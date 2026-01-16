@@ -1,8 +1,53 @@
 # go_infra_link
-exploring new world
 
+Full-stack infrastructure link project with Go backend and future frontend.
 
-## build/run
-go build ./cmd/server
-go run ./cmd/server/main.go  
-./server   # oder: go run ./cmd/server
+## Quick Start
+
+### Backend
+
+```bash
+cd backend
+go run ./cmd/server
+```
+
+## Development
+
+### Prerequisites
+
+- Go 1.25.6 or higher
+- Docker (optional, for containerized deployment)
+
+### Running with Docker
+
+```bash
+docker build -t go_infra_link .
+docker run -p 8080:8080 go_infra_link
+```
+
+### Using Make
+
+```bash
+# Build backend
+make build
+
+# Run backend
+make run
+
+# Run tests
+make test
+
+# Clean build artifacts
+make clean
+```
+
+## Architecture
+
+This project follows **Clean/Hexagonal Architecture** principles:
+
+- **Backend**: Go service with layered architecture (domain, application, infrastructure)
+- **Frontend**: Separate frontend application (to be implemented)
+
+## License
+
+See [LICENSE](LICENSE) for details.

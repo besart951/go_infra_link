@@ -1,4 +1,4 @@
-module github.com/besart951/go_infra_link
+module github.com/besart951/go_infra_link/backend
 
 go 1.25.6
 
