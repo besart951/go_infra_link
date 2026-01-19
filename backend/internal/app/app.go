@@ -1,0 +1,35 @@
+package app
+
+import (
+	"fmt"
+
+	"github.com/besart951/go_infra_link/backend/internal/config"
+	"github.com/besart951/go_infra_link/backend/internal/db"
+	"github.com/besart951/go_infra_link/backend/internal/domain"
+	"github.com/besart951/go_infra_link/backend/internal/repository"
+	"github.com/besart951/go_infra_link/backend/internal/service"
+	applogger "github.com/besart951/go_infra_link/backend/pkg/logger"
+)
+
+func Run() error {
+	cfg := config.Load()
+	log := applogger.Setup(cfg.AppEnv, cfg.LogLevel)
+
+	database, err := db.Open(cfg)
+	if err != nil {
+		log.Error("Failed to connect to database", "err", err)
+		return fmt.Errorf("db open: %w", err)
+	}
+
+	log.Info("Migrating database...")
+	if err := domain.Migrate(database); err != nil {
+		log.Error("Database migration failed", "err", err)
+		return fmt.Errorf("db migrate: %w", err)
+	}
+
+	projRepo := repository.NewProjectRepository(database)
+	_ = service.NewProjectService(projRepo)
+
+	log.Info("Server ready to start...")
+	return nil
+}

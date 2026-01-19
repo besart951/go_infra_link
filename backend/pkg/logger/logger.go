@@ -1,18 +1,20 @@
 package logger
 
 import (
-	"os"
 	"log/slog"
+	"os"
+	"strings"
 )
 
 // Setup initialisiert den Logger.
 // env: "prod" für JSON output, "dev" für lesbaren Text
-func Setup(env string) *slog.Logger {
+func Setup(env string, level string) *slog.Logger {
 	var handler slog.Handler
+	parsedLevel := parseLevel(level)
 
 	opts := &slog.HandlerOptions{
-		Level: slog.LevelDebug, // Oder aus Env-Variable laden
-        // AddSource: true, // Zeigt Dateiname und Zeilennummer (teuer in Prod!)
+		Level: parsedLevel,
+		// AddSource: true, // Zeigt Dateiname und Zeilennummer (teuer in Prod!)
 	}
 
 	if env == "prod" {
@@ -24,9 +26,24 @@ func Setup(env string) *slog.Logger {
 	}
 
 	logger := slog.New(handler)
-    
-    // Optional: Setze ihn auch als globalen Default, falls mal eine 3rd Party Lib loggt
-    slog.SetDefault(logger)
+
+	// Optional: Setze ihn auch als globalen Default, falls mal eine 3rd Party Lib loggt
+	slog.SetDefault(logger)
 
 	return logger
+}
+
+func parseLevel(level string) slog.Level {
+	switch strings.ToLower(strings.TrimSpace(level)) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	case "info", "":
+		fallthrough
+	default:
+		return slog.LevelInfo
+	}
 }
