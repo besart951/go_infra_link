@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-// Setup initialisiert den Logger.
 // env: "prod" für JSON output, "dev" für lesbaren Text
 func Setup(env string, level string) *slog.Logger {
 	var handler slog.Handler
@@ -14,7 +13,6 @@ func Setup(env string, level string) *slog.Logger {
 
 	opts := &slog.HandlerOptions{
 		Level: parsedLevel,
-		// AddSource: true, // Zeigt Dateiname und Zeilennummer (teuer in Prod!)
 	}
 
 	if env == "prod" {

@@ -7,7 +7,7 @@ import (
 )
 
 // Generic function to handle pagination & search
-func paginate[T any](db *gorm.DB, params domain.PaginationParams, searchFields []string) (*domain.PaginatedList[T], error) {
+func Paginate[T any](db *gorm.DB, params domain.PaginationParams, searchFields []string) (*domain.PaginatedList[T], error) {
 	var items []T
 	var total int64
 

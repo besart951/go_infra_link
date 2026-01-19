@@ -5,7 +5,6 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/repository"
 	"github.com/besart951/go_infra_link/backend/internal/service"
 	applogger "github.com/besart951/go_infra_link/backend/pkg/logger"
@@ -22,7 +21,7 @@ func Run() error {
 	}
 
 	log.Info("Migrating database...")
-	if err := domain.Migrate(database); err != nil {
+	if err := db.Migrate(database); err != nil {
 		log.Error("Database migration failed", "err", err)
 		return fmt.Errorf("db migrate: %w", err)
 	}

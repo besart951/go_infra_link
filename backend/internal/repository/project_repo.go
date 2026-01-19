@@ -35,5 +35,5 @@ func (r *projectRepo) DeleteByIds(ids []uuid.UUID) error {
 
 func (r *projectRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domain.Project], error) {
 	searchFields := []string{"name", "description"}
-	return paginate[domain.Project](r.db, params, searchFields)
+	return Paginate[domain.Project](r.db, params, searchFields)
 }
