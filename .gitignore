@@ -8,9 +8,32 @@
 coverage.*
 *.coverprofile
 profile.cov
+
+# Build / binaries
+bin/
+dist/
+*.tmp
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Workspace / IDE
 go.work
 go.work.sum
+
+# Environment
 .env
+!.env.example
+
+# Local data (sqlite, exports, etc.)
+backend/data/
+!backend/data/.gitkeep
+
 .idea/
 .vscode/
 server
