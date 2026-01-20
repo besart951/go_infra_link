@@ -6,7 +6,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
 	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
-	"github.com/besart951/go_infra_link/backend/internal/service"
+	projectservice "github.com/besart951/go_infra_link/backend/internal/service/project"
 	applogger "github.com/besart951/go_infra_link/backend/pkg/logger"
 )
 
@@ -27,7 +27,7 @@ func Run() error {
 	}
 
 	projRepo := projectrepo.NewProjectRepository(database)
-	_ = service.NewProjectService(projRepo)
+	_ = projectservice.New(projRepo)
 
 	log.Info("Server ready to start...")
 	return nil
