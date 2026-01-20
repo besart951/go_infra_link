@@ -1,0 +1,357 @@
+package facility
+
+import (
+	"net/http"
+
+	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	facilityService "github.com/besart951/go_infra_link/backend/internal/service/facility"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+)
+
+type SpecificationHandler struct {
+	service *facilityService.Service
+}
+
+func NewSpecificationHandler(service *facilityService.Service) *SpecificationHandler {
+	return &SpecificationHandler{service: service}
+}
+
+// CreateSpecification godoc
+// @Summary Create a new specification
+// @Tags facility-specifications
+// @Accept json
+// @Produce json
+// @Param specification body dto.CreateSpecificationRequest true "Specification data"
+// @Success 201 {object} dto.SpecificationResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/specifications [post]
+func (h *SpecificationHandler) CreateSpecification(c *gin.Context) {
+	var req dto.CreateSpecificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "validation_error",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	specification := &domainFacility.Specification{
+		SpecificationSupplier:                     req.SpecificationSupplier,
+		SpecificationBrand:                        req.SpecificationBrand,
+		SpecificationType:                         req.SpecificationType,
+		AdditionalInfoMotorValve:                  req.AdditionalInfoMotorValve,
+		AdditionalInfoSize:                        req.AdditionalInfoSize,
+		AdditionalInformationInstallationLocation: req.AdditionalInformationInstallationLocation,
+		ElectricalConnectionPH:                    req.ElectricalConnectionPH,
+		ElectricalConnectionACDC:                  req.ElectricalConnectionACDC,
+		ElectricalConnectionAmperage:              req.ElectricalConnectionAmperage,
+		ElectricalConnectionPower:                 req.ElectricalConnectionPower,
+		ElectricalConnectionRotation:              req.ElectricalConnectionRotation,
+	}
+
+	if err := h.service.Specifications.Create(specification); err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "creation_failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	response := dto.SpecificationResponse{
+		ID:                                        specification.ID,
+		SpecificationSupplier:                     specification.SpecificationSupplier,
+		SpecificationBrand:                        specification.SpecificationBrand,
+		SpecificationType:                         specification.SpecificationType,
+		AdditionalInfoMotorValve:                  specification.AdditionalInfoMotorValve,
+		AdditionalInfoSize:                        specification.AdditionalInfoSize,
+		AdditionalInformationInstallationLocation: specification.AdditionalInformationInstallationLocation,
+		ElectricalConnectionPH:                    specification.ElectricalConnectionPH,
+		ElectricalConnectionACDC:                  specification.ElectricalConnectionACDC,
+		ElectricalConnectionAmperage:              specification.ElectricalConnectionAmperage,
+		ElectricalConnectionPower:                 specification.ElectricalConnectionPower,
+		ElectricalConnectionRotation:              specification.ElectricalConnectionRotation,
+		CreatedAt:                                 specification.CreatedAt,
+		UpdatedAt:                                 specification.UpdatedAt,
+	}
+
+	c.JSON(http.StatusCreated, response)
+}
+
+// GetSpecification godoc
+// @Summary Get a specification by ID
+// @Tags facility-specifications
+// @Produce json
+// @Param id path string true "Specification ID"
+// @Success 200 {object} dto.SpecificationResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/specifications/{id} [get]
+func (h *SpecificationHandler) GetSpecification(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "invalid_id",
+			Message: "Invalid UUID format",
+		})
+		return
+	}
+
+	specifications, err := h.service.Specifications.GetByIds([]uuid.UUID{id})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "fetch_failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	if len(specifications) == 0 {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{
+			Error:   "not_found",
+			Message: "Specification not found",
+		})
+		return
+	}
+
+	specification := specifications[0]
+	response := dto.SpecificationResponse{
+		ID:                                        specification.ID,
+		SpecificationSupplier:                     specification.SpecificationSupplier,
+		SpecificationBrand:                        specification.SpecificationBrand,
+		SpecificationType:                         specification.SpecificationType,
+		AdditionalInfoMotorValve:                  specification.AdditionalInfoMotorValve,
+		AdditionalInfoSize:                        specification.AdditionalInfoSize,
+		AdditionalInformationInstallationLocation: specification.AdditionalInformationInstallationLocation,
+		ElectricalConnectionPH:                    specification.ElectricalConnectionPH,
+		ElectricalConnectionACDC:                  specification.ElectricalConnectionACDC,
+		ElectricalConnectionAmperage:              specification.ElectricalConnectionAmperage,
+		ElectricalConnectionPower:                 specification.ElectricalConnectionPower,
+		ElectricalConnectionRotation:              specification.ElectricalConnectionRotation,
+		CreatedAt:                                 specification.CreatedAt,
+		UpdatedAt:                                 specification.UpdatedAt,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// ListSpecifications godoc
+// @Summary List specifications with pagination
+// @Tags facility-specifications
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Param search query string false "Search query"
+// @Success 200 {object} dto.SpecificationListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/specifications [get]
+func (h *SpecificationHandler) ListSpecifications(c *gin.Context) {
+	var query dto.PaginationQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "validation_error",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	if query.Page == 0 {
+		query.Page = 1
+	}
+	if query.Limit == 0 {
+		query.Limit = 10
+	}
+
+	params := domain.PaginationParams{
+		Page:   query.Page,
+		Limit:  query.Limit,
+		Search: query.Search,
+	}
+
+	result, err := h.service.Specifications.GetPaginatedList(params)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "fetch_failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	items := make([]dto.SpecificationResponse, len(result.Items))
+	for i, specification := range result.Items {
+		items[i] = dto.SpecificationResponse{
+			ID:                                        specification.ID,
+			SpecificationSupplier:                     specification.SpecificationSupplier,
+			SpecificationBrand:                        specification.SpecificationBrand,
+			SpecificationType:                         specification.SpecificationType,
+			AdditionalInfoMotorValve:                  specification.AdditionalInfoMotorValve,
+			AdditionalInfoSize:                        specification.AdditionalInfoSize,
+			AdditionalInformationInstallationLocation: specification.AdditionalInformationInstallationLocation,
+			ElectricalConnectionPH:                    specification.ElectricalConnectionPH,
+			ElectricalConnectionACDC:                  specification.ElectricalConnectionACDC,
+			ElectricalConnectionAmperage:              specification.ElectricalConnectionAmperage,
+			ElectricalConnectionPower:                 specification.ElectricalConnectionPower,
+			ElectricalConnectionRotation:              specification.ElectricalConnectionRotation,
+			CreatedAt:                                 specification.CreatedAt,
+			UpdatedAt:                                 specification.UpdatedAt,
+		}
+	}
+
+	response := dto.SpecificationListResponse{
+		Items:      items,
+		Total:      result.Total,
+		Page:       result.Page,
+		TotalPages: result.TotalPages,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// UpdateSpecification godoc
+// @Summary Update a specification
+// @Tags facility-specifications
+// @Accept json
+// @Produce json
+// @Param id path string true "Specification ID"
+// @Param specification body dto.UpdateSpecificationRequest true "Specification data"
+// @Success 200 {object} dto.SpecificationResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/specifications/{id} [put]
+func (h *SpecificationHandler) UpdateSpecification(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "invalid_id",
+			Message: "Invalid UUID format",
+		})
+		return
+	}
+
+	var req dto.UpdateSpecificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "validation_error",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	specifications, err := h.service.Specifications.GetByIds([]uuid.UUID{id})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "fetch_failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	if len(specifications) == 0 {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{
+			Error:   "not_found",
+			Message: "Specification not found",
+		})
+		return
+	}
+
+	specification := specifications[0]
+	if req.SpecificationSupplier != nil {
+		specification.SpecificationSupplier = req.SpecificationSupplier
+	}
+	if req.SpecificationBrand != nil {
+		specification.SpecificationBrand = req.SpecificationBrand
+	}
+	if req.SpecificationType != nil {
+		specification.SpecificationType = req.SpecificationType
+	}
+	if req.AdditionalInfoMotorValve != nil {
+		specification.AdditionalInfoMotorValve = req.AdditionalInfoMotorValve
+	}
+	if req.AdditionalInfoSize != nil {
+		specification.AdditionalInfoSize = req.AdditionalInfoSize
+	}
+	if req.AdditionalInformationInstallationLocation != nil {
+		specification.AdditionalInformationInstallationLocation = req.AdditionalInformationInstallationLocation
+	}
+	if req.ElectricalConnectionPH != nil {
+		specification.ElectricalConnectionPH = req.ElectricalConnectionPH
+	}
+	if req.ElectricalConnectionACDC != nil {
+		specification.ElectricalConnectionACDC = req.ElectricalConnectionACDC
+	}
+	if req.ElectricalConnectionAmperage != nil {
+		specification.ElectricalConnectionAmperage = req.ElectricalConnectionAmperage
+	}
+	if req.ElectricalConnectionPower != nil {
+		specification.ElectricalConnectionPower = req.ElectricalConnectionPower
+	}
+	if req.ElectricalConnectionRotation != nil {
+		specification.ElectricalConnectionRotation = req.ElectricalConnectionRotation
+	}
+
+	if err := h.service.Specifications.Update(specification); err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "update_failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	response := dto.SpecificationResponse{
+		ID:                                        specification.ID,
+		SpecificationSupplier:                     specification.SpecificationSupplier,
+		SpecificationBrand:                        specification.SpecificationBrand,
+		SpecificationType:                         specification.SpecificationType,
+		AdditionalInfoMotorValve:                  specification.AdditionalInfoMotorValve,
+		AdditionalInfoSize:                        specification.AdditionalInfoSize,
+		AdditionalInformationInstallationLocation: specification.AdditionalInformationInstallationLocation,
+		ElectricalConnectionPH:                    specification.ElectricalConnectionPH,
+		ElectricalConnectionACDC:                  specification.ElectricalConnectionACDC,
+		ElectricalConnectionAmperage:              specification.ElectricalConnectionAmperage,
+		ElectricalConnectionPower:                 specification.ElectricalConnectionPower,
+		ElectricalConnectionRotation:              specification.ElectricalConnectionRotation,
+		CreatedAt:                                 specification.CreatedAt,
+		UpdatedAt:                                 specification.UpdatedAt,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// DeleteSpecification godoc
+// @Summary Delete a specification
+// @Tags facility-specifications
+// @Produce json
+// @Param id path string true "Specification ID"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/specifications/{id} [delete]
+func (h *SpecificationHandler) DeleteSpecification(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "invalid_id",
+			Message: "Invalid UUID format",
+		})
+		return
+	}
+
+	if err := h.service.Specifications.DeleteByIds([]uuid.UUID{id}); err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "deletion_failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
