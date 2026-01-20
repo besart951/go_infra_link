@@ -5,7 +5,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
-	"github.com/besart951/go_infra_link/backend/internal/repository"
+	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
 	"github.com/besart951/go_infra_link/backend/internal/service"
 	applogger "github.com/besart951/go_infra_link/backend/pkg/logger"
 )
@@ -26,7 +26,7 @@ func Run() error {
 		return fmt.Errorf("db migrate: %w", err)
 	}
 
-	projRepo := repository.NewProjectRepository(database)
+	projRepo := projectrepo.NewProjectRepository(database)
 	_ = service.NewProjectService(projRepo)
 
 	log.Info("Server ready to start...")

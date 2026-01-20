@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -36,7 +37,7 @@ type ObjectDataHistory struct {
 	ObjectDataID *uuid.UUID
 	ObjectData   *ObjectData `gorm:"foreignKey:ObjectDataID;constraint:OnDelete:SET NULL"`
 	UserID       *uuid.UUID
-	User         *domain.User `gorm:"foreignKey:UserID;constraint:OnDelete:SET NULL"`
+	User         *user.User `gorm:"foreignKey:UserID;constraint:OnDelete:SET NULL"`
 	Action       string
 	Changes      JSONMap `gorm:"type:json"`
 }

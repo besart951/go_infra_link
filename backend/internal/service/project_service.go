@@ -2,22 +2,23 @@ package service
 
 import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
 type ProjectService struct {
-	repo domain.ProjectRepository
+	repo project.ProjectRepository
 }
 
-func NewProjectService(repo domain.ProjectRepository) *ProjectService {
+func NewProjectService(repo project.ProjectRepository) *ProjectService {
 	return &ProjectService{repo: repo}
 }
 
-func (s *ProjectService) CreateProject(name string, creatorID uuid.UUID) (*domain.Project, error) {
-	proj := &domain.Project{
+func (s *ProjectService) CreateProject(name string, creatorID uuid.UUID) (*project.Project, error) {
+	proj := &project.Project{
 		Name:      name,
 		CreatorID: creatorID,
-		Status:    domain.StatusPlanned,
+		Status:    project.StatusPlanned,
 	}
 
 	if err := s.repo.Create(proj); err != nil {
@@ -26,7 +27,7 @@ func (s *ProjectService) CreateProject(name string, creatorID uuid.UUID) (*domai
 	return proj, nil
 }
 
-func (s *ProjectService) ListProjects(page, limit int, search string) (*domain.PaginatedList[domain.Project], error) {
+func (s *ProjectService) ListProjects(page, limit int, search string) (*domain.PaginatedList[project.Project], error) {
 	return s.repo.GetPaginatedList(domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,

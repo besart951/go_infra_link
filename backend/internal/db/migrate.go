@@ -1,17 +1,18 @@
 package db
 
 import (
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	"github.com/besart951/go_infra_link/backend/internal/domain/project"
+	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"gorm.io/gorm"
 )
 
 func Migrate(db *gorm.DB) error {
 	return db.AutoMigrate(
-		&domain.User{},
-		&domain.BusinessDetails{},
-		&domain.Project{},
-		&domain.Phase{},
+		&user.User{},
+		&user.BusinessDetails{},
+		&project.Project{},
+		&project.Phase{},
 		// Facility Domain
 		&facility.Building{},
 		&facility.ControlCabinet{},
