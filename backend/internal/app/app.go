@@ -6,8 +6,8 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
-	"github.com/besart951/go_infra_link/backend/internal/handler"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	"github.com/besart951/go_infra_link/backend/internal/handler"
 	"github.com/besart951/go_infra_link/backend/internal/repository/auth"
 	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
 	userrepo "github.com/besart951/go_infra_link/backend/internal/repository/user"
