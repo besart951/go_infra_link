@@ -7,21 +7,21 @@ import (
 )
 
 func (s *Service) GetSystemTypeByIds(ids []uuid.UUID) ([]*domainFacility.SystemType, error) {
-	return s.repo.GetSystemTypeByIds(ids)
+	return s.SystemTypes.GetByIds(ids)
 }
 
 func (s *Service) CreateSystemType(entity *domainFacility.SystemType) error {
-	return s.repo.CreateSystemType(entity)
+	return s.SystemTypes.Create(entity)
 }
 
 func (s *Service) UpdateSystemType(entity *domainFacility.SystemType) error {
-	return s.repo.UpdateSystemType(entity)
+	return s.SystemTypes.Update(entity)
 }
 
 func (s *Service) DeleteSystemTypeByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteSystemTypeByIds(ids)
+	return s.SystemTypes.DeleteByIds(ids)
 }
 
 func (s *Service) GetPaginatedSystemTypes(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SystemType], error) {
-	return s.repo.GetPaginatedSystemTypes(params)
+	return s.SystemTypes.GetPaginatedList(params)
 }

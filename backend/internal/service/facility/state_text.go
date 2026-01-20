@@ -7,21 +7,21 @@ import (
 )
 
 func (s *Service) GetStateTextByIds(ids []uuid.UUID) ([]*domainFacility.StateText, error) {
-	return s.repo.GetStateTextByIds(ids)
+	return s.StateTexts.GetByIds(ids)
 }
 
 func (s *Service) CreateStateText(entity *domainFacility.StateText) error {
-	return s.repo.CreateStateText(entity)
+	return s.StateTexts.Create(entity)
 }
 
 func (s *Service) UpdateStateText(entity *domainFacility.StateText) error {
-	return s.repo.UpdateStateText(entity)
+	return s.StateTexts.Update(entity)
 }
 
 func (s *Service) DeleteStateTextByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteStateTextByIds(ids)
+	return s.StateTexts.DeleteByIds(ids)
 }
 
 func (s *Service) GetPaginatedStateTexts(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.StateText], error) {
-	return s.repo.GetPaginatedStateTexts(params)
+	return s.StateTexts.GetPaginatedList(params)
 }

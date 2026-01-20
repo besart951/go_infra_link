@@ -24,11 +24,4 @@ type BusinessDetails struct {
 	VatNumber   string
 }
 
-// Repository Interface definition
-type UserRepository interface {
-	GetByIds(ids []uuid.UUID) ([]*User, error)
-	Create(entity *User) error
-	Update(entity *User) error
-	DeleteByIds(ids []uuid.UUID) error
-	GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[User], error)
-}
+type UserRepository = domain.Repository[User]

@@ -7,21 +7,21 @@ import (
 )
 
 func (s *Service) GetFieldDeviceByIds(ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {
-	return s.repo.GetFieldDeviceByIds(ids)
+	return s.FieldDevices.GetByIds(ids)
 }
 
 func (s *Service) CreateFieldDevice(entity *domainFacility.FieldDevice) error {
-	return s.repo.CreateFieldDevice(entity)
+	return s.FieldDevices.Create(entity)
 }
 
 func (s *Service) UpdateFieldDevice(entity *domainFacility.FieldDevice) error {
-	return s.repo.UpdateFieldDevice(entity)
+	return s.FieldDevices.Update(entity)
 }
 
 func (s *Service) DeleteFieldDeviceByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteFieldDeviceByIds(ids)
+	return s.FieldDevices.DeleteByIds(ids)
 }
 
 func (s *Service) GetPaginatedFieldDevices(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
-	return s.repo.GetPaginatedFieldDevices(params)
+	return s.FieldDevices.GetPaginatedList(params)
 }

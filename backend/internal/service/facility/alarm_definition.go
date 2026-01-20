@@ -7,21 +7,21 @@ import (
 )
 
 func (s *Service) GetAlarmDefinitionByIds(ids []uuid.UUID) ([]*domainFacility.AlarmDefinition, error) {
-	return s.repo.GetAlarmDefinitionByIds(ids)
+	return s.AlarmDefinitions.GetByIds(ids)
 }
 
 func (s *Service) CreateAlarmDefinition(entity *domainFacility.AlarmDefinition) error {
-	return s.repo.CreateAlarmDefinition(entity)
+	return s.AlarmDefinitions.Create(entity)
 }
 
 func (s *Service) UpdateAlarmDefinition(entity *domainFacility.AlarmDefinition) error {
-	return s.repo.UpdateAlarmDefinition(entity)
+	return s.AlarmDefinitions.Update(entity)
 }
 
 func (s *Service) DeleteAlarmDefinitionByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteAlarmDefinitionByIds(ids)
+	return s.AlarmDefinitions.DeleteByIds(ids)
 }
 
 func (s *Service) GetPaginatedAlarmDefinitions(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.AlarmDefinition], error) {
-	return s.repo.GetPaginatedAlarmDefinitions(params)
+	return s.AlarmDefinitions.GetPaginatedList(params)
 }

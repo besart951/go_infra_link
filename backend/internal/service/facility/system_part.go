@@ -7,21 +7,21 @@ import (
 )
 
 func (s *Service) GetSystemPartByIds(ids []uuid.UUID) ([]*domainFacility.SystemPart, error) {
-	return s.repo.GetSystemPartByIds(ids)
+	return s.SystemParts.GetByIds(ids)
 }
 
 func (s *Service) CreateSystemPart(entity *domainFacility.SystemPart) error {
-	return s.repo.CreateSystemPart(entity)
+	return s.SystemParts.Create(entity)
 }
 
 func (s *Service) UpdateSystemPart(entity *domainFacility.SystemPart) error {
-	return s.repo.UpdateSystemPart(entity)
+	return s.SystemParts.Update(entity)
 }
 
 func (s *Service) DeleteSystemPartByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteSystemPartByIds(ids)
+	return s.SystemParts.DeleteByIds(ids)
 }
 
 func (s *Service) GetPaginatedSystemParts(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SystemPart], error) {
-	return s.repo.GetPaginatedSystemParts(params)
+	return s.SystemParts.GetPaginatedList(params)
 }

@@ -8,9 +8,55 @@ import (
 // It mirrors the repository capabilities but gives you a stable place
 // to add validation, business rules, auth checks, etc.
 type Service struct {
-	repo domainFacility.Repository
+	Buildings                domainFacility.BuildingRepository
+	SystemTypes              domainFacility.SystemTypeRepository
+	SystemParts              domainFacility.SystemPartRepository
+	Specifications           domainFacility.SpecificationRepository
+	StateTexts               domainFacility.StateTextRepository
+	NotificationClasses      domainFacility.NotificationClassRepository
+	AlarmDefinitions         domainFacility.AlarmDefinitionRepository
+	Apparats                 domainFacility.ApparatRepository
+	ObjectData               domainFacility.ObjectDataRepository
+	ControlCabinets          domainFacility.ControlCabinetRepository
+	SPSControllers           domainFacility.SPSControllerRepository
+	SPSControllerSystemTypes domainFacility.SPSControllerSystemTypeRepository
+	FieldDevices             domainFacility.FieldDeviceRepository
+	BacnetObjects            domainFacility.BacnetObjectRepository
+	ObjectDataHistory        domainFacility.ObjectDataHistoryRepository
 }
 
-func New(repo domainFacility.Repository) *Service {
-	return &Service{repo: repo}
+func New(
+	buildings domainFacility.BuildingRepository,
+	systemTypes domainFacility.SystemTypeRepository,
+	systemParts domainFacility.SystemPartRepository,
+	specifications domainFacility.SpecificationRepository,
+	stateTexts domainFacility.StateTextRepository,
+	notificationClasses domainFacility.NotificationClassRepository,
+	alarmDefinitions domainFacility.AlarmDefinitionRepository,
+	apparats domainFacility.ApparatRepository,
+	objectData domainFacility.ObjectDataRepository,
+	controlCabinets domainFacility.ControlCabinetRepository,
+	spsControllers domainFacility.SPSControllerRepository,
+	spsControllerSystemTypes domainFacility.SPSControllerSystemTypeRepository,
+	fieldDevices domainFacility.FieldDeviceRepository,
+	bacnetObjects domainFacility.BacnetObjectRepository,
+	objectDataHistory domainFacility.ObjectDataHistoryRepository,
+) *Service {
+	return &Service{
+		Buildings:                buildings,
+		SystemTypes:              systemTypes,
+		SystemParts:              systemParts,
+		Specifications:           specifications,
+		StateTexts:               stateTexts,
+		NotificationClasses:      notificationClasses,
+		AlarmDefinitions:         alarmDefinitions,
+		Apparats:                 apparats,
+		ObjectData:               objectData,
+		ControlCabinets:          controlCabinets,
+		SPSControllers:           spsControllers,
+		SPSControllerSystemTypes: spsControllerSystemTypes,
+		FieldDevices:             fieldDevices,
+		BacnetObjects:            bacnetObjects,
+		ObjectDataHistory:        objectDataHistory,
+	}
 }

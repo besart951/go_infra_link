@@ -5,26 +5,35 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
-func (r *facilityRepo) GetNotificationClassByIds(ids []uuid.UUID) ([]*facility.NotificationClass, error) {
+type notificationClassRepo struct {
+	db *gorm.DB
+}
+
+func NewNotificationClassRepository(db *gorm.DB) facility.NotificationClassRepository {
+	return &notificationClassRepo{db: db}
+}
+
+func (r *notificationClassRepo) GetByIds(ids []uuid.UUID) ([]*facility.NotificationClass, error) {
 	var items []*facility.NotificationClass
 	err := r.db.Where("id IN ?", ids).Find(&items).Error
 	return items, err
 }
 
-func (r *facilityRepo) CreateNotificationClass(entity *facility.NotificationClass) error {
+func (r *notificationClassRepo) Create(entity *facility.NotificationClass) error {
 	return r.db.Create(entity).Error
 }
 
-func (r *facilityRepo) UpdateNotificationClass(entity *facility.NotificationClass) error {
+func (r *notificationClassRepo) Update(entity *facility.NotificationClass) error {
 	return r.db.Save(entity).Error
 }
 
-func (r *facilityRepo) DeleteNotificationClassByIds(ids []uuid.UUID) error {
+func (r *notificationClassRepo) DeleteByIds(ids []uuid.UUID) error {
 	return r.db.Where("id IN ?", ids).Delete(&facility.NotificationClass{}).Error
 }
 
-func (r *facilityRepo) GetPaginatedNotificationClasses(params domain.PaginationParams) (*domain.PaginatedList[facility.NotificationClass], error) {
+func (r *notificationClassRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[facility.NotificationClass], error) {
 	return repository.Paginate[facility.NotificationClass](r.db, params, []string{"event_category", "meaning", "object_description"})
 }

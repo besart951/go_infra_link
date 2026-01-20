@@ -7,21 +7,21 @@ import (
 )
 
 func (s *Service) GetNotificationClassByIds(ids []uuid.UUID) ([]*domainFacility.NotificationClass, error) {
-	return s.repo.GetNotificationClassByIds(ids)
+	return s.NotificationClasses.GetByIds(ids)
 }
 
 func (s *Service) CreateNotificationClass(entity *domainFacility.NotificationClass) error {
-	return s.repo.CreateNotificationClass(entity)
+	return s.NotificationClasses.Create(entity)
 }
 
 func (s *Service) UpdateNotificationClass(entity *domainFacility.NotificationClass) error {
-	return s.repo.UpdateNotificationClass(entity)
+	return s.NotificationClasses.Update(entity)
 }
 
 func (s *Service) DeleteNotificationClassByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteNotificationClassByIds(ids)
+	return s.NotificationClasses.DeleteByIds(ids)
 }
 
 func (s *Service) GetPaginatedNotificationClasses(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.NotificationClass], error) {
-	return s.repo.GetPaginatedNotificationClasses(params)
+	return s.NotificationClasses.GetPaginatedList(params)
 }

@@ -7,21 +7,21 @@ import (
 )
 
 func (s *Service) GetSpecificationByIds(ids []uuid.UUID) ([]*domainFacility.Specification, error) {
-	return s.repo.GetSpecificationByIds(ids)
+	return s.Specifications.GetByIds(ids)
 }
 
 func (s *Service) CreateSpecification(entity *domainFacility.Specification) error {
-	return s.repo.CreateSpecification(entity)
+	return s.Specifications.Create(entity)
 }
 
 func (s *Service) UpdateSpecification(entity *domainFacility.Specification) error {
-	return s.repo.UpdateSpecification(entity)
+	return s.Specifications.Update(entity)
 }
 
 func (s *Service) DeleteSpecificationByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteSpecificationByIds(ids)
+	return s.Specifications.DeleteByIds(ids)
 }
 
 func (s *Service) GetPaginatedSpecifications(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Specification], error) {
-	return s.repo.GetPaginatedSpecifications(params)
+	return s.Specifications.GetPaginatedList(params)
 }

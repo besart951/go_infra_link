@@ -7,21 +7,21 @@ import (
 )
 
 func (s *Service) GetSPSControllerSystemTypeByIds(ids []uuid.UUID) ([]*domainFacility.SPSControllerSystemType, error) {
-	return s.repo.GetSPSControllerSystemTypeByIds(ids)
+	return s.SPSControllerSystemTypes.GetByIds(ids)
 }
 
 func (s *Service) CreateSPSControllerSystemType(entity *domainFacility.SPSControllerSystemType) error {
-	return s.repo.CreateSPSControllerSystemType(entity)
+	return s.SPSControllerSystemTypes.Create(entity)
 }
 
 func (s *Service) UpdateSPSControllerSystemType(entity *domainFacility.SPSControllerSystemType) error {
-	return s.repo.UpdateSPSControllerSystemType(entity)
+	return s.SPSControllerSystemTypes.Update(entity)
 }
 
 func (s *Service) DeleteSPSControllerSystemTypeByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteSPSControllerSystemTypeByIds(ids)
+	return s.SPSControllerSystemTypes.DeleteByIds(ids)
 }
 
 func (s *Service) GetPaginatedSPSControllerSystemTypes(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
-	return s.repo.GetPaginatedSPSControllerSystemTypes(params)
+	return s.SPSControllerSystemTypes.GetPaginatedList(params)
 }

@@ -7,21 +7,21 @@ import (
 )
 
 func (s *Service) GetBuildingByIds(ids []uuid.UUID) ([]*domainFacility.Building, error) {
-	return s.repo.GetBuildingByIds(ids)
+	return s.Buildings.GetByIds(ids)
 }
 
 func (s *Service) CreateBuilding(entity *domainFacility.Building) error {
-	return s.repo.CreateBuilding(entity)
+	return s.Buildings.Create(entity)
 }
 
 func (s *Service) UpdateBuilding(entity *domainFacility.Building) error {
-	return s.repo.UpdateBuilding(entity)
+	return s.Buildings.Update(entity)
 }
 
 func (s *Service) DeleteBuildingByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteBuildingByIds(ids)
+	return s.Buildings.DeleteByIds(ids)
 }
 
 func (s *Service) GetPaginatedBuildings(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Building], error) {
-	return s.repo.GetPaginatedBuildings(params)
+	return s.Buildings.GetPaginatedList(params)
 }

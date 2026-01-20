@@ -35,10 +35,4 @@ type Phase struct {
 	Name string `gorm:"uniqueIndex"`
 }
 
-type ProjectRepository interface {
-	GetByIds(ids []uuid.UUID) ([]*Project, error)
-	Create(entity *Project) error
-	Update(entity *Project) error
-	DeleteByIds(ids []uuid.UUID) error
-	GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[Project], error)
-}
+type ProjectRepository = domain.Repository[Project]

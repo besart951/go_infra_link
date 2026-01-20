@@ -7,21 +7,21 @@ import (
 )
 
 func (s *Service) GetControlCabinetByIds(ids []uuid.UUID) ([]*domainFacility.ControlCabinet, error) {
-	return s.repo.GetControlCabinetByIds(ids)
+	return s.ControlCabinets.GetByIds(ids)
 }
 
 func (s *Service) CreateControlCabinet(entity *domainFacility.ControlCabinet) error {
-	return s.repo.CreateControlCabinet(entity)
+	return s.ControlCabinets.Create(entity)
 }
 
 func (s *Service) UpdateControlCabinet(entity *domainFacility.ControlCabinet) error {
-	return s.repo.UpdateControlCabinet(entity)
+	return s.ControlCabinets.Update(entity)
 }
 
 func (s *Service) DeleteControlCabinetByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteControlCabinetByIds(ids)
+	return s.ControlCabinets.DeleteByIds(ids)
 }
 
 func (s *Service) GetPaginatedControlCabinets(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ControlCabinet], error) {
-	return s.repo.GetPaginatedControlCabinets(params)
+	return s.ControlCabinets.GetPaginatedList(params)
 }

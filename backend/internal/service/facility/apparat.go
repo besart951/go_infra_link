@@ -7,21 +7,21 @@ import (
 )
 
 func (s *Service) GetApparatByIds(ids []uuid.UUID) ([]*domainFacility.Apparat, error) {
-	return s.repo.GetApparatByIds(ids)
+	return s.Apparats.GetByIds(ids)
 }
 
 func (s *Service) CreateApparat(entity *domainFacility.Apparat) error {
-	return s.repo.CreateApparat(entity)
+	return s.Apparats.Create(entity)
 }
 
 func (s *Service) UpdateApparat(entity *domainFacility.Apparat) error {
-	return s.repo.UpdateApparat(entity)
+	return s.Apparats.Update(entity)
 }
 
 func (s *Service) DeleteApparatByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteApparatByIds(ids)
+	return s.Apparats.DeleteByIds(ids)
 }
 
 func (s *Service) GetPaginatedApparats(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Apparat], error) {
-	return s.repo.GetPaginatedApparats(params)
+	return s.Apparats.GetPaginatedList(params)
 }
