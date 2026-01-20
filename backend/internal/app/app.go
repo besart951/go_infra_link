@@ -48,9 +48,9 @@ func Run() error {
 	if cfg.AppEnv == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	
+
 	router := gin.Default()
-	
+
 	// Register all routes
 	handler.RegisterRoutes(router, handlers)
 

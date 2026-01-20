@@ -62,12 +62,12 @@ func (h *SpecificationHandler) CreateSpecification(c *gin.Context) {
 	}
 
 	response := dto.SpecificationResponse{
-		ID:                                        specification.ID,
-		SpecificationSupplier:                     specification.SpecificationSupplier,
-		SpecificationBrand:                        specification.SpecificationBrand,
-		SpecificationType:                         specification.SpecificationType,
-		AdditionalInfoMotorValve:                  specification.AdditionalInfoMotorValve,
-		AdditionalInfoSize:                        specification.AdditionalInfoSize,
+		ID:                       specification.ID,
+		SpecificationSupplier:    specification.SpecificationSupplier,
+		SpecificationBrand:       specification.SpecificationBrand,
+		SpecificationType:        specification.SpecificationType,
+		AdditionalInfoMotorValve: specification.AdditionalInfoMotorValve,
+		AdditionalInfoSize:       specification.AdditionalInfoSize,
 		AdditionalInformationInstallationLocation: specification.AdditionalInformationInstallationLocation,
 		ElectricalConnectionPH:                    specification.ElectricalConnectionPH,
 		ElectricalConnectionACDC:                  specification.ElectricalConnectionACDC,
@@ -121,12 +121,12 @@ func (h *SpecificationHandler) GetSpecification(c *gin.Context) {
 
 	specification := specifications[0]
 	response := dto.SpecificationResponse{
-		ID:                                        specification.ID,
-		SpecificationSupplier:                     specification.SpecificationSupplier,
-		SpecificationBrand:                        specification.SpecificationBrand,
-		SpecificationType:                         specification.SpecificationType,
-		AdditionalInfoMotorValve:                  specification.AdditionalInfoMotorValve,
-		AdditionalInfoSize:                        specification.AdditionalInfoSize,
+		ID:                       specification.ID,
+		SpecificationSupplier:    specification.SpecificationSupplier,
+		SpecificationBrand:       specification.SpecificationBrand,
+		SpecificationType:        specification.SpecificationType,
+		AdditionalInfoMotorValve: specification.AdditionalInfoMotorValve,
+		AdditionalInfoSize:       specification.AdditionalInfoSize,
 		AdditionalInformationInstallationLocation: specification.AdditionalInformationInstallationLocation,
 		ElectricalConnectionPH:                    specification.ElectricalConnectionPH,
 		ElectricalConnectionACDC:                  specification.ElectricalConnectionACDC,
@@ -186,12 +186,12 @@ func (h *SpecificationHandler) ListSpecifications(c *gin.Context) {
 	items := make([]dto.SpecificationResponse, len(result.Items))
 	for i, specification := range result.Items {
 		items[i] = dto.SpecificationResponse{
-			ID:                                        specification.ID,
-			SpecificationSupplier:                     specification.SpecificationSupplier,
-			SpecificationBrand:                        specification.SpecificationBrand,
-			SpecificationType:                         specification.SpecificationType,
-			AdditionalInfoMotorValve:                  specification.AdditionalInfoMotorValve,
-			AdditionalInfoSize:                        specification.AdditionalInfoSize,
+			ID:                       specification.ID,
+			SpecificationSupplier:    specification.SpecificationSupplier,
+			SpecificationBrand:       specification.SpecificationBrand,
+			SpecificationType:        specification.SpecificationType,
+			AdditionalInfoMotorValve: specification.AdditionalInfoMotorValve,
+			AdditionalInfoSize:       specification.AdditionalInfoSize,
 			AdditionalInformationInstallationLocation: specification.AdditionalInformationInstallationLocation,
 			ElectricalConnectionPH:                    specification.ElectricalConnectionPH,
 			ElectricalConnectionACDC:                  specification.ElectricalConnectionACDC,
@@ -306,12 +306,12 @@ func (h *SpecificationHandler) UpdateSpecification(c *gin.Context) {
 	}
 
 	response := dto.SpecificationResponse{
-		ID:                                        specification.ID,
-		SpecificationSupplier:                     specification.SpecificationSupplier,
-		SpecificationBrand:                        specification.SpecificationBrand,
-		SpecificationType:                         specification.SpecificationType,
-		AdditionalInfoMotorValve:                  specification.AdditionalInfoMotorValve,
-		AdditionalInfoSize:                        specification.AdditionalInfoSize,
+		ID:                       specification.ID,
+		SpecificationSupplier:    specification.SpecificationSupplier,
+		SpecificationBrand:       specification.SpecificationBrand,
+		SpecificationType:        specification.SpecificationType,
+		AdditionalInfoMotorValve: specification.AdditionalInfoMotorValve,
+		AdditionalInfoSize:       specification.AdditionalInfoSize,
 		AdditionalInformationInstallationLocation: specification.AdditionalInformationInstallationLocation,
 		ElectricalConnectionPH:                    specification.ElectricalConnectionPH,
 		ElectricalConnectionACDC:                  specification.ElectricalConnectionACDC,

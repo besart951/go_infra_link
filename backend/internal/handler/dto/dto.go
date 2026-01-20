@@ -19,11 +19,11 @@ type CreateProjectRequest struct {
 }
 
 type UpdateProjectRequest struct {
-	Name        string            `json:"name" binding:"omitempty,min=1,max=255"`
-	Description string            `json:"description"`
+	Name        string                `json:"name" binding:"omitempty,min=1,max=255"`
+	Description string                `json:"description"`
 	Status      project.ProjectStatus `json:"status" binding:"omitempty,oneof=planned ongoing completed"`
-	StartDate   *time.Time        `json:"start_date"`
-	PhaseID     *uuid.UUID        `json:"phase_id"`
+	StartDate   *time.Time            `json:"start_date"`
+	PhaseID     *uuid.UUID            `json:"phase_id"`
 }
 
 type ProjectResponse struct {
@@ -48,11 +48,11 @@ type ProjectListResponse struct {
 // User DTOs
 
 type CreateUserRequest struct {
-	FirstName string     `json:"first_name" binding:"required,min=1,max=100"`
-	LastName  string     `json:"last_name" binding:"required,min=1,max=100"`
-	Email     string     `json:"email" binding:"required,email"`
-	Password  string     `json:"password" binding:"required,min=8"`
-	IsActive  bool       `json:"is_active"`
+	FirstName   string     `json:"first_name" binding:"required,min=1,max=100"`
+	LastName    string     `json:"last_name" binding:"required,min=1,max=100"`
+	Email       string     `json:"email" binding:"required,email"`
+	Password    string     `json:"password" binding:"required,min=8"`
+	IsActive    bool       `json:"is_active"`
 	CreatedByID *uuid.UUID `json:"created_by_id"`
 }
 
