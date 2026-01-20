@@ -23,15 +23,21 @@ type AuthHandler struct {
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
 	cookieSettings  CookieSettings
+	devAuthEnabled  bool
+	devAuthEmail    string
+	devAuthPassword string
 }
 
-func NewAuthHandler(service AuthService, userService UserService, accessTokenTTL, refreshTokenTTL time.Duration, cookieSettings CookieSettings) *AuthHandler {
+func NewAuthHandler(service AuthService, userService UserService, accessTokenTTL, refreshTokenTTL time.Duration, cookieSettings CookieSettings, devAuthEnabled bool, devAuthEmail, devAuthPassword string) *AuthHandler {
 	return &AuthHandler{
 		service:         service,
 		userService:     userService,
 		accessTokenTTL:  accessTokenTTL,
 		refreshTokenTTL: refreshTokenTTL,
 		cookieSettings:  cookieSettings,
+		devAuthEnabled:  devAuthEnabled,
+		devAuthEmail:    devAuthEmail,
+		devAuthPassword: devAuthPassword,
 	}
 }
 
@@ -60,6 +66,49 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	ip := c.ClientIP()
 
 	result, err := h.service.Login(req.Email, req.Password, &userAgent, &ip)
+	if err != nil {
+		if err == domainAuth.ErrInvalidCredentials {
+			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "invalid_credentials"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "login_failed", Message: err.Error()})
+		return
+	}
+
+	h.setAuthCookies(c, result)
+
+	c.JSON(http.StatusOK, dto.AuthResponse{
+		User: dto.AuthUserResponse{
+			ID:        result.User.ID,
+			FirstName: result.User.FirstName,
+			LastName:  result.User.LastName,
+			Email:     result.User.Email,
+			IsActive:  result.User.IsActive,
+		},
+		AccessTokenExpiresAt:  result.AccessTokenExpiry,
+		RefreshTokenExpiresAt: result.RefreshTokenExpiry,
+		CsrfToken:             result.CSRFFriendlyToken,
+	})
+}
+
+// DevLogin godoc
+// @Summary Dev login (no credentials)
+// @Tags auth
+// @Produce json
+// @Success 200 {object} dto.AuthResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/auth/dev-login [post]
+func (h *AuthHandler) DevLogin(c *gin.Context) {
+	if !h.devAuthEnabled || h.devAuthEmail == "" || h.devAuthPassword == "" {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found"})
+		return
+	}
+
+	userAgent := c.GetHeader("User-Agent")
+	ip := c.ClientIP()
+
+	result, err := h.service.Login(h.devAuthEmail, h.devAuthPassword, &userAgent, &ip)
 	if err != nil {
 		if err == domainAuth.ErrInvalidCredentials {
 			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "invalid_credentials"})

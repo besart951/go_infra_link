@@ -18,6 +18,9 @@ type Config struct {
 	RefreshTokenTTL   time.Duration
 	CookieDomain      string
 	CookieSecure      bool
+	DevAuthEnabled    bool
+	DevAuthEmail      string
+	DevAuthPassword   string
 	DBDriver          string
 	DBDsn             string
 	DBMaxOpenConns    int
@@ -40,6 +43,7 @@ func Load() Config {
 	accessTokenTTL, _ := time.ParseDuration(getEnv("ACCESS_TOKEN_TTL", "15m"))
 	refreshTokenTTL, _ := time.ParseDuration(getEnv("REFRESH_TOKEN_TTL", "720h"))
 	cookieSecure, _ := strconv.ParseBool(getEnv("COOKIE_SECURE", "false"))
+	devAuthEnabled, _ := strconv.ParseBool(getEnv("DEV_AUTH_ENABLED", "false"))
 
 	dbDriver := normalizeDriver(getEnvFirst("sqlite", "DB_DRIVER"))
 	// Prefer DATABASE_URL if present (common convention), else DB_DSN.
@@ -59,6 +63,9 @@ func Load() Config {
 		RefreshTokenTTL:   refreshTokenTTL,
 		CookieDomain:      getEnv("COOKIE_DOMAIN", ""),
 		CookieSecure:      cookieSecure,
+		DevAuthEnabled:    devAuthEnabled,
+		DevAuthEmail:      getEnv("DEV_AUTH_EMAIL", ""),
+		DevAuthPassword:   getEnv("DEV_AUTH_PASSWORD", ""),
 		DBDriver:          dbDriver,
 		DBDsn:             dbDsn,
 		DBMaxOpenConns:    maxOpen,

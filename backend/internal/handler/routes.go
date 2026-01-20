@@ -14,11 +14,29 @@ type Handlers struct {
 
 // RegisterRoutes registers all API routes
 func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTService) {
-	// API v1 group
-	v1 := r.Group("/api/v1")
+	// Public API v1 group (login only)
+	publicV1 := r.Group("/api/v1")
+	publicAuth := publicV1.Group("/auth")
+	{
+		publicAuth.POST("/login", handlers.AuthHandler.Login)
+		publicAuth.POST("/dev-login", handlers.AuthHandler.DevLogin)
+	}
+
+	// CSRF-protected auth endpoints (no access token required)
+	authCsrf := publicV1.Group("/auth")
+	authCsrf.Use(middleware.CSRFMiddleware())
+	{
+		authCsrf.POST("/refresh", handlers.AuthHandler.Refresh)
+		authCsrf.POST("/logout", handlers.AuthHandler.Logout)
+	}
+
+	// Protected API v1 group (all other routes)
+	protectedV1 := r.Group("/api/v1")
+	protectedV1.Use(middleware.AuthGuard(jwtService))
+	protectedV1.Use(middleware.CSRFMiddleware())
 
 	// Project routes
-	projects := v1.Group("/projects")
+	projects := protectedV1.Group("/projects")
 	{
 		projects.POST("", handlers.ProjectHandler.CreateProject)
 		projects.GET("", handlers.ProjectHandler.ListProjects)
@@ -28,7 +46,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 	}
 
 	// User routes
-	users := v1.Group("/users")
+	users := protectedV1.Group("/users")
 	{
 		users.POST("", handlers.UserHandler.CreateUser)
 		users.GET("", handlers.UserHandler.ListUsers)
@@ -37,22 +55,9 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 		users.DELETE("/:id", handlers.UserHandler.DeleteUser)
 	}
 
-	// Auth routes
-	auth := v1.Group("/auth")
-	{
-		auth.POST("/login", handlers.AuthHandler.Login)
-	}
-
-	authProtected := v1.Group("/auth")
-	authProtected.Use(middleware.AuthGuard(jwtService))
+	// Auth routes (protected)
+	authProtected := protectedV1.Group("/auth")
 	{
 		authProtected.GET("/me", handlers.AuthHandler.Me)
-	}
-
-	authCsrf := v1.Group("/auth")
-	authCsrf.Use(middleware.CSRFMiddleware())
-	{
-		authCsrf.POST("/refresh", handlers.AuthHandler.Refresh)
-		authCsrf.POST("/logout", handlers.AuthHandler.Logout)
 	}
 }

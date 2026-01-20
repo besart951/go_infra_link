@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "go_infra_link",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

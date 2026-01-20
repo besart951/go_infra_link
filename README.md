@@ -51,3 +51,7 @@ This project follows **Clean/Hexagonal Architecture** principles:
 ## License
 
 See [LICENSE](LICENSE) for details.
+
+
+CSRF-Token
+Invoke-RestMethod -Method POST -Uri "http://localhost:8080/api/v1/auth/login" -ContentType "application/json" -Body '{"email":"besart_morina@hotmail.com","password":"password"}' -SessionVariable s | Select-Object -ExpandProperty csrf_token

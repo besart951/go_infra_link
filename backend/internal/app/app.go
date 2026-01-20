@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
 	"github.com/besart951/go_infra_link/backend/internal/handler"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/repository/auth"
 	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
 	userrepo "github.com/besart951/go_infra_link/backend/internal/repository/user"
@@ -38,6 +39,11 @@ func Run() error {
 	projRepo := projectrepo.NewProjectRepository(database)
 	usrRepo := userrepo.NewUserRepository(database)
 	refreshTokenRepo := auth.NewRefreshTokenRepository(database)
+	userEmailRepo, ok := usrRepo.(domainUser.UserEmailRepository)
+	if !ok {
+		log.Error("User repository does not implement email lookup")
+		return fmt.Errorf("user repository missing GetByEmail")
+	}
 
 	// Initialize services
 	projService := projectservice.New(projRepo)
@@ -47,7 +53,7 @@ func Run() error {
 	authService := authservice.NewService(
 		jwtService,
 		usrRepo,
-		usrRepo,
+		userEmailRepo,
 		refreshTokenRepo,
 		passwordService,
 		cfg.AccessTokenTTL,
@@ -69,7 +75,7 @@ func Run() error {
 	handlers := &handler.Handlers{
 		ProjectHandler: handler.NewProjectHandler(projService),
 		UserHandler:    handler.NewUserHandler(usrService),
-		AuthHandler:    handler.NewAuthHandler(authService, usrService, cfg.AccessTokenTTL, cfg.RefreshTokenTTL, cookieSettings),
+		AuthHandler:    handler.NewAuthHandler(authService, usrService, cfg.AccessTokenTTL, cfg.RefreshTokenTTL, cookieSettings, cfg.DevAuthEnabled, cfg.DevAuthEmail, cfg.DevAuthPassword),
 	}
 
 	// Setup Gin router

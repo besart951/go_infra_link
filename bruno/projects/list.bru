@@ -1,0 +1,11 @@
+meta {
+  name: List Projects
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{baseUrl}}/api/v1/projects?page=1&limit=10
+  body: none
+  auth: none
+}

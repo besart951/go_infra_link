@@ -1,0 +1,11 @@
+meta {
+  name: List Users
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users?page=1&limit=10
+  body: none
+  auth: none
+}

@@ -1,0 +1,22 @@
+meta {
+  name: Refresh
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/refresh
+  body: none
+  auth: none
+}
+
+headers {
+  X-CSRF-Token: {{csrf_token}}
+}
+
+script:post-response {
+  const data = res.body;
+  if (data && data.csrf_token) {
+    bru.setVar('csrf_token', data.csrf_token);
+  }
+}
