@@ -8,6 +8,7 @@ import (
 	userService "github.com/besart951/go_infra_link/backend/internal/service/user"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserHandler struct {
@@ -38,11 +39,21 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "password_hashing_failed",
+			Message: "Failed to hash password",
+		})
+		return
+	}
+
 	usr := &user.User{
 		FirstName:   req.FirstName,
 		LastName:    req.LastName,
 		Email:       req.Email,
-		Password:    req.Password, // TODO: Hash password before storing
+		Password:    string(hashedPassword),
 		IsActive:    req.IsActive,
 		CreatedByID: req.CreatedByID,
 	}
@@ -238,7 +249,16 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		usr.Email = req.Email
 	}
 	if req.Password != "" {
-		usr.Password = req.Password // TODO: Hash password before storing
+		// Hash the password before updating
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+				Error:   "password_hashing_failed",
+				Message: "Failed to hash password",
+			})
+			return
+		}
+		usr.Password = string(hashedPassword)
 	}
 	if req.IsActive != nil {
 		usr.IsActive = *req.IsActive
