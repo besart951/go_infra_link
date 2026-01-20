@@ -17,7 +17,7 @@ func Paginate[T any](db *gorm.DB, params domain.PaginationParams, searchFields [
 	if params.Search != "" && len(searchFields) > 0 {
 		// Detect database type
 		dialector := db.Dialector.Name()
-		
+
 		var searchQuery *gorm.DB
 		for i, field := range searchFields {
 			searchPattern := "%" + params.Search + "%"
