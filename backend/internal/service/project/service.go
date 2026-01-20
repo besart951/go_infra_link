@@ -14,17 +14,31 @@ func New(repo domainProject.ProjectRepository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) Create(name string, creatorID uuid.UUID) (*domainProject.Project, error) {
-	proj := &domainProject.Project{
-		Name:      name,
-		CreatorID: creatorID,
-		Status:    domainProject.StatusPlanned,
-	}
+func (s *Service) Create(project *domainProject.Project) error {
+	return s.repo.Create(project)
+}
 
-	if err := s.repo.Create(proj); err != nil {
+func (s *Service) GetByIds(ids []uuid.UUID) ([]*domainProject.Project, error) {
+	return s.repo.GetByIds(ids)
+}
+
+func (s *Service) GetById(id uuid.UUID) (*domainProject.Project, error) {
+	projects, err := s.repo.GetByIds([]uuid.UUID{id})
+	if err != nil {
 		return nil, err
 	}
-	return proj, nil
+	if len(projects) == 0 {
+		return nil, nil
+	}
+	return projects[0], nil
+}
+
+func (s *Service) Update(project *domainProject.Project) error {
+	return s.repo.Update(project)
+}
+
+func (s *Service) DeleteByIds(ids []uuid.UUID) error {
+	return s.repo.DeleteByIds(ids)
 }
 
 func (s *Service) List(page, limit int, search string) (*domain.PaginatedList[domainProject.Project], error) {

@@ -13,17 +13,32 @@ func Paginate[T any](db *gorm.DB, params domain.PaginationParams, searchFields [
 
 	query := db.Model(new(T))
 
-	// Global Search
+	// Global Search - use LIKE for SQLite compatibility, ILIKE for PostgreSQL
 	if params.Search != "" && len(searchFields) > 0 {
-		searchQuery := db
+		// Detect database type
+		dialector := db.Dialector.Name()
+		
+		var searchQuery *gorm.DB
 		for i, field := range searchFields {
-			if i == 0 {
-				searchQuery = searchQuery.Where(field+" ILIKE ?", "%"+params.Search+"%")
+			searchPattern := "%" + params.Search + "%"
+			if dialector == "postgres" {
+				if i == 0 {
+					searchQuery = db.Where(field+" ILIKE ?", searchPattern)
+				} else {
+					searchQuery = searchQuery.Or(field+" ILIKE ?", searchPattern)
+				}
 			} else {
-				searchQuery = searchQuery.Or(field+" ILIKE ?", "%"+params.Search+"%")
+				// SQLite and others use LIKE (case-insensitive by default in SQLite)
+				if i == 0 {
+					searchQuery = db.Where(field+" LIKE ?", searchPattern)
+				} else {
+					searchQuery = searchQuery.Or(field+" LIKE ?", searchPattern)
+				}
 			}
 		}
-		query = query.Where(searchQuery)
+		if searchQuery != nil {
+			query = query.Where(searchQuery)
+		}
 	}
 
 	// Count Total
