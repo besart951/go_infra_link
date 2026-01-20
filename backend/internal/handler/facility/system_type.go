@@ -3,19 +3,17 @@ package facility
 import (
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
-	facilityService "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type SystemTypeHandler struct {
-	service *facilityService.Service
+	service SystemTypeService
 }
 
-func NewSystemTypeHandler(service *facilityService.Service) *SystemTypeHandler {
+func NewSystemTypeHandler(service SystemTypeService) *SystemTypeHandler {
 	return &SystemTypeHandler{service: service}
 }
 
@@ -45,7 +43,7 @@ func (h *SystemTypeHandler) CreateSystemType(c *gin.Context) {
 		Name:      req.Name,
 	}
 
-	if err := h.service.SystemTypes.Create(systemType); err != nil {
+	if err := h.service.Create(systemType); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -86,7 +84,7 @@ func (h *SystemTypeHandler) GetSystemType(c *gin.Context) {
 		return
 	}
 
-	systemTypes, err := h.service.SystemTypes.GetByIds([]uuid.UUID{id})
+	systemType, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -95,7 +93,7 @@ func (h *SystemTypeHandler) GetSystemType(c *gin.Context) {
 		return
 	}
 
-	if len(systemTypes) == 0 {
+	if systemType == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "System Type not found",
@@ -103,7 +101,6 @@ func (h *SystemTypeHandler) GetSystemType(c *gin.Context) {
 		return
 	}
 
-	systemType := systemTypes[0]
 	response := dto.SystemTypeResponse{
 		ID:        systemType.ID,
 		NumberMin: systemType.NumberMin,
@@ -137,20 +134,7 @@ func (h *SystemTypeHandler) ListSystemTypes(c *gin.Context) {
 		return
 	}
 
-	if query.Page == 0 {
-		query.Page = 1
-	}
-	if query.Limit == 0 {
-		query.Limit = 10
-	}
-
-	params := domain.PaginationParams{
-		Page:   query.Page,
-		Limit:  query.Limit,
-		Search: query.Search,
-	}
-
-	result, err := h.service.SystemTypes.GetPaginatedList(params)
+	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -213,7 +197,7 @@ func (h *SystemTypeHandler) UpdateSystemType(c *gin.Context) {
 		return
 	}
 
-	systemTypes, err := h.service.SystemTypes.GetByIds([]uuid.UUID{id})
+	systemType, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -222,7 +206,7 @@ func (h *SystemTypeHandler) UpdateSystemType(c *gin.Context) {
 		return
 	}
 
-	if len(systemTypes) == 0 {
+	if systemType == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "System Type not found",
@@ -230,7 +214,6 @@ func (h *SystemTypeHandler) UpdateSystemType(c *gin.Context) {
 		return
 	}
 
-	systemType := systemTypes[0]
 	if req.NumberMin != 0 {
 		systemType.NumberMin = req.NumberMin
 	}
@@ -241,7 +224,7 @@ func (h *SystemTypeHandler) UpdateSystemType(c *gin.Context) {
 		systemType.Name = req.Name
 	}
 
-	if err := h.service.SystemTypes.Update(systemType); err != nil {
+	if err := h.service.Update(systemType); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "update_failed",
 			Message: err.Error(),
@@ -281,7 +264,7 @@ func (h *SystemTypeHandler) DeleteSystemType(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.SystemTypes.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "deletion_failed",
 			Message: err.Error(),

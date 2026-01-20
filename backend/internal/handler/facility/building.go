@@ -3,19 +3,17 @@ package facility
 import (
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
-	facilityService "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type BuildingHandler struct {
-	service *facilityService.Service
+	service BuildingService
 }
 
-func NewBuildingHandler(service *facilityService.Service) *BuildingHandler {
+func NewBuildingHandler(service BuildingService) *BuildingHandler {
 	return &BuildingHandler{service: service}
 }
 
@@ -44,7 +42,7 @@ func (h *BuildingHandler) CreateBuilding(c *gin.Context) {
 		BuildingGroup: req.BuildingGroup,
 	}
 
-	if err := h.service.Buildings.Create(building); err != nil {
+	if err := h.service.Create(building); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -84,7 +82,7 @@ func (h *BuildingHandler) GetBuilding(c *gin.Context) {
 		return
 	}
 
-	buildings, err := h.service.Buildings.GetByIds([]uuid.UUID{id})
+	building, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -93,7 +91,7 @@ func (h *BuildingHandler) GetBuilding(c *gin.Context) {
 		return
 	}
 
-	if len(buildings) == 0 {
+	if building == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "Building not found",
@@ -101,7 +99,6 @@ func (h *BuildingHandler) GetBuilding(c *gin.Context) {
 		return
 	}
 
-	building := buildings[0]
 	response := dto.BuildingResponse{
 		ID:            building.ID,
 		IWSCode:       building.IWSCode,
@@ -134,20 +131,7 @@ func (h *BuildingHandler) ListBuildings(c *gin.Context) {
 		return
 	}
 
-	if query.Page == 0 {
-		query.Page = 1
-	}
-	if query.Limit == 0 {
-		query.Limit = 10
-	}
-
-	params := domain.PaginationParams{
-		Page:   query.Page,
-		Limit:  query.Limit,
-		Search: query.Search,
-	}
-
-	result, err := h.service.Buildings.GetPaginatedList(params)
+	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -209,7 +193,7 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 		return
 	}
 
-	buildings, err := h.service.Buildings.GetByIds([]uuid.UUID{id})
+	building, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -218,7 +202,7 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 		return
 	}
 
-	if len(buildings) == 0 {
+	if building == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "Building not found",
@@ -226,7 +210,6 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 		return
 	}
 
-	building := buildings[0]
 	if req.IWSCode != "" {
 		building.IWSCode = req.IWSCode
 	}
@@ -234,7 +217,7 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 		building.BuildingGroup = req.BuildingGroup
 	}
 
-	if err := h.service.Buildings.Update(building); err != nil {
+	if err := h.service.Update(building); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "update_failed",
 			Message: err.Error(),
@@ -273,7 +256,7 @@ func (h *BuildingHandler) DeleteBuilding(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Buildings.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "deletion_failed",
 			Message: err.Error(),

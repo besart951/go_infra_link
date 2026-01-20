@@ -5,16 +5,15 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
-	projectService "github.com/besart951/go_infra_link/backend/internal/service/project"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type ProjectHandler struct {
-	service *projectService.Service
+	service ProjectService
 }
 
-func NewProjectHandler(service *projectService.Service) *ProjectHandler {
+func NewProjectHandler(service ProjectService) *ProjectHandler {
 	return &ProjectHandler{service: service}
 }
 
@@ -38,15 +37,10 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 		return
 	}
 
-	status := project.StatusPlanned
-	if req.Status != "" {
-		status = project.ProjectStatus(req.Status)
-	}
-
 	proj := &project.Project{
 		Name:        req.Name,
 		Description: req.Description,
-		Status:      status,
+		Status:      project.ProjectStatus(req.Status),
 		StartDate:   req.StartDate,
 		CreatorID:   req.CreatorID,
 	}
@@ -150,13 +144,6 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 			Message: err.Error(),
 		})
 		return
-	}
-
-	if query.Page == 0 {
-		query.Page = 1
-	}
-	if query.Limit == 0 {
-		query.Limit = 10
 	}
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)

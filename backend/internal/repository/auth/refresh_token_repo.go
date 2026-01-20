@@ -1,0 +1,39 @@
+package auth
+
+import (
+	"time"
+
+	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
+	"gorm.io/gorm"
+)
+
+type refreshTokenRepo struct {
+	db *gorm.DB
+}
+
+func NewRefreshTokenRepository(db *gorm.DB) domainAuth.RefreshTokenRepository {
+	return &refreshTokenRepo{db: db}
+}
+
+func (r *refreshTokenRepo) Create(token *domainAuth.RefreshToken) error {
+	return r.db.Create(token).Error
+}
+
+func (r *refreshTokenRepo) GetByTokenHash(tokenHash string) (*domainAuth.RefreshToken, error) {
+	var token domainAuth.RefreshToken
+	err := r.db.Where("token_hash = ?", tokenHash).First(&token).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	return &token, err
+}
+
+func (r *refreshTokenRepo) RevokeByTokenHash(tokenHash string, revokedAt time.Time) error {
+	return r.db.Model(&domainAuth.RefreshToken{}).
+		Where("token_hash = ?", tokenHash).
+		Update("revoked_at", revokedAt).Error
+}
+
+func (r *refreshTokenRepo) DeleteExpired(before time.Time) error {
+	return r.db.Where("expires_at <= ?", before).Delete(&domainAuth.RefreshToken{}).Error
+}

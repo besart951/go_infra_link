@@ -23,6 +23,15 @@ func (r *userRepo) GetByIds(ids []uuid.UUID) ([]*domainUser.User, error) {
 	return users, err
 }
 
+func (r *userRepo) GetByEmail(email string) (*domainUser.User, error) {
+	var usr domainUser.User
+	err := r.db.Preload("CreatedBy").Preload("BusinessDetails").Where("email = ?", email).First(&usr).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	return &usr, err
+}
+
 func (r *userRepo) Create(entity *domainUser.User) error {
 	return r.db.Create(entity).Error
 }

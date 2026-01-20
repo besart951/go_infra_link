@@ -3,19 +3,17 @@ package facility
 import (
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
-	facilityService "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type SystemPartHandler struct {
-	service *facilityService.Service
+	service SystemPartService
 }
 
-func NewSystemPartHandler(service *facilityService.Service) *SystemPartHandler {
+func NewSystemPartHandler(service SystemPartService) *SystemPartHandler {
 	return &SystemPartHandler{service: service}
 }
 
@@ -45,7 +43,7 @@ func (h *SystemPartHandler) CreateSystemPart(c *gin.Context) {
 		Description: req.Description,
 	}
 
-	if err := h.service.SystemParts.Create(systemPart); err != nil {
+	if err := h.service.Create(systemPart); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -86,7 +84,7 @@ func (h *SystemPartHandler) GetSystemPart(c *gin.Context) {
 		return
 	}
 
-	systemParts, err := h.service.SystemParts.GetByIds([]uuid.UUID{id})
+	systemPart, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -95,7 +93,7 @@ func (h *SystemPartHandler) GetSystemPart(c *gin.Context) {
 		return
 	}
 
-	if len(systemParts) == 0 {
+	if systemPart == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "System Part not found",
@@ -103,7 +101,6 @@ func (h *SystemPartHandler) GetSystemPart(c *gin.Context) {
 		return
 	}
 
-	systemPart := systemParts[0]
 	response := dto.SystemPartResponse{
 		ID:          systemPart.ID,
 		ShortName:   systemPart.ShortName,
@@ -137,20 +134,7 @@ func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
 		return
 	}
 
-	if query.Page == 0 {
-		query.Page = 1
-	}
-	if query.Limit == 0 {
-		query.Limit = 10
-	}
-
-	params := domain.PaginationParams{
-		Page:   query.Page,
-		Limit:  query.Limit,
-		Search: query.Search,
-	}
-
-	result, err := h.service.SystemParts.GetPaginatedList(params)
+	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -213,7 +197,7 @@ func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
 		return
 	}
 
-	systemParts, err := h.service.SystemParts.GetByIds([]uuid.UUID{id})
+	systemPart, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -222,7 +206,7 @@ func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
 		return
 	}
 
-	if len(systemParts) == 0 {
+	if systemPart == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "System Part not found",
@@ -230,7 +214,6 @@ func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
 		return
 	}
 
-	systemPart := systemParts[0]
 	if req.ShortName != "" {
 		systemPart.ShortName = req.ShortName
 	}
@@ -241,7 +224,7 @@ func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
 		systemPart.Description = req.Description
 	}
 
-	if err := h.service.SystemParts.Update(systemPart); err != nil {
+	if err := h.service.Update(systemPart); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "update_failed",
 			Message: err.Error(),
@@ -281,7 +264,7 @@ func (h *SystemPartHandler) DeleteSystemPart(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.SystemParts.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "deletion_failed",
 			Message: err.Error(),

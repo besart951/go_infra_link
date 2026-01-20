@@ -3,19 +3,17 @@ package facility
 import (
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
-	facilityService "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type FieldDeviceHandler struct {
-	service *facilityService.Service
+	service FieldDeviceService
 }
 
-func NewFieldDeviceHandler(service *facilityService.Service) *FieldDeviceHandler {
+func NewFieldDeviceHandler(service FieldDeviceService) *FieldDeviceHandler {
 	return &FieldDeviceHandler{service: service}
 }
 
@@ -50,7 +48,7 @@ func (h *FieldDeviceHandler) CreateFieldDevice(c *gin.Context) {
 		ApparatID:                 req.ApparatID,
 	}
 
-	if err := h.service.FieldDevices.Create(fieldDevice); err != nil {
+	if err := h.service.Create(fieldDevice); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -96,7 +94,7 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 		return
 	}
 
-	fieldDevices, err := h.service.FieldDevices.GetByIds([]uuid.UUID{id})
+	fieldDevice, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -105,7 +103,7 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 		return
 	}
 
-	if len(fieldDevices) == 0 {
+	if fieldDevice == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "Field Device not found",
@@ -113,7 +111,6 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 		return
 	}
 
-	fieldDevice := fieldDevices[0]
 	response := dto.FieldDeviceResponse{
 		ID:                        fieldDevice.ID,
 		BMK:                       fieldDevice.BMK,
@@ -152,20 +149,7 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 		return
 	}
 
-	if query.Page == 0 {
-		query.Page = 1
-	}
-	if query.Limit == 0 {
-		query.Limit = 10
-	}
-
-	params := domain.PaginationParams{
-		Page:   query.Page,
-		Limit:  query.Limit,
-		Search: query.Search,
-	}
-
-	result, err := h.service.FieldDevices.GetPaginatedList(params)
+	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -233,7 +217,7 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		return
 	}
 
-	fieldDevices, err := h.service.FieldDevices.GetByIds([]uuid.UUID{id})
+	fieldDevice, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -242,7 +226,7 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		return
 	}
 
-	if len(fieldDevices) == 0 {
+	if fieldDevice == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "Field Device not found",
@@ -250,7 +234,6 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		return
 	}
 
-	fieldDevice := fieldDevices[0]
 	if req.BMK != nil {
 		fieldDevice.BMK = req.BMK
 	}
@@ -276,7 +259,7 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		fieldDevice.ApparatID = req.ApparatID
 	}
 
-	if err := h.service.FieldDevices.Update(fieldDevice); err != nil {
+	if err := h.service.Update(fieldDevice); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "update_failed",
 			Message: err.Error(),
@@ -321,7 +304,7 @@ func (h *FieldDeviceHandler) DeleteFieldDevice(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.FieldDevices.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "deletion_failed",
 			Message: err.Error(),

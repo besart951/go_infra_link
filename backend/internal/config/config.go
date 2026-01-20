@@ -13,6 +13,11 @@ type Config struct {
 	AppEnv            string
 	LogLevel          string
 	HTTPAddr          string
+	JWTSecret         string
+	AccessTokenTTL    time.Duration
+	RefreshTokenTTL   time.Duration
+	CookieDomain      string
+	CookieSecure      bool
 	DBDriver          string
 	DBDsn             string
 	DBMaxOpenConns    int
@@ -32,6 +37,9 @@ func Load() Config {
 	maxIdle, _ := strconv.Atoi(getEnv("DB_MAX_IDLE_CONNS", "5"))
 	connMaxLifetime, _ := time.ParseDuration(getEnv("DB_CONN_MAX_LIFETIME", "1h"))
 	connectTimeout, _ := time.ParseDuration(getEnv("DB_CONNECT_TIMEOUT", "5s"))
+	accessTokenTTL, _ := time.ParseDuration(getEnv("ACCESS_TOKEN_TTL", "15m"))
+	refreshTokenTTL, _ := time.ParseDuration(getEnv("REFRESH_TOKEN_TTL", "720h"))
+	cookieSecure, _ := strconv.ParseBool(getEnv("COOKIE_SECURE", "false"))
 
 	dbDriver := normalizeDriver(getEnvFirst("sqlite", "DB_DRIVER"))
 	// Prefer DATABASE_URL if present (common convention), else DB_DSN.
@@ -46,6 +54,11 @@ func Load() Config {
 		AppEnv:            getEnvFirst("development", "APP_ENV", "ENV"),
 		LogLevel:          getEnvFirst("info", "APP_LOG_LEVEL", "LOG_LEVEL"),
 		HTTPAddr:          getEnv("HTTP_ADDR", ":8080"),
+		JWTSecret:         getEnv("JWT_SECRET", "change-me"),
+		AccessTokenTTL:    accessTokenTTL,
+		RefreshTokenTTL:   refreshTokenTTL,
+		CookieDomain:      getEnv("COOKIE_DOMAIN", ""),
+		CookieSecure:      cookieSecure,
 		DBDriver:          dbDriver,
 		DBDsn:             dbDsn,
 		DBMaxOpenConns:    maxOpen,

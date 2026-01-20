@@ -3,19 +3,17 @@ package facility
 import (
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
-	facilityService "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type SPSControllerHandler struct {
-	service *facilityService.Service
+	service SPSControllerService
 }
 
-func NewSPSControllerHandler(service *facilityService.Service) *SPSControllerHandler {
+func NewSPSControllerHandler(service SPSControllerService) *SPSControllerHandler {
 	return &SPSControllerHandler{service: service}
 }
 
@@ -52,7 +50,7 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 		Vlan:              req.Vlan,
 	}
 
-	if err := h.service.SPSControllers.Create(spsController); err != nil {
+	if err := h.service.Create(spsController); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -100,7 +98,7 @@ func (h *SPSControllerHandler) GetSPSController(c *gin.Context) {
 		return
 	}
 
-	spsControllers, err := h.service.SPSControllers.GetByIds([]uuid.UUID{id})
+	spsController, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -109,7 +107,7 @@ func (h *SPSControllerHandler) GetSPSController(c *gin.Context) {
 		return
 	}
 
-	if len(spsControllers) == 0 {
+	if spsController == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "SPS Controller not found",
@@ -117,7 +115,6 @@ func (h *SPSControllerHandler) GetSPSController(c *gin.Context) {
 		return
 	}
 
-	spsController := spsControllers[0]
 	response := dto.SPSControllerResponse{
 		ID:                spsController.ID,
 		ControlCabinetID:  spsController.ControlCabinetID,
@@ -158,20 +155,7 @@ func (h *SPSControllerHandler) ListSPSControllers(c *gin.Context) {
 		return
 	}
 
-	if query.Page == 0 {
-		query.Page = 1
-	}
-	if query.Limit == 0 {
-		query.Limit = 10
-	}
-
-	params := domain.PaginationParams{
-		Page:   query.Page,
-		Limit:  query.Limit,
-		Search: query.Search,
-	}
-
-	result, err := h.service.SPSControllers.GetPaginatedList(params)
+	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -241,7 +225,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		return
 	}
 
-	spsControllers, err := h.service.SPSControllers.GetByIds([]uuid.UUID{id})
+	spsController, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -250,7 +234,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		return
 	}
 
-	if len(spsControllers) == 0 {
+	if spsController == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "SPS Controller not found",
@@ -258,7 +242,6 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		return
 	}
 
-	spsController := spsControllers[0]
 	if req.ControlCabinetID != uuid.Nil {
 		spsController.ControlCabinetID = req.ControlCabinetID
 	}
@@ -290,7 +273,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		spsController.Vlan = req.Vlan
 	}
 
-	if err := h.service.SPSControllers.Update(spsController); err != nil {
+	if err := h.service.Update(spsController); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "update_failed",
 			Message: err.Error(),
@@ -337,7 +320,7 @@ func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.SPSControllers.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "deletion_failed",
 			Message: err.Error(),

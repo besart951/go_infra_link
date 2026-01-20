@@ -15,6 +15,10 @@ func New(repo domainProject.ProjectRepository) *Service {
 }
 
 func (s *Service) Create(project *domainProject.Project) error {
+	if project.Status == "" {
+		project.Status = domainProject.StatusPlanned
+	}
+
 	return s.repo.Create(project)
 }
 
@@ -42,9 +46,21 @@ func (s *Service) DeleteByIds(ids []uuid.UUID) error {
 }
 
 func (s *Service) List(page, limit int, search string) (*domain.PaginatedList[domainProject.Project], error) {
+	page, limit = normalizePagination(page, limit)
 	return s.repo.GetPaginatedList(domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,
 		Search: search,
 	})
+}
+
+func normalizePagination(page, limit int) (int, int) {
+	if page == 0 {
+		page = 1
+	}
+	if limit == 0 {
+		limit = 10
+	}
+
+	return page, limit
 }

@@ -3,18 +3,34 @@ package user
 import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
 	"github.com/google/uuid"
 )
 
 type Service struct {
-	repo domainUser.UserRepository
+	repo        domainUser.UserRepository
+	passwordSvc passwordsvc.Service
 }
 
 func New(repo domainUser.UserRepository) *Service {
-	return &Service{repo: repo}
+	return &Service{repo: repo, passwordSvc: passwordsvc.New()}
+}
+
+func NewWithPasswordService(repo domainUser.UserRepository, passwordSvc passwordsvc.Service) *Service {
+	return &Service{repo: repo, passwordSvc: passwordSvc}
 }
 
 func (s *Service) Create(user *domainUser.User) error {
+	return s.repo.Create(user)
+}
+
+func (s *Service) CreateWithPassword(user *domainUser.User, password string) error {
+	hashedPassword, err := s.passwordSvc.Hash(password)
+	if err != nil {
+		return domainUser.ErrPasswordHashingFailed
+	}
+
+	user.Password = hashedPassword
 	return s.repo.Create(user)
 }
 
@@ -37,14 +53,38 @@ func (s *Service) Update(user *domainUser.User) error {
 	return s.repo.Update(user)
 }
 
+func (s *Service) UpdateWithPassword(user *domainUser.User, password *string) error {
+	if password != nil && *password != "" {
+		hashedPassword, err := s.passwordSvc.Hash(*password)
+		if err != nil {
+			return domainUser.ErrPasswordHashingFailed
+		}
+		user.Password = hashedPassword
+	}
+
+	return s.repo.Update(user)
+}
+
 func (s *Service) DeleteByIds(ids []uuid.UUID) error {
 	return s.repo.DeleteByIds(ids)
 }
 
 func (s *Service) List(page, limit int, search string) (*domain.PaginatedList[domainUser.User], error) {
+	page, limit = normalizePagination(page, limit)
 	return s.repo.GetPaginatedList(domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,
 		Search: search,
 	})
+}
+
+func normalizePagination(page, limit int) (int, int) {
+	if page == 0 {
+		page = 1
+	}
+	if limit == 0 {
+		limit = 10
+	}
+
+	return page, limit
 }

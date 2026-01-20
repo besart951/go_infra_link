@@ -3,19 +3,17 @@ package facility
 import (
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
-	facilityService "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type ControlCabinetHandler struct {
-	service *facilityService.Service
+	service ControlCabinetService
 }
 
-func NewControlCabinetHandler(service *facilityService.Service) *ControlCabinetHandler {
+func NewControlCabinetHandler(service ControlCabinetService) *ControlCabinetHandler {
 	return &ControlCabinetHandler{service: service}
 }
 
@@ -45,7 +43,7 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 		ControlCabinetNr: req.ControlCabinetNr,
 	}
 
-	if err := h.service.ControlCabinets.Create(controlCabinet); err != nil {
+	if err := h.service.Create(controlCabinet); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -86,7 +84,7 @@ func (h *ControlCabinetHandler) GetControlCabinet(c *gin.Context) {
 		return
 	}
 
-	controlCabinets, err := h.service.ControlCabinets.GetByIds([]uuid.UUID{id})
+	controlCabinet, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -95,7 +93,7 @@ func (h *ControlCabinetHandler) GetControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if len(controlCabinets) == 0 {
+	if controlCabinet == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "Control Cabinet not found",
@@ -103,7 +101,6 @@ func (h *ControlCabinetHandler) GetControlCabinet(c *gin.Context) {
 		return
 	}
 
-	controlCabinet := controlCabinets[0]
 	response := dto.ControlCabinetResponse{
 		ID:               controlCabinet.ID,
 		BuildingID:       controlCabinet.BuildingID,
@@ -137,20 +134,7 @@ func (h *ControlCabinetHandler) ListControlCabinets(c *gin.Context) {
 		return
 	}
 
-	if query.Page == 0 {
-		query.Page = 1
-	}
-	if query.Limit == 0 {
-		query.Limit = 10
-	}
-
-	params := domain.PaginationParams{
-		Page:   query.Page,
-		Limit:  query.Limit,
-		Search: query.Search,
-	}
-
-	result, err := h.service.ControlCabinets.GetPaginatedList(params)
+	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -213,7 +197,7 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 		return
 	}
 
-	controlCabinets, err := h.service.ControlCabinets.GetByIds([]uuid.UUID{id})
+	controlCabinet, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -222,7 +206,7 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if len(controlCabinets) == 0 {
+	if controlCabinet == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "Control Cabinet not found",
@@ -230,7 +214,6 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 		return
 	}
 
-	controlCabinet := controlCabinets[0]
 	if req.BuildingID != uuid.Nil {
 		controlCabinet.BuildingID = req.BuildingID
 	}
@@ -241,7 +224,7 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 		controlCabinet.ControlCabinetNr = req.ControlCabinetNr
 	}
 
-	if err := h.service.ControlCabinets.Update(controlCabinet); err != nil {
+	if err := h.service.Update(controlCabinet); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "update_failed",
 			Message: err.Error(),
@@ -281,7 +264,7 @@ func (h *ControlCabinetHandler) DeleteControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.ControlCabinets.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "deletion_failed",
 			Message: err.Error(),

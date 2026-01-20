@@ -1,3 +1,6 @@
+//go:build legacydto
+// +build legacydto
+
 package dto
 
 import (

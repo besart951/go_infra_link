@@ -3,19 +3,17 @@ package facility
 import (
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
-	facilityService "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type ApparatHandler struct {
-	service *facilityService.Service
+	service ApparatService
 }
 
-func NewApparatHandler(service *facilityService.Service) *ApparatHandler {
+func NewApparatHandler(service ApparatService) *ApparatHandler {
 	return &ApparatHandler{service: service}
 }
 
@@ -45,7 +43,7 @@ func (h *ApparatHandler) CreateApparat(c *gin.Context) {
 		Description: req.Description,
 	}
 
-	if err := h.service.Apparats.Create(apparat); err != nil {
+	if err := h.service.Create(apparat); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -86,7 +84,7 @@ func (h *ApparatHandler) GetApparat(c *gin.Context) {
 		return
 	}
 
-	apparats, err := h.service.Apparats.GetByIds([]uuid.UUID{id})
+	apparat, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -95,7 +93,7 @@ func (h *ApparatHandler) GetApparat(c *gin.Context) {
 		return
 	}
 
-	if len(apparats) == 0 {
+	if apparat == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "Apparat not found",
@@ -103,7 +101,6 @@ func (h *ApparatHandler) GetApparat(c *gin.Context) {
 		return
 	}
 
-	apparat := apparats[0]
 	response := dto.ApparatResponse{
 		ID:          apparat.ID,
 		ShortName:   apparat.ShortName,
@@ -137,20 +134,7 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 		return
 	}
 
-	if query.Page == 0 {
-		query.Page = 1
-	}
-	if query.Limit == 0 {
-		query.Limit = 10
-	}
-
-	params := domain.PaginationParams{
-		Page:   query.Page,
-		Limit:  query.Limit,
-		Search: query.Search,
-	}
-
-	result, err := h.service.Apparats.GetPaginatedList(params)
+	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -213,7 +197,7 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 		return
 	}
 
-	apparats, err := h.service.Apparats.GetByIds([]uuid.UUID{id})
+	apparat, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -222,7 +206,7 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 		return
 	}
 
-	if len(apparats) == 0 {
+	if apparat == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "Apparat not found",
@@ -230,7 +214,6 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 		return
 	}
 
-	apparat := apparats[0]
 	if req.ShortName != "" {
 		apparat.ShortName = req.ShortName
 	}
@@ -241,7 +224,7 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 		apparat.Description = req.Description
 	}
 
-	if err := h.service.Apparats.Update(apparat); err != nil {
+	if err := h.service.Update(apparat); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "update_failed",
 			Message: err.Error(),
@@ -281,7 +264,7 @@ func (h *ApparatHandler) DeleteApparat(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Apparats.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "deletion_failed",
 			Message: err.Error(),

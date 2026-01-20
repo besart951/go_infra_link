@@ -3,19 +3,17 @@ package facility
 import (
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
-	facilityService "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type SpecificationHandler struct {
-	service *facilityService.Service
+	service SpecificationService
 }
 
-func NewSpecificationHandler(service *facilityService.Service) *SpecificationHandler {
+func NewSpecificationHandler(service SpecificationService) *SpecificationHandler {
 	return &SpecificationHandler{service: service}
 }
 
@@ -53,7 +51,7 @@ func (h *SpecificationHandler) CreateSpecification(c *gin.Context) {
 		ElectricalConnectionRotation:              req.ElectricalConnectionRotation,
 	}
 
-	if err := h.service.Specifications.Create(specification); err != nil {
+	if err := h.service.Create(specification); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -102,7 +100,7 @@ func (h *SpecificationHandler) GetSpecification(c *gin.Context) {
 		return
 	}
 
-	specifications, err := h.service.Specifications.GetByIds([]uuid.UUID{id})
+	specification, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -111,7 +109,7 @@ func (h *SpecificationHandler) GetSpecification(c *gin.Context) {
 		return
 	}
 
-	if len(specifications) == 0 {
+	if specification == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "Specification not found",
@@ -119,7 +117,6 @@ func (h *SpecificationHandler) GetSpecification(c *gin.Context) {
 		return
 	}
 
-	specification := specifications[0]
 	response := dto.SpecificationResponse{
 		ID:                       specification.ID,
 		SpecificationSupplier:    specification.SpecificationSupplier,
@@ -161,20 +158,7 @@ func (h *SpecificationHandler) ListSpecifications(c *gin.Context) {
 		return
 	}
 
-	if query.Page == 0 {
-		query.Page = 1
-	}
-	if query.Limit == 0 {
-		query.Limit = 10
-	}
-
-	params := domain.PaginationParams{
-		Page:   query.Page,
-		Limit:  query.Limit,
-		Search: query.Search,
-	}
-
-	result, err := h.service.Specifications.GetPaginatedList(params)
+	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -245,7 +229,7 @@ func (h *SpecificationHandler) UpdateSpecification(c *gin.Context) {
 		return
 	}
 
-	specifications, err := h.service.Specifications.GetByIds([]uuid.UUID{id})
+	specification, err := h.service.GetById(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -254,7 +238,7 @@ func (h *SpecificationHandler) UpdateSpecification(c *gin.Context) {
 		return
 	}
 
-	if len(specifications) == 0 {
+	if specification == nil {
 		c.JSON(http.StatusNotFound, dto.ErrorResponse{
 			Error:   "not_found",
 			Message: "Specification not found",
@@ -262,7 +246,6 @@ func (h *SpecificationHandler) UpdateSpecification(c *gin.Context) {
 		return
 	}
 
-	specification := specifications[0]
 	if req.SpecificationSupplier != nil {
 		specification.SpecificationSupplier = req.SpecificationSupplier
 	}
@@ -297,7 +280,7 @@ func (h *SpecificationHandler) UpdateSpecification(c *gin.Context) {
 		specification.ElectricalConnectionRotation = req.ElectricalConnectionRotation
 	}
 
-	if err := h.service.Specifications.Update(specification); err != nil {
+	if err := h.service.Update(specification); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "update_failed",
 			Message: err.Error(),
@@ -345,7 +328,7 @@ func (h *SpecificationHandler) DeleteSpecification(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Specifications.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "deletion_failed",
 			Message: err.Error(),

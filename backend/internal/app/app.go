@@ -2,12 +2,16 @@ package app
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
 	"github.com/besart951/go_infra_link/backend/internal/handler"
+	"github.com/besart951/go_infra_link/backend/internal/repository/auth"
 	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
 	userrepo "github.com/besart951/go_infra_link/backend/internal/repository/user"
+	authservice "github.com/besart951/go_infra_link/backend/internal/service/auth"
+	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
 	projectservice "github.com/besart951/go_infra_link/backend/internal/service/project"
 	userservice "github.com/besart951/go_infra_link/backend/internal/service/user"
 	applogger "github.com/besart951/go_infra_link/backend/pkg/logger"
@@ -33,15 +37,39 @@ func Run() error {
 	// Initialize repositories
 	projRepo := projectrepo.NewProjectRepository(database)
 	usrRepo := userrepo.NewUserRepository(database)
+	refreshTokenRepo := auth.NewRefreshTokenRepository(database)
 
 	// Initialize services
 	projService := projectservice.New(projRepo)
-	usrService := userservice.New(usrRepo)
+	passwordService := passwordsvc.New()
+	usrService := userservice.NewWithPasswordService(usrRepo, passwordService)
+	jwtService := authservice.NewJWTService(cfg.JWTSecret, "go_infra_link")
+	authService := authservice.NewService(
+		jwtService,
+		usrRepo,
+		usrRepo,
+		refreshTokenRepo,
+		passwordService,
+		cfg.AccessTokenTTL,
+		cfg.RefreshTokenTTL,
+		"go_infra_link",
+	)
+
+	cookieSecure := cfg.CookieSecure
+	if cfg.AppEnv == "production" {
+		cookieSecure = true
+	}
+	cookieSettings := handler.CookieSettings{
+		Domain:   cfg.CookieDomain,
+		Secure:   cookieSecure,
+		SameSite: http.SameSiteStrictMode,
+	}
 
 	// Initialize handlers
 	handlers := &handler.Handlers{
 		ProjectHandler: handler.NewProjectHandler(projService),
 		UserHandler:    handler.NewUserHandler(usrService),
+		AuthHandler:    handler.NewAuthHandler(authService, usrService, cfg.AccessTokenTTL, cfg.RefreshTokenTTL, cookieSettings),
 	}
 
 	// Setup Gin router
@@ -52,7 +80,7 @@ func Run() error {
 	router := gin.Default()
 
 	// Register all routes
-	handler.RegisterRoutes(router, handlers)
+	handler.RegisterRoutes(router, handlers, jwtService)
 
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {

@@ -1,21 +1,20 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
-	userService "github.com/besart951/go_infra_link/backend/internal/service/user"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type UserHandler struct {
-	service *userService.Service
+	service UserService
 }
 
-func NewUserHandler(service *userService.Service) *UserHandler {
+func NewUserHandler(service UserService) *UserHandler {
 	return &UserHandler{service: service}
 }
 
@@ -39,26 +38,22 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	// Hash the password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "password_hashing_failed",
-			Message: "Failed to hash password",
-		})
-		return
-	}
-
 	usr := &user.User{
 		FirstName:   req.FirstName,
 		LastName:    req.LastName,
 		Email:       req.Email,
-		Password:    string(hashedPassword),
 		IsActive:    req.IsActive,
 		CreatedByID: req.CreatedByID,
 	}
 
-	if err := h.service.Create(usr); err != nil {
+	if err := h.service.CreateWithPassword(usr, req.Password); err != nil {
+		if errors.Is(err, user.ErrPasswordHashingFailed) {
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+				Error:   "password_hashing_failed",
+				Message: "Failed to hash password",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -149,13 +144,6 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 			Message: err.Error(),
 		})
 		return
-	}
-
-	if query.Page == 0 {
-		query.Page = 1
-	}
-	if query.Limit == 0 {
-		query.Limit = 10
 	}
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
@@ -249,22 +237,20 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		usr.Email = req.Email
 	}
 	if req.Password != "" {
-		// Hash the password before updating
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-		if err != nil {
+		usr.Password = req.Password
+	}
+	if req.IsActive != nil {
+		usr.IsActive = *req.IsActive
+	}
+
+	if err := h.service.UpdateWithPassword(usr, &req.Password); err != nil {
+		if errors.Is(err, user.ErrPasswordHashingFailed) {
 			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 				Error:   "password_hashing_failed",
 				Message: "Failed to hash password",
 			})
 			return
 		}
-		usr.Password = string(hashedPassword)
-	}
-	if req.IsActive != nil {
-		usr.IsActive = *req.IsActive
-	}
-
-	if err := h.service.Update(usr); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "update_failed",
 			Message: err.Error(),
