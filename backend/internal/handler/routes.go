@@ -115,6 +115,8 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 		facility.GET("/field-devices", handlers.FacilityFieldDeviceHandler.ListFieldDevices)
 		facility.GET("/field-devices/:id", handlers.FacilityFieldDeviceHandler.GetFieldDevice)
 		facility.GET("/field-devices/:id/bacnet-objects", handlers.FacilityFieldDeviceHandler.ListFieldDeviceBacnetObjects)
+		facility.POST("/field-devices/:id/specification", handlers.FacilityFieldDeviceHandler.CreateFieldDeviceSpecification)
+		facility.PUT("/field-devices/:id/specification", handlers.FacilityFieldDeviceHandler.UpdateFieldDeviceSpecification)
 		facility.PUT("/field-devices/:id", handlers.FacilityFieldDeviceHandler.UpdateFieldDevice)
 		facility.DELETE("/field-devices/:id", handlers.FacilityFieldDeviceHandler.DeleteFieldDevice)
 

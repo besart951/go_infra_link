@@ -1,7 +1,7 @@
 meta {
-  name: Create Field Device
+  name: Create Field Device (from object_data template)
   type: http
-  seq: 70
+  seq: 75
 }
 
 post {
@@ -17,13 +17,14 @@ headers {
 
 body:json {
   {
-    "bmk": "BMK1",
-    "description": "Example field device",
+    "bmk": "BMK-FD-OD-1",
+    "description": "Field device created from object_data template (bacnet objects cloned)",
     "apparat_nr": 1,
     "sps_controller_system_type_id": "{{sps_controller_system_type_id}}",
     "system_part_id": "{{system_part_id}}",
     "project_id": null,
-    "apparat_id": "{{apparat_id}}"
+    "apparat_id": "{{apparat_id}}",
+    "object_data_id": "{{object_data_id}}"
   }
 }
 

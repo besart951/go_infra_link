@@ -1,0 +1,23 @@
+meta {
+  name: Update FieldDevice Specification
+  type: http
+  seq: 84
+}
+
+put {
+  url: {{baseUrl}}/api/v1/facility/field-devices/{{field_device_id}}/specification
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "specification_brand": "Brand Y (updated)",
+    "additional_info_size": 12
+  }
+}

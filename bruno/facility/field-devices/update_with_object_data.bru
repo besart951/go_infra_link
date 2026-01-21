@@ -1,7 +1,7 @@
 meta {
-  name: Update Field Device
+  name: Update Field Device (from object_data template)
   type: http
-  seq: 73
+  seq: 77
 }
 
 put {
@@ -17,12 +17,13 @@ headers {
 
 body:json {
   {
-    "bmk": "BMK2",
-    "description": "Updated field device",
+    "bmk": "BMK-FD-OD-UPDATED",
+    "description": "Update field device and clone bacnet objects from object_data",
     "apparat_nr": 2,
     "sps_controller_system_type_id": "{{sps_controller_system_type_id}}",
     "system_part_id": "{{system_part_id}}",
     "project_id": null,
-    "apparat_id": "{{apparat_id}}"
+    "apparat_id": "{{apparat_id}}",
+    "object_data_id": "{{object_data_id}}"
   }
 }

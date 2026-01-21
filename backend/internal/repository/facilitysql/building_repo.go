@@ -2,6 +2,7 @@ package facilitysql
 
 import (
 	"database/sql"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,12 +13,11 @@ import (
 )
 
 type buildingRepo struct {
-	db      *sql.DB
-	dialect sqlutil.Dialect
+	db *sql.DB
 }
 
-func NewBuildingRepository(db *sql.DB, driver string) domainFacility.BuildingRepository {
-	return &buildingRepo{db: db, dialect: sqlutil.DialectFromDriver(driver)}
+func NewBuildingRepository(db *sql.DB) domainFacility.BuildingRepository {
+	return &buildingRepo{db: db}
 }
 
 func (r *buildingRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Building, error) {
@@ -26,8 +26,7 @@ func (r *buildingRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Building, er
 	}
 
 	q := "SELECT id, created_at, updated_at, deleted_at, iws_code, building_group " +
-		"FROM buildings WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
-	q = sqlutil.Rebind(r.dialect, q)
+		"FROM buildings WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(1, len(ids)) + ")"
 
 	args := make([]any, 0, len(ids))
 	for _, id := range ids {
@@ -78,8 +77,7 @@ func (r *buildingRepo) Create(entity *domainFacility.Building) error {
 	}
 
 	q := "INSERT INTO buildings (id, created_at, updated_at, deleted_at, iws_code, building_group) " +
-		"VALUES (?, ?, ?, NULL, ?, ?)"
-	q = sqlutil.Rebind(r.dialect, q)
+		"VALUES ($1, $2, $3, NULL, $4, $5)"
 
 	_, err := r.db.Exec(q, entity.ID, entity.CreatedAt, entity.UpdatedAt, nullIfEmpty(entity.IWSCode), entity.BuildingGroup)
 	return err
@@ -89,8 +87,7 @@ func (r *buildingRepo) Update(entity *domainFacility.Building) error {
 	now := time.Now().UTC()
 	entity.Base.TouchForUpdate(now)
 
-	q := "UPDATE buildings SET updated_at = ?, iws_code = ?, building_group = ? WHERE deleted_at IS NULL AND id = ?"
-	q = sqlutil.Rebind(r.dialect, q)
+	q := "UPDATE buildings SET updated_at = $1, iws_code = $2, building_group = $3 WHERE deleted_at IS NULL AND id = $4"
 
 	_, err := r.db.Exec(q, entity.UpdatedAt, nullIfEmpty(entity.IWSCode), entity.BuildingGroup, entity.ID)
 	return err
@@ -102,8 +99,7 @@ func (r *buildingRepo) DeleteByIds(ids []uuid.UUID) error {
 	}
 
 	now := time.Now().UTC()
-	q := "UPDATE buildings SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
-	q = sqlutil.Rebind(r.dialect, q)
+	q := "UPDATE buildings SET deleted_at = $1, updated_at = $2 WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(3, len(ids)) + ")"
 
 	args := make([]any, 0, 2+len(ids))
 	args = append(args, now, now)
@@ -130,19 +126,17 @@ func (r *buildingRepo) GetPaginatedList(params domain.PaginationParams) (*domain
 	args := make([]any, 0, 4)
 	if strings.TrimSpace(params.Search) != "" {
 		pattern := "%" + params.Search + "%"
-		where += " AND (iws_code " + sqlutil.LikeOperator(r.dialect) + " ?)"
+		where += " AND (iws_code ILIKE $1)"
 		args = append(args, pattern)
 	}
 
 	countQ := "SELECT COUNT(*) FROM buildings WHERE " + where
-	countQ = sqlutil.Rebind(r.dialect, countQ)
 	var total int64
 	if err := r.db.QueryRow(countQ, args...).Scan(&total); err != nil {
 		return nil, err
 	}
 
-	dataQ := "SELECT id, created_at, updated_at, deleted_at, iws_code, building_group FROM buildings WHERE " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
-	dataQ = sqlutil.Rebind(r.dialect, dataQ)
+	dataQ := "SELECT id, created_at, updated_at, deleted_at, iws_code, building_group FROM buildings WHERE " + where + " ORDER BY created_at DESC LIMIT $" + strconv.Itoa(len(args)+1) + " OFFSET $" + strconv.Itoa(len(args)+2)
 	dataArgs := append(append([]any{}, args...), limit, offset)
 
 	rows, err := r.db.Query(dataQ, dataArgs...)

@@ -25,7 +25,7 @@ type Repositories struct {
 	FacilityBuildings                domainFacility.BuildingRepository
 	FacilitySystemTypes              domainFacility.SystemTypeRepository
 	FacilitySystemParts              domainFacility.SystemPartRepository
-	FacilitySpecifications           domainFacility.SpecificationRepository
+	FacilitySpecifications           domainFacility.SpecificationStore
 	FacilityApparats                 domainFacility.ApparatRepository
 	FacilityControlCabinet           domainFacility.ControlCabinetRepository
 	FacilityFieldDevices             domainFacility.FieldDeviceStore

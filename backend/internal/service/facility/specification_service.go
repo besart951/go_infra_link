@@ -7,14 +7,25 @@ import (
 )
 
 type SpecificationService struct {
-	repo domainFacility.SpecificationRepository
+	repo domainFacility.SpecificationStore
 }
 
-func NewSpecificationService(repo domainFacility.SpecificationRepository) *SpecificationService {
+func NewSpecificationService(repo domainFacility.SpecificationStore) *SpecificationService {
 	return &SpecificationService{repo: repo}
 }
 
 func (s *SpecificationService) Create(specification *domainFacility.Specification) error {
+	if specification.FieldDeviceID == nil {
+		return domain.ErrInvalidArgument
+	}
+	// Enforce 1:1 relationship: each field_device can have at most one active specification.
+	existing, err := s.repo.GetByFieldDeviceIDs([]uuid.UUID{*specification.FieldDeviceID})
+	if err != nil {
+		return err
+	}
+	if len(existing) > 0 {
+		return domain.ErrConflict
+	}
 	return s.repo.Create(specification)
 }
 

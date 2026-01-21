@@ -1,0 +1,39 @@
+meta {
+  name: Update Bacnet Object + attach to object_data
+  type: http
+  seq: 82
+}
+
+put {
+  url: {{baseUrl}}/api/v1/facility/bacnet-objects/{{bacnet_object_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "object_data_id": "{{object_data_id}}",
+
+    "text_fix": "AI-TPL-1",
+    "description": "Updated and linked to object_data template",
+    "gms_visible": true,
+    "optional": false,
+    "text_individual": null,
+
+    "software_type": "ai",
+    "software_number": 1,
+
+    "hardware_type": "ai",
+    "hardware_quantity": 1,
+
+    "software_reference_id": null,
+    "state_text_id": null,
+    "notification_class_id": null,
+    "alarm_definition_id": null
+  }
+}

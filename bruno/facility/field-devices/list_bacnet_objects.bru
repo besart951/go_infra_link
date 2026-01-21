@@ -1,0 +1,15 @@
+meta {
+  name: List FieldDevice Bacnet Objects (hydration)
+  type: http
+  seq: 78
+}
+
+get {
+  url: {{baseUrl}}/api/v1/facility/field-devices/{{field_device_id}}/bacnet-objects
+  body: none
+  auth: none
+}
+
+headers {
+  X-CSRF-Token: {{csrf_token}}
+}

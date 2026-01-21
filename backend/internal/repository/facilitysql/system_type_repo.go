@@ -2,6 +2,7 @@ package facilitysql
 
 import (
 	"database/sql"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,12 +13,11 @@ import (
 )
 
 type systemTypeRepo struct {
-	db      *sql.DB
-	dialect sqlutil.Dialect
+	db *sql.DB
 }
 
-func NewSystemTypeRepository(db *sql.DB, driver string) domainFacility.SystemTypeRepository {
-	return &systemTypeRepo{db: db, dialect: sqlutil.DialectFromDriver(driver)}
+func NewSystemTypeRepository(db *sql.DB) domainFacility.SystemTypeRepository {
+	return &systemTypeRepo{db: db}
 }
 
 func (r *systemTypeRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SystemType, error) {
@@ -26,8 +26,7 @@ func (r *systemTypeRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SystemType
 	}
 
 	q := "SELECT id, created_at, updated_at, deleted_at, number_min, number_max, name " +
-		"FROM system_types WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
-	q = sqlutil.Rebind(r.dialect, q)
+		"FROM system_types WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(1, len(ids)) + ")"
 
 	args := make([]any, 0, len(ids))
 	for _, id := range ids {
@@ -65,8 +64,7 @@ func (r *systemTypeRepo) Create(entity *domainFacility.SystemType) error {
 		return err
 	}
 
-	q := "INSERT INTO system_types (id, created_at, updated_at, deleted_at, number_min, number_max, name) VALUES (?, ?, ?, NULL, ?, ?, ?)"
-	q = sqlutil.Rebind(r.dialect, q)
+	q := "INSERT INTO system_types (id, created_at, updated_at, deleted_at, number_min, number_max, name) VALUES ($1, $2, $3, NULL, $4, $5, $6)"
 
 	_, err := r.db.Exec(q, entity.ID, entity.CreatedAt, entity.UpdatedAt, entity.NumberMin, entity.NumberMax, entity.Name)
 	return err
@@ -76,8 +74,7 @@ func (r *systemTypeRepo) Update(entity *domainFacility.SystemType) error {
 	now := time.Now().UTC()
 	entity.Base.TouchForUpdate(now)
 
-	q := "UPDATE system_types SET updated_at = ?, number_min = ?, number_max = ?, name = ? WHERE deleted_at IS NULL AND id = ?"
-	q = sqlutil.Rebind(r.dialect, q)
+	q := "UPDATE system_types SET updated_at = $1, number_min = $2, number_max = $3, name = $4 WHERE deleted_at IS NULL AND id = $5"
 
 	_, err := r.db.Exec(q, entity.UpdatedAt, entity.NumberMin, entity.NumberMax, entity.Name, entity.ID)
 	return err
@@ -89,8 +86,7 @@ func (r *systemTypeRepo) DeleteByIds(ids []uuid.UUID) error {
 	}
 
 	now := time.Now().UTC()
-	q := "UPDATE system_types SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
-	q = sqlutil.Rebind(r.dialect, q)
+	q := "UPDATE system_types SET deleted_at = $1, updated_at = $2 WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(3, len(ids)) + ")"
 
 	args := make([]any, 0, 2+len(ids))
 	args = append(args, now, now)
@@ -116,19 +112,17 @@ func (r *systemTypeRepo) GetPaginatedList(params domain.PaginationParams) (*doma
 	args := make([]any, 0, 4)
 	if strings.TrimSpace(params.Search) != "" {
 		pattern := "%" + params.Search + "%"
-		where += " AND (name " + sqlutil.LikeOperator(r.dialect) + " ?)"
+		where += " AND (name ILIKE $1)"
 		args = append(args, pattern)
 	}
 
 	countQ := "SELECT COUNT(*) FROM system_types WHERE " + where
-	countQ = sqlutil.Rebind(r.dialect, countQ)
 	var total int64
 	if err := r.db.QueryRow(countQ, args...).Scan(&total); err != nil {
 		return nil, err
 	}
 
-	dataQ := "SELECT id, created_at, updated_at, deleted_at, number_min, number_max, name FROM system_types WHERE " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
-	dataQ = sqlutil.Rebind(r.dialect, dataQ)
+	dataQ := "SELECT id, created_at, updated_at, deleted_at, number_min, number_max, name FROM system_types WHERE " + where + " ORDER BY created_at DESC LIMIT $" + strconv.Itoa(len(args)+1) + " OFFSET $" + strconv.Itoa(len(args)+2)
 	dataArgs := append(append([]any{}, args...), limit, offset)
 
 	rows, err := r.db.Query(dataQ, dataArgs...)

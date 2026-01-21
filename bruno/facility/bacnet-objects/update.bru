@@ -1,0 +1,39 @@
+meta {
+  name: Update Bacnet Object
+  type: http
+  seq: 81
+}
+
+put {
+  url: {{baseUrl}}/api/v1/facility/bacnet-objects/{{bacnet_object_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "field_device_id": "{{field_device_id}}",
+
+    "text_fix": "AI-NEW",
+    "description": "Updated bacnet object (direct)",
+    "gms_visible": true,
+    "optional": false,
+    "text_individual": "Custom text",
+
+    "software_type": "ai",
+    "software_number": 10,
+
+    "hardware_type": "ai",
+    "hardware_quantity": 1,
+
+    "software_reference_id": null,
+    "state_text_id": null,
+    "notification_class_id": null,
+    "alarm_definition_id": null
+  }
+}

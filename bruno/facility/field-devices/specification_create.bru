@@ -1,11 +1,11 @@
 meta {
-  name: Create Specification
+  name: Create FieldDevice Specification
   type: http
-  seq: 50
+  seq: 83
 }
 
 post {
-  url: {{baseUrl}}/api/v1/facility/specifications
+  url: {{baseUrl}}/api/v1/facility/field-devices/{{field_device_id}}/specification
   body: json
   auth: none
 }
@@ -17,7 +17,6 @@ headers {
 
 body:json {
   {
-    "field_device_id": "{{field_device_id}}",
     "specification_supplier": "Supplier X",
     "specification_brand": "Brand Y",
     "specification_type": "Type Z",

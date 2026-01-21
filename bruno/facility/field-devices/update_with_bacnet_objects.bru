@@ -1,0 +1,45 @@
+meta {
+  name: Update Field Device (replace bacnet_objects)
+  type: http
+  seq: 76
+}
+
+put {
+  url: {{baseUrl}}/api/v1/facility/field-devices/{{field_device_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "bmk": "BMK-FD-BO-UPDATED",
+    "description": "Update field device and REPLACE bacnet_objects",
+    "apparat_nr": 2,
+    "sps_controller_system_type_id": "{{sps_controller_system_type_id}}",
+    "system_part_id": "{{system_part_id}}",
+    "project_id": null,
+    "apparat_id": "{{apparat_id}}",
+    "bacnet_objects": [
+      {
+        "text_fix": "AI-1",
+        "description": "Analog Input 1 (updated)",
+        "gms_visible": true,
+        "optional": false,
+        "text_individual": null,
+        "software_type": "ai",
+        "software_number": 1,
+        "hardware_type": "ai",
+        "hardware_quantity": 1,
+        "software_reference_id": null,
+        "state_text_id": null,
+        "notification_class_id": null,
+        "alarm_definition_id": null
+      }
+    ]
+  }
+}

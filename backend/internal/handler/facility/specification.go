@@ -1,8 +1,10 @@
 package facility
 
 import (
+	"errors"
 	"net/http"
 
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
@@ -38,6 +40,7 @@ func (h *SpecificationHandler) CreateSpecification(c *gin.Context) {
 	}
 
 	specification := &domainFacility.Specification{
+		FieldDeviceID:                             &req.FieldDeviceID,
 		SpecificationSupplier:                     req.SpecificationSupplier,
 		SpecificationBrand:                        req.SpecificationBrand,
 		SpecificationType:                         req.SpecificationType,
@@ -52,6 +55,20 @@ func (h *SpecificationHandler) CreateSpecification(c *gin.Context) {
 	}
 
 	if err := h.service.Create(specification); err != nil {
+		if errors.Is(err, domain.ErrInvalidArgument) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+				Error:   "validation_error",
+				Message: "field_device_id is required",
+			})
+			return
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			c.JSON(http.StatusConflict, dto.ErrorResponse{
+				Error:   "conflict",
+				Message: "Specification already exists for this field device",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -61,6 +78,7 @@ func (h *SpecificationHandler) CreateSpecification(c *gin.Context) {
 
 	response := dto.SpecificationResponse{
 		ID:                       specification.ID,
+		FieldDeviceID:            specification.FieldDeviceID,
 		SpecificationSupplier:    specification.SpecificationSupplier,
 		SpecificationBrand:       specification.SpecificationBrand,
 		SpecificationType:        specification.SpecificationType,
@@ -119,6 +137,7 @@ func (h *SpecificationHandler) GetSpecification(c *gin.Context) {
 
 	response := dto.SpecificationResponse{
 		ID:                       specification.ID,
+		FieldDeviceID:            specification.FieldDeviceID,
 		SpecificationSupplier:    specification.SpecificationSupplier,
 		SpecificationBrand:       specification.SpecificationBrand,
 		SpecificationType:        specification.SpecificationType,
@@ -171,6 +190,7 @@ func (h *SpecificationHandler) ListSpecifications(c *gin.Context) {
 	for i, specification := range result.Items {
 		items[i] = dto.SpecificationResponse{
 			ID:                       specification.ID,
+			FieldDeviceID:            specification.FieldDeviceID,
 			SpecificationSupplier:    specification.SpecificationSupplier,
 			SpecificationBrand:       specification.SpecificationBrand,
 			SpecificationType:        specification.SpecificationType,
@@ -290,6 +310,7 @@ func (h *SpecificationHandler) UpdateSpecification(c *gin.Context) {
 
 	response := dto.SpecificationResponse{
 		ID:                       specification.ID,
+		FieldDeviceID:            specification.FieldDeviceID,
 		SpecificationSupplier:    specification.SpecificationSupplier,
 		SpecificationBrand:       specification.SpecificationBrand,
 		SpecificationType:        specification.SpecificationType,

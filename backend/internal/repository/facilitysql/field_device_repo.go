@@ -14,10 +14,27 @@ import (
 type fieldDeviceRepo struct {
 	db      *sql.DB
 	dialect sqlutil.Dialect
+
+	// Schema-compat flags. We support both:
+	// - new: specifications.field_device_id (spec derived from specs)
+	// - old: field_devices.specification_id
+	hasSpecificationsFieldDeviceID bool
+	hasFieldDevicesSpecificationID bool
 }
 
 func NewFieldDeviceRepository(db *sql.DB, driver string) domainFacility.FieldDeviceStore {
-	return &fieldDeviceRepo{db: db, dialect: sqlutil.DialectFromDriver(driver)}
+	dialect := sqlutil.DialectFromDriver(driver)
+
+	// Best-effort schema introspection. If it fails, we fall back to safest option.
+	hasSpecificationsFieldDeviceID, _ := sqlutil.ColumnExists(db, dialect, "specifications", "field_device_id")
+	hasFieldDevicesSpecificationID, _ := sqlutil.ColumnExists(db, dialect, "field_devices", "specification_id")
+
+	return &fieldDeviceRepo{
+		db:                             db,
+		dialect:                        dialect,
+		hasSpecificationsFieldDeviceID: hasSpecificationsFieldDeviceID,
+		hasFieldDevicesSpecificationID: hasFieldDevicesSpecificationID,
+	}
 }
 
 func (r *fieldDeviceRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {
@@ -25,7 +42,14 @@ func (r *fieldDeviceRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.FieldDevi
 		return []*domainFacility.FieldDevice{}, nil
 	}
 
-	q := "SELECT id, created_at, updated_at, deleted_at, bmk, description, apparat_nr, sps_controller_system_type_id, system_part_id, specification_id, project_id, apparat_id " +
+	specificationIDSelect := "NULL AS specification_id"
+	if r.hasSpecificationsFieldDeviceID {
+		specificationIDSelect = "(SELECT s.id FROM specifications s WHERE s.deleted_at IS NULL AND s.field_device_id = field_devices.id LIMIT 1) AS specification_id"
+	} else if r.hasFieldDevicesSpecificationID {
+		specificationIDSelect = "specification_id"
+	}
+
+	q := "SELECT id, created_at, updated_at, deleted_at, bmk, description, apparat_nr, sps_controller_system_type_id, system_part_id, " + specificationIDSelect + ", project_id, apparat_id " +
 		"FROM field_devices WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
 	q = sqlutil.Rebind(r.dialect, q)
 
@@ -121,8 +145,8 @@ func (r *fieldDeviceRepo) Create(entity *domainFacility.FieldDevice) error {
 		return err
 	}
 
-	q := "INSERT INTO field_devices (id, created_at, updated_at, deleted_at, bmk, description, apparat_nr, sps_controller_system_type_id, system_part_id, specification_id, project_id, apparat_id) " +
-		"VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)"
+	q := "INSERT INTO field_devices (id, created_at, updated_at, deleted_at, bmk, description, apparat_nr, sps_controller_system_type_id, system_part_id, project_id, apparat_id) " +
+		"VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)"
 	q = sqlutil.Rebind(r.dialect, q)
 
 	_, err := r.db.Exec(
@@ -135,7 +159,6 @@ func (r *fieldDeviceRepo) Create(entity *domainFacility.FieldDevice) error {
 		argIntPtr(entity.ApparatNr),
 		entity.SPSControllerSystemTypeID,
 		argUUIDPtr(entity.SystemPartID),
-		argUUIDPtr(entity.SpecificationID),
 		argUUIDPtr(entity.ProjectID),
 		entity.ApparatID,
 	)
@@ -146,7 +169,7 @@ func (r *fieldDeviceRepo) Update(entity *domainFacility.FieldDevice) error {
 	now := time.Now().UTC()
 	entity.Base.TouchForUpdate(now)
 
-	q := "UPDATE field_devices SET updated_at = ?, bmk = ?, description = ?, apparat_nr = ?, sps_controller_system_type_id = ?, system_part_id = ?, specification_id = ?, project_id = ?, apparat_id = ? " +
+	q := "UPDATE field_devices SET updated_at = ?, bmk = ?, description = ?, apparat_nr = ?, sps_controller_system_type_id = ?, system_part_id = ?, project_id = ?, apparat_id = ? " +
 		"WHERE deleted_at IS NULL AND id = ?"
 	q = sqlutil.Rebind(r.dialect, q)
 
@@ -158,7 +181,6 @@ func (r *fieldDeviceRepo) Update(entity *domainFacility.FieldDevice) error {
 		argIntPtr(entity.ApparatNr),
 		entity.SPSControllerSystemTypeID,
 		argUUIDPtr(entity.SystemPartID),
-		argUUIDPtr(entity.SpecificationID),
 		argUUIDPtr(entity.ProjectID),
 		entity.ApparatID,
 		entity.ID,
@@ -212,7 +234,14 @@ func (r *fieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*dom
 		return nil, err
 	}
 
-	dataQ := "SELECT id, created_at, updated_at, deleted_at, bmk, description, apparat_nr, sps_controller_system_type_id, system_part_id, specification_id, project_id, apparat_id " +
+	specificationIDSelect := "NULL AS specification_id"
+	if r.hasSpecificationsFieldDeviceID {
+		specificationIDSelect = "(SELECT s.id FROM specifications s WHERE s.deleted_at IS NULL AND s.field_device_id = field_devices.id LIMIT 1) AS specification_id"
+	} else if r.hasFieldDevicesSpecificationID {
+		specificationIDSelect = "specification_id"
+	}
+
+	dataQ := "SELECT id, created_at, updated_at, deleted_at, bmk, description, apparat_nr, sps_controller_system_type_id, system_part_id, " + specificationIDSelect + ", project_id, apparat_id " +
 		"FROM field_devices WHERE " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
 	dataQ = sqlutil.Rebind(r.dialect, dataQ)
 

@@ -61,6 +61,8 @@ type FieldDeviceService interface {
 	UpdateWithBacnetObjects(fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects *[]domainFacility.BacnetObject) error
 	DeleteByIds(ids []uuid.UUID) error
 	ListBacnetObjects(fieldDeviceID uuid.UUID) ([]domainFacility.BacnetObject, error)
+	CreateSpecification(fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error
+	UpdateSpecification(fieldDeviceID uuid.UUID, patch *domainFacility.Specification) (*domainFacility.Specification, error)
 }
 
 type ControlCabinetService interface {

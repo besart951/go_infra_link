@@ -2,10 +2,12 @@ package facility
 
 import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	"github.com/google/uuid"
 )
 
 type Specification struct {
 	domain.Base
+	FieldDeviceID                             *uuid.UUID
 	SpecificationSupplier                     *string
 	SpecificationBrand                        *string
 	SpecificationType                         *string

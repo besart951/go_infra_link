@@ -45,7 +45,6 @@ func (h *FieldDeviceHandler) CreateFieldDevice(c *gin.Context) {
 		ApparatNr:                 req.ApparatNr,
 		SPSControllerSystemTypeID: req.SPSControllerSystemTypeID,
 		SystemPartID:              req.SystemPartID,
-		SpecificationID:           req.SpecificationID,
 		ProjectID:                 req.ProjectID,
 		ApparatID:                 req.ApparatID,
 	}
@@ -291,9 +290,6 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 	if req.SystemPartID != nil {
 		fieldDevice.SystemPartID = req.SystemPartID
 	}
-	if req.SpecificationID != nil {
-		fieldDevice.SpecificationID = req.SpecificationID
-	}
 	if req.ProjectID != nil {
 		fieldDevice.ProjectID = req.ProjectID
 	}
@@ -462,4 +458,144 @@ func (h *FieldDeviceHandler) ListFieldDeviceBacnetObjects(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, out)
+}
+
+// CreateFieldDeviceSpecification godoc
+// @Summary Create specification for a field device
+// @Tags facility-field-devices
+// @Accept json
+// @Produce json
+// @Param id path string true "Field Device ID"
+// @Param specification body dto.CreateFieldDeviceSpecificationRequest true "Specification data"
+// @Success 201 {object} dto.SpecificationResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/field-devices/{id}/specification [post]
+func (h *FieldDeviceHandler) CreateFieldDeviceSpecification(c *gin.Context) {
+	fieldDeviceID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_id", Message: "Invalid UUID format"})
+		return
+	}
+
+	var req dto.CreateFieldDeviceSpecificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+		return
+	}
+
+	spec := &domainFacility.Specification{
+		SpecificationSupplier:                     req.SpecificationSupplier,
+		SpecificationBrand:                        req.SpecificationBrand,
+		SpecificationType:                         req.SpecificationType,
+		AdditionalInfoMotorValve:                  req.AdditionalInfoMotorValve,
+		AdditionalInfoSize:                        req.AdditionalInfoSize,
+		AdditionalInformationInstallationLocation: req.AdditionalInformationInstallationLocation,
+		ElectricalConnectionPH:                    req.ElectricalConnectionPH,
+		ElectricalConnectionACDC:                  req.ElectricalConnectionACDC,
+		ElectricalConnectionAmperage:              req.ElectricalConnectionAmperage,
+		ElectricalConnectionPower:                 req.ElectricalConnectionPower,
+		ElectricalConnectionRotation:              req.ElectricalConnectionRotation,
+	}
+
+	if err := h.service.CreateSpecification(fieldDeviceID, spec); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found", Message: "Field Device not found"})
+			return
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			c.JSON(http.StatusConflict, dto.ErrorResponse{Error: "conflict", Message: "Specification already exists for this field device"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "creation_failed", Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, dto.SpecificationResponse{
+		ID:                       spec.ID,
+		FieldDeviceID:            spec.FieldDeviceID,
+		SpecificationSupplier:    spec.SpecificationSupplier,
+		SpecificationBrand:       spec.SpecificationBrand,
+		SpecificationType:        spec.SpecificationType,
+		AdditionalInfoMotorValve: spec.AdditionalInfoMotorValve,
+		AdditionalInfoSize:       spec.AdditionalInfoSize,
+		AdditionalInformationInstallationLocation: spec.AdditionalInformationInstallationLocation,
+		ElectricalConnectionPH:                    spec.ElectricalConnectionPH,
+		ElectricalConnectionACDC:                  spec.ElectricalConnectionACDC,
+		ElectricalConnectionAmperage:              spec.ElectricalConnectionAmperage,
+		ElectricalConnectionPower:                 spec.ElectricalConnectionPower,
+		ElectricalConnectionRotation:              spec.ElectricalConnectionRotation,
+		CreatedAt:                                 spec.CreatedAt,
+		UpdatedAt:                                 spec.UpdatedAt,
+	})
+}
+
+// UpdateFieldDeviceSpecification godoc
+// @Summary Update specification for a field device
+// @Tags facility-field-devices
+// @Accept json
+// @Produce json
+// @Param id path string true "Field Device ID"
+// @Param specification body dto.UpdateFieldDeviceSpecificationRequest true "Specification data"
+// @Success 200 {object} dto.SpecificationResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/field-devices/{id}/specification [put]
+func (h *FieldDeviceHandler) UpdateFieldDeviceSpecification(c *gin.Context) {
+	fieldDeviceID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_id", Message: "Invalid UUID format"})
+		return
+	}
+
+	var req dto.UpdateFieldDeviceSpecificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+		return
+	}
+
+	patch := &domainFacility.Specification{
+		SpecificationSupplier:                     req.SpecificationSupplier,
+		SpecificationBrand:                        req.SpecificationBrand,
+		SpecificationType:                         req.SpecificationType,
+		AdditionalInfoMotorValve:                  req.AdditionalInfoMotorValve,
+		AdditionalInfoSize:                        req.AdditionalInfoSize,
+		AdditionalInformationInstallationLocation: req.AdditionalInformationInstallationLocation,
+		ElectricalConnectionPH:                    req.ElectricalConnectionPH,
+		ElectricalConnectionACDC:                  req.ElectricalConnectionACDC,
+		ElectricalConnectionAmperage:              req.ElectricalConnectionAmperage,
+		ElectricalConnectionPower:                 req.ElectricalConnectionPower,
+		ElectricalConnectionRotation:              req.ElectricalConnectionRotation,
+	}
+
+	spec, err := h.service.UpdateSpecification(fieldDeviceID, patch)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found", Message: "Field Device or specification not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "update_failed", Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SpecificationResponse{
+		ID:                       spec.ID,
+		FieldDeviceID:            spec.FieldDeviceID,
+		SpecificationSupplier:    spec.SpecificationSupplier,
+		SpecificationBrand:       spec.SpecificationBrand,
+		SpecificationType:        spec.SpecificationType,
+		AdditionalInfoMotorValve: spec.AdditionalInfoMotorValve,
+		AdditionalInfoSize:       spec.AdditionalInfoSize,
+		AdditionalInformationInstallationLocation: spec.AdditionalInformationInstallationLocation,
+		ElectricalConnectionPH:                    spec.ElectricalConnectionPH,
+		ElectricalConnectionACDC:                  spec.ElectricalConnectionACDC,
+		ElectricalConnectionAmperage:              spec.ElectricalConnectionAmperage,
+		ElectricalConnectionPower:                 spec.ElectricalConnectionPower,
+		ElectricalConnectionRotation:              spec.ElectricalConnectionRotation,
+		CreatedAt:                                 spec.CreatedAt,
+		UpdatedAt:                                 spec.UpdatedAt,
+	})
 }

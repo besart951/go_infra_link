@@ -17,7 +17,7 @@ type FieldDeviceService struct {
 	buildingRepo                domainFacility.BuildingRepository
 	apparatRepo                 domainFacility.ApparatRepository
 	systemPartRepo              domainFacility.SystemPartRepository
-	specificationRepo           domainFacility.SpecificationRepository
+	specificationRepo           domainFacility.SpecificationStore
 	bacnetObjectRepo            domainFacility.BacnetObjectStore
 	objectDataRepo              domainFacility.ObjectDataStore
 }
@@ -31,7 +31,7 @@ func NewFieldDeviceService(
 	buildingRepo domainFacility.BuildingRepository,
 	apparatRepo domainFacility.ApparatRepository,
 	systemPartRepo domainFacility.SystemPartRepository,
-	specificationRepo domainFacility.SpecificationRepository,
+	specificationRepo domainFacility.SpecificationStore,
 	bacnetObjectRepo domainFacility.BacnetObjectStore,
 	objectDataRepo domainFacility.ObjectDataStore,
 ) *FieldDeviceService {
@@ -134,7 +134,97 @@ func (s *FieldDeviceService) UpdateWithBacnetObjects(fieldDevice *domainFacility
 }
 
 func (s *FieldDeviceService) DeleteByIds(ids []uuid.UUID) error {
+	// Soft-delete dependents as well (because field_devices are soft-deleted)
+	if err := s.bacnetObjectRepo.SoftDeleteByFieldDeviceIDs(ids); err != nil {
+		return err
+	}
+	if err := s.specificationRepo.SoftDeleteByFieldDeviceIDs(ids); err != nil {
+		return err
+	}
 	return s.repo.DeleteByIds(ids)
+}
+
+func (s *FieldDeviceService) CreateSpecification(fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error {
+	// Ensure field device exists (and not deleted)
+	fds, err := s.repo.GetByIds([]uuid.UUID{fieldDeviceID})
+	if err != nil {
+		return err
+	}
+	if len(fds) == 0 {
+		return domain.ErrNotFound
+	}
+
+	// Ensure 1:1 uniqueness
+	existing, err := s.specificationRepo.GetByFieldDeviceIDs([]uuid.UUID{fieldDeviceID})
+	if err != nil {
+		return err
+	}
+	if len(existing) > 0 {
+		return domain.ErrConflict
+	}
+
+	id := fieldDeviceID
+	specification.FieldDeviceID = &id
+	return s.specificationRepo.Create(specification)
+}
+
+func (s *FieldDeviceService) UpdateSpecification(fieldDeviceID uuid.UUID, patch *domainFacility.Specification) (*domainFacility.Specification, error) {
+	// Ensure field device exists (and not deleted)
+	fds, err := s.repo.GetByIds([]uuid.UUID{fieldDeviceID})
+	if err != nil {
+		return nil, err
+	}
+	if len(fds) == 0 {
+		return nil, domain.ErrNotFound
+	}
+
+	specs, err := s.specificationRepo.GetByFieldDeviceIDs([]uuid.UUID{fieldDeviceID})
+	if err != nil {
+		return nil, err
+	}
+	if len(specs) == 0 {
+		return nil, domain.ErrNotFound
+	}
+	spec := specs[0]
+
+	if patch.SpecificationSupplier != nil {
+		spec.SpecificationSupplier = patch.SpecificationSupplier
+	}
+	if patch.SpecificationBrand != nil {
+		spec.SpecificationBrand = patch.SpecificationBrand
+	}
+	if patch.SpecificationType != nil {
+		spec.SpecificationType = patch.SpecificationType
+	}
+	if patch.AdditionalInfoMotorValve != nil {
+		spec.AdditionalInfoMotorValve = patch.AdditionalInfoMotorValve
+	}
+	if patch.AdditionalInfoSize != nil {
+		spec.AdditionalInfoSize = patch.AdditionalInfoSize
+	}
+	if patch.AdditionalInformationInstallationLocation != nil {
+		spec.AdditionalInformationInstallationLocation = patch.AdditionalInformationInstallationLocation
+	}
+	if patch.ElectricalConnectionPH != nil {
+		spec.ElectricalConnectionPH = patch.ElectricalConnectionPH
+	}
+	if patch.ElectricalConnectionACDC != nil {
+		spec.ElectricalConnectionACDC = patch.ElectricalConnectionACDC
+	}
+	if patch.ElectricalConnectionAmperage != nil {
+		spec.ElectricalConnectionAmperage = patch.ElectricalConnectionAmperage
+	}
+	if patch.ElectricalConnectionPower != nil {
+		spec.ElectricalConnectionPower = patch.ElectricalConnectionPower
+	}
+	if patch.ElectricalConnectionRotation != nil {
+		spec.ElectricalConnectionRotation = patch.ElectricalConnectionRotation
+	}
+
+	if err := s.specificationRepo.Update(spec); err != nil {
+		return nil, err
+	}
+	return spec, nil
 }
 
 func (s *FieldDeviceService) ListBacnetObjects(fieldDeviceID uuid.UUID) ([]domainFacility.BacnetObject, error) {
@@ -223,16 +313,6 @@ func (s *FieldDeviceService) ensureParentsExist(fieldDevice *domainFacility.Fiel
 			return domain.ErrNotFound
 		}
 	}
-	if fieldDevice.SpecificationID != nil {
-		specs, err := s.specificationRepo.GetByIds([]uuid.UUID{*fieldDevice.SpecificationID})
-		if err != nil {
-			return err
-		}
-		if len(specs) == 0 {
-			return domain.ErrNotFound
-		}
-	}
-
 	return nil
 }
 
