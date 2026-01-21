@@ -26,7 +26,7 @@ func (r *buildingRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Building, er
 	}
 
 	q := "SELECT id, created_at, updated_at, deleted_at, iws_code, building_group " +
-		"FROM buildings WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(1, len(ids)) + ")"
+		"FROM buildings WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
 
 	args := make([]any, 0, len(ids))
 	for _, id := range ids {
@@ -99,7 +99,7 @@ func (r *buildingRepo) DeleteByIds(ids []uuid.UUID) error {
 	}
 
 	now := time.Now().UTC()
-	q := "UPDATE buildings SET deleted_at = $1, updated_at = $2 WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(3, len(ids)) + ")"
+	q := "UPDATE buildings SET deleted_at = $1, updated_at = $2 WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
 
 	args := make([]any, 0, 2+len(ids))
 	args = append(args, now, now)

@@ -45,7 +45,6 @@ func (h *FieldDeviceHandler) CreateFieldDevice(c *gin.Context) {
 		ApparatNr:                 req.ApparatNr,
 		SPSControllerSystemTypeID: req.SPSControllerSystemTypeID,
 		SystemPartID:              req.SystemPartID,
-		ProjectID:                 req.ProjectID,
 		ApparatID:                 req.ApparatID,
 	}
 
@@ -105,7 +104,6 @@ func (h *FieldDeviceHandler) CreateFieldDevice(c *gin.Context) {
 		SPSControllerSystemTypeID: fieldDevice.SPSControllerSystemTypeID,
 		SystemPartID:              fieldDevice.SystemPartID,
 		SpecificationID:           fieldDevice.SpecificationID,
-		ProjectID:                 fieldDevice.ProjectID,
 		ApparatID:                 fieldDevice.ApparatID,
 		CreatedAt:                 fieldDevice.CreatedAt,
 		UpdatedAt:                 fieldDevice.UpdatedAt,
@@ -160,7 +158,6 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 		SPSControllerSystemTypeID: fieldDevice.SPSControllerSystemTypeID,
 		SystemPartID:              fieldDevice.SystemPartID,
 		SpecificationID:           fieldDevice.SpecificationID,
-		ProjectID:                 fieldDevice.ProjectID,
 		ApparatID:                 fieldDevice.ApparatID,
 		CreatedAt:                 fieldDevice.CreatedAt,
 		UpdatedAt:                 fieldDevice.UpdatedAt,
@@ -209,7 +206,6 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 			SPSControllerSystemTypeID: fieldDevice.SPSControllerSystemTypeID,
 			SystemPartID:              fieldDevice.SystemPartID,
 			SpecificationID:           fieldDevice.SpecificationID,
-			ProjectID:                 fieldDevice.ProjectID,
 			ApparatID:                 fieldDevice.ApparatID,
 			CreatedAt:                 fieldDevice.CreatedAt,
 			UpdatedAt:                 fieldDevice.UpdatedAt,
@@ -287,11 +283,8 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 	if req.SPSControllerSystemTypeID != uuid.Nil {
 		fieldDevice.SPSControllerSystemTypeID = req.SPSControllerSystemTypeID
 	}
-	if req.SystemPartID != nil {
+	if req.SystemPartID != uuid.Nil {
 		fieldDevice.SystemPartID = req.SystemPartID
-	}
-	if req.ProjectID != nil {
-		fieldDevice.ProjectID = req.ProjectID
 	}
 	if req.ApparatID != uuid.Nil {
 		fieldDevice.ApparatID = req.ApparatID
@@ -357,7 +350,6 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		SPSControllerSystemTypeID: fieldDevice.SPSControllerSystemTypeID,
 		SystemPartID:              fieldDevice.SystemPartID,
 		SpecificationID:           fieldDevice.SpecificationID,
-		ProjectID:                 fieldDevice.ProjectID,
 		ApparatID:                 fieldDevice.ApparatID,
 		CreatedAt:                 fieldDevice.CreatedAt,
 		UpdatedAt:                 fieldDevice.UpdatedAt,
