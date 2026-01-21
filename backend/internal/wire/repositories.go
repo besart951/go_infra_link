@@ -22,14 +22,18 @@ type Repositories struct {
 	UserEmail    domainUser.UserEmailRepository
 	RefreshToken domainAuth.RefreshTokenRepository
 
-	FacilityBuildings      domainFacility.BuildingRepository
-	FacilitySystemTypes    domainFacility.SystemTypeRepository
-	FacilitySystemParts    domainFacility.SystemPartRepository
-	FacilitySpecifications domainFacility.SpecificationRepository
-	FacilityApparats       domainFacility.ApparatRepository
-	FacilityControlCabinet domainFacility.ControlCabinetRepository
-	FacilityFieldDevices   domainFacility.FieldDeviceRepository
-	FacilitySPSControllers domainFacility.SPSControllerRepository
+	FacilityBuildings                domainFacility.BuildingRepository
+	FacilitySystemTypes              domainFacility.SystemTypeRepository
+	FacilitySystemParts              domainFacility.SystemPartRepository
+	FacilitySpecifications           domainFacility.SpecificationRepository
+	FacilityApparats                 domainFacility.ApparatRepository
+	FacilityControlCabinet           domainFacility.ControlCabinetRepository
+	FacilityFieldDevices             domainFacility.FieldDeviceStore
+	FacilitySPSControllers           domainFacility.SPSControllerRepository
+	FacilitySPSControllerSystemTypes domainFacility.SPSControllerSystemTypeStore
+	FacilityBacnetObjects           domainFacility.BacnetObjectStore
+	FacilityObjectData              domainFacility.ObjectDataStore
+	FacilityObjectDataBacnetObjects domainFacility.ObjectDataBacnetObjectStore
 }
 
 // NewRepositories creates all repository instances from the database connection.
@@ -46,13 +50,17 @@ func NewRepositories(db *sql.DB, driver string) (*Repositories, error) {
 		UserEmail:    userEmailRepo,
 		RefreshToken: authrepo.NewRefreshTokenRepository(db, driver),
 
-		FacilityBuildings:      facilityrepo.NewBuildingRepository(db, driver),
-		FacilitySystemTypes:    facilityrepo.NewSystemTypeRepository(db, driver),
-		FacilitySystemParts:    facilityrepo.NewSystemPartRepository(db, driver),
-		FacilitySpecifications: facilityrepo.NewSpecificationRepository(db, driver),
-		FacilityApparats:       facilityrepo.NewApparatRepository(db, driver),
-		FacilityControlCabinet: facilityrepo.NewControlCabinetRepository(db, driver),
-		FacilityFieldDevices:   facilityrepo.NewFieldDeviceRepository(db, driver),
-		FacilitySPSControllers: facilityrepo.NewSPSControllerRepository(db, driver),
+		FacilityBuildings:                facilityrepo.NewBuildingRepository(db, driver),
+		FacilitySystemTypes:              facilityrepo.NewSystemTypeRepository(db, driver),
+		FacilitySystemParts:              facilityrepo.NewSystemPartRepository(db, driver),
+		FacilitySpecifications:           facilityrepo.NewSpecificationRepository(db, driver),
+		FacilityApparats:                 facilityrepo.NewApparatRepository(db, driver),
+		FacilityControlCabinet:           facilityrepo.NewControlCabinetRepository(db, driver),
+		FacilityFieldDevices:             facilityrepo.NewFieldDeviceRepository(db, driver),
+		FacilitySPSControllers:           facilityrepo.NewSPSControllerRepository(db, driver),
+		FacilitySPSControllerSystemTypes: facilityrepo.NewSPSControllerSystemTypeRepository(db, driver),
+		FacilityBacnetObjects:            facilityrepo.NewBacnetObjectRepository(db, driver),
+		FacilityObjectData:               facilityrepo.NewObjectDataRepository(db, driver),
+		FacilityObjectDataBacnetObjects:  facilityrepo.NewObjectDataBacnetObjectRepository(db, driver),
 	}, nil
 }

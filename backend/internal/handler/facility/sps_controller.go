@@ -1,8 +1,10 @@
 package facility
 
 import (
+	"errors"
 	"net/http"
 
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
@@ -50,7 +52,23 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 		Vlan:              req.Vlan,
 	}
 
-	if err := h.service.Create(spsController); err != nil {
+	systemTypes := make([]domainFacility.SPSControllerSystemType, 0, len(req.SystemTypes))
+	for _, st := range req.SystemTypes {
+		systemTypes = append(systemTypes, domainFacility.SPSControllerSystemType{
+			SystemTypeID: st.SystemTypeID,
+			Number:       st.Number,
+			DocumentName: st.DocumentName,
+		})
+	}
+
+	if err := h.service.CreateWithSystemTypes(spsController, systemTypes); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+				Error:   "invalid_reference",
+				Message: "Referenced entity not found or deleted",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -273,10 +291,31 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		spsController.Vlan = req.Vlan
 	}
 
-	if err := h.service.Update(spsController); err != nil {
+	var updateErr error
+	if req.SystemTypes != nil {
+		systemTypes := make([]domainFacility.SPSControllerSystemType, 0, len(*req.SystemTypes))
+		for _, st := range *req.SystemTypes {
+			systemTypes = append(systemTypes, domainFacility.SPSControllerSystemType{
+				SystemTypeID: st.SystemTypeID,
+				Number:       st.Number,
+				DocumentName: st.DocumentName,
+			})
+		}
+		updateErr = h.service.UpdateWithSystemTypes(spsController, systemTypes)
+	} else {
+		updateErr = h.service.Update(spsController)
+	}
+	if updateErr != nil {
+		if errors.Is(updateErr, domain.ErrNotFound) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+				Error:   "invalid_reference",
+				Message: "Referenced entity not found or deleted",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "update_failed",
-			Message: err.Error(),
+			Message: updateErr.Error(),
 		})
 		return
 	}

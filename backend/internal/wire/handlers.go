@@ -30,6 +30,7 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devA
 		FacilityApparatHandler:        facilityhandler.NewApparatHandler(services.FacilityApparat),
 		FacilityControlCabinetHandler: facilityhandler.NewControlCabinetHandler(services.FacilityControlCabinet),
 		FacilityFieldDeviceHandler:    facilityhandler.NewFieldDeviceHandler(services.FacilityFieldDevice),
+		FacilityBacnetObjectHandler:   facilityhandler.NewBacnetObjectHandler(services.FacilityBacnetObject),
 		FacilitySPSControllerHandler:  facilityhandler.NewSPSControllerHandler(services.FacilitySPSController),
 	}
 }

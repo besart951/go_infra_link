@@ -1,8 +1,10 @@
 package facility
 
 import (
+	"errors"
 	"net/http"
 
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
@@ -48,7 +50,47 @@ func (h *FieldDeviceHandler) CreateFieldDevice(c *gin.Context) {
 		ApparatID:                 req.ApparatID,
 	}
 
-	if err := h.service.Create(fieldDevice); err != nil {
+	bacnetObjects := make([]domainFacility.BacnetObject, 0, len(req.BacnetObjects))
+	for _, bo := range req.BacnetObjects {
+		bacnetObjects = append(bacnetObjects, domainFacility.BacnetObject{
+			TextFix:             bo.TextFix,
+			Description:         bo.Description,
+			GMSVisible:          bo.GMSVisible,
+			Optional:            bo.Optional,
+			TextIndividual:      bo.TextIndividual,
+			SoftwareType:        domainFacility.BacnetSoftwareType(bo.SoftwareType),
+			SoftwareNumber:      uint16(bo.SoftwareNumber),
+			HardwareType:        domainFacility.BacnetHardwareType(bo.HardwareType),
+			HardwareQuantity:    uint8(bo.HardwareQuantity),
+			SoftwareReferenceID: bo.SoftwareReferenceID,
+			StateTextID:         bo.StateTextID,
+			NotificationClassID: bo.NotificationClassID,
+			AlarmDefinitionID:   bo.AlarmDefinitionID,
+		})
+	}
+
+	if err := h.service.CreateWithBacnetObjects(fieldDevice, req.ObjectDataID, bacnetObjects); err != nil {
+		if errors.Is(err, domain.ErrInvalidArgument) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+				Error:   "validation_error",
+				Message: "object_data_id and bacnet_objects are mutually exclusive",
+			})
+			return
+		}
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+				Error:   "invalid_reference",
+				Message: "Referenced entity not found or deleted",
+			})
+			return
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			c.JSON(http.StatusConflict, dto.ErrorResponse{
+				Error:   "conflict",
+				Message: "apparat_nr is already used in this scope",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -259,7 +301,51 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		fieldDevice.ApparatID = req.ApparatID
 	}
 
-	if err := h.service.Update(fieldDevice); err != nil {
+	var bacnetObjects *[]domainFacility.BacnetObject
+	if req.BacnetObjects != nil {
+		mapped := make([]domainFacility.BacnetObject, 0, len(*req.BacnetObjects))
+		for _, bo := range *req.BacnetObjects {
+			mapped = append(mapped, domainFacility.BacnetObject{
+				TextFix:             bo.TextFix,
+				Description:         bo.Description,
+				GMSVisible:          bo.GMSVisible,
+				Optional:            bo.Optional,
+				TextIndividual:      bo.TextIndividual,
+				SoftwareType:        domainFacility.BacnetSoftwareType(bo.SoftwareType),
+				SoftwareNumber:      uint16(bo.SoftwareNumber),
+				HardwareType:        domainFacility.BacnetHardwareType(bo.HardwareType),
+				HardwareQuantity:    uint8(bo.HardwareQuantity),
+				SoftwareReferenceID: bo.SoftwareReferenceID,
+				StateTextID:         bo.StateTextID,
+				NotificationClassID: bo.NotificationClassID,
+				AlarmDefinitionID:   bo.AlarmDefinitionID,
+			})
+		}
+		bacnetObjects = &mapped
+	}
+
+	if err := h.service.UpdateWithBacnetObjects(fieldDevice, req.ObjectDataID, bacnetObjects); err != nil {
+		if errors.Is(err, domain.ErrInvalidArgument) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+				Error:   "validation_error",
+				Message: "object_data_id and bacnet_objects are mutually exclusive",
+			})
+			return
+		}
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+				Error:   "invalid_reference",
+				Message: "Referenced entity not found or deleted",
+			})
+			return
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			c.JSON(http.StatusConflict, dto.ErrorResponse{
+				Error:   "conflict",
+				Message: "apparat_nr is already used in this scope",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "update_failed",
 			Message: err.Error(),
@@ -313,4 +399,67 @@ func (h *FieldDeviceHandler) DeleteFieldDevice(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// ListFieldDeviceBacnetObjects godoc
+// @Summary List bacnet objects for a field device (hydration)
+// @Tags facility-field-devices
+// @Produce json
+// @Param id path string true "Field Device ID"
+// @Success 200 {array} dto.BacnetObjectResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/field-devices/{id}/bacnet-objects [get]
+func (h *FieldDeviceHandler) ListFieldDeviceBacnetObjects(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Error:   "invalid_id",
+			Message: "Invalid UUID format",
+		})
+		return
+	}
+
+	objs, err := h.service.ListBacnetObjects(id)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{
+				Error:   "not_found",
+				Message: "Field Device not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "fetch_failed",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	out := make([]dto.BacnetObjectResponse, 0, len(objs))
+	for _, o := range objs {
+		out = append(out, dto.BacnetObjectResponse{
+			ID:                  o.ID.String(),
+			TextFix:             o.TextFix,
+			Description:         o.Description,
+			GMSVisible:          o.GMSVisible,
+			Optional:            o.Optional,
+			TextIndividual:      o.TextIndividual,
+			SoftwareType:        string(o.SoftwareType),
+			SoftwareNumber:      int(o.SoftwareNumber),
+			HardwareType:        string(o.HardwareType),
+			HardwareQuantity:    int(o.HardwareQuantity),
+			FieldDeviceID:       o.FieldDeviceID,
+			SoftwareReferenceID: o.SoftwareReferenceID,
+			StateTextID:         o.StateTextID,
+			NotificationClassID: o.NotificationClassID,
+			AlarmDefinitionID:   o.AlarmDefinitionID,
+			CreatedAt:           o.CreatedAt,
+			UpdatedAt:           o.UpdatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, out)
 }

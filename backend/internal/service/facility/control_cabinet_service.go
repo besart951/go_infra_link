@@ -7,14 +7,18 @@ import (
 )
 
 type ControlCabinetService struct {
-	repo domainFacility.ControlCabinetRepository
+	repo         domainFacility.ControlCabinetRepository
+	buildingRepo domainFacility.BuildingRepository
 }
 
-func NewControlCabinetService(repo domainFacility.ControlCabinetRepository) *ControlCabinetService {
-	return &ControlCabinetService{repo: repo}
+func NewControlCabinetService(repo domainFacility.ControlCabinetRepository, buildingRepo domainFacility.BuildingRepository) *ControlCabinetService {
+	return &ControlCabinetService{repo: repo, buildingRepo: buildingRepo}
 }
 
 func (s *ControlCabinetService) Create(controlCabinet *domainFacility.ControlCabinet) error {
+	if err := s.ensureBuildingExists(controlCabinet.BuildingID); err != nil {
+		return err
+	}
 	return s.repo.Create(controlCabinet)
 }
 
@@ -39,9 +43,23 @@ func (s *ControlCabinetService) List(page, limit int, search string) (*domain.Pa
 }
 
 func (s *ControlCabinetService) Update(controlCabinet *domainFacility.ControlCabinet) error {
+	if err := s.ensureBuildingExists(controlCabinet.BuildingID); err != nil {
+		return err
+	}
 	return s.repo.Update(controlCabinet)
 }
 
 func (s *ControlCabinetService) DeleteByIds(ids []uuid.UUID) error {
 	return s.repo.DeleteByIds(ids)
+}
+
+func (s *ControlCabinetService) ensureBuildingExists(buildingID uuid.UUID) error {
+	buildings, err := s.buildingRepo.GetByIds([]uuid.UUID{buildingID})
+	if err != nil {
+		return err
+	}
+	if len(buildings) == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
 }

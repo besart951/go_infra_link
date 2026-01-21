@@ -9,29 +9,37 @@ import (
 // Facility DTOs - SPSController
 
 type CreateSPSControllerRequest struct {
-	ControlCabinetID  uuid.UUID  `json:"control_cabinet_id" binding:"required"`
-	ProjectID         *uuid.UUID `json:"project_id"`
-	GADevice          *string    `json:"ga_device" binding:"omitempty,max=10"`
-	DeviceName        string     `json:"device_name" binding:"required,max=100"`
-	DeviceDescription *string    `json:"device_description" binding:"omitempty,max=250"`
-	DeviceLocation    *string    `json:"device_location" binding:"omitempty,max=250"`
-	IPAddress         *string    `json:"ip_address" binding:"omitempty,max=50"`
-	Subnet            *string    `json:"subnet" binding:"omitempty,max=50"`
-	Gateway           *string    `json:"gateway" binding:"omitempty,max=50"`
-	Vlan              *string    `json:"vlan" binding:"omitempty,max=50"`
+	ControlCabinetID  uuid.UUID                      `json:"control_cabinet_id" binding:"required"`
+	ProjectID         *uuid.UUID                     `json:"project_id"`
+	GADevice          *string                        `json:"ga_device" binding:"omitempty,max=10"`
+	DeviceName        string                         `json:"device_name" binding:"required,max=100"`
+	DeviceDescription *string                        `json:"device_description" binding:"omitempty,max=250"`
+	DeviceLocation    *string                        `json:"device_location" binding:"omitempty,max=250"`
+	IPAddress         *string                        `json:"ip_address" binding:"omitempty,max=50"`
+	Subnet            *string                        `json:"subnet" binding:"omitempty,max=50"`
+	Gateway           *string                        `json:"gateway" binding:"omitempty,max=50"`
+	Vlan              *string                        `json:"vlan" binding:"omitempty,max=50"`
+	SystemTypes       []SPSControllerSystemTypeInput `json:"system_types" binding:"omitempty,dive"`
 }
 
 type UpdateSPSControllerRequest struct {
-	ControlCabinetID  uuid.UUID  `json:"control_cabinet_id"`
-	ProjectID         *uuid.UUID `json:"project_id"`
-	GADevice          *string    `json:"ga_device" binding:"omitempty,max=10"`
-	DeviceName        string     `json:"device_name" binding:"omitempty,max=100"`
-	DeviceDescription *string    `json:"device_description" binding:"omitempty,max=250"`
-	DeviceLocation    *string    `json:"device_location" binding:"omitempty,max=250"`
-	IPAddress         *string    `json:"ip_address" binding:"omitempty,max=50"`
-	Subnet            *string    `json:"subnet" binding:"omitempty,max=50"`
-	Gateway           *string    `json:"gateway" binding:"omitempty,max=50"`
-	Vlan              *string    `json:"vlan" binding:"omitempty,max=50"`
+	ControlCabinetID  uuid.UUID                       `json:"control_cabinet_id"`
+	ProjectID         *uuid.UUID                      `json:"project_id"`
+	GADevice          *string                         `json:"ga_device" binding:"omitempty,max=10"`
+	DeviceName        string                          `json:"device_name" binding:"omitempty,max=100"`
+	DeviceDescription *string                         `json:"device_description" binding:"omitempty,max=250"`
+	DeviceLocation    *string                         `json:"device_location" binding:"omitempty,max=250"`
+	IPAddress         *string                         `json:"ip_address" binding:"omitempty,max=50"`
+	Subnet            *string                         `json:"subnet" binding:"omitempty,max=50"`
+	Gateway           *string                         `json:"gateway" binding:"omitempty,max=50"`
+	Vlan              *string                         `json:"vlan" binding:"omitempty,max=50"`
+	SystemTypes       *[]SPSControllerSystemTypeInput `json:"system_types" binding:"omitempty,dive"`
+}
+
+type SPSControllerSystemTypeInput struct {
+	SystemTypeID uuid.UUID `json:"system_type_id" binding:"required"`
+	Number       *int      `json:"number"`
+	DocumentName *string   `json:"document_name" binding:"omitempty,max=250"`
 }
 
 type SPSControllerResponse struct {

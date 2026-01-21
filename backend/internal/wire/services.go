@@ -25,6 +25,7 @@ type Services struct {
 	FacilityApparat        *facilityservice.ApparatService
 	FacilityControlCabinet *facilityservice.ControlCabinetService
 	FacilityFieldDevice    *facilityservice.FieldDeviceService
+	FacilityBacnetObject   *facilityservice.BacnetObjectService
 	FacilitySPSController  *facilityservice.SPSControllerService
 }
 
@@ -62,8 +63,31 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 		FacilitySystemPart:     facilityservice.NewSystemPartService(repos.FacilitySystemParts),
 		FacilitySpecification:  facilityservice.NewSpecificationService(repos.FacilitySpecifications),
 		FacilityApparat:        facilityservice.NewApparatService(repos.FacilityApparats),
-		FacilityControlCabinet: facilityservice.NewControlCabinetService(repos.FacilityControlCabinet),
-		FacilityFieldDevice:    facilityservice.NewFieldDeviceService(repos.FacilityFieldDevices),
-		FacilitySPSController:  facilityservice.NewSPSControllerService(repos.FacilitySPSControllers),
+		FacilityControlCabinet: facilityservice.NewControlCabinetService(repos.FacilityControlCabinet, repos.FacilityBuildings),
+		FacilityFieldDevice: facilityservice.NewFieldDeviceService(
+			repos.FacilityFieldDevices,
+			repos.FacilitySPSControllerSystemTypes,
+			repos.FacilitySPSControllers,
+			repos.FacilityControlCabinet,
+			repos.FacilitySystemTypes,
+			repos.FacilityBuildings,
+			repos.FacilityApparats,
+			repos.FacilitySystemParts,
+			repos.FacilitySpecifications,
+			repos.FacilityBacnetObjects,
+			repos.FacilityObjectData,
+		),
+		FacilityBacnetObject: facilityservice.NewBacnetObjectService(
+			repos.FacilityBacnetObjects,
+			repos.FacilityFieldDevices,
+			repos.FacilityObjectData,
+			repos.FacilityObjectDataBacnetObjects,
+		),
+		FacilitySPSController: facilityservice.NewSPSControllerService(
+			repos.FacilitySPSControllers,
+			repos.FacilityControlCabinet,
+			repos.FacilitySystemTypes,
+			repos.FacilitySPSControllerSystemTypes,
+		),
 	}
 }

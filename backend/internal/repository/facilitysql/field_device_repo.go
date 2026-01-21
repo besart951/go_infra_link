@@ -16,7 +16,7 @@ type fieldDeviceRepo struct {
 	dialect sqlutil.Dialect
 }
 
-func NewFieldDeviceRepository(db *sql.DB, driver string) domainFacility.FieldDeviceRepository {
+func NewFieldDeviceRepository(db *sql.DB, driver string) domainFacility.FieldDeviceStore {
 	return &fieldDeviceRepo{db: db, dialect: sqlutil.DialectFromDriver(driver)}
 }
 
@@ -298,4 +298,29 @@ func (r *fieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*dom
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
+}
+
+// ExistsApparatNrConflict checks if apparat_nr is already taken for the given
+// (sps_controller_system_type_id, system_part_id, apparat_id) tuple.
+// excludeID can be set for updates.
+func (r *fieldDeviceRepo) ExistsApparatNrConflict(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID, apparatNr int, excludeID *uuid.UUID) (bool, error) {
+	// Note: system_part_id is nullable. Treat NULL as a single bucket.
+	q := "SELECT 1 FROM field_devices WHERE deleted_at IS NULL AND sps_controller_system_type_id = ? AND apparat_id = ? AND COALESCE(system_part_id, '00000000-0000-0000-0000-000000000000') = COALESCE(?, '00000000-0000-0000-0000-000000000000') AND apparat_nr = ?"
+	args := []any{spsControllerSystemTypeID, apparatID, argUUIDPtr(systemPartID), apparatNr}
+	if excludeID != nil {
+		q += " AND id <> ?"
+		args = append(args, *excludeID)
+	}
+	q += " LIMIT 1"
+	q = sqlutil.Rebind(r.dialect, q)
+
+	var one int
+	err := r.db.QueryRow(q, args...).Scan(&one)
+	if err == nil {
+		return true, nil
+	}
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	return false, err
 }

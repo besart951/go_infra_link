@@ -1,8 +1,10 @@
 package facility
 
 import (
+	"errors"
 	"net/http"
 
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
@@ -44,6 +46,13 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 	}
 
 	if err := h.service.Create(controlCabinet); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+				Error:   "invalid_reference",
+				Message: "Building not found or deleted",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -225,6 +234,13 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 	}
 
 	if err := h.service.Update(controlCabinet); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+				Error:   "invalid_reference",
+				Message: "Building not found or deleted",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "update_failed",
 			Message: err.Error(),

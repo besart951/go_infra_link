@@ -46,12 +46,21 @@ type ApparatService interface {
 	DeleteByIds(ids []uuid.UUID) error
 }
 
+type BacnetObjectService interface {
+	CreateWithParent(bacnetObject *domainFacility.BacnetObject, fieldDeviceID *uuid.UUID, objectDataID *uuid.UUID) error
+	GetByID(id uuid.UUID) (*domainFacility.BacnetObject, error)
+	Update(bacnetObject *domainFacility.BacnetObject, objectDataID *uuid.UUID) error
+}
+
 type FieldDeviceService interface {
 	Create(fieldDevice *domainFacility.FieldDevice) error
+	CreateWithBacnetObjects(fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects []domainFacility.BacnetObject) error
 	GetByID(id uuid.UUID) (*domainFacility.FieldDevice, error)
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.FieldDevice], error)
 	Update(fieldDevice *domainFacility.FieldDevice) error
+	UpdateWithBacnetObjects(fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects *[]domainFacility.BacnetObject) error
 	DeleteByIds(ids []uuid.UUID) error
+	ListBacnetObjects(fieldDeviceID uuid.UUID) ([]domainFacility.BacnetObject, error)
 }
 
 type ControlCabinetService interface {
@@ -64,8 +73,10 @@ type ControlCabinetService interface {
 
 type SPSControllerService interface {
 	Create(spsController *domainFacility.SPSController) error
+	CreateWithSystemTypes(spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error
 	GetByID(id uuid.UUID) (*domainFacility.SPSController, error)
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSController], error)
 	Update(spsController *domainFacility.SPSController) error
+	UpdateWithSystemTypes(spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error
 	DeleteByIds(ids []uuid.UUID) error
 }

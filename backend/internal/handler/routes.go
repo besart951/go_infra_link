@@ -18,6 +18,7 @@ type Handlers struct {
 	FacilitySpecificationHandler  *facilityhandler.SpecificationHandler
 	FacilityApparatHandler        *facilityhandler.ApparatHandler
 	FacilityFieldDeviceHandler    *facilityhandler.FieldDeviceHandler
+	FacilityBacnetObjectHandler   *facilityhandler.BacnetObjectHandler
 	FacilityControlCabinetHandler *facilityhandler.ControlCabinetHandler
 	FacilitySPSControllerHandler  *facilityhandler.SPSControllerHandler
 }
@@ -113,8 +114,12 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 		facility.POST("/field-devices", handlers.FacilityFieldDeviceHandler.CreateFieldDevice)
 		facility.GET("/field-devices", handlers.FacilityFieldDeviceHandler.ListFieldDevices)
 		facility.GET("/field-devices/:id", handlers.FacilityFieldDeviceHandler.GetFieldDevice)
+		facility.GET("/field-devices/:id/bacnet-objects", handlers.FacilityFieldDeviceHandler.ListFieldDeviceBacnetObjects)
 		facility.PUT("/field-devices/:id", handlers.FacilityFieldDeviceHandler.UpdateFieldDevice)
 		facility.DELETE("/field-devices/:id", handlers.FacilityFieldDeviceHandler.DeleteFieldDevice)
+
+		facility.POST("/bacnet-objects", handlers.FacilityBacnetObjectHandler.CreateBacnetObject)
+		facility.PUT("/bacnet-objects/:id", handlers.FacilityBacnetObjectHandler.UpdateBacnetObject)
 
 		facility.POST("/sps-controllers", handlers.FacilitySPSControllerHandler.CreateSPSController)
 		facility.GET("/sps-controllers", handlers.FacilitySPSControllerHandler.ListSPSControllers)
