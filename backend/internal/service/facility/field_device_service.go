@@ -303,15 +303,13 @@ func (s *FieldDeviceService) ensureParentsExist(fieldDevice *domainFacility.Fiel
 		return domain.ErrNotFound
 	}
 
-	// optional parents
-	if fieldDevice.SystemPartID != nil {
-		parts, err := s.systemPartRepo.GetByIds([]uuid.UUID{*fieldDevice.SystemPartID})
-		if err != nil {
-			return err
-		}
-		if len(parts) == 0 {
-			return domain.ErrNotFound
-		}
+	// SystemPart is now required
+	parts, err := s.systemPartRepo.GetByIds([]uuid.UUID{fieldDevice.SystemPartID})
+	if err != nil {
+		return err
+	}
+	if len(parts) == 0 {
+		return domain.ErrNotFound
 	}
 	return nil
 }

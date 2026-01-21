@@ -8,21 +8,24 @@ import (
 // It mirrors the repository capabilities but gives you a stable place
 // to add validation, business rules, auth checks, etc.
 type Service struct {
-	Buildings                domainFacility.BuildingRepository
-	SystemTypes              domainFacility.SystemTypeRepository
-	SystemParts              domainFacility.SystemPartRepository
-	Specifications           domainFacility.SpecificationRepository
-	StateTexts               domainFacility.StateTextRepository
-	NotificationClasses      domainFacility.NotificationClassRepository
-	AlarmDefinitions         domainFacility.AlarmDefinitionRepository
-	Apparats                 domainFacility.ApparatRepository
-	ObjectData               domainFacility.ObjectDataRepository
-	ControlCabinets          domainFacility.ControlCabinetRepository
-	SPSControllers           domainFacility.SPSControllerRepository
-	SPSControllerSystemTypes domainFacility.SPSControllerSystemTypeRepository
-	FieldDevices             domainFacility.FieldDeviceRepository
-	BacnetObjects            domainFacility.BacnetObjectRepository
-	ObjectDataHistory        domainFacility.ObjectDataHistoryRepository
+	Buildings                   domainFacility.BuildingRepository
+	SystemTypes                 domainFacility.SystemTypeRepository
+	SystemParts                 domainFacility.SystemPartRepository
+	Specifications              domainFacility.SpecificationRepository
+	StateTexts                  domainFacility.StateTextRepository
+	NotificationClasses         domainFacility.NotificationClassRepository
+	AlarmDefinitions            domainFacility.AlarmDefinitionRepository
+	Apparats                    domainFacility.ApparatRepository
+	ObjectData                  domainFacility.ObjectDataRepository
+	ControlCabinets             domainFacility.ControlCabinetRepository
+	SPSControllers              domainFacility.SPSControllerRepository
+	SPSControllerSystemTypes    domainFacility.SPSControllerSystemTypeRepository
+	FieldDevices                domainFacility.FieldDeviceRepository
+	BacnetObjects               domainFacility.BacnetObjectRepository
+	ObjectDataHistory           domainFacility.ObjectDataHistoryRepository
+	ProjectControlCabinets      domainFacility.ProjectControlCabinetStore
+	ProjectSPSControllers       domainFacility.ProjectSPSControllerStore
+	ProjectFieldDevices         domainFacility.ProjectFieldDeviceStore
 }
 
 func New(
@@ -41,6 +44,9 @@ func New(
 	fieldDevices domainFacility.FieldDeviceRepository,
 	bacnetObjects domainFacility.BacnetObjectRepository,
 	objectDataHistory domainFacility.ObjectDataHistoryRepository,
+	projectControlCabinets domainFacility.ProjectControlCabinetStore,
+	projectSPSControllers domainFacility.ProjectSPSControllerStore,
+	projectFieldDevices domainFacility.ProjectFieldDeviceStore,
 ) *Service {
 	return &Service{
 		Buildings:                buildings,
@@ -58,5 +64,8 @@ func New(
 		FieldDevices:             fieldDevices,
 		BacnetObjects:            bacnetObjects,
 		ObjectDataHistory:        objectDataHistory,
+		ProjectControlCabinets:   projectControlCabinets,
+		ProjectSPSControllers:    projectSPSControllers,
+		ProjectFieldDevices:      projectFieldDevices,
 	}
 }

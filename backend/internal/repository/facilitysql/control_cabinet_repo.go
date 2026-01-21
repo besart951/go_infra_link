@@ -26,7 +26,7 @@ func (r *controlCabinetRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Contro
 	}
 
 	q := "SELECT id, created_at, updated_at, deleted_at, building_id, control_cabinet_nr " +
-		"FROM control_cabinets WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(1, len(ids)) + ")"
+		"FROM control_cabinets WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
 
 	args := make([]any, 0, len(ids))
 	for _, id := range ids {
@@ -100,7 +100,7 @@ func (r *controlCabinetRepo) DeleteByIds(ids []uuid.UUID) error {
 	}
 
 	now := time.Now().UTC()
-	q := "UPDATE control_cabinets SET deleted_at = $1, updated_at = $2 WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(3, len(ids)) + ")"
+	q := "UPDATE control_cabinets SET deleted_at = $1, updated_at = $2 WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
 
 	args := make([]any, 0, 2+len(ids))
 	args = append(args, now, now)

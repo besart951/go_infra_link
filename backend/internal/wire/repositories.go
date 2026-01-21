@@ -34,6 +34,9 @@ type Repositories struct {
 	FacilityBacnetObjects            domainFacility.BacnetObjectStore
 	FacilityObjectData               domainFacility.ObjectDataStore
 	FacilityObjectDataBacnetObjects  domainFacility.ObjectDataBacnetObjectStore
+	ProjectControlCabinets           domainFacility.ProjectControlCabinetStore
+	ProjectSPSControllers            domainFacility.ProjectSPSControllerStore
+	ProjectFieldDevices              domainFacility.ProjectFieldDeviceStore
 }
 
 // NewRepositories creates all repository instances from the database connection.
@@ -55,12 +58,15 @@ func NewRepositories(db *sql.DB, driver string) (*Repositories, error) {
 		FacilitySystemParts:              facilityrepo.NewSystemPartRepository(db, driver),
 		FacilitySpecifications:           facilityrepo.NewSpecificationRepository(db, driver),
 		FacilityApparats:                 facilityrepo.NewApparatRepository(db, driver),
-		FacilityControlCabinet:           facilityrepo.NewControlCabinetRepository(db, driver),
+		FacilityControlCabinet:           facilityrepo.NewControlCabinetRepository(db),
 		FacilityFieldDevices:             facilityrepo.NewFieldDeviceRepository(db, driver),
 		FacilitySPSControllers:           facilityrepo.NewSPSControllerRepository(db, driver),
 		FacilitySPSControllerSystemTypes: facilityrepo.NewSPSControllerSystemTypeRepository(db, driver),
 		FacilityBacnetObjects:            facilityrepo.NewBacnetObjectRepository(db, driver),
 		FacilityObjectData:               facilityrepo.NewObjectDataRepository(db, driver),
 		FacilityObjectDataBacnetObjects:  facilityrepo.NewObjectDataBacnetObjectRepository(db, driver),
+		ProjectControlCabinets:           facilityrepo.NewProjectControlCabinetRepository(db, driver),
+		ProjectSPSControllers:            facilityrepo.NewProjectSPSControllerRepository(db, driver),
+		ProjectFieldDevices:              facilityrepo.NewProjectFieldDeviceRepository(db, driver),
 	}, nil
 }
