@@ -1,0 +1,24 @@
+meta {
+  name: Update System Part
+  type: http
+  seq: 48
+}
+
+put {
+  url: {{baseUrl}}/api/v1/facility/system-parts/{{system_part_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "short_name": "SP2",
+    "name": "System Part 2",
+    "description": "Updated description"
+  }
+}

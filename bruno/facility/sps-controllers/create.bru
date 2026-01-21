@@ -1,0 +1,38 @@
+meta {
+  name: Create SPS Controller
+  type: http
+  seq: 65
+}
+
+post {
+  url: {{baseUrl}}/api/v1/facility/sps-controllers
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "control_cabinet_id": "{{control_cabinet_id}}",
+    "project_id": null,
+    "ga_device": "GA-1",
+    "device_name": "SPS Controller 1",
+    "device_description": "Example description",
+    "device_location": "Building A",
+    "ip_address": "192.168.1.10",
+    "subnet": "255.255.255.0",
+    "gateway": "192.168.1.1",
+    "vlan": "10"
+  }
+}
+
+script:post-response {
+  const data = res.body;
+  if (data && data.id) {
+    bru.setVar('sps_controller_id', data.id);
+  }
+}

@@ -1,0 +1,31 @@
+meta {
+  name: Create Control Cabinet
+  type: http
+  seq: 60
+}
+
+post {
+  url: {{baseUrl}}/api/v1/facility/control-cabinets
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "building_id": "{{building_id}}",
+    "project_id": null,
+    "control_cabinet_nr": "CC-1"
+  }
+}
+
+script:post-response {
+  const data = res.body;
+  if (data && data.id) {
+    bru.setVar('control_cabinet_id', data.id);
+  }
+}

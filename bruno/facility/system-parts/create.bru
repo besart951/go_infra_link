@@ -1,0 +1,31 @@
+meta {
+  name: Create System Part
+  type: http
+  seq: 45
+}
+
+post {
+  url: {{baseUrl}}/api/v1/facility/system-parts
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "short_name": "SP1",
+    "name": "System Part 1",
+    "description": "Example description"
+  }
+}
+
+script:post-response {
+  const data = res.body;
+  if (data && data.id) {
+    bru.setVar('system_part_id', data.id);
+  }
+}

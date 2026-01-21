@@ -1,0 +1,11 @@
+meta {
+  name: List Field Devices
+  type: http
+  seq: 71
+}
+
+get {
+  url: {{baseUrl}}/api/v1/facility/field-devices?page=1&limit=10&search=
+  body: none
+  auth: none
+}

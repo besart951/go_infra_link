@@ -1,0 +1,24 @@
+meta {
+  name: Update Specification
+  type: http
+  seq: 53
+}
+
+put {
+  url: {{baseUrl}}/api/v1/facility/specifications/{{specification_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "specification_supplier": "Supplier Updated",
+    "electrical_connection_amperage": 2.5,
+    "electrical_connection_power": 40.0
+  }
+}

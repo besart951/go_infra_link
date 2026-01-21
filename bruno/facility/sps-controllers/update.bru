@@ -1,0 +1,31 @@
+meta {
+  name: Update SPS Controller
+  type: http
+  seq: 68
+}
+
+put {
+  url: {{baseUrl}}/api/v1/facility/sps-controllers/{{sps_controller_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "control_cabinet_id": "{{control_cabinet_id}}",
+    "project_id": null,
+    "ga_device": "GA-2",
+    "device_name": "SPS Controller 2",
+    "device_description": "Updated description",
+    "device_location": "Building B",
+    "ip_address": "192.168.1.11",
+    "subnet": "255.255.255.0",
+    "gateway": "192.168.1.1",
+    "vlan": "20"
+  }
+}

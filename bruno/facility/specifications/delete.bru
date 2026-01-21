@@ -1,0 +1,15 @@
+meta {
+  name: Delete Specification
+  type: http
+  seq: 54
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/facility/specifications/{{specification_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-CSRF-Token: {{csrf_token}}
+}

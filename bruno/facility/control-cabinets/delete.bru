@@ -1,0 +1,15 @@
+meta {
+  name: Delete Control Cabinet
+  type: http
+  seq: 64
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/facility/control-cabinets/{{control_cabinet_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-CSRF-Token: {{csrf_token}}
+}

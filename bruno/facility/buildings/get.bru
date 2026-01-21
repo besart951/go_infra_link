@@ -1,0 +1,11 @@
+meta {
+  name: Get Building
+  type: http
+  seq: 32
+}
+
+get {
+  url: {{baseUrl}}/api/v1/facility/buildings/{{building_id}}
+  body: none
+  auth: none
+}

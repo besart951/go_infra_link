@@ -1,0 +1,24 @@
+meta {
+  name: Update Control Cabinet
+  type: http
+  seq: 63
+}
+
+put {
+  url: {{baseUrl}}/api/v1/facility/control-cabinets/{{control_cabinet_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "building_id": "{{building_id}}",
+    "project_id": null,
+    "control_cabinet_nr": "CC-2"
+  }
+}

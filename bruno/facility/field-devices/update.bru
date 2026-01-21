@@ -1,0 +1,29 @@
+meta {
+  name: Update Field Device
+  type: http
+  seq: 73
+}
+
+put {
+  url: {{baseUrl}}/api/v1/facility/field-devices/{{field_device_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "bmk": "BMK2",
+    "description": "Updated field device",
+    "apparat_nr": 2,
+    "sps_controller_system_type_id": "{{sps_controller_system_type_id}}",
+    "system_part_id": "{{system_part_id}}",
+    "specification_id": "{{specification_id}}",
+    "project_id": null,
+    "apparat_id": "{{apparat_id}}"
+  }
+}

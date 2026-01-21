@@ -1,0 +1,11 @@
+meta {
+  name: Get System Type
+  type: http
+  seq: 42
+}
+
+get {
+  url: {{baseUrl}}/api/v1/facility/system-types/{{system_type_id}}
+  body: none
+  auth: none
+}

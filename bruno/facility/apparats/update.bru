@@ -1,0 +1,24 @@
+meta {
+  name: Update Apparat
+  type: http
+  seq: 58
+}
+
+put {
+  url: {{baseUrl}}/api/v1/facility/apparats/{{apparat_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "short_name": "APP-2",
+    "name": "Apparat 2",
+    "description": "Updated description"
+  }
+}

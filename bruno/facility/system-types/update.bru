@@ -1,0 +1,24 @@
+meta {
+  name: Update System Type
+  type: http
+  seq: 43
+}
+
+put {
+  url: {{baseUrl}}/api/v1/facility/system-types/{{system_type_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "number_min": 11,
+    "number_max": 20,
+    "name": "System Type B"
+  }
+}

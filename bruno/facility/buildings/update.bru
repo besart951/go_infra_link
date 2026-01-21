@@ -1,0 +1,23 @@
+meta {
+  name: Update Building
+  type: http
+  seq: 33
+}
+
+put {
+  url: {{baseUrl}}/api/v1/facility/buildings/{{building_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "iws_code": "WXYZ",
+    "building_group": 2
+  }
+}

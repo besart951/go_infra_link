@@ -1,0 +1,11 @@
+meta {
+  name: List Buildings
+  type: http
+  seq: 31
+}
+
+get {
+  url: {{baseUrl}}/api/v1/facility/buildings?page=1&limit=10&search=
+  body: none
+  auth: none
+}

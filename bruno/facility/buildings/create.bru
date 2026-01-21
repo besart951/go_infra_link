@@ -1,0 +1,30 @@
+meta {
+  name: Create Building
+  type: http
+  seq: 30
+}
+
+post {
+  url: {{baseUrl}}/api/v1/facility/buildings
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "iws_code": "ABCD",
+    "building_group": 1
+  }
+}
+
+script:post-response {
+  const data = res.body;
+  if (data && data.id) {
+    bru.setVar('building_id', data.id);
+  }
+}

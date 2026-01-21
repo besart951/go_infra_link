@@ -1,0 +1,31 @@
+meta {
+  name: Create System Type
+  type: http
+  seq: 40
+}
+
+post {
+  url: {{baseUrl}}/api/v1/facility/system-types
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "number_min": 1,
+    "number_max": 10,
+    "name": "System Type A"
+  }
+}
+
+script:post-response {
+  const data = res.body;
+  if (data && data.id) {
+    bru.setVar('system_type_id', data.id);
+  }
+}

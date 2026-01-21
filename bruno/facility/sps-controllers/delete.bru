@@ -1,0 +1,15 @@
+meta {
+  name: Delete SPS Controller
+  type: http
+  seq: 69
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/facility/sps-controllers/{{sps_controller_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-CSRF-Token: {{csrf_token}}
+}
