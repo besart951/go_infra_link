@@ -6,6 +6,11 @@ import (
 	"strings"
 )
 
+type Logger interface {
+	Info(msg string, args ...any)
+	Error(msg string, args ...any)
+}
+
 // env: "prod" für JSON output, "dev" für lesbaren Text
 func Setup(env string, level string) *slog.Logger {
 	var handler slog.Handler

@@ -1,0 +1,26 @@
+meta {
+  name: Create User
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/v1/users
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "first_name": "Dev",
+    "last_name": "Ops",
+    "email": "dev_ops@hotmail.com",
+    "password": "password",
+    "is_active": true
+  }
+}

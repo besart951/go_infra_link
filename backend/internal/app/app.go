@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
@@ -61,6 +62,11 @@ func Run() error {
 		"go_infra_link",
 	)
 
+	if err := ensureSeedUser(cfg, log, usrService, userEmailRepo); err != nil {
+		log.Error("Failed seeding initial user", "err", err)
+		return fmt.Errorf("seed user: %w", err)
+	}
+
 	cookieSecure := cfg.CookieSecure
 	if cfg.AppEnv == "production" {
 		cookieSecure = true
@@ -93,11 +99,48 @@ func Run() error {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	log.Info("Starting server on :8080...")
-	if err := router.Run(":8080"); err != nil {
+	httpAddr := cfg.HTTPAddr
+	log.Info("Starting server on" + httpAddr + "...")
+
+	if err := router.Run(httpAddr); err != nil {
 		log.Error("Failed to start server", "err", err)
 		return fmt.Errorf("server start: %w", err)
 	}
 
+	return nil
+}
+
+func ensureSeedUser(cfg config.Config, log applogger.Logger, userService *userservice.Service, userEmailRepo domainUser.UserEmailRepository) error {
+	if !cfg.SeedUserEnabled {
+		return nil
+	}
+	if strings.EqualFold(cfg.AppEnv, "production") || strings.EqualFold(cfg.AppEnv, "prod") {
+		return nil
+	}
+
+	if cfg.SeedUserEmail == "" || cfg.SeedUserPassword == "" {
+		return nil
+	}
+
+	existing, err := userEmailRepo.GetByEmail(cfg.SeedUserEmail)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		return nil
+	}
+
+	usr := &domainUser.User{
+		FirstName: cfg.SeedUserFirstName,
+		LastName:  cfg.SeedUserLastName,
+		Email:     cfg.SeedUserEmail,
+		IsActive:  true,
+	}
+
+	if err := userService.CreateWithPassword(usr, cfg.SeedUserPassword); err != nil {
+		return err
+	}
+
+	log.Info("Seeded initial user", "email", cfg.SeedUserEmail)
 	return nil
 }

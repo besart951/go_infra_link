@@ -18,7 +18,14 @@ func NewProjectService(repo project.ProjectRepository) *ProjectService {
 }
 
 func (s *ProjectService) CreateProject(name string, creatorID uuid.UUID) (*project.Project, error) {
-	return s.svc.Create(name, creatorID)
+	p := &project.Project{
+		Name:      name,
+		CreatorID: creatorID,
+	}
+	if err := s.svc.Create(p); err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 func (s *ProjectService) ListProjects(page, limit int, search string) (*domain.PaginatedList[project.Project], error) {
