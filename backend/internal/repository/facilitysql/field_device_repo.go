@@ -49,7 +49,7 @@ func (r *fieldDeviceRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.FieldDevi
 		specificationIDSelect = "specification_id"
 	}
 
-	q := "SELECT id, created_at, updated_at, deleted_at, bmk, description, apparat_nr, sps_controller_system_type_id, system_part_id, " + specificationIDSelect + ", project_id, apparat_id " +
+	q := "SELECT id, created_at, updated_at, deleted_at, bmk, description, apparat_nr, sps_controller_system_type_id, system_part_id, " + specificationIDSelect + ", apparat_id " +
 		"FROM field_devices WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
 	q = sqlutil.Rebind(r.dialect, q)
 
@@ -71,9 +71,7 @@ func (r *fieldDeviceRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.FieldDevi
 		var bmk sql.NullString
 		var desc sql.NullString
 		var apparatNr sql.NullInt64
-		var systemPartID sql.NullString
 		var specificationID sql.NullString
-		var projectID sql.NullString
 
 		if err := rows.Scan(
 			&fd.ID,
@@ -84,9 +82,8 @@ func (r *fieldDeviceRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.FieldDevi
 			&desc,
 			&apparatNr,
 			&fd.SPSControllerSystemTypeID,
-			&systemPartID,
+			&fd.SystemPartID,
 			&specificationID,
-			&projectID,
 			&fd.ApparatID,
 		); err != nil {
 			return nil, err
@@ -108,26 +105,12 @@ func (r *fieldDeviceRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.FieldDevi
 			v := int(apparatNr.Int64)
 			fd.ApparatNr = &v
 		}
-		if systemPartID.Valid {
-			id, err := uuid.Parse(systemPartID.String)
-			if err != nil {
-				return nil, err
-			}
-			fd.SystemPartID = &id
-		}
 		if specificationID.Valid {
 			id, err := uuid.Parse(specificationID.String)
 			if err != nil {
 				return nil, err
 			}
 			fd.SpecificationID = &id
-		}
-		if projectID.Valid {
-			id, err := uuid.Parse(projectID.String)
-			if err != nil {
-				return nil, err
-			}
-			fd.ProjectID = &id
 		}
 
 		out = append(out, &fd)
@@ -145,8 +128,8 @@ func (r *fieldDeviceRepo) Create(entity *domainFacility.FieldDevice) error {
 		return err
 	}
 
-	q := "INSERT INTO field_devices (id, created_at, updated_at, deleted_at, bmk, description, apparat_nr, sps_controller_system_type_id, system_part_id, project_id, apparat_id) " +
-		"VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)"
+	q := "INSERT INTO field_devices (id, created_at, updated_at, deleted_at, bmk, description, apparat_nr, sps_controller_system_type_id, system_part_id, apparat_id) " +
+		"VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)"
 	q = sqlutil.Rebind(r.dialect, q)
 
 	_, err := r.db.Exec(
@@ -158,8 +141,7 @@ func (r *fieldDeviceRepo) Create(entity *domainFacility.FieldDevice) error {
 		argStringPtr(entity.Description),
 		argIntPtr(entity.ApparatNr),
 		entity.SPSControllerSystemTypeID,
-		argUUIDPtr(entity.SystemPartID),
-		argUUIDPtr(entity.ProjectID),
+		entity.SystemPartID,
 		entity.ApparatID,
 	)
 	return err
@@ -169,7 +151,7 @@ func (r *fieldDeviceRepo) Update(entity *domainFacility.FieldDevice) error {
 	now := time.Now().UTC()
 	entity.Base.TouchForUpdate(now)
 
-	q := "UPDATE field_devices SET updated_at = ?, bmk = ?, description = ?, apparat_nr = ?, sps_controller_system_type_id = ?, system_part_id = ?, project_id = ?, apparat_id = ? " +
+	q := "UPDATE field_devices SET updated_at = ?, bmk = ?, description = ?, apparat_nr = ?, sps_controller_system_type_id = ?, system_part_id = ?, apparat_id = ? " +
 		"WHERE deleted_at IS NULL AND id = ?"
 	q = sqlutil.Rebind(r.dialect, q)
 
@@ -180,8 +162,7 @@ func (r *fieldDeviceRepo) Update(entity *domainFacility.FieldDevice) error {
 		argStringPtr(entity.Description),
 		argIntPtr(entity.ApparatNr),
 		entity.SPSControllerSystemTypeID,
-		argUUIDPtr(entity.SystemPartID),
-		argUUIDPtr(entity.ProjectID),
+		entity.SystemPartID,
 		entity.ApparatID,
 		entity.ID,
 	)
@@ -241,7 +222,7 @@ func (r *fieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*dom
 		specificationIDSelect = "specification_id"
 	}
 
-	dataQ := "SELECT id, created_at, updated_at, deleted_at, bmk, description, apparat_nr, sps_controller_system_type_id, system_part_id, " + specificationIDSelect + ", project_id, apparat_id " +
+	dataQ := "SELECT id, created_at, updated_at, deleted_at, bmk, description, apparat_nr, sps_controller_system_type_id, system_part_id, " + specificationIDSelect + ", apparat_id " +
 		"FROM field_devices WHERE " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
 	dataQ = sqlutil.Rebind(r.dialect, dataQ)
 
@@ -259,9 +240,7 @@ func (r *fieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*dom
 		var bmk sql.NullString
 		var desc sql.NullString
 		var apparatNr sql.NullInt64
-		var systemPartID sql.NullString
 		var specificationID sql.NullString
-		var projectID sql.NullString
 		if err := rows.Scan(
 			&fd.ID,
 			&fd.CreatedAt,
@@ -271,9 +250,8 @@ func (r *fieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*dom
 			&desc,
 			&apparatNr,
 			&fd.SPSControllerSystemTypeID,
-			&systemPartID,
+			&fd.SystemPartID,
 			&specificationID,
-			&projectID,
 			&fd.ApparatID,
 		); err != nil {
 			return nil, err
@@ -294,26 +272,12 @@ func (r *fieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*dom
 			v := int(apparatNr.Int64)
 			fd.ApparatNr = &v
 		}
-		if systemPartID.Valid {
-			id, err := uuid.Parse(systemPartID.String)
-			if err != nil {
-				return nil, err
-			}
-			fd.SystemPartID = &id
-		}
 		if specificationID.Valid {
 			id, err := uuid.Parse(specificationID.String)
 			if err != nil {
 				return nil, err
 			}
 			fd.SpecificationID = &id
-		}
-		if projectID.Valid {
-			id, err := uuid.Parse(projectID.String)
-			if err != nil {
-				return nil, err
-			}
-			fd.ProjectID = &id
 		}
 		items = append(items, fd)
 	}
@@ -332,10 +296,10 @@ func (r *fieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*dom
 // ExistsApparatNrConflict checks if apparat_nr is already taken for the given
 // (sps_controller_system_type_id, system_part_id, apparat_id) tuple.
 // excludeID can be set for updates.
-func (r *fieldDeviceRepo) ExistsApparatNrConflict(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID, apparatNr int, excludeID *uuid.UUID) (bool, error) {
-	// Note: system_part_id is nullable. Treat NULL as a single bucket.
-	q := "SELECT 1 FROM field_devices WHERE deleted_at IS NULL AND sps_controller_system_type_id = ? AND apparat_id = ? AND COALESCE(system_part_id, '00000000-0000-0000-0000-000000000000') = COALESCE(?, '00000000-0000-0000-0000-000000000000') AND apparat_nr = ?"
-	args := []any{spsControllerSystemTypeID, apparatID, argUUIDPtr(systemPartID), apparatNr}
+func (r *fieldDeviceRepo) ExistsApparatNrConflict(spsControllerSystemTypeID uuid.UUID, systemPartID uuid.UUID, apparatID uuid.UUID, apparatNr int, excludeID *uuid.UUID) (bool, error) {
+	// Note: system_part_id is now NOT NULL
+	q := "SELECT 1 FROM field_devices WHERE deleted_at IS NULL AND sps_controller_system_type_id = ? AND system_part_id = ? AND apparat_id = ? AND apparat_nr = ?"
+	args := []any{spsControllerSystemTypeID, systemPartID, apparatID, apparatNr}
 	if excludeID != nil {
 		q += " AND id <> ?"
 		args = append(args, *excludeID)
