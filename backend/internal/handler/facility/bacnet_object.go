@@ -124,11 +124,11 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 
 	existing, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found", Message: "Bacnet Object not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "fetch_failed", Message: err.Error()})
-		return
-	}
-	if existing == nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found", Message: "Bacnet Object not found"})
 		return
 	}
 
