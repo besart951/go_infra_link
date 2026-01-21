@@ -120,17 +120,16 @@ func (h *SpecificationHandler) GetSpecification(c *gin.Context) {
 
 	specification, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{
+				Error:   "not_found",
+				Message: "Specification not found",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
 			Message: err.Error(),
-		})
-		return
-	}
-
-	if specification == nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error:   "not_found",
-			Message: "Specification not found",
 		})
 		return
 	}
@@ -251,17 +250,16 @@ func (h *SpecificationHandler) UpdateSpecification(c *gin.Context) {
 
 	specification, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{
+				Error:   "not_found",
+				Message: "Specification not found",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
 			Message: err.Error(),
-		})
-		return
-	}
-
-	if specification == nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error:   "not_found",
-			Message: "Specification not found",
 		})
 		return
 	}
