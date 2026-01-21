@@ -31,9 +31,9 @@ type Repositories struct {
 	FacilityFieldDevices             domainFacility.FieldDeviceStore
 	FacilitySPSControllers           domainFacility.SPSControllerRepository
 	FacilitySPSControllerSystemTypes domainFacility.SPSControllerSystemTypeStore
-	FacilityBacnetObjects           domainFacility.BacnetObjectStore
-	FacilityObjectData              domainFacility.ObjectDataStore
-	FacilityObjectDataBacnetObjects domainFacility.ObjectDataBacnetObjectStore
+	FacilityBacnetObjects            domainFacility.BacnetObjectStore
+	FacilityObjectData               domainFacility.ObjectDataStore
+	FacilityObjectDataBacnetObjects  domainFacility.ObjectDataBacnetObjectStore
 }
 
 // NewRepositories creates all repository instances from the database connection.

@@ -9,17 +9,17 @@ import (
 )
 
 type FieldDeviceService struct {
-	repo                      domainFacility.FieldDeviceStore
+	repo                        domainFacility.FieldDeviceStore
 	spsControllerSystemTypeRepo domainFacility.SPSControllerSystemTypeStore
-	spsControllerRepo          domainFacility.SPSControllerRepository
-	controlCabinetRepo         domainFacility.ControlCabinetRepository
-	systemTypeRepo             domainFacility.SystemTypeRepository
-	buildingRepo               domainFacility.BuildingRepository
-	apparatRepo                domainFacility.ApparatRepository
-	systemPartRepo             domainFacility.SystemPartRepository
-	specificationRepo          domainFacility.SpecificationRepository
-	bacnetObjectRepo           domainFacility.BacnetObjectStore
-	objectDataRepo             domainFacility.ObjectDataStore
+	spsControllerRepo           domainFacility.SPSControllerRepository
+	controlCabinetRepo          domainFacility.ControlCabinetRepository
+	systemTypeRepo              domainFacility.SystemTypeRepository
+	buildingRepo                domainFacility.BuildingRepository
+	apparatRepo                 domainFacility.ApparatRepository
+	systemPartRepo              domainFacility.SystemPartRepository
+	specificationRepo           domainFacility.SpecificationRepository
+	bacnetObjectRepo            domainFacility.BacnetObjectStore
+	objectDataRepo              domainFacility.ObjectDataStore
 }
 
 func NewFieldDeviceService(
@@ -36,17 +36,17 @@ func NewFieldDeviceService(
 	objectDataRepo domainFacility.ObjectDataStore,
 ) *FieldDeviceService {
 	return &FieldDeviceService{
-		repo:                      repo,
+		repo:                        repo,
 		spsControllerSystemTypeRepo: spsControllerSystemTypeRepo,
-		spsControllerRepo:          spsControllerRepo,
-		controlCabinetRepo:         controlCabinetRepo,
-		systemTypeRepo:             systemTypeRepo,
-		buildingRepo:               buildingRepo,
-		apparatRepo:                apparatRepo,
-		systemPartRepo:             systemPartRepo,
-		specificationRepo:          specificationRepo,
-		bacnetObjectRepo:           bacnetObjectRepo,
-		objectDataRepo:             objectDataRepo,
+		spsControllerRepo:           spsControllerRepo,
+		controlCabinetRepo:          controlCabinetRepo,
+		systemTypeRepo:              systemTypeRepo,
+		buildingRepo:                buildingRepo,
+		apparatRepo:                 apparatRepo,
+		systemPartRepo:              systemPartRepo,
+		specificationRepo:           specificationRepo,
+		bacnetObjectRepo:            bacnetObjectRepo,
+		objectDataRepo:              objectDataRepo,
 	}
 }
 
