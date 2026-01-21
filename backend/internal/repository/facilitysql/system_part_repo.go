@@ -2,7 +2,6 @@ package facilitysql
 
 import (
 	"database/sql"
-	"strconv"
 	"strings"
 	"time"
 
@@ -13,11 +12,12 @@ import (
 )
 
 type systemPartRepo struct {
-	db *sql.DB
+	db      *sql.DB
+	dialect sqlutil.Dialect
 }
 
-func NewSystemPartRepository(db *sql.DB) domainFacility.SystemPartRepository {
-	return &systemPartRepo{db: db}
+func NewSystemPartRepository(db *sql.DB, driver string) domainFacility.SystemPartRepository {
+	return &systemPartRepo{db: db, dialect: sqlutil.DialectFromDriver(driver)}
 }
 
 func (r *systemPartRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SystemPart, error) {
@@ -26,7 +26,8 @@ func (r *systemPartRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SystemPart
 	}
 
 	q := "SELECT id, created_at, updated_at, deleted_at, short_name, name, description " +
-		"FROM system_parts WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(1, len(ids)) + ")"
+		"FROM system_parts WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
+	q = sqlutil.Rebind(r.dialect, q)
 
 	args := make([]any, 0, len(ids))
 	for _, id := range ids {
@@ -69,7 +70,8 @@ func (r *systemPartRepo) Create(entity *domainFacility.SystemPart) error {
 		return err
 	}
 
-	q := "INSERT INTO system_parts (id, created_at, updated_at, deleted_at, short_name, name, description) VALUES ($1, $2, $3, NULL, $4, $5, $6)"
+	q := "INSERT INTO system_parts (id, created_at, updated_at, deleted_at, short_name, name, description) VALUES (?, ?, ?, NULL, ?, ?, ?)"
+	q = sqlutil.Rebind(r.dialect, q)
 
 	_, err := r.db.Exec(q, entity.ID, entity.CreatedAt, entity.UpdatedAt, entity.ShortName, entity.Name, argStringPtr(entity.Description))
 	return err
@@ -79,7 +81,8 @@ func (r *systemPartRepo) Update(entity *domainFacility.SystemPart) error {
 	now := time.Now().UTC()
 	entity.Base.TouchForUpdate(now)
 
-	q := "UPDATE system_parts SET updated_at = $1, short_name = $2, name = $3, description = $4 WHERE deleted_at IS NULL AND id = $5"
+	q := "UPDATE system_parts SET updated_at = ?, short_name = ?, name = ?, description = ? WHERE deleted_at IS NULL AND id = ?"
+	q = sqlutil.Rebind(r.dialect, q)
 
 	_, err := r.db.Exec(q, entity.UpdatedAt, entity.ShortName, entity.Name, argStringPtr(entity.Description), entity.ID)
 	return err
@@ -91,7 +94,8 @@ func (r *systemPartRepo) DeleteByIds(ids []uuid.UUID) error {
 	}
 
 	now := time.Now().UTC()
-	q := "UPDATE system_parts SET deleted_at = $1, updated_at = $2 WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(3, len(ids)) + ")"
+	q := "UPDATE system_parts SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
+	q = sqlutil.Rebind(r.dialect, q)
 
 	args := make([]any, 0, 2+len(ids))
 	args = append(args, now, now)
@@ -117,17 +121,20 @@ func (r *systemPartRepo) GetPaginatedList(params domain.PaginationParams) (*doma
 	args := make([]any, 0, 6)
 	if strings.TrimSpace(params.Search) != "" {
 		pattern := "%" + params.Search + "%"
-		where += " AND ((short_name ILIKE $1) OR (name ILIKE $2))"
+		like := sqlutil.LikeOperator(r.dialect)
+		where += " AND ((short_name " + like + " ?) OR (name " + like + " ?))"
 		args = append(args, pattern, pattern)
 	}
 
 	countQ := "SELECT COUNT(*) FROM system_parts WHERE " + where
+	countQ = sqlutil.Rebind(r.dialect, countQ)
 	var total int64
 	if err := r.db.QueryRow(countQ, args...).Scan(&total); err != nil {
 		return nil, err
 	}
 
-	dataQ := "SELECT id, created_at, updated_at, deleted_at, short_name, name, description FROM system_parts WHERE " + where + " ORDER BY created_at DESC LIMIT $" + strconv.Itoa(len(args)+1) + " OFFSET $" + strconv.Itoa(len(args)+2)
+	dataQ := "SELECT id, created_at, updated_at, deleted_at, short_name, name, description FROM system_parts WHERE " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+	dataQ = sqlutil.Rebind(r.dialect, dataQ)
 	dataArgs := append(append([]any{}, args...), limit, offset)
 
 	rows, err := r.db.Query(dataQ, dataArgs...)

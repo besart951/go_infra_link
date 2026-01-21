@@ -86,7 +86,7 @@ func Run() error {
 	router := gin.Default()
 
 	// Register all routes
-	handler.RegisterRoutes(router, handlers, services.JWT)
+	handler.RegisterRoutes(router, handlers, services.JWT, services.RBAC, services.User)
 
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {

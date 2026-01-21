@@ -12,6 +12,8 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devA
 	return &handler.Handlers{
 		ProjectHandler: handler.NewProjectHandler(services.Project),
 		UserHandler:    handler.NewUserHandler(services.User),
+		TeamHandler:    handler.NewTeamHandler(services.Team),
+		AdminHandler:   handler.NewAdminHandler(services.Admin, services.Auth),
 		AuthHandler: handler.NewAuthHandler(
 			services.Auth,
 			services.User,

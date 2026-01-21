@@ -14,10 +14,10 @@ type Repositories struct {
 	FieldDevices    domainFacility.FieldDeviceRepository
 }
 
-func NewRepositories(db *sql.DB) Repositories {
+func NewRepositories(db *sql.DB, driver string) Repositories {
 	return Repositories{
-		Buildings:       NewBuildingRepository(db),
-		ControlCabinets: NewControlCabinetRepository(db),
-		FieldDevices:    NewFieldDeviceRepository(db),
+		Buildings:       NewBuildingRepository(db, driver),
+		ControlCabinets: NewControlCabinetRepository(db, driver),
+		FieldDevices:    NewFieldDeviceRepository(db, driver),
 	}
 }

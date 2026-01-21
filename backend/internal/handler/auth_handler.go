@@ -72,6 +72,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "invalid_credentials"})
 			return
 		}
+		if err == domainAuth.ErrAccountDisabled {
+			c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "account_disabled"})
+			return
+		}
+		if err == domainAuth.ErrAccountLocked {
+			c.JSON(http.StatusLocked, dto.ErrorResponse{Error: "account_locked"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "login_failed", Message: err.Error()})
 		return
 	}
@@ -113,6 +121,14 @@ func (h *AuthHandler) DevLogin(c *gin.Context) {
 	if err != nil {
 		if err == domainAuth.ErrInvalidCredentials {
 			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "invalid_credentials"})
+			return
+		}
+		if err == domainAuth.ErrAccountDisabled {
+			c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "account_disabled"})
+			return
+		}
+		if err == domainAuth.ErrAccountLocked {
+			c.JSON(http.StatusLocked, dto.ErrorResponse{Error: "account_locked"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "login_failed", Message: err.Error()})
@@ -233,6 +249,43 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		Email:     usr.Email,
 		IsActive:  usr.IsActive,
 	})
+}
+
+// ConfirmPasswordReset godoc
+// @Summary Confirm password reset
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param payload body dto.PasswordResetConfirmRequest true "Password reset confirmation"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/auth/password-reset/confirm [post]
+func (h *AuthHandler) ConfirmPasswordReset(c *gin.Context) {
+	var req dto.PasswordResetConfirmRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+		return
+	}
+
+	if err := h.service.ConfirmPasswordReset(req.Token, req.NewPassword); err != nil {
+		switch err {
+		case domainAuth.ErrPasswordResetTokenInvalid:
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "password_reset_token_invalid"})
+			return
+		case domainAuth.ErrPasswordResetTokenExpired:
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "password_reset_token_expired"})
+			return
+		case domainAuth.ErrPasswordResetTokenUsed:
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "password_reset_token_used"})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "reset_failed", Message: err.Error()})
+			return
+		}
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func (h *AuthHandler) setAuthCookies(c *gin.Context, result *authsvc.LoginResult) {

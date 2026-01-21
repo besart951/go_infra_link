@@ -2,7 +2,6 @@ package facilitysql
 
 import (
 	"database/sql"
-	"strconv"
 	"strings"
 	"time"
 
@@ -13,11 +12,12 @@ import (
 )
 
 type controlCabinetRepo struct {
-	db *sql.DB
+	db      *sql.DB
+	dialect sqlutil.Dialect
 }
 
-func NewControlCabinetRepository(db *sql.DB) domainFacility.ControlCabinetRepository {
-	return &controlCabinetRepo{db: db}
+func NewControlCabinetRepository(db *sql.DB, driver string) domainFacility.ControlCabinetRepository {
+	return &controlCabinetRepo{db: db, dialect: sqlutil.DialectFromDriver(driver)}
 }
 
 func (r *controlCabinetRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.ControlCabinet, error) {
@@ -26,7 +26,8 @@ func (r *controlCabinetRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Contro
 	}
 
 	q := "SELECT id, created_at, updated_at, deleted_at, building_id, project_id, control_cabinet_nr " +
-		"FROM control_cabinets WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(1, len(ids)) + ")"
+		"FROM control_cabinets WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
+	q = sqlutil.Rebind(r.dialect, q)
 
 	args := make([]any, 0, len(ids))
 	for _, id := range ids {
@@ -87,7 +88,8 @@ func (r *controlCabinetRepo) Create(entity *domainFacility.ControlCabinet) error
 	}
 
 	q := "INSERT INTO control_cabinets (id, created_at, updated_at, deleted_at, building_id, project_id, control_cabinet_nr) " +
-		"VALUES ($1, $2, $3, NULL, $4, $5, $6)"
+		"VALUES (?, ?, ?, NULL, ?, ?, ?)"
+	q = sqlutil.Rebind(r.dialect, q)
 
 	_, err := r.db.Exec(q, entity.ID, entity.CreatedAt, entity.UpdatedAt, entity.BuildingID, argUUIDPtr(entity.ProjectID), argStringPtr(entity.ControlCabinetNr))
 	return err
@@ -97,7 +99,8 @@ func (r *controlCabinetRepo) Update(entity *domainFacility.ControlCabinet) error
 	now := time.Now().UTC()
 	entity.Base.TouchForUpdate(now)
 
-	q := "UPDATE control_cabinets SET updated_at = $1, building_id = $2, project_id = $3, control_cabinet_nr = $4 WHERE deleted_at IS NULL AND id = $5"
+	q := "UPDATE control_cabinets SET updated_at = ?, building_id = ?, project_id = ?, control_cabinet_nr = ? WHERE deleted_at IS NULL AND id = ?"
+	q = sqlutil.Rebind(r.dialect, q)
 
 	_, err := r.db.Exec(q, entity.UpdatedAt, entity.BuildingID, argUUIDPtr(entity.ProjectID), argStringPtr(entity.ControlCabinetNr), entity.ID)
 	return err
@@ -109,7 +112,8 @@ func (r *controlCabinetRepo) DeleteByIds(ids []uuid.UUID) error {
 	}
 
 	now := time.Now().UTC()
-	q := "UPDATE control_cabinets SET deleted_at = $1, updated_at = $2 WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(3, len(ids)) + ")"
+	q := "UPDATE control_cabinets SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
+	q = sqlutil.Rebind(r.dialect, q)
 
 	args := make([]any, 0, 2+len(ids))
 	args = append(args, now, now)
@@ -136,17 +140,20 @@ func (r *controlCabinetRepo) GetPaginatedList(params domain.PaginationParams) (*
 	args := make([]any, 0, 6)
 	if strings.TrimSpace(params.Search) != "" {
 		pattern := "%" + params.Search + "%"
-		where += " AND (control_cabinet_nr ILIKE $1)"
+		like := sqlutil.LikeOperator(r.dialect)
+		where += " AND (control_cabinet_nr " + like + " ?)"
 		args = append(args, pattern)
 	}
 
 	countQ := "SELECT COUNT(*) FROM control_cabinets WHERE " + where
+	countQ = sqlutil.Rebind(r.dialect, countQ)
 	var total int64
 	if err := r.db.QueryRow(countQ, args...).Scan(&total); err != nil {
 		return nil, err
 	}
 
-	dataQ := "SELECT id, created_at, updated_at, deleted_at, building_id, project_id, control_cabinet_nr FROM control_cabinets WHERE " + where + " ORDER BY created_at DESC LIMIT $" + strconv.Itoa(len(args)+1) + " OFFSET $" + strconv.Itoa(len(args)+2)
+	dataQ := "SELECT id, created_at, updated_at, deleted_at, building_id, project_id, control_cabinet_nr FROM control_cabinets WHERE " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+	dataQ = sqlutil.Rebind(r.dialect, dataQ)
 	dataArgs := append(append([]any{}, args...), limit, offset)
 
 	rows, err := r.db.Query(dataQ, dataArgs...)

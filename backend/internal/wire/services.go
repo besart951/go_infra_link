@@ -4,9 +4,12 @@ import (
 	"time"
 
 	authservice "github.com/besart951/go_infra_link/backend/internal/service/auth"
+	adminservice "github.com/besart951/go_infra_link/backend/internal/service/admin"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
 	projectservice "github.com/besart951/go_infra_link/backend/internal/service/project"
+	rbacservice "github.com/besart951/go_infra_link/backend/internal/service/rbac"
+	teamservice "github.com/besart951/go_infra_link/backend/internal/service/team"
 	userservice "github.com/besart951/go_infra_link/backend/internal/service/user"
 )
 
@@ -16,6 +19,9 @@ type Services struct {
 	User     *userservice.Service
 	Auth     *authservice.Service
 	JWT      authservice.JWTService
+	RBAC     *rbacservice.Service
+	Team     *teamservice.Service
+	Admin    *adminservice.Service
 	Password passwordsvc.Service
 
 	FacilityBuilding       *facilityservice.BuildingService
@@ -41,17 +47,23 @@ type ServiceConfig struct {
 func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 	passwordService := passwordsvc.New()
 	jwtService := authservice.NewJWTService(cfg.JWTSecret, cfg.Issuer)
+	rbacSvc := rbacservice.New(repos.User, repos.TeamMember)
 
 	return &Services{
 		Project:  projectservice.New(repos.Project),
 		User:     userservice.New(repos.User, passwordService),
 		Password: passwordService,
 		JWT:      jwtService,
+		RBAC:     rbacSvc,
+		Team:     teamservice.New(repos.Team, repos.TeamMember),
+		Admin:    adminservice.New(repos.User),
 		Auth: authservice.NewService(
 			jwtService,
 			repos.User,
 			repos.UserEmail,
 			repos.RefreshToken,
+			repos.LoginAttempt,
+			repos.PasswordReset,
 			passwordService,
 			cfg.AccessTokenTTL,
 			cfg.RefreshTokenTTL,

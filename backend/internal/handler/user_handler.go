@@ -45,6 +45,9 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		IsActive:    req.IsActive,
 		CreatedByID: req.CreatedByID,
 	}
+	if req.Role != "" {
+		usr.Role = user.Role(req.Role)
+	}
 
 	if err := h.service.CreateWithPassword(usr, req.Password); err != nil {
 		if errors.Is(err, user.ErrPasswordHashingFailed) {
@@ -67,6 +70,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		LastName:  usr.LastName,
 		Email:     usr.Email,
 		IsActive:  usr.IsActive,
+		Role:      string(usr.Role),
 		CreatedAt: usr.CreatedAt,
 		UpdatedAt: usr.UpdatedAt,
 	}
@@ -118,6 +122,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		LastName:  usr.LastName,
 		Email:     usr.Email,
 		IsActive:  usr.IsActive,
+		Role:      string(usr.Role),
 		CreatedAt: usr.CreatedAt,
 		UpdatedAt: usr.UpdatedAt,
 	}
@@ -163,6 +168,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 			LastName:  usr.LastName,
 			Email:     usr.Email,
 			IsActive:  usr.IsActive,
+			Role:      string(usr.Role),
 			CreatedAt: usr.CreatedAt,
 			UpdatedAt: usr.UpdatedAt,
 		}
@@ -242,6 +248,9 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	if req.IsActive != nil {
 		usr.IsActive = *req.IsActive
 	}
+	if req.Role != "" {
+		usr.Role = user.Role(req.Role)
+	}
 
 	if err := h.service.UpdateWithPassword(usr, &req.Password); err != nil {
 		if errors.Is(err, user.ErrPasswordHashingFailed) {
@@ -264,6 +273,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		LastName:  usr.LastName,
 		Email:     usr.Email,
 		IsActive:  usr.IsActive,
+		Role:      string(usr.Role),
 		CreatedAt: usr.CreatedAt,
 		UpdatedAt: usr.UpdatedAt,
 	}

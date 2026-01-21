@@ -25,7 +25,7 @@ func (r *userRepo) GetByIds(ids []uuid.UUID) ([]*domainUser.User, error) {
 		return []*domainUser.User{}, nil
 	}
 
-	q := "SELECT id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, created_by_id " +
+	q := "SELECT id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, role, disabled_at, locked_until, failed_login_attempts, last_login_at, created_by_id " +
 		"FROM users WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
 	q = sqlutil.Rebind(r.dialect, q)
 
@@ -44,6 +44,10 @@ func (r *userRepo) GetByIds(ids []uuid.UUID) ([]*domainUser.User, error) {
 	for rows.Next() {
 		var u domainUser.User
 		var deletedAt sql.NullTime
+		var disabledAt sql.NullTime
+		var lockedUntil sql.NullTime
+		var lastLoginAt sql.NullTime
+		var role sql.NullString
 		var createdByID sql.NullString
 
 		err := rows.Scan(
@@ -56,6 +60,11 @@ func (r *userRepo) GetByIds(ids []uuid.UUID) ([]*domainUser.User, error) {
 			&u.Email,
 			&u.Password,
 			&u.IsActive,
+			&role,
+			&disabledAt,
+			&lockedUntil,
+			&u.FailedLoginAttempts,
+			&lastLoginAt,
 			&createdByID,
 		)
 		if err != nil {
@@ -65,6 +74,21 @@ func (r *userRepo) GetByIds(ids []uuid.UUID) ([]*domainUser.User, error) {
 		if deletedAt.Valid {
 			t := deletedAt.Time
 			u.DeletedAt = &t
+		}
+		if role.Valid {
+			u.Role = domainUser.Role(role.String)
+		}
+		if disabledAt.Valid {
+			t := disabledAt.Time
+			u.DisabledAt = &t
+		}
+		if lockedUntil.Valid {
+			t := lockedUntil.Time
+			u.LockedUntil = &t
+		}
+		if lastLoginAt.Valid {
+			t := lastLoginAt.Time
+			u.LastLoginAt = &t
 		}
 		if createdByID.Valid {
 			id, err := uuid.Parse(createdByID.String)
@@ -84,12 +108,16 @@ func (r *userRepo) GetByIds(ids []uuid.UUID) ([]*domainUser.User, error) {
 }
 
 func (r *userRepo) GetByEmail(email string) (*domainUser.User, error) {
-	q := "SELECT id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, created_by_id " +
+	q := "SELECT id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, role, disabled_at, locked_until, failed_login_attempts, last_login_at, created_by_id " +
 		"FROM users WHERE deleted_at IS NULL AND email = ? LIMIT 1"
 	q = sqlutil.Rebind(r.dialect, q)
 
 	var u domainUser.User
 	var deletedAt sql.NullTime
+	var disabledAt sql.NullTime
+	var lockedUntil sql.NullTime
+	var lastLoginAt sql.NullTime
+	var role sql.NullString
 	var createdByID sql.NullString
 
 	err := r.db.QueryRow(q, email).Scan(
@@ -102,6 +130,11 @@ func (r *userRepo) GetByEmail(email string) (*domainUser.User, error) {
 		&u.Email,
 		&u.Password,
 		&u.IsActive,
+		&role,
+		&disabledAt,
+		&lockedUntil,
+		&u.FailedLoginAttempts,
+		&lastLoginAt,
 		&createdByID,
 	)
 	if err != nil {
@@ -114,6 +147,21 @@ func (r *userRepo) GetByEmail(email string) (*domainUser.User, error) {
 	if deletedAt.Valid {
 		t := deletedAt.Time
 		u.DeletedAt = &t
+	}
+	if role.Valid {
+		u.Role = domainUser.Role(role.String)
+	}
+	if disabledAt.Valid {
+		t := disabledAt.Time
+		u.DisabledAt = &t
+	}
+	if lockedUntil.Valid {
+		t := lockedUntil.Time
+		u.LockedUntil = &t
+	}
+	if lastLoginAt.Valid {
+		t := lastLoginAt.Time
+		u.LastLoginAt = &t
 	}
 	if createdByID.Valid {
 		id, err := uuid.Parse(createdByID.String)
@@ -132,8 +180,8 @@ func (r *userRepo) Create(entity *domainUser.User) error {
 		return err
 	}
 
-	q := "INSERT INTO users (id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, created_by_id) " +
-		"VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)"
+	q := "INSERT INTO users (id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, role, disabled_at, locked_until, failed_login_attempts, last_login_at, created_by_id) " +
+		"VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	q = sqlutil.Rebind(r.dialect, q)
 
 	_, err := r.db.Exec(
@@ -146,6 +194,11 @@ func (r *userRepo) Create(entity *domainUser.User) error {
 		entity.Email,
 		entity.Password,
 		entity.IsActive,
+		entity.Role,
+		entity.DisabledAt,
+		entity.LockedUntil,
+		entity.FailedLoginAttempts,
+		entity.LastLoginAt,
 		entity.CreatedByID,
 	)
 	return err
@@ -160,11 +213,11 @@ func (r *userRepo) Update(entity *domainUser.User) error {
 	var q string
 	var args []any
 	if setPassword {
-		q = "UPDATE users SET updated_at = ?, first_name = ?, last_name = ?, email = ?, password = ?, is_active = ?, created_by_id = ? WHERE deleted_at IS NULL AND id = ?"
-		args = []any{entity.UpdatedAt, entity.FirstName, entity.LastName, entity.Email, entity.Password, entity.IsActive, entity.CreatedByID, entity.ID}
+		q = "UPDATE users SET updated_at = ?, first_name = ?, last_name = ?, email = ?, password = ?, is_active = ?, role = ?, disabled_at = ?, locked_until = ?, failed_login_attempts = ?, last_login_at = ?, created_by_id = ? WHERE deleted_at IS NULL AND id = ?"
+		args = []any{entity.UpdatedAt, entity.FirstName, entity.LastName, entity.Email, entity.Password, entity.IsActive, entity.Role, entity.DisabledAt, entity.LockedUntil, entity.FailedLoginAttempts, entity.LastLoginAt, entity.CreatedByID, entity.ID}
 	} else {
-		q = "UPDATE users SET updated_at = ?, first_name = ?, last_name = ?, email = ?, is_active = ?, created_by_id = ? WHERE deleted_at IS NULL AND id = ?"
-		args = []any{entity.UpdatedAt, entity.FirstName, entity.LastName, entity.Email, entity.IsActive, entity.CreatedByID, entity.ID}
+		q = "UPDATE users SET updated_at = ?, first_name = ?, last_name = ?, email = ?, is_active = ?, role = ?, disabled_at = ?, locked_until = ?, failed_login_attempts = ?, last_login_at = ?, created_by_id = ? WHERE deleted_at IS NULL AND id = ?"
+		args = []any{entity.UpdatedAt, entity.FirstName, entity.LastName, entity.Email, entity.IsActive, entity.Role, entity.DisabledAt, entity.LockedUntil, entity.FailedLoginAttempts, entity.LastLoginAt, entity.CreatedByID, entity.ID}
 	}
 	q = sqlutil.Rebind(r.dialect, q)
 
@@ -224,7 +277,7 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 		return nil, err
 	}
 
-	dataQ := "SELECT id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, created_by_id FROM users WHERE " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+	dataQ := "SELECT id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, role, disabled_at, locked_until, failed_login_attempts, last_login_at, created_by_id FROM users WHERE " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
 	dataQ = sqlutil.Rebind(r.dialect, dataQ)
 
 	dataArgs := append(append([]any{}, args...), limit, offset)
@@ -238,6 +291,10 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 	for rows.Next() {
 		var u domainUser.User
 		var deletedAt sql.NullTime
+		var disabledAt sql.NullTime
+		var lockedUntil sql.NullTime
+		var lastLoginAt sql.NullTime
+		var role sql.NullString
 		var createdByID sql.NullString
 		if err := rows.Scan(
 			&u.ID,
@@ -249,6 +306,11 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 			&u.Email,
 			&u.Password,
 			&u.IsActive,
+			&role,
+			&disabledAt,
+			&lockedUntil,
+			&u.FailedLoginAttempts,
+			&lastLoginAt,
 			&createdByID,
 		); err != nil {
 			return nil, err
@@ -256,6 +318,21 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 		if deletedAt.Valid {
 			t := deletedAt.Time
 			u.DeletedAt = &t
+		}
+		if role.Valid {
+			u.Role = domainUser.Role(role.String)
+		}
+		if disabledAt.Valid {
+			t := disabledAt.Time
+			u.DisabledAt = &t
+		}
+		if lockedUntil.Valid {
+			t := lockedUntil.Time
+			u.LockedUntil = &t
+		}
+		if lastLoginAt.Valid {
+			t := lastLoginAt.Time
+			u.LastLoginAt = &t
 		}
 		if createdByID.Valid {
 			id, err := uuid.Parse(createdByID.String)

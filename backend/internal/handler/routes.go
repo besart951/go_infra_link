@@ -3,7 +3,10 @@ package handler
 import (
 	facilityhandler "github.com/besart951/go_infra_link/backend/internal/handler/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	authsvc "github.com/besart951/go_infra_link/backend/internal/service/auth"
+	rbacsvc "github.com/besart951/go_infra_link/backend/internal/service/rbac"
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,6 +14,8 @@ type Handlers struct {
 	ProjectHandler *ProjectHandler
 	UserHandler    *UserHandler
 	AuthHandler    *AuthHandler
+	TeamHandler    *TeamHandler
+	AdminHandler   *AdminHandler
 
 	FacilityBuildingHandler       *facilityhandler.BuildingHandler
 	FacilitySystemTypeHandler     *facilityhandler.SystemTypeHandler
@@ -24,13 +29,14 @@ type Handlers struct {
 }
 
 // RegisterRoutes registers all API routes
-func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTService) {
+func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTService, rbacService *rbacsvc.Service, userStatusSvc middleware.UserStatusService) {
 	// Public API v1 group (login only)
 	publicV1 := r.Group("/api/v1")
 	publicAuth := publicV1.Group("/auth")
 	{
 		publicAuth.POST("/login", handlers.AuthHandler.Login)
 		publicAuth.POST("/dev-login", handlers.AuthHandler.DevLogin)
+		publicAuth.POST("/password-reset/confirm", handlers.AuthHandler.ConfirmPasswordReset)
 	}
 
 	// CSRF-protected auth endpoints (no access token required)
@@ -44,6 +50,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 	// Protected API v1 group (all other routes)
 	protectedV1 := r.Group("/api/v1")
 	protectedV1.Use(middleware.AuthGuard(jwtService))
+	protectedV1.Use(middleware.AccountStatusGuard(userStatusSvc))
 	protectedV1.Use(middleware.CSRFMiddleware())
 
 	// Project routes
@@ -58,12 +65,42 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 
 	// User routes
 	users := protectedV1.Group("/users")
+	users.Use(middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin))
 	{
 		users.POST("", handlers.UserHandler.CreateUser)
 		users.GET("", handlers.UserHandler.ListUsers)
 		users.GET("/:id", handlers.UserHandler.GetUser)
 		users.PUT("/:id", handlers.UserHandler.UpdateUser)
 		users.DELETE("/:id", handlers.UserHandler.DeleteUser)
+	}
+
+	// Team routes
+	teams := protectedV1.Group("/teams")
+	{
+		teams.POST("", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin), handlers.TeamHandler.CreateTeam)
+		teams.GET("", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin), handlers.TeamHandler.ListTeams)
+
+		teams.GET("/:id", middleware.RequireTeamRole(rbacService, "id", domainTeam.MemberRoleMember), handlers.TeamHandler.GetTeam)
+		teams.PUT("/:id", middleware.RequireTeamRole(rbacService, "id", domainTeam.MemberRoleManager), handlers.TeamHandler.UpdateTeam)
+		teams.DELETE("/:id", middleware.RequireTeamRole(rbacService, "id", domainTeam.MemberRoleOwner), handlers.TeamHandler.DeleteTeam)
+
+		teams.POST("/:id/members", middleware.RequireTeamRole(rbacService, "id", domainTeam.MemberRoleManager), handlers.TeamHandler.AddMember)
+		teams.GET("/:id/members", middleware.RequireTeamRole(rbacService, "id", domainTeam.MemberRoleMember), handlers.TeamHandler.ListMembers)
+		teams.DELETE("/:id/members/:userId", middleware.RequireTeamRole(rbacService, "id", domainTeam.MemberRoleManager), handlers.TeamHandler.RemoveMember)
+	}
+
+	// Admin routes
+	admin := protectedV1.Group("/admin")
+	admin.Use(middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin))
+	{
+		admin.POST("/users/:id/password-reset", handlers.AdminHandler.ResetUserPassword)
+		admin.POST("/users/:id/disable", handlers.AdminHandler.DisableUser)
+		admin.POST("/users/:id/enable", handlers.AdminHandler.EnableUser)
+		admin.POST("/users/:id/lock", handlers.AdminHandler.LockUser)
+		admin.POST("/users/:id/unlock", handlers.AdminHandler.UnlockUser)
+		admin.POST("/users/:id/role", handlers.AdminHandler.SetUserRole)
+
+		admin.GET("/login-attempts", handlers.AdminHandler.ListLoginAttempts)
 	}
 
 	// Auth routes (protected)

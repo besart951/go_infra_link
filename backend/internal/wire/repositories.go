@@ -8,10 +8,12 @@ import (
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
+	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	authrepo "github.com/besart951/go_infra_link/backend/internal/repository/auth"
 	facilityrepo "github.com/besart951/go_infra_link/backend/internal/repository/facilitysql"
 	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
+	teamrepo "github.com/besart951/go_infra_link/backend/internal/repository/team"
 	userrepo "github.com/besart951/go_infra_link/backend/internal/repository/user"
 )
 
@@ -21,6 +23,10 @@ type Repositories struct {
 	User         domainUser.UserRepository
 	UserEmail    domainUser.UserEmailRepository
 	RefreshToken domainAuth.RefreshTokenRepository
+	LoginAttempt domainAuth.LoginAttemptRepository
+	PasswordReset domainAuth.PasswordResetTokenRepository
+	Team         domainTeam.TeamRepository
+	TeamMember   domainTeam.TeamMemberRepository
 
 	FacilityBuildings                domainFacility.BuildingRepository
 	FacilitySystemTypes              domainFacility.SystemTypeRepository
@@ -49,6 +55,10 @@ func NewRepositories(db *sql.DB, driver string) (*Repositories, error) {
 		User:         userRepo,
 		UserEmail:    userEmailRepo,
 		RefreshToken: authrepo.NewRefreshTokenRepository(db, driver),
+		LoginAttempt: authrepo.NewLoginAttemptRepository(db, driver),
+		PasswordReset: authrepo.NewPasswordResetTokenRepository(db, driver),
+		Team:         teamrepo.NewTeamRepository(db, driver),
+		TeamMember:   teamrepo.NewTeamMemberRepository(db, driver),
 
 		FacilityBuildings:                facilityrepo.NewBuildingRepository(db, driver),
 		FacilitySystemTypes:              facilityrepo.NewSystemTypeRepository(db, driver),
