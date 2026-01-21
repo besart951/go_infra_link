@@ -16,16 +16,16 @@ import (
 )
 
 type Service struct {
-	jwtService       JWTService
-	userRepo         domainUser.UserRepository
-	userEmailRepo    domainUser.UserEmailRepository
-	refreshTokenRepo domainAuth.RefreshTokenRepository
-	loginAttemptRepo domainAuth.LoginAttemptRepository
+	jwtService        JWTService
+	userRepo          domainUser.UserRepository
+	userEmailRepo     domainUser.UserEmailRepository
+	refreshTokenRepo  domainAuth.RefreshTokenRepository
+	loginAttemptRepo  domainAuth.LoginAttemptRepository
 	passwordResetRepo domainAuth.PasswordResetTokenRepository
-	passwordService  passwordsvc.Service
-	accessTokenTTL   time.Duration
-	refreshTokenTTL  time.Duration
-	issuer           string
+	passwordService   passwordsvc.Service
+	accessTokenTTL    time.Duration
+	refreshTokenTTL   time.Duration
+	issuer            string
 }
 
 func NewService(
@@ -41,16 +41,16 @@ func NewService(
 	issuer string,
 ) *Service {
 	return &Service{
-		jwtService:       jwtService,
-		userRepo:         userRepo,
-		userEmailRepo:    userEmailRepo,
-		refreshTokenRepo: refreshTokenRepo,
-		loginAttemptRepo: loginAttemptRepo,
+		jwtService:        jwtService,
+		userRepo:          userRepo,
+		userEmailRepo:     userEmailRepo,
+		refreshTokenRepo:  refreshTokenRepo,
+		loginAttemptRepo:  loginAttemptRepo,
 		passwordResetRepo: passwordResetRepo,
-		passwordService:  passwordService,
-		accessTokenTTL:   accessTokenTTL,
-		refreshTokenTTL:  refreshTokenTTL,
-		issuer:           issuer,
+		passwordService:   passwordService,
+		accessTokenTTL:    accessTokenTTL,
+		refreshTokenTTL:   refreshTokenTTL,
+		issuer:            issuer,
 	}
 }
 

@@ -1,13 +1,13 @@
 package rbac
 
 import (
-	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
+	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/google/uuid"
 )
 
 type Service struct {
-	userRepo user.UserRepository
+	userRepo   user.UserRepository
 	memberRepo domainTeam.TeamMemberRepository
 }
 

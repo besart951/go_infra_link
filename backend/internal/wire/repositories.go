@@ -19,14 +19,14 @@ import (
 
 // Repositories holds all repository instances.
 type Repositories struct {
-	Project      domainProject.ProjectRepository
-	User         domainUser.UserRepository
-	UserEmail    domainUser.UserEmailRepository
-	RefreshToken domainAuth.RefreshTokenRepository
-	LoginAttempt domainAuth.LoginAttemptRepository
+	Project       domainProject.ProjectRepository
+	User          domainUser.UserRepository
+	UserEmail     domainUser.UserEmailRepository
+	RefreshToken  domainAuth.RefreshTokenRepository
+	LoginAttempt  domainAuth.LoginAttemptRepository
 	PasswordReset domainAuth.PasswordResetTokenRepository
-	Team         domainTeam.TeamRepository
-	TeamMember   domainTeam.TeamMemberRepository
+	Team          domainTeam.TeamRepository
+	TeamMember    domainTeam.TeamMemberRepository
 
 	FacilityBuildings                domainFacility.BuildingRepository
 	FacilitySystemTypes              domainFacility.SystemTypeRepository
@@ -51,14 +51,14 @@ func NewRepositories(db *sql.DB, driver string) (*Repositories, error) {
 	}
 
 	return &Repositories{
-		Project:      projectrepo.NewProjectRepository(db, driver),
-		User:         userRepo,
-		UserEmail:    userEmailRepo,
-		RefreshToken: authrepo.NewRefreshTokenRepository(db, driver),
-		LoginAttempt: authrepo.NewLoginAttemptRepository(db, driver),
+		Project:       projectrepo.NewProjectRepository(db, driver),
+		User:          userRepo,
+		UserEmail:     userEmailRepo,
+		RefreshToken:  authrepo.NewRefreshTokenRepository(db, driver),
+		LoginAttempt:  authrepo.NewLoginAttemptRepository(db, driver),
 		PasswordReset: authrepo.NewPasswordResetTokenRepository(db, driver),
-		Team:         teamrepo.NewTeamRepository(db, driver),
-		TeamMember:   teamrepo.NewTeamMemberRepository(db, driver),
+		Team:          teamrepo.NewTeamRepository(db, driver),
+		TeamMember:    teamrepo.NewTeamMemberRepository(db, driver),
 
 		FacilityBuildings:                facilityrepo.NewBuildingRepository(db, driver),
 		FacilitySystemTypes:              facilityrepo.NewSystemTypeRepository(db, driver),

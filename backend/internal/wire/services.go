@@ -3,8 +3,8 @@ package wire
 import (
 	"time"
 
-	authservice "github.com/besart951/go_infra_link/backend/internal/service/auth"
 	adminservice "github.com/besart951/go_infra_link/backend/internal/service/admin"
+	authservice "github.com/besart951/go_infra_link/backend/internal/service/auth"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
 	projectservice "github.com/besart951/go_infra_link/backend/internal/service/project"

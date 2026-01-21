@@ -1,10 +1,10 @@
 package handler
 
 import (
-	facilityhandler "github.com/besart951/go_infra_link/backend/internal/handler/facility"
-	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	facilityhandler "github.com/besart951/go_infra_link/backend/internal/handler/facility"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	authsvc "github.com/besart951/go_infra_link/backend/internal/service/auth"
 	rbacsvc "github.com/besart951/go_infra_link/backend/internal/service/rbac"
 	"github.com/gin-gonic/gin"

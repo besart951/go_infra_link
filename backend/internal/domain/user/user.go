@@ -1,9 +1,10 @@
 package user
 
 import (
+	"time"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/google/uuid"
-	"time"
 )
 
 type Role string
@@ -16,19 +17,19 @@ const (
 
 type User struct {
 	domain.Base
-	FirstName       string
-	LastName        string
-	Email           string `json:"email"`
-	Password        string `json:"-"`
-	IsActive        bool
-	Role            Role
-	DisabledAt      *time.Time
-	LockedUntil     *time.Time
+	FirstName           string
+	LastName            string
+	Email               string `json:"email"`
+	Password            string `json:"-"`
+	IsActive            bool
+	Role                Role
+	DisabledAt          *time.Time
+	LockedUntil         *time.Time
 	FailedLoginAttempts int
-	LastLoginAt     *time.Time
-	CreatedByID     *uuid.UUID
-	CreatedBy       *User
-	BusinessDetails *BusinessDetails `json:"business_details,omitempty"`
+	LastLoginAt         *time.Time
+	CreatedByID         *uuid.UUID
+	CreatedBy           *User
+	BusinessDetails     *BusinessDetails `json:"business_details,omitempty"`
 }
 
 type BusinessDetails struct {

@@ -1,9 +1,10 @@
 package team
 
 import (
+	"time"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/google/uuid"
-	"time"
 )
 
 type MemberRole string
