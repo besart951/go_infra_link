@@ -98,7 +98,7 @@ func (h *SPSControllerHandler) GetSPSController(c *gin.Context) {
 		return
 	}
 
-	spsController, err := h.service.GetById(id)
+	spsController, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -225,7 +225,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		return
 	}
 
-	spsController, err := h.service.GetById(id)
+	spsController, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",

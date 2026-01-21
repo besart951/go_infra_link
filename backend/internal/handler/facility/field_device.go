@@ -94,7 +94,7 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 		return
 	}
 
-	fieldDevice, err := h.service.GetById(id)
+	fieldDevice, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -217,7 +217,7 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		return
 	}
 
-	fieldDevice, err := h.service.GetById(id)
+	fieldDevice, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",

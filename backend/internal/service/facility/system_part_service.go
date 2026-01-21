@@ -18,7 +18,7 @@ func (s *SystemPartService) Create(systemPart *domainFacility.SystemPart) error 
 	return s.repo.Create(systemPart)
 }
 
-func (s *SystemPartService) GetById(id uuid.UUID) (*domainFacility.SystemPart, error) {
+func (s *SystemPartService) GetByID(id uuid.UUID) (*domainFacility.SystemPart, error) {
 	systemParts, err := s.repo.GetByIds([]uuid.UUID{id})
 	if err != nil {
 		return nil, err

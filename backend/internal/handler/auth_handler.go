@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
@@ -143,7 +144,11 @@ func (h *AuthHandler) DevLogin(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/auth/refresh [post]
 func (h *AuthHandler) Refresh(c *gin.Context) {
-	refreshToken, _ := c.Cookie("refresh_token")
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil || strings.TrimSpace(refreshToken) == "" {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized"})
+		return
+	}
 	userAgent := c.GetHeader("User-Agent")
 	ip := c.ClientIP()
 
@@ -181,8 +186,16 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 // @Success 204
 // @Router /api/v1/auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
-	refreshToken, _ := c.Cookie("refresh_token")
-	_ = h.service.Logout(refreshToken)
+	refreshToken, err := c.Cookie("refresh_token")
+	if err == nil && strings.TrimSpace(refreshToken) != "" {
+		if err := h.service.Logout(refreshToken); err != nil {
+			// Logout is intentionally best-effort and idempotent.
+			ginErr := c.Error(err)
+			if ginErr != nil {
+				ginErr.Type = gin.ErrorTypePrivate
+			}
+		}
+	}
 
 	h.clearAuthCookies(c)
 	c.Status(http.StatusNoContent)
@@ -203,7 +216,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		return
 	}
 
-	usr, err := h.userService.GetById(userID)
+	usr, err := h.userService.GetByID(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "fetch_failed", Message: err.Error()})
 		return

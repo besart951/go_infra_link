@@ -3,11 +3,11 @@ package facility
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 // JSONMap is a helper for JSON fields
@@ -27,7 +27,7 @@ func (j *JSONMap) Scan(value interface{}) error {
 	}
 	bytes, ok := value.([]byte)
 	if !ok {
-		return gorm.ErrInvalidField
+		return fmt.Errorf("invalid JSONMap scan type: %T", value)
 	}
 	return json.Unmarshal(bytes, j)
 }
@@ -35,9 +35,9 @@ func (j *JSONMap) Scan(value interface{}) error {
 type ObjectDataHistory struct {
 	domain.Base
 	ObjectDataID *uuid.UUID
-	ObjectData   *ObjectData `gorm:"foreignKey:ObjectDataID;constraint:OnDelete:SET NULL"`
+	ObjectData   *ObjectData
 	UserID       *uuid.UUID
-	User         *user.User `gorm:"foreignKey:UserID;constraint:OnDelete:SET NULL"`
+	User         *user.User
 	Action       string
-	Changes      JSONMap `gorm:"type:json"`
+	Changes      JSONMap
 }

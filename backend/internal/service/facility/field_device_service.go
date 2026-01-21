@@ -18,7 +18,7 @@ func (s *FieldDeviceService) Create(fieldDevice *domainFacility.FieldDevice) err
 	return s.repo.Create(fieldDevice)
 }
 
-func (s *FieldDeviceService) GetById(id uuid.UUID) (*domainFacility.FieldDevice, error) {
+func (s *FieldDeviceService) GetByID(id uuid.UUID) (*domainFacility.FieldDevice, error) {
 	fieldDevices, err := s.repo.GetByIds([]uuid.UUID{id})
 	if err != nil {
 		return nil, err

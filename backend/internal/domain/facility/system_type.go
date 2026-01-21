@@ -8,5 +8,5 @@ type SystemType struct {
 	domain.Base
 	NumberMin int
 	NumberMax int
-	Name      string `gorm:"size:150"`
+	Name      string
 }

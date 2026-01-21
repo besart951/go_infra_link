@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -34,34 +35,33 @@ type Config struct {
 	DBConnectTimeout  time.Duration
 }
 
-func Load() Config {
-	// Load .env (if present). We try a few common locations so it works whether
-	// you run from `backend/` or from a subdir.
-	_ = godotenv.Load()
-	_ = godotenv.Load("configs/.env")
-	_ = godotenv.Load("../.env")
+const DefaultIssuer = "go_infra_link"
+
+func Load() (Config, error) {
+	loadEnvFiles()
 
 	appEnv := getEnvFirst("development", "APP_ENV", "ENV")
 	logLevel := getEnvFirst("info", "APP_LOG_LEVEL", "LOG_LEVEL")
+	jwtSecret := getEnv("JWT_SECRET", "change-me")
 
-	maxOpen, _ := strconv.Atoi(getEnv("DB_MAX_OPEN_CONNS", "25"))
-	maxIdle, _ := strconv.Atoi(getEnv("DB_MAX_IDLE_CONNS", "5"))
-	connMaxLifetime, _ := time.ParseDuration(getEnv("DB_CONN_MAX_LIFETIME", "1h"))
-	connectTimeout, _ := time.ParseDuration(getEnv("DB_CONNECT_TIMEOUT", "5s"))
-	accessTokenTTL, _ := time.ParseDuration(getEnv("ACCESS_TOKEN_TTL", "15m"))
-	refreshTokenTTL, _ := time.ParseDuration(getEnv("REFRESH_TOKEN_TTL", "720h"))
-	cookieSecure, _ := strconv.ParseBool(getEnv("COOKIE_SECURE", "false"))
-
-	seedEnabledDefault := "true"
-	if strings.EqualFold(appEnv, "production") || strings.EqualFold(appEnv, "prod") {
-		seedEnabledDefault = "false"
+	if IsProduction(appEnv) {
+		if jwtSecret == "change-me" {
+			return Config{}, fmt.Errorf("missing JWT_SECRET in production environment")
+		}
 	}
-	seedUserEnabled, _ := strconv.ParseBool(getEnv("SEED_USER_ENABLED", seedEnabledDefault))
-	devAuthEnabled, _ := strconv.ParseBool(getEnv("DEV_AUTH_ENABLED", "false"))
+
+	maxOpen := getEnvInt("DB_MAX_OPEN_CONNS", 25)
+	maxIdle := getEnvInt("DB_MAX_IDLE_CONNS", 5)
+	connMaxLifetime := getEnvDuration("DB_CONN_MAX_LIFETIME", time.Hour)
+	connectTimeout := getEnvDuration("DB_CONNECT_TIMEOUT", 5*time.Second)
+	accessTokenTTL := getEnvDuration("ACCESS_TOKEN_TTL", 15*time.Minute)
+	refreshTokenTTL := getEnvDuration("REFRESH_TOKEN_TTL", 720*time.Hour)
+	cookieSecure := getEnvBool("COOKIE_SECURE", false)
+
+	seedUserEnabled := getEnvBool("SEED_USER_ENABLED", !IsProduction(appEnv))
+	devAuthEnabled := getEnvBool("DEV_AUTH_ENABLED", false)
 
 	dbDriver := normalizeDriver(getEnvFirst("sqlite", "DB_DRIVER"))
-	// Prefer DATABASE_URL if present (common convention), else DB_DSN.
-	// DSN fallback depends on selected driver.
 	dbDsnFallback := "host=localhost user=postgres password=postgres dbname=mydb port=5432 sslmode=disable"
 	if dbDriver == "sqlite" {
 		dbDsnFallback = "./data/app.db"
@@ -72,7 +72,7 @@ func Load() Config {
 		AppEnv:            appEnv,
 		LogLevel:          logLevel,
 		HTTPAddr:          getEnv("HTTP_ADDR", ":8080"),
-		JWTSecret:         getEnv("JWT_SECRET", "change-me"),
+		JWTSecret:         jwtSecret,
 		AccessTokenTTL:    accessTokenTTL,
 		RefreshTokenTTL:   refreshTokenTTL,
 		CookieDomain:      getEnv("COOKIE_DOMAIN", ""),
@@ -91,7 +91,58 @@ func Load() Config {
 		DBMaxIdleConns:    maxIdle,
 		DBConnMaxLifetime: connMaxLifetime,
 		DBConnectTimeout:  connectTimeout,
+	}, nil
+}
+
+func loadEnvFiles() {
+	// .env files are optional; ignore missing/unreadable files.
+	discardErr(godotenv.Load())
+	discardErr(godotenv.Load("configs/.env"))
+	discardErr(godotenv.Load("../.env"))
+}
+
+func discardErr(err error) {
+	_ = err
+}
+
+func getEnvInt(key string, fallback int) int {
+	v, ok := os.LookupEnv(key)
+	if !ok || v == "" {
+		return fallback
 	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return fallback
+	}
+	return n
+}
+
+func getEnvBool(key string, fallback bool) bool {
+	v, ok := os.LookupEnv(key)
+	if !ok || v == "" {
+		return fallback
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return fallback
+	}
+	return b
+}
+
+func getEnvDuration(key string, fallback time.Duration) time.Duration {
+	v, ok := os.LookupEnv(key)
+	if !ok || v == "" {
+		return fallback
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		return fallback
+	}
+	return d
+}
+
+func IsProduction(env string) bool {
+	return strings.EqualFold(env, "production") || strings.EqualFold(env, "prod")
 }
 
 func getEnvFirst(fallback string, keys ...string) string {
@@ -116,7 +167,7 @@ func normalizeDriver(driver string) string {
 	case "sqlite3", "sqlite":
 		return "sqlite"
 	case "postgres", "pg", "postgresql", "pgx":
-		// gorm's driver package is named postgres; it uses pgx internally.
+		// Normalize common Postgres aliases.
 		return "postgres"
 	case "mysql", "mariadb":
 		return "mysql"

@@ -6,10 +6,10 @@ import (
 
 type Apparat struct {
 	domain.Base
-	ShortName   string  `gorm:"uniqueIndex:idx_apparat_composite"`
-	Name        string  `gorm:"size:250;uniqueIndex:idx_apparat_composite"`
-	Description *string `gorm:"size:250"`
+	ShortName   string
+	Name        string
+	Description *string
 
-	SystemParts  []*SystemPart `gorm:"many2many:apparat_system_parts;"`
-	FieldDevices []FieldDevice `gorm:"foreignKey:ApparatID"`
+	SystemParts  []*SystemPart
+	FieldDevices []FieldDevice
 }

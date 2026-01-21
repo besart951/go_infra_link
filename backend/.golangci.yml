@@ -1,0 +1,38 @@
+run:
+  timeout: 3m
+  tests: true
+
+# Keep it intentionally low-noise but aligned with Google Go Style Guide themes:
+# - naming, comments, and error string style
+# - common correctness checks
+linters:
+  disable-all: true
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - ineffassign
+    - unused
+    - gosimple
+    - typecheck
+    - stylecheck
+    - misspell
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+  # Allow (intentionally) some patterns that are common in web handlers.
+  exclude-rules:
+    # Some linters can be overly strict about ignored errors on Close().
+    - path: _test\.go
+      linters:
+        - errcheck
+
+# Exclude generated/vendor-ish things if you add them later.
+# (No exclude paths for now to avoid hiding real issues.)

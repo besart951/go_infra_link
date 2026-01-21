@@ -8,19 +8,19 @@ import (
 
 type FieldDevice struct {
 	domain.Base
-	BMK                       *string `gorm:"size:10;index"`
-	Description               *string `gorm:"size:250"`
-	ApparatNr                 *int    `gorm:"index"`
+	BMK                       *string
+	Description               *string
+	ApparatNr                 *int
 	SPSControllerSystemTypeID uuid.UUID
-	SPSControllerSystemType   SPSControllerSystemType `gorm:"foreignKey:SPSControllerSystemTypeID;constraint:OnDelete:RESTRICT"`
+	SPSControllerSystemType   SPSControllerSystemType
 	SystemPartID              *uuid.UUID
-	SystemPart                *SystemPart `gorm:"foreignKey:SystemPartID;constraint:OnDelete:CASCADE"`
+	SystemPart                *SystemPart
 	SpecificationID           *uuid.UUID
-	Specification             *Specification `gorm:"foreignKey:SpecificationID;constraint:OnDelete:CASCADE"`
+	Specification             *Specification
 	ProjectID                 *uuid.UUID
-	Project                   *project.Project `gorm:"foreignKey:ProjectID;constraint:OnDelete:SET NULL"`
+	Project                   *project.Project
 	ApparatID                 uuid.UUID
-	Apparat                   Apparat `gorm:"foreignKey:ApparatID;constraint:OnDelete:RESTRICT"`
+	Apparat                   Apparat
 
-	BacnetObjects []BacnetObject `gorm:"foreignKey:FieldDeviceID"`
+	BacnetObjects []BacnetObject
 }

@@ -8,11 +8,11 @@ import (
 type SPSControllerSystemType struct {
 	domain.Base
 	Number          *int
-	DocumentName    *string `gorm:"size:250"`
+	DocumentName    *string
 	SPSControllerID uuid.UUID
-	SPSController   SPSController `gorm:"foreignKey:SPSControllerID;constraint:OnDelete:CASCADE"`
+	SPSController   SPSController
 	SystemTypeID    uuid.UUID
-	SystemType      SystemType `gorm:"foreignKey:SystemTypeID;constraint:OnDelete:RESTRICT"`
+	SystemType      SystemType
 
-	FieldDevices []FieldDevice `gorm:"foreignKey:SPSControllerSystemTypeID"`
+	FieldDevices []FieldDevice
 }

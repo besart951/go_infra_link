@@ -9,17 +9,17 @@ type User struct {
 	domain.Base
 	FirstName       string
 	LastName        string
-	Email           string `gorm:"uniqueIndex" json:"email"`
+	Email           string `json:"email"`
 	Password        string `json:"-"`
-	IsActive        bool   `gorm:"default:true"`
+	IsActive        bool
 	CreatedByID     *uuid.UUID
-	CreatedBy       *User            `gorm:"foreignKey:CreatedByID"`
-	BusinessDetails *BusinessDetails `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE;" json:"business_details,omitempty"`
+	CreatedBy       *User
+	BusinessDetails *BusinessDetails `json:"business_details,omitempty"`
 }
 
 type BusinessDetails struct {
 	domain.Base
-	UserID      uuid.UUID `gorm:"uniqueIndex"`
+	UserID      uuid.UUID
 	CompanyName string
 	VatNumber   string
 }

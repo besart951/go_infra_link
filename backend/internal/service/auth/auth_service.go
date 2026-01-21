@@ -4,8 +4,10 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"time"
 
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
@@ -57,10 +59,10 @@ type LoginResult struct {
 func (s *Service) Login(email, password string, userAgent, ip *string) (*LoginResult, error) {
 	usr, err := s.userEmailRepo.GetByEmail(email)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, domainAuth.ErrInvalidCredentials
+		}
 		return nil, err
-	}
-	if usr == nil {
-		return nil, domainAuth.ErrInvalidCredentials
 	}
 	if !usr.IsActive {
 		return nil, domainAuth.ErrInvalidCredentials

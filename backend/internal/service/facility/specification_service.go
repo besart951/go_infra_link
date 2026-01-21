@@ -18,7 +18,7 @@ func (s *SpecificationService) Create(specification *domainFacility.Specificatio
 	return s.repo.Create(specification)
 }
 
-func (s *SpecificationService) GetById(id uuid.UUID) (*domainFacility.Specification, error) {
+func (s *SpecificationService) GetByID(id uuid.UUID) (*domainFacility.Specification, error) {
 	specifications, err := s.repo.GetByIds([]uuid.UUID{id})
 	if err != nil {
 		return nil, err

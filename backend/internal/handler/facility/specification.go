@@ -100,7 +100,7 @@ func (h *SpecificationHandler) GetSpecification(c *gin.Context) {
 		return
 	}
 
-	specification, err := h.service.GetById(id)
+	specification, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -229,7 +229,7 @@ func (h *SpecificationHandler) UpdateSpecification(c *gin.Context) {
 		return
 	}
 
-	specification, err := h.service.GetById(id)
+	specification, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",

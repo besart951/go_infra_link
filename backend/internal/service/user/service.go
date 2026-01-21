@@ -12,11 +12,9 @@ type Service struct {
 	passwordSvc passwordsvc.Service
 }
 
-func New(repo domainUser.UserRepository) *Service {
-	return &Service{repo: repo, passwordSvc: passwordsvc.New()}
-}
-
-func NewWithPasswordService(repo domainUser.UserRepository, passwordSvc passwordsvc.Service) *Service {
+// New creates a user service with the given repository and password service.
+// Password service must be injected for proper dependency inversion.
+func New(repo domainUser.UserRepository, passwordSvc passwordsvc.Service) *Service {
 	return &Service{repo: repo, passwordSvc: passwordSvc}
 }
 
@@ -38,7 +36,7 @@ func (s *Service) GetByIds(ids []uuid.UUID) ([]*domainUser.User, error) {
 	return s.repo.GetByIds(ids)
 }
 
-func (s *Service) GetById(id uuid.UUID) (*domainUser.User, error) {
+func (s *Service) GetByID(id uuid.UUID) (*domainUser.User, error) {
 	users, err := s.repo.GetByIds([]uuid.UUID{id})
 	if err != nil {
 		return nil, err

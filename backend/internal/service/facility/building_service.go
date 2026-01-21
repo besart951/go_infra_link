@@ -18,7 +18,7 @@ func (s *BuildingService) Create(building *domainFacility.Building) error {
 	return s.repo.Create(building)
 }
 
-func (s *BuildingService) GetById(id uuid.UUID) (*domainFacility.Building, error) {
+func (s *BuildingService) GetByID(id uuid.UUID) (*domainFacility.Building, error) {
 	buildings, err := s.repo.GetByIds([]uuid.UUID{id})
 	if err != nil {
 		return nil, err

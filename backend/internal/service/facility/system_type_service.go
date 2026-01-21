@@ -18,7 +18,7 @@ func (s *SystemTypeService) Create(systemType *domainFacility.SystemType) error 
 	return s.repo.Create(systemType)
 }
 
-func (s *SystemTypeService) GetById(id uuid.UUID) (*domainFacility.SystemType, error) {
+func (s *SystemTypeService) GetByID(id uuid.UUID) (*domainFacility.SystemType, error) {
 	systemTypes, err := s.repo.GetByIds([]uuid.UUID{id})
 	if err != nil {
 		return nil, err

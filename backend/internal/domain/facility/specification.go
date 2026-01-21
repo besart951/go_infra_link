@@ -6,14 +6,14 @@ import (
 
 type Specification struct {
 	domain.Base
-	SpecificationSupplier                     *string `gorm:"size:250"`
-	SpecificationBrand                        *string `gorm:"size:250"`
-	SpecificationType                         *string `gorm:"size:250"`
-	AdditionalInfoMotorValve                  *string `gorm:"size:250"`
+	SpecificationSupplier                     *string
+	SpecificationBrand                        *string
+	SpecificationType                         *string
+	AdditionalInfoMotorValve                  *string
 	AdditionalInfoSize                        *int
-	AdditionalInformationInstallationLocation *string `gorm:"size:250"`
+	AdditionalInformationInstallationLocation *string
 	ElectricalConnectionPH                    *int
-	ElectricalConnectionACDC                  *string `gorm:"size:2"`
+	ElectricalConnectionACDC                  *string
 	ElectricalConnectionAmperage              *float64
 	ElectricalConnectionPower                 *float64
 	ElectricalConnectionRotation              *int

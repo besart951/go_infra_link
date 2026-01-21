@@ -26,7 +26,7 @@ func (s *Service) GetByIds(ids []uuid.UUID) ([]*domainProject.Project, error) {
 	return s.repo.GetByIds(ids)
 }
 
-func (s *Service) GetById(id uuid.UUID) (*domainProject.Project, error) {
+func (s *Service) GetByID(id uuid.UUID) (*domainProject.Project, error) {
 	projects, err := s.repo.GetByIds([]uuid.UUID{id})
 	if err != nil {
 		return nil, err

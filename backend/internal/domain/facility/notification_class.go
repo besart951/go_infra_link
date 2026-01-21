@@ -6,11 +6,11 @@ import (
 
 type NotificationClass struct {
 	domain.Base
-	EventCategory        string `gorm:"size:50"`
+	EventCategory        string
 	Nc                   int
-	ObjectDescription    string `gorm:"size:250"`
-	InternalDescription  string `gorm:"size:250"`
-	Meaning              string `gorm:"size:250"`
+	ObjectDescription    string
+	InternalDescription  string
+	Meaning              string
 	AckRequiredNotNormal bool
 	AckRequiredError     bool
 	AckRequiredNormal    bool

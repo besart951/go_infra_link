@@ -1,27 +1,31 @@
 package app
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
-	"strings"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler"
-	"github.com/besart951/go_infra_link/backend/internal/repository/auth"
-	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
-	userrepo "github.com/besart951/go_infra_link/backend/internal/repository/user"
-	authservice "github.com/besart951/go_infra_link/backend/internal/service/auth"
-	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
-	projectservice "github.com/besart951/go_infra_link/backend/internal/service/project"
 	userservice "github.com/besart951/go_infra_link/backend/internal/service/user"
+	"github.com/besart951/go_infra_link/backend/internal/wire"
 	applogger "github.com/besart951/go_infra_link/backend/pkg/logger"
 	"github.com/gin-gonic/gin"
 )
 
 func Run() error {
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("config load: %w", err)
+	}
 	log := applogger.Setup(cfg.AppEnv, cfg.LogLevel)
 
 	database, err := db.Open(cfg)
@@ -29,42 +33,31 @@ func Run() error {
 		log.Error("Failed to connect to database", "err", err)
 		return fmt.Errorf("db open: %w", err)
 	}
+	defer func() {
+		if err := database.Close(); err != nil {
+			log.Error("Failed to close database", "err", err)
+		}
+	}()
 
-	log.Info("Migrating database...")
-	if err := db.Migrate(database); err != nil {
-		log.Error("Database migration failed", "err", err)
-		return fmt.Errorf("db migrate: %w", err)
+	// Initialize dependencies via wire package
+	repos, err := wire.NewRepositories(database, cfg.DBDriver)
+	if err != nil {
+		log.Error("Failed to initialize repositories", "err", err)
+		return fmt.Errorf("repositories: %w", err)
 	}
 
-	// Initialize repositories
-	projRepo := projectrepo.NewProjectRepository(database)
-	usrRepo := userrepo.NewUserRepository(database)
-	refreshTokenRepo := auth.NewRefreshTokenRepository(database)
-	userEmailRepo, ok := usrRepo.(domainUser.UserEmailRepository)
-	if !ok {
-		log.Error("User repository does not implement email lookup")
-		return fmt.Errorf("user repository missing GetByEmail")
-	}
+	services := wire.NewServices(repos, wire.ServiceConfig{
+		JWTSecret:       cfg.JWTSecret,
+		Issuer:          config.DefaultIssuer,
+		AccessTokenTTL:  cfg.AccessTokenTTL,
+		RefreshTokenTTL: cfg.RefreshTokenTTL,
+	})
 
-	// Initialize services
-	projService := projectservice.New(projRepo)
-	passwordService := passwordsvc.New()
-	usrService := userservice.NewWithPasswordService(usrRepo, passwordService)
-	jwtService := authservice.NewJWTService(cfg.JWTSecret, "go_infra_link")
-	authService := authservice.NewService(
-		jwtService,
-		usrRepo,
-		userEmailRepo,
-		refreshTokenRepo,
-		passwordService,
-		cfg.AccessTokenTTL,
-		cfg.RefreshTokenTTL,
-		"go_infra_link",
-	)
-
-	if err := ensureSeedUser(cfg, log, usrService, userEmailRepo); err != nil {
-		log.Error("Failed seeding initial user", "err", err)
-		return fmt.Errorf("seed user: %w", err)
+	if !config.IsProduction(cfg.AppEnv) {
+		if err := ensureSeedUser(cfg, log, services.User, repos.UserEmail); err != nil {
+			log.Error("Failed seeding initial user", "err", err)
+			return fmt.Errorf("seed user: %w", err)
+		}
 	}
 
 	cookieSecure := cfg.CookieSecure
@@ -77,22 +70,23 @@ func Run() error {
 		SameSite: http.SameSiteStrictMode,
 	}
 
-	// Initialize handlers
-	handlers := &handler.Handlers{
-		ProjectHandler: handler.NewProjectHandler(projService),
-		UserHandler:    handler.NewUserHandler(usrService),
-		AuthHandler:    handler.NewAuthHandler(authService, usrService, cfg.AccessTokenTTL, cfg.RefreshTokenTTL, cookieSettings, cfg.DevAuthEnabled, cfg.DevAuthEmail, cfg.DevAuthPassword),
-	}
+	handlers := wire.NewHandlers(services, cookieSettings, wire.DevAuthConfig{
+		Enabled:         cfg.DevAuthEnabled,
+		Email:           cfg.DevAuthEmail,
+		Password:        cfg.DevAuthPassword,
+		AccessTokenTTL:  cfg.AccessTokenTTL,
+		RefreshTokenTTL: cfg.RefreshTokenTTL,
+	})
 
 	// Setup Gin router
-	if cfg.AppEnv == "production" {
+	if config.IsProduction(cfg.AppEnv) {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	router := gin.Default()
 
 	// Register all routes
-	handler.RegisterRoutes(router, handlers, jwtService)
+	handler.RegisterRoutes(router, handlers, services.JWT)
 
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
@@ -100,13 +94,51 @@ func Run() error {
 	})
 
 	httpAddr := cfg.HTTPAddr
-	log.Info("Starting server on" + httpAddr + "...")
+	log.Info("Starting server", "addr", httpAddr, "env", cfg.AppEnv)
 
-	if err := router.Run(httpAddr); err != nil {
-		log.Error("Failed to start server", "err", err)
-		return fmt.Errorf("server start: %w", err)
+	srv := &http.Server{
+		Addr:              httpAddr,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
+	serverErr := make(chan error, 1)
+	go func() {
+		serverErr <- srv.ListenAndServe()
+	}()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	select {
+	case err := <-serverErr:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("Server stopped unexpectedly", "err", err)
+			return fmt.Errorf("server listen: %w", err)
+		}
+		return nil
+	case <-ctx.Done():
+		log.Info("Shutdown signal received")
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Error("Graceful shutdown failed", "err", err)
+		_ = srv.Close()
+		return fmt.Errorf("server shutdown: %w", err)
+	}
+
+	if err := <-serverErr; err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Error("Server stopped with error", "err", err)
+		return fmt.Errorf("server stop: %w", err)
+	}
+
+	log.Info("Server stopped")
 	return nil
 }
 
@@ -114,20 +146,17 @@ func ensureSeedUser(cfg config.Config, log applogger.Logger, userService *userse
 	if !cfg.SeedUserEnabled {
 		return nil
 	}
-	if strings.EqualFold(cfg.AppEnv, "production") || strings.EqualFold(cfg.AppEnv, "prod") {
-		return nil
-	}
 
 	if cfg.SeedUserEmail == "" || cfg.SeedUserPassword == "" {
 		return nil
 	}
-
-	existing, err := userEmailRepo.GetByEmail(cfg.SeedUserEmail)
-	if err != nil {
-		return err
-	}
-	if existing != nil {
+	_, err := userEmailRepo.GetByEmail(cfg.SeedUserEmail)
+	if err == nil {
+		// User already exists
 		return nil
+	}
+	if !errors.Is(err, domain.ErrNotFound) {
+		return err
 	}
 
 	usr := &domainUser.User{

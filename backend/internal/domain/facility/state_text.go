@@ -7,20 +7,20 @@ import (
 type StateText struct {
 	domain.Base
 	RefNumber   int
-	StateText1  *string `gorm:"size:100"`
-	StateText2  *string `gorm:"size:100"`
-	StateText3  *string `gorm:"size:100"`
-	StateText4  *string `gorm:"size:100"`
-	StateText5  *string `gorm:"size:100"`
-	StateText6  *string `gorm:"size:100"`
-	StateText7  *string `gorm:"size:100"`
-	StateText8  *string `gorm:"size:100"`
-	StateText9  *string `gorm:"size:100"`
-	StateText10 *string `gorm:"size:100"`
-	StateText11 *string `gorm:"size:100"`
-	StateText12 *string `gorm:"size:100"`
-	StateText13 *string `gorm:"size:100"`
-	StateText14 *string `gorm:"size:100"`
-	StateText15 *string `gorm:"size:100"`
-	StateText16 *string `gorm:"size:100"`
+	StateText1  *string
+	StateText2  *string
+	StateText3  *string
+	StateText4  *string
+	StateText5  *string
+	StateText6  *string
+	StateText7  *string
+	StateText8  *string
+	StateText9  *string
+	StateText10 *string
+	StateText11 *string
+	StateText12 *string
+	StateText13 *string
+	StateText14 *string
+	StateText15 *string
+	StateText16 *string
 }

@@ -9,17 +9,17 @@ import (
 type SPSController struct {
 	domain.Base
 	ControlCabinetID  uuid.UUID
-	ControlCabinet    ControlCabinet `gorm:"foreignKey:ControlCabinetID;constraint:OnDelete:CASCADE"`
+	ControlCabinet    ControlCabinet
 	ProjectID         *uuid.UUID
-	Project           *project.Project `gorm:"foreignKey:ProjectID;constraint:OnDelete:SET NULL"`
-	GADevice          *string          `gorm:"size:10"`
-	DeviceName        string           `gorm:"size:100"`
-	DeviceDescription *string          `gorm:"size:250"`
-	DeviceLocation    *string          `gorm:"size:250"`
-	IPAddress         *string          `gorm:"size:50;index"`
-	Subnet            *string          `gorm:"size:50"`
-	Gateway           *string          `gorm:"size:50"`
-	Vlan              *string          `gorm:"size:50;index"`
+	Project           *project.Project
+	GADevice          *string
+	DeviceName        string
+	DeviceDescription *string
+	DeviceLocation    *string
+	IPAddress         *string
+	Subnet            *string
+	Gateway           *string
+	Vlan              *string
 
-	SPSControllerSystemTypes []SPSControllerSystemType `gorm:"foreignKey:SPSControllerID"`
+	SPSControllerSystemTypes []SPSControllerSystemType
 }

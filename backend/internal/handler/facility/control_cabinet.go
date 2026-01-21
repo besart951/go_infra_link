@@ -84,7 +84,7 @@ func (h *ControlCabinetHandler) GetControlCabinet(c *gin.Context) {
 		return
 	}
 
-	controlCabinet, err := h.service.GetById(id)
+	controlCabinet, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -197,7 +197,7 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 		return
 	}
 
-	controlCabinet, err := h.service.GetById(id)
+	controlCabinet, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",

@@ -18,7 +18,7 @@ func (s *SPSControllerService) Create(spsController *domainFacility.SPSControlle
 	return s.repo.Create(spsController)
 }
 
-func (s *SPSControllerService) GetById(id uuid.UUID) (*domainFacility.SPSController, error) {
+func (s *SPSControllerService) GetByID(id uuid.UUID) (*domainFacility.SPSController, error) {
 	spsControllers, err := s.repo.GetByIds([]uuid.UUID{id})
 	if err != nil {
 		return nil, err

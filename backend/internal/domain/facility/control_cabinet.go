@@ -9,10 +9,10 @@ import (
 type ControlCabinet struct {
 	domain.Base
 	BuildingID       uuid.UUID
-	Building         Building `gorm:"foreignKey:BuildingID;constraint:OnDelete:CASCADE"`
+	Building         Building
 	ProjectID        *uuid.UUID
-	Project          *project.Project `gorm:"foreignKey:ProjectID;constraint:OnDelete:SET NULL"`
-	ControlCabinetNr *string          `gorm:"size:11;index"`
+	Project          *project.Project
+	ControlCabinetNr *string
 
-	SPSControllers []SPSController `gorm:"foreignKey:ControlCabinetID"`
+	SPSControllers []SPSController
 }

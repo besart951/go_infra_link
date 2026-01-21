@@ -82,7 +82,7 @@ func (h *BuildingHandler) GetBuilding(c *gin.Context) {
 		return
 	}
 
-	building, err := h.service.GetById(id)
+	building, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -193,7 +193,7 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 		return
 	}
 
-	building, err := h.service.GetById(id)
+	building, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",

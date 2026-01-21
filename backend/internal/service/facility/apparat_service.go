@@ -18,7 +18,7 @@ func (s *ApparatService) Create(apparat *domainFacility.Apparat) error {
 	return s.repo.Create(apparat)
 }
 
-func (s *ApparatService) GetById(id uuid.UUID) (*domainFacility.Apparat, error) {
+func (s *ApparatService) GetByID(id uuid.UUID) (*domainFacility.Apparat, error) {
 	apparats, err := s.repo.GetByIds([]uuid.UUID{id})
 	if err != nil {
 		return nil, err

@@ -18,7 +18,7 @@ func (s *ControlCabinetService) Create(controlCabinet *domainFacility.ControlCab
 	return s.repo.Create(controlCabinet)
 }
 
-func (s *ControlCabinetService) GetById(id uuid.UUID) (*domainFacility.ControlCabinet, error) {
+func (s *ControlCabinetService) GetByID(id uuid.UUID) (*domainFacility.ControlCabinet, error) {
 	controlCabinets, err := s.repo.GetByIds([]uuid.UUID{id})
 	if err != nil {
 		return nil, err

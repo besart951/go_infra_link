@@ -84,7 +84,7 @@ func (h *ApparatHandler) GetApparat(c *gin.Context) {
 		return
 	}
 
-	apparat, err := h.service.GetById(id)
+	apparat, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -197,7 +197,7 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 		return
 	}
 
-	apparat, err := h.service.GetById(id)
+	apparat, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",

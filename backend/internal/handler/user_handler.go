@@ -95,7 +95,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	usr, err := h.service.GetById(id)
+	usr, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -210,7 +210,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	usr, err := h.service.GetById(id)
+	usr, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",

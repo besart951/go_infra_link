@@ -84,7 +84,7 @@ func (h *SystemPartHandler) GetSystemPart(c *gin.Context) {
 		return
 	}
 
-	systemPart, err := h.service.GetById(id)
+	systemPart, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -197,7 +197,7 @@ func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
 		return
 	}
 
-	systemPart, err := h.service.GetById(id)
+	systemPart, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",

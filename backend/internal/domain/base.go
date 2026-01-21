@@ -5,21 +5,32 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type Base struct {
-	ID        uuid.UUID      `gorm:"type:uuid;primary_key;" json:"id"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID        uuid.UUID  `json:"id"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"-"`
 }
 
-func (b *Base) BeforeCreate(tx *gorm.DB) (err error) {
+func (b *Base) InitForCreate(now time.Time) error {
 	if b.ID == uuid.Nil {
-		b.ID, err = uuid.NewV7()
+		id, err := uuid.NewV7()
+		if err != nil {
+			return err
+		}
+		b.ID = id
 	}
-	return
+	if b.CreatedAt.IsZero() {
+		b.CreatedAt = now
+	}
+	b.UpdatedAt = now
+	return nil
+}
+
+func (b *Base) TouchForUpdate(now time.Time) {
+	b.UpdatedAt = now
 }
 
 type PaginationParams struct {

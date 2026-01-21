@@ -93,7 +93,7 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 		return
 	}
 
-	proj, err := h.service.GetById(id)
+	proj, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -212,7 +212,7 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 		return
 	}
 
-	proj, err := h.service.GetById(id)
+	proj, err := h.service.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
