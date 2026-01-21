@@ -25,6 +25,7 @@ type UserService interface {
 	UpdateWithPassword(user *user.User, password *string) error
 	GetByID(id uuid.UUID) (*user.User, error)
 	List(page, limit int, search string) (*domain.PaginatedList[user.User], error)
+	ListWithFilters(page, limit int, search, role, companyName string, isActive *bool) (*domain.PaginatedList[user.User], error)
 	DeleteByIds(ids []uuid.UUID) error
 }
 

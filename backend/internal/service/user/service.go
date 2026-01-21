@@ -83,6 +83,28 @@ func (s *Service) List(page, limit int, search string) (*domain.PaginatedList[do
 	})
 }
 
+func (s *Service) ListWithFilters(page, limit int, search, role, companyName string, isActive *bool) (*domain.PaginatedList[domainUser.User], error) {
+	page, limit = normalizePagination(page, limit)
+	
+	filters := make(map[string]interface{})
+	if role != "" {
+		filters["role"] = role
+	}
+	if companyName != "" {
+		filters["company_name"] = companyName
+	}
+	if isActive != nil {
+		filters["is_active"] = *isActive
+	}
+	
+	return s.repo.GetPaginatedList(domain.PaginationParams{
+		Page:    page,
+		Limit:   limit,
+		Search:  search,
+		Filters: filters,
+	})
+}
+
 func normalizePagination(page, limit int) (int, int) {
 	if page == 0 {
 		page = 1

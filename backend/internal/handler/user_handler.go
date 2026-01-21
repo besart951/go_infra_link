@@ -65,15 +65,25 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
+	var companyName *string
+	if usr.BusinessDetails != nil && usr.BusinessDetails.CompanyName != "" {
+		companyName = &usr.BusinessDetails.CompanyName
+	}
+
 	response := dto.UserResponse{
-		ID:        usr.ID,
-		FirstName: usr.FirstName,
-		LastName:  usr.LastName,
-		Email:     usr.Email,
-		IsActive:  usr.IsActive,
-		Role:      string(usr.Role),
-		CreatedAt: usr.CreatedAt,
-		UpdatedAt: usr.UpdatedAt,
+		ID:                  usr.ID,
+		FirstName:           usr.FirstName,
+		LastName:            usr.LastName,
+		Email:               usr.Email,
+		IsActive:            usr.IsActive,
+		Role:                string(usr.Role),
+		CompanyName:         companyName,
+		DisabledAt:          usr.DisabledAt,
+		LockedUntil:         usr.LockedUntil,
+		FailedLoginAttempts: usr.FailedLoginAttempts,
+		LastLoginAt:         usr.LastLoginAt,
+		CreatedAt:           usr.CreatedAt,
+		UpdatedAt:           usr.UpdatedAt,
 	}
 
 	c.JSON(http.StatusCreated, response)
@@ -116,33 +126,46 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
+	var companyName *string
+	if usr.BusinessDetails != nil && usr.BusinessDetails.CompanyName != "" {
+		companyName = &usr.BusinessDetails.CompanyName
+	}
+
 	response := dto.UserResponse{
-		ID:        usr.ID,
-		FirstName: usr.FirstName,
-		LastName:  usr.LastName,
-		Email:     usr.Email,
-		IsActive:  usr.IsActive,
-		Role:      string(usr.Role),
-		CreatedAt: usr.CreatedAt,
-		UpdatedAt: usr.UpdatedAt,
+		ID:                  usr.ID,
+		FirstName:           usr.FirstName,
+		LastName:            usr.LastName,
+		Email:               usr.Email,
+		IsActive:            usr.IsActive,
+		Role:                string(usr.Role),
+		CompanyName:         companyName,
+		DisabledAt:          usr.DisabledAt,
+		LockedUntil:         usr.LockedUntil,
+		FailedLoginAttempts: usr.FailedLoginAttempts,
+		LastLoginAt:         usr.LastLoginAt,
+		CreatedAt:           usr.CreatedAt,
+		UpdatedAt:           usr.UpdatedAt,
 	}
 
 	c.JSON(http.StatusOK, response)
 }
 
 // ListUsers godoc
-// @Summary List users with pagination
+// @Summary List users with pagination and advanced filters
 // @Tags users
 // @Produce json
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
-// @Param search query string false "Search query"
+// @Param search query string false "Search by first name, last name, or email"
+// @Param role query string false "Filter by role (user, admin, superadmin)"
+// @Param is_active query string false "Filter by active status (true, false)"
+// @Param company_name query string false "Filter by company name"
 // @Success 200 {object} dto.UserListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/users [get]
 func (h *UserHandler) ListUsers(c *gin.Context) {
-	var query dto.PaginationQuery
+	var query dto.UserFilterQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
 			Error:   "validation_error",
@@ -151,7 +174,20 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(query.Page, query.Limit, query.Search)
+	var isActive *bool
+	if query.IsActive != "" {
+		val := query.IsActive == "true"
+		isActive = &val
+	}
+
+	result, err := h.service.ListWithFilters(
+		query.Page,
+		query.Limit,
+		query.Search,
+		query.Role,
+		query.CompanyName,
+		isActive,
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -162,15 +198,25 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 
 	items := make([]dto.UserResponse, len(result.Items))
 	for i, usr := range result.Items {
+		var companyName *string
+		if usr.BusinessDetails != nil && usr.BusinessDetails.CompanyName != "" {
+			companyName = &usr.BusinessDetails.CompanyName
+		}
+		
 		items[i] = dto.UserResponse{
-			ID:        usr.ID,
-			FirstName: usr.FirstName,
-			LastName:  usr.LastName,
-			Email:     usr.Email,
-			IsActive:  usr.IsActive,
-			Role:      string(usr.Role),
-			CreatedAt: usr.CreatedAt,
-			UpdatedAt: usr.UpdatedAt,
+			ID:                  usr.ID,
+			FirstName:           usr.FirstName,
+			LastName:            usr.LastName,
+			Email:               usr.Email,
+			IsActive:            usr.IsActive,
+			Role:                string(usr.Role),
+			CompanyName:         companyName,
+			DisabledAt:          usr.DisabledAt,
+			LockedUntil:         usr.LockedUntil,
+			FailedLoginAttempts: usr.FailedLoginAttempts,
+			LastLoginAt:         usr.LastLoginAt,
+			CreatedAt:           usr.CreatedAt,
+			UpdatedAt:           usr.UpdatedAt,
 		}
 	}
 
@@ -266,15 +312,25 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
+	var companyName *string
+	if usr.BusinessDetails != nil && usr.BusinessDetails.CompanyName != "" {
+		companyName = &usr.BusinessDetails.CompanyName
+	}
+
 	response := dto.UserResponse{
-		ID:        usr.ID,
-		FirstName: usr.FirstName,
-		LastName:  usr.LastName,
-		Email:     usr.Email,
-		IsActive:  usr.IsActive,
-		Role:      string(usr.Role),
-		CreatedAt: usr.CreatedAt,
-		UpdatedAt: usr.UpdatedAt,
+		ID:                  usr.ID,
+		FirstName:           usr.FirstName,
+		LastName:            usr.LastName,
+		Email:               usr.Email,
+		IsActive:            usr.IsActive,
+		Role:                string(usr.Role),
+		CompanyName:         companyName,
+		DisabledAt:          usr.DisabledAt,
+		LockedUntil:         usr.LockedUntil,
+		FailedLoginAttempts: usr.FailedLoginAttempts,
+		LastLoginAt:         usr.LastLoginAt,
+		CreatedAt:           usr.CreatedAt,
+		UpdatedAt:           usr.UpdatedAt,
 	}
 
 	c.JSON(http.StatusOK, response)

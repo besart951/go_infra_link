@@ -255,9 +255,11 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 	}
 	offset := (page - 1) * limit
 
-	searchFields := []string{"first_name", "last_name", "email"}
-	where := "deleted_at IS NULL"
+	searchFields := []string{"u.first_name", "u.last_name", "u.email"}
+	where := "u.deleted_at IS NULL"
 	args := make([]any, 0, 8)
+	
+	// Text search on name and email
 	if strings.TrimSpace(params.Search) != "" {
 		like := sqlutil.LikeOperator(r.dialect)
 		pattern := "%" + params.Search + "%"
@@ -268,8 +270,34 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 		}
 		where += " AND (" + strings.Join(parts, " OR ") + ")"
 	}
+	
+	// Advanced filtering based on Filters map
+	if params.Filters != nil {
+		// Filter by role
+		if role, ok := params.Filters["role"].(string); ok && role != "" {
+			where += " AND u.role = ?"
+			args = append(args, role)
+		}
+		
+		// Filter by is_active
+		if isActive, ok := params.Filters["is_active"].(bool); ok {
+			where += " AND u.is_active = ?"
+			args = append(args, isActive)
+		}
+		
+		// Filter by company_name (requires JOIN with business_details)
+		if companyName, ok := params.Filters["company_name"].(string); ok && companyName != "" {
+			like := sqlutil.LikeOperator(r.dialect)
+			pattern := "%" + companyName + "%"
+			where += " AND bd.company_name " + like + " ?"
+			args = append(args, pattern)
+		}
+	}
 
-	countQ := "SELECT COUNT(*) FROM users WHERE " + where
+	// Use LEFT JOIN to include users without business details
+	fromClause := "users u LEFT JOIN business_details bd ON u.id = bd.user_id AND bd.deleted_at IS NULL"
+	
+	countQ := "SELECT COUNT(DISTINCT u.id) FROM " + fromClause + " WHERE " + where
 	countQ = sqlutil.Rebind(r.dialect, countQ)
 
 	var total int64
@@ -277,7 +305,7 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 		return nil, err
 	}
 
-	dataQ := "SELECT id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, role, disabled_at, locked_until, failed_login_attempts, last_login_at, created_by_id FROM users WHERE " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+	dataQ := "SELECT DISTINCT u.id, u.created_at, u.updated_at, u.deleted_at, u.first_name, u.last_name, u.email, u.password, u.is_active, u.role, u.disabled_at, u.locked_until, u.failed_login_attempts, u.last_login_at, u.created_by_id, bd.company_name FROM " + fromClause + " WHERE " + where + " ORDER BY u.created_at DESC LIMIT ? OFFSET ?"
 	dataQ = sqlutil.Rebind(r.dialect, dataQ)
 
 	dataArgs := append(append([]any{}, args...), limit, offset)
@@ -296,6 +324,7 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 		var lastLoginAt sql.NullTime
 		var role sql.NullString
 		var createdByID sql.NullString
+		var companyName sql.NullString
 		if err := rows.Scan(
 			&u.ID,
 			&u.CreatedAt,
@@ -312,6 +341,7 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 			&u.FailedLoginAttempts,
 			&lastLoginAt,
 			&createdByID,
+			&companyName,
 		); err != nil {
 			return nil, err
 		}
@@ -340,6 +370,12 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 				return nil, err
 			}
 			u.CreatedByID = &id
+		}
+		if companyName.Valid {
+			// Populate business details with company name
+			u.BusinessDetails = &domainUser.BusinessDetails{
+				CompanyName: companyName.String,
+			}
 		}
 		items = append(items, u)
 	}

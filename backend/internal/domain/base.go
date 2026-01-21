@@ -37,6 +37,8 @@ type PaginationParams struct {
 	Page   int
 	Limit  int
 	Search string
+	// Advanced filtering
+	Filters map[string]interface{}
 }
 
 type PaginatedList[T any] struct {
