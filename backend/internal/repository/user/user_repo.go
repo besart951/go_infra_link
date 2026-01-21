@@ -295,6 +295,8 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 	}
 
 	// Use LEFT JOIN to include users without business details
+	// Note: Soft-deleted business_details (deleted_at IS NOT NULL) are excluded,
+	// so users with deleted business details will show company_name as null.
 	fromClause := "users u LEFT JOIN business_details bd ON u.id = bd.user_id AND bd.deleted_at IS NULL"
 	
 	countQ := "SELECT COUNT(DISTINCT u.id) FROM " + fromClause + " WHERE " + where
@@ -372,7 +374,10 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 			u.CreatedByID = &id
 		}
 		if companyName.Valid {
-			// Populate business details with company name
+			// Populate business details with company name only
+			// Note: This is a partial initialization for performance reasons.
+			// Full business details (UserID, VatNumber) are not fetched in list queries.
+			// Use GetByID to fetch complete business details if needed.
 			u.BusinessDetails = &domainUser.BusinessDetails{
 				CompanyName: companyName.String,
 			}

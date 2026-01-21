@@ -75,12 +75,8 @@ func (s *Service) DeleteByIds(ids []uuid.UUID) error {
 }
 
 func (s *Service) List(page, limit int, search string) (*domain.PaginatedList[domainUser.User], error) {
-	page, limit = normalizePagination(page, limit)
-	return s.repo.GetPaginatedList(domain.PaginationParams{
-		Page:   page,
-		Limit:  limit,
-		Search: search,
-	})
+	// Use ListWithFilters with no filters for backward compatibility
+	return s.ListWithFilters(page, limit, search, "", "", nil)
 }
 
 func (s *Service) ListWithFilters(page, limit int, search, role, companyName string, isActive *bool) (*domain.PaginatedList[domainUser.User], error) {
