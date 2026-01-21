@@ -66,7 +66,7 @@ func (s *SPSControllerService) GetByID(id uuid.UUID) (*domainFacility.SPSControl
 		return nil, err
 	}
 	if len(spsControllers) == 0 {
-		return nil, nil
+		return nil, domain.ErrNotFound
 	}
 	return spsControllers[0], nil
 }

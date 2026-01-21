@@ -32,7 +32,7 @@ func (s *Service) GetByID(id uuid.UUID) (*domainProject.Project, error) {
 		return nil, err
 	}
 	if len(projects) == 0 {
-		return nil, nil
+		return nil, domain.ErrNotFound
 	}
 	return projects[0], nil
 }

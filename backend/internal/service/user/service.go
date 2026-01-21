@@ -49,7 +49,7 @@ func (s *Service) GetByID(id uuid.UUID) (*domainUser.User, error) {
 		return nil, err
 	}
 	if len(users) == 0 {
-		return nil, nil
+		return nil, domain.ErrNotFound
 	}
 	return users[0], nil
 }

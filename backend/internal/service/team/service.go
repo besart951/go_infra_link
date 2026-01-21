@@ -25,7 +25,7 @@ func (s *Service) GetByID(id uuid.UUID) (*domainTeam.Team, error) {
 		return nil, err
 	}
 	if len(teams) == 0 {
-		return nil, nil
+		return nil, domain.ErrNotFound
 	}
 	return teams[0], nil
 }

@@ -84,7 +84,7 @@ func (s *FieldDeviceService) GetByID(id uuid.UUID) (*domainFacility.FieldDevice,
 		return nil, err
 	}
 	if len(fieldDevices) == 0 {
-		return nil, nil
+		return nil, domain.ErrNotFound
 	}
 	return fieldDevices[0], nil
 }
