@@ -1,8 +1,10 @@
 package facility
 
 import (
+	"errors"
 	"net/http"
 
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
@@ -86,17 +88,16 @@ func (h *SystemPartHandler) GetSystemPart(c *gin.Context) {
 
 	systemPart, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{
+				Error:   "not_found",
+				Message: "System Part not found",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
 			Message: err.Error(),
-		})
-		return
-	}
-
-	if systemPart == nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error:   "not_found",
-			Message: "System Part not found",
 		})
 		return
 	}
@@ -199,17 +200,16 @@ func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
 
 	systemPart, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{
+				Error:   "not_found",
+				Message: "System Part not found",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
 			Message: err.Error(),
-		})
-		return
-	}
-
-	if systemPart == nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error:   "not_found",
-			Message: "System Part not found",
 		})
 		return
 	}

@@ -24,7 +24,7 @@ func (s *ApparatService) GetByID(id uuid.UUID) (*domainFacility.Apparat, error) 
 		return nil, err
 	}
 	if len(apparats) == 0 {
-		return nil, nil
+		return nil, domain.ErrNotFound
 	}
 	return apparats[0], nil
 }

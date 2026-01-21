@@ -137,17 +137,16 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 
 	fieldDevice, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{
+				Error:   "not_found",
+				Message: "Field Device not found",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
 			Message: err.Error(),
-		})
-		return
-	}
-
-	if fieldDevice == nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error:   "not_found",
-			Message: "Field Device not found",
 		})
 		return
 	}
@@ -260,17 +259,16 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 
 	fieldDevice, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{
+				Error:   "not_found",
+				Message: "Field Device not found",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
 			Message: err.Error(),
-		})
-		return
-	}
-
-	if fieldDevice == nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error:   "not_found",
-			Message: "Field Device not found",
 		})
 		return
 	}

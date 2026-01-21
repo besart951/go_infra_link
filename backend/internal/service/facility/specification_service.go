@@ -35,7 +35,7 @@ func (s *SpecificationService) GetByID(id uuid.UUID) (*domainFacility.Specificat
 		return nil, err
 	}
 	if len(specifications) == 0 {
-		return nil, nil
+		return nil, domain.ErrNotFound
 	}
 	return specifications[0], nil
 }

@@ -1,8 +1,10 @@
 package facility
 
 import (
+	"errors"
 	"net/http"
 
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
@@ -86,17 +88,16 @@ func (h *SystemTypeHandler) GetSystemType(c *gin.Context) {
 
 	systemType, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{
+				Error:   "not_found",
+				Message: "System Type not found",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
 			Message: err.Error(),
-		})
-		return
-	}
-
-	if systemType == nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error:   "not_found",
-			Message: "System Type not found",
 		})
 		return
 	}
@@ -199,17 +200,16 @@ func (h *SystemTypeHandler) UpdateSystemType(c *gin.Context) {
 
 	systemType, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{
+				Error:   "not_found",
+				Message: "System Type not found",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
 			Message: err.Error(),
-		})
-		return
-	}
-
-	if systemType == nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error:   "not_found",
-			Message: "System Type not found",
 		})
 		return
 	}

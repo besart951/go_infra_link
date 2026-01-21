@@ -24,7 +24,7 @@ func (s *SystemTypeService) GetByID(id uuid.UUID) (*domainFacility.SystemType, e
 		return nil, err
 	}
 	if len(systemTypes) == 0 {
-		return nil, nil
+		return nil, domain.ErrNotFound
 	}
 	return systemTypes[0], nil
 }

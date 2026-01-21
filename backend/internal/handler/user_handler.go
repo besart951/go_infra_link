@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
@@ -101,17 +102,16 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 
 	usr, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{
+				Error:   "not_found",
+				Message: "User not found",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
 			Message: err.Error(),
-		})
-		return
-	}
-
-	if usr == nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error:   "not_found",
-			Message: "User not found",
 		})
 		return
 	}
@@ -218,17 +218,16 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	usr, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{
+				Error:   "not_found",
+				Message: "User not found",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
 			Message: err.Error(),
-		})
-		return
-	}
-
-	if usr == nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{
-			Error:   "not_found",
-			Message: "User not found",
 		})
 		return
 	}

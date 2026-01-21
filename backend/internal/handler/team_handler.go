@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/domain/team"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
@@ -63,11 +65,11 @@ func (h *TeamHandler) GetTeam(c *gin.Context) {
 
 	t, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found", Message: "Team not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "fetch_failed", Message: err.Error()})
-		return
-	}
-	if t == nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found", Message: "Team not found"})
 		return
 	}
 
@@ -89,11 +91,11 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 
 	t, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found", Message: "Team not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "fetch_failed", Message: err.Error()})
-		return
-	}
-	if t == nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found", Message: "Team not found"})
 		return
 	}
 

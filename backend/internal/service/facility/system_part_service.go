@@ -24,7 +24,7 @@ func (s *SystemPartService) GetByID(id uuid.UUID) (*domainFacility.SystemPart, e
 		return nil, err
 	}
 	if len(systemParts) == 0 {
-		return nil, nil
+		return nil, domain.ErrNotFound
 	}
 	return systemParts[0], nil
 }

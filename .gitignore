@@ -37,4 +37,5 @@ backend/data/
 .idea/
 .vscode/
 server
-backend/serverbackend/app
+backend/server
+backend/app

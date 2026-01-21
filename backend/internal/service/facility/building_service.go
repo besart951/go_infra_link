@@ -24,7 +24,7 @@ func (s *BuildingService) GetByID(id uuid.UUID) (*domainFacility.Building, error
 		return nil, err
 	}
 	if len(buildings) == 0 {
-		return nil, nil
+		return nil, domain.ErrNotFound
 	}
 	return buildings[0], nil
 }

@@ -49,7 +49,7 @@ func (s *BacnetObjectService) GetByID(id uuid.UUID) (*domainFacility.BacnetObjec
 		return nil, err
 	}
 	if len(items) == 0 {
-		return nil, nil
+		return nil, domain.ErrNotFound
 	}
 	return items[0], nil
 }

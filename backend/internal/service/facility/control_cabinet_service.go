@@ -28,7 +28,7 @@ func (s *ControlCabinetService) GetByID(id uuid.UUID) (*domainFacility.ControlCa
 		return nil, err
 	}
 	if len(controlCabinets) == 0 {
-		return nil, nil
+		return nil, domain.ErrNotFound
 	}
 	return controlCabinets[0], nil
 }
