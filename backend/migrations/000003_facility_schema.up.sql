@@ -208,7 +208,7 @@ CREATE TABLE field_devices (
     description VARCHAR(250),
     apparat_nr INT,
     sps_controller_system_type_id UUID NOT NULL,
-    system_part_id UUID,
+    system_part_id UUID NOT NULL,
     specification_id UUID,
     project_id UUID,
     apparat_id UUID NOT NULL,
