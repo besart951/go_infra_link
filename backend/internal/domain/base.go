@@ -34,9 +34,11 @@ func (b *Base) TouchForUpdate(now time.Time) {
 }
 
 type PaginationParams struct {
-	Page   int
-	Limit  int
-	Search string
+	Page    int
+	Limit   int
+	Search  string
+	OrderBy string
+	Order   string // "asc" or "desc"
 }
 
 type PaginatedList[T any] struct {

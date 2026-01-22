@@ -66,14 +66,18 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	}
 
 	response := dto.UserResponse{
-		ID:        usr.ID,
-		FirstName: usr.FirstName,
-		LastName:  usr.LastName,
-		Email:     usr.Email,
-		IsActive:  usr.IsActive,
-		Role:      string(usr.Role),
-		CreatedAt: usr.CreatedAt,
-		UpdatedAt: usr.UpdatedAt,
+		ID:                  usr.ID,
+		FirstName:           usr.FirstName,
+		LastName:            usr.LastName,
+		Email:               usr.Email,
+		IsActive:            usr.IsActive,
+		Role:                string(usr.Role),
+		CreatedAt:           usr.CreatedAt,
+		UpdatedAt:           usr.UpdatedAt,
+		LastLoginAt:         usr.LastLoginAt,
+		DisabledAt:          usr.DisabledAt,
+		LockedUntil:         usr.LockedUntil,
+		FailedLoginAttempts: usr.FailedLoginAttempts,
 	}
 
 	c.JSON(http.StatusCreated, response)
@@ -117,14 +121,18 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	}
 
 	response := dto.UserResponse{
-		ID:        usr.ID,
-		FirstName: usr.FirstName,
-		LastName:  usr.LastName,
-		Email:     usr.Email,
-		IsActive:  usr.IsActive,
-		Role:      string(usr.Role),
-		CreatedAt: usr.CreatedAt,
-		UpdatedAt: usr.UpdatedAt,
+		ID:                  usr.ID,
+		FirstName:           usr.FirstName,
+		LastName:            usr.LastName,
+		Email:               usr.Email,
+		IsActive:            usr.IsActive,
+		Role:                string(usr.Role),
+		CreatedAt:           usr.CreatedAt,
+		UpdatedAt:           usr.UpdatedAt,
+		LastLoginAt:         usr.LastLoginAt,
+		DisabledAt:          usr.DisabledAt,
+		LockedUntil:         usr.LockedUntil,
+		FailedLoginAttempts: usr.FailedLoginAttempts,
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -151,7 +159,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(query.Page, query.Limit, query.Search)
+	result, err := h.service.List(query.Page, query.Limit, query.Search, query.OrderBy, query.Order)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "fetch_failed",
@@ -163,14 +171,18 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	items := make([]dto.UserResponse, len(result.Items))
 	for i, usr := range result.Items {
 		items[i] = dto.UserResponse{
-			ID:        usr.ID,
-			FirstName: usr.FirstName,
-			LastName:  usr.LastName,
-			Email:     usr.Email,
-			IsActive:  usr.IsActive,
-			Role:      string(usr.Role),
-			CreatedAt: usr.CreatedAt,
-			UpdatedAt: usr.UpdatedAt,
+			ID:                  usr.ID,
+			FirstName:           usr.FirstName,
+			LastName:            usr.LastName,
+			Email:               usr.Email,
+			IsActive:            usr.IsActive,
+			Role:                string(usr.Role),
+			CreatedAt:           usr.CreatedAt,
+			UpdatedAt:           usr.UpdatedAt,
+			LastLoginAt:         usr.LastLoginAt,
+			DisabledAt:          usr.DisabledAt,
+			LockedUntil:         usr.LockedUntil,
+			FailedLoginAttempts: usr.FailedLoginAttempts,
 		}
 	}
 
@@ -267,14 +279,18 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 
 	response := dto.UserResponse{
-		ID:        usr.ID,
-		FirstName: usr.FirstName,
-		LastName:  usr.LastName,
-		Email:     usr.Email,
-		IsActive:  usr.IsActive,
-		Role:      string(usr.Role),
-		CreatedAt: usr.CreatedAt,
-		UpdatedAt: usr.UpdatedAt,
+		ID:                  usr.ID,
+		FirstName:           usr.FirstName,
+		LastName:            usr.LastName,
+		Email:               usr.Email,
+		IsActive:            usr.IsActive,
+		Role:                string(usr.Role),
+		CreatedAt:           usr.CreatedAt,
+		UpdatedAt:           usr.UpdatedAt,
+		LastLoginAt:         usr.LastLoginAt,
+		DisabledAt:          usr.DisabledAt,
+		LockedUntil:         usr.LockedUntil,
+		FailedLoginAttempts: usr.FailedLoginAttempts,
 	}
 
 	c.JSON(http.StatusOK, response)
