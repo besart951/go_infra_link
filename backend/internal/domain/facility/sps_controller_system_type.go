@@ -9,10 +9,10 @@ type SPSControllerSystemType struct {
 	domain.Base
 	Number          *int
 	DocumentName    *string
-	SPSControllerID uuid.UUID
-	SPSController   SPSController
-	SystemTypeID    uuid.UUID
-	SystemType      SystemType
+	SPSControllerID uuid.UUID     `gorm:"type:uuid;not null;index"`
+	SPSController   SPSController `gorm:"foreignKey:SPSControllerID"`
+	SystemTypeID    uuid.UUID     `gorm:"type:uuid;not null;index"`
+	SystemType      SystemType    `gorm:"foreignKey:SystemTypeID"`
 
-	FieldDevices []FieldDevice
+	FieldDevices []FieldDevice `gorm:"foreignKey:SPSControllerSystemTypeID"`
 }

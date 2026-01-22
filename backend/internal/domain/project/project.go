@@ -18,21 +18,21 @@ const (
 
 type Project struct {
 	domain.Base
-	Name        string
+	Name        string        `gorm:"not null"`
 	Description string
-	Status      ProjectStatus
+	Status      ProjectStatus `gorm:"type:varchar(50);not null"`
 	StartDate   *time.Time
-	PhaseID     uuid.UUID `json:"phase_id"`
-	Phase       Phase
-	CreatorID   uuid.UUID `json:"creator_id"`
-	Creator     user.User
+	PhaseID     uuid.UUID `json:"phase_id" gorm:"type:uuid;not null"`
+	Phase       Phase     `gorm:"foreignKey:PhaseID"`
+	CreatorID   uuid.UUID `json:"creator_id" gorm:"type:uuid;not null"`
+	Creator     user.User `gorm:"foreignKey:CreatorID"`
 
-	Users []*user.User `json:"users,omitempty"`
+	Users []*user.User `json:"users,omitempty" gorm:"many2many:project_users;"`
 }
 
 type Phase struct {
 	domain.Base
-	Name string
+	Name string `gorm:"not null"`
 }
 
 type ProjectRepository = domain.Repository[Project]

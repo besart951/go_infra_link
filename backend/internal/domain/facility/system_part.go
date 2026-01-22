@@ -6,9 +6,9 @@ import (
 
 type SystemPart struct {
 	domain.Base
-	ShortName   string
-	Name        string
+	ShortName   string  `gorm:"not null"`
+	Name        string  `gorm:"not null"`
 	Description *string
 
-	Apparats []*Apparat
+	Apparats []*Apparat `gorm:"many2many:system_part_apparats;"`
 }

@@ -11,16 +11,16 @@ type FieldDevice struct {
 	BMK                       *string
 	Description               *string
 	ApparatNr                 *int
-	SPSControllerSystemTypeID uuid.UUID
-	SPSControllerSystemType   SPSControllerSystemType
-	SystemPartID              *uuid.UUID
-	SystemPart                *SystemPart
-	SpecificationID           *uuid.UUID
-	Specification             *Specification
-	ProjectID                 *uuid.UUID
-	Project                   *project.Project
-	ApparatID                 uuid.UUID
-	Apparat                   Apparat
+	SPSControllerSystemTypeID uuid.UUID               `gorm:"type:uuid;not null;index"`
+	SPSControllerSystemType   SPSControllerSystemType `gorm:"foreignKey:SPSControllerSystemTypeID"`
+	SystemPartID              *uuid.UUID              `gorm:"type:uuid;index"`
+	SystemPart                *SystemPart             `gorm:"foreignKey:SystemPartID"`
+	SpecificationID           *uuid.UUID              `gorm:"type:uuid;index"`
+	Specification             *Specification          `gorm:"foreignKey:SpecificationID"`
+	ProjectID                 *uuid.UUID              `gorm:"type:uuid;index"`
+	Project                   *project.Project        `gorm:"foreignKey:ProjectID"`
+	ApparatID                 uuid.UUID               `gorm:"type:uuid;not null;index"`
+	Apparat                   Apparat                 `gorm:"foreignKey:ApparatID"`
 
-	BacnetObjects []BacnetObject
+	BacnetObjects []BacnetObject `gorm:"foreignKey:FieldDeviceID"`
 }

@@ -28,19 +28,26 @@ func Run() error {
 	}
 	log := applogger.Setup(cfg.AppEnv, cfg.LogLevel)
 
-	database, err := db.Open(cfg)
+	gormDB, err := db.Connect(cfg)
 	if err != nil {
 		log.Error("Failed to connect to database", "err", err)
-		return fmt.Errorf("db open: %w", err)
+		return fmt.Errorf("db connect: %w", err)
+	}
+
+	// Get underlying sql.DB for existing repositories
+	sqlDB, err := gormDB.DB()
+	if err != nil {
+		log.Error("Failed to get sql.DB instance", "err", err)
+		return fmt.Errorf("db instance: %w", err)
 	}
 	defer func() {
-		if err := database.Close(); err != nil {
+		if err := sqlDB.Close(); err != nil {
 			log.Error("Failed to close database", "err", err)
 		}
 	}()
 
 	// Initialize dependencies via wire package
-	repos, err := wire.NewRepositories(database, cfg.DBDriver)
+	repos, err := wire.NewRepositories(sqlDB, cfg.DBType)
 	if err != nil {
 		log.Error("Failed to initialize repositories", "err", err)
 		return fmt.Errorf("repositories: %w", err)
