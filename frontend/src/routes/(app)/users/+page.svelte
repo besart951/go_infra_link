@@ -277,7 +277,8 @@
 							</Table.Cell>
 							<Table.Cell>
 								<Badge variant={getRoleBadgeVariant(user.role)}>
-									<svelte:component this={getRoleIcon(user.role)} class="mr-1 h-3 w-3" />
+									{@const Icon = getRoleIcon(user.role)}
+									<Icon class="mr-1 h-3 w-3" />
 									{user.role}
 								</Badge>
 							</Table.Cell>
