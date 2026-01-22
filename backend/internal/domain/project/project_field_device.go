@@ -7,8 +7,8 @@ import (
 
 type ProjectFieldDevice struct {
 	domain.Base
-	ProjectID     uuid.UUID `gorm:"type:uuid;not null;index:idx_project_field_device"`
-	FieldDeviceID uuid.UUID `gorm:"type:uuid;not null;index:idx_project_field_device"`
+	ProjectID     uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_project_field_device_unique"`
+	FieldDeviceID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_project_field_device_unique"`
 }
 
 func (ProjectFieldDevice) TableName() string {

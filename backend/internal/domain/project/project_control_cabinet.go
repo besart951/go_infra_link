@@ -7,8 +7,8 @@ import (
 
 type ProjectControlCabinet struct {
 	domain.Base
-	ProjectID        uuid.UUID `gorm:"type:uuid;not null;index:idx_project_control_cabinet"`
-	ControlCabinetID uuid.UUID `gorm:"type:uuid;not null;index:idx_project_control_cabinet"`
+	ProjectID        uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_project_control_cabinet_unique"`
+	ControlCabinetID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_project_control_cabinet_unique"`
 }
 
 func (ProjectControlCabinet) TableName() string {

@@ -7,8 +7,8 @@ import (
 
 type ProjectSPSController struct {
 	domain.Base
-	ProjectID       uuid.UUID `gorm:"type:uuid;not null;index:idx_project_sps_controller"`
-	SPSControllerID uuid.UUID `gorm:"type:uuid;not null;index:idx_project_sps_controller"`
+	ProjectID       uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_project_sps_controller_unique"`
+	SPSControllerID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_project_sps_controller_unique"`
 }
 
 func (ProjectSPSController) TableName() string {
