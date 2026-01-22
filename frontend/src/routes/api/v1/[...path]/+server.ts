@@ -23,7 +23,10 @@ async function proxy({ request, params }: Parameters<RequestHandler>[0]): Promis
 	const init: RequestInit = {
 		method: request.method,
 		headers,
-		body: request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.arrayBuffer(),
+		body:
+			request.method === 'GET' || request.method === 'HEAD'
+				? undefined
+				: await request.arrayBuffer(),
 		redirect: 'manual'
 	};
 

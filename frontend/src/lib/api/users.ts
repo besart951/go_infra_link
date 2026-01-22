@@ -38,9 +38,7 @@ const API_BASE = '/api/v1';
 function getCookie(name: string): string | undefined {
 	if (typeof document === 'undefined') return undefined;
 	const m = document.cookie.match(
-		new RegExp(
-			`(?:^|; )${name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}=([^;]*)`
-		)
+		new RegExp(`(?:^|; )${name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}=([^;]*)`)
 	);
 	return m ? decodeURIComponent(m[1]) : undefined;
 }

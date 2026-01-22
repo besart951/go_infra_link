@@ -33,7 +33,9 @@ const API_BASE = '/api/v1';
 
 function getCookie(name: string): string | undefined {
 	if (typeof document === 'undefined') return undefined;
-	const m = document.cookie.match(new RegExp(`(?:^|; )${name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}=([^;]*)`));
+	const m = document.cookie.match(
+		new RegExp(`(?:^|; )${name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}=([^;]*)`)
+	);
 	return m ? decodeURIComponent(m[1]) : undefined;
 }
 
@@ -62,7 +64,9 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 	return response.json();
 }
 
-export async function listTeams(params: { page?: number; limit?: number; search?: string } = {}): Promise<TeamListResponse> {
+export async function listTeams(
+	params: { page?: number; limit?: number; search?: string } = {}
+): Promise<TeamListResponse> {
 	const sp = new URLSearchParams();
 	if (params.page) sp.set('page', String(params.page));
 	if (params.limit) sp.set('limit', String(params.limit));
@@ -71,10 +75,15 @@ export async function listTeams(params: { page?: number; limit?: number; search?
 	return fetchAPI<TeamListResponse>(q ? `/teams?${q}` : '/teams');
 }
 
-export async function listTeamMembers(teamId: string, params: { page?: number; limit?: number } = {}): Promise<TeamMemberListResponse> {
+export async function listTeamMembers(
+	teamId: string,
+	params: { page?: number; limit?: number } = {}
+): Promise<TeamMemberListResponse> {
 	const sp = new URLSearchParams();
 	if (params.page) sp.set('page', String(params.page));
 	if (params.limit) sp.set('limit', String(params.limit));
 	const q = sp.toString();
-	return fetchAPI<TeamMemberListResponse>(q ? `/teams/${teamId}/members?${q}` : `/teams/${teamId}/members`);
+	return fetchAPI<TeamMemberListResponse>(
+		q ? `/teams/${teamId}/members?${q}` : `/teams/${teamId}/members`
+	);
 }
