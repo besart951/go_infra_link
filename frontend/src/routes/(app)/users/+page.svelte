@@ -5,6 +5,8 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
+	import Toasts, { addToast } from '$lib/components/toast.svelte';
+	import ConfirmDialog, { confirm } from '$lib/components/confirm-dialog.svelte';
 	import {
 		listUsers,
 		setUserRole,
@@ -79,8 +81,9 @@
 		try {
 			await setUserRole(userId, newRole);
 			await loadUsers();
+			addToast('Role updated successfully', 'success');
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to change role');
+			addToast(err instanceof Error ? err.message : 'Failed to change role', 'error');
 		}
 	}
 
@@ -88,22 +91,33 @@
 		try {
 			if (isActive) {
 				await disableUser(userId);
+				addToast('User disabled successfully', 'success');
 			} else {
 				await enableUser(userId);
+				addToast('User enabled successfully', 'success');
 			}
 			await loadUsers();
 		} catch (err) {
-			alert(err instanceof Error ? err.message : 'Failed to toggle user status');
+			addToast(err instanceof Error ? err.message : 'Failed to toggle user status', 'error');
 		}
 	}
 
 	async function handleDeleteUser(userId: string, userName: string) {
-		if (confirm(`Are you sure you want to delete ${userName}?`)) {
+		const confirmed = await confirm({
+			title: 'Delete User',
+			message: `Are you sure you want to delete ${userName}? This action cannot be undone.`,
+			confirmText: 'Delete',
+			cancelText: 'Cancel',
+			variant: 'destructive'
+		});
+
+		if (confirmed) {
 			try {
 				await deleteUser(userId);
 				await loadUsers();
+				addToast('User deleted successfully', 'success');
 			} catch (err) {
-				alert(err instanceof Error ? err.message : 'Failed to delete user');
+				addToast(err instanceof Error ? err.message : 'Failed to delete user', 'error');
 			}
 		}
 	}
@@ -412,3 +426,7 @@
 		</div>
 	{/if}
 </div>
+
+<Toasts />
+<ConfirmDialog />
+
