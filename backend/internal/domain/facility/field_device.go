@@ -2,7 +2,6 @@ package facility
 
 import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
-	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
@@ -17,8 +16,6 @@ type FieldDevice struct {
 	SystemPart                *SystemPart             `gorm:"foreignKey:SystemPartID"`
 	SpecificationID           *uuid.UUID              `gorm:"type:uuid;index"`
 	Specification             *Specification          `gorm:"foreignKey:SpecificationID"`
-	ProjectID                 *uuid.UUID              `gorm:"type:uuid;index"`
-	Project                   *project.Project        `gorm:"foreignKey:ProjectID"`
 	ApparatID                 uuid.UUID               `gorm:"type:uuid;not null;index"`
 	Apparat                   Apparat                 `gorm:"foreignKey:ApparatID"`
 

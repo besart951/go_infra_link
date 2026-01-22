@@ -41,7 +41,6 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 
 	controlCabinet := &domainFacility.ControlCabinet{
 		BuildingID:       req.BuildingID,
-		ProjectID:        req.ProjectID,
 		ControlCabinetNr: req.ControlCabinetNr,
 	}
 
@@ -63,7 +62,6 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 	response := dto.ControlCabinetResponse{
 		ID:               controlCabinet.ID,
 		BuildingID:       controlCabinet.BuildingID,
-		ProjectID:        controlCabinet.ProjectID,
 		ControlCabinetNr: controlCabinet.ControlCabinetNr,
 		CreatedAt:        controlCabinet.CreatedAt,
 		UpdatedAt:        controlCabinet.UpdatedAt,
@@ -112,7 +110,6 @@ func (h *ControlCabinetHandler) GetControlCabinet(c *gin.Context) {
 	response := dto.ControlCabinetResponse{
 		ID:               controlCabinet.ID,
 		BuildingID:       controlCabinet.BuildingID,
-		ProjectID:        controlCabinet.ProjectID,
 		ControlCabinetNr: controlCabinet.ControlCabinetNr,
 		CreatedAt:        controlCabinet.CreatedAt,
 		UpdatedAt:        controlCabinet.UpdatedAt,
@@ -156,7 +153,6 @@ func (h *ControlCabinetHandler) ListControlCabinets(c *gin.Context) {
 		items[i] = dto.ControlCabinetResponse{
 			ID:               controlCabinet.ID,
 			BuildingID:       controlCabinet.BuildingID,
-			ProjectID:        controlCabinet.ProjectID,
 			ControlCabinetNr: controlCabinet.ControlCabinetNr,
 			CreatedAt:        controlCabinet.CreatedAt,
 			UpdatedAt:        controlCabinet.UpdatedAt,
@@ -224,9 +220,6 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 	if req.BuildingID != uuid.Nil {
 		controlCabinet.BuildingID = req.BuildingID
 	}
-	if req.ProjectID != nil {
-		controlCabinet.ProjectID = req.ProjectID
-	}
 	if req.ControlCabinetNr != nil {
 		controlCabinet.ControlCabinetNr = req.ControlCabinetNr
 	}
@@ -249,7 +242,6 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 	response := dto.ControlCabinetResponse{
 		ID:               controlCabinet.ID,
 		BuildingID:       controlCabinet.BuildingID,
-		ProjectID:        controlCabinet.ProjectID,
 		ControlCabinetNr: controlCabinet.ControlCabinetNr,
 		CreatedAt:        controlCabinet.CreatedAt,
 		UpdatedAt:        controlCabinet.UpdatedAt,

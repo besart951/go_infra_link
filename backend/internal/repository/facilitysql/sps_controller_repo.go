@@ -25,7 +25,7 @@ func (r *spsControllerRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SPSCont
 		return []*domainFacility.SPSController{}, nil
 	}
 
-	q := "SELECT id, created_at, updated_at, deleted_at, control_cabinet_id, project_id, ga_device, device_name, device_description, device_location, ip_address, subnet, gateway, vlan " +
+	q := "SELECT id, created_at, updated_at, deleted_at, control_cabinet_id, ga_device, device_name, device_description, device_location, ip_address, subnet, gateway, vlan " +
 		"FROM sps_controllers WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
 	q = sqlutil.Rebind(r.dialect, q)
 
@@ -44,7 +44,6 @@ func (r *spsControllerRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SPSCont
 	for rows.Next() {
 		var s domainFacility.SPSController
 		var deletedAt sql.NullTime
-		var projectID sql.NullString
 		var ga sql.NullString
 		var desc sql.NullString
 		var loc sql.NullString
@@ -58,7 +57,6 @@ func (r *spsControllerRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SPSCont
 			&s.UpdatedAt,
 			&deletedAt,
 			&s.ControlCabinetID,
-			&projectID,
 			&ga,
 			&s.DeviceName,
 			&desc,
@@ -73,13 +71,6 @@ func (r *spsControllerRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SPSCont
 		if deletedAt.Valid {
 			t := deletedAt.Time
 			s.DeletedAt = &t
-		}
-		if projectID.Valid {
-			id, err := uuid.Parse(projectID.String)
-			if err != nil {
-				return nil, err
-			}
-			s.ProjectID = &id
 		}
 		if ga.Valid {
 			v := ga.String
@@ -123,8 +114,8 @@ func (r *spsControllerRepo) Create(entity *domainFacility.SPSController) error {
 		return err
 	}
 
-	q := "INSERT INTO sps_controllers (id, created_at, updated_at, deleted_at, control_cabinet_id, project_id, ga_device, device_name, device_description, device_location, ip_address, subnet, gateway, vlan) " +
-		"VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	q := "INSERT INTO sps_controllers (id, created_at, updated_at, deleted_at, control_cabinet_id, ga_device, device_name, device_description, device_location, ip_address, subnet, gateway, vlan) " +
+		"VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	q = sqlutil.Rebind(r.dialect, q)
 
 	_, err := r.db.Exec(
@@ -133,7 +124,6 @@ func (r *spsControllerRepo) Create(entity *domainFacility.SPSController) error {
 		entity.CreatedAt,
 		entity.UpdatedAt,
 		entity.ControlCabinetID,
-		argUUIDPtr(entity.ProjectID),
 		argStringPtr(entity.GADevice),
 		entity.DeviceName,
 		argStringPtr(entity.DeviceDescription),
@@ -150,7 +140,7 @@ func (r *spsControllerRepo) Update(entity *domainFacility.SPSController) error {
 	now := time.Now().UTC()
 	entity.Base.TouchForUpdate(now)
 
-	q := "UPDATE sps_controllers SET updated_at = ?, control_cabinet_id = ?, project_id = ?, ga_device = ?, device_name = ?, device_description = ?, device_location = ?, ip_address = ?, subnet = ?, gateway = ?, vlan = ? " +
+	q := "UPDATE sps_controllers SET updated_at = ?, control_cabinet_id = ?, ga_device = ?, device_name = ?, device_description = ?, device_location = ?, ip_address = ?, subnet = ?, gateway = ?, vlan = ? " +
 		"WHERE deleted_at IS NULL AND id = ?"
 	q = sqlutil.Rebind(r.dialect, q)
 
@@ -158,7 +148,6 @@ func (r *spsControllerRepo) Update(entity *domainFacility.SPSController) error {
 		q,
 		entity.UpdatedAt,
 		entity.ControlCabinetID,
-		argUUIDPtr(entity.ProjectID),
 		argStringPtr(entity.GADevice),
 		entity.DeviceName,
 		argStringPtr(entity.DeviceDescription),
@@ -217,7 +206,7 @@ func (r *spsControllerRepo) GetPaginatedList(params domain.PaginationParams) (*d
 		return nil, err
 	}
 
-	dataQ := "SELECT id, created_at, updated_at, deleted_at, control_cabinet_id, project_id, ga_device, device_name, device_description, device_location, ip_address, subnet, gateway, vlan " +
+	dataQ := "SELECT id, created_at, updated_at, deleted_at, control_cabinet_id, ga_device, device_name, device_description, device_location, ip_address, subnet, gateway, vlan " +
 		"FROM sps_controllers WHERE " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
 	dataQ = sqlutil.Rebind(r.dialect, dataQ)
 	dataArgs := append(append([]any{}, args...), limit, offset)
@@ -232,7 +221,6 @@ func (r *spsControllerRepo) GetPaginatedList(params domain.PaginationParams) (*d
 	for rows.Next() {
 		var s domainFacility.SPSController
 		var deletedAt sql.NullTime
-		var projectID sql.NullString
 		var ga sql.NullString
 		var desc sql.NullString
 		var loc sql.NullString
@@ -246,7 +234,6 @@ func (r *spsControllerRepo) GetPaginatedList(params domain.PaginationParams) (*d
 			&s.UpdatedAt,
 			&deletedAt,
 			&s.ControlCabinetID,
-			&projectID,
 			&ga,
 			&s.DeviceName,
 			&desc,
@@ -261,13 +248,6 @@ func (r *spsControllerRepo) GetPaginatedList(params domain.PaginationParams) (*d
 		if deletedAt.Valid {
 			t := deletedAt.Time
 			s.DeletedAt = &t
-		}
-		if projectID.Valid {
-			id, err := uuid.Parse(projectID.String)
-			if err != nil {
-				return nil, err
-			}
-			s.ProjectID = &id
 		}
 		if ga.Valid {
 			v := ga.String

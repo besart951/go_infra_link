@@ -41,7 +41,6 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 
 	spsController := &domainFacility.SPSController{
 		ControlCabinetID:  req.ControlCabinetID,
-		ProjectID:         req.ProjectID,
 		GADevice:          req.GADevice,
 		DeviceName:        req.DeviceName,
 		DeviceDescription: req.DeviceDescription,
@@ -79,7 +78,6 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 	response := dto.SPSControllerResponse{
 		ID:                spsController.ID,
 		ControlCabinetID:  spsController.ControlCabinetID,
-		ProjectID:         spsController.ProjectID,
 		GADevice:          spsController.GADevice,
 		DeviceName:        spsController.DeviceName,
 		DeviceDescription: spsController.DeviceDescription,
@@ -135,7 +133,6 @@ func (h *SPSControllerHandler) GetSPSController(c *gin.Context) {
 	response := dto.SPSControllerResponse{
 		ID:                spsController.ID,
 		ControlCabinetID:  spsController.ControlCabinetID,
-		ProjectID:         spsController.ProjectID,
 		GADevice:          spsController.GADevice,
 		DeviceName:        spsController.DeviceName,
 		DeviceDescription: spsController.DeviceDescription,
@@ -186,7 +183,6 @@ func (h *SPSControllerHandler) ListSPSControllers(c *gin.Context) {
 		items[i] = dto.SPSControllerResponse{
 			ID:                spsController.ID,
 			ControlCabinetID:  spsController.ControlCabinetID,
-			ProjectID:         spsController.ProjectID,
 			GADevice:          spsController.GADevice,
 			DeviceName:        spsController.DeviceName,
 			DeviceDescription: spsController.DeviceDescription,
@@ -261,9 +257,6 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 	if req.ControlCabinetID != uuid.Nil {
 		spsController.ControlCabinetID = req.ControlCabinetID
 	}
-	if req.ProjectID != nil {
-		spsController.ProjectID = req.ProjectID
-	}
 	if req.GADevice != nil {
 		spsController.GADevice = req.GADevice
 	}
@@ -321,7 +314,6 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 	response := dto.SPSControllerResponse{
 		ID:                spsController.ID,
 		ControlCabinetID:  spsController.ControlCabinetID,
-		ProjectID:         spsController.ProjectID,
 		GADevice:          spsController.GADevice,
 		DeviceName:        spsController.DeviceName,
 		DeviceDescription: spsController.DeviceDescription,
