@@ -25,7 +25,7 @@ func (r *controlCabinetRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Contro
 		return []*domainFacility.ControlCabinet{}, nil
 	}
 
-	q := "SELECT id, created_at, updated_at, deleted_at, building_id, project_id, control_cabinet_nr " +
+	q := "SELECT id, created_at, updated_at, deleted_at, building_id, control_cabinet_nr " +
 		"FROM control_cabinets WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
 	q = sqlutil.Rebind(r.dialect, q)
 
@@ -44,7 +44,6 @@ func (r *controlCabinetRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Contro
 	for rows.Next() {
 		var c domainFacility.ControlCabinet
 		var deletedAt sql.NullTime
-		var projectID sql.NullString
 		var nr sql.NullString
 		if err := rows.Scan(
 			&c.ID,
@@ -52,7 +51,6 @@ func (r *controlCabinetRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Contro
 			&c.UpdatedAt,
 			&deletedAt,
 			&c.BuildingID,
-			&projectID,
 			&nr,
 		); err != nil {
 			return nil, err
@@ -60,13 +58,6 @@ func (r *controlCabinetRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Contro
 		if deletedAt.Valid {
 			t := deletedAt.Time
 			c.DeletedAt = &t
-		}
-		if projectID.Valid {
-			id, err := uuid.Parse(projectID.String)
-			if err != nil {
-				return nil, err
-			}
-			c.ProjectID = &id
 		}
 		if nr.Valid {
 			v := nr.String
@@ -87,11 +78,11 @@ func (r *controlCabinetRepo) Create(entity *domainFacility.ControlCabinet) error
 		return err
 	}
 
-	q := "INSERT INTO control_cabinets (id, created_at, updated_at, deleted_at, building_id, project_id, control_cabinet_nr) " +
-		"VALUES (?, ?, ?, NULL, ?, ?, ?)"
+	q := "INSERT INTO control_cabinets (id, created_at, updated_at, deleted_at, building_id, control_cabinet_nr) " +
+		"VALUES (?, ?, ?, NULL, ?, ?)"
 	q = sqlutil.Rebind(r.dialect, q)
 
-	_, err := r.db.Exec(q, entity.ID, entity.CreatedAt, entity.UpdatedAt, entity.BuildingID, argUUIDPtr(entity.ProjectID), argStringPtr(entity.ControlCabinetNr))
+	_, err := r.db.Exec(q, entity.ID, entity.CreatedAt, entity.UpdatedAt, entity.BuildingID, argStringPtr(entity.ControlCabinetNr))
 	return err
 }
 
@@ -99,10 +90,10 @@ func (r *controlCabinetRepo) Update(entity *domainFacility.ControlCabinet) error
 	now := time.Now().UTC()
 	entity.Base.TouchForUpdate(now)
 
-	q := "UPDATE control_cabinets SET updated_at = ?, building_id = ?, project_id = ?, control_cabinet_nr = ? WHERE deleted_at IS NULL AND id = ?"
+	q := "UPDATE control_cabinets SET updated_at = ?, building_id = ?, control_cabinet_nr = ? WHERE deleted_at IS NULL AND id = ?"
 	q = sqlutil.Rebind(r.dialect, q)
 
-	_, err := r.db.Exec(q, entity.UpdatedAt, entity.BuildingID, argUUIDPtr(entity.ProjectID), argStringPtr(entity.ControlCabinetNr), entity.ID)
+	_, err := r.db.Exec(q, entity.UpdatedAt, entity.BuildingID, argStringPtr(entity.ControlCabinetNr), entity.ID)
 	return err
 }
 
@@ -152,7 +143,7 @@ func (r *controlCabinetRepo) GetPaginatedList(params domain.PaginationParams) (*
 		return nil, err
 	}
 
-	dataQ := "SELECT id, created_at, updated_at, deleted_at, building_id, project_id, control_cabinet_nr FROM control_cabinets WHERE " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+	dataQ := "SELECT id, created_at, updated_at, deleted_at, building_id, control_cabinet_nr FROM control_cabinets WHERE " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
 	dataQ = sqlutil.Rebind(r.dialect, dataQ)
 	dataArgs := append(append([]any{}, args...), limit, offset)
 
@@ -166,21 +157,13 @@ func (r *controlCabinetRepo) GetPaginatedList(params domain.PaginationParams) (*
 	for rows.Next() {
 		var c domainFacility.ControlCabinet
 		var deletedAt sql.NullTime
-		var projectID sql.NullString
 		var nr sql.NullString
-		if err := rows.Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt, &deletedAt, &c.BuildingID, &projectID, &nr); err != nil {
+		if err := rows.Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt, &deletedAt, &c.BuildingID, &nr); err != nil {
 			return nil, err
 		}
 		if deletedAt.Valid {
 			t := deletedAt.Time
 			c.DeletedAt = &t
-		}
-		if projectID.Valid {
-			id, err := uuid.Parse(projectID.String)
-			if err != nil {
-				return nil, err
-			}
-			c.ProjectID = &id
 		}
 		if nr.Valid {
 			v := nr.String
