@@ -17,24 +17,24 @@ const (
 
 type User struct {
 	domain.Base
-	FirstName           string
-	LastName            string
-	Email               string `json:"email"`
-	Password            string `json:"-"`
-	IsActive            bool
-	Role                Role
-	DisabledAt          *time.Time
-	LockedUntil         *time.Time
-	FailedLoginAttempts int
+	FirstName           string     `gorm:"not null"`
+	LastName            string     `gorm:"not null"`
+	Email               string     `json:"email" gorm:"uniqueIndex;not null"`
+	Password            string     `json:"-" gorm:"not null"`
+	IsActive            bool       `gorm:"default:true"`
+	Role                Role       `gorm:"type:varchar(50);default:'user'"`
+	DisabledAt          *time.Time `gorm:"index"`
+	LockedUntil         *time.Time `gorm:"index"`
+	FailedLoginAttempts int        `gorm:"default:0"`
 	LastLoginAt         *time.Time
-	CreatedByID         *uuid.UUID
-	CreatedBy           *User
-	BusinessDetails     *BusinessDetails `json:"business_details,omitempty"`
+	CreatedByID         *uuid.UUID `gorm:"type:uuid"`
+	CreatedBy           *User      `gorm:"foreignKey:CreatedByID"`
+	BusinessDetails     *BusinessDetails `json:"business_details,omitempty" gorm:"foreignKey:UserID"`
 }
 
 type BusinessDetails struct {
 	domain.Base
-	UserID      uuid.UUID
+	UserID      uuid.UUID `gorm:"type:uuid;uniqueIndex;not null"`
 	CompanyName string
 	VatNumber   string
 }

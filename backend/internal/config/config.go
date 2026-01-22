@@ -27,7 +27,7 @@ type Config struct {
 	DevAuthEnabled    bool
 	DevAuthEmail      string
 	DevAuthPassword   string
-	DBDriver          string
+	DBType            string
 	DBDsn             string
 	DBMaxOpenConns    int
 	DBMaxIdleConns    int
@@ -61,9 +61,9 @@ func Load() (Config, error) {
 	seedUserEnabled := getEnvBool("SEED_USER_ENABLED", !IsProduction(appEnv))
 	devAuthEnabled := getEnvBool("DEV_AUTH_ENABLED", false)
 
-	dbDriver := normalizeDriver(getEnvFirst("sqlite", "DB_DRIVER"))
+	dbType := normalizeDBType(getEnvFirst("sqlite", "DB_TYPE", "DB_DRIVER"))
 	dbDsnFallback := "host=localhost user=postgres password=postgres dbname=mydb port=5432 sslmode=disable"
-	if dbDriver == "sqlite" {
+	if dbType == "sqlite" {
 		dbDsnFallback = "./data/app.db"
 	}
 	dbDsn := getEnvFirst(dbDsnFallback, "DATABASE_URL", "DB_DSN")
@@ -85,7 +85,7 @@ func Load() (Config, error) {
 		DevAuthEnabled:    devAuthEnabled,
 		DevAuthEmail:      getEnv("DEV_AUTH_EMAIL", ""),
 		DevAuthPassword:   getEnv("DEV_AUTH_PASSWORD", ""),
-		DBDriver:          dbDriver,
+		DBType:            dbType,
 		DBDsn:             dbDsn,
 		DBMaxOpenConns:    maxOpen,
 		DBMaxIdleConns:    maxIdle,
@@ -161,17 +161,16 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-func normalizeDriver(driver string) string {
-	driver = strings.ToLower(strings.TrimSpace(driver))
-	switch driver {
+func normalizeDBType(dbType string) string {
+	dbType = strings.ToLower(strings.TrimSpace(dbType))
+	switch dbType {
 	case "sqlite3", "sqlite":
 		return "sqlite"
 	case "postgres", "pg", "postgresql", "pgx":
-		// Normalize common Postgres aliases.
 		return "postgres"
 	case "mysql", "mariadb":
 		return "mysql"
 	default:
-		return driver
+		return dbType
 	}
 }

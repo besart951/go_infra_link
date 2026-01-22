@@ -17,8 +17,8 @@ const (
 
 type TeamMember struct {
 	domain.Base
-	TeamID   uuid.UUID
-	UserID   uuid.UUID
-	Role     MemberRole
-	JoinedAt time.Time
+	TeamID   uuid.UUID  `gorm:"type:uuid;not null;index:idx_team_user,unique"`
+	UserID   uuid.UUID  `gorm:"type:uuid;not null;index:idx_team_user,unique"`
+	Role     MemberRole `gorm:"type:varchar(50);not null"`
+	JoinedAt time.Time  `gorm:"not null"`
 }

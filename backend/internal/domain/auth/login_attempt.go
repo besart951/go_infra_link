@@ -7,12 +7,12 @@ import (
 )
 
 type LoginAttempt struct {
-	ID            uuid.UUID
-	CreatedAt     time.Time
-	UserID        *uuid.UUID
-	Email         *string
+	ID            uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	CreatedAt     time.Time  `gorm:"autoCreateTime;index"`
+	UserID        *uuid.UUID `gorm:"type:uuid;index"`
+	Email         *string    `gorm:"index"`
 	IP            *string
 	UserAgent     *string
-	Success       bool
+	Success       bool       `gorm:"index"`
 	FailureReason *string
 }

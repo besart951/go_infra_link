@@ -6,8 +6,8 @@ import (
 
 type Building struct {
 	domain.Base
-	IWSCode       string
-	BuildingGroup int
+	IWSCode       string `gorm:"index"`
+	BuildingGroup int    `gorm:"not null"`
 
-	ControlCabinets []ControlCabinet
+	ControlCabinets []ControlCabinet `gorm:"foreignKey:BuildingID"`
 }

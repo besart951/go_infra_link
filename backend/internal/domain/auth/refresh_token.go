@@ -10,11 +10,11 @@ import (
 
 type RefreshToken struct {
 	domain.Base
-	UserID      uuid.UUID
-	User        user.User
-	TokenHash   string
-	ExpiresAt   time.Time
-	RevokedAt   *time.Time
+	UserID      uuid.UUID  `gorm:"type:uuid;not null;index"`
+	User        user.User  `gorm:"foreignKey:UserID"`
+	TokenHash   string     `gorm:"uniqueIndex;not null"`
+	ExpiresAt   time.Time  `gorm:"not null;index"`
+	RevokedAt   *time.Time `gorm:"index"`
 	CreatedByIP *string
 	UserAgent   *string
 }

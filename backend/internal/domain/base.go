@@ -8,10 +8,10 @@ import (
 )
 
 type Base struct {
-	ID        uuid.UUID  `json:"id"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"-"`
+	ID        uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey"`
+	CreatedAt time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+	DeletedAt *time.Time `json:"-" gorm:"index"`
 }
 
 func (b *Base) InitForCreate(now time.Time) error {

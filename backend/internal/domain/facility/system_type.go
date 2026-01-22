@@ -6,7 +6,7 @@ import (
 
 type SystemType struct {
 	domain.Base
-	NumberMin int
-	NumberMax int
-	Name      string
+	NumberMin int    `gorm:"not null"`
+	NumberMax int    `gorm:"not null"`
+	Name      string `gorm:"not null"`
 }
