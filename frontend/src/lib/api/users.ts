@@ -35,14 +35,28 @@ export interface ApiError {
 
 const API_BASE = '/api/v1';
 
+function getCookie(name: string): string | undefined {
+	if (typeof document === 'undefined') return undefined;
+	const m = document.cookie.match(
+		new RegExp(
+			`(?:^|; )${name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}=([^;]*)`
+		)
+	);
+	return m ? decodeURIComponent(m[1]) : undefined;
+}
+
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
+	const csrf = getCookie('csrf_token');
+	const headers: Record<string, string> = {
+		'Content-Type': 'application/json',
+		...((options?.headers as Record<string, string> | undefined) ?? {})
+	};
+	if (csrf) headers['X-CSRF-Token'] = csrf;
+
 	const response = await fetch(`${API_BASE}${endpoint}`, {
 		...options,
 		credentials: 'include',
-		headers: {
-			'Content-Type': 'application/json',
-			...options?.headers
-		}
+		headers
 	});
 
 	if (!response.ok) {
@@ -56,7 +70,10 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 	return response.json();
 }
 
-export async function listUsers(params: ListUsersParams = {}): Promise<PaginatedUserResponse> {
+export async function listUsers(
+	params: ListUsersParams = {},
+	options?: RequestInit
+): Promise<PaginatedUserResponse> {
 	const searchParams = new URLSearchParams();
 	if (params.page) searchParams.set('page', params.page.toString());
 	if (params.limit) searchParams.set('limit', params.limit.toString());
@@ -67,7 +84,7 @@ export async function listUsers(params: ListUsersParams = {}): Promise<Paginated
 	const query = searchParams.toString();
 	const endpoint = query ? `/users?${query}` : '/users';
 
-	return fetchAPI<PaginatedUserResponse>(endpoint);
+	return fetchAPI<PaginatedUserResponse>(endpoint, options);
 }
 
 export async function setUserRole(

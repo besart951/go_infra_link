@@ -5,8 +5,10 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
+	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import Toasts, { addToast } from '$lib/components/toast.svelte';
-	import ConfirmDialog, { confirm } from '$lib/components/confirm-dialog.svelte';
+	import { confirm } from '$lib/stores/confirm-dialog.js';
+	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import {
 		listUsers,
 		setUserRole,
@@ -16,6 +18,7 @@
 		type User,
 		type PaginatedUserResponse
 	} from '$lib/api/users.js';
+	import { listTeams, listTeamMembers, type Team } from '$lib/api/teams.js';
 	import {
 		Search,
 		UserCircle,
@@ -26,10 +29,18 @@
 		UserCheck,
 		Trash2,
 		ChevronUp,
-		ChevronDown
-	} from 'lucide-svelte';
+		ChevronDown,
+		BadgeCheck,
+		BadgeX,
+		KeyRound
+	} from '@lucide/svelte';
 
 	let users = $state<User[]>([]);
+	let teams = $state<Team[]>([]);
+	let teamByUserId = $state<Map<string, string[]>>(new Map());
+	let selectedTeamId = $state<string>('all');
+	let teamsLoading = $state(true);
+	let teamsError = $state<string | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let searchQuery = $state('');
@@ -38,22 +49,99 @@
 	let total = $state(0);
 	let orderBy = $state('last_login_at');
 	let order = $state<'asc' | 'desc'>('desc');
+	let searchDebounce = $state<ReturnType<typeof setTimeout> | null>(null);
+	let listAbort = $state<AbortController | null>(null);
+	const cache = new Map<string, { at: number; data: PaginatedUserResponse }>();
+	const cacheTTLms = 10_000;
+
+	function cacheKey() {
+		return JSON.stringify({
+			page: currentPage,
+			limit: 10,
+			search: searchQuery,
+			order_by: orderBy,
+			order
+		});
+	}
+
+	function getUserTeams(userId: string): string[] {
+		return teamByUserId.get(userId) ?? [];
+	}
+
+	function userMatchesTeam(userId: string): boolean {
+		if (selectedTeamId === 'all') return true;
+		const names = getUserTeams(userId);
+		const t = teams.find((x) => x.id === selectedTeamId);
+		if (!t) return true;
+		return names.includes(t.name);
+	}
+
+	function visibleUsers(): User[] {
+		if (selectedTeamId === 'all') return users;
+		return users.filter((u) => userMatchesTeam(u.id));
+	}
+
+	async function loadTeamsAndMembers() {
+		teamsLoading = true;
+		teamsError = null;
+		try {
+			const res = await listTeams({ page: 1, limit: 100, search: '' });
+			teams = res.items;
+
+			const memberLists = await Promise.all(
+				teams.map(async (t) => ({ team: t, members: await listTeamMembers(t.id, { page: 1, limit: 1000 }) }))
+			);
+
+			const map = new Map<string, string[]>();
+			for (const { team, members } of memberLists) {
+				for (const m of members.items) {
+					const arr = map.get(m.user_id) ?? [];
+					arr.push(team.name);
+					map.set(m.user_id, arr);
+				}
+			}
+			teamByUserId = map;
+		} catch (err) {
+			teamsError = err instanceof Error ? err.message : 'Failed to load teams';
+		} finally {
+			teamsLoading = false;
+		}
+	}
 
 	async function loadUsers() {
 		loading = true;
 		error = null;
+		const key = cacheKey();
+		const cached = cache.get(key);
+		if (cached && Date.now() - cached.at < cacheTTLms) {
+			users = cached.data.items;
+			totalPages = cached.data.total_pages;
+			total = cached.data.total;
+			loading = false;
+			return;
+		}
+
+		listAbort?.abort();
+		listAbort = new AbortController();
 		try {
-			const response: PaginatedUserResponse = await listUsers({
-				page: currentPage,
-				limit: 10,
-				search: searchQuery,
-				order_by: orderBy,
-				order
-			});
+			const response: PaginatedUserResponse = await listUsers(
+				{
+					page: currentPage,
+					limit: 10,
+					search: searchQuery,
+					order_by: orderBy,
+					order
+				},
+				{ signal: listAbort.signal }
+			);
 			users = response.items;
 			totalPages = response.total_pages;
 			total = response.total;
+			cache.set(key, { at: Date.now(), data: response });
 		} catch (err) {
+			if (err instanceof DOMException && err.name === 'AbortError') {
+				return;
+			}
 			error = err instanceof Error ? err.message : 'Failed to load users';
 		} finally {
 			loading = false;
@@ -74,7 +162,10 @@
 		const target = event.target as HTMLInputElement;
 		searchQuery = target.value;
 		currentPage = 1;
-		loadUsers();
+		if (searchDebounce) clearTimeout(searchDebounce);
+		searchDebounce = setTimeout(() => {
+			loadUsers();
+		}, 300);
 	}
 
 	async function handleRoleChange(userId: string, newRole: 'user' | 'admin' | 'superadmin') {
@@ -143,12 +234,36 @@
 		return 'outline';
 	}
 
+	function roleLabel(role: User['role']) {
+		switch (role) {
+			case 'superadmin':
+				return 'Super Admin';
+			case 'admin':
+				return 'Admin';
+			case 'user':
+			default:
+				return 'Member';
+		}
+	}
+
+	function authVerified(user: User): boolean {
+		// Backend currently has no "email_verified" field.
+		// Treat active, non-disabled users as "verified" for UI purposes.
+		return Boolean(user.is_active && !user.disabled_at);
+	}
+
+	function twoFactorEnabled(_user: User): boolean {
+		// Backend currently has no 2FA field.
+		return false;
+	}
+
 	function getRoleIcon(role: string) {
 		if (role === 'superadmin' || role === 'admin') return ShieldCheck;
 		return UserCircle;
 	}
 
 	onMount(() => {
+		loadTeamsAndMembers();
 		loadUsers();
 	});
 
@@ -165,7 +280,7 @@
 	</div>
 
 	<!-- Search and Filters -->
-	<div class="flex items-center gap-4">
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 		<div class="relative flex-1 max-w-sm">
 			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
@@ -176,10 +291,36 @@
 				oninput={handleSearch}
 			/>
 		</div>
-		<div class="text-sm text-muted-foreground">
-			{total} {total === 1 ? 'user' : 'users'} total
+		<div class="flex items-center gap-3">
+			<div class="text-sm text-muted-foreground">
+				{#if selectedTeamId === 'all'}
+					{total} {total === 1 ? 'user' : 'users'} total
+				{:else}
+					{visibleUsers().length} shown • {total} total
+				{/if}
+			</div>
+			<div class="flex items-center gap-2">
+				<span class="text-sm text-muted-foreground">Team</span>
+				<select
+					class="h-9 rounded-md border bg-background px-3 text-sm"
+					bind:value={selectedTeamId}
+					disabled={teamsLoading || teams.length === 0}
+				>
+					<option value="all">All teams</option>
+					{#each teams as t (t.id)}
+						<option value={t.id}>{t.name}</option>
+					{/each}
+				</select>
+			</div>
 		</div>
 	</div>
+
+	{#if teamsError}
+		<div class="bg-muted text-muted-foreground rounded-md border px-4 py-3">
+			<p class="font-medium">Teams unavailable</p>
+			<p class="text-sm">{teamsError}</p>
+		</div>
+	{/if}
 
 	{#if error}
 		<div
@@ -210,6 +351,7 @@
 							{/if}
 						</button>
 					</Table.Head>
+					<Table.Head>Team</Table.Head>
 					<Table.Head>
 						<button
 							class="flex items-center gap-1 font-medium hover:underline"
@@ -225,6 +367,7 @@
 							{/if}
 						</button>
 					</Table.Head>
+					<Table.Head>Auth</Table.Head>
 					<Table.Head>Status</Table.Head>
 					<Table.Head>
 						<button
@@ -252,10 +395,16 @@
 								<Skeleton class="h-10 w-full" />
 							</Table.Cell>
 							<Table.Cell>
+								<Skeleton class="h-6 w-24" />
+							</Table.Cell>
+							<Table.Cell>
 								<Skeleton class="h-6 w-20" />
 							</Table.Cell>
 							<Table.Cell>
 								<Skeleton class="h-6 w-16" />
+							</Table.Cell>
+							<Table.Cell>
+								<Skeleton class="h-6 w-24" />
 							</Table.Cell>
 							<Table.Cell>
 								<Skeleton class="h-5 w-24" />
@@ -265,20 +414,22 @@
 							</Table.Cell>
 						</Table.Row>
 					{/each}
-				{:else if users.length === 0}
+				{:else if visibleUsers().length === 0}
 					<Table.Row>
-						<Table.Cell colspan={5} class="h-24 text-center">
+						<Table.Cell colspan={7} class="h-24 text-center">
 							<div class="flex flex-col items-center justify-center gap-2 text-muted-foreground">
 								<UserCircle class="h-12 w-12" />
 								<p class="font-medium">No users found</p>
 								<p class="text-sm">
-									{searchQuery ? 'Try adjusting your search query' : 'No users in the system yet'}
+									{searchQuery || selectedTeamId !== 'all'
+										? 'Try adjusting your search or filters'
+										: 'No users in the system yet'}
 								</p>
 							</div>
 						</Table.Cell>
 					</Table.Row>
 				{:else}
-					{#each users as user (user.id)}
+					{#each visibleUsers() as user (user.id)}
 						<Table.Row>
 							<Table.Cell>
 								<div class="flex flex-col">
@@ -290,11 +441,84 @@
 								</div>
 							</Table.Cell>
 							<Table.Cell>
+								{@const tnames = getUserTeams(user.id)}
+								{#if tnames.length === 0}
+									<span class="text-sm text-muted-foreground">—</span>
+								{:else}
+									<div class="flex items-center gap-2">
+										<span class="text-sm font-medium">{tnames[0]}</span>
+										{#if tnames.length > 1}
+											<Tooltip.Root>
+												<Tooltip.Trigger class="inline-flex">
+													<Badge variant="outline">+{tnames.length - 1}</Badge>
+												</Tooltip.Trigger>
+												<Tooltip.Content class="max-w-xs">
+													<div class="text-sm">{tnames.join(', ')}</div>
+												</Tooltip.Content>
+											</Tooltip.Root>
+										{/if}
+									</div>
+								{/if}
+							</Table.Cell>
+							<Table.Cell>
 								<Badge variant={getRoleBadgeVariant(user.role)}>
 									{@const Icon = getRoleIcon(user.role)}
 									<Icon class="mr-1 h-3 w-3" />
-									{user.role}
+									{roleLabel(user.role)}
 								</Badge>
+								<select
+									class="ml-2 h-8 rounded-md border bg-background px-2 text-xs"
+									value={user.role}
+									onchange={(e) =>
+										handleRoleChange(user.id, (e.currentTarget as HTMLSelectElement).value as any)}
+								>
+									<option value="user">Member</option>
+									<option value="admin">Admin</option>
+									<option value="superadmin">Super Admin</option>
+								</select>
+							</Table.Cell>
+							<Table.Cell>
+								<div class="flex items-center gap-2">
+									<Tooltip.Root>
+										<Tooltip.Trigger class="inline-flex">
+											{#if authVerified(user)}
+												<Badge variant="success">
+													<BadgeCheck class="mr-1 h-3 w-3" />
+													Verified
+												</Badge>
+											{:else}
+												<Badge variant="outline">
+													<BadgeX class="mr-1 h-3 w-3" />
+													Unverified
+												</Badge>
+											{/if}
+										</Tooltip.Trigger>
+										<Tooltip.Content>
+											<div class="text-sm">
+												Email verification is not tracked in the backend yet.
+											</div>
+										</Tooltip.Content>
+									</Tooltip.Root>
+
+									<Tooltip.Root>
+										<Tooltip.Trigger class="inline-flex">
+											{#if twoFactorEnabled(user)}
+												<Badge variant="secondary">
+													<KeyRound class="mr-1 h-3 w-3" />
+													2FA
+												</Badge>
+											{:else}
+												<Badge variant="outline">
+													<KeyRound class="mr-1 h-3 w-3" />
+													2FA off
+												</Badge>
+											{/if}
+										</Tooltip.Trigger>
+										<Tooltip.Content>
+											<div class="text-sm">Two-factor authentication is not implemented yet.</div>
+										</Tooltip.Content>
+									</Tooltip.Root>
+								</div>
 							</Table.Cell>
 							<Table.Cell>
 								{#if user.disabled_at}

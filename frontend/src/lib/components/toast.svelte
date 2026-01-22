@@ -33,7 +33,7 @@
 
 <script lang="ts">
 	import { fly } from 'svelte/transition';
-	import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-svelte';
+	import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from '@lucide/svelte';
 
 	function getIcon(type: ToastType) {
 		switch (type) {
@@ -70,11 +70,11 @@
 				transition:fly={{ y: 50, duration: 200 }}
 				class="flex items-start gap-3 rounded-lg border p-4 shadow-lg {getColorClasses(toast.type)}"
 			>
-				<Icon class="h-5 w-5 flex-shrink-0 mt-0.5" />
+				<Icon class="h-5 w-5 shrink-0 mt-0.5" />
 				<p class="flex-1 text-sm">{toast.message}</p>
 				<button
 					onclick={() => removeToast(toast.id)}
-					class="flex-shrink-0 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
+					class="shrink-0 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
 					aria-label="Close notification"
 				>
 					<X class="h-4 w-4" />
