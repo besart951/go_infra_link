@@ -34,6 +34,7 @@ func Connect(cfg config.Config) (*gorm.DB, error) {
 		dialector = postgres.Open(cfg.DBDsn)
 
 	case "mysql", "mariadb":
+		// MariaDB is MySQL-compatible and uses the same driver
 		dialector = mysql.Open(cfg.DBDsn)
 
 	default:
