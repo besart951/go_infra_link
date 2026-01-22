@@ -60,11 +60,9 @@ func Run() error {
 		RefreshTokenTTL: cfg.RefreshTokenTTL,
 	})
 
-	if !config.IsProduction(cfg.AppEnv) {
-		if err := ensureSeedUser(cfg, log, services.User, repos.UserEmail); err != nil {
-			log.Error("Failed seeding initial user", "err", err)
-			return fmt.Errorf("seed user: %w", err)
-		}
+	if err := ensureSeedUser(cfg, log, services.User, repos.UserEmail); err != nil {
+		log.Error("Failed seeding initial user", "err", err)
+		return fmt.Errorf("seed user: %w", err)
 	}
 
 	cookieSecure := cfg.CookieSecure
@@ -157,26 +155,63 @@ func ensureSeedUser(cfg config.Config, log applogger.Logger, userService *userse
 	if cfg.SeedUserEmail == "" || cfg.SeedUserPassword == "" {
 		return nil
 	}
-	_, err := userEmailRepo.GetByEmail(cfg.SeedUserEmail)
-	if err == nil {
-		// User already exists
+	usr, err := userEmailRepo.GetByEmail(cfg.SeedUserEmail)
+	if err != nil {
+		if !errors.Is(err, domain.ErrNotFound) {
+			return err
+		}
+
+		usr = &domainUser.User{
+			FirstName: cfg.SeedUserFirstName,
+			LastName:  cfg.SeedUserLastName,
+			Email:     cfg.SeedUserEmail,
+			IsActive:  true,
+			Role:      domainUser.RoleSuperAdmin,
+		}
+
+		if err := userService.CreateWithPassword(usr, cfg.SeedUserPassword); err != nil {
+			return err
+		}
+
+		log.Info("Seeded initial superadmin user", "email", cfg.SeedUserEmail)
 		return nil
 	}
-	if !errors.Is(err, domain.ErrNotFound) {
-		return err
+
+	changed := false
+	if usr.FirstName != cfg.SeedUserFirstName {
+		usr.FirstName = cfg.SeedUserFirstName
+		changed = true
+	}
+	if usr.LastName != cfg.SeedUserLastName {
+		usr.LastName = cfg.SeedUserLastName
+		changed = true
+	}
+	if usr.Role != domainUser.RoleSuperAdmin {
+		usr.Role = domainUser.RoleSuperAdmin
+		changed = true
+	}
+	if usr.DisabledAt != nil || !usr.IsActive {
+		usr.DisabledAt = nil
+		usr.IsActive = true
+		changed = true
 	}
 
-	usr := &domainUser.User{
-		FirstName: cfg.SeedUserFirstName,
-		LastName:  cfg.SeedUserLastName,
-		Email:     cfg.SeedUserEmail,
-		IsActive:  true,
+	// Ensure login works with the configured seed password.
+	if cfg.SeedUserPassword != "" {
+		pwd := cfg.SeedUserPassword
+		if err := userService.UpdateWithPassword(usr, &pwd); err != nil {
+			return err
+		}
+		log.Info("Ensured seed superadmin user", "email", cfg.SeedUserEmail, "updated", changed, "password_updated", true)
+		return nil
 	}
 
-	if err := userService.CreateWithPassword(usr, cfg.SeedUserPassword); err != nil {
-		return err
+	if changed {
+		if err := userService.Update(usr); err != nil {
+			return err
+		}
 	}
 
-	log.Info("Seeded initial user", "email", cfg.SeedUserEmail)
+	log.Info("Ensured seed superadmin user", "email", cfg.SeedUserEmail, "updated", changed, "password_updated", false)
 	return nil
 }

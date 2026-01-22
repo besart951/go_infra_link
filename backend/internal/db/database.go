@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
+	sqlite "github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
 	"github.com/besart951/go_infra_link/backend/internal/config"
@@ -25,10 +25,11 @@ func Connect(cfg config.Config) (*gorm.DB, error) {
 
 	switch cfg.DBType {
 	case "sqlite":
-		if err := ensureSQLiteDir(cfg.DBDsn); err != nil {
+		sqliteDsn := resolveSQLiteDSN(cfg.DBDsn)
+		if err := ensureSQLiteDir(sqliteDsn); err != nil {
 			return nil, fmt.Errorf("ensure sqlite directory: %w", err)
 		}
-		dialector = sqlite.Open(cfg.DBDsn)
+		dialector = sqlite.Open(sqliteDsn)
 
 	case "postgres":
 		dialector = postgres.Open(cfg.DBDsn)
@@ -109,6 +110,32 @@ func autoMigrate(db *gorm.DB) error {
 		&facility.BacnetObject{},
 		&facility.ObjectData{},
 	)
+}
+
+func resolveSQLiteDSN(dsn string) string {
+	if dsn == ":memory:" {
+		return dsn
+	}
+	if filepath.IsAbs(dsn) {
+		return dsn
+	}
+	// If you run from repo root, ./data/app.db doesn't exist, but backend/data/app.db does.
+	// If you run from backend/, ./data/app.db exists and will be used.
+	if fileExists(dsn) {
+		return dsn
+	}
+	alt := filepath.Join("backend", dsn)
+	if fileExists(alt) {
+		return alt
+	}
+	return dsn
+}
+
+func fileExists(path string) bool {
+	if _, err := os.Stat(path); err != nil {
+		return false
+	}
+	return true
 }
 
 // ensureSQLiteDir creates the directory for SQLite database file if needed

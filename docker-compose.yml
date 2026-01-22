@@ -6,12 +6,17 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - APP_ENV=production
-      - JWT_SECRET=${JWT_SECRET}
+      - APP_ENV=${APP_ENV:-development}
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret}
       - DB_DRIVER=${DB_DRIVER:-postgres}
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=${DATABASE_URL:-host=postgres user=postgres password=postgres dbname=go_infra_link port=5432 sslmode=disable}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN:-}
-      - COOKIE_SECURE=true
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+      - SEED_USER_ENABLED=${SEED_USER_ENABLED:-true}
+      - SEED_USER_FIRST_NAME=${SEED_USER_FIRST_NAME:-Besart}
+      - SEED_USER_LAST_NAME=${SEED_USER_LAST_NAME:-Morina}
+      - SEED_USER_EMAIL=${SEED_USER_EMAIL:-besart_morina@hotmail.com}
+      - SEED_USER_PASSWORD=${SEED_USER_PASSWORD:-password}
     depends_on:
       postgres:
         condition: service_healthy

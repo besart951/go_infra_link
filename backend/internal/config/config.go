@@ -96,9 +96,22 @@ func Load() (Config, error) {
 
 func loadEnvFiles() {
 	// .env files are optional; ignore missing/unreadable files.
-	discardErr(godotenv.Load())
+	// Prefer a repo-root .env so frontend and backend can share one file.
+	// If we're running from the backend/ directory, repo root is ../.env.
+	if fileExists("../.env") {
+		discardErr(godotenv.Load("../.env"))
+	} else {
+		discardErr(godotenv.Load(".env"))
+	}
+	// Optional additional env locations.
 	discardErr(godotenv.Load("configs/.env"))
-	discardErr(godotenv.Load("../.env"))
+}
+
+func fileExists(path string) bool {
+	if _, err := os.Stat(path); err != nil {
+		return false
+	}
+	return true
 }
 
 func discardErr(err error) {
