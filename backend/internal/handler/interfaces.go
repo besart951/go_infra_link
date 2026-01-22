@@ -24,7 +24,7 @@ type UserService interface {
 	CreateWithPassword(user *user.User, password string) error
 	UpdateWithPassword(user *user.User, password *string) error
 	GetByID(id uuid.UUID) (*user.User, error)
-	List(page, limit int, search string) (*domain.PaginatedList[user.User], error)
+	List(page, limit int, search, orderBy, order string) (*domain.PaginatedList[user.User], error)
 	DeleteByIds(ids []uuid.UUID) error
 }
 

@@ -28,14 +28,18 @@ type UpdateUserRequest struct {
 }
 
 type UserResponse struct {
-	ID        uuid.UUID `json:"id"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	Email     string    `json:"email"`
-	IsActive  bool      `json:"is_active"`
-	Role      string    `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                  uuid.UUID  `json:"id"`
+	FirstName           string     `json:"first_name"`
+	LastName            string     `json:"last_name"`
+	Email               string     `json:"email"`
+	IsActive            bool       `json:"is_active"`
+	Role                string     `json:"role"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
+	LastLoginAt         *time.Time `json:"last_login_at,omitempty"`
+	DisabledAt          *time.Time `json:"disabled_at,omitempty"`
+	LockedUntil         *time.Time `json:"locked_until,omitempty"`
+	FailedLoginAttempts int        `json:"failed_login_attempts"`
 }
 
 type UserListResponse struct {

@@ -277,7 +277,28 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 		return nil, err
 	}
 
-	dataQ := "SELECT id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, role, disabled_at, locked_until, failed_login_attempts, last_login_at, created_by_id FROM users WHERE " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+	// Build ORDER BY clause with safe column names
+	orderBy := "last_login_at" // Default ordering
+	order := "DESC"
+	if params.OrderBy != "" {
+		// Whitelist allowed order by columns to prevent SQL injection
+		allowedColumns := map[string]string{
+			"last_login_at": "last_login_at",
+			"created_at":    "created_at",
+			"first_name":    "first_name",
+			"last_name":     "last_name",
+			"email":         "email",
+			"role":          "role",
+		}
+		if col, ok := allowedColumns[params.OrderBy]; ok {
+			orderBy = col
+		}
+	}
+	if params.Order != "" && (params.Order == "asc" || params.Order == "ASC") {
+		order = "ASC"
+	}
+
+	dataQ := "SELECT id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, role, disabled_at, locked_until, failed_login_attempts, last_login_at, created_by_id FROM users WHERE " + where + " ORDER BY " + orderBy + " " + order + " LIMIT ? OFFSET ?"
 	dataQ = sqlutil.Rebind(r.dialect, dataQ)
 
 	dataArgs := append(append([]any{}, args...), limit, offset)
