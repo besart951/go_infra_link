@@ -2,12 +2,13 @@
 	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
 	import { page } from "$app/stores";
 	import { goto } from "$app/navigation";
-	import { Building2, FolderKanban, LogOut, Users } from "@lucide/svelte";
+	import { Building2, FolderKanban, LogOut, Settings, UserCircle, Users } from "@lucide/svelte";
 
 	const items = [
 		{ label: "Dashboard", href: "/", icon: Building2 },
 		{ label: "Projects", href: "/projects", icon: FolderKanban },
-		{ label: "Users", href: "/users", icon: Users },
+		{ label: "Teams", href: "/teams", icon: Users },
+		{ label: "Users", href: "/users", icon: UserCircle },
 	] as const;
 </script>
 
@@ -45,6 +46,16 @@
 
 	<Sidebar.Footer>
 		<Sidebar.Menu>
+			<Sidebar.MenuItem>
+				<Sidebar.MenuButton
+					isActive={$page.url.pathname === "/settings" || $page.url.pathname.startsWith("/settings/")}
+					onclick={() => goto("/settings")}
+					tooltipContent="Settings"
+				>
+					<Settings />
+					<span>Settings</span>
+				</Sidebar.MenuButton>
+			</Sidebar.MenuItem>
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton onclick={() => goto("/logout")} tooltipContent="Logout">
 					<LogOut />

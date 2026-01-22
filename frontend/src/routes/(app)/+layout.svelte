@@ -12,6 +12,8 @@
 		if (pathname === "/") return "Dashboard";
 		if (pathname.startsWith("/projects")) return "Projects";
 		if (pathname.startsWith("/users")) return "Users";
+		if (pathname.startsWith("/teams")) return "Teams";
+		if (pathname.startsWith("/settings")) return "Settings";
 		return "App";
 	};
 </script>

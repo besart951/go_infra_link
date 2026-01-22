@@ -27,6 +27,16 @@ export interface TeamMemberListResponse {
 	total_pages: number;
 }
 
+export interface CreateTeamRequest {
+	name: string;
+	description?: string | null;
+}
+
+export interface AddTeamMemberRequest {
+	user_id: string;
+	role: 'member' | 'manager' | 'owner';
+}
+
 type ApiError = { error: string; message?: string };
 
 const API_BASE = '/api/v1';
@@ -75,6 +85,20 @@ export async function listTeams(
 	return fetchAPI<TeamListResponse>(q ? `/teams?${q}` : '/teams');
 }
 
+export async function getTeam(teamId: string): Promise<Team> {
+	return fetchAPI<Team>(`/teams/${teamId}`);
+}
+
+export async function createTeam(req: CreateTeamRequest): Promise<Team> {
+	return fetchAPI<Team>(`/teams`, {
+		method: 'POST',
+		body: JSON.stringify({
+			name: req.name,
+			description: req.description ?? null
+		})
+	});
+}
+
 export async function listTeamMembers(
 	teamId: string,
 	params: { page?: number; limit?: number } = {}
@@ -86,4 +110,17 @@ export async function listTeamMembers(
 	return fetchAPI<TeamMemberListResponse>(
 		q ? `/teams/${teamId}/members?${q}` : `/teams/${teamId}/members`
 	);
+}
+
+export async function addTeamMember(teamId: string, req: AddTeamMemberRequest): Promise<void> {
+	await fetchAPI<void>(`/teams/${teamId}/members`, {
+		method: 'POST',
+		body: JSON.stringify(req)
+	});
+}
+
+export async function removeTeamMember(teamId: string, userId: string): Promise<void> {
+	await fetchAPI<void>(`/teams/${teamId}/members/${userId}`, {
+		method: 'DELETE'
+	});
 }

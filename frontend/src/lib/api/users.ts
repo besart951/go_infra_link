@@ -28,6 +28,15 @@ export interface ListUsersParams {
 	order?: 'asc' | 'desc';
 }
 
+export interface CreateUserRequest {
+	first_name: string;
+	last_name: string;
+	email: string;
+	password: string;
+	is_active: boolean;
+	role?: 'user' | 'admin' | 'superadmin';
+}
+
 export interface ApiError {
 	error: string;
 	message?: string;
@@ -92,6 +101,13 @@ export async function setUserRole(
 	await fetchAPI(`/admin/users/${userId}/role`, {
 		method: 'POST',
 		body: JSON.stringify({ role })
+	});
+}
+
+export async function createUser(req: CreateUserRequest): Promise<User> {
+	return fetchAPI<User>(`/users`, {
+		method: 'POST',
+		body: JSON.stringify(req)
 	});
 }
 
