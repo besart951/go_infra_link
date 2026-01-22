@@ -43,17 +43,17 @@ export function initTheme() {
 	initialized = true;
 
 	const preference = readStoredPreference();
-		currentPreference = preference;
-		themePreference.set(preference);
-		applyPreferenceToDom(preference);
+	currentPreference = preference;
+	themePreference.set(preference);
+	applyPreferenceToDom(preference);
 
 	mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)') ?? null;
-		mediaQuery?.addEventListener('change', () => {
-			if (currentPreference === 'system') applyPreferenceToDom('system');
-		});
+	mediaQuery?.addEventListener('change', () => {
+		if (currentPreference === 'system') applyPreferenceToDom('system');
+	});
 
-		themePreference.subscribe((pref) => {
-			currentPreference = pref;
+	themePreference.subscribe((pref) => {
+		currentPreference = pref;
 		applyPreferenceToDom(pref);
 		try {
 			localStorage.setItem(STORAGE_KEY, pref);
