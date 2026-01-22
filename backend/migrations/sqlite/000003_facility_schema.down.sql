@@ -1,25 +1,20 @@
--- Rollback facility schema migration
+PRAGMA foreign_keys = OFF;
 
--- Drop join tables first
+DROP TABLE IF EXISTS object_data_histories;
 DROP TABLE IF EXISTS object_data_bacnet_objects;
 DROP TABLE IF EXISTS object_data_apparats;
 DROP TABLE IF EXISTS apparat_system_parts;
-
--- Drop dependent tables
-DROP TABLE IF EXISTS object_data_histories;
+DROP TABLE IF EXISTS object_data;
 DROP TABLE IF EXISTS bacnet_objects;
 DROP TABLE IF EXISTS specifications;
 DROP TABLE IF EXISTS field_devices;
 DROP TABLE IF EXISTS sps_controller_system_types;
 DROP TABLE IF EXISTS sps_controllers;
 DROP TABLE IF EXISTS control_cabinets;
-
--- Drop base/lookup tables
-DROP TABLE IF EXISTS object_data;
+DROP TABLE IF EXISTS buildings;
 DROP TABLE IF EXISTS apparats;
 DROP TABLE IF EXISTS state_texts;
 DROP TABLE IF EXISTS alarm_definitions;
 DROP TABLE IF EXISTS notification_classes;
 DROP TABLE IF EXISTS system_parts;
 DROP TABLE IF EXISTS system_types;
-DROP TABLE IF EXISTS buildings;

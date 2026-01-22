@@ -1,19 +1,18 @@
 .PHONY: migrate-up migrate-down migrate-goto migrate-version lint lint-fix
 
 MIGRATIONS_PATH ?= ./migrations
-DATABASE_URL ?=
 
 migrate-up:
-	go run ./cmd/migrate -path $(MIGRATIONS_PATH) -database "$(DATABASE_URL)" up
+	go run ./cmd/migrate -path $(MIGRATIONS_PATH) up
 
 migrate-down:
-	go run ./cmd/migrate -path $(MIGRATIONS_PATH) -database "$(DATABASE_URL)" down 1
+	go run ./cmd/migrate -path $(MIGRATIONS_PATH) down 1
 
 migrate-goto:
-	go run ./cmd/migrate -path $(MIGRATIONS_PATH) -database "$(DATABASE_URL)" goto 1
+	go run ./cmd/migrate -path $(MIGRATIONS_PATH) goto 1
 
 migrate-version:
-	go run ./cmd/migrate -path $(MIGRATIONS_PATH) -database "$(DATABASE_URL)" version
+	go run ./cmd/migrate -path $(MIGRATIONS_PATH) version
 
 lint:
 	golangci-lint run ./...

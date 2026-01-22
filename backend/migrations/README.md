@@ -26,10 +26,15 @@ Recommended (no external tooling required):
 
 ```bash
 # from backend/
-go run ./cmd/migrate -path ./migrations -database "$DATABASE_URL" up
-go run ./cmd/migrate -path ./migrations -database "$DATABASE_URL" down 1
-go run ./cmd/migrate -path ./migrations -database "$DATABASE_URL" version
+go run ./cmd/migrate -path ./migrations up
+go run ./cmd/migrate -path ./migrations down 1
+go run ./cmd/migrate -path ./migrations version
 ```
+
+Notes:
+
+- The migration runner loads `.env` automatically (same behavior as the backend config loader).
+- For `DB_DRIVER=sqlite`, it will automatically use `./migrations/sqlite` (if present) and will accept a plain file path like `DATABASE_URL=./data/app.db`.
 
 Using golang-migrate CLI:
 

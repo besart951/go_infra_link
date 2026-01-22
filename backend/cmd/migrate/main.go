@@ -10,7 +10,9 @@ import (
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/database/sqlite"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/joho/godotenv"
 )
 
 func usage() {
@@ -28,6 +30,8 @@ func usage() {
 }
 
 func main() {
+	loadEnvFiles()
+
 	var (
 		migrationsPath = flag.String("path", "./migrations", "Path to migration files")
 		dsn            = flag.String("database", os.Getenv("DATABASE_URL"), "Database DSN (or set DATABASE_URL)")
@@ -41,18 +45,25 @@ func main() {
 	}
 	cmd := strings.ToLower(flag.Arg(0))
 
-	if *dsn == "" {
-		_, _ = fmt.Fprintln(os.Stderr, "DATABASE_URL is required (or pass -database)")
+	driver := normalizeDriver(os.Getenv("DB_DRIVER"))
+	if driver == "" {
+		driver = "postgres"
+	}
+
+	resolvedPath := resolveMigrationsPath(*migrationsPath, driver)
+	resolvedDSN, dsnErr := resolveDatabaseURL(*dsn, driver)
+	if dsnErr != nil {
+		_, _ = fmt.Fprintln(os.Stderr, dsnErr.Error())
 		os.Exit(2)
 	}
 
-	absPath, err := filepath.Abs(*migrationsPath)
+	absPath, err := filepath.Abs(resolvedPath)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "migrations path:", err)
 		os.Exit(1)
 	}
 
-	m, err := migrate.New("file://"+filepath.ToSlash(absPath), *dsn)
+	m, err := migrate.New("file://"+filepath.ToSlash(absPath), resolvedDSN)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "migrate init:", err)
 		os.Exit(1)
@@ -124,4 +135,77 @@ func main() {
 		usage()
 		os.Exit(2)
 	}
+}
+
+func loadEnvFiles() {
+	// .env files are optional; ignore missing/unreadable files.
+	_ = godotenv.Load()
+	_ = godotenv.Load("configs/.env")
+	_ = godotenv.Load("../.env")
+}
+
+func normalizeDriver(driver string) string {
+	driver = strings.ToLower(strings.TrimSpace(driver))
+	switch driver {
+	case "sqlite3", "sqlite":
+		return "sqlite"
+	case "postgres", "pg", "postgresql", "pgx":
+		return "postgres"
+	default:
+		return driver
+	}
+}
+
+func resolveMigrationsPath(path string, driver string) string {
+	// If user left the default migrations path and is using sqlite,
+	// automatically switch to dialect-specific migrations if present.
+	if normalizeSlashes(path) == "./migrations" && driver == "sqlite" {
+		candidate := filepath.Join(path, "sqlite")
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			return candidate
+		}
+	}
+	return path
+}
+
+func normalizeSlashes(p string) string {
+	return filepath.ToSlash(strings.TrimSpace(p))
+}
+
+func resolveDatabaseURL(raw string, driver string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		raw = strings.TrimSpace(os.Getenv("DATABASE_URL"))
+	}
+	if raw == "" {
+		raw = strings.TrimSpace(os.Getenv("DB_DSN"))
+	}
+
+	if raw == "" {
+		return "", fmt.Errorf("DATABASE_URL is required (or pass -database)")
+	}
+
+	if driver != "sqlite" {
+		// Postgres/MySQL: assume caller provided a working DSN.
+		return raw, nil
+	}
+
+	// SQLite: allow a plain file path in DATABASE_URL/DB_DSN and convert to sqlite:///...
+	if strings.HasPrefix(raw, "sqlite://") {
+		return raw, nil
+	}
+
+	// Ensure directory exists.
+	absFile, err := filepath.Abs(raw)
+	if err != nil {
+		return "", fmt.Errorf("invalid sqlite database path: %w", err)
+	}
+	if dir := filepath.Dir(absFile); dir != "." {
+		if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
+			return "", fmt.Errorf("create sqlite db dir: %w", mkErr)
+		}
+	}
+
+	// Use sqlite:///C:/... form on Windows.
+	return "sqlite:///" + filepath.ToSlash(absFile), nil
 }

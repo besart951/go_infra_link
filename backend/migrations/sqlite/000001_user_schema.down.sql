@@ -1,4 +1,4 @@
--- Rollback user + auth schema migration
+PRAGMA foreign_keys = OFF;
 
 DROP TABLE IF EXISTS password_reset_tokens;
 DROP TABLE IF EXISTS login_attempts;

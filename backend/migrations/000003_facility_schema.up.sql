@@ -320,3 +320,58 @@ CREATE TABLE object_data_histories (
 );
 
 CREATE INDEX idx_object_data_histories_deleted_at ON object_data_histories(deleted_at);
+
+-- Field devices constraints (performance + integrity)
+
+-- apparat_nr must be present and between 1 and 99
+ALTER TABLE field_devices
+    ALTER COLUMN apparat_nr SET NOT NULL;
+
+ALTER TABLE field_devices
+    ADD CONSTRAINT chk_field_devices_apparat_nr_range CHECK (apparat_nr BETWEEN 1 AND 99);
+
+-- apparat_nr must be unique per (sps_controller_system_type, system_part, apparat)
+-- Note: system_part_id is nullable, so COALESCE is used to treat NULL as a single bucket.
+CREATE UNIQUE INDEX idx_field_devices_unique_apparat_nr
+    ON field_devices (
+        sps_controller_system_type_id,
+        apparat_id,
+        COALESCE(system_part_id, '00000000-0000-0000-0000-000000000000'::uuid),
+        apparat_nr
+    )
+    WHERE deleted_at IS NULL;
+
+-- FieldDevice <-> Specification: enforce 1:1 (nullable on FieldDevice)
+--
+-- New model:
+--   - field_devices no longer stores specification_id
+--   - specifications stores field_device_id (unique, soft-delete aware)
+
+ALTER TABLE specifications
+    ADD COLUMN IF NOT EXISTS field_device_id UUID;
+
+-- Backfill links from previous schema if present
+UPDATE specifications s
+SET field_device_id = fd.id
+FROM field_devices fd
+WHERE fd.specification_id = s.id
+  AND fd.deleted_at IS NULL
+  AND s.deleted_at IS NULL
+  AND s.field_device_id IS NULL;
+
+-- FK from specification to field_device (hard-delete cascade)
+ALTER TABLE specifications
+    ADD CONSTRAINT fk_specifications_field_device
+        FOREIGN KEY (field_device_id) REFERENCES field_devices(id) ON DELETE CASCADE;
+
+-- Enforce 1:1 for active specifications
+CREATE UNIQUE INDEX IF NOT EXISTS idx_specifications_field_device_id
+    ON specifications(field_device_id)
+    WHERE deleted_at IS NULL AND field_device_id IS NOT NULL;
+
+-- Drop old FK/column (field_devices -> specifications)
+ALTER TABLE field_devices
+    DROP CONSTRAINT IF EXISTS fk_field_devices_specification;
+
+ALTER TABLE field_devices
+    DROP COLUMN IF EXISTS specification_id;
