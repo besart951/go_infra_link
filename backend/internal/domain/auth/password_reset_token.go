@@ -9,10 +9,10 @@ import (
 
 type PasswordResetToken struct {
 	domain.Base
-	UserID           uuid.UUID
-	TokenHash        string
-	TokenSalt        string
-	ExpiresAt        time.Time
-	UsedAt           *time.Time
-	CreatedByAdminID *uuid.UUID
+	UserID           uuid.UUID  `gorm:"type:uuid;not null;index"`
+	TokenHash        string     `gorm:"uniqueIndex;not null"`
+	TokenSalt        string     `gorm:"not null"`
+	ExpiresAt        time.Time  `gorm:"not null;index"`
+	UsedAt           *time.Time `gorm:"index"`
+	CreatedByAdminID *uuid.UUID `gorm:"type:uuid"`
 }

@@ -7,28 +7,28 @@ import (
 
 type BacnetObject struct {
 	domain.Base
-	TextFix        string
+	TextFix        string  `gorm:"not null"`
 	Description    *string
-	GMSVisible     bool
-	Optional       bool
+	GMSVisible     bool `gorm:"default:false"`
+	Optional       bool `gorm:"default:false"`
 	TextIndividual *string
 
-	SoftwareType   BacnetSoftwareType
-	SoftwareNumber uint16
+	SoftwareType   BacnetSoftwareType `gorm:"type:varchar(50);not null"`
+	SoftwareNumber uint16             `gorm:"not null"`
 
-	HardwareType     BacnetHardwareType
+	HardwareType     BacnetHardwareType `gorm:"type:varchar(50)"`
 	HardwareQuantity uint8
 
-	FieldDeviceID       *uuid.UUID
-	FieldDevice         *FieldDevice
-	SoftwareReferenceID *uuid.UUID
-	SoftwareReference   *BacnetObject
-	StateTextID         *uuid.UUID
-	StateText           *StateText
-	NotificationClassID *uuid.UUID
-	NotificationClass   *NotificationClass
-	AlarmDefinitionID   *uuid.UUID
-	AlarmDefinition     *AlarmDefinition
+	FieldDeviceID       *uuid.UUID        `gorm:"type:uuid;index"`
+	FieldDevice         *FieldDevice      `gorm:"foreignKey:FieldDeviceID"`
+	SoftwareReferenceID *uuid.UUID        `gorm:"type:uuid;index"`
+	SoftwareReference   *BacnetObject     `gorm:"foreignKey:SoftwareReferenceID"`
+	StateTextID         *uuid.UUID        `gorm:"type:uuid;index"`
+	StateText           *StateText        `gorm:"foreignKey:StateTextID"`
+	NotificationClassID *uuid.UUID        `gorm:"type:uuid;index"`
+	NotificationClass   *NotificationClass `gorm:"foreignKey:NotificationClassID"`
+	AlarmDefinitionID   *uuid.UUID        `gorm:"type:uuid;index"`
+	AlarmDefinition     *AlarmDefinition  `gorm:"foreignKey:AlarmDefinitionID"`
 }
 
 type BacnetSoftwareType string

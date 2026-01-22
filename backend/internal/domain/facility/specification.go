@@ -7,7 +7,7 @@ import (
 
 type Specification struct {
 	domain.Base
-	FieldDeviceID                             *uuid.UUID
+	FieldDeviceID                             *uuid.UUID `gorm:"type:uuid;uniqueIndex"`
 	SpecificationSupplier                     *string
 	SpecificationBrand                        *string
 	SpecificationType                         *string

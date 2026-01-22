@@ -6,7 +6,7 @@ import (
 
 type StateText struct {
 	domain.Base
-	RefNumber   int
+	RefNumber   int `gorm:"uniqueIndex;not null"`
 	StateText1  *string
 	StateText2  *string
 	StateText3  *string

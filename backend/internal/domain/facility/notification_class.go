@@ -6,15 +6,15 @@ import (
 
 type NotificationClass struct {
 	domain.Base
-	EventCategory        string
-	Nc                   int
-	ObjectDescription    string
-	InternalDescription  string
-	Meaning              string
-	AckRequiredNotNormal bool
-	AckRequiredError     bool
-	AckRequiredNormal    bool
-	NormNotNormal        int
-	NormError            int
-	NormNormal           int
+	EventCategory        string `gorm:"not null"`
+	Nc                   int    `gorm:"not null"`
+	ObjectDescription    string `gorm:"not null"`
+	InternalDescription  string `gorm:"not null"`
+	Meaning              string `gorm:"not null"`
+	AckRequiredNotNormal bool   `gorm:"default:false"`
+	AckRequiredError     bool   `gorm:"default:false"`
+	AckRequiredNormal    bool   `gorm:"default:false"`
+	NormNotNormal        int    `gorm:"default:0"`
+	NormError            int    `gorm:"default:0"`
+	NormNormal           int    `gorm:"default:0"`
 }
