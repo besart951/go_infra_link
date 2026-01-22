@@ -10,7 +10,6 @@ import (
 
 type CreateSPSControllerRequest struct {
 	ControlCabinetID  uuid.UUID                      `json:"control_cabinet_id" binding:"required"`
-	ProjectID         *uuid.UUID                     `json:"project_id"`
 	GADevice          *string                        `json:"ga_device" binding:"omitempty,max=10"`
 	DeviceName        string                         `json:"device_name" binding:"required,max=100"`
 	DeviceDescription *string                        `json:"device_description" binding:"omitempty,max=250"`
@@ -24,7 +23,6 @@ type CreateSPSControllerRequest struct {
 
 type UpdateSPSControllerRequest struct {
 	ControlCabinetID  uuid.UUID                       `json:"control_cabinet_id"`
-	ProjectID         *uuid.UUID                      `json:"project_id"`
 	GADevice          *string                         `json:"ga_device" binding:"omitempty,max=10"`
 	DeviceName        string                          `json:"device_name" binding:"omitempty,max=100"`
 	DeviceDescription *string                         `json:"device_description" binding:"omitempty,max=250"`
@@ -43,19 +41,18 @@ type SPSControllerSystemTypeInput struct {
 }
 
 type SPSControllerResponse struct {
-	ID                uuid.UUID  `json:"id"`
-	ControlCabinetID  uuid.UUID  `json:"control_cabinet_id"`
-	ProjectID         *uuid.UUID `json:"project_id"`
-	GADevice          *string    `json:"ga_device"`
-	DeviceName        string     `json:"device_name"`
-	DeviceDescription *string    `json:"device_description"`
-	DeviceLocation    *string    `json:"device_location"`
-	IPAddress         *string    `json:"ip_address"`
-	Subnet            *string    `json:"subnet"`
-	Gateway           *string    `json:"gateway"`
-	Vlan              *string    `json:"vlan"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
+	ID                uuid.UUID `json:"id"`
+	ControlCabinetID  uuid.UUID `json:"control_cabinet_id"`
+	GADevice          *string   `json:"ga_device"`
+	DeviceName        string    `json:"device_name"`
+	DeviceDescription *string   `json:"device_description"`
+	DeviceLocation    *string   `json:"device_location"`
+	IPAddress         *string   `json:"ip_address"`
+	Subnet            *string   `json:"subnet"`
+	Gateway           *string   `json:"gateway"`
+	Vlan              *string   `json:"vlan"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 type SPSControllerListResponse struct {
