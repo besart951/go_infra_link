@@ -1,11 +1,28 @@
 <script lang="ts">
+	import { Eye, EyeOff } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+	import * as InputGroup from '$lib/components/ui/input-group/index.js';
 	import type { ActionData } from './$types.js';
+	import {
+		Field,
+		FieldGroup,
+		FieldLabel,
+		FieldContent,
+		FieldError
+	} from '$lib/components/ui/field/index.js';
 
-	let { form }: { form?: ActionData } = $props();
+	export let form: ActionData;
+	let showPassword = false;
+
+	const toogleShowPassword = () => {
+		showPassword = !showPassword;
+	};
 
 	const errorMessage = (error?: string) => {
+		if (form?.message && form.error !== 'missing_fields' && form.error !== 'service_unavailable') {
+			return form.message;
+		}
 		switch (error) {
 			case 'missing_fields':
 				return 'Email and password are required.';
@@ -39,21 +56,54 @@
 		</div>
 	{/if}
 
-	<form method="POST" class="space-y-4">
-		<div class="space-y-2">
-			<label class="text-sm font-medium" for="email">Email</label>
-			<Input id="email" name="email" type="email" autocomplete="email" required />
-		</div>
-		<div class="space-y-2">
-			<label class="text-sm font-medium" for="password">Password</label>
-			<Input
-				id="password"
-				name="password"
-				type="password"
-				autocomplete="current-password"
-				required
-			/>
-		</div>
+	<form method="POST" class="space-y-6">
+		<FieldGroup>
+			<Field>
+				<FieldLabel for="email" class="text-sm font-medium">Email</FieldLabel>
+				<FieldContent>
+					<Input id="email" name="email" type="email" autocomplete="email" required />
+					{#if form?.error === 'missing_fields'}
+						<FieldError errors={[{ message: 'Email is required.' }]} />
+					{/if}
+				</FieldContent>
+			</Field>
+
+			<Field>
+				<FieldLabel for="password" class="text-sm font-medium">Password</FieldLabel>
+				<FieldContent>
+					<InputGroup.Root>
+						<InputGroup.Input
+							id="password"
+							name="password"
+							type={showPassword ? 'text' : 'password'}
+							autocomplete="current-password"
+							required
+						/>
+						<InputGroup.Addon align="inline-end">
+							<InputGroup.Button
+								type="button"
+								variant="ghost"
+								size="icon-xs"
+								onclick={toogleShowPassword}
+								aria-pressed={showPassword}
+								aria-label={showPassword ? 'Hide password' : 'Show password'}
+								title={showPassword ? 'Hide password' : 'Show password'}
+							>
+								{#if showPassword}
+									<EyeOff class="size-4" />
+								{:else}
+									<Eye class="size-4" />
+								{/if}
+							</InputGroup.Button>
+						</InputGroup.Addon>
+					</InputGroup.Root>
+					{#if form?.error && form.error !== 'missing_fields'}
+						<FieldError errors={[{ message: errorMessage(form.error) }]} />
+					{/if}
+				</FieldContent>
+			</Field>
+		</FieldGroup>
+
 		<Button type="submit" class="w-full">Sign in</Button>
 	</form>
 </div>
