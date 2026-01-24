@@ -14,12 +14,34 @@
 		if (pathname.startsWith('/users')) return 'Users';
 		if (pathname.startsWith('/teams')) return 'Teams';
 		if (pathname.startsWith('/settings')) return 'Settings';
+		if (pathname.startsWith('/facility/buildings')) return 'Buildings';
+		if (pathname.startsWith('/facility/control-cabinets')) return 'Control Cabinets';
+		if (pathname.startsWith('/facility/sps-controllers')) return 'SPS Controllers';
+		if (pathname.startsWith('/facility/field-devices')) return 'Field Devices';
+		if (pathname.startsWith('/facility')) return 'Facility';
 		return 'App';
+	};
+
+	// Provide a default user if not loaded
+	const defaultUser = {
+		id: '',
+		first_name: 'User',
+		last_name: '',
+		email: '',
+		role: 'user' as const,
+		is_active: true,
+		failed_login_attempts: 0,
+		created_at: '',
+		updated_at: ''
 	};
 </script>
 
 <Sidebar.Provider>
-	<AppSidebar />
+	<AppSidebar
+		user={data.user ?? defaultUser}
+		teams={data.teams ?? []}
+		projects={data.projects ?? []}
+	/>
 	<Sidebar.Inset>
 		<header class="flex h-16 shrink-0 items-center gap-2">
 			<div class="flex items-center gap-2 px-4">

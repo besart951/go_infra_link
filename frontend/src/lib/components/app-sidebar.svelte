@@ -1,70 +1,119 @@
 <script lang="ts">
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import { NavMain, NavProjects, NavUser, TeamSwitcher } from '$lib/components/sidebar/index.js';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Building2, FolderKanban, LogOut, Settings, UserCircle, Users } from '@lucide/svelte';
+	import type { User } from '$lib/domain/user/index.js';
+	import type { Team } from '$lib/domain/team/index.js';
+	import type { Project } from '$lib/domain/project/index.js';
 
-	const items = [
-		{ label: 'Dashboard', href: '/', icon: Building2 },
-		{ label: 'Projects', href: '/projects', icon: FolderKanban },
-		{ label: 'Teams', href: '/teams', icon: Users },
-		{ label: 'Users', href: '/users', icon: UserCircle }
-	] as const;
+	// Icons
+	import UsersIcon from '@lucide/svelte/icons/users';
+	import Building2Icon from '@lucide/svelte/icons/building-2';
+	import FolderKanbanIcon from '@lucide/svelte/icons/folder-kanban';
+
+	// Props from layout
+	let {
+		user,
+		teams = [],
+		projects = []
+	}: {
+		user: User;
+		teams?: Team[];
+		projects?: Project[];
+	} = $props();
+
+	// Active team state - use $state with effect to update when teams change
+	let activeTeam = $state<Team | undefined>(undefined);
+	$effect(() => {
+		if (teams && teams.length > 0 && !activeTeam) {
+			activeTeam = teams[0];
+		}
+	});
+
+	// Navigation items with collapsible sub-menus
+	const navItems = $derived([
+		{
+			title: 'Users',
+			url: '/users',
+			icon: UsersIcon,
+			isActive:
+				$page.url.pathname.startsWith('/users') ||
+				$page.url.pathname.startsWith('/auth') ||
+				$page.url.pathname.startsWith('/teams'),
+			items: [
+				{ title: 'All Users', url: '/users' },
+				{ title: 'Teams', url: '/teams' },
+				{ title: 'Roles & Permissions', url: '/users/roles' }
+			]
+		},
+		{
+			title: 'Facility',
+			url: '/facility',
+			icon: Building2Icon,
+			isActive: $page.url.pathname.startsWith('/facility'),
+			items: [
+				{ title: 'Buildings', url: '/facility/buildings' },
+				{ title: 'Control Cabinets', url: '/facility/control-cabinets' },
+				{ title: 'SPS Controllers', url: '/facility/sps-controllers' },
+				{ title: 'Field Devices', url: '/facility/field-devices' }
+			]
+		},
+		{
+			title: 'Projects',
+			url: '/projects',
+			icon: FolderKanbanIcon,
+			isActive: $page.url.pathname.startsWith('/projects')
+		}
+	]);
+
+	// Transform projects for NavProjects component
+	const projectItems = $derived(
+		Array.isArray(projects)
+			? projects.map((p) => ({
+					id: p.id,
+					name: p.name,
+					url: `/projects/${p.id}`,
+					status: p.status
+				}))
+			: []
+	);
+
+	const handleViewProject = (id: string) => {
+		goto(`/projects/${id}`);
+	};
+
+	const handleShareProject = (id: string) => {
+		// TODO: Implement share modal
+		console.log('Share project:', id);
+	};
+
+	const handleCreateProject = () => {
+		goto('/projects/new');
+	};
+
+	const handleCreateTeam = () => {
+		goto('/teams/new');
+	};
 </script>
 
 <Sidebar.Root collapsible="icon">
-	<Sidebar.Header class="px-2 py-2">
-		<div class="flex items-center gap-2 px-2">
-			<div
-				class="flex size-8 items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground"
-			>
-				IL
-			</div>
-			<div class="hidden flex-col leading-tight group-data-[state=expanded]:flex">
-				<span class="text-sm font-semibold">Infra Link</span>
-				<span class="text-xs text-muted-foreground">Console</span>
-			</div>
-		</div>
+	<Sidebar.Header>
+		<TeamSwitcher {teams} bind:activeTeam onCreateTeam={handleCreateTeam} />
 	</Sidebar.Header>
 
 	<Sidebar.Content>
-		<Sidebar.Menu>
-			{#each items as item (item.href)}
-				<Sidebar.MenuItem>
-					<Sidebar.MenuButton
-						isActive={$page.url.pathname === item.href ||
-							$page.url.pathname.startsWith(item.href + '/')}
-						onclick={() => goto(item.href)}
-						tooltipContent={item.label}
-					>
-						<svelte:component this={item.icon} />
-						<span>{item.label}</span>
-					</Sidebar.MenuButton>
-				</Sidebar.MenuItem>
-			{/each}
-		</Sidebar.Menu>
+		<NavMain items={navItems} />
+		<NavProjects
+			projects={projectItems}
+			onViewProject={handleViewProject}
+			onShareProject={handleShareProject}
+			onCreate={handleCreateProject}
+		/>
 	</Sidebar.Content>
 
 	<Sidebar.Footer>
-		<Sidebar.Menu>
-			<Sidebar.MenuItem>
-				<Sidebar.MenuButton
-					isActive={$page.url.pathname === '/settings' ||
-						$page.url.pathname.startsWith('/settings/')}
-					onclick={() => goto('/settings')}
-					tooltipContent="Settings"
-				>
-					<Settings />
-					<span>Settings</span>
-				</Sidebar.MenuButton>
-			</Sidebar.MenuItem>
-			<Sidebar.MenuItem>
-				<Sidebar.MenuButton onclick={() => goto('/logout')} tooltipContent="Logout">
-					<LogOut />
-					<span>Logout</span>
-				</Sidebar.MenuButton>
-			</Sidebar.MenuItem>
-		</Sidebar.Menu>
+		<NavUser {user} />
 	</Sidebar.Footer>
 
 	<Sidebar.Rail />
