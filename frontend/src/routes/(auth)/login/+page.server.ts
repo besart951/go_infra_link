@@ -3,11 +3,11 @@ import type { Actions } from './$types.js';
 import { getBackendUrl } from '$lib/server/backend.js';
 import { getSetCookieValues } from '$lib/server/set-cookie.js';
 
-type AuthResponse = {
+interface AuthResponse {
 	csrf_token: string;
 	access_token_expires_at: string;
 	refresh_token_expires_at: string;
-};
+}
 
 function secondsUntil(isoDate: string): number | undefined {
 	const d = new Date(isoDate);
@@ -23,7 +23,7 @@ export const actions: Actions = {
 		const password = String(form.get('password') ?? '');
 
 		if (!email || !password) {
-			return fail(400, { error: 'missing_fields' });
+			return fail(400, { error: 'missing_fields', message: 'Email and password are required' });
 		}
 
 		let res: Response;
@@ -35,20 +35,23 @@ export const actions: Actions = {
 				},
 				body: JSON.stringify({ email, password })
 			});
-		} catch {
+		} catch (err) {
 			// Network error (backend down, DNS issue, connection refused, etc.)
-			return fail(503, { error: 'service_unavailable' });
+			const msg = err instanceof Error ? err.message : 'Network request failed';
+			return fail(503, { error: 'service_unavailable', message: `Backend unavailable: ${msg}` });
 		}
 
 		if (!res.ok) {
 			let error = 'login_failed';
+			let message = 'Login failed';
 			try {
-				const body = (await res.json()) as { error?: string };
+				const body = (await res.json()) as { error?: string; message?: string };
 				error = body.error ?? error;
+				message = body.message ?? message;
 			} catch {
-				// ignore JSON parse errors
+				// Ignore JSON parse errors, use defaults
 			}
-			return fail(res.status, { error });
+			return fail(res.status, { error, message });
 		}
 
 		const body = (await res.json()) as AuthResponse;
@@ -58,7 +61,10 @@ export const actions: Actions = {
 		const refreshToken = setCookies.refresh_token;
 
 		if (!accessToken || !refreshToken) {
-			return fail(500, { error: 'missing_auth_cookies' });
+			return fail(500, {
+				error: 'missing_auth_cookies',
+				message: 'Backend did not return auth cookies'
+			});
 		}
 
 		const secure = url.protocol === 'https:';

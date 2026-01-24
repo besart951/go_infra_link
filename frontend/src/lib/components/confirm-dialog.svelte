@@ -22,19 +22,19 @@
 		}}
 	>
 		<div
-			class="bg-background w-full max-w-md rounded-lg border p-6 shadow-lg"
+			class="w-full max-w-md rounded-lg border bg-background p-6 shadow-lg"
 			role="dialog"
 			aria-modal="true"
 		>
 			<div class="flex items-start gap-4">
 				{#if $confirmDialogState.variant === 'destructive'}
-					<div class="bg-destructive/10 text-destructive rounded-full p-2">
+					<div class="rounded-full bg-destructive/10 p-2 text-destructive">
 						<AlertTriangle class="h-6 w-6" />
 					</div>
 				{/if}
 				<div class="flex-1">
 					<h2 class="text-lg font-semibold">{$confirmDialogState.title}</h2>
-					<p class="text-muted-foreground mt-2 text-sm">{$confirmDialogState.message}</p>
+					<p class="mt-2 text-sm text-muted-foreground">{$confirmDialogState.message}</p>
 				</div>
 			</div>
 

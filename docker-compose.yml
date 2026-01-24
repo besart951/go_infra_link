@@ -4,19 +4,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "${GDK_BACKEND_PORT:-8080}:8080"
+    env_file:
+      - .env
     environment:
-      - APP_ENV=${APP_ENV:-development}
-      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret}
-      - DB_DRIVER=${DB_DRIVER:-postgres}
-      - DATABASE_URL=${DATABASE_URL:-host=postgres user=postgres password=postgres dbname=go_infra_link port=5432 sslmode=disable}
-      - COOKIE_DOMAIN=${COOKIE_DOMAIN:-}
-      - COOKIE_SECURE=${COOKIE_SECURE:-false}
-      - SEED_USER_ENABLED=${SEED_USER_ENABLED:-true}
-      - SEED_USER_FIRST_NAME=${SEED_USER_FIRST_NAME:-Besart}
-      - SEED_USER_LAST_NAME=${SEED_USER_LAST_NAME:-Morina}
-      - SEED_USER_EMAIL=${SEED_USER_EMAIL:-besart_morina@hotmail.com}
-      - SEED_USER_PASSWORD=${SEED_USER_PASSWORD:-password}
+      - DATABASE_URL=${DATABASE_URL:-host=postgres user=${POSTGRES_USER:-postgres} password=${POSTGRES_PASSWORD:-postgres} dbname=${POSTGRES_DB:-go_infra_link} port=5432 sslmode=disable}
     depends_on:
       postgres:
         condition: service_healthy
@@ -24,6 +16,8 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}

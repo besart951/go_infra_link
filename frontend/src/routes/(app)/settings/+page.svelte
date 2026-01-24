@@ -35,13 +35,13 @@
 <div class="flex flex-col gap-6">
 	<div>
 		<h1 class="text-3xl font-bold tracking-tight">Settings</h1>
-		<p class="text-muted-foreground mt-2 text-sm">Customize your console preferences.</p>
+		<p class="mt-2 text-sm text-muted-foreground">Customize your console preferences.</p>
 	</div>
 
-	<div class="bg-card rounded-lg border p-4">
+	<div class="rounded-lg border bg-card p-4">
 		<div class="flex flex-col gap-1">
 			<h2 class="text-base font-semibold">Appearance</h2>
-			<p class="text-muted-foreground text-sm">Choose how Infra Link looks on this device.</p>
+			<p class="text-sm text-muted-foreground">Choose how Infra Link looks on this device.</p>
 		</div>
 
 		<div class="mt-4 grid gap-2 sm:grid-cols-3">
@@ -55,7 +55,11 @@
 					<svelte:component this={opt.icon} />
 					<span class="flex flex-col items-start gap-0.5 text-left">
 						<span class="leading-tight">{opt.label}</span>
-						<span class={active ? 'text-primary-foreground/80 text-xs' : 'text-muted-foreground text-xs'}>
+						<span
+							class={active
+								? 'text-xs text-primary-foreground/80'
+								: 'text-xs text-muted-foreground'}
+						>
 							{opt.description}
 						</span>
 					</span>

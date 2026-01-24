@@ -78,7 +78,7 @@
 	<div class="flex items-start justify-between gap-4">
 		<div>
 			<h1 class="text-3xl font-bold tracking-tight">Teams</h1>
-			<p class="text-muted-foreground mt-1">Create teams and manage access.</p>
+			<p class="mt-1 text-muted-foreground">Create teams and manage access.</p>
 		</div>
 		<Button variant="outline" onclick={() => (createOpen = !createOpen)}>
 			<Plus class="mr-2 h-4 w-4" />
@@ -87,8 +87,8 @@
 	</div>
 
 	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-		<div class="relative flex-1 max-w-sm">
-			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+		<div class="relative max-w-sm flex-1">
+			<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
 				type="search"
 				placeholder="Search teams..."
@@ -104,7 +104,12 @@
 			<div class="grid gap-3 md:grid-cols-3">
 				<div class="md:col-span-1">
 					<label class="text-sm font-medium" for="team_name">Name</label>
-					<Input id="team_name" placeholder="Operations" bind:value={form.name} disabled={createBusy} />
+					<Input
+						id="team_name"
+						placeholder="Operations"
+						bind:value={form.name}
+						disabled={createBusy}
+					/>
 				</div>
 				<div class="md:col-span-2">
 					<label class="text-sm font-medium" for="team_desc">Description (optional)</label>
@@ -117,14 +122,16 @@
 				</div>
 			</div>
 			<div class="mt-4 flex items-center justify-end gap-2">
-				<Button variant="outline" onclick={() => (createOpen = false)} disabled={createBusy}>Cancel</Button>
+				<Button variant="outline" onclick={() => (createOpen = false)} disabled={createBusy}
+					>Cancel</Button
+				>
 				<Button onclick={submitCreate} disabled={!canSubmitCreate()}>Create</Button>
 			</div>
 		</div>
 	{/if}
 
 	{#if error}
-		<div class="bg-muted text-muted-foreground rounded-md border px-4 py-3">
+		<div class="rounded-md border bg-muted px-4 py-3 text-muted-foreground">
 			<p class="font-medium">Could not load teams</p>
 			<p class="text-sm">{error}</p>
 		</div>
@@ -153,7 +160,9 @@
 						<Table.Cell colspan={3}>
 							<div class="flex flex-col items-center justify-center gap-2 py-10 text-center">
 								<div class="text-sm font-medium">No teams yet</div>
-								<div class="text-muted-foreground text-sm">Create your first team to start assigning access.</div>
+								<div class="text-sm text-muted-foreground">
+									Create your first team to start assigning access.
+								</div>
 							</div>
 						</Table.Cell>
 					</Table.Row>

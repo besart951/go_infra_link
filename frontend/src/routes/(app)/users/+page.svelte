@@ -89,7 +89,10 @@
 			teams = res.items;
 
 			const memberLists = await Promise.all(
-				teams.map(async (t) => ({ team: t, members: await listTeamMembers(t.id, { page: 1, limit: 1000 }) }))
+				teams.map(async (t) => ({
+					team: t,
+					members: await listTeamMembers(t.id, { page: 1, limit: 1000 })
+				}))
 			);
 
 			const map = new Map<string, string[]>();
@@ -275,14 +278,14 @@
 	<div class="flex items-center justify-between">
 		<div>
 			<h1 class="text-3xl font-bold tracking-tight">User Management</h1>
-			<p class="text-muted-foreground mt-1">Manage all users and their permissions</p>
+			<p class="mt-1 text-muted-foreground">Manage all users and their permissions</p>
 		</div>
 	</div>
 
 	<!-- Search and Filters -->
 	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-		<div class="relative flex-1 max-w-sm">
-			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+		<div class="relative max-w-sm flex-1">
+			<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
 				type="search"
 				placeholder="Search users by name or email..."
@@ -316,7 +319,7 @@
 	</div>
 
 	{#if teamsError}
-		<div class="bg-muted text-muted-foreground rounded-md border px-4 py-3">
+		<div class="rounded-md border bg-muted px-4 py-3 text-muted-foreground">
 			<p class="font-medium">Teams unavailable</p>
 			<p class="text-sm">{teamsError}</p>
 		</div>
@@ -324,7 +327,7 @@
 
 	{#if error}
 		<div
-			class="bg-destructive/15 text-destructive border-destructive/50 rounded-md border px-4 py-3"
+			class="rounded-md border border-destructive/50 bg-destructive/15 px-4 py-3 text-destructive"
 		>
 			<p class="font-medium">Error loading users</p>
 			<p class="text-sm">{error}</p>
@@ -332,7 +335,7 @@
 	{/if}
 
 	<!-- Table -->
-	<div class="border rounded-lg">
+	<div class="rounded-lg border">
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
@@ -539,8 +542,7 @@
 									<Button
 										variant="ghost"
 										size="sm"
-										onclick={() =>
-											(showActionsMenu = showActionsMenu === user.id ? null : user.id)}
+										onclick={() => (showActionsMenu = showActionsMenu === user.id ? null : user.id)}
 									>
 										<MoreVertical class="h-4 w-4" />
 									</Button>
@@ -597,7 +599,7 @@
 											</button>
 											<div class="my-1 h-px bg-border"></div>
 											<button
-												class="text-destructive flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-destructive/10"
+												class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
 												onclick={() => {
 													handleDeleteUser(user.id, `${user.first_name} ${user.last_name}`);
 													showActionsMenu = null;
@@ -653,4 +655,3 @@
 
 <Toasts />
 <ConfirmDialog />
-

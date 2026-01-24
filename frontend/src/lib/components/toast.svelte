@@ -63,18 +63,18 @@
 </script>
 
 {#if $toasts.length > 0}
-	<div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md">
+	<div class="fixed right-4 bottom-4 z-50 flex max-w-md flex-col gap-2">
 		{#each $toasts as toast (toast.id)}
 			{@const Icon = getIcon(toast.type)}
 			<div
 				transition:fly={{ y: 50, duration: 200 }}
 				class="flex items-start gap-3 rounded-lg border p-4 shadow-lg {getColorClasses(toast.type)}"
 			>
-				<Icon class="h-5 w-5 shrink-0 mt-0.5" />
+				<Icon class="mt-0.5 h-5 w-5 shrink-0" />
 				<p class="flex-1 text-sm">{toast.message}</p>
 				<button
 					onclick={() => removeToast(toast.id)}
-					class="shrink-0 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
+					class="shrink-0 rounded-sm opacity-70 transition-opacity hover:opacity-100"
 					aria-label="Close notification"
 				>
 					<X class="h-4 w-4" />

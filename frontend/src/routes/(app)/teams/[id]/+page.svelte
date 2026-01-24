@@ -111,16 +111,16 @@
 		</Button>
 		<div>
 			<h1 class="text-3xl font-bold tracking-tight">{team?.name ?? 'Team'}</h1>
-			<p class="text-muted-foreground mt-1">Manage members and permissions.</p>
+			<p class="mt-1 text-muted-foreground">Manage members and permissions.</p>
 		</div>
 	</div>
 
 	{#if team?.description}
-		<div class="text-muted-foreground text-sm">{team.description}</div>
+		<div class="text-sm text-muted-foreground">{team.description}</div>
 	{/if}
 
 	{#if error}
-		<div class="bg-muted text-muted-foreground rounded-md border px-4 py-3">
+		<div class="rounded-md border bg-muted px-4 py-3 text-muted-foreground">
 			<p class="font-medium">Could not load team</p>
 			<p class="text-sm">{error}</p>
 		</div>
@@ -159,9 +159,10 @@
 								{#if userById(m.user_id)}
 									<div class="flex flex-col">
 										<div class="font-medium">
-											{userById(m.user_id)?.first_name} {userById(m.user_id)?.last_name}
+											{userById(m.user_id)?.first_name}
+											{userById(m.user_id)?.last_name}
 										</div>
-										<div class="text-muted-foreground text-sm">{userById(m.user_id)?.email}</div>
+										<div class="text-sm text-muted-foreground">{userById(m.user_id)?.email}</div>
 									</div>
 								{:else}
 									<div class="font-medium">{m.user_id}</div>
@@ -170,7 +171,8 @@
 							<Table.Cell>
 								<select
 									class="h-8 rounded-md border bg-background px-2 text-sm"
-									onchange={(e) => changeRole(m.user_id, (e.target as HTMLSelectElement).value as any)}
+									onchange={(e) =>
+										changeRole(m.user_id, (e.target as HTMLSelectElement).value as any)}
 									disabled={busy}
 								>
 									<option value="member" selected={m.role === 'member'}>Member</option>

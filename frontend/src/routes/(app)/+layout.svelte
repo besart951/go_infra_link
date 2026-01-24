@@ -1,20 +1,20 @@
 <script lang="ts">
-	import AppSidebar from "$lib/components/app-sidebar.svelte";
-	import * as Breadcrumb from "$lib/components/ui/breadcrumb/index.js";
-	import { Separator } from "$lib/components/ui/separator/index.js";
-	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
-	import { page } from "$app/stores";
-	import type { LayoutData } from "./$types.js";
+	import AppSidebar from '$lib/components/app-sidebar.svelte';
+	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
+	import { Separator } from '$lib/components/ui/separator/index.js';
+	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import { page } from '$app/stores';
+	import type { LayoutData } from './$types.js';
 
 	const { children, data } = $props<{ children: any; data: LayoutData }>();
 
 	const titleForPath = (pathname: string) => {
-		if (pathname === "/") return "Dashboard";
-		if (pathname.startsWith("/projects")) return "Projects";
-		if (pathname.startsWith("/users")) return "Users";
-		if (pathname.startsWith("/teams")) return "Teams";
-		if (pathname.startsWith("/settings")) return "Settings";
-		return "App";
+		if (pathname === '/') return 'Dashboard';
+		if (pathname.startsWith('/projects')) return 'Projects';
+		if (pathname.startsWith('/users')) return 'Users';
+		if (pathname.startsWith('/teams')) return 'Teams';
+		if (pathname.startsWith('/settings')) return 'Settings';
+		return 'App';
 	};
 </script>
 
@@ -40,7 +40,7 @@
 		</header>
 		{#if data && data.backendAvailable === false}
 			<div class="px-4">
-				<div class="bg-muted text-muted-foreground rounded-md border px-3 py-2 text-sm">
+				<div class="rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
 					Backend service is currently unavailable. Some actions may fail.
 				</div>
 			</div>

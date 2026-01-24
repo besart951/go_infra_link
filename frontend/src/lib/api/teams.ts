@@ -1,3 +1,5 @@
+import { api } from './client.js';
+
 export interface Team {
 	id: string;
 	name: string;
@@ -37,43 +39,10 @@ export interface AddTeamMemberRequest {
 	role: 'member' | 'manager' | 'owner';
 }
 
-type ApiError = { error: string; message?: string };
-
-const API_BASE = '/api/v1';
-
-function getCookie(name: string): string | undefined {
-	if (typeof document === 'undefined') return undefined;
-	const m = document.cookie.match(
-		new RegExp(`(?:^|; )${name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}=([^;]*)`)
-	);
-	return m ? decodeURIComponent(m[1]) : undefined;
-}
-
-async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
-	const csrf = getCookie('csrf_token');
-	const headers: Record<string, string> = {
-		'Content-Type': 'application/json',
-		...(options?.headers as Record<string, string> | undefined)
-	};
-	if (csrf) headers['X-CSRF-Token'] = csrf;
-
-	const response = await fetch(`${API_BASE}${endpoint}`, {
-		...options,
-		credentials: 'include',
-		headers
-	});
-
-	if (!response.ok) {
-		const error: ApiError = await response.json().catch(() => ({
-			error: 'unknown_error',
-			message: 'An unknown error occurred'
-		}));
-		throw new Error(error.message || error.error);
-	}
-
-	return response.json();
-}
-
+/**
+ * List all teams
+ * CSRF token is automatically included by the api() client
+ */
 export async function listTeams(
 	params: { page?: number; limit?: number; search?: string } = {}
 ): Promise<TeamListResponse> {
@@ -82,15 +51,22 @@ export async function listTeams(
 	if (params.limit) sp.set('limit', String(params.limit));
 	if (params.search) sp.set('search', params.search);
 	const q = sp.toString();
-	return fetchAPI<TeamListResponse>(q ? `/teams?${q}` : '/teams');
+	return api<TeamListResponse>(q ? `/teams?${q}` : '/teams');
 }
 
+/**
+ * Get a single team by ID
+ */
 export async function getTeam(teamId: string): Promise<Team> {
-	return fetchAPI<Team>(`/teams/${teamId}`);
+	return api<Team>(`/teams/${teamId}`);
 }
 
+/**
+ * Create a new team
+ * CSRF token is automatically included
+ */
 export async function createTeam(req: CreateTeamRequest): Promise<Team> {
-	return fetchAPI<Team>(`/teams`, {
+	return api<Team>('/teams', {
 		method: 'POST',
 		body: JSON.stringify({
 			name: req.name,
@@ -99,6 +75,28 @@ export async function createTeam(req: CreateTeamRequest): Promise<Team> {
 	});
 }
 
+/**
+ * Update a team
+ * CSRF token is automatically included
+ */
+export async function updateTeam(teamId: string, req: Partial<CreateTeamRequest>): Promise<Team> {
+	return api<Team>(`/teams/${teamId}`, {
+		method: 'PATCH',
+		body: JSON.stringify(req)
+	});
+}
+
+/**
+ * Delete a team
+ * CSRF token is automatically included
+ */
+export async function deleteTeam(teamId: string): Promise<void> {
+	return api<void>(`/teams/${teamId}`, { method: 'DELETE' });
+}
+
+/**
+ * List team members
+ */
 export async function listTeamMembers(
 	teamId: string,
 	params: { page?: number; limit?: number } = {}
@@ -107,20 +105,28 @@ export async function listTeamMembers(
 	if (params.page) sp.set('page', String(params.page));
 	if (params.limit) sp.set('limit', String(params.limit));
 	const q = sp.toString();
-	return fetchAPI<TeamMemberListResponse>(
+	return api<TeamMemberListResponse>(
 		q ? `/teams/${teamId}/members?${q}` : `/teams/${teamId}/members`
 	);
 }
 
+/**
+ * Add a member to a team
+ * CSRF token is automatically included
+ */
 export async function addTeamMember(teamId: string, req: AddTeamMemberRequest): Promise<void> {
-	await fetchAPI<void>(`/teams/${teamId}/members`, {
+	return api<void>(`/teams/${teamId}/members`, {
 		method: 'POST',
 		body: JSON.stringify(req)
 	});
 }
 
+/**
+ * Remove a member from a team
+ * CSRF token is automatically included
+ */
 export async function removeTeamMember(teamId: string, userId: string): Promise<void> {
-	await fetchAPI<void>(`/teams/${teamId}/members/${userId}`, {
+	return api<void>(`/teams/${teamId}/members/${userId}`, {
 		method: 'DELETE'
 	});
 }

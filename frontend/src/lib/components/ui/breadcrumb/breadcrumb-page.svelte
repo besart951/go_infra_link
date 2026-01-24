@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { cn, type WithElementRef } from "$lib/utils.js";
-	import type { HTMLAttributes } from "svelte/elements";
+	import { cn, type WithElementRef } from '$lib/utils.js';
+	import type { HTMLAttributes } from 'svelte/elements';
 
 	let {
 		ref = $bindable(null),
@@ -13,7 +13,7 @@
 <span
 	bind:this={ref}
 	aria-current="page"
-	class={cn("text-foreground font-medium", className)}
+	class={cn('font-medium text-foreground', className)}
 	{...rest}
 >
 	{@render children?.()}
