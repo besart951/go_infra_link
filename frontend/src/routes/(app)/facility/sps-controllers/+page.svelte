@@ -2,16 +2,19 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
+	import * as Pagination from '$lib/components/ui/pagination/index.js';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import type { PageData } from './$types.js';
 	import SPSControllerForm from '$lib/components/facility/SPSControllerForm.svelte';
 	import type { SPSController } from '$lib/domain/facility/index.js';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import { debounce } from '$lib/utils.js';
 
 	let { data }: { data: PageData } = $props();
-	let searchQuery = $state('');
+	let searchQuery = $state(page.url.searchParams.get('search') || '');
 	let showForm = $state(false);
 	let editingItem: SPSController | undefined = $state(undefined);
 
@@ -35,6 +38,21 @@
 		showForm = false;
 		editingItem = undefined;
 	}
+
+	function handlePageChange(newPage: number) {
+		const url = new URL(page.url);
+		url.searchParams.set('page', newPage.toString());
+		goto(url.toString(), { keepFocus: true });
+	}
+
+	function handleSearch() {
+		const url = new URL(page.url);
+		url.searchParams.set('search', searchQuery);
+		url.searchParams.set('page', '1');
+		goto(url.toString(), { keepFocus: true });
+	}
+
+	const debouncedSearch = debounce(handleSearch, 300);
 </script>
 
 <svelte:head>
@@ -67,12 +85,13 @@
 
 	<div class="flex items-center gap-4">
 		<div class="relative flex-1">
-			<SearchIcon class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+			<SearchIcon class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
 				type="search"
 				placeholder="Search SPS controllers..."
 				class="pl-10"
 				bind:value={searchQuery}
+				oninput={debouncedSearch}
 			/>
 		</div>
 	</div>
@@ -134,4 +153,37 @@
 			</Table.Body>
 		</Table.Root>
 	</div>
+
+	{#if (data.total_pages ?? 0) > 1}
+		<Pagination.Root
+			count={data.total ?? 0}
+			perPage={data.limit ?? 10}
+			page={data.page ?? 1}
+			onPageChange={handlePageChange}
+		>
+			{#snippet children({ pages, currentPage })}
+				<Pagination.Content>
+					<Pagination.Item>
+						<Pagination.Previous />
+					</Pagination.Item>
+					{#each pages as page (page.key)}
+						{#if page.type === 'ellipsis'}
+							<Pagination.Item>
+								<Pagination.Ellipsis />
+							</Pagination.Item>
+						{:else}
+							<Pagination.Item>
+								<Pagination.Link {page} isActive={currentPage === page.value}>
+									{page.value}
+								</Pagination.Link>
+							</Pagination.Item>
+						{/if}
+					{/each}
+					<Pagination.Item>
+						<Pagination.Next />
+					</Pagination.Item>
+				</Pagination.Content>
+			{/snippet}
+		</Pagination.Root>
+	{/if}
 </div>

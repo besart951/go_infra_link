@@ -45,7 +45,7 @@
 			} finally {
 				loading = false;
 			}
-		}, 300);
+		}, 500);
 	}
 
 	// Trigger search when search term changes, skip initial empty string if not open/initialized
