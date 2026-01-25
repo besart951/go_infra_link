@@ -23,7 +23,34 @@ import type {
 	FieldDeviceListParams,
 	FieldDeviceListResponse,
 	CreateFieldDeviceRequest,
-	UpdateFieldDeviceRequest
+	UpdateFieldDeviceRequest,
+	SystemType,
+	SystemTypeListParams,
+	SystemTypeListResponse,
+	SystemPart,
+	SystemPartListParams,
+	SystemPartListResponse,
+	Apparat,
+	ApparatListParams,
+	ApparatListResponse,
+	Specification,
+	SpecificationListParams,
+	SpecificationListResponse,
+	StateText,
+	StateTextListParams,
+	StateTextListResponse,
+	NotificationClass,
+	NotificationClassListParams,
+	NotificationClassListResponse,
+	AlarmDefinition,
+	AlarmDefinitionListParams,
+	AlarmDefinitionListResponse,
+	ObjectData,
+	ObjectDataListParams,
+	ObjectDataListResponse,
+	SPSControllerSystemType,
+	SPSControllerSystemTypeListParams,
+	SPSControllerSystemTypeListResponse
 } from '$lib/domain/facility/index.js';
 
 // ============================================================================
@@ -80,7 +107,7 @@ export async function deleteBuilding(id: string, options?: ApiOptions): Promise<
 
 export async function listControlCabinets(
 	params?: ControlCabinetListParams,
-	options?: RequestInit
+	options?: ApiOptions
 ): Promise<ControlCabinetListResponse> {
 	const searchParams = new URLSearchParams();
 	if (params?.page) searchParams.set('page', String(params.page));
@@ -135,7 +162,7 @@ export async function deleteControlCabinet(id: string, options?: RequestInit): P
 
 export async function listSPSControllers(
 	params?: SPSControllerListParams,
-	options?: RequestInit
+	options?: ApiOptions
 ): Promise<SPSControllerListResponse> {
 	const searchParams = new URLSearchParams();
 	if (params?.page) searchParams.set('page', String(params.page));
@@ -187,7 +214,7 @@ export async function deleteSPSController(id: string, options?: RequestInit): Pr
 
 export async function listFieldDevices(
 	params?: FieldDeviceListParams,
-	options?: RequestInit
+	options?: ApiOptions
 ): Promise<FieldDeviceListResponse> {
 	const searchParams = new URLSearchParams();
 	if (params?.page) searchParams.set('page', String(params.page));
@@ -235,6 +262,171 @@ export async function deleteFieldDevice(id: string, options?: RequestInit): Prom
 	return api<void>(`/facility/field-devices/${id}`, { ...options, method: 'DELETE' });
 }
 
+// ============================================================================
+// SYSTEM TYPES
+// ============================================================================
+
+export async function listSystemTypes(
+	params?: SystemTypeListParams,
+	options?: ApiOptions
+): Promise<SystemTypeListResponse> {
+	const searchParams = new URLSearchParams();
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
+	if (params?.search) searchParams.set('search', params.search);
+
+	const query = searchParams.toString();
+	return api<SystemTypeListResponse>(`/facility/system-types${query ? `?${query}` : ''}`, options);
+}
+
+// ============================================================================
+// SYSTEM PARTS
+// ============================================================================
+
+export async function listSystemParts(
+	params?: SystemPartListParams,
+	options?: ApiOptions
+): Promise<SystemPartListResponse> {
+	const searchParams = new URLSearchParams();
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
+	if (params?.search) searchParams.set('search', params.search);
+
+	const query = searchParams.toString();
+	return api<SystemPartListResponse>(`/facility/system-parts${query ? `?${query}` : ''}`, options);
+}
+
+// ============================================================================
+// APPARATS
+// ============================================================================
+
+export async function listApparats(
+	params?: ApparatListParams,
+	options?: ApiOptions
+): Promise<ApparatListResponse> {
+	const searchParams = new URLSearchParams();
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
+	if (params?.search) searchParams.set('search', params.search);
+
+	const query = searchParams.toString();
+	return api<ApparatListResponse>(`/facility/apparats${query ? `?${query}` : ''}`, options);
+}
+
+// ============================================================================
+// SPECIFICATIONS
+// ============================================================================
+
+export async function listSpecifications(
+	params?: SpecificationListParams,
+	options?: ApiOptions
+): Promise<SpecificationListResponse> {
+	const searchParams = new URLSearchParams();
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
+	if (params?.search) searchParams.set('search', params.search);
+
+	const query = searchParams.toString();
+	return api<SpecificationListResponse>(
+		`/facility/specifications${query ? `?${query}` : ''}`,
+		options
+	);
+}
+
+// ============================================================================
+// STATE TEXTS
+// ============================================================================
+
+export async function listStateTexts(
+	params?: StateTextListParams,
+	options?: ApiOptions
+): Promise<StateTextListResponse> {
+	const searchParams = new URLSearchParams();
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
+	if (params?.search) searchParams.set('search', params.search);
+
+	const query = searchParams.toString();
+	return api<StateTextListResponse>(`/facility/state-texts${query ? `?${query}` : ''}`, options);
+}
+
+// ============================================================================
+// NOTIFICATION CLASSES
+// ============================================================================
+
+export async function listNotificationClasses(
+	params?: NotificationClassListParams,
+	options?: ApiOptions
+): Promise<NotificationClassListResponse> {
+	const searchParams = new URLSearchParams();
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
+	if (params?.search) searchParams.set('search', params.search);
+
+	const query = searchParams.toString();
+	return api<NotificationClassListResponse>(
+		`/facility/notification-classes${query ? `?${query}` : ''}`,
+		options
+	);
+}
+
+// ============================================================================
+// ALARM DEFINITIONS
+// ============================================================================
+
+export async function listAlarmDefinitions(
+	params?: AlarmDefinitionListParams,
+	options?: ApiOptions
+): Promise<AlarmDefinitionListResponse> {
+	const searchParams = new URLSearchParams();
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
+	if (params?.search) searchParams.set('search', params.search);
+
+	const query = searchParams.toString();
+	return api<AlarmDefinitionListResponse>(
+		`/facility/alarm-definitions${query ? `?${query}` : ''}`,
+		options
+	);
+}
+
+// ============================================================================
+// OBJECT DATA
+// ============================================================================
+
+export async function listObjectData(
+	params?: ObjectDataListParams,
+	options?: ApiOptions
+): Promise<ObjectDataListResponse> {
+	const searchParams = new URLSearchParams();
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
+	if (params?.search) searchParams.set('search', params.search);
+
+	const query = searchParams.toString();
+	return api<ObjectDataListResponse>(`/facility/object-data${query ? `?${query}` : ''}`, options);
+}
+
+// ============================================================================
+// SPS CONTROLLER SYSTEM TYPES
+// ============================================================================
+
+export async function listSPSControllerSystemTypes(
+	params?: SPSControllerSystemTypeListParams,
+	options?: ApiOptions
+): Promise<SPSControllerSystemTypeListResponse> {
+	const searchParams = new URLSearchParams();
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
+	if (params?.search) searchParams.set('search', params.search);
+
+	const query = searchParams.toString();
+	return api<SPSControllerSystemTypeListResponse>(
+		`/facility/sps-controller-system-types${query ? `?${query}` : ''}`,
+		options
+	);
+}
+
 // Re-export all types
 export type {
 	Building,
@@ -256,5 +448,32 @@ export type {
 	FieldDeviceListParams,
 	FieldDeviceListResponse,
 	CreateFieldDeviceRequest,
-	UpdateFieldDeviceRequest
+	UpdateFieldDeviceRequest,
+	SystemType,
+	SystemTypeListParams,
+	SystemTypeListResponse,
+	SystemPart,
+	SystemPartListParams,
+	SystemPartListResponse,
+	Apparat,
+	ApparatListParams,
+	ApparatListResponse,
+	Specification,
+	SpecificationListParams,
+	SpecificationListResponse,
+	StateText,
+	StateTextListParams,
+	StateTextListResponse,
+	NotificationClass,
+	NotificationClassListParams,
+	NotificationClassListResponse,
+	AlarmDefinition,
+	AlarmDefinitionListParams,
+	AlarmDefinitionListResponse,
+	ObjectData,
+	ObjectDataListParams,
+	ObjectDataListResponse,
+	SPSControllerSystemType,
+	SPSControllerSystemTypeListParams,
+	SPSControllerSystemTypeListResponse
 };

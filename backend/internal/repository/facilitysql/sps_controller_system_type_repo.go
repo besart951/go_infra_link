@@ -257,17 +257,3 @@ func (r *spsControllerSystemTypeRepo) SoftDeleteBySPSControllerIDs(ids []uuid.UU
 	_, err := r.db.Exec(q, args...)
 	return err
 }
-
-func argIntPtr(i *int) any {
-	if i == nil {
-		return nil
-	}
-	return *i
-}
-
-func argStringPtr(s *string) any {
-	if s == nil {
-		return nil
-	}
-	return *s
-}

@@ -4,10 +4,37 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import PlusIcon from '@lucide/svelte/icons/plus';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import type { PageData } from './$types.js';
+	import ControlCabinetForm from '$lib/components/facility/ControlCabinetForm.svelte';
+	import type { ControlCabinet } from '$lib/domain/facility/index.js';
+	import { invalidateAll } from '$app/navigation';
 
 	let { data }: { data: PageData } = $props();
 	let searchQuery = $state('');
+	let showForm = $state(false);
+	let editingItem: ControlCabinet | undefined = $state(undefined);
+
+	function handleEdit(item: ControlCabinet) {
+		editingItem = item;
+		showForm = true;
+	}
+
+	function handleCreate() {
+		editingItem = undefined;
+		showForm = true;
+	}
+
+	function handleSuccess() {
+		showForm = false;
+		editingItem = undefined;
+		invalidateAll();
+	}
+
+	function handleCancel() {
+		showForm = false;
+		editingItem = undefined;
+	}
 </script>
 
 <svelte:head>
@@ -22,14 +49,24 @@
 				Manage control cabinet configurations within buildings.
 			</p>
 		</div>
-		<Button href="/facility/control-cabinets/new">
-			<PlusIcon class="mr-2 size-4" />
-			New Control Cabinet
-		</Button>
+		{#if !showForm}
+			<Button onclick={handleCreate}>
+				<PlusIcon class="mr-2 size-4" />
+				New Control Cabinet
+			</Button>
+		{/if}
 	</div>
 
+	{#if showForm}
+		<ControlCabinetForm
+			initialData={editingItem}
+			on:success={handleSuccess}
+			on:cancel={handleCancel}
+		/>
+	{/if}
+
 	<div class="flex items-center gap-4">
-		<div class="relative max-w-sm flex-1">
+		<div class="relative flex-1">
 			<SearchIcon class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
 				type="search"
@@ -64,9 +101,14 @@
 								{new Date(cabinet.created_at).toLocaleDateString()}
 							</Table.Cell>
 							<Table.Cell>
-								<Button variant="ghost" size="sm" href="/facility/control-cabinets/{cabinet.id}">
-									View
-								</Button>
+								<div class="flex items-center gap-2">
+									<Button variant="ghost" size="icon" onclick={() => handleEdit(cabinet)}>
+										<PencilIcon class="size-4" />
+									</Button>
+									<Button variant="ghost" size="sm" href="/facility/control-cabinets/{cabinet.id}">
+										View
+									</Button>
+								</div>
 							</Table.Cell>
 						</Table.Row>
 					{/each}

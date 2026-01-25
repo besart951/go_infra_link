@@ -4,10 +4,37 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import PlusIcon from '@lucide/svelte/icons/plus';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import type { PageData } from './$types.js';
+	import BuildingForm from '$lib/components/facility/BuildingForm.svelte';
+	import type { Building } from '$lib/domain/facility/index.js';
+	import { invalidateAll } from '$app/navigation';
 
 	let { data }: { data: PageData } = $props();
 	let searchQuery = $state('');
+	let showForm = $state(false);
+	let editingBuilding: Building | undefined = $state(undefined);
+
+	function handleEdit(building: Building) {
+		editingBuilding = building;
+		showForm = true;
+	}
+
+	function handleCreate() {
+		editingBuilding = undefined;
+		showForm = true;
+	}
+
+	function handleSuccess() {
+		showForm = false;
+		editingBuilding = undefined;
+		invalidateAll();
+	}
+
+	function handleCancel() {
+		showForm = false;
+		editingBuilding = undefined;
+	}
 </script>
 
 <svelte:head>
@@ -20,15 +47,25 @@
 			<h1 class="text-2xl font-semibold tracking-tight">Buildings</h1>
 			<p class="text-sm text-muted-foreground">Manage building infrastructure and IWS codes.</p>
 		</div>
-		<Button href="/facility/buildings/new">
-			<PlusIcon class="mr-2 size-4" />
-			New Building
-		</Button>
+		{#if !showForm}
+			<Button onclick={handleCreate}>
+				<PlusIcon class="mr-2 size-4" />
+				New Building
+			</Button>
+		{/if}
 	</div>
 
+	{#if showForm}
+		<BuildingForm
+			initialData={editingBuilding}
+			on:success={handleSuccess}
+			on:cancel={handleCancel}
+		/>
+	{/if}
+
 	<div class="flex items-center gap-4">
-		<div class="relative  flex-1">
-			<SearchIcon class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+		<div class="relative flex-1">
+			<SearchIcon class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
 				type="search"
 				placeholder="Search buildings..."
@@ -62,9 +99,14 @@
 								{new Date(building.created_at).toLocaleDateString()}
 							</Table.Cell>
 							<Table.Cell>
-								<Button variant="ghost" size="sm" href="/facility/buildings/{building.id}">
-									View
-								</Button>
+								<div class="flex items-center gap-2">
+									<Button variant="ghost" size="icon" onclick={() => handleEdit(building)}>
+										<PencilIcon class="size-4" />
+									</Button>
+									<Button variant="ghost" size="sm" href="/facility/buildings/{building.id}">
+										View
+									</Button>
+								</div>
 							</Table.Cell>
 						</Table.Row>
 					{/each}

@@ -15,8 +15,6 @@ import (
 	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
 	teamrepo "github.com/besart951/go_infra_link/backend/internal/repository/team"
 	userrepo "github.com/besart951/go_infra_link/backend/internal/repository/user"
-	"gorm.io/driver/mysql"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -50,19 +48,7 @@ type Repositories struct {
 }
 
 // NewRepositories creates all repository instances from the database connection.
-func NewRepositories(db *sql.DB, driver string) (*Repositories, error) {
-	var dialect gorm.Dialector
-	if driver == "postgres" || driver == "pgx" {
-		dialect = postgres.New(postgres.Config{Conn: db})
-	} else {
-		dialect = mysql.New(mysql.Config{Conn: db})
-	}
-
-	gormDB, err := gorm.Open(dialect, &gorm.Config{})
-	if err != nil {
-		return nil, err
-	}
-
+func NewRepositories(db *sql.DB, gormDB *gorm.DB, driver string) (*Repositories, error) {
 	userRepo := userrepo.NewUserRepository(db, driver)
 	userEmailRepo, ok := userRepo.(domainUser.UserEmailRepository)
 	if !ok {

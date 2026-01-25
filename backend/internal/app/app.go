@@ -47,7 +47,7 @@ func Run() error {
 	}()
 
 	// Initialize dependencies via wire package
-	repos, err := wire.NewRepositories(sqlDB, cfg.DBType)
+	repos, err := wire.NewRepositories(sqlDB, gormDB, cfg.DBType)
 	if err != nil {
 		log.Error("Failed to initialize repositories", "err", err)
 		return fmt.Errorf("repositories: %w", err)

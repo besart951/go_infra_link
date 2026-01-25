@@ -11,9 +11,12 @@
 		FieldContent,
 		FieldError
 	} from '$lib/components/ui/field/index.js';
+	import { dev } from '$app/environment';
 
 	export let form: ActionData;
 	let showPassword = false;
+	let email = dev ? 'besart_morina@hotmail.com' : '';
+	let password = dev ? 'password' : '';
 
 	const toogleShowPassword = () => {
 		showPassword = !showPassword;
@@ -61,7 +64,14 @@
 			<Field>
 				<FieldLabel for="email" class="text-sm font-medium">Email</FieldLabel>
 				<FieldContent>
-					<Input id="email" name="email" type="email" autocomplete="email" required />
+					<Input
+						id="email"
+						name="email"
+						type="email"
+						autocomplete="email"
+						required
+						bind:value={email}
+					/>
 					{#if form?.error === 'missing_fields'}
 						<FieldError errors={[{ message: 'Email is required.' }]} />
 					{/if}
@@ -78,6 +88,7 @@
 							type={showPassword ? 'text' : 'password'}
 							autocomplete="current-password"
 							required
+							bind:value={password}
 						/>
 						<InputGroup.Addon align="inline-end">
 							<InputGroup.Button

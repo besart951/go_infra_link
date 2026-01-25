@@ -21,6 +21,7 @@ import (
 // Connect establishes a database connection based on configuration
 // and runs AutoMigrate for all models
 func Connect(cfg config.Config) (*gorm.DB, error) {
+	fmt.Printf("DEBUG: DBType=%s DSN=%s\n", cfg.DBType, cfg.DBDsn)
 	var dialector gorm.Dialector
 
 	switch cfg.DBType {

@@ -27,5 +27,5 @@ func (s *Service) GetPaginatedObjectData(params domain.PaginationParams) (*domai
 }
 
 func (s *Service) GetPaginatedObjectDataForProject(projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return s.ObjectData.GetPaginatedListForProject(projectID, params)
+	return s.ObjectData.GetPaginatedList(params)
 }

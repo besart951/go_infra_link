@@ -304,8 +304,8 @@ func (s *FieldDeviceService) ensureParentsExist(fieldDevice *domainFacility.Fiel
 	}
 
 	// optional parents
-	if fieldDevice.SystemPartID != nil {
-		parts, err := s.systemPartRepo.GetByIds([]uuid.UUID{*fieldDevice.SystemPartID})
+	if fieldDevice.SystemPartID != uuid.Nil {
+		parts, err := s.systemPartRepo.GetByIds([]uuid.UUID{fieldDevice.SystemPartID})
 		if err != nil {
 			return err
 		}
@@ -317,14 +317,20 @@ func (s *FieldDeviceService) ensureParentsExist(fieldDevice *domainFacility.Fiel
 }
 
 func (s *FieldDeviceService) ensureApparatNrAvailable(fieldDevice *domainFacility.FieldDevice, excludeID *uuid.UUID) error {
-	if fieldDevice.ApparatNr == nil {
+	if fieldDevice.ApparatNr == 0 {
 		return fmt.Errorf("apparat_nr is required")
 	}
+
+	var systemPartID *uuid.UUID
+	if fieldDevice.SystemPartID != uuid.Nil {
+		systemPartID = &fieldDevice.SystemPartID
+	}
+
 	exists, err := s.repo.ExistsApparatNrConflict(
 		fieldDevice.SPSControllerSystemTypeID,
-		fieldDevice.SystemPartID,
+		systemPartID,
 		fieldDevice.ApparatID,
-		*fieldDevice.ApparatNr,
+		fieldDevice.ApparatNr,
 		excludeID,
 	)
 	if err != nil {

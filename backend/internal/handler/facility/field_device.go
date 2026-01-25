@@ -39,12 +39,21 @@ func (h *FieldDeviceHandler) CreateFieldDevice(c *gin.Context) {
 		return
 	}
 
+	var apparatNr int
+	if req.ApparatNr != nil {
+		apparatNr = *req.ApparatNr
+	}
+	var systemPartID uuid.UUID
+	if req.SystemPartID != nil {
+		systemPartID = *req.SystemPartID
+	}
+
 	fieldDevice := &domainFacility.FieldDevice{
 		BMK:                       req.BMK,
 		Description:               req.Description,
-		ApparatNr:                 req.ApparatNr,
+		ApparatNr:                 apparatNr,
 		SPSControllerSystemTypeID: req.SPSControllerSystemTypeID,
-		SystemPartID:              req.SystemPartID,
+		SystemPartID:              systemPartID,
 		ApparatID:                 req.ApparatID,
 	}
 
@@ -96,13 +105,18 @@ func (h *FieldDeviceHandler) CreateFieldDevice(c *gin.Context) {
 		return
 	}
 
+	var sysPartID *uuid.UUID
+	if fieldDevice.SystemPartID != uuid.Nil {
+		sysPartID = &fieldDevice.SystemPartID
+	}
+
 	response := dto.FieldDeviceResponse{
 		ID:                        fieldDevice.ID,
 		BMK:                       fieldDevice.BMK,
 		Description:               fieldDevice.Description,
-		ApparatNr:                 fieldDevice.ApparatNr,
+		ApparatNr:                 &fieldDevice.ApparatNr,
 		SPSControllerSystemTypeID: fieldDevice.SPSControllerSystemTypeID,
-		SystemPartID:              fieldDevice.SystemPartID,
+		SystemPartID:              sysPartID,
 		SpecificationID:           fieldDevice.SpecificationID,
 		ApparatID:                 fieldDevice.ApparatID,
 		CreatedAt:                 fieldDevice.CreatedAt,
@@ -149,13 +163,18 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 		return
 	}
 
+	var sysPartID *uuid.UUID
+	if fieldDevice.SystemPartID != uuid.Nil {
+		sysPartID = &fieldDevice.SystemPartID
+	}
+
 	response := dto.FieldDeviceResponse{
 		ID:                        fieldDevice.ID,
 		BMK:                       fieldDevice.BMK,
 		Description:               fieldDevice.Description,
-		ApparatNr:                 fieldDevice.ApparatNr,
+		ApparatNr:                 &fieldDevice.ApparatNr,
 		SPSControllerSystemTypeID: fieldDevice.SPSControllerSystemTypeID,
-		SystemPartID:              fieldDevice.SystemPartID,
+		SystemPartID:              sysPartID,
 		SpecificationID:           fieldDevice.SpecificationID,
 		ApparatID:                 fieldDevice.ApparatID,
 		CreatedAt:                 fieldDevice.CreatedAt,
@@ -197,13 +216,17 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 
 	items := make([]dto.FieldDeviceResponse, len(result.Items))
 	for i, fieldDevice := range result.Items {
+		var sysPartID *uuid.UUID
+		if fieldDevice.SystemPartID != uuid.Nil {
+			sysPartID = &fieldDevice.SystemPartID
+		}
 		items[i] = dto.FieldDeviceResponse{
 			ID:                        fieldDevice.ID,
 			BMK:                       fieldDevice.BMK,
 			Description:               fieldDevice.Description,
-			ApparatNr:                 fieldDevice.ApparatNr,
+			ApparatNr:                 &fieldDevice.ApparatNr,
 			SPSControllerSystemTypeID: fieldDevice.SPSControllerSystemTypeID,
-			SystemPartID:              fieldDevice.SystemPartID,
+			SystemPartID:              sysPartID,
 			SpecificationID:           fieldDevice.SpecificationID,
 			ApparatID:                 fieldDevice.ApparatID,
 			CreatedAt:                 fieldDevice.CreatedAt,
@@ -276,13 +299,13 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		fieldDevice.Description = req.Description
 	}
 	if req.ApparatNr != nil {
-		fieldDevice.ApparatNr = req.ApparatNr
+		fieldDevice.ApparatNr = *req.ApparatNr
 	}
 	if req.SPSControllerSystemTypeID != uuid.Nil {
 		fieldDevice.SPSControllerSystemTypeID = req.SPSControllerSystemTypeID
 	}
 	if req.SystemPartID != nil {
-		fieldDevice.SystemPartID = req.SystemPartID
+		fieldDevice.SystemPartID = *req.SystemPartID
 	}
 	if req.ApparatID != uuid.Nil {
 		fieldDevice.ApparatID = req.ApparatID
@@ -340,13 +363,18 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		return
 	}
 
+	var sysPartID *uuid.UUID
+	if fieldDevice.SystemPartID != uuid.Nil {
+		sysPartID = &fieldDevice.SystemPartID
+	}
+
 	response := dto.FieldDeviceResponse{
 		ID:                        fieldDevice.ID,
 		BMK:                       fieldDevice.BMK,
 		Description:               fieldDevice.Description,
-		ApparatNr:                 fieldDevice.ApparatNr,
+		ApparatNr:                 &fieldDevice.ApparatNr,
 		SPSControllerSystemTypeID: fieldDevice.SPSControllerSystemTypeID,
-		SystemPartID:              fieldDevice.SystemPartID,
+		SystemPartID:              sysPartID,
 		SpecificationID:           fieldDevice.SpecificationID,
 		ApparatID:                 fieldDevice.ApparatID,
 		CreatedAt:                 fieldDevice.CreatedAt,
