@@ -12,7 +12,9 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 		const cookieHeader = [
 			accessToken ? `access_token=${accessToken}` : '',
 			csrfToken ? `csrf_token=${csrfToken}` : ''
-		].filter(Boolean).join('; ');
+		]
+			.filter(Boolean)
+			.join('; ');
 
 		const response = await listBuildings(
 			{ limit: 100 }, // Fetch reasonable amount

@@ -2,7 +2,11 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types.js';
 import { getBackendUrl } from '$lib/server/backend.js';
 import type { Building } from '$lib/domain/facility/index.js';
-import { getBuilding, updateBuilding, deleteBuilding } from '$lib/infrastructure/api/facility.adapter.js';
+import {
+	getBuilding,
+	updateBuilding,
+	deleteBuilding
+} from '$lib/infrastructure/api/facility.adapter.js';
 
 interface FormErrors {
 	iws_code?: string;
@@ -22,7 +26,9 @@ export const load: PageServerLoad = async ({ params, fetch, cookies }) => {
 		const cookieHeader = [
 			accessToken ? `access_token=${accessToken}` : '',
 			csrfToken ? `csrf_token=${csrfToken}` : ''
-		].filter(Boolean).join('; ');
+		]
+			.filter(Boolean)
+			.join('; ');
 
 		const building = await getBuilding(params.id, {
 			baseUrl: getBackendUrl(),
@@ -74,7 +80,9 @@ export const actions: Actions = {
 			const cookieHeader = [
 				accessToken ? `access_token=${accessToken}` : '',
 				csrfToken ? `csrf_token=${csrfToken}` : ''
-			].filter(Boolean).join('; ');
+			]
+				.filter(Boolean)
+				.join('; ');
 
 			await updateBuilding(
 				params.id,
@@ -109,7 +117,9 @@ export const actions: Actions = {
 			const cookieHeader = [
 				accessToken ? `access_token=${accessToken}` : '',
 				csrfToken ? `csrf_token=${csrfToken}` : ''
-			].filter(Boolean).join('; ');
+			]
+				.filter(Boolean)
+				.join('; ');
 
 			await deleteBuilding(params.id, {
 				baseUrl: getBackendUrl(),

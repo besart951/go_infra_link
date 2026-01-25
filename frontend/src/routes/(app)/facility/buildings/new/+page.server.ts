@@ -46,7 +46,9 @@ export const actions: Actions = {
 			const cookieHeader = [
 				accessToken ? `access_token=${accessToken}` : '',
 				csrfToken ? `csrf_token=${csrfToken}` : ''
-			].filter(Boolean).join('; ');
+			]
+				.filter(Boolean)
+				.join('; ');
 
 			await createBuilding(
 				{

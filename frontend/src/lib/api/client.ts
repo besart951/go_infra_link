@@ -67,10 +67,7 @@ export interface ApiOptions extends RequestInit {
 	baseUrl?: string;
 }
 
-export async function api<T = unknown>(
-	endpoint: string,
-	options: ApiOptions = {}
-): Promise<T> {
+export async function api<T = unknown>(endpoint: string, options: ApiOptions = {}): Promise<T> {
 	const basePath = options.baseUrl ?? '';
 	const url = `${basePath}/api/v1${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
 
