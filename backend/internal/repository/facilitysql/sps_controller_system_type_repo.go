@@ -174,7 +174,7 @@ func (r *spsControllerSystemTypeRepo) GetPaginatedList(params domain.PaginationP
 		LEFT JOIN sps_controllers sc ON s.sps_controller_id = sc.id
 		LEFT JOIN system_types st ON s.system_type_id = st.id
 		WHERE ` + where + ` ORDER BY s.created_at DESC LIMIT ? OFFSET ?`
-	
+
 	dataQ = sqlutil.Rebind(r.dialect, dataQ)
 	dataArgs := append(append([]any{}, args...), limit, offset)
 

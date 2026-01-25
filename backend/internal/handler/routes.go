@@ -27,10 +27,10 @@ type Handlers struct {
 	FacilityControlCabinetHandler *facilityhandler.ControlCabinetHandler
 	FacilitySPSControllerHandler  *facilityhandler.SPSControllerHandler
 
-	FacilityStateTextHandler             *facilityhandler.StateTextHandler
-	FacilityNotificationClassHandler     *facilityhandler.NotificationClassHandler
-	FacilityAlarmDefinitionHandler       *facilityhandler.AlarmDefinitionHandler
-	FacilityObjectDataHandler            *facilityhandler.ObjectDataHandler
+	FacilityStateTextHandler               *facilityhandler.StateTextHandler
+	FacilityNotificationClassHandler       *facilityhandler.NotificationClassHandler
+	FacilityAlarmDefinitionHandler         *facilityhandler.AlarmDefinitionHandler
+	FacilityObjectDataHandler              *facilityhandler.ObjectDataHandler
 	FacilitySPSControllerSystemTypeHandler *facilityhandler.SPSControllerSystemTypeHandler
 }
 

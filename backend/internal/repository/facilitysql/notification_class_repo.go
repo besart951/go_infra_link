@@ -40,7 +40,7 @@ func (r *notificationClassRepo) GetPaginatedList(params domain.PaginationParams)
 	db := r.db.Model(&domainFacility.NotificationClass{})
 
 	if params.Search != "" {
-		db = db.Where("object_description ILIKE ? OR event_category ILIKE ? OR meaning ILIKE ?", 
+		db = db.Where("object_description ILIKE ? OR event_category ILIKE ? OR meaning ILIKE ?",
 			"%"+params.Search+"%", "%"+params.Search+"%", "%"+params.Search+"%")
 	}
 

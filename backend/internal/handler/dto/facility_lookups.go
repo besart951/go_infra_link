@@ -9,26 +9,26 @@ import (
 // Facility DTOs - StateText
 
 type StateTextResponse struct {
-	ID        uuid.UUID `json:"id"`
-	RefNumber int       `json:"ref_number"`
-	StateText1  *string `json:"state_text1"`
+	ID         uuid.UUID `json:"id"`
+	RefNumber  int       `json:"ref_number"`
+	StateText1 *string   `json:"state_text1"`
 	// Include only first few for lightness or all? User just wants search.
 	// But detailed response usually contains all.
-	StateText2  *string `json:"state_text2"`
-	StateText3  *string `json:"state_text3"`
-	StateText4  *string `json:"state_text4"`
-	StateText5  *string `json:"state_text5"`
-	StateText6  *string `json:"state_text6"`
-	StateText7  *string `json:"state_text7"`
-	StateText8  *string `json:"state_text8"`
-	StateText9  *string `json:"state_text9"`
-	StateText10 *string `json:"state_text10"`
-	StateText11 *string `json:"state_text11"`
-	StateText12 *string `json:"state_text12"`
-	StateText13 *string `json:"state_text13"`
-	StateText14 *string `json:"state_text14"`
-	StateText15 *string `json:"state_text15"`
-	StateText16 *string `json:"state_text16"`
+	StateText2  *string   `json:"state_text2"`
+	StateText3  *string   `json:"state_text3"`
+	StateText4  *string   `json:"state_text4"`
+	StateText5  *string   `json:"state_text5"`
+	StateText6  *string   `json:"state_text6"`
+	StateText7  *string   `json:"state_text7"`
+	StateText8  *string   `json:"state_text8"`
+	StateText9  *string   `json:"state_text9"`
+	StateText10 *string   `json:"state_text10"`
+	StateText11 *string   `json:"state_text11"`
+	StateText12 *string   `json:"state_text12"`
+	StateText13 *string   `json:"state_text13"`
+	StateText14 *string   `json:"state_text14"`
+	StateText15 *string   `json:"state_text15"`
+	StateText16 *string   `json:"state_text16"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -87,18 +87,18 @@ type AlarmDefinitionListResponse struct {
 
 // This represents the join of SPS Controller and System Type
 type SPSControllerSystemTypeResponse struct {
-	ID             uuid.UUID `json:"id"`
+	ID              uuid.UUID `json:"id"`
 	SPSControllerID uuid.UUID `json:"sps_controller_id"`
 	SystemTypeID    uuid.UUID `json:"system_type_id"`
-	
+
 	// Pre-filled names for display in combobox
 	SPSControllerName string `json:"sps_controller_name"`
 	SystemTypeName    string `json:"system_type_name"`
 
-	Number        *int    `json:"number"`
-	DocumentName  *string `json:"document_name"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	Number       *int      `json:"number"`
+	DocumentName *string   `json:"document_name"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type SPSControllerSystemTypeListResponse struct {

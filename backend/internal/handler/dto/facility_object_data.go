@@ -9,13 +9,13 @@ import (
 // Facility DTOs - ObjectData
 
 type ObjectDataResponse struct {
-	ID          uuid.UUID `json:"id"`
-	Description string    `json:"description"`
-	Version     string    `json:"version"`
-	IsActive    bool      `json:"is_active"`
+	ID          uuid.UUID  `json:"id"`
+	Description string     `json:"description"`
+	Version     string     `json:"version"`
+	IsActive    bool       `json:"is_active"`
 	ProjectID   *uuid.UUID `json:"project_id"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 type ObjectDataListResponse struct {

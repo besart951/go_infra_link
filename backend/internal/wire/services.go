@@ -34,10 +34,10 @@ type Services struct {
 	FacilityBacnetObject   *facilityservice.BacnetObjectService
 	FacilitySPSController  *facilityservice.SPSControllerService
 
-	FacilityStateText             *facilityservice.StateTextService
-	FacilityNotificationClass     *facilityservice.NotificationClassService
-	FacilityAlarmDefinition       *facilityservice.AlarmDefinitionService
-	FacilityObjectData            *facilityservice.ObjectDataService
+	FacilityStateText               *facilityservice.StateTextService
+	FacilityNotificationClass       *facilityservice.NotificationClassService
+	FacilityAlarmDefinition         *facilityservice.AlarmDefinitionService
+	FacilityObjectData              *facilityservice.ObjectDataService
 	FacilitySPSControllerSystemType *facilityservice.SPSControllerSystemTypeService
 }
 

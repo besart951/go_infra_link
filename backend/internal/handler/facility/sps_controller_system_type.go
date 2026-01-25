@@ -39,9 +39,9 @@ func (h *SPSControllerSystemTypeHandler) ListSPSControllerSystemTypes(c *gin.Con
 	for i, item := range result.Items {
 		// We expect the repository to preload SPSController and SystemType if we want names
 		// If using GORM, we need to ensure they are preloaded.
-		// Since I implemented it using database/sql with JOINs, I need to make sure 
+		// Since I implemented it using database/sql with JOINs, I need to make sure
 		// the domain struct has fields for the joined names OR the struct has nested objects populated.
-		
+
 		// In my repo implementation:
 		// sc.device_name and st.name are NOT SCANNED into the struct because the struct doesn't have them
 		// and the Scan only scans "standard" fields.
@@ -49,19 +49,19 @@ func (h *SPSControllerSystemTypeHandler) ListSPSControllerSystemTypes(c *gin.Con
 		// Looking back at my repo implementation:
 		// SELECT s.id, ... FROM ...
 		// I did NOT select sc.device_name, st.name in the Scan list!
-		
+
 		// I need to fix the repository to map these names somewhere!
 		// Usually we map to the nested struct fields: SpsController.DeviceName etc.
-		
-		// I will modify the response mapping assuming I fix the repo later, 
+
+		// I will modify the response mapping assuming I fix the repo later,
 		// OR just map what I have for now. I should fix the repo.
-		
+
 		items[i] = dto.SPSControllerSystemTypeResponse{
 			ID:                item.ID,
 			SPSControllerID:   item.SPSControllerID,
 			SystemTypeID:      item.SystemTypeID,
 			SPSControllerName: item.SPSController.DeviceName, // This will be empty if not populated
-			SystemTypeName:    item.SystemType.Name,       // This will be empty if not populated
+			SystemTypeName:    item.SystemType.Name,          // This will be empty if not populated
 			Number:            item.Number,
 			DocumentName:      item.DocumentName,
 			CreatedAt:         item.CreatedAt,
