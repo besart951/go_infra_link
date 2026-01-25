@@ -3,6 +3,8 @@
  * Mirrors backend: internal/domain/facility/sps_controller.go
  */
 
+import type { Pagination } from "../utils/index.ts";
+
 export interface SPSController {
 	id: string;
 	ga_device: string;
@@ -21,6 +23,7 @@ export interface CreateSPSControllerRequest {
 }
 
 export interface UpdateSPSControllerRequest {
+    id: string;
 	ga_device?: string;
 	device_name?: string;
 	ip_address?: string;
@@ -34,9 +37,4 @@ export interface SPSControllerListParams {
 	control_cabinet_id?: string;
 }
 
-export interface SPSControllerListResponse {
-	sps_controllers: SPSController[];
-	total: number;
-	page: number;
-	limit: number;
-}
+export interface SPSControllerListResponse extends Pagination<SPSController> {}

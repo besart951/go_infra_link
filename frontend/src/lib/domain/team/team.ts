@@ -3,6 +3,8 @@
  * Mirrors backend: internal/domain/team/team.go
  */
 
+import type { Pagination } from "../utils/index.ts";
+
 export interface Team {
 	id: string;
 	name: string;
@@ -27,9 +29,4 @@ export interface TeamListParams {
 	search?: string;
 }
 
-export interface TeamListResponse {
-	teams: Team[];
-	total: number;
-	page: number;
-	limit: number;
-}
+export interface TeamListResponse extends Pagination<Team> {}

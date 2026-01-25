@@ -7,16 +7,16 @@ import (
 
 type SPSController struct {
 	domain.Base
-	ControlCabinetID  uuid.UUID      `gorm:"type:uuid;not null;index"`
+	ControlCabinetID  uuid.UUID      `gorm:"type:uuid;not null;index;uniqueIndex:idx_cabinet_devicename"`
 	ControlCabinet    ControlCabinet `gorm:"foreignKey:ControlCabinetID"`
 	GADevice          *string
-	DeviceName        string `gorm:"not null"`
+	DeviceName        string `gorm:"not null;uniqueIndex:idx_cabinet_devicename"`
 	DeviceDescription *string
 	DeviceLocation    *string
-	IPAddress         *string
+	IPAddress         *string `gorm:"uniqueIndex:idx_vlan_ip"`
 	Subnet            *string
 	Gateway           *string
-	Vlan              *string
+	Vlan              *string `gorm:"uniqueIndex:idx_vlan_ip"`
 
 	SPSControllerSystemTypes []SPSControllerSystemType `gorm:"foreignKey:SPSControllerID"`
 }

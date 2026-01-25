@@ -3,22 +3,24 @@
  * Mirrors backend: internal/domain/facility/building.go
  */
 
+import type { Pagination } from '../utils/index.js';
+
 export interface Building {
 	id: string;
 	iws_code: string;
-	building_group: string;
+	building_group: number;
 	created_at: string;
 	updated_at: string;
 }
 
 export interface CreateBuildingRequest {
 	iws_code: string;
-	building_group: string;
+	building_group: number;
 }
 
 export interface UpdateBuildingRequest {
 	iws_code?: string;
-	building_group?: string;
+	building_group?: number;
 }
 
 export interface BuildingListParams {
@@ -27,9 +29,4 @@ export interface BuildingListParams {
 	search?: string;
 }
 
-export interface BuildingListResponse {
-	buildings: Building[];
-	total: number;
-	page: number;
-	limit: number;
-}
+export interface BuildingListResponse extends Pagination<Building> {}

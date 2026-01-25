@@ -2,7 +2,7 @@
  * Facility API adapters
  * Infrastructure layer - implements facility data operations via HTTP
  */
-import { api } from '$lib/api/client.js';
+import { api, type ApiOptions } from '$lib/api/client.js';
 import type {
 	Building,
 	BuildingListParams,
@@ -32,7 +32,7 @@ import type {
 
 export async function listBuildings(
 	params?: BuildingListParams,
-	options?: RequestInit
+	options?: ApiOptions
 ): Promise<BuildingListResponse> {
 	const searchParams = new URLSearchParams();
 	if (params?.page) searchParams.set('page', String(params.page));
@@ -40,18 +40,18 @@ export async function listBuildings(
 	if (params?.search) searchParams.set('search', params.search);
 
 	const query = searchParams.toString();
-	return api<BuildingListResponse>(`/buildings${query ? `?${query}` : ''}`, options);
+	return api<BuildingListResponse>(`/facility/buildings${query ? `?${query}` : ''}`, options);
 }
 
-export async function getBuilding(id: string, options?: RequestInit): Promise<Building> {
-	return api<Building>(`/buildings/${id}`, options);
+export async function getBuilding(id: string, options?: ApiOptions): Promise<Building> {
+	return api<Building>(`/facility/buildings/${id}`, options);
 }
 
 export async function createBuilding(
 	data: CreateBuildingRequest,
-	options?: RequestInit
+	options?: ApiOptions
 ): Promise<Building> {
-	return api<Building>('/buildings', {
+	return api<Building>('/facility/buildings', {
 		...options,
 		method: 'POST',
 		body: JSON.stringify(data)
@@ -61,17 +61,17 @@ export async function createBuilding(
 export async function updateBuilding(
 	id: string,
 	data: UpdateBuildingRequest,
-	options?: RequestInit
+	options?: ApiOptions
 ): Promise<Building> {
-	return api<Building>(`/buildings/${id}`, {
+	return api<Building>(`/facility/buildings/${id}`, {
 		...options,
 		method: 'PUT',
 		body: JSON.stringify(data)
 	});
 }
 
-export async function deleteBuilding(id: string, options?: RequestInit): Promise<void> {
-	return api<void>(`/buildings/${id}`, { ...options, method: 'DELETE' });
+export async function deleteBuilding(id: string, options?: ApiOptions): Promise<void> {
+	return api<void>(`/facility/buildings/${id}`, { ...options, method: 'DELETE' });
 }
 
 // ============================================================================
@@ -89,21 +89,24 @@ export async function listControlCabinets(
 	if (params?.building_id) searchParams.set('building_id', params.building_id);
 
 	const query = searchParams.toString();
-	return api<ControlCabinetListResponse>(`/control-cabinets${query ? `?${query}` : ''}`, options);
+	return api<ControlCabinetListResponse>(
+		`/facility/control-cabinets${query ? `?${query}` : ''}`,
+		options
+	);
 }
 
 export async function getControlCabinet(
 	id: string,
 	options?: RequestInit
 ): Promise<ControlCabinet> {
-	return api<ControlCabinet>(`/control-cabinets/${id}`, options);
+	return api<ControlCabinet>(`/facility/control-cabinets/${id}`, options);
 }
 
 export async function createControlCabinet(
 	data: CreateControlCabinetRequest,
 	options?: RequestInit
 ): Promise<ControlCabinet> {
-	return api<ControlCabinet>('/control-cabinets', {
+	return api<ControlCabinet>('/facility/control-cabinets', {
 		...options,
 		method: 'POST',
 		body: JSON.stringify(data)
@@ -115,7 +118,7 @@ export async function updateControlCabinet(
 	data: UpdateControlCabinetRequest,
 	options?: RequestInit
 ): Promise<ControlCabinet> {
-	return api<ControlCabinet>(`/control-cabinets/${id}`, {
+	return api<ControlCabinet>(`/facility/control-cabinets/${id}`, {
 		...options,
 		method: 'PUT',
 		body: JSON.stringify(data)
@@ -123,7 +126,7 @@ export async function updateControlCabinet(
 }
 
 export async function deleteControlCabinet(id: string, options?: RequestInit): Promise<void> {
-	return api<void>(`/control-cabinets/${id}`, { ...options, method: 'DELETE' });
+	return api<void>(`/facility/control-cabinets/${id}`, { ...options, method: 'DELETE' });
 }
 
 // ============================================================================
@@ -141,18 +144,21 @@ export async function listSPSControllers(
 	if (params?.control_cabinet_id) searchParams.set('control_cabinet_id', params.control_cabinet_id);
 
 	const query = searchParams.toString();
-	return api<SPSControllerListResponse>(`/sps-controllers${query ? `?${query}` : ''}`, options);
+	return api<SPSControllerListResponse>(
+		`/facility/sps-controllers${query ? `?${query}` : ''}`,
+		options
+	);
 }
 
 export async function getSPSController(id: string, options?: RequestInit): Promise<SPSController> {
-	return api<SPSController>(`/sps-controllers/${id}`, options);
+	return api<SPSController>(`/facility/sps-controllers/${id}`, options);
 }
 
 export async function createSPSController(
 	data: CreateSPSControllerRequest,
 	options?: RequestInit
 ): Promise<SPSController> {
-	return api<SPSController>('/sps-controllers', {
+	return api<SPSController>('/facility/sps-controllers', {
 		...options,
 		method: 'POST',
 		body: JSON.stringify(data)
@@ -164,7 +170,7 @@ export async function updateSPSController(
 	data: UpdateSPSControllerRequest,
 	options?: RequestInit
 ): Promise<SPSController> {
-	return api<SPSController>(`/sps-controllers/${id}`, {
+	return api<SPSController>(`/facility/sps-controllers/${id}`, {
 		...options,
 		method: 'PUT',
 		body: JSON.stringify(data)
@@ -172,7 +178,7 @@ export async function updateSPSController(
 }
 
 export async function deleteSPSController(id: string, options?: RequestInit): Promise<void> {
-	return api<void>(`/sps-controllers/${id}`, { ...options, method: 'DELETE' });
+	return api<void>(`/facility/sps-controllers/${id}`, { ...options, method: 'DELETE' });
 }
 
 // ============================================================================
@@ -192,18 +198,21 @@ export async function listFieldDevices(
 	}
 
 	const query = searchParams.toString();
-	return api<FieldDeviceListResponse>(`/field-devices${query ? `?${query}` : ''}`, options);
+	return api<FieldDeviceListResponse>(
+		`/facility/field-devices${query ? `?${query}` : ''}`,
+		options
+	);
 }
 
 export async function getFieldDevice(id: string, options?: RequestInit): Promise<FieldDevice> {
-	return api<FieldDevice>(`/field-devices/${id}`, options);
+	return api<FieldDevice>(`/facility/field-devices/${id}`, options);
 }
 
 export async function createFieldDevice(
 	data: CreateFieldDeviceRequest,
 	options?: RequestInit
 ): Promise<FieldDevice> {
-	return api<FieldDevice>('/field-devices', {
+	return api<FieldDevice>('/facility/field-devices', {
 		...options,
 		method: 'POST',
 		body: JSON.stringify(data)
@@ -215,7 +224,7 @@ export async function updateFieldDevice(
 	data: UpdateFieldDeviceRequest,
 	options?: RequestInit
 ): Promise<FieldDevice> {
-	return api<FieldDevice>(`/field-devices/${id}`, {
+	return api<FieldDevice>(`/facility/field-devices/${id}`, {
 		...options,
 		method: 'PUT',
 		body: JSON.stringify(data)
@@ -223,7 +232,7 @@ export async function updateFieldDevice(
 }
 
 export async function deleteFieldDevice(id: string, options?: RequestInit): Promise<void> {
-	return api<void>(`/field-devices/${id}`, { ...options, method: 'DELETE' });
+	return api<void>(`/facility/field-devices/${id}`, { ...options, method: 'DELETE' });
 }
 
 // Re-export all types

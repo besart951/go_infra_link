@@ -3,6 +3,7 @@
  * Mirrors backend: internal/domain/project/project.go
  */
 
+import type { Pagination } from "../utils/index.ts";
 export type ProjectStatus = 'planned' | 'ongoing' | 'completed';
 
 export interface Project {
@@ -26,6 +27,7 @@ export interface CreateProjectRequest {
 }
 
 export interface UpdateProjectRequest {
+    id: string;
 	name?: string;
 	description?: string;
 	status?: ProjectStatus;
@@ -40,9 +42,4 @@ export interface ProjectListParams {
 	status?: ProjectStatus;
 }
 
-export interface ProjectListResponse {
-	projects: Project[];
-	total: number;
-	page: number;
-	limit: number;
-}
+export interface ProjectListResponse extends Pagination<Project> {}

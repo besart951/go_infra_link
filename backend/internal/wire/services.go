@@ -50,7 +50,7 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 	rbacSvc := rbacservice.New(repos.User, repos.TeamMember)
 
 	return &Services{
-		Project:  projectservice.New(repos.Project),
+		Project:  projectservice.New(repos.Project, repos.FacilityObjectData, repos.FacilityBacnetObjects),
 		User:     userservice.New(repos.User, passwordService),
 		Password: passwordService,
 		JWT:      jwtService,

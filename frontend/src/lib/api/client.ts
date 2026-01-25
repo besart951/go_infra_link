@@ -62,11 +62,17 @@ async function parseError(response: Response): Promise<ApiError> {
  *   const user = await api<User>('/users/me');
  *   await api('/teams', { method: 'POST', body: {...} });
  */
+export interface ApiOptions extends RequestInit {
+	customFetch?: typeof fetch;
+	baseUrl?: string;
+}
+
 export async function api<T = unknown>(
 	endpoint: string,
-	options: RequestInit = {}
+	options: ApiOptions = {}
 ): Promise<T> {
-	const url = `/api/v1${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+	const basePath = options.baseUrl ?? '';
+	const url = `${basePath}/api/v1${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
 
 	const csrf = getCsrfToken();
 	const customHeaders = options.headers;
@@ -96,8 +102,10 @@ export async function api<T = unknown>(
 		headers['X-CSRF-Token'] = csrf;
 	}
 
+	const fetchImpl = options.customFetch ?? fetch;
+
 	try {
-		const response = await fetch(url, {
+		const response = await fetchImpl(url, {
 			...options,
 			credentials: 'include',
 			headers

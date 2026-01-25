@@ -3,6 +3,8 @@
  * Mirrors backend: internal/domain/user/user.go
  */
 
+import type { Pagination } from "../utils/index.ts";
+
 export type UserRole = 'user' | 'admin' | 'superadmin';
 
 export interface User {
@@ -46,9 +48,4 @@ export interface UserListParams {
 	is_active?: boolean;
 }
 
-export interface UserListResponse {
-	users: User[];
-	total: number;
-	page: number;
-	limit: number;
-}
+export interface UserListResponse extends Pagination<User> {}

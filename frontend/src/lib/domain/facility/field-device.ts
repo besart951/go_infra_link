@@ -3,6 +3,8 @@
  * Mirrors backend: internal/domain/facility/field_device.go
  */
 
+import type { Pagination } from "../utils/index.ts";
+
 export interface FieldDevice {
 	id: string;
 	bmk: string;
@@ -21,6 +23,7 @@ export interface CreateFieldDeviceRequest {
 }
 
 export interface UpdateFieldDeviceRequest {
+    id: string;
 	bmk?: string;
 	description?: string;
 	apparat_nr?: string;
@@ -34,9 +37,4 @@ export interface FieldDeviceListParams {
 	sps_controller_system_type_id?: string;
 }
 
-export interface FieldDeviceListResponse {
-	field_devices: FieldDevice[];
-	total: number;
-	page: number;
-	limit: number;
-}
+export interface FieldDeviceListResponse extends Pagination<FieldDevice> {}

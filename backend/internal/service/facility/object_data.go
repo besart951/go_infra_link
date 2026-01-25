@@ -25,3 +25,7 @@ func (s *Service) DeleteObjectDataByIds(ids []uuid.UUID) error {
 func (s *Service) GetPaginatedObjectData(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	return s.ObjectData.GetPaginatedList(params)
 }
+
+func (s *Service) GetPaginatedObjectDataForProject(projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	return s.ObjectData.GetPaginatedListForProject(projectID, params)
+}
