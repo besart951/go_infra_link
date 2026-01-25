@@ -82,3 +82,27 @@ type SPSControllerService interface {
 	UpdateWithSystemTypes(spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error
 	DeleteByIds(ids []uuid.UUID) error
 }
+
+type StateTextService interface {
+	GetByID(id uuid.UUID) (*domainFacility.StateText, error)
+	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.StateText], error)
+}
+
+type NotificationClassService interface {
+	GetByID(id uuid.UUID) (*domainFacility.NotificationClass, error)
+	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.NotificationClass], error)
+}
+
+type AlarmDefinitionService interface {
+	GetByID(id uuid.UUID) (*domainFacility.AlarmDefinition, error)
+	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.AlarmDefinition], error)
+}
+
+type ObjectDataService interface {
+	GetByID(id uuid.UUID) (*domainFacility.ObjectData, error)
+	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.ObjectData], error)
+}
+
+type SPSControllerSystemTypeService interface {
+	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
+}

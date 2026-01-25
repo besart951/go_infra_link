@@ -43,6 +43,10 @@ type Repositories struct {
 	FacilityBacnetObjects            domainFacility.BacnetObjectStore
 	FacilityObjectData               domainFacility.ObjectDataStore
 	FacilityObjectDataBacnetObjects  domainFacility.ObjectDataBacnetObjectStore
+
+	FacilityStateTexts          domainFacility.StateTextRepository
+	FacilityNotificationClasses domainFacility.NotificationClassRepository
+	FacilityAlarmDefinitions    domainFacility.AlarmDefinitionRepository
 }
 
 // NewRepositories creates all repository instances from the database connection.
@@ -87,5 +91,8 @@ func NewRepositories(db *sql.DB, driver string) (*Repositories, error) {
 		FacilityBacnetObjects:            facilityrepo.NewBacnetObjectRepository(gormDB),
 		FacilityObjectData:               facilityrepo.NewObjectDataRepository(gormDB),
 		FacilityObjectDataBacnetObjects:  facilityrepo.NewObjectDataBacnetObjectRepository(db, driver),
+		FacilityStateTexts:               facilityrepo.NewStateTextRepository(gormDB),
+		FacilityNotificationClasses:      facilityrepo.NewNotificationClassRepository(gormDB),
+		FacilityAlarmDefinitions:         facilityrepo.NewAlarmDefinitionRepository(gormDB),
 	}, nil
 }

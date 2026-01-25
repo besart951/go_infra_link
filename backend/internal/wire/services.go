@@ -33,6 +33,12 @@ type Services struct {
 	FacilityFieldDevice    *facilityservice.FieldDeviceService
 	FacilityBacnetObject   *facilityservice.BacnetObjectService
 	FacilitySPSController  *facilityservice.SPSControllerService
+
+	FacilityStateText             *facilityservice.StateTextService
+	FacilityNotificationClass     *facilityservice.NotificationClassService
+	FacilityAlarmDefinition       *facilityservice.AlarmDefinitionService
+	FacilityObjectData            *facilityservice.ObjectDataService
+	FacilitySPSControllerSystemType *facilityservice.SPSControllerSystemTypeService
 }
 
 // ServiceConfig contains configuration for services.
@@ -101,5 +107,11 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 			repos.FacilitySystemTypes,
 			repos.FacilitySPSControllerSystemTypes,
 		),
+
+		FacilityStateText:               facilityservice.NewStateTextService(repos.FacilityStateTexts),
+		FacilityNotificationClass:       facilityservice.NewNotificationClassService(repos.FacilityNotificationClasses),
+		FacilityAlarmDefinition:         facilityservice.NewAlarmDefinitionService(repos.FacilityAlarmDefinitions),
+		FacilityObjectData:              facilityservice.NewObjectDataService(repos.FacilityObjectData),
+		FacilitySPSControllerSystemType: facilityservice.NewSPSControllerSystemTypeService(repos.FacilitySPSControllerSystemTypes),
 	}
 }

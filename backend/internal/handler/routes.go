@@ -26,6 +26,12 @@ type Handlers struct {
 	FacilityBacnetObjectHandler   *facilityhandler.BacnetObjectHandler
 	FacilityControlCabinetHandler *facilityhandler.ControlCabinetHandler
 	FacilitySPSControllerHandler  *facilityhandler.SPSControllerHandler
+
+	FacilityStateTextHandler             *facilityhandler.StateTextHandler
+	FacilityNotificationClassHandler     *facilityhandler.NotificationClassHandler
+	FacilityAlarmDefinitionHandler       *facilityhandler.AlarmDefinitionHandler
+	FacilityObjectDataHandler            *facilityhandler.ObjectDataHandler
+	FacilitySPSControllerSystemTypeHandler *facilityhandler.SPSControllerSystemTypeHandler
 }
 
 // RegisterRoutes registers all API routes
@@ -165,5 +171,19 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 		facility.GET("/sps-controllers/:id", handlers.FacilitySPSControllerHandler.GetSPSController)
 		facility.PUT("/sps-controllers/:id", handlers.FacilitySPSControllerHandler.UpdateSPSController)
 		facility.DELETE("/sps-controllers/:id", handlers.FacilitySPSControllerHandler.DeleteSPSController)
+
+		facility.GET("/state-texts", handlers.FacilityStateTextHandler.ListStateTexts)
+		facility.GET("/state-texts/:id", handlers.FacilityStateTextHandler.GetStateText)
+
+		facility.GET("/notification-classes", handlers.FacilityNotificationClassHandler.ListNotificationClasses)
+		facility.GET("/notification-classes/:id", handlers.FacilityNotificationClassHandler.GetNotificationClass)
+
+		facility.GET("/alarm-definitions", handlers.FacilityAlarmDefinitionHandler.ListAlarmDefinitions)
+		facility.GET("/alarm-definitions/:id", handlers.FacilityAlarmDefinitionHandler.GetAlarmDefinition)
+
+		facility.GET("/object-data", handlers.FacilityObjectDataHandler.ListObjectData)
+		facility.GET("/object-data/:id", handlers.FacilityObjectDataHandler.GetObjectData)
+
+		facility.GET("/sps-controller-system-types", handlers.FacilitySPSControllerSystemTypeHandler.ListSPSControllerSystemTypes)
 	}
 }

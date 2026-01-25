@@ -34,6 +34,12 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devA
 		FacilityFieldDeviceHandler:    facilityhandler.NewFieldDeviceHandler(services.FacilityFieldDevice),
 		FacilityBacnetObjectHandler:   facilityhandler.NewBacnetObjectHandler(services.FacilityBacnetObject),
 		FacilitySPSControllerHandler:  facilityhandler.NewSPSControllerHandler(services.FacilitySPSController),
+
+		FacilityStateTextHandler:             facilityhandler.NewStateTextHandler(services.FacilityStateText),
+		FacilityNotificationClassHandler:     facilityhandler.NewNotificationClassHandler(services.FacilityNotificationClass),
+		FacilityAlarmDefinitionHandler:       facilityhandler.NewAlarmDefinitionHandler(services.FacilityAlarmDefinition),
+		FacilityObjectDataHandler:            facilityhandler.NewObjectDataHandler(services.FacilityObjectData),
+		FacilitySPSControllerSystemTypeHandler: facilityhandler.NewSPSControllerSystemTypeHandler(services.FacilitySPSControllerSystemType),
 	}
 }
 
