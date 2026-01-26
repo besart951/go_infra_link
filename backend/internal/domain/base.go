@@ -33,6 +33,11 @@ func (b *Base) TouchForUpdate(now time.Time) {
 	b.UpdatedAt = now
 }
 
+// GetBase returns a pointer to the Base struct (for use with generic repositories)
+func (b *Base) GetBase() *Base {
+	return b
+}
+
 type PaginationParams struct {
 	Page    int
 	Limit   int

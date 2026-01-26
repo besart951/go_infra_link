@@ -10,6 +10,7 @@ import (
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	authsvc "github.com/besart951/go_infra_link/backend/internal/service/auth"
 	"github.com/gin-gonic/gin"
 )
@@ -57,7 +58,7 @@ func NewAuthHandler(service AuthService, userService UserService, accessTokenTTL
 // @Router /api/v1/auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
-	if !BindJSON(c, &req) {
+	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 
@@ -234,7 +235,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 // @Router /api/v1/auth/password-reset/confirm [post]
 func (h *AuthHandler) ConfirmPasswordReset(c *gin.Context) {
 	var req dto.PasswordResetConfirmRequest
-	if !BindJSON(c, &req) {
+	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 

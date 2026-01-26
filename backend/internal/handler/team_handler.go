@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/domain/team"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,13 +31,13 @@ func NewTeamHandler(service TeamService) *TeamHandler {
 // @Router /api/v1/teams [post]
 func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	var req dto.CreateTeamRequest
-	if !BindJSON(c, &req) {
+	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 
 	t := &team.Team{Name: req.Name, Description: req.Description}
 	if err := h.service.Create(t); err != nil {
-		RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
@@ -56,13 +57,13 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 // @Router /api/v1/teams [get]
 func (h *TeamHandler) ListTeams(c *gin.Context) {
 	var query dto.PaginationQuery
-	if !BindQuery(c, &query) {
+	if !handlerutil.BindQuery(c, &query) {
 		return
 	}
 
 	res, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -85,7 +86,7 @@ func (h *TeamHandler) ListTeams(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/teams/{id} [get]
 func (h *TeamHandler) GetTeam(c *gin.Context) {
-	id, ok := ParseUUIDParam(c, "id")
+	id, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
@@ -93,10 +94,10 @@ func (h *TeamHandler) GetTeam(c *gin.Context) {
 	t, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			RespondNotFound(c, "Team not found")
+			handlerutil.RespondNotFound(c, "Team not found")
 			return
 		}
-		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -116,23 +117,23 @@ func (h *TeamHandler) GetTeam(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/teams/{id} [put]
 func (h *TeamHandler) UpdateTeam(c *gin.Context) {
-	id, ok := ParseUUIDParam(c, "id")
+	id, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
 	var req dto.UpdateTeamRequest
-	if !BindJSON(c, &req) {
+	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 
 	t, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			RespondNotFound(c, "Team not found")
+			handlerutil.RespondNotFound(c, "Team not found")
 			return
 		}
-		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -144,7 +145,7 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 	}
 
 	if err := h.service.Update(t); err != nil {
-		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -160,13 +161,13 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/teams/{id} [delete]
 func (h *TeamHandler) DeleteTeam(c *gin.Context) {
-	id, ok := ParseUUIDParam(c, "id")
+	id, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}
 
@@ -184,18 +185,18 @@ func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/teams/{id}/members [post]
 func (h *TeamHandler) AddMember(c *gin.Context) {
-	teamID, ok := ParseUUIDParam(c, "id")
+	teamID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
 	var req dto.AddTeamMemberRequest
-	if !BindJSON(c, &req) {
+	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 
 	if err := h.service.AddMember(teamID, req.UserID, team.MemberRole(req.Role)); err != nil {
-		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -212,18 +213,18 @@ func (h *TeamHandler) AddMember(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/teams/{id}/members/{userId} [delete]
 func (h *TeamHandler) RemoveMember(c *gin.Context) {
-	teamID, ok := ParseUUIDParam(c, "id")
+	teamID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
-	userID, ok := ParseUUIDParamWithCode(c, "userId", "invalid_user_id")
+	userID, ok := handlerutil.ParseUUIDParamWithCode(c, "userId", "invalid_user_id")
 	if !ok {
 		return
 	}
 
 	if err := h.service.RemoveMember(teamID, userID); err != nil {
-		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -242,19 +243,19 @@ func (h *TeamHandler) RemoveMember(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/teams/{id}/members [get]
 func (h *TeamHandler) ListMembers(c *gin.Context) {
-	teamID, ok := ParseUUIDParam(c, "id")
+	teamID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
 	var query dto.PaginationQuery
-	if !BindQuery(c, &query) {
+	if !handlerutil.BindQuery(c, &query) {
 		return
 	}
 
 	res, err := h.service.ListMembers(teamID, query.Page, query.Limit)
 	if err != nil {
-		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 

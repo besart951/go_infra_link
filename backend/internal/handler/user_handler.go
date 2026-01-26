@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,7 +31,7 @@ func NewUserHandler(service UserService) *UserHandler {
 // @Router /api/v1/users [post]
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req dto.CreateUserRequest
-	if !BindJSON(c, &req) {
+	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 
@@ -47,10 +48,10 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 
 	if err := h.service.CreateWithPassword(usr, req.Password); err != nil {
 		if errors.Is(err, user.ErrPasswordHashingFailed) {
-			RespondError(c, http.StatusInternalServerError, "password_hashing_failed", "Failed to hash password")
+			handlerutil.RespondError(c, http.StatusInternalServerError, "password_hashing_failed", "Failed to hash password")
 			return
 		}
-		RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
@@ -83,7 +84,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/users/{id} [get]
 func (h *UserHandler) GetUser(c *gin.Context) {
-	id, ok := ParseUUIDParam(c, "id")
+	id, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
@@ -91,10 +92,10 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	usr, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			RespondNotFound(c, "User not found")
+			handlerutil.RespondNotFound(c, "User not found")
 			return
 		}
-		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -129,13 +130,13 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 // @Router /api/v1/users [get]
 func (h *UserHandler) ListUsers(c *gin.Context) {
 	var query dto.PaginationQuery
-	if !BindQuery(c, &query) {
+	if !handlerutil.BindQuery(c, &query) {
 		return
 	}
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search, query.OrderBy, query.Order)
 	if err != nil {
-		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -180,23 +181,23 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/users/{id} [put]
 func (h *UserHandler) UpdateUser(c *gin.Context) {
-	id, ok := ParseUUIDParam(c, "id")
+	id, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
 	var req dto.UpdateUserRequest
-	if !BindJSON(c, &req) {
+	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 
 	usr, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			RespondNotFound(c, "User not found")
+			handlerutil.RespondNotFound(c, "User not found")
 			return
 		}
-		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -221,10 +222,10 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	if err := h.service.UpdateWithPassword(usr, &req.Password); err != nil {
 		if errors.Is(err, user.ErrPasswordHashingFailed) {
-			RespondError(c, http.StatusInternalServerError, "password_hashing_failed", "Failed to hash password")
+			handlerutil.RespondError(c, http.StatusInternalServerError, "password_hashing_failed", "Failed to hash password")
 			return
 		}
-		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -256,13 +257,13 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/users/{id} [delete]
 func (h *UserHandler) DeleteUser(c *gin.Context) {
-	id, ok := ParseUUIDParam(c, "id")
+	id, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}
 
