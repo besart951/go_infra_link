@@ -7,7 +7,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type ObjectDataHandler struct {
