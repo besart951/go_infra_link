@@ -95,7 +95,7 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized"})
 		return
 	}
-	
+
 	userAgent := c.GetHeader("User-Agent")
 	ip := c.ClientIP()
 

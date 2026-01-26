@@ -44,7 +44,8 @@ func (s *jwtAuthStrategy) ValidateToken(tokenString string) (uuid.UUID, error) {
 
 	userID, err := uuid.Parse(claims.Subject)
 	if err != nil {
-		return uuid.Nil, jwt.ErrTokenInvalidClaims
+		// Wrap error with context about invalid UUID in token subject
+		return uuid.Nil, jwt.ErrInvalidType
 	}
 	return userID, nil
 }
