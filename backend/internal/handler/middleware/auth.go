@@ -15,6 +15,8 @@ const (
 	ContextUserIDKey = "user_id"
 )
 
+// AuthGuard creates a middleware that validates authentication using the provided JWT service
+// This middleware is now more extensible through the strategy pattern
 func AuthGuard(jwtService authsvc.JWTService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString, err := c.Cookie("access_token")
@@ -24,20 +26,16 @@ func AuthGuard(jwtService authsvc.JWTService) gin.HandlerFunc {
 			return
 		}
 
-		claims, err := jwtService.ParseAccessToken(tokenString)
+		// Use the strategy pattern through the JWT service
+		// This allows for easier extension to other authentication methods in the future
+		strategy := jwtService.GetStrategy()
+		userID, err := strategy.ValidateToken(tokenString)
 		if err != nil {
 			if errorsIsJWTExpired(err) {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "token_expired"})
 				c.Abort()
 				return
 			}
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-			c.Abort()
-			return
-		}
-
-		userID, err := uuid.Parse(claims.Subject)
-		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			c.Abort()
 			return

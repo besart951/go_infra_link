@@ -61,41 +61,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	userAgent := c.GetHeader("User-Agent")
-	ip := c.ClientIP()
-
-	result, err := h.service.Login(req.Email, req.Password, &userAgent, &ip)
-	if err != nil {
-		if err == domainAuth.ErrInvalidCredentials {
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "invalid_credentials"})
-			return
-		}
-		if err == domainAuth.ErrAccountDisabled {
-			c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "account_disabled"})
-			return
-		}
-		if err == domainAuth.ErrAccountLocked {
-			c.JSON(http.StatusLocked, dto.ErrorResponse{Error: "account_locked"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "login_failed", Message: err.Error()})
-		return
-	}
-
-	h.setAuthCookies(c, result)
-
-	c.JSON(http.StatusOK, dto.AuthResponse{
-		User: dto.AuthUserResponse{
-			ID:        result.User.ID,
-			FirstName: result.User.FirstName,
-			LastName:  result.User.LastName,
-			Email:     result.User.Email,
-			IsActive:  result.User.IsActive,
-		},
-		AccessTokenExpiresAt:  result.AccessTokenExpiry,
-		RefreshTokenExpiresAt: result.RefreshTokenExpiry,
-		CsrfToken:             result.CSRFFriendlyToken,
-	})
+	h.handleLogin(c, req.Email, req.Password)
 }
 
 // DevLogin godoc
@@ -112,41 +78,7 @@ func (h *AuthHandler) DevLogin(c *gin.Context) {
 		return
 	}
 
-	userAgent := c.GetHeader("User-Agent")
-	ip := c.ClientIP()
-
-	result, err := h.service.Login(h.devAuthEmail, h.devAuthPassword, &userAgent, &ip)
-	if err != nil {
-		if err == domainAuth.ErrInvalidCredentials {
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "invalid_credentials"})
-			return
-		}
-		if err == domainAuth.ErrAccountDisabled {
-			c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "account_disabled"})
-			return
-		}
-		if err == domainAuth.ErrAccountLocked {
-			c.JSON(http.StatusLocked, dto.ErrorResponse{Error: "account_locked"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "login_failed", Message: err.Error()})
-		return
-	}
-
-	h.setAuthCookies(c, result)
-
-	c.JSON(http.StatusOK, dto.AuthResponse{
-		User: dto.AuthUserResponse{
-			ID:        result.User.ID,
-			FirstName: result.User.FirstName,
-			LastName:  result.User.LastName,
-			Email:     result.User.Email,
-			IsActive:  result.User.IsActive,
-		},
-		AccessTokenExpiresAt:  result.AccessTokenExpiry,
-		RefreshTokenExpiresAt: result.RefreshTokenExpiry,
-		CsrfToken:             result.CSRFFriendlyToken,
-	})
+	h.handleLogin(c, h.devAuthEmail, h.devAuthPassword)
 }
 
 // Refresh godoc
@@ -163,35 +95,29 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized"})
 		return
 	}
+
 	userAgent := c.GetHeader("User-Agent")
 	ip := c.ClientIP()
 
 	result, err := h.service.Refresh(refreshToken, &userAgent, &ip)
 	if err != nil {
-		switch err {
-		case domainAuth.ErrInvalidToken, domainAuth.ErrTokenExpired, domainAuth.ErrTokenRevoked:
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: err.Error()})
-			return
-		default:
-			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "refresh_failed", Message: err.Error()})
-			return
-		}
+		h.handleRefreshError(c, err)
+		return
 	}
 
 	h.setAuthCookies(c, result)
 
-	c.JSON(http.StatusOK, dto.AuthResponse{
-		User: dto.AuthUserResponse{
-			ID:        result.User.ID,
-			FirstName: result.User.FirstName,
-			LastName:  result.User.LastName,
-			Email:     result.User.Email,
-			IsActive:  result.User.IsActive,
-		},
-		AccessTokenExpiresAt:  result.AccessTokenExpiry,
-		RefreshTokenExpiresAt: result.RefreshTokenExpiry,
-		CsrfToken:             result.CSRFFriendlyToken,
-	})
+	c.JSON(http.StatusOK, h.buildAuthResponse(result))
+}
+
+// handleRefreshError centralizes error handling for refresh operations
+func (h *AuthHandler) handleRefreshError(c *gin.Context, err error) {
+	switch err {
+	case domainAuth.ErrInvalidToken, domainAuth.ErrTokenExpired, domainAuth.ErrTokenRevoked:
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: err.Error()})
+	default:
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "refresh_failed", Message: err.Error()})
+	}
 }
 
 // Logout godoc
@@ -213,6 +139,53 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 	h.clearAuthCookies(c)
 	c.Status(http.StatusNoContent)
+}
+
+// handleLogin is a helper method to handle common login logic
+// This eliminates duplicate code between Login and DevLogin handlers
+func (h *AuthHandler) handleLogin(c *gin.Context, email, password string) {
+	userAgent := c.GetHeader("User-Agent")
+	ip := c.ClientIP()
+
+	result, err := h.service.Login(email, password, &userAgent, &ip)
+	if err != nil {
+		h.handleLoginError(c, err)
+		return
+	}
+
+	h.setAuthCookies(c, result)
+
+	c.JSON(http.StatusOK, h.buildAuthResponse(result))
+}
+
+// handleLoginError centralizes error handling for login operations
+func (h *AuthHandler) handleLoginError(c *gin.Context, err error) {
+	switch err {
+	case domainAuth.ErrInvalidCredentials:
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "invalid_credentials"})
+	case domainAuth.ErrAccountDisabled:
+		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "account_disabled"})
+	case domainAuth.ErrAccountLocked:
+		c.JSON(http.StatusLocked, dto.ErrorResponse{Error: "account_locked"})
+	default:
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "login_failed", Message: err.Error()})
+	}
+}
+
+// buildAuthResponse creates a consistent auth response
+func (h *AuthHandler) buildAuthResponse(result *authsvc.LoginResult) dto.AuthResponse {
+	return dto.AuthResponse{
+		User: dto.AuthUserResponse{
+			ID:        result.User.ID,
+			FirstName: result.User.FirstName,
+			LastName:  result.User.LastName,
+			Email:     result.User.Email,
+			IsActive:  result.User.IsActive,
+		},
+		AccessTokenExpiresAt:  result.AccessTokenExpiry,
+		RefreshTokenExpiresAt: result.RefreshTokenExpiry,
+		CsrfToken:             result.CSRFFriendlyToken,
+	}
 }
 
 // Me godoc
@@ -266,23 +239,25 @@ func (h *AuthHandler) ConfirmPasswordReset(c *gin.Context) {
 	}
 
 	if err := h.service.ConfirmPasswordReset(req.Token, req.NewPassword); err != nil {
-		switch err {
-		case domainAuth.ErrPasswordResetTokenInvalid:
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "password_reset_token_invalid"})
-			return
-		case domainAuth.ErrPasswordResetTokenExpired:
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "password_reset_token_expired"})
-			return
-		case domainAuth.ErrPasswordResetTokenUsed:
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "password_reset_token_used"})
-			return
-		default:
-			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "reset_failed", Message: err.Error()})
-			return
-		}
+		h.handlePasswordResetError(c, err)
+		return
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// handlePasswordResetError centralizes error handling for password reset operations
+func (h *AuthHandler) handlePasswordResetError(c *gin.Context, err error) {
+	switch err {
+	case domainAuth.ErrPasswordResetTokenInvalid:
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "password_reset_token_invalid"})
+	case domainAuth.ErrPasswordResetTokenExpired:
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "password_reset_token_expired"})
+	case domainAuth.ErrPasswordResetTokenUsed:
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "password_reset_token_used"})
+	default:
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "reset_failed", Message: err.Error()})
+	}
 }
 
 func (h *AuthHandler) setAuthCookies(c *gin.Context, result *authsvc.LoginResult) {
