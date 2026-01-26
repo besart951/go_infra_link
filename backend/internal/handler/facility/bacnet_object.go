@@ -52,6 +52,10 @@ func (h *BacnetObjectHandler) CreateBacnetObject(c *gin.Context) {
 	}
 
 	if err := h.service.CreateWithParent(obj, req.FieldDeviceID, req.ObjectDataID); err != nil {
+		if ve, ok := domain.AsValidationError(err); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
 		if errors.Is(err, domain.ErrInvalidArgument) {
 			respondError(c, http.StatusBadRequest, "validation_error", "exactly one of field_device_id or object_data_id must be set")
 			return
@@ -145,6 +149,10 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 	}
 
 	if err := h.service.Update(existing, req.ObjectDataID); err != nil {
+		if ve, ok := domain.AsValidationError(err); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
 		if errors.Is(err, domain.ErrInvalidArgument) {
 			respondError(c, http.StatusBadRequest, "validation_error", err.Error())
 			return

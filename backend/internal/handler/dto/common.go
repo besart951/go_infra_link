@@ -13,6 +13,7 @@ type PaginationQuery struct {
 // Error Response
 
 type ErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
+	Error   string            `json:"error"`
+	Message string            `json:"message,omitempty"`
+	Fields  map[string]string `json:"fields,omitempty"`
 }

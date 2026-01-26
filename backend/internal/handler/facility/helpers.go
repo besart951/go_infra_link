@@ -15,6 +15,13 @@ func respondError(c *gin.Context, status int, code, message string) {
 	})
 }
 
+func respondValidationError(c *gin.Context, fields map[string]string) {
+	c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+		Error:  "validation_error",
+		Fields: fields,
+	})
+}
+
 func respondNotFound(c *gin.Context, message string) {
 	respondError(c, http.StatusNotFound, "not_found", message)
 }

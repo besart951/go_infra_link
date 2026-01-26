@@ -1,8 +1,6 @@
 package facility
 
 import (
-	"fmt"
-
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
@@ -317,7 +315,7 @@ func (s *FieldDeviceService) ensureParentsExist(fieldDevice *domainFacility.Fiel
 
 func (s *FieldDeviceService) ensureApparatNrAvailable(fieldDevice *domainFacility.FieldDevice, excludeID *uuid.UUID) error {
 	if fieldDevice.ApparatNr == 0 {
-		return fmt.Errorf("apparat_nr is required")
+		return domain.NewValidationError().Add("fielddevice.apparat_nr", "apparat_nr is required")
 	}
 
 	var systemPartID *uuid.UUID
@@ -336,12 +334,23 @@ func (s *FieldDeviceService) ensureApparatNrAvailable(fieldDevice *domainFacilit
 		return err
 	}
 	if exists {
-		return domain.ErrConflict
+		return domain.NewValidationError().Add("fielddevice.apparat_nr", "apparat_nr is already used in this scope")
 	}
 	return nil
 }
 
 func (s *FieldDeviceService) replaceBacnetObjects(fieldDeviceID uuid.UUID, bacnetObjects []domainFacility.BacnetObject) error {
+	seen := make(map[string]struct{}, len(bacnetObjects))
+	for _, obj := range bacnetObjects {
+		if obj.TextFix == "" {
+			continue
+		}
+		if _, ok := seen[obj.TextFix]; ok {
+			return domain.NewValidationError().Add("fielddevice.bacnetobject.textfix", "textfix must be unique within the field device")
+		}
+		seen[obj.TextFix] = struct{}{}
+	}
+
 	if err := s.bacnetObjectRepo.SoftDeleteByFieldDeviceIDs([]uuid.UUID{fieldDeviceID}); err != nil {
 		return err
 	}

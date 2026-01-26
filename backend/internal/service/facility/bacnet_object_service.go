@@ -13,7 +13,7 @@ type BacnetObjectService struct {
 	objectDataBacnetStore domainFacility.ObjectDataBacnetObjectStore
 }
 
-func (s *BacnetObjectService) ensureTextFixUnique(fieldDeviceID uuid.UUID, textFix string, excludeID *uuid.UUID) error {
+func (s *BacnetObjectService) ensureTextFixUniqueForFieldDevice(fieldDeviceID uuid.UUID, textFix string, excludeID *uuid.UUID) error {
 	items, err := s.repo.GetByFieldDeviceIDs([]uuid.UUID{fieldDeviceID})
 	if err != nil {
 		return err
@@ -23,7 +23,30 @@ func (s *BacnetObjectService) ensureTextFixUnique(fieldDeviceID uuid.UUID, textF
 			continue
 		}
 		if it.TextFix == textFix {
-			return domain.ErrConflict
+			return domain.NewValidationError().Add("fielddevice.bacnetobject.textfix", "textfix must be unique within the field device")
+		}
+	}
+	return nil
+}
+
+func (s *BacnetObjectService) ensureTextFixUniqueForObjectData(objectDataID uuid.UUID, textFix string, excludeID *uuid.UUID) error {
+	ids, err := s.objectDataRepo.GetBacnetObjectIDs(objectDataID)
+	if err != nil {
+		return err
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	items, err := s.repo.GetByIds(ids)
+	if err != nil {
+		return err
+	}
+	for _, it := range items {
+		if excludeID != nil && it.ID == *excludeID {
+			continue
+		}
+		if it.TextFix == textFix {
+			return domain.NewValidationError().Add("objectdata.bacnetobject.textfix", "textfix must be unique within the object data")
 		}
 	}
 	return nil
@@ -69,7 +92,7 @@ func (s *BacnetObjectService) CreateWithParent(bacnetObject *domainFacility.Bacn
 		if len(fds) == 0 {
 			return domain.ErrNotFound
 		}
-		if err := s.ensureTextFixUnique(*fieldDeviceID, bacnetObject.TextFix, nil); err != nil {
+		if err := s.ensureTextFixUniqueForFieldDevice(*fieldDeviceID, bacnetObject.TextFix, nil); err != nil {
 			return err
 		}
 		bacnetObject.FieldDeviceID = fieldDeviceID
@@ -82,6 +105,10 @@ func (s *BacnetObjectService) CreateWithParent(bacnetObject *domainFacility.Bacn
 	}
 	if len(ods) == 0 || !ods[0].IsActive {
 		return domain.ErrNotFound
+	}
+
+	if err := s.ensureTextFixUniqueForObjectData(*objectDataID, bacnetObject.TextFix, nil); err != nil {
+		return err
 	}
 
 	bacnetObject.FieldDeviceID = nil
@@ -102,7 +129,13 @@ func (s *BacnetObjectService) Update(bacnetObject *domainFacility.BacnetObject, 
 		return domain.ErrNotFound
 	}
 	if bacnetObject.FieldDeviceID != nil {
-		if err := s.ensureTextFixUnique(*bacnetObject.FieldDeviceID, bacnetObject.TextFix, &bacnetObject.ID); err != nil {
+		if err := s.ensureTextFixUniqueForFieldDevice(*bacnetObject.FieldDeviceID, bacnetObject.TextFix, &bacnetObject.ID); err != nil {
+			return err
+		}
+	}
+
+	if objectDataID != nil {
+		if err := s.ensureTextFixUniqueForObjectData(*objectDataID, bacnetObject.TextFix, &bacnetObject.ID); err != nil {
 			return err
 		}
 	}

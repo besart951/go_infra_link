@@ -73,6 +73,10 @@ func (h *FieldDeviceHandler) CreateFieldDevice(c *gin.Context) {
 	}
 
 	if err := h.service.CreateWithBacnetObjects(fieldDevice, req.ObjectDataID, bacnetObjects); err != nil {
+		if ve, ok := domain.AsValidationError(err); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
 		if errors.Is(err, domain.ErrInvalidArgument) {
 			respondError(c, http.StatusBadRequest, "validation_error", "object_data_id and bacnet_objects are mutually exclusive")
 			return
@@ -286,6 +290,10 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateWithBacnetObjects(fieldDevice, req.ObjectDataID, bacnetObjects); err != nil {
+		if ve, ok := domain.AsValidationError(err); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
 		if errors.Is(err, domain.ErrInvalidArgument) {
 			respondError(c, http.StatusBadRequest, "validation_error", "object_data_id and bacnet_objects are mutually exclusive")
 			return
