@@ -31,11 +31,7 @@ func NewSystemPartHandler(service SystemPartService) *SystemPartHandler {
 // @Router /api/v1/facility/system-parts [post]
 func (h *SystemPartHandler) CreateSystemPart(c *gin.Context) {
 	var req dto.CreateSystemPartRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindJSON(c, &req) {
 		return
 	}
 
@@ -46,10 +42,7 @@ func (h *SystemPartHandler) CreateSystemPart(c *gin.Context) {
 	}
 
 	if err := h.service.Create(systemPart); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "creation_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
@@ -76,29 +69,18 @@ func (h *SystemPartHandler) CreateSystemPart(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/system-parts/{id} [get]
 func (h *SystemPartHandler) GetSystemPart(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	systemPart, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "System Part not found",
-			})
+			respondNotFound(c, "System Part not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -127,20 +109,13 @@ func (h *SystemPartHandler) GetSystemPart(c *gin.Context) {
 // @Router /api/v1/facility/system-parts [get]
 func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
 	var query dto.PaginationQuery
-	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindQuery(c, &query) {
 		return
 	}
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -179,38 +154,23 @@ func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/system-parts/{id} [put]
 func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.UpdateSystemPartRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindJSON(c, &req) {
 		return
 	}
 
 	systemPart, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "System Part not found",
-			})
+			respondNotFound(c, "System Part not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -225,10 +185,7 @@ func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
 	}
 
 	if err := h.service.Update(systemPart); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "update_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -254,21 +211,13 @@ func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/system-parts/{id} [delete]
 func (h *SystemPartHandler) DeleteSystemPart(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "deletion_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}
 

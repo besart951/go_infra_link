@@ -31,11 +31,7 @@ func NewBuildingHandler(service BuildingService) *BuildingHandler {
 // @Router /api/v1/facility/buildings [post]
 func (h *BuildingHandler) CreateBuilding(c *gin.Context) {
 	var req dto.CreateBuildingRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindJSON(c, &req) {
 		return
 	}
 
@@ -74,29 +70,18 @@ func (h *BuildingHandler) CreateBuilding(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/buildings/{id} [get]
 func (h *BuildingHandler) GetBuilding(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	building, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "Building not found",
-			})
+			respondNotFound(c, "Building not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -124,20 +109,13 @@ func (h *BuildingHandler) GetBuilding(c *gin.Context) {
 // @Router /api/v1/facility/buildings [get]
 func (h *BuildingHandler) ListBuildings(c *gin.Context) {
 	var query dto.PaginationQuery
-	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindQuery(c, &query) {
 		return
 	}
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -175,38 +153,23 @@ func (h *BuildingHandler) ListBuildings(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/buildings/{id} [put]
 func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.UpdateBuildingRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindJSON(c, &req) {
 		return
 	}
 
 	building, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "Building not found",
-			})
+			respondNotFound(c, "Building not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -218,10 +181,7 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 	}
 
 	if err := h.service.Update(building); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "update_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -246,21 +206,13 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/buildings/{id} [delete]
 func (h *BuildingHandler) DeleteBuilding(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "deletion_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}
 

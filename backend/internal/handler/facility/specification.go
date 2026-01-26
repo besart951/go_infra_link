@@ -31,11 +31,7 @@ func NewSpecificationHandler(service SpecificationService) *SpecificationHandler
 // @Router /api/v1/facility/specifications [post]
 func (h *SpecificationHandler) CreateSpecification(c *gin.Context) {
 	var req dto.CreateSpecificationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindJSON(c, &req) {
 		return
 	}
 
@@ -56,23 +52,14 @@ func (h *SpecificationHandler) CreateSpecification(c *gin.Context) {
 
 	if err := h.service.Create(specification); err != nil {
 		if errors.Is(err, domain.ErrInvalidArgument) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-				Error:   "validation_error",
-				Message: "field_device_id is required",
-			})
+			respondError(c, http.StatusBadRequest, "validation_error", "field_device_id is required")
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			c.JSON(http.StatusConflict, dto.ErrorResponse{
-				Error:   "conflict",
-				Message: "Specification already exists for this field device",
-			})
+			respondError(c, http.StatusConflict, "conflict", "Specification already exists for this field device")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "creation_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
@@ -108,29 +95,18 @@ func (h *SpecificationHandler) CreateSpecification(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/specifications/{id} [get]
 func (h *SpecificationHandler) GetSpecification(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	specification, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "Specification not found",
-			})
+			respondNotFound(c, "Specification not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -168,20 +144,13 @@ func (h *SpecificationHandler) GetSpecification(c *gin.Context) {
 // @Router /api/v1/facility/specifications [get]
 func (h *SpecificationHandler) ListSpecifications(c *gin.Context) {
 	var query dto.PaginationQuery
-	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindQuery(c, &query) {
 		return
 	}
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -229,38 +198,23 @@ func (h *SpecificationHandler) ListSpecifications(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/specifications/{id} [put]
 func (h *SpecificationHandler) UpdateSpecification(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.UpdateSpecificationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindJSON(c, &req) {
 		return
 	}
 
 	specification, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "Specification not found",
-			})
+			respondNotFound(c, "Specification not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -299,10 +253,7 @@ func (h *SpecificationHandler) UpdateSpecification(c *gin.Context) {
 	}
 
 	if err := h.service.Update(specification); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "update_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -337,21 +288,13 @@ func (h *SpecificationHandler) UpdateSpecification(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/specifications/{id} [delete]
 func (h *SpecificationHandler) DeleteSpecification(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "deletion_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}
 

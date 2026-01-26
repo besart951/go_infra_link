@@ -32,8 +32,7 @@ func NewBacnetObjectHandler(service BacnetObjectService) *BacnetObjectHandler {
 // @Router /api/v1/facility/bacnet-objects [post]
 func (h *BacnetObjectHandler) CreateBacnetObject(c *gin.Context) {
 	var req dto.CreateBacnetObjectRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+	if !bindJSON(c, &req) {
 		return
 	}
 
@@ -55,18 +54,18 @@ func (h *BacnetObjectHandler) CreateBacnetObject(c *gin.Context) {
 
 	if err := h.service.CreateWithParent(obj, req.FieldDeviceID, req.ObjectDataID); err != nil {
 		if errors.Is(err, domain.ErrInvalidArgument) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: "exactly one of field_device_id or object_data_id must be set"})
+			respondError(c, http.StatusBadRequest, "validation_error", "exactly one of field_device_id or object_data_id must be set")
 			return
 		}
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_reference", Message: "Referenced entity not found or deleted"})
+			respondError(c, http.StatusBadRequest, "invalid_reference", "Referenced entity not found or deleted")
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			c.JSON(http.StatusConflict, dto.ErrorResponse{Error: "conflict", Message: "entity conflict"})
+			respondError(c, http.StatusConflict, "conflict", "entity conflict")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "creation_failed", Message: err.Error()})
+		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
@@ -105,30 +104,27 @@ func (h *BacnetObjectHandler) CreateBacnetObject(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/bacnet-objects/{id} [put]
 func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_id", Message: "Invalid UUID format"})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.UpdateBacnetObjectRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+	if !bindJSON(c, &req) {
 		return
 	}
 	if req.FieldDeviceID != nil && req.ObjectDataID != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: "field_device_id and object_data_id are mutually exclusive"})
+		respondError(c, http.StatusBadRequest, "validation_error", "field_device_id and object_data_id are mutually exclusive")
 		return
 	}
 
 	existing, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found", Message: "Bacnet Object not found"})
+			respondNotFound(c, "Bacnet Object not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "fetch_failed", Message: err.Error()})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -151,18 +147,18 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 
 	if err := h.service.Update(existing, req.ObjectDataID); err != nil {
 		if errors.Is(err, domain.ErrInvalidArgument) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+			respondError(c, http.StatusBadRequest, "validation_error", err.Error())
 			return
 		}
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_reference", Message: "Referenced entity not found or deleted"})
+			respondError(c, http.StatusBadRequest, "invalid_reference", "Referenced entity not found or deleted")
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			c.JSON(http.StatusConflict, dto.ErrorResponse{Error: "conflict", Message: "entity conflict"})
+			respondError(c, http.StatusConflict, "conflict", "entity conflict")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "update_failed", Message: err.Error()})
+		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 

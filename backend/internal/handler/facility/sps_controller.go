@@ -31,11 +31,7 @@ func NewSPSControllerHandler(service SPSControllerService) *SPSControllerHandler
 // @Router /api/v1/facility/sps-controllers [post]
 func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 	var req dto.CreateSPSControllerRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindJSON(c, &req) {
 		return
 	}
 
@@ -62,16 +58,10 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 
 	if err := h.service.CreateWithSystemTypes(spsController, systemTypes); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-				Error:   "invalid_reference",
-				Message: "Referenced entity not found or deleted",
-			})
+			respondError(c, http.StatusBadRequest, "invalid_reference", "Referenced entity not found or deleted")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "creation_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
@@ -104,29 +94,18 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/sps-controllers/{id} [get]
 func (h *SPSControllerHandler) GetSPSController(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	spsController, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "SPS Controller not found",
-			})
+			respondNotFound(c, "SPS Controller not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -161,20 +140,13 @@ func (h *SPSControllerHandler) GetSPSController(c *gin.Context) {
 // @Router /api/v1/facility/sps-controllers [get]
 func (h *SPSControllerHandler) ListSPSControllers(c *gin.Context) {
 	var query dto.PaginationQuery
-	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindQuery(c, &query) {
 		return
 	}
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -219,38 +191,23 @@ func (h *SPSControllerHandler) ListSPSControllers(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/sps-controllers/{id} [put]
 func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.UpdateSPSControllerRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindJSON(c, &req) {
 		return
 	}
 
 	spsController, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "SPS Controller not found",
-			})
+			respondNotFound(c, "SPS Controller not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -298,16 +255,10 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 	}
 	if updateErr != nil {
 		if errors.Is(updateErr, domain.ErrNotFound) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-				Error:   "invalid_reference",
-				Message: "Referenced entity not found or deleted",
-			})
+			respondError(c, http.StatusBadRequest, "invalid_reference", "Referenced entity not found or deleted")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "update_failed",
-			Message: updateErr.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "update_failed", updateErr.Error())
 		return
 	}
 
@@ -339,21 +290,13 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/sps-controllers/{id} [delete]
 func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "deletion_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}
 

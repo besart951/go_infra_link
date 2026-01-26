@@ -31,11 +31,7 @@ func NewControlCabinetHandler(service ControlCabinetService) *ControlCabinetHand
 // @Router /api/v1/facility/control-cabinets [post]
 func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 	var req dto.CreateControlCabinetRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindJSON(c, &req) {
 		return
 	}
 
@@ -46,16 +42,10 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 
 	if err := h.service.Create(controlCabinet); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-				Error:   "invalid_reference",
-				Message: "Building not found or deleted",
-			})
+			respondError(c, http.StatusBadRequest, "invalid_reference", "Building not found or deleted")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "creation_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
@@ -81,29 +71,18 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/control-cabinets/{id} [get]
 func (h *ControlCabinetHandler) GetControlCabinet(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	controlCabinet, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "Control Cabinet not found",
-			})
+			respondNotFound(c, "Control Cabinet not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -131,20 +110,13 @@ func (h *ControlCabinetHandler) GetControlCabinet(c *gin.Context) {
 // @Router /api/v1/facility/control-cabinets [get]
 func (h *ControlCabinetHandler) ListControlCabinets(c *gin.Context) {
 	var query dto.PaginationQuery
-	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindQuery(c, &query) {
 		return
 	}
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -182,38 +154,23 @@ func (h *ControlCabinetHandler) ListControlCabinets(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/control-cabinets/{id} [put]
 func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.UpdateControlCabinetRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindJSON(c, &req) {
 		return
 	}
 
 	controlCabinet, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "Control Cabinet not found",
-			})
+			respondNotFound(c, "Control Cabinet not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -226,16 +183,10 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 
 	if err := h.service.Update(controlCabinet); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-				Error:   "invalid_reference",
-				Message: "Building not found or deleted",
-			})
+			respondError(c, http.StatusBadRequest, "invalid_reference", "Building not found or deleted")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "update_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -260,21 +211,13 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/control-cabinets/{id} [delete]
 func (h *ControlCabinetHandler) DeleteControlCabinet(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "deletion_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}
 

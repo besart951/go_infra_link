@@ -31,11 +31,7 @@ func NewFieldDeviceHandler(service FieldDeviceService) *FieldDeviceHandler {
 // @Router /api/v1/facility/field-devices [post]
 func (h *FieldDeviceHandler) CreateFieldDevice(c *gin.Context) {
 	var req dto.CreateFieldDeviceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindJSON(c, &req) {
 		return
 	}
 
@@ -78,30 +74,18 @@ func (h *FieldDeviceHandler) CreateFieldDevice(c *gin.Context) {
 
 	if err := h.service.CreateWithBacnetObjects(fieldDevice, req.ObjectDataID, bacnetObjects); err != nil {
 		if errors.Is(err, domain.ErrInvalidArgument) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-				Error:   "validation_error",
-				Message: "object_data_id and bacnet_objects are mutually exclusive",
-			})
+			respondError(c, http.StatusBadRequest, "validation_error", "object_data_id and bacnet_objects are mutually exclusive")
 			return
 		}
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-				Error:   "invalid_reference",
-				Message: "Referenced entity not found or deleted",
-			})
+			respondError(c, http.StatusBadRequest, "invalid_reference", "Referenced entity not found or deleted")
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			c.JSON(http.StatusConflict, dto.ErrorResponse{
-				Error:   "conflict",
-				Message: "apparat_nr is already used in this scope",
-			})
+			respondError(c, http.StatusConflict, "conflict", "apparat_nr is already used in this scope")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "creation_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
@@ -137,29 +121,18 @@ func (h *FieldDeviceHandler) CreateFieldDevice(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/field-devices/{id} [get]
 func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	fieldDevice, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "Field Device not found",
-			})
+			respondNotFound(c, "Field Device not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -197,20 +170,13 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 // @Router /api/v1/facility/field-devices [get]
 func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 	var query dto.PaginationQuery
-	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindQuery(c, &query) {
 		return
 	}
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -257,38 +223,23 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/field-devices/{id} [put]
 func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.UpdateFieldDeviceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !bindJSON(c, &req) {
 		return
 	}
 
 	fieldDevice, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "Field Device not found",
-			})
+			respondNotFound(c, "Field Device not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -336,30 +287,18 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 
 	if err := h.service.UpdateWithBacnetObjects(fieldDevice, req.ObjectDataID, bacnetObjects); err != nil {
 		if errors.Is(err, domain.ErrInvalidArgument) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-				Error:   "validation_error",
-				Message: "object_data_id and bacnet_objects are mutually exclusive",
-			})
+			respondError(c, http.StatusBadRequest, "validation_error", "object_data_id and bacnet_objects are mutually exclusive")
 			return
 		}
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-				Error:   "invalid_reference",
-				Message: "Referenced entity not found or deleted",
-			})
+			respondError(c, http.StatusBadRequest, "invalid_reference", "Referenced entity not found or deleted")
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			c.JSON(http.StatusConflict, dto.ErrorResponse{
-				Error:   "conflict",
-				Message: "apparat_nr is already used in this scope",
-			})
+			respondError(c, http.StatusConflict, "conflict", "apparat_nr is already used in this scope")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "update_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -394,21 +333,13 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/field-devices/{id} [delete]
 func (h *FieldDeviceHandler) DeleteFieldDevice(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "deletion_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}
 
@@ -426,29 +357,18 @@ func (h *FieldDeviceHandler) DeleteFieldDevice(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/field-devices/{id}/bacnet-objects [get]
 func (h *FieldDeviceHandler) ListFieldDeviceBacnetObjects(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	objs, err := h.service.ListBacnetObjects(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "Field Device not found",
-			})
+			respondNotFound(c, "Field Device not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -492,15 +412,13 @@ func (h *FieldDeviceHandler) ListFieldDeviceBacnetObjects(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/field-devices/{id}/specification [post]
 func (h *FieldDeviceHandler) CreateFieldDeviceSpecification(c *gin.Context) {
-	fieldDeviceID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_id", Message: "Invalid UUID format"})
+	fieldDeviceID, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.CreateFieldDeviceSpecificationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+	if !bindJSON(c, &req) {
 		return
 	}
 
@@ -520,14 +438,14 @@ func (h *FieldDeviceHandler) CreateFieldDeviceSpecification(c *gin.Context) {
 
 	if err := h.service.CreateSpecification(fieldDeviceID, spec); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found", Message: "Field Device not found"})
+			respondNotFound(c, "Field Device not found")
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			c.JSON(http.StatusConflict, dto.ErrorResponse{Error: "conflict", Message: "Specification already exists for this field device"})
+			respondError(c, http.StatusConflict, "conflict", "Specification already exists for this field device")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "creation_failed", Message: err.Error()})
+		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
@@ -563,15 +481,13 @@ func (h *FieldDeviceHandler) CreateFieldDeviceSpecification(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/field-devices/{id}/specification [put]
 func (h *FieldDeviceHandler) UpdateFieldDeviceSpecification(c *gin.Context) {
-	fieldDeviceID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_id", Message: "Invalid UUID format"})
+	fieldDeviceID, ok := parseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.UpdateFieldDeviceSpecificationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+	if !bindJSON(c, &req) {
 		return
 	}
 
@@ -592,10 +508,10 @@ func (h *FieldDeviceHandler) UpdateFieldDeviceSpecification(c *gin.Context) {
 	spec, err := h.service.UpdateSpecification(fieldDeviceID, patch)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found", Message: "Field Device or specification not found"})
+			respondNotFound(c, "Field Device or specification not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "update_failed", Message: err.Error()})
+		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
