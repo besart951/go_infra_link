@@ -16,10 +16,10 @@ type systemTypeRepo struct {
 
 func NewSystemTypeRepository(db *gorm.DB) domainFacility.SystemTypeRepository {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
-		return query.Where("name ILIKE ?", pattern)
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+		return query.Where("LOWER(name) LIKE ?", pattern)
 	}
-	
+
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.SystemType](db, searchCallback)
 	return &systemTypeRepo{BaseRepository: baseRepo}
 }
@@ -45,13 +45,13 @@ func (r *systemTypeRepo) GetPaginatedList(params domain.PaginationParams) (*doma
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert []*SystemType to []SystemType for the interface
 	items := make([]domainFacility.SystemType, len(result.Items))
 	for i, item := range result.Items {
 		items[i] = *item
 	}
-	
+
 	return &domain.PaginatedList[domainFacility.SystemType]{
 		Items:      items,
 		Total:      result.Total,

@@ -17,8 +17,8 @@ type fieldDeviceRepo struct {
 
 func NewFieldDeviceRepository(db *gorm.DB) domainFacility.FieldDeviceStore {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
-		return query.Where("bmk ILIKE ? OR description ILIKE ?", pattern, pattern)
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+		return query.Where("LOWER(bmk) LIKE ? OR LOWER(description) LIKE ?", pattern, pattern)
 	}
 
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.FieldDevice](db, searchCallback)

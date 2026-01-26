@@ -16,8 +16,8 @@ type controlCabinetRepo struct {
 
 func NewControlCabinetRepository(db *gorm.DB) domainFacility.ControlCabinetRepository {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
-		return query.Where("control_cabinet_nr ILIKE ?", pattern)
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+		return query.Where("LOWER(control_cabinet_nr) LIKE ?", pattern)
 	}
 
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.ControlCabinet](db, searchCallback)

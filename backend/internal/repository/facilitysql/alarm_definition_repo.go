@@ -16,8 +16,8 @@ type alarmDefinitionRepo struct {
 
 func NewAlarmDefinitionRepository(db *gorm.DB) domainFacility.AlarmDefinitionRepository {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
-		return query.Where("name ILIKE ?", pattern)
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+		return query.Where("LOWER(name) LIKE ?", pattern)
 	}
 
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.AlarmDefinition](db, searchCallback)

@@ -17,13 +17,13 @@ type buildingRepo struct {
 
 func NewBuildingRepository(db *gorm.DB) domainFacility.BuildingRepository {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
 		if num, err := strconv.Atoi(strings.TrimSpace(search)); err == nil {
-			return query.Where("iws_code ILIKE ? OR building_group = ?", pattern, num)
+			return query.Where("LOWER(iws_code) LIKE ? OR building_group = ?", pattern, num)
 		}
-		return query.Where("iws_code ILIKE ?", pattern)
+		return query.Where("LOWER(iws_code) LIKE ?", pattern)
 	}
-	
+
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.Building](db, searchCallback)
 	return &buildingRepo{BaseRepository: baseRepo}
 }
@@ -49,13 +49,13 @@ func (r *buildingRepo) GetPaginatedList(params domain.PaginationParams) (*domain
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert []*Building to []Building for the interface
 	items := make([]domainFacility.Building, len(result.Items))
 	for i, item := range result.Items {
 		items[i] = *item
 	}
-	
+
 	return &domain.PaginatedList[domainFacility.Building]{
 		Items:      items,
 		Total:      result.Total,

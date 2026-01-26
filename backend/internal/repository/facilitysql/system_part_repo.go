@@ -16,10 +16,10 @@ type systemPartRepo struct {
 
 func NewSystemPartRepository(db *gorm.DB) domainFacility.SystemPartRepository {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
-		return query.Where("short_name ILIKE ? OR name ILIKE ?", pattern, pattern)
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+		return query.Where("LOWER(short_name) LIKE ? OR LOWER(name) LIKE ?", pattern, pattern)
 	}
-	
+
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.SystemPart](db, searchCallback)
 	return &systemPartRepo{BaseRepository: baseRepo}
 }
@@ -45,13 +45,13 @@ func (r *systemPartRepo) GetPaginatedList(params domain.PaginationParams) (*doma
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert []*SystemPart to []SystemPart for the interface
 	items := make([]domainFacility.SystemPart, len(result.Items))
 	for i, item := range result.Items {
 		items[i] = *item
 	}
-	
+
 	return &domain.PaginatedList[domainFacility.SystemPart]{
 		Items:      items,
 		Total:      result.Total,

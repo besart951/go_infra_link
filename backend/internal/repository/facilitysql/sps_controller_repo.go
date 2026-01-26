@@ -16,8 +16,8 @@ type spsControllerRepo struct {
 
 func NewSPSControllerRepository(db *gorm.DB) domainFacility.SPSControllerRepository {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
-		return query.Where("device_name ILIKE ? OR ip_address ILIKE ?", pattern, pattern)
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+		return query.Where("LOWER(device_name) LIKE ? OR LOWER(ip_address) LIKE ?", pattern, pattern)
 	}
 
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.SPSController](db, searchCallback)

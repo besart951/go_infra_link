@@ -18,8 +18,8 @@ type specificationRepo struct {
 
 func NewSpecificationRepository(db *gorm.DB) domainFacility.SpecificationStore {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
-		return query.Where("specification_supplier ILIKE ? OR specification_brand ILIKE ? OR specification_type ILIKE ?", pattern, pattern, pattern)
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+		return query.Where("LOWER(specification_supplier) LIKE ? OR LOWER(specification_brand) LIKE ? OR LOWER(specification_type) LIKE ?", pattern, pattern, pattern)
 	}
 
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.Specification](db, searchCallback)

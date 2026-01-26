@@ -86,7 +86,7 @@
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
-				{#if state.loading}
+				{#if state.loading && state.items.length === 0}
 					{#each Array(5) as _}
 						<Table.Row>
 							{#each columns as _}
@@ -109,7 +109,7 @@
 					</Table.Row>
 				{:else}
 					{#each state.items as item}
-						<Table.Row>
+						<Table.Row class={state.loading ? "opacity-60" : undefined}>
 							{@render rowSnippet(item)}
 						</Table.Row>
 					{/each}

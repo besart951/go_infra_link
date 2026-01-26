@@ -18,8 +18,8 @@ type teamRepo struct {
 
 func NewTeamRepository(db *gorm.DB) domainTeam.TeamRepository {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
-		return query.Where("name ILIKE ? OR description ILIKE ?", pattern, pattern)
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+		return query.Where("LOWER(name) LIKE ? OR LOWER(description) LIKE ?", pattern, pattern)
 	}
 
 	baseRepo := gormbase.NewBaseRepository[*domainTeam.Team](db, searchCallback)

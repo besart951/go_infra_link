@@ -18,10 +18,10 @@ type spsControllerSystemTypeRepo struct {
 
 func NewSPSControllerSystemTypeRepository(db *gorm.DB) domainFacility.SPSControllerSystemTypeStore {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
 		return query.Joins("LEFT JOIN sps_controllers ON sps_controllers.id = sps_controller_system_types.sps_controller_id").
 			Joins("LEFT JOIN system_types ON system_types.id = sps_controller_system_types.system_type_id").
-			Where("sps_controller_system_types.document_name ILIKE ? OR sps_controllers.device_name ILIKE ? OR system_types.name ILIKE ?", pattern, pattern, pattern)
+			Where("LOWER(sps_controller_system_types.document_name) LIKE ? OR LOWER(sps_controllers.device_name) LIKE ? OR LOWER(system_types.name) LIKE ?", pattern, pattern, pattern)
 	}
 
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.SPSControllerSystemType](db, searchCallback)
@@ -65,10 +65,10 @@ func (r *spsControllerSystemTypeRepo) GetPaginatedList(params domain.PaginationP
 		Where("sps_controller_system_types.deleted_at IS NULL")
 
 	if strings.TrimSpace(params.Search) != "" {
-		pattern := "%" + strings.TrimSpace(params.Search) + "%"
+		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
 		query = query.Joins("LEFT JOIN sps_controllers ON sps_controllers.id = sps_controller_system_types.sps_controller_id").
 			Joins("LEFT JOIN system_types ON system_types.id = sps_controller_system_types.system_type_id").
-			Where("sps_controller_system_types.document_name ILIKE ? OR sps_controllers.device_name ILIKE ? OR system_types.name ILIKE ?", pattern, pattern, pattern)
+			Where("LOWER(sps_controller_system_types.document_name) LIKE ? OR LOWER(sps_controllers.device_name) LIKE ? OR LOWER(system_types.name) LIKE ?", pattern, pattern, pattern)
 	}
 
 	var total int64

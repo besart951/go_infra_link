@@ -16,10 +16,10 @@ type apparatRepo struct {
 
 func NewApparatRepository(db *gorm.DB) domainFacility.ApparatRepository {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
-		return query.Where("short_name ILIKE ? OR name ILIKE ?", pattern, pattern)
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+		return query.Where("LOWER(short_name) LIKE ? OR LOWER(name) LIKE ?", pattern, pattern)
 	}
-	
+
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.Apparat](db, searchCallback)
 	return &apparatRepo{BaseRepository: baseRepo}
 }
@@ -45,13 +45,13 @@ func (r *apparatRepo) GetPaginatedList(params domain.PaginationParams) (*domain.
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert []*Apparat to []Apparat for the interface
 	items := make([]domainFacility.Apparat, len(result.Items))
 	for i, item := range result.Items {
 		items[i] = *item
 	}
-	
+
 	return &domain.PaginatedList[domainFacility.Apparat]{
 		Items:      items,
 		Total:      result.Total,

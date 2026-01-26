@@ -39,8 +39,8 @@ func (r *loginAttemptRepo) GetPaginatedList(params domain.PaginationParams) (*do
 
 	query := r.db.Model(&domainAuth.LoginAttempt{})
 	if strings.TrimSpace(params.Search) != "" {
-		pattern := "%" + strings.TrimSpace(params.Search) + "%"
-		query = query.Where("email ILIKE ? OR ip ILIKE ? OR user_agent ILIKE ? OR failure_reason ILIKE ?", pattern, pattern, pattern, pattern)
+		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
+		query = query.Where("LOWER(email) LIKE ? OR LOWER(ip) LIKE ? OR LOWER(user_agent) LIKE ? OR LOWER(failure_reason) LIKE ?", pattern, pattern, pattern, pattern)
 	}
 
 	var total int64

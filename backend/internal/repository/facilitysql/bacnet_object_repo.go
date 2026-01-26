@@ -18,8 +18,8 @@ type bacnetObjectRepo struct {
 
 func NewBacnetObjectRepository(db *gorm.DB) domainFacility.BacnetObjectStore {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
-		return query.Where("text_fix ILIKE ?", pattern)
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+		return query.Where("LOWER(text_fix) LIKE ?", pattern)
 	}
 
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.BacnetObject](db, searchCallback)

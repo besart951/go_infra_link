@@ -2,6 +2,7 @@ package facilitysql
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -21,7 +22,8 @@ func NewStateTextRepository(db *gorm.DB) domainFacility.StateTextRepository {
 			return query.Where("ref_number = ?", refNum)
 		}
 		// Search in text fields if not a number
-		return query.Where("state_text1 ILIKE ?", "%"+search+"%")
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+		return query.Where("LOWER(state_text1) LIKE ?", pattern)
 	}
 
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.StateText](db, searchCallback)

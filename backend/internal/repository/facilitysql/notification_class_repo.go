@@ -16,8 +16,8 @@ type notificationClassRepo struct {
 
 func NewNotificationClassRepository(db *gorm.DB) domainFacility.NotificationClassRepository {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
-		return query.Where("object_description ILIKE ? OR event_category ILIKE ? OR meaning ILIKE ?",
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+		return query.Where("LOWER(object_description) LIKE ? OR LOWER(event_category) LIKE ? OR LOWER(meaning) LIKE ?",
 			pattern, pattern, pattern)
 	}
 

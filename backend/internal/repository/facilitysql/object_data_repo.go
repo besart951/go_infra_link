@@ -17,8 +17,8 @@ type objectDataRepo struct {
 
 func NewObjectDataRepository(db *gorm.DB) domainFacility.ObjectDataStore {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.TrimSpace(search) + "%"
-		return query.Where("description ILIKE ?", pattern)
+		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+		return query.Where("LOWER(description) LIKE ?", pattern)
 	}
 
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.ObjectData](db, searchCallback)
@@ -88,8 +88,8 @@ func (r *objectDataRepo) GetPaginatedListForProject(projectID uuid.UUID, params 
 		Where("project_id = ?", projectID)
 
 	if strings.TrimSpace(params.Search) != "" {
-		pattern := "%" + strings.TrimSpace(params.Search) + "%"
-		query = query.Where("description ILIKE ?", pattern)
+		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
+		query = query.Where("LOWER(description) LIKE ?", pattern)
 	}
 
 	var total int64
