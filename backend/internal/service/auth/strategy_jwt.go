@@ -37,27 +37,27 @@ func (s *jwtAuthStrategy) CreateToken(userID uuid.UUID, expiresAt time.Time) (st
 
 // ValidateToken validates and parses a JWT token, returning the user ID
 func (s *jwtAuthStrategy) ValidateToken(tokenString string) (uuid.UUID, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(t *jwt.Token) (interface{}, error) {
-		return s.secret, nil
-	})
+	claims, err := s.parseAndValidateToken(tokenString)
 	if err != nil {
 		return uuid.Nil, err
 	}
 
-	if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok && token.Valid {
-		userID, err := uuid.Parse(claims.Subject)
-		if err != nil {
-			return uuid.Nil, jwt.ErrTokenInvalidClaims
-		}
-		return userID, nil
+	userID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		return uuid.Nil, jwt.ErrTokenInvalidClaims
 	}
-
-	return uuid.Nil, jwt.ErrTokenInvalidClaims
+	return userID, nil
 }
 
 // ParseToken validates and returns the full JWT claims
 // This satisfies the ParseToken method added to AuthStrategy for better encapsulation
 func (s *jwtAuthStrategy) ParseToken(tokenString string) (interface{}, error) {
+	return s.parseAndValidateToken(tokenString)
+}
+
+// parseAndValidateToken is a helper that parses and validates a JWT token
+// This eliminates duplication between ValidateToken and ParseToken methods
+func (s *jwtAuthStrategy) parseAndValidateToken(tokenString string) (*jwt.RegisteredClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(t *jwt.Token) (interface{}, error) {
 		return s.secret, nil
 	})
