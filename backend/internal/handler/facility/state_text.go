@@ -17,6 +17,15 @@ func NewStateTextHandler(service StateTextService) *StateTextHandler {
 	return &StateTextHandler{service: service}
 }
 
+// GetStateText godoc
+// @Summary Get a state text by ID
+// @Tags facility-state-texts
+// @Produce json
+// @Param id path string true "State Text ID"
+// @Success 200 {object} dto.StateTextResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/state-texts/{id} [get]
 func (h *StateTextHandler) GetStateText(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
@@ -60,6 +69,16 @@ func (h *StateTextHandler) GetStateText(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// ListStateTexts godoc
+// @Summary List state texts with pagination
+// @Tags facility-state-texts
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Param search query string false "Search query"
+// @Success 200 {object} dto.StateTextListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/state-texts [get]
 func (h *StateTextHandler) ListStateTexts(c *gin.Context) {
 	var query dto.PaginationQuery

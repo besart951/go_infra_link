@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	docs "github.com/besart951/go_infra_link/backend/docs"
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -19,6 +20,8 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/wire"
 	applogger "github.com/besart951/go_infra_link/backend/pkg/logger"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func Run() error {
@@ -89,6 +92,8 @@ func Run() error {
 	}
 
 	router := gin.Default()
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Register all routes
 	handler.RegisterRoutes(router, handlers, services.JWT, services.RBAC, services.User)

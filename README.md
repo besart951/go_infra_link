@@ -41,6 +41,25 @@ make test
 make clean
 ```
 
+## Swagger
+
+### Generate Swagger docs
+
+From the backend folder:
+
+```bash
+cd backend
+swag init -g ./cmd/app/main.go -o ./docs
+```
+
+### View Swagger UI
+
+Start the backend and open:
+
+```
+http://localhost:8080/swagger/index.html
+```
+
 ## Architecture
 
 This project follows **Clean/Hexagonal Architecture** principles:

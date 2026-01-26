@@ -19,6 +19,16 @@ func NewTeamHandler(service TeamService) *TeamHandler {
 	return &TeamHandler{service: service}
 }
 
+// CreateTeam godoc
+// @Summary Create a new team
+// @Tags teams
+// @Accept json
+// @Produce json
+// @Param team body dto.CreateTeamRequest true "Team data"
+// @Success 201 {object} dto.TeamResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/teams [post]
 func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	var req dto.CreateTeamRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -35,6 +45,17 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.TeamResponse{ID: t.ID, Name: t.Name, Description: t.Description, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt})
 }
 
+// ListTeams godoc
+// @Summary List teams with pagination
+// @Tags teams
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Param search query string false "Search query"
+// @Success 200 {object} dto.TeamListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/teams [get]
 func (h *TeamHandler) ListTeams(c *gin.Context) {
 	var query dto.PaginationQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
@@ -56,6 +77,16 @@ func (h *TeamHandler) ListTeams(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.TeamListResponse{Items: items, Total: res.Total, Page: res.Page, TotalPages: res.TotalPages})
 }
 
+// GetTeam godoc
+// @Summary Get a team by ID
+// @Tags teams
+// @Produce json
+// @Param id path string true "Team ID"
+// @Success 200 {object} dto.TeamResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/teams/{id} [get]
 func (h *TeamHandler) GetTeam(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -76,6 +107,18 @@ func (h *TeamHandler) GetTeam(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.TeamResponse{ID: t.ID, Name: t.Name, Description: t.Description, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt})
 }
 
+// UpdateTeam godoc
+// @Summary Update a team
+// @Tags teams
+// @Accept json
+// @Produce json
+// @Param id path string true "Team ID"
+// @Param team body dto.UpdateTeamRequest true "Team data"
+// @Success 200 {object} dto.TeamResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/teams/{id} [put]
 func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -114,6 +157,14 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.TeamResponse{ID: t.ID, Name: t.Name, Description: t.Description, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt})
 }
 
+// DeleteTeam godoc
+// @Summary Delete a team
+// @Tags teams
+// @Param id path string true "Team ID"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/teams/{id} [delete]
 func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -129,6 +180,16 @@ func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// AddMember godoc
+// @Summary Add a member to a team
+// @Tags teams
+// @Accept json
+// @Param id path string true "Team ID"
+// @Param payload body dto.AddTeamMemberRequest true "Member data"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/teams/{id}/members [post]
 func (h *TeamHandler) AddMember(c *gin.Context) {
 	teamID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -150,6 +211,15 @@ func (h *TeamHandler) AddMember(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// RemoveMember godoc
+// @Summary Remove a member from a team
+// @Tags teams
+// @Param id path string true "Team ID"
+// @Param userId path string true "User ID"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/teams/{id}/members/{userId} [delete]
 func (h *TeamHandler) RemoveMember(c *gin.Context) {
 	teamID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -171,6 +241,17 @@ func (h *TeamHandler) RemoveMember(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// ListMembers godoc
+// @Summary List team members
+// @Tags teams
+// @Produce json
+// @Param id path string true "Team ID"
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} dto.TeamMemberListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/teams/{id}/members [get]
 func (h *TeamHandler) ListMembers(c *gin.Context) {
 	teamID, err := uuid.Parse(c.Param("id"))
 	if err != nil {

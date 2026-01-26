@@ -1,0 +1,3951 @@
+definitions:
+  github_com_besart951_go_infra_link_backend_internal_domain_project.ProjectStatus:
+    enum:
+    - planned
+    - ongoing
+    - completed
+    type: string
+    x-enum-varnames:
+    - StatusPlanned
+    - StatusOngoing
+    - StatusCompleted
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.AddTeamMemberRequest:
+    properties:
+      role:
+        enum:
+        - member
+        - manager
+        - owner
+        type: string
+      user_id:
+        type: string
+    required:
+    - role
+    - user_id
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.AdminLockUserRequest:
+    properties:
+      until:
+        type: string
+    required:
+    - until
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.AdminPasswordResetResponse:
+    properties:
+      expires_at:
+        type: string
+      reset_token:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.AdminSetUserRoleRequest:
+    properties:
+      role:
+        enum:
+        - user
+        - admin
+        - superadmin
+        type: string
+    required:
+    - role
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionResponse:
+    properties:
+      alarm_note:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      short_name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.AuthResponse:
+    properties:
+      access_token_expires_at:
+        type: string
+      csrf_token:
+        type: string
+      refresh_token_expires_at:
+        type: string
+      user:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AuthUserResponse'
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.AuthUserResponse:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      last_name:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectInput:
+    properties:
+      alarm_definition_id:
+        type: string
+      description:
+        type: string
+      gms_visible:
+        type: boolean
+      hardware_quantity:
+        maximum: 255
+        minimum: 1
+        type: integer
+      hardware_type:
+        type: string
+      notification_class_id:
+        type: string
+      optional:
+        type: boolean
+      software_number:
+        maximum: 65535
+        minimum: 0
+        type: integer
+      software_reference_id:
+        type: string
+      software_type:
+        type: string
+      state_text_id:
+        type: string
+      text_fix:
+        maxLength: 250
+        type: string
+      text_individual:
+        maxLength: 250
+        type: string
+    required:
+    - hardware_quantity
+    - hardware_type
+    - software_number
+    - software_type
+    - text_fix
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse:
+    properties:
+      alarm_definition_id:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      field_device_id:
+        type: string
+      gms_visible:
+        type: boolean
+      hardware_quantity:
+        type: integer
+      hardware_type:
+        type: string
+      id:
+        type: string
+      notification_class_id:
+        type: string
+      optional:
+        type: boolean
+      software_number:
+        type: integer
+      software_reference_id:
+        type: string
+      software_type:
+        type: string
+      state_text_id:
+        type: string
+      text_fix:
+        type: string
+      text_individual:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingResponse:
+    properties:
+      building_group:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: string
+      iws_code:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetResponse:
+    properties:
+      building_id:
+        type: string
+      control_cabinet_nr:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateApparatRequest:
+    properties:
+      description:
+        maxLength: 250
+        type: string
+      name:
+        maxLength: 250
+        type: string
+      short_name:
+        maxLength: 255
+        type: string
+    required:
+    - name
+    - short_name
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateBacnetObjectRequest:
+    properties:
+      alarm_definition_id:
+        type: string
+      description:
+        type: string
+      field_device_id:
+        type: string
+      gms_visible:
+        type: boolean
+      hardware_quantity:
+        maximum: 255
+        minimum: 1
+        type: integer
+      hardware_type:
+        type: string
+      notification_class_id:
+        type: string
+      object_data_id:
+        type: string
+      optional:
+        type: boolean
+      software_number:
+        maximum: 65535
+        minimum: 0
+        type: integer
+      software_reference_id:
+        type: string
+      software_type:
+        type: string
+      state_text_id:
+        type: string
+      text_fix:
+        maxLength: 250
+        type: string
+      text_individual:
+        maxLength: 250
+        type: string
+    required:
+    - hardware_quantity
+    - hardware_type
+    - software_number
+    - software_type
+    - text_fix
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateBuildingRequest:
+    properties:
+      building_group:
+        type: integer
+      iws_code:
+        type: string
+    required:
+    - building_group
+    - iws_code
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateControlCabinetRequest:
+    properties:
+      building_id:
+        type: string
+      control_cabinet_nr:
+        maxLength: 11
+        type: string
+    required:
+    - building_id
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateFieldDeviceRequest:
+    properties:
+      apparat_id:
+        type: string
+      apparat_nr:
+        maximum: 99
+        minimum: 1
+        type: integer
+      bacnet_objects:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectInput'
+        type: array
+      bmk:
+        maxLength: 10
+        type: string
+      description:
+        maxLength: 250
+        type: string
+      object_data_id:
+        type: string
+      sps_controller_system_type_id:
+        type: string
+      system_part_id:
+        type: string
+    required:
+    - apparat_id
+    - apparat_nr
+    - sps_controller_system_type_id
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateFieldDeviceSpecificationRequest:
+    properties:
+      additional_info_motor_valve:
+        maxLength: 250
+        type: string
+      additional_info_size:
+        type: integer
+      additional_information_installation_location:
+        maxLength: 250
+        type: string
+      electrical_connection_acdc:
+        type: string
+      electrical_connection_amperage:
+        type: number
+      electrical_connection_ph:
+        type: integer
+      electrical_connection_power:
+        type: number
+      electrical_connection_rotation:
+        type: integer
+      specification_brand:
+        maxLength: 250
+        type: string
+      specification_supplier:
+        maxLength: 250
+        type: string
+      specification_type:
+        maxLength: 250
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectRequest:
+    properties:
+      creator_id:
+        type: string
+      description:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      phase_id:
+        type: string
+      start_date:
+        type: string
+      status:
+        enum:
+        - planned
+        - ongoing
+        - completed
+        type: string
+    required:
+    - creator_id
+    - name
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSPSControllerRequest:
+    properties:
+      control_cabinet_id:
+        type: string
+      device_description:
+        maxLength: 250
+        type: string
+      device_location:
+        maxLength: 250
+        type: string
+      device_name:
+        maxLength: 100
+        type: string
+      ga_device:
+        maxLength: 10
+        type: string
+      gateway:
+        maxLength: 50
+        type: string
+      ip_address:
+        maxLength: 50
+        type: string
+      subnet:
+        maxLength: 50
+        type: string
+      system_types:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeInput'
+        type: array
+      vlan:
+        maxLength: 50
+        type: string
+    required:
+    - control_cabinet_id
+    - device_name
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSpecificationRequest:
+    properties:
+      additional_info_motor_valve:
+        maxLength: 250
+        type: string
+      additional_info_size:
+        type: integer
+      additional_information_installation_location:
+        maxLength: 250
+        type: string
+      electrical_connection_acdc:
+        type: string
+      electrical_connection_amperage:
+        type: number
+      electrical_connection_ph:
+        type: integer
+      electrical_connection_power:
+        type: number
+      electrical_connection_rotation:
+        type: integer
+      field_device_id:
+        type: string
+      specification_brand:
+        maxLength: 250
+        type: string
+      specification_supplier:
+        maxLength: 250
+        type: string
+      specification_type:
+        maxLength: 250
+        type: string
+    required:
+    - field_device_id
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSystemPartRequest:
+    properties:
+      description:
+        maxLength: 250
+        type: string
+      name:
+        maxLength: 250
+        type: string
+      short_name:
+        maxLength: 10
+        type: string
+    required:
+    - name
+    - short_name
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSystemTypeRequest:
+    properties:
+      name:
+        maxLength: 150
+        type: string
+      number_max:
+        type: integer
+      number_min:
+        type: integer
+    required:
+    - name
+    - number_max
+    - number_min
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateTeamRequest:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 150
+        minLength: 1
+        type: string
+    required:
+    - name
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateUserRequest:
+    properties:
+      created_by_id:
+        type: string
+      email:
+        type: string
+      first_name:
+        maxLength: 100
+        minLength: 1
+        type: string
+      is_active:
+        type: boolean
+      last_name:
+        maxLength: 100
+        minLength: 1
+        type: string
+      password:
+        minLength: 8
+        type: string
+      role:
+        enum:
+        - user
+        - admin
+        - superadmin
+        type: string
+    required:
+    - email
+    - first_name
+    - last_name
+    - password
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse:
+    properties:
+      error:
+        type: string
+      fields:
+        additionalProperties:
+          type: string
+        type: object
+      message:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceResponse:
+    properties:
+      apparat_id:
+        type: string
+      apparat_nr:
+        type: integer
+      bmk:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      specification_id:
+        type: string
+      sps_controller_system_type_id:
+        type: string
+      system_part_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.LoginAttemptListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.LoginAttemptResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.LoginAttemptResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      failure_reason:
+        type: string
+      id:
+        type: string
+      ip:
+        type: string
+      success:
+        type: boolean
+      user_agent:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassResponse:
+    properties:
+      ack_required_error:
+        type: boolean
+      ack_required_normal:
+        type: boolean
+      ack_required_not_normal:
+        type: boolean
+      created_at:
+        type: string
+      event_category:
+        type: string
+      id:
+        type: string
+      internal_description:
+        type: string
+      meaning:
+        type: string
+      nc:
+        type: integer
+      norm_error:
+        type: integer
+      norm_normal:
+        type: integer
+      norm_not_normal:
+        type: integer
+      object_description:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      project_id:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.PasswordResetConfirmRequest:
+    properties:
+      new_password:
+        minLength: 8
+        type: string
+      token:
+        type: string
+    required:
+    - new_password
+    - token
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectResponse:
+    properties:
+      created_at:
+        type: string
+      creator_id:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      phase_id:
+        type: string
+      start_date:
+        type: string
+      status:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_project.ProjectStatus'
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse:
+    properties:
+      control_cabinet_id:
+        type: string
+      created_at:
+        type: string
+      device_description:
+        type: string
+      device_location:
+        type: string
+      device_name:
+        type: string
+      ga_device:
+        type: string
+      gateway:
+        type: string
+      id:
+        type: string
+      ip_address:
+        type: string
+      subnet:
+        type: string
+      updated_at:
+        type: string
+      vlan:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeInput:
+    properties:
+      document_name:
+        maxLength: 250
+        type: string
+      number:
+        type: integer
+      system_type_id:
+        type: string
+    required:
+    - system_type_id
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeResponse:
+    properties:
+      created_at:
+        type: string
+      document_name:
+        type: string
+      id:
+        type: string
+      number:
+        type: integer
+      sps_controller_id:
+        type: string
+      sps_controller_name:
+        description: Pre-filled names for display in combobox
+        type: string
+      system_type_id:
+        type: string
+      system_type_name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse:
+    properties:
+      additional_info_motor_valve:
+        type: string
+      additional_info_size:
+        type: integer
+      additional_information_installation_location:
+        type: string
+      created_at:
+        type: string
+      electrical_connection_acdc:
+        type: string
+      electrical_connection_amperage:
+        type: number
+      electrical_connection_ph:
+        type: integer
+      electrical_connection_power:
+        type: number
+      electrical_connection_rotation:
+        type: integer
+      field_device_id:
+        type: string
+      id:
+        type: string
+      specification_brand:
+        type: string
+      specification_supplier:
+        type: string
+      specification_type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      ref_number:
+        type: integer
+      state_text1:
+        type: string
+      state_text2:
+        description: |-
+          Include only first few for lightness or all? User just wants search.
+          But detailed response usually contains all.
+        type: string
+      state_text3:
+        type: string
+      state_text4:
+        type: string
+      state_text5:
+        type: string
+      state_text6:
+        type: string
+      state_text7:
+        type: string
+      state_text8:
+        type: string
+      state_text9:
+        type: string
+      state_text10:
+        type: string
+      state_text11:
+        type: string
+      state_text12:
+        type: string
+      state_text13:
+        type: string
+      state_text14:
+        type: string
+      state_text15:
+        type: string
+      state_text16:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      short_name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      number_max:
+        type: integer
+      number_min:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamMemberListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamMemberResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamMemberResponse:
+    properties:
+      joined_at:
+        type: string
+      role:
+        type: string
+      team_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateApparatRequest:
+    properties:
+      description:
+        maxLength: 250
+        type: string
+      name:
+        maxLength: 250
+        type: string
+      short_name:
+        maxLength: 255
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateBacnetObjectRequest:
+    properties:
+      alarm_definition_id:
+        type: string
+      description:
+        type: string
+      field_device_id:
+        type: string
+      gms_visible:
+        type: boolean
+      hardware_quantity:
+        maximum: 255
+        minimum: 1
+        type: integer
+      hardware_type:
+        type: string
+      notification_class_id:
+        type: string
+      object_data_id:
+        type: string
+      optional:
+        type: boolean
+      software_number:
+        maximum: 65535
+        minimum: 0
+        type: integer
+      software_reference_id:
+        type: string
+      software_type:
+        type: string
+      state_text_id:
+        type: string
+      text_fix:
+        maxLength: 250
+        type: string
+      text_individual:
+        maxLength: 250
+        type: string
+    required:
+    - hardware_quantity
+    - hardware_type
+    - software_number
+    - software_type
+    - text_fix
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateBuildingRequest:
+    properties:
+      building_group:
+        type: integer
+      iws_code:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateControlCabinetRequest:
+    properties:
+      building_id:
+        type: string
+      control_cabinet_nr:
+        maxLength: 11
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateFieldDeviceRequest:
+    properties:
+      apparat_id:
+        type: string
+      apparat_nr:
+        maximum: 99
+        minimum: 1
+        type: integer
+      bacnet_objects:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectInput'
+        type: array
+      bmk:
+        maxLength: 10
+        type: string
+      description:
+        maxLength: 250
+        type: string
+      object_data_id:
+        type: string
+      sps_controller_system_type_id:
+        type: string
+      system_part_id:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateFieldDeviceSpecificationRequest:
+    properties:
+      additional_info_motor_valve:
+        maxLength: 250
+        type: string
+      additional_info_size:
+        type: integer
+      additional_information_installation_location:
+        maxLength: 250
+        type: string
+      electrical_connection_acdc:
+        type: string
+      electrical_connection_amperage:
+        type: number
+      electrical_connection_ph:
+        type: integer
+      electrical_connection_power:
+        type: number
+      electrical_connection_rotation:
+        type: integer
+      specification_brand:
+        maxLength: 250
+        type: string
+      specification_supplier:
+        maxLength: 250
+        type: string
+      specification_type:
+        maxLength: 250
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateProjectRequest:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      phase_id:
+        type: string
+      start_date:
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_project.ProjectStatus'
+        enum:
+        - planned
+        - ongoing
+        - completed
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSPSControllerRequest:
+    properties:
+      control_cabinet_id:
+        type: string
+      device_description:
+        maxLength: 250
+        type: string
+      device_location:
+        maxLength: 250
+        type: string
+      device_name:
+        maxLength: 100
+        type: string
+      ga_device:
+        maxLength: 10
+        type: string
+      gateway:
+        maxLength: 50
+        type: string
+      ip_address:
+        maxLength: 50
+        type: string
+      subnet:
+        maxLength: 50
+        type: string
+      system_types:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeInput'
+        type: array
+      vlan:
+        maxLength: 50
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSpecificationRequest:
+    properties:
+      additional_info_motor_valve:
+        maxLength: 250
+        type: string
+      additional_info_size:
+        type: integer
+      additional_information_installation_location:
+        maxLength: 250
+        type: string
+      electrical_connection_acdc:
+        type: string
+      electrical_connection_amperage:
+        type: number
+      electrical_connection_ph:
+        type: integer
+      electrical_connection_power:
+        type: number
+      electrical_connection_rotation:
+        type: integer
+      specification_brand:
+        maxLength: 250
+        type: string
+      specification_supplier:
+        maxLength: 250
+        type: string
+      specification_type:
+        maxLength: 250
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSystemPartRequest:
+    properties:
+      description:
+        maxLength: 250
+        type: string
+      name:
+        maxLength: 250
+        type: string
+      short_name:
+        maxLength: 10
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSystemTypeRequest:
+    properties:
+      name:
+        maxLength: 150
+        type: string
+      number_max:
+        type: integer
+      number_min:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateTeamRequest:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 150
+        minLength: 1
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateUserRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        maxLength: 100
+        minLength: 1
+        type: string
+      is_active:
+        type: boolean
+      last_name:
+        maxLength: 100
+        minLength: 1
+        type: string
+      password:
+        minLength: 8
+        type: string
+      role:
+        enum:
+        - user
+        - admin
+        - superadmin
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UserListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UserResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto.UserResponse:
+    properties:
+      created_at:
+        type: string
+      disabled_at:
+        type: string
+      email:
+        type: string
+      failed_login_attempts:
+        type: integer
+      first_name:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      last_login_at:
+        type: string
+      last_name:
+        type: string
+      locked_until:
+        type: string
+      role:
+        type: string
+      updated_at:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /api/v1/admin/login-attempts:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.LoginAttemptListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List login attempts
+      tags:
+      - admin
+  /api/v1/admin/users/{id}/disable:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Disable a user
+      tags:
+      - admin
+  /api/v1/admin/users/{id}/enable:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Enable a user
+      tags:
+      - admin
+  /api/v1/admin/users/{id}/lock:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lock details
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AdminLockUserRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Lock a user until a given time
+      tags:
+      - admin
+  /api/v1/admin/users/{id}/password-reset:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AdminPasswordResetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create a password reset token for a user
+      tags:
+      - admin
+  /api/v1/admin/users/{id}/role:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AdminSetUserRoleRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Set a user's role
+      tags:
+      - admin
+  /api/v1/admin/users/{id}/unlock:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Unlock a user
+      tags:
+      - admin
+  /api/v1/auth/dev-login:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AuthResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Dev login (no credentials)
+      tags:
+      - auth
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login data
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Login
+      tags:
+      - auth
+  /api/v1/auth/logout:
+    post:
+      responses:
+        "204":
+          description: No Content
+      summary: Logout
+      tags:
+      - auth
+  /api/v1/auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AuthUserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get current user
+      tags:
+      - auth
+  /api/v1/auth/password-reset/confirm:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Password reset confirmation
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PasswordResetConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Confirm password reset
+      tags:
+      - auth
+  /api/v1/auth/refresh:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AuthResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - auth
+  /api/v1/facility/alarm-definitions:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List alarm definitions with pagination
+      tags:
+      - facility-alarm-definitions
+  /api/v1/facility/alarm-definitions/{id}:
+    get:
+      parameters:
+      - description: Alarm Definition ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get an alarm definition by ID
+      tags:
+      - facility-alarm-definitions
+  /api/v1/facility/apparats:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List apparats with pagination
+      tags:
+      - facility-apparats
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Apparat data
+        in: body
+        name: apparat
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateApparatRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create a new apparat
+      tags:
+      - facility-apparats
+  /api/v1/facility/apparats/{id}:
+    delete:
+      parameters:
+      - description: Apparat ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Delete an apparat
+      tags:
+      - facility-apparats
+    get:
+      parameters:
+      - description: Apparat ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get an apparat by ID
+      tags:
+      - facility-apparats
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Apparat ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Apparat data
+        in: body
+        name: apparat
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateApparatRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Update an apparat
+      tags:
+      - facility-apparats
+  /api/v1/facility/bacnet-objects:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Bacnet Object data
+        in: body
+        name: bacnet_object
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateBacnetObjectRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create a bacnet object (for field device or object data)
+      tags:
+      - facility-bacnet-objects
+  /api/v1/facility/bacnet-objects/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Bacnet Object ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Bacnet Object data
+        in: body
+        name: bacnet_object
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateBacnetObjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Update a bacnet object
+      tags:
+      - facility-bacnet-objects
+  /api/v1/facility/buildings:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List buildings with pagination
+      tags:
+      - facility-buildings
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Building data
+        in: body
+        name: building
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateBuildingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create a new building
+      tags:
+      - facility-buildings
+  /api/v1/facility/buildings/{id}:
+    delete:
+      parameters:
+      - description: Building ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Delete a building
+      tags:
+      - facility-buildings
+    get:
+      parameters:
+      - description: Building ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get a building by ID
+      tags:
+      - facility-buildings
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Building ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Building data
+        in: body
+        name: building
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateBuildingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Update a building
+      tags:
+      - facility-buildings
+  /api/v1/facility/control-cabinets:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List control cabinets with pagination
+      tags:
+      - facility-control-cabinets
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Control Cabinet data
+        in: body
+        name: control_cabinet
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateControlCabinetRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create a new control cabinet
+      tags:
+      - facility-control-cabinets
+  /api/v1/facility/control-cabinets/{id}:
+    delete:
+      parameters:
+      - description: Control Cabinet ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Delete a control cabinet
+      tags:
+      - facility-control-cabinets
+    get:
+      parameters:
+      - description: Control Cabinet ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get a control cabinet by ID
+      tags:
+      - facility-control-cabinets
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Control Cabinet ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Control Cabinet data
+        in: body
+        name: control_cabinet
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateControlCabinetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Update a control cabinet
+      tags:
+      - facility-control-cabinets
+  /api/v1/facility/field-devices:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List field devices with pagination
+      tags:
+      - facility-field-devices
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Field Device data
+        in: body
+        name: field_device
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateFieldDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create a new field device
+      tags:
+      - facility-field-devices
+  /api/v1/facility/field-devices/{id}:
+    delete:
+      parameters:
+      - description: Field Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Delete a field device
+      tags:
+      - facility-field-devices
+    get:
+      parameters:
+      - description: Field Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get a field device by ID
+      tags:
+      - facility-field-devices
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Field Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Field Device data
+        in: body
+        name: field_device
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateFieldDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Update a field device
+      tags:
+      - facility-field-devices
+  /api/v1/facility/field-devices/{id}/bacnet-objects:
+    get:
+      parameters:
+      - description: Field Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List bacnet objects for a field device (hydration)
+      tags:
+      - facility-field-devices
+  /api/v1/facility/field-devices/{id}/specification:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Field Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Specification data
+        in: body
+        name: specification
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateFieldDeviceSpecificationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create specification for a field device
+      tags:
+      - facility-field-devices
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Field Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Specification data
+        in: body
+        name: specification
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateFieldDeviceSpecificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Update specification for a field device
+      tags:
+      - facility-field-devices
+  /api/v1/facility/notification-classes:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List notification classes with pagination
+      tags:
+      - facility-notification-classes
+  /api/v1/facility/notification-classes/{id}:
+    get:
+      parameters:
+      - description: Notification Class ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get a notification class by ID
+      tags:
+      - facility-notification-classes
+  /api/v1/facility/object-data:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List object data with pagination
+      tags:
+      - facility-object-data
+  /api/v1/facility/object-data/{id}:
+    get:
+      parameters:
+      - description: Object Data ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get object data by ID
+      tags:
+      - facility-object-data
+  /api/v1/facility/specifications:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List specifications with pagination
+      tags:
+      - facility-specifications
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Specification data
+        in: body
+        name: specification
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSpecificationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create a new specification
+      tags:
+      - facility-specifications
+  /api/v1/facility/specifications/{id}:
+    delete:
+      parameters:
+      - description: Specification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Delete a specification
+      tags:
+      - facility-specifications
+    get:
+      parameters:
+      - description: Specification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get a specification by ID
+      tags:
+      - facility-specifications
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Specification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Specification data
+        in: body
+        name: specification
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSpecificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Update a specification
+      tags:
+      - facility-specifications
+  /api/v1/facility/sps-controller-system-types:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List SPS controller system types with pagination
+      tags:
+      - facility-sps-controller-system-types
+  /api/v1/facility/sps-controllers:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List SPS controllers with pagination
+      tags:
+      - facility-sps-controllers
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: SPS Controller data
+        in: body
+        name: sps_controller
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSPSControllerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create a new SPS controller
+      tags:
+      - facility-sps-controllers
+  /api/v1/facility/sps-controllers/{id}:
+    delete:
+      parameters:
+      - description: SPS Controller ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Delete an SPS controller
+      tags:
+      - facility-sps-controllers
+    get:
+      parameters:
+      - description: SPS Controller ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get an SPS controller by ID
+      tags:
+      - facility-sps-controllers
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: SPS Controller ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: SPS Controller data
+        in: body
+        name: sps_controller
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSPSControllerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Update an SPS controller
+      tags:
+      - facility-sps-controllers
+  /api/v1/facility/state-texts:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List state texts with pagination
+      tags:
+      - facility-state-texts
+  /api/v1/facility/state-texts/{id}:
+    get:
+      parameters:
+      - description: State Text ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get a state text by ID
+      tags:
+      - facility-state-texts
+  /api/v1/facility/system-parts:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List system parts with pagination
+      tags:
+      - facility-system-parts
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: System Part data
+        in: body
+        name: system_part
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSystemPartRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create a new system part
+      tags:
+      - facility-system-parts
+  /api/v1/facility/system-parts/{id}:
+    delete:
+      parameters:
+      - description: System Part ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Delete a system part
+      tags:
+      - facility-system-parts
+    get:
+      parameters:
+      - description: System Part ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get a system part by ID
+      tags:
+      - facility-system-parts
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: System Part ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: System Part data
+        in: body
+        name: system_part
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSystemPartRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Update a system part
+      tags:
+      - facility-system-parts
+  /api/v1/facility/system-types:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List system types with pagination
+      tags:
+      - facility-system-types
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: System Type data
+        in: body
+        name: system_type
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSystemTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create a new system type
+      tags:
+      - facility-system-types
+  /api/v1/facility/system-types/{id}:
+    delete:
+      parameters:
+      - description: System Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Delete a system type
+      tags:
+      - facility-system-types
+    get:
+      parameters:
+      - description: System Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get a system type by ID
+      tags:
+      - facility-system-types
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: System Type ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: System Type data
+        in: body
+        name: system_type
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSystemTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Update a system type
+      tags:
+      - facility-system-types
+  /api/v1/projects:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List projects with pagination
+      tags:
+      - projects
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project data
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create a new project
+      tags:
+      - projects
+  /api/v1/projects/{id}:
+    delete:
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Delete a project
+      tags:
+      - projects
+    get:
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get a project by ID
+      tags:
+      - projects
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Project data
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Update a project
+      tags:
+      - projects
+  /api/v1/teams:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List teams with pagination
+      tags:
+      - teams
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Team data
+        in: body
+        name: team
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateTeamRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create a new team
+      tags:
+      - teams
+  /api/v1/teams/{id}:
+    delete:
+      parameters:
+      - description: Team ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Delete a team
+      tags:
+      - teams
+    get:
+      parameters:
+      - description: Team ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get a team by ID
+      tags:
+      - teams
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Team ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Team data
+        in: body
+        name: team
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateTeamRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Update a team
+      tags:
+      - teams
+  /api/v1/teams/{id}/members:
+    get:
+      parameters:
+      - description: Team ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamMemberListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List team members
+      tags:
+      - teams
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Team ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Member data
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AddTeamMemberRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Add a member to a team
+      tags:
+      - teams
+  /api/v1/teams/{id}/members/{userId}:
+    delete:
+      parameters:
+      - description: Team ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Remove a member from a team
+      tags:
+      - teams
+  /api/v1/users:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UserListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: List users with pagination
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Create a new user
+      tags:
+      - users
+  /api/v1/users/{id}:
+    delete:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Delete a user
+      tags:
+      - users
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Get a user by ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse'
+      summary: Update a user
+      tags:
+      - users
+swagger: "2.0"

@@ -20,6 +20,16 @@ func NewAdminHandler(adminService AdminService, authService AuthService) *AdminH
 	return &AdminHandler{adminService: adminService, authService: authService}
 }
 
+// ResetUserPassword godoc
+// @Summary Create a password reset token for a user
+// @Tags admin
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} dto.AdminPasswordResetResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/admin/users/{id}/password-reset [post]
 func (h *AdminHandler) ResetUserPassword(c *gin.Context) {
 	adminID, ok := middleware.GetUserID(c)
 	if !ok {
@@ -42,6 +52,14 @@ func (h *AdminHandler) ResetUserPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.AdminPasswordResetResponse{ResetToken: resetToken, ExpiresAt: expiresAt})
 }
 
+// DisableUser godoc
+// @Summary Disable a user
+// @Tags admin
+// @Param id path string true "User ID"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/admin/users/{id}/disable [post]
 func (h *AdminHandler) DisableUser(c *gin.Context) {
 	userID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -55,6 +73,14 @@ func (h *AdminHandler) DisableUser(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// EnableUser godoc
+// @Summary Enable a user
+// @Tags admin
+// @Param id path string true "User ID"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/admin/users/{id}/enable [post]
 func (h *AdminHandler) EnableUser(c *gin.Context) {
 	userID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -68,6 +94,16 @@ func (h *AdminHandler) EnableUser(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// LockUser godoc
+// @Summary Lock a user until a given time
+// @Tags admin
+// @Accept json
+// @Param id path string true "User ID"
+// @Param payload body dto.AdminLockUserRequest true "Lock details"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/admin/users/{id}/lock [post]
 func (h *AdminHandler) LockUser(c *gin.Context) {
 	userID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -91,6 +127,14 @@ func (h *AdminHandler) LockUser(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// UnlockUser godoc
+// @Summary Unlock a user
+// @Tags admin
+// @Param id path string true "User ID"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/admin/users/{id}/unlock [post]
 func (h *AdminHandler) UnlockUser(c *gin.Context) {
 	userID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -104,6 +148,16 @@ func (h *AdminHandler) UnlockUser(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// SetUserRole godoc
+// @Summary Set a user's role
+// @Tags admin
+// @Accept json
+// @Param id path string true "User ID"
+// @Param payload body dto.AdminSetUserRoleRequest true "Role"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/admin/users/{id}/role [post]
 func (h *AdminHandler) SetUserRole(c *gin.Context) {
 	userID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -123,6 +177,17 @@ func (h *AdminHandler) SetUserRole(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// ListLoginAttempts godoc
+// @Summary List login attempts
+// @Tags admin
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Param search query string false "Search query"
+// @Success 200 {object} dto.LoginAttemptListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/admin/login-attempts [get]
 func (h *AdminHandler) ListLoginAttempts(c *gin.Context) {
 	var query dto.PaginationQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
