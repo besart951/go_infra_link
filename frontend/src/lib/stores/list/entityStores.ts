@@ -4,7 +4,7 @@ import type { Building } from '$lib/domain/facility/index.js';
 import type { ControlCabinet } from '$lib/domain/facility/index.js';
 import type { SPSController } from '$lib/domain/facility/index.js';
 import type { Apparat } from '$lib/domain/facility/index.js';
-import type { SystemPart } from '$lib/domain/entities/systemPart.js';
+import type { SystemPart } from '$lib/domain/facility/index.js';
 import type { SPSControllerSystemType } from '$lib/domain/entities/spsControllerSystemType.js';
 import type { ObjectData } from '$lib/domain/facility/index.js';
 import type { SystemType } from '$lib/domain/facility/index.js';

@@ -5,7 +5,7 @@
 	import { Plus } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { systemPartsStore } from '$lib/stores/list/entityStores.js';
-	import type { SystemPart } from '$lib/domain/entities/systemPart.js';
+	import type { SystemPart } from '$lib/domain/facility/index.js';
 
 	onMount(() => {
 		systemPartsStore.load();
