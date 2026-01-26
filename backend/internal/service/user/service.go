@@ -76,13 +76,13 @@ func (s *Service) DeleteByIds(ids []uuid.UUID) error {
 
 func (s *Service) List(page, limit int, search, orderBy, order string) (*domain.PaginatedList[domainUser.User], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
-	
+
 	// Default ordering by last_login_at descending
 	if orderBy == "" {
 		orderBy = "last_login_at"
 		order = "desc"
 	}
-	
+
 	return s.repo.GetPaginatedList(domain.PaginationParams{
 		Page:    page,
 		Limit:   limit,
