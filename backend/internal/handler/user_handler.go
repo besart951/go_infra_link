@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
-	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	"github.com/besart951/go_infra_link/backend/internal/handler/mapper"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
@@ -35,42 +35,14 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	usr := &user.User{
-		FirstName:   req.FirstName,
-		LastName:    req.LastName,
-		Email:       req.Email,
-		IsActive:    req.IsActive,
-		CreatedByID: req.CreatedByID,
-	}
-	if req.Role != "" {
-		usr.Role = user.Role(req.Role)
-	}
+	usr := mapper.ToUserModel(req)
 
 	if err := h.service.CreateWithPassword(usr, req.Password); err != nil {
-		if errors.Is(err, user.ErrPasswordHashingFailed) {
-			handlerutil.RespondError(c, http.StatusInternalServerError, "password_hashing_failed", "Failed to hash password")
-			return
-		}
 		handlerutil.RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
-	response := dto.UserResponse{
-		ID:                  usr.ID,
-		FirstName:           usr.FirstName,
-		LastName:            usr.LastName,
-		Email:               usr.Email,
-		IsActive:            usr.IsActive,
-		Role:                string(usr.Role),
-		CreatedAt:           usr.CreatedAt,
-		UpdatedAt:           usr.UpdatedAt,
-		LastLoginAt:         usr.LastLoginAt,
-		DisabledAt:          usr.DisabledAt,
-		LockedUntil:         usr.LockedUntil,
-		FailedLoginAttempts: usr.FailedLoginAttempts,
-	}
-
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, mapper.ToUserResponse(usr))
 }
 
 // GetUser godoc
@@ -99,22 +71,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	response := dto.UserResponse{
-		ID:                  usr.ID,
-		FirstName:           usr.FirstName,
-		LastName:            usr.LastName,
-		Email:               usr.Email,
-		IsActive:            usr.IsActive,
-		Role:                string(usr.Role),
-		CreatedAt:           usr.CreatedAt,
-		UpdatedAt:           usr.UpdatedAt,
-		LastLoginAt:         usr.LastLoginAt,
-		DisabledAt:          usr.DisabledAt,
-		LockedUntil:         usr.LockedUntil,
-		FailedLoginAttempts: usr.FailedLoginAttempts,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, mapper.ToUserResponse(usr))
 }
 
 // ListUsers godoc
@@ -140,26 +97,8 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		return
 	}
 
-	items := make([]dto.UserResponse, len(result.Items))
-	for i, usr := range result.Items {
-		items[i] = dto.UserResponse{
-			ID:                  usr.ID,
-			FirstName:           usr.FirstName,
-			LastName:            usr.LastName,
-			Email:               usr.Email,
-			IsActive:            usr.IsActive,
-			Role:                string(usr.Role),
-			CreatedAt:           usr.CreatedAt,
-			UpdatedAt:           usr.UpdatedAt,
-			LastLoginAt:         usr.LastLoginAt,
-			DisabledAt:          usr.DisabledAt,
-			LockedUntil:         usr.LockedUntil,
-			FailedLoginAttempts: usr.FailedLoginAttempts,
-		}
-	}
-
 	response := dto.UserListResponse{
-		Items:      items,
+		Items:      mapper.ToUserListResponse(result.Items),
 		Total:      result.Total,
 		Page:       result.Page,
 		TotalPages: result.TotalPages,
@@ -201,50 +140,14 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	if req.FirstName != "" {
-		usr.FirstName = req.FirstName
-	}
-	if req.LastName != "" {
-		usr.LastName = req.LastName
-	}
-	if req.Email != "" {
-		usr.Email = req.Email
-	}
-	if req.Password != "" {
-		usr.Password = req.Password
-	}
-	if req.IsActive != nil {
-		usr.IsActive = *req.IsActive
-	}
-	if req.Role != "" {
-		usr.Role = user.Role(req.Role)
-	}
+	mapper.ApplyUserUpdate(usr, req)
 
 	if err := h.service.UpdateWithPassword(usr, &req.Password); err != nil {
-		if errors.Is(err, user.ErrPasswordHashingFailed) {
-			handlerutil.RespondError(c, http.StatusInternalServerError, "password_hashing_failed", "Failed to hash password")
-			return
-		}
 		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
-	response := dto.UserResponse{
-		ID:                  usr.ID,
-		FirstName:           usr.FirstName,
-		LastName:            usr.LastName,
-		Email:               usr.Email,
-		IsActive:            usr.IsActive,
-		Role:                string(usr.Role),
-		CreatedAt:           usr.CreatedAt,
-		UpdatedAt:           usr.UpdatedAt,
-		LastLoginAt:         usr.LastLoginAt,
-		DisabledAt:          usr.DisabledAt,
-		LockedUntil:         usr.LockedUntil,
-		FailedLoginAttempts: usr.FailedLoginAttempts,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, mapper.ToUserResponse(usr))
 }
 
 // DeleteUser godoc

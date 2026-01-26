@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
-	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	"github.com/besart951/go_infra_link/backend/internal/handler/mapper"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
@@ -35,36 +35,14 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 		return
 	}
 
-	proj := &project.Project{
-		Name:        req.Name,
-		Description: req.Description,
-		Status:      project.ProjectStatus(req.Status),
-		StartDate:   req.StartDate,
-		CreatorID:   req.CreatorID,
-	}
-
-	if req.PhaseID != nil {
-		proj.PhaseID = *req.PhaseID
-	}
+	proj := mapper.ToProjectModel(req)
 
 	if err := h.service.Create(proj); err != nil {
 		handlerutil.RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
-	response := dto.ProjectResponse{
-		ID:          proj.ID,
-		Name:        proj.Name,
-		Description: proj.Description,
-		Status:      proj.Status,
-		StartDate:   proj.StartDate,
-		PhaseID:     proj.PhaseID,
-		CreatorID:   proj.CreatorID,
-		CreatedAt:   proj.CreatedAt,
-		UpdatedAt:   proj.UpdatedAt,
-	}
-
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, mapper.ToProjectResponse(proj))
 }
 
 // GetProject godoc
@@ -93,19 +71,7 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 		return
 	}
 
-	response := dto.ProjectResponse{
-		ID:          proj.ID,
-		Name:        proj.Name,
-		Description: proj.Description,
-		Status:      proj.Status,
-		StartDate:   proj.StartDate,
-		PhaseID:     proj.PhaseID,
-		CreatorID:   proj.CreatorID,
-		CreatedAt:   proj.CreatedAt,
-		UpdatedAt:   proj.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, mapper.ToProjectResponse(proj))
 }
 
 // ListProjects godoc
@@ -131,23 +97,8 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 		return
 	}
 
-	items := make([]dto.ProjectResponse, len(result.Items))
-	for i, proj := range result.Items {
-		items[i] = dto.ProjectResponse{
-			ID:          proj.ID,
-			Name:        proj.Name,
-			Description: proj.Description,
-			Status:      proj.Status,
-			StartDate:   proj.StartDate,
-			PhaseID:     proj.PhaseID,
-			CreatorID:   proj.CreatorID,
-			CreatedAt:   proj.CreatedAt,
-			UpdatedAt:   proj.UpdatedAt,
-		}
-	}
-
 	response := dto.ProjectListResponse{
-		Items:      items,
+		Items:      mapper.ToProjectListResponse(result.Items),
 		Total:      result.Total,
 		Page:       result.Page,
 		TotalPages: result.TotalPages,
@@ -189,40 +140,14 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 		return
 	}
 
-	if req.Name != "" {
-		proj.Name = req.Name
-	}
-	if req.Description != "" {
-		proj.Description = req.Description
-	}
-	if req.Status != "" {
-		proj.Status = req.Status
-	}
-	if req.StartDate != nil {
-		proj.StartDate = req.StartDate
-	}
-	if req.PhaseID != nil {
-		proj.PhaseID = *req.PhaseID
-	}
+	mapper.ApplyProjectUpdate(proj, req)
 
 	if err := h.service.Update(proj); err != nil {
 		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
-	response := dto.ProjectResponse{
-		ID:          proj.ID,
-		Name:        proj.Name,
-		Description: proj.Description,
-		Status:      proj.Status,
-		StartDate:   proj.StartDate,
-		PhaseID:     proj.PhaseID,
-		CreatorID:   proj.CreatorID,
-		CreatedAt:   proj.CreatedAt,
-		UpdatedAt:   proj.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, mapper.ToProjectResponse(proj))
 }
 
 // DeleteProject godoc

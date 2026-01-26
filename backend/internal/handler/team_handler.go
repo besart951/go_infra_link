@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/domain/team"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	"github.com/besart951/go_infra_link/backend/internal/handler/mapper"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
@@ -35,13 +36,13 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 		return
 	}
 
-	t := &team.Team{Name: req.Name, Description: req.Description}
+	t := mapper.ToTeamModel(req)
 	if err := h.service.Create(t); err != nil {
 		handlerutil.RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, dto.TeamResponse{ID: t.ID, Name: t.Name, Description: t.Description, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt})
+	c.JSON(http.StatusCreated, mapper.ToTeamResponse(t))
 }
 
 // ListTeams godoc
@@ -67,12 +68,12 @@ func (h *TeamHandler) ListTeams(c *gin.Context) {
 		return
 	}
 
-	items := make([]dto.TeamResponse, len(res.Items))
-	for i, t := range res.Items {
-		items[i] = dto.TeamResponse{ID: t.ID, Name: t.Name, Description: t.Description, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt}
-	}
-
-	c.JSON(http.StatusOK, dto.TeamListResponse{Items: items, Total: res.Total, Page: res.Page, TotalPages: res.TotalPages})
+	c.JSON(http.StatusOK, dto.TeamListResponse{
+		Items:      mapper.ToTeamListResponse(res.Items),
+		Total:      res.Total,
+		Page:       res.Page,
+		TotalPages: res.TotalPages,
+	})
 }
 
 // GetTeam godoc
@@ -101,7 +102,7 @@ func (h *TeamHandler) GetTeam(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.TeamResponse{ID: t.ID, Name: t.Name, Description: t.Description, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt})
+	c.JSON(http.StatusOK, mapper.ToTeamResponse(t))
 }
 
 // UpdateTeam godoc
@@ -137,19 +138,14 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 		return
 	}
 
-	if req.Name != "" {
-		t.Name = req.Name
-	}
-	if req.Description != nil {
-		t.Description = req.Description
-	}
+	mapper.ApplyTeamUpdate(t, req)
 
 	if err := h.service.Update(t); err != nil {
 		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.TeamResponse{ID: t.ID, Name: t.Name, Description: t.Description, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt})
+	c.JSON(http.StatusOK, mapper.ToTeamResponse(t))
 }
 
 // DeleteTeam godoc
@@ -259,10 +255,10 @@ func (h *TeamHandler) ListMembers(c *gin.Context) {
 		return
 	}
 
-	items := make([]dto.TeamMemberResponse, len(res.Items))
-	for i, m := range res.Items {
-		items[i] = dto.TeamMemberResponse{TeamID: m.TeamID, UserID: m.UserID, Role: string(m.Role), JoinedAt: m.JoinedAt}
-	}
-
-	c.JSON(http.StatusOK, dto.TeamMemberListResponse{Items: items, Total: res.Total, Page: res.Page, TotalPages: res.TotalPages})
+	c.JSON(http.StatusOK, dto.TeamMemberListResponse{
+		Items:      mapper.ToTeamMemberListResponse(res.Items),
+		Total:      res.Total,
+		Page:       res.Page,
+		TotalPages: res.TotalPages,
+	})
 }
