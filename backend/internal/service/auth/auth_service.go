@@ -204,12 +204,7 @@ func (s *Service) ConfirmPasswordReset(token, newPassword string) error {
 }
 
 func (s *Service) ListLoginAttempts(page, limit int, search string) (*domain.PaginatedList[domainAuth.LoginAttempt], error) {
-	if page <= 0 {
-		page = 1
-	}
-	if limit <= 0 {
-		limit = 20
-	}
+	page, limit = domain.NormalizePagination(page, limit, 20)
 	return s.loginAttemptRepo.GetPaginatedList(domain.PaginationParams{Page: page, Limit: limit, Search: search})
 }
 

@@ -30,7 +30,7 @@ func (s *SystemTypeService) GetByID(id uuid.UUID) (*domainFacility.SystemType, e
 }
 
 func (s *SystemTypeService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SystemType], error) {
-	page, limit = normalizePagination(page, limit)
+	page, limit = domain.NormalizePagination(page, limit, 10)
 	return s.repo.GetPaginatedList(domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,

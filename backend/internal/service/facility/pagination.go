@@ -1,12 +1,7 @@
 package facility
 
-func normalizePagination(page, limit int) (int, int) {
-	if page == 0 {
-		page = 1
-	}
-	if limit == 0 {
-		limit = 10
-	}
+import "github.com/besart951/go_infra_link/backend/internal/domain"
 
-	return page, limit
+func normalizePagination(page, limit int) (int, int) {
+	return domain.NormalizePagination(page, limit, 10)
 }

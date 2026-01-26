@@ -75,7 +75,7 @@ func (s *Service) DeleteByIds(ids []uuid.UUID) error {
 }
 
 func (s *Service) List(page, limit int, search, orderBy, order string) (*domain.PaginatedList[domainUser.User], error) {
-	page, limit = normalizePagination(page, limit)
+	page, limit = domain.NormalizePagination(page, limit, 10)
 	
 	// Default ordering by last_login_at descending
 	if orderBy == "" {
@@ -90,15 +90,4 @@ func (s *Service) List(page, limit int, search, orderBy, order string) (*domain.
 		OrderBy: orderBy,
 		Order:   order,
 	})
-}
-
-func normalizePagination(page, limit int) (int, int) {
-	if page == 0 {
-		page = 1
-	}
-	if limit == 0 {
-		limit = 10
-	}
-
-	return page, limit
 }

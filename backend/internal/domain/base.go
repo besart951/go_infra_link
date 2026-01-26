@@ -54,3 +54,17 @@ func CalculateTotalPages(total int64, limit int) int {
 	}
 	return int(math.Ceil(float64(total) / float64(limit)))
 }
+
+// NormalizePagination normalizes pagination parameters with a configurable default limit.
+func NormalizePagination(page, limit, defaultLimit int) (int, int) {
+	if page <= 0 {
+		page = 1
+	}
+	if limit <= 0 {
+		if defaultLimit <= 0 {
+			defaultLimit = 10
+		}
+		limit = defaultLimit
+	}
+	return page, limit
+}

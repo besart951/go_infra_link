@@ -31,12 +31,7 @@ func (s *Service) GetByID(id uuid.UUID) (*domainTeam.Team, error) {
 }
 
 func (s *Service) List(page, limit int, search string) (*domain.PaginatedList[domainTeam.Team], error) {
-	if page <= 0 {
-		page = 1
-	}
-	if limit <= 0 {
-		limit = 10
-	}
+	page, limit = domain.NormalizePagination(page, limit, 10)
 	return s.repo.GetPaginatedList(domain.PaginationParams{Page: page, Limit: limit, Search: search})
 }
 
@@ -58,11 +53,6 @@ func (s *Service) RemoveMember(teamID, userID uuid.UUID) error {
 }
 
 func (s *Service) ListMembers(teamID uuid.UUID, page, limit int) (*domain.PaginatedList[domainTeam.TeamMember], error) {
-	if page <= 0 {
-		page = 1
-	}
-	if limit <= 0 {
-		limit = 20
-	}
+	page, limit = domain.NormalizePagination(page, limit, 20)
 	return s.memberRepo.ListByTeam(teamID, domain.PaginationParams{Page: page, Limit: limit})
 }

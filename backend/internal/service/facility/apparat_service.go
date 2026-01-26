@@ -30,7 +30,7 @@ func (s *ApparatService) GetByID(id uuid.UUID) (*domainFacility.Apparat, error) 
 }
 
 func (s *ApparatService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.Apparat], error) {
-	page, limit = normalizePagination(page, limit)
+	page, limit = domain.NormalizePagination(page, limit, 10)
 	return s.repo.GetPaginatedList(domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,
