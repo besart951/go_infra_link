@@ -31,14 +31,13 @@ func NewTeamHandler(service TeamService) *TeamHandler {
 // @Router /api/v1/teams [post]
 func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	var req dto.CreateTeamRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+	if !BindJSON(c, &req) {
 		return
 	}
 
 	t := &team.Team{Name: req.Name, Description: req.Description}
 	if err := h.service.Create(t); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "creation_failed", Message: err.Error()})
+		RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
@@ -58,14 +57,13 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 // @Router /api/v1/teams [get]
 func (h *TeamHandler) ListTeams(c *gin.Context) {
 	var query dto.PaginationQuery
-	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+	if !BindQuery(c, &query) {
 		return
 	}
 
 	res, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "fetch_failed", Message: err.Error()})
+		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -88,19 +86,18 @@ func (h *TeamHandler) ListTeams(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/teams/{id} [get]
 func (h *TeamHandler) GetTeam(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_id", Message: "Invalid UUID format"})
+	id, ok := ParseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	t, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found", Message: "Team not found"})
+			RespondNotFound(c, "Team not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "fetch_failed", Message: err.Error()})
+		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -120,25 +117,23 @@ func (h *TeamHandler) GetTeam(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/teams/{id} [put]
 func (h *TeamHandler) UpdateTeam(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_id", Message: "Invalid UUID format"})
+	id, ok := ParseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.UpdateTeamRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+	if !BindJSON(c, &req) {
 		return
 	}
 
 	t, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found", Message: "Team not found"})
+			RespondNotFound(c, "Team not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "fetch_failed", Message: err.Error()})
+		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -150,7 +145,7 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 	}
 
 	if err := h.service.Update(t); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "update_failed", Message: err.Error()})
+		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -166,14 +161,13 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/teams/{id} [delete]
 func (h *TeamHandler) DeleteTeam(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_id", Message: "Invalid UUID format"})
+	id, ok := ParseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "deletion_failed", Message: err.Error()})
+		RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}
 
@@ -191,20 +185,18 @@ func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/teams/{id}/members [post]
 func (h *TeamHandler) AddMember(c *gin.Context) {
-	teamID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_id", Message: "Invalid UUID format"})
+	teamID, ok := ParseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.AddTeamMemberRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+	if !BindJSON(c, &req) {
 		return
 	}
 
 	if err := h.service.AddMember(teamID, req.UserID, team.MemberRole(req.Role)); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "update_failed", Message: err.Error()})
+		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -221,20 +213,18 @@ func (h *TeamHandler) AddMember(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/teams/{id}/members/{userId} [delete]
 func (h *TeamHandler) RemoveMember(c *gin.Context) {
-	teamID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_id", Message: "Invalid UUID format"})
+	teamID, ok := ParseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
-	userID, err := uuid.Parse(c.Param("userId"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_user_id", Message: "Invalid UUID format"})
+	userID, ok := ParseUUIDParamWithCode(c, "userId", "invalid_user_id")
+	if !ok {
 		return
 	}
 
 	if err := h.service.RemoveMember(teamID, userID); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "update_failed", Message: err.Error()})
+		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -253,21 +243,19 @@ func (h *TeamHandler) RemoveMember(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/teams/{id}/members [get]
 func (h *TeamHandler) ListMembers(c *gin.Context) {
-	teamID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid_id", Message: "Invalid UUID format"})
+	teamID, ok := ParseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var query dto.PaginationQuery
-	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+	if !BindQuery(c, &query) {
 		return
 	}
 
 	res, err := h.service.ListMembers(teamID, query.Page, query.Limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "fetch_failed", Message: err.Error()})
+		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 

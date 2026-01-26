@@ -3,8 +3,6 @@
 package wire
 
 import (
-	"database/sql"
-
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
@@ -48,35 +46,35 @@ type Repositories struct {
 }
 
 // NewRepositories creates all repository instances from the database connection.
-func NewRepositories(db *sql.DB, gormDB *gorm.DB, driver string) (*Repositories, error) {
-	userRepo := userrepo.NewUserRepository(db, driver)
+func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
+	userRepo := userrepo.NewUserRepository(gormDB)
 	userEmailRepo, ok := userRepo.(domainUser.UserEmailRepository)
 	if !ok {
 		return nil, ErrUserRepoMissingEmailLookup
 	}
 
 	return &Repositories{
-		Project:       projectrepo.NewProjectRepository(db, driver),
+		Project:       projectrepo.NewProjectRepository(gormDB),
 		User:          userRepo,
 		UserEmail:     userEmailRepo,
-		RefreshToken:  authrepo.NewRefreshTokenRepository(db, driver),
-		LoginAttempt:  authrepo.NewLoginAttemptRepository(db, driver),
-		PasswordReset: authrepo.NewPasswordResetTokenRepository(db, driver),
-		Team:          teamrepo.NewTeamRepository(db, driver),
-		TeamMember:    teamrepo.NewTeamMemberRepository(db, driver),
+		RefreshToken:  authrepo.NewRefreshTokenRepository(gormDB),
+		LoginAttempt:  authrepo.NewLoginAttemptRepository(gormDB),
+		PasswordReset: authrepo.NewPasswordResetTokenRepository(gormDB),
+		Team:          teamrepo.NewTeamRepository(gormDB),
+		TeamMember:    teamrepo.NewTeamMemberRepository(gormDB),
 
-		FacilityBuildings:                facilityrepo.NewBuildingRepository(db, driver),
-		FacilitySystemTypes:              facilityrepo.NewSystemTypeRepository(db, driver),
-		FacilitySystemParts:              facilityrepo.NewSystemPartRepository(db, driver),
-		FacilitySpecifications:           facilityrepo.NewSpecificationRepository(db, driver),
-		FacilityApparats:                 facilityrepo.NewApparatRepository(db, driver),
-		FacilityControlCabinet:           facilityrepo.NewControlCabinetRepository(db, driver),
+		FacilityBuildings:                facilityrepo.NewBuildingRepository(gormDB),
+		FacilitySystemTypes:              facilityrepo.NewSystemTypeRepository(gormDB),
+		FacilitySystemParts:              facilityrepo.NewSystemPartRepository(gormDB),
+		FacilitySpecifications:           facilityrepo.NewSpecificationRepository(gormDB),
+		FacilityApparats:                 facilityrepo.NewApparatRepository(gormDB),
+		FacilityControlCabinet:           facilityrepo.NewControlCabinetRepository(gormDB),
 		FacilityFieldDevices:             facilityrepo.NewFieldDeviceRepository(gormDB),
-		FacilitySPSControllers:           facilityrepo.NewSPSControllerRepository(db, driver),
-		FacilitySPSControllerSystemTypes: facilityrepo.NewSPSControllerSystemTypeRepository(db, driver),
+		FacilitySPSControllers:           facilityrepo.NewSPSControllerRepository(gormDB),
+		FacilitySPSControllerSystemTypes: facilityrepo.NewSPSControllerSystemTypeRepository(gormDB),
 		FacilityBacnetObjects:            facilityrepo.NewBacnetObjectRepository(gormDB),
 		FacilityObjectData:               facilityrepo.NewObjectDataRepository(gormDB),
-		FacilityObjectDataBacnetObjects:  facilityrepo.NewObjectDataBacnetObjectRepository(db, driver),
+		FacilityObjectDataBacnetObjects:  facilityrepo.NewObjectDataBacnetObjectRepository(gormDB),
 		FacilityStateTexts:               facilityrepo.NewStateTextRepository(gormDB),
 		FacilityNotificationClasses:      facilityrepo.NewNotificationClassRepository(gormDB),
 		FacilityAlarmDefinitions:         facilityrepo.NewAlarmDefinitionRepository(gormDB),

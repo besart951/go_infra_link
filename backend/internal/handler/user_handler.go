@@ -31,11 +31,7 @@ func NewUserHandler(service UserService) *UserHandler {
 // @Router /api/v1/users [post]
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req dto.CreateUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !BindJSON(c, &req) {
 		return
 	}
 
@@ -52,16 +48,10 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 
 	if err := h.service.CreateWithPassword(usr, req.Password); err != nil {
 		if errors.Is(err, user.ErrPasswordHashingFailed) {
-			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-				Error:   "password_hashing_failed",
-				Message: "Failed to hash password",
-			})
+			RespondError(c, http.StatusInternalServerError, "password_hashing_failed", "Failed to hash password")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "creation_failed",
-			Message: err.Error(),
-		})
+		RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
@@ -94,29 +84,18 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/users/{id} [get]
 func (h *UserHandler) GetUser(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := ParseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	usr, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "User not found",
-			})
+			RespondNotFound(c, "User not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -151,20 +130,13 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 // @Router /api/v1/users [get]
 func (h *UserHandler) ListUsers(c *gin.Context) {
 	var query dto.PaginationQuery
-	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !BindQuery(c, &query) {
 		return
 	}
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search, query.OrderBy, query.Order)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -209,38 +181,23 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/users/{id} [put]
 func (h *UserHandler) UpdateUser(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := ParseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.UpdateUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !BindJSON(c, &req) {
 		return
 	}
 
 	usr, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "User not found",
-			})
+			RespondNotFound(c, "User not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -265,16 +222,10 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	if err := h.service.UpdateWithPassword(usr, &req.Password); err != nil {
 		if errors.Is(err, user.ErrPasswordHashingFailed) {
-			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-				Error:   "password_hashing_failed",
-				Message: "Failed to hash password",
-			})
+			RespondError(c, http.StatusInternalServerError, "password_hashing_failed", "Failed to hash password")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "update_failed",
-			Message: err.Error(),
-		})
+		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -306,21 +257,13 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/users/{id} [delete]
 func (h *UserHandler) DeleteUser(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := ParseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "deletion_failed",
-			Message: err.Error(),
-		})
+		RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}
 

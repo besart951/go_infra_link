@@ -183,10 +183,10 @@ func (s *SPSControllerService) ensureSystemTypesExist(systemTypes []domainFacili
 func (s *SPSControllerService) validateRequiredFields(spsController *domainFacility.SPSController) error {
 	ve := domain.NewValidationError()
 	if spsController.ControlCabinetID == uuid.Nil {
-		ve.Add("spscontroller.control_cabinet_id", "control_cabinet_id is required")
+		ve = ve.Add("spscontroller.control_cabinet_id", "control_cabinet_id is required")
 	}
 	if strings.TrimSpace(spsController.DeviceName) == "" {
-		ve.Add("spscontroller.device_name", "device_name is required")
+		ve = ve.Add("spscontroller.device_name", "device_name is required")
 	}
 	if len(ve.Fields) > 0 {
 		return ve
@@ -208,7 +208,7 @@ func (s *SPSControllerService) ensureUnique(spsController *domainFacility.SPSCon
 				continue
 			}
 			if item.ControlCabinetID == spsController.ControlCabinetID && strings.EqualFold(item.DeviceName, spsController.DeviceName) {
-				ve.Add("spscontroller.device_name", "device_name must be unique within the control cabinet")
+				ve = ve.Add("spscontroller.device_name", "device_name must be unique within the control cabinet")
 				break
 			}
 		}
@@ -228,8 +228,8 @@ func (s *SPSControllerService) ensureUnique(spsController *domainFacility.SPSCon
 					continue
 				}
 				if item.IPAddress != nil && item.Vlan != nil && *item.IPAddress == ip && *item.Vlan == vlan {
-					ve.Add("spscontroller.ip_address", "ip_address must be unique per vlan")
-					ve.Add("spscontroller.vlan", "vlan must be unique per ip_address")
+					ve = ve.Add("spscontroller.ip_address", "ip_address must be unique per vlan")
+					ve = ve.Add("spscontroller.vlan", "vlan must be unique per ip_address")
 					break
 				}
 			}

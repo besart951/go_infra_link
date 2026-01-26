@@ -37,7 +37,7 @@ func Run() error {
 		return fmt.Errorf("db connect: %w", err)
 	}
 
-	// Get underlying sql.DB for existing repositories
+	// Get underlying sql.DB for connection lifecycle management
 	sqlDB, err := gormDB.DB()
 	if err != nil {
 		log.Error("Failed to get sql.DB instance", "err", err)
@@ -50,7 +50,7 @@ func Run() error {
 	}()
 
 	// Initialize dependencies via wire package
-	repos, err := wire.NewRepositories(sqlDB, gormDB, cfg.DBType)
+	repos, err := wire.NewRepositories(gormDB)
 	if err != nil {
 		log.Error("Failed to initialize repositories", "err", err)
 		return fmt.Errorf("repositories: %w", err)

@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	projectservice "github.com/besart951/go_infra_link/backend/internal/service/project"
 	"github.com/google/uuid"
@@ -13,8 +14,8 @@ type ProjectService struct {
 	svc *projectservice.Service
 }
 
-func NewProjectService(repo project.ProjectRepository) *ProjectService {
-	return &ProjectService{svc: projectservice.New(repo)}
+func NewProjectService(repo project.ProjectRepository, objectDataRepo domainFacility.ObjectDataStore, bacnetObjectRepo domainFacility.BacnetObjectStore) *ProjectService {
+	return &ProjectService{svc: projectservice.New(repo, objectDataRepo, bacnetObjectRepo)}
 }
 
 func (s *ProjectService) CreateProject(name string, creatorID uuid.UUID) (*project.Project, error) {

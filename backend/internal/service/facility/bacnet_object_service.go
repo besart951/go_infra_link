@@ -58,10 +58,10 @@ func (s *BacnetObjectService) validateRequiredFields(bacnetObject *domainFacilit
 	ve := domain.NewValidationError()
 
 	if strings.TrimSpace(bacnetObject.TextFix) == "" {
-		ve.Add(prefix+".textfix", "textfix is required")
+		ve = ve.Add(prefix+".textfix", "textfix is required")
 	}
 	if strings.TrimSpace(string(bacnetObject.SoftwareType)) == "" {
-		ve.Add(prefix+".software_type", "software_type is required")
+		ve = ve.Add(prefix+".software_type", "software_type is required")
 	}
 
 	if len(ve.Fields) > 0 {

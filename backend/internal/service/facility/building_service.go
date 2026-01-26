@@ -55,7 +55,7 @@ func (s *BuildingService) DeleteByIds(ids []uuid.UUID) error {
 func (s *BuildingService) validateRequiredFields(building *domainFacility.Building) error {
 	ve := domain.NewValidationError()
 	if building.BuildingGroup == 0 {
-		ve.Add("building.building_group", "building_group is required")
+		ve = ve.Add("building.building_group", "building_group is required")
 	}
 	if len(ve.Fields) > 0 {
 		return ve

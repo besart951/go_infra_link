@@ -1,20 +1,18 @@
 package auth
 
 import (
-	"database/sql"
 	"time"
 
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
-	"github.com/besart951/go_infra_link/backend/internal/repository/sqlutil"
+	"gorm.io/gorm"
 )
 
 type refreshTokenRepo struct {
-	db      *sql.DB
-	dialect sqlutil.Dialect
+	db *gorm.DB
 }
 
-func NewRefreshTokenRepository(db *sql.DB, driver string) domainAuth.RefreshTokenRepository {
-	return &refreshTokenRepo{db: db, dialect: sqlutil.DialectFromDriver(driver)}
+func NewRefreshTokenRepository(db *gorm.DB) domainAuth.RefreshTokenRepository {
+	return &refreshTokenRepo{db: db}
 }
 
 func (r *refreshTokenRepo) Create(token *domainAuth.RefreshToken) error {
@@ -22,89 +20,30 @@ func (r *refreshTokenRepo) Create(token *domainAuth.RefreshToken) error {
 	if err := token.Base.InitForCreate(now); err != nil {
 		return err
 	}
-
-	q := "INSERT INTO refresh_tokens (id, created_at, updated_at, deleted_at, user_id, token_hash, expires_at, revoked_at, created_by_ip, user_agent) " +
-		"VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)"
-	q = sqlutil.Rebind(r.dialect, q)
-
-	_, err := r.db.Exec(
-		q,
-		token.ID,
-		token.CreatedAt,
-		token.UpdatedAt,
-		token.UserID,
-		token.TokenHash,
-		token.ExpiresAt,
-		token.RevokedAt,
-		token.CreatedByIP,
-		token.UserAgent,
-	)
-	return err
+	return r.db.Create(token).Error
 }
 
 func (r *refreshTokenRepo) GetByTokenHash(tokenHash string) (*domainAuth.RefreshToken, error) {
-	q := "SELECT id, created_at, updated_at, deleted_at, user_id, token_hash, expires_at, revoked_at, created_by_ip, user_agent " +
-		"FROM refresh_tokens WHERE deleted_at IS NULL AND token_hash = ? LIMIT 1"
-	q = sqlutil.Rebind(r.dialect, q)
-
 	var token domainAuth.RefreshToken
-	var deletedAt sql.NullTime
-	var revokedAt sql.NullTime
-	var createdByIP sql.NullString
-	var userAgent sql.NullString
-
-	err := r.db.QueryRow(q, tokenHash).Scan(
-		&token.ID,
-		&token.CreatedAt,
-		&token.UpdatedAt,
-		&deletedAt,
-		&token.UserID,
-		&token.TokenHash,
-		&token.ExpiresAt,
-		&revokedAt,
-		&createdByIP,
-		&userAgent,
-	)
+	err := r.db.Where("deleted_at IS NULL").Where("token_hash = ?", tokenHash).First(&token).Error
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
 		return nil, err
 	}
-
-	if deletedAt.Valid {
-		t := deletedAt.Time
-		token.DeletedAt = &t
-	}
-	if revokedAt.Valid {
-		t := revokedAt.Time
-		token.RevokedAt = &t
-	}
-	if createdByIP.Valid {
-		v := createdByIP.String
-		token.CreatedByIP = &v
-	}
-	if userAgent.Valid {
-		v := userAgent.String
-		token.UserAgent = &v
-	}
-
 	return &token, nil
 }
 
 func (r *refreshTokenRepo) RevokeByTokenHash(tokenHash string, revokedAt time.Time) error {
-	q := "UPDATE refresh_tokens SET revoked_at = ?, updated_at = ? WHERE deleted_at IS NULL AND token_hash = ?"
-	q = sqlutil.Rebind(r.dialect, q)
-
-	_, err := r.db.Exec(q, revokedAt, time.Now().UTC(), tokenHash)
-	return err
+	return r.db.Model(&domainAuth.RefreshToken{}).
+		Where("deleted_at IS NULL AND token_hash = ?", tokenHash).
+		Updates(map[string]any{"revoked_at": revokedAt, "updated_at": time.Now().UTC()}).Error
 }
 
 func (r *refreshTokenRepo) DeleteExpired(before time.Time) error {
-	q := "UPDATE refresh_tokens SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND expires_at <= ?"
-	q = sqlutil.Rebind(r.dialect, q)
-
 	now := time.Now().UTC()
-	_, err := r.db.Exec(q, now, now, before)
-	return err
+	return r.db.Model(&domainAuth.RefreshToken{}).
+		Where("deleted_at IS NULL AND expires_at <= ?", before).
+		Updates(map[string]any{"deleted_at": now, "updated_at": now}).Error
 }

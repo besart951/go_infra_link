@@ -73,7 +73,7 @@ func (s *ControlCabinetService) ensureBuildingExists(buildingID uuid.UUID) error
 func (s *ControlCabinetService) validateRequiredFields(controlCabinet *domainFacility.ControlCabinet) error {
 	ve := domain.NewValidationError()
 	if controlCabinet.BuildingID == uuid.Nil {
-		ve.Add("controlcabinet.building_id", "building_id is required")
+		ve = ve.Add("controlcabinet.building_id", "building_id is required")
 	}
 	if len(ve.Fields) > 0 {
 		return ve

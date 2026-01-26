@@ -351,10 +351,10 @@ func (s *FieldDeviceService) ensureApparatNrAvailable(fieldDevice *domainFacilit
 func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.FieldDevice) error {
 	ve := domain.NewValidationError()
 	if fieldDevice.SPSControllerSystemTypeID == uuid.Nil {
-		ve.Add("fielddevice.sps_controller_system_type_id", "sps_controller_system_type_id is required")
+		ve = ve.Add("fielddevice.sps_controller_system_type_id", "sps_controller_system_type_id is required")
 	}
 	if fieldDevice.ApparatID == uuid.Nil {
-		ve.Add("fielddevice.apparat_id", "apparat_id is required")
+		ve = ve.Add("fielddevice.apparat_id", "apparat_id is required")
 	}
 	if len(ve.Fields) > 0 {
 		return ve

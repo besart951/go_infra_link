@@ -63,10 +63,10 @@ func (s *ApparatService) DeleteByIds(ids []uuid.UUID) error {
 func (s *ApparatService) validateRequiredFields(apparat *domainFacility.Apparat) error {
 	ve := domain.NewValidationError()
 	if strings.TrimSpace(apparat.ShortName) == "" {
-		ve.Add("apparat.short_name", "short_name is required")
+		ve = ve.Add("apparat.short_name", "short_name is required")
 	}
 	if strings.TrimSpace(apparat.Name) == "" {
-		ve.Add("apparat.name", "name is required")
+		ve = ve.Add("apparat.name", "name is required")
 	}
 	if len(ve.Fields) > 0 {
 		return ve
@@ -88,7 +88,7 @@ func (s *ApparatService) ensureUnique(apparat *domainFacility.Apparat, excludeID
 				continue
 			}
 			if strings.EqualFold(item.ShortName, apparat.ShortName) {
-				ve.Add("apparat.short_name", "short_name must be unique")
+				ve = ve.Add("apparat.short_name", "short_name must be unique")
 				break
 			}
 		}
@@ -105,7 +105,7 @@ func (s *ApparatService) ensureUnique(apparat *domainFacility.Apparat, excludeID
 				continue
 			}
 			if strings.EqualFold(item.Name, apparat.Name) {
-				ve.Add("apparat.name", "name must be unique")
+				ve = ve.Add("apparat.name", "name must be unique")
 				break
 			}
 		}

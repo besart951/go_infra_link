@@ -31,11 +31,7 @@ func NewProjectHandler(service ProjectService) *ProjectHandler {
 // @Router /api/v1/projects [post]
 func (h *ProjectHandler) CreateProject(c *gin.Context) {
 	var req dto.CreateProjectRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !BindJSON(c, &req) {
 		return
 	}
 
@@ -52,10 +48,7 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 	}
 
 	if err := h.service.Create(proj); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "creation_failed",
-			Message: err.Error(),
-		})
+		RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
@@ -85,29 +78,18 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id} [get]
 func (h *ProjectHandler) GetProject(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := ParseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	proj, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "Project not found",
-			})
+			RespondNotFound(c, "Project not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -139,20 +121,13 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 // @Router /api/v1/projects [get]
 func (h *ProjectHandler) ListProjects(c *gin.Context) {
 	var query dto.PaginationQuery
-	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !BindQuery(c, &query) {
 		return
 	}
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -194,38 +169,23 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id} [put]
 func (h *ProjectHandler) UpdateProject(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := ParseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	var req dto.UpdateProjectRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !BindJSON(c, &req) {
 		return
 	}
 
 	proj, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusNotFound, dto.ErrorResponse{
-				Error:   "not_found",
-				Message: "Project not found",
-			})
+			RespondNotFound(c, "Project not found")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "fetch_failed",
-			Message: err.Error(),
-		})
+		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
@@ -246,10 +206,7 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 	}
 
 	if err := h.service.Update(proj); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "update_failed",
-			Message: err.Error(),
-		})
+		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
@@ -278,21 +235,13 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id} [delete]
 func (h *ProjectHandler) DeleteProject(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "invalid_id",
-			Message: "Invalid UUID format",
-		})
+	id, ok := ParseUUIDParam(c, "id")
+	if !ok {
 		return
 	}
 
 	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "deletion_failed",
-			Message: err.Error(),
-		})
+		RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}
 

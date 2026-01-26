@@ -1,177 +1,43 @@
 package user
 
 import (
-	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
-	"github.com/besart951/go_infra_link/backend/internal/repository/sqlutil"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type userRepo struct {
-	db      *sql.DB
-	dialect sqlutil.Dialect
+	db *gorm.DB
 }
 
-func NewUserRepository(db *sql.DB, driver string) domainUser.UserRepository {
-	return &userRepo{db: db, dialect: sqlutil.DialectFromDriver(driver)}
+func NewUserRepository(db *gorm.DB) domainUser.UserRepository {
+	return &userRepo{db: db}
 }
 
 func (r *userRepo) GetByIds(ids []uuid.UUID) ([]*domainUser.User, error) {
 	if len(ids) == 0 {
 		return []*domainUser.User{}, nil
 	}
-
-	q := "SELECT id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, role, disabled_at, locked_until, failed_login_attempts, last_login_at, created_by_id " +
-		"FROM users WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
-	q = sqlutil.Rebind(r.dialect, q)
-
-	args := make([]any, 0, len(ids))
-	for _, id := range ids {
-		args = append(args, id)
-	}
-
-	rows, err := r.db.Query(q, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	out := make([]*domainUser.User, 0, len(ids))
-	for rows.Next() {
-		var u domainUser.User
-		var deletedAt sql.NullTime
-		var disabledAt sql.NullTime
-		var lockedUntil sql.NullTime
-		var lastLoginAt sql.NullTime
-		var role sql.NullString
-		var createdByID sql.NullString
-
-		err := rows.Scan(
-			&u.ID,
-			&u.CreatedAt,
-			&u.UpdatedAt,
-			&deletedAt,
-			&u.FirstName,
-			&u.LastName,
-			&u.Email,
-			&u.Password,
-			&u.IsActive,
-			&role,
-			&disabledAt,
-			&lockedUntil,
-			&u.FailedLoginAttempts,
-			&lastLoginAt,
-			&createdByID,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if deletedAt.Valid {
-			t := deletedAt.Time
-			u.DeletedAt = &t
-		}
-		if role.Valid {
-			u.Role = domainUser.Role(role.String)
-		}
-		if disabledAt.Valid {
-			t := disabledAt.Time
-			u.DisabledAt = &t
-		}
-		if lockedUntil.Valid {
-			t := lockedUntil.Time
-			u.LockedUntil = &t
-		}
-		if lastLoginAt.Valid {
-			t := lastLoginAt.Time
-			u.LastLoginAt = &t
-		}
-		if createdByID.Valid {
-			id, err := uuid.Parse(createdByID.String)
-			if err != nil {
-				return nil, err
-			}
-			u.CreatedByID = &id
-		}
-
-		out = append(out, &u)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return out, nil
+	var items []*domainUser.User
+	err := r.db.Where("deleted_at IS NULL").Where("id IN ?", ids).Find(&items).Error
+	return items, err
 }
 
 func (r *userRepo) GetByEmail(email string) (*domainUser.User, error) {
-	q := "SELECT id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, role, disabled_at, locked_until, failed_login_attempts, last_login_at, created_by_id " +
-		"FROM users WHERE deleted_at IS NULL AND email = ? LIMIT 1"
-	q = sqlutil.Rebind(r.dialect, q)
-
-	var u domainUser.User
-	var deletedAt sql.NullTime
-	var disabledAt sql.NullTime
-	var lockedUntil sql.NullTime
-	var lastLoginAt sql.NullTime
-	var role sql.NullString
-	var createdByID sql.NullString
-
-	err := r.db.QueryRow(q, email).Scan(
-		&u.ID,
-		&u.CreatedAt,
-		&u.UpdatedAt,
-		&deletedAt,
-		&u.FirstName,
-		&u.LastName,
-		&u.Email,
-		&u.Password,
-		&u.IsActive,
-		&role,
-		&disabledAt,
-		&lockedUntil,
-		&u.FailedLoginAttempts,
-		&lastLoginAt,
-		&createdByID,
-	)
+	var user domainUser.User
+	err := r.db.Where("deleted_at IS NULL").Where("email = ?", email).First(&user).Error
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == gorm.ErrRecordNotFound {
 			return nil, domain.ErrNotFound
 		}
 		return nil, err
 	}
-
-	if deletedAt.Valid {
-		t := deletedAt.Time
-		u.DeletedAt = &t
-	}
-	if role.Valid {
-		u.Role = domainUser.Role(role.String)
-	}
-	if disabledAt.Valid {
-		t := disabledAt.Time
-		u.DisabledAt = &t
-	}
-	if lockedUntil.Valid {
-		t := lockedUntil.Time
-		u.LockedUntil = &t
-	}
-	if lastLoginAt.Valid {
-		t := lastLoginAt.Time
-		u.LastLoginAt = &t
-	}
-	if createdByID.Valid {
-		id, err := uuid.Parse(createdByID.String)
-		if err != nil {
-			return nil, err
-		}
-		u.CreatedByID = &id
-	}
-
-	return &u, nil
+	return &user, nil
 }
 
 func (r *userRepo) Create(entity *domainUser.User) error {
@@ -179,192 +45,78 @@ func (r *userRepo) Create(entity *domainUser.User) error {
 	if err := entity.Base.InitForCreate(now); err != nil {
 		return err
 	}
-
-	q := "INSERT INTO users (id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, role, disabled_at, locked_until, failed_login_attempts, last_login_at, created_by_id) " +
-		"VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	q = sqlutil.Rebind(r.dialect, q)
-
-	_, err := r.db.Exec(
-		q,
-		entity.ID,
-		entity.CreatedAt,
-		entity.UpdatedAt,
-		entity.FirstName,
-		entity.LastName,
-		entity.Email,
-		entity.Password,
-		entity.IsActive,
-		entity.Role,
-		entity.DisabledAt,
-		entity.LockedUntil,
-		entity.FailedLoginAttempts,
-		entity.LastLoginAt,
-		entity.CreatedByID,
-	)
-	return err
+	return r.db.Create(entity).Error
 }
 
 func (r *userRepo) Update(entity *domainUser.User) error {
-	now := time.Now().UTC()
-	entity.Base.TouchForUpdate(now)
+	entity.Base.TouchForUpdate(time.Now().UTC())
 
-	setPassword := strings.TrimSpace(entity.Password) != ""
-
-	var q string
-	var args []any
-	if setPassword {
-		q = "UPDATE users SET updated_at = ?, first_name = ?, last_name = ?, email = ?, password = ?, is_active = ?, role = ?, disabled_at = ?, locked_until = ?, failed_login_attempts = ?, last_login_at = ?, created_by_id = ? WHERE deleted_at IS NULL AND id = ?"
-		args = []any{entity.UpdatedAt, entity.FirstName, entity.LastName, entity.Email, entity.Password, entity.IsActive, entity.Role, entity.DisabledAt, entity.LockedUntil, entity.FailedLoginAttempts, entity.LastLoginAt, entity.CreatedByID, entity.ID}
-	} else {
-		q = "UPDATE users SET updated_at = ?, first_name = ?, last_name = ?, email = ?, is_active = ?, role = ?, disabled_at = ?, locked_until = ?, failed_login_attempts = ?, last_login_at = ?, created_by_id = ? WHERE deleted_at IS NULL AND id = ?"
-		args = []any{entity.UpdatedAt, entity.FirstName, entity.LastName, entity.Email, entity.IsActive, entity.Role, entity.DisabledAt, entity.LockedUntil, entity.FailedLoginAttempts, entity.LastLoginAt, entity.CreatedByID, entity.ID}
+	updates := map[string]any{
+		"updated_at":            entity.UpdatedAt,
+		"first_name":            entity.FirstName,
+		"last_name":             entity.LastName,
+		"email":                 entity.Email,
+		"is_active":             entity.IsActive,
+		"role":                  entity.Role,
+		"disabled_at":           entity.DisabledAt,
+		"locked_until":          entity.LockedUntil,
+		"failed_login_attempts": entity.FailedLoginAttempts,
+		"last_login_at":         entity.LastLoginAt,
+		"created_by_id":         entity.CreatedByID,
 	}
-	q = sqlutil.Rebind(r.dialect, q)
+	if strings.TrimSpace(entity.Password) != "" {
+		updates["password"] = entity.Password
+	}
 
-	_, err := r.db.Exec(q, args...)
-	return err
+	return r.db.Model(&domainUser.User{}).
+		Where("deleted_at IS NULL AND id = ?", entity.ID).
+		Updates(updates).Error
 }
 
 func (r *userRepo) DeleteByIds(ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-
 	now := time.Now().UTC()
-	q := "UPDATE users SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND id IN (" + sqlutil.Placeholders(len(ids)) + ")"
-	q = sqlutil.Rebind(r.dialect, q)
-
-	args := make([]any, 0, 2+len(ids))
-	args = append(args, now, now)
-	for _, id := range ids {
-		args = append(args, id)
-	}
-
-	_, err := r.db.Exec(q, args...)
-	return err
+	return r.db.Model(&domainUser.User{}).
+		Where("id IN ?", ids).
+		Updates(map[string]any{"deleted_at": now, "updated_at": now}).Error
 }
 
 func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainUser.User], error) {
-	page := params.Page
-	limit := params.Limit
-	if page <= 0 {
-		page = 1
-	}
-	if limit <= 0 {
-		limit = 10
-	}
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	searchFields := []string{"first_name", "last_name", "email"}
-	where := "deleted_at IS NULL"
-	args := make([]any, 0, 8)
+	query := r.db.Model(&domainUser.User{}).Where("deleted_at IS NULL")
 	if strings.TrimSpace(params.Search) != "" {
-		like := sqlutil.LikeOperator(r.dialect)
-		pattern := "%" + params.Search + "%"
-		parts := make([]string, 0, len(searchFields))
-		for _, f := range searchFields {
-			parts = append(parts, f+" "+like+" ?")
-			args = append(args, pattern)
-		}
-		where += " AND (" + strings.Join(parts, " OR ") + ")"
+		pattern := "%" + strings.TrimSpace(params.Search) + "%"
+		query = query.Where("first_name ILIKE ? OR last_name ILIKE ? OR email ILIKE ?", pattern, pattern, pattern)
 	}
 
-	countQ := "SELECT COUNT(*) FROM users WHERE " + where
-	countQ = sqlutil.Rebind(r.dialect, countQ)
-
-	var total int64
-	if err := r.db.QueryRow(countQ, args...).Scan(&total); err != nil {
-		return nil, err
+	allowedColumns := map[string]string{
+		"last_login_at": "last_login_at",
+		"created_at":    "created_at",
+		"first_name":    "first_name",
+		"last_name":     "last_name",
+		"email":         "email",
+		"role":          "role",
 	}
-
-	// Build ORDER BY clause with safe column names
-	orderBy := "last_login_at" // Default ordering
+	orderBy := "last_login_at"
+	if col, ok := allowedColumns[params.OrderBy]; ok {
+		orderBy = col
+	}
 	order := "DESC"
-	if params.OrderBy != "" {
-		// Whitelist allowed order by columns to prevent SQL injection
-		allowedColumns := map[string]string{
-			"last_login_at": "last_login_at",
-			"created_at":    "created_at",
-			"first_name":    "first_name",
-			"last_name":     "last_name",
-			"email":         "email",
-			"role":          "role",
-		}
-		if col, ok := allowedColumns[params.OrderBy]; ok {
-			orderBy = col
-		}
-	}
-	if params.Order != "" && (params.Order == "asc" || params.Order == "ASC") {
+	if strings.EqualFold(params.Order, "asc") {
 		order = "ASC"
 	}
 
-	dataQ := "SELECT id, created_at, updated_at, deleted_at, first_name, last_name, email, password, is_active, role, disabled_at, locked_until, failed_login_attempts, last_login_at, created_by_id FROM users WHERE " + where + " ORDER BY " + orderBy + " " + order + " LIMIT ? OFFSET ?"
-	dataQ = sqlutil.Rebind(r.dialect, dataQ)
-
-	dataArgs := append(append([]any{}, args...), limit, offset)
-	rows, err := r.db.Query(dataQ, dataArgs...)
-	if err != nil {
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
 
-	items := make([]domainUser.User, 0, limit)
-	for rows.Next() {
-		var u domainUser.User
-		var deletedAt sql.NullTime
-		var disabledAt sql.NullTime
-		var lockedUntil sql.NullTime
-		var lastLoginAt sql.NullTime
-		var role sql.NullString
-		var createdByID sql.NullString
-		if err := rows.Scan(
-			&u.ID,
-			&u.CreatedAt,
-			&u.UpdatedAt,
-			&deletedAt,
-			&u.FirstName,
-			&u.LastName,
-			&u.Email,
-			&u.Password,
-			&u.IsActive,
-			&role,
-			&disabledAt,
-			&lockedUntil,
-			&u.FailedLoginAttempts,
-			&lastLoginAt,
-			&createdByID,
-		); err != nil {
-			return nil, err
-		}
-		if deletedAt.Valid {
-			t := deletedAt.Time
-			u.DeletedAt = &t
-		}
-		if role.Valid {
-			u.Role = domainUser.Role(role.String)
-		}
-		if disabledAt.Valid {
-			t := disabledAt.Time
-			u.DisabledAt = &t
-		}
-		if lockedUntil.Valid {
-			t := lockedUntil.Time
-			u.LockedUntil = &t
-		}
-		if lastLoginAt.Valid {
-			t := lastLoginAt.Time
-			u.LastLoginAt = &t
-		}
-		if createdByID.Valid {
-			id, err := uuid.Parse(createdByID.String)
-			if err != nil {
-				return nil, err
-			}
-			u.CreatedByID = &id
-		}
-		items = append(items, u)
-	}
-	if err := rows.Err(); err != nil {
+	var items []domainUser.User
+	if err := query.Order(fmt.Sprintf("%s %s", orderBy, order)).Limit(limit).Offset(offset).Find(&items).Error; err != nil {
 		return nil, err
 	}
 

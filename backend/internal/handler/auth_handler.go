@@ -57,11 +57,7 @@ func NewAuthHandler(service AuthService, userService UserService, accessTokenTTL
 // @Router /api/v1/auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+	if !BindJSON(c, &req) {
 		return
 	}
 
@@ -265,8 +261,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 // @Router /api/v1/auth/password-reset/confirm [post]
 func (h *AuthHandler) ConfirmPasswordReset(c *gin.Context) {
 	var req dto.PasswordResetConfirmRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "validation_error", Message: err.Error()})
+	if !BindJSON(c, &req) {
 		return
 	}
 

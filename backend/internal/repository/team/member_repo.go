@@ -1,38 +1,33 @@
 package team
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
-	"github.com/besart951/go_infra_link/backend/internal/repository/sqlutil"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type memberRepo struct {
-	db      *sql.DB
-	dialect sqlutil.Dialect
+	db *gorm.DB
 }
 
-func NewTeamMemberRepository(db *sql.DB, driver string) domainTeam.TeamMemberRepository {
-	return &memberRepo{db: db, dialect: sqlutil.DialectFromDriver(driver)}
+func NewTeamMemberRepository(db *gorm.DB) domainTeam.TeamMemberRepository {
+	return &memberRepo{db: db}
 }
 
 func (r *memberRepo) GetUserRole(teamID, userID uuid.UUID) (*domainTeam.MemberRole, error) {
-	q := "SELECT role FROM team_members WHERE deleted_at IS NULL AND team_id = ? AND user_id = ? LIMIT 1"
-	q = sqlutil.Rebind(r.dialect, q)
-
-	var role string
-	err := r.db.QueryRow(q, teamID, userID).Scan(&role)
+	var member domainTeam.TeamMember
+	err := r.db.Where("deleted_at IS NULL").Where("team_id = ? AND user_id = ?", teamID, userID).First(&member).Error
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == gorm.ErrRecordNotFound {
 			return nil, nil
 		}
 		return nil, err
 	}
-	rv := domainTeam.MemberRole(role)
-	return &rv, nil
+	role := member.Role
+	return &role, nil
 }
 
 func (r *memberRepo) Upsert(member *domainTeam.TeamMember) error {
@@ -44,78 +39,50 @@ func (r *memberRepo) Upsert(member *domainTeam.TeamMember) error {
 		member.JoinedAt = now
 	}
 
-	q := "UPDATE team_members SET updated_at = ?, deleted_at = NULL, role = ? WHERE team_id = ? AND user_id = ?"
-	q = sqlutil.Rebind(r.dialect, q)
-	res, err := r.db.Exec(q, now, member.Role, member.TeamID, member.UserID)
-	if err != nil {
-		return err
+	result := r.db.Model(&domainTeam.TeamMember{}).
+		Where("team_id = ? AND user_id = ?", member.TeamID, member.UserID).
+		Updates(map[string]any{
+			"updated_at": now,
+			"deleted_at": nil,
+			"role":       member.Role,
+		})
+	if result.Error != nil {
+		return result.Error
 	}
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if affected > 0 {
+	if result.RowsAffected > 0 {
 		return nil
 	}
 
-	q = "INSERT INTO team_members (id, created_at, updated_at, deleted_at, team_id, user_id, role, joined_at) VALUES (?, ?, ?, NULL, ?, ?, ?, ?)"
-	q = sqlutil.Rebind(r.dialect, q)
-	_, err = r.db.Exec(q, member.ID, member.CreatedAt, member.UpdatedAt, member.TeamID, member.UserID, member.Role, member.JoinedAt)
-	return err
+	return r.db.Create(member).Error
 }
 
 func (r *memberRepo) Delete(teamID, userID uuid.UUID) error {
 	now := time.Now().UTC()
-	q := "UPDATE team_members SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND team_id = ? AND user_id = ?"
-	q = sqlutil.Rebind(r.dialect, q)
-	_, err := r.db.Exec(q, now, now, teamID, userID)
-	return err
+	return r.db.Model(&domainTeam.TeamMember{}).
+		Where("deleted_at IS NULL AND team_id = ? AND user_id = ?", teamID, userID).
+		Updates(map[string]any{"deleted_at": now, "updated_at": now}).Error
 }
 
 func (r *memberRepo) ListByTeam(teamID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainTeam.TeamMember], error) {
-	page := params.Page
-	limit := params.Limit
-	if page <= 0 {
-		page = 1
-	}
-	if limit <= 0 {
-		limit = 20
-	}
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 20)
 	offset := (page - 1) * limit
 
-	countQ := "SELECT COUNT(*) FROM team_members WHERE deleted_at IS NULL AND team_id = ?"
-	countQ = sqlutil.Rebind(r.dialect, countQ)
+	query := r.db.Model(&domainTeam.TeamMember{}).Where("deleted_at IS NULL AND team_id = ?", teamID)
+
 	var total int64
-	if err := r.db.QueryRow(countQ, teamID).Scan(&total); err != nil {
+	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	dataQ := "SELECT id, created_at, updated_at, deleted_at, team_id, user_id, role, joined_at FROM team_members WHERE deleted_at IS NULL AND team_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"
-	dataQ = sqlutil.Rebind(r.dialect, dataQ)
-	rows, err := r.db.Query(dataQ, teamID, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	items := make([]domainTeam.TeamMember, 0, limit)
-	for rows.Next() {
-		var m domainTeam.TeamMember
-		var deletedAt sql.NullTime
-		var role string
-		if err := rows.Scan(&m.ID, &m.CreatedAt, &m.UpdatedAt, &deletedAt, &m.TeamID, &m.UserID, &role, &m.JoinedAt); err != nil {
-			return nil, err
-		}
-		m.Role = domainTeam.MemberRole(role)
-		if deletedAt.Valid {
-			v := deletedAt.Time
-			m.DeletedAt = &v
-		}
-		items = append(items, m)
-	}
-	if err := rows.Err(); err != nil {
+	var items []domainTeam.TeamMember
+	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&items).Error; err != nil {
 		return nil, err
 	}
 
-	return &domain.PaginatedList[domainTeam.TeamMember]{Items: items, Total: total, Page: page, TotalPages: domain.CalculateTotalPages(total, limit)}, nil
+	return &domain.PaginatedList[domainTeam.TeamMember]{
+		Items:      items,
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
+	}, nil
 }
