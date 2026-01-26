@@ -2,10 +2,10 @@
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import { Plus, Pencil } from 'lucide-svelte';
+	import { Plus, Pencil } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { spsControllersStore } from '$lib/stores/list/entityStores.js';
-	import type { SPSController } from '$lib/domain/entities/spsController.js';
+	import type { SPSController } from '$lib/domain/facility/index.js';
 	import SPSControllerForm from '$lib/components/facility/SPSControllerForm.svelte';
 
 	let showForm = $state(false);

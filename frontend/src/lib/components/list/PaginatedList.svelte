@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { Search, ChevronLeft, ChevronRight } from 'lucide-svelte';
+	import { Search, ChevronLeft, ChevronRight } from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import type { ListState } from '$lib/application/useCases/listUseCase.js';
 
@@ -29,11 +29,11 @@
 		onReload
 	}: Props = $props();
 
-	let searchInput = $state(state.searchText);
+	let searchInput = $derived(state.searchText);
 
 	function handleSearchInput(e: Event) {
-		searchInput = (e.target as HTMLInputElement).value;
-		onSearch(searchInput);
+		const value = (e.target as HTMLInputElement).value;
+		onSearch(value);
 	}
 
 	function handlePrevious() {

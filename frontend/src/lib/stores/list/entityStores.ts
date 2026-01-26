@@ -1,12 +1,12 @@
 import { createApiAdapter } from '$lib/infrastructure/api/apiListAdapter.js';
 import { createListStore } from './listStore.js';
-import type { Building } from '$lib/domain/entities/building.js';
-import type { ControlCabinet } from '$lib/domain/entities/controlCabinet.js';
-import type { SPSController } from '$lib/domain/entities/spsController.js';
-import type { Apparat } from '$lib/domain/entities/apparat.js';
+import type { Building } from '$lib/domain/facility/index.js';
+import type { ControlCabinet } from '$lib/domain/facility/index.js';
+import type { SPSController } from '$lib/domain/facility/index.js';
+import type { Apparat } from '$lib/domain/facility/index.js';
 import type { SystemPart } from '$lib/domain/entities/systemPart.js';
 import type { SPSControllerSystemType } from '$lib/domain/entities/spsControllerSystemType.js';
-import type { ObjectData } from '$lib/domain/entities/objectData.js';
+import type { ObjectData } from '$lib/domain/facility/index.js';
 import type { Project } from '$lib/domain/entities/project.js';
 import type { Team } from '$lib/domain/entities/team.js';
 import type { User } from '$lib/domain/entities/user.js';
