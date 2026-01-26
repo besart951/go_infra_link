@@ -5,66 +5,61 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type stateTextRepo struct {
-	db *gorm.DB
+	*gormbase.BaseRepository[*domainFacility.StateText]
 }
 
 func NewStateTextRepository(db *gorm.DB) domainFacility.StateTextRepository {
-	return &stateTextRepo{db: db}
+	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
+		// Try to parse search as int for RefNumber
+		if refNum, err := strconv.Atoi(search); err == nil {
+			return query.Where("ref_number = ?", refNum)
+		}
+		// Search in text fields if not a number
+		return query.Where("state_text1 ILIKE ?", "%"+search+"%")
+	}
+
+	baseRepo := gormbase.NewBaseRepository[*domainFacility.StateText](db, searchCallback)
+	return &stateTextRepo{BaseRepository: baseRepo}
 }
 
 func (r *stateTextRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.StateText, error) {
-	var items []*domainFacility.StateText
-	err := r.db.Where("id IN ?", ids).Find(&items).Error
-	return items, err
+	return r.BaseRepository.GetByIds(ids)
 }
 
 func (r *stateTextRepo) Create(entity *domainFacility.StateText) error {
-	return r.db.Create(entity).Error
+	return r.BaseRepository.Create(entity)
 }
 
 func (r *stateTextRepo) Update(entity *domainFacility.StateText) error {
-	return r.db.Save(entity).Error
+	return r.BaseRepository.Update(entity)
 }
 
 func (r *stateTextRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.db.Delete(&domainFacility.StateText{}, ids).Error
+	return r.BaseRepository.DeleteByIds(ids)
 }
 
 func (r *stateTextRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.StateText], error) {
-	var items []domainFacility.StateText
-	var total int64
-
-	db := r.db.Model(&domainFacility.StateText{})
-
-	if params.Search != "" {
-		// Try to parse search as int for RefNumber
-		if refNum, err := strconv.Atoi(params.Search); err == nil {
-			db = db.Where("ref_number = ?", refNum)
-		} else {
-			// Search in text fields if not a number, or just as a fallback/OR condition?
-			// Since RefNumber is likely the primary search, let's stick to simple text search on the first text field
-			db = db.Where("state_text1 ILIKE ?", "%"+params.Search+"%")
-		}
-	}
-
-	if err := db.Count(&total).Error; err != nil {
+	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+	if err != nil {
 		return nil, err
 	}
 
-	offset := (params.Page - 1) * params.Limit
-	if err := db.Limit(params.Limit).Offset(offset).Order("ref_number ASC").Find(&items).Error; err != nil {
-		return nil, err
+	// Convert []*StateText to []StateText for the interface
+	items := make([]domainFacility.StateText, len(result.Items))
+	for i, item := range result.Items {
+		items[i] = *item
 	}
 
 	return &domain.PaginatedList[domainFacility.StateText]{
 		Items:      items,
-		Total:      total,
-		Page:       params.Page,
-		TotalPages: domain.CalculateTotalPages(total, params.Limit),
+		Total:      result.Total,
+		Page:       result.Page,
+		TotalPages: result.TotalPages,
 	}, nil
 }
