@@ -5,8 +5,9 @@ import (
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
-	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	"github.com/besart951/go_infra_link/backend/internal/handler/mapper"
+	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,40 +31,18 @@ func NewProjectHandler(service ProjectService) *ProjectHandler {
 // @Router /api/v1/projects [post]
 func (h *ProjectHandler) CreateProject(c *gin.Context) {
 	var req dto.CreateProjectRequest
-	if !BindJSON(c, &req) {
+	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 
-	proj := &project.Project{
-		Name:        req.Name,
-		Description: req.Description,
-		Status:      project.ProjectStatus(req.Status),
-		StartDate:   req.StartDate,
-		CreatorID:   req.CreatorID,
-	}
-
-	if req.PhaseID != nil {
-		proj.PhaseID = *req.PhaseID
-	}
+	proj := mapper.ToProjectModel(req)
 
 	if err := h.service.Create(proj); err != nil {
-		RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
-	response := dto.ProjectResponse{
-		ID:          proj.ID,
-		Name:        proj.Name,
-		Description: proj.Description,
-		Status:      proj.Status,
-		StartDate:   proj.StartDate,
-		PhaseID:     proj.PhaseID,
-		CreatorID:   proj.CreatorID,
-		CreatedAt:   proj.CreatedAt,
-		UpdatedAt:   proj.UpdatedAt,
-	}
-
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, mapper.ToProjectResponse(proj))
 }
 
 // GetProject godoc
@@ -77,7 +56,7 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id} [get]
 func (h *ProjectHandler) GetProject(c *gin.Context) {
-	id, ok := ParseUUIDParam(c, "id")
+	id, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
@@ -85,26 +64,14 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 	proj, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			RespondNotFound(c, "Project not found")
+			handlerutil.RespondNotFound(c, "Project not found")
 			return
 		}
-		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	response := dto.ProjectResponse{
-		ID:          proj.ID,
-		Name:        proj.Name,
-		Description: proj.Description,
-		Status:      proj.Status,
-		StartDate:   proj.StartDate,
-		PhaseID:     proj.PhaseID,
-		CreatorID:   proj.CreatorID,
-		CreatedAt:   proj.CreatedAt,
-		UpdatedAt:   proj.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, mapper.ToProjectResponse(proj))
 }
 
 // ListProjects godoc
@@ -120,33 +87,18 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 // @Router /api/v1/projects [get]
 func (h *ProjectHandler) ListProjects(c *gin.Context) {
 	var query dto.PaginationQuery
-	if !BindQuery(c, &query) {
+	if !handlerutil.BindQuery(c, &query) {
 		return
 	}
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	items := make([]dto.ProjectResponse, len(result.Items))
-	for i, proj := range result.Items {
-		items[i] = dto.ProjectResponse{
-			ID:          proj.ID,
-			Name:        proj.Name,
-			Description: proj.Description,
-			Status:      proj.Status,
-			StartDate:   proj.StartDate,
-			PhaseID:     proj.PhaseID,
-			CreatorID:   proj.CreatorID,
-			CreatedAt:   proj.CreatedAt,
-			UpdatedAt:   proj.UpdatedAt,
-		}
-	}
-
 	response := dto.ProjectListResponse{
-		Items:      items,
+		Items:      mapper.ToProjectListResponse(result.Items),
 		Total:      result.Total,
 		Page:       result.Page,
 		TotalPages: result.TotalPages,
@@ -168,60 +120,34 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id} [put]
 func (h *ProjectHandler) UpdateProject(c *gin.Context) {
-	id, ok := ParseUUIDParam(c, "id")
+	id, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
 	var req dto.UpdateProjectRequest
-	if !BindJSON(c, &req) {
+	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 
 	proj, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			RespondNotFound(c, "Project not found")
+			handlerutil.RespondNotFound(c, "Project not found")
 			return
 		}
-		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	if req.Name != "" {
-		proj.Name = req.Name
-	}
-	if req.Description != "" {
-		proj.Description = req.Description
-	}
-	if req.Status != "" {
-		proj.Status = req.Status
-	}
-	if req.StartDate != nil {
-		proj.StartDate = req.StartDate
-	}
-	if req.PhaseID != nil {
-		proj.PhaseID = *req.PhaseID
-	}
+	mapper.ApplyProjectUpdate(proj, req)
 
 	if err := h.service.Update(proj); err != nil {
-		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
-	response := dto.ProjectResponse{
-		ID:          proj.ID,
-		Name:        proj.Name,
-		Description: proj.Description,
-		Status:      proj.Status,
-		StartDate:   proj.StartDate,
-		PhaseID:     proj.PhaseID,
-		CreatorID:   proj.CreatorID,
-		CreatedAt:   proj.CreatedAt,
-		UpdatedAt:   proj.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, mapper.ToProjectResponse(proj))
 }
 
 // DeleteProject godoc
@@ -234,13 +160,13 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id} [delete]
 func (h *ProjectHandler) DeleteProject(c *gin.Context) {
-	id, ok := ParseUUIDParam(c, "id")
+	id, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}
 

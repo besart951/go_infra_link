@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
 
@@ -32,18 +33,18 @@ func NewAdminHandler(adminService AdminService, authService AuthService) *AdminH
 func (h *AdminHandler) ResetUserPassword(c *gin.Context) {
 	adminID, ok := middleware.GetUserID(c)
 	if !ok {
-		RespondError(c, http.StatusUnauthorized, "unauthorized", "")
+		handlerutil.RespondError(c, http.StatusUnauthorized, "unauthorized", "")
 		return
 	}
 
-	userID, ok := ParseUUIDParam(c, "id")
+	userID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
 	resetToken, expiresAt, err := h.authService.CreatePasswordResetToken(adminID, userID)
 	if err != nil {
-		RespondError(c, http.StatusInternalServerError, "reset_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "reset_failed", err.Error())
 		return
 	}
 
@@ -59,12 +60,12 @@ func (h *AdminHandler) ResetUserPassword(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/admin/users/{id}/disable [post]
 func (h *AdminHandler) DisableUser(c *gin.Context) {
-	userID, ok := ParseUUIDParam(c, "id")
+	userID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 	if err := h.adminService.DisableUser(userID); err != nil {
-		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -79,12 +80,12 @@ func (h *AdminHandler) DisableUser(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/admin/users/{id}/enable [post]
 func (h *AdminHandler) EnableUser(c *gin.Context) {
-	userID, ok := ParseUUIDParam(c, "id")
+	userID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 	if err := h.adminService.EnableUser(userID); err != nil {
-		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -101,21 +102,21 @@ func (h *AdminHandler) EnableUser(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/admin/users/{id}/lock [post]
 func (h *AdminHandler) LockUser(c *gin.Context) {
-	userID, ok := ParseUUIDParam(c, "id")
+	userID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 	var req dto.AdminLockUserRequest
-	if !BindJSON(c, &req) {
+	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 	until := req.Until.UTC()
 	if until.Before(time.Now().UTC()) {
-		RespondError(c, http.StatusBadRequest, "validation_error", "until must be in the future")
+		handlerutil.RespondError(c, http.StatusBadRequest, "validation_error", "until must be in the future")
 		return
 	}
 	if err := h.adminService.LockUserUntil(userID, until); err != nil {
-		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -130,12 +131,12 @@ func (h *AdminHandler) LockUser(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/admin/users/{id}/unlock [post]
 func (h *AdminHandler) UnlockUser(c *gin.Context) {
-	userID, ok := ParseUUIDParam(c, "id")
+	userID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 	if err := h.adminService.UnlockUser(userID); err != nil {
-		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -152,17 +153,17 @@ func (h *AdminHandler) UnlockUser(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/admin/users/{id}/role [post]
 func (h *AdminHandler) SetUserRole(c *gin.Context) {
-	userID, ok := ParseUUIDParam(c, "id")
+	userID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 	var req dto.AdminSetUserRoleRequest
-	if !BindJSON(c, &req) {
+	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 
 	if err := h.adminService.SetUserRole(userID, user.Role(req.Role)); err != nil {
-		RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -181,13 +182,13 @@ func (h *AdminHandler) SetUserRole(c *gin.Context) {
 // @Router /api/v1/admin/login-attempts [get]
 func (h *AdminHandler) ListLoginAttempts(c *gin.Context) {
 	var query dto.PaginationQuery
-	if !BindQuery(c, &query) {
+	if !handlerutil.BindQuery(c, &query) {
 		return
 	}
 
 	res, err := h.authService.ListLoginAttempts(query.Page, query.Limit, query.Search)
 	if err != nil {
-		RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
