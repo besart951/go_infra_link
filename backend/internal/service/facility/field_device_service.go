@@ -56,6 +56,9 @@ func (s *FieldDeviceService) CreateWithBacnetObjects(fieldDevice *domainFacility
 	if objectDataID != nil && len(bacnetObjects) > 0 {
 		return domain.ErrInvalidArgument
 	}
+	if err := s.validateRequiredFields(fieldDevice); err != nil {
+		return err
+	}
 	if err := s.ensureParentsExist(fieldDevice); err != nil {
 		return err
 	}
@@ -96,6 +99,9 @@ func (s *FieldDeviceService) List(page, limit int, search string) (*domain.Pagin
 	})
 }
 func (s *FieldDeviceService) Update(fieldDevice *domainFacility.FieldDevice) error {
+	if err := s.validateRequiredFields(fieldDevice); err != nil {
+		return err
+	}
 	if err := s.ensureParentsExist(fieldDevice); err != nil {
 		return err
 	}
@@ -108,6 +114,9 @@ func (s *FieldDeviceService) Update(fieldDevice *domainFacility.FieldDevice) err
 func (s *FieldDeviceService) UpdateWithBacnetObjects(fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects *[]domainFacility.BacnetObject) error {
 	if objectDataID != nil && bacnetObjects != nil {
 		return domain.ErrInvalidArgument
+	}
+	if err := s.validateRequiredFields(fieldDevice); err != nil {
+		return err
 	}
 	if err := s.ensureParentsExist(fieldDevice); err != nil {
 		return err
@@ -335,6 +344,20 @@ func (s *FieldDeviceService) ensureApparatNrAvailable(fieldDevice *domainFacilit
 	}
 	if exists {
 		return domain.NewValidationError().Add("fielddevice.apparat_nr", "apparat_nr is already used in this scope")
+	}
+	return nil
+}
+
+func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.FieldDevice) error {
+	ve := domain.NewValidationError()
+	if fieldDevice.SPSControllerSystemTypeID == uuid.Nil {
+		ve.Add("fielddevice.sps_controller_system_type_id", "sps_controller_system_type_id is required")
+	}
+	if fieldDevice.ApparatID == uuid.Nil {
+		ve.Add("fielddevice.apparat_id", "apparat_id is required")
+	}
+	if len(ve.Fields) > 0 {
+		return ve
 	}
 	return nil
 }

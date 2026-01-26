@@ -57,6 +57,10 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 	}
 
 	if err := h.service.CreateWithSystemTypes(spsController, systemTypes); err != nil {
+		if ve, ok := domain.AsValidationError(err); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
 		if errors.Is(err, domain.ErrNotFound) {
 			respondError(c, http.StatusBadRequest, "invalid_reference", "Referenced entity not found or deleted")
 			return
@@ -254,6 +258,10 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		updateErr = h.service.Update(spsController)
 	}
 	if updateErr != nil {
+		if ve, ok := domain.AsValidationError(updateErr); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
 		if errors.Is(updateErr, domain.ErrNotFound) {
 			respondError(c, http.StatusBadRequest, "invalid_reference", "Referenced entity not found or deleted")
 			return

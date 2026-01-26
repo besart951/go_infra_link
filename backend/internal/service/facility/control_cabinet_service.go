@@ -16,6 +16,9 @@ func NewControlCabinetService(repo domainFacility.ControlCabinetRepository, buil
 }
 
 func (s *ControlCabinetService) Create(controlCabinet *domainFacility.ControlCabinet) error {
+	if err := s.validateRequiredFields(controlCabinet); err != nil {
+		return err
+	}
 	if err := s.ensureBuildingExists(controlCabinet.BuildingID); err != nil {
 		return err
 	}
@@ -43,6 +46,9 @@ func (s *ControlCabinetService) List(page, limit int, search string) (*domain.Pa
 }
 
 func (s *ControlCabinetService) Update(controlCabinet *domainFacility.ControlCabinet) error {
+	if err := s.validateRequiredFields(controlCabinet); err != nil {
+		return err
+	}
 	if err := s.ensureBuildingExists(controlCabinet.BuildingID); err != nil {
 		return err
 	}
@@ -60,6 +66,17 @@ func (s *ControlCabinetService) ensureBuildingExists(buildingID uuid.UUID) error
 	}
 	if len(buildings) == 0 {
 		return domain.ErrNotFound
+	}
+	return nil
+}
+
+func (s *ControlCabinetService) validateRequiredFields(controlCabinet *domainFacility.ControlCabinet) error {
+	ve := domain.NewValidationError()
+	if controlCabinet.BuildingID == uuid.Nil {
+		ve.Add("controlcabinet.building_id", "building_id is required")
+	}
+	if len(ve.Fields) > 0 {
+		return ve
 	}
 	return nil
 }

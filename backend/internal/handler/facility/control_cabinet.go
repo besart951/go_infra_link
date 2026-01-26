@@ -41,6 +41,10 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 	}
 
 	if err := h.service.Create(controlCabinet); err != nil {
+		if ve, ok := domain.AsValidationError(err); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
 		if errors.Is(err, domain.ErrNotFound) {
 			respondError(c, http.StatusBadRequest, "invalid_reference", "Building not found or deleted")
 			return
@@ -182,6 +186,10 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 	}
 
 	if err := h.service.Update(controlCabinet); err != nil {
+		if ve, ok := domain.AsValidationError(err); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
 		if errors.Is(err, domain.ErrNotFound) {
 			respondError(c, http.StatusBadRequest, "invalid_reference", "Building not found or deleted")
 			return

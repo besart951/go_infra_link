@@ -42,6 +42,10 @@ func (h *ApparatHandler) CreateApparat(c *gin.Context) {
 	}
 
 	if err := h.service.Create(apparat); err != nil {
+		if ve, ok := domain.AsValidationError(err); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -188,6 +192,10 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 	}
 
 	if err := h.service.Update(apparat); err != nil {
+		if ve, ok := domain.AsValidationError(err); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
 		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}

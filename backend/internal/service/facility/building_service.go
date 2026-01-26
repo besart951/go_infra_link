@@ -15,6 +15,9 @@ func NewBuildingService(repo domainFacility.BuildingRepository) *BuildingService
 }
 
 func (s *BuildingService) Create(building *domainFacility.Building) error {
+	if err := s.validateRequiredFields(building); err != nil {
+		return err
+	}
 	return s.repo.Create(building)
 }
 
@@ -39,9 +42,23 @@ func (s *BuildingService) List(page, limit int, search string) (*domain.Paginate
 }
 
 func (s *BuildingService) Update(building *domainFacility.Building) error {
+	if err := s.validateRequiredFields(building); err != nil {
+		return err
+	}
 	return s.repo.Update(building)
 }
 
 func (s *BuildingService) DeleteByIds(ids []uuid.UUID) error {
 	return s.repo.DeleteByIds(ids)
+}
+
+func (s *BuildingService) validateRequiredFields(building *domainFacility.Building) error {
+	ve := domain.NewValidationError()
+	if building.BuildingGroup == 0 {
+		ve.Add("building.building_group", "building_group is required")
+	}
+	if len(ve.Fields) > 0 {
+		return ve
+	}
+	return nil
 }

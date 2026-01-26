@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"strings"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
@@ -32,6 +34,12 @@ func (s *SPSControllerService) Create(spsController *domainFacility.SPSControlle
 }
 
 func (s *SPSControllerService) CreateWithSystemTypes(spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
+	if err := s.validateRequiredFields(spsController); err != nil {
+		return err
+	}
+	if err := s.ensureUnique(spsController, nil); err != nil {
+		return err
+	}
 	if err := s.ensureControlCabinetExists(spsController.ControlCabinetID); err != nil {
 		return err
 	}
@@ -81,6 +89,12 @@ func (s *SPSControllerService) List(page, limit int, search string) (*domain.Pag
 }
 
 func (s *SPSControllerService) Update(spsController *domainFacility.SPSController) error {
+	if err := s.validateRequiredFields(spsController); err != nil {
+		return err
+	}
+	if err := s.ensureUnique(spsController, &spsController.ID); err != nil {
+		return err
+	}
 	if err := s.ensureControlCabinetExists(spsController.ControlCabinetID); err != nil {
 		return err
 	}
@@ -88,6 +102,12 @@ func (s *SPSControllerService) Update(spsController *domainFacility.SPSControlle
 }
 
 func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
+	if err := s.validateRequiredFields(spsController); err != nil {
+		return err
+	}
+	if err := s.ensureUnique(spsController, &spsController.ID); err != nil {
+		return err
+	}
 	if err := s.ensureControlCabinetExists(spsController.ControlCabinetID); err != nil {
 		return err
 	}
@@ -156,6 +176,68 @@ func (s *SPSControllerService) ensureSystemTypesExist(systemTypes []domainFacili
 	}
 	if len(found) != len(ids) {
 		return domain.ErrNotFound
+	}
+	return nil
+}
+
+func (s *SPSControllerService) validateRequiredFields(spsController *domainFacility.SPSController) error {
+	ve := domain.NewValidationError()
+	if spsController.ControlCabinetID == uuid.Nil {
+		ve.Add("spscontroller.control_cabinet_id", "control_cabinet_id is required")
+	}
+	if strings.TrimSpace(spsController.DeviceName) == "" {
+		ve.Add("spscontroller.device_name", "device_name is required")
+	}
+	if len(ve.Fields) > 0 {
+		return ve
+	}
+	return nil
+}
+
+func (s *SPSControllerService) ensureUnique(spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
+	ve := domain.NewValidationError()
+
+	if strings.TrimSpace(spsController.DeviceName) != "" {
+		items, err := s.repo.GetPaginatedList(domain.PaginationParams{Page: 1, Limit: 1000, Search: spsController.DeviceName})
+		if err != nil {
+			return err
+		}
+		for i := range items.Items {
+			item := items.Items[i]
+			if excludeID != nil && item.ID == *excludeID {
+				continue
+			}
+			if item.ControlCabinetID == spsController.ControlCabinetID && strings.EqualFold(item.DeviceName, spsController.DeviceName) {
+				ve.Add("spscontroller.device_name", "device_name must be unique within the control cabinet")
+				break
+			}
+		}
+	}
+
+	if spsController.IPAddress != nil && spsController.Vlan != nil {
+		ip := strings.TrimSpace(*spsController.IPAddress)
+		vlan := strings.TrimSpace(*spsController.Vlan)
+		if ip != "" && vlan != "" {
+			items, err := s.repo.GetPaginatedList(domain.PaginationParams{Page: 1, Limit: 1000, Search: ip})
+			if err != nil {
+				return err
+			}
+			for i := range items.Items {
+				item := items.Items[i]
+				if excludeID != nil && item.ID == *excludeID {
+					continue
+				}
+				if item.IPAddress != nil && item.Vlan != nil && *item.IPAddress == ip && *item.Vlan == vlan {
+					ve.Add("spscontroller.ip_address", "ip_address must be unique per vlan")
+					ve.Add("spscontroller.vlan", "vlan must be unique per ip_address")
+					break
+				}
+			}
+		}
+	}
+
+	if len(ve.Fields) > 0 {
+		return ve
 	}
 	return nil
 }

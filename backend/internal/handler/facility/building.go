@@ -41,6 +41,10 @@ func (h *BuildingHandler) CreateBuilding(c *gin.Context) {
 	}
 
 	if err := h.service.Create(building); err != nil {
+		if ve, ok := domain.AsValidationError(err); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
 			Error:   "creation_failed",
 			Message: err.Error(),
@@ -181,6 +185,10 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 	}
 
 	if err := h.service.Update(building); err != nil {
+		if ve, ok := domain.AsValidationError(err); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
 		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
