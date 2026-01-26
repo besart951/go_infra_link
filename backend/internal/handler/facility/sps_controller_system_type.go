@@ -3,7 +3,6 @@ package facility
 import (
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
 )
 
@@ -27,8 +26,8 @@ func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService) *
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/sps-controller-system-types [get]
 func (h *SPSControllerSystemTypeHandler) ListSPSControllerSystemTypes(c *gin.Context) {
-	var query dto.PaginationQuery
-	if !bindQuery(c, &query) {
+	query, ok := parsePaginationQuery(c)
+	if !ok {
 		return
 	}
 
@@ -38,27 +37,5 @@ func (h *SPSControllerSystemTypeHandler) ListSPSControllerSystemTypes(c *gin.Con
 		return
 	}
 
-	items := make([]dto.SPSControllerSystemTypeResponse, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = dto.SPSControllerSystemTypeResponse{
-			ID:                item.ID,
-			SPSControllerID:   item.SPSControllerID,
-			SystemTypeID:      item.SystemTypeID,
-			SPSControllerName: item.SPSController.DeviceName, // This will be empty if not populated
-			SystemTypeName:    item.SystemType.Name,          // This will be empty if not populated
-			Number:            item.Number,
-			DocumentName:      item.DocumentName,
-			CreatedAt:         item.CreatedAt,
-			UpdatedAt:         item.UpdatedAt,
-		}
-	}
-
-	response := dto.SPSControllerSystemTypeListResponse{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toSPSControllerSystemTypeListResponse(result))
 }

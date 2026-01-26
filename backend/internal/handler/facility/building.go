@@ -1,14 +1,10 @@
 package facility
 
 import (
-	"errors"
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
-	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type BuildingHandler struct {
@@ -35,32 +31,13 @@ func (h *BuildingHandler) CreateBuilding(c *gin.Context) {
 		return
 	}
 
-	building := &domainFacility.Building{
-		IWSCode:       req.IWSCode,
-		BuildingGroup: req.BuildingGroup,
-	}
+	building := toBuildingModel(req)
 
-	if err := h.service.Create(building); err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "creation_failed",
-			Message: err.Error(),
-		})
+	if err := h.service.Create(building); respondValidationOrError(c, err, "creation_failed") {
 		return
 	}
 
-	response := dto.BuildingResponse{
-		ID:            building.ID,
-		IWSCode:       building.IWSCode,
-		BuildingGroup: building.BuildingGroup,
-		CreatedAt:     building.CreatedAt,
-		UpdatedAt:     building.UpdatedAt,
-	}
-
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, toBuildingResponse(*building))
 }
 
 // GetBuilding godoc
@@ -81,23 +58,14 @@ func (h *BuildingHandler) GetBuilding(c *gin.Context) {
 
 	building, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "Building not found")
+		if respondNotFoundIf(c, err, "Building not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	response := dto.BuildingResponse{
-		ID:            building.ID,
-		IWSCode:       building.IWSCode,
-		BuildingGroup: building.BuildingGroup,
-		CreatedAt:     building.CreatedAt,
-		UpdatedAt:     building.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toBuildingResponse(*building))
 }
 
 // ListBuildings godoc
@@ -112,8 +80,8 @@ func (h *BuildingHandler) GetBuilding(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/buildings [get]
 func (h *BuildingHandler) ListBuildings(c *gin.Context) {
-	var query dto.PaginationQuery
-	if !bindQuery(c, &query) {
+	query, ok := parsePaginationQuery(c)
+	if !ok {
 		return
 	}
 
@@ -123,25 +91,7 @@ func (h *BuildingHandler) ListBuildings(c *gin.Context) {
 		return
 	}
 
-	items := make([]dto.BuildingResponse, len(result.Items))
-	for i, building := range result.Items {
-		items[i] = dto.BuildingResponse{
-			ID:            building.ID,
-			IWSCode:       building.IWSCode,
-			BuildingGroup: building.BuildingGroup,
-			CreatedAt:     building.CreatedAt,
-			UpdatedAt:     building.UpdatedAt,
-		}
-	}
-
-	response := dto.BuildingListResponse{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toBuildingListResponse(result))
 }
 
 // UpdateBuilding godoc
@@ -169,39 +119,20 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 
 	building, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "Building not found")
+		if respondNotFoundIf(c, err, "Building not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	if req.IWSCode != "" {
-		building.IWSCode = req.IWSCode
-	}
-	if req.BuildingGroup != 0 {
-		building.BuildingGroup = req.BuildingGroup
-	}
+	applyBuildingUpdate(building, req)
 
-	if err := h.service.Update(building); err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+	if err := h.service.Update(building); respondValidationOrError(c, err, "update_failed") {
 		return
 	}
 
-	response := dto.BuildingResponse{
-		ID:            building.ID,
-		IWSCode:       building.IWSCode,
-		BuildingGroup: building.BuildingGroup,
-		CreatedAt:     building.CreatedAt,
-		UpdatedAt:     building.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toBuildingResponse(*building))
 }
 
 // DeleteBuilding godoc
@@ -219,7 +150,7 @@ func (h *BuildingHandler) DeleteBuilding(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByID(id); err != nil {
 		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}

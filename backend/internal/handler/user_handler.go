@@ -8,7 +8,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type UserHandler struct {
@@ -262,7 +261,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByID(id); err != nil {
 		RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}

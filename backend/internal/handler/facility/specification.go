@@ -5,10 +5,8 @@ import (
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
-	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type SpecificationHandler struct {
@@ -35,53 +33,22 @@ func (h *SpecificationHandler) CreateSpecification(c *gin.Context) {
 		return
 	}
 
-	specification := &domainFacility.Specification{
-		FieldDeviceID:                             &req.FieldDeviceID,
-		SpecificationSupplier:                     req.SpecificationSupplier,
-		SpecificationBrand:                        req.SpecificationBrand,
-		SpecificationType:                         req.SpecificationType,
-		AdditionalInfoMotorValve:                  req.AdditionalInfoMotorValve,
-		AdditionalInfoSize:                        req.AdditionalInfoSize,
-		AdditionalInformationInstallationLocation: req.AdditionalInformationInstallationLocation,
-		ElectricalConnectionPH:                    req.ElectricalConnectionPH,
-		ElectricalConnectionACDC:                  req.ElectricalConnectionACDC,
-		ElectricalConnectionAmperage:              req.ElectricalConnectionAmperage,
-		ElectricalConnectionPower:                 req.ElectricalConnectionPower,
-		ElectricalConnectionRotation:              req.ElectricalConnectionRotation,
-	}
+	specification := toSpecificationModel(req)
 
 	if err := h.service.Create(specification); err != nil {
 		if errors.Is(err, domain.ErrInvalidArgument) {
-			respondError(c, http.StatusBadRequest, "validation_error", "field_device_id is required")
+			respondInvalidArgument(c, "field_device_id is required")
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			respondError(c, http.StatusConflict, "conflict", "Specification already exists for this field device")
+			respondConflict(c, "Specification already exists for this field device")
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
-	response := dto.SpecificationResponse{
-		ID:                       specification.ID,
-		FieldDeviceID:            specification.FieldDeviceID,
-		SpecificationSupplier:    specification.SpecificationSupplier,
-		SpecificationBrand:       specification.SpecificationBrand,
-		SpecificationType:        specification.SpecificationType,
-		AdditionalInfoMotorValve: specification.AdditionalInfoMotorValve,
-		AdditionalInfoSize:       specification.AdditionalInfoSize,
-		AdditionalInformationInstallationLocation: specification.AdditionalInformationInstallationLocation,
-		ElectricalConnectionPH:                    specification.ElectricalConnectionPH,
-		ElectricalConnectionACDC:                  specification.ElectricalConnectionACDC,
-		ElectricalConnectionAmperage:              specification.ElectricalConnectionAmperage,
-		ElectricalConnectionPower:                 specification.ElectricalConnectionPower,
-		ElectricalConnectionRotation:              specification.ElectricalConnectionRotation,
-		CreatedAt:                                 specification.CreatedAt,
-		UpdatedAt:                                 specification.UpdatedAt,
-	}
-
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, toSpecificationResponse(*specification))
 }
 
 // GetSpecification godoc
@@ -102,33 +69,14 @@ func (h *SpecificationHandler) GetSpecification(c *gin.Context) {
 
 	specification, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "Specification not found")
+		if respondNotFoundIf(c, err, "Specification not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	response := dto.SpecificationResponse{
-		ID:                       specification.ID,
-		FieldDeviceID:            specification.FieldDeviceID,
-		SpecificationSupplier:    specification.SpecificationSupplier,
-		SpecificationBrand:       specification.SpecificationBrand,
-		SpecificationType:        specification.SpecificationType,
-		AdditionalInfoMotorValve: specification.AdditionalInfoMotorValve,
-		AdditionalInfoSize:       specification.AdditionalInfoSize,
-		AdditionalInformationInstallationLocation: specification.AdditionalInformationInstallationLocation,
-		ElectricalConnectionPH:                    specification.ElectricalConnectionPH,
-		ElectricalConnectionACDC:                  specification.ElectricalConnectionACDC,
-		ElectricalConnectionAmperage:              specification.ElectricalConnectionAmperage,
-		ElectricalConnectionPower:                 specification.ElectricalConnectionPower,
-		ElectricalConnectionRotation:              specification.ElectricalConnectionRotation,
-		CreatedAt:                                 specification.CreatedAt,
-		UpdatedAt:                                 specification.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toSpecificationResponse(*specification))
 }
 
 // ListSpecifications godoc
@@ -143,8 +91,8 @@ func (h *SpecificationHandler) GetSpecification(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/specifications [get]
 func (h *SpecificationHandler) ListSpecifications(c *gin.Context) {
-	var query dto.PaginationQuery
-	if !bindQuery(c, &query) {
+	query, ok := parsePaginationQuery(c)
+	if !ok {
 		return
 	}
 
@@ -154,35 +102,7 @@ func (h *SpecificationHandler) ListSpecifications(c *gin.Context) {
 		return
 	}
 
-	items := make([]dto.SpecificationResponse, len(result.Items))
-	for i, specification := range result.Items {
-		items[i] = dto.SpecificationResponse{
-			ID:                       specification.ID,
-			FieldDeviceID:            specification.FieldDeviceID,
-			SpecificationSupplier:    specification.SpecificationSupplier,
-			SpecificationBrand:       specification.SpecificationBrand,
-			SpecificationType:        specification.SpecificationType,
-			AdditionalInfoMotorValve: specification.AdditionalInfoMotorValve,
-			AdditionalInfoSize:       specification.AdditionalInfoSize,
-			AdditionalInformationInstallationLocation: specification.AdditionalInformationInstallationLocation,
-			ElectricalConnectionPH:                    specification.ElectricalConnectionPH,
-			ElectricalConnectionACDC:                  specification.ElectricalConnectionACDC,
-			ElectricalConnectionAmperage:              specification.ElectricalConnectionAmperage,
-			ElectricalConnectionPower:                 specification.ElectricalConnectionPower,
-			ElectricalConnectionRotation:              specification.ElectricalConnectionRotation,
-			CreatedAt:                                 specification.CreatedAt,
-			UpdatedAt:                                 specification.UpdatedAt,
-		}
-	}
-
-	response := dto.SpecificationListResponse{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toSpecificationListResponse(result))
 }
 
 // UpdateSpecification godoc
@@ -210,72 +130,21 @@ func (h *SpecificationHandler) UpdateSpecification(c *gin.Context) {
 
 	specification, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "Specification not found")
+		if respondNotFoundIf(c, err, "Specification not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	if req.SpecificationSupplier != nil {
-		specification.SpecificationSupplier = req.SpecificationSupplier
-	}
-	if req.SpecificationBrand != nil {
-		specification.SpecificationBrand = req.SpecificationBrand
-	}
-	if req.SpecificationType != nil {
-		specification.SpecificationType = req.SpecificationType
-	}
-	if req.AdditionalInfoMotorValve != nil {
-		specification.AdditionalInfoMotorValve = req.AdditionalInfoMotorValve
-	}
-	if req.AdditionalInfoSize != nil {
-		specification.AdditionalInfoSize = req.AdditionalInfoSize
-	}
-	if req.AdditionalInformationInstallationLocation != nil {
-		specification.AdditionalInformationInstallationLocation = req.AdditionalInformationInstallationLocation
-	}
-	if req.ElectricalConnectionPH != nil {
-		specification.ElectricalConnectionPH = req.ElectricalConnectionPH
-	}
-	if req.ElectricalConnectionACDC != nil {
-		specification.ElectricalConnectionACDC = req.ElectricalConnectionACDC
-	}
-	if req.ElectricalConnectionAmperage != nil {
-		specification.ElectricalConnectionAmperage = req.ElectricalConnectionAmperage
-	}
-	if req.ElectricalConnectionPower != nil {
-		specification.ElectricalConnectionPower = req.ElectricalConnectionPower
-	}
-	if req.ElectricalConnectionRotation != nil {
-		specification.ElectricalConnectionRotation = req.ElectricalConnectionRotation
-	}
+	applySpecificationUpdate(specification, req)
 
 	if err := h.service.Update(specification); err != nil {
 		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
-	response := dto.SpecificationResponse{
-		ID:                       specification.ID,
-		FieldDeviceID:            specification.FieldDeviceID,
-		SpecificationSupplier:    specification.SpecificationSupplier,
-		SpecificationBrand:       specification.SpecificationBrand,
-		SpecificationType:        specification.SpecificationType,
-		AdditionalInfoMotorValve: specification.AdditionalInfoMotorValve,
-		AdditionalInfoSize:       specification.AdditionalInfoSize,
-		AdditionalInformationInstallationLocation: specification.AdditionalInformationInstallationLocation,
-		ElectricalConnectionPH:                    specification.ElectricalConnectionPH,
-		ElectricalConnectionACDC:                  specification.ElectricalConnectionACDC,
-		ElectricalConnectionAmperage:              specification.ElectricalConnectionAmperage,
-		ElectricalConnectionPower:                 specification.ElectricalConnectionPower,
-		ElectricalConnectionRotation:              specification.ElectricalConnectionRotation,
-		CreatedAt:                                 specification.CreatedAt,
-		UpdatedAt:                                 specification.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toSpecificationResponse(*specification))
 }
 
 // DeleteSpecification godoc
@@ -293,7 +162,7 @@ func (h *SpecificationHandler) DeleteSpecification(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByID(id); err != nil {
 		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}

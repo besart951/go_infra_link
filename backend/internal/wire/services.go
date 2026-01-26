@@ -24,21 +24,7 @@ type Services struct {
 	Admin    *adminservice.Service
 	Password passwordsvc.Service
 
-	FacilityBuilding       *facilityservice.BuildingService
-	FacilitySystemType     *facilityservice.SystemTypeService
-	FacilitySystemPart     *facilityservice.SystemPartService
-	FacilitySpecification  *facilityservice.SpecificationService
-	FacilityApparat        *facilityservice.ApparatService
-	FacilityControlCabinet *facilityservice.ControlCabinetService
-	FacilityFieldDevice    *facilityservice.FieldDeviceService
-	FacilityBacnetObject   *facilityservice.BacnetObjectService
-	FacilitySPSController  *facilityservice.SPSControllerService
-
-	FacilityStateText               *facilityservice.StateTextService
-	FacilityNotificationClass       *facilityservice.NotificationClassService
-	FacilityAlarmDefinition         *facilityservice.AlarmDefinitionService
-	FacilityObjectData              *facilityservice.ObjectDataService
-	FacilitySPSControllerSystemType *facilityservice.SPSControllerSystemTypeService
+	Facility *facilityservice.Services
 }
 
 // ServiceConfig contains configuration for services.
@@ -54,6 +40,23 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 	passwordService := passwordsvc.New()
 	jwtService := authservice.NewJWTService(cfg.JWTSecret, cfg.Issuer)
 	rbacSvc := rbacservice.New(repos.User, repos.TeamMember)
+	facilityServices := facilityservice.NewServices(facilityservice.Repositories{
+		Buildings:                repos.FacilityBuildings,
+		SystemTypes:              repos.FacilitySystemTypes,
+		SystemParts:              repos.FacilitySystemParts,
+		Specifications:           repos.FacilitySpecifications,
+		Apparats:                 repos.FacilityApparats,
+		ControlCabinets:          repos.FacilityControlCabinet,
+		FieldDevices:             repos.FacilityFieldDevices,
+		SPSControllers:           repos.FacilitySPSControllers,
+		SPSControllerSystemTypes: repos.FacilitySPSControllerSystemTypes,
+		BacnetObjects:            repos.FacilityBacnetObjects,
+		ObjectData:               repos.FacilityObjectData,
+		ObjectDataBacnetObjects:  repos.FacilityObjectDataBacnetObjects,
+		StateTexts:               repos.FacilityStateTexts,
+		NotificationClasses:      repos.FacilityNotificationClasses,
+		AlarmDefinitions:         repos.FacilityAlarmDefinitions,
+	})
 
 	return &Services{
 		Project:  projectservice.New(repos.Project, repos.FacilityObjectData, repos.FacilityBacnetObjects),
@@ -75,43 +78,6 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 			cfg.RefreshTokenTTL,
 			cfg.Issuer,
 		),
-
-		FacilityBuilding:       facilityservice.NewBuildingService(repos.FacilityBuildings),
-		FacilitySystemType:     facilityservice.NewSystemTypeService(repos.FacilitySystemTypes),
-		FacilitySystemPart:     facilityservice.NewSystemPartService(repos.FacilitySystemParts),
-		FacilitySpecification:  facilityservice.NewSpecificationService(repos.FacilitySpecifications),
-		FacilityApparat:        facilityservice.NewApparatService(repos.FacilityApparats),
-		FacilityControlCabinet: facilityservice.NewControlCabinetService(repos.FacilityControlCabinet, repos.FacilityBuildings),
-		FacilityFieldDevice: facilityservice.NewFieldDeviceService(
-			repos.FacilityFieldDevices,
-			repos.FacilitySPSControllerSystemTypes,
-			repos.FacilitySPSControllers,
-			repos.FacilityControlCabinet,
-			repos.FacilitySystemTypes,
-			repos.FacilityBuildings,
-			repos.FacilityApparats,
-			repos.FacilitySystemParts,
-			repos.FacilitySpecifications,
-			repos.FacilityBacnetObjects,
-			repos.FacilityObjectData,
-		),
-		FacilityBacnetObject: facilityservice.NewBacnetObjectService(
-			repos.FacilityBacnetObjects,
-			repos.FacilityFieldDevices,
-			repos.FacilityObjectData,
-			repos.FacilityObjectDataBacnetObjects,
-		),
-		FacilitySPSController: facilityservice.NewSPSControllerService(
-			repos.FacilitySPSControllers,
-			repos.FacilityControlCabinet,
-			repos.FacilitySystemTypes,
-			repos.FacilitySPSControllerSystemTypes,
-		),
-
-		FacilityStateText:               facilityservice.NewStateTextService(repos.FacilityStateTexts),
-		FacilityNotificationClass:       facilityservice.NewNotificationClassService(repos.FacilityNotificationClasses),
-		FacilityAlarmDefinition:         facilityservice.NewAlarmDefinitionService(repos.FacilityAlarmDefinitions),
-		FacilityObjectData:              facilityservice.NewObjectDataService(repos.FacilityObjectData),
-		FacilitySPSControllerSystemType: facilityservice.NewSPSControllerSystemTypeService(repos.FacilitySPSControllerSystemTypes),
+		Facility: facilityServices,
 	}
 }

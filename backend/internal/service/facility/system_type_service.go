@@ -42,6 +42,6 @@ func (s *SystemTypeService) Update(systemType *domainFacility.SystemType) error 
 	return s.repo.Update(systemType)
 }
 
-func (s *SystemTypeService) DeleteByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteByIds(ids)
+func (s *SystemTypeService) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }

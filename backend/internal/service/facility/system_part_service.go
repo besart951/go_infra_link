@@ -42,6 +42,6 @@ func (s *SystemPartService) Update(systemPart *domainFacility.SystemPart) error 
 	return s.repo.Update(systemPart)
 }
 
-func (s *SystemPartService) DeleteByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteByIds(ids)
+func (s *SystemPartService) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }

@@ -17,7 +17,7 @@ type ProjectService interface {
 	GetByID(id uuid.UUID) (*project.Project, error)
 	List(page, limit int, search string) (*domain.PaginatedList[project.Project], error)
 	Update(project *project.Project) error
-	DeleteByIds(ids []uuid.UUID) error
+	DeleteByID(id uuid.UUID) error
 }
 
 type UserService interface {
@@ -25,7 +25,7 @@ type UserService interface {
 	UpdateWithPassword(user *user.User, password *string) error
 	GetByID(id uuid.UUID) (*user.User, error)
 	List(page, limit int, search, orderBy, order string) (*domain.PaginatedList[user.User], error)
-	DeleteByIds(ids []uuid.UUID) error
+	DeleteByID(id uuid.UUID) error
 }
 
 type TeamService interface {
@@ -33,7 +33,7 @@ type TeamService interface {
 	GetByID(id uuid.UUID) (*team.Team, error)
 	List(page, limit int, search string) (*domain.PaginatedList[team.Team], error)
 	Update(team *team.Team) error
-	DeleteByIds(ids []uuid.UUID) error
+	DeleteByID(id uuid.UUID) error
 
 	AddMember(teamID, userID uuid.UUID, role team.MemberRole) error
 	RemoveMember(teamID, userID uuid.UUID) error

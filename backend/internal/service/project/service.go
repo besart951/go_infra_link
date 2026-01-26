@@ -121,8 +121,8 @@ func (s *Service) Update(project *domainProject.Project) error {
 	return s.repo.Update(project)
 }
 
-func (s *Service) DeleteByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteByIds(ids)
+func (s *Service) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
 func (s *Service) List(page, limit int, search string) (*domain.PaginatedList[domainProject.Project], error) {

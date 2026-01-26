@@ -137,8 +137,8 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 	return nil
 }
 
-func (s *SPSControllerService) DeleteByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteByIds(ids)
+func (s *SPSControllerService) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
 func (s *SPSControllerService) ensureControlCabinetExists(controlCabinetID uuid.UUID) error {

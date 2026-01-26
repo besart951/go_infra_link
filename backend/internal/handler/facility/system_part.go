@@ -1,14 +1,10 @@
 package facility
 
 import (
-	"errors"
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
-	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type SystemPartHandler struct {
@@ -35,27 +31,13 @@ func (h *SystemPartHandler) CreateSystemPart(c *gin.Context) {
 		return
 	}
 
-	systemPart := &domainFacility.SystemPart{
-		ShortName:   req.ShortName,
-		Name:        req.Name,
-		Description: req.Description,
-	}
+	systemPart := toSystemPartModel(req)
 
-	if err := h.service.Create(systemPart); err != nil {
-		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+	if err := h.service.Create(systemPart); respondValidationOrError(c, err, "creation_failed") {
 		return
 	}
 
-	response := dto.SystemPartResponse{
-		ID:          systemPart.ID,
-		ShortName:   systemPart.ShortName,
-		Name:        systemPart.Name,
-		Description: systemPart.Description,
-		CreatedAt:   systemPart.CreatedAt,
-		UpdatedAt:   systemPart.UpdatedAt,
-	}
-
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, toSystemPartResponse(*systemPart))
 }
 
 // GetSystemPart godoc
@@ -76,24 +58,14 @@ func (h *SystemPartHandler) GetSystemPart(c *gin.Context) {
 
 	systemPart, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "System Part not found")
+		if respondNotFoundIf(c, err, "System Part not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	response := dto.SystemPartResponse{
-		ID:          systemPart.ID,
-		ShortName:   systemPart.ShortName,
-		Name:        systemPart.Name,
-		Description: systemPart.Description,
-		CreatedAt:   systemPart.CreatedAt,
-		UpdatedAt:   systemPart.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toSystemPartResponse(*systemPart))
 }
 
 // ListSystemParts godoc
@@ -108,8 +80,8 @@ func (h *SystemPartHandler) GetSystemPart(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/system-parts [get]
 func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
-	var query dto.PaginationQuery
-	if !bindQuery(c, &query) {
+	query, ok := parsePaginationQuery(c)
+	if !ok {
 		return
 	}
 
@@ -119,26 +91,7 @@ func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
 		return
 	}
 
-	items := make([]dto.SystemPartResponse, len(result.Items))
-	for i, systemPart := range result.Items {
-		items[i] = dto.SystemPartResponse{
-			ID:          systemPart.ID,
-			ShortName:   systemPart.ShortName,
-			Name:        systemPart.Name,
-			Description: systemPart.Description,
-			CreatedAt:   systemPart.CreatedAt,
-			UpdatedAt:   systemPart.UpdatedAt,
-		}
-	}
-
-	response := dto.SystemPartListResponse{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toSystemPartListResponse(result))
 }
 
 // UpdateSystemPart godoc
@@ -166,39 +119,20 @@ func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
 
 	systemPart, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "System Part not found")
+		if respondNotFoundIf(c, err, "System Part not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	if req.ShortName != "" {
-		systemPart.ShortName = req.ShortName
-	}
-	if req.Name != "" {
-		systemPart.Name = req.Name
-	}
-	if req.Description != nil {
-		systemPart.Description = req.Description
-	}
+	applySystemPartUpdate(systemPart, req)
 
-	if err := h.service.Update(systemPart); err != nil {
-		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+	if err := h.service.Update(systemPart); respondValidationOrError(c, err, "update_failed") {
 		return
 	}
 
-	response := dto.SystemPartResponse{
-		ID:          systemPart.ID,
-		ShortName:   systemPart.ShortName,
-		Name:        systemPart.Name,
-		Description: systemPart.Description,
-		CreatedAt:   systemPart.CreatedAt,
-		UpdatedAt:   systemPart.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toSystemPartResponse(*systemPart))
 }
 
 // DeleteSystemPart godoc
@@ -216,7 +150,7 @@ func (h *SystemPartHandler) DeleteSystemPart(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByID(id); err != nil {
 		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}

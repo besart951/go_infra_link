@@ -70,8 +70,8 @@ func (s *Service) UpdateWithPassword(user *domainUser.User, password *string) er
 	return s.repo.Update(user)
 }
 
-func (s *Service) DeleteByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteByIds(ids)
+func (s *Service) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
 func (s *Service) List(page, limit int, search, orderBy, order string) (*domain.PaginatedList[domainUser.User], error) {

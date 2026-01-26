@@ -56,8 +56,8 @@ func (s *ApparatService) Update(apparat *domainFacility.Apparat) error {
 	return s.repo.Update(apparat)
 }
 
-func (s *ApparatService) DeleteByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteByIds(ids)
+func (s *ApparatService) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
 func (s *ApparatService) validateRequiredFields(apparat *domainFacility.Apparat) error {

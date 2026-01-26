@@ -9,6 +9,8 @@ import (
 
 // NewHandlers creates all HTTP handler instances from services.
 func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devAuthCfg DevAuthConfig) *handler.Handlers {
+	facilityHandlers := facilityhandler.NewHandlers(services.Facility)
+
 	return &handler.Handlers{
 		ProjectHandler: handler.NewProjectHandler(services.Project),
 		UserHandler:    handler.NewUserHandler(services.User),
@@ -25,21 +27,21 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devA
 			devAuthCfg.Password,
 		),
 
-		FacilityBuildingHandler:       facilityhandler.NewBuildingHandler(services.FacilityBuilding),
-		FacilitySystemTypeHandler:     facilityhandler.NewSystemTypeHandler(services.FacilitySystemType),
-		FacilitySystemPartHandler:     facilityhandler.NewSystemPartHandler(services.FacilitySystemPart),
-		FacilitySpecificationHandler:  facilityhandler.NewSpecificationHandler(services.FacilitySpecification),
-		FacilityApparatHandler:        facilityhandler.NewApparatHandler(services.FacilityApparat),
-		FacilityControlCabinetHandler: facilityhandler.NewControlCabinetHandler(services.FacilityControlCabinet),
-		FacilityFieldDeviceHandler:    facilityhandler.NewFieldDeviceHandler(services.FacilityFieldDevice),
-		FacilityBacnetObjectHandler:   facilityhandler.NewBacnetObjectHandler(services.FacilityBacnetObject),
-		FacilitySPSControllerHandler:  facilityhandler.NewSPSControllerHandler(services.FacilitySPSController),
+		FacilityBuildingHandler:       facilityHandlers.Building,
+		FacilitySystemTypeHandler:     facilityHandlers.SystemType,
+		FacilitySystemPartHandler:     facilityHandlers.SystemPart,
+		FacilitySpecificationHandler:  facilityHandlers.Specification,
+		FacilityApparatHandler:        facilityHandlers.Apparat,
+		FacilityControlCabinetHandler: facilityHandlers.ControlCabinet,
+		FacilityFieldDeviceHandler:    facilityHandlers.FieldDevice,
+		FacilityBacnetObjectHandler:   facilityHandlers.BacnetObject,
+		FacilitySPSControllerHandler:  facilityHandlers.SPSController,
 
-		FacilityStateTextHandler:               facilityhandler.NewStateTextHandler(services.FacilityStateText),
-		FacilityNotificationClassHandler:       facilityhandler.NewNotificationClassHandler(services.FacilityNotificationClass),
-		FacilityAlarmDefinitionHandler:         facilityhandler.NewAlarmDefinitionHandler(services.FacilityAlarmDefinition),
-		FacilityObjectDataHandler:              facilityhandler.NewObjectDataHandler(services.FacilityObjectData),
-		FacilitySPSControllerSystemTypeHandler: facilityhandler.NewSPSControllerSystemTypeHandler(services.FacilitySPSControllerSystemType),
+		FacilityStateTextHandler:               facilityHandlers.StateText,
+		FacilityNotificationClassHandler:       facilityHandlers.NotificationClass,
+		FacilityAlarmDefinitionHandler:         facilityHandlers.AlarmDefinition,
+		FacilityObjectDataHandler:              facilityHandlers.ObjectData,
+		FacilitySPSControllerSystemTypeHandler: facilityHandlers.SPSControllerSystemType,
 	}
 }
 

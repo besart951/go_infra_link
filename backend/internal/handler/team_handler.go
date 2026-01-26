@@ -8,7 +8,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain/team"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type TeamHandler struct {
@@ -166,7 +165,7 @@ func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByID(id); err != nil {
 		RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}

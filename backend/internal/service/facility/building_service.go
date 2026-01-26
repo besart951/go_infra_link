@@ -48,8 +48,8 @@ func (s *BuildingService) Update(building *domainFacility.Building) error {
 	return s.repo.Update(building)
 }
 
-func (s *BuildingService) DeleteByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteByIds(ids)
+func (s *BuildingService) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
 func (s *BuildingService) validateRequiredFields(building *domainFacility.Building) error {

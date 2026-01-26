@@ -5,10 +5,8 @@ import (
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
-	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type ControlCabinetHandler struct {
@@ -35,10 +33,7 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 		return
 	}
 
-	controlCabinet := &domainFacility.ControlCabinet{
-		BuildingID:       req.BuildingID,
-		ControlCabinetNr: req.ControlCabinetNr,
-	}
+	controlCabinet := toControlCabinetModel(req)
 
 	if err := h.service.Create(controlCabinet); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {
@@ -46,22 +41,14 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, domain.ErrNotFound) {
-			respondError(c, http.StatusBadRequest, "invalid_reference", "Building not found or deleted")
+			respondInvalidReference(c)
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
-	response := dto.ControlCabinetResponse{
-		ID:               controlCabinet.ID,
-		BuildingID:       controlCabinet.BuildingID,
-		ControlCabinetNr: controlCabinet.ControlCabinetNr,
-		CreatedAt:        controlCabinet.CreatedAt,
-		UpdatedAt:        controlCabinet.UpdatedAt,
-	}
-
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, toControlCabinetResponse(*controlCabinet))
 }
 
 // GetControlCabinet godoc
@@ -82,23 +69,14 @@ func (h *ControlCabinetHandler) GetControlCabinet(c *gin.Context) {
 
 	controlCabinet, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "Control Cabinet not found")
+		if respondNotFoundIf(c, err, "Control Cabinet not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	response := dto.ControlCabinetResponse{
-		ID:               controlCabinet.ID,
-		BuildingID:       controlCabinet.BuildingID,
-		ControlCabinetNr: controlCabinet.ControlCabinetNr,
-		CreatedAt:        controlCabinet.CreatedAt,
-		UpdatedAt:        controlCabinet.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toControlCabinetResponse(*controlCabinet))
 }
 
 // ListControlCabinets godoc
@@ -113,8 +91,8 @@ func (h *ControlCabinetHandler) GetControlCabinet(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/control-cabinets [get]
 func (h *ControlCabinetHandler) ListControlCabinets(c *gin.Context) {
-	var query dto.PaginationQuery
-	if !bindQuery(c, &query) {
+	query, ok := parsePaginationQuery(c)
+	if !ok {
 		return
 	}
 
@@ -124,25 +102,7 @@ func (h *ControlCabinetHandler) ListControlCabinets(c *gin.Context) {
 		return
 	}
 
-	items := make([]dto.ControlCabinetResponse, len(result.Items))
-	for i, controlCabinet := range result.Items {
-		items[i] = dto.ControlCabinetResponse{
-			ID:               controlCabinet.ID,
-			BuildingID:       controlCabinet.BuildingID,
-			ControlCabinetNr: controlCabinet.ControlCabinetNr,
-			CreatedAt:        controlCabinet.CreatedAt,
-			UpdatedAt:        controlCabinet.UpdatedAt,
-		}
-	}
-
-	response := dto.ControlCabinetListResponse{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toControlCabinetListResponse(result))
 }
 
 // UpdateControlCabinet godoc
@@ -170,20 +130,14 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 
 	controlCabinet, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "Control Cabinet not found")
+		if respondNotFoundIf(c, err, "Control Cabinet not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	if req.BuildingID != uuid.Nil {
-		controlCabinet.BuildingID = req.BuildingID
-	}
-	if req.ControlCabinetNr != nil {
-		controlCabinet.ControlCabinetNr = req.ControlCabinetNr
-	}
+	applyControlCabinetUpdate(controlCabinet, req)
 
 	if err := h.service.Update(controlCabinet); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {
@@ -191,22 +145,14 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, domain.ErrNotFound) {
-			respondError(c, http.StatusBadRequest, "invalid_reference", "Building not found or deleted")
+			respondInvalidReference(c)
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
-	response := dto.ControlCabinetResponse{
-		ID:               controlCabinet.ID,
-		BuildingID:       controlCabinet.BuildingID,
-		ControlCabinetNr: controlCabinet.ControlCabinetNr,
-		CreatedAt:        controlCabinet.CreatedAt,
-		UpdatedAt:        controlCabinet.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toControlCabinetResponse(*controlCabinet))
 }
 
 // DeleteControlCabinet godoc
@@ -224,7 +170,7 @@ func (h *ControlCabinetHandler) DeleteControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByID(id); err != nil {
 		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}

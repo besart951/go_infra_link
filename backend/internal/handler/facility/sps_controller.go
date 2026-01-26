@@ -5,10 +5,8 @@ import (
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
-	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type SPSControllerHandler struct {
@@ -35,26 +33,8 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 		return
 	}
 
-	spsController := &domainFacility.SPSController{
-		ControlCabinetID:  req.ControlCabinetID,
-		GADevice:          req.GADevice,
-		DeviceName:        req.DeviceName,
-		DeviceDescription: req.DeviceDescription,
-		DeviceLocation:    req.DeviceLocation,
-		IPAddress:         req.IPAddress,
-		Subnet:            req.Subnet,
-		Gateway:           req.Gateway,
-		Vlan:              req.Vlan,
-	}
-
-	systemTypes := make([]domainFacility.SPSControllerSystemType, 0, len(req.SystemTypes))
-	for _, st := range req.SystemTypes {
-		systemTypes = append(systemTypes, domainFacility.SPSControllerSystemType{
-			SystemTypeID: st.SystemTypeID,
-			Number:       st.Number,
-			DocumentName: st.DocumentName,
-		})
-	}
+	spsController := toSPSControllerModel(req)
+	systemTypes := toSPSControllerSystemTypes(req.SystemTypes)
 
 	if err := h.service.CreateWithSystemTypes(spsController, systemTypes); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {
@@ -62,29 +42,14 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, domain.ErrNotFound) {
-			respondError(c, http.StatusBadRequest, "invalid_reference", "Referenced entity not found or deleted")
+			respondInvalidReference(c)
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
-	response := dto.SPSControllerResponse{
-		ID:                spsController.ID,
-		ControlCabinetID:  spsController.ControlCabinetID,
-		GADevice:          spsController.GADevice,
-		DeviceName:        spsController.DeviceName,
-		DeviceDescription: spsController.DeviceDescription,
-		DeviceLocation:    spsController.DeviceLocation,
-		IPAddress:         spsController.IPAddress,
-		Subnet:            spsController.Subnet,
-		Gateway:           spsController.Gateway,
-		Vlan:              spsController.Vlan,
-		CreatedAt:         spsController.CreatedAt,
-		UpdatedAt:         spsController.UpdatedAt,
-	}
-
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, toSPSControllerResponse(*spsController))
 }
 
 // GetSPSController godoc
@@ -105,30 +70,14 @@ func (h *SPSControllerHandler) GetSPSController(c *gin.Context) {
 
 	spsController, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "SPS Controller not found")
+		if respondNotFoundIf(c, err, "SPS Controller not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	response := dto.SPSControllerResponse{
-		ID:                spsController.ID,
-		ControlCabinetID:  spsController.ControlCabinetID,
-		GADevice:          spsController.GADevice,
-		DeviceName:        spsController.DeviceName,
-		DeviceDescription: spsController.DeviceDescription,
-		DeviceLocation:    spsController.DeviceLocation,
-		IPAddress:         spsController.IPAddress,
-		Subnet:            spsController.Subnet,
-		Gateway:           spsController.Gateway,
-		Vlan:              spsController.Vlan,
-		CreatedAt:         spsController.CreatedAt,
-		UpdatedAt:         spsController.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toSPSControllerResponse(*spsController))
 }
 
 // ListSPSControllers godoc
@@ -143,8 +92,8 @@ func (h *SPSControllerHandler) GetSPSController(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/sps-controllers [get]
 func (h *SPSControllerHandler) ListSPSControllers(c *gin.Context) {
-	var query dto.PaginationQuery
-	if !bindQuery(c, &query) {
+	query, ok := parsePaginationQuery(c)
+	if !ok {
 		return
 	}
 
@@ -154,32 +103,7 @@ func (h *SPSControllerHandler) ListSPSControllers(c *gin.Context) {
 		return
 	}
 
-	items := make([]dto.SPSControllerResponse, len(result.Items))
-	for i, spsController := range result.Items {
-		items[i] = dto.SPSControllerResponse{
-			ID:                spsController.ID,
-			ControlCabinetID:  spsController.ControlCabinetID,
-			GADevice:          spsController.GADevice,
-			DeviceName:        spsController.DeviceName,
-			DeviceDescription: spsController.DeviceDescription,
-			DeviceLocation:    spsController.DeviceLocation,
-			IPAddress:         spsController.IPAddress,
-			Subnet:            spsController.Subnet,
-			Gateway:           spsController.Gateway,
-			Vlan:              spsController.Vlan,
-			CreatedAt:         spsController.CreatedAt,
-			UpdatedAt:         spsController.UpdatedAt,
-		}
-	}
-
-	response := dto.SPSControllerListResponse{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toSPSControllerListResponse(result))
 }
 
 // UpdateSPSController godoc
@@ -207,52 +131,18 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 
 	spsController, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "SPS Controller not found")
+		if respondNotFoundIf(c, err, "SPS Controller not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	if req.ControlCabinetID != uuid.Nil {
-		spsController.ControlCabinetID = req.ControlCabinetID
-	}
-	if req.GADevice != nil {
-		spsController.GADevice = req.GADevice
-	}
-	if req.DeviceName != "" {
-		spsController.DeviceName = req.DeviceName
-	}
-	if req.DeviceDescription != nil {
-		spsController.DeviceDescription = req.DeviceDescription
-	}
-	if req.DeviceLocation != nil {
-		spsController.DeviceLocation = req.DeviceLocation
-	}
-	if req.IPAddress != nil {
-		spsController.IPAddress = req.IPAddress
-	}
-	if req.Subnet != nil {
-		spsController.Subnet = req.Subnet
-	}
-	if req.Gateway != nil {
-		spsController.Gateway = req.Gateway
-	}
-	if req.Vlan != nil {
-		spsController.Vlan = req.Vlan
-	}
+	applySPSControllerUpdate(spsController, req)
 
 	var updateErr error
 	if req.SystemTypes != nil {
-		systemTypes := make([]domainFacility.SPSControllerSystemType, 0, len(*req.SystemTypes))
-		for _, st := range *req.SystemTypes {
-			systemTypes = append(systemTypes, domainFacility.SPSControllerSystemType{
-				SystemTypeID: st.SystemTypeID,
-				Number:       st.Number,
-				DocumentName: st.DocumentName,
-			})
-		}
+		systemTypes := toSPSControllerSystemTypes(*req.SystemTypes)
 		updateErr = h.service.UpdateWithSystemTypes(spsController, systemTypes)
 	} else {
 		updateErr = h.service.Update(spsController)
@@ -263,29 +153,14 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 			return
 		}
 		if errors.Is(updateErr, domain.ErrNotFound) {
-			respondError(c, http.StatusBadRequest, "invalid_reference", "Referenced entity not found or deleted")
+			respondInvalidReference(c)
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "update_failed", updateErr.Error())
 		return
 	}
 
-	response := dto.SPSControllerResponse{
-		ID:                spsController.ID,
-		ControlCabinetID:  spsController.ControlCabinetID,
-		GADevice:          spsController.GADevice,
-		DeviceName:        spsController.DeviceName,
-		DeviceDescription: spsController.DeviceDescription,
-		DeviceLocation:    spsController.DeviceLocation,
-		IPAddress:         spsController.IPAddress,
-		Subnet:            spsController.Subnet,
-		Gateway:           spsController.Gateway,
-		Vlan:              spsController.Vlan,
-		CreatedAt:         spsController.CreatedAt,
-		UpdatedAt:         spsController.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toSPSControllerResponse(*spsController))
 }
 
 // DeleteSPSController godoc
@@ -303,7 +178,7 @@ func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByID(id); err != nil {
 		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}

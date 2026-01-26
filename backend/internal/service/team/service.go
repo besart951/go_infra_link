@@ -39,8 +39,8 @@ func (s *Service) Update(team *domainTeam.Team) error {
 	return s.repo.Update(team)
 }
 
-func (s *Service) DeleteByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteByIds(ids)
+func (s *Service) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
 func (s *Service) AddMember(teamID, userID uuid.UUID, role domainTeam.MemberRole) error {

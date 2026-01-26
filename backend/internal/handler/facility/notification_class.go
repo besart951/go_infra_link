@@ -1,11 +1,8 @@
 package facility
 
 import (
-	"errors"
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
-	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,32 +32,14 @@ func (h *NotificationClassHandler) GetNotificationClass(c *gin.Context) {
 
 	nc, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "Notification class not found")
+		if respondNotFoundIf(c, err, "Notification class not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	response := dto.NotificationClassResponse{
-		ID:                   nc.ID,
-		EventCategory:        nc.EventCategory,
-		Nc:                   nc.Nc,
-		ObjectDescription:    nc.ObjectDescription,
-		InternalDescription:  nc.InternalDescription,
-		Meaning:              nc.Meaning,
-		AckRequiredNotNormal: nc.AckRequiredNotNormal,
-		AckRequiredError:     nc.AckRequiredError,
-		AckRequiredNormal:    nc.AckRequiredNormal,
-		NormNotNormal:        nc.NormNotNormal,
-		NormError:            nc.NormError,
-		NormNormal:           nc.NormNormal,
-		CreatedAt:            nc.CreatedAt,
-		UpdatedAt:            nc.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toNotificationClassResponse(*nc))
 }
 
 // ListNotificationClasses godoc
@@ -75,8 +54,8 @@ func (h *NotificationClassHandler) GetNotificationClass(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/notification-classes [get]
 func (h *NotificationClassHandler) ListNotificationClasses(c *gin.Context) {
-	var query dto.PaginationQuery
-	if !bindQuery(c, &query) {
+	query, ok := parsePaginationQuery(c)
+	if !ok {
 		return
 	}
 
@@ -86,32 +65,5 @@ func (h *NotificationClassHandler) ListNotificationClasses(c *gin.Context) {
 		return
 	}
 
-	items := make([]dto.NotificationClassResponse, len(result.Items))
-	for i, nc := range result.Items {
-		items[i] = dto.NotificationClassResponse{
-			ID:                   nc.ID,
-			EventCategory:        nc.EventCategory,
-			Nc:                   nc.Nc,
-			ObjectDescription:    nc.ObjectDescription,
-			InternalDescription:  nc.InternalDescription,
-			Meaning:              nc.Meaning,
-			AckRequiredNotNormal: nc.AckRequiredNotNormal,
-			AckRequiredError:     nc.AckRequiredError,
-			AckRequiredNormal:    nc.AckRequiredNormal,
-			NormNotNormal:        nc.NormNotNormal,
-			NormError:            nc.NormError,
-			NormNormal:           nc.NormNormal,
-			CreatedAt:            nc.CreatedAt,
-			UpdatedAt:            nc.UpdatedAt,
-		}
-	}
-
-	response := dto.NotificationClassListResponse{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toNotificationClassListResponse(result))
 }

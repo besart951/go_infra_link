@@ -53,6 +53,6 @@ func (s *SpecificationService) Update(specification *domainFacility.Specificatio
 	return s.repo.Update(specification)
 }
 
-func (s *SpecificationService) DeleteByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteByIds(ids)
+func (s *SpecificationService) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }

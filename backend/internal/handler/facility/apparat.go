@@ -1,14 +1,10 @@
 package facility
 
 import (
-	"errors"
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
-	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type ApparatHandler struct {
@@ -35,34 +31,13 @@ func (h *ApparatHandler) CreateApparat(c *gin.Context) {
 		return
 	}
 
-	apparat := &domainFacility.Apparat{
-		ShortName:   req.ShortName,
-		Name:        req.Name,
-		Description: req.Description,
-	}
+	apparat := toApparatModel(req)
 
-	if err := h.service.Create(apparat); err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "creation_failed",
-			Message: err.Error(),
-		})
+	if err := h.service.Create(apparat); respondValidationOrError(c, err, "creation_failed") {
 		return
 	}
 
-	response := dto.ApparatResponse{
-		ID:          apparat.ID,
-		ShortName:   apparat.ShortName,
-		Name:        apparat.Name,
-		Description: apparat.Description,
-		CreatedAt:   apparat.CreatedAt,
-		UpdatedAt:   apparat.UpdatedAt,
-	}
-
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, toApparatResponse(*apparat))
 }
 
 // GetApparat godoc
@@ -83,24 +58,14 @@ func (h *ApparatHandler) GetApparat(c *gin.Context) {
 
 	apparat, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "Apparat not found")
+		if respondNotFoundIf(c, err, "Apparat not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	response := dto.ApparatResponse{
-		ID:          apparat.ID,
-		ShortName:   apparat.ShortName,
-		Name:        apparat.Name,
-		Description: apparat.Description,
-		CreatedAt:   apparat.CreatedAt,
-		UpdatedAt:   apparat.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toApparatResponse(*apparat))
 }
 
 // ListApparats godoc
@@ -115,8 +80,8 @@ func (h *ApparatHandler) GetApparat(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/apparats [get]
 func (h *ApparatHandler) ListApparats(c *gin.Context) {
-	var query dto.PaginationQuery
-	if !bindQuery(c, &query) {
+	query, ok := parsePaginationQuery(c)
+	if !ok {
 		return
 	}
 
@@ -126,26 +91,7 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 		return
 	}
 
-	items := make([]dto.ApparatResponse, len(result.Items))
-	for i, apparat := range result.Items {
-		items[i] = dto.ApparatResponse{
-			ID:          apparat.ID,
-			ShortName:   apparat.ShortName,
-			Name:        apparat.Name,
-			Description: apparat.Description,
-			CreatedAt:   apparat.CreatedAt,
-			UpdatedAt:   apparat.UpdatedAt,
-		}
-	}
-
-	response := dto.ApparatListResponse{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toApparatListResponse(result))
 }
 
 // UpdateApparat godoc
@@ -173,43 +119,20 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 
 	apparat, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "Apparat not found")
+		if respondNotFoundIf(c, err, "Apparat not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	if req.ShortName != "" {
-		apparat.ShortName = req.ShortName
-	}
-	if req.Name != "" {
-		apparat.Name = req.Name
-	}
-	if req.Description != nil {
-		apparat.Description = req.Description
-	}
+	applyApparatUpdate(apparat, req)
 
-	if err := h.service.Update(apparat); err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+	if err := h.service.Update(apparat); respondValidationOrError(c, err, "update_failed") {
 		return
 	}
 
-	response := dto.ApparatResponse{
-		ID:          apparat.ID,
-		ShortName:   apparat.ShortName,
-		Name:        apparat.Name,
-		Description: apparat.Description,
-		CreatedAt:   apparat.CreatedAt,
-		UpdatedAt:   apparat.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toApparatResponse(*apparat))
 }
 
 // DeleteApparat godoc
@@ -227,7 +150,7 @@ func (h *ApparatHandler) DeleteApparat(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByID(id); err != nil {
 		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}

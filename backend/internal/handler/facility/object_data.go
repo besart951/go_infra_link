@@ -1,11 +1,8 @@
 package facility
 
 import (
-	"errors"
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
-	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,25 +32,14 @@ func (h *ObjectDataHandler) GetObjectData(c *gin.Context) {
 
 	obj, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "Object data not found")
+		if respondNotFoundIf(c, err, "Object data not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	response := dto.ObjectDataResponse{
-		ID:          obj.ID,
-		Description: obj.Description,
-		Version:     obj.Version,
-		IsActive:    obj.IsActive,
-		ProjectID:   obj.ProjectID,
-		CreatedAt:   obj.CreatedAt,
-		UpdatedAt:   obj.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toObjectDataResponse(*obj))
 }
 
 // ListObjectData godoc
@@ -68,8 +54,8 @@ func (h *ObjectDataHandler) GetObjectData(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/object-data [get]
 func (h *ObjectDataHandler) ListObjectData(c *gin.Context) {
-	var query dto.PaginationQuery
-	if !bindQuery(c, &query) {
+	query, ok := parsePaginationQuery(c)
+	if !ok {
 		return
 	}
 
@@ -79,25 +65,5 @@ func (h *ObjectDataHandler) ListObjectData(c *gin.Context) {
 		return
 	}
 
-	items := make([]dto.ObjectDataResponse, len(result.Items))
-	for i, obj := range result.Items {
-		items[i] = dto.ObjectDataResponse{
-			ID:          obj.ID,
-			Description: obj.Description,
-			Version:     obj.Version,
-			IsActive:    obj.IsActive,
-			ProjectID:   obj.ProjectID,
-			CreatedAt:   obj.CreatedAt,
-			UpdatedAt:   obj.UpdatedAt,
-		}
-	}
-
-	response := dto.ObjectDataListResponse{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toObjectDataListResponse(result))
 }

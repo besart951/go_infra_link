@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
-	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
 )
@@ -35,21 +34,7 @@ func (h *BacnetObjectHandler) CreateBacnetObject(c *gin.Context) {
 		return
 	}
 
-	obj := &domainFacility.BacnetObject{
-		TextFix:             req.TextFix,
-		Description:         req.Description,
-		GMSVisible:          req.GMSVisible,
-		Optional:            req.Optional,
-		TextIndividual:      req.TextIndividual,
-		SoftwareType:        domainFacility.BacnetSoftwareType(req.SoftwareType),
-		SoftwareNumber:      uint16(req.SoftwareNumber),
-		HardwareType:        domainFacility.BacnetHardwareType(req.HardwareType),
-		HardwareQuantity:    uint8(req.HardwareQuantity),
-		SoftwareReferenceID: req.SoftwareReferenceID,
-		StateTextID:         req.StateTextID,
-		NotificationClassID: req.NotificationClassID,
-		AlarmDefinitionID:   req.AlarmDefinitionID,
-	}
+	obj := toBacnetObjectModel(req)
 
 	if err := h.service.CreateWithParent(obj, req.FieldDeviceID, req.ObjectDataID); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {
@@ -57,40 +42,22 @@ func (h *BacnetObjectHandler) CreateBacnetObject(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, domain.ErrInvalidArgument) {
-			respondError(c, http.StatusBadRequest, "validation_error", "exactly one of field_device_id or object_data_id must be set")
+			respondInvalidArgument(c, "exactly one of field_device_id or object_data_id must be set")
 			return
 		}
 		if errors.Is(err, domain.ErrNotFound) {
-			respondError(c, http.StatusBadRequest, "invalid_reference", "Referenced entity not found or deleted")
+			respondInvalidReference(c)
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			respondError(c, http.StatusConflict, "conflict", "entity conflict")
+			respondConflict(c, "entity conflict")
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, dto.BacnetObjectResponse{
-		ID:                  obj.ID.String(),
-		TextFix:             obj.TextFix,
-		Description:         obj.Description,
-		GMSVisible:          obj.GMSVisible,
-		Optional:            obj.Optional,
-		TextIndividual:      obj.TextIndividual,
-		SoftwareType:        string(obj.SoftwareType),
-		SoftwareNumber:      int(obj.SoftwareNumber),
-		HardwareType:        string(obj.HardwareType),
-		HardwareQuantity:    int(obj.HardwareQuantity),
-		FieldDeviceID:       obj.FieldDeviceID,
-		SoftwareReferenceID: obj.SoftwareReferenceID,
-		StateTextID:         obj.StateTextID,
-		NotificationClassID: obj.NotificationClassID,
-		AlarmDefinitionID:   obj.AlarmDefinitionID,
-		CreatedAt:           obj.CreatedAt,
-		UpdatedAt:           obj.UpdatedAt,
-	})
+	c.JSON(http.StatusCreated, toBacnetObjectResponse(*obj))
 }
 
 // UpdateBacnetObject godoc
@@ -123,30 +90,14 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 
 	existing, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "Bacnet Object not found")
+		if respondNotFoundIf(c, err, "Bacnet Object not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	existing.TextFix = req.TextFix
-	existing.Description = req.Description
-	existing.GMSVisible = req.GMSVisible
-	existing.Optional = req.Optional
-	existing.TextIndividual = req.TextIndividual
-	existing.SoftwareType = domainFacility.BacnetSoftwareType(req.SoftwareType)
-	existing.SoftwareNumber = uint16(req.SoftwareNumber)
-	existing.HardwareType = domainFacility.BacnetHardwareType(req.HardwareType)
-	existing.HardwareQuantity = uint8(req.HardwareQuantity)
-	existing.SoftwareReferenceID = req.SoftwareReferenceID
-	existing.StateTextID = req.StateTextID
-	existing.NotificationClassID = req.NotificationClassID
-	existing.AlarmDefinitionID = req.AlarmDefinitionID
-	if req.FieldDeviceID != nil {
-		existing.FieldDeviceID = req.FieldDeviceID
-	}
+	applyBacnetObjectUpdate(existing, req)
 
 	if err := h.service.Update(existing, req.ObjectDataID); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {
@@ -154,38 +105,20 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, domain.ErrInvalidArgument) {
-			respondError(c, http.StatusBadRequest, "validation_error", err.Error())
+			respondInvalidArgument(c, err.Error())
 			return
 		}
 		if errors.Is(err, domain.ErrNotFound) {
-			respondError(c, http.StatusBadRequest, "invalid_reference", "Referenced entity not found or deleted")
+			respondInvalidReference(c)
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			respondError(c, http.StatusConflict, "conflict", "entity conflict")
+			respondConflict(c, "entity conflict")
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.BacnetObjectResponse{
-		ID:                  existing.ID.String(),
-		TextFix:             existing.TextFix,
-		Description:         existing.Description,
-		GMSVisible:          existing.GMSVisible,
-		Optional:            existing.Optional,
-		TextIndividual:      existing.TextIndividual,
-		SoftwareType:        string(existing.SoftwareType),
-		SoftwareNumber:      int(existing.SoftwareNumber),
-		HardwareType:        string(existing.HardwareType),
-		HardwareQuantity:    int(existing.HardwareQuantity),
-		FieldDeviceID:       existing.FieldDeviceID,
-		SoftwareReferenceID: existing.SoftwareReferenceID,
-		StateTextID:         existing.StateTextID,
-		NotificationClassID: existing.NotificationClassID,
-		AlarmDefinitionID:   existing.AlarmDefinitionID,
-		CreatedAt:           existing.CreatedAt,
-		UpdatedAt:           existing.UpdatedAt,
-	})
+	c.JSON(http.StatusOK, toBacnetObjectResponse(*existing))
 }

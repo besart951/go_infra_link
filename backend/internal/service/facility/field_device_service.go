@@ -139,7 +139,8 @@ func (s *FieldDeviceService) UpdateWithBacnetObjects(fieldDevice *domainFacility
 	return nil
 }
 
-func (s *FieldDeviceService) DeleteByIds(ids []uuid.UUID) error {
+func (s *FieldDeviceService) DeleteByID(id uuid.UUID) error {
+	ids := []uuid.UUID{id}
 	// Soft-delete dependents as well (because field_devices are soft-deleted)
 	if err := s.bacnetObjectRepo.SoftDeleteByFieldDeviceIDs(ids); err != nil {
 		return err

@@ -55,8 +55,8 @@ func (s *ControlCabinetService) Update(controlCabinet *domainFacility.ControlCab
 	return s.repo.Update(controlCabinet)
 }
 
-func (s *ControlCabinetService) DeleteByIds(ids []uuid.UUID) error {
-	return s.repo.DeleteByIds(ids)
+func (s *ControlCabinetService) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
 func (s *ControlCabinetService) ensureBuildingExists(buildingID uuid.UUID) error {

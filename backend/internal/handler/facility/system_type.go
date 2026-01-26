@@ -1,14 +1,10 @@
 package facility
 
 import (
-	"errors"
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
-	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type SystemTypeHandler struct {
@@ -35,30 +31,13 @@ func (h *SystemTypeHandler) CreateSystemType(c *gin.Context) {
 		return
 	}
 
-	systemType := &domainFacility.SystemType{
-		NumberMin: req.NumberMin,
-		NumberMax: req.NumberMax,
-		Name:      req.Name,
-	}
+	systemType := toSystemTypeModel(req)
 
-	if err := h.service.Create(systemType); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "creation_failed",
-			Message: err.Error(),
-		})
+	if err := h.service.Create(systemType); respondValidationOrError(c, err, "creation_failed") {
 		return
 	}
 
-	response := dto.SystemTypeResponse{
-		ID:        systemType.ID,
-		NumberMin: systemType.NumberMin,
-		NumberMax: systemType.NumberMax,
-		Name:      systemType.Name,
-		CreatedAt: systemType.CreatedAt,
-		UpdatedAt: systemType.UpdatedAt,
-	}
-
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, toSystemTypeResponse(*systemType))
 }
 
 // GetSystemType godoc
@@ -79,24 +58,14 @@ func (h *SystemTypeHandler) GetSystemType(c *gin.Context) {
 
 	systemType, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "System Type not found")
+		if respondNotFoundIf(c, err, "System Type not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	response := dto.SystemTypeResponse{
-		ID:        systemType.ID,
-		NumberMin: systemType.NumberMin,
-		NumberMax: systemType.NumberMax,
-		Name:      systemType.Name,
-		CreatedAt: systemType.CreatedAt,
-		UpdatedAt: systemType.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toSystemTypeResponse(*systemType))
 }
 
 // ListSystemTypes godoc
@@ -111,8 +80,8 @@ func (h *SystemTypeHandler) GetSystemType(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/system-types [get]
 func (h *SystemTypeHandler) ListSystemTypes(c *gin.Context) {
-	var query dto.PaginationQuery
-	if !bindQuery(c, &query) {
+	query, ok := parsePaginationQuery(c)
+	if !ok {
 		return
 	}
 
@@ -122,26 +91,7 @@ func (h *SystemTypeHandler) ListSystemTypes(c *gin.Context) {
 		return
 	}
 
-	items := make([]dto.SystemTypeResponse, len(result.Items))
-	for i, systemType := range result.Items {
-		items[i] = dto.SystemTypeResponse{
-			ID:        systemType.ID,
-			NumberMin: systemType.NumberMin,
-			NumberMax: systemType.NumberMax,
-			Name:      systemType.Name,
-			CreatedAt: systemType.CreatedAt,
-			UpdatedAt: systemType.UpdatedAt,
-		}
-	}
-
-	response := dto.SystemTypeListResponse{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toSystemTypeListResponse(result))
 }
 
 // UpdateSystemType godoc
@@ -169,39 +119,20 @@ func (h *SystemTypeHandler) UpdateSystemType(c *gin.Context) {
 
 	systemType, err := h.service.GetByID(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "System Type not found")
+		if respondNotFoundIf(c, err, "System Type not found") {
 			return
 		}
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	if req.NumberMin != 0 {
-		systemType.NumberMin = req.NumberMin
-	}
-	if req.NumberMax != 0 {
-		systemType.NumberMax = req.NumberMax
-	}
-	if req.Name != "" {
-		systemType.Name = req.Name
-	}
+	applySystemTypeUpdate(systemType, req)
 
-	if err := h.service.Update(systemType); err != nil {
-		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+	if err := h.service.Update(systemType); respondValidationOrError(c, err, "update_failed") {
 		return
 	}
 
-	response := dto.SystemTypeResponse{
-		ID:        systemType.ID,
-		NumberMin: systemType.NumberMin,
-		NumberMax: systemType.NumberMax,
-		Name:      systemType.Name,
-		CreatedAt: systemType.CreatedAt,
-		UpdatedAt: systemType.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, toSystemTypeResponse(*systemType))
 }
 
 // DeleteSystemType godoc
@@ -219,7 +150,7 @@ func (h *SystemTypeHandler) DeleteSystemType(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := h.service.DeleteByID(id); err != nil {
 		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}
