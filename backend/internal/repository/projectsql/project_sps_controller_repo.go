@@ -1,90 +1,79 @@
 package projectsql
 
 import (
-"github.com/besart951/go_infra_link/backend/internal/domain"
-"github.com/besart951/go_infra_link/backend/internal/domain/project"
-"github.com/google/uuid"
-"gorm.io/gorm"
+	"github.com/besart951/go_infra_link/backend/internal/domain"
+	"github.com/besart951/go_infra_link/backend/internal/domain/project"
+	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type projectSPSControllerRepo struct {
-db *gorm.DB
+	*gormbase.BaseRepository[*project.ProjectSPSController]
+	db *gorm.DB
 }
 
 func NewProjectSPSControllerRepository(db *gorm.DB) project.ProjectSPSControllerRepository {
-return &projectSPSControllerRepo{db: db}
+	baseRepo := gormbase.NewBaseRepository[*project.ProjectSPSController](db, nil)
+	return &projectSPSControllerRepo{
+		BaseRepository: baseRepo,
+		db:             db,
+	}
 }
 
 func (r *projectSPSControllerRepo) GetByIds(ids []uuid.UUID) ([]*project.ProjectSPSController, error) {
-if len(ids) == 0 {
-return []*project.ProjectSPSController{}, nil
-}
-var items []*project.ProjectSPSController
-err := r.db.Where("id IN ?", ids).Find(&items).Error
-return items, err
+	return r.BaseRepository.GetByIds(ids)
 }
 
 func (r *projectSPSControllerRepo) Create(entity *project.ProjectSPSController) error {
-return r.db.Create(entity).Error
+	return r.BaseRepository.Create(entity)
 }
 
 func (r *projectSPSControllerRepo) Update(entity *project.ProjectSPSController) error {
-return r.db.Save(entity).Error
+	return r.BaseRepository.Update(entity)
 }
 
 func (r *projectSPSControllerRepo) DeleteByIds(ids []uuid.UUID) error {
-if len(ids) == 0 {
-return nil
-}
-return r.db.Where("id IN ?", ids).Delete(&project.ProjectSPSController{}).Error
+	return r.BaseRepository.DeleteByIds(ids)
 }
 
 func (r *projectSPSControllerRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[project.ProjectSPSController], error) {
-page := params.Page
-limit := params.Limit
-if page <= 0 {
-page = 1
-}
-if limit <= 0 {
-limit = 10
-}
-offset := (page - 1) * limit
+	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+	if err != nil {
+		return nil, err
+	}
 
-var total int64
-if err := r.db.Model(&project.ProjectSPSController{}).Count(&total).Error; err != nil {
-return nil, err
-}
+	// Convert []*ProjectSPSController to []ProjectSPSController for the interface
+	items := make([]project.ProjectSPSController, len(result.Items))
+	for i, item := range result.Items {
+		items[i] = *item
+	}
 
-var items []project.ProjectSPSController
-err := r.db.Offset(offset).Limit(limit).Find(&items).Error
-if err != nil {
-return nil, err
-}
-
-return &domain.PaginatedList[project.ProjectSPSController]{
-Items:      items,
-Total:      total,
-Page:       page,
-TotalPages: domain.CalculateTotalPages(total, limit),
-}, nil
+	return &domain.PaginatedList[project.ProjectSPSController]{
+		Items:      items,
+		Total:      result.Total,
+		Page:       result.Page,
+		TotalPages: result.TotalPages,
+	}, nil
 }
 
 // GetByProjectID retrieves all SPS controllers associated with a project
 func (r *projectSPSControllerRepo) GetByProjectID(projectID uuid.UUID) ([]*project.ProjectSPSController, error) {
-var items []*project.ProjectSPSController
-err := r.db.Where("project_id = ?", projectID).Find(&items).Error
-return items, err
+	var items []*project.ProjectSPSController
+	err := r.db.Where("deleted_at IS NULL").Where("project_id = ?", projectID).Find(&items).Error
+	return items, err
 }
 
 // GetBySPSControllerID retrieves all projects associated with an SPS controller
 func (r *projectSPSControllerRepo) GetBySPSControllerID(spsControllerID uuid.UUID) ([]*project.ProjectSPSController, error) {
-var items []*project.ProjectSPSController
-err := r.db.Where("sps_controller_id = ?", spsControllerID).Find(&items).Error
-return items, err
+	var items []*project.ProjectSPSController
+	err := r.db.Where("deleted_at IS NULL").Where("sps_controller_id = ?", spsControllerID).Find(&items).Error
+	return items, err
 }
 
 // DeleteByProjectAndSPSController deletes a specific association
 func (r *projectSPSControllerRepo) DeleteByProjectAndSPSController(projectID, spsControllerID uuid.UUID) error {
-return r.db.Where("project_id = ? AND sps_controller_id = ?", projectID, spsControllerID).
-Delete(&project.ProjectSPSController{}).Error
+	return r.db.Model(&project.ProjectSPSController{}).
+		Where("project_id = ? AND sps_controller_id = ?", projectID, spsControllerID).
+		Update("deleted_at", gorm.Expr("CURRENT_TIMESTAMP")).Error
 }

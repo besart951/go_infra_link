@@ -7,25 +7,31 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type userRepo struct {
+	*gormbase.BaseRepository[*domainUser.User]
 	db *gorm.DB
 }
 
 func NewUserRepository(db *gorm.DB) domainUser.UserRepository {
-	return &userRepo{db: db}
+	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
+		pattern := "%" + strings.TrimSpace(search) + "%"
+		return query.Where("first_name ILIKE ? OR last_name ILIKE ? OR email ILIKE ?", pattern, pattern, pattern)
+	}
+
+	baseRepo := gormbase.NewBaseRepository[*domainUser.User](db, searchCallback)
+	return &userRepo{
+		BaseRepository: baseRepo,
+		db:             db,
+	}
 }
 
 func (r *userRepo) GetByIds(ids []uuid.UUID) ([]*domainUser.User, error) {
-	if len(ids) == 0 {
-		return []*domainUser.User{}, nil
-	}
-	var items []*domainUser.User
-	err := r.db.Where("deleted_at IS NULL").Where("id IN ?", ids).Find(&items).Error
-	return items, err
+	return r.BaseRepository.GetByIds(ids)
 }
 
 func (r *userRepo) GetByEmail(email string) (*domainUser.User, error) {
@@ -41,11 +47,7 @@ func (r *userRepo) GetByEmail(email string) (*domainUser.User, error) {
 }
 
 func (r *userRepo) Create(entity *domainUser.User) error {
-	now := time.Now().UTC()
-	if err := entity.Base.InitForCreate(now); err != nil {
-		return err
-	}
-	return r.db.Create(entity).Error
+	return r.BaseRepository.Create(entity)
 }
 
 func (r *userRepo) Update(entity *domainUser.User) error {
@@ -74,13 +76,7 @@ func (r *userRepo) Update(entity *domainUser.User) error {
 }
 
 func (r *userRepo) DeleteByIds(ids []uuid.UUID) error {
-	if len(ids) == 0 {
-		return nil
-	}
-	now := time.Now().UTC()
-	return r.db.Model(&domainUser.User{}).
-		Where("id IN ?", ids).
-		Updates(map[string]any{"deleted_at": now, "updated_at": now}).Error
+	return r.BaseRepository.DeleteByIds(ids)
 }
 
 func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainUser.User], error) {
