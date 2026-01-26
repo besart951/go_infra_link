@@ -7,6 +7,12 @@ import type { Apparat } from '$lib/domain/facility/index.js';
 import type { SystemPart } from '$lib/domain/entities/systemPart.js';
 import type { SPSControllerSystemType } from '$lib/domain/entities/spsControllerSystemType.js';
 import type { ObjectData } from '$lib/domain/facility/index.js';
+import type { SystemType } from '$lib/domain/facility/index.js';
+import type { FieldDevice } from '$lib/domain/facility/index.js';
+import type { Specification } from '$lib/domain/facility/index.js';
+import type { StateText } from '$lib/domain/facility/index.js';
+import type { NotificationClass } from '$lib/domain/facility/index.js';
+import type { AlarmDefinition } from '$lib/domain/facility/index.js';
 import type { Project } from '$lib/domain/entities/project.js';
 import type { Team } from '$lib/domain/entities/team.js';
 import type { User } from '$lib/domain/entities/user.js';
@@ -64,6 +70,54 @@ export const spsControllerSystemTypesStore = createListStore<SPSControllerSystem
  */
 export const objectDataStore = createListStore<ObjectData>(
 	createApiAdapter<ObjectData>('/facility/object-data'),
+	{ pageSize: 10 }
+);
+
+/**
+ * System Types store
+ */
+export const systemTypesStore = createListStore<SystemType>(
+	createApiAdapter<SystemType>('/facility/system-types'),
+	{ pageSize: 10 }
+);
+
+/**
+ * Field Devices store
+ */
+export const fieldDevicesStore = createListStore<FieldDevice>(
+	createApiAdapter<FieldDevice>('/facility/field-devices'),
+	{ pageSize: 10 }
+);
+
+/**
+ * Specifications store
+ */
+export const specificationsStore = createListStore<Specification>(
+	createApiAdapter<Specification>('/facility/specifications'),
+	{ pageSize: 10 }
+);
+
+/**
+ * State Texts store
+ */
+export const stateTextsStore = createListStore<StateText>(
+	createApiAdapter<StateText>('/facility/state-texts'),
+	{ pageSize: 10 }
+);
+
+/**
+ * Notification Classes store
+ */
+export const notificationClassesStore = createListStore<NotificationClass>(
+	createApiAdapter<NotificationClass>('/facility/notification-classes'),
+	{ pageSize: 10 }
+);
+
+/**
+ * Alarm Definitions store
+ */
+export const alarmDefinitionsStore = createListStore<AlarmDefinition>(
+	createApiAdapter<AlarmDefinition>('/facility/alarm-definitions'),
 	{ pageSize: 10 }
 );
 
