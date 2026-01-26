@@ -8,6 +8,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	// DefaultBatchSize is the default batch size for bulk operations
+	DefaultBatchSize = 100
+)
+
 // Entity is the interface that all entities must implement to work with BaseRepository
 type Entity interface {
 	GetBase() *domain.Base
@@ -114,7 +119,7 @@ func (r *BaseRepository[T]) BulkCreate(entities []T, batchSize int) error {
 	}
 
 	if batchSize <= 0 {
-		batchSize = 100
+		batchSize = DefaultBatchSize
 	}
 
 	return r.db.CreateInBatches(entities, batchSize).Error
