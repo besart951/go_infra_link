@@ -6,16 +6,29 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type spsControllerSystemTypeRepo struct {
+	*gormbase.BaseRepository[*domainFacility.SPSControllerSystemType]
 	db *gorm.DB
 }
 
 func NewSPSControllerSystemTypeRepository(db *gorm.DB) domainFacility.SPSControllerSystemTypeStore {
-	return &spsControllerSystemTypeRepo{db: db}
+	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
+		pattern := "%" + strings.TrimSpace(search) + "%"
+		return query.Joins("LEFT JOIN sps_controllers ON sps_controllers.id = sps_controller_system_types.sps_controller_id").
+			Joins("LEFT JOIN system_types ON system_types.id = sps_controller_system_types.system_type_id").
+			Where("sps_controller_system_types.document_name ILIKE ? OR sps_controllers.device_name ILIKE ? OR system_types.name ILIKE ?", pattern, pattern, pattern)
+	}
+
+	baseRepo := gormbase.NewBaseRepository[*domainFacility.SPSControllerSystemType](db, searchCallback)
+	return &spsControllerSystemTypeRepo{
+		BaseRepository: baseRepo,
+		db:             db,
+	}
 }
 
 func (r *spsControllerSystemTypeRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SPSControllerSystemType, error) {
@@ -33,26 +46,15 @@ func (r *spsControllerSystemTypeRepo) GetByIds(ids []uuid.UUID) ([]*domainFacili
 }
 
 func (r *spsControllerSystemTypeRepo) Create(entity *domainFacility.SPSControllerSystemType) error {
-	now := time.Now().UTC()
-	if err := entity.Base.InitForCreate(now); err != nil {
-		return err
-	}
-	return r.db.Create(entity).Error
+	return r.BaseRepository.Create(entity)
 }
 
 func (r *spsControllerSystemTypeRepo) Update(entity *domainFacility.SPSControllerSystemType) error {
-	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.Save(entity).Error
+	return r.BaseRepository.Update(entity)
 }
 
 func (r *spsControllerSystemTypeRepo) DeleteByIds(ids []uuid.UUID) error {
-	if len(ids) == 0 {
-		return nil
-	}
-	now := time.Now().UTC()
-	return r.db.Model(&domainFacility.SPSControllerSystemType{}).
-		Where("id IN ?", ids).
-		Updates(map[string]any{"deleted_at": now, "updated_at": now}).Error
+	return r.BaseRepository.DeleteByIds(ids)
 }
 
 func (r *spsControllerSystemTypeRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {

@@ -1,62 +1,62 @@
 package facilitysql
 
 import (
+	"strings"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type notificationClassRepo struct {
-	db *gorm.DB
+	*gormbase.BaseRepository[*domainFacility.NotificationClass]
 }
 
 func NewNotificationClassRepository(db *gorm.DB) domainFacility.NotificationClassRepository {
-	return &notificationClassRepo{db: db}
+	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
+		pattern := "%" + strings.TrimSpace(search) + "%"
+		return query.Where("object_description ILIKE ? OR event_category ILIKE ? OR meaning ILIKE ?",
+			pattern, pattern, pattern)
+	}
+
+	baseRepo := gormbase.NewBaseRepository[*domainFacility.NotificationClass](db, searchCallback)
+	return &notificationClassRepo{BaseRepository: baseRepo}
 }
 
 func (r *notificationClassRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.NotificationClass, error) {
-	var items []*domainFacility.NotificationClass
-	err := r.db.Where("id IN ?", ids).Find(&items).Error
-	return items, err
+	return r.BaseRepository.GetByIds(ids)
 }
 
 func (r *notificationClassRepo) Create(entity *domainFacility.NotificationClass) error {
-	return r.db.Create(entity).Error
+	return r.BaseRepository.Create(entity)
 }
 
 func (r *notificationClassRepo) Update(entity *domainFacility.NotificationClass) error {
-	return r.db.Save(entity).Error
+	return r.BaseRepository.Update(entity)
 }
 
 func (r *notificationClassRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.db.Delete(&domainFacility.NotificationClass{}, ids).Error
+	return r.BaseRepository.DeleteByIds(ids)
 }
 
 func (r *notificationClassRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.NotificationClass], error) {
-	var items []domainFacility.NotificationClass
-	var total int64
-
-	db := r.db.Model(&domainFacility.NotificationClass{})
-
-	if params.Search != "" {
-		db = db.Where("object_description ILIKE ? OR event_category ILIKE ? OR meaning ILIKE ?",
-			"%"+params.Search+"%", "%"+params.Search+"%", "%"+params.Search+"%")
-	}
-
-	if err := db.Count(&total).Error; err != nil {
+	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+	if err != nil {
 		return nil, err
 	}
 
-	offset := (params.Page - 1) * params.Limit
-	if err := db.Limit(params.Limit).Offset(offset).Order("nc ASC").Find(&items).Error; err != nil {
-		return nil, err
+	// Convert []*NotificationClass to []NotificationClass for the interface
+	items := make([]domainFacility.NotificationClass, len(result.Items))
+	for i, item := range result.Items {
+		items[i] = *item
 	}
 
 	return &domain.PaginatedList[domainFacility.NotificationClass]{
 		Items:      items,
-		Total:      total,
-		Page:       params.Page,
-		TotalPages: domain.CalculateTotalPages(total, params.Limit),
+		Total:      result.Total,
+		Page:       result.Page,
+		TotalPages: result.TotalPages,
 	}, nil
 }
