@@ -34,28 +34,17 @@ func (s *jwtService) CreateAccessToken(userID uuid.UUID, expiresAt time.Time) (s
 }
 
 // ParseAccessToken parses and validates a JWT token
+// Now uses the strategy's ParseToken method for proper encapsulation
 func (s *jwtService) ParseAccessToken(tokenString string) (*jwt.RegisteredClaims, error) {
-	// Use the strategy to validate the token
-	_, err := s.strategy.ValidateToken(tokenString)
+	// Use the strategy's ParseToken method which handles validation and parsing
+	claims, err := s.strategy.ParseToken(tokenString)
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse again to get the full claims for backward compatibility
-	// This maintains the existing interface while using the strategy internally
-	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(t *jwt.Token) (interface{}, error) {
-		// Access the secret through the strategy (we know it's JWT strategy)
-		if jwtStrat, ok := s.strategy.(*jwtAuthStrategy); ok {
-			return jwtStrat.secret, nil
-		}
-		return nil, jwt.ErrTokenInvalidClaims
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok && token.Valid {
-		return claims, nil
+	// Type assert to jwt.RegisteredClaims (safe since we know it's JWT strategy)
+	if jwtClaims, ok := claims.(*jwt.RegisteredClaims); ok {
+		return jwtClaims, nil
 	}
 
 	return nil, jwt.ErrTokenInvalidClaims

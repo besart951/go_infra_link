@@ -55,6 +55,23 @@ func (s *jwtAuthStrategy) ValidateToken(tokenString string) (uuid.UUID, error) {
 	return uuid.Nil, jwt.ErrTokenInvalidClaims
 }
 
+// ParseToken validates and returns the full JWT claims
+// This satisfies the ParseToken method added to AuthStrategy for better encapsulation
+func (s *jwtAuthStrategy) ParseToken(tokenString string) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(t *jwt.Token) (interface{}, error) {
+		return s.secret, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, jwt.ErrTokenInvalidClaims
+}
+
 // Name returns the name of this authentication strategy
 func (s *jwtAuthStrategy) Name() string {
 	return "JWT"

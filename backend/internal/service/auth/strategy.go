@@ -16,6 +16,10 @@ type AuthStrategy interface {
 	// Returns the user ID if valid, or an error if invalid/expired
 	ValidateToken(token string) (uuid.UUID, error)
 	
+	// ParseToken validates and returns the full claims for backward compatibility
+	// This allows strategies to return their native claim types
+	ParseToken(token string) (interface{}, error)
+	
 	// Name returns the name of the authentication strategy
 	Name() string
 }
