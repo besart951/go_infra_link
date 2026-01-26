@@ -1,26 +1,22 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import Toasts, { addToast } from '$lib/components/toast.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import {
-		listUsers,
 		setUserRole,
 		disableUser,
 		enableUser,
-		deleteUser,
-		type User,
-		type PaginatedUserResponse
+		deleteUser
 	} from '$lib/api/users.js';
-	import { listTeams, listTeamMembers, type Team } from '$lib/api/teams.js';
+	import { listTeams, listTeamMembers } from '$lib/api/teams.js';
+	import type { Team } from '$lib/domain/entities/team.js';
+	import type { User } from '$lib/domain/entities/user.js';
 	import {
-		Search,
 		UserCircle,
 		Shield,
 		ShieldCheck,
@@ -28,41 +24,19 @@
 		UserMinus,
 		UserCheck,
 		Trash2,
-		ChevronUp,
-		ChevronDown,
 		BadgeCheck,
 		BadgeX,
 		KeyRound
 	} from '@lucide/svelte';
+	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
+	import { usersStore } from '$lib/stores/list/entityStores.js';
 
-	let users = $state<User[]>([]);
 	let teams = $state<Team[]>([]);
 	let teamByUserId = $state<Map<string, string[]>>(new Map());
 	let selectedTeamId = $state<string>('all');
 	let teamsLoading = $state(true);
 	let teamsError = $state<string | null>(null);
-	let loading = $state(true);
-	let error = $state<string | null>(null);
-	let searchQuery = $state('');
-	let currentPage = $state(1);
-	let totalPages = $state(1);
-	let total = $state(0);
-	let orderBy = $state('last_login_at');
-	let order = $state<'asc' | 'desc'>('desc');
-	let searchDebounce = $state<ReturnType<typeof setTimeout> | null>(null);
-	let listAbort = $state<AbortController | null>(null);
-	const cache = new Map<string, { at: number; data: PaginatedUserResponse }>();
-	const cacheTTLms = 10_000;
-
-	function cacheKey() {
-		return JSON.stringify({
-			page: currentPage,
-			limit: 10,
-			search: searchQuery,
-			order_by: orderBy,
-			order
-		});
-	}
+	let showActionsMenu = $state<string | null>(null);
 
 	function getUserTeams(userId: string): string[] {
 		return teamByUserId.get(userId) ?? [];
@@ -77,8 +51,8 @@
 	}
 
 	function visibleUsers(): User[] {
-		if (selectedTeamId === 'all') return users;
-		return users.filter((u) => userMatchesTeam(u.id));
+		if (selectedTeamId === 'all') return $usersStore.items;
+		return $usersStore.items.filter((u) => userMatchesTeam(u.id));
 	}
 
 	async function loadTeamsAndMembers() {
@@ -111,70 +85,10 @@
 		}
 	}
 
-	async function loadUsers() {
-		loading = true;
-		error = null;
-		const key = cacheKey();
-		const cached = cache.get(key);
-		if (cached && Date.now() - cached.at < cacheTTLms) {
-			users = cached.data.items;
-			totalPages = cached.data.total_pages;
-			total = cached.data.total;
-			loading = false;
-			return;
-		}
-
-		listAbort?.abort();
-		listAbort = new AbortController();
-		try {
-			const response: PaginatedUserResponse = await listUsers(
-				{
-					page: currentPage,
-					limit: 10,
-					search: searchQuery,
-					order_by: orderBy,
-					order
-				},
-				{ signal: listAbort.signal }
-			);
-			users = response.items;
-			totalPages = response.total_pages;
-			total = response.total;
-			cache.set(key, { at: Date.now(), data: response });
-		} catch (err) {
-			if (err instanceof DOMException && err.name === 'AbortError') {
-				return;
-			}
-			error = err instanceof Error ? err.message : 'Failed to load users';
-		} finally {
-			loading = false;
-		}
-	}
-
-	function handleSort(field: string) {
-		if (orderBy === field) {
-			order = order === 'asc' ? 'desc' : 'asc';
-		} else {
-			orderBy = field;
-			order = 'desc';
-		}
-		loadUsers();
-	}
-
-	function handleSearch(event: Event) {
-		const target = event.target as HTMLInputElement;
-		searchQuery = target.value;
-		currentPage = 1;
-		if (searchDebounce) clearTimeout(searchDebounce);
-		searchDebounce = setTimeout(() => {
-			loadUsers();
-		}, 300);
-	}
-
 	async function handleRoleChange(userId: string, newRole: 'user' | 'admin' | 'superadmin') {
 		try {
 			await setUserRole(userId, newRole);
-			await loadUsers();
+			usersStore.reload();
 			addToast('Role updated successfully', 'success');
 		} catch (err) {
 			addToast(err instanceof Error ? err.message : 'Failed to change role', 'error');
@@ -190,7 +104,7 @@
 				await enableUser(userId);
 				addToast('User enabled successfully', 'success');
 			}
-			await loadUsers();
+			usersStore.reload();
 		} catch (err) {
 			addToast(err instanceof Error ? err.message : 'Failed to toggle user status', 'error');
 		}
@@ -208,7 +122,7 @@
 		if (confirmed) {
 			try {
 				await deleteUser(userId);
-				await loadUsers();
+				usersStore.reload();
 				addToast('User deleted successfully', 'success');
 			} catch (err) {
 				addToast(err instanceof Error ? err.message : 'Failed to delete user', 'error');
@@ -250,13 +164,10 @@
 	}
 
 	function authVerified(user: User): boolean {
-		// Backend currently has no "email_verified" field.
-		// Treat active, non-disabled users as "verified" for UI purposes.
 		return Boolean(user.is_active && !user.disabled_at);
 	}
 
 	function twoFactorEnabled(_user: User): boolean {
-		// Backend currently has no 2FA field.
 		return false;
 	}
 
@@ -267,10 +178,8 @@
 
 	onMount(() => {
 		loadTeamsAndMembers();
-		loadUsers();
+		usersStore.load();
 	});
-
-	let showActionsMenu = $state<string | null>(null);
 </script>
 
 <div class="flex flex-col gap-6">
@@ -282,39 +191,27 @@
 		</div>
 	</div>
 
-	<!-- Search and Filters -->
-	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-		<div class="relative max-w-sm flex-1">
-			<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-			<Input
-				type="search"
-				placeholder="Search users by name or email..."
-				class="pl-9"
-				value={searchQuery}
-				oninput={handleSearch}
-			/>
+	<!-- Team Filter -->
+	<div class="flex items-center justify-end gap-3">
+		<div class="text-sm text-muted-foreground">
+			{#if selectedTeamId === 'all'}
+				{$usersStore.total} {$usersStore.total === 1 ? 'user' : 'users'} total
+			{:else}
+				{visibleUsers().length} shown • {$usersStore.total} total
+			{/if}
 		</div>
-		<div class="flex items-center gap-3">
-			<div class="text-sm text-muted-foreground">
-				{#if selectedTeamId === 'all'}
-					{total} {total === 1 ? 'user' : 'users'} total
-				{:else}
-					{visibleUsers().length} shown • {total} total
-				{/if}
-			</div>
-			<div class="flex items-center gap-2">
-				<span class="text-sm text-muted-foreground">Team</span>
-				<select
-					class="h-9 rounded-md border bg-background px-3 text-sm"
-					bind:value={selectedTeamId}
-					disabled={teamsLoading || teams.length === 0}
-				>
-					<option value="all">All teams</option>
-					{#each teams as t (t.id)}
-						<option value={t.id}>{t.name}</option>
-					{/each}
-				</select>
-			</div>
+		<div class="flex items-center gap-2">
+			<span class="text-sm text-muted-foreground">Team</span>
+			<select
+				class="h-9 rounded-md border bg-background px-3 text-sm"
+				bind:value={selectedTeamId}
+				disabled={teamsLoading || teams.length === 0}
+			>
+				<option value="all">All teams</option>
+				{#each teams as t (t.id)}
+					<option value={t.id}>{t.name}</option>
+				{/each}
+			</select>
 		</div>
 	</div>
 
@@ -325,332 +222,207 @@
 		</div>
 	{/if}
 
-	{#if error}
-		<div
-			class="rounded-md border border-destructive/50 bg-destructive/15 px-4 py-3 text-destructive"
-		>
-			<p class="font-medium">Error loading users</p>
-			<p class="text-sm">{error}</p>
-		</div>
-	{/if}
-
-	<!-- Table -->
-	<div class="rounded-lg border">
-		<Table.Root>
-			<Table.Header>
-				<Table.Row>
-					<Table.Head>
-						<button
-							class="flex items-center gap-1 font-medium hover:underline"
-							onclick={() => handleSort('first_name')}
-						>
-							Name/Email
-							{#if orderBy === 'first_name'}
-								{#if order === 'asc'}
-									<ChevronUp class="h-4 w-4" />
-								{:else}
-									<ChevronDown class="h-4 w-4" />
-								{/if}
+	<PaginatedList
+		state={$usersStore}
+		columns={[
+			{ key: 'name', label: 'Name/Email' },
+			{ key: 'team', label: 'Team' },
+			{ key: 'role', label: 'Role' },
+			{ key: 'auth', label: 'Auth' },
+			{ key: 'status', label: 'Status' },
+			{ key: 'last_active', label: 'Last Active' },
+			{ key: 'actions', label: 'Actions', width: 'text-right' }
+		]}
+		searchPlaceholder="Search users by name or email..."
+		emptyMessage="No users found"
+		onSearch={(text) => usersStore.search(text)}
+		onPageChange={(page) => usersStore.goToPage(page)}
+		onReload={() => usersStore.reload()}
+	>
+		{#snippet rowSnippet(user: User)}
+			{@const isVisible = userMatchesTeam(user.id)}
+			{#if isVisible || selectedTeamId === 'all'}
+				<Table.Cell>
+					<div class="flex flex-col">
+						<div class="font-medium">
+							{user.first_name}
+							{user.last_name}
+						</div>
+						<div class="text-sm text-muted-foreground">{user.email}</div>
+					</div>
+				</Table.Cell>
+				<Table.Cell>
+					{@const tnames = getUserTeams(user.id)}
+					{#if tnames.length === 0}
+						<span class="text-sm text-muted-foreground">—</span>
+					{:else}
+						<div class="flex items-center gap-2">
+							<span class="text-sm font-medium">{tnames[0]}</span>
+							{#if tnames.length > 1}
+								<Tooltip.Root>
+									<Tooltip.Trigger class="inline-flex">
+										<Badge variant="outline">+{tnames.length - 1}</Badge>
+									</Tooltip.Trigger>
+									<Tooltip.Content class="max-w-xs">
+										<div class="text-sm">{tnames.join(', ')}</div>
+									</Tooltip.Content>
+								</Tooltip.Root>
 							{/if}
-						</button>
-					</Table.Head>
-					<Table.Head>Team</Table.Head>
-					<Table.Head>
-						<button
-							class="flex items-center gap-1 font-medium hover:underline"
-							onclick={() => handleSort('role')}
-						>
-							Role
-							{#if orderBy === 'role'}
-								{#if order === 'asc'}
-									<ChevronUp class="h-4 w-4" />
+						</div>
+					{/if}
+				</Table.Cell>
+				<Table.Cell>
+					<Badge variant={getRoleBadgeVariant(user.role)}>
+						{@const Icon = getRoleIcon(user.role)}
+						<Icon class="mr-1 h-3 w-3" />
+						{roleLabel(user.role)}
+					</Badge>
+					<select
+						class="ml-2 h-8 rounded-md border bg-background px-2 text-xs"
+						value={user.role}
+						onchange={(e) =>
+							handleRoleChange(user.id, (e.currentTarget as HTMLSelectElement).value as any)}
+					>
+						<option value="user">Member</option>
+						<option value="admin">Admin</option>
+						<option value="superadmin">Super Admin</option>
+					</select>
+				</Table.Cell>
+				<Table.Cell>
+					<div class="flex items-center gap-2">
+						<Tooltip.Root>
+							<Tooltip.Trigger class="inline-flex">
+								{#if authVerified(user)}
+									<Badge variant="success">
+										<BadgeCheck class="mr-1 h-3 w-3" />
+										Verified
+									</Badge>
 								{:else}
-									<ChevronDown class="h-4 w-4" />
+									<Badge variant="outline">
+										<BadgeX class="mr-1 h-3 w-3" />
+										Unverified
+									</Badge>
 								{/if}
-							{/if}
-						</button>
-					</Table.Head>
-					<Table.Head>Auth</Table.Head>
-					<Table.Head>Status</Table.Head>
-					<Table.Head>
-						<button
-							class="flex items-center gap-1 font-medium hover:underline"
-							onclick={() => handleSort('last_login_at')}
-						>
-							Last Active
-							{#if orderBy === 'last_login_at'}
-								{#if order === 'asc'}
-									<ChevronUp class="h-4 w-4" />
-								{:else}
-									<ChevronDown class="h-4 w-4" />
-								{/if}
-							{/if}
-						</button>
-					</Table.Head>
-					<Table.Head class="text-right">Actions</Table.Head>
-				</Table.Row>
-			</Table.Header>
-			<Table.Body>
-				{#if loading}
-					{#each Array(5) as _}
-						<Table.Row>
-							<Table.Cell>
-								<Skeleton class="h-10 w-full" />
-							</Table.Cell>
-							<Table.Cell>
-								<Skeleton class="h-6 w-24" />
-							</Table.Cell>
-							<Table.Cell>
-								<Skeleton class="h-6 w-20" />
-							</Table.Cell>
-							<Table.Cell>
-								<Skeleton class="h-6 w-16" />
-							</Table.Cell>
-							<Table.Cell>
-								<Skeleton class="h-6 w-24" />
-							</Table.Cell>
-							<Table.Cell>
-								<Skeleton class="h-5 w-24" />
-							</Table.Cell>
-							<Table.Cell>
-								<Skeleton class="h-8 w-8" />
-							</Table.Cell>
-						</Table.Row>
-					{/each}
-				{:else if visibleUsers().length === 0}
-					<Table.Row>
-						<Table.Cell colspan={7} class="h-24 text-center">
-							<div class="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-								<UserCircle class="h-12 w-12" />
-								<p class="font-medium">No users found</p>
-								<p class="text-sm">
-									{searchQuery || selectedTeamId !== 'all'
-										? 'Try adjusting your search or filters'
-										: 'No users in the system yet'}
-								</p>
-							</div>
-						</Table.Cell>
-					</Table.Row>
-				{:else}
-					{#each visibleUsers() as user (user.id)}
-						<Table.Row>
-							<Table.Cell>
-								<div class="flex flex-col">
-									<div class="font-medium">
-										{user.first_name}
-										{user.last_name}
-									</div>
-									<div class="text-sm text-muted-foreground">{user.email}</div>
+							</Tooltip.Trigger>
+							<Tooltip.Content>
+								<div class="text-sm">
+									Email verification is not tracked in the backend yet.
 								</div>
-							</Table.Cell>
-							<Table.Cell>
-								{@const tnames = getUserTeams(user.id)}
-								{#if tnames.length === 0}
-									<span class="text-sm text-muted-foreground">—</span>
+							</Tooltip.Content>
+						</Tooltip.Root>
+
+						<Tooltip.Root>
+							<Tooltip.Trigger class="inline-flex">
+								{#if twoFactorEnabled(user)}
+									<Badge variant="secondary">
+										<KeyRound class="mr-1 h-3 w-3" />
+										2FA
+									</Badge>
 								{:else}
-									<div class="flex items-center gap-2">
-										<span class="text-sm font-medium">{tnames[0]}</span>
-										{#if tnames.length > 1}
-											<Tooltip.Root>
-												<Tooltip.Trigger class="inline-flex">
-													<Badge variant="outline">+{tnames.length - 1}</Badge>
-												</Tooltip.Trigger>
-												<Tooltip.Content class="max-w-xs">
-													<div class="text-sm">{tnames.join(', ')}</div>
-												</Tooltip.Content>
-											</Tooltip.Root>
-										{/if}
-									</div>
+									<Badge variant="outline">
+										<KeyRound class="mr-1 h-3 w-3" />
+										2FA off
+									</Badge>
 								{/if}
-							</Table.Cell>
-							<Table.Cell>
-								<Badge variant={getRoleBadgeVariant(user.role)}>
-									{@const Icon = getRoleIcon(user.role)}
-									<Icon class="mr-1 h-3 w-3" />
-									{roleLabel(user.role)}
-								</Badge>
-								<select
-									class="ml-2 h-8 rounded-md border bg-background px-2 text-xs"
-									value={user.role}
-									onchange={(e) =>
-										handleRoleChange(user.id, (e.currentTarget as HTMLSelectElement).value as any)}
+							</Tooltip.Trigger>
+							<Tooltip.Content>
+								<div class="text-sm">Two-factor authentication is not implemented yet.</div>
+							</Tooltip.Content>
+						</Tooltip.Root>
+					</div>
+				</Table.Cell>
+				<Table.Cell>
+					{#if user.disabled_at}
+						<Badge variant="destructive">Disabled</Badge>
+					{:else if user.locked_until}
+						<Badge variant="warning">Locked</Badge>
+					{:else if user.is_active}
+						<Badge variant="success">Active</Badge>
+					{:else}
+						<Badge variant="outline">Inactive</Badge>
+					{/if}
+				</Table.Cell>
+				<Table.Cell>
+					<span class="text-sm">{formatDate(user.last_login_at)}</span>
+				</Table.Cell>
+				<Table.Cell class="text-right">
+					<div class="relative inline-block">
+						<Button
+							variant="ghost"
+							size="sm"
+							onclick={() => (showActionsMenu = showActionsMenu === user.id ? null : user.id)}
+						>
+							<MoreVertical class="h-4 w-4" />
+						</Button>
+						{#if showActionsMenu === user.id}
+							<div
+								class="absolute right-0 z-10 mt-2 w-56 rounded-md border bg-popover p-1 shadow-md"
+							>
+								<div class="px-2 py-1.5 text-sm font-medium">Change Role</div>
+								<button
+									class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+									onclick={() => {
+										handleRoleChange(user.id, 'user');
+										showActionsMenu = null;
+									}}
 								>
-									<option value="user">Member</option>
-									<option value="admin">Admin</option>
-									<option value="superadmin">Super Admin</option>
-								</select>
-							</Table.Cell>
-							<Table.Cell>
-								<div class="flex items-center gap-2">
-									<Tooltip.Root>
-										<Tooltip.Trigger class="inline-flex">
-											{#if authVerified(user)}
-												<Badge variant="success">
-													<BadgeCheck class="mr-1 h-3 w-3" />
-													Verified
-												</Badge>
-											{:else}
-												<Badge variant="outline">
-													<BadgeX class="mr-1 h-3 w-3" />
-													Unverified
-												</Badge>
-											{/if}
-										</Tooltip.Trigger>
-										<Tooltip.Content>
-											<div class="text-sm">
-												Email verification is not tracked in the backend yet.
-											</div>
-										</Tooltip.Content>
-									</Tooltip.Root>
-
-									<Tooltip.Root>
-										<Tooltip.Trigger class="inline-flex">
-											{#if twoFactorEnabled(user)}
-												<Badge variant="secondary">
-													<KeyRound class="mr-1 h-3 w-3" />
-													2FA
-												</Badge>
-											{:else}
-												<Badge variant="outline">
-													<KeyRound class="mr-1 h-3 w-3" />
-													2FA off
-												</Badge>
-											{/if}
-										</Tooltip.Trigger>
-										<Tooltip.Content>
-											<div class="text-sm">Two-factor authentication is not implemented yet.</div>
-										</Tooltip.Content>
-									</Tooltip.Root>
-								</div>
-							</Table.Cell>
-							<Table.Cell>
-								{#if user.disabled_at}
-									<Badge variant="destructive">Disabled</Badge>
-								{:else if user.locked_until}
-									<Badge variant="warning">Locked</Badge>
-								{:else if user.is_active}
-									<Badge variant="success">Active</Badge>
-								{:else}
-									<Badge variant="outline">Inactive</Badge>
-								{/if}
-							</Table.Cell>
-							<Table.Cell>
-								<span class="text-sm">{formatDate(user.last_login_at)}</span>
-							</Table.Cell>
-							<Table.Cell class="text-right">
-								<div class="relative inline-block">
-									<Button
-										variant="ghost"
-										size="sm"
-										onclick={() => (showActionsMenu = showActionsMenu === user.id ? null : user.id)}
-									>
-										<MoreVertical class="h-4 w-4" />
-									</Button>
-									{#if showActionsMenu === user.id}
-										<div
-											class="absolute right-0 z-10 mt-2 w-56 rounded-md border bg-popover p-1 shadow-md"
-										>
-											<div class="px-2 py-1.5 text-sm font-medium">Change Role</div>
-											<button
-												class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-												onclick={() => {
-													handleRoleChange(user.id, 'user');
-													showActionsMenu = null;
-												}}
-											>
-												<UserCircle class="mr-2 h-4 w-4" />
-												User
-											</button>
-											<button
-												class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-												onclick={() => {
-													handleRoleChange(user.id, 'admin');
-													showActionsMenu = null;
-												}}
-											>
-												<Shield class="mr-2 h-4 w-4" />
-												Admin
-											</button>
-											<button
-												class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-												onclick={() => {
-													handleRoleChange(user.id, 'superadmin');
-													showActionsMenu = null;
-												}}
-											>
-												<ShieldCheck class="mr-2 h-4 w-4" />
-												Super Admin
-											</button>
-											<div class="my-1 h-px bg-border"></div>
-											<button
-												class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-												onclick={() => {
-													handleToggleActive(user.id, user.is_active);
-													showActionsMenu = null;
-												}}
-											>
-												{#if user.is_active}
-													<UserMinus class="mr-2 h-4 w-4" />
-													Disable User
-												{:else}
-													<UserCheck class="mr-2 h-4 w-4" />
-													Enable User
-												{/if}
-											</button>
-											<div class="my-1 h-px bg-border"></div>
-											<button
-												class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
-												onclick={() => {
-													handleDeleteUser(user.id, `${user.first_name} ${user.last_name}`);
-													showActionsMenu = null;
-												}}
-											>
-												<Trash2 class="mr-2 h-4 w-4" />
-												Delete User
-											</button>
-										</div>
+									<UserCircle class="mr-2 h-4 w-4" />
+									User
+								</button>
+								<button
+									class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+									onclick={() => {
+										handleRoleChange(user.id, 'admin');
+										showActionsMenu = null;
+									}}
+								>
+									<Shield class="mr-2 h-4 w-4" />
+									Admin
+								</button>
+								<button
+									class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+									onclick={() => {
+										handleRoleChange(user.id, 'superadmin');
+										showActionsMenu = null;
+									}}
+								>
+									<ShieldCheck class="mr-2 h-4 w-4" />
+									Super Admin
+								</button>
+								<div class="my-1 h-px bg-border"></div>
+								<button
+									class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+									onclick={() => {
+										handleToggleActive(user.id, user.is_active);
+										showActionsMenu = null;
+									}}
+								>
+									{#if user.is_active}
+										<UserMinus class="mr-2 h-4 w-4" />
+										Disable User
+									{:else}
+										<UserCheck class="mr-2 h-4 w-4" />
+										Enable User
 									{/if}
-								</div>
-							</Table.Cell>
-						</Table.Row>
-					{/each}
-				{/if}
-			</Table.Body>
-		</Table.Root>
-	</div>
-
-	<!-- Pagination -->
-	{#if totalPages > 1}
-		<div class="flex items-center justify-between">
-			<div class="text-sm text-muted-foreground">
-				Page {currentPage} of {totalPages}
-			</div>
-			<div class="flex items-center gap-2">
-				<Button
-					variant="outline"
-					size="sm"
-					disabled={currentPage <= 1}
-					onclick={() => {
-						currentPage--;
-						loadUsers();
-					}}
-				>
-					Previous
-				</Button>
-				<Button
-					variant="outline"
-					size="sm"
-					disabled={currentPage >= totalPages}
-					onclick={() => {
-						currentPage++;
-						loadUsers();
-					}}
-				>
-					Next
-				</Button>
-			</div>
-		</div>
-	{/if}
+								</button>
+								<div class="my-1 h-px bg-border"></div>
+								<button
+									class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
+									onclick={() => {
+										handleDeleteUser(user.id, `${user.first_name} ${user.last_name}`);
+										showActionsMenu = null;
+									}}
+								>
+									<Trash2 class="mr-2 h-4 w-4" />
+									Delete User
+								</button>
+							</div>
+						{/if}
+					</div>
+				</Table.Cell>
+			{/if}
+		{/snippet}
+	</PaginatedList>
 </div>
 
 <Toasts />
