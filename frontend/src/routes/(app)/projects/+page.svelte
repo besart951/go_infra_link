@@ -1,11 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Plus } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
+	import Toasts, { addToast } from '$lib/components/toast.svelte';
+	import ProjectPhaseSelect from '$lib/components/project/ProjectPhaseSelect.svelte';
 	import { projectListStore } from '$lib/stores/projects/projectListStore.js';
-	import type { Project, ProjectStatus } from '$lib/domain/project/index.js';
+	import { createProject } from '$lib/infrastructure/api/project.adapter.js';
+	import type { CreateProjectRequest, Project, ProjectStatus } from '$lib/domain/project/index.js';
 
 	function getStatusClass(status: string): string {
 		switch (status) {
@@ -25,6 +31,75 @@
 		{ value: 'completed', label: 'Completed' }
 	];
 
+	const createStatusOptions: Array<{ value: ProjectStatus; label: string }> = [
+		{ value: 'planned', label: 'Planned' },
+		{ value: 'ongoing', label: 'Ongoing' },
+		{ value: 'completed', label: 'Completed' }
+	];
+
+	type CreateProjectForm = {
+		name: string;
+		description: string;
+		status: ProjectStatus;
+		start_date: string;
+		phase_id: string;
+	};
+
+	function todayInputValue(): string {
+		const now = new Date();
+		const yyyy = now.getFullYear();
+		const mm = String(now.getMonth() + 1).padStart(2, '0');
+		const dd = String(now.getDate()).padStart(2, '0');
+		return `${yyyy}-${mm}-${dd}`;
+	}
+
+	let createOpen = $state(false);
+	let createBusy = $state(false);
+	let form = $state<CreateProjectForm>({
+		name: '',
+		description: '',
+		status: 'planned',
+		start_date: todayInputValue(),
+		phase_id: ''
+	});
+
+	function canSubmitCreate(): boolean {
+		return form.name.trim().length > 0 && form.phase_id.trim().length > 0 && !createBusy;
+	}
+
+	async function submitCreate() {
+		if (!canSubmitCreate()) return;
+		createBusy = true;
+		try {
+			const payload: CreateProjectRequest = {
+				name: form.name.trim(),
+				description: form.description.trim() || undefined,
+				status: form.status,
+				start_date: form.start_date
+					? new Date(`${form.start_date}T00:00:00Z`).toISOString()
+					: undefined,
+				phase_id: form.phase_id
+			};
+
+			const project = await createProject(payload);
+			addToast('Project created', 'success');
+			form = {
+				name: '',
+				description: '',
+				status: 'planned',
+				start_date: todayInputValue(),
+				phase_id: ''
+			};
+			createOpen = false;
+			projectListStore.reload();
+			goto(`/projects/${project.id}`);
+		} catch (err) {
+			addToast(err instanceof Error ? err.message : 'Failed to create project', 'error');
+		} finally {
+			createBusy = false;
+		}
+	}
+
 	function handleStatusChange(e: Event) {
 		const value = (e.target as HTMLSelectElement).value;
 		projectListStore.setStatus(value === 'all' ? 'all' : (value as ProjectStatus));
@@ -34,6 +109,8 @@
 		projectListStore.load();
 	});
 </script>
+
+<Toasts />
 
 <svelte:head>
 	<title>Projects | Infra Link</title>
@@ -48,11 +125,74 @@
 				access.
 			</p>
 		</div>
-		<Button href="/projects/new">
+		<Button onclick={() => (createOpen = !createOpen)}>
 			<Plus class="mr-2 size-4" />
 			New Project
 		</Button>
 	</div>
+
+	{#if createOpen}
+		<div class="rounded-lg border bg-background p-4">
+			<div class="grid gap-4 md:grid-cols-2">
+				<div class="flex flex-col gap-2">
+					<label class="text-sm font-medium" for="project_name_create">Name</label>
+					<Input
+						id="project_name_create"
+						placeholder="Project name"
+						bind:value={form.name}
+						disabled={createBusy}
+					/>
+				</div>
+
+				<div class="flex flex-col gap-2">
+					<label class="text-sm font-medium" for="project_status_create">Status</label>
+					<select
+						id="project_status_create"
+						class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
+						bind:value={form.status}
+						disabled={createBusy}
+					>
+						{#each createStatusOptions as opt}
+							<option value={opt.value}>{opt.label}</option>
+						{/each}
+					</select>
+				</div>
+
+				<div class="flex flex-col gap-2">
+					<label class="text-sm font-medium" for="project_start_create">Start date</label>
+					<Input
+						id="project_start_create"
+						type="date"
+						bind:value={form.start_date}
+						disabled={createBusy}
+					/>
+				</div>
+
+				<div class="flex flex-col gap-2">
+					<label class="text-sm font-medium" for="project_phase_create">Phase</label>
+					<ProjectPhaseSelect id="project_phase_create" bind:value={form.phase_id} width="w-full" />
+				</div>
+
+				<div class="flex flex-col gap-2 md:col-span-2">
+					<label class="text-sm font-medium" for="project_desc_create">Description</label>
+					<Textarea
+						id="project_desc_create"
+						placeholder="Describe the project goals"
+						rows={3}
+						bind:value={form.description}
+						disabled={createBusy}
+					/>
+				</div>
+			</div>
+
+			<div class="mt-4 flex items-center justify-end gap-2">
+				<Button variant="outline" onclick={() => (createOpen = false)} disabled={createBusy}
+					>Cancel</Button
+				>
+				<Button onclick={submitCreate} disabled={!canSubmitCreate()}>Create</Button>
+			</div>
+		</div>
+	{/if}
 
 	<div class="flex flex-wrap items-center gap-3">
 		<label class="text-sm font-medium" for="project_status_filter">Status</label>

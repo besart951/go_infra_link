@@ -11,8 +11,7 @@ import (
 // Phase DTOs
 
 type CreatePhaseRequest struct {
-	Name      string    `json:"name" binding:"required,min=1,max=255"`
-	ProjectID uuid.UUID `json:"project_id" binding:"required"`
+	Name string `json:"name" binding:"required,min=1,max=255"`
 }
 
 type UpdatePhaseRequest struct {
@@ -22,7 +21,6 @@ type UpdatePhaseRequest struct {
 type PhaseResponse struct {
 	ID        uuid.UUID `json:"id"`
 	Name      string    `json:"name"`
-	ProjectID uuid.UUID `json:"project_id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

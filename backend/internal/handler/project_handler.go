@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/besart951/go_infra_link/backend/internal/handler/mapper"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
@@ -36,6 +37,13 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 	}
 
 	proj := mapper.ToProjectModel(req)
+
+	creatorID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+	proj.CreatorID = creatorID
 
 	if err := h.service.Create(proj); err != nil {
 		handlerutil.RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())

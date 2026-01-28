@@ -101,7 +101,7 @@
 	};
 
 	const handleCreateProject = () => {
-		goto('/projects/new');
+		goto('/projects');
 	};
 
 	const handleCreateTeam = () => {

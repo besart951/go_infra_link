@@ -9,8 +9,7 @@ import (
 
 func ToPhaseModel(req dto.CreatePhaseRequest) *project.Phase {
 	return &project.Phase{
-		Name:      req.Name,
-		ProjectID: req.ProjectID,
+		Name: req.Name,
 	}
 }
 
@@ -18,7 +17,6 @@ func ToPhaseResponse(phase *project.Phase) dto.PhaseResponse {
 	return dto.PhaseResponse{
 		ID:        phase.ID,
 		Name:      phase.Name,
-		ProjectID: phase.ProjectID,
 		CreatedAt: phase.CreatedAt,
 		UpdatedAt: phase.UpdatedAt,
 	}
@@ -30,7 +28,6 @@ func ToPhaseListResponse(phases []project.Phase) []dto.PhaseResponse {
 		result[i] = dto.PhaseResponse{
 			ID:        phase.ID,
 			Name:      phase.Name,
-			ProjectID: phase.ProjectID,
 			CreatedAt: phase.CreatedAt,
 			UpdatedAt: phase.UpdatedAt,
 		}

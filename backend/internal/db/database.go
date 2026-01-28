@@ -73,7 +73,7 @@ func Connect(cfg config.Config) (*gorm.DB, error) {
 
 // autoMigrate runs GORM's AutoMigrate for all domain models
 func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(
+	if err := db.AutoMigrate(
 		// User domain
 		&user.User{},
 		&user.BusinessDetails{},
@@ -110,7 +110,18 @@ func autoMigrate(db *gorm.DB) error {
 		&facility.AlarmDefinition{},
 		&facility.BacnetObject{},
 		&facility.ObjectData{},
-	)
+	); err != nil {
+		return err
+	}
+
+	// Cleanup legacy phases.project_id column (phases are independent)
+	if db.Migrator().HasColumn(&project.Phase{}, "project_id") {
+		if err := db.Migrator().DropColumn(&project.Phase{}, "project_id"); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func resolveSQLiteDSN(dsn string) string {

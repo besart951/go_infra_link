@@ -1,32 +1,20 @@
 <script lang="ts">
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
-	import { listProjects } from '$lib/infrastructure/api/project.adapter.js';
-
-	type PhaseOption = {
-		id: string;
-		name: string;
-	};
+	import { listPhases } from '$lib/infrastructure/api/phase.adapter.js';
+	import type { Phase } from '$lib/domain/phase/index.js';
 
 	export let value: string = '';
 	export let width: string = 'w-[260px]';
 	export let id: string | undefined = undefined;
 
-	const MAX_PHASE_SAMPLES = 200;
+	const MAX_PHASE_SAMPLES = 100;
 
-	async function fetcher(search: string): Promise<PhaseOption[]> {
-		const res = await listProjects({ page: 1, limit: MAX_PHASE_SAMPLES });
-		const unique = new Map<string, PhaseOption>();
-		for (const project of res.items ?? []) {
-			const phaseId = project.phase_id?.trim();
-			if (!phaseId) continue;
-			if (!unique.has(phaseId)) {
-				unique.set(phaseId, { id: phaseId, name: phaseId });
-			}
-		}
-		const items = Array.from(unique.values());
-		const normalized = search.trim().toLowerCase();
-		if (!normalized) return items;
-		return items.filter((item) => item.name.toLowerCase().includes(normalized));
+	async function fetcher(search: string): Promise<Phase[]> {
+		const res = await listPhases({ page: 1, limit: MAX_PHASE_SAMPLES, search });
+		return (res.items ?? []).map((phase) => ({
+			...phase,
+			name: phase.name || phase.id
+		}));
 	}
 </script>
 

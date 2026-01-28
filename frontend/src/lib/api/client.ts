@@ -44,7 +44,7 @@ async function parseError(response: Response): Promise<ApiError> {
 		return {
 			error: body.error || 'unknown_error',
 			message: body.message || response.statusText,
-			details: body.details,
+			details: body.details || body.fields,
 			status: response.status
 		};
 	} catch {
@@ -153,7 +153,14 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
  */
 export function getErrorMessage(err: unknown): string {
 	if (err instanceof ApiException) {
-		return err.message || err.error;
+		if (err.message) return err.message;
+		if (err.details && typeof err.details === 'object') {
+			const entries = Object.entries(err.details as Record<string, string>);
+			if (entries.length > 0) {
+				return entries.map(([key, value]) => `${key} ${value}`).join(', ');
+			}
+		}
+		return err.error;
 	}
 	if (err instanceof Error) {
 		return err.message;

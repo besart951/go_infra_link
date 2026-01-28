@@ -14,8 +14,7 @@ type CreateProjectRequest struct {
 	Description string     `json:"description"`
 	Status      string     `json:"status" binding:"omitempty,oneof=planned ongoing completed"`
 	StartDate   *time.Time `json:"start_date"`
-	PhaseID     *uuid.UUID `json:"phase_id"`
-	CreatorID   uuid.UUID  `json:"creator_id" binding:"required"`
+	PhaseID     uuid.UUID  `json:"phase_id" binding:"required"`
 }
 
 type UpdateProjectRequest struct {

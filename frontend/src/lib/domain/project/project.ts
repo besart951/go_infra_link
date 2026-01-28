@@ -3,9 +3,9 @@
  * Mirrors backend: internal/domain/project/project.go
  */
 
-import type { Pagination } from "../utils/index.ts";
-import type { User } from "../user/index.ts";
-import type { ObjectData } from "../facility/index.ts";
+import type { Pagination } from '../utils/index.ts';
+import type { User } from '../user/index.ts';
+import type { ObjectData } from '../facility/index.ts';
 export type ProjectStatus = 'planned' | 'ongoing' | 'completed';
 
 export interface Project {
@@ -25,11 +25,11 @@ export interface CreateProjectRequest {
 	description?: string;
 	status?: ProjectStatus;
 	start_date?: string;
-	phase_id?: string;
+	phase_id: string;
 }
 
 export interface UpdateProjectRequest {
-    id: string;
+	id: string;
 	name?: string;
 	description?: string;
 	status?: ProjectStatus;

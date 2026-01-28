@@ -60,11 +60,13 @@
 	let availableUsers = $state<User[]>([]);
 	let usersLoading = $state(false);
 	let selectedUserId = $state('');
+	let usersLoaded = $state(false);
 
 	let projectObjectData = $state<ObjectData[]>([]);
 	let availableObjectData = $state<ObjectData[]>([]);
 	let objectDataLoading = $state(false);
 	let selectedObjectDataId = $state('');
+	let objectDataLoaded = $state(false);
 
 	function getStatusClass(status: string): string {
 		switch (status) {
@@ -98,6 +100,10 @@
 
 	async function saveSettings() {
 		if (!projectId || !project) return;
+		if (!form.phase_id.trim()) {
+			addToast('Phase is required', 'error');
+			return;
+		}
 		saving = true;
 		try {
 			const payload: UpdateProjectRequest = {
@@ -106,7 +112,7 @@
 				description: form.description.trim() || undefined,
 				status: form.status,
 				start_date: form.start_date || undefined,
-				phase_id: form.phase_id || undefined
+				phase_id: form.phase_id
 			};
 			project = await updateProject(projectId, payload);
 			hydrateForm(project);
@@ -124,10 +130,11 @@
 		try {
 			const [projectUsersRes, usersRes] = await Promise.all([
 				listProjectUsers(projectId),
-				listUsers({ page: 1, limit: 200 })
+				listUsers({ page: 1, limit: 100 })
 			]);
 			projectUsers = projectUsersRes.items;
 			availableUsers = usersRes.items;
+			usersLoaded = true;
 		} catch (err) {
 			addToast(err instanceof Error ? err.message : 'Failed to load users', 'error');
 		} finally {
@@ -171,11 +178,12 @@
 		objectDataLoading = true;
 		try {
 			const [projectRes, allRes] = await Promise.all([
-				listProjectObjectData(projectId, { page: 1, limit: 200 }),
-				listObjectData({ page: 1, limit: 200 })
+				listProjectObjectData(projectId, { page: 1, limit: 100 }),
+				listObjectData({ page: 1, limit: 100 })
 			]);
 			projectObjectData = projectRes.items;
 			availableObjectData = allRes.items;
+			objectDataLoaded = true;
 		} catch (err) {
 			addToast(err instanceof Error ? err.message : 'Failed to load object data', 'error');
 		} finally {
@@ -222,6 +230,8 @@
 		}
 		loading = true;
 		error = null;
+		usersLoaded = false;
+		objectDataLoaded = false;
 		try {
 			project = await getProject(projectId);
 			hydrateForm(project);
@@ -234,13 +244,17 @@
 		}
 	}
 
-	$: if (activeTab === 'users' && projectUsers.length === 0 && !usersLoading) {
-		loadUsers();
-	}
+	$effect(() => {
+		if (activeTab === 'users' && !usersLoaded && !usersLoading) {
+			loadUsers();
+		}
+	});
 
-	$: if (activeTab === 'object-data' && projectObjectData.length === 0 && !objectDataLoading) {
-		loadObjectData();
-	}
+	$effect(() => {
+		if (activeTab === 'object-data' && !objectDataLoaded && !objectDataLoading) {
+			loadObjectData();
+		}
+	});
 
 	onMount(() => {
 		load();
@@ -301,215 +315,199 @@
 			</div>
 		{:else if !project}
 			<div class="p-6 text-sm text-muted-foreground">Project not found.</div>
+		{:else if activeTab === 'settings'}
+			<div class="p-6">
+				<div class="grid gap-4 md:grid-cols-2">
+					<div class="flex flex-col gap-2">
+						<label class="text-sm font-medium" for="project_name">Name</label>
+						<Input id="project_name" bind:value={form.name} disabled={saving} />
+					</div>
+
+					<div class="flex flex-col gap-2">
+						<label class="text-sm font-medium" for="project_status">Status</label>
+						<select
+							id="project_status"
+							class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
+							bind:value={form.status}
+							disabled={saving}
+						>
+							{#each statusOptions as opt}
+								<option value={opt.value}>{opt.label}</option>
+							{/each}
+						</select>
+					</div>
+
+					<div class="flex flex-col gap-2">
+						<label class="text-sm font-medium" for="project_start">Start date</label>
+						<Input id="project_start" type="date" bind:value={form.start_date} disabled={saving} />
+					</div>
+
+					<div class="flex flex-col gap-2">
+						<label class="text-sm font-medium" for="project_phase_edit">Phase</label>
+						<ProjectPhaseSelect id="project_phase_edit" bind:value={form.phase_id} width="w-full" />
+					</div>
+
+					<div class="flex flex-col gap-2 md:col-span-2">
+						<label class="text-sm font-medium" for="project_desc">Description</label>
+						<Textarea id="project_desc" rows={4} bind:value={form.description} disabled={saving} />
+					</div>
+				</div>
+
+				<div class="mt-6 flex items-center justify-end gap-2">
+					<Button
+						variant="outline"
+						onclick={() => project && hydrateForm(project)}
+						disabled={saving}>Reset</Button
+					>
+					<Button onclick={saveSettings} disabled={saving}>Save changes</Button>
+				</div>
+
+				<div class="mt-8 grid gap-6 md:grid-cols-2">
+					<div class="space-y-2">
+						<div class="text-xs text-muted-foreground uppercase">Created</div>
+						<div class="text-sm font-medium">{formatDate(project.created_at)}</div>
+					</div>
+					<div class="space-y-2">
+						<div class="text-xs text-muted-foreground uppercase">Updated</div>
+						<div class="text-sm font-medium">{formatDate(project.updated_at)}</div>
+					</div>
+				</div>
+			</div>
+		{:else if activeTab === 'users'}
+			<div class="p-6">
+				<div class="flex flex-wrap items-end gap-3">
+					<div class="flex flex-col gap-2">
+						<label class="text-sm font-medium" for="project_user">Add user</label>
+						<select
+							id="project_user"
+							class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
+							bind:value={selectedUserId}
+						>
+							<option value="">Select user</option>
+							{#each availableUsers as user}
+								<option value={user.id}>
+									{user.first_name}
+									{user.last_name} ({user.email})
+								</option>
+							{/each}
+						</select>
+					</div>
+					<Button onclick={inviteUser} disabled={!selectedUserId || usersLoading}>Add</Button>
+					<Button variant="outline" onclick={loadUsers} disabled={usersLoading}>Refresh</Button>
+				</div>
+
+				<div class="mt-6 rounded-lg border bg-background">
+					<Table.Root>
+						<Table.Header>
+							<Table.Row>
+								<Table.Head>Name</Table.Head>
+								<Table.Head>Email</Table.Head>
+								<Table.Head class="w-32"></Table.Head>
+							</Table.Row>
+						</Table.Header>
+						<Table.Body>
+							{#if usersLoading}
+								{#each Array(5) as _}
+									<Table.Row>
+										<Table.Cell><Skeleton class="h-4 w-40" /></Table.Cell>
+										<Table.Cell><Skeleton class="h-4 w-60" /></Table.Cell>
+										<Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
+									</Table.Row>
+								{/each}
+							{:else if projectUsers.length === 0}
+								<Table.Row>
+									<Table.Cell colspan={3} class="h-20 text-center text-sm text-muted-foreground">
+										No users in this project yet.
+									</Table.Cell>
+								</Table.Row>
+							{:else}
+								{#each projectUsers as user (user.id)}
+									<Table.Row>
+										<Table.Cell class="font-medium">
+											{user.first_name}
+											{user.last_name}
+										</Table.Cell>
+										<Table.Cell class="text-muted-foreground">{user.email}</Table.Cell>
+										<Table.Cell class="text-right">
+											<Button variant="outline" onclick={() => removeUser(user.id)}>Remove</Button>
+										</Table.Cell>
+									</Table.Row>
+								{/each}
+							{/if}
+						</Table.Body>
+					</Table.Root>
+				</div>
+			</div>
 		{:else}
-			{#if activeTab === 'settings'}
-				<div class="p-6">
-					<div class="grid gap-4 md:grid-cols-2">
-						<div class="flex flex-col gap-2">
-							<label class="text-sm font-medium" for="project_name">Name</label>
-							<Input id="project_name" bind:value={form.name} disabled={saving} />
-						</div>
-
-						<div class="flex flex-col gap-2">
-							<label class="text-sm font-medium" for="project_status">Status</label>
-							<select
-								id="project_status"
-								class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
-								bind:value={form.status}
-								disabled={saving}
-							>
-								{#each statusOptions as opt}
-									<option value={opt.value}>{opt.label}</option>
-								{/each}
-							</select>
-						</div>
-
-						<div class="flex flex-col gap-2">
-							<label class="text-sm font-medium" for="project_start">Start date</label>
-							<Input
-								id="project_start"
-								type="date"
-								bind:value={form.start_date}
-								disabled={saving}
-							/>
-						</div>
-
-						<div class="flex flex-col gap-2">
-							<label class="text-sm font-medium">Phase</label>
-							<ProjectPhaseSelect bind:value={form.phase_id} width="w-full" />
-						</div>
-
-						<div class="flex flex-col gap-2 md:col-span-2">
-							<label class="text-sm font-medium" for="project_desc">Description</label>
-							<Textarea
-								id="project_desc"
-								rows={4}
-								bind:value={form.description}
-								disabled={saving}
-							/>
-						</div>
-					</div>
-
-					<div class="mt-6 flex items-center justify-end gap-2">
-						<Button variant="outline" onclick={() => hydrateForm(project)} disabled={saving}
-							>Reset</Button
+			<div class="p-6">
+				<div class="flex flex-wrap items-end gap-3">
+					<div class="flex flex-col gap-2">
+						<label class="text-sm font-medium" for="project_object_data">Add object data</label>
+						<select
+							id="project_object_data"
+							class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
+							bind:value={selectedObjectDataId}
 						>
-						<Button onclick={saveSettings} disabled={saving}>Save changes</Button>
+							<option value="">Select object data</option>
+							{#each availableObjectData as obj}
+								<option value={obj.id}>{obj.description}</option>
+							{/each}
+						</select>
 					</div>
-
-					<div class="mt-8 grid gap-6 md:grid-cols-2">
-						<div class="space-y-2">
-							<div class="text-xs uppercase text-muted-foreground">Created</div>
-							<div class="text-sm font-medium">{formatDate(project.created_at)}</div>
-						</div>
-						<div class="space-y-2">
-							<div class="text-xs uppercase text-muted-foreground">Updated</div>
-							<div class="text-sm font-medium">{formatDate(project.updated_at)}</div>
-						</div>
-					</div>
+					<Button onclick={attachObjectData} disabled={!selectedObjectDataId || objectDataLoading}
+						>Add</Button
+					>
+					<Button variant="outline" onclick={loadObjectData} disabled={objectDataLoading}
+						>Refresh</Button
+					>
 				</div>
-			{:else if activeTab === 'users'}
-				<div class="p-6">
-					<div class="flex flex-wrap items-end gap-3">
-						<div class="flex flex-col gap-2">
-							<label class="text-sm font-medium" for="project_user">Add user</label>
-							<select
-								id="project_user"
-								class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
-								bind:value={selectedUserId}
-							>
-								<option value="">Select user</option>
-								{#each availableUsers as user}
-									<option value={user.id}>
-										{user.first_name} {user.last_name} ({user.email})
-									</option>
-								{/each}
-							</select>
-						</div>
-						<Button onclick={inviteUser} disabled={!selectedUserId || usersLoading}>Add</Button>
-						<Button variant="outline" onclick={loadUsers} disabled={usersLoading}>Refresh</Button>
-					</div>
 
-					<div class="mt-6 rounded-lg border bg-background">
-						<Table.Root>
-							<Table.Header>
-								<Table.Row>
-									<Table.Head>Name</Table.Head>
-									<Table.Head>Email</Table.Head>
-									<Table.Head class="w-32"></Table.Head>
-								</Table.Row>
-							</Table.Header>
-							<Table.Body>
-								{#if usersLoading}
-									{#each Array(5) as _}
-										<Table.Row>
-											<Table.Cell><Skeleton class="h-4 w-40" /></Table.Cell>
-											<Table.Cell><Skeleton class="h-4 w-60" /></Table.Cell>
-											<Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
-										</Table.Row>
-									{/each}
-								{:else if projectUsers.length === 0}
+				<div class="mt-6 rounded-lg border bg-background">
+					<Table.Root>
+						<Table.Header>
+							<Table.Row>
+								<Table.Head>Description</Table.Head>
+								<Table.Head>Version</Table.Head>
+								<Table.Head>Active</Table.Head>
+								<Table.Head class="w-32"></Table.Head>
+							</Table.Row>
+						</Table.Header>
+						<Table.Body>
+							{#if objectDataLoading}
+								{#each Array(5) as _}
 									<Table.Row>
-										<Table.Cell colspan={3} class="h-20 text-center text-sm text-muted-foreground">
-											No users in this project yet.
+										<Table.Cell><Skeleton class="h-4 w-60" /></Table.Cell>
+										<Table.Cell><Skeleton class="h-4 w-24" /></Table.Cell>
+										<Table.Cell><Skeleton class="h-4 w-16" /></Table.Cell>
+										<Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
+									</Table.Row>
+								{/each}
+							{:else if projectObjectData.length === 0}
+								<Table.Row>
+									<Table.Cell colspan={4} class="h-20 text-center text-sm text-muted-foreground">
+										No object data assigned yet.
+									</Table.Cell>
+								</Table.Row>
+							{:else}
+								{#each projectObjectData as obj (obj.id)}
+									<Table.Row>
+										<Table.Cell class="font-medium">{obj.description}</Table.Cell>
+										<Table.Cell class="text-muted-foreground">{obj.version}</Table.Cell>
+										<Table.Cell>
+											{obj.is_active ? 'Yes' : 'No'}
+										</Table.Cell>
+										<Table.Cell class="text-right">
+											<Button variant="outline" onclick={() => detachObjectData(obj.id)}>
+												Remove
+											</Button>
 										</Table.Cell>
 									</Table.Row>
-								{:else}
-									{#each projectUsers as user (user.id)}
-										<Table.Row>
-											<Table.Cell class="font-medium">
-												{user.first_name} {user.last_name}
-											</Table.Cell>
-											<Table.Cell class="text-muted-foreground">{user.email}</Table.Cell>
-											<Table.Cell class="text-right">
-												<Button
-													variant="outline"
-													onclick={() => removeUser(user.id)}
-												>
-													Remove
-												</Button>
-											</Table.Cell>
-										</Table.Row>
-									{/each}
-								{/if}
-							</Table.Body>
-						</Table.Root>
-					</div>
-				</div>
-			{:else}
-				<div class="p-6">
-					<div class="flex flex-wrap items-end gap-3">
-						<div class="flex flex-col gap-2">
-							<label class="text-sm font-medium" for="project_object_data">Add object data</label>
-							<select
-								id="project_object_data"
-								class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
-								bind:value={selectedObjectDataId}
-							>
-								<option value="">Select object data</option>
-								{#each availableObjectData as obj}
-									<option value={obj.id}>{obj.description}</option>
 								{/each}
-							</select>
-						</div>
-						<Button onclick={attachObjectData} disabled={!selectedObjectDataId || objectDataLoading}
-							>Add</Button
-						>
-						<Button variant="outline" onclick={loadObjectData} disabled={objectDataLoading}
-							>Refresh</Button
-						>
-					</div>
-
-					<div class="mt-6 rounded-lg border bg-background">
-						<Table.Root>
-							<Table.Header>
-								<Table.Row>
-									<Table.Head>Description</Table.Head>
-									<Table.Head>Version</Table.Head>
-									<Table.Head>Active</Table.Head>
-									<Table.Head class="w-32"></Table.Head>
-								</Table.Row>
-							</Table.Header>
-							<Table.Body>
-								{#if objectDataLoading}
-									{#each Array(5) as _}
-										<Table.Row>
-											<Table.Cell><Skeleton class="h-4 w-60" /></Table.Cell>
-											<Table.Cell><Skeleton class="h-4 w-24" /></Table.Cell>
-											<Table.Cell><Skeleton class="h-4 w-16" /></Table.Cell>
-											<Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
-										</Table.Row>
-									{/each}
-								{:else if projectObjectData.length === 0}
-									<Table.Row>
-										<Table.Cell colspan={4} class="h-20 text-center text-sm text-muted-foreground">
-											No object data assigned yet.
-										</Table.Cell>
-									</Table.Row>
-								{:else}
-									{#each projectObjectData as obj (obj.id)}
-										<Table.Row>
-											<Table.Cell class="font-medium">{obj.description}</Table.Cell>
-											<Table.Cell class="text-muted-foreground">{obj.version}</Table.Cell>
-											<Table.Cell>
-												{obj.is_active ? 'Yes' : 'No'}
-											</Table.Cell>
-											<Table.Cell class="text-right">
-												<Button
-													variant="outline"
-													onclick={() => detachObjectData(obj.id)}
-												>
-													Remove
-												</Button>
-											</Table.Cell>
-										</Table.Row>
-									{/each}
-								{/if}
-							</Table.Body>
-						</Table.Root>
-					</div>
+							{/if}
+						</Table.Body>
+					</Table.Root>
 				</div>
-			{/if}
+			</div>
 		{/if}
 	</div>
 </div>
