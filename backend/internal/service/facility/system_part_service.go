@@ -29,6 +29,10 @@ func (s *SystemPartService) GetByID(id uuid.UUID) (*domainFacility.SystemPart, e
 	return systemParts[0], nil
 }
 
+func (s *SystemPartService) GetByIDs(ids []uuid.UUID) ([]*domainFacility.SystemPart, error) {
+	return s.repo.GetByIds(ids)
+}
+
 func (s *SystemPartService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SystemPart], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
 	return s.repo.GetPaginatedList(domain.PaginationParams{

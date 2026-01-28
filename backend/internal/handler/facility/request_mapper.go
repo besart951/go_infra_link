@@ -300,15 +300,16 @@ func applySystemPartUpdate(target *domainFacility.SystemPart, req dto.UpdateSyst
 	}
 }
 
-func toApparatModel(req dto.CreateApparatRequest) *domainFacility.Apparat {
+func toApparatModel(req dto.CreateApparatRequest, systemParts []*domainFacility.SystemPart) *domainFacility.Apparat {
 	return &domainFacility.Apparat{
 		ShortName:   req.ShortName,
 		Name:        req.Name,
 		Description: req.Description,
+		SystemParts: systemParts,
 	}
 }
 
-func applyApparatUpdate(target *domainFacility.Apparat, req dto.UpdateApparatRequest) {
+func applyApparatUpdate(target *domainFacility.Apparat, req dto.UpdateApparatRequest, systemParts *[]*domainFacility.SystemPart) {
 	if req.ShortName != "" {
 		target.ShortName = req.ShortName
 	}
@@ -317,6 +318,9 @@ func applyApparatUpdate(target *domainFacility.Apparat, req dto.UpdateApparatReq
 	}
 	if req.Description != nil {
 		target.Description = req.Description
+	}
+	if systemParts != nil {
+		target.SystemParts = *systemParts
 	}
 }
 
