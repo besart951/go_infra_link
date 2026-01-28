@@ -32,7 +32,7 @@ func (r *apparatRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Apparat, erro
 	
 	// Preload SystemParts for each apparat
 	for _, apparat := range result {
-		if err := r.DB.Model(apparat).Association("SystemParts").Find(&apparat.SystemParts); err != nil {
+		if err := r.DB().Model(apparat).Association("SystemParts").Find(&apparat.SystemParts); err != nil {
 			return nil, err
 		}
 	}
@@ -46,7 +46,7 @@ func (r *apparatRepo) Create(entity *domainFacility.Apparat) error {
 
 func (r *apparatRepo) Update(entity *domainFacility.Apparat) error {
 	// Use GORM's Association API to replace SystemParts
-	return r.DB.Transaction(func(tx *gorm.DB) error {
+	return r.DB().Transaction(func(tx *gorm.DB) error {
 		// Update the entity itself
 		if err := tx.Model(entity).Updates(entity).Error; err != nil {
 			return err
@@ -73,7 +73,7 @@ func (r *apparatRepo) GetPaginatedList(params domain.PaginationParams) (*domain.
 
 	// Preload SystemParts for each apparat
 	for _, apparat := range result.Items {
-		if err := r.DB.Model(apparat).Association("SystemParts").Find(&apparat.SystemParts); err != nil {
+		if err := r.DB().Model(apparat).Association("SystemParts").Find(&apparat.SystemParts); err != nil {
 			return nil, err
 		}
 	}

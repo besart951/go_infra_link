@@ -3,6 +3,7 @@ package facility
 import (
 	"net/http"
 
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
 )
