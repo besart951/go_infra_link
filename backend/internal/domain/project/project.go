@@ -40,11 +40,11 @@ type Phase struct {
 type PermissionType string
 
 const (
-	PermissionEdit            PermissionType = "edit"
-	PermissionSuggestChanges  PermissionType = "suggest_changes"
-	PermissionView            PermissionType = "view"
-	PermissionDelete          PermissionType = "delete"
-	PermissionManageUsers     PermissionType = "manage_users"
+	PermissionEdit           PermissionType = "edit"
+	PermissionSuggestChanges PermissionType = "suggest_changes"
+	PermissionView           PermissionType = "view"
+	PermissionDelete         PermissionType = "delete"
+	PermissionManageUsers    PermissionType = "manage_users"
 )
 
 // PhasePermission defines what a specific role can do in a specific phase

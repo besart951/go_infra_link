@@ -1,0 +1,22 @@
+meta {
+  name: Update Phase
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{base_url}}/api/v1/phases/{{phase_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "name": "SIA:61"
+  }
+}

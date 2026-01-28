@@ -11,13 +11,13 @@ import (
 )
 
 type Handlers struct {
-	ProjectHandler             *ProjectHandler
-	UserHandler                *UserHandler
-	AuthHandler                *AuthHandler
-	TeamHandler                *TeamHandler
-	AdminHandler               *AdminHandler
-	PhaseHandler               *PhaseHandler
-	PhasePermissionHandler     *PhasePermissionHandler
+	ProjectHandler         *ProjectHandler
+	UserHandler            *UserHandler
+	AuthHandler            *AuthHandler
+	TeamHandler            *TeamHandler
+	AdminHandler           *AdminHandler
+	PhaseHandler           *PhaseHandler
+	PhasePermissionHandler *PhasePermissionHandler
 
 	FacilityBuildingHandler       *facilityhandler.BuildingHandler
 	FacilitySystemTypeHandler     *facilityhandler.SystemTypeHandler

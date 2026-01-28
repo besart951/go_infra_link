@@ -1,0 +1,15 @@
+meta {
+  name: Delete Phase Permission
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{base_url}}/api/v1/phase-permissions/{{permission_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-CSRF-Token: {{csrf_token}}
+}

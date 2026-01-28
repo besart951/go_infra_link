@@ -10,13 +10,13 @@ import (
 type Role string
 
 const (
-	RoleUser       Role = "user"
-	RoleAdmin      Role = "admin"
-	RoleSuperAdmin Role = "superadmin"
-	RoleAdminPlaner Role = "admin_planer"
-	RolePlaner Role = "planer"
+	RoleUser              Role = "user"
+	RoleAdmin             Role = "admin"
+	RoleSuperAdmin        Role = "superadmin"
+	RoleAdminPlaner       Role = "admin_planer"
+	RolePlaner            Role = "planer"
 	RoleAdminEnterpreneur Role = "admin_entrepreneur"
-	RoleEnterpreneur Role = "entrepreneur"
+	RoleEnterpreneur      Role = "entrepreneur"
 )
 
 type User struct {
@@ -31,8 +31,8 @@ type User struct {
 	LockedUntil         *time.Time `gorm:"index"`
 	FailedLoginAttempts int        `gorm:"default:0"`
 	LastLoginAt         *time.Time
-	CreatedByID         *uuid.UUID `gorm:"type:uuid"`
-	CreatedBy           *User      `gorm:"foreignKey:CreatedByID"`
+	CreatedByID         *uuid.UUID       `gorm:"type:uuid"`
+	CreatedBy           *User            `gorm:"foreignKey:CreatedByID"`
 	BusinessDetails     *BusinessDetails `json:"business_details,omitempty" gorm:"foreignKey:UserID"`
 }
 

@@ -14,11 +14,11 @@ func ToProjectModel(req dto.CreateProjectRequest) *project.Project {
 		StartDate:   req.StartDate,
 		CreatorID:   req.CreatorID,
 	}
-	
+
 	if req.PhaseID != nil {
 		proj.PhaseID = *req.PhaseID
 	}
-	
+
 	return proj
 }
 

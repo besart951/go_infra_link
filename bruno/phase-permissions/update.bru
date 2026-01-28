@@ -1,0 +1,31 @@
+meta {
+  name: Update Phase Permission
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{base_url}}/api/v1/phase-permissions/{{permission_id}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "permission": "suggest_changes"
+  }
+}
+
+docs {
+  # Update Permission Example
+  
+  This example changes the permission type from "edit" to "suggest_changes" for the same phase and role.
+  
+  In phase "SIA:51", admin_planer can edit.
+  In phase "SIA:61", admin_planer can only suggest_changes.
+}

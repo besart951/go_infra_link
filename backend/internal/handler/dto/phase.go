@@ -37,8 +37,8 @@ type PhaseListResponse struct {
 // PhasePermission DTOs
 
 type CreatePhasePermissionRequest struct {
-	PhaseID    uuid.UUID             `json:"phase_id" binding:"required"`
-	Role       user.Role             `json:"role" binding:"required,oneof=user admin superadmin admin_planer planer admin_entrepreneur entrepreneur"`
+	PhaseID    uuid.UUID              `json:"phase_id" binding:"required"`
+	Role       user.Role              `json:"role" binding:"required,oneof=user admin superadmin admin_planer planer admin_entrepreneur entrepreneur"`
 	Permission project.PermissionType `json:"permission" binding:"required,oneof=edit suggest_changes view delete manage_users"`
 }
 
@@ -47,12 +47,12 @@ type UpdatePhasePermissionRequest struct {
 }
 
 type PhasePermissionResponse struct {
-	ID         uuid.UUID             `json:"id"`
-	PhaseID    uuid.UUID             `json:"phase_id"`
-	Role       user.Role             `json:"role"`
+	ID         uuid.UUID              `json:"id"`
+	PhaseID    uuid.UUID              `json:"phase_id"`
+	Role       user.Role              `json:"role"`
 	Permission project.PermissionType `json:"permission"`
-	CreatedAt  time.Time             `json:"created_at"`
-	UpdatedAt  time.Time             `json:"updated_at"`
+	CreatedAt  time.Time              `json:"created_at"`
+	UpdatedAt  time.Time              `json:"updated_at"`
 }
 
 type PhasePermissionListResponse struct {

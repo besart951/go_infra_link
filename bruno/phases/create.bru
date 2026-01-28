@@ -1,0 +1,23 @@
+meta {
+  name: Create Phase
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/v1/phases
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "name": "SIA:51",
+    "project_id": "{{project_id}}"
+  }
+}

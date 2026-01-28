@@ -1,0 +1,46 @@
+meta {
+  name: Create Phase Permission
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/v1/phase-permissions
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "phase_id": "{{phase_id}}",
+    "role": "admin_planer",
+    "permission": "edit"
+  }
+}
+
+docs {
+  # Phase Permission Example
+  
+  This example creates a permission for "admin_planer" role in phase "SIA:51" with "edit" permission.
+  
+  ## Available Roles
+  - user
+  - admin
+  - superadmin
+  - admin_planer
+  - planer
+  - admin_entrepreneur
+  - entrepreneur
+  
+  ## Available Permissions
+  - edit: Full edit access
+  - suggest_changes: Can only suggest changes (not directly edit)
+  - view: Read-only access
+  - delete: Can delete items
+  - manage_users: Can manage user access
+}

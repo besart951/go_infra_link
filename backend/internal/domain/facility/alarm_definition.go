@@ -6,6 +6,6 @@ import (
 
 type AlarmDefinition struct {
 	domain.Base
-	Name      string  `gorm:"not null"`
+	Name      string `gorm:"not null"`
 	AlarmNote *string
 }
