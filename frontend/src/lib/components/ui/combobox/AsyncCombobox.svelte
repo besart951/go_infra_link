@@ -27,7 +27,7 @@
 	let initialized = false;
 	let selectedLoading = false;
 	let selectedRequestId = 0;
-	let currentValue = value;
+	let selectedValue: string | undefined = undefined;
 
 	// We keep track of the label for the selected value to display it even if it's not in the current search results
 	let selectedLabel: string | undefined = undefined;
@@ -41,6 +41,7 @@
 			if (requestId !== selectedRequestId) return;
 			if (item) {
 				selectedLabel = String(item[labelKey] ?? '');
+				selectedValue = id;
 			}
 		} catch (error) {
 			console.error('Failed to fetch selected item:', error);
@@ -80,10 +81,10 @@
 	$: selectedItem = items.find((i) => String(i[idKey]) === value);
 	$: if (selectedItem) {
 		selectedLabel = String(selectedItem[labelKey] ?? '');
+		selectedValue = value;
 	}
 
-	$: if (value !== currentValue) {
-		currentValue = value;
+	$: if (value && selectedValue && value !== selectedValue) {
 		selectedLabel = undefined;
 	}
 
@@ -93,6 +94,7 @@
 
 	$: if (!value) {
 		selectedLabel = undefined;
+		selectedValue = undefined;
 	}
 </script>
 
@@ -124,6 +126,7 @@
 							onSelect={() => {
 								value = String(item[idKey]);
 								selectedLabel = String(item[labelKey] ?? '');
+								selectedValue = value;
 								open = false;
 							}}
 						>

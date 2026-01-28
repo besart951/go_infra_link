@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import Toasts, { addToast } from '$lib/components/toast.svelte';
@@ -47,16 +48,49 @@
 	let controlCabinetOptions = $state<ControlCabinet[]>([]);
 	let controlCabinetLoading = $state(false);
 	let showControlCabinetForm = $state(false);
+	let controlCabinetSearch = $state('');
 
 	let spsControllerLinks = $state<ProjectSPSControllerLink[]>([]);
 	let spsControllerOptions = $state<SPSController[]>([]);
 	let spsControllerLoading = $state(false);
 	let showSpsControllerForm = $state(false);
+	let spsControllerSearch = $state('');
 
 	let fieldDeviceLinks = $state<ProjectFieldDeviceLink[]>([]);
 	let fieldDeviceOptions = $state<FieldDevice[]>([]);
 	let fieldDeviceLoading = $state(false);
 	let showFieldDeviceForm = $state(false);
+	let fieldDeviceSearch = $state('');
+
+	const filteredControlCabinetLinks = $derived(
+		controlCabinetSearch.trim()
+			? controlCabinetLinks.filter((link) =>
+					controlCabinetLabel(link.control_cabinet_id)
+						.toLowerCase()
+						.includes(controlCabinetSearch.trim().toLowerCase())
+				)
+			: controlCabinetLinks
+	);
+
+	const filteredSpsControllerLinks = $derived(
+		spsControllerSearch.trim()
+			? spsControllerLinks.filter((link) =>
+					spsControllerLabel(link.sps_controller_id)
+						.toLowerCase()
+						.includes(spsControllerSearch.trim().toLowerCase())
+				)
+			: spsControllerLinks
+	);
+
+	const filteredFieldDeviceLinks = $derived(
+		fieldDeviceSearch.trim()
+			? fieldDeviceLinks.filter((link) =>
+					fieldDeviceLabel(link.field_device_id)
+						.toLowerCase()
+						.includes(fieldDeviceSearch.trim().toLowerCase())
+				)
+			: fieldDeviceLinks
+	);
 
 	function controlCabinetLabel(id: string): string {
 		const item = controlCabinetOptions.find((c) => c.id === id);
@@ -289,6 +323,11 @@
 						<p class="text-sm text-muted-foreground">Create and assign control cabinets.</p>
 					</div>
 					<div class="flex items-center gap-2">
+						<Input
+							class="w-64"
+							placeholder="Search control cabinets..."
+							bind:value={controlCabinetSearch}
+						/>
 						<Button variant="outline" onclick={loadControlCabinets} disabled={controlCabinetLoading}
 							>Refresh</Button
 						>
@@ -324,14 +363,14 @@
 										<Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
 									</Table.Row>
 								{/each}
-							{:else if controlCabinetLinks.length === 0}
+							{:else if filteredControlCabinetLinks.length === 0}
 								<Table.Row>
 									<Table.Cell colspan={2} class="h-20 text-center text-sm text-muted-foreground">
-										No control cabinets assigned yet.
+										No control cabinets found.
 									</Table.Cell>
 								</Table.Row>
 							{:else}
-								{#each controlCabinetLinks as link (link.id)}
+								{#each filteredControlCabinetLinks as link (link.id)}
 									<Table.Row>
 										<Table.Cell class="font-medium">
 											{controlCabinetLabel(link.control_cabinet_id)}
@@ -356,6 +395,11 @@
 						<p class="text-sm text-muted-foreground">Create and assign SPS controllers.</p>
 					</div>
 					<div class="flex items-center gap-2">
+						<Input
+							class="w-64"
+							placeholder="Search SPS controllers..."
+							bind:value={spsControllerSearch}
+						/>
 						<Button variant="outline" onclick={loadSpsControllers} disabled={spsControllerLoading}
 							>Refresh</Button
 						>
@@ -391,14 +435,14 @@
 										<Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
 									</Table.Row>
 								{/each}
-							{:else if spsControllerLinks.length === 0}
+							{:else if filteredSpsControllerLinks.length === 0}
 								<Table.Row>
 									<Table.Cell colspan={2} class="h-20 text-center text-sm text-muted-foreground">
-										No SPS controllers assigned yet.
+										No SPS controllers found.
 									</Table.Cell>
 								</Table.Row>
 							{:else}
-								{#each spsControllerLinks as link (link.id)}
+								{#each filteredSpsControllerLinks as link (link.id)}
 									<Table.Row>
 										<Table.Cell class="font-medium">
 											{spsControllerLabel(link.sps_controller_id)}
@@ -423,6 +467,11 @@
 						<p class="text-sm text-muted-foreground">Create and assign field devices.</p>
 					</div>
 					<div class="flex items-center gap-2">
+						<Input
+							class="w-64"
+							placeholder="Search field devices..."
+							bind:value={fieldDeviceSearch}
+						/>
 						<Button variant="outline" onclick={loadFieldDevices} disabled={fieldDeviceLoading}
 							>Refresh</Button
 						>
@@ -459,14 +508,14 @@
 										<Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
 									</Table.Row>
 								{/each}
-							{:else if fieldDeviceLinks.length === 0}
+							{:else if filteredFieldDeviceLinks.length === 0}
 								<Table.Row>
 									<Table.Cell colspan={2} class="h-20 text-center text-sm text-muted-foreground">
-										No field devices assigned yet.
+										No field devices found.
 									</Table.Cell>
 								</Table.Row>
 							{:else}
-								{#each fieldDeviceLinks as link (link.id)}
+								{#each filteredFieldDeviceLinks as link (link.id)}
 									<Table.Row>
 										<Table.Cell class="font-medium">
 											{fieldDeviceLabel(link.field_device_id)}
