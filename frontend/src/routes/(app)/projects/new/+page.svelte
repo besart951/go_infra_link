@@ -52,7 +52,9 @@
 				name: form.name.trim(),
 				description: form.description.trim() || undefined,
 				status: form.status,
-				start_date: form.start_date || undefined,
+				start_date: form.start_date
+					? new Date(`${form.start_date}T00:00:00Z`).toISOString()
+					: undefined,
 				phase_id: form.phase_id || undefined
 			};
 
@@ -108,17 +110,12 @@
 
 			<div class="flex flex-col gap-2">
 				<label class="text-sm font-medium" for="project_start">Start date</label>
-				<Input
-					id="project_start"
-					type="date"
-					bind:value={form.start_date}
-					disabled={busy}
-				/>
+				<Input id="project_start" type="date" bind:value={form.start_date} disabled={busy} />
 			</div>
 
 			<div class="flex flex-col gap-2">
-				<label class="text-sm font-medium">Phase</label>
-				<ProjectPhaseSelect bind:value={form.phase_id} width="w-full" />
+				<label class="text-sm font-medium" for="project_phase">Phase</label>
+				<ProjectPhaseSelect id="project_phase" bind:value={form.phase_id} width="w-full" />
 				<p class="text-xs text-muted-foreground">Select an existing phase ID.</p>
 			</div>
 
@@ -135,9 +132,7 @@
 		</div>
 
 		<div class="mt-6 flex items-center justify-end gap-2">
-			<Button variant="outline" onclick={() => goto('/projects')} disabled={busy}
-				>Cancel</Button
-			>
+			<Button variant="outline" onclick={() => goto('/projects')} disabled={busy}>Cancel</Button>
 			<Button onclick={submit} disabled={!canSubmit()}>Create project</Button>
 		</div>
 	</div>

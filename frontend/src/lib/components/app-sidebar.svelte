@@ -71,7 +71,11 @@
 			title: 'Projects',
 			url: '/projects',
 			icon: FolderKanbanIcon,
-			isActive: $page.url.pathname.startsWith('/projects')
+			isActive: $page.url.pathname.startsWith('/projects'),
+			items: [
+				{ title: 'All Projects', url: '/projects' },
+				{ title: 'Phases', url: '/projects/phases' }
+			]
 		}
 	]);
 

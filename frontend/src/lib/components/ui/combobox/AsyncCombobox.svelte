@@ -12,6 +12,7 @@
 	export let fetcher: (search: string) => Promise<T[]>;
 	export let labelKey: keyof T;
 	export let idKey: keyof T = 'id' as keyof T;
+	export let id: string | undefined = undefined;
 	export let placeholder: string = 'Select item...';
 	export let searchPlaceholder: string = 'Search...';
 	export let emptyText: string = 'No results found.';
@@ -64,6 +65,7 @@
 		{#snippet child({ props })}
 			<Button
 				{...props}
+				{id}
 				variant="outline"
 				role="combobox"
 				aria-expanded={open}

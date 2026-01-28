@@ -9,6 +9,7 @@
 
 	export let value: string = '';
 	export let width: string = 'w-[260px]';
+	export let id: string | undefined = undefined;
 
 	const MAX_PHASE_SAMPLES = 200;
 
@@ -37,4 +38,5 @@
 	searchPlaceholder="Search phases..."
 	emptyText="No phases found."
 	{width}
+	id={id}
 />

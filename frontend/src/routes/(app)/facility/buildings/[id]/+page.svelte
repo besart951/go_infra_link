@@ -5,6 +5,7 @@
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import TrashIcon from '@lucide/svelte/icons/trash-2';
 	import type { PageData, ActionData } from './$types.js';
+	import { enhance } from '$app/forms';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -33,7 +34,7 @@
 				<p class="text-sm text-muted-foreground">Edit building details</p>
 			</div>
 		</div>
-		<form method="POST" action="?/delete" bind:this={deleteFormEl}>
+		<form method="POST" action="?/delete" bind:this={deleteFormEl} use:enhance>
 			<Button variant="destructive" size="sm" type="button" onclick={handleDeleteClick}>
 				<TrashIcon class="mr-2 size-4" />
 				Delete
@@ -55,7 +56,7 @@
 		</div>
 	{/if}
 
-	<form method="POST" action="?/update" class="space-y-6">
+	<form method="POST" action="?/update" use:enhance class="space-y-6">
 		<div class="rounded-lg border bg-card p-6">
 			<Field.Set>
 				<Field.Legend>Building Details</Field.Legend>

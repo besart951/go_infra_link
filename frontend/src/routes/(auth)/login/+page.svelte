@@ -12,6 +12,7 @@
 		FieldError
 	} from '$lib/components/ui/field/index.js';
 	import { dev } from '$app/environment';
+	import { enhance } from '$app/forms';
 
 	export let form: ActionData;
 	let showPassword = false;
@@ -59,7 +60,7 @@
 		</div>
 	{/if}
 
-	<form method="POST" class="space-y-6">
+	<form method="POST" use:enhance class="space-y-6">
 		<FieldGroup>
 			<Field>
 				<FieldLabel for="email" class="text-sm font-medium">Email</FieldLabel>

@@ -1,5 +1,5 @@
 import type { LayoutServerLoad } from './$types.js';
-import { getBackendUrl } from '$lib/server/backend.ts';
+import { getBackendUrl } from '$lib/server/backend.js';
 import type { User } from '$lib/domain/user/index.js';
 import type { Team } from '$lib/domain/team/index.js';
 import type { Project } from '$lib/domain/project/index.js';

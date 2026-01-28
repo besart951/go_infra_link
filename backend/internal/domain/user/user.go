@@ -13,6 +13,10 @@ const (
 	RoleUser       Role = "user"
 	RoleAdmin      Role = "admin"
 	RoleSuperAdmin Role = "superadmin"
+	RoleAdminPlaner Role = "admin_planer"
+	RolePlaner Role = "planer"
+	RoleAdminEnterpreneur Role = "admin_entrepreneur"
+	RoleEnterpreneur Role = "entrepreneur"
 )
 
 type User struct {

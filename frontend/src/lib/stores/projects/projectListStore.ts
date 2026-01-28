@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
 import type { ListState } from '$lib/application/useCases/listUseCase.js';
+import type { PaginationMetadata } from '$lib/domain/valueObjects/pagination.js';
 import type { Project, ProjectStatus, ProjectListParams } from '$lib/domain/project/index.js';
 import { listProjects } from '$lib/infrastructure/api/project.adapter.js';
 
@@ -90,12 +91,22 @@ export function createProjectListStore(options: ProjectListStoreOptions = {}) {
 				signal: abortController.signal
 			});
 
+			const metadata: PaginationMetadata = (response as { metadata?: PaginationMetadata })
+				.metadata ?? {
+				total: response.total ?? response.items?.length ?? 0,
+				page: response.page ?? page,
+				pageSize: response.limit ?? pageSize,
+				totalPages:
+					response.total_pages ??
+					Math.ceil((response.total ?? response.items?.length ?? 0) / pageSize)
+			};
+
 			const newState: ProjectListState = {
-				items: response.items,
-				total: response.metadata.total,
-				page: response.metadata.page,
-				pageSize: response.metadata.pageSize,
-				totalPages: response.metadata.totalPages,
+				items: response.items ?? [],
+				total: metadata.total,
+				page: metadata.page,
+				pageSize: metadata.pageSize,
+				totalPages: metadata.totalPages,
 				searchText,
 				loading: false,
 				error: null,
