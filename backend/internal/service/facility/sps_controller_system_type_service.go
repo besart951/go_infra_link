@@ -3,6 +3,7 @@ package facility
 import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	"github.com/google/uuid"
 )
 
 type SPSControllerSystemTypeService struct {
