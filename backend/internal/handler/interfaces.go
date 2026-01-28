@@ -18,6 +18,8 @@ type ProjectService interface {
 	GetByID(id uuid.UUID) (*project.Project, error)
 	List(page, limit int, search string) (*domain.PaginatedList[project.Project], error)
 	InviteUser(projectID, userID uuid.UUID) error
+	ListUsers(projectID uuid.UUID) ([]user.User, error)
+	RemoveUser(projectID, userID uuid.UUID) error
 	CreateControlCabinet(projectID, controlCabinetID uuid.UUID) (*project.ProjectControlCabinet, error)
 	UpdateControlCabinet(linkID, projectID, controlCabinetID uuid.UUID) (*project.ProjectControlCabinet, error)
 	DeleteControlCabinet(linkID, projectID uuid.UUID) error
@@ -31,6 +33,8 @@ type ProjectService interface {
 	ListSPSControllers(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[project.ProjectSPSController], error)
 	ListFieldDevices(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[project.ProjectFieldDevice], error)
 	ListObjectData(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainFacility.ObjectData], error)
+	AddObjectData(projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
+	RemoveObjectData(projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
 	Update(project *project.Project) error
 	DeleteByID(id uuid.UUID) error
 }

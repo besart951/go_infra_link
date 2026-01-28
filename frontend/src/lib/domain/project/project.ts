@@ -4,6 +4,8 @@
  */
 
 import type { Pagination } from "../utils/index.ts";
+import type { User } from "../user/index.ts";
+import type { ObjectData } from "../facility/index.ts";
 export type ProjectStatus = 'planned' | 'ongoing' | 'completed';
 
 export interface Project {
@@ -43,3 +45,9 @@ export interface ProjectListParams {
 }
 
 export interface ProjectListResponse extends Pagination<Project> {}
+
+export interface ProjectUserListResponse {
+	items: User[];
+}
+
+export interface ProjectObjectDataListResponse extends Pagination<ObjectData> {}

@@ -37,6 +37,7 @@ var (
 
 	_ = dto.CreateProjectUserRequest{}
 	_ = dto.ProjectUserResponse{}
+	_ = dto.ProjectUserListResponse{}
 	_ = dto.CreateProjectControlCabinetRequest{}
 	_ = dto.UpdateProjectControlCabinetRequest{}
 	_ = dto.ProjectControlCabinetResponse{}
@@ -49,6 +50,7 @@ var (
 	_ = dto.UpdateProjectFieldDeviceRequest{}
 	_ = dto.ProjectFieldDeviceResponse{}
 	_ = dto.ProjectFieldDeviceListResponse{}
+	_ = dto.CreateProjectObjectDataRequest{}
 
 	_ = dto.CreateBuildingRequest{}
 	_ = dto.UpdateBuildingRequest{}

@@ -82,3 +82,18 @@ func (r *projectRepo) AddUser(projectID, userID uuid.UUID) error {
 	user := &domainUser.User{Base: domain.Base{ID: userID}}
 	return r.db.Model(project).Association("Users").Append(user)
 }
+
+func (r *projectRepo) RemoveUser(projectID, userID uuid.UUID) error {
+	project := &domainProject.Project{Base: domain.Base{ID: projectID}}
+	user := &domainUser.User{Base: domain.Base{ID: userID}}
+	return r.db.Model(project).Association("Users").Delete(user)
+}
+
+func (r *projectRepo) ListUsers(projectID uuid.UUID) ([]domainUser.User, error) {
+	project := &domainProject.Project{Base: domain.Base{ID: projectID}}
+	var users []domainUser.User
+	if err := r.db.Model(project).Association("Users").Find(&users); err != nil {
+		return nil, err
+	}
+	return users, nil
+}

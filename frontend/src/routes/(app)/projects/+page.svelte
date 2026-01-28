@@ -4,8 +4,8 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Plus } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
-	import { projectsStore } from '$lib/stores/list/entityStores.js';
-	import type { Project } from '$lib/domain/entities/project.js';
+	import { projectListStore } from '$lib/stores/projects/projectListStore.js';
+	import type { Project, ProjectStatus } from '$lib/domain/project/index.js';
 
 	function getStatusClass(status: string): string {
 		switch (status) {
@@ -18,8 +18,20 @@
 		}
 	}
 
+	const statusOptions: Array<{ value: ProjectStatus | 'all'; label: string }> = [
+		{ value: 'all', label: 'All statuses' },
+		{ value: 'planned', label: 'Planned' },
+		{ value: 'ongoing', label: 'Ongoing' },
+		{ value: 'completed', label: 'Completed' }
+	];
+
+	function handleStatusChange(e: Event) {
+		const value = (e.target as HTMLSelectElement).value;
+		projectListStore.setStatus(value === 'all' ? 'all' : (value as ProjectStatus));
+	}
+
 	onMount(() => {
-		projectsStore.load();
+		projectListStore.load();
 	});
 </script>
 
@@ -42,8 +54,22 @@
 		</Button>
 	</div>
 
+	<div class="flex flex-wrap items-center gap-3">
+		<label class="text-sm font-medium" for="project_status_filter">Status</label>
+		<select
+			id="project_status_filter"
+			class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
+			value={$projectListStore.status}
+			onchange={handleStatusChange}
+		>
+			{#each statusOptions as opt}
+				<option value={opt.value}>{opt.label}</option>
+			{/each}
+		</select>
+	</div>
+
 	<PaginatedList
-		state={$projectsStore}
+		state={$projectListStore}
 		columns={[
 			{ key: 'name', label: 'Name' },
 			{ key: 'status', label: 'Status' },
@@ -53,9 +79,9 @@
 		]}
 		searchPlaceholder="Search projects..."
 		emptyMessage="No projects found. Create your first project to get started."
-		onSearch={(text) => projectsStore.search(text)}
-		onPageChange={(page) => projectsStore.goToPage(page)}
-		onReload={() => projectsStore.reload()}
+		onSearch={(text) => projectListStore.search(text)}
+		onPageChange={(page) => projectListStore.goToPage(page)}
+		onReload={() => projectListStore.reload()}
 	>
 		{#snippet rowSnippet(project: Project)}
 			<Table.Cell class="font-medium">

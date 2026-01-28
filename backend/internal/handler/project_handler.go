@@ -208,6 +208,68 @@ func (h *ProjectHandler) InviteProjectUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.ProjectUserResponse{ProjectID: projectID, UserID: req.UserID})
 }
 
+// ListProjectUsers godoc
+// @Summary List users in a project
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Success 200 {object} dto.ProjectUserListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/users [get]
+func (h *ProjectHandler) ListProjectUsers(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	users, err := h.service.ListUsers(projectID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.ProjectUserListResponse{Items: mapper.ToUserListResponse(users)})
+}
+
+// RemoveProjectUser godoc
+// @Summary Remove user from project
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param userId path string true "User ID"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/users/{userId} [delete]
+func (h *ProjectHandler) RemoveProjectUser(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	userID, ok := handlerutil.ParseUUIDParam(c, "userId")
+	if !ok {
+		return
+	}
+
+	if err := h.service.RemoveUser(projectID, userID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project or user not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "remove_failed", err.Error())
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
 // CreateProjectControlCabinet godoc
 // @Summary Create project control cabinet link
 // @Tags projects
@@ -797,4 +859,80 @@ func (h *ProjectHandler) ListProjectObjectData(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+// AddProjectObjectData godoc
+// @Summary Attach object data to project
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param payload body dto.CreateProjectObjectDataRequest true "Object data link"
+// @Success 201 {object} dto.ObjectDataResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/object-data [post]
+func (h *ProjectHandler) AddProjectObjectData(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var req dto.CreateProjectObjectDataRequest
+	if !handlerutil.BindJSON(c, &req) {
+		return
+	}
+
+	obj, err := h.service.AddObjectData(projectID, req.ObjectDataID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrNotFound):
+			handlerutil.RespondNotFound(c, "Project or object data not found")
+			return
+		case errors.Is(err, domain.ErrConflict):
+			handlerutil.RespondError(c, http.StatusConflict, "conflict", "Object data already linked to another project")
+			return
+		default:
+			handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+			return
+		}
+	}
+
+	c.JSON(http.StatusCreated, mapper.ToObjectDataResponse(*obj))
+}
+
+// RemoveProjectObjectData godoc
+// @Summary Detach object data from project
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param objectDataId path string true "Object Data ID"
+// @Success 200 {object} dto.ObjectDataResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/object-data/{objectDataId} [delete]
+func (h *ProjectHandler) RemoveProjectObjectData(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	objectDataID, ok := handlerutil.ParseUUIDParam(c, "objectDataId")
+	if !ok {
+		return
+	}
+
+	obj, err := h.service.RemoveObjectData(projectID, objectDataID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project or object data not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, mapper.ToObjectDataResponse(*obj))
 }

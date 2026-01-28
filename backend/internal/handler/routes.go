@@ -78,7 +78,11 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 		projects.GET("/:id/field-devices", handlers.ProjectHandler.ListProjectFieldDevices)
 		projects.PUT("/:id/field-devices/:linkId", handlers.ProjectHandler.UpdateProjectFieldDevice)
 		projects.DELETE("/:id/field-devices/:linkId", handlers.ProjectHandler.DeleteProjectFieldDevice)
+		projects.GET("/:id/users", handlers.ProjectHandler.ListProjectUsers)
+		projects.DELETE("/:id/users/:userId", handlers.ProjectHandler.RemoveProjectUser)
 		projects.GET("/:id/object-data", handlers.ProjectHandler.ListProjectObjectData)
+		projects.POST("/:id/object-data", handlers.ProjectHandler.AddProjectObjectData)
+		projects.DELETE("/:id/object-data/:objectDataId", handlers.ProjectHandler.RemoveProjectObjectData)
 		projects.PUT("/:id", handlers.ProjectHandler.UpdateProject)
 		projects.DELETE("/:id", handlers.ProjectHandler.DeleteProject)
 	}

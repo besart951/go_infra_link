@@ -228,6 +228,35 @@ func (s *Service) InviteUser(projectID, userID uuid.UUID) error {
 	return s.repo.AddUser(projectID, userID)
 }
 
+func (s *Service) ListUsers(projectID uuid.UUID) ([]domainUser.User, error) {
+	projects, err := s.repo.GetByIds([]uuid.UUID{projectID})
+	if err != nil {
+		return nil, err
+	}
+	if len(projects) == 0 {
+		return nil, domain.ErrNotFound
+	}
+	return s.repo.ListUsers(projectID)
+}
+
+func (s *Service) RemoveUser(projectID, userID uuid.UUID) error {
+	projects, err := s.repo.GetByIds([]uuid.UUID{projectID})
+	if err != nil {
+		return err
+	}
+	if len(projects) == 0 {
+		return domain.ErrNotFound
+	}
+	users, err := s.userRepo.GetByIds([]uuid.UUID{userID})
+	if err != nil {
+		return err
+	}
+	if len(users) == 0 {
+		return domain.ErrNotFound
+	}
+	return s.repo.RemoveUser(projectID, userID)
+}
+
 func (s *Service) UpdateFieldDevice(linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
 	items, err := s.projectFieldDeviceRepo.GetByIds([]uuid.UUID{linkID})
 	if err != nil {
@@ -255,6 +284,57 @@ func (s *Service) DeleteFieldDevice(linkID, projectID uuid.UUID) error {
 	return s.projectFieldDeviceRepo.DeleteByIds([]uuid.UUID{linkID})
 }
 
+func (s *Service) AddObjectData(projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error) {
+	projects, err := s.repo.GetByIds([]uuid.UUID{projectID})
+	if err != nil {
+		return nil, err
+	}
+	if len(projects) == 0 {
+		return nil, domain.ErrNotFound
+	}
+	objects, err := s.objectDataRepo.GetByIds([]uuid.UUID{objectDataID})
+	if err != nil {
+		return nil, err
+	}
+	if len(objects) == 0 {
+		return nil, domain.ErrNotFound
+	}
+	obj := objects[0]
+	if obj.ProjectID != nil && *obj.ProjectID != projectID {
+		return nil, domain.ErrConflict
+	}
+	obj.ProjectID = &projectID
+	if err := s.objectDataRepo.Update(obj); err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
+
+func (s *Service) RemoveObjectData(projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error) {
+	projects, err := s.repo.GetByIds([]uuid.UUID{projectID})
+	if err != nil {
+		return nil, err
+	}
+	if len(projects) == 0 {
+		return nil, domain.ErrNotFound
+	}
+	objects, err := s.objectDataRepo.GetByIds([]uuid.UUID{objectDataID})
+	if err != nil {
+		return nil, err
+	}
+	if len(objects) == 0 {
+		return nil, domain.ErrNotFound
+	}
+	obj := objects[0]
+	if obj.ProjectID == nil || *obj.ProjectID != projectID {
+		return nil, domain.ErrNotFound
+	}
+	obj.ProjectID = nil
+	if err := s.objectDataRepo.Update(obj); err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
 func (s *Service) GetByIds(ids []uuid.UUID) ([]*domainProject.Project, error) {
 	return s.repo.GetByIds(ids)
 }

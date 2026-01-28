@@ -17,6 +17,10 @@ type ProjectUserResponse struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
+type ProjectUserListResponse struct {
+	Items []UserResponse `json:"items"`
+}
+
 type CreateProjectControlCabinetRequest struct {
 	ControlCabinetID uuid.UUID `json:"control_cabinet_id" binding:"required"`
 }
@@ -65,6 +69,10 @@ type ProjectSPSControllerListResponse struct {
 
 type CreateProjectFieldDeviceRequest struct {
 	FieldDeviceID uuid.UUID `json:"field_device_id" binding:"required"`
+}
+
+type CreateProjectObjectDataRequest struct {
+	ObjectDataID uuid.UUID `json:"object_data_id" binding:"required"`
 }
 
 type UpdateProjectFieldDeviceRequest struct {

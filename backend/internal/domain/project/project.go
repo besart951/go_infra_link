@@ -38,4 +38,6 @@ type Phase struct {
 type ProjectRepository interface {
 	domain.Repository[Project]
 	AddUser(projectID, userID uuid.UUID) error
+	RemoveUser(projectID, userID uuid.UUID) error
+	ListUsers(projectID uuid.UUID) ([]user.User, error)
 }
