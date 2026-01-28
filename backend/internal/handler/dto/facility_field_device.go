@@ -24,7 +24,7 @@ type UpdateFieldDeviceRequest struct {
 	Description               *string              `json:"description" binding:"omitempty,max=250"`
 	ApparatNr                 *int                 `json:"apparat_nr" binding:"omitempty,min=1,max=99"`
 	SPSControllerSystemTypeID uuid.UUID            `json:"sps_controller_system_type_id"`
-	SystemPartID              *uuid.UUID           `json:"system_part_id"`
+	SystemPartID              uuid.UUID            `json:"system_part_id" binding:"required"`
 	ApparatID                 uuid.UUID            `json:"apparat_id"`
 	ObjectDataID              *uuid.UUID           `json:"object_data_id"`
 	BacnetObjects             *[]BacnetObjectInput `json:"bacnet_objects" binding:"omitempty,dive"`
@@ -48,4 +48,8 @@ type FieldDeviceListResponse struct {
 	Total      int64                 `json:"total"`
 	Page       int                   `json:"page"`
 	TotalPages int                   `json:"total_pages"`
+}
+
+type AvailableApparatNumbersResponse struct {
+	Available []int `json:"available"`
 }

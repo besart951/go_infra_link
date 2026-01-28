@@ -19,10 +19,10 @@ func NewStateTextHandler(service StateTextService) *StateTextHandler {
 // @Tags facility-state-texts
 // @Produce json
 // @Param id path string true "State Text ID"
-// @Success 200 {object} dto.StateTextResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 404 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
+// @Success 200 {object} StateTextResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/v1/facility/state-texts/{id} [get]
 func (h *StateTextHandler) GetStateText(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
@@ -49,9 +49,9 @@ func (h *StateTextHandler) GetStateText(c *gin.Context) {
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
-// @Success 200 {object} dto.StateTextListResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
+// @Success 200 {object} StateTextListResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/v1/facility/state-texts [get]
 func (h *StateTextHandler) ListStateTexts(c *gin.Context) {
 	query, ok := parsePaginationQuery(c)

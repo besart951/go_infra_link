@@ -115,6 +115,50 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 	c.JSON(http.StatusOK, toFieldDeviceListResponse(result))
 }
 
+// ListAvailableApparatNumbers godoc
+// @Summary List available apparat numbers for field devices
+// @Tags facility-field-devices
+// @Produce json
+// @Param sps_controller_system_type_id query string true "SPS Controller System Type ID"
+// @Param apparat_id query string true "Apparat ID"
+// @Param system_part_id query string false "System Part ID"
+// @Success 200 {object} dto.AvailableApparatNumbersResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/field-devices/available-apparat-nr [get]
+func (h *FieldDeviceHandler) ListAvailableApparatNumbers(c *gin.Context) {
+	spsControllerSystemTypeID, ok := parseUUIDQueryParam(c, "sps_controller_system_type_id")
+	if !ok {
+		return
+	}
+	if spsControllerSystemTypeID == nil {
+		respondInvalidArgument(c, "sps_controller_system_type_id is required")
+		return
+	}
+
+	apparatID, ok := parseUUIDQueryParam(c, "apparat_id")
+	if !ok {
+		return
+	}
+	if apparatID == nil {
+		respondInvalidArgument(c, "apparat_id is required")
+		return
+	}
+
+	systemPartID, ok := parseUUIDQueryParam(c, "system_part_id")
+	if !ok {
+		return
+	}
+
+	available, err := h.service.ListAvailableApparatNumbers(*spsControllerSystemTypeID, systemPartID, *apparatID)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.AvailableApparatNumbersResponse{Available: available})
+}
+
 // UpdateFieldDevice godoc
 // @Summary Update a field device
 // @Tags facility-field-devices

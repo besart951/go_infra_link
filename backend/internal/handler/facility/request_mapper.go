@@ -104,10 +104,7 @@ func toFieldDeviceModel(req dto.CreateFieldDeviceRequest) *domainFacility.FieldD
 	if req.ApparatNr != nil {
 		apparatNr = *req.ApparatNr
 	}
-	var systemPartID uuid.UUID
-	if req.SystemPartID != nil {
-		systemPartID = *req.SystemPartID
-	}
+	systemPartID := req.SystemPartID
 
 	return &domainFacility.FieldDevice{
 		BMK:                       req.BMK,
@@ -132,8 +129,8 @@ func applyFieldDeviceUpdate(target *domainFacility.FieldDevice, req dto.UpdateFi
 	if req.SPSControllerSystemTypeID != uuid.Nil {
 		target.SPSControllerSystemTypeID = req.SPSControllerSystemTypeID
 	}
-	if req.SystemPartID != nil {
-		target.SystemPartID = *req.SystemPartID
+	if req.SystemPartID != uuid.Nil {
+		target.SystemPartID = req.SystemPartID
 	}
 	if req.ApparatID != uuid.Nil {
 		target.ApparatID = req.ApparatID

@@ -327,6 +327,9 @@ func (s *FieldDeviceService) ensureApparatNrAvailable(fieldDevice *domainFacilit
 	if fieldDevice.ApparatNr == 0 {
 		return domain.NewValidationError().Add("fielddevice.apparat_nr", "apparat_nr is required")
 	}
+	if fieldDevice.ApparatNr < 1 || fieldDevice.ApparatNr > 99 {
+		return domain.NewValidationError().Add("fielddevice.apparat_nr", "apparat_nr must be between 1 and 99")
+	}
 
 	var systemPartID *uuid.UUID
 	if fieldDevice.SystemPartID != uuid.Nil {
@@ -344,9 +347,31 @@ func (s *FieldDeviceService) ensureApparatNrAvailable(fieldDevice *domainFacilit
 		return err
 	}
 	if exists {
-		return domain.NewValidationError().Add("fielddevice.apparat_nr", "apparat_nr is already used in this scope")
+		return domain.NewValidationError().Add("fielddevice.apparat_nr", "apparatnummer ist bereits vergeben")
 	}
 	return nil
+}
+
+func (s *FieldDeviceService) ListAvailableApparatNumbers(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID) ([]int, error) {
+	used, err := s.repo.GetUsedApparatNumbers(spsControllerSystemTypeID, systemPartID, apparatID)
+	if err != nil {
+		return nil, err
+	}
+
+	usedSet := make(map[int]struct{}, len(used))
+	for _, n := range used {
+		if n >= 1 && n <= 99 {
+			usedSet[n] = struct{}{}
+		}
+	}
+
+	available := make([]int, 0, 99-len(usedSet))
+	for n := 1; n <= 99; n++ {
+		if _, ok := usedSet[n]; !ok {
+			available = append(available, n)
+		}
+	}
+	return available, nil
 }
 
 func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.FieldDevice) error {

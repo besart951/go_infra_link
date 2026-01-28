@@ -91,3 +91,22 @@ func (r *fieldDeviceRepo) ExistsApparatNrConflict(spsControllerSystemTypeID uuid
 	err := db.Count(&count).Error
 	return count > 0, err
 }
+
+func (r *fieldDeviceRepo) GetUsedApparatNumbers(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID) ([]int, error) {
+	query := r.db.Model(&domainFacility.FieldDevice{}).
+		Where("deleted_at IS NULL").
+		Where("sps_controller_system_type_id = ?", spsControllerSystemTypeID).
+		Where("apparat_id = ?", apparatID)
+
+	if systemPartID != nil {
+		query = query.Where("system_part_id = ?", *systemPartID)
+	} else {
+		query = query.Where("system_part_id IS NULL")
+	}
+
+	var nums []int
+	if err := query.Pluck("apparat_nr", &nums).Error; err != nil {
+		return nil, err
+	}
+	return nums, nil
+}

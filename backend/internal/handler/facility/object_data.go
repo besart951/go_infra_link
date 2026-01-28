@@ -19,10 +19,10 @@ func NewObjectDataHandler(service ObjectDataService) *ObjectDataHandler {
 // @Tags facility-object-data
 // @Produce json
 // @Param id path string true "Object Data ID"
-// @Success 200 {object} dto.ObjectDataResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 404 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
+// @Success 200 {object} ObjectDataResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/v1/facility/object-data/{id} [get]
 func (h *ObjectDataHandler) GetObjectData(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
@@ -49,9 +49,9 @@ func (h *ObjectDataHandler) GetObjectData(c *gin.Context) {
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
-// @Success 200 {object} dto.ObjectDataListResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
+// @Success 200 {object} ObjectDataListResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/v1/facility/object-data [get]
 func (h *ObjectDataHandler) ListObjectData(c *gin.Context) {
 	query, ok := parsePaginationQuery(c)

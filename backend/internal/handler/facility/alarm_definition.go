@@ -19,10 +19,10 @@ func NewAlarmDefinitionHandler(service AlarmDefinitionService) *AlarmDefinitionH
 // @Tags facility-alarm-definitions
 // @Produce json
 // @Param id path string true "Alarm Definition ID"
-// @Success 200 {object} dto.AlarmDefinitionResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 404 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
+// @Success 200 {object} AlarmDefinitionResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/v1/facility/alarm-definitions/{id} [get]
 func (h *AlarmDefinitionHandler) GetAlarmDefinition(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
@@ -49,9 +49,9 @@ func (h *AlarmDefinitionHandler) GetAlarmDefinition(c *gin.Context) {
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
-// @Success 200 {object} dto.AlarmDefinitionListResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
+// @Success 200 {object} AlarmDefinitionListResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/v1/facility/alarm-definitions [get]
 func (h *AlarmDefinitionHandler) ListAlarmDefinitions(c *gin.Context) {
 	query, ok := parsePaginationQuery(c)

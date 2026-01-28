@@ -24,9 +24,9 @@ func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService) *
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
 // @Param sps_controller_id query string false "SPS Controller ID"
-// @Success 200 {object} dto.SPSControllerSystemTypeListResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
+// @Success 200 {object} SPSControllerSystemTypeListResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/v1/facility/sps-controller-system-types [get]
 func (h *SPSControllerSystemTypeHandler) ListSPSControllerSystemTypes(c *gin.Context) {
 	query, ok := parsePaginationQuery(c)

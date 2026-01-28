@@ -19,10 +19,10 @@ func NewNotificationClassHandler(service NotificationClassService) *Notification
 // @Tags facility-notification-classes
 // @Produce json
 // @Param id path string true "Notification Class ID"
-// @Success 200 {object} dto.NotificationClassResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 404 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
+// @Success 200 {object} NotificationClassResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/v1/facility/notification-classes/{id} [get]
 func (h *NotificationClassHandler) GetNotificationClass(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
@@ -49,9 +49,9 @@ func (h *NotificationClassHandler) GetNotificationClass(c *gin.Context) {
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
-// @Success 200 {object} dto.NotificationClassListResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
+// @Success 200 {object} NotificationClassListResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/v1/facility/notification-classes [get]
 func (h *NotificationClassHandler) ListNotificationClasses(c *gin.Context) {
 	query, ok := parsePaginationQuery(c)

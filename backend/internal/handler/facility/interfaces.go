@@ -57,6 +57,7 @@ type FieldDeviceService interface {
 	CreateWithBacnetObjects(fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects []domainFacility.BacnetObject) error
 	GetByID(id uuid.UUID) (*domainFacility.FieldDevice, error)
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.FieldDevice], error)
+	ListAvailableApparatNumbers(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID) ([]int, error)
 	Update(fieldDevice *domainFacility.FieldDevice) error
 	UpdateWithBacnetObjects(fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects *[]domainFacility.BacnetObject) error
 	DeleteByID(id uuid.UUID) error
