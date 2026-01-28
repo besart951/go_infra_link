@@ -20,6 +20,8 @@ import (
 // Repositories holds all repository instances.
 type Repositories struct {
 	Project                domainProject.ProjectRepository
+	Phase                  domainProject.PhaseRepository
+	PhasePermission        domainProject.PhasePermissionRepository
 	ProjectControlCabinets domainProject.ProjectControlCabinetRepository
 	ProjectSPSControllers  domainProject.ProjectSPSControllerRepository
 	ProjectFieldDevices    domainProject.ProjectFieldDeviceRepository
@@ -59,6 +61,8 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 
 	return &Repositories{
 		Project:                projectrepo.NewProjectRepository(gormDB),
+		Phase:                  projectrepo.NewPhaseRepository(gormDB),
+		PhasePermission:        projectrepo.NewPhasePermissionRepository(gormDB),
 		ProjectControlCabinets: projectsqlrepo.NewProjectControlCabinetRepository(gormDB),
 		ProjectSPSControllers:  projectsqlrepo.NewProjectSPSControllerRepository(gormDB),
 		ProjectFieldDevices:    projectsqlrepo.NewProjectFieldDeviceRepository(gormDB),

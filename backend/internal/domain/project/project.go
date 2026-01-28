@@ -32,7 +32,28 @@ type Project struct {
 
 type Phase struct {
 	domain.Base
-	Name string `gorm:"not null"`
+	Name      string    `gorm:"not null"`
+	ProjectID uuid.UUID `json:"project_id" gorm:"type:uuid;not null"`
+	Project   *Project  `gorm:"foreignKey:ProjectID"`
+}
+
+type PermissionType string
+
+const (
+	PermissionEdit            PermissionType = "edit"
+	PermissionSuggestChanges  PermissionType = "suggest_changes"
+	PermissionView            PermissionType = "view"
+	PermissionDelete          PermissionType = "delete"
+	PermissionManageUsers     PermissionType = "manage_users"
+)
+
+// PhasePermission defines what a specific role can do in a specific phase
+type PhasePermission struct {
+	domain.Base
+	PhaseID    uuid.UUID      `json:"phase_id" gorm:"type:uuid;not null;index:idx_phase_role,unique"`
+	Phase      *Phase         `gorm:"foreignKey:PhaseID"`
+	Role       user.Role      `json:"role" gorm:"type:varchar(50);not null;index:idx_phase_role,unique"`
+	Permission PermissionType `json:"permission" gorm:"type:varchar(50);not null"`
 }
 
 type ProjectRepository interface {
@@ -40,4 +61,13 @@ type ProjectRepository interface {
 	AddUser(projectID, userID uuid.UUID) error
 	RemoveUser(projectID, userID uuid.UUID) error
 	ListUsers(projectID uuid.UUID) ([]user.User, error)
+}
+
+type PhaseRepository = domain.Repository[Phase]
+
+type PhasePermissionRepository interface {
+	domain.Repository[PhasePermission]
+	GetByPhaseAndRole(phaseID uuid.UUID, role user.Role) (*PhasePermission, error)
+	ListByPhase(phaseID uuid.UUID) ([]PhasePermission, error)
+	DeleteByPhaseAndRole(phaseID uuid.UUID, role user.Role) error
 }

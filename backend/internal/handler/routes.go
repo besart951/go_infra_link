@@ -11,11 +11,13 @@ import (
 )
 
 type Handlers struct {
-	ProjectHandler *ProjectHandler
-	UserHandler    *UserHandler
-	AuthHandler    *AuthHandler
-	TeamHandler    *TeamHandler
-	AdminHandler   *AdminHandler
+	ProjectHandler             *ProjectHandler
+	UserHandler                *UserHandler
+	AuthHandler                *AuthHandler
+	TeamHandler                *TeamHandler
+	AdminHandler               *AdminHandler
+	PhaseHandler               *PhaseHandler
+	PhasePermissionHandler     *PhasePermissionHandler
 
 	FacilityBuildingHandler       *facilityhandler.BuildingHandler
 	FacilitySystemTypeHandler     *facilityhandler.SystemTypeHandler
@@ -85,6 +87,26 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 		projects.DELETE("/:id/object-data/:objectDataId", handlers.ProjectHandler.RemoveProjectObjectData)
 		projects.PUT("/:id", handlers.ProjectHandler.UpdateProject)
 		projects.DELETE("/:id", handlers.ProjectHandler.DeleteProject)
+	}
+
+	// Phase routes
+	phases := protectedV1.Group("/phases")
+	{
+		phases.POST("", handlers.PhaseHandler.CreatePhase)
+		phases.GET("", handlers.PhaseHandler.ListPhases)
+		phases.GET("/:id", handlers.PhaseHandler.GetPhase)
+		phases.PUT("/:id", handlers.PhaseHandler.UpdatePhase)
+		phases.DELETE("/:id", handlers.PhaseHandler.DeletePhase)
+	}
+
+	// Phase Permission routes
+	phasePermissions := protectedV1.Group("/phase-permissions")
+	{
+		phasePermissions.POST("", handlers.PhasePermissionHandler.CreatePhasePermission)
+		phasePermissions.GET("", handlers.PhasePermissionHandler.ListPhasePermissions)
+		phasePermissions.GET("/:id", handlers.PhasePermissionHandler.GetPhasePermission)
+		phasePermissions.PUT("/:id", handlers.PhasePermissionHandler.UpdatePhasePermission)
+		phasePermissions.DELETE("/:id", handlers.PhasePermissionHandler.DeletePhasePermission)
 	}
 
 	// User routes
