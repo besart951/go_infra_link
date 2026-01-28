@@ -437,7 +437,7 @@
 
 				{#if showFieldDeviceForm}
 					<FieldDeviceForm
-						projectId={projectId}
+						{projectId}
 						on:success={handleFieldDeviceCreated}
 						on:cancel={() => (showFieldDeviceForm = false)}
 					/>

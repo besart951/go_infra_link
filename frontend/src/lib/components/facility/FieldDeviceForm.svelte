@@ -65,9 +65,7 @@
 			spsControllerSystemTypes = spsRes.items;
 			systemParts = partsRes.items;
 			apparats = apparatsRes.items;
-			objectData = projectId
-				? objectRes.items.filter((obj) => obj.is_active)
-				: objectRes.items;
+			objectData = projectId ? objectRes.items.filter((obj) => obj.is_active) : objectRes.items;
 		} catch (e) {
 			console.error(e);
 			error = getErrorMessage(e);

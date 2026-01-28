@@ -456,8 +456,9 @@
 					</div>
 					<Button
 						onclick={attachObjectData}
-						disabled={!selectedObjectDataId || objectDataLoading || availableObjectDataToActivate.length === 0}
-						>Add</Button
+						disabled={!selectedObjectDataId ||
+							objectDataLoading ||
+							availableObjectDataToActivate.length === 0}>Add</Button
 					>
 					<Button variant="outline" onclick={loadObjectData} disabled={objectDataLoading}
 						>Refresh</Button
