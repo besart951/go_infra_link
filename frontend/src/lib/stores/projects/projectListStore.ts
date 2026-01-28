@@ -121,7 +121,12 @@ export function createProjectListStore(options: ProjectListStoreOptions = {}) {
 			}
 
 			const errorMessage = error instanceof Error ? error.message : 'Failed to load projects';
-			store.update((s: ProjectListState) => ({ ...s, loading: false, error: errorMessage, status }));
+			store.update((s: ProjectListState) => ({
+				...s,
+				loading: false,
+				error: errorMessage,
+				status
+			}));
 		} finally {
 			abortController = null;
 		}

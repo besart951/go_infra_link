@@ -1,5 +1,9 @@
 import type { Phase } from '$lib/domain/phase/index.js';
-import type { ListParams, ListRepository, PaginatedResponse } from '$lib/domain/ports/listRepository.js';
+import type {
+	ListParams,
+	ListRepository,
+	PaginatedResponse
+} from '$lib/domain/ports/listRepository.js';
 import { calculateTotalPages } from '$lib/domain/valueObjects/pagination.js';
 import { listProjects, createProject } from '$lib/infrastructure/api/project.adapter.js';
 
@@ -45,7 +49,11 @@ export class PhaseListRepository implements ListRepository<Phase> {
 	}
 }
 
-export async function createPhase(id: string, name?: string, options?: RequestInit): Promise<Phase> {
+export async function createPhase(
+	id: string,
+	name?: string,
+	options?: RequestInit
+): Promise<Phase> {
 	const trimmed = id.trim();
 	const displayName = name?.trim() || trimmed;
 

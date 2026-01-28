@@ -38,5 +38,5 @@
 	searchPlaceholder="Search phases..."
 	emptyText="No phases found."
 	{width}
-	id={id}
+	{id}
 />
