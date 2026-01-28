@@ -8,11 +8,15 @@ import (
 )
 
 type ApparatHandler struct {
-	service ApparatService
+	service         ApparatService
+	systemPartService SystemPartService
 }
 
-func NewApparatHandler(service ApparatService) *ApparatHandler {
-	return &ApparatHandler{service: service}
+func NewApparatHandler(service ApparatService, systemPartService SystemPartService) *ApparatHandler {
+	return &ApparatHandler{
+		service:         service,
+		systemPartService: systemPartService,
+	}
 }
 
 // CreateApparat godoc
@@ -31,7 +35,18 @@ func (h *ApparatHandler) CreateApparat(c *gin.Context) {
 		return
 	}
 
-	apparat := toApparatModel(req)
+	// Load system parts if IDs are provided
+	var systemParts []*domainFacility.SystemPart
+	if len(req.SystemPartIDs) > 0 {
+		loadedParts, err := h.systemPartService.GetByIDs(req.SystemPartIDs)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, "invalid_system_parts", "Failed to load system parts")
+			return
+		}
+		systemParts = loadedParts
+	}
+
+	apparat := toApparatModel(req, systemParts)
 
 	if err := h.service.Create(apparat); respondValidationOrError(c, err, "creation_failed") {
 		return
@@ -126,7 +141,24 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 		return
 	}
 
-	applyApparatUpdate(apparat, req)
+	// Load system parts if IDs are provided
+	var systemParts *[]*domainFacility.SystemPart
+	if req.SystemPartIDs != nil {
+		if len(*req.SystemPartIDs) > 0 {
+			loadedParts, err := h.systemPartService.GetByIDs(*req.SystemPartIDs)
+			if err != nil {
+				respondError(c, http.StatusBadRequest, "invalid_system_parts", "Failed to load system parts")
+				return
+			}
+			systemParts = &loadedParts
+		} else {
+			// Empty array means clear all system parts
+			emptyParts := []*domainFacility.SystemPart{}
+			systemParts = &emptyParts
+		}
+	}
+
+	applyApparatUpdate(apparat, req, systemParts)
 
 	if err := h.service.Update(apparat); respondValidationOrError(c, err, "update_failed") {
 		return

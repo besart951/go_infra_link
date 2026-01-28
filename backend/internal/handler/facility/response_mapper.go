@@ -116,11 +116,22 @@ func toSpecificationListResponse(list *domain.PaginatedList[domainFacility.Speci
 }
 
 func toApparatResponse(apparat domainFacility.Apparat) dto.ApparatResponse {
+	systemParts := make([]dto.SystemPartResponse, 0)
+	if apparat.SystemParts != nil {
+		systemParts = make([]dto.SystemPartResponse, len(apparat.SystemParts))
+		for i, sp := range apparat.SystemParts {
+			if sp != nil {
+				systemParts[i] = toSystemPartResponse(*sp)
+			}
+		}
+	}
+	
 	return dto.ApparatResponse{
 		ID:          apparat.ID,
 		ShortName:   apparat.ShortName,
 		Name:        apparat.Name,
 		Description: apparat.Description,
+		SystemParts: systemParts,
 		CreatedAt:   apparat.CreatedAt,
 		UpdatedAt:   apparat.UpdatedAt,
 	}

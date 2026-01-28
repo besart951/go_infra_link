@@ -25,7 +25,19 @@ func NewApparatRepository(db *gorm.DB) domainFacility.ApparatRepository {
 }
 
 func (r *apparatRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Apparat, error) {
-	return r.BaseRepository.GetByIds(ids)
+	result, err := r.BaseRepository.GetByIds(ids)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Preload SystemParts for each apparat
+	for _, apparat := range result {
+		if err := r.DB.Model(apparat).Association("SystemParts").Find(&apparat.SystemParts); err != nil {
+			return nil, err
+		}
+	}
+	
+	return result, nil
 }
 
 func (r *apparatRepo) Create(entity *domainFacility.Apparat) error {
@@ -33,7 +45,20 @@ func (r *apparatRepo) Create(entity *domainFacility.Apparat) error {
 }
 
 func (r *apparatRepo) Update(entity *domainFacility.Apparat) error {
-	return r.BaseRepository.Update(entity)
+	// Use GORM's Association API to replace SystemParts
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		// Update the entity itself
+		if err := tx.Model(entity).Updates(entity).Error; err != nil {
+			return err
+		}
+		
+		// Replace SystemParts association
+		if err := tx.Model(entity).Association("SystemParts").Replace(entity.SystemParts); err != nil {
+			return err
+		}
+		
+		return nil
+	})
 }
 
 func (r *apparatRepo) DeleteByIds(ids []uuid.UUID) error {
@@ -44,6 +69,13 @@ func (r *apparatRepo) GetPaginatedList(params domain.PaginationParams) (*domain.
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
+	}
+
+	// Preload SystemParts for each apparat
+	for _, apparat := range result.Items {
+		if err := r.DB.Model(apparat).Association("SystemParts").Find(&apparat.SystemParts); err != nil {
+			return nil, err
+		}
 	}
 
 	// Convert []*Apparat to []Apparat for the interface
