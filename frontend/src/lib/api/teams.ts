@@ -1,4 +1,4 @@
-import { api } from './client.js';
+import { api } from './client.ts';
 
 export interface Team {
 	id: string;
