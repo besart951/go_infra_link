@@ -7,12 +7,14 @@
 	import { getErrorMessage } from '$lib/api/client.js';
 	import type { Apparat } from '$lib/domain/facility/index.js';
 	import { createEventDispatcher } from 'svelte';
+	import SystemPartMultiSelect from './SystemPartMultiSelect.svelte';
 
 	export let initialData: Apparat | undefined = undefined;
 
 	let short_name = initialData?.short_name ?? '';
 	let name = initialData?.name ?? '';
 	let description = initialData?.description ?? '';
+	let system_part_ids = initialData?.system_parts?.map((sp) => sp.id) ?? [];
 	let loading = false;
 	let error = '';
 
@@ -20,6 +22,7 @@
 		short_name = initialData.short_name;
 		name = initialData.name;
 		description = initialData.description ?? '';
+		system_part_ids = initialData.system_parts?.map((sp) => sp.id) ?? [];
 	}
 
 	const dispatch = createEventDispatcher();
@@ -33,14 +36,16 @@
 				const res = await updateApparat(initialData.id, {
 					short_name,
 					name,
-					description: description || undefined
+					description: description || undefined,
+					system_part_ids
 				});
 				dispatch('success', res);
 			} else {
 				const res = await createApparat({
 					short_name,
 					name,
-					description: description || undefined
+					description: description || undefined,
+					system_part_ids
 				});
 				dispatch('success', res);
 			}
@@ -70,6 +75,10 @@
 		<div class="space-y-2 md:col-span-2">
 			<Label for="apparat_desc">Description</Label>
 			<Textarea id="apparat_desc" bind:value={description} rows={3} maxlength={250} />
+		</div>
+		<div class="space-y-2 md:col-span-2">
+			<Label for="apparat_system_parts">System Parts</Label>
+			<SystemPartMultiSelect id="apparat_system_parts" bind:value={system_part_ids} />
 		</div>
 	</div>
 
