@@ -14,7 +14,12 @@ func NewObjectDataService(repo domainFacility.ObjectDataStore) *ObjectDataServic
 	return &ObjectDataService{repo: repo}
 }
 
+func (s *ObjectDataService) Create(objectData *domainFacility.ObjectData) error {
+	return s.repo.Create(objectData)
+}
+
 func (s *ObjectDataService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	page, limit = domain.NormalizePagination(page, limit, 10)
 	return s.repo.GetPaginatedList(domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,
@@ -31,4 +36,12 @@ func (s *ObjectDataService) GetByID(id uuid.UUID) (*domainFacility.ObjectData, e
 		return nil, domain.ErrNotFound
 	}
 	return items[0], nil
+}
+
+func (s *ObjectDataService) Update(objectData *domainFacility.ObjectData) error {
+	return s.repo.Update(objectData)
+}
+
+func (s *ObjectDataService) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }

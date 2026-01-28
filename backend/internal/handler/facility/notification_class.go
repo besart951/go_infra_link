@@ -3,6 +3,7 @@ package facility
 import (
 	"net/http"
 
+	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,6 +13,31 @@ type NotificationClassHandler struct {
 
 func NewNotificationClassHandler(service NotificationClassService) *NotificationClassHandler {
 	return &NotificationClassHandler{service: service}
+}
+
+// CreateNotificationClass godoc
+// @Summary Create a new notification class
+// @Tags facility-notification-classes
+// @Accept json
+// @Produce json
+// @Param notification_class body dto.CreateNotificationClassRequest true "Notification Class data"
+// @Success 201 {object} dto.NotificationClassResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/notification-classes [post]
+func (h *NotificationClassHandler) CreateNotificationClass(c *gin.Context) {
+	var req dto.CreateNotificationClassRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+
+	nc := toNotificationClassModel(req)
+
+	if err := h.service.Create(nc); respondValidationOrError(c, err, "creation_failed") {
+		return
+	}
+
+	c.JSON(http.StatusCreated, toNotificationClassResponse(*nc))
 }
 
 // GetNotificationClass godoc
@@ -66,4 +92,68 @@ func (h *NotificationClassHandler) ListNotificationClasses(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toNotificationClassListResponse(result))
+}
+
+// UpdateNotificationClass godoc
+// @Summary Update a notification class
+// @Tags facility-notification-classes
+// @Accept json
+// @Produce json
+// @Param id path string true "Notification Class ID"
+// @Param notification_class body dto.UpdateNotificationClassRequest true "Notification Class data"
+// @Success 200 {object} dto.NotificationClassResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/notification-classes/{id} [put]
+func (h *NotificationClassHandler) UpdateNotificationClass(c *gin.Context) {
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var req dto.UpdateNotificationClassRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+
+	nc, err := h.service.GetByID(id)
+	if err != nil {
+		if respondNotFoundIf(c, err, "Notification class not found") {
+			return
+		}
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	applyNotificationClassUpdate(nc, req)
+
+	if err := h.service.Update(nc); respondValidationOrError(c, err, "update_failed") {
+		return
+	}
+
+	c.JSON(http.StatusOK, toNotificationClassResponse(*nc))
+}
+
+// DeleteNotificationClass godoc
+// @Summary Delete a notification class
+// @Tags facility-notification-classes
+// @Produce json
+// @Param id path string true "Notification Class ID"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/notification-classes/{id} [delete]
+func (h *NotificationClassHandler) DeleteNotificationClass(c *gin.Context) {
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if err := h.service.DeleteByID(id); err != nil {
+		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

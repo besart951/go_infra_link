@@ -2,10 +2,35 @@
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import { Plus } from '@lucide/svelte';
+	import { Plus, Pencil } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { specificationsStore } from '$lib/stores/list/entityStores.js';
 	import type { Specification } from '$lib/domain/facility/index.js';
+	import SpecificationForm from '$lib/components/facility/SpecificationForm.svelte';
+
+	let showForm = $state(false);
+	let editingItem: Specification | undefined = $state(undefined);
+
+	function handleEdit(item: Specification) {
+		editingItem = item;
+		showForm = true;
+	}
+
+	function handleCreate() {
+		editingItem = undefined;
+		showForm = true;
+	}
+
+	function handleSuccess() {
+		showForm = false;
+		editingItem = undefined;
+		specificationsStore.reload();
+	}
+
+	function handleCancel() {
+		showForm = false;
+		editingItem = undefined;
+	}
 
 	onMount(() => {
 		specificationsStore.load();
@@ -24,11 +49,21 @@
 				Manage technical specifications for field devices.
 			</p>
 		</div>
-		<Button>
-			<Plus class="mr-2 size-4" />
-			New Specification
-		</Button>
+		{#if !showForm}
+			<Button onclick={handleCreate}>
+				<Plus class="mr-2 size-4" />
+				New Specification
+			</Button>
+		{/if}
 	</div>
+
+	{#if showForm}
+		<SpecificationForm
+			initialData={editingItem}
+			on:success={handleSuccess}
+			on:cancel={handleCancel}
+		/>
+	{/if}
 
 	<PaginatedList
 		state={$specificationsStore}
@@ -53,7 +88,11 @@
 				{new Date(item.created_at).toLocaleDateString()}
 			</Table.Cell>
 			<Table.Cell>
-				<Button variant="ghost" size="sm">View</Button>
+				<div class="flex items-center gap-2">
+					<Button variant="ghost" size="icon" onclick={() => handleEdit(item)}>
+						<Pencil class="size-4" />
+					</Button>
+				</div>
 			</Table.Cell>
 		{/snippet}
 	</PaginatedList>

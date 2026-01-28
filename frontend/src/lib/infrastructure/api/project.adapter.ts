@@ -10,7 +10,10 @@ import type {
 	CreateProjectRequest,
 	UpdateProjectRequest,
 	ProjectUserListResponse,
-	ProjectObjectDataListResponse
+	ProjectObjectDataListResponse,
+	ProjectControlCabinetListResponse,
+	ProjectSPSControllerListResponse,
+	ProjectFieldDeviceListResponse
 } from '$lib/domain/project/index.js';
 import type { ObjectDataListParams } from '$lib/domain/facility/index.js';
 
@@ -167,6 +170,132 @@ export async function removeProjectObjectData(
 	});
 }
 
+// ============================================================================
+// PROJECT CONTROL CABINETS
+// ==========================================================================
+
+export async function listProjectControlCabinets(
+	projectId: string,
+	params?: { page?: number; limit?: number },
+	options?: RequestInit
+): Promise<ProjectControlCabinetListResponse> {
+	const searchParams = new URLSearchParams();
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
+	const query = searchParams.toString();
+	return api<ProjectControlCabinetListResponse>(
+		`/projects/${projectId}/control-cabinets${query ? `?${query}` : ''}`,
+		options
+	);
+}
+
+export async function addProjectControlCabinet(
+	projectId: string,
+	controlCabinetId: string,
+	options?: RequestInit
+): Promise<void> {
+	return api<void>(`/projects/${projectId}/control-cabinets`, {
+		...options,
+		method: 'POST',
+		body: JSON.stringify({ control_cabinet_id: controlCabinetId })
+	});
+}
+
+export async function removeProjectControlCabinet(
+	projectId: string,
+	linkId: string,
+	options?: RequestInit
+): Promise<void> {
+	return api<void>(`/projects/${projectId}/control-cabinets/${linkId}`, {
+		...options,
+		method: 'DELETE'
+	});
+}
+
+// ============================================================================
+// PROJECT SPS CONTROLLERS
+// ==========================================================================
+
+export async function listProjectSPSControllers(
+	projectId: string,
+	params?: { page?: number; limit?: number },
+	options?: RequestInit
+): Promise<ProjectSPSControllerListResponse> {
+	const searchParams = new URLSearchParams();
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
+	const query = searchParams.toString();
+	return api<ProjectSPSControllerListResponse>(
+		`/projects/${projectId}/sps-controllers${query ? `?${query}` : ''}`,
+		options
+	);
+}
+
+export async function addProjectSPSController(
+	projectId: string,
+	spsControllerId: string,
+	options?: RequestInit
+): Promise<void> {
+	return api<void>(`/projects/${projectId}/sps-controllers`, {
+		...options,
+		method: 'POST',
+		body: JSON.stringify({ sps_controller_id: spsControllerId })
+	});
+}
+
+export async function removeProjectSPSController(
+	projectId: string,
+	linkId: string,
+	options?: RequestInit
+): Promise<void> {
+	return api<void>(`/projects/${projectId}/sps-controllers/${linkId}`, {
+		...options,
+		method: 'DELETE'
+	});
+}
+
+// ============================================================================
+// PROJECT FIELD DEVICES
+// ==========================================================================
+
+export async function listProjectFieldDevices(
+	projectId: string,
+	params?: { page?: number; limit?: number },
+	options?: RequestInit
+): Promise<ProjectFieldDeviceListResponse> {
+	const searchParams = new URLSearchParams();
+	if (params?.page) searchParams.set('page', String(params.page));
+	if (params?.limit) searchParams.set('limit', String(params.limit));
+	const query = searchParams.toString();
+	return api<ProjectFieldDeviceListResponse>(
+		`/projects/${projectId}/field-devices${query ? `?${query}` : ''}`,
+		options
+	);
+}
+
+export async function addProjectFieldDevice(
+	projectId: string,
+	fieldDeviceId: string,
+	options?: RequestInit
+): Promise<void> {
+	return api<void>(`/projects/${projectId}/field-devices`, {
+		...options,
+		method: 'POST',
+		body: JSON.stringify({ field_device_id: fieldDeviceId })
+	});
+}
+
+export async function removeProjectFieldDevice(
+	projectId: string,
+	linkId: string,
+	options?: RequestInit
+): Promise<void> {
+	return api<void>(`/projects/${projectId}/field-devices/${linkId}`, {
+		...options,
+		method: 'DELETE'
+	});
+}
+
 // Re-export types for convenience
 export type {
 	Project,
@@ -175,5 +304,8 @@ export type {
 	CreateProjectRequest,
 	UpdateProjectRequest,
 	ProjectUserListResponse,
-	ProjectObjectDataListResponse
+	ProjectObjectDataListResponse,
+	ProjectControlCabinetListResponse,
+	ProjectSPSControllerListResponse,
+	ProjectFieldDeviceListResponse
 };

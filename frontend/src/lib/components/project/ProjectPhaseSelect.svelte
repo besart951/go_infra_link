@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
-	import { listPhases } from '$lib/infrastructure/api/phase.adapter.js';
+	import { getPhase, listPhases } from '$lib/infrastructure/api/phase.adapter.js';
 	import type { Phase } from '$lib/domain/phase/index.js';
 
 	export let value: string = '';
@@ -16,11 +16,17 @@
 			name: phase.name || phase.id
 		}));
 	}
+
+	async function fetchById(id: string): Promise<Phase | null> {
+		const phase = await getPhase(id);
+		return { ...phase, name: phase.name || phase.id };
+	}
 </script>
 
 <AsyncCombobox
 	bind:value
 	{fetcher}
+	{fetchById}
 	labelKey="name"
 	placeholder="Select phase..."
 	searchPlaceholder="Search phases..."

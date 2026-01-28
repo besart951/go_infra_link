@@ -10,6 +10,7 @@
 	// Props
 	export let value: string = '';
 	export let fetcher: (search: string) => Promise<T[]>;
+	export let fetchById: ((id: string) => Promise<T | null | undefined>) | undefined = undefined;
 	export let labelKey: keyof T;
 	export let idKey: keyof T = 'id' as keyof T;
 	export let id: string | undefined = undefined;
@@ -24,9 +25,31 @@
 	let loading = false;
 	let debounceTimer: ReturnType<typeof setTimeout>;
 	let initialized = false;
+	let selectedLoading = false;
+	let selectedRequestId = 0;
+	let currentValue = value;
 
 	// We keep track of the label for the selected value to display it even if it's not in the current search results
 	let selectedLabel: string | undefined = undefined;
+
+	async function loadSelected(id: string) {
+		if (!fetchById) return;
+		selectedLoading = true;
+		const requestId = ++selectedRequestId;
+		try {
+			const item = await fetchById(id);
+			if (requestId !== selectedRequestId) return;
+			if (item) {
+				selectedLabel = String(item[labelKey] ?? '');
+			}
+		} catch (error) {
+			console.error('Failed to fetch selected item:', error);
+		} finally {
+			if (requestId === selectedRequestId) {
+				selectedLoading = false;
+			}
+		}
+	}
 
 	$: if (open && !initialized) {
 		initialized = true;
@@ -57,6 +80,19 @@
 	$: selectedItem = items.find((i) => String(i[idKey]) === value);
 	$: if (selectedItem) {
 		selectedLabel = String(selectedItem[labelKey] ?? '');
+	}
+
+	$: if (value !== currentValue) {
+		currentValue = value;
+		selectedLabel = undefined;
+	}
+
+	$: if (value && !selectedLabel && !selectedItem && fetchById && !selectedLoading) {
+		loadSelected(value);
+	}
+
+	$: if (!value) {
+		selectedLabel = undefined;
 	}
 </script>
 

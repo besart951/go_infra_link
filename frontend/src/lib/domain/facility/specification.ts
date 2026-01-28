@@ -21,7 +21,30 @@ export interface Specification {
 export interface CreateSpecificationRequest {
 	field_device_id: string;
 	specification_supplier?: string;
-	// ... add other fields as needed
+	specification_brand?: string;
+	specification_type?: string;
+	additional_info_motor_valve?: string;
+	additional_info_size?: number;
+	additional_information_installation_location?: string;
+	electrical_connection_ph?: number;
+	electrical_connection_acdc?: string;
+	electrical_connection_amperage?: number;
+	electrical_connection_power?: number;
+	electrical_connection_rotation?: number;
+}
+
+export interface UpdateSpecificationRequest {
+	specification_supplier?: string;
+	specification_brand?: string;
+	specification_type?: string;
+	additional_info_motor_valve?: string;
+	additional_info_size?: number;
+	additional_information_installation_location?: string;
+	electrical_connection_ph?: number;
+	electrical_connection_acdc?: string;
+	electrical_connection_amperage?: number;
+	electrical_connection_power?: number;
+	electrical_connection_rotation?: number;
 }
 
 export interface SpecificationListParams {

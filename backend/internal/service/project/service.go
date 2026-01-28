@@ -303,7 +303,10 @@ func (s *Service) AddObjectData(projectID, objectDataID uuid.UUID) (*domainFacil
 	if obj.ProjectID != nil && *obj.ProjectID != projectID {
 		return nil, domain.ErrConflict
 	}
-	obj.ProjectID = &projectID
+	if obj.ProjectID == nil {
+		obj.ProjectID = &projectID
+	}
+	obj.IsActive = true
 	if err := s.objectDataRepo.Update(obj); err != nil {
 		return nil, err
 	}
@@ -329,7 +332,7 @@ func (s *Service) RemoveObjectData(projectID, objectDataID uuid.UUID) (*domainFa
 	if obj.ProjectID == nil || *obj.ProjectID != projectID {
 		return nil, domain.ErrNotFound
 	}
-	obj.ProjectID = nil
+	obj.IsActive = false
 	if err := s.objectDataRepo.Update(obj); err != nil {
 		return nil, err
 	}

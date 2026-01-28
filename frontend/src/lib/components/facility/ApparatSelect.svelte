@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
-	import { listApparats } from '$lib/infrastructure/api/facility.adapter.js';
+	import { getApparat, listApparats } from '$lib/infrastructure/api/facility.adapter.js';
 	import type { Apparat } from '$lib/domain/facility/index.js';
 
 	export let value: string = '';
@@ -10,6 +10,17 @@
 		const res = await listApparats({ search, limit: 20 });
 		return res.items || [];
 	}
+
+	async function fetchById(id: string): Promise<Apparat> {
+		return getApparat(id);
+	}
 </script>
 
-<AsyncCombobox bind:value {fetcher} labelKey="name" placeholder="Select Apparat..." {width} />
+<AsyncCombobox
+	bind:value
+	{fetcher}
+	{fetchById}
+	labelKey="name"
+	placeholder="Select Apparat..."
+	{width}
+/>

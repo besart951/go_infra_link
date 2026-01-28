@@ -2,10 +2,35 @@
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import { Plus } from '@lucide/svelte';
+	import { Plus, Pencil } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { systemTypesStore } from '$lib/stores/list/entityStores.js';
 	import type { SystemType } from '$lib/domain/facility/index.js';
+	import SystemTypeForm from '$lib/components/facility/SystemTypeForm.svelte';
+
+	let showForm = $state(false);
+	let editingItem: SystemType | undefined = $state(undefined);
+
+	function handleEdit(item: SystemType) {
+		editingItem = item;
+		showForm = true;
+	}
+
+	function handleCreate() {
+		editingItem = undefined;
+		showForm = true;
+	}
+
+	function handleSuccess() {
+		showForm = false;
+		editingItem = undefined;
+		systemTypesStore.reload();
+	}
+
+	function handleCancel() {
+		showForm = false;
+		editingItem = undefined;
+	}
 
 	onMount(() => {
 		systemTypesStore.load();
@@ -22,11 +47,17 @@
 			<h1 class="text-2xl font-semibold tracking-tight">System Types</h1>
 			<p class="text-sm text-muted-foreground">Manage system types and their configurations.</p>
 		</div>
-		<Button>
-			<Plus class="mr-2 size-4" />
-			New System Type
-		</Button>
+		{#if !showForm}
+			<Button onclick={handleCreate}>
+				<Plus class="mr-2 size-4" />
+				New System Type
+			</Button>
+		{/if}
 	</div>
+
+	{#if showForm}
+		<SystemTypeForm initialData={editingItem} on:success={handleSuccess} on:cancel={handleCancel} />
+	{/if}
 
 	<PaginatedList
 		state={$systemTypesStore}
@@ -51,7 +82,11 @@
 				{new Date(item.created_at).toLocaleDateString()}
 			</Table.Cell>
 			<Table.Cell>
-				<Button variant="ghost" size="sm">View</Button>
+				<div class="flex items-center gap-2">
+					<Button variant="ghost" size="icon" onclick={() => handleEdit(item)}>
+						<Pencil class="size-4" />
+					</Button>
+				</div>
 			</Table.Cell>
 		{/snippet}
 	</PaginatedList>

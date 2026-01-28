@@ -27,27 +27,43 @@ import type {
 	SystemType,
 	SystemTypeListParams,
 	SystemTypeListResponse,
+	CreateSystemTypeRequest,
+	UpdateSystemTypeRequest,
 	SystemPart,
 	SystemPartListParams,
 	SystemPartListResponse,
+	CreateSystemPartRequest,
+	UpdateSystemPartRequest,
 	Apparat,
 	ApparatListParams,
 	ApparatListResponse,
+	CreateApparatRequest,
+	UpdateApparatRequest,
 	Specification,
 	SpecificationListParams,
 	SpecificationListResponse,
+	CreateSpecificationRequest,
+	UpdateSpecificationRequest,
 	StateText,
 	StateTextListParams,
 	StateTextListResponse,
+	CreateStateTextRequest,
+	UpdateStateTextRequest,
 	NotificationClass,
 	NotificationClassListParams,
 	NotificationClassListResponse,
+	CreateNotificationClassRequest,
+	UpdateNotificationClassRequest,
 	AlarmDefinition,
 	AlarmDefinitionListParams,
 	AlarmDefinitionListResponse,
+	CreateAlarmDefinitionRequest,
+	UpdateAlarmDefinitionRequest,
 	ObjectData,
 	ObjectDataListParams,
 	ObjectDataListResponse,
+	CreateObjectDataRequest,
+	UpdateObjectDataRequest,
 	SPSControllerSystemType,
 	SPSControllerSystemTypeListParams,
 	SPSControllerSystemTypeListResponse
@@ -279,6 +295,37 @@ export async function listSystemTypes(
 	return api<SystemTypeListResponse>(`/facility/system-types${query ? `?${query}` : ''}`, options);
 }
 
+export async function createSystemType(
+	data: CreateSystemTypeRequest,
+	options?: ApiOptions
+): Promise<SystemType> {
+	return api<SystemType>('/facility/system-types', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function updateSystemType(
+	id: string,
+	data: UpdateSystemTypeRequest,
+	options?: ApiOptions
+): Promise<SystemType> {
+	return api<SystemType>(`/facility/system-types/${id}`, {
+		...options,
+		method: 'PUT',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function deleteSystemType(id: string, options?: ApiOptions): Promise<void> {
+	return api<void>(`/facility/system-types/${id}`, { ...options, method: 'DELETE' });
+}
+
+export async function getSystemType(id: string, options?: ApiOptions): Promise<SystemType> {
+	return api<SystemType>(`/facility/system-types/${id}`, options);
+}
+
 // ============================================================================
 // SYSTEM PARTS
 // ============================================================================
@@ -296,6 +343,37 @@ export async function listSystemParts(
 	return api<SystemPartListResponse>(`/facility/system-parts${query ? `?${query}` : ''}`, options);
 }
 
+export async function createSystemPart(
+	data: CreateSystemPartRequest,
+	options?: ApiOptions
+): Promise<SystemPart> {
+	return api<SystemPart>('/facility/system-parts', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function updateSystemPart(
+	id: string,
+	data: UpdateSystemPartRequest,
+	options?: ApiOptions
+): Promise<SystemPart> {
+	return api<SystemPart>(`/facility/system-parts/${id}`, {
+		...options,
+		method: 'PUT',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function deleteSystemPart(id: string, options?: ApiOptions): Promise<void> {
+	return api<void>(`/facility/system-parts/${id}`, { ...options, method: 'DELETE' });
+}
+
+export async function getSystemPart(id: string, options?: ApiOptions): Promise<SystemPart> {
+	return api<SystemPart>(`/facility/system-parts/${id}`, options);
+}
+
 // ============================================================================
 // APPARATS
 // ============================================================================
@@ -311,6 +389,37 @@ export async function listApparats(
 
 	const query = searchParams.toString();
 	return api<ApparatListResponse>(`/facility/apparats${query ? `?${query}` : ''}`, options);
+}
+
+export async function createApparat(
+	data: CreateApparatRequest,
+	options?: ApiOptions
+): Promise<Apparat> {
+	return api<Apparat>('/facility/apparats', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function updateApparat(
+	id: string,
+	data: UpdateApparatRequest,
+	options?: ApiOptions
+): Promise<Apparat> {
+	return api<Apparat>(`/facility/apparats/${id}`, {
+		...options,
+		method: 'PUT',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function deleteApparat(id: string, options?: ApiOptions): Promise<void> {
+	return api<void>(`/facility/apparats/${id}`, { ...options, method: 'DELETE' });
+}
+
+export async function getApparat(id: string, options?: ApiOptions): Promise<Apparat> {
+	return api<Apparat>(`/facility/apparats/${id}`, options);
 }
 
 // ============================================================================
@@ -333,6 +442,37 @@ export async function listSpecifications(
 	);
 }
 
+export async function createSpecification(
+	data: CreateSpecificationRequest,
+	options?: ApiOptions
+): Promise<Specification> {
+	return api<Specification>('/facility/specifications', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function updateSpecification(
+	id: string,
+	data: UpdateSpecificationRequest,
+	options?: ApiOptions
+): Promise<Specification> {
+	return api<Specification>(`/facility/specifications/${id}`, {
+		...options,
+		method: 'PUT',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function deleteSpecification(id: string, options?: ApiOptions): Promise<void> {
+	return api<void>(`/facility/specifications/${id}`, { ...options, method: 'DELETE' });
+}
+
+export async function getSpecification(id: string, options?: ApiOptions): Promise<Specification> {
+	return api<Specification>(`/facility/specifications/${id}`, options);
+}
+
 // ============================================================================
 // STATE TEXTS
 // ============================================================================
@@ -348,6 +488,37 @@ export async function listStateTexts(
 
 	const query = searchParams.toString();
 	return api<StateTextListResponse>(`/facility/state-texts${query ? `?${query}` : ''}`, options);
+}
+
+export async function createStateText(
+	data: CreateStateTextRequest,
+	options?: ApiOptions
+): Promise<StateText> {
+	return api<StateText>('/facility/state-texts', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function updateStateText(
+	id: string,
+	data: UpdateStateTextRequest,
+	options?: ApiOptions
+): Promise<StateText> {
+	return api<StateText>(`/facility/state-texts/${id}`, {
+		...options,
+		method: 'PUT',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function deleteStateText(id: string, options?: ApiOptions): Promise<void> {
+	return api<void>(`/facility/state-texts/${id}`, { ...options, method: 'DELETE' });
+}
+
+export async function getStateText(id: string, options?: ApiOptions): Promise<StateText> {
+	return api<StateText>(`/facility/state-texts/${id}`, options);
 }
 
 // ============================================================================
@@ -370,6 +541,40 @@ export async function listNotificationClasses(
 	);
 }
 
+export async function createNotificationClass(
+	data: CreateNotificationClassRequest,
+	options?: ApiOptions
+): Promise<NotificationClass> {
+	return api<NotificationClass>('/facility/notification-classes', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function updateNotificationClass(
+	id: string,
+	data: UpdateNotificationClassRequest,
+	options?: ApiOptions
+): Promise<NotificationClass> {
+	return api<NotificationClass>(`/facility/notification-classes/${id}`, {
+		...options,
+		method: 'PUT',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function deleteNotificationClass(id: string, options?: ApiOptions): Promise<void> {
+	return api<void>(`/facility/notification-classes/${id}`, { ...options, method: 'DELETE' });
+}
+
+export async function getNotificationClass(
+	id: string,
+	options?: ApiOptions
+): Promise<NotificationClass> {
+	return api<NotificationClass>(`/facility/notification-classes/${id}`, options);
+}
+
 // ============================================================================
 // ALARM DEFINITIONS
 // ============================================================================
@@ -390,6 +595,40 @@ export async function listAlarmDefinitions(
 	);
 }
 
+export async function createAlarmDefinition(
+	data: CreateAlarmDefinitionRequest,
+	options?: ApiOptions
+): Promise<AlarmDefinition> {
+	return api<AlarmDefinition>('/facility/alarm-definitions', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function updateAlarmDefinition(
+	id: string,
+	data: UpdateAlarmDefinitionRequest,
+	options?: ApiOptions
+): Promise<AlarmDefinition> {
+	return api<AlarmDefinition>(`/facility/alarm-definitions/${id}`, {
+		...options,
+		method: 'PUT',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function deleteAlarmDefinition(id: string, options?: ApiOptions): Promise<void> {
+	return api<void>(`/facility/alarm-definitions/${id}`, { ...options, method: 'DELETE' });
+}
+
+export async function getAlarmDefinition(
+	id: string,
+	options?: ApiOptions
+): Promise<AlarmDefinition> {
+	return api<AlarmDefinition>(`/facility/alarm-definitions/${id}`, options);
+}
+
 // ============================================================================
 // OBJECT DATA
 // ============================================================================
@@ -405,6 +644,37 @@ export async function listObjectData(
 
 	const query = searchParams.toString();
 	return api<ObjectDataListResponse>(`/facility/object-data${query ? `?${query}` : ''}`, options);
+}
+
+export async function createObjectData(
+	data: CreateObjectDataRequest,
+	options?: ApiOptions
+): Promise<ObjectData> {
+	return api<ObjectData>('/facility/object-data', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function updateObjectData(
+	id: string,
+	data: UpdateObjectDataRequest,
+	options?: ApiOptions
+): Promise<ObjectData> {
+	return api<ObjectData>(`/facility/object-data/${id}`, {
+		...options,
+		method: 'PUT',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function deleteObjectData(id: string, options?: ApiOptions): Promise<void> {
+	return api<void>(`/facility/object-data/${id}`, { ...options, method: 'DELETE' });
+}
+
+export async function getObjectData(id: string, options?: ApiOptions): Promise<ObjectData> {
+	return api<ObjectData>(`/facility/object-data/${id}`, options);
 }
 
 // ============================================================================
@@ -425,6 +695,13 @@ export async function listSPSControllerSystemTypes(
 		`/facility/sps-controller-system-types${query ? `?${query}` : ''}`,
 		options
 	);
+}
+
+export async function getSPSControllerSystemType(
+	id: string,
+	options?: ApiOptions
+): Promise<SPSControllerSystemType> {
+	return api<SPSControllerSystemType>(`/facility/sps-controller-system-types/${id}`, options);
 }
 
 // Re-export all types

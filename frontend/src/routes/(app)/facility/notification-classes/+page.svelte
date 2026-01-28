@@ -2,10 +2,35 @@
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import { Plus } from '@lucide/svelte';
+	import { Plus, Pencil } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { notificationClassesStore } from '$lib/stores/list/entityStores.js';
 	import type { NotificationClass } from '$lib/domain/facility/index.js';
+	import NotificationClassForm from '$lib/components/facility/NotificationClassForm.svelte';
+
+	let showForm = $state(false);
+	let editingItem: NotificationClass | undefined = $state(undefined);
+
+	function handleEdit(item: NotificationClass) {
+		editingItem = item;
+		showForm = true;
+	}
+
+	function handleCreate() {
+		editingItem = undefined;
+		showForm = true;
+	}
+
+	function handleSuccess() {
+		showForm = false;
+		editingItem = undefined;
+		notificationClassesStore.reload();
+	}
+
+	function handleCancel() {
+		showForm = false;
+		editingItem = undefined;
+	}
 
 	onMount(() => {
 		notificationClassesStore.load();
@@ -22,11 +47,21 @@
 			<h1 class="text-2xl font-semibold tracking-tight">Notification Classes</h1>
 			<p class="text-sm text-muted-foreground">Manage notification classes and event categories.</p>
 		</div>
-		<Button>
-			<Plus class="mr-2 size-4" />
-			New Notification Class
-		</Button>
+		{#if !showForm}
+			<Button onclick={handleCreate}>
+				<Plus class="mr-2 size-4" />
+				New Notification Class
+			</Button>
+		{/if}
 	</div>
+
+	{#if showForm}
+		<NotificationClassForm
+			initialData={editingItem}
+			on:success={handleSuccess}
+			on:cancel={handleCancel}
+		/>
+	{/if}
 
 	<PaginatedList
 		state={$notificationClassesStore}
@@ -53,7 +88,11 @@
 				{new Date(item.created_at).toLocaleDateString()}
 			</Table.Cell>
 			<Table.Cell>
-				<Button variant="ghost" size="sm">View</Button>
+				<div class="flex items-center gap-2">
+					<Button variant="ghost" size="icon" onclick={() => handleEdit(item)}>
+						<Pencil class="size-4" />
+					</Button>
+				</div>
 			</Table.Cell>
 		{/snippet}
 	</PaginatedList>

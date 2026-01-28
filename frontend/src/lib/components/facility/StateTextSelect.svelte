@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
-	import { listStateTexts } from '$lib/infrastructure/api/facility.adapter.js';
+	import { getStateText, listStateTexts } from '$lib/infrastructure/api/facility.adapter.js';
 	import type { StateText } from '$lib/domain/facility/index.js';
 
 	export let value: string = '';
@@ -10,11 +10,16 @@
 		const res = await listStateTexts({ search, limit: 20 });
 		return res.items || [];
 	}
+
+	async function fetchById(id: string): Promise<StateText> {
+		return getStateText(id);
+	}
 </script>
 
 <AsyncCombobox
 	bind:value
 	{fetcher}
+	{fetchById}
 	labelKey="state_text1"
 	placeholder="Select State Text..."
 	{width}

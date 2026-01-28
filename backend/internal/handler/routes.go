@@ -217,15 +217,27 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 
 		facility.GET("/state-texts", handlers.FacilityStateTextHandler.ListStateTexts)
 		facility.GET("/state-texts/:id", handlers.FacilityStateTextHandler.GetStateText)
+		facility.POST("/state-texts", handlers.FacilityStateTextHandler.CreateStateText)
+		facility.PUT("/state-texts/:id", handlers.FacilityStateTextHandler.UpdateStateText)
+		facility.DELETE("/state-texts/:id", handlers.FacilityStateTextHandler.DeleteStateText)
 
 		facility.GET("/notification-classes", handlers.FacilityNotificationClassHandler.ListNotificationClasses)
 		facility.GET("/notification-classes/:id", handlers.FacilityNotificationClassHandler.GetNotificationClass)
+		facility.POST("/notification-classes", handlers.FacilityNotificationClassHandler.CreateNotificationClass)
+		facility.PUT("/notification-classes/:id", handlers.FacilityNotificationClassHandler.UpdateNotificationClass)
+		facility.DELETE("/notification-classes/:id", handlers.FacilityNotificationClassHandler.DeleteNotificationClass)
 
 		facility.GET("/alarm-definitions", handlers.FacilityAlarmDefinitionHandler.ListAlarmDefinitions)
 		facility.GET("/alarm-definitions/:id", handlers.FacilityAlarmDefinitionHandler.GetAlarmDefinition)
+		facility.POST("/alarm-definitions", handlers.FacilityAlarmDefinitionHandler.CreateAlarmDefinition)
+		facility.PUT("/alarm-definitions/:id", handlers.FacilityAlarmDefinitionHandler.UpdateAlarmDefinition)
+		facility.DELETE("/alarm-definitions/:id", handlers.FacilityAlarmDefinitionHandler.DeleteAlarmDefinition)
 
 		facility.GET("/object-data", handlers.FacilityObjectDataHandler.ListObjectData)
 		facility.GET("/object-data/:id", handlers.FacilityObjectDataHandler.GetObjectData)
+		facility.POST("/object-data", handlers.FacilityObjectDataHandler.CreateObjectData)
+		facility.PUT("/object-data/:id", handlers.FacilityObjectDataHandler.UpdateObjectData)
+		facility.DELETE("/object-data/:id", handlers.FacilityObjectDataHandler.DeleteObjectData)
 
 		facility.GET("/sps-controller-system-types", handlers.FacilitySPSControllerSystemTypeHandler.ListSPSControllerSystemTypes)
 	}

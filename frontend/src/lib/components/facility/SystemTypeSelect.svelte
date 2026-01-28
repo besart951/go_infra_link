@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
-	import { listSystemTypes } from '$lib/infrastructure/api/facility.adapter.js';
+	import { getSystemType, listSystemTypes } from '$lib/infrastructure/api/facility.adapter.js';
 	import type { SystemType } from '$lib/domain/facility/index.js';
 
 	export let value: string = '';
@@ -10,6 +10,17 @@
 		const res = await listSystemTypes({ search, limit: 20 });
 		return res.items || [];
 	}
+
+	async function fetchById(id: string): Promise<SystemType> {
+		return getSystemType(id);
+	}
 </script>
 
-<AsyncCombobox bind:value {fetcher} labelKey="name" placeholder="Select System Type..." {width} />
+<AsyncCombobox
+	bind:value
+	{fetcher}
+	{fetchById}
+	labelKey="name"
+	placeholder="Select System Type..."
+	{width}
+/>

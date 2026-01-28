@@ -14,7 +14,12 @@ func NewNotificationClassService(repo domainFacility.NotificationClassRepository
 	return &NotificationClassService{repo: repo}
 }
 
+func (s *NotificationClassService) Create(notificationClass *domainFacility.NotificationClass) error {
+	return s.repo.Create(notificationClass)
+}
+
 func (s *NotificationClassService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.NotificationClass], error) {
+	page, limit = domain.NormalizePagination(page, limit, 10)
 	return s.repo.GetPaginatedList(domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,
@@ -31,4 +36,12 @@ func (s *NotificationClassService) GetByID(id uuid.UUID) (*domainFacility.Notifi
 		return nil, domain.ErrNotFound
 	}
 	return items[0], nil
+}
+
+func (s *NotificationClassService) Update(notificationClass *domainFacility.NotificationClass) error {
+	return s.repo.Update(notificationClass)
+}
+
+func (s *NotificationClassService) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }

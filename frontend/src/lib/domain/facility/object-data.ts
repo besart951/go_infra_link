@@ -5,8 +5,23 @@ export interface ObjectData {
 	description: string;
 	version: string;
 	is_active: boolean;
+	project_id?: string;
 	created_at: string;
 	updated_at: string;
+}
+
+export interface CreateObjectDataRequest {
+	description: string;
+	version: string;
+	is_active?: boolean;
+	project_id?: string;
+}
+
+export interface UpdateObjectDataRequest {
+	description?: string;
+	version?: string;
+	is_active?: boolean;
+	project_id?: string;
 }
 
 export interface ObjectDataListParams {

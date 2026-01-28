@@ -14,7 +14,12 @@ func NewStateTextService(repo domainFacility.StateTextRepository) *StateTextServ
 	return &StateTextService{repo: repo}
 }
 
+func (s *StateTextService) Create(stateText *domainFacility.StateText) error {
+	return s.repo.Create(stateText)
+}
+
 func (s *StateTextService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.StateText], error) {
+	page, limit = domain.NormalizePagination(page, limit, 10)
 	return s.repo.GetPaginatedList(domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,
@@ -31,4 +36,12 @@ func (s *StateTextService) GetByID(id uuid.UUID) (*domainFacility.StateText, err
 		return nil, domain.ErrNotFound
 	}
 	return items[0], nil
+}
+
+func (s *StateTextService) Update(stateText *domainFacility.StateText) error {
+	return s.repo.Update(stateText)
+}
+
+func (s *StateTextService) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }

@@ -8,6 +8,20 @@ import (
 
 // Facility DTOs - ObjectData
 
+type CreateObjectDataRequest struct {
+	Description string     `json:"description" binding:"required,max=250"`
+	Version     string     `json:"version" binding:"required,max=100"`
+	IsActive    *bool      `json:"is_active"`
+	ProjectID   *uuid.UUID `json:"project_id"`
+}
+
+type UpdateObjectDataRequest struct {
+	Description *string    `json:"description"`
+	Version     *string    `json:"version"`
+	IsActive    *bool      `json:"is_active"`
+	ProjectID   *uuid.UUID `json:"project_id"`
+}
+
 type ObjectDataResponse struct {
 	ID          uuid.UUID  `json:"id"`
 	Description string     `json:"description"`
