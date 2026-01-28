@@ -13,6 +13,6 @@ type LoginAttempt struct {
 	Email         *string    `gorm:"index"`
 	IP            *string
 	UserAgent     *string
-	Success       bool       `gorm:"index"`
+	Success       bool `gorm:"index"`
 	FailureReason *string
 }

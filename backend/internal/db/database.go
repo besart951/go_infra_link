@@ -89,6 +89,7 @@ func autoMigrate(db *gorm.DB) error {
 
 		// Project domain
 		&project.Phase{},
+		&project.PhasePermission{},
 		&project.Project{},
 		&project.ProjectFieldDevice{},
 		&project.ProjectControlCabinet{},
@@ -161,6 +162,7 @@ func GetModels() []interface{} {
 		&team.Team{},
 		&team.TeamMember{},
 		&project.Phase{},
+		&project.PhasePermission{},
 		&project.Project{},
 		&project.ProjectFieldDevice{},
 		&project.ProjectControlCabinet{},

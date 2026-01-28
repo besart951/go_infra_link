@@ -11,11 +11,13 @@ import (
 )
 
 type Handlers struct {
-	ProjectHandler *ProjectHandler
-	UserHandler    *UserHandler
-	AuthHandler    *AuthHandler
-	TeamHandler    *TeamHandler
-	AdminHandler   *AdminHandler
+	ProjectHandler         *ProjectHandler
+	UserHandler            *UserHandler
+	AuthHandler            *AuthHandler
+	TeamHandler            *TeamHandler
+	AdminHandler           *AdminHandler
+	PhaseHandler           *PhaseHandler
+	PhasePermissionHandler *PhasePermissionHandler
 
 	FacilityBuildingHandler       *facilityhandler.BuildingHandler
 	FacilitySystemTypeHandler     *facilityhandler.SystemTypeHandler
@@ -85,6 +87,28 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 		projects.DELETE("/:id/object-data/:objectDataId", handlers.ProjectHandler.RemoveProjectObjectData)
 		projects.PUT("/:id", handlers.ProjectHandler.UpdateProject)
 		projects.DELETE("/:id", handlers.ProjectHandler.DeleteProject)
+	}
+
+	// Phase routes - Anyone authenticated can view, but only admins can modify
+	phases := protectedV1.Group("/phases")
+	{
+		phases.GET("", handlers.PhaseHandler.ListPhases)
+		phases.GET("/:id", handlers.PhaseHandler.GetPhase)
+		// Creating, updating, and deleting phases requires admin role
+		phases.POST("", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin), handlers.PhaseHandler.CreatePhase)
+		phases.PUT("/:id", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin), handlers.PhaseHandler.UpdatePhase)
+		phases.DELETE("/:id", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin), handlers.PhaseHandler.DeletePhase)
+	}
+
+	// Phase Permission routes - Only admins can manage permissions
+	phasePermissions := protectedV1.Group("/phase-permissions")
+	phasePermissions.Use(middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin))
+	{
+		phasePermissions.POST("", handlers.PhasePermissionHandler.CreatePhasePermission)
+		phasePermissions.GET("", handlers.PhasePermissionHandler.ListPhasePermissions)
+		phasePermissions.GET("/:id", handlers.PhasePermissionHandler.GetPhasePermission)
+		phasePermissions.PUT("/:id", handlers.PhasePermissionHandler.UpdatePhasePermission)
+		phasePermissions.DELETE("/:id", handlers.PhasePermissionHandler.DeletePhasePermission)
 	}
 
 	// User routes

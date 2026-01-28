@@ -1,0 +1,21 @@
+meta {
+  name: List Phases
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/api/v1/phases?page=1&limit=10
+  body: none
+  auth: none
+}
+
+headers {
+  X-CSRF-Token: {{csrf_token}}
+}
+
+params:query {
+  page: 1
+  limit: 10
+  ~search: 
+}

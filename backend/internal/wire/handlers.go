@@ -12,10 +12,12 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devA
 	facilityHandlers := facilityhandler.NewHandlers(services.Facility)
 
 	return &handler.Handlers{
-		ProjectHandler: handler.NewProjectHandler(services.Project),
-		UserHandler:    handler.NewUserHandler(services.User),
-		TeamHandler:    handler.NewTeamHandler(services.Team),
-		AdminHandler:   handler.NewAdminHandler(services.Admin, services.Auth),
+		ProjectHandler:         handler.NewProjectHandler(services.Project),
+		PhaseHandler:           handler.NewPhaseHandler(services.Phase),
+		PhasePermissionHandler: handler.NewPhasePermissionHandler(services.PhasePermission),
+		UserHandler:            handler.NewUserHandler(services.User),
+		TeamHandler:            handler.NewTeamHandler(services.Team),
+		AdminHandler:           handler.NewAdminHandler(services.Admin, services.Auth),
 		AuthHandler: handler.NewAuthHandler(
 			services.Auth,
 			services.User,

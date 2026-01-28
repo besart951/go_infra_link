@@ -7,6 +7,7 @@ import (
 	authservice "github.com/besart951/go_infra_link/backend/internal/service/auth"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
+	phaseservice "github.com/besart951/go_infra_link/backend/internal/service/phase"
 	projectservice "github.com/besart951/go_infra_link/backend/internal/service/project"
 	rbacservice "github.com/besart951/go_infra_link/backend/internal/service/rbac"
 	teamservice "github.com/besart951/go_infra_link/backend/internal/service/team"
@@ -15,14 +16,16 @@ import (
 
 // Services holds all service instances.
 type Services struct {
-	Project  *projectservice.Service
-	User     *userservice.Service
-	Auth     *authservice.Service
-	JWT      authservice.JWTService
-	RBAC     *rbacservice.Service
-	Team     *teamservice.Service
-	Admin    *adminservice.Service
-	Password passwordsvc.Service
+	Project         *projectservice.Service
+	Phase           *phaseservice.Service
+	PhasePermission *phaseservice.PermissionService
+	User            *userservice.Service
+	Auth            *authservice.Service
+	JWT             authservice.JWTService
+	RBAC            *rbacservice.Service
+	Team            *teamservice.Service
+	Admin           *adminservice.Service
+	Password        passwordsvc.Service
 
 	Facility *facilityservice.Services
 }
@@ -68,12 +71,14 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 			repos.FacilityObjectData,
 			repos.FacilityBacnetObjects,
 		),
-		User:     userservice.New(repos.User, passwordService),
-		Password: passwordService,
-		JWT:      jwtService,
-		RBAC:     rbacSvc,
-		Team:     teamservice.New(repos.Team, repos.TeamMember),
-		Admin:    adminservice.New(repos.User),
+		Phase:           phaseservice.NewPhaseService(repos.Phase),
+		PhasePermission: phaseservice.NewPhasePermissionService(repos.PhasePermission),
+		User:            userservice.New(repos.User, passwordService),
+		Password:        passwordService,
+		JWT:             jwtService,
+		RBAC:            rbacSvc,
+		Team:            teamservice.New(repos.Team, repos.TeamMember),
+		Admin:           adminservice.New(repos.User),
 		Auth: authservice.NewService(
 			jwtService,
 			repos.User,
