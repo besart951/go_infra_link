@@ -89,18 +89,20 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 		projects.DELETE("/:id", handlers.ProjectHandler.DeleteProject)
 	}
 
-	// Phase routes
+	// Phase routes - Anyone authenticated can view, but only admins can modify
 	phases := protectedV1.Group("/phases")
 	{
-		phases.POST("", handlers.PhaseHandler.CreatePhase)
 		phases.GET("", handlers.PhaseHandler.ListPhases)
 		phases.GET("/:id", handlers.PhaseHandler.GetPhase)
-		phases.PUT("/:id", handlers.PhaseHandler.UpdatePhase)
-		phases.DELETE("/:id", handlers.PhaseHandler.DeletePhase)
+		// Creating, updating, and deleting phases requires admin role
+		phases.POST("", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin), handlers.PhaseHandler.CreatePhase)
+		phases.PUT("/:id", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin), handlers.PhaseHandler.UpdatePhase)
+		phases.DELETE("/:id", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin), handlers.PhaseHandler.DeletePhase)
 	}
 
-	// Phase Permission routes
+	// Phase Permission routes - Only admins can manage permissions
 	phasePermissions := protectedV1.Group("/phase-permissions")
+	phasePermissions.Use(middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin))
 	{
 		phasePermissions.POST("", handlers.PhasePermissionHandler.CreatePhasePermission)
 		phasePermissions.GET("", handlers.PhasePermissionHandler.ListPhasePermissions)

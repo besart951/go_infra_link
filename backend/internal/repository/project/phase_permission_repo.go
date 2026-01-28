@@ -44,7 +44,7 @@ func (r *phasePermissionRepo) ListByPhase(phaseID uuid.UUID) ([]domainProject.Ph
 }
 
 func (r *phasePermissionRepo) DeleteByPhaseAndRole(phaseID uuid.UUID, role domainUser.Role) error {
-	return r.db.Where("phase_id = ? AND role = ?", phaseID, role).Delete(&domainProject.PhasePermission{}).Error
+	return r.db.Where("phase_id = ? AND role = ? AND deleted_at IS NULL", phaseID, role).Delete(&domainProject.PhasePermission{}).Error
 }
 
 func (r *phasePermissionRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainProject.PhasePermission], error) {

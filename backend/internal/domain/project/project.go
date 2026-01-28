@@ -33,8 +33,9 @@ type Project struct {
 type Phase struct {
 	domain.Base
 	Name      string    `gorm:"not null"`
-	ProjectID uuid.UUID `json:"project_id" gorm:"type:uuid;not null"`
-	Project   *Project  `gorm:"foreignKey:ProjectID"`
+	ProjectID uuid.UUID `json:"project_id" gorm:"type:uuid;not null;index"`
+	// Note: We don't define a back-reference to Project here to avoid circular dependency
+	// Projects can reference phases via PhaseID, and phases reference projects via ProjectID
 }
 
 type PermissionType string
