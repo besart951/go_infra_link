@@ -4444,7 +4444,8 @@ const docTemplate = `{
             "required": [
                 "apparat_id",
                 "apparat_nr",
-                "sps_controller_system_type_id"
+                "sps_controller_system_type_id",
+                "system_part_id"
             ],
             "properties": {
                 "apparat_id": {

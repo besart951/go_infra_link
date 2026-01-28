@@ -21,6 +21,7 @@ func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService) *
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
+// @Param sps_controller_id query string false "SPS Controller ID"
 // @Success 200 {object} dto.SPSControllerSystemTypeListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -31,7 +32,18 @@ func (h *SPSControllerSystemTypeHandler) ListSPSControllerSystemTypes(c *gin.Con
 		return
 	}
 
-	result, err := h.service.List(query.Page, query.Limit, query.Search)
+	spsControllerID, ok := parseUUIDQueryParam(c, "sps_controller_id")
+	if !ok {
+		return
+	}
+
+	var result *domain.PaginatedList[domainFacility.SPSControllerSystemType]
+	var err error
+	if spsControllerID != nil {
+		result, err = h.service.ListBySPSControllerID(*spsControllerID, query.Page, query.Limit, query.Search)
+	} else {
+		result, err = h.service.List(query.Page, query.Limit, query.Search)
+	}
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return

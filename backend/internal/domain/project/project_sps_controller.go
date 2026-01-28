@@ -18,4 +18,7 @@ func (ProjectSPSController) TableName() string {
 	return "project_sps_controllers"
 }
 
-type ProjectSPSControllerRepository = domain.Repository[ProjectSPSController]
+type ProjectSPSControllerRepository interface {
+	domain.Repository[ProjectSPSController]
+	GetPaginatedListByProjectID(projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ProjectSPSController], error)
+}

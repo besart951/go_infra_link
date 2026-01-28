@@ -3,6 +3,7 @@ package facility
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
@@ -41,6 +42,19 @@ func parsePaginationQuery(c *gin.Context) (dto.PaginationQuery, bool) {
 		return dto.PaginationQuery{}, false
 	}
 	return query, true
+}
+
+func parseUUIDQueryParam(c *gin.Context, name string) (*uuid.UUID, bool) {
+	value := strings.TrimSpace(c.Query(name))
+	if value == "" {
+		return nil, true
+	}
+	parsed, err := uuid.Parse(value)
+	if err != nil {
+		respondInvalidArgument(c, name+" is invalid")
+		return nil, false
+	}
+	return &parsed, true
 }
 
 func respondValidationOrError(c *gin.Context, err error, fallbackCode string) bool {

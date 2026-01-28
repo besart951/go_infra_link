@@ -5,6 +5,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/besart951/go_infra_link/backend/internal/domain/team"
 	"github.com/besart951/go_infra_link/backend/internal/domain/user"
@@ -16,6 +17,20 @@ type ProjectService interface {
 	Create(project *project.Project) error
 	GetByID(id uuid.UUID) (*project.Project, error)
 	List(page, limit int, search string) (*domain.PaginatedList[project.Project], error)
+	InviteUser(projectID, userID uuid.UUID) error
+	CreateControlCabinet(projectID, controlCabinetID uuid.UUID) (*project.ProjectControlCabinet, error)
+	UpdateControlCabinet(linkID, projectID, controlCabinetID uuid.UUID) (*project.ProjectControlCabinet, error)
+	DeleteControlCabinet(linkID, projectID uuid.UUID) error
+	CreateSPSController(projectID, spsControllerID uuid.UUID) (*project.ProjectSPSController, error)
+	UpdateSPSController(linkID, projectID, spsControllerID uuid.UUID) (*project.ProjectSPSController, error)
+	DeleteSPSController(linkID, projectID uuid.UUID) error
+	CreateFieldDevice(projectID, fieldDeviceID uuid.UUID) (*project.ProjectFieldDevice, error)
+	UpdateFieldDevice(linkID, projectID, fieldDeviceID uuid.UUID) (*project.ProjectFieldDevice, error)
+	DeleteFieldDevice(linkID, projectID uuid.UUID) error
+	ListControlCabinets(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[project.ProjectControlCabinet], error)
+	ListSPSControllers(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[project.ProjectSPSController], error)
+	ListFieldDevices(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[project.ProjectFieldDevice], error)
+	ListObjectData(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainFacility.ObjectData], error)
 	Update(project *project.Project) error
 	DeleteByID(id uuid.UUID) error
 }

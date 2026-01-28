@@ -172,3 +172,629 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+// InviteProjectUser godoc
+// @Summary Invite user to project
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param invite body dto.CreateProjectUserRequest true "Invite data"
+// @Success 201 {object} dto.ProjectUserResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/users [post]
+func (h *ProjectHandler) InviteProjectUser(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var req dto.CreateProjectUserRequest
+	if !handlerutil.BindJSON(c, &req) {
+		return
+	}
+
+	if err := h.service.InviteUser(projectID, req.UserID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project or user not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "invite_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusCreated, dto.ProjectUserResponse{ProjectID: projectID, UserID: req.UserID})
+}
+
+// CreateProjectControlCabinet godoc
+// @Summary Create project control cabinet link
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param link body dto.CreateProjectControlCabinetRequest true "Link data"
+// @Success 201 {object} dto.ProjectControlCabinetResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/control-cabinets [post]
+func (h *ProjectHandler) CreateProjectControlCabinet(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if _, err := h.service.GetByID(projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	var req dto.CreateProjectControlCabinetRequest
+	if !handlerutil.BindJSON(c, &req) {
+		return
+	}
+
+	created, err := h.service.CreateControlCabinet(projectID, req.ControlCabinetID)
+	if err != nil {
+		handlerutil.RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusCreated, mapper.ToProjectControlCabinetResponse(*created))
+}
+
+// UpdateProjectControlCabinet godoc
+// @Summary Update project control cabinet link
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param linkId path string true "Link ID"
+// @Param link body dto.UpdateProjectControlCabinetRequest true "Link data"
+// @Success 200 {object} dto.ProjectControlCabinetResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/control-cabinets/{linkId} [put]
+func (h *ProjectHandler) UpdateProjectControlCabinet(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	linkID, ok := handlerutil.ParseUUIDParam(c, "linkId")
+	if !ok {
+		return
+	}
+
+	if _, err := h.service.GetByID(projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	var req dto.UpdateProjectControlCabinetRequest
+	if !handlerutil.BindJSON(c, &req) {
+		return
+	}
+
+	updated, err := h.service.UpdateControlCabinet(linkID, projectID, req.ControlCabinetID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Link not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, mapper.ToProjectControlCabinetResponse(*updated))
+}
+
+// DeleteProjectControlCabinet godoc
+// @Summary Delete project control cabinet link
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param linkId path string true "Link ID"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/control-cabinets/{linkId} [delete]
+func (h *ProjectHandler) DeleteProjectControlCabinet(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	linkID, ok := handlerutil.ParseUUIDParam(c, "linkId")
+	if !ok {
+		return
+	}
+
+	if _, err := h.service.GetByID(projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	if err := h.service.DeleteControlCabinet(linkID, projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Link not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+// CreateProjectSPSController godoc
+// @Summary Create project SPS controller link
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param link body dto.CreateProjectSPSControllerRequest true "Link data"
+// @Success 201 {object} dto.ProjectSPSControllerResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/sps-controllers [post]
+func (h *ProjectHandler) CreateProjectSPSController(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if _, err := h.service.GetByID(projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	var req dto.CreateProjectSPSControllerRequest
+	if !handlerutil.BindJSON(c, &req) {
+		return
+	}
+
+	created, err := h.service.CreateSPSController(projectID, req.SPSControllerID)
+	if err != nil {
+		handlerutil.RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusCreated, mapper.ToProjectSPSControllerResponse(*created))
+}
+
+// UpdateProjectSPSController godoc
+// @Summary Update project SPS controller link
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param linkId path string true "Link ID"
+// @Param link body dto.UpdateProjectSPSControllerRequest true "Link data"
+// @Success 200 {object} dto.ProjectSPSControllerResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/sps-controllers/{linkId} [put]
+func (h *ProjectHandler) UpdateProjectSPSController(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	linkID, ok := handlerutil.ParseUUIDParam(c, "linkId")
+	if !ok {
+		return
+	}
+
+	if _, err := h.service.GetByID(projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	var req dto.UpdateProjectSPSControllerRequest
+	if !handlerutil.BindJSON(c, &req) {
+		return
+	}
+
+	updated, err := h.service.UpdateSPSController(linkID, projectID, req.SPSControllerID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Link not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, mapper.ToProjectSPSControllerResponse(*updated))
+}
+
+// DeleteProjectSPSController godoc
+// @Summary Delete project SPS controller link
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param linkId path string true "Link ID"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/sps-controllers/{linkId} [delete]
+func (h *ProjectHandler) DeleteProjectSPSController(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	linkID, ok := handlerutil.ParseUUIDParam(c, "linkId")
+	if !ok {
+		return
+	}
+
+	if _, err := h.service.GetByID(projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	if err := h.service.DeleteSPSController(linkID, projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Link not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+// CreateProjectFieldDevice godoc
+// @Summary Create project field device link
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param link body dto.CreateProjectFieldDeviceRequest true "Link data"
+// @Success 201 {object} dto.ProjectFieldDeviceResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/field-devices [post]
+func (h *ProjectHandler) CreateProjectFieldDevice(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if _, err := h.service.GetByID(projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	var req dto.CreateProjectFieldDeviceRequest
+	if !handlerutil.BindJSON(c, &req) {
+		return
+	}
+
+	created, err := h.service.CreateFieldDevice(projectID, req.FieldDeviceID)
+	if err != nil {
+		handlerutil.RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusCreated, mapper.ToProjectFieldDeviceResponse(*created))
+}
+
+// UpdateProjectFieldDevice godoc
+// @Summary Update project field device link
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param linkId path string true "Link ID"
+// @Param link body dto.UpdateProjectFieldDeviceRequest true "Link data"
+// @Success 200 {object} dto.ProjectFieldDeviceResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/field-devices/{linkId} [put]
+func (h *ProjectHandler) UpdateProjectFieldDevice(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	linkID, ok := handlerutil.ParseUUIDParam(c, "linkId")
+	if !ok {
+		return
+	}
+
+	if _, err := h.service.GetByID(projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	var req dto.UpdateProjectFieldDeviceRequest
+	if !handlerutil.BindJSON(c, &req) {
+		return
+	}
+
+	updated, err := h.service.UpdateFieldDevice(linkID, projectID, req.FieldDeviceID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Link not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, mapper.ToProjectFieldDeviceResponse(*updated))
+}
+
+// DeleteProjectFieldDevice godoc
+// @Summary Delete project field device link
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param linkId path string true "Link ID"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/field-devices/{linkId} [delete]
+func (h *ProjectHandler) DeleteProjectFieldDevice(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	linkID, ok := handlerutil.ParseUUIDParam(c, "linkId")
+	if !ok {
+		return
+	}
+
+	if _, err := h.service.GetByID(projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	if err := h.service.DeleteFieldDevice(linkID, projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Link not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+// ListProjectControlCabinets godoc
+// @Summary List project control cabinets with pagination
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} dto.ProjectControlCabinetListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/control-cabinets [get]
+func (h *ProjectHandler) ListProjectControlCabinets(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if _, err := h.service.GetByID(projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	var query dto.PaginationQuery
+	if !handlerutil.BindQuery(c, &query) {
+		return
+	}
+
+	result, err := h.service.ListControlCabinets(projectID, query.Page, query.Limit)
+	if err != nil {
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	response := dto.ProjectControlCabinetListResponse{
+		Items:      mapper.ToProjectControlCabinetList(result.Items),
+		Total:      result.Total,
+		Page:       result.Page,
+		TotalPages: result.TotalPages,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// ListProjectSPSControllers godoc
+// @Summary List project SPS controllers with pagination
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} dto.ProjectSPSControllerListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/sps-controllers [get]
+func (h *ProjectHandler) ListProjectSPSControllers(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if _, err := h.service.GetByID(projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	var query dto.PaginationQuery
+	if !handlerutil.BindQuery(c, &query) {
+		return
+	}
+
+	result, err := h.service.ListSPSControllers(projectID, query.Page, query.Limit)
+	if err != nil {
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	response := dto.ProjectSPSControllerListResponse{
+		Items:      mapper.ToProjectSPSControllerList(result.Items),
+		Total:      result.Total,
+		Page:       result.Page,
+		TotalPages: result.TotalPages,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// ListProjectFieldDevices godoc
+// @Summary List project field devices with pagination
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} dto.ProjectFieldDeviceListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/field-devices [get]
+func (h *ProjectHandler) ListProjectFieldDevices(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if _, err := h.service.GetByID(projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	var query dto.PaginationQuery
+	if !handlerutil.BindQuery(c, &query) {
+		return
+	}
+
+	result, err := h.service.ListFieldDevices(projectID, query.Page, query.Limit)
+	if err != nil {
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	response := dto.ProjectFieldDeviceListResponse{
+		Items:      mapper.ToProjectFieldDeviceList(result.Items),
+		Total:      result.Total,
+		Page:       result.Page,
+		TotalPages: result.TotalPages,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// ListProjectObjectData godoc
+// @Summary List project object data with pagination
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} dto.ObjectDataListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/object-data [get]
+func (h *ProjectHandler) ListProjectObjectData(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if _, err := h.service.GetByID(projectID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	var query dto.PaginationQuery
+	if !handlerutil.BindQuery(c, &query) {
+		return
+	}
+
+	result, err := h.service.ListObjectData(projectID, query.Page, query.Limit)
+	if err != nil {
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	response := dto.ObjectDataListResponse{
+		Items:      mapper.ToObjectDataList(result.Items),
+		Total:      result.Total,
+		Page:       result.Page,
+		TotalPages: result.TotalPages,
+	}
+
+	c.JSON(http.StatusOK, response)
+}

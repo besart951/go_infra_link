@@ -57,6 +57,33 @@ func (r *projectControlCabinetRepo) GetPaginatedList(params domain.PaginationPar
 	}, nil
 }
 
+// GetPaginatedListByProjectID retrieves control cabinets for a project with pagination
+func (r *projectControlCabinetRepo) GetPaginatedListByProjectID(projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[project.ProjectControlCabinet], error) {
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
+	offset := (page - 1) * limit
+
+	query := r.db.Model(&project.ProjectControlCabinet{}).
+		Where("deleted_at IS NULL").
+		Where("project_id = ?", projectID)
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	var items []project.ProjectControlCabinet
+	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&items).Error; err != nil {
+		return nil, err
+	}
+
+	return &domain.PaginatedList[project.ProjectControlCabinet]{
+		Items:      items,
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
+	}, nil
+}
+
 // GetByProjectID retrieves all control cabinets associated with a project
 func (r *projectControlCabinetRepo) GetByProjectID(projectID uuid.UUID) ([]*project.ProjectControlCabinet, error) {
 	var items []*project.ProjectControlCabinet

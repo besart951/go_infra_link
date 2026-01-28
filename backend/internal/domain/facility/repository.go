@@ -2,6 +2,7 @@ package facility
 
 import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	"github.com/google/uuid"
 )
 
 type BuildingRepository = domain.Repository[Building]
@@ -13,8 +14,15 @@ type NotificationClassRepository = domain.Repository[NotificationClass]
 type AlarmDefinitionRepository = domain.Repository[AlarmDefinition]
 type ApparatRepository = domain.Repository[Apparat]
 type ObjectDataRepository = domain.Repository[ObjectData]
-type ControlCabinetRepository = domain.Repository[ControlCabinet]
-type SPSControllerRepository = domain.Repository[SPSController]
+type ControlCabinetRepository interface {
+	domain.Repository[ControlCabinet]
+	GetPaginatedListByBuildingID(buildingID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ControlCabinet], error)
+}
+
+type SPSControllerRepository interface {
+	domain.Repository[SPSController]
+	GetPaginatedListByControlCabinetID(controlCabinetID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[SPSController], error)
+}
 type SPSControllerSystemTypeRepository = domain.Repository[SPSControllerSystemType]
 type FieldDeviceRepository = domain.Repository[FieldDevice]
 type BacnetObjectRepository = domain.Repository[BacnetObject]

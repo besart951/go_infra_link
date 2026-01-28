@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -30,6 +31,9 @@ func Run() error {
 		return fmt.Errorf("config load: %w", err)
 	}
 	log := applogger.Setup(cfg.AppEnv, cfg.LogLevel)
+	if !config.IsProduction(cfg.AppEnv) {
+		log.Info("Database config", "type", cfg.DBType, "dsn", formatDSNForLog(cfg.DBType, cfg.DBDsn))
+	}
 
 	gormDB, err := db.Connect(cfg)
 	if err != nil {
@@ -89,6 +93,10 @@ func Run() error {
 	// Setup Gin router
 	if config.IsProduction(cfg.AppEnv) {
 		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.DebugPrintRouteFunc = func(httpMethod, absolutePath, handlerName string, nuHandlers int) {
+			// Suppress per-route debug output in dev; we log a summary instead.
+		}
 	}
 
 	router := gin.Default()
@@ -104,6 +112,18 @@ func Run() error {
 	})
 
 	httpAddr := cfg.HTTPAddr
+	if !config.IsProduction(cfg.AppEnv) {
+		routes := router.Routes()
+		log.Info(
+			"Routes registered",
+			"count",
+			len(routes),
+			"swagger",
+			localURL(httpAddr, "/swagger/index.html"),
+			"health",
+			localURL(httpAddr, "/health"),
+		)
+	}
 	log.Info("Starting server", "addr", httpAddr, "env", cfg.AppEnv)
 
 	srv := &http.Server{
@@ -219,4 +239,60 @@ func ensureSeedUser(cfg config.Config, log applogger.Logger, userService *userse
 
 	log.Info("Ensured seed superadmin user", "email", cfg.SeedUserEmail, "updated", changed, "password_updated", false)
 	return nil
+}
+
+func formatDSNForLog(dbType, dsn string) string {
+	switch strings.ToLower(dbType) {
+	case "postgres", "pg", "postgresql", "pgx":
+		return maskKeyValue(dsn, "password")
+	case "mysql", "mariadb":
+		return maskMySQLPassword(dsn)
+	default:
+		return dsn
+	}
+}
+
+func maskKeyValue(dsn, key string) string {
+	keyLower := strings.ToLower(key)
+	parts := strings.Fields(dsn)
+	for i, part := range parts {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		if strings.EqualFold(kv[0], keyLower) {
+			parts[i] = kv[0] + "=****"
+		}
+	}
+	return strings.Join(parts, " ")
+}
+
+func maskMySQLPassword(dsn string) string {
+	// user:password@tcp(host:port)/db?params
+	at := strings.Index(dsn, "@")
+	if at <= 0 {
+		return dsn
+	}
+	creds := dsn[:at]
+	colon := strings.Index(creds, ":")
+	if colon <= 0 {
+		return dsn
+	}
+	return creds[:colon+1] + "****" + dsn[at:]
+}
+
+func localURL(addr, path string) string {
+	host := strings.TrimSpace(addr)
+	if host == "" {
+		host = "localhost:8080"
+	}
+	if strings.HasPrefix(host, ":") {
+		host = "localhost" + host
+	} else if strings.HasPrefix(host, "0.0.0.0:") {
+		host = "localhost" + host[len("0.0.0.0"):]
+	}
+	if !strings.HasPrefix(host, "http://") && !strings.HasPrefix(host, "https://") {
+		host = "http://" + host
+	}
+	return host + path
 }

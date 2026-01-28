@@ -18,4 +18,7 @@ func (ProjectFieldDevice) TableName() string {
 	return "project_field_devices"
 }
 
-type ProjectFieldDeviceRepository = domain.Repository[ProjectFieldDevice]
+type ProjectFieldDeviceRepository interface {
+	domain.Repository[ProjectFieldDevice]
+	GetPaginatedListByProjectID(projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ProjectFieldDevice], error)
+}

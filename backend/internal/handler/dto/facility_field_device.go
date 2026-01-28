@@ -13,7 +13,7 @@ type CreateFieldDeviceRequest struct {
 	Description               *string             `json:"description" binding:"omitempty,max=250"`
 	ApparatNr                 *int                `json:"apparat_nr" binding:"required,min=1,max=99"`
 	SPSControllerSystemTypeID uuid.UUID           `json:"sps_controller_system_type_id" binding:"required"`
-	SystemPartID              *uuid.UUID          `json:"system_part_id"`
+	SystemPartID              uuid.UUID           `json:"system_part_id" binding:"required"`
 	ApparatID                 uuid.UUID           `json:"apparat_id" binding:"required"`
 	ObjectDataID              *uuid.UUID          `json:"object_data_id"`
 	BacnetObjects             []BacnetObjectInput `json:"bacnet_objects" binding:"omitempty,dive"`

@@ -11,6 +11,7 @@ type ObjectData struct {
 	Version       string          `gorm:"not null;column:obj_version"`
 	IsActive      bool            `gorm:"default:true"`
 	ProjectID     *uuid.UUID      `gorm:"type:uuid;index"`
+	Project       *ProjectRef     `gorm:"foreignKey:ProjectID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	BacnetObjects []*BacnetObject `gorm:"many2many:object_data_bacnet_objects;"`
 	Apparats      []*Apparat      `gorm:"many2many:object_data_apparats;"`
 }

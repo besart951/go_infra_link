@@ -6,6 +6,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -74,4 +75,10 @@ func (r *projectRepo) GetPaginatedList(params domain.PaginationParams) (*domain.
 		Page:       result.Page,
 		TotalPages: result.TotalPages,
 	}, nil
+}
+
+func (r *projectRepo) AddUser(projectID, userID uuid.UUID) error {
+	project := &domainProject.Project{Base: domain.Base{ID: projectID}}
+	user := &domainUser.User{Base: domain.Base{ID: userID}}
+	return r.db.Model(project).Association("Users").Append(user)
 }

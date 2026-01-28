@@ -18,4 +18,7 @@ func (ProjectControlCabinet) TableName() string {
 	return "project_control_cabinets"
 }
 
-type ProjectControlCabinetRepository = domain.Repository[ProjectControlCabinet]
+type ProjectControlCabinetRepository interface {
+	domain.Repository[ProjectControlCabinet]
+	GetPaginatedListByProjectID(projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ProjectControlCabinet], error)
+}

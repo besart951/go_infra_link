@@ -1,6 +1,9 @@
 package facility
 
-import "github.com/google/uuid"
+import (
+	"github.com/besart951/go_infra_link/backend/internal/domain"
+	"github.com/google/uuid"
+)
 
 // SPSControllerSystemTypeStore extends the basic CRUD repository with helper operations
 // needed by the service layer to keep associations consistent.
@@ -9,5 +12,6 @@ import "github.com/google/uuid"
 // relying on database FK errors.
 type SPSControllerSystemTypeStore interface {
 	SPSControllerSystemTypeRepository
+	GetPaginatedListBySPSControllerID(spsControllerID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[SPSControllerSystemType], error)
 	SoftDeleteBySPSControllerIDs(ids []uuid.UUID) error
 }

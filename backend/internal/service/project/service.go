@@ -4,17 +4,38 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/google/uuid"
 )
 
 type Service struct {
-	repo             domainProject.ProjectRepository
-	objectDataRepo   domainFacility.ObjectDataStore
-	bacnetObjectRepo domainFacility.BacnetObjectStore
+	repo                      domainProject.ProjectRepository
+	projectControlCabinetRepo domainProject.ProjectControlCabinetRepository
+	projectSPSControllerRepo  domainProject.ProjectSPSControllerRepository
+	projectFieldDeviceRepo    domainProject.ProjectFieldDeviceRepository
+	userRepo                  domainUser.UserRepository
+	objectDataRepo            domainFacility.ObjectDataStore
+	bacnetObjectRepo          domainFacility.BacnetObjectStore
 }
 
-func New(repo domainProject.ProjectRepository, objectDataRepo domainFacility.ObjectDataStore, bacnetObjectRepo domainFacility.BacnetObjectStore) *Service {
-	return &Service{repo: repo, objectDataRepo: objectDataRepo, bacnetObjectRepo: bacnetObjectRepo}
+func New(
+	repo domainProject.ProjectRepository,
+	projectControlCabinetRepo domainProject.ProjectControlCabinetRepository,
+	projectSPSControllerRepo domainProject.ProjectSPSControllerRepository,
+	projectFieldDeviceRepo domainProject.ProjectFieldDeviceRepository,
+	userRepo domainUser.UserRepository,
+	objectDataRepo domainFacility.ObjectDataStore,
+	bacnetObjectRepo domainFacility.BacnetObjectStore,
+) *Service {
+	return &Service{
+		repo:                      repo,
+		projectControlCabinetRepo: projectControlCabinetRepo,
+		projectSPSControllerRepo:  projectSPSControllerRepo,
+		projectFieldDeviceRepo:    projectFieldDeviceRepo,
+		userRepo:                  userRepo,
+		objectDataRepo:            objectDataRepo,
+		bacnetObjectRepo:          bacnetObjectRepo,
+	}
 }
 
 func (s *Service) Create(project *domainProject.Project) error {
@@ -102,6 +123,138 @@ func (s *Service) Create(project *domainProject.Project) error {
 	return nil
 }
 
+func (s *Service) CreateControlCabinet(projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
+	entity := &domainProject.ProjectControlCabinet{
+		ProjectID:        projectID,
+		ControlCabinetID: controlCabinetID,
+	}
+	if err := s.projectControlCabinetRepo.Create(entity); err != nil {
+		return nil, err
+	}
+	return entity, nil
+}
+
+func (s *Service) UpdateControlCabinet(linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
+	items, err := s.projectControlCabinetRepo.GetByIds([]uuid.UUID{linkID})
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 || items[0].ProjectID != projectID {
+		return nil, domain.ErrNotFound
+	}
+	entity := items[0]
+	entity.ControlCabinetID = controlCabinetID
+	if err := s.projectControlCabinetRepo.Update(entity); err != nil {
+		return nil, err
+	}
+	return entity, nil
+}
+
+func (s *Service) DeleteControlCabinet(linkID, projectID uuid.UUID) error {
+	items, err := s.projectControlCabinetRepo.GetByIds([]uuid.UUID{linkID})
+	if err != nil {
+		return err
+	}
+	if len(items) == 0 || items[0].ProjectID != projectID {
+		return domain.ErrNotFound
+	}
+	return s.projectControlCabinetRepo.DeleteByIds([]uuid.UUID{linkID})
+}
+
+func (s *Service) CreateSPSController(projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
+	entity := &domainProject.ProjectSPSController{
+		ProjectID:       projectID,
+		SPSControllerID: spsControllerID,
+	}
+	if err := s.projectSPSControllerRepo.Create(entity); err != nil {
+		return nil, err
+	}
+	return entity, nil
+}
+
+func (s *Service) UpdateSPSController(linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
+	items, err := s.projectSPSControllerRepo.GetByIds([]uuid.UUID{linkID})
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 || items[0].ProjectID != projectID {
+		return nil, domain.ErrNotFound
+	}
+	entity := items[0]
+	entity.SPSControllerID = spsControllerID
+	if err := s.projectSPSControllerRepo.Update(entity); err != nil {
+		return nil, err
+	}
+	return entity, nil
+}
+
+func (s *Service) DeleteSPSController(linkID, projectID uuid.UUID) error {
+	items, err := s.projectSPSControllerRepo.GetByIds([]uuid.UUID{linkID})
+	if err != nil {
+		return err
+	}
+	if len(items) == 0 || items[0].ProjectID != projectID {
+		return domain.ErrNotFound
+	}
+	return s.projectSPSControllerRepo.DeleteByIds([]uuid.UUID{linkID})
+}
+
+func (s *Service) CreateFieldDevice(projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
+	entity := &domainProject.ProjectFieldDevice{
+		ProjectID:     projectID,
+		FieldDeviceID: fieldDeviceID,
+	}
+	if err := s.projectFieldDeviceRepo.Create(entity); err != nil {
+		return nil, err
+	}
+	return entity, nil
+}
+
+func (s *Service) InviteUser(projectID, userID uuid.UUID) error {
+	projects, err := s.repo.GetByIds([]uuid.UUID{projectID})
+	if err != nil {
+		return err
+	}
+	if len(projects) == 0 {
+		return domain.ErrNotFound
+	}
+	users, err := s.userRepo.GetByIds([]uuid.UUID{userID})
+	if err != nil {
+		return err
+	}
+	if len(users) == 0 {
+		return domain.ErrNotFound
+	}
+	return s.repo.AddUser(projectID, userID)
+}
+
+func (s *Service) UpdateFieldDevice(linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
+	items, err := s.projectFieldDeviceRepo.GetByIds([]uuid.UUID{linkID})
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 || items[0].ProjectID != projectID {
+		return nil, domain.ErrNotFound
+	}
+	entity := items[0]
+	entity.FieldDeviceID = fieldDeviceID
+	if err := s.projectFieldDeviceRepo.Update(entity); err != nil {
+		return nil, err
+	}
+	return entity, nil
+}
+
+func (s *Service) DeleteFieldDevice(linkID, projectID uuid.UUID) error {
+	items, err := s.projectFieldDeviceRepo.GetByIds([]uuid.UUID{linkID})
+	if err != nil {
+		return err
+	}
+	if len(items) == 0 || items[0].ProjectID != projectID {
+		return domain.ErrNotFound
+	}
+	return s.projectFieldDeviceRepo.DeleteByIds([]uuid.UUID{linkID})
+}
+
 func (s *Service) GetByIds(ids []uuid.UUID) ([]*domainProject.Project, error) {
 	return s.repo.GetByIds(ids)
 }
@@ -132,4 +285,24 @@ func (s *Service) List(page, limit int, search string) (*domain.PaginatedList[do
 		Limit:  limit,
 		Search: search,
 	})
+}
+
+func (s *Service) ListControlCabinets(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error) {
+	page, limit = domain.NormalizePagination(page, limit, 10)
+	return s.projectControlCabinetRepo.GetPaginatedListByProjectID(projectID, domain.PaginationParams{Page: page, Limit: limit})
+}
+
+func (s *Service) ListSPSControllers(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectSPSController], error) {
+	page, limit = domain.NormalizePagination(page, limit, 10)
+	return s.projectSPSControllerRepo.GetPaginatedListByProjectID(projectID, domain.PaginationParams{Page: page, Limit: limit})
+}
+
+func (s *Service) ListFieldDevices(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectFieldDevice], error) {
+	page, limit = domain.NormalizePagination(page, limit, 10)
+	return s.projectFieldDeviceRepo.GetPaginatedListByProjectID(projectID, domain.PaginationParams{Page: page, Limit: limit})
+}
+
+func (s *Service) ListObjectData(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	page, limit = domain.NormalizePagination(page, limit, 10)
+	return s.objectDataRepo.GetPaginatedListForProject(projectID, domain.PaginationParams{Page: page, Limit: limit})
 }

@@ -18,7 +18,7 @@ const (
 
 type Project struct {
 	domain.Base
-	Name        string        `gorm:"not null"`
+	Name        string `gorm:"not null"`
 	Description string
 	Status      ProjectStatus `gorm:"type:varchar(50);not null"`
 	StartDate   *time.Time
@@ -35,4 +35,7 @@ type Phase struct {
 	Name string `gorm:"not null"`
 }
 
-type ProjectRepository = domain.Repository[Project]
+type ProjectRepository interface {
+	domain.Repository[Project]
+	AddUser(projectID, userID uuid.UUID) error
+}

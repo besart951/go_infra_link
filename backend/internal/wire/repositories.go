@@ -11,6 +11,7 @@ import (
 	authrepo "github.com/besart951/go_infra_link/backend/internal/repository/auth"
 	facilityrepo "github.com/besart951/go_infra_link/backend/internal/repository/facilitysql"
 	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
+	projectsqlrepo "github.com/besart951/go_infra_link/backend/internal/repository/projectsql"
 	teamrepo "github.com/besart951/go_infra_link/backend/internal/repository/team"
 	userrepo "github.com/besart951/go_infra_link/backend/internal/repository/user"
 	"gorm.io/gorm"
@@ -18,14 +19,17 @@ import (
 
 // Repositories holds all repository instances.
 type Repositories struct {
-	Project       domainProject.ProjectRepository
-	User          domainUser.UserRepository
-	UserEmail     domainUser.UserEmailRepository
-	RefreshToken  domainAuth.RefreshTokenRepository
-	LoginAttempt  domainAuth.LoginAttemptRepository
-	PasswordReset domainAuth.PasswordResetTokenRepository
-	Team          domainTeam.TeamRepository
-	TeamMember    domainTeam.TeamMemberRepository
+	Project                domainProject.ProjectRepository
+	ProjectControlCabinets domainProject.ProjectControlCabinetRepository
+	ProjectSPSControllers  domainProject.ProjectSPSControllerRepository
+	ProjectFieldDevices    domainProject.ProjectFieldDeviceRepository
+	User                   domainUser.UserRepository
+	UserEmail              domainUser.UserEmailRepository
+	RefreshToken           domainAuth.RefreshTokenRepository
+	LoginAttempt           domainAuth.LoginAttemptRepository
+	PasswordReset          domainAuth.PasswordResetTokenRepository
+	Team                   domainTeam.TeamRepository
+	TeamMember             domainTeam.TeamMemberRepository
 
 	FacilityBuildings                domainFacility.BuildingRepository
 	FacilitySystemTypes              domainFacility.SystemTypeRepository
@@ -54,14 +58,17 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 	}
 
 	return &Repositories{
-		Project:       projectrepo.NewProjectRepository(gormDB),
-		User:          userRepo,
-		UserEmail:     userEmailRepo,
-		RefreshToken:  authrepo.NewRefreshTokenRepository(gormDB),
-		LoginAttempt:  authrepo.NewLoginAttemptRepository(gormDB),
-		PasswordReset: authrepo.NewPasswordResetTokenRepository(gormDB),
-		Team:          teamrepo.NewTeamRepository(gormDB),
-		TeamMember:    teamrepo.NewTeamMemberRepository(gormDB),
+		Project:                projectrepo.NewProjectRepository(gormDB),
+		ProjectControlCabinets: projectsqlrepo.NewProjectControlCabinetRepository(gormDB),
+		ProjectSPSControllers:  projectsqlrepo.NewProjectSPSControllerRepository(gormDB),
+		ProjectFieldDevices:    projectsqlrepo.NewProjectFieldDeviceRepository(gormDB),
+		User:                   userRepo,
+		UserEmail:              userEmailRepo,
+		RefreshToken:           authrepo.NewRefreshTokenRepository(gormDB),
+		LoginAttempt:           authrepo.NewLoginAttemptRepository(gormDB),
+		PasswordReset:          authrepo.NewPasswordResetTokenRepository(gormDB),
+		Team:                   teamrepo.NewTeamRepository(gormDB),
+		TeamMember:             teamrepo.NewTeamMemberRepository(gormDB),
 
 		FacilityBuildings:                facilityrepo.NewBuildingRepository(gormDB),
 		FacilitySystemTypes:              facilityrepo.NewSystemTypeRepository(gormDB),

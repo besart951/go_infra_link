@@ -12,6 +12,7 @@ import (
 
 type controlCabinetRepo struct {
 	*gormbase.BaseRepository[*domainFacility.ControlCabinet]
+	db *gorm.DB
 }
 
 func NewControlCabinetRepository(db *gorm.DB) domainFacility.ControlCabinetRepository {
@@ -21,7 +22,7 @@ func NewControlCabinetRepository(db *gorm.DB) domainFacility.ControlCabinetRepos
 	}
 
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.ControlCabinet](db, searchCallback)
-	return &controlCabinetRepo{BaseRepository: baseRepo}
+	return &controlCabinetRepo{BaseRepository: baseRepo, db: db}
 }
 
 func (r *controlCabinetRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.ControlCabinet, error) {
@@ -57,5 +58,36 @@ func (r *controlCabinetRepo) GetPaginatedList(params domain.PaginationParams) (*
 		Total:      result.Total,
 		Page:       result.Page,
 		TotalPages: result.TotalPages,
+	}, nil
+}
+
+func (r *controlCabinetRepo) GetPaginatedListByBuildingID(buildingID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ControlCabinet], error) {
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
+	offset := (page - 1) * limit
+
+	query := r.db.Model(&domainFacility.ControlCabinet{}).
+		Where("deleted_at IS NULL").
+		Where("building_id = ?", buildingID)
+
+	if strings.TrimSpace(params.Search) != "" {
+		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
+		query = query.Where("LOWER(control_cabinet_nr) LIKE ?", pattern)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	var items []domainFacility.ControlCabinet
+	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&items).Error; err != nil {
+		return nil, err
+	}
+
+	return &domain.PaginatedList[domainFacility.ControlCabinet]{
+		Items:      items,
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
 }

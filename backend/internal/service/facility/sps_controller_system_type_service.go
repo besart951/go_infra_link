@@ -20,3 +20,11 @@ func (s *SPSControllerSystemTypeService) List(page, limit int, search string) (*
 		Search: search,
 	})
 }
+
+func (s *SPSControllerSystemTypeService) ListBySPSControllerID(spsControllerID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
+	return s.repo.GetPaginatedListBySPSControllerID(spsControllerID, domain.PaginationParams{
+		Page:   page,
+		Limit:  limit,
+		Search: search,
+	})
+}

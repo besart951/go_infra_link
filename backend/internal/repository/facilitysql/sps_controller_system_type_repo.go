@@ -91,6 +91,41 @@ func (r *spsControllerSystemTypeRepo) GetPaginatedList(params domain.PaginationP
 	}, nil
 }
 
+func (r *spsControllerSystemTypeRepo) GetPaginatedListBySPSControllerID(spsControllerID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
+	offset := (page - 1) * limit
+
+	query := r.db.Model(&domainFacility.SPSControllerSystemType{}).
+		Where("sps_controller_system_types.deleted_at IS NULL").
+		Where("sps_controller_id = ?", spsControllerID)
+
+	if strings.TrimSpace(params.Search) != "" {
+		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
+		query = query.Joins("LEFT JOIN sps_controllers ON sps_controllers.id = sps_controller_system_types.sps_controller_id").
+			Joins("LEFT JOIN system_types ON system_types.id = sps_controller_system_types.system_type_id").
+			Where("LOWER(sps_controller_system_types.document_name) LIKE ? OR LOWER(sps_controllers.device_name) LIKE ? OR LOWER(system_types.name) LIKE ?", pattern, pattern, pattern)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	var items []domainFacility.SPSControllerSystemType
+	if err := query.Preload("SPSController").Preload("SystemType").
+		Order("sps_controller_system_types.created_at DESC").
+		Limit(limit).Offset(offset).Find(&items).Error; err != nil {
+		return nil, err
+	}
+
+	return &domain.PaginatedList[domainFacility.SPSControllerSystemType]{
+		Items:      items,
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
+	}, nil
+}
+
 func (r *spsControllerSystemTypeRepo) SoftDeleteBySPSControllerIDs(ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil

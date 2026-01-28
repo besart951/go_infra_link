@@ -59,7 +59,15 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 	})
 
 	return &Services{
-		Project:  projectservice.New(repos.Project, repos.FacilityObjectData, repos.FacilityBacnetObjects),
+		Project: projectservice.New(
+			repos.Project,
+			repos.ProjectControlCabinets,
+			repos.ProjectSPSControllers,
+			repos.ProjectFieldDevices,
+			repos.User,
+			repos.FacilityObjectData,
+			repos.FacilityBacnetObjects,
+		),
 		User:     userservice.New(repos.User, passwordService),
 		Password: passwordService,
 		JWT:      jwtService,

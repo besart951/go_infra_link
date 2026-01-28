@@ -88,6 +88,15 @@ func (s *SPSControllerService) List(page, limit int, search string) (*domain.Pag
 	})
 }
 
+func (s *SPSControllerService) ListByControlCabinetID(controlCabinetID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSController], error) {
+	page, limit = domain.NormalizePagination(page, limit, 10)
+	return s.repo.GetPaginatedListByControlCabinetID(controlCabinetID, domain.PaginationParams{
+		Page:   page,
+		Limit:  limit,
+		Search: search,
+	})
+}
+
 func (s *SPSControllerService) Update(spsController *domainFacility.SPSController) error {
 	if err := s.validateRequiredFields(spsController); err != nil {
 		return err

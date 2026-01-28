@@ -45,6 +45,15 @@ func (s *ControlCabinetService) List(page, limit int, search string) (*domain.Pa
 	})
 }
 
+func (s *ControlCabinetService) ListByBuildingID(buildingID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.ControlCabinet], error) {
+	page, limit = domain.NormalizePagination(page, limit, 10)
+	return s.repo.GetPaginatedListByBuildingID(buildingID, domain.PaginationParams{
+		Page:   page,
+		Limit:  limit,
+		Search: search,
+	})
+}
+
 func (s *ControlCabinetService) Update(controlCabinet *domainFacility.ControlCabinet) error {
 	if err := s.validateRequiredFields(controlCabinet); err != nil {
 		return err
