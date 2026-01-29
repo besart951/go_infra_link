@@ -16,7 +16,7 @@
 	let { initialData }: Props = $props();
 
 	let description = $state('');
-	let version = $state('');
+	let version = $state('1.0');
 	let is_active = $state(true);
 	let bacnetObjects: BacnetObjectInput[] = $state([]);
 	let loading = $state(false);
@@ -25,12 +25,24 @@
 	$effect(() => {
 		if (initialData) {
 			description = initialData.description ?? '';
-			version = initialData.version ?? '';
+			version = initialData.version ?? '1.0';
 			is_active = initialData.is_active ?? true;
+			bacnetObjects = (initialData.bacnet_objects ?? []).map((obj) => ({
+				text_fix: obj.text_fix ?? '',
+				description: obj.description ?? '',
+				gms_visible: obj.gms_visible ?? false,
+				optional: obj.optional ?? false,
+				text_individual: obj.text_individual ?? '',
+				software_type: obj.software_type ?? 'ai',
+				software_number: obj.software_number ?? 1,
+				hardware_type: obj.hardware_type ?? 'ai',
+				hardware_quantity: obj.hardware_quantity ?? 1
+			}));
 		} else {
 			description = '';
-			version = '';
+			version = '1.0';
 			is_active = true;
+			bacnetObjects = [];
 		}
 	});
 
@@ -45,9 +57,9 @@
 				gms_visible: false,
 				optional: false,
 				text_individual: '',
-				software_type: '',
-				software_number: 0,
-				hardware_type: '',
+				software_type: 'ai',
+				software_number: 1,
+				hardware_type: 'ai',
 				hardware_quantity: 1
 			}
 		];
@@ -83,7 +95,8 @@
 				const res = await createObjectData({
 					description,
 					version,
-					is_active
+					is_active,
+					bacnet_objects: bacnetObjects
 				});
 				dispatch('success', res);
 			}

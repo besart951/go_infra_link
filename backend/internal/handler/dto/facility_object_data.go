@@ -9,10 +9,11 @@ import (
 // Facility DTOs - ObjectData
 
 type CreateObjectDataRequest struct {
-	Description string     `json:"description" binding:"required,max=250"`
-	Version     string     `json:"version" binding:"required,max=100"`
-	IsActive    *bool      `json:"is_active"`
-	ProjectID   *uuid.UUID `json:"project_id"`
+	Description   string               `json:"description" binding:"required,max=250"`
+	Version       string               `json:"version" binding:"required,max=100"`
+	IsActive      *bool                `json:"is_active"`
+	ProjectID     *uuid.UUID           `json:"project_id"`
+	BacnetObjects *[]BacnetObjectInput `json:"bacnet_objects" binding:"omitempty,dive"`
 }
 
 type UpdateObjectDataRequest struct {
@@ -23,13 +24,14 @@ type UpdateObjectDataRequest struct {
 }
 
 type ObjectDataResponse struct {
-	ID          uuid.UUID  `json:"id"`
-	Description string     `json:"description"`
-	Version     string     `json:"version"`
-	IsActive    bool       `json:"is_active"`
-	ProjectID   *uuid.UUID `json:"project_id"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID            uuid.UUID              `json:"id"`
+	Description   string                 `json:"description"`
+	Version       string                 `json:"version"`
+	IsActive      bool                   `json:"is_active"`
+	ProjectID     *uuid.UUID             `json:"project_id"`
+	BacnetObjects []BacnetObjectResponse `json:"bacnet_objects"`
+	CreatedAt     time.Time              `json:"created_at"`
+	UpdatedAt     time.Time              `json:"updated_at"`
 }
 
 type ObjectDataListResponse struct {

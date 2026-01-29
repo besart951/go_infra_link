@@ -1,18 +1,21 @@
 package facility
 
 import (
+	"errors"
 	"net/http"
 
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
 )
 
 type ObjectDataHandler struct {
-	service ObjectDataService
+	service       ObjectDataService
+	bacnetService BacnetObjectService
 }
 
-func NewObjectDataHandler(service ObjectDataService) *ObjectDataHandler {
-	return &ObjectDataHandler{service: service}
+func NewObjectDataHandler(service ObjectDataService, bacnetService BacnetObjectService) *ObjectDataHandler {
+	return &ObjectDataHandler{service: service, bacnetService: bacnetService}
 }
 
 // CreateObjectData godoc
@@ -34,6 +37,41 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 	obj := toObjectDataModel(req)
 
 	if err := h.service.Create(obj); respondValidationOrError(c, err, "creation_failed") {
+		return
+	}
+
+	if req.BacnetObjects != nil && len(*req.BacnetObjects) > 0 {
+		for _, input := range *req.BacnetObjects {
+			createReq := dto.CreateBacnetObjectRequest{
+				ObjectDataID:      &obj.ID,
+				BacnetObjectInput: input,
+			}
+			bacnetObject := toBacnetObjectModel(createReq)
+			if err := h.bacnetService.CreateWithParent(bacnetObject, nil, &obj.ID); err != nil {
+				if ve, ok := domain.AsValidationError(err); ok {
+					respondValidationError(c, ve.Fields)
+					return
+				}
+				if errors.Is(err, domain.ErrInvalidArgument) {
+					respondInvalidArgument(c, "invalid bacnet object data")
+					return
+				}
+				if errors.Is(err, domain.ErrNotFound) {
+					respondInvalidReference(c)
+					return
+				}
+				if errors.Is(err, domain.ErrConflict) {
+					respondConflict(c, "entity conflict")
+					return
+				}
+				respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+				return
+			}
+		}
+	}
+
+	if created, err := h.service.GetByID(obj.ID); err == nil && created != nil {
+		c.JSON(http.StatusCreated, toObjectDataResponse(*created))
 		return
 	}
 

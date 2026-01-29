@@ -125,7 +125,7 @@ func toApparatResponse(apparat domainFacility.Apparat) dto.ApparatResponse {
 			}
 		}
 	}
-	
+
 	return dto.ApparatResponse{
 		ID:          apparat.ID,
 		ShortName:   apparat.ShortName,
@@ -367,14 +367,26 @@ func toAlarmDefinitionListResponse(list *domain.PaginatedList[domainFacility.Ala
 }
 
 func toObjectDataResponse(obj domainFacility.ObjectData) dto.ObjectDataResponse {
+	bacnetObjects := []domainFacility.BacnetObject{}
+	if len(obj.BacnetObjects) > 0 {
+		bacnetObjects = make([]domainFacility.BacnetObject, 0, len(obj.BacnetObjects))
+		for _, item := range obj.BacnetObjects {
+			if item == nil {
+				continue
+			}
+			bacnetObjects = append(bacnetObjects, *item)
+		}
+	}
+
 	return dto.ObjectDataResponse{
-		ID:          obj.ID,
-		Description: obj.Description,
-		Version:     obj.Version,
-		IsActive:    obj.IsActive,
-		ProjectID:   obj.ProjectID,
-		CreatedAt:   obj.CreatedAt,
-		UpdatedAt:   obj.UpdatedAt,
+		ID:            obj.ID,
+		Description:   obj.Description,
+		Version:       obj.Version,
+		IsActive:      obj.IsActive,
+		ProjectID:     obj.ProjectID,
+		BacnetObjects: toBacnetObjectResponses(bacnetObjects),
+		CreatedAt:     obj.CreatedAt,
+		UpdatedAt:     obj.UpdatedAt,
 	}
 }
 

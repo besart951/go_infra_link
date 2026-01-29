@@ -29,7 +29,11 @@ func NewObjectDataRepository(db *gorm.DB) domainFacility.ObjectDataStore {
 }
 
 func (r *objectDataRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.ObjectData, error) {
-	return r.BaseRepository.GetByIds(ids)
+	var items []*domainFacility.ObjectData
+	if err := r.db.Where("id IN ?", ids).Preload("BacnetObjects").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 func (r *objectDataRepo) Create(entity *domainFacility.ObjectData) error {
@@ -45,22 +49,36 @@ func (r *objectDataRepo) DeleteByIds(ids []uuid.UUID) error {
 }
 
 func (r *objectDataRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
-	if err != nil {
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
+	offset := (page - 1) * limit
+
+	query := r.db.Model(&domainFacility.ObjectData{})
+
+	if strings.TrimSpace(params.Search) != "" {
+		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
+		query = query.Where("LOWER(description) LIKE ?", pattern)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	// Convert []*ObjectData to []ObjectData for the interface
-	items := make([]domainFacility.ObjectData, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
+	var items []domainFacility.ObjectData
+	if err := query.
+		Order("created_at DESC").
+		Preload("BacnetObjects").
+		Limit(limit).
+		Offset(offset).
+		Find(&items).Error; err != nil {
+		return nil, err
 	}
 
 	return &domain.PaginatedList[domainFacility.ObjectData]{
 		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
 }
 
@@ -98,7 +116,7 @@ func (r *objectDataRepo) GetPaginatedListForProject(projectID uuid.UUID, params 
 	}
 
 	var items []domainFacility.ObjectData
-	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&items).Error; err != nil {
+	if err := query.Order("created_at DESC").Preload("BacnetObjects").Limit(limit).Offset(offset).Find(&items).Error; err != nil {
 		return nil, err
 	}
 

@@ -6,13 +6,19 @@
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { objectDataStore } from '$lib/stores/list/entityStores.js';
 	import type { ObjectData } from '$lib/domain/facility/index.js';
+	import { getObjectData } from '$lib/infrastructure/api/facility.adapter.js';
 	import ObjectDataForm from '$lib/components/facility/ObjectDataForm.svelte';
 
 	let showForm = $state(false);
 	let editingItem: ObjectData | undefined = $state(undefined);
 
-	function handleEdit(item: ObjectData) {
-		editingItem = item;
+	async function handleEdit(item: ObjectData) {
+		try {
+			editingItem = await getObjectData(item.id);
+		} catch (error) {
+			console.error(error);
+			editingItem = item;
+		}
 		showForm = true;
 	}
 

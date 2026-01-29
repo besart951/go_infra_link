@@ -35,7 +35,7 @@ func NewHandlers(services *facilityservice.Services) *Handlers {
 		StateText:               NewStateTextHandler(services.StateText),
 		NotificationClass:       NewNotificationClassHandler(services.NotificationClass),
 		AlarmDefinition:         NewAlarmDefinitionHandler(services.AlarmDefinition),
-		ObjectData:              NewObjectDataHandler(services.ObjectData),
+		ObjectData:              NewObjectDataHandler(services.ObjectData, services.BacnetObject),
 		SPSControllerSystemType: NewSPSControllerSystemTypeHandler(services.SPSControllerSystemType),
 	}
 }

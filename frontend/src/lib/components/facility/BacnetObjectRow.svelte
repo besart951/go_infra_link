@@ -2,6 +2,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Trash2 } from '@lucide/svelte';
 	import { BACNET_SOFTWARE_TYPES, BACNET_HARDWARE_TYPES } from '$lib/domain/facility/index.js';
 
@@ -26,14 +27,57 @@
 		description = $bindable(),
 		gmsVisible = $bindable(false),
 		optional = $bindable(false),
-		textIndividual = $bindable(),
-		softwareType = $bindable(),
-		softwareNumber = $bindable(0),
-		hardwareType = $bindable(),
+		textIndividual = $bindable(''),
+		softwareType = $bindable('ai'),
+		softwareNumber = $bindable(1),
+		hardwareType = $bindable('ai'),
 		hardwareQuantity = $bindable(1),
 		onRemove,
 		onUpdate
 	}: Props = $props();
+
+	let textIndividualEnabled = $state(!!textIndividual);
+	let prevGmsVisible = $state<boolean | null>(null);
+	let prevOptional = $state<boolean | null>(null);
+
+	$effect(() => {
+		if (prevGmsVisible === null) {
+			prevGmsVisible = gmsVisible;
+			return;
+		}
+		if (gmsVisible !== prevGmsVisible) {
+			prevGmsVisible = gmsVisible;
+			onUpdate('gms_visible', gmsVisible);
+		}
+	});
+
+	$effect(() => {
+		if (prevOptional === null) {
+			prevOptional = optional;
+			return;
+		}
+		if (optional !== prevOptional) {
+			prevOptional = optional;
+			onUpdate('optional', optional);
+		}
+	});
+
+	$effect(() => {
+		const value = textIndividualEnabled ? 'Text Individual' : '';
+		if (textIndividual !== value) {
+			textIndividual = value;
+			onUpdate('text_individual', textIndividual);
+		}
+	});
+
+	$effect(() => {
+		if (textIndividual && !textIndividualEnabled) {
+			textIndividualEnabled = true;
+		}
+		if (!textIndividual && textIndividualEnabled) {
+			textIndividualEnabled = false;
+		}
+	});
 </script>
 
 <div class="grid grid-cols-12 gap-2 rounded-md border p-3">
@@ -146,40 +190,30 @@
 		</div>
 	</div>
 
-	<!-- Text Individual -->
-	<div class="col-span-12 space-y-1 md:col-span-6">
-		<Label for="text_individual_{index}" class="text-xs">Text Individual</Label>
-		<Input
-			id="text_individual_{index}"
-			bind:value={textIndividual}
-			onchange={() => onUpdate('text_individual', textIndividual)}
-			maxlength={250}
-			placeholder="Optional individual text"
-			class="h-8 text-sm"
-		/>
-	</div>
-
 	<!-- Checkboxes -->
-	<div class="col-span-12 flex items-center gap-4 md:col-span-6">
+	<div class="col-span-12 flex flex-wrap items-center gap-4 md:col-span-6">
 		<div class="flex items-center gap-2">
-			<input
+			<Checkbox
 				id="gms_visible_{index}"
-				type="checkbox"
 				bind:checked={gmsVisible}
-				onchange={() => onUpdate('gms_visible', gmsVisible)}
-				class="h-4 w-4 rounded"
 			/>
 			<Label for="gms_visible_{index}" class="cursor-pointer text-xs">GMS Visible</Label>
 		</div>
 		<div class="flex items-center gap-2">
-			<input
+			<Checkbox
 				id="optional_{index}"
-				type="checkbox"
 				bind:checked={optional}
-				onchange={() => onUpdate('optional', optional)}
-				class="h-4 w-4 rounded"
 			/>
 			<Label for="optional_{index}" class="cursor-pointer text-xs">Optional</Label>
+		</div>
+		<div class="flex items-center gap-2">
+			<Checkbox
+				id="text_individual_{index}"
+				bind:checked={textIndividualEnabled}
+			/>
+			<Label for="text_individual_{index}" class="cursor-pointer text-xs">
+				Text Individual
+			</Label>
 		</div>
 	</div>
 </div>
