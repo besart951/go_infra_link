@@ -9,20 +9,30 @@
 	import { Plus } from '@lucide/svelte';
 	import BacnetObjectRow from './BacnetObjectRow.svelte';
 
-	export let initialData: ObjectData | undefined = undefined;
-
-	let description = initialData?.description ?? '';
-	let version = initialData?.version ?? '';
-	let is_active = initialData?.is_active ?? true;
-	let bacnetObjects: BacnetObjectInput[] = $state([]);
-	let loading = false;
-	let error = '';
-
-	$: if (initialData) {
-		description = initialData.description ?? '';
-		version = initialData.version ?? '';
-		is_active = initialData.is_active ?? true;
+	interface Props {
+		initialData?: ObjectData;
 	}
+
+	let { initialData }: Props = $props();
+
+	let description = $state('');
+	let version = $state('');
+	let is_active = $state(true);
+	let bacnetObjects: BacnetObjectInput[] = $state([]);
+	let loading = $state(false);
+	let error = $state('');
+
+	$effect(() => {
+		if (initialData) {
+			description = initialData.description ?? '';
+			version = initialData.version ?? '';
+			is_active = initialData.is_active ?? true;
+		} else {
+			description = '';
+			version = '';
+			is_active = true;
+		}
+	});
 
 	const dispatch = createEventDispatcher();
 
@@ -56,7 +66,8 @@
 		});
 	}
 
-	async function handleSubmit() {
+	async function handleSubmit(event: SubmitEvent) {
+		event.preventDefault();
 		loading = true;
 		error = '';
 
@@ -85,7 +96,7 @@
 	}
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
+<form onsubmit={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">{initialData ? 'Edit Object Data' : 'New Object Data'}</h3>
 	</div>
