@@ -8,7 +8,7 @@
 		createSpecification,
 		updateSpecification
 	} from '$lib/infrastructure/api/facility.adapter.js';
-	import { getErrorMessage } from '$lib/api/client.js';
+	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { Specification } from '$lib/domain/facility/index.js';
 	import { createEventDispatcher } from 'svelte';
 
@@ -32,6 +32,7 @@
 
 	let loading = false;
 	let error = '';
+	let fieldErrors: Record<string, string> = {};
 
 	$: if (initialData) {
 		field_device_id = initialData.field_device_id ?? '';
@@ -51,6 +52,8 @@
 
 	const dispatch = createEventDispatcher();
 
+	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['specification']);
+
 	function toNumber(value: string): number | undefined {
 		const parsed = Number(value);
 		return Number.isFinite(parsed) ? parsed : undefined;
@@ -59,6 +62,7 @@
 	async function handleSubmit() {
 		loading = true;
 		error = '';
+		fieldErrors = {};
 
 		if (!field_device_id) {
 			error = 'Please select a field device';
@@ -103,7 +107,8 @@
 			}
 		} catch (e) {
 			console.error(e);
-			error = getErrorMessage(e);
+			fieldErrors = getFieldErrors(e);
+			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
 		} finally {
 			loading = false;
 		}
@@ -121,46 +126,79 @@
 			<div class="block">
 				<FieldDeviceSelect bind:value={field_device_id} width="w-full" />
 			</div>
+			{#if fieldError('field_device_id')}
+				<p class="text-sm text-red-500">{fieldError('field_device_id')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_supplier">Supplier</Label>
 			<Input id="spec_supplier" bind:value={specification_supplier} maxlength={250} />
+			{#if fieldError('specification_supplier')}
+				<p class="text-sm text-red-500">{fieldError('specification_supplier')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_brand">Brand</Label>
 			<Input id="spec_brand" bind:value={specification_brand} maxlength={250} />
+			{#if fieldError('specification_brand')}
+				<p class="text-sm text-red-500">{fieldError('specification_brand')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_type">Type</Label>
 			<Input id="spec_type" bind:value={specification_type} maxlength={250} />
+			{#if fieldError('specification_type')}
+				<p class="text-sm text-red-500">{fieldError('specification_type')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_motor_valve">Motor Valve Info</Label>
 			<Input id="spec_motor_valve" bind:value={additional_info_motor_valve} maxlength={250} />
+			{#if fieldError('additional_info_motor_valve')}
+				<p class="text-sm text-red-500">{fieldError('additional_info_motor_valve')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_size">Size</Label>
 			<Input id="spec_size" type="number" bind:value={additional_info_size} />
+			{#if fieldError('additional_info_size')}
+				<p class="text-sm text-red-500">{fieldError('additional_info_size')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_ph">Electrical PH</Label>
 			<Input id="spec_ph" type="number" bind:value={electrical_connection_ph} />
+			{#if fieldError('electrical_connection_ph')}
+				<p class="text-sm text-red-500">{fieldError('electrical_connection_ph')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_acdc">Electrical AC/DC</Label>
 			<Input id="spec_acdc" bind:value={electrical_connection_acdc} maxlength={2} />
+			{#if fieldError('electrical_connection_acdc')}
+				<p class="text-sm text-red-500">{fieldError('electrical_connection_acdc')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_amp">Amperage</Label>
 			<Input id="spec_amp" type="number" bind:value={electrical_connection_amperage} />
+			{#if fieldError('electrical_connection_amperage')}
+				<p class="text-sm text-red-500">{fieldError('electrical_connection_amperage')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_power">Power</Label>
 			<Input id="spec_power" type="number" bind:value={electrical_connection_power} />
+			{#if fieldError('electrical_connection_power')}
+				<p class="text-sm text-red-500">{fieldError('electrical_connection_power')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_rotation">Rotation</Label>
 			<Input id="spec_rotation" type="number" bind:value={electrical_connection_rotation} />
+			{#if fieldError('electrical_connection_rotation')}
+				<p class="text-sm text-red-500">{fieldError('electrical_connection_rotation')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2 md:col-span-2">
 			<Label for="spec_location">Installation Location</Label>
@@ -170,6 +208,11 @@
 				rows={2}
 				maxlength={250}
 			/>
+			{#if fieldError('additional_information_installation_location')}
+				<p class="text-sm text-red-500">
+					{fieldError('additional_information_installation_location')}
+				</p>
+			{/if}
 		</div>
 	</div>
 

@@ -4,7 +4,7 @@
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { createSystemPart, updateSystemPart } from '$lib/infrastructure/api/facility.adapter.js';
-	import { getErrorMessage } from '$lib/api/client.js';
+	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { SystemPart } from '$lib/domain/facility/index.js';
 	import { createEventDispatcher } from 'svelte';
 
@@ -15,6 +15,7 @@
 	let description = initialData?.description ?? '';
 	let loading = false;
 	let error = '';
+	let fieldErrors: Record<string, string> = {};
 
 	$: if (initialData) {
 		short_name = initialData.short_name;
@@ -24,9 +25,12 @@
 
 	const dispatch = createEventDispatcher();
 
+	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['systempart']);
+
 	async function handleSubmit() {
 		loading = true;
 		error = '';
+		fieldErrors = {};
 
 		try {
 			if (initialData) {
@@ -46,7 +50,8 @@
 			}
 		} catch (e) {
 			console.error(e);
-			error = getErrorMessage(e);
+			fieldErrors = getFieldErrors(e);
+			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
 		} finally {
 			loading = false;
 		}
@@ -62,14 +67,23 @@
 		<div class="space-y-2">
 			<Label for="system_part_short">Short Name</Label>
 			<Input id="system_part_short" bind:value={short_name} required maxlength={10} />
+			{#if fieldError('short_name')}
+				<p class="text-sm text-red-500">{fieldError('short_name')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="system_part_name">Name</Label>
 			<Input id="system_part_name" bind:value={name} required maxlength={250} />
+			{#if fieldError('name')}
+				<p class="text-sm text-red-500">{fieldError('name')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2 md:col-span-2">
 			<Label for="system_part_desc">Description</Label>
 			<Textarea id="system_part_desc" bind:value={description} rows={3} maxlength={250} />
+			{#if fieldError('description')}
+				<p class="text-sm text-red-500">{fieldError('description')}</p>
+			{/if}
 		</div>
 	</div>
 

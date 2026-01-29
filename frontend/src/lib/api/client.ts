@@ -14,6 +14,8 @@ export interface ApiError {
 	status?: number;
 }
 
+export type FieldErrorMap = Record<string, string>;
+
 export class ApiException extends Error {
 	constructor(
 		public status: number,
@@ -166,6 +168,33 @@ export function getErrorMessage(err: unknown): string {
 		return err.message;
 	}
 	return 'An unknown error occurred';
+}
+
+/**
+ * Extract field-level validation errors from API exceptions.
+ */
+export function getFieldErrors(err: unknown): FieldErrorMap {
+	if (!(err instanceof ApiException)) return {};
+	if (!err.details || typeof err.details !== 'object') return {};
+	const entries = Object.entries(err.details as Record<string, unknown>)
+		.filter(([, value]) => typeof value === 'string')
+		.map(([key, value]) => [key, value as string]);
+	return Object.fromEntries(entries);
+}
+
+/**
+ * Resolve a field error by checking both prefixed and raw keys.
+ */
+export function getFieldError(
+	errors: FieldErrorMap,
+	field: string,
+	prefixes: string[] = []
+): string | undefined {
+	for (const prefix of prefixes) {
+		const key = `${prefix}.${field}`;
+		if (errors[key]) return errors[key];
+	}
+	return errors[field];
 }
 
 /**

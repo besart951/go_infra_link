@@ -10,7 +10,7 @@
 		listSPSControllerSystemTypes,
 		updateSPSController
 	} from '$lib/infrastructure/api/facility.adapter.js';
-	import { getErrorMessage } from '$lib/api/client.js';
+	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type {
 		SPSController,
 		SPSControllerSystemType,
@@ -36,6 +36,7 @@
 
 	let loading = $state(false);
 	let error = $state('');
+	let fieldErrors = $state<Record<string, string>>({});
 
 	$effect(() => {
 		if (!initialData) {
@@ -60,6 +61,8 @@
 	});
 
 	const dispatch = createEventDispatcher();
+
+	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['spscontroller']);
 
 	async function loadSystemTypes() {
 		if (!initialData?.id) return;
@@ -133,6 +136,7 @@
 		event.preventDefault();
 		loading = true;
 		error = '';
+		fieldErrors = {};
 
 		if (!control_cabinet_id) {
 			error = 'Please select a control cabinet';
@@ -163,7 +167,8 @@
 			}
 		} catch (e) {
 			console.error(e);
-			error = getErrorMessage(e);
+			fieldErrors = getFieldErrors(e);
+			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
 		} finally {
 			loading = false;
 		}
@@ -181,14 +186,23 @@
 		<div class="space-y-2">
 			<Label for="ga_device">GA Device</Label>
 			<Input id="ga_device" bind:value={ga_device} required maxlength={10} />
+			{#if fieldError('ga_device')}
+				<p class="text-sm text-red-500">{fieldError('ga_device')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="device_name">Device Name</Label>
 			<Input id="device_name" bind:value={device_name} required maxlength={100} />
+			{#if fieldError('device_name')}
+				<p class="text-sm text-red-500">{fieldError('device_name')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="ip_address">IP Address</Label>
 			<Input id="ip_address" bind:value={ip_address} required maxlength={50} />
+			{#if fieldError('ip_address')}
+				<p class="text-sm text-red-500">{fieldError('ip_address')}</p>
+			{/if}
 		</div>
 
 		<div class="space-y-2">
@@ -196,6 +210,9 @@
 			<div class="block">
 				<ControlCabinetSelect bind:value={control_cabinet_id} width="w-full" />
 			</div>
+			{#if fieldError('control_cabinet_id')}
+				<p class="text-sm text-red-500">{fieldError('control_cabinet_id')}</p>
+			{/if}
 		</div>
 	</div>
 

@@ -7,7 +7,7 @@
 		createAlarmDefinition,
 		updateAlarmDefinition
 	} from '$lib/infrastructure/api/facility.adapter.js';
-	import { getErrorMessage } from '$lib/api/client.js';
+	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { AlarmDefinition } from '$lib/domain/facility/index.js';
 	import { createEventDispatcher } from 'svelte';
 
@@ -17,6 +17,7 @@
 	let alarm_note = initialData?.alarm_note ?? '';
 	let loading = false;
 	let error = '';
+	let fieldErrors: Record<string, string> = {};
 
 	$: if (initialData) {
 		name = initialData.name;
@@ -25,9 +26,12 @@
 
 	const dispatch = createEventDispatcher();
 
+	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['alarmdefinition']);
+
 	async function handleSubmit() {
 		loading = true;
 		error = '';
+		fieldErrors = {};
 
 		try {
 			if (initialData) {
@@ -45,7 +49,8 @@
 			}
 		} catch (e) {
 			console.error(e);
-			error = getErrorMessage(e);
+			fieldErrors = getFieldErrors(e);
+			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
 		} finally {
 			loading = false;
 		}
@@ -63,10 +68,16 @@
 		<div class="space-y-2">
 			<Label for="alarm_name">Name</Label>
 			<Input id="alarm_name" bind:value={name} required />
+			{#if fieldError('name')}
+				<p class="text-sm text-red-500">{fieldError('name')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2 md:col-span-2">
 			<Label for="alarm_note">Alarm Note</Label>
 			<Textarea id="alarm_note" bind:value={alarm_note} rows={3} />
+			{#if fieldError('alarm_note')}
+				<p class="text-sm text-red-500">{fieldError('alarm_note')}</p>
+			{/if}
 		</div>
 	</div>
 

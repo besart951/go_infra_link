@@ -7,6 +7,10 @@
 	import { spsControllersStore } from '$lib/stores/list/entityStores.js';
 	import type { SPSController } from '$lib/domain/facility/index.js';
 	import SPSControllerForm from '$lib/components/facility/SPSControllerForm.svelte';
+	import Toasts, { addToast } from '$lib/components/toast.svelte';
+	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+	import { confirm } from '$lib/stores/confirm-dialog.js';
+	import { deleteSPSController } from '$lib/infrastructure/api/facility.adapter.js';
 
 	let showForm = $state(false);
 	let editingItem: SPSController | undefined = $state(undefined);
@@ -32,6 +36,24 @@
 		editingItem = undefined;
 	}
 
+	async function handleDelete(item: SPSController) {
+		const ok = await confirm({
+			title: 'Delete SPS controller',
+			message: `Delete ${item.device_name}?`,
+			confirmText: 'Delete',
+			cancelText: 'Cancel',
+			variant: 'destructive'
+		});
+		if (!ok) return;
+		try {
+			await deleteSPSController(item.id);
+			addToast('SPS controller deleted', 'success');
+			spsControllersStore.reload();
+		} catch (err) {
+			addToast(err instanceof Error ? err.message : 'Failed to delete SPS controller', 'error');
+		}
+	}
+
 	onMount(() => {
 		spsControllersStore.load();
 	});
@@ -40,6 +62,9 @@
 <svelte:head>
 	<title>SPS Controllers | Infra Link</title>
 </svelte:head>
+
+<Toasts />
+<ConfirmDialog />
 
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
@@ -109,6 +134,7 @@
 					<Button variant="ghost" size="sm" href="/facility/sps-controllers/{controller.id}">
 						View
 					</Button>
+					<Button variant="ghost" size="sm" onclick={() => handleDelete(controller)}>Delete</Button>
 				</div>
 			</Table.Cell>
 		{/snippet}

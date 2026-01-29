@@ -3,7 +3,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { createObjectData, updateObjectData } from '$lib/infrastructure/api/facility.adapter.js';
-	import { getErrorMessage } from '$lib/api/client.js';
+	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { ObjectData, BacnetObjectInput } from '$lib/domain/facility/index.js';
 	import { createEventDispatcher } from 'svelte';
 	import { Plus } from '@lucide/svelte';
@@ -21,6 +21,7 @@
 	let bacnetObjects: BacnetObjectInput[] = $state([]);
 	let loading = $state(false);
 	let error = $state('');
+	let fieldErrors = $state<Record<string, string>>({});
 
 	$effect(() => {
 		if (initialData) {
@@ -47,6 +48,8 @@
 	});
 
 	const dispatch = createEventDispatcher();
+
+	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['objectdata']);
 
 	function addBacnetObject() {
 		bacnetObjects = [
@@ -82,6 +85,7 @@
 		event.preventDefault();
 		loading = true;
 		error = '';
+		fieldErrors = {};
 
 		try {
 			if (initialData) {
@@ -103,7 +107,8 @@
 			}
 		} catch (e) {
 			console.error(e);
-			error = getErrorMessage(e);
+			fieldErrors = getFieldErrors(e);
+			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
 		} finally {
 			loading = false;
 		}
@@ -119,15 +124,24 @@
 		<div class="space-y-2 md:col-span-2">
 			<Label for="object_data_description">Description</Label>
 			<Input id="object_data_description" bind:value={description} required maxlength={250} />
+			{#if fieldError('description')}
+				<p class="text-sm text-red-500">{fieldError('description')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="object_data_version">Version</Label>
 			<Input id="object_data_version" bind:value={version} required maxlength={100} />
+			{#if fieldError('version')}
+				<p class="text-sm text-red-500">{fieldError('version')}</p>
+			{/if}
 		</div>
 		<div class="flex items-center gap-2 md:col-span-3">
 			<input id="object_data_active" type="checkbox" bind:checked={is_active} class="h-4 w-4" />
 			<Label for="object_data_active">Active</Label>
 		</div>
+		{#if fieldError('is_active')}
+			<p class="text-sm text-red-500 md:col-span-3">{fieldError('is_active')}</p>
+		{/if}
 	</div>
 
 	<!-- BACnet Objects Section -->

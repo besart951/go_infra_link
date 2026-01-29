@@ -3,7 +3,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { createEventDispatcher } from 'svelte';
-	import { getErrorMessage } from '$lib/api/client.js';
+	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { Phase } from '$lib/domain/phase/index.js';
 	import { createPhase, updatePhase } from '$lib/infrastructure/api/phase.adapter.js';
 
@@ -12,6 +12,7 @@
 	let name = initialData?.name ?? '';
 	let loading = false;
 	let error = '';
+	let fieldErrors: Record<string, string> = {};
 
 	$: if (initialData) {
 		name = initialData.name ?? '';
@@ -19,8 +20,11 @@
 
 	const dispatch = createEventDispatcher();
 
+	const fieldError = (name: string) => getFieldError(fieldErrors, name);
+
 	async function handleSubmit() {
 		error = '';
+		fieldErrors = {};
 
 		if (!name.trim()) {
 			error = 'Phase name is required';
@@ -39,7 +43,8 @@
 				dispatch('success', res);
 			}
 		} catch (e) {
-			error = getErrorMessage(e);
+			fieldErrors = getFieldErrors(e);
+			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
 		} finally {
 			loading = false;
 		}
@@ -55,6 +60,9 @@
 		<div class="space-y-2">
 			<Label for="phase_name">Phase Name</Label>
 			<Input id="phase_name" bind:value={name} required placeholder="e.g. SIA:51" />
+			{#if fieldError('name')}
+				<p class="text-sm text-red-500">{fieldError('name')}</p>
+			{/if}
 		</div>
 	</div>
 

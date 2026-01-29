@@ -6,6 +6,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
+	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import Toasts, { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
@@ -19,7 +20,6 @@
 		removeProjectControlCabinet,
 		listProjectSPSControllers,
 		addProjectSPSController,
-		removeProjectSPSController,
 		listProjectFieldDevices,
 		addProjectFieldDevice,
 		removeProjectFieldDevice
@@ -27,7 +27,8 @@
 	import {
 		listControlCabinets,
 		listSPSControllers,
-		listFieldDevices
+		listFieldDevices,
+		deleteSPSController
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import type { Project } from '$lib/domain/project/index.js';
 	import type {
@@ -36,7 +37,7 @@
 		ProjectFieldDeviceLink
 	} from '$lib/domain/project/index.js';
 	import type { ControlCabinet, SPSController, FieldDevice } from '$lib/domain/facility/index.js';
-	import { ArrowLeft, Plus } from '@lucide/svelte';
+	import { ArrowLeft, Plus, Pencil } from '@lucide/svelte';
 
 	const projectId = $derived($page.params.id ?? '');
 
@@ -54,7 +55,10 @@
 	let spsControllerOptions = $state<SPSController[]>([]);
 	let spsControllerLoading = $state(false);
 	let showSpsControllerForm = $state(false);
-	let spsControllerSearch = $state('');
+	let editingSpsController: SPSController | undefined = $state(undefined);
+	let spsControllerSearchText = $state('');
+	let spsControllerPage = $state(1);
+	const spsControllerPageSize = 10;
 
 	let fieldDeviceLinks = $state<ProjectFieldDeviceLink[]>([]);
 	let fieldDeviceOptions = $state<FieldDevice[]>([]);
@@ -72,15 +76,50 @@
 			: controlCabinetLinks
 	);
 
-	const filteredSpsControllerLinks = $derived(
-		spsControllerSearch.trim()
-			? spsControllerLinks.filter((link) =>
-					spsControllerLabel(link.sps_controller_id)
-						.toLowerCase()
-						.includes(spsControllerSearch.trim().toLowerCase())
-				)
-			: spsControllerLinks
+	const spsControllerLinkMap = $derived.by(
+		() => new Map(spsControllerLinks.map((link) => [link.sps_controller_id, link]))
 	);
+
+	const linkedSpsControllers = $derived.by(() =>
+		spsControllerOptions.filter((controller) => spsControllerLinkMap.has(controller.id))
+	);
+
+	const filteredSpsControllers = $derived.by(() => {
+		const query = spsControllerSearchText.trim().toLowerCase();
+		if (!query) return linkedSpsControllers;
+		return linkedSpsControllers.filter((controller) =>
+			[
+				controller.device_name,
+				controller.ga_device,
+				controller.ip_address,
+				controller.control_cabinet_id
+			]
+				.filter(Boolean)
+				.some((value) => value!.toLowerCase().includes(query))
+		);
+	});
+
+	const spsControllerTotalPages = $derived.by(() =>
+		filteredSpsControllers.length === 0
+			? 0
+			: Math.ceil(filteredSpsControllers.length / spsControllerPageSize)
+	);
+
+	const spsControllerPageItems = $derived.by(() => {
+		const start = (spsControllerPage - 1) * spsControllerPageSize;
+		return filteredSpsControllers.slice(start, start + spsControllerPageSize);
+	});
+
+	const spsControllerListState = $derived.by(() => ({
+		items: spsControllerPageItems,
+		total: filteredSpsControllers.length,
+		page: spsControllerTotalPages === 0 ? 1 : Math.min(spsControllerPage, spsControllerTotalPages),
+		pageSize: spsControllerPageSize,
+		totalPages: spsControllerTotalPages,
+		searchText: spsControllerSearchText,
+		loading: spsControllerLoading,
+		error: null
+	}));
 
 	const filteredFieldDeviceLinks = $derived(
 		fieldDeviceSearch.trim()
@@ -97,15 +136,20 @@
 		return item?.control_cabinet_nr || item?.id || id;
 	}
 
-	function spsControllerLabel(id: string): string {
-		const item = spsControllerOptions.find((c) => c.id === id);
-		return item?.device_name || item?.id || id;
-	}
-
 	function fieldDeviceLabel(id: string): string {
 		const item = fieldDeviceOptions.find((c) => c.id === id);
 		return item?.bmk || item?.apparat_nr?.toString() || item?.id || id;
 	}
+
+	$effect(() => {
+		if (spsControllerTotalPages === 0) {
+			spsControllerPage = 1;
+			return;
+		}
+		if (spsControllerPage > spsControllerTotalPages) {
+			spsControllerPage = spsControllerTotalPages;
+		}
+	});
 
 	async function loadProject() {
 		if (!projectId) return;
@@ -205,35 +249,63 @@
 		}
 	}
 
-	async function handleSpsControllerCreated(event: CustomEvent<SPSController>) {
+	function handleSpsControllerEdit(item: SPSController) {
+		editingSpsController = item;
+		showSpsControllerForm = true;
+	}
+
+	function handleSpsControllerCreate() {
+		editingSpsController = undefined;
+		showSpsControllerForm = true;
+	}
+
+	function handleSpsControllerCancel() {
+		showSpsControllerForm = false;
+		editingSpsController = undefined;
+	}
+
+	function handleSpsControllerSearch(text: string) {
+		spsControllerSearchText = text;
+		spsControllerPage = 1;
+	}
+
+	function handleSpsControllerPageChange(page: number) {
+		spsControllerPage = page;
+	}
+
+	async function handleSpsControllerSuccess(event: CustomEvent<SPSController>) {
 		if (!projectId) return;
 		const item = event.detail;
 		try {
-			await addProjectSPSController(projectId, item.id);
-			addToast('SPS controller created', 'success');
+			if (!editingSpsController) {
+				await addProjectSPSController(projectId, item.id);
+				addToast('SPS controller created', 'success');
+			} else {
+				addToast('SPS controller updated', 'success');
+			}
 			showSpsControllerForm = false;
+			editingSpsController = undefined;
 			await loadSpsControllers();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to link SPS controller', 'error');
+			addToast(err instanceof Error ? err.message : 'Failed to save SPS controller', 'error');
 		}
 	}
 
-	async function removeSpsController(linkId: string) {
-		if (!projectId) return;
+	async function handleDeleteSpsController(item: SPSController) {
 		const ok = await confirm({
-			title: 'Remove SPS controller',
-			message: 'Remove this SPS controller from the project?',
-			confirmText: 'Remove',
+			title: 'Delete SPS controller',
+			message: `Delete ${item.device_name}?`,
+			confirmText: 'Delete',
 			cancelText: 'Cancel',
 			variant: 'destructive'
 		});
 		if (!ok) return;
 		try {
-			await removeProjectSPSController(projectId, linkId);
-			addToast('SPS controller removed', 'success');
+			await deleteSPSController(item.id);
+			addToast('SPS controller deleted', 'success');
 			await loadSpsControllers();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to remove SPS controller', 'error');
+			addToast(err instanceof Error ? err.message : 'Failed to delete SPS controller', 'error');
 		}
 	}
 
@@ -395,16 +467,8 @@
 						<p class="text-sm text-muted-foreground">Create and assign SPS controllers.</p>
 					</div>
 					<div class="flex items-center gap-2">
-						<Input
-							class="w-64"
-							placeholder="Search SPS controllers..."
-							bind:value={spsControllerSearch}
-						/>
-						<Button variant="outline" onclick={loadSpsControllers} disabled={spsControllerLoading}
-							>Refresh</Button
-						>
 						{#if !showSpsControllerForm}
-							<Button onclick={() => (showSpsControllerForm = true)}>
+							<Button onclick={handleSpsControllerCreate}>
 								<Plus class="mr-2 size-4" />
 								New SPS Controller
 							</Button>
@@ -414,50 +478,71 @@
 
 				{#if showSpsControllerForm}
 					<SPSControllerForm
-						on:success={handleSpsControllerCreated}
-						on:cancel={() => (showSpsControllerForm = false)}
+						initialData={editingSpsController}
+						on:success={handleSpsControllerSuccess}
+						on:cancel={handleSpsControllerCancel}
 					/>
 				{/if}
 
-				<div class="mt-6 rounded-lg border bg-background">
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>SPS Controller</Table.Head>
-								<Table.Head class="w-32"></Table.Head>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#if spsControllerLoading}
-								{#each Array(4) as _}
-									<Table.Row>
-										<Table.Cell><Skeleton class="h-4 w-60" /></Table.Cell>
-										<Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
-									</Table.Row>
-								{/each}
-							{:else if filteredSpsControllerLinks.length === 0}
-								<Table.Row>
-									<Table.Cell colspan={2} class="h-20 text-center text-sm text-muted-foreground">
-										No SPS controllers found.
-									</Table.Cell>
-								</Table.Row>
+				<PaginatedList
+					state={spsControllerListState}
+					columns={[
+						{ key: 'device_name', label: 'Device Name' },
+						{ key: 'ga_device', label: 'GA Device' },
+						{ key: 'ip_address', label: 'IP Address' },
+						{ key: 'cabinet', label: 'Cabinet' },
+						{ key: 'created', label: 'Created' },
+						{ key: 'actions', label: 'Actions', width: 'w-[120px]' }
+					]}
+					searchPlaceholder="Search SPS controllers..."
+					emptyMessage="No SPS controllers found. Create your first SPS controller to get started."
+					onSearch={handleSpsControllerSearch}
+					onPageChange={handleSpsControllerPageChange}
+					onReload={loadSpsControllers}
+				>
+					{#snippet rowSnippet(controller: SPSController)}
+						<Table.Cell class="font-medium">
+							<a href="/facility/sps-controllers/{controller.id}" class="hover:underline">
+								{controller.device_name}
+							</a>
+						</Table.Cell>
+						<Table.Cell>{controller.ga_device ?? '-'}</Table.Cell>
+						<Table.Cell>
+							{#if controller.ip_address}
+								<code class="rounded bg-muted px-1.5 py-0.5 text-sm">
+									{controller.ip_address}
+								</code>
 							{:else}
-								{#each filteredSpsControllerLinks as link (link.id)}
-									<Table.Row>
-										<Table.Cell class="font-medium">
-											{spsControllerLabel(link.sps_controller_id)}
-										</Table.Cell>
-										<Table.Cell class="text-right">
-											<Button variant="outline" onclick={() => removeSpsController(link.id)}>
-												Remove
-											</Button>
-										</Table.Cell>
-									</Table.Row>
-								{/each}
+								-
 							{/if}
-						</Table.Body>
-					</Table.Root>
-				</div>
+						</Table.Cell>
+						<Table.Cell>{controller.control_cabinet_id}</Table.Cell>
+						<Table.Cell>
+							{new Date(controller.created_at).toLocaleDateString()}
+						</Table.Cell>
+						<Table.Cell>
+							<div class="flex items-center gap-2">
+								<Button
+									variant="ghost"
+									size="icon"
+									onclick={() => handleSpsControllerEdit(controller)}
+								>
+									<Pencil class="size-4" />
+								</Button>
+								<Button variant="ghost" size="sm" href="/facility/sps-controllers/{controller.id}">
+									View
+								</Button>
+								<Button
+									variant="ghost"
+									size="sm"
+									onclick={() => handleDeleteSpsController(controller)}
+								>
+									Delete
+								</Button>
+							</div>
+						</Table.Cell>
+					{/snippet}
+				</PaginatedList>
 			</div>
 
 			<div class="rounded-lg border bg-background p-6">

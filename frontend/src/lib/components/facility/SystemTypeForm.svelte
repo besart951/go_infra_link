@@ -3,7 +3,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { createSystemType, updateSystemType } from '$lib/infrastructure/api/facility.adapter.js';
-	import { getErrorMessage } from '$lib/api/client.js';
+	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { SystemType } from '$lib/domain/facility/index.js';
 	import { createEventDispatcher } from 'svelte';
 
@@ -14,6 +14,7 @@
 	let number_max = initialData?.number_max ?? 0;
 	let loading = false;
 	let error = '';
+	let fieldErrors: Record<string, string> = {};
 
 	$: if (initialData) {
 		name = initialData.name;
@@ -23,9 +24,12 @@
 
 	const dispatch = createEventDispatcher();
 
+	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['systemtype']);
+
 	async function handleSubmit() {
 		loading = true;
 		error = '';
+		fieldErrors = {};
 
 		try {
 			if (initialData) {
@@ -45,7 +49,8 @@
 			}
 		} catch (e) {
 			console.error(e);
-			error = getErrorMessage(e);
+			fieldErrors = getFieldErrors(e);
+			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
 		} finally {
 			loading = false;
 		}
@@ -61,14 +66,23 @@
 		<div class="space-y-2 md:col-span-1">
 			<Label for="system_type_name">Name</Label>
 			<Input id="system_type_name" bind:value={name} required maxlength={150} />
+			{#if fieldError('name')}
+				<p class="text-sm text-red-500">{fieldError('name')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="system_type_min">Min Number</Label>
 			<Input id="system_type_min" type="number" bind:value={number_min} required />
+			{#if fieldError('number_min')}
+				<p class="text-sm text-red-500">{fieldError('number_min')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="system_type_max">Max Number</Label>
 			<Input id="system_type_max" type="number" bind:value={number_max} required />
+			{#if fieldError('number_max')}
+				<p class="text-sm text-red-500">{fieldError('number_max')}</p>
+			{/if}
 		</div>
 	</div>
 

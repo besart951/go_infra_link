@@ -12,7 +12,7 @@
 		listObjectData
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import { listProjectObjectData } from '$lib/infrastructure/api/project.adapter.js';
-	import { getErrorMessage } from '$lib/api/client.js';
+	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type {
 		FieldDevice,
 		SPSControllerSystemType,
@@ -40,6 +40,7 @@
 
 	let loading = false;
 	let error = '';
+	let fieldErrors: Record<string, string> = {};
 
 	$: if (initialData) {
 		bmk = initialData.bmk ?? '';
@@ -51,6 +52,8 @@
 	}
 
 	const dispatch = createEventDispatcher();
+
+	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['fielddevice']);
 
 	async function loadLookups() {
 		try {
@@ -75,6 +78,7 @@
 	async function handleSubmit() {
 		loading = true;
 		error = '';
+		fieldErrors = {};
 
 		if (!sps_controller_system_type_id) {
 			error = 'Please select an SPS controller system type';
@@ -128,7 +132,8 @@
 			}
 		} catch (e) {
 			console.error(e);
-			error = getErrorMessage(e);
+			fieldErrors = getFieldErrors(e);
+			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
 		} finally {
 			loading = false;
 		}
@@ -150,14 +155,23 @@
 		<div class="space-y-2">
 			<Label for="field_device_bmk">BMK</Label>
 			<Input id="field_device_bmk" bind:value={bmk} maxlength={255} />
+			{#if fieldError('bmk')}
+				<p class="text-sm text-red-500">{fieldError('bmk')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="field_device_desc">Description</Label>
 			<Input id="field_device_desc" bind:value={description} maxlength={255} />
+			{#if fieldError('description')}
+				<p class="text-sm text-red-500">{fieldError('description')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="field_device_apparat_nr">Apparat Nr</Label>
 			<Input id="field_device_apparat_nr" type="number" bind:value={apparat_nr} required />
+			{#if fieldError('apparat_nr')}
+				<p class="text-sm text-red-500">{fieldError('apparat_nr')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="field_device_sps_type">SPS Controller System Type</Label>
@@ -175,6 +189,9 @@
 					</option>
 				{/each}
 			</select>
+			{#if fieldError('sps_controller_system_type_id')}
+				<p class="text-sm text-red-500">{fieldError('sps_controller_system_type_id')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="field_device_system_part">System Part</Label>
@@ -191,6 +208,9 @@
 					</option>
 				{/each}
 			</select>
+			{#if fieldError('system_part_id')}
+				<p class="text-sm text-red-500">{fieldError('system_part_id')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="field_device_apparat">Apparat</Label>
@@ -207,6 +227,9 @@
 					</option>
 				{/each}
 			</select>
+			{#if fieldError('apparat_id')}
+				<p class="text-sm text-red-500">{fieldError('apparat_id')}</p>
+			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="field_device_object_data">Object Data (optional)</Label>
@@ -220,6 +243,9 @@
 					<option value={obj.id}>{obj.description}</option>
 				{/each}
 			</select>
+			{#if fieldError('object_data_id')}
+				<p class="text-sm text-red-500">{fieldError('object_data_id')}</p>
+			{/if}
 		</div>
 	</div>
 
