@@ -66,7 +66,10 @@ import type {
 	UpdateObjectDataRequest,
 	SPSControllerSystemType,
 	SPSControllerSystemTypeListParams,
-	SPSControllerSystemTypeListResponse
+	SPSControllerSystemTypeListResponse,
+	BacnetObject,
+	CreateBacnetObjectRequest,
+	UpdateBacnetObjectRequest
 } from '$lib/domain/facility/index.js';
 
 // ============================================================================
@@ -704,6 +707,45 @@ export async function getSPSControllerSystemType(
 	return api<SPSControllerSystemType>(`/facility/sps-controller-system-types/${id}`, options);
 }
 
+// ============================================================================
+// BACNET OBJECTS
+// ============================================================================
+
+export async function listBacnetObjects(options?: ApiOptions): Promise<BacnetObject[]> {
+	return api<BacnetObject[]>('/facility/bacnet-objects', options);
+}
+
+export async function getBacnetObject(id: string, options?: ApiOptions): Promise<BacnetObject> {
+	return api<BacnetObject>(`/facility/bacnet-objects/${id}`, options);
+}
+
+export async function createBacnetObject(
+	data: CreateBacnetObjectRequest,
+	options?: ApiOptions
+): Promise<BacnetObject> {
+	return api<BacnetObject>('/facility/bacnet-objects', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function updateBacnetObject(
+	id: string,
+	data: UpdateBacnetObjectRequest,
+	options?: ApiOptions
+): Promise<BacnetObject> {
+	return api<BacnetObject>(`/facility/bacnet-objects/${id}`, {
+		...options,
+		method: 'PUT',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function deleteBacnetObject(id: string, options?: ApiOptions): Promise<void> {
+	return api<void>(`/facility/bacnet-objects/${id}`, { ...options, method: 'DELETE' });
+}
+
 // Re-export all types
 export type {
 	Building,
@@ -752,5 +794,8 @@ export type {
 	ObjectDataListResponse,
 	SPSControllerSystemType,
 	SPSControllerSystemTypeListParams,
-	SPSControllerSystemTypeListResponse
+	SPSControllerSystemTypeListResponse,
+	BacnetObject,
+	CreateBacnetObjectRequest,
+	UpdateBacnetObjectRequest
 };
