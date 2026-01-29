@@ -4,14 +4,17 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { createObjectData, updateObjectData } from '$lib/infrastructure/api/facility.adapter.js';
 	import { getErrorMessage } from '$lib/api/client.js';
-	import type { ObjectData } from '$lib/domain/facility/index.js';
+	import type { ObjectData, BacnetObjectInput } from '$lib/domain/facility/index.js';
 	import { createEventDispatcher } from 'svelte';
+	import { Plus } from '@lucide/svelte';
+	import BacnetObjectRow from './BacnetObjectRow.svelte';
 
 	export let initialData: ObjectData | undefined = undefined;
 
 	let description = initialData?.description ?? '';
 	let version = initialData?.version ?? '';
 	let is_active = initialData?.is_active ?? true;
+	let bacnetObjects: BacnetObjectInput[] = $state([]);
 	let loading = false;
 	let error = '';
 
@@ -22,6 +25,36 @@
 	}
 
 	const dispatch = createEventDispatcher();
+
+	function addBacnetObject() {
+		bacnetObjects = [
+			...bacnetObjects,
+			{
+				text_fix: '',
+				description: '',
+				gms_visible: false,
+				optional: false,
+				text_individual: '',
+				software_type: '',
+				software_number: 0,
+				hardware_type: '',
+				hardware_quantity: 1
+			}
+		];
+	}
+
+	function removeBacnetObject(index: number) {
+		bacnetObjects = bacnetObjects.filter((_, i) => i !== index);
+	}
+
+	function updateBacnetObject(index: number, field: string, value: any) {
+		bacnetObjects = bacnetObjects.map((obj, i) => {
+			if (i === index) {
+				return { ...obj, [field]: value };
+			}
+			return obj;
+		});
+	}
 
 	async function handleSubmit() {
 		loading = true;
@@ -70,6 +103,47 @@
 			<input id="object_data_active" type="checkbox" bind:checked={is_active} class="h-4 w-4" />
 			<Label for="object_data_active">Active</Label>
 		</div>
+	</div>
+
+	<!-- BACnet Objects Section -->
+	<div class="space-y-3 pt-4">
+		<div class="flex items-center justify-between border-t pt-4">
+			<div>
+				<h4 class="text-base font-medium">BACnet Objects</h4>
+				<p class="text-sm text-muted-foreground">Add and configure BACnet objects for this template</p>
+			</div>
+			<Button type="button" variant="outline" size="sm" onclick={addBacnetObject}>
+				<Plus class="mr-2 size-4" />
+				Add Object
+			</Button>
+		</div>
+
+		{#if bacnetObjects.length === 0}
+			<div class="rounded-md border border-dashed p-8 text-center">
+				<p class="text-sm text-muted-foreground">
+					No BACnet objects added yet. Click "Add Object" to get started.
+				</p>
+			</div>
+		{:else}
+			<div class="space-y-3">
+				{#each bacnetObjects as obj, index (index)}
+					<BacnetObjectRow
+						{index}
+						bind:textFix={obj.text_fix}
+						bind:description={obj.description}
+						bind:gmsVisible={obj.gms_visible}
+						bind:optional={obj.optional}
+						bind:textIndividual={obj.text_individual}
+						bind:softwareType={obj.software_type}
+						bind:softwareNumber={obj.software_number}
+						bind:hardwareType={obj.hardware_type}
+						bind:hardwareQuantity={obj.hardware_quantity}
+						onRemove={() => removeBacnetObject(index)}
+						onUpdate={(field, value) => updateBacnetObject(index, field, value)}
+					/>
+				{/each}
+			</div>
+		{/if}
 	</div>
 
 	{#if error}
