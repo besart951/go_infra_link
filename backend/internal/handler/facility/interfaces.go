@@ -25,6 +25,7 @@ type SystemTypeService interface {
 type SystemPartService interface {
 	Create(systemPart *domainFacility.SystemPart) error
 	GetByID(id uuid.UUID) (*domainFacility.SystemPart, error)
+	GetByIDs(ids []uuid.UUID) ([]*domainFacility.SystemPart, error)
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SystemPart], error)
 	Update(systemPart *domainFacility.SystemPart) error
 	DeleteByID(id uuid.UUID) error
