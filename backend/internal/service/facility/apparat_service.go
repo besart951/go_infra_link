@@ -60,6 +60,22 @@ func (s *ApparatService) DeleteByID(id uuid.UUID) error {
 	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
+func (s *ApparatService) GetSystemPartIDs(id uuid.UUID) ([]uuid.UUID, error) {
+	apparat, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Get the IDs from the loaded system parts
+	systemPartIDs := make([]uuid.UUID, 0, len(apparat.SystemParts))
+	for _, systemPart := range apparat.SystemParts {
+		if systemPart != nil {
+			systemPartIDs = append(systemPartIDs, systemPart.ID)
+		}
+	}
+	return systemPartIDs, nil
+}
+
 func (s *ApparatService) validateRequiredFields(apparat *domainFacility.Apparat) error {
 	ve := domain.NewValidationError()
 	if strings.TrimSpace(apparat.ShortName) == "" {

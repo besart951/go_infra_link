@@ -341,6 +341,7 @@ export async function listSystemParts(
 	if (params?.page) searchParams.set('page', String(params.page));
 	if (params?.limit) searchParams.set('limit', String(params.limit));
 	if (params?.search) searchParams.set('search', params.search);
+	if (params?.apparat_id) searchParams.set('apparat_id', params.apparat_id);
 
 	const query = searchParams.toString();
 	return api<SystemPartListResponse>(`/facility/system-parts${query ? `?${query}` : ''}`, options);
@@ -389,6 +390,7 @@ export async function listApparats(
 	if (params?.page) searchParams.set('page', String(params.page));
 	if (params?.limit) searchParams.set('limit', String(params.limit));
 	if (params?.search) searchParams.set('search', params.search);
+	if (params?.object_data_id) searchParams.set('object_data_id', params.object_data_id);
 
 	const query = searchParams.toString();
 	return api<ApparatListResponse>(`/facility/apparats${query ? `?${query}` : ''}`, options);
@@ -678,6 +680,13 @@ export async function deleteObjectData(id: string, options?: ApiOptions): Promis
 
 export async function getObjectData(id: string, options?: ApiOptions): Promise<ObjectData> {
 	return api<ObjectData>(`/facility/object-data/${id}`, options);
+}
+
+export async function getObjectDataBacnetObjects(
+	id: string,
+	options?: ApiOptions
+): Promise<BacnetObject[]> {
+	return api<BacnetObject[]>(`/facility/object-data/${id}/bacnet-objects`, options);
 }
 
 // ============================================================================

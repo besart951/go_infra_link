@@ -235,6 +235,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 
 		facility.GET("/object-data", handlers.FacilityObjectDataHandler.ListObjectData)
 		facility.GET("/object-data/:id", handlers.FacilityObjectDataHandler.GetObjectData)
+		facility.GET("/object-data/:id/bacnet-objects", handlers.FacilityObjectDataHandler.GetObjectDataBacnetObjects)
 		facility.POST("/object-data", handlers.FacilityObjectDataHandler.CreateObjectData)
 		facility.PUT("/object-data/:id", handlers.FacilityObjectDataHandler.UpdateObjectData)
 		facility.DELETE("/object-data/:id", handlers.FacilityObjectDataHandler.DeleteObjectData)

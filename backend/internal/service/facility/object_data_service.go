@@ -45,3 +45,23 @@ func (s *ObjectDataService) Update(objectData *domainFacility.ObjectData) error 
 func (s *ObjectDataService) DeleteByID(id uuid.UUID) error {
 	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
+
+func (s *ObjectDataService) GetBacnetObjectIDs(id uuid.UUID) ([]uuid.UUID, error) {
+	return s.repo.GetBacnetObjectIDs(id)
+}
+
+func (s *ObjectDataService) GetApparatIDs(id uuid.UUID) ([]uuid.UUID, error) {
+	objectData, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Get the IDs from the loaded apparats
+	apparatIDs := make([]uuid.UUID, 0, len(objectData.Apparats))
+	for _, apparat := range objectData.Apparats {
+		if apparat != nil {
+			apparatIDs = append(apparatIDs, apparat.ID)
+		}
+	}
+	return apparatIDs, nil
+}
