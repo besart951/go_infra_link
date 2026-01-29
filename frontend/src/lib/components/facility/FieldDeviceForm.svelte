@@ -289,12 +289,12 @@
 		</div>
 	</div>
 
-	{#if object_data_id && bacnetObjects.length > 0}
+	{#if object_data_id}
 		<div class="mt-4 rounded-md border border-muted bg-background p-4">
 			<h4 class="mb-2 text-sm font-medium">BacNet Objects (will be copied to field device)</h4>
 			{#if loadingBacnet}
 				<p class="text-sm text-muted-foreground">Loading...</p>
-			{:else}
+			{:else if bacnetObjects.length > 0}
 				<div class="max-h-48 overflow-y-auto">
 					<table class="w-full text-sm">
 						<thead class="border-b">
@@ -315,6 +315,8 @@
 						</tbody>
 					</table>
 				</div>
+			{:else}
+				<p class="text-sm text-muted-foreground">No BacNet objects found.</p>
 			{/if}
 		</div>
 	{/if}
