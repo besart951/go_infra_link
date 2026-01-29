@@ -26,3 +26,9 @@ func (r *objectDataBacnetObjectRepo) Delete(objectDataID uuid.UUID, bacnetObject
 		Where("object_data_id = ? AND bacnet_object_id = ?", objectDataID, bacnetObjectID).
 		Delete(nil).Error
 }
+
+func (r *objectDataBacnetObjectRepo) DeleteByObjectDataID(objectDataID uuid.UUID) error {
+	return r.db.Table("object_data_bacnet_objects").
+		Where("object_data_id = ?", objectDataID).
+		Delete(nil).Error
+}

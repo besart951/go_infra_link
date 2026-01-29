@@ -52,7 +52,8 @@ func (r *objectDataRepo) GetPaginatedList(params domain.PaginationParams) (*doma
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainFacility.ObjectData{})
+	query := r.db.Model(&domainFacility.ObjectData{}).
+		Where("project_id IS NULL")
 
 	if strings.TrimSpace(params.Search) != "" {
 		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"

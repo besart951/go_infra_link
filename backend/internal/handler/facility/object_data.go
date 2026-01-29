@@ -170,7 +170,31 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, toObjectDataResponse(*obj))
+	if req.BacnetObjects != nil {
+		bacnetObjects := toFieldDeviceBacnetObjects(*req.BacnetObjects)
+		if err := h.bacnetService.ReplaceForObjectData(obj.ID, bacnetObjects); err != nil {
+			if ve, ok := domain.AsValidationError(err); ok {
+				respondValidationError(c, ve.Fields)
+				return
+			}
+			if respondNotFoundIf(c, err, "Object data not found") {
+				return
+			}
+			respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+			return
+		}
+	}
+
+	updated, err := h.service.GetByID(obj.ID)
+	if err != nil {
+		if respondNotFoundIf(c, err, "Object data not found") {
+			return
+		}
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, toObjectDataResponse(*updated))
 }
 
 // DeleteObjectData godoc

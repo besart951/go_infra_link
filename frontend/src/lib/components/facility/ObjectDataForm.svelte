@@ -88,7 +88,8 @@
 				const res = await updateObjectData(initialData.id, {
 					description,
 					version,
-					is_active
+					is_active,
+					bacnet_objects: bacnetObjects
 				});
 				dispatch('success', res);
 			} else {
@@ -134,7 +135,9 @@
 		<div class="flex items-center justify-between border-t pt-4">
 			<div>
 				<h4 class="text-base font-medium">BACnet Objects</h4>
-				<p class="text-sm text-muted-foreground">Add and configure BACnet objects for this template</p>
+				<p class="text-sm text-muted-foreground">
+					Add and configure BACnet objects for this template
+				</p>
 			</div>
 			<Button type="button" variant="outline" size="sm" onclick={addBacnetObject}>
 				<Plus class="mr-2 size-4" />

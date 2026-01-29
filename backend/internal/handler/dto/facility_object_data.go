@@ -17,10 +17,11 @@ type CreateObjectDataRequest struct {
 }
 
 type UpdateObjectDataRequest struct {
-	Description *string    `json:"description"`
-	Version     *string    `json:"version"`
-	IsActive    *bool      `json:"is_active"`
-	ProjectID   *uuid.UUID `json:"project_id"`
+	Description   *string              `json:"description"`
+	Version       *string              `json:"version"`
+	IsActive      *bool                `json:"is_active"`
+	ProjectID     *uuid.UUID           `json:"project_id"`
+	BacnetObjects *[]BacnetObjectInput `json:"bacnet_objects" binding:"omitempty,dive"`
 }
 
 type ObjectDataResponse struct {

@@ -51,6 +51,7 @@ type BacnetObjectService interface {
 	CreateWithParent(bacnetObject *domainFacility.BacnetObject, fieldDeviceID *uuid.UUID, objectDataID *uuid.UUID) error
 	GetByID(id uuid.UUID) (*domainFacility.BacnetObject, error)
 	Update(bacnetObject *domainFacility.BacnetObject, objectDataID *uuid.UUID) error
+	ReplaceForObjectData(objectDataID uuid.UUID, inputs []domainFacility.BacnetObject) error
 }
 
 type FieldDeviceService interface {

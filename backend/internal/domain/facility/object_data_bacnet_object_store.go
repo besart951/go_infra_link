@@ -7,4 +7,5 @@ import "github.com/google/uuid"
 type ObjectDataBacnetObjectStore interface {
 	Add(objectDataID uuid.UUID, bacnetObjectID uuid.UUID) error
 	Delete(objectDataID uuid.UUID, bacnetObjectID uuid.UUID) error
+	DeleteByObjectDataID(objectDataID uuid.UUID) error
 }

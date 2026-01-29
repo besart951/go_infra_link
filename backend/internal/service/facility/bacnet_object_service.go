@@ -196,3 +196,48 @@ func (s *BacnetObjectService) Update(bacnetObject *domainFacility.BacnetObject, 
 
 	return nil
 }
+
+// ReplaceForObjectData replaces all bacnet objects for an object data template.
+// Existing links are removed and the provided list is created and attached.
+func (s *BacnetObjectService) ReplaceForObjectData(objectDataID uuid.UUID, inputs []domainFacility.BacnetObject) error {
+	ods, err := s.objectDataRepo.GetByIds([]uuid.UUID{objectDataID})
+	if err != nil {
+		return err
+	}
+	if len(ods) == 0 || !ods[0].IsActive {
+		return domain.ErrNotFound
+	}
+
+	seen := map[string]struct{}{}
+	for i := range inputs {
+		bo := &inputs[i]
+		if err := s.validateRequiredFields(bo, "objectdata.bacnetobject"); err != nil {
+			return err
+		}
+		if _, exists := seen[bo.TextFix]; exists {
+			return domain.NewValidationError().Add("objectdata.bacnetobject.textfix", "textfix must be unique within the object data")
+		}
+		seen[bo.TextFix] = struct{}{}
+	}
+
+	if err := s.objectDataBacnetStore.DeleteByObjectDataID(objectDataID); err != nil {
+		return err
+	}
+
+	if len(inputs) == 0 {
+		return nil
+	}
+
+	for i := range inputs {
+		bo := inputs[i]
+		bo.FieldDeviceID = nil
+		if err := s.repo.Create(&bo); err != nil {
+			return err
+		}
+		if err := s.objectDataBacnetStore.Add(objectDataID, bo.ID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

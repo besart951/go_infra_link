@@ -21,11 +21,14 @@
 		addProjectObjectData,
 		removeProjectObjectData
 	} from '$lib/infrastructure/api/project.adapter.js';
+	import { listObjectData } from '$lib/infrastructure/api/facility.adapter.js';
 	import { listUsers } from '$lib/infrastructure/api/user.adapter.js';
 	import type { Project, ProjectStatus, UpdateProjectRequest } from '$lib/domain/project/index.js';
 	import type { User } from '$lib/domain/user/index.js';
 	import type { ObjectData } from '$lib/domain/facility/index.js';
-	import { ArrowLeft } from '@lucide/svelte';
+	import { ArrowLeft, Pencil } from '@lucide/svelte';
+	import { getObjectData } from '$lib/infrastructure/api/facility.adapter.js';
+	import ObjectDataForm from '$lib/components/facility/ObjectDataForm.svelte';
 
 	const projectId = $derived($page.params.id ?? '');
 
@@ -58,22 +61,27 @@
 	let projectUsers = $state<User[]>([]);
 	let availableUsers = $state<User[]>([]);
 	let usersLoading = $state(false);
-	let selectedUserId = $state('');
 	let usersLoaded = $state(false);
-
-	const availableUsersToInvite = $derived(
-		availableUsers.filter((user) => !projectUsers.some((member) => member.id === user.id))
-	);
+	let userSearch = $state('');
+	let userSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	let projectObjectData = $state<ObjectData[]>([]);
-	let availableObjectData = $state<ObjectData[]>([]);
 	let objectDataLoading = $state(false);
-	let selectedObjectDataId = $state('');
 	let objectDataLoaded = $state(false);
+	let objectDataSearch = $state('');
+	let objectDataSearchTimeout: ReturnType<typeof setTimeout> | null = null;
+	let objectDataStatusFilter = $state<'all' | 'active' | 'inactive'>('all');
+	let editingObjectData: ObjectData | undefined = $state(undefined);
+	let showObjectDataForm = $state(false);
 
-	const availableObjectDataToActivate = $derived(
-		availableObjectData.filter((obj) => !obj.is_active)
-	);
+	function getFilteredObjectData() {
+		if (objectDataStatusFilter === 'all') {
+			return projectObjectData;
+		}
+		const isActive = objectDataStatusFilter === 'active';
+		return projectObjectData.filter((item) => isObjectDataActive(item) === isActive);
+	}
+
 
 	function formatDate(value?: string): string {
 		if (!value) return '-';
@@ -148,7 +156,7 @@
 		try {
 			const [projectUsersRes, usersRes] = await Promise.all([
 				listProjectUsers(projectId),
-				listUsers({ page: 1, limit: 100 })
+				listUsers({ page: 1, limit: 100, search: userSearch.trim() || undefined })
 			]);
 			projectUsers = projectUsersRes.items;
 			availableUsers = usersRes.items;
@@ -160,34 +168,37 @@
 		}
 	}
 
-	async function inviteUser() {
-		if (!projectId || !selectedUserId) return;
+	function isUserInProject(userId: string) {
+		return projectUsers.some((member) => member.id === userId);
+	}
+
+	async function toggleUser(user: User) {
+		if (!projectId) return;
+		if (isUserInProject(user.id)) {
+			const ok = await confirm({
+				title: 'Remove user',
+				message: 'Remove this user from the project?',
+				confirmText: 'Remove',
+				cancelText: 'Cancel',
+				variant: 'destructive'
+			});
+			if (!ok) return;
+			try {
+				await removeProjectUser(projectId, user.id);
+				addToast('User removed', 'success');
+				await loadUsers();
+			} catch (err) {
+				addToast(err instanceof Error ? err.message : 'Failed to remove user', 'error');
+			}
+			return;
+		}
+
 		try {
-			await addProjectUser(projectId, selectedUserId);
+			await addProjectUser(projectId, user.id);
 			addToast('User added', 'success');
-			selectedUserId = '';
 			await loadUsers();
 		} catch (err) {
 			addToast(err instanceof Error ? err.message : 'Failed to add user', 'error');
-		}
-	}
-
-	async function removeUser(userId: string) {
-		if (!projectId) return;
-		const ok = await confirm({
-			title: 'Remove user',
-			message: 'Remove this user from the project?',
-			confirmText: 'Remove',
-			cancelText: 'Cancel',
-			variant: 'destructive'
-		});
-		if (!ok) return;
-		try {
-			await removeProjectUser(projectId, userId);
-			addToast('User removed', 'success');
-			await loadUsers();
-		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to remove user', 'error');
 		}
 	}
 
@@ -195,46 +206,102 @@
 		if (!projectId) return;
 		objectDataLoading = true;
 		try {
-			const projectRes = await listProjectObjectData(projectId, { page: 1, limit: 100 });
-			projectObjectData = projectRes.items;
-			availableObjectData = projectRes.items;
-			objectDataLoaded = true;
+			const [projectRes, templateRes] = await Promise.all([
+				listProjectObjectData(projectId, {
+					page: 1,
+					limit: 100,
+					search: objectDataSearch.trim() || undefined
+				}),
+				listObjectData({ page: 1, limit: 100, search: objectDataSearch.trim() || undefined })
+			]);
+			const projectItems = projectRes.items ?? [];
+			const templateItems = templateRes.items ?? [];
+			const projectIds = new Set(projectItems.map((obj) => obj.id));
+			projectObjectData = [...projectItems, ...templateItems.filter((obj) => !projectIds.has(obj.id))];
 		} catch (err) {
 			addToast(err instanceof Error ? err.message : 'Failed to load object data', 'error');
 		} finally {
 			objectDataLoading = false;
+			objectDataLoaded = true;
 		}
 	}
 
-	async function attachObjectData() {
-		if (!projectId || !selectedObjectDataId) return;
+	async function toggleObjectData(objectData: ObjectData) {
+		if (!projectId) return;
+		const isAssigned = objectData.project_id === projectId;
+		const isActive = isAssigned && objectData.is_active;
+		if (isActive) {
+			const ok = await confirm({
+				title: 'Deactivate object data',
+				message: 'Deactivate this object data for the project?',
+				confirmText: 'Deactivate',
+				cancelText: 'Cancel',
+				variant: 'destructive'
+			});
+			if (!ok) return;
+			try {
+				await removeProjectObjectData(projectId, objectData.id);
+				addToast('Object data deactivated', 'success');
+				await loadObjectData();
+			} catch (err) {
+				addToast(err instanceof Error ? err.message : 'Failed to remove object data', 'error');
+			}
+			return;
+		}
+
 		try {
-			await addProjectObjectData(projectId, selectedObjectDataId);
+			await addProjectObjectData(projectId, objectData.id);
 			addToast('Object data activated', 'success');
-			selectedObjectDataId = '';
 			await loadObjectData();
 		} catch (err) {
 			addToast(err instanceof Error ? err.message : 'Failed to add object data', 'error');
 		}
 	}
 
-	async function detachObjectData(objectDataId: string) {
-		if (!projectId) return;
-		const ok = await confirm({
-			title: 'Deactivate object data',
-			message: 'Deactivate this object data for the project?',
-			confirmText: 'Deactivate',
-			cancelText: 'Cancel',
-			variant: 'destructive'
-		});
-		if (!ok) return;
+	function isObjectDataActive(item: ObjectData) {
+		return item.project_id === projectId && item.is_active;
+	}
+
+	async function editObjectData(item: ObjectData) {
 		try {
-			await removeProjectObjectData(projectId, objectDataId);
-			addToast('Object data deactivated', 'success');
-			await loadObjectData();
+			editingObjectData = await getObjectData(item.id);
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to remove object data', 'error');
+			editingObjectData = item;
 		}
+		showObjectDataForm = true;
+	}
+
+	function handleObjectDataSuccess() {
+		showObjectDataForm = false;
+		editingObjectData = undefined;
+		loadObjectData();
+	}
+
+	function handleObjectDataCancel() {
+		showObjectDataForm = false;
+		editingObjectData = undefined;
+	}
+
+	function handleUserSearchInput() {
+		if (userSearchTimeout) {
+			clearTimeout(userSearchTimeout);
+		}
+		userSearchTimeout = setTimeout(() => {
+			if (activeTab === 'users' && !usersLoading) {
+				loadUsers();
+			}
+		}, 300);
+	}
+
+	function handleObjectDataSearchInput() {
+		if (objectDataSearchTimeout) {
+			clearTimeout(objectDataSearchTimeout);
+		}
+		objectDataSearchTimeout = setTimeout(() => {
+			if (activeTab === 'object-data' && !objectDataLoading) {
+				loadObjectData();
+			}
+		}, 300);
 	}
 
 	$effect(() => {
@@ -370,29 +437,16 @@
 			</div>
 		{:else if activeTab === 'users'}
 			<div class="p-6">
-				<div class="flex flex-wrap items-end gap-3">
-					<div class="flex flex-col gap-2">
-						<label class="text-sm font-medium" for="project_user">Add user</label>
-						<select
-							id="project_user"
-							class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
-							bind:value={selectedUserId}
-						>
-							<option value="">Select user</option>
-							{#each availableUsersToInvite as user}
-								<option value={user.id}>
-									{user.first_name}
-									{user.last_name} ({user.email})
-								</option>
-							{/each}
-						</select>
+				<div class="flex flex-wrap items-end justify-between gap-3">
+					<div class="flex w-full max-w-sm flex-col gap-2">
+						<label class="text-sm font-medium" for="project_user_search">Search users</label>
+						<Input
+							id="project_user_search"
+							placeholder="Search by name or email"
+							bind:value={userSearch}
+							oninput={handleUserSearchInput}
+						/>
 					</div>
-					<Button
-						onclick={inviteUser}
-						disabled={!selectedUserId || usersLoading || availableUsersToInvite.length === 0}
-					>
-						Add
-					</Button>
 					<Button variant="outline" onclick={loadUsers} disabled={usersLoading}>Refresh</Button>
 				</div>
 
@@ -402,7 +456,8 @@
 							<Table.Row>
 								<Table.Head>Name</Table.Head>
 								<Table.Head>Email</Table.Head>
-								<Table.Head class="w-32"></Table.Head>
+								<Table.Head>Status</Table.Head>
+								<Table.Head class="w-44"></Table.Head>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -414,22 +469,30 @@
 										<Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
 									</Table.Row>
 								{/each}
-							{:else if projectUsers.length === 0}
+							{:else if availableUsers.length === 0}
 								<Table.Row>
-									<Table.Cell colspan={3} class="h-20 text-center text-sm text-muted-foreground">
-										No users in this project yet.
+									<Table.Cell colspan={4} class="h-20 text-center text-sm text-muted-foreground">
+										No users found.
 									</Table.Cell>
 								</Table.Row>
 							{:else}
-								{#each projectUsers as user (user.id)}
+								{#each availableUsers as user (user.id)}
 									<Table.Row>
 										<Table.Cell class="font-medium">
 											{user.first_name}
 											{user.last_name}
 										</Table.Cell>
 										<Table.Cell class="text-muted-foreground">{user.email}</Table.Cell>
+										<Table.Cell>
+											{isUserInProject(user.id) ? 'Active' : 'Inactive'}
+										</Table.Cell>
 										<Table.Cell class="text-right">
-											<Button variant="outline" onclick={() => removeUser(user.id)}>Remove</Button>
+											<Button
+												variant={isUserInProject(user.id) ? 'outline' : 'default'}
+												onclick={() => toggleUser(user)}
+											>
+												{isUserInProject(user.id) ? 'Remove' : 'Add'}
+											</Button>
 										</Table.Cell>
 									</Table.Row>
 								{/each}
@@ -440,29 +503,41 @@
 			</div>
 		{:else}
 			<div class="p-6">
-				<div class="flex flex-wrap items-end gap-3">
-					<div class="flex flex-col gap-2">
-						<label class="text-sm font-medium" for="project_object_data">Add object data</label>
-						<select
-							id="project_object_data"
-							class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
-							bind:value={selectedObjectDataId}
-						>
-							<option value="">Select object data</option>
-							{#each availableObjectDataToActivate as obj}
-								<option value={obj.id}>{obj.description}</option>
-							{/each}
-						</select>
+				{#if showObjectDataForm}
+					<ObjectDataForm
+						initialData={editingObjectData}
+						on:success={handleObjectDataSuccess}
+						on:cancel={handleObjectDataCancel}
+					/>
+				{/if}
+
+				<div class="flex flex-wrap items-end justify-between gap-3">
+					<div class="flex w-full max-w-sm flex-col gap-2">
+						<label class="text-sm font-medium" for="project_object_data_search">Search object data</label>
+						<Input
+							id="project_object_data_search"
+							placeholder="Search by description"
+							bind:value={objectDataSearch}
+							oninput={handleObjectDataSearchInput}
+						/>
 					</div>
-					<Button
-						onclick={attachObjectData}
-						disabled={!selectedObjectDataId ||
-							objectDataLoading ||
-							availableObjectDataToActivate.length === 0}>Add</Button
-					>
-					<Button variant="outline" onclick={loadObjectData} disabled={objectDataLoading}
-						>Refresh</Button
-					>
+					<div class="flex items-end gap-3">
+						<div class="flex flex-col gap-2">
+							<label class="text-sm font-medium" for="project_object_data_status">Status</label>
+							<select
+								id="project_object_data_status"
+								class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
+								bind:value={objectDataStatusFilter}
+							>
+								<option value="all">All</option>
+								<option value="active">Active</option>
+								<option value="inactive">Inactive</option>
+							</select>
+						</div>
+						<Button variant="outline" onclick={loadObjectData} disabled={objectDataLoading}
+							>Refresh</Button
+						>
+					</div>
 				</div>
 
 				<div class="mt-6 rounded-lg border bg-background">
@@ -471,8 +546,8 @@
 							<Table.Row>
 								<Table.Head>Description</Table.Head>
 								<Table.Head>Version</Table.Head>
-								<Table.Head>Active</Table.Head>
-								<Table.Head class="w-32"></Table.Head>
+								<Table.Head>Project status</Table.Head>
+								<Table.Head class="w-44"></Table.Head>
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
@@ -485,24 +560,33 @@
 										<Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
 									</Table.Row>
 								{/each}
-							{:else if projectObjectData.length === 0}
+							{:else if getFilteredObjectData().length === 0}
 								<Table.Row>
 									<Table.Cell colspan={4} class="h-20 text-center text-sm text-muted-foreground">
-										No object data assigned yet.
+										No object data found.
 									</Table.Cell>
 								</Table.Row>
 							{:else}
-								{#each projectObjectData as obj (obj.id)}
+								{#each getFilteredObjectData() as obj (obj.id)}
 									<Table.Row>
 										<Table.Cell class="font-medium">{obj.description}</Table.Cell>
 										<Table.Cell class="text-muted-foreground">{obj.version}</Table.Cell>
 										<Table.Cell>
-											{obj.is_active ? 'Yes' : 'No'}
+											{isObjectDataActive(obj) ? 'Active' : 'Inactive'}
 										</Table.Cell>
 										<Table.Cell class="text-right">
-											<Button variant="outline" onclick={() => detachObjectData(obj.id)}>
-												Deactivate
-											</Button>
+											<div class="flex items-center justify-end gap-2">
+												<Button variant="outline" onclick={() => editObjectData(obj)}>
+													<Pencil class="mr-2 h-4 w-4" />
+													Edit
+												</Button>
+												<Button
+													variant={isObjectDataActive(obj) ? 'outline' : 'default'}
+													onclick={() => toggleObjectData(obj)}
+												>
+													{isObjectDataActive(obj) ? 'Deactivate' : 'Activate'}
+												</Button>
+											</div>
 										</Table.Cell>
 									</Table.Row>
 								{/each}

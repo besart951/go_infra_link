@@ -26,6 +26,7 @@ export interface UpdateObjectDataRequest {
 	version?: string;
 	is_active?: boolean;
 	project_id?: string;
+	bacnet_objects?: BacnetObjectInput[];
 }
 
 export interface ObjectDataListParams {

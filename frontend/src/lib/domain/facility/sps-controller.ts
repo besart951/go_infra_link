@@ -15,11 +15,18 @@ export interface SPSController {
 	updated_at: string;
 }
 
+export interface SPSControllerSystemTypeInput {
+	system_type_id: string;
+	number?: number;
+	document_name?: string;
+}
+
 export interface CreateSPSControllerRequest {
 	ga_device: string;
 	device_name: string;
 	ip_address: string;
 	control_cabinet_id: string;
+	system_types?: SPSControllerSystemTypeInput[];
 }
 
 export interface UpdateSPSControllerRequest {
@@ -28,6 +35,7 @@ export interface UpdateSPSControllerRequest {
 	device_name?: string;
 	ip_address?: string;
 	control_cabinet_id?: string;
+	system_types?: SPSControllerSystemTypeInput[];
 }
 
 export interface SPSControllerListParams {
