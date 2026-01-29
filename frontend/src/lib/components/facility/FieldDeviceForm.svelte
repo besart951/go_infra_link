@@ -1,15 +1,20 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
 	import {
 		createFieldDevice,
 		updateFieldDevice,
 		listSPSControllerSystemTypes,
 		listSystemParts,
 		listApparats,
-		listObjectData
+		listObjectData,
+		getSPSControllerSystemType,
+		getObjectData,
+		getApparat,
+		getSystemPart,
+		getObjectDataBacnetObjects
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import { listProjectObjectData } from '$lib/infrastructure/api/project.adapter.js';
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
@@ -18,7 +23,8 @@
 		SPSControllerSystemType,
 		SystemPart,
 		Apparat,
-		ObjectData
+		ObjectData,
+		BacnetObject
 	} from '$lib/domain/facility/index.js';
 	import { createEventDispatcher } from 'svelte';
 
@@ -33,10 +39,8 @@
 	let apparat_id = initialData?.apparat_id ?? '';
 	let object_data_id = '';
 
-	let spsControllerSystemTypes: SPSControllerSystemType[] = [];
-	let systemParts: SystemPart[] = [];
-	let apparats: Apparat[] = [];
-	let objectData: ObjectData[] = [];
+	let bacnetObjects: BacnetObject[] = [];
+	let loadingBacnet = false;
 
 	let loading = false;
 	let error = '';
@@ -55,24 +59,74 @@
 
 	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['fielddevice']);
 
-	async function loadLookups() {
+	async function fetchSPSControllerSystemTypes(
+		search: string
+	): Promise<SPSControllerSystemType[]> {
 		try {
-			const [spsRes, partsRes, apparatsRes, objectRes] = await Promise.all([
-				listSPSControllerSystemTypes({ page: 1, limit: 100 }),
-				listSystemParts({ page: 1, limit: 100 }),
-				listApparats({ page: 1, limit: 100 }),
-				projectId
-					? listProjectObjectData(projectId, { page: 1, limit: 100 })
-					: listObjectData({ page: 1, limit: 100 })
-			]);
-			spsControllerSystemTypes = spsRes.items;
-			systemParts = partsRes.items;
-			apparats = apparatsRes.items;
-			objectData = projectId ? objectRes.items.filter((obj) => obj.is_active) : objectRes.items;
+			const res = await listSPSControllerSystemTypes({ page: 1, limit: 50, search });
+			return res.items;
 		} catch (e) {
 			console.error(e);
-			error = getErrorMessage(e);
+			return [];
 		}
+	}
+
+	async function fetchObjectData(search: string): Promise<ObjectData[]> {
+		try {
+			const res = projectId
+				? await listProjectObjectData(projectId, { page: 1, limit: 50, search })
+				: await listObjectData({ page: 1, limit: 50, search });
+			return projectId ? res.items.filter((obj) => obj.is_active) : res.items;
+		} catch (e) {
+			console.error(e);
+			return [];
+		}
+	}
+
+	async function fetchApparats(search: string): Promise<Apparat[]> {
+		try {
+			const params: any = { page: 1, limit: 50, search };
+			if (object_data_id) {
+				params.object_data_id = object_data_id;
+			}
+			const res = await listApparats(params);
+			return res.items;
+		} catch (e) {
+			console.error(e);
+			return [];
+		}
+	}
+
+	async function fetchSystemParts(search: string): Promise<SystemPart[]> {
+		try {
+			const params: any = { page: 1, limit: 50, search };
+			if (apparat_id) {
+				params.apparat_id = apparat_id;
+			}
+			const res = await listSystemParts(params);
+			return res.items;
+		} catch (e) {
+			console.error(e);
+			return [];
+		}
+	}
+
+	async function loadBacnetObjects(objectDataId: string) {
+		loadingBacnet = true;
+		try {
+			bacnetObjects = await getObjectDataBacnetObjects(objectDataId);
+		} catch (e) {
+			console.error(e);
+			bacnetObjects = [];
+		} finally {
+			loadingBacnet = false;
+		}
+	}
+
+	$: if (object_data_id) {
+		loadBacnetObjects(object_data_id);
+	} else {
+		bacnetObjects = [];
 	}
 
 	async function handleSubmit() {
@@ -138,10 +192,6 @@
 			loading = false;
 		}
 	}
-
-	onMount(() => {
-		loadLookups();
-	});
 </script>
 
 <form on:submit|preventDefault={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
@@ -175,79 +225,99 @@
 		</div>
 		<div class="space-y-2">
 			<Label for="field_device_sps_type">SPS Controller System Type</Label>
-			<select
+			<AsyncCombobox
 				id="field_device_sps_type"
-				class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
 				bind:value={sps_controller_system_type_id}
-				required
-			>
-				<option value="">Select SPS controller system type</option>
-				{#each spsControllerSystemTypes as item}
-					<option value={item.id}>
-						{item.sps_controller_name || item.sps_controller_id} -
-						{item.system_type_name || item.system_type_id}
-					</option>
-				{/each}
-			</select>
+				fetcher={fetchSPSControllerSystemTypes}
+				fetchById={getSPSControllerSystemType}
+				labelKey="system_type_name"
+				width="w-full"
+				placeholder="Select SPS controller system type"
+				searchPlaceholder="Search SPS types..."
+			/>
 			{#if fieldError('sps_controller_system_type_id')}
 				<p class="text-sm text-red-500">{fieldError('sps_controller_system_type_id')}</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="field_device_system_part">System Part</Label>
-			<select
+			<AsyncCombobox
 				id="field_device_system_part"
-				class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
 				bind:value={system_part_id}
-				required
-			>
-				<option value="">Select system part</option>
-				{#each systemParts as part}
-					<option value={part.id}>
-						{part.short_name} - {part.name}
-					</option>
-				{/each}
-			</select>
+				fetcher={fetchSystemParts}
+				fetchById={getSystemPart}
+				labelKey="name"
+				width="w-full"
+				placeholder="Select system part"
+				searchPlaceholder="Search system parts..."
+			/>
 			{#if fieldError('system_part_id')}
 				<p class="text-sm text-red-500">{fieldError('system_part_id')}</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="field_device_apparat">Apparat</Label>
-			<select
+			<AsyncCombobox
 				id="field_device_apparat"
-				class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
 				bind:value={apparat_id}
-				required
-			>
-				<option value="">Select apparat</option>
-				{#each apparats as apparat}
-					<option value={apparat.id}>
-						{apparat.short_name} - {apparat.name}
-					</option>
-				{/each}
-			</select>
+				fetcher={fetchApparats}
+				fetchById={getApparat}
+				labelKey="name"
+				width="w-full"
+				placeholder="Select apparat"
+				searchPlaceholder="Search apparats..."
+			/>
 			{#if fieldError('apparat_id')}
 				<p class="text-sm text-red-500">{fieldError('apparat_id')}</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="field_device_object_data">Object Data (optional)</Label>
-			<select
+			<AsyncCombobox
 				id="field_device_object_data"
-				class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
 				bind:value={object_data_id}
-			>
-				<option value="">None</option>
-				{#each objectData as obj}
-					<option value={obj.id}>{obj.description}</option>
-				{/each}
-			</select>
+				fetcher={fetchObjectData}
+				fetchById={getObjectData}
+				labelKey="description"
+				width="w-full"
+				placeholder="None"
+				searchPlaceholder="Search object data..."
+			/>
 			{#if fieldError('object_data_id')}
 				<p class="text-sm text-red-500">{fieldError('object_data_id')}</p>
 			{/if}
 		</div>
 	</div>
+
+	{#if object_data_id && bacnetObjects.length > 0}
+		<div class="mt-4 rounded-md border border-muted bg-background p-4">
+			<h4 class="mb-2 text-sm font-medium">BacNet Objects (will be copied to field device)</h4>
+			{#if loadingBacnet}
+				<p class="text-sm text-muted-foreground">Loading...</p>
+			{:else}
+				<div class="max-h-48 overflow-y-auto">
+					<table class="w-full text-sm">
+						<thead class="border-b">
+							<tr class="text-left text-muted-foreground">
+								<th class="p-2">Text Fix</th>
+								<th class="p-2">Description</th>
+								<th class="p-2">Type</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each bacnetObjects as obj}
+								<tr class="border-b border-muted last:border-0">
+									<td class="p-2">{obj.text_fix || '-'}</td>
+									<td class="p-2">{obj.description || '-'}</td>
+									<td class="p-2">{obj.software_type || '-'}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
+		</div>
+	{/if}
 
 	{#if error}
 		<p class="text-sm text-red-500">{error}</p>

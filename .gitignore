@@ -39,3 +39,4 @@ backend/data/
 server
 backend/server
 backend/app
+/backend/main
