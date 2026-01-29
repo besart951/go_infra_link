@@ -7,7 +7,7 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Plus } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
-	import Toasts, { addToast } from '$lib/components/toast.svelte';
+	import { addToast } from '$lib/components/toast.svelte';
 	import ProjectPhaseSelect from '$lib/components/project/ProjectPhaseSelect.svelte';
 	import { projectListStore } from '$lib/stores/projects/projectListStore.js';
 	import { createProject } from '$lib/infrastructure/api/project.adapter.js';
@@ -109,8 +109,6 @@
 		projectListStore.load();
 	});
 </script>
-
-<Toasts />
 
 <svelte:head>
 	<title>Projects | Infra Link</title>

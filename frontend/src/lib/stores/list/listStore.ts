@@ -4,6 +4,7 @@ import { ListUseCase } from '$lib/application/useCases/listUseCase.js';
 import type { ListRepository } from '$lib/domain/ports/listRepository.js';
 import { createPagination } from '$lib/domain/valueObjects/pagination.js';
 import { createSearchQuery } from '$lib/domain/valueObjects/search.js';
+import { ApiException } from '$lib/api/client.js';
 
 /**
  * Cache entry with timestamp
@@ -26,10 +27,7 @@ export interface ListStoreOptions {
  * Creates a reactive Svelte store for managing paginated lists
  * Supports pagination, search, caching, and prevents duplicate requests
  */
-export function createListStore<T>(
-	repository: ListRepository<T>,
-	options: ListStoreOptions = {}
-) {
+export function createListStore<T>(repository: ListRepository<T>, options: ListStoreOptions = {}) {
 	const { pageSize = 10, cacheTTL = 30000, debounceMs = 300 } = options;
 
 	const useCase = new ListUseCase(repository);
@@ -105,6 +103,13 @@ export function createListStore<T>(
 		} catch (error) {
 			// Ignore abort errors
 			if (error instanceof DOMException && error.name === 'AbortError') {
+				return;
+			}
+
+			// authorization_failed is already surfaced via a toast in the central api client.
+			// Keep the previous items and avoid showing an inline table error.
+			if (error instanceof ApiException && error.error === 'authorization_failed') {
+				store.update((s) => ({ ...s, loading: false, error: null }));
 				return;
 			}
 

@@ -1,4 +1,8 @@
-import type { ListRepository, PaginatedResponse, ListParams } from '$lib/domain/ports/listRepository.js';
+import type {
+	ListRepository,
+	PaginatedResponse,
+	ListParams
+} from '$lib/domain/ports/listRepository.js';
 
 /**
  * List state representing the current state of a list

@@ -3,7 +3,7 @@
  * Mirrors backend: internal/domain/facility/control_cabinet.go
  */
 
-import type { Pagination } from "../utils/index.ts";
+import type { Pagination } from '../utils/index.ts';
 
 export interface ControlCabinet {
 	id: string;
@@ -19,7 +19,7 @@ export interface CreateControlCabinetRequest {
 }
 
 export interface UpdateControlCabinetRequest {
-    id: string;
+	id: string;
 	control_cabinet_nr?: string;
 	building_id?: string;
 }
@@ -32,3 +32,12 @@ export interface ControlCabinetListParams {
 }
 
 export interface ControlCabinetListResponse extends Pagination<ControlCabinet> {}
+
+export interface ControlCabinetDeleteImpact {
+	control_cabinet_id: string;
+	sps_controllers_count: number;
+	sps_controller_system_types_count: number;
+	field_devices_count: number;
+	bacnet_objects_count: number;
+	specifications_count: number;
+}

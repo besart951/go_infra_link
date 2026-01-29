@@ -7,7 +7,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
-	import Toasts, { addToast } from '$lib/components/toast.svelte';
+	import { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import ControlCabinetForm from '$lib/components/facility/ControlCabinetForm.svelte';
@@ -25,8 +25,8 @@
 		removeProjectFieldDevice
 	} from '$lib/infrastructure/api/project.adapter.js';
 	import {
-		listControlCabinets,
-		listSPSControllers,
+		getControlCabinet,
+		getSPSController,
 		listFieldDevices,
 		deleteSPSController
 	} from '$lib/infrastructure/api/facility.adapter.js';
@@ -76,6 +76,16 @@
 			: controlCabinetLinks
 	);
 
+	function uniqueIds(ids: string[]): string[] {
+		return Array.from(new Set(ids.filter(Boolean)));
+	}
+
+	async function fetchByIds<T>(ids: string[], fetchOne: (id: string) => Promise<T>): Promise<T[]> {
+		const unique = uniqueIds(ids);
+		const results = await Promise.all(unique.map((id) => fetchOne(id).catch(() => null)));
+		return results.filter(Boolean) as T[];
+	}
+
 	const spsControllerLinkMap = $derived.by(
 		() => new Map(spsControllerLinks.map((link) => [link.sps_controller_id, link]))
 	);
@@ -92,7 +102,7 @@
 				controller.device_name,
 				controller.ga_device,
 				controller.ip_address,
-				controller.control_cabinet_id
+				controlCabinetLabel(controller.control_cabinet_id)
 			]
 				.filter(Boolean)
 				.some((value) => value!.toLowerCase().includes(query))
@@ -170,12 +180,12 @@
 		if (!projectId) return;
 		controlCabinetLoading = true;
 		try {
-			const [linksRes, optionsRes] = await Promise.all([
-				listProjectControlCabinets(projectId, { page: 1, limit: 100 }),
-				listControlCabinets({ page: 1, limit: 100 })
-			]);
+			const linksRes = await listProjectControlCabinets(projectId, { page: 1, limit: 100 });
 			controlCabinetLinks = linksRes.items;
-			controlCabinetOptions = optionsRes.items;
+
+			// Hydrate labels by fetching the exact linked cabinets (avoid global list limits).
+			const cabinetIds = linksRes.items.map((l) => l.control_cabinet_id);
+			controlCabinetOptions = await fetchByIds<ControlCabinet>(cabinetIds, getControlCabinet);
 		} catch (err) {
 			addToast(err instanceof Error ? err.message : 'Failed to load control cabinets', 'error');
 		} finally {
@@ -187,12 +197,22 @@
 		if (!projectId) return;
 		spsControllerLoading = true;
 		try {
-			const [linksRes, optionsRes] = await Promise.all([
-				listProjectSPSControllers(projectId, { page: 1, limit: 100 }),
-				listSPSControllers({ page: 1, limit: 100 })
-			]);
+			const linksRes = await listProjectSPSControllers(projectId, { page: 1, limit: 100 });
 			spsControllerLinks = linksRes.items;
-			spsControllerOptions = optionsRes.items;
+
+			// Hydrate linked SPS controllers by ID (avoid global list limits so newly created
+			// controllers always appear).
+			const controllerIds = linksRes.items.map((l) => l.sps_controller_id);
+			spsControllerOptions = await fetchByIds<SPSController>(controllerIds, getSPSController);
+
+			// Ensure control cabinet labels are available for the cabinet column.
+			const cabinetIds = spsControllerOptions.map((c) => c.control_cabinet_id);
+			const existing = new Set(controlCabinetOptions.map((c) => c.id));
+			const missing = uniqueIds(cabinetIds).filter((id) => !existing.has(id));
+			if (missing.length > 0) {
+				const fetched = await fetchByIds<ControlCabinet>(missing, getControlCabinet);
+				controlCabinetOptions = [...controlCabinetOptions, ...fetched];
+			}
 		} catch (err) {
 			addToast(err instanceof Error ? err.message : 'Failed to load SPS controllers', 'error');
 		} finally {
@@ -349,7 +369,6 @@
 	});
 </script>
 
-<Toasts />
 <ConfirmDialog />
 
 <div class="flex flex-col gap-6">
@@ -516,7 +535,7 @@
 								-
 							{/if}
 						</Table.Cell>
-						<Table.Cell>{controller.control_cabinet_id}</Table.Cell>
+						<Table.Cell>{controlCabinetLabel(controller.control_cabinet_id)}</Table.Cell>
 						<Table.Cell>
 							{new Date(controller.created_at).toLocaleDateString()}
 						</Table.Cell>

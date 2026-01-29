@@ -50,6 +50,11 @@ func NewServices(repos Repositories) *Services {
 		ControlCabinet: NewControlCabinetService(
 			repos.ControlCabinets,
 			repos.Buildings,
+			repos.SPSControllers,
+			repos.SPSControllerSystemTypes,
+			repos.FieldDevices,
+			repos.BacnetObjects,
+			repos.Specifications,
 		),
 		FieldDevice: NewFieldDeviceService(
 			repos.FieldDevices,

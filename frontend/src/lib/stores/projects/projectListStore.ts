@@ -3,6 +3,7 @@ import type { ListState } from '$lib/application/useCases/listUseCase.js';
 import type { PaginationMetadata } from '$lib/domain/valueObjects/pagination.js';
 import type { Project, ProjectStatus, ProjectListParams } from '$lib/domain/project/index.js';
 import { listProjects } from '$lib/infrastructure/api/project.adapter.js';
+import { ApiException } from '$lib/api/client.js';
 
 /**
  * Project status filter options
@@ -117,6 +118,13 @@ export function createProjectListStore(options: ProjectListStoreOptions = {}) {
 			cache.set(cacheKey, { timestamp: Date.now(), data: newState });
 		} catch (error) {
 			if (error instanceof DOMException && error.name === 'AbortError') {
+				return;
+			}
+
+			// authorization_failed is already surfaced via toast in the central api client.
+			// Avoid showing the error inline in the project table.
+			if (error instanceof ApiException && error.error === 'authorization_failed') {
+				store.update((s: ProjectListState) => ({ ...s, loading: false, error: null, status }));
 				return;
 			}
 

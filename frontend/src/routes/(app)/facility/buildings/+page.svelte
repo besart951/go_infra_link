@@ -92,9 +92,7 @@
 					<Button variant="ghost" size="icon" onclick={() => handleEdit(building)}>
 						<Pencil class="size-4" />
 					</Button>
-					<Button variant="ghost" size="sm" href="/facility/buildings/{building.id}">
-						View
-					</Button>
+					<Button variant="ghost" size="sm" href="/facility/buildings/{building.id}">View</Button>
 				</div>
 			</Table.Cell>
 		{/snippet}

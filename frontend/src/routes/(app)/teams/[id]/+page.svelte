@@ -5,7 +5,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import Toasts, { addToast } from '$lib/components/toast.svelte';
+	import { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import { ArrowLeft, UserMinus } from '@lucide/svelte';
@@ -100,7 +100,6 @@
 	});
 </script>
 
-<Toasts />
 <ConfirmDialog />
 
 <div class="flex flex-col gap-6">

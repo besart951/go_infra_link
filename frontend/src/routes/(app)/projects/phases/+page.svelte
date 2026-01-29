@@ -4,7 +4,7 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Plus, Pencil, Trash2, Eye } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
-	import Toasts, { addToast } from '$lib/components/toast.svelte';
+	import { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import { phaseListStore } from '$lib/stores/phases/phaseListStore.js';
@@ -64,7 +64,6 @@
 	});
 </script>
 
-<Toasts />
 <ConfirmDialog />
 
 <svelte:head>

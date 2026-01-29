@@ -59,9 +59,7 @@
 
 	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['fielddevice']);
 
-	async function fetchSPSControllerSystemTypes(
-		search: string
-	): Promise<SPSControllerSystemType[]> {
+	async function fetchSPSControllerSystemTypes(search: string): Promise<SPSControllerSystemType[]> {
 		try {
 			const res = await listSPSControllerSystemTypes({ page: 1, limit: 50, search });
 			return res.items;

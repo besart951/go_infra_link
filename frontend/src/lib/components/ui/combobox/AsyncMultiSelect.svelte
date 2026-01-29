@@ -105,13 +105,13 @@
 	{#if selectedItems.length > 0}
 		<div class="flex flex-wrap gap-2">
 			{#each selectedItems as item (String(item[idKey]))}
-				<Badge variant="secondary" class="pl-2 pr-1">
+				<Badge variant="secondary" class="pr-1 pl-2">
 					{String(item[labelKey] ?? '')}
 					<button
 						type="button"
-						class="ml-1 rounded-full hover:bg-secondary-foreground/20 p-0.5"
+						class="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
 						onclick={() => handleRemove(String(item[idKey]))}
-						disabled={disabled}
+						{disabled}
 					>
 						<X class="h-3 w-3" />
 					</button>
@@ -131,11 +131,9 @@
 					role="combobox"
 					aria-expanded={open}
 					class={cn('justify-between', width)}
-					disabled={disabled}
+					{disabled}
 				>
-					{selectedItems.length > 0
-						? `${selectedItems.length} selected`
-						: placeholder}
+					{selectedItems.length > 0 ? `${selectedItems.length} selected` : placeholder}
 					<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
 				</Button>
 			{/snippet}

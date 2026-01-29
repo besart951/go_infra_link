@@ -1,1 +1,1 @@
-export * from './pagination.ts'
+export * from './pagination.ts';

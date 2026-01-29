@@ -52,7 +52,7 @@
 <div class="flex flex-col gap-4">
 	<!-- Search Bar -->
 	<div class="flex items-center gap-4">
-		<div class="relative flex-1 ">
+		<div class="relative flex-1">
 			<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
 				type="search"
@@ -69,7 +69,9 @@
 
 	<!-- Error Message -->
 	{#if state.error}
-		<div class="rounded-md border border-destructive/50 bg-destructive/15 px-4 py-3 text-destructive">
+		<div
+			class="rounded-md border border-destructive/50 bg-destructive/15 px-4 py-3 text-destructive"
+		>
 			<p class="font-medium">Error</p>
 			<p class="text-sm">{state.error}</p>
 		</div>
@@ -109,7 +111,7 @@
 					</Table.Row>
 				{:else}
 					{#each state.items as item}
-						<Table.Row class={state.loading ? "opacity-60" : undefined}>
+						<Table.Row class={state.loading ? 'opacity-60' : undefined}>
 							{@render rowSnippet(item)}
 						</Table.Row>
 					{/each}
@@ -132,7 +134,7 @@
 					disabled={state.page <= 1 || state.loading}
 					onclick={handlePrevious}
 				>
-					<ChevronLeft class="h-4 w-4 mr-1" />
+					<ChevronLeft class="mr-1 h-4 w-4" />
 					Previous
 				</Button>
 				<Button
@@ -142,7 +144,7 @@
 					onclick={handleNext}
 				>
 					Next
-					<ChevronRight class="h-4 w-4 ml-1" />
+					<ChevronRight class="ml-1 h-4 w-4" />
 				</Button>
 			</div>
 		</div>

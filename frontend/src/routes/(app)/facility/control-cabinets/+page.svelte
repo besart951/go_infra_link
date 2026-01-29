@@ -7,6 +7,13 @@
 	import { controlCabinetsStore } from '$lib/stores/list/entityStores.js';
 	import type { ControlCabinet } from '$lib/domain/facility/index.js';
 	import ControlCabinetForm from '$lib/components/facility/ControlCabinetForm.svelte';
+	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+	import { confirm } from '$lib/stores/confirm-dialog.js';
+	import { addToast } from '$lib/components/toast.svelte';
+	import {
+		deleteControlCabinet,
+		getControlCabinetDeleteImpact
+	} from '$lib/infrastructure/api/facility.adapter.js';
 
 	let showForm = $state(false);
 	let editingItem: ControlCabinet | undefined = $state(undefined);
@@ -32,6 +39,38 @@
 		editingItem = undefined;
 	}
 
+	async function handleDelete(item: ControlCabinet) {
+		try {
+			const impact = await getControlCabinetDeleteImpact(item.id);
+
+			if (impact.sps_controllers_count > 0) {
+				const ok1 = await confirm({
+					title: 'Delete control cabinet',
+					message: `This will also delete ${impact.sps_controllers_count} SPS controller(s). Continue?`,
+					confirmText: 'Continue',
+					cancelText: 'Cancel',
+					variant: 'destructive'
+				});
+				if (!ok1) return;
+
+				const ok2 = await confirm({
+					title: 'Confirm cascading delete',
+					message: `This will also delete ${impact.sps_controller_system_types_count} system type link(s), ${impact.field_devices_count} field device(s), and ${impact.bacnet_objects_count} bacnet object(s).`,
+					confirmText: 'Delete everything',
+					cancelText: 'Cancel',
+					variant: 'destructive'
+				});
+				if (!ok2) return;
+			}
+
+			await deleteControlCabinet(item.id);
+			addToast('Control cabinet deleted', 'success');
+			controlCabinetsStore.reload();
+		} catch (err) {
+			addToast(err instanceof Error ? err.message : 'Failed to delete control cabinet', 'error');
+		}
+	}
+
 	onMount(() => {
 		controlCabinetsStore.load();
 	});
@@ -40,6 +79,8 @@
 <svelte:head>
 	<title>Control Cabinets | Infra Link</title>
 </svelte:head>
+
+<ConfirmDialog />
 
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
@@ -95,6 +136,7 @@
 					<Button variant="ghost" size="sm" href="/facility/control-cabinets/{cabinet.id}">
 						View
 					</Button>
+					<Button variant="ghost" size="sm" onclick={() => handleDelete(cabinet)}>Delete</Button>
 				</div>
 			</Table.Cell>
 		{/snippet}

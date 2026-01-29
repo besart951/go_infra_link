@@ -3,7 +3,7 @@
  * Mirrors backend: internal/domain/facility/field_device.go
  */
 
-import type { Pagination } from "../utils/index.ts";
+import type { Pagination } from '../utils/index.ts';
 
 export interface FieldDevice {
 	id: string;
@@ -46,7 +46,7 @@ export interface CreateFieldDeviceRequest {
 }
 
 export interface UpdateFieldDeviceRequest {
-    id: string;
+	id: string;
 	bmk?: string;
 	description?: string;
 	apparat_nr?: number;

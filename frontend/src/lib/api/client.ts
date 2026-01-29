@@ -29,6 +29,18 @@ export class ApiException extends Error {
 }
 
 /**
+ * ApiException that has already been surfaced to the user (e.g. via toast).
+ * UI layers can choose to not render it again.
+ */
+export class HandledApiException extends ApiException {
+	public readonly handled = true;
+	constructor(status: number, error: string, message: string, details?: unknown) {
+		super(status, error, message, details);
+		this.name = 'HandledApiException';
+	}
+}
+
+/**
  * Extract CSRF token from cookies
  */
 function getCsrfToken(): string | undefined {
@@ -112,6 +124,23 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
 
 		if (!response.ok) {
 			const error = await parseError(response);
+
+			// Central handling: authorization errors should be surfaced via toast,
+			// not rendered inline in table/list UIs.
+			if (error.error === 'authorization_failed') {
+				const message = error.message || 'You are not authorized to perform this action.';
+				if (typeof window !== 'undefined') {
+					try {
+						const { addToast } = await import('$lib/components/toast.svelte');
+						addToast(message, 'error');
+					} catch {
+						// Ignore toast rendering failures (e.g. during SSR or if component isn't mounted)
+					}
+				}
+
+				throw new HandledApiException(response.status, error.error, message, error.details);
+			}
+
 			throw new ApiException(
 				response.status,
 				error.error,

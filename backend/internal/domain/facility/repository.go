@@ -22,6 +22,7 @@ type ControlCabinetRepository interface {
 type SPSControllerRepository interface {
 	domain.Repository[SPSController]
 	GetPaginatedListByControlCabinetID(controlCabinetID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[SPSController], error)
+	GetIDsByControlCabinetID(controlCabinetID uuid.UUID) ([]uuid.UUID, error)
 }
 type SPSControllerSystemTypeRepository = domain.Repository[SPSControllerSystemType]
 type FieldDeviceRepository = domain.Repository[FieldDevice]

@@ -91,3 +91,15 @@ func (r *spsControllerRepo) GetPaginatedListByControlCabinetID(controlCabinetID 
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
 }
+
+func (r *spsControllerRepo) GetIDsByControlCabinetID(controlCabinetID uuid.UUID) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	err := r.db.Model(&domainFacility.SPSController{}).
+		Where("deleted_at IS NULL").
+		Where("control_cabinet_id = ?", controlCabinetID).
+		Pluck("id", &ids).Error
+	if err != nil {
+		return nil, err
+	}
+	return ids, nil
+}

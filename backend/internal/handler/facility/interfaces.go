@@ -73,6 +73,7 @@ type FieldDeviceService interface {
 type ControlCabinetService interface {
 	Create(controlCabinet *domainFacility.ControlCabinet) error
 	GetByID(id uuid.UUID) (*domainFacility.ControlCabinet, error)
+	GetDeleteImpact(id uuid.UUID) (*domainFacility.ControlCabinetDeleteImpact, error)
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.ControlCabinet], error)
 	ListByBuildingID(buildingID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.ControlCabinet], error)
 	Update(controlCabinet *domainFacility.ControlCabinet) error

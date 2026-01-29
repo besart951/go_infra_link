@@ -4,7 +4,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import Toasts, { addToast } from '$lib/components/toast.svelte';
+	import { addToast } from '$lib/components/toast.svelte';
 	import { createTeam } from '$lib/api/teams.js';
 	import { Plus } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
@@ -48,8 +48,6 @@
 		teamsStore.load();
 	});
 </script>
-
-<Toasts />
 
 <div class="flex flex-col gap-6">
 	<div class="flex items-start justify-between gap-4">

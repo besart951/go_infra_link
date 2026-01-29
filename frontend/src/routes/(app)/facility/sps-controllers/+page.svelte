@@ -7,7 +7,7 @@
 	import { spsControllersStore } from '$lib/stores/list/entityStores.js';
 	import type { SPSController } from '$lib/domain/facility/index.js';
 	import SPSControllerForm from '$lib/components/facility/SPSControllerForm.svelte';
-	import Toasts, { addToast } from '$lib/components/toast.svelte';
+	import { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import { deleteSPSController } from '$lib/infrastructure/api/facility.adapter.js';
@@ -62,8 +62,6 @@
 <svelte:head>
 	<title>SPS Controllers | Infra Link</title>
 </svelte:head>
-
-<Toasts />
 <ConfirmDialog />
 
 <div class="flex flex-col gap-6">

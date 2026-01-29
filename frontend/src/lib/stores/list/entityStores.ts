@@ -124,10 +124,9 @@ export const alarmDefinitionsStore = createListStore<AlarmDefinition>(
 /**
  * Projects store
  */
-export const projectsStore = createListStore<Project>(
-	createApiAdapter<Project>('/projects'),
-	{ pageSize: 10 }
-);
+export const projectsStore = createListStore<Project>(createApiAdapter<Project>('/projects'), {
+	pageSize: 10
+});
 
 /**
  * Teams store

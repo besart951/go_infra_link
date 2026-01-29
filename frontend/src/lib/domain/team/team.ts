@@ -3,7 +3,7 @@
  * Mirrors backend: internal/domain/team/team.go
  */
 
-import type { Pagination } from "../utils/index.ts";
+import type { Pagination } from '../utils/index.ts';
 
 export interface Team {
 	id: string;

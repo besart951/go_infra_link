@@ -80,6 +80,41 @@ func (h *ControlCabinetHandler) GetControlCabinet(c *gin.Context) {
 	c.JSON(http.StatusOK, toControlCabinetResponse(*controlCabinet))
 }
 
+// GetControlCabinetDeleteImpact godoc
+// @Summary Preview delete impact for a control cabinet
+// @Tags facility-control-cabinets
+// @Produce json
+// @Param id path string true "Control Cabinet ID"
+// @Success 200 {object} dto.ControlCabinetDeleteImpactResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/control-cabinets/{id}/delete-impact [get]
+func (h *ControlCabinetHandler) GetControlCabinetDeleteImpact(c *gin.Context) {
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	impact, err := h.service.GetDeleteImpact(id)
+	if err != nil {
+		if respondNotFoundIf(c, err, "Control Cabinet not found") {
+			return
+		}
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.ControlCabinetDeleteImpactResponse{
+		ControlCabinetID:              impact.ControlCabinetID,
+		SPSControllersCount:           impact.SPSControllersCount,
+		SPSControllerSystemTypesCount: impact.SPSControllerSystemTypesCount,
+		FieldDevicesCount:             impact.FieldDevicesCount,
+		BacnetObjectsCount:            impact.BacnetObjectsCount,
+		SpecificationsCount:           impact.SpecificationsCount,
+	})
+}
+
 // ListControlCabinets godoc
 // @Summary List control cabinets with pagination
 // @Tags facility-control-cabinets
@@ -184,6 +219,9 @@ func (h *ControlCabinetHandler) DeleteControlCabinet(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
+		if respondNotFoundIf(c, err, "Control Cabinet not found") {
+			return
+		}
 		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
 		return
 	}

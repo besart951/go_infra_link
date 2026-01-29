@@ -11,18 +11,24 @@ This document describes the implementation of a hexagonal (clean) architecture f
 The domain layer contains the core business logic and entities, independent of any framework or infrastructure.
 
 #### **Entities** (`domain/entities/`)
+
 Pure TypeScript interfaces representing domain models:
+
 - `building.ts`, `controlCabinet.ts`, `spsController.ts`
-- `apparat.ts`, `systemPart.ts`, `spsControllerSystemType.ts`  
+- `apparat.ts`, `systemPart.ts`, `spsControllerSystemType.ts`
 - `objectData.ts`, `project.ts`, `team.ts`, `user.ts`
 
 #### **Value Objects** (`domain/valueObjects/`)
+
 Immutable objects representing domain concepts:
+
 - `pagination.ts` - Pagination parameters and metadata
 - `search.ts` - Search query value object
 
 #### **Ports** (`domain/ports/`)
+
 Interfaces defining contracts for infrastructure adapters:
+
 - `listRepository.ts` - Repository interface for paginated list operations
 
 ### 2. Application Layer (`src/lib/application/`)
@@ -30,6 +36,7 @@ Interfaces defining contracts for infrastructure adapters:
 Orchestrates domain logic and coordinates between layers, completely framework-agnostic.
 
 #### **Use Cases** (`application/useCases/`)
+
 - `listUseCase.ts` - Handles list, search, and pagination logic
   - `execute()` - Fetch paginated data
   - `getById()` - Fetch single item
@@ -40,6 +47,7 @@ Orchestrates domain logic and coordinates between layers, completely framework-a
 Implements domain ports with concrete technology choices.
 
 #### **API Adapters** (`infrastructure/api/`)
+
 - `apiListAdapter.ts` - Implements `ListRepository` port using the backend API
   - Generic adapter for any entity type
   - Transforms backend responses to domain models
@@ -48,7 +56,9 @@ Implements domain ports with concrete technology choices.
 ### 4. UI Layer
 
 #### **Stores** (`src/lib/stores/list/`)
+
 Svelte stores that wrap use cases for reactive state management:
+
 - `listStore.ts` - Generic factory for creating list stores
   - Reactive state management
   - Request caching (30s TTL)
@@ -58,6 +68,7 @@ Svelte stores that wrap use cases for reactive state management:
 - `entityStores.ts` - Concrete store instances for each entity
 
 **Features:**
+
 - `load(searchText)` - Load first page
 - `reload()` - Force refresh (bypass cache)
 - `goToPage(page)` - Navigate to specific page
@@ -66,6 +77,7 @@ Svelte stores that wrap use cases for reactive state management:
 - `clearCache()` / `reset()` - State management
 
 #### **Components** (`src/lib/components/list/`)
+
 - `PaginatedList.svelte` - Generic reusable list component
   - Supports any entity type via generics
   - Search bar with debounced input
@@ -75,7 +87,9 @@ Svelte stores that wrap use cases for reactive state management:
   - Empty state messaging
 
 #### **Pages**
+
 Refactored pages using the new architecture:
+
 - `routes/(app)/teams/+page.svelte`
 - `routes/(app)/users/+page.svelte`
 - `routes/(app)/projects/+page.svelte`
@@ -137,58 +151,61 @@ Refactored pages using the new architecture:
 To add support for a new entity, follow these steps:
 
 ### 1. Create Domain Entity
+
 ```typescript
 // src/lib/domain/entities/newEntity.ts
 export interface NewEntity {
-    id: string;
-    name: string;
-    created_at: string;
-    updated_at: string;
+	id: string;
+	name: string;
+	created_at: string;
+	updated_at: string;
 }
 ```
 
 ### 2. Add Store Instance
+
 ```typescript
 // src/lib/stores/list/entityStores.ts
 import type { NewEntity } from '$lib/domain/entities/newEntity.js';
 
 export const newEntitiesStore = createListStore<NewEntity>(
-    createApiAdapter<NewEntity>('/api/new-entities'),
-    { pageSize: 10 }
+	createApiAdapter<NewEntity>('/api/new-entities'),
+	{ pageSize: 10 }
 );
 ```
 
 ### 3. Create Page Component
+
 ```svelte
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import PaginatedList from '$lib/components/list/PaginatedList.svelte';
-    import { newEntitiesStore } from '$lib/stores/list/entityStores.js';
-    import type { NewEntity } from '$lib/domain/entities/newEntity.js';
-    import * as Table from '$lib/components/ui/table/index.js';
+	import { onMount } from 'svelte';
+	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
+	import { newEntitiesStore } from '$lib/stores/list/entityStores.js';
+	import type { NewEntity } from '$lib/domain/entities/newEntity.js';
+	import * as Table from '$lib/components/ui/table/index.js';
 
-    onMount(() => {
-        newEntitiesStore.load();
-    });
+	onMount(() => {
+		newEntitiesStore.load();
+	});
 </script>
 
 <PaginatedList
-    state={$newEntitiesStore}
-    columns={[
-        { key: 'name', label: 'Name' },
-        { key: 'created', label: 'Created' }
-    ]}
-    searchPlaceholder="Search entities..."
-    onSearch={(text) => newEntitiesStore.search(text)}
-    onPageChange={(page) => newEntitiesStore.goToPage(page)}
-    onReload={() => newEntitiesStore.reload()}
+	state={$newEntitiesStore}
+	columns={[
+		{ key: 'name', label: 'Name' },
+		{ key: 'created', label: 'Created' }
+	]}
+	searchPlaceholder="Search entities..."
+	onSearch={(text) => newEntitiesStore.search(text)}
+	onPageChange={(page) => newEntitiesStore.goToPage(page)}
+	onReload={() => newEntitiesStore.reload()}
 >
-    {#snippet rowSnippet(entity: NewEntity)}
-        <Table.Cell>{entity.name}</Table.Cell>
-        <Table.Cell>
-            {new Date(entity.created_at).toLocaleDateString()}
-        </Table.Cell>
-    {/snippet}
+	{#snippet rowSnippet(entity: NewEntity)}
+		<Table.Cell>{entity.name}</Table.Cell>
+		<Table.Cell>
+			{new Date(entity.created_at).toLocaleDateString()}
+		</Table.Cell>
+	{/snippet}
 </PaginatedList>
 ```
 
@@ -210,16 +227,19 @@ import { newEntitiesStore } from '$lib/stores/list/entityStores.js';
 ## Technical Details
 
 ### Caching Strategy
+
 - **TTL**: 30 seconds by default
 - **Key**: JSON.stringify({ page, searchText, pageSize })
 - **Invalidation**: Manual via `reload()` or automatic on TTL expiry
 
 ### Request Handling
+
 - **Debouncing**: Search requests debounced by 300ms
 - **Cancellation**: Previous requests cancelled via AbortController
 - **Error Handling**: Errors stored in state, displayed in UI
 
 ### Type Safety
+
 - Full TypeScript support throughout
 - Generic types for reusable components
 - Type-safe repository ports and adapters

@@ -193,6 +193,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 		facility.POST("/control-cabinets", handlers.FacilityControlCabinetHandler.CreateControlCabinet)
 		facility.GET("/control-cabinets", handlers.FacilityControlCabinetHandler.ListControlCabinets)
 		facility.GET("/control-cabinets/:id", handlers.FacilityControlCabinetHandler.GetControlCabinet)
+		facility.GET("/control-cabinets/:id/delete-impact", handlers.FacilityControlCabinetHandler.GetControlCabinetDeleteImpact)
 		facility.PUT("/control-cabinets/:id", handlers.FacilityControlCabinetHandler.UpdateControlCabinet)
 		facility.DELETE("/control-cabinets/:id", handlers.FacilityControlCabinetHandler.DeleteControlCabinet)
 

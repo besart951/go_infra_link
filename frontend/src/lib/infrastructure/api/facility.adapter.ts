@@ -12,6 +12,7 @@ import type {
 	ControlCabinet,
 	ControlCabinetListParams,
 	ControlCabinetListResponse,
+	ControlCabinetDeleteImpact,
 	CreateControlCabinetRequest,
 	UpdateControlCabinetRequest,
 	SPSController,
@@ -173,6 +174,13 @@ export async function updateControlCabinet(
 
 export async function deleteControlCabinet(id: string, options?: RequestInit): Promise<void> {
 	return api<void>(`/facility/control-cabinets/${id}`, { ...options, method: 'DELETE' });
+}
+
+export async function getControlCabinetDeleteImpact(
+	id: string,
+	options?: RequestInit
+): Promise<ControlCabinetDeleteImpact> {
+	return api<ControlCabinetDeleteImpact>(`/facility/control-cabinets/${id}/delete-impact`, options);
 }
 
 // ============================================================================

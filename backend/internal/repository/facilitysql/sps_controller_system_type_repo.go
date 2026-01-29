@@ -126,6 +126,21 @@ func (r *spsControllerSystemTypeRepo) GetPaginatedListBySPSControllerID(spsContr
 	}, nil
 }
 
+func (r *spsControllerSystemTypeRepo) GetIDsBySPSControllerIDs(ids []uuid.UUID) ([]uuid.UUID, error) {
+	if len(ids) == 0 {
+		return []uuid.UUID{}, nil
+	}
+	var out []uuid.UUID
+	err := r.db.Model(&domainFacility.SPSControllerSystemType{}).
+		Where("deleted_at IS NULL").
+		Where("sps_controller_id IN ?", ids).
+		Pluck("id", &out).Error
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (r *spsControllerSystemTypeRepo) SoftDeleteBySPSControllerIDs(ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil

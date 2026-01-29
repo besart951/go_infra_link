@@ -127,7 +127,7 @@
 					bind:value={softwareType}
 					onchange={() => onUpdate('software_type', softwareType)}
 					required
-					class="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+					class="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					<option value="">Select...</option>
 					{#each BACNET_SOFTWARE_TYPES as type}
@@ -163,7 +163,7 @@
 					bind:value={hardwareType}
 					onchange={() => onUpdate('hardware_type', hardwareType)}
 					required
-					class="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+					class="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					<option value="">Select...</option>
 					{#each BACNET_HARDWARE_TYPES as type}
@@ -193,27 +193,16 @@
 	<!-- Checkboxes -->
 	<div class="col-span-12 flex flex-wrap items-center gap-4 md:col-span-6">
 		<div class="flex items-center gap-2">
-			<Checkbox
-				id="gms_visible_{index}"
-				bind:checked={gmsVisible}
-			/>
+			<Checkbox id="gms_visible_{index}" bind:checked={gmsVisible} />
 			<Label for="gms_visible_{index}" class="cursor-pointer text-xs">GMS Visible</Label>
 		</div>
 		<div class="flex items-center gap-2">
-			<Checkbox
-				id="optional_{index}"
-				bind:checked={optional}
-			/>
+			<Checkbox id="optional_{index}" bind:checked={optional} />
 			<Label for="optional_{index}" class="cursor-pointer text-xs">Optional</Label>
 		</div>
 		<div class="flex items-center gap-2">
-			<Checkbox
-				id="text_individual_{index}"
-				bind:checked={textIndividualEnabled}
-			/>
-			<Label for="text_individual_{index}" class="cursor-pointer text-xs">
-				Text Individual
-			</Label>
+			<Checkbox id="text_individual_{index}" bind:checked={textIndividualEnabled} />
+			<Label for="text_individual_{index}" class="cursor-pointer text-xs">Text Individual</Label>
 		</div>
 	</div>
 </div>

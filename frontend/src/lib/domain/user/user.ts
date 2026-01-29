@@ -3,7 +3,7 @@
  * Mirrors backend: internal/domain/user/user.go
  */
 
-import type { Pagination } from "../utils/index.ts";
+import type { Pagination } from '../utils/index.ts';
 
 export type UserRole = 'user' | 'admin' | 'superadmin';
 

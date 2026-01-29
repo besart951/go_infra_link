@@ -13,5 +13,6 @@ import (
 type SPSControllerSystemTypeStore interface {
 	SPSControllerSystemTypeRepository
 	GetPaginatedListBySPSControllerID(spsControllerID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[SPSControllerSystemType], error)
+	GetIDsBySPSControllerIDs(ids []uuid.UUID) ([]uuid.UUID, error)
 	SoftDeleteBySPSControllerIDs(ids []uuid.UUID) error
 }

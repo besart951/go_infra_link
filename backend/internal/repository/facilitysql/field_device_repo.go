@@ -70,6 +70,21 @@ func (r *fieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*dom
 	}, nil
 }
 
+func (r *fieldDeviceRepo) GetIDsBySPSControllerSystemTypeIDs(ids []uuid.UUID) ([]uuid.UUID, error) {
+	if len(ids) == 0 {
+		return []uuid.UUID{}, nil
+	}
+	var out []uuid.UUID
+	err := r.db.Model(&domainFacility.FieldDevice{}).
+		Where("deleted_at IS NULL").
+		Where("sps_controller_system_type_id IN ?", ids).
+		Pluck("id", &out).Error
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (r *fieldDeviceRepo) ExistsApparatNrConflict(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID, apparatNr int, excludeID *uuid.UUID) (bool, error) {
 	db := r.db.Model(&domainFacility.FieldDevice{}).
 		Where("deleted_at IS NULL").

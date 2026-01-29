@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
+	import Toasts from '$lib/components/toast.svelte';
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
@@ -77,4 +78,5 @@
 		{/if}
 		<div class="flex flex-1 flex-col gap-4 p-4 pt-0">{@render children?.()}</div>
 	</Sidebar.Inset>
+	<Toasts />
 </Sidebar.Provider>

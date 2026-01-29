@@ -4,15 +4,10 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
-	import Toasts, { addToast } from '$lib/components/toast.svelte';
+	import { addToast } from '$lib/components/toast.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
-	import {
-		setUserRole,
-		disableUser,
-		enableUser,
-		deleteUser
-	} from '$lib/api/users.js';
+	import { setUserRole, disableUser, enableUser, deleteUser } from '$lib/api/users.js';
 	import { listTeams, listTeamMembers } from '$lib/api/teams.js';
 	import type { Team } from '$lib/domain/entities/team.js';
 	import type { User } from '$lib/domain/entities/user.js';
@@ -305,9 +300,7 @@
 								{/if}
 							</Tooltip.Trigger>
 							<Tooltip.Content>
-								<div class="text-sm">
-									Email verification is not tracked in the backend yet.
-								</div>
+								<div class="text-sm">Email verification is not tracked in the backend yet.</div>
 							</Tooltip.Content>
 						</Tooltip.Root>
 
@@ -424,6 +417,4 @@
 		{/snippet}
 	</PaginatedList>
 </div>
-
-<Toasts />
 <ConfirmDialog />

@@ -3,7 +3,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import Toasts, { addToast } from '$lib/components/toast.svelte';
+	import { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import { ArrowLeft, Trash2 } from '@lucide/svelte';
@@ -63,7 +63,6 @@
 	});
 </script>
 
-<Toasts />
 <ConfirmDialog />
 
 <div class="flex flex-col gap-6">
