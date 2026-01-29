@@ -82,7 +82,6 @@
 		return projectObjectData.filter((item) => isObjectDataActive(item) === isActive);
 	}
 
-
 	function formatDate(value?: string): string {
 		if (!value) return '-';
 		try {
@@ -217,7 +216,10 @@
 			const projectItems = projectRes.items ?? [];
 			const templateItems = templateRes.items ?? [];
 			const projectIds = new Set(projectItems.map((obj) => obj.id));
-			projectObjectData = [...projectItems, ...templateItems.filter((obj) => !projectIds.has(obj.id))];
+			projectObjectData = [
+				...projectItems,
+				...templateItems.filter((obj) => !projectIds.has(obj.id))
+			];
 		} catch (err) {
 			addToast(err instanceof Error ? err.message : 'Failed to load object data', 'error');
 		} finally {
@@ -513,7 +515,9 @@
 
 				<div class="flex flex-wrap items-end justify-between gap-3">
 					<div class="flex w-full max-w-sm flex-col gap-2">
-						<label class="text-sm font-medium" for="project_object_data_search">Search object data</label>
+						<label class="text-sm font-medium" for="project_object_data_search"
+							>Search object data</label
+						>
 						<Input
 							id="project_object_data_search"
 							placeholder="Search by description"

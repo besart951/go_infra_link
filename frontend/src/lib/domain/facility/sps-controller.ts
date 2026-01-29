@@ -3,7 +3,7 @@
  * Mirrors backend: internal/domain/facility/sps_controller.go
  */
 
-import type { Pagination } from "../utils/index.ts";
+import type { Pagination } from '../utils/index.ts';
 
 export interface SPSController {
 	id: string;
@@ -30,7 +30,7 @@ export interface CreateSPSControllerRequest {
 }
 
 export interface UpdateSPSControllerRequest {
-    id: string;
+	id: string;
 	ga_device?: string;
 	device_name?: string;
 	ip_address?: string;

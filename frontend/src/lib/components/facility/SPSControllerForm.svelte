@@ -114,7 +114,11 @@
 		systemTypes = systemTypes.filter((_, i) => i !== index);
 	}
 
-	function updateSystemTypeField(index: number, field: keyof SPSControllerSystemTypeInput, value: string) {
+	function updateSystemTypeField(
+		index: number,
+		field: keyof SPSControllerSystemTypeInput,
+		value: string
+	) {
 		systemTypes = systemTypes.map((item, i) => {
 			if (i !== index) return item;
 			if (field === 'number') {
@@ -199,13 +203,17 @@
 		<div class="flex items-center justify-between border-t pt-4">
 			<div>
 				<h4 class="text-base font-medium">System Types</h4>
-				<p class="text-sm text-muted-foreground">
-					Assign system types to this SPS controller
-				</p>
+				<p class="text-sm text-muted-foreground">Assign system types to this SPS controller</p>
 			</div>
 			<div class="flex items-center gap-2">
 				<SystemTypeSelect bind:value={system_type_id} width="w-[250px]" />
-				<Button type="button" variant="outline" size="sm" onclick={addSystemType} disabled={!system_type_id}>
+				<Button
+					type="button"
+					variant="outline"
+					size="sm"
+					onclick={addSystemType}
+					disabled={!system_type_id}
+				>
 					Add
 				</Button>
 			</div>
@@ -232,14 +240,20 @@
 							<Input
 								type="number"
 								value={st.number ?? ''}
-								oninput={(e) => updateSystemTypeField(index, 'number', (e.target as HTMLInputElement).value)}
+								oninput={(e) =>
+									updateSystemTypeField(index, 'number', (e.target as HTMLInputElement).value)}
 							/>
 						</div>
 						<div class="md:col-span-4">
 							<Label class="text-xs">Document name</Label>
 							<Input
 								value={st.document_name ?? ''}
-								oninput={(e) => updateSystemTypeField(index, 'document_name', (e.target as HTMLInputElement).value)}
+								oninput={(e) =>
+									updateSystemTypeField(
+										index,
+										'document_name',
+										(e.target as HTMLInputElement).value
+									)}
 								maxlength={250}
 							/>
 						</div>
