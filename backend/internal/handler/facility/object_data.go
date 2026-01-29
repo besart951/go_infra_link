@@ -219,3 +219,49 @@ func (h *ObjectDataHandler) DeleteObjectData(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+// GetObjectDataBacnetObjects godoc
+// @Summary Get bacnet objects for object data
+// @Tags facility-object-data
+// @Produce json
+// @Param id path string true "Object Data ID"
+// @Success 200 {array} dto.BacnetObjectResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/object-data/{id}/bacnet-objects [get]
+func (h *ObjectDataHandler) GetObjectDataBacnetObjects(c *gin.Context) {
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	bacnetObjectIDs, err := h.service.GetBacnetObjectIDs(id)
+	if err != nil {
+		if respondNotFoundIf(c, err, "Object data not found") {
+			return
+		}
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	if len(bacnetObjectIDs) == 0 {
+		c.JSON(http.StatusOK, []dto.BacnetObjectResponse{})
+		return
+	}
+
+	bacnetObjects, err := h.bacnetService.GetByIDs(bacnetObjectIDs)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	response := make([]dto.BacnetObjectResponse, 0, len(bacnetObjects))
+	for _, obj := range bacnetObjects {
+		if obj != nil {
+			response = append(response, toBacnetObjectResponse(*obj))
+		}
+	}
+
+	c.JSON(http.StatusOK, response)
+}

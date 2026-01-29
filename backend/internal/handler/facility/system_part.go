@@ -2,17 +2,23 @@ package facility
 
 import (
 	"net/http"
+	"strings"
 
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
 )
 
 type SystemPartHandler struct {
-	service SystemPartService
+	service        SystemPartService
+	apparatService ApparatService
 }
 
-func NewSystemPartHandler(service SystemPartService) *SystemPartHandler {
-	return &SystemPartHandler{service: service}
+func NewSystemPartHandler(service SystemPartService, apparatService ApparatService) *SystemPartHandler {
+	return &SystemPartHandler{
+		service:        service,
+		apparatService: apparatService,
+	}
 }
 
 // CreateSystemPart godoc
@@ -75,6 +81,7 @@ func (h *SystemPartHandler) GetSystemPart(c *gin.Context) {
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
+// @Param apparat_id query string false "Filter by Apparat ID"
 // @Success 200 {object} dto.SystemPartListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -82,6 +89,83 @@ func (h *SystemPartHandler) GetSystemPart(c *gin.Context) {
 func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
 	query, ok := parsePaginationQuery(c)
 	if !ok {
+		return
+	}
+
+	apparatIDStr := c.Query("apparat_id")
+	
+	// If apparat_id is provided, filter system parts
+	if apparatIDStr != "" {
+		apparatID, err := parseUUIDString(apparatIDStr)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, "invalid_apparat_id", "Invalid apparat_id format")
+			return
+		}
+		
+		systemPartIDs, err := h.apparatService.GetSystemPartIDs(apparatID)
+		if err != nil {
+			if respondNotFoundIf(c, err, "Apparat not found") {
+				return
+			}
+			respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+			return
+		}
+		
+		if len(systemPartIDs) == 0 {
+			c.JSON(http.StatusOK, dto.SystemPartListResponse{
+				Items:      []dto.SystemPartResponse{},
+				TotalPages: 0,
+				Page:       1,
+				Limit:      query.Limit,
+				Total:      0,
+			})
+			return
+		}
+		
+		// Get all system parts and filter by search if needed
+		systemParts := make([]*domainFacility.SystemPart, 0, len(systemPartIDs))
+		for _, id := range systemPartIDs {
+			systemPart, err := h.service.GetByID(id)
+			if err == nil && systemPart != nil {
+				// Apply search filter if provided
+				if query.Search == "" || 
+					strings.Contains(strings.ToLower(systemPart.ShortName), strings.ToLower(query.Search)) || 
+					strings.Contains(strings.ToLower(systemPart.Name), strings.ToLower(query.Search)) ||
+					(systemPart.Description != nil && strings.Contains(strings.ToLower(*systemPart.Description), strings.ToLower(query.Search))) {
+					systemParts = append(systemParts, systemPart)
+				}
+			}
+		}
+		
+		// Simple pagination
+		total := len(systemParts)
+		totalPages := (total + query.Limit - 1) / query.Limit
+		if totalPages == 0 {
+			totalPages = 1
+		}
+		
+		start := (query.Page - 1) * query.Limit
+		end := start + query.Limit
+		if start >= total {
+			start = 0
+			end = 0
+		} else if end > total {
+			end = total
+		}
+		
+		pageSystemParts := systemParts[start:end]
+		responses := make([]dto.SystemPartResponse, 0, len(pageSystemParts))
+		for _, systemPart := range pageSystemParts {
+			responses = append(responses, toSystemPartResponse(*systemPart))
+		}
+		
+		c.JSON(http.StatusOK, dto.SystemPartListResponse{
+			Items:      responses,
+			TotalPages: totalPages,
+			Page:       query.Page,
+			Limit:      query.Limit,
+			Total:      total,
+		})
 		return
 	}
 

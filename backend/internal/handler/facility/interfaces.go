@@ -45,11 +45,13 @@ type ApparatService interface {
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.Apparat], error)
 	Update(apparat *domainFacility.Apparat) error
 	DeleteByID(id uuid.UUID) error
+	GetSystemPartIDs(id uuid.UUID) ([]uuid.UUID, error)
 }
 
 type BacnetObjectService interface {
 	CreateWithParent(bacnetObject *domainFacility.BacnetObject, fieldDeviceID *uuid.UUID, objectDataID *uuid.UUID) error
 	GetByID(id uuid.UUID) (*domainFacility.BacnetObject, error)
+	GetByIDs(ids []uuid.UUID) ([]*domainFacility.BacnetObject, error)
 	Update(bacnetObject *domainFacility.BacnetObject, objectDataID *uuid.UUID) error
 	ReplaceForObjectData(objectDataID uuid.UUID, inputs []domainFacility.BacnetObject) error
 }
@@ -118,6 +120,8 @@ type ObjectDataService interface {
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.ObjectData], error)
 	Update(objectData *domainFacility.ObjectData) error
 	DeleteByID(id uuid.UUID) error
+	GetBacnetObjectIDs(id uuid.UUID) ([]uuid.UUID, error)
+	GetApparatIDs(id uuid.UUID) ([]uuid.UUID, error)
 }
 
 type SPSControllerSystemTypeService interface {

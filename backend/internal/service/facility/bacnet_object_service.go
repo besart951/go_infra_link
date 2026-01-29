@@ -95,6 +95,10 @@ func (s *BacnetObjectService) GetByID(id uuid.UUID) (*domainFacility.BacnetObjec
 	return items[0], nil
 }
 
+func (s *BacnetObjectService) GetByIDs(ids []uuid.UUID) ([]*domainFacility.BacnetObject, error) {
+	return s.repo.GetByIds(ids)
+}
+
 // CreateWithParent creates a bacnet object either for a field device (fieldDeviceID)
 // or for an object data template (objectDataID). Exactly one must be provided.
 func (s *BacnetObjectService) CreateWithParent(bacnetObject *domainFacility.BacnetObject, fieldDeviceID *uuid.UUID, objectDataID *uuid.UUID) error {

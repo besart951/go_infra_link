@@ -25,9 +25,9 @@ func NewHandlers(services *facilityservice.Services) *Handlers {
 	return &Handlers{
 		Building:                NewBuildingHandler(services.Building),
 		SystemType:              NewSystemTypeHandler(services.SystemType),
-		SystemPart:              NewSystemPartHandler(services.SystemPart),
+		SystemPart:              NewSystemPartHandler(services.SystemPart, services.Apparat),
 		Specification:           NewSpecificationHandler(services.Specification),
-		Apparat:                 NewApparatHandler(services.Apparat, services.SystemPart),
+		Apparat:                 NewApparatHandler(services.Apparat, services.SystemPart, services.ObjectData),
 		ControlCabinet:          NewControlCabinetHandler(services.ControlCabinet),
 		FieldDevice:             NewFieldDeviceHandler(services.FieldDevice),
 		BacnetObject:            NewBacnetObjectHandler(services.BacnetObject),

@@ -30,7 +30,7 @@ func NewObjectDataRepository(db *gorm.DB) domainFacility.ObjectDataStore {
 
 func (r *objectDataRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.ObjectData, error) {
 	var items []*domainFacility.ObjectData
-	if err := r.db.Where("id IN ?", ids).Preload("BacnetObjects").Find(&items).Error; err != nil {
+	if err := r.db.Where("id IN ?", ids).Preload("BacnetObjects").Preload("Apparats").Find(&items).Error; err != nil {
 		return nil, err
 	}
 	return items, nil

@@ -88,3 +88,7 @@ func respondNotFoundIf(c *gin.Context, err error, message string) bool {
 	}
 	return false
 }
+
+func parseUUIDString(s string) (uuid.UUID, error) {
+	return uuid.Parse(s)
+}
