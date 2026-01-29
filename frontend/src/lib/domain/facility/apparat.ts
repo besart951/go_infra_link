@@ -29,6 +29,7 @@ export interface ApparatListParams {
 	page?: number;
 	limit?: number;
 	search?: string;
+	object_data_id?: string;
 }
 
 export interface ApparatListResponse extends Pagination<Apparat> {

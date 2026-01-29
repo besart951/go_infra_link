@@ -116,7 +116,6 @@ func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
 				Items:      []dto.SystemPartResponse{},
 				TotalPages: 0,
 				Page:       1,
-				Limit:      query.Limit,
 				Total:      0,
 			})
 			return
@@ -163,8 +162,7 @@ func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
 			Items:      responses,
 			TotalPages: totalPages,
 			Page:       query.Page,
-			Limit:      query.Limit,
-			Total:      total,
+			Total:      int64(total),
 		})
 		return
 	}

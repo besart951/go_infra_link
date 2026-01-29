@@ -7,6 +7,7 @@ import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type ApparatHandler struct {
@@ -129,7 +130,6 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 				Items:      []dto.ApparatResponse{},
 				TotalPages: 0,
 				Page:       1,
-				Limit:      query.Limit,
 				Total:      0,
 			})
 			return
@@ -176,8 +176,7 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 			Items:      responses,
 			TotalPages: totalPages,
 			Page:       query.Page,
-			Limit:      query.Limit,
-			Total:      total,
+			Total:      int64(total),
 		})
 		return
 	}
