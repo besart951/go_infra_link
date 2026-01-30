@@ -125,3 +125,67 @@ func (r *fieldDeviceRepo) GetUsedApparatNumbers(spsControllerSystemTypeID uuid.U
 	}
 	return nums, nil
 }
+
+func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 300)
+	offset := (page - 1) * limit
+
+	query := r.db.Model(&domainFacility.FieldDevice{}).Where("deleted_at IS NULL")
+
+	// Apply filters by joining through the hierarchy
+	if filters.SPSControllerSystemTypeID != nil {
+		query = query.Where("sps_controller_system_type_id = ?", *filters.SPSControllerSystemTypeID)
+	}
+
+	if filters.SPSControllerID != nil {
+		// Join through sps_controller_system_types to filter by sps_controller_id
+		query = query.Joins("JOIN sps_controller_system_types ON sps_controller_system_types.id = field_devices.sps_controller_system_type_id").
+			Where("sps_controller_system_types.sps_controller_id = ?", *filters.SPSControllerID)
+	}
+
+	if filters.ControlCabinetID != nil {
+		// Join through sps_controller_system_types and sps_controllers to filter by control_cabinet_id
+		query = query.Joins("JOIN sps_controller_system_types scts ON scts.id = field_devices.sps_controller_system_type_id").
+			Joins("JOIN sps_controllers sc ON sc.id = scts.sps_controller_id").
+			Where("sc.control_cabinet_id = ?", *filters.ControlCabinetID)
+	}
+
+	if filters.BuildingID != nil {
+		// Join through the full hierarchy to filter by building_id
+		query = query.Joins("JOIN sps_controller_system_types scts2 ON scts2.id = field_devices.sps_controller_system_type_id").
+			Joins("JOIN sps_controllers sc2 ON sc2.id = scts2.sps_controller_id").
+			Joins("JOIN control_cabinets cc ON cc.id = sc2.control_cabinet_id").
+			Where("cc.building_id = ?", *filters.BuildingID)
+	}
+
+	// Apply search
+	if strings.TrimSpace(params.Search) != "" {
+		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
+		query = query.Where("LOWER(field_devices.bmk) LIKE ? OR LOWER(field_devices.description) LIKE ?", pattern, pattern)
+	}
+
+	// Count total
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	// Fetch items with preloads
+	var items []domainFacility.FieldDevice
+	if err := query.
+		Select("DISTINCT field_devices.*").
+		Order("field_devices.created_at DESC").
+		Preload("Specification").
+		Limit(limit).
+		Offset(offset).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+
+	return &domain.PaginatedList[domainFacility.FieldDevice]{
+		Items:      items,
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
+	}, nil
+}

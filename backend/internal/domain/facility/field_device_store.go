@@ -1,6 +1,9 @@
 package facility
 
-import "github.com/google/uuid"
+import (
+	"github.com/besart951/go_infra_link/backend/internal/domain"
+	"github.com/google/uuid"
+)
 
 // FieldDeviceStore extends the base repository with helper methods
 // needed for high-volume uniqueness checks.
@@ -18,4 +21,7 @@ type FieldDeviceStore interface {
 
 	// GetUsedApparatNumbers returns a list of used apparat_nr values for the given scope.
 	GetUsedApparatNumbers(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID) ([]int, error)
+
+	// GetPaginatedListWithFilters returns paginated field devices with optional filtering
+	GetPaginatedListWithFilters(params domain.PaginationParams, filters FieldDeviceFilterParams) (*domain.PaginatedList[FieldDevice], error)
 }
