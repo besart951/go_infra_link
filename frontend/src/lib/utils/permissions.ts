@@ -55,19 +55,7 @@ export function canPerform(action: string, resource: string): boolean {
 		],
 		planer: ['user.read', 'team.read', 'project.read', 'project.update'],
 		admin_entrepreneur: ['user.create', 'user.read', 'team.read', 'project.read'],
-		entrepreneur: ['team.read', 'project.read'],
-		admin: [
-			'user.create',
-			'user.read',
-			'user.update',
-			'team.create',
-			'team.read',
-			'team.update',
-			'project.create',
-			'project.read',
-			'project.update'
-		],
-		user: ['team.read', 'project.read']
+		entrepreneur: ['team.read', 'project.read']
 	};
 
 	const rolePerms = permissions[role] || [];
@@ -103,9 +91,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 	admin_planer: 'Planner Administrator',
 	planer: 'Planner',
 	admin_entrepreneur: 'Entrepreneur Administrator',
-	entrepreneur: 'Entrepreneur',
-	admin: 'Administrator',
-	user: 'User'
+	entrepreneur: 'Entrepreneur'
 };
 
 /**

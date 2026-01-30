@@ -17,9 +17,7 @@ const ROLE_LEVELS: Record<UserRole, number> = {
 	admin_planer: 70,
 	planer: 60,
 	admin_entrepreneur: 50,
-	entrepreneur: 40,
-	admin: 50, // Legacy
-	user: 10 // Legacy
+	entrepreneur: 40
 };
 
 interface AuthState {

@@ -7,7 +7,14 @@ export interface User {
 	last_name: string;
 	email: string;
 	is_active: boolean;
-	role: 'user' | 'admin' | 'superadmin';
+	role:
+		| 'superadmin'
+		| 'admin_fzag'
+		| 'fzag'
+		| 'admin_planer'
+		| 'planer'
+		| 'admin_entrepreneur'
+		| 'entrepreneur';
 	created_at: string;
 	updated_at: string;
 	last_login_at?: string | null;

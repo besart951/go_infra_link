@@ -17,9 +17,6 @@ const (
 	RolePlaner            Role = "planer"
 	RoleAdminEnterpreneur Role = "admin_entrepreneur"
 	RoleEnterpreneur      Role = "entrepreneur"
-	// Legacy roles (kept for backwards compatibility)
-	RoleAdmin Role = "admin"
-	RoleUser  Role = "user"
 )
 
 type User struct {
@@ -29,7 +26,7 @@ type User struct {
 	Email               string     `json:"email" gorm:"uniqueIndex;not null"`
 	Password            string     `json:"-" gorm:"not null"`
 	IsActive            bool       `gorm:"default:true"`
-	Role                Role       `gorm:"type:varchar(50);default:'user'"`
+	Role                Role       `gorm:"type:varchar(50);default:'entrepreneur'"`
 	DisabledAt          *time.Time `gorm:"index"`
 	LockedUntil         *time.Time `gorm:"index"`
 	FailedLoginAttempts int        `gorm:"default:0"`

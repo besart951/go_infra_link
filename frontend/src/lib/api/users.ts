@@ -1,8 +1,6 @@
 import { api } from './client.js';
 
 export type UserRole =
-	| 'user'
-	| 'admin'
 	| 'superadmin'
 	| 'admin_fzag'
 	| 'fzag'

@@ -64,11 +64,6 @@ func GetRoleLevel(role user.Role) int {
 		return 50
 	case user.RoleEnterpreneur:
 		return 40
-	// Legacy roles
-	case user.RoleAdmin:
-		return 50 // Same level as admin_planer for backwards compatibility
-	case user.RoleUser:
-		return 10
 	default:
 		return 0
 	}
@@ -101,8 +96,6 @@ func GetAllowedRoles(requesterRole user.Role) []user.Role {
 			user.RolePlaner,
 			user.RoleAdminEnterpreneur,
 			user.RoleEnterpreneur,
-			user.RoleAdmin, // Legacy
-			user.RoleUser,  // Legacy
 		}
 	case user.RoleAdminFZAG:
 		// Can manage fzag and all below
@@ -165,5 +158,5 @@ func TeamRoleLevel(r domainTeam.MemberRole) int {
 }
 
 func IsGlobalAdmin(r user.Role) bool {
-	return GlobalRoleLevel(r) >= GlobalRoleLevel(user.RoleAdmin)
+	return GlobalRoleLevel(r) >= GlobalRoleLevel(user.RoleAdminFZAG)
 }
