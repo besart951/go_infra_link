@@ -21,3 +21,12 @@ type FieldDevice struct {
 
 	BacnetObjects []BacnetObject `gorm:"foreignKey:FieldDeviceID"`
 }
+
+// FieldDeviceOptions contains all metadata needed for creating/editing field devices
+type FieldDeviceOptions struct {
+	Apparats            []Apparat
+	SystemParts         []SystemPart
+	ObjectDatas         []ObjectData
+	ApparatToSystemPart map[uuid.UUID][]uuid.UUID // apparat_id -> [system_part_ids]
+	ObjectDataToApparat map[uuid.UUID][]uuid.UUID // object_data_id -> [apparat_ids]
+}

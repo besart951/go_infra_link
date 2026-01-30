@@ -159,6 +159,24 @@ func (h *FieldDeviceHandler) ListAvailableApparatNumbers(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.AvailableApparatNumbersResponse{Available: available})
 }
 
+// GetFieldDeviceOptions godoc
+// @Summary Get all metadata needed for creating/editing field devices
+// @Description Returns all apparats, system parts, object datas and their relationships in a single call
+// @Tags facility-field-devices
+// @Produce json
+// @Success 200 {object} dto.FieldDeviceOptionsResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/field-devices/options [get]
+func (h *FieldDeviceHandler) GetFieldDeviceOptions(c *gin.Context) {
+	options, err := h.service.GetFieldDeviceOptions()
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, toFieldDeviceOptionsResponse(options))
+}
+
 // UpdateFieldDevice godoc
 // @Summary Update a field device
 // @Tags facility-field-devices

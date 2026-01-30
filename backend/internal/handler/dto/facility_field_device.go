@@ -53,3 +53,13 @@ type FieldDeviceListResponse struct {
 type AvailableApparatNumbersResponse struct {
 	Available []int `json:"available"`
 }
+
+// FieldDeviceOptionsResponse contains all metadata needed for creating/editing field devices
+// This implements the "Single-Fetch Metadata Strategy" to avoid multiple API calls
+type FieldDeviceOptionsResponse struct {
+	Apparats              []ApparatResponse      `json:"apparats"`
+	SystemParts           []SystemPartResponse   `json:"system_parts"`
+	ObjectDatas           []ObjectDataResponse   `json:"object_datas"`
+	ApparatToSystemPart   map[string][]string    `json:"apparat_to_system_part"`   // apparat_id -> [system_part_ids]
+	ObjectDataToApparat   map[string][]string    `json:"object_data_to_apparat"`   // object_data_id -> [apparat_ids]
+}
