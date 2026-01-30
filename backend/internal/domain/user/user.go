@@ -10,9 +10,9 @@ import (
 type Role string
 
 const (
-	RoleUser              Role = "user"
-	RoleAdmin             Role = "admin"
 	RoleSuperAdmin        Role = "superadmin"
+	RoleAdminFZAG         Role = "admin_fzag"
+	RoleFZAG              Role = "fzag"
 	RoleAdminPlaner       Role = "admin_planer"
 	RolePlaner            Role = "planer"
 	RoleAdminEnterpreneur Role = "admin_entrepreneur"
@@ -26,7 +26,7 @@ type User struct {
 	Email               string     `json:"email" gorm:"uniqueIndex;not null"`
 	Password            string     `json:"-" gorm:"not null"`
 	IsActive            bool       `gorm:"default:true"`
-	Role                Role       `gorm:"type:varchar(50);default:'user'"`
+	Role                Role       `gorm:"type:varchar(50);default:'entrepreneur'"`
 	DisabledAt          *time.Time `gorm:"index"`
 	LockedUntil         *time.Time `gorm:"index"`
 	FailedLoginAttempts int        `gorm:"default:0"`
@@ -34,6 +34,7 @@ type User struct {
 	CreatedByID         *uuid.UUID       `gorm:"type:uuid"`
 	CreatedBy           *User            `gorm:"foreignKey:CreatedByID"`
 	BusinessDetails     *BusinessDetails `json:"business_details,omitempty" gorm:"foreignKey:UserID"`
+	Teams               []UserTeam       `gorm:"foreignKey:UserID"`
 }
 
 type BusinessDetails struct {

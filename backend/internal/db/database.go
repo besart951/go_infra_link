@@ -77,6 +77,9 @@ func autoMigrate(db *gorm.DB) error {
 		// User domain
 		&user.User{},
 		&user.BusinessDetails{},
+		&user.UserTeam{},
+		&user.Permission{},
+		&user.RolePermission{},
 
 		// Auth domain
 		&auth.RefreshToken{},
@@ -167,6 +170,9 @@ func GetModels() []interface{} {
 	return []interface{}{
 		&user.User{},
 		&user.BusinessDetails{},
+		&user.UserTeam{},
+		&user.Permission{},
+		&user.RolePermission{},
 		&auth.RefreshToken{},
 		&auth.PasswordResetToken{},
 		&auth.LoginAttempt{},

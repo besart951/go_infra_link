@@ -14,7 +14,7 @@ type CreateUserRequest struct {
 	Email       string     `json:"email" binding:"required,email"`
 	Password    string     `json:"password" binding:"required,min=8"`
 	IsActive    bool       `json:"is_active"`
-	Role        string     `json:"role" binding:"omitempty,oneof=user admin superadmin"`
+	Role        string     `json:"role" binding:"omitempty,oneof=superadmin admin_fzag fzag admin_planer planer admin_entrepreneur entrepreneur"`
 	CreatedByID *uuid.UUID `json:"created_by_id"`
 }
 
@@ -24,7 +24,7 @@ type UpdateUserRequest struct {
 	Email     string `json:"email" binding:"omitempty,email"`
 	Password  string `json:"password" binding:"omitempty,min=8"`
 	IsActive  *bool  `json:"is_active"`
-	Role      string `json:"role" binding:"omitempty,oneof=user admin superadmin"`
+	Role      string `json:"role" binding:"omitempty,oneof=superadmin admin_fzag fzag admin_planer planer admin_entrepreneur entrepreneur"`
 }
 
 type UserResponse struct {
@@ -47,4 +47,13 @@ type UserListResponse struct {
 	Total      int64          `json:"total"`
 	Page       int            `json:"page"`
 	TotalPages int            `json:"total_pages"`
+}
+
+type AllowedRolesResponse struct {
+	Roles []string `json:"roles"`
+}
+
+type AddUserToTeamRequest struct {
+	UserID uuid.UUID `json:"user_id" binding:"required"`
+	TeamID uuid.UUID `json:"team_id" binding:"required"`
 }

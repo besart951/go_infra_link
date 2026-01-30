@@ -20,7 +20,7 @@ func New(repo domainUser.UserRepository, passwordSvc passwordsvc.Service) *Servi
 
 func (s *Service) Create(user *domainUser.User) error {
 	if user.Role == "" {
-		user.Role = domainUser.RoleUser
+		user.Role = domainUser.RoleEnterpreneur
 	}
 	return s.repo.Create(user)
 }
@@ -32,7 +32,7 @@ func (s *Service) CreateWithPassword(user *domainUser.User, password string) err
 	}
 
 	if user.Role == "" {
-		user.Role = domainUser.RoleUser
+		user.Role = domainUser.RoleEnterpreneur
 	}
 
 	user.Password = hashedPassword

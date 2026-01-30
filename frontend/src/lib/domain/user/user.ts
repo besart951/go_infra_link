@@ -5,7 +5,14 @@
 
 import type { Pagination } from '../utils/index.ts';
 
-export type UserRole = 'user' | 'admin' | 'superadmin';
+export type UserRole =
+	| 'superadmin'
+	| 'admin_fzag'
+	| 'fzag'
+	| 'admin_planer'
+	| 'planer'
+	| 'admin_entrepreneur'
+	| 'entrepreneur';
 
 export interface User {
 	id: string;

@@ -95,14 +95,14 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 		phases.GET("", handlers.PhaseHandler.ListPhases)
 		phases.GET("/:id", handlers.PhaseHandler.GetPhase)
 		// Creating, updating, and deleting phases requires admin role
-		phases.POST("", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin), handlers.PhaseHandler.CreatePhase)
-		phases.PUT("/:id", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin), handlers.PhaseHandler.UpdatePhase)
-		phases.DELETE("/:id", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin), handlers.PhaseHandler.DeletePhase)
+		phases.POST("", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdminFZAG), handlers.PhaseHandler.CreatePhase)
+		phases.PUT("/:id", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdminFZAG), handlers.PhaseHandler.UpdatePhase)
+		phases.DELETE("/:id", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdminFZAG), handlers.PhaseHandler.DeletePhase)
 	}
 
 	// Phase Permission routes - Only admins can manage permissions
 	phasePermissions := protectedV1.Group("/phase-permissions")
-	phasePermissions.Use(middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin))
+	phasePermissions.Use(middleware.RequireGlobalRole(rbacService, domainUser.RoleAdminFZAG))
 	{
 		phasePermissions.POST("", handlers.PhasePermissionHandler.CreatePhasePermission)
 		phasePermissions.GET("", handlers.PhasePermissionHandler.ListPhasePermissions)
@@ -113,20 +113,27 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 
 	// User routes
 	users := protectedV1.Group("/users")
-	users.Use(middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin))
 	{
-		users.POST("", handlers.UserHandler.CreateUser)
-		users.GET("", handlers.UserHandler.ListUsers)
-		users.GET("/:id", handlers.UserHandler.GetUser)
-		users.PUT("/:id", handlers.UserHandler.UpdateUser)
-		users.DELETE("/:id", handlers.UserHandler.DeleteUser)
+		// Anyone authenticated can get their allowed roles
+		users.GET("/allowed-roles", handlers.UserHandler.GetAllowedRoles)
+	}
+
+	// Admin-only user management routes
+	usersAdmin := protectedV1.Group("/users")
+	usersAdmin.Use(middleware.RequireGlobalRole(rbacService, domainUser.RoleAdminFZAG))
+	{
+		usersAdmin.POST("", handlers.UserHandler.CreateUser)
+		usersAdmin.GET("", handlers.UserHandler.ListUsers)
+		usersAdmin.GET("/:id", handlers.UserHandler.GetUser)
+		usersAdmin.PUT("/:id", handlers.UserHandler.UpdateUser)
+		usersAdmin.DELETE("/:id", handlers.UserHandler.DeleteUser)
 	}
 
 	// Team routes
 	teams := protectedV1.Group("/teams")
 	{
-		teams.POST("", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin), handlers.TeamHandler.CreateTeam)
-		teams.GET("", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin), handlers.TeamHandler.ListTeams)
+		teams.POST("", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdminFZAG), handlers.TeamHandler.CreateTeam)
+		teams.GET("", middleware.RequireGlobalRole(rbacService, domainUser.RoleAdminFZAG), handlers.TeamHandler.ListTeams)
 
 		teams.GET("/:id", middleware.RequireTeamRole(rbacService, "id", domainTeam.MemberRoleMember), handlers.TeamHandler.GetTeam)
 		teams.PUT("/:id", middleware.RequireTeamRole(rbacService, "id", domainTeam.MemberRoleManager), handlers.TeamHandler.UpdateTeam)
@@ -139,7 +146,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 
 	// Admin routes
 	admin := protectedV1.Group("/admin")
-	admin.Use(middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin))
+	admin.Use(middleware.RequireGlobalRole(rbacService, domainUser.RoleAdminFZAG))
 	{
 		admin.POST("/users/:id/password-reset", handlers.AdminHandler.ResetUserPassword)
 		admin.POST("/users/:id/disable", handlers.AdminHandler.DisableUser)

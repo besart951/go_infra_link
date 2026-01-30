@@ -1,12 +1,21 @@
 import { api } from './client.js';
 
+export type UserRole =
+	| 'superadmin'
+	| 'admin_fzag'
+	| 'fzag'
+	| 'admin_planer'
+	| 'planer'
+	| 'admin_entrepreneur'
+	| 'entrepreneur';
+
 export interface User {
 	id: string;
 	first_name: string;
 	last_name: string;
 	email: string;
 	is_active: boolean;
-	role: 'user' | 'admin' | 'superadmin';
+	role: UserRole;
 	created_at: string;
 	updated_at: string;
 	last_login_at?: string | null;
@@ -36,7 +45,11 @@ export interface CreateUserRequest {
 	email: string;
 	password: string;
 	is_active: boolean;
-	role?: 'user' | 'admin' | 'superadmin';
+	role?: UserRole;
+}
+
+export interface AllowedRolesResponse {
+	roles: UserRole[];
 }
 
 /**
@@ -64,7 +77,15 @@ export async function listUsers(
  * Get current authenticated user
  */
 export async function getCurrentUser(): Promise<User> {
-	return api<User>('/users/me');
+	return api<User>('/auth/me');
+}
+
+/**
+ * Get allowed roles for the current user
+ * CSRF token is automatically included
+ */
+export async function getAllowedRoles(): Promise<AllowedRolesResponse> {
+	return api<AllowedRolesResponse>('/users/allowed-roles');
 }
 
 /**
@@ -82,10 +103,7 @@ export async function createUser(req: CreateUserRequest): Promise<User> {
  * Set a user's role (admin only)
  * CSRF token is automatically included
  */
-export async function setUserRole(
-	userId: string,
-	role: 'user' | 'admin' | 'superadmin'
-): Promise<void> {
+export async function setUserRole(userId: string, role: UserRole): Promise<void> {
 	return api<void>(`/admin/users/${userId}/role`, {
 		method: 'POST',
 		body: JSON.stringify({ role })
