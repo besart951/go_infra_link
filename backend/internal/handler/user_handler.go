@@ -7,16 +7,22 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/besart951/go_infra_link/backend/internal/handler/mapper"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
+	rbacsvc "github.com/besart951/go_infra_link/backend/internal/service/rbac"
 	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
-	service UserService
+	service     UserService
+	rbacService *rbacsvc.Service
 }
 
-func NewUserHandler(service UserService) *UserHandler {
-	return &UserHandler{service: service}
+func NewUserHandler(service UserService, rbacService *rbacsvc.Service) *UserHandler {
+	return &UserHandler{
+		service:     service,
+		rbacService: rbacService,
+	}
 }
 
 // CreateUser godoc
@@ -171,4 +177,36 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// GetAllowedRoles godoc
+// @Summary Get roles that the current user can assign
+// @Tags users
+// @Produce json
+// @Success 200 {object} dto.AllowedRolesResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/users/allowed-roles [get]
+func (h *UserHandler) GetAllowedRoles(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+
+	role, err := h.rbacService.GetGlobalRole(userID)
+	if err != nil {
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	allowedRoles := h.rbacService.GetAllowedRoles(role)
+	roleStrings := make([]string, len(allowedRoles))
+	for i, r := range allowedRoles {
+		roleStrings[i] = string(r)
+	}
+
+	c.JSON(http.StatusOK, dto.AllowedRolesResponse{
+		Roles: roleStrings,
+	})
 }

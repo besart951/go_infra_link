@@ -10,13 +10,16 @@ import (
 type Role string
 
 const (
-	RoleUser              Role = "user"
-	RoleAdmin             Role = "admin"
 	RoleSuperAdmin        Role = "superadmin"
+	RoleAdminFZAG         Role = "admin_fzag"
+	RoleFZAG              Role = "fzag"
 	RoleAdminPlaner       Role = "admin_planer"
 	RolePlaner            Role = "planer"
 	RoleAdminEnterpreneur Role = "admin_entrepreneur"
 	RoleEnterpreneur      Role = "entrepreneur"
+	// Legacy roles (kept for backwards compatibility)
+	RoleAdmin Role = "admin"
+	RoleUser  Role = "user"
 )
 
 type User struct {
@@ -34,6 +37,7 @@ type User struct {
 	CreatedByID         *uuid.UUID       `gorm:"type:uuid"`
 	CreatedBy           *User            `gorm:"foreignKey:CreatedByID"`
 	BusinessDetails     *BusinessDetails `json:"business_details,omitempty" gorm:"foreignKey:UserID"`
+	Teams               []UserTeam       `gorm:"foreignKey:UserID"`
 }
 
 type BusinessDetails struct {

@@ -113,13 +113,20 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 
 	// User routes
 	users := protectedV1.Group("/users")
-	users.Use(middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin))
 	{
-		users.POST("", handlers.UserHandler.CreateUser)
-		users.GET("", handlers.UserHandler.ListUsers)
-		users.GET("/:id", handlers.UserHandler.GetUser)
-		users.PUT("/:id", handlers.UserHandler.UpdateUser)
-		users.DELETE("/:id", handlers.UserHandler.DeleteUser)
+		// Anyone authenticated can get their allowed roles
+		users.GET("/allowed-roles", handlers.UserHandler.GetAllowedRoles)
+	}
+	
+	// Admin-only user management routes
+	usersAdmin := protectedV1.Group("/users")
+	usersAdmin.Use(middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin))
+	{
+		usersAdmin.POST("", handlers.UserHandler.CreateUser)
+		usersAdmin.GET("", handlers.UserHandler.ListUsers)
+		usersAdmin.GET("/:id", handlers.UserHandler.GetUser)
+		usersAdmin.PUT("/:id", handlers.UserHandler.UpdateUser)
+		usersAdmin.DELETE("/:id", handlers.UserHandler.DeleteUser)
 	}
 
 	// Team routes

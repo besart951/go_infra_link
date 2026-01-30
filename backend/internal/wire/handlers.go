@@ -15,7 +15,7 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devA
 		ProjectHandler:         handler.NewProjectHandler(services.Project),
 		PhaseHandler:           handler.NewPhaseHandler(services.Phase),
 		PhasePermissionHandler: handler.NewPhasePermissionHandler(services.PhasePermission),
-		UserHandler:            handler.NewUserHandler(services.User),
+		UserHandler:            handler.NewUserHandler(services.User, services.RBAC),
 		TeamHandler:            handler.NewTeamHandler(services.Team),
 		AdminHandler:           handler.NewAdminHandler(services.Admin, services.Auth),
 		AuthHandler: handler.NewAuthHandler(
