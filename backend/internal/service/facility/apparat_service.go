@@ -37,6 +37,10 @@ func (s *ApparatService) GetByID(id uuid.UUID) (*domainFacility.Apparat, error) 
 	return apparats[0], nil
 }
 
+func (s *ApparatService) GetByIDs(ids []uuid.UUID) ([]*domainFacility.Apparat, error) {
+	return s.repo.GetByIds(ids)
+}
+
 func (s *ApparatService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.Apparat], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
 	return s.repo.GetPaginatedList(domain.PaginationParams{
@@ -65,7 +69,7 @@ func (s *ApparatService) GetSystemPartIDs(id uuid.UUID) ([]uuid.UUID, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Get the IDs from the loaded system parts
 	systemPartIDs := make([]uuid.UUID, 0, len(apparat.SystemParts))
 	for _, systemPart := range apparat.SystemParts {

@@ -26,6 +26,7 @@ type SystemPartService interface {
 	Create(systemPart *domainFacility.SystemPart) error
 	GetByID(id uuid.UUID) (*domainFacility.SystemPart, error)
 	GetByIDs(ids []uuid.UUID) ([]*domainFacility.SystemPart, error)
+	GetApparatIDs(id uuid.UUID) ([]uuid.UUID, error)
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SystemPart], error)
 	Update(systemPart *domainFacility.SystemPart) error
 	DeleteByID(id uuid.UUID) error
@@ -42,6 +43,7 @@ type SpecificationService interface {
 type ApparatService interface {
 	Create(apparat *domainFacility.Apparat) error
 	GetByID(id uuid.UUID) (*domainFacility.Apparat, error)
+	GetByIDs(ids []uuid.UUID) ([]*domainFacility.Apparat, error)
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.Apparat], error)
 	Update(apparat *domainFacility.Apparat) error
 	DeleteByID(id uuid.UUID) error
@@ -119,6 +121,9 @@ type ObjectDataService interface {
 	Create(objectData *domainFacility.ObjectData) error
 	GetByID(id uuid.UUID) (*domainFacility.ObjectData, error)
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.ObjectData], error)
+	ListByApparatID(page, limit int, search string, apparatID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
+	ListBySystemPartID(page, limit int, search string, systemPartID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
+	ListByApparatAndSystemPartID(page, limit int, search string, apparatID, systemPartID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
 	Update(objectData *domainFacility.ObjectData) error
 	DeleteByID(id uuid.UUID) error
 	GetBacnetObjectIDs(id uuid.UUID) ([]uuid.UUID, error)

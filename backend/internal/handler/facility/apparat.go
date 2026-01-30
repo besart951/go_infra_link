@@ -96,6 +96,7 @@ func (h *ApparatHandler) GetApparat(c *gin.Context) {
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
 // @Param object_data_id query string false "Filter by Object Data ID"
+// @Param system_part_id query string false "Filter by System Part ID"
 // @Success 200 {object} dto.ApparatListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -107,56 +108,96 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 	}
 
 	objectDataIDStr := c.Query("object_data_id")
-	
-	// If object_data_id is provided, filter apparats
-	if objectDataIDStr != "" {
-		objectDataID, err := parseUUIDString(objectDataIDStr)
-		if err != nil {
-			respondError(c, http.StatusBadRequest, "invalid_object_data_id", "Invalid object_data_id format")
-			return
-		}
-		
-		apparatIDs, err := h.getApparatsForObjectData(objectDataID)
-		if err != nil {
-			if respondNotFoundIf(c, err, "Object data not found") {
+	systemPartIDStr := c.Query("system_part_id")
+
+	filtering := objectDataIDStr != "" || systemPartIDStr != ""
+	if filtering {
+		var byObjectData []uuid.UUID
+		var bySystemPart []uuid.UUID
+
+		if objectDataIDStr != "" {
+			objectDataID, err := parseUUIDString(objectDataIDStr)
+			if err != nil {
+				respondError(c, http.StatusBadRequest, "invalid_object_data_id", "Invalid object_data_id format")
 				return
 			}
+
+			ids, err := h.getApparatsForObjectData(objectDataID)
+			if err != nil {
+				if respondNotFoundIf(c, err, "Object data not found") {
+					return
+				}
+				respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+				return
+			}
+			byObjectData = ids
+		}
+
+		if systemPartIDStr != "" {
+			systemPartID, err := parseUUIDString(systemPartIDStr)
+			if err != nil {
+				respondError(c, http.StatusBadRequest, "invalid_system_part_id", "Invalid system_part_id format")
+				return
+			}
+
+			ids, err := h.systemPartService.GetApparatIDs(systemPartID)
+			if err != nil {
+				if respondNotFoundIf(c, err, "System part not found") {
+					return
+				}
+				respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+				return
+			}
+			bySystemPart = ids
+		}
+
+		finalIDs := byObjectData
+		if objectDataIDStr == "" {
+			finalIDs = bySystemPart
+		} else if systemPartIDStr != "" {
+			set := map[uuid.UUID]struct{}{}
+			for _, id := range bySystemPart {
+				set[id] = struct{}{}
+			}
+			out := make([]uuid.UUID, 0, len(byObjectData))
+			for _, id := range byObjectData {
+				if _, ok := set[id]; ok {
+					out = append(out, id)
+				}
+			}
+			finalIDs = out
+		}
+
+		if len(finalIDs) == 0 {
+			c.JSON(http.StatusOK, dto.ApparatListResponse{Items: []dto.ApparatResponse{}, TotalPages: 0, Page: 1, Total: 0})
+			return
+		}
+
+		apparats, err := h.service.GetByIDs(finalIDs)
+		if err != nil {
 			respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 			return
 		}
-		
-		if len(apparatIDs) == 0 {
-			c.JSON(http.StatusOK, dto.ApparatListResponse{
-				Items:      []dto.ApparatResponse{},
-				TotalPages: 0,
-				Page:       1,
-				Total:      0,
-			})
-			return
-		}
-		
-		// Get all apparats and filter by search if needed
-		apparats := make([]*domainFacility.Apparat, 0, len(apparatIDs))
-		for _, id := range apparatIDs {
-			apparat, err := h.service.GetByID(id)
-			if err == nil && apparat != nil {
-				// Apply search filter if provided
-				if query.Search == "" || 
-					containsIgnoreCase(apparat.ShortName, query.Search) || 
-					containsIgnoreCase(apparat.Name, query.Search) ||
-					(apparat.Description != nil && containsIgnoreCase(*apparat.Description, query.Search)) {
-					apparats = append(apparats, apparat)
-				}
+
+		filtered := make([]*domainFacility.Apparat, 0, len(apparats))
+		for _, apparat := range apparats {
+			if apparat == nil {
+				continue
+			}
+			if query.Search == "" ||
+				containsIgnoreCase(apparat.ShortName, query.Search) ||
+				containsIgnoreCase(apparat.Name, query.Search) ||
+				(apparat.Description != nil && containsIgnoreCase(*apparat.Description, query.Search)) {
+				filtered = append(filtered, apparat)
 			}
 		}
-		
-		// Simple pagination
-		total := len(apparats)
+
+		total := len(filtered)
 		totalPages := (total + query.Limit - 1) / query.Limit
 		if totalPages == 0 {
 			totalPages = 1
 		}
-		
+
 		start := (query.Page - 1) * query.Limit
 		end := start + query.Limit
 		if start >= total {
@@ -165,19 +206,14 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 		} else if end > total {
 			end = total
 		}
-		
-		pageApparats := apparats[start:end]
-		responses := make([]dto.ApparatResponse, 0, len(pageApparats))
-		for _, apparat := range pageApparats {
-			responses = append(responses, toApparatResponse(*apparat))
+
+		pageItems := filtered[start:end]
+		responses := make([]dto.ApparatResponse, 0, len(pageItems))
+		for _, a := range pageItems {
+			responses = append(responses, toApparatResponse(*a))
 		}
-		
-		c.JSON(http.StatusOK, dto.ApparatListResponse{
-			Items:      responses,
-			TotalPages: totalPages,
-			Page:       query.Page,
-			Total:      int64(total),
-		})
+
+		c.JSON(http.StatusOK, dto.ApparatListResponse{Items: responses, TotalPages: totalPages, Page: query.Page, Total: int64(total)})
 		return
 	}
 
@@ -276,12 +312,12 @@ func (h *ApparatHandler) getApparatsForObjectData(objectDataID uuid.UUID) ([]uui
 }
 
 func containsIgnoreCase(s, substr string) bool {
-	return len(s) >= len(substr) && 
-		   (s == substr || 
-		    len(substr) == 0 || 
-		    (len(s) > 0 && len(substr) > 0 && 
-			 toLower(s) == toLower(substr) || 
-			 strings.Contains(toLower(s), toLower(substr))))
+	return len(s) >= len(substr) &&
+		(s == substr ||
+			len(substr) == 0 ||
+			(len(s) > 0 && len(substr) > 0 &&
+				toLower(s) == toLower(substr) ||
+				strings.Contains(toLower(s), toLower(substr))))
 }
 
 func toLower(s string) string {

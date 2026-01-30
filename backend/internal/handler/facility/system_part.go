@@ -7,17 +7,20 @@ import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type SystemPartHandler struct {
-	service        SystemPartService
-	apparatService ApparatService
+	service           SystemPartService
+	apparatService    ApparatService
+	objectDataService ObjectDataService
 }
 
-func NewSystemPartHandler(service SystemPartService, apparatService ApparatService) *SystemPartHandler {
+func NewSystemPartHandler(service SystemPartService, apparatService ApparatService, objectDataService ObjectDataService) *SystemPartHandler {
 	return &SystemPartHandler{
-		service:        service,
-		apparatService: apparatService,
+		service:           service,
+		apparatService:    apparatService,
+		objectDataService: objectDataService,
 	}
 }
 
@@ -82,6 +85,7 @@ func (h *SystemPartHandler) GetSystemPart(c *gin.Context) {
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
 // @Param apparat_id query string false "Filter by Apparat ID"
+// @Param object_data_id query string false "Filter by Object Data ID"
 // @Success 200 {object} dto.SystemPartListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -93,56 +97,110 @@ func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
 	}
 
 	apparatIDStr := c.Query("apparat_id")
-	
-	// If apparat_id is provided, filter system parts
-	if apparatIDStr != "" {
-		apparatID, err := parseUUIDString(apparatIDStr)
-		if err != nil {
-			respondError(c, http.StatusBadRequest, "invalid_apparat_id", "Invalid apparat_id format")
-			return
-		}
-		
-		systemPartIDs, err := h.apparatService.GetSystemPartIDs(apparatID)
-		if err != nil {
-			if respondNotFoundIf(c, err, "Apparat not found") {
+	objectDataIDStr := c.Query("object_data_id")
+
+	filtering := apparatIDStr != "" || objectDataIDStr != ""
+	if filtering {
+		var byApparat []uuid.UUID
+		var byObjectData []uuid.UUID
+
+		if apparatIDStr != "" {
+			apparatID, err := parseUUIDString(apparatIDStr)
+			if err != nil {
+				respondError(c, http.StatusBadRequest, "invalid_apparat_id", "Invalid apparat_id format")
 				return
 			}
+			ids, err := h.apparatService.GetSystemPartIDs(apparatID)
+			if err != nil {
+				if respondNotFoundIf(c, err, "Apparat not found") {
+					return
+				}
+				respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+				return
+			}
+			byApparat = ids
+		}
+
+		if objectDataIDStr != "" {
+			objectDataID, err := parseUUIDString(objectDataIDStr)
+			if err != nil {
+				respondError(c, http.StatusBadRequest, "invalid_object_data_id", "Invalid object_data_id format")
+				return
+			}
+
+			apparatIDs, err := h.objectDataService.GetApparatIDs(objectDataID)
+			if err != nil {
+				if respondNotFoundIf(c, err, "Object data not found") {
+					return
+				}
+				respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+				return
+			}
+
+			idSet := map[uuid.UUID]struct{}{}
+			for _, aid := range apparatIDs {
+				sysIDs, err := h.apparatService.GetSystemPartIDs(aid)
+				if err != nil {
+					continue
+				}
+				for _, sid := range sysIDs {
+					idSet[sid] = struct{}{}
+				}
+			}
+			byObjectData = make([]uuid.UUID, 0, len(idSet))
+			for id := range idSet {
+				byObjectData = append(byObjectData, id)
+			}
+		}
+
+		// Combine filters: intersection if both present, else whichever exists
+		finalIDs := byApparat
+		if apparatIDStr == "" {
+			finalIDs = byObjectData
+		} else if objectDataIDStr != "" {
+			set := map[uuid.UUID]struct{}{}
+			for _, id := range byObjectData {
+				set[id] = struct{}{}
+			}
+			out := make([]uuid.UUID, 0, len(byApparat))
+			for _, id := range byApparat {
+				if _, ok := set[id]; ok {
+					out = append(out, id)
+				}
+			}
+			finalIDs = out
+		}
+
+		if len(finalIDs) == 0 {
+			c.JSON(http.StatusOK, dto.SystemPartListResponse{Items: []dto.SystemPartResponse{}, TotalPages: 0, Page: 1, Total: 0})
+			return
+		}
+
+		systemParts, err := h.service.GetByIDs(finalIDs)
+		if err != nil {
 			respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 			return
 		}
-		
-		if len(systemPartIDs) == 0 {
-			c.JSON(http.StatusOK, dto.SystemPartListResponse{
-				Items:      []dto.SystemPartResponse{},
-				TotalPages: 0,
-				Page:       1,
-				Total:      0,
-			})
-			return
-		}
-		
-		// Get all system parts and filter by search if needed
-		systemParts := make([]*domainFacility.SystemPart, 0, len(systemPartIDs))
-		for _, id := range systemPartIDs {
-			systemPart, err := h.service.GetByID(id)
-			if err == nil && systemPart != nil {
-				// Apply search filter if provided
-				if query.Search == "" || 
-					strings.Contains(strings.ToLower(systemPart.ShortName), strings.ToLower(query.Search)) || 
-					strings.Contains(strings.ToLower(systemPart.Name), strings.ToLower(query.Search)) ||
-					(systemPart.Description != nil && strings.Contains(strings.ToLower(*systemPart.Description), strings.ToLower(query.Search))) {
-					systemParts = append(systemParts, systemPart)
-				}
+
+		filtered := make([]*domainFacility.SystemPart, 0, len(systemParts))
+		for _, sp := range systemParts {
+			if sp == nil {
+				continue
+			}
+			if query.Search == "" ||
+				strings.Contains(strings.ToLower(sp.ShortName), strings.ToLower(query.Search)) ||
+				strings.Contains(strings.ToLower(sp.Name), strings.ToLower(query.Search)) ||
+				(sp.Description != nil && strings.Contains(strings.ToLower(*sp.Description), strings.ToLower(query.Search))) {
+				filtered = append(filtered, sp)
 			}
 		}
-		
-		// Simple pagination
-		total := len(systemParts)
+
+		total := len(filtered)
 		totalPages := (total + query.Limit - 1) / query.Limit
 		if totalPages == 0 {
 			totalPages = 1
 		}
-		
+
 		start := (query.Page - 1) * query.Limit
 		end := start + query.Limit
 		if start >= total {
@@ -151,19 +209,14 @@ func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
 		} else if end > total {
 			end = total
 		}
-		
-		pageSystemParts := systemParts[start:end]
-		responses := make([]dto.SystemPartResponse, 0, len(pageSystemParts))
-		for _, systemPart := range pageSystemParts {
-			responses = append(responses, toSystemPartResponse(*systemPart))
+
+		pageItems := filtered[start:end]
+		responses := make([]dto.SystemPartResponse, 0, len(pageItems))
+		for _, sp := range pageItems {
+			responses = append(responses, toSystemPartResponse(*sp))
 		}
-		
-		c.JSON(http.StatusOK, dto.SystemPartListResponse{
-			Items:      responses,
-			TotalPages: totalPages,
-			Page:       query.Page,
-			Total:      int64(total),
-		})
+
+		c.JSON(http.StatusOK, dto.SystemPartListResponse{Items: responses, TotalPages: totalPages, Page: query.Page, Total: int64(total)})
 		return
 	}
 

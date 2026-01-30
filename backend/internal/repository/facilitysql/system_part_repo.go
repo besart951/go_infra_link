@@ -25,7 +25,19 @@ func NewSystemPartRepository(db *gorm.DB) domainFacility.SystemPartRepository {
 }
 
 func (r *systemPartRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SystemPart, error) {
-	return r.BaseRepository.GetByIds(ids)
+	result, err := r.BaseRepository.GetByIds(ids)
+	if err != nil {
+		return nil, err
+	}
+
+	// Preload Apparats for each system part (many2many)
+	for _, systemPart := range result {
+		if err := r.DB().Model(systemPart).Association("Apparats").Find(&systemPart.Apparats); err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
 }
 
 func (r *systemPartRepo) Create(entity *domainFacility.SystemPart) error {

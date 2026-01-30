@@ -18,6 +18,7 @@
 	export let searchPlaceholder: string = 'Search...';
 	export let emptyText: string = 'No results found.';
 	export let width: string = 'w-[200px]';
+	export let onValueChange: ((value: string) => void) | undefined = undefined;
 
 	let open = false;
 	let items: T[] = [];
@@ -127,6 +128,7 @@
 								value = String(item[idKey]);
 								selectedLabel = String(item[labelKey] ?? '');
 								selectedValue = value;
+								onValueChange?.(value);
 								open = false;
 							}}
 						>

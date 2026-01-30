@@ -13,6 +13,7 @@ type CreateObjectDataRequest struct {
 	Version       string               `json:"version" binding:"required,max=100"`
 	IsActive      *bool                `json:"is_active"`
 	ProjectID     *uuid.UUID           `json:"project_id"`
+	ApparatIDs    []uuid.UUID          `json:"apparat_ids" binding:"omitempty"`
 	BacnetObjects *[]BacnetObjectInput `json:"bacnet_objects" binding:"omitempty,dive"`
 }
 
@@ -21,6 +22,7 @@ type UpdateObjectDataRequest struct {
 	Version       *string              `json:"version"`
 	IsActive      *bool                `json:"is_active"`
 	ProjectID     *uuid.UUID           `json:"project_id"`
+	ApparatIDs    *[]uuid.UUID         `json:"apparat_ids" binding:"omitempty"`
 	BacnetObjects *[]BacnetObjectInput `json:"bacnet_objects" binding:"omitempty,dive"`
 }
 
@@ -30,6 +32,7 @@ type ObjectDataResponse struct {
 	Version       string                 `json:"version"`
 	IsActive      bool                   `json:"is_active"`
 	ProjectID     *uuid.UUID             `json:"project_id"`
+	Apparats      []ApparatResponse      `json:"apparats"`
 	BacnetObjects []BacnetObjectResponse `json:"bacnet_objects"`
 	CreatedAt     time.Time              `json:"created_at"`
 	UpdatedAt     time.Time              `json:"updated_at"`

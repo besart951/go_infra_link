@@ -27,6 +27,21 @@ func (s *ObjectDataService) List(page, limit int, search string) (*domain.Pagina
 	})
 }
 
+func (s *ObjectDataService) ListByApparatID(page, limit int, search string, apparatID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	page, limit = domain.NormalizePagination(page, limit, 10)
+	return s.repo.GetPaginatedListByApparatID(apparatID, domain.PaginationParams{Page: page, Limit: limit, Search: search})
+}
+
+func (s *ObjectDataService) ListBySystemPartID(page, limit int, search string, systemPartID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	page, limit = domain.NormalizePagination(page, limit, 10)
+	return s.repo.GetPaginatedListBySystemPartID(systemPartID, domain.PaginationParams{Page: page, Limit: limit, Search: search})
+}
+
+func (s *ObjectDataService) ListByApparatAndSystemPartID(page, limit int, search string, apparatID, systemPartID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	page, limit = domain.NormalizePagination(page, limit, 10)
+	return s.repo.GetPaginatedListByApparatAndSystemPartID(apparatID, systemPartID, domain.PaginationParams{Page: page, Limit: limit, Search: search})
+}
+
 func (s *ObjectDataService) GetByID(id uuid.UUID) (*domainFacility.ObjectData, error) {
 	items, err := s.repo.GetByIds([]uuid.UUID{id})
 	if err != nil {
@@ -55,7 +70,7 @@ func (s *ObjectDataService) GetApparatIDs(id uuid.UUID) ([]uuid.UUID, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Get the IDs from the loaded apparats
 	apparatIDs := make([]uuid.UUID, 0, len(objectData.Apparats))
 	for _, apparat := range objectData.Apparats {

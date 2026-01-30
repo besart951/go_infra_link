@@ -2,6 +2,7 @@ package facilitysql
 
 import (
 	"strings"
+	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -13,6 +14,61 @@ import (
 type objectDataRepo struct {
 	*gormbase.BaseRepository[*domainFacility.ObjectData]
 	db *gorm.DB
+}
+
+func (r *objectDataRepo) getPaginatedListFiltered(projectID *uuid.UUID, apparatID *uuid.UUID, systemPartID *uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
+	offset := (page - 1) * limit
+
+	query := r.db.Model(&domainFacility.ObjectData{})
+	if projectID == nil {
+		query = query.Where("project_id IS NULL")
+	} else {
+		query = query.Where("deleted_at IS NULL").Where("project_id = ?", *projectID)
+	}
+
+	if apparatID != nil {
+		sub := r.db.Table("object_data_apparats").
+			Select("object_data_id").
+			Where("apparat_id = ?", *apparatID)
+		query = query.Where("id IN (?)", sub)
+	}
+
+	if systemPartID != nil {
+		sub := r.db.Table("object_data_apparats AS oda").
+			Select("DISTINCT oda.object_data_id").
+			Joins("JOIN system_part_apparats spa ON spa.apparat_id = oda.apparat_id").
+			Where("spa.system_part_id = ?", *systemPartID)
+		query = query.Where("id IN (?)", sub)
+	}
+
+	if strings.TrimSpace(params.Search) != "" {
+		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
+		query = query.Where("LOWER(description) LIKE ?", pattern)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	var items []domainFacility.ObjectData
+	if err := query.
+		Order("created_at DESC").
+		Preload("BacnetObjects").
+		Preload("Apparats").
+		Limit(limit).
+		Offset(offset).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+
+	return &domain.PaginatedList[domainFacility.ObjectData]{
+		Items:      items,
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
+	}, nil
 }
 
 func NewObjectDataRepository(db *gorm.DB) domainFacility.ObjectDataStore {
@@ -37,11 +93,38 @@ func (r *objectDataRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.ObjectData
 }
 
 func (r *objectDataRepo) Create(entity *domainFacility.ObjectData) error {
-	return r.BaseRepository.Create(entity)
+	// Mirror BaseRepository.Create behavior, but ensure Apparats association is saved.
+	now := time.Now().UTC()
+	if err := entity.GetBase().InitForCreate(now); err != nil {
+		return err
+	}
+
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(entity).Error; err != nil {
+			return err
+		}
+		// Replace works for both empty and non-empty slices
+		if entity.Apparats != nil {
+			if err := tx.Model(entity).Association("Apparats").Replace(entity.Apparats); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (r *objectDataRepo) Update(entity *domainFacility.ObjectData) error {
-	return r.BaseRepository.Update(entity)
+	// Mirror BaseRepository.Update behavior (Save) and sync Apparats association.
+	entity.GetBase().TouchForUpdate(time.Now().UTC())
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(entity).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(entity).Association("Apparats").Replace(entity.Apparats); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (r *objectDataRepo) DeleteByIds(ids []uuid.UUID) error {
@@ -69,6 +152,7 @@ func (r *objectDataRepo) GetPaginatedList(params domain.PaginationParams) (*doma
 	if err := query.
 		Order("created_at DESC").
 		Preload("BacnetObjects").
+		Preload("Apparats").
 		Limit(limit).
 		Offset(offset).
 		Find(&items).Error; err != nil {
@@ -94,37 +178,34 @@ func (r *objectDataRepo) GetBacnetObjectIDs(objectDataID uuid.UUID) ([]uuid.UUID
 
 func (r *objectDataRepo) GetTemplates() ([]*domainFacility.ObjectData, error) {
 	var items []*domainFacility.ObjectData
-	err := r.db.Where("deleted_at IS NULL").Where("is_active = ? AND project_id IS NULL", true).Preload("BacnetObjects").Find(&items).Error
+	err := r.db.Where("deleted_at IS NULL").Where("is_active = ? AND project_id IS NULL", true).Preload("BacnetObjects").Preload("Apparats").Find(&items).Error
 	return items, err
 }
 
 func (r *objectDataRepo) GetPaginatedListForProject(projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
-	offset := (page - 1) * limit
+	return r.getPaginatedListFiltered(&projectID, nil, nil, params)
+}
 
-	query := r.db.Model(&domainFacility.ObjectData{}).
-		Where("deleted_at IS NULL").
-		Where("project_id = ?", projectID)
+func (r *objectDataRepo) GetPaginatedListByApparatID(apparatID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	return r.getPaginatedListFiltered(nil, &apparatID, nil, params)
+}
 
-	if strings.TrimSpace(params.Search) != "" {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
-		query = query.Where("LOWER(description) LIKE ?", pattern)
-	}
+func (r *objectDataRepo) GetPaginatedListBySystemPartID(systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	return r.getPaginatedListFiltered(nil, nil, &systemPartID, params)
+}
 
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
+func (r *objectDataRepo) GetPaginatedListByApparatAndSystemPartID(apparatID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	return r.getPaginatedListFiltered(nil, &apparatID, &systemPartID, params)
+}
 
-	var items []domainFacility.ObjectData
-	if err := query.Order("created_at DESC").Preload("BacnetObjects").Limit(limit).Offset(offset).Find(&items).Error; err != nil {
-		return nil, err
-	}
+func (r *objectDataRepo) GetPaginatedListForProjectByApparatID(projectID, apparatID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	return r.getPaginatedListFiltered(&projectID, &apparatID, nil, params)
+}
 
-	return &domain.PaginatedList[domainFacility.ObjectData]{
-		Items:      items,
-		Total:      total,
-		Page:       page,
-		TotalPages: domain.CalculateTotalPages(total, limit),
-	}, nil
+func (r *objectDataRepo) GetPaginatedListForProjectBySystemPartID(projectID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	return r.getPaginatedListFiltered(&projectID, nil, &systemPartID, params)
+}
+
+func (r *objectDataRepo) GetPaginatedListForProjectByApparatAndSystemPartID(projectID, apparatID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	return r.getPaginatedListFiltered(&projectID, &apparatID, &systemPartID, params)
 }

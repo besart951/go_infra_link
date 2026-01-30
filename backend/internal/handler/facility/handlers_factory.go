@@ -25,7 +25,7 @@ func NewHandlers(services *facilityservice.Services) *Handlers {
 	return &Handlers{
 		Building:                NewBuildingHandler(services.Building),
 		SystemType:              NewSystemTypeHandler(services.SystemType),
-		SystemPart:              NewSystemPartHandler(services.SystemPart, services.Apparat),
+		SystemPart:              NewSystemPartHandler(services.SystemPart, services.Apparat, services.ObjectData),
 		Specification:           NewSpecificationHandler(services.Specification),
 		Apparat:                 NewApparatHandler(services.Apparat, services.SystemPart, services.ObjectData),
 		ControlCabinet:          NewControlCabinetHandler(services.ControlCabinet),
@@ -35,7 +35,7 @@ func NewHandlers(services *facilityservice.Services) *Handlers {
 		StateText:               NewStateTextHandler(services.StateText),
 		NotificationClass:       NewNotificationClassHandler(services.NotificationClass),
 		AlarmDefinition:         NewAlarmDefinitionHandler(services.AlarmDefinition),
-		ObjectData:              NewObjectDataHandler(services.ObjectData, services.BacnetObject),
+		ObjectData:              NewObjectDataHandler(services.ObjectData, services.BacnetObject, services.Apparat),
 		SPSControllerSystemType: NewSPSControllerSystemTypeHandler(services.SPSControllerSystemType),
 	}
 }

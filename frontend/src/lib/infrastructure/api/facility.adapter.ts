@@ -350,6 +350,7 @@ export async function listSystemParts(
 	if (params?.limit) searchParams.set('limit', String(params.limit));
 	if (params?.search) searchParams.set('search', params.search);
 	if (params?.apparat_id) searchParams.set('apparat_id', params.apparat_id);
+	if (params?.object_data_id) searchParams.set('object_data_id', params.object_data_id);
 
 	const query = searchParams.toString();
 	return api<SystemPartListResponse>(`/facility/system-parts${query ? `?${query}` : ''}`, options);
@@ -399,6 +400,7 @@ export async function listApparats(
 	if (params?.limit) searchParams.set('limit', String(params.limit));
 	if (params?.search) searchParams.set('search', params.search);
 	if (params?.object_data_id) searchParams.set('object_data_id', params.object_data_id);
+	if (params?.system_part_id) searchParams.set('system_part_id', params.system_part_id);
 
 	const query = searchParams.toString();
 	return api<ApparatListResponse>(`/facility/apparats${query ? `?${query}` : ''}`, options);
@@ -654,6 +656,8 @@ export async function listObjectData(
 	if (params?.page) searchParams.set('page', String(params.page));
 	if (params?.limit) searchParams.set('limit', String(params.limit));
 	if (params?.search) searchParams.set('search', params.search);
+	if (params?.apparat_id) searchParams.set('apparat_id', params.apparat_id);
+	if (params?.system_part_id) searchParams.set('system_part_id', params.system_part_id);
 
 	const query = searchParams.toString();
 	return api<ObjectDataListResponse>(`/facility/object-data${query ? `?${query}` : ''}`, options);

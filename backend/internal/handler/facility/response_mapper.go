@@ -378,12 +378,24 @@ func toObjectDataResponse(obj domainFacility.ObjectData) dto.ObjectDataResponse 
 		}
 	}
 
+	apparats := make([]dto.ApparatResponse, 0)
+	if len(obj.Apparats) > 0 {
+		apparats = make([]dto.ApparatResponse, 0, len(obj.Apparats))
+		for _, item := range obj.Apparats {
+			if item == nil {
+				continue
+			}
+			apparats = append(apparats, toApparatResponse(*item))
+		}
+	}
+
 	return dto.ObjectDataResponse{
 		ID:            obj.ID,
 		Description:   obj.Description,
 		Version:       obj.Version,
 		IsActive:      obj.IsActive,
 		ProjectID:     obj.ProjectID,
+		Apparats:      apparats,
 		BacnetObjects: toBacnetObjectResponses(bacnetObjects),
 		CreatedAt:     obj.CreatedAt,
 		UpdatedAt:     obj.UpdatedAt,

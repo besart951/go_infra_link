@@ -55,6 +55,26 @@
 		apparat_id = initialData.apparat_id ?? '';
 	}
 
+	function handleObjectDataChange(_next: string) {
+		// When an ObjectData is selected, use it as the root filter
+		// and clear dependent selections.
+		apparat_id = '';
+		system_part_id = '';
+	}
+
+	function handleSystemPartChange(_next: string) {
+		// When a SystemPart is selected, clear selections that would conflict.
+		apparat_id = '';
+		object_data_id = '';
+	}
+
+	function handleApparatChange(_next: string) {
+		// Apparats constrain SystemParts and ObjectData; clear existing selections
+		// so the user doesn't end up with an invalid combination.
+		system_part_id = '';
+		if (object_data_id) object_data_id = '';
+	}
+
 	const dispatch = createEventDispatcher();
 
 	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['fielddevice']);
@@ -71,9 +91,12 @@
 
 	async function fetchObjectData(search: string): Promise<ObjectData[]> {
 		try {
+			const params: any = { page: 1, limit: 50, search };
+			if (apparat_id) params.apparat_id = apparat_id;
+			if (system_part_id) params.system_part_id = system_part_id;
 			const res = projectId
-				? await listProjectObjectData(projectId, { page: 1, limit: 50, search })
-				: await listObjectData({ page: 1, limit: 50, search });
+				? await listProjectObjectData(projectId, params)
+				: await listObjectData(params);
 			return projectId ? res.items.filter((obj) => obj.is_active) : res.items;
 		} catch (e) {
 			console.error(e);
@@ -86,6 +109,9 @@
 			const params: any = { page: 1, limit: 50, search };
 			if (object_data_id) {
 				params.object_data_id = object_data_id;
+			}
+			if (system_part_id) {
+				params.system_part_id = system_part_id;
 			}
 			const res = await listApparats(params);
 			return res.items;
@@ -100,6 +126,9 @@
 			const params: any = { page: 1, limit: 50, search };
 			if (apparat_id) {
 				params.apparat_id = apparat_id;
+			}
+			if (object_data_id) {
+				params.object_data_id = object_data_id;
 			}
 			const res = await listSystemParts(params);
 			return res.items;
@@ -242,6 +271,7 @@
 			<AsyncCombobox
 				id="field_device_system_part"
 				bind:value={system_part_id}
+				onValueChange={handleSystemPartChange}
 				fetcher={fetchSystemParts}
 				fetchById={getSystemPart}
 				labelKey="name"
@@ -258,6 +288,7 @@
 			<AsyncCombobox
 				id="field_device_apparat"
 				bind:value={apparat_id}
+				onValueChange={handleApparatChange}
 				fetcher={fetchApparats}
 				fetchById={getApparat}
 				labelKey="name"
@@ -274,6 +305,7 @@
 			<AsyncCombobox
 				id="field_device_object_data"
 				bind:value={object_data_id}
+				onValueChange={handleObjectDataChange}
 				fetcher={fetchObjectData}
 				fetchById={getObjectData}
 				labelKey="description"

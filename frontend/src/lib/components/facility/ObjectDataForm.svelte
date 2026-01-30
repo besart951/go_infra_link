@@ -8,6 +8,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { Plus } from '@lucide/svelte';
 	import BacnetObjectRow from './BacnetObjectRow.svelte';
+	import ApparatMultiSelect from './ApparatMultiSelect.svelte';
 
 	interface Props {
 		initialData?: ObjectData;
@@ -18,6 +19,7 @@
 	let description = $state('');
 	let version = $state('1.0');
 	let is_active = $state(true);
+	let apparat_ids: string[] = $state([]);
 	let bacnetObjects: BacnetObjectInput[] = $state([]);
 	let loading = $state(false);
 	let error = $state('');
@@ -28,6 +30,7 @@
 			description = initialData.description ?? '';
 			version = initialData.version ?? '1.0';
 			is_active = initialData.is_active ?? true;
+			apparat_ids = (initialData.apparats ?? []).map((a) => a.id);
 			bacnetObjects = (initialData.bacnet_objects ?? []).map((obj) => ({
 				text_fix: obj.text_fix ?? '',
 				description: obj.description ?? '',
@@ -43,6 +46,7 @@
 			description = '';
 			version = '1.0';
 			is_active = true;
+			apparat_ids = [];
 			bacnetObjects = [];
 		}
 	});
@@ -93,6 +97,7 @@
 					description,
 					version,
 					is_active,
+					apparat_ids,
 					bacnet_objects: bacnetObjects
 				});
 				dispatch('success', res);
@@ -101,6 +106,7 @@
 					description,
 					version,
 					is_active,
+					apparat_ids,
 					bacnet_objects: bacnetObjects
 				});
 				dispatch('success', res);
@@ -142,6 +148,13 @@
 		{#if fieldError('is_active')}
 			<p class="text-sm text-red-500 md:col-span-3">{fieldError('is_active')}</p>
 		{/if}
+		<div class="space-y-2 md:col-span-3">
+			<Label for="object_data_apparats">Apparats</Label>
+			<ApparatMultiSelect id="object_data_apparats" bind:value={apparat_ids} />
+			{#if fieldError('apparat_ids')}
+				<p class="text-sm text-red-500">{fieldError('apparat_ids')}</p>
+			{/if}
+		</div>
 	</div>
 
 	<!-- BACnet Objects Section -->

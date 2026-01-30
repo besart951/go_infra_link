@@ -33,6 +33,21 @@ func (s *SystemPartService) GetByIDs(ids []uuid.UUID) ([]*domainFacility.SystemP
 	return s.repo.GetByIds(ids)
 }
 
+func (s *SystemPartService) GetApparatIDs(id uuid.UUID) ([]uuid.UUID, error) {
+	systemPart, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	apparatIDs := make([]uuid.UUID, 0, len(systemPart.Apparats))
+	for _, apparat := range systemPart.Apparats {
+		if apparat != nil {
+			apparatIDs = append(apparatIDs, apparat.ID)
+		}
+	}
+	return apparatIDs, nil
+}
+
 func (s *SystemPartService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SystemPart], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
 	return s.repo.GetPaginatedList(domain.PaginationParams{

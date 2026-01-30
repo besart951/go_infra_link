@@ -22,6 +22,7 @@
 		}
 
 		return id;
+		
 	}
 
 	export function removeToast(id: string) {

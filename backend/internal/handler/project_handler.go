@@ -10,6 +10,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type ProjectHandler struct {
@@ -828,6 +829,9 @@ func (h *ProjectHandler) ListProjectFieldDevices(c *gin.Context) {
 // @Param id path string true "Project ID"
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
+// @Param search query string false "Search query"
+// @Param apparat_id query string false "Filter by Apparat ID"
+// @Param system_part_id query string false "Filter by System Part ID"
 // @Success 200 {object} dto.ObjectDataListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
@@ -853,7 +857,31 @@ func (h *ProjectHandler) ListProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.ListObjectData(projectID, query.Page, query.Limit)
+	apparatIDStr := c.Query("apparat_id")
+	systemPartIDStr := c.Query("system_part_id")
+
+	var apparatID *uuid.UUID
+	var systemPartID *uuid.UUID
+
+	if apparatIDStr != "" {
+		id, err := uuid.Parse(apparatIDStr)
+		if err != nil {
+			handlerutil.RespondError(c, http.StatusBadRequest, "invalid_apparat_id", "Invalid UUID format")
+			return
+		}
+		apparatID = &id
+	}
+
+	if systemPartIDStr != "" {
+		id, err := uuid.Parse(systemPartIDStr)
+		if err != nil {
+			handlerutil.RespondError(c, http.StatusBadRequest, "invalid_system_part_id", "Invalid UUID format")
+			return
+		}
+		systemPartID = &id
+	}
+
+	result, err := h.service.ListObjectData(projectID, query.Page, query.Limit, query.Search, apparatID, systemPartID)
 	if err != nil {
 		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return

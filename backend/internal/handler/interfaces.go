@@ -32,7 +32,7 @@ type ProjectService interface {
 	ListControlCabinets(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[project.ProjectControlCabinet], error)
 	ListSPSControllers(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[project.ProjectSPSController], error)
 	ListFieldDevices(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[project.ProjectFieldDevice], error)
-	ListObjectData(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainFacility.ObjectData], error)
+	ListObjectData(projectID uuid.UUID, page, limit int, search string, apparatID, systemPartID *uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
 	AddObjectData(projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
 	RemoveObjectData(projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
 	Update(project *project.Project) error

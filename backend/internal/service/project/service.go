@@ -385,7 +385,18 @@ func (s *Service) ListFieldDevices(projectID uuid.UUID, page, limit int) (*domai
 	return s.projectFieldDeviceRepo.GetPaginatedListByProjectID(projectID, domain.PaginationParams{Page: page, Limit: limit})
 }
 
-func (s *Service) ListObjectData(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+func (s *Service) ListObjectData(projectID uuid.UUID, page, limit int, search string, apparatID, systemPartID *uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
-	return s.objectDataRepo.GetPaginatedListForProject(projectID, domain.PaginationParams{Page: page, Limit: limit})
+	params := domain.PaginationParams{Page: page, Limit: limit, Search: search}
+
+	switch {
+	case apparatID != nil && systemPartID != nil:
+		return s.objectDataRepo.GetPaginatedListForProjectByApparatAndSystemPartID(projectID, *apparatID, *systemPartID, params)
+	case apparatID != nil:
+		return s.objectDataRepo.GetPaginatedListForProjectByApparatID(projectID, *apparatID, params)
+	case systemPartID != nil:
+		return s.objectDataRepo.GetPaginatedListForProjectBySystemPartID(projectID, *systemPartID, params)
+	default:
+		return s.objectDataRepo.GetPaginatedListForProject(projectID, params)
+	}
 }

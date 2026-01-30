@@ -59,6 +59,7 @@ export interface SystemPartListParams {
 	limit?: number;
 	search?: string;
 	apparat_id?: string;
+	object_data_id?: string;
 }
 
 export interface SystemPartListResponse extends Pagination<SystemPart> {

@@ -5,17 +5,20 @@ import (
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type ObjectDataHandler struct {
-	service       ObjectDataService
-	bacnetService BacnetObjectService
+	service        ObjectDataService
+	bacnetService  BacnetObjectService
+	apparatService ApparatService
 }
 
-func NewObjectDataHandler(service ObjectDataService, bacnetService BacnetObjectService) *ObjectDataHandler {
-	return &ObjectDataHandler{service: service, bacnetService: bacnetService}
+func NewObjectDataHandler(service ObjectDataService, bacnetService BacnetObjectService, apparatService ApparatService) *ObjectDataHandler {
+	return &ObjectDataHandler{service: service, bacnetService: bacnetService, apparatService: apparatService}
 }
 
 // CreateObjectData godoc
@@ -35,6 +38,16 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 	}
 
 	obj := toObjectDataModel(req)
+
+	// Load apparats if IDs are provided
+	if len(req.ApparatIDs) > 0 {
+		apparats, err := h.apparatService.GetByIDs(req.ApparatIDs)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, "invalid_apparats", "Failed to load apparats")
+			return
+		}
+		obj.Apparats = apparats
+	}
 
 	if err := h.service.Create(obj); respondValidationOrError(c, err, "creation_failed") {
 		return
@@ -113,6 +126,8 @@ func (h *ObjectDataHandler) GetObjectData(c *gin.Context) {
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
+// @Param apparat_id query string false "Filter by Apparat ID"
+// @Param system_part_id query string false "Filter by System Part ID"
 // @Success 200 {object} ObjectDataListResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -123,7 +138,45 @@ func (h *ObjectDataHandler) ListObjectData(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(query.Page, query.Limit, query.Search)
+	apparatIDStr := c.Query("apparat_id")
+	systemPartIDStr := c.Query("system_part_id")
+
+	var apparatID *uuid.UUID
+	var systemPartID *uuid.UUID
+
+	if apparatIDStr != "" {
+		id, err := parseUUIDString(apparatIDStr)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, "invalid_apparat_id", "Invalid apparat_id format")
+			return
+		}
+		apparatID = &id
+	}
+
+	if systemPartIDStr != "" {
+		id, err := parseUUIDString(systemPartIDStr)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, "invalid_system_part_id", "Invalid system_part_id format")
+			return
+		}
+		systemPartID = &id
+	}
+
+	var (
+		result *domain.PaginatedList[domainFacility.ObjectData]
+		err    error
+	)
+
+	switch {
+	case apparatID != nil && systemPartID != nil:
+		result, err = h.service.ListByApparatAndSystemPartID(query.Page, query.Limit, query.Search, *apparatID, *systemPartID)
+	case apparatID != nil:
+		result, err = h.service.ListByApparatID(query.Page, query.Limit, query.Search, *apparatID)
+	case systemPartID != nil:
+		result, err = h.service.ListBySystemPartID(query.Page, query.Limit, query.Search, *systemPartID)
+	default:
+		result, err = h.service.List(query.Page, query.Limit, query.Search)
+	}
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
@@ -165,6 +218,21 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 	}
 
 	applyObjectDataUpdate(obj, req)
+
+	// Load apparats if IDs are provided
+	if req.ApparatIDs != nil {
+		if len(*req.ApparatIDs) > 0 {
+			apparats, err := h.apparatService.GetByIDs(*req.ApparatIDs)
+			if err != nil {
+				respondError(c, http.StatusBadRequest, "invalid_apparats", "Failed to load apparats")
+				return
+			}
+			obj.Apparats = apparats
+		} else {
+			// Empty array means clear all apparats
+			obj.Apparats = []*domainFacility.Apparat{}
+		}
+	}
 
 	if err := h.service.Update(obj); respondValidationOrError(c, err, "update_failed") {
 		return
