@@ -65,3 +65,15 @@ export interface FieldDeviceListParams {
 }
 
 export interface FieldDeviceListResponse extends Pagination<FieldDevice> {}
+
+/**
+ * FieldDeviceOptions - Response from /api/v1/facility/field-devices/options
+ * Contains all metadata needed for creating/editing field devices with relationships
+ */
+export interface FieldDeviceOptions {
+	apparats: import('./apparat.js').Apparat[];
+	system_parts: import('./system.js').SystemPart[];
+	object_datas: import('./object-data.js').ObjectData[];
+	apparat_to_system_part: Record<string, string[]>; // apparat_id -> [system_part_ids]
+	object_data_to_apparat: Record<string, string[]>; // object_data_id -> [apparat_ids]
+}

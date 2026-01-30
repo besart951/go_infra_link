@@ -289,6 +289,15 @@ export async function deleteFieldDevice(id: string, options?: RequestInit): Prom
 	return api<void>(`/facility/field-devices/${id}`, { ...options, method: 'DELETE' });
 }
 
+export async function getFieldDeviceOptions(
+	options?: ApiOptions
+): Promise<import('$lib/domain/facility/field-device.js').FieldDeviceOptions> {
+	return api<import('$lib/domain/facility/field-device.js').FieldDeviceOptions>(
+		'/facility/field-devices/options',
+		options
+	);
+}
+
 // ============================================================================
 // SYSTEM TYPES
 // ============================================================================
