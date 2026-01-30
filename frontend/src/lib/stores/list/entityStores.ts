@@ -86,7 +86,7 @@ export const systemTypesStore = createListStore<SystemType>(
  */
 export const fieldDevicesStore = createListStore<FieldDevice>(
 	createApiAdapter<FieldDevice>('/facility/field-devices'),
-	{ pageSize: 10 }
+	{ pageSize: 300 }
 );
 
 /**

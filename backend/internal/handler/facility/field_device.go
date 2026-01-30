@@ -90,12 +90,16 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 }
 
 // ListFieldDevices godoc
-// @Summary List field devices with pagination
+// @Summary List field devices with pagination and filtering
 // @Tags facility-field-devices
 // @Produce json
 // @Param page query int false "Page number" default(1)
-// @Param limit query int false "Items per page" default(10)
+// @Param limit query int false "Items per page" default(300)
 // @Param search query string false "Search query"
+// @Param building_id query string false "Filter by building ID"
+// @Param control_cabinet_id query string false "Filter by control cabinet ID"
+// @Param sps_controller_id query string false "Filter by SPS controller ID"
+// @Param sps_controller_system_type_id query string false "Filter by SPS controller system type ID"
 // @Success 200 {object} dto.FieldDeviceListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -106,7 +110,26 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(query.Page, query.Limit, query.Search)
+	// Parse optional filter parameters
+	filters := domainFacility.FieldDeviceFilterParams{}
+
+	if buildingID, ok := parseUUIDQueryParam(c, "building_id"); ok && buildingID != nil {
+		filters.BuildingID = buildingID
+	}
+
+	if controlCabinetID, ok := parseUUIDQueryParam(c, "control_cabinet_id"); ok && controlCabinetID != nil {
+		filters.ControlCabinetID = controlCabinetID
+	}
+
+	if spsControllerID, ok := parseUUIDQueryParam(c, "sps_controller_id"); ok && spsControllerID != nil {
+		filters.SPSControllerID = spsControllerID
+	}
+
+	if spsControllerSystemTypeID, ok := parseUUIDQueryParam(c, "sps_controller_system_type_id"); ok && spsControllerSystemTypeID != nil {
+		filters.SPSControllerSystemTypeID = spsControllerSystemTypeID
+	}
+
+	result, err := h.service.ListWithFilters(query.Page, query.Limit, query.Search, filters)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return

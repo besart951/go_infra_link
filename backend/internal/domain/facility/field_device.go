@@ -30,3 +30,11 @@ type FieldDeviceOptions struct {
 	ApparatToSystemPart map[uuid.UUID][]uuid.UUID // apparat_id -> [system_part_ids]
 	ObjectDataToApparat map[uuid.UUID][]uuid.UUID // object_data_id -> [apparat_ids]
 }
+
+// FieldDeviceFilterParams contains optional filter parameters for listing field devices
+type FieldDeviceFilterParams struct {
+	BuildingID                  *uuid.UUID
+	ControlCabinetID            *uuid.UUID
+	SPSControllerID             *uuid.UUID
+	SPSControllerSystemTypeID   *uuid.UUID
+}
