@@ -374,6 +374,86 @@ func (s *FieldDeviceService) ListAvailableApparatNumbers(spsControllerSystemType
 	return available, nil
 }
 
+// GetFieldDeviceOptions returns all metadata needed for creating/editing field devices.
+// This implements the "Single-Fetch Metadata Strategy" to avoid multiple API calls.
+func (s *FieldDeviceService) GetFieldDeviceOptions() (*domainFacility.FieldDeviceOptions, error) {
+	// Fetch all apparats with their system parts (many-to-many)
+	apparatList, err := s.apparatRepo.GetPaginatedList(domain.PaginationParams{
+		Page:  1,
+		Limit: 1000, // Get all apparats
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch all system parts with their apparats (many-to-many)
+	systemPartList, err := s.systemPartRepo.GetPaginatedList(domain.PaginationParams{
+		Page:  1,
+		Limit: 1000, // Get all system parts
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch all active object datas (templates) with their apparats
+	objectDatas, err := s.objectDataRepo.GetTemplates()
+	if err != nil {
+		return nil, err
+	}
+
+	// Build relationship maps
+	apparatToSystemPart := make(map[uuid.UUID][]uuid.UUID)
+	for _, apparat := range apparatList.Items {
+		systemPartIDs := make([]uuid.UUID, 0, len(apparat.SystemParts))
+		for _, sp := range apparat.SystemParts {
+			if sp != nil {
+				systemPartIDs = append(systemPartIDs, sp.ID)
+			}
+		}
+		apparatToSystemPart[apparat.ID] = systemPartIDs
+	}
+
+	objectDataToApparat := make(map[uuid.UUID][]uuid.UUID)
+	for _, od := range objectDatas {
+		if od == nil {
+			continue
+		}
+		apparatIDs := make([]uuid.UUID, 0, len(od.Apparats))
+		for _, app := range od.Apparats {
+			if app != nil {
+				apparatIDs = append(apparatIDs, app.ID)
+			}
+		}
+		objectDataToApparat[od.ID] = apparatIDs
+	}
+
+	// Convert pointer slices to value slices
+	apparats := make([]domainFacility.Apparat, len(apparatList.Items))
+	for i, item := range apparatList.Items {
+		apparats[i] = item
+	}
+
+	systemParts := make([]domainFacility.SystemPart, len(systemPartList.Items))
+	for i, item := range systemPartList.Items {
+		systemParts[i] = item
+	}
+
+	objectDataValues := make([]domainFacility.ObjectData, 0, len(objectDatas))
+	for _, od := range objectDatas {
+		if od != nil {
+			objectDataValues = append(objectDataValues, *od)
+		}
+	}
+
+	return &domainFacility.FieldDeviceOptions{
+		Apparats:            apparats,
+		SystemParts:         systemParts,
+		ObjectDatas:         objectDataValues,
+		ApparatToSystemPart: apparatToSystemPart,
+		ObjectDataToApparat: objectDataToApparat,
+	}, nil
+}
+
 func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.FieldDevice) error {
 	ve := domain.NewValidationError()
 	if fieldDevice.SPSControllerSystemTypeID == uuid.Nil {

@@ -240,6 +240,53 @@ func toFieldDeviceListResponse(list *domain.PaginatedList[domainFacility.FieldDe
 	}
 }
 
+func toFieldDeviceOptionsResponse(options *domainFacility.FieldDeviceOptions) dto.FieldDeviceOptionsResponse {
+	// Convert Apparats
+	apparats := make([]dto.ApparatResponse, len(options.Apparats))
+	for i, app := range options.Apparats {
+		apparats[i] = toApparatResponse(app)
+	}
+
+	// Convert SystemParts
+	systemParts := make([]dto.SystemPartResponse, len(options.SystemParts))
+	for i, sp := range options.SystemParts {
+		systemParts[i] = toSystemPartResponse(sp)
+	}
+
+	// Convert ObjectDatas
+	objectDatas := make([]dto.ObjectDataResponse, len(options.ObjectDatas))
+	for i, od := range options.ObjectDatas {
+		objectDatas[i] = toObjectDataResponse(od)
+	}
+
+	// Convert UUID maps to string maps for JSON compatibility
+	apparatToSystemPart := make(map[string][]string)
+	for apparatID, systemPartIDs := range options.ApparatToSystemPart {
+		strIDs := make([]string, len(systemPartIDs))
+		for i, id := range systemPartIDs {
+			strIDs[i] = id.String()
+		}
+		apparatToSystemPart[apparatID.String()] = strIDs
+	}
+
+	objectDataToApparat := make(map[string][]string)
+	for objectDataID, apparatIDs := range options.ObjectDataToApparat {
+		strIDs := make([]string, len(apparatIDs))
+		for i, id := range apparatIDs {
+			strIDs[i] = id.String()
+		}
+		objectDataToApparat[objectDataID.String()] = strIDs
+	}
+
+	return dto.FieldDeviceOptionsResponse{
+		Apparats:            apparats,
+		SystemParts:         systemParts,
+		ObjectDatas:         objectDatas,
+		ApparatToSystemPart: apparatToSystemPart,
+		ObjectDataToApparat: objectDataToApparat,
+	}
+}
+
 func toBacnetObjectResponse(obj domainFacility.BacnetObject) dto.BacnetObjectResponse {
 	return dto.BacnetObjectResponse{
 		ID:                  obj.ID.String(),
