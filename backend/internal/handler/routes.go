@@ -117,7 +117,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 		// Anyone authenticated can get their allowed roles
 		users.GET("/allowed-roles", handlers.UserHandler.GetAllowedRoles)
 	}
-	
+
 	// Admin-only user management routes
 	usersAdmin := protectedV1.Group("/users")
 	usersAdmin.Use(middleware.RequireGlobalRole(rbacService, domainUser.RoleAdmin))

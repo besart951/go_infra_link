@@ -7,7 +7,7 @@ import (
 
 type Team struct {
 	domain.Base
-	Name        string          `gorm:"not null"`
+	Name        string `gorm:"not null"`
 	Description *string
 	Users       []user.UserTeam `gorm:"foreignKey:TeamID"`
 }
