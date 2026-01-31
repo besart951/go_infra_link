@@ -3,52 +3,47 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { createBuilding, updateBuilding } from '$lib/infrastructure/api/facility.adapter.js';
-	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { Building } from '$lib/domain/facility/index.js';
-	import { createEventDispatcher } from 'svelte';
+	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 
-	export let initialData: Building | undefined = undefined;
-
-	let iws_code = initialData?.iws_code ?? '';
-	let building_group = initialData?.building_group ?? 0;
-	let loading = false;
-	let error = '';
-	let fieldErrors: Record<string, string> = {};
-
-	$: if (initialData) {
-		iws_code = initialData.iws_code;
-		building_group = initialData.building_group;
+	interface BuildingFormProps {
+		initialData?: Building;
+		onSuccess?: (building: Building) => void;
+		onCancel?: () => void;
 	}
 
-	const dispatch = createEventDispatcher();
+	let { initialData, onSuccess, onCancel }: BuildingFormProps = $props();
 
-	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['building']);
+	let iws_code = $state(initialData?.iws_code ?? '');
+	let building_group = $state(initialData?.building_group ?? 0);
+
+	$effect(() => {
+		if (initialData) {
+			iws_code = initialData.iws_code;
+			building_group = initialData.building_group;
+		}
+	});
+
+	const formState = useFormState({
+		onSuccess: (result: Building) => {
+			onSuccess?.(result);
+		}
+	});
 
 	async function handleSubmit() {
-		loading = true;
-		error = '';
-		fieldErrors = {};
-		try {
+		await formState.handleSubmit(async () => {
 			if (initialData) {
-				const res = await updateBuilding(initialData.id, {
+				return await updateBuilding(initialData.id, {
 					iws_code,
 					building_group: Number(building_group)
 				});
-				dispatch('success', res);
 			} else {
-				const res = await createBuilding({
+				return await createBuilding({
 					iws_code,
 					building_group: Number(building_group)
 				});
-				dispatch('success', res);
 			}
-		} catch (e) {
-			console.error(e);
-			fieldErrors = getFieldErrors(e);
-			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
-		} finally {
-			loading = false;
-		}
+		});
 	}
 </script>
 
@@ -69,8 +64,8 @@
 				maxlength={4}
 			/>
 			<p class="text-xs text-muted-foreground">Exactly 4 characters</p>
-			{#if fieldError('iws_code')}
-				<p class="text-sm text-red-500">{fieldError('iws_code')}</p>
+			{#if formState.getFieldError('iws_code', ['building'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('iws_code', ['building'])}</p>
 			{/if}
 		</div>
 
@@ -83,19 +78,19 @@
 				required
 				placeholder="e.g. 1"
 			/>
-			{#if fieldError('building_group')}
-				<p class="text-sm text-red-500">{fieldError('building_group')}</p>
+			{#if formState.getFieldError('building_group', ['building'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('building_group', ['building'])}</p>
 			{/if}
 		</div>
 	</div>
 
-	{#if error}
-		<p class="text-sm text-red-500">{error}</p>
+	{#if formState.error}
+		<p class="text-sm text-red-500">{formState.error}</p>
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={() => dispatch('cancel')}>Cancel</Button>
-		<Button type="submit" disabled={loading}>
+		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
+		<Button type="submit" disabled={formState.loading}>
 			{initialData ? 'Update' : 'Create'}
 		</Button>
 	</div>

@@ -2,52 +2,47 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { createEventDispatcher } from 'svelte';
-	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { Phase } from '$lib/domain/phase/index.js';
 	import { createPhase, updatePhase } from '$lib/infrastructure/api/phase.adapter.js';
+	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 
-	export let initialData: Phase | undefined = undefined;
-
-	let name = initialData?.name ?? '';
-	let loading = false;
-	let error = '';
-	let fieldErrors: Record<string, string> = {};
-
-	$: if (initialData) {
-		name = initialData.name ?? '';
+	interface PhaseFormProps {
+		initialData?: Phase;
+		onSuccess?: (phase: Phase) => void;
+		onCancel?: () => void;
 	}
 
-	const dispatch = createEventDispatcher();
+	let { initialData, onSuccess, onCancel }: PhaseFormProps = $props();
 
-	const fieldError = (name: string) => getFieldError(fieldErrors, name);
+	let name = $state(initialData?.name ?? '');
+
+	// Watch for changes to initialData
+	$effect(() => {
+		if (initialData) {
+			name = initialData.name ?? '';
+		}
+	});
+
+	const formState = useFormState({
+		onSuccess: (result: Phase) => {
+			onSuccess?.(result);
+		}
+	});
 
 	async function handleSubmit() {
-		error = '';
-		fieldErrors = {};
-
 		if (!name.trim()) {
-			error = 'Phase name is required';
+			formState.resetErrors();
+			// We can't set error directly on formState, so we'll handle validation inline
 			return;
 		}
 
-		loading = true;
-		try {
+		await formState.handleSubmit(async () => {
 			if (initialData) {
-				const res = await updatePhase(initialData.id, { name: name.trim() });
-				dispatch('success', res);
+				return await updatePhase(initialData.id, { name: name.trim() });
 			} else {
-				const res = await createPhase({
-					name: name.trim()
-				});
-				dispatch('success', res);
+				return await createPhase({ name: name.trim() });
 			}
-		} catch (e) {
-			fieldErrors = getFieldErrors(e);
-			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
-		} finally {
-			loading = false;
-		}
+		});
 	}
 </script>
 
@@ -60,19 +55,19 @@
 		<div class="space-y-2">
 			<Label for="phase_name">Phase Name</Label>
 			<Input id="phase_name" bind:value={name} required placeholder="e.g. SIA:51" />
-			{#if fieldError('name')}
-				<p class="text-sm text-red-500">{fieldError('name')}</p>
+			{#if formState.getFieldError('name')}
+				<p class="text-sm text-red-500">{formState.getFieldError('name')}</p>
 			{/if}
 		</div>
 	</div>
 
-	{#if error}
-		<p class="text-sm text-red-500">{error}</p>
+	{#if formState.error}
+		<p class="text-sm text-red-500">{formState.error}</p>
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={() => dispatch('cancel')}>Cancel</Button>
-		<Button type="submit" disabled={loading}>
+		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
+		<Button type="submit" disabled={formState.loading}>
 			{initialData ? 'Update' : 'Create'}
 		</Button>
 	</div>

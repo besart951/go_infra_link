@@ -85,7 +85,7 @@
 	</div>
 
 	{#if showForm}
-		<PhaseForm initialData={editingPhase} on:success={handleSuccess} on:cancel={handleCancel} />
+		<PhaseForm initialData={editingPhase} onSuccess={handleSuccess} onCancel={handleCancel} />
 	{/if}
 
 	<PaginatedList

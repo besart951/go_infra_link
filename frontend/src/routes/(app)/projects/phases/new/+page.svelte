@@ -25,5 +25,5 @@
 		</div>
 	</div>
 
-	<PhaseForm on:success={handleSuccess} on:cancel={handleCancel} />
+	<PhaseForm onSuccess={handleSuccess} onCancel={handleCancel} />
 </div>
