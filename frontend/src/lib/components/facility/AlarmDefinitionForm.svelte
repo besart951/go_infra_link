@@ -7,53 +7,47 @@
 		createAlarmDefinition,
 		updateAlarmDefinition
 	} from '$lib/infrastructure/api/facility.adapter.js';
-	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { AlarmDefinition } from '$lib/domain/facility/index.js';
-	import { createEventDispatcher } from 'svelte';
+	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 
-	export let initialData: AlarmDefinition | undefined = undefined;
-
-	let name = initialData?.name ?? '';
-	let alarm_note = initialData?.alarm_note ?? '';
-	let loading = false;
-	let error = '';
-	let fieldErrors: Record<string, string> = {};
-
-	$: if (initialData) {
-		name = initialData.name;
-		alarm_note = initialData.alarm_note ?? '';
+	interface AlarmDefinitionFormProps {
+		initialData?: AlarmDefinition;
+		onSuccess?: (alarmDefinition: AlarmDefinition) => void;
+		onCancel?: () => void;
 	}
 
-	const dispatch = createEventDispatcher();
+	let { initialData, onSuccess, onCancel }: AlarmDefinitionFormProps = $props();
 
-	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['alarmdefinition']);
+	let name = $state(initialData?.name ?? '');
+	let alarm_note = $state(initialData?.alarm_note ?? '');
+
+	$effect(() => {
+		if (initialData) {
+			name = initialData.name;
+			alarm_note = initialData.alarm_note ?? '';
+		}
+	});
+
+	const formState = useFormState({
+		onSuccess: (result: AlarmDefinition) => {
+			onSuccess?.(result);
+		}
+	});
 
 	async function handleSubmit() {
-		loading = true;
-		error = '';
-		fieldErrors = {};
-
-		try {
+		await formState.handleSubmit(async () => {
 			if (initialData) {
-				const res = await updateAlarmDefinition(initialData.id, {
+				return await updateAlarmDefinition(initialData.id, {
 					name,
 					alarm_note: alarm_note || undefined
 				});
-				dispatch('success', res);
 			} else {
-				const res = await createAlarmDefinition({
+				return await createAlarmDefinition({
 					name,
 					alarm_note: alarm_note || undefined
 				});
-				dispatch('success', res);
 			}
-		} catch (e) {
-			console.error(e);
-			fieldErrors = getFieldErrors(e);
-			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
-		} finally {
-			loading = false;
-		}
+		});
 	}
 </script>
 
@@ -68,25 +62,27 @@
 		<div class="space-y-2">
 			<Label for="alarm_name">Name</Label>
 			<Input id="alarm_name" bind:value={name} required />
-			{#if fieldError('name')}
-				<p class="text-sm text-red-500">{fieldError('name')}</p>
+			{#if formState.getFieldError('name', ['alarmdefinition'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('name', ['alarmdefinition'])}</p>
 			{/if}
 		</div>
 		<div class="space-y-2 md:col-span-2">
 			<Label for="alarm_note">Alarm Note</Label>
 			<Textarea id="alarm_note" bind:value={alarm_note} rows={3} />
-			{#if fieldError('alarm_note')}
-				<p class="text-sm text-red-500">{fieldError('alarm_note')}</p>
+			{#if formState.getFieldError('alarm_note', ['alarmdefinition'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('alarm_note', ['alarmdefinition'])}
+				</p>
 			{/if}
 		</div>
 	</div>
 
-	{#if error}
-		<p class="text-sm text-red-500">{error}</p>
+	{#if formState.error}
+		<p class="text-sm text-red-500">{formState.error}</p>
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={() => dispatch('cancel')}>Cancel</Button>
-		<Button type="submit" disabled={loading}>{initialData ? 'Update' : 'Create'}</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
+		<Button type="submit" disabled={formState.loading}>{initialData ? 'Update' : 'Create'}</Button>
 	</div>
 </form>

@@ -13,6 +13,8 @@
 	import { createProject } from '$lib/infrastructure/api/project.adapter.js';
 	import type { CreateProjectRequest, Project, ProjectStatus } from '$lib/domain/project/index.js';
 
+	import { useOptimisticUpdate } from '$lib/hooks/useOptimisticUpdate.svelte.js';
+
 	function getStatusClass(status: string): string {
 		switch (status) {
 			case 'completed':
@@ -63,6 +65,16 @@
 		phase_id: ''
 	});
 
+	// Optimistic update helper
+	const optimisticCreate = useOptimisticUpdate<Project>({
+		onSuccess: (project) => {
+			goto(`/projects/${project.id}`);
+		},
+		onError: (err) => {
+			addToast(err instanceof Error ? err.message : 'Failed to create project', 'error');
+		}
+	});
+
 	function canSubmitCreate(): boolean {
 		return form.name.trim().length > 0 && form.phase_id.trim().length > 0 && !createBusy;
 	}
@@ -70,31 +82,63 @@
 	async function submitCreate() {
 		if (!canSubmitCreate()) return;
 		createBusy = true;
-		try {
-			const payload: CreateProjectRequest = {
-				name: form.name.trim(),
-				description: form.description.trim() || undefined,
-				status: form.status,
-				start_date: form.start_date
-					? new Date(`${form.start_date}T00:00:00Z`).toISOString()
-					: undefined,
-				phase_id: form.phase_id
-			};
 
-			const project = await createProject(payload);
-			addToast('Project created', 'success');
-			form = {
-				name: '',
-				description: '',
-				status: 'planned',
-				start_date: todayInputValue(),
-				phase_id: ''
-			};
-			createOpen = false;
-			projectListStore.reload();
-			goto(`/projects/${project.id}`);
-		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to create project', 'error');
+		const payload: CreateProjectRequest = {
+			name: form.name.trim(),
+			description: form.description.trim() || undefined,
+			status: form.status,
+			start_date: form.start_date
+				? new Date(`${form.start_date}T00:00:00Z`).toISOString()
+				: undefined,
+			phase_id: form.phase_id
+		};
+
+		// Create optimistic project for immediate UI feedback
+		const optimisticProject: Project = {
+			id: `temp-${Date.now()}`, // Temporary ID
+			name: payload.name,
+			description: payload.description || '',
+			status: payload.status,
+			start_date: payload.start_date || '',
+			phase_id: payload.phase_id,
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString()
+		};
+
+		try {
+			await optimisticCreate.execute(
+				// Optimistic action - close form and show toast immediately
+				() => {
+					createOpen = false;
+					form = {
+						name: '',
+						description: '',
+						status: 'planned',
+						start_date: todayInputValue(),
+						phase_id: ''
+					};
+					addToast('Creating project...', 'info', 2000);
+				},
+				// Server action
+				async () => {
+					const project = await createProject(payload);
+					addToast('Project created successfully', 'success');
+					projectListStore.reload();
+					return project;
+				},
+				// Rollback action on error
+				() => {
+					// Reopen form with previous values
+					createOpen = true;
+					form = {
+						name: payload.name,
+						description: payload.description || '',
+						status: payload.status,
+						start_date: payload.start_date ? payload.start_date.split('T')[0] : todayInputValue(),
+						phase_id: payload.phase_id
+					};
+				}
+			);
 		} finally {
 			createBusy = false;
 		}

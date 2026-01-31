@@ -4,62 +4,56 @@
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { createApparat, updateApparat } from '$lib/infrastructure/api/facility.adapter.js';
-	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { Apparat } from '$lib/domain/facility/index.js';
-	import { createEventDispatcher } from 'svelte';
+	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 	import SystemPartMultiSelect from './SystemPartMultiSelect.svelte';
 
-	export let initialData: Apparat | undefined = undefined;
-
-	let short_name = initialData?.short_name ?? '';
-	let name = initialData?.name ?? '';
-	let description = initialData?.description ?? '';
-	let system_part_ids = initialData?.system_parts?.map((sp) => sp.id) ?? [];
-	let loading = false;
-	let error = '';
-	let fieldErrors: Record<string, string> = {};
-
-	$: if (initialData) {
-		short_name = initialData.short_name;
-		name = initialData.name;
-		description = initialData.description ?? '';
-		system_part_ids = initialData.system_parts?.map((sp) => sp.id) ?? [];
+	interface ApparatFormProps {
+		initialData?: Apparat;
+		onSuccess?: (apparat: Apparat) => void;
+		onCancel?: () => void;
 	}
 
-	const dispatch = createEventDispatcher();
+	let { initialData, onSuccess, onCancel }: ApparatFormProps = $props();
 
-	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['apparat']);
+	let short_name = $state(initialData?.short_name ?? '');
+	let name = $state(initialData?.name ?? '');
+	let description = $state(initialData?.description ?? '');
+	let system_part_ids = $state(initialData?.system_parts?.map((sp) => sp.id) ?? []);
+
+	$effect(() => {
+		if (initialData) {
+			short_name = initialData.short_name;
+			name = initialData.name;
+			description = initialData.description ?? '';
+			system_part_ids = initialData.system_parts?.map((sp) => sp.id) ?? [];
+		}
+	});
+
+	const formState = useFormState({
+		onSuccess: (result: Apparat) => {
+			onSuccess?.(result);
+		}
+	});
 
 	async function handleSubmit() {
-		loading = true;
-		error = '';
-		fieldErrors = {};
-
-		try {
+		await formState.handleSubmit(async () => {
 			if (initialData) {
-				const res = await updateApparat(initialData.id, {
+				return await updateApparat(initialData.id, {
 					short_name,
 					name,
 					description: description || undefined,
 					system_part_ids
 				});
-				dispatch('success', res);
 			} else {
-				const res = await createApparat({
+				return await createApparat({
 					short_name,
 					name,
 					description: description || undefined,
 					system_part_ids
 				});
-				dispatch('success', res);
 			}
-		} catch (e) {
-			console.error(e);
-			fieldErrors = getFieldErrors(e);
-			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
-		} finally {
-			loading = false;
-		}
+		});
 	}
 </script>
 
@@ -72,39 +66,41 @@
 		<div class="space-y-2">
 			<Label for="apparat_short">Short Name</Label>
 			<Input id="apparat_short" bind:value={short_name} required maxlength={255} />
-			{#if fieldError('short_name')}
-				<p class="text-sm text-red-500">{fieldError('short_name')}</p>
+			{#if formState.getFieldError('short_name', ['apparat'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('short_name', ['apparat'])}</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="apparat_name">Name</Label>
 			<Input id="apparat_name" bind:value={name} required maxlength={250} />
-			{#if fieldError('name')}
-				<p class="text-sm text-red-500">{fieldError('name')}</p>
+			{#if formState.getFieldError('name', ['apparat'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('name', ['apparat'])}</p>
 			{/if}
 		</div>
 		<div class="space-y-2 md:col-span-2">
 			<Label for="apparat_desc">Description</Label>
 			<Textarea id="apparat_desc" bind:value={description} rows={3} maxlength={250} />
-			{#if fieldError('description')}
-				<p class="text-sm text-red-500">{fieldError('description')}</p>
+			{#if formState.getFieldError('description', ['apparat'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('description', ['apparat'])}</p>
 			{/if}
 		</div>
 		<div class="space-y-2 md:col-span-2">
 			<Label for="apparat_system_parts">System Parts</Label>
 			<SystemPartMultiSelect id="apparat_system_parts" bind:value={system_part_ids} />
-			{#if fieldError('system_part_ids')}
-				<p class="text-sm text-red-500">{fieldError('system_part_ids')}</p>
+			{#if formState.getFieldError('system_part_ids', ['apparat'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('system_part_ids', ['apparat'])}
+				</p>
 			{/if}
 		</div>
 	</div>
 
-	{#if error}
-		<p class="text-sm text-red-500">{error}</p>
+	{#if formState.error}
+		<p class="text-sm text-red-500">{formState.error}</p>
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={() => dispatch('cancel')}>Cancel</Button>
-		<Button type="submit" disabled={loading}>{initialData ? 'Update' : 'Create'}</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
+		<Button type="submit" disabled={formState.loading}>{initialData ? 'Update' : 'Create'}</Button>
 	</div>
 </form>

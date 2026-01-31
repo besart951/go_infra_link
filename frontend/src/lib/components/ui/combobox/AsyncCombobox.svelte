@@ -5,34 +5,50 @@
 	import { cn } from '$lib/utils.js';
 	import Check from 'lucide-svelte/icons/check';
 	import ChevronsUpDown from 'lucide-svelte/icons/chevrons-up-down';
-	import { tick } from 'svelte';
 
-	// Props
-	export let value: string = '';
-	export let fetcher: (search: string) => Promise<T[]>;
-	export let fetchById: ((id: string) => Promise<T | null | undefined>) | undefined = undefined;
-	export let labelKey: keyof T;
-	export let idKey: keyof T = 'id' as keyof T;
-	export let id: string | undefined = undefined;
-	export let placeholder: string = 'Select item...';
-	export let searchPlaceholder: string = 'Search...';
-	export let emptyText: string = 'No results found.';
-	export let width: string = 'w-[200px]';
-	export let onValueChange: ((value: string) => void) | undefined = undefined;
+	interface AsyncComboboxProps<T> {
+		value?: string;
+		fetcher: (search: string) => Promise<T[]>;
+		fetchById?: (id: string) => Promise<T | null | undefined>;
+		labelKey: keyof T;
+		idKey?: keyof T;
+		id?: string;
+		placeholder?: string;
+		searchPlaceholder?: string;
+		emptyText?: string;
+		width?: string;
+		onValueChange?: (value: string) => void;
+	}
 
-	let open = false;
-	let items: T[] = [];
-	let search = '';
-	let loading = false;
+	let {
+		value = $bindable(''),
+		fetcher,
+		fetchById,
+		labelKey,
+		idKey = 'id' as keyof T,
+		id,
+		placeholder = 'Select item...',
+		searchPlaceholder = 'Search...',
+		emptyText = 'No results found.',
+		width = 'w-[200px]',
+		onValueChange
+	}: AsyncComboboxProps<T> = $props();
+
+	let open = $state(false);
+	let items = $state<T[]>([]);
+	let search = $state('');
+	let loading = $state(false);
 	let debounceTimer: ReturnType<typeof setTimeout>;
-	let initialized = false;
-	let selectedLoading = false;
-	let selectedRequestId = 0;
-	let selectedValue: string | undefined = undefined;
+	let initialized = $state(false);
+	let selectedLoading = $state(false);
+	let selectedRequestId = $state(0);
+	let selectedValue = $state<string | undefined>(undefined);
+	let selectedLabel = $state<string | undefined>(undefined);
 
-	// We keep track of the label for the selected value to display it even if it's not in the current search results
-	let selectedLabel: string | undefined = undefined;
+	// Derived state
+	const selectedItem = $derived(items.find((i) => String(i[idKey]) === value));
 
+	// Load selected item by ID
 	async function loadSelected(id: string) {
 		if (!fetchById) return;
 		selectedLoading = true;
@@ -53,11 +69,7 @@
 		}
 	}
 
-	$: if (open && !initialized) {
-		initialized = true;
-		loadItems('');
-	}
-
+	// Load items with debounce
 	function loadItems(query: string) {
 		clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(async () => {
@@ -74,29 +86,45 @@
 		}, 500);
 	}
 
-	// Trigger search when search term changes, skip initial empty string if not open/initialized
-	$: if (initialized) {
-		loadItems(search);
-	}
+	// Effects
+	$effect(() => {
+		if (open && !initialized) {
+			initialized = true;
+			loadItems('');
+		}
+	});
 
-	$: selectedItem = items.find((i) => String(i[idKey]) === value);
-	$: if (selectedItem) {
-		selectedLabel = String(selectedItem[labelKey] ?? '');
-		selectedValue = value;
-	}
+	$effect(() => {
+		if (initialized) {
+			loadItems(search);
+		}
+	});
 
-	$: if (value && selectedValue && value !== selectedValue) {
-		selectedLabel = undefined;
-	}
+	$effect(() => {
+		if (selectedItem) {
+			selectedLabel = String(selectedItem[labelKey] ?? '');
+			selectedValue = value;
+		}
+	});
 
-	$: if (value && !selectedLabel && !selectedItem && fetchById && !selectedLoading) {
-		loadSelected(value);
-	}
+	$effect(() => {
+		if (value && selectedValue && value !== selectedValue) {
+			selectedLabel = undefined;
+		}
+	});
 
-	$: if (!value) {
-		selectedLabel = undefined;
-		selectedValue = undefined;
-	}
+	$effect(() => {
+		if (value && !selectedLabel && !selectedItem && fetchById && !selectedLoading) {
+			loadSelected(value);
+		}
+	});
+
+	$effect(() => {
+		if (!value) {
+			selectedLabel = undefined;
+			selectedValue = undefined;
+		}
+	});
 </script>
 
 <Popover.Root bind:open>

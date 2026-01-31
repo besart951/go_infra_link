@@ -8,51 +8,61 @@
 		createSpecification,
 		updateSpecification
 	} from '$lib/infrastructure/api/facility.adapter.js';
-	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { Specification } from '$lib/domain/facility/index.js';
-	import { createEventDispatcher } from 'svelte';
+	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 
-	export let initialData: Specification | undefined = undefined;
-
-	let field_device_id = initialData?.field_device_id ?? '';
-	let specification_supplier = initialData?.specification_supplier ?? '';
-	let specification_brand = initialData?.specification_brand ?? '';
-	let specification_type = initialData?.specification_type ?? '';
-	let additional_info_motor_valve = initialData?.additional_info_motor_valve ?? '';
-	let additional_info_size = initialData?.additional_info_size?.toString() ?? '';
-	let additional_information_installation_location =
-		initialData?.additional_information_installation_location ?? '';
-	let electrical_connection_ph = initialData?.electrical_connection_ph?.toString() ?? '';
-	let electrical_connection_acdc = initialData?.electrical_connection_acdc ?? '';
-	let electrical_connection_amperage =
-		initialData?.electrical_connection_amperage?.toString() ?? '';
-	let electrical_connection_power = initialData?.electrical_connection_power?.toString() ?? '';
-	let electrical_connection_rotation =
-		initialData?.electrical_connection_rotation?.toString() ?? '';
-
-	let loading = false;
-	let error = '';
-	let fieldErrors: Record<string, string> = {};
-
-	$: if (initialData) {
-		field_device_id = initialData.field_device_id ?? '';
-		specification_supplier = initialData.specification_supplier ?? '';
-		specification_brand = initialData.specification_brand ?? '';
-		specification_type = initialData.specification_type ?? '';
-		additional_info_motor_valve = initialData.additional_info_motor_valve ?? '';
-		additional_info_size = initialData.additional_info_size?.toString() ?? '';
-		additional_information_installation_location =
-			initialData.additional_information_installation_location ?? '';
-		electrical_connection_ph = initialData.electrical_connection_ph?.toString() ?? '';
-		electrical_connection_acdc = initialData.electrical_connection_acdc ?? '';
-		electrical_connection_amperage = initialData.electrical_connection_amperage?.toString() ?? '';
-		electrical_connection_power = initialData.electrical_connection_power?.toString() ?? '';
-		electrical_connection_rotation = initialData.electrical_connection_rotation?.toString() ?? '';
+	interface SpecificationFormProps {
+		initialData?: Specification;
+		onSuccess?: (specification: Specification) => void;
+		onCancel?: () => void;
 	}
 
-	const dispatch = createEventDispatcher();
+	let { initialData, onSuccess, onCancel }: SpecificationFormProps = $props();
 
-	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['specification']);
+	let field_device_id = $state(initialData?.field_device_id ?? '');
+	let specification_supplier = $state(initialData?.specification_supplier ?? '');
+	let specification_brand = $state(initialData?.specification_brand ?? '');
+	let specification_type = $state(initialData?.specification_type ?? '');
+	let additional_info_motor_valve = $state(initialData?.additional_info_motor_valve ?? '');
+	let additional_info_size = $state(initialData?.additional_info_size?.toString() ?? '');
+	let additional_information_installation_location = $state(
+		initialData?.additional_information_installation_location ?? ''
+	);
+	let electrical_connection_ph = $state(initialData?.electrical_connection_ph?.toString() ?? '');
+	let electrical_connection_acdc = $state(initialData?.electrical_connection_acdc ?? '');
+	let electrical_connection_amperage = $state(
+		initialData?.electrical_connection_amperage?.toString() ?? ''
+	);
+	let electrical_connection_power = $state(
+		initialData?.electrical_connection_power?.toString() ?? ''
+	);
+	let electrical_connection_rotation = $state(
+		initialData?.electrical_connection_rotation?.toString() ?? ''
+	);
+
+	$effect(() => {
+		if (initialData) {
+			field_device_id = initialData.field_device_id ?? '';
+			specification_supplier = initialData.specification_supplier ?? '';
+			specification_brand = initialData.specification_brand ?? '';
+			specification_type = initialData.specification_type ?? '';
+			additional_info_motor_valve = initialData.additional_info_motor_valve ?? '';
+			additional_info_size = initialData.additional_info_size?.toString() ?? '';
+			additional_information_installation_location =
+				initialData.additional_information_installation_location ?? '';
+			electrical_connection_ph = initialData.electrical_connection_ph?.toString() ?? '';
+			electrical_connection_acdc = initialData.electrical_connection_acdc ?? '';
+			electrical_connection_amperage = initialData.electrical_connection_amperage?.toString() ?? '';
+			electrical_connection_power = initialData.electrical_connection_power?.toString() ?? '';
+			electrical_connection_rotation = initialData.electrical_connection_rotation?.toString() ?? '';
+		}
+	});
+
+	const formState = useFormState({
+		onSuccess: (result: Specification) => {
+			onSuccess?.(result);
+		}
+	});
 
 	function toNumber(value: string): number | undefined {
 		const parsed = Number(value);
@@ -60,19 +70,14 @@
 	}
 
 	async function handleSubmit() {
-		loading = true;
-		error = '';
-		fieldErrors = {};
-
 		if (!field_device_id) {
-			error = 'Please select a field device';
-			loading = false;
+			formState.resetErrors();
 			return;
 		}
 
-		try {
+		await formState.handleSubmit(async () => {
 			if (initialData) {
-				const res = await updateSpecification(initialData.id, {
+				return await updateSpecification(initialData.id, {
 					specification_supplier: specification_supplier || undefined,
 					specification_brand: specification_brand || undefined,
 					specification_type: specification_type || undefined,
@@ -86,9 +91,8 @@
 					electrical_connection_power: toNumber(electrical_connection_power),
 					electrical_connection_rotation: toNumber(electrical_connection_rotation)
 				});
-				dispatch('success', res);
 			} else {
-				const res = await createSpecification({
+				return await createSpecification({
 					field_device_id,
 					specification_supplier: specification_supplier || undefined,
 					specification_brand: specification_brand || undefined,
@@ -103,15 +107,8 @@
 					electrical_connection_power: toNumber(electrical_connection_power),
 					electrical_connection_rotation: toNumber(electrical_connection_rotation)
 				});
-				dispatch('success', res);
 			}
-		} catch (e) {
-			console.error(e);
-			fieldErrors = getFieldErrors(e);
-			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
-		} finally {
-			loading = false;
-		}
+		});
 	}
 </script>
 
@@ -126,78 +123,100 @@
 			<div class="block">
 				<FieldDeviceSelect bind:value={field_device_id} width="w-full" />
 			</div>
-			{#if fieldError('field_device_id')}
-				<p class="text-sm text-red-500">{fieldError('field_device_id')}</p>
+			{#if formState.getFieldError('field_device_id', ['specification'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('field_device_id', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_supplier">Supplier</Label>
 			<Input id="spec_supplier" bind:value={specification_supplier} maxlength={250} />
-			{#if fieldError('specification_supplier')}
-				<p class="text-sm text-red-500">{fieldError('specification_supplier')}</p>
+			{#if formState.getFieldError('specification_supplier', ['specification'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('specification_supplier', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_brand">Brand</Label>
 			<Input id="spec_brand" bind:value={specification_brand} maxlength={250} />
-			{#if fieldError('specification_brand')}
-				<p class="text-sm text-red-500">{fieldError('specification_brand')}</p>
+			{#if formState.getFieldError('specification_brand', ['specification'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('specification_brand', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_type">Type</Label>
 			<Input id="spec_type" bind:value={specification_type} maxlength={250} />
-			{#if fieldError('specification_type')}
-				<p class="text-sm text-red-500">{fieldError('specification_type')}</p>
+			{#if formState.getFieldError('specification_type', ['specification'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('specification_type', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_motor_valve">Motor Valve Info</Label>
 			<Input id="spec_motor_valve" bind:value={additional_info_motor_valve} maxlength={250} />
-			{#if fieldError('additional_info_motor_valve')}
-				<p class="text-sm text-red-500">{fieldError('additional_info_motor_valve')}</p>
+			{#if formState.getFieldError('additional_info_motor_valve', ['specification'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('additional_info_motor_valve', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_size">Size</Label>
 			<Input id="spec_size" type="number" bind:value={additional_info_size} />
-			{#if fieldError('additional_info_size')}
-				<p class="text-sm text-red-500">{fieldError('additional_info_size')}</p>
+			{#if formState.getFieldError('additional_info_size', ['specification'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('additional_info_size', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_ph">Electrical PH</Label>
 			<Input id="spec_ph" type="number" bind:value={electrical_connection_ph} />
-			{#if fieldError('electrical_connection_ph')}
-				<p class="text-sm text-red-500">{fieldError('electrical_connection_ph')}</p>
+			{#if formState.getFieldError('electrical_connection_ph', ['specification'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('electrical_connection_ph', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_acdc">Electrical AC/DC</Label>
 			<Input id="spec_acdc" bind:value={electrical_connection_acdc} maxlength={2} />
-			{#if fieldError('electrical_connection_acdc')}
-				<p class="text-sm text-red-500">{fieldError('electrical_connection_acdc')}</p>
+			{#if formState.getFieldError('electrical_connection_acdc', ['specification'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('electrical_connection_acdc', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_amp">Amperage</Label>
 			<Input id="spec_amp" type="number" bind:value={electrical_connection_amperage} />
-			{#if fieldError('electrical_connection_amperage')}
-				<p class="text-sm text-red-500">{fieldError('electrical_connection_amperage')}</p>
+			{#if formState.getFieldError('electrical_connection_amperage', ['specification'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('electrical_connection_amperage', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_power">Power</Label>
 			<Input id="spec_power" type="number" bind:value={electrical_connection_power} />
-			{#if fieldError('electrical_connection_power')}
-				<p class="text-sm text-red-500">{fieldError('electrical_connection_power')}</p>
+			{#if formState.getFieldError('electrical_connection_power', ['specification'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('electrical_connection_power', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_rotation">Rotation</Label>
 			<Input id="spec_rotation" type="number" bind:value={electrical_connection_rotation} />
-			{#if fieldError('electrical_connection_rotation')}
-				<p class="text-sm text-red-500">{fieldError('electrical_connection_rotation')}</p>
+			{#if formState.getFieldError('electrical_connection_rotation', ['specification'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('electrical_connection_rotation', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2 md:col-span-2">
@@ -208,20 +227,22 @@
 				rows={2}
 				maxlength={250}
 			/>
-			{#if fieldError('additional_information_installation_location')}
+			{#if formState.getFieldError( 'additional_information_installation_location', ['specification'] )}
 				<p class="text-sm text-red-500">
-					{fieldError('additional_information_installation_location')}
+					{formState.getFieldError('additional_information_installation_location', [
+						'specification'
+					])}
 				</p>
 			{/if}
 		</div>
 	</div>
 
-	{#if error}
-		<p class="text-sm text-red-500">{error}</p>
+	{#if formState.error}
+		<p class="text-sm text-red-500">{formState.error}</p>
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={() => dispatch('cancel')}>Cancel</Button>
-		<Button type="submit" disabled={loading}>{initialData ? 'Update' : 'Create'}</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
+		<Button type="submit" disabled={formState.loading}>{initialData ? 'Update' : 'Create'}</Button>
 	</div>
 </form>

@@ -61,7 +61,7 @@ export function createFieldDeviceStore(pageSize = 300) {
 	 */
 	async function load() {
 		const state = get(store);
-		
+
 		// Cancel any ongoing request
 		if (abortController) {
 			abortController.abort();
@@ -121,7 +121,7 @@ export function createFieldDeviceStore(pageSize = 300) {
 
 	return {
 		subscribe: store.subscribe,
-		
+
 		/**
 		 * Load field devices
 		 */
