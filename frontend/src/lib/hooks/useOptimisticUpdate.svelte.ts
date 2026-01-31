@@ -9,7 +9,7 @@
 
 export interface OptimisticUpdateOptions<T> {
 	onSuccess?: (result: T) => void;
-	onError?: (error: any) => void;
+	onError?: (error: unknown) => void;
 	onRollback?: () => void;
 }
 

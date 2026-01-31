@@ -18,9 +18,9 @@ export interface FormState {
 	fieldErrors: Record<string, string>;
 }
 
-export interface UseFormStateOptions {
-	onSuccess?: (result: any) => void;
-	onError?: (error: any) => void;
+export interface UseFormStateOptions<T = unknown> {
+	onSuccess?: (result: T) => void;
+	onError?: (error: unknown) => void;
 	showErrorToast?: boolean; // Default: true - show toast on general errors
 	showSuccessToast?: boolean; // Default: false - don't show toast on success
 	successMessage?: string; // Custom success message
@@ -29,7 +29,7 @@ export interface UseFormStateOptions {
 /**
  * Create reactive form state
  */
-export function useFormState(options: UseFormStateOptions = {}) {
+export function useFormState<T = unknown>(options: UseFormStateOptions<T> = {}) {
 	const {
 		onSuccess,
 		onError,
@@ -75,7 +75,7 @@ export function useFormState(options: UseFormStateOptions = {}) {
 	/**
 	 * Wrap an async form submission handler with error handling
 	 */
-	async function handleSubmit<T>(submitFn: () => Promise<T>): Promise<T | undefined> {
+	async function handleSubmit<R = T>(submitFn: () => Promise<R>): Promise<R | undefined> {
 		resetErrors();
 		state.loading = true;
 
