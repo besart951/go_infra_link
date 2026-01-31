@@ -70,7 +70,9 @@
 			<Label for="alarm_note">Alarm Note</Label>
 			<Textarea id="alarm_note" bind:value={alarm_note} rows={3} />
 			{#if formState.getFieldError('alarm_note', ['alarmdefinition'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('alarm_note', ['alarmdefinition'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('alarm_note', ['alarmdefinition'])}
+				</p>
 			{/if}
 		</div>
 	</div>

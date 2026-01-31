@@ -39,7 +39,8 @@
 	}
 
 	// Reactive statement to check if any filters are active
-	$: hasActiveFilters = buildingId || controlCabinetId || spsControllerId || spsControllerSystemTypeId;
+	$: hasActiveFilters =
+		buildingId || controlCabinetId || spsControllerId || spsControllerSystemTypeId;
 </script>
 
 <svelte:head>
@@ -69,7 +70,7 @@
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
 				<div class="flex flex-col gap-2">
 					<label for="building-filter" class="text-sm font-medium">Building</label>
 					<BuildingSelect bind:value={buildingId} width="w-full" />
@@ -89,7 +90,7 @@
 					<SPSControllerSystemTypeSelect bind:value={spsControllerSystemTypeId} width="w-full" />
 				</div>
 			</div>
-			<div class="flex gap-2 mt-4">
+			<div class="mt-4 flex gap-2">
 				<Button onclick={applyFilters}>Apply Filters</Button>
 				{#if hasActiveFilters}
 					<Button variant="outline" onclick={clearFilters}>

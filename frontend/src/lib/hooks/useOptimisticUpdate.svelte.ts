@@ -1,6 +1,6 @@
 /**
  * useOptimisticUpdate - Helper for implementing optimistic UI updates
- * 
+ *
  * This composable provides utilities for optimistic updates:
  * - Immediately update UI before server response
  * - Automatically rollback on error

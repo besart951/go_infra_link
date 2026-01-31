@@ -1,6 +1,6 @@
 /**
  * useFormState - Reusable form state management using Svelte 5 runes
- * 
+ *
  * This composable manages common form state:
  * - Loading state
  * - General error messages
@@ -60,7 +60,7 @@ export function useFormState(options: UseFormStateOptions = {}) {
 		if (state.fieldErrors[name]) {
 			return state.fieldErrors[name];
 		}
-		
+
 		// Try with prefixes
 		for (const prefix of prefixes) {
 			const key = `${prefix}.${name}`;
@@ -68,39 +68,37 @@ export function useFormState(options: UseFormStateOptions = {}) {
 				return state.fieldErrors[key];
 			}
 		}
-		
+
 		return undefined;
 	}
 
 	/**
 	 * Wrap an async form submission handler with error handling
 	 */
-	async function handleSubmit<T>(
-		submitFn: () => Promise<T>
-	): Promise<T | undefined> {
+	async function handleSubmit<T>(submitFn: () => Promise<T>): Promise<T | undefined> {
 		resetErrors();
 		state.loading = true;
 
 		try {
 			const result = await submitFn();
-			
+
 			// Show success toast if enabled
 			if (showSuccessToast) {
 				addToast(successMessage || 'Operation completed successfully', 'success');
 			}
-			
+
 			onSuccess?.(result);
 			return result;
 		} catch (e) {
 			console.error('Form submission error:', e);
 			state.fieldErrors = getFieldErrors(e);
 			state.error = Object.keys(state.fieldErrors).length ? '' : getErrorMessage(e);
-			
+
 			// Show error toast if enabled and there are no field-specific errors
 			if (showErrorToast && state.error) {
 				addToast(state.error, 'error');
 			}
-			
+
 			onError?.(e);
 			return undefined;
 		} finally {

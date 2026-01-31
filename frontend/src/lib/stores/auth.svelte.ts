@@ -1,6 +1,6 @@
 /**
  * Auth Store - Global authentication state using Svelte 5 Runes
- * 
+ *
  * This store manages:
  * - Current authenticated user
  * - User's role and permissions
@@ -43,10 +43,7 @@ export async function loadAuth(): Promise<void> {
 	authState.error = null;
 
 	try {
-		const [user, allowedRolesResponse] = await Promise.all([
-			getCurrentUser(),
-			getAllowedRoles()
-		]);
+		const [user, allowedRolesResponse] = await Promise.all([getCurrentUser(), getAllowedRoles()]);
 
 		authState.user = user;
 		authState.allowedRoles = allowedRolesResponse.roles;

@@ -88,7 +88,9 @@
 			<Label for="apparat_system_parts">System Parts</Label>
 			<SystemPartMultiSelect id="apparat_system_parts" bind:value={system_part_ids} />
 			{#if formState.getFieldError('system_part_ids', ['apparat'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('system_part_ids', ['apparat'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('system_part_ids', ['apparat'])}
+				</p>
 			{/if}
 		</div>
 	</div>

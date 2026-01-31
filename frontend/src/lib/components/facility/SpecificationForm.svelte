@@ -124,77 +124,99 @@
 				<FieldDeviceSelect bind:value={field_device_id} width="w-full" />
 			</div>
 			{#if formState.getFieldError('field_device_id', ['specification'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('field_device_id', ['specification'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('field_device_id', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_supplier">Supplier</Label>
 			<Input id="spec_supplier" bind:value={specification_supplier} maxlength={250} />
 			{#if formState.getFieldError('specification_supplier', ['specification'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('specification_supplier', ['specification'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('specification_supplier', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_brand">Brand</Label>
 			<Input id="spec_brand" bind:value={specification_brand} maxlength={250} />
 			{#if formState.getFieldError('specification_brand', ['specification'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('specification_brand', ['specification'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('specification_brand', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_type">Type</Label>
 			<Input id="spec_type" bind:value={specification_type} maxlength={250} />
 			{#if formState.getFieldError('specification_type', ['specification'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('specification_type', ['specification'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('specification_type', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_motor_valve">Motor Valve Info</Label>
 			<Input id="spec_motor_valve" bind:value={additional_info_motor_valve} maxlength={250} />
 			{#if formState.getFieldError('additional_info_motor_valve', ['specification'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('additional_info_motor_valve', ['specification'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('additional_info_motor_valve', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_size">Size</Label>
 			<Input id="spec_size" type="number" bind:value={additional_info_size} />
 			{#if formState.getFieldError('additional_info_size', ['specification'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('additional_info_size', ['specification'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('additional_info_size', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_ph">Electrical PH</Label>
 			<Input id="spec_ph" type="number" bind:value={electrical_connection_ph} />
 			{#if formState.getFieldError('electrical_connection_ph', ['specification'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('electrical_connection_ph', ['specification'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('electrical_connection_ph', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_acdc">Electrical AC/DC</Label>
 			<Input id="spec_acdc" bind:value={electrical_connection_acdc} maxlength={2} />
 			{#if formState.getFieldError('electrical_connection_acdc', ['specification'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('electrical_connection_acdc', ['specification'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('electrical_connection_acdc', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_amp">Amperage</Label>
 			<Input id="spec_amp" type="number" bind:value={electrical_connection_amperage} />
 			{#if formState.getFieldError('electrical_connection_amperage', ['specification'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('electrical_connection_amperage', ['specification'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('electrical_connection_amperage', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_power">Power</Label>
 			<Input id="spec_power" type="number" bind:value={electrical_connection_power} />
 			{#if formState.getFieldError('electrical_connection_power', ['specification'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('electrical_connection_power', ['specification'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('electrical_connection_power', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="spec_rotation">Rotation</Label>
 			<Input id="spec_rotation" type="number" bind:value={electrical_connection_rotation} />
 			{#if formState.getFieldError('electrical_connection_rotation', ['specification'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('electrical_connection_rotation', ['specification'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('electrical_connection_rotation', ['specification'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2 md:col-span-2">
@@ -205,9 +227,11 @@
 				rows={2}
 				maxlength={250}
 			/>
-			{#if formState.getFieldError('additional_information_installation_location', ['specification'])}
+			{#if formState.getFieldError( 'additional_information_installation_location', ['specification'] )}
 				<p class="text-sm text-red-500">
-					{formState.getFieldError('additional_information_installation_location', ['specification'])}
+					{formState.getFieldError('additional_information_installation_location', [
+						'specification'
+					])}
 				</p>
 			{/if}
 		</div>

@@ -1,6 +1,6 @@
 /**
  * Permission Guard Utilities
- * 
+ *
  * Helper functions and components for controlling UI visibility
  * based on user permissions and role hierarchy
  */

@@ -1,14 +1,14 @@
 <script lang="ts">
 	/**
 	 * PermissionGuard Component
-	 * 
+	 *
 	 * Conditionally renders children based on user permissions.
-	 * 
+	 *
 	 * Usage:
 	 *   <PermissionGuard action="create" resource="user">
 	 *     <button>Create User</button>
 	 *   </PermissionGuard>
-	 * 
+	 *
 	 *   <PermissionGuard canManageRole="entrepreneur">
 	 *     <button>Assign Entrepreneur Role</button>
 	 *   </PermissionGuard>

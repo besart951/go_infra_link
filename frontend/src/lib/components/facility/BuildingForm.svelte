@@ -79,7 +79,9 @@
 				placeholder="e.g. 1"
 			/>
 			{#if formState.getFieldError('building_group', ['building'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('building_group', ['building'])}</p>
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('building_group', ['building'])}
+				</p>
 			{/if}
 		</div>
 	</div>

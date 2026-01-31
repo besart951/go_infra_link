@@ -82,7 +82,7 @@
 	async function submitCreate() {
 		if (!canSubmitCreate()) return;
 		createBusy = true;
-		
+
 		const payload: CreateProjectRequest = {
 			name: form.name.trim(),
 			description: form.description.trim() || undefined,
