@@ -8,27 +8,45 @@
 	import ChevronsUpDown from 'lucide-svelte/icons/chevrons-up-down';
 	import X from 'lucide-svelte/icons/x';
 
-	// Props
-	export let value: string[] = [];
-	export let fetcher: (search: string) => Promise<T[]>;
-	export let fetchByIds: ((ids: string[]) => Promise<T[]>) | undefined = undefined;
-	export let labelKey: keyof T;
-	export let idKey: keyof T = 'id' as keyof T;
-	export let id: string | undefined = undefined;
-	export let placeholder: string = 'Select items...';
-	export let searchPlaceholder: string = 'Search...';
-	export let emptyText: string = 'No results found.';
-	export let width: string = 'w-full';
-	export let disabled: boolean = false;
+	interface AsyncMultiSelectProps<T> {
+		value?: string[];
+		fetcher: (search: string) => Promise<T[]>;
+		fetchByIds?: (ids: string[]) => Promise<T[]>;
+		labelKey: keyof T;
+		idKey?: keyof T;
+		id?: string;
+		placeholder?: string;
+		searchPlaceholder?: string;
+		emptyText?: string;
+		width?: string;
+		disabled?: boolean;
+	}
 
-	let open = false;
-	let items: T[] = [];
-	let search = '';
-	let loading = false;
+	let {
+		value = $bindable([]),
+		fetcher,
+		fetchByIds,
+		labelKey,
+		idKey = 'id' as keyof T,
+		id,
+		placeholder = 'Select items...',
+		searchPlaceholder = 'Search...',
+		emptyText = 'No results found.',
+		width = 'w-full',
+		disabled = false
+	}: AsyncMultiSelectProps<T> = $props();
+
+	let open = $state(false);
+	let items = $state<T[]>([]);
+	let search = $state('');
+	let loading = $state(false);
 	let debounceTimer: ReturnType<typeof setTimeout>;
-	let initialized = false;
-	let selectedItems: T[] = [];
-	let selectedLoading = false;
+	let initialized = $state(false);
+	let selectedItems = $state<T[]>([]);
+	let selectedLoading = $state(false);
+
+	// Derived state
+	const availableItems = $derived(items.filter((item) => !value.includes(String(item[idKey]))));
 
 	// Load selected items by IDs
 	async function loadSelected() {
@@ -45,12 +63,6 @@
 		} finally {
 			selectedLoading = false;
 		}
-	}
-
-	// Initialize on first open
-	$: if (open && !initialized) {
-		initialized = true;
-		loadItems('');
 	}
 
 	// Load items from fetcher
@@ -70,20 +82,27 @@
 		}, 500);
 	}
 
-	// Trigger search when search term changes
-	$: if (initialized) {
-		loadItems(search);
-	}
+	// Effects
+	$effect(() => {
+		if (open && !initialized) {
+			initialized = true;
+			loadItems('');
+		}
+	});
 
-	// Load selected items when value changes
-	$: if (value && value.length > 0) {
-		loadSelected();
-	} else {
-		selectedItems = [];
-	}
+	$effect(() => {
+		if (initialized) {
+			loadItems(search);
+		}
+	});
 
-	// Filter out selected items from available items
-	$: availableItems = items.filter((item) => !value.includes(String(item[idKey])));
+	$effect(() => {
+		if (value && value.length > 0) {
+			loadSelected();
+		} else {
+			selectedItems = [];
+		}
+	});
 
 	function handleSelect(itemId: string) {
 		if (value.includes(itemId)) {

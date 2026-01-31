@@ -26,7 +26,9 @@
 	const formState = useFormState({
 		onSuccess: (result: Phase) => {
 			onSuccess?.(result);
-		}
+		},
+		showSuccessToast: true,
+		successMessage: initialData ? 'Phase updated successfully' : 'Phase created successfully'
 	});
 
 	async function handleSubmit() {

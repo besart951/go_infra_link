@@ -6,9 +6,11 @@
  * - General error messages
  * - Field-level errors
  * - Submit handler wrapper with error handling
+ * - Automatic toast notifications for errors
  */
 
 import { getErrorMessage, getFieldErrors } from '$lib/api/client.js';
+import { addToast } from '$lib/components/toast.svelte';
 
 export interface FormState {
 	loading: boolean;
@@ -19,12 +21,23 @@ export interface FormState {
 export interface UseFormStateOptions {
 	onSuccess?: (result: any) => void;
 	onError?: (error: any) => void;
+	showErrorToast?: boolean; // Default: true - show toast on general errors
+	showSuccessToast?: boolean; // Default: false - don't show toast on success
+	successMessage?: string; // Custom success message
 }
 
 /**
  * Create reactive form state
  */
 export function useFormState(options: UseFormStateOptions = {}) {
+	const {
+		onSuccess,
+		onError,
+		showErrorToast = true,
+		showSuccessToast = false,
+		successMessage
+	} = options;
+
 	const state = $state<FormState>({
 		loading: false,
 		error: '',
@@ -70,13 +83,25 @@ export function useFormState(options: UseFormStateOptions = {}) {
 
 		try {
 			const result = await submitFn();
-			options.onSuccess?.(result);
+			
+			// Show success toast if enabled
+			if (showSuccessToast) {
+				addToast(successMessage || 'Operation completed successfully', 'success');
+			}
+			
+			onSuccess?.(result);
 			return result;
 		} catch (e) {
 			console.error('Form submission error:', e);
 			state.fieldErrors = getFieldErrors(e);
 			state.error = Object.keys(state.fieldErrors).length ? '' : getErrorMessage(e);
-			options.onError?.(e);
+			
+			// Show error toast if enabled and there are no field-specific errors
+			if (showErrorToast && state.error) {
+				addToast(state.error, 'error');
+			}
+			
+			onError?.(e);
 			return undefined;
 		} finally {
 			state.loading = false;
