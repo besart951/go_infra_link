@@ -3,9 +3,13 @@
 	import { getPhase, listPhases } from '$lib/infrastructure/api/phase.adapter.js';
 	import type { Phase } from '$lib/domain/phase/index.js';
 
-	export let value: string = '';
-	export let width: string = 'w-[260px]';
-	export let id: string | undefined = undefined;
+	interface ProjectPhaseSelectProps {
+		value?: string;
+		width?: string;
+		id?: string;
+	}
+
+	let { value = $bindable(''), width = 'w-[260px]', id }: ProjectPhaseSelectProps = $props();
 
 	const MAX_PHASE_SAMPLES = 100;
 
