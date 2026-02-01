@@ -61,6 +61,7 @@ type BacnetObjectService interface {
 type FieldDeviceService interface {
 	Create(fieldDevice *domainFacility.FieldDevice) error
 	CreateWithBacnetObjects(fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects []domainFacility.BacnetObject) error
+	MultiCreate(items []domainFacility.FieldDeviceCreateItem) *domainFacility.FieldDeviceMultiCreateResult
 	GetByID(id uuid.UUID) (*domainFacility.FieldDevice, error)
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.FieldDevice], error)
 	ListWithFilters(page, limit int, search string, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error)

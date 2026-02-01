@@ -400,3 +400,33 @@ func (s *Service) ListObjectData(projectID uuid.UUID, page, limit int, search st
 		return s.objectDataRepo.GetPaginatedListForProject(projectID, params)
 	}
 }
+
+// MultiCreateFieldDevices creates multiple field devices and links them to a project in one operation.
+// For each successfully created field device, it creates a ProjectFieldDevice link.
+// Returns the IDs of the created field devices and any association errors.
+func (s *Service) MultiCreateFieldDevices(projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) ([]uuid.UUID, []string) {
+	// Verify project exists
+	projects, err := s.repo.GetByIds([]uuid.UUID{projectID})
+	if err != nil || len(projects) == 0 {
+		return nil, []string{"project not found"}
+	}
+
+	successIDs := make([]uuid.UUID, 0, len(fieldDeviceIDs))
+	errors := make([]string, 0)
+
+	for i, fdID := range fieldDeviceIDs {
+		entity := &domainProject.ProjectFieldDevice{
+			ProjectID:     projectID,
+			FieldDeviceID: fdID,
+		}
+		if err := s.projectFieldDeviceRepo.Create(entity); err != nil {
+			errors = append(errors, err.Error())
+		} else {
+			successIDs = append(successIDs, fdID)
+		}
+		// Continue even if one fails
+		_ = i // Use index if needed for error reporting
+	}
+
+	return successIDs, errors
+}

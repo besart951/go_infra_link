@@ -63,3 +63,25 @@ type FieldDeviceOptionsResponse struct {
 	ApparatToSystemPart   map[string][]string    `json:"apparat_to_system_part"`   // apparat_id -> [system_part_ids]
 	ObjectDataToApparat   map[string][]string    `json:"object_data_to_apparat"`   // object_data_id -> [apparat_ids]
 }
+
+// MultiCreateFieldDeviceRequest represents a request to create multiple field devices
+type MultiCreateFieldDeviceRequest struct {
+	FieldDevices []CreateFieldDeviceRequest `json:"field_devices" binding:"required,min=1,dive"`
+}
+
+// FieldDeviceCreateResultResponse represents the result of creating a single field device
+type FieldDeviceCreateResultResponse struct {
+	Index        int                   `json:"index"`         // Index in the original request array
+	Success      bool                  `json:"success"`       // Whether the creation succeeded
+	FieldDevice  *FieldDeviceResponse  `json:"field_device"`  // The created field device (null if failed)
+	Error        string                `json:"error"`         // Error message if failed (empty if succeeded)
+	ErrorField   string                `json:"error_field"`   // Specific field that caused the error (if applicable)
+}
+
+// MultiCreateFieldDeviceResponse represents the response from a multi-create operation
+type MultiCreateFieldDeviceResponse struct {
+	Results       []FieldDeviceCreateResultResponse `json:"results"`
+	TotalRequests int                               `json:"total_requests"`
+	SuccessCount  int                               `json:"success_count"`
+	FailureCount  int                               `json:"failure_count"`
+}
