@@ -3,19 +3,23 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { Plus, X } from 'lucide-svelte';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { Plus, X, ListPlus } from 'lucide-svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { fieldDeviceStore } from '$lib/stores/facility/fieldDeviceStore.js';
+	import { addToast } from '$lib/components/toast.svelte';
 	import type { FieldDevice } from '$lib/domain/facility/index.js';
 	import BuildingSelect from '$lib/components/facility/BuildingSelect.svelte';
 	import ControlCabinetSelect from '$lib/components/facility/ControlCabinetSelect.svelte';
 	import SPSControllerSelect from '$lib/components/facility/SPSControllerSelect.svelte';
 	import SPSControllerSystemTypeSelect from '$lib/components/facility/SPSControllerSystemTypeSelect.svelte';
+	import FieldDeviceMultiCreateForm from '$lib/components/facility/FieldDeviceMultiCreateForm.svelte';
 
-	let buildingId = '';
-	let controlCabinetId = '';
-	let spsControllerId = '';
-	let spsControllerSystemTypeId = '';
+	let buildingId = $state('');
+	let controlCabinetId = $state('');
+	let spsControllerId = $state('');
+	let spsControllerSystemTypeId = $state('');
+	let showMultiCreateDialog = $state(false);
 
 	onMount(() => {
 		fieldDeviceStore.load();
@@ -38,9 +42,20 @@
 		fieldDeviceStore.clearAllFilters();
 	}
 
+	function handleMultiCreateSuccess(createdDevices: any[]) {
+		showMultiCreateDialog = false;
+		fieldDeviceStore.reload();
+		addToast({
+			type: 'success',
+			message: 'Field devices created successfully',
+			description: `Created ${createdDevices.length} field device(s)`
+		});
+	}
+
 	// Reactive statement to check if any filters are active
-	$: hasActiveFilters =
-		buildingId || controlCabinetId || spsControllerId || spsControllerSystemTypeId;
+	const hasActiveFilters = $derived(
+		buildingId || controlCabinetId || spsControllerId || spsControllerSystemTypeId
+	);
 </script>
 
 <svelte:head>
@@ -55,10 +70,16 @@
 				Manage field devices, BMK identifiers, and specifications.
 			</p>
 		</div>
-		<Button>
-			<Plus class="mr-2 size-4" />
-			New Field Device
-		</Button>
+		<div class="flex gap-2">
+			<Button variant="outline" onclick={() => (showMultiCreateDialog = true)}>
+				<ListPlus class="mr-2 size-4" />
+				Multi-Create
+			</Button>
+			<Button>
+				<Plus class="mr-2 size-4" />
+				New Field Device
+			</Button>
+		</div>
 	</div>
 
 	<!-- Filter Card -->
@@ -134,3 +155,19 @@
 		{/snippet}
 	</PaginatedList>
 </div>
+
+<!-- Multi-Create Dialog -->
+<Dialog.Root bind:open={showMultiCreateDialog}>
+	<Dialog.Content class="max-h-[90vh] max-w-5xl overflow-y-auto">
+		<Dialog.Header>
+			<Dialog.Title>Multi-Create Field Devices</Dialog.Title>
+			<Dialog.Description>
+				Create multiple field devices at once with automatic apparat number assignment.
+			</Dialog.Description>
+		</Dialog.Header>
+		<FieldDeviceMultiCreateForm
+			onSuccess={handleMultiCreateSuccess}
+			onCancel={() => (showMultiCreateDialog = false)}
+		/>
+	</Dialog.Content>
+</Dialog.Root>
