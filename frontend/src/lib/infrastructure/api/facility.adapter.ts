@@ -298,6 +298,39 @@ export async function getFieldDeviceOptions(
 	);
 }
 
+export async function getAvailableApparatNumbers(
+	spsControllerSystemTypeId: string,
+	apparatId: string,
+	systemPartId?: string,
+	options?: ApiOptions
+): Promise<import('$lib/domain/facility/field-device.js').AvailableApparatNumbersResponse> {
+	const searchParams = new URLSearchParams();
+	searchParams.set('sps_controller_system_type_id', spsControllerSystemTypeId);
+	searchParams.set('apparat_id', apparatId);
+	if (systemPartId) {
+		searchParams.set('system_part_id', systemPartId);
+	}
+
+	return api<import('$lib/domain/facility/field-device.js').AvailableApparatNumbersResponse>(
+		`/facility/field-devices/available-apparat-nr?${searchParams.toString()}`,
+		options
+	);
+}
+
+export async function multiCreateFieldDevices(
+	data: import('$lib/domain/facility/field-device.js').MultiCreateFieldDeviceRequest,
+	options?: ApiOptions
+): Promise<import('$lib/domain/facility/field-device.js').MultiCreateFieldDeviceResponse> {
+	return api<import('$lib/domain/facility/field-device.js').MultiCreateFieldDeviceResponse>(
+		'/facility/field-devices/multi-create',
+		{
+			...options,
+			method: 'POST',
+			body: JSON.stringify(data)
+		}
+	);
+}
+
 // ============================================================================
 // SYSTEM TYPES
 // ============================================================================
