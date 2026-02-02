@@ -6,7 +6,6 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
@@ -66,7 +65,7 @@
 	let fieldDeviceOptions = $state<FieldDevice[]>([]);
 	let fieldDeviceLoading = $state(false);
 	let showFieldDeviceForm = $state(false);
-	let showFieldDeviceMultiCreateDialog = $state(false);
+	let showFieldDeviceMultiCreateForm = $state(false);
 	let fieldDeviceSearch = $state('');
 
 	const filteredControlCabinetLinks = $derived(
@@ -347,7 +346,7 @@
 
 	async function handleFieldDeviceMultiCreateSuccess(createdDevices: FieldDevice[]) {
 		if (!projectId) return;
-		showFieldDeviceMultiCreateDialog = false;
+		showFieldDeviceMultiCreateForm = false;
 		
 		try {
 			// Link all created devices to the project
@@ -608,8 +607,8 @@
 						<Button variant="outline" onclick={loadFieldDevices} disabled={fieldDeviceLoading}
 							>Refresh</Button
 						>
-						{#if !showFieldDeviceForm}
-							<Button variant="outline" onclick={() => (showFieldDeviceMultiCreateDialog = true)}>
+						{#if !showFieldDeviceForm && !showFieldDeviceMultiCreateForm}
+							<Button variant="outline" onclick={() => (showFieldDeviceMultiCreateForm = true)}>
 								<ListPlus class="mr-2 size-4" />
 								Multi-Create
 							</Button>
@@ -627,6 +626,16 @@
 						on:success={handleFieldDeviceCreated}
 						on:cancel={() => (showFieldDeviceForm = false)}
 					/>
+				{/if}
+
+				{#if showFieldDeviceMultiCreateForm}
+					<div class="mt-6">
+						<FieldDeviceMultiCreateForm
+							projectId={projectId}
+							onSuccess={handleFieldDeviceMultiCreateSuccess}
+							onCancel={() => (showFieldDeviceMultiCreateForm = false)}
+						/>
+					</div>
 				{/if}
 
 				<div class="mt-6 rounded-lg border bg-background">
@@ -673,19 +682,4 @@
 	{/if}
 </div>
 
-<!-- Multi-Create Field Devices Dialog -->
-<Dialog.Root bind:open={showFieldDeviceMultiCreateDialog}>
-<Dialog.Content class="max-h-[90vh] max-w-5xl overflow-y-auto">
-<Dialog.Header>
-<Dialog.Title>Multi-Create Field Devices</Dialog.Title>
-<Dialog.Description>
-Create multiple field devices at once with automatic apparat number assignment. They will be automatically linked to this project.
-</Dialog.Description>
-</Dialog.Header>
-<FieldDeviceMultiCreateForm
-projectId={projectId}
-onSuccess={handleFieldDeviceMultiCreateSuccess}
-onCancel={() => (showFieldDeviceMultiCreateDialog = false)}
-/>
-</Dialog.Content>
-</Dialog.Root>
+<ConfirmDialog />

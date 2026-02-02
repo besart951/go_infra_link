@@ -3,7 +3,6 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Plus, X, ListPlus } from 'lucide-svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { fieldDeviceStore } from '$lib/stores/facility/fieldDeviceStore.js';
@@ -19,7 +18,7 @@
 	let controlCabinetId = $state('');
 	let spsControllerId = $state('');
 	let spsControllerSystemTypeId = $state('');
-	let showMultiCreateDialog = $state(false);
+	let showMultiCreateForm = $state(false);
 
 	onMount(() => {
 		fieldDeviceStore.load();
@@ -43,7 +42,7 @@
 	}
 
 	function handleMultiCreateSuccess(createdDevices: FieldDevice[]) {
-		showMultiCreateDialog = false;
+		showMultiCreateForm = false;
 		fieldDeviceStore.reload();
 		addToast({
 			type: 'success',
@@ -71,16 +70,36 @@
 			</p>
 		</div>
 		<div class="flex gap-2">
-			<Button variant="outline" onclick={() => (showMultiCreateDialog = true)}>
-				<ListPlus class="mr-2 size-4" />
-				Multi-Create
-			</Button>
-			<Button>
-				<Plus class="mr-2 size-4" />
-				New Field Device
-			</Button>
+			{#if !showMultiCreateForm}
+				<Button variant="outline" onclick={() => (showMultiCreateForm = true)}>
+					<ListPlus class="mr-2 size-4" />
+					Multi-Create
+				</Button>
+				<Button>
+					<Plus class="mr-2 size-4" />
+					New Field Device
+				</Button>
+			{/if}
 		</div>
 	</div>
+
+	<!-- Multi-Create Form -->
+	{#if showMultiCreateForm}
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Multi-Create Field Devices</Card.Title>
+				<Card.Description>
+					Create multiple field devices at once with automatic apparat number assignment.
+				</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<FieldDeviceMultiCreateForm
+					onSuccess={handleMultiCreateSuccess}
+					onCancel={() => (showMultiCreateForm = false)}
+				/>
+			</Card.Content>
+		</Card.Root>
+	{/if}
 
 	<!-- Filter Card -->
 	<Card.Root>
@@ -155,19 +174,3 @@
 		{/snippet}
 	</PaginatedList>
 </div>
-
-<!-- Multi-Create Dialog -->
-<Dialog.Root bind:open={showMultiCreateDialog}>
-	<Dialog.Content class="max-h-[90vh] max-w-5xl overflow-y-auto">
-		<Dialog.Header>
-			<Dialog.Title>Multi-Create Field Devices</Dialog.Title>
-			<Dialog.Description>
-				Create multiple field devices at once with automatic apparat number assignment.
-			</Dialog.Description>
-		</Dialog.Header>
-		<FieldDeviceMultiCreateForm
-			onSuccess={handleMultiCreateSuccess}
-			onCancel={() => (showMultiCreateDialog = false)}
-		/>
-	</Dialog.Content>
-</Dialog.Root>
