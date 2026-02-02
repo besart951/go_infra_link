@@ -61,6 +61,41 @@ func (h *FieldDeviceHandler) CreateFieldDevice(c *gin.Context) {
 	c.JSON(http.StatusCreated, toFieldDeviceResponse(*fieldDevice))
 }
 
+// MultiCreateFieldDevices godoc
+// @Summary Create multiple field devices in a single operation
+// @Description Creates multiple field devices with independent validation. Returns detailed results for each device. To link created devices to a project, use the CreateProjectFieldDevice endpoint with the returned field device IDs.
+// @Tags facility-field-devices
+// @Accept json
+// @Produce json
+// @Param request body dto.MultiCreateFieldDeviceRequest true "Multi-create request"
+// @Success 200 {object} dto.MultiCreateFieldDeviceResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/field-devices/multi-create [post]
+func (h *FieldDeviceHandler) MultiCreateFieldDevices(c *gin.Context) {
+	var req dto.MultiCreateFieldDeviceRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+
+	// Convert DTOs to domain models
+	items := make([]domainFacility.FieldDeviceCreateItem, len(req.FieldDevices))
+	for i, fdReq := range req.FieldDevices {
+		fieldDevice := toFieldDeviceModel(fdReq)
+		bacnetObjects := toFieldDeviceBacnetObjects(fdReq.BacnetObjects)
+		items[i] = domainFacility.FieldDeviceCreateItem{
+			FieldDevice:   fieldDevice,
+			ObjectDataID:  fdReq.ObjectDataID,
+			BacnetObjects: bacnetObjects,
+		}
+	}
+
+	// Create field devices
+	result := h.service.MultiCreate(items)
+
+	c.JSON(http.StatusOK, toMultiCreateFieldDeviceResponse(result))
+}
+
 // GetFieldDevice godoc
 // @Summary Get a field device by ID
 // @Tags facility-field-devices

@@ -33,8 +33,32 @@ type FieldDeviceOptions struct {
 
 // FieldDeviceFilterParams contains optional filter parameters for listing field devices
 type FieldDeviceFilterParams struct {
-	BuildingID                  *uuid.UUID
-	ControlCabinetID            *uuid.UUID
-	SPSControllerID             *uuid.UUID
-	SPSControllerSystemTypeID   *uuid.UUID
+	BuildingID                *uuid.UUID
+	ControlCabinetID          *uuid.UUID
+	SPSControllerID           *uuid.UUID
+	SPSControllerSystemTypeID *uuid.UUID
+}
+
+// FieldDeviceCreateItem represents a single field device to create in a multi-create operation
+type FieldDeviceCreateItem struct {
+	FieldDevice   *FieldDevice
+	ObjectDataID  *uuid.UUID
+	BacnetObjects []BacnetObject
+}
+
+// FieldDeviceCreateResult represents the result of creating a single field device
+type FieldDeviceCreateResult struct {
+	Index       int          // Index in the original request array
+	Success     bool         // Whether the creation succeeded
+	FieldDevice *FieldDevice // The created field device (nil if failed)
+	Error       string       // Error message if failed (empty if succeeded)
+	ErrorField  string       // Specific field that caused the error (if applicable)
+}
+
+// FieldDeviceMultiCreateResult represents the result of a multi-create operation
+type FieldDeviceMultiCreateResult struct {
+	Results       []FieldDeviceCreateResult
+	TotalRequests int
+	SuccessCount  int
+	FailureCount  int
 }

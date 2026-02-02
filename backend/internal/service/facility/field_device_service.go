@@ -586,3 +586,108 @@ func (s *FieldDeviceService) replaceBacnetObjectsFromObjectData(fieldDeviceID uu
 
 	return nil
 }
+
+// MultiCreate creates multiple field devices in a single operation.
+// It validates each device independently and continues on failures.
+// Returns detailed results for each device creation attempt.
+func (s *FieldDeviceService) MultiCreate(items []domainFacility.FieldDeviceCreateItem) *domainFacility.FieldDeviceMultiCreateResult {
+	result := &domainFacility.FieldDeviceMultiCreateResult{
+		Results:       make([]domainFacility.FieldDeviceCreateResult, len(items)),
+		TotalRequests: len(items),
+		SuccessCount:  0,
+		FailureCount:  0,
+	}
+
+	for i, item := range items {
+		createResult := &result.Results[i]
+		createResult.Index = i
+		createResult.Success = false
+
+		// Validate the item
+		if item.FieldDevice == nil {
+			createResult.Error = "field device is required"
+			createResult.ErrorField = "fielddevice"
+			result.FailureCount++
+			continue
+		}
+
+		// Check for mutually exclusive options
+		if item.ObjectDataID != nil && len(item.BacnetObjects) > 0 {
+			createResult.Error = "object_data_id and bacnet_objects are mutually exclusive"
+			createResult.ErrorField = "fielddevice"
+			result.FailureCount++
+			continue
+		}
+
+		// Validate required fields
+		if err := s.validateRequiredFields(item.FieldDevice); err != nil {
+			if ve, ok := domain.AsValidationError(err); ok {
+				// Get first validation error
+				for field, msg := range ve.Fields {
+					createResult.Error = msg
+					createResult.ErrorField = field
+					break
+				}
+			} else {
+				createResult.Error = err.Error()
+				createResult.ErrorField = "fielddevice"
+			}
+			result.FailureCount++
+			continue
+		}
+
+		// Ensure parent entities exist
+		if err := s.ensureParentsExist(item.FieldDevice); err != nil {
+			if err == domain.ErrNotFound {
+				createResult.Error = "one or more parent entities (SPS controller, apparat, system part) not found"
+				createResult.ErrorField = "fielddevice"
+			} else {
+				createResult.Error = err.Error()
+				createResult.ErrorField = "fielddevice"
+			}
+			result.FailureCount++
+			continue
+		}
+
+		// Validate apparat_nr uniqueness
+		if err := s.ensureApparatNrAvailable(item.FieldDevice, nil); err != nil {
+			if ve, ok := domain.AsValidationError(err); ok {
+				// Get first validation error
+				for field, msg := range ve.Fields {
+					createResult.Error = msg
+					createResult.ErrorField = field
+					break
+				}
+			} else {
+				createResult.Error = err.Error()
+				createResult.ErrorField = "fielddevice.apparat_nr"
+			}
+			result.FailureCount++
+			continue
+		}
+
+		// Create the field device
+		if err := s.CreateWithBacnetObjects(item.FieldDevice, item.ObjectDataID, item.BacnetObjects); err != nil {
+			if ve, ok := domain.AsValidationError(err); ok {
+				// Get first validation error
+				for field, msg := range ve.Fields {
+					createResult.Error = msg
+					createResult.ErrorField = field
+					break
+				}
+			} else {
+				createResult.Error = err.Error()
+				createResult.ErrorField = "fielddevice"
+			}
+			result.FailureCount++
+			continue
+		}
+
+		// Success
+		createResult.Success = true
+		createResult.FieldDevice = item.FieldDevice
+		result.SuccessCount++
+	}
+
+	return result
+}

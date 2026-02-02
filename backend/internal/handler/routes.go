@@ -205,6 +205,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, jwtService authsvc.JWTSer
 		facility.DELETE("/control-cabinets/:id", handlers.FacilityControlCabinetHandler.DeleteControlCabinet)
 
 		facility.POST("/field-devices", handlers.FacilityFieldDeviceHandler.CreateFieldDevice)
+		facility.POST("/field-devices/multi-create", handlers.FacilityFieldDeviceHandler.MultiCreateFieldDevices)
 		facility.GET("/field-devices/options", handlers.FacilityFieldDeviceHandler.GetFieldDeviceOptions)
 		facility.GET("/field-devices/available-apparat-nr", handlers.FacilityFieldDeviceHandler.ListAvailableApparatNumbers)
 		facility.GET("/field-devices", handlers.FacilityFieldDeviceHandler.ListFieldDevices)

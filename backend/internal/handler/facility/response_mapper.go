@@ -287,6 +287,30 @@ func toFieldDeviceOptionsResponse(options *domainFacility.FieldDeviceOptions) dt
 	}
 }
 
+func toMultiCreateFieldDeviceResponse(result *domainFacility.FieldDeviceMultiCreateResult) dto.MultiCreateFieldDeviceResponse {
+	results := make([]dto.FieldDeviceCreateResultResponse, len(result.Results))
+	for i, r := range result.Results {
+		var fdResponse *dto.FieldDeviceResponse
+		if r.FieldDevice != nil {
+			resp := toFieldDeviceResponse(*r.FieldDevice)
+			fdResponse = &resp
+		}
+		results[i] = dto.FieldDeviceCreateResultResponse{
+			Index:       r.Index,
+			Success:     r.Success,
+			FieldDevice: fdResponse,
+			Error:       r.Error,
+			ErrorField:  r.ErrorField,
+		}
+	}
+	return dto.MultiCreateFieldDeviceResponse{
+		Results:       results,
+		TotalRequests: result.TotalRequests,
+		SuccessCount:  result.SuccessCount,
+		FailureCount:  result.FailureCount,
+	}
+}
+
 func toBacnetObjectResponse(obj domainFacility.BacnetObject) dto.BacnetObjectResponse {
 	return dto.BacnetObjectResponse{
 		ID:                  obj.ID.String(),

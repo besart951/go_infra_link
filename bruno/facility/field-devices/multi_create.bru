@@ -1,0 +1,69 @@
+meta {
+  name: Multi-Create Field Devices
+  type: http
+  seq: 75
+}
+
+post {
+  url: {{baseUrl}}/api/v1/facility/field-devices/multi-create
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-CSRF-Token: {{csrf_token}}
+}
+
+body:json {
+  {
+    "field_devices": [
+      {
+        "bmk": "BMK10",
+        "description": "First field device in batch",
+        "apparat_nr": 10,
+        "sps_controller_system_type_id": "{{sps_controller_system_type_id}}",
+        "system_part_id": "{{system_part_id}}",
+        "apparat_id": "{{apparat_id}}"
+      },
+      {
+        "bmk": "BMK11",
+        "description": "Second field device in batch",
+        "apparat_nr": 11,
+        "sps_controller_system_type_id": "{{sps_controller_system_type_id}}",
+        "system_part_id": "{{system_part_id}}",
+        "apparat_id": "{{apparat_id}}"
+      },
+      {
+        "bmk": "BMK12",
+        "description": "Third field device in batch",
+        "apparat_nr": 12,
+        "sps_controller_system_type_id": "{{sps_controller_system_type_id}}",
+        "system_part_id": "{{system_part_id}}",
+        "apparat_id": "{{apparat_id}}"
+      }
+    ]
+  }
+}
+
+script:post-response {
+  const data = res.body;
+  if (data && data.results) {
+    console.log(`Multi-create results: ${data.success_count} succeeded, ${data.failure_count} failed`);
+    
+    // Store first successfully created field device ID for further testing
+    const successfulResult = data.results.find(r => r.success);
+    if (successfulResult && successfulResult.field_device) {
+      bru.setVar('field_device_id', successfulResult.field_device.id);
+    }
+    
+    // Display any errors
+    const failures = data.results.filter(r => !r.success);
+    if (failures.length > 0) {
+      console.log('Failures:');
+      failures.forEach(f => {
+        console.log(`  [${f.index}] ${f.error_field}: ${f.error}`);
+      });
+    }
+  }
+}
