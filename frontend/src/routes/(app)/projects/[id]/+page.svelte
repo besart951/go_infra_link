@@ -13,6 +13,7 @@
 	import ControlCabinetForm from '$lib/components/facility/ControlCabinetForm.svelte';
 	import SPSControllerForm from '$lib/components/facility/SPSControllerForm.svelte';
 	import FieldDeviceForm from '$lib/components/facility/FieldDeviceForm.svelte';
+	import FieldDeviceMultiCreateForm from '$lib/components/facility/FieldDeviceMultiCreateForm.svelte';
 	import {
 		getProject,
 		listProjectControlCabinets,
@@ -37,7 +38,7 @@
 		ProjectFieldDeviceLink
 	} from '$lib/domain/project/index.js';
 	import type { ControlCabinet, SPSController, FieldDevice } from '$lib/domain/facility/index.js';
-	import { ArrowLeft, Plus, Pencil } from '@lucide/svelte';
+	import { ArrowLeft, Plus, Pencil, ListPlus } from '@lucide/svelte';
 
 	const projectId = $derived($page.params.id ?? '');
 
@@ -64,6 +65,7 @@
 	let fieldDeviceOptions = $state<FieldDevice[]>([]);
 	let fieldDeviceLoading = $state(false);
 	let showFieldDeviceForm = $state(false);
+	let showFieldDeviceMultiCreateForm = $state(false);
 	let fieldDeviceSearch = $state('');
 
 	const filteredControlCabinetLinks = $derived(
@@ -342,6 +344,32 @@
 		}
 	}
 
+	async function handleFieldDeviceMultiCreateSuccess(createdDevices: FieldDevice[]) {
+		if (!projectId) return;
+		showFieldDeviceMultiCreateForm = false;
+		
+		try {
+			// Link all created devices to the project
+			await Promise.all(
+				createdDevices.map((device) => addProjectFieldDevice(projectId, device.id))
+			);
+			
+			addToast({
+				type: 'success',
+				message: 'Field devices created and linked',
+				description: `Created ${createdDevices.length} field device(s) and linked them to the project`
+			});
+			
+			await loadFieldDevices();
+		} catch (err) {
+			addToast({
+				type: 'error',
+				message: 'Failed to link field devices',
+				description: err instanceof Error ? err.message : 'Some field devices were created but could not be linked to the project'
+			});
+		}
+	}
+
 	async function removeFieldDevice(linkId: string) {
 		if (!projectId) return;
 		const ok = await confirm({
@@ -579,7 +607,11 @@
 						<Button variant="outline" onclick={loadFieldDevices} disabled={fieldDeviceLoading}
 							>Refresh</Button
 						>
-						{#if !showFieldDeviceForm}
+						{#if !showFieldDeviceForm && !showFieldDeviceMultiCreateForm}
+							<Button variant="outline" onclick={() => (showFieldDeviceMultiCreateForm = true)}>
+								<ListPlus class="mr-2 size-4" />
+								Multi-Create
+							</Button>
 							<Button onclick={() => (showFieldDeviceForm = true)}>
 								<Plus class="mr-2 size-4" />
 								New Field Device
@@ -594,6 +626,16 @@
 						on:success={handleFieldDeviceCreated}
 						on:cancel={() => (showFieldDeviceForm = false)}
 					/>
+				{/if}
+
+				{#if showFieldDeviceMultiCreateForm}
+					<div class="mt-6">
+						<FieldDeviceMultiCreateForm
+							projectId={projectId}
+							onSuccess={handleFieldDeviceMultiCreateSuccess}
+							onCancel={() => (showFieldDeviceMultiCreateForm = false)}
+						/>
+					</div>
 				{/if}
 
 				<div class="mt-6 rounded-lg border bg-background">
@@ -639,3 +681,5 @@
 		</div>
 	{/if}
 </div>
+
+<ConfirmDialog />

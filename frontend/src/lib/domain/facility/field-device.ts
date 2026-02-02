@@ -77,3 +77,38 @@ export interface FieldDeviceOptions {
 	apparat_to_system_part: Record<string, string[]>; // apparat_id -> [system_part_ids]
 	object_data_to_apparat: Record<string, string[]>; // object_data_id -> [apparat_ids]
 }
+
+/**
+ * Available apparat numbers response
+ */
+export interface AvailableApparatNumbersResponse {
+	available: number[];
+}
+
+/**
+ * Multi-create field device request
+ */
+export interface MultiCreateFieldDeviceRequest {
+	field_devices: CreateFieldDeviceRequest[];
+}
+
+/**
+ * Result for a single field device creation in multi-create
+ */
+export interface FieldDeviceCreateResult {
+	index: number; // Index in the original request array
+	success: boolean; // Whether the creation succeeded
+	field_device?: FieldDevice; // The created field device (null if failed)
+	error: string; // Error message if failed (empty if succeeded)
+	error_field: string; // Specific field that caused the error (if applicable)
+}
+
+/**
+ * Multi-create field device response
+ */
+export interface MultiCreateFieldDeviceResponse {
+	results: FieldDeviceCreateResult[];
+	total_requests: number;
+	success_count: number;
+	failure_count: number;
+}
