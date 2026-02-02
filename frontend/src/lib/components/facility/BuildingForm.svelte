@@ -14,14 +14,12 @@
 
 	let { initialData, onSuccess, onCancel }: BuildingFormProps = $props();
 
-	let iws_code = $state(initialData?.iws_code ?? '');
-	let building_group = $state(initialData?.building_group ?? 0);
+	let iws_code = $state('');
+	let building_group = $state(0);
 
 	$effect(() => {
-		if (initialData) {
-			iws_code = initialData.iws_code;
-			building_group = initialData.building_group;
-		}
+		iws_code = initialData?.iws_code ?? '';
+		building_group = initialData?.building_group ?? 0;
 	});
 
 	const formState = useFormState({
@@ -30,7 +28,8 @@
 		}
 	});
 
-	async function handleSubmit() {
+	async function handleSubmit(event: SubmitEvent) {
+		event.preventDefault();
 		await formState.handleSubmit(async () => {
 			if (initialData) {
 				return await updateBuilding(initialData.id, {
@@ -47,7 +46,7 @@
 	}
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
+<form onsubmit={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">{initialData ? 'Edit Building' : 'New Building'}</h3>
 	</div>

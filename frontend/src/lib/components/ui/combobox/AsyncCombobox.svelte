@@ -13,6 +13,9 @@
 		labelKey: keyof T;
 		idKey?: keyof T;
 		id?: string;
+		disabled?: boolean;
+		clearable?: boolean;
+		clearText?: string;
 		placeholder?: string;
 		searchPlaceholder?: string;
 		emptyText?: string;
@@ -27,6 +30,9 @@
 		labelKey,
 		idKey = 'id' as keyof T,
 		id,
+		disabled = false,
+		clearable = false,
+		clearText = 'Clear selection',
 		placeholder = 'Select item...',
 		searchPlaceholder = 'Search...',
 		emptyText = 'No results found.',
@@ -47,6 +53,14 @@
 
 	// Derived state
 	const selectedItem = $derived(items.find((i) => String(i[idKey]) === value));
+
+	function clearSelection() {
+		value = '';
+		selectedLabel = undefined;
+		selectedValue = undefined;
+		onValueChange?.('');
+		open = false;
+	}
 
 	// Load selected item by ID
 	async function loadSelected(id: string) {
@@ -136,6 +150,8 @@
 				variant="outline"
 				role="combobox"
 				aria-expanded={open}
+				{disabled}
+				aria-disabled={disabled}
 				class={cn('justify-between', width)}
 			>
 				{selectedLabel || (value ? value : placeholder)}
@@ -149,11 +165,26 @@
 			<Command.List>
 				<Command.Empty>{loading ? 'Loading...' : emptyText}</Command.Empty>
 				<Command.Group>
+					{#if clearable && value}
+						<Command.Item
+							value=""
+							onSelect={() => {
+								clearSelection();
+							}}
+						>
+							{clearText}
+						</Command.Item>
+					{/if}
 					{#each items as item (String(item[idKey]))}
 						<Command.Item
 							value={String(item[idKey])}
 							onSelect={() => {
-								value = String(item[idKey]);
+								const next = String(item[idKey] ?? '');
+								if (!next || next === 'undefined' || next === 'null') {
+									console.warn('AsyncCombobox: selected item has no valid id', item);
+									return;
+								}
+								value = next;
 								selectedLabel = String(item[labelKey] ?? '');
 								selectedValue = value;
 								onValueChange?.(value);

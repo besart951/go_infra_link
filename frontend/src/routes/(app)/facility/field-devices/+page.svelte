@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { Plus, X, ListPlus } from 'lucide-svelte';
+	import { Plus, X, ListPlus } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { fieldDeviceStore } from '$lib/stores/facility/fieldDeviceStore.js';
 	import { addToast } from '$lib/components/toast.svelte';
@@ -44,11 +44,7 @@
 	function handleMultiCreateSuccess(createdDevices: FieldDevice[]) {
 		showMultiCreateForm = false;
 		fieldDeviceStore.reload();
-		addToast({
-			type: 'success',
-			message: 'Field devices created successfully',
-			description: `Created ${createdDevices.length} field device(s)`
-		});
+		addToast(`Created ${createdDevices.length} field device(s).`, 'success');
 	}
 
 	// Reactive statement to check if any filters are active

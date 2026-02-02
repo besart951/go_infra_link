@@ -127,7 +127,7 @@ func (r *fieldDeviceRepo) GetUsedApparatNumbers(spsControllerSystemTypeID uuid.U
 }
 
 func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
-	page, limit := domain.NormalizePagination(params.Page, params.Limit, 300)
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 1000)
 	offset := (page - 1) * limit
 
 	query := r.db.Model(&domainFacility.FieldDevice{}).Where("deleted_at IS NULL")

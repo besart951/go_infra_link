@@ -4,7 +4,7 @@ package dto
 
 type PaginationQuery struct {
 	Page    int    `form:"page" binding:"omitempty,min=1"`
-	Limit   int    `form:"limit" binding:"omitempty,min=1,max=100"`
+	Limit   int    `form:"limit" binding:"omitempty,min=1,max=1000"`
 	Search  string `form:"search"`
 	OrderBy string `form:"order_by"`
 	Order   string `form:"order" binding:"omitempty,oneof=asc desc"`
