@@ -2,7 +2,7 @@
 	/**
 	 * Multi-Create Field Device Form
 	 * Allows creating multiple field devices with:
-	 * - Selection flow: SPS Controller System Type → Apparat → System Part → Object Data
+	 * - Selection flow: SPS Controller System Type → Object Data → Apparat → System Part
 	 * - Dynamic row generation with + button
 	 * - Auto-calculated apparat_nr with placeholder
 	 * - Field-level validation display
@@ -38,7 +38,7 @@
 	// Props
 	interface Props {
 		projectId?: string;
-		onSuccess?: (createdDevices: any[]) => void;
+		onSuccess?: (createdDevices: FieldDevice[]) => void;
 		onCancel?: () => void;
 	}
 

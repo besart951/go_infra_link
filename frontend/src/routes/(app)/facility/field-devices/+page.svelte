@@ -42,7 +42,7 @@
 		fieldDeviceStore.clearAllFilters();
 	}
 
-	function handleMultiCreateSuccess(createdDevices: any[]) {
+	function handleMultiCreateSuccess(createdDevices: FieldDevice[]) {
 		showMultiCreateDialog = false;
 		fieldDeviceStore.reload();
 		addToast({

@@ -345,7 +345,7 @@
 		}
 	}
 
-	async function handleFieldDeviceMultiCreateSuccess(createdDevices: any[]) {
+	async function handleFieldDeviceMultiCreateSuccess(createdDevices: FieldDevice[]) {
 		if (!projectId) return;
 		showFieldDeviceMultiCreateDialog = false;
 		
