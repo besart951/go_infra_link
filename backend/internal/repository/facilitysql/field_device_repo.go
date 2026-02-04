@@ -128,7 +128,7 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 1000)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainFacility.FieldDevice{}).Where("deleted_at IS NULL")
+	query := r.db.Model(&domainFacility.FieldDevice{}).Where("field_devices.deleted_at IS NULL")
 
 	// Apply filters by joining through the hierarchy
 	if filters.SPSControllerSystemTypeID != nil {
@@ -174,6 +174,12 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 		Select("DISTINCT field_devices.*").
 		Order("field_devices.created_at DESC").
 		Preload("Specification").
+		Preload("SPSControllerSystemType").
+		Preload("SPSControllerSystemType.SPSController").
+		Preload("SPSControllerSystemType.SystemType").
+		Preload("Apparat").
+		Preload("SystemPart").
+		Preload("BacnetObjects").
 		Limit(limit).
 		Offset(offset).
 		Find(&items).Error; err != nil {

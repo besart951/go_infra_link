@@ -5,6 +5,7 @@
 
 	export let value: string = '';
 	export let width: string = 'w-[250px]';
+	export let onValueChange: ((value: string) => void) | undefined = undefined;
 
 	async function fetcher(search: string): Promise<Apparat[]> {
 		const res = await listApparats({ search, limit: 20 });
@@ -23,4 +24,5 @@
 	labelKey="name"
 	placeholder="Select Apparat..."
 	{width}
+	{onValueChange}
 />

@@ -41,6 +41,13 @@ type FieldDeviceResponse struct {
 	ApparatID                 uuid.UUID  `json:"apparat_id"`
 	CreatedAt                 time.Time  `json:"created_at"`
 	UpdatedAt                 time.Time  `json:"updated_at"`
+
+	// Embedded related entities for display
+	SPSControllerSystemType *SPSControllerSystemTypeResponse `json:"sps_controller_system_type,omitempty"`
+	Apparat                 *ApparatResponse                 `json:"apparat,omitempty"`
+	SystemPart              *SystemPartResponse              `json:"system_part,omitempty"`
+	Specification           *SpecificationResponse           `json:"specification,omitempty"`
+	BacnetObjects           []BacnetObjectResponse           `json:"bacnet_objects,omitempty"`
 }
 
 type FieldDeviceListResponse struct {
@@ -57,11 +64,11 @@ type AvailableApparatNumbersResponse struct {
 // FieldDeviceOptionsResponse contains all metadata needed for creating/editing field devices
 // This implements the "Single-Fetch Metadata Strategy" to avoid multiple API calls
 type FieldDeviceOptionsResponse struct {
-	Apparats              []ApparatResponse      `json:"apparats"`
-	SystemParts           []SystemPartResponse   `json:"system_parts"`
-	ObjectDatas           []ObjectDataResponse   `json:"object_datas"`
-	ApparatToSystemPart   map[string][]string    `json:"apparat_to_system_part"`   // apparat_id -> [system_part_ids]
-	ObjectDataToApparat   map[string][]string    `json:"object_data_to_apparat"`   // object_data_id -> [apparat_ids]
+	Apparats            []ApparatResponse    `json:"apparats"`
+	SystemParts         []SystemPartResponse `json:"system_parts"`
+	ObjectDatas         []ObjectDataResponse `json:"object_datas"`
+	ApparatToSystemPart map[string][]string  `json:"apparat_to_system_part"` // apparat_id -> [system_part_ids]
+	ObjectDataToApparat map[string][]string  `json:"object_data_to_apparat"` // object_data_id -> [apparat_ids]
 }
 
 // MultiCreateFieldDeviceRequest represents a request to create multiple field devices
@@ -71,11 +78,11 @@ type MultiCreateFieldDeviceRequest struct {
 
 // FieldDeviceCreateResultResponse represents the result of creating a single field device
 type FieldDeviceCreateResultResponse struct {
-	Index        int                   `json:"index"`         // Index in the original request array
-	Success      bool                  `json:"success"`       // Whether the creation succeeded
-	FieldDevice  *FieldDeviceResponse  `json:"field_device"`  // The created field device (null if failed)
-	Error        string                `json:"error"`         // Error message if failed (empty if succeeded)
-	ErrorField   string                `json:"error_field"`   // Specific field that caused the error (if applicable)
+	Index       int                  `json:"index"`        // Index in the original request array
+	Success     bool                 `json:"success"`      // Whether the creation succeeded
+	FieldDevice *FieldDeviceResponse `json:"field_device"` // The created field device (null if failed)
+	Error       string               `json:"error"`        // Error message if failed (empty if succeeded)
+	ErrorField  string               `json:"error_field"`  // Specific field that caused the error (if applicable)
 }
 
 // MultiCreateFieldDeviceResponse represents the response from a multi-create operation

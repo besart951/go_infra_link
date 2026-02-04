@@ -212,7 +212,7 @@ func toFieldDeviceResponse(fieldDevice domainFacility.FieldDevice) dto.FieldDevi
 		systemPartID = &fieldDevice.SystemPartID
 	}
 
-	return dto.FieldDeviceResponse{
+	resp := dto.FieldDeviceResponse{
 		ID:                        fieldDevice.ID,
 		BMK:                       fieldDevice.BMK,
 		Description:               fieldDevice.Description,
@@ -224,6 +224,34 @@ func toFieldDeviceResponse(fieldDevice domainFacility.FieldDevice) dto.FieldDevi
 		CreatedAt:                 fieldDevice.CreatedAt,
 		UpdatedAt:                 fieldDevice.UpdatedAt,
 	}
+
+	// Include embedded related entities if preloaded
+	if fieldDevice.SPSControllerSystemType.ID != uuid.Nil {
+		spsSystemType := toSPSControllerSystemTypeResponse(fieldDevice.SPSControllerSystemType)
+		resp.SPSControllerSystemType = &spsSystemType
+	}
+
+	if fieldDevice.Apparat.ID != uuid.Nil {
+		apparat := toApparatResponse(fieldDevice.Apparat)
+		resp.Apparat = &apparat
+	}
+
+	if fieldDevice.SystemPart.ID != uuid.Nil {
+		systemPart := toSystemPartResponse(fieldDevice.SystemPart)
+		resp.SystemPart = &systemPart
+	}
+
+	if fieldDevice.Specification != nil && fieldDevice.Specification.ID != uuid.Nil {
+		specification := toSpecificationResponse(*fieldDevice.Specification)
+		resp.Specification = &specification
+	}
+
+	// Include BacnetObjects if preloaded
+	if len(fieldDevice.BacnetObjects) > 0 {
+		resp.BacnetObjects = toBacnetObjectResponses(fieldDevice.BacnetObjects)
+	}
+
+	return resp
 }
 
 func toFieldDeviceListResponse(list *domain.PaginatedList[domainFacility.FieldDevice]) dto.FieldDeviceListResponse {

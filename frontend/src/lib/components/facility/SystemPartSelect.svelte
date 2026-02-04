@@ -5,6 +5,7 @@
 
 	export let value: string = '';
 	export let width: string = 'w-[250px]';
+	export let onValueChange: ((value: string) => void) | undefined = undefined;
 
 	async function fetcher(search: string): Promise<SystemPart[]> {
 		const res = await listSystemParts({ search, limit: 20 });
@@ -23,4 +24,5 @@
 	labelKey="name"
 	placeholder="Select System Part..."
 	{width}
+	{onValueChange}
 />

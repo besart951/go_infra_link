@@ -3,9 +3,23 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { Plus, X, ListPlus } from '@lucide/svelte';
-	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import {
+		Plus,
+		X,
+		ListPlus,
+		ChevronDown,
+		ChevronRight,
+		Search,
+		ChevronLeft,
+		Trash2,
+		Settings2
+	} from '@lucide/svelte';
 	import { fieldDeviceStore } from '$lib/stores/facility/fieldDeviceStore.js';
+	import { lookupCache } from '$lib/stores/facility/lookupCache.js';
+	import { updateFieldDevice } from '$lib/infrastructure/api/facility.adapter.js';
 	import { addToast } from '$lib/components/toast.svelte';
 	import type { FieldDevice } from '$lib/domain/facility/index.js';
 	import BuildingSelect from '$lib/components/facility/BuildingSelect.svelte';
@@ -13,15 +27,36 @@
 	import SPSControllerSelect from '$lib/components/facility/SPSControllerSelect.svelte';
 	import SPSControllerSystemTypeSelect from '$lib/components/facility/SPSControllerSystemTypeSelect.svelte';
 	import FieldDeviceMultiCreateForm from '$lib/components/facility/FieldDeviceMultiCreateForm.svelte';
+	import CachedApparatSelect from '$lib/components/facility/CachedApparatSelect.svelte';
+	import CachedSystemPartSelect from '$lib/components/facility/CachedSystemPartSelect.svelte';
 
+	// Filter state
 	let buildingId = $state('');
 	let controlCabinetId = $state('');
 	let spsControllerId = $state('');
 	let spsControllerSystemTypeId = $state('');
 	let showMultiCreateForm = $state(false);
+	let expandedBacnetRows = $state<Set<string>>(new Set());
+	let showSpecifications = $state(false);
+	let searchInput = $state('');
+
+	// Selection state
+	let selectedIds = $state<Set<string>>(new Set());
+
+	// Derived states for selection
+	const allSelected = $derived(
+		$fieldDeviceStore.items.length > 0 &&
+			$fieldDeviceStore.items.every((d) => selectedIds.has(d.id))
+	);
+	const someSelected = $derived(
+		$fieldDeviceStore.items.some((d) => selectedIds.has(d.id)) && !allSelected
+	);
+	const selectedCount = $derived(selectedIds.size);
 
 	onMount(() => {
 		fieldDeviceStore.load();
+		// Preload lookup cache for better UX
+		lookupCache.preloadAll();
 	});
 
 	function applyFilters() {
@@ -47,9 +82,108 @@
 		addToast(`Created ${createdDevices.length} field device(s).`, 'success');
 	}
 
+	function toggleRowExpansion(id: string) {
+		const newSet = new Set(expandedBacnetRows);
+		if (newSet.has(id)) {
+			newSet.delete(id);
+		} else {
+			newSet.add(id);
+		}
+		expandedBacnetRows = newSet;
+	}
+
+	function toggleSpecifications() {
+		showSpecifications = !showSpecifications;
+	}
+
+	function formatSPSControllerSystemType(device: FieldDevice): string {
+		const sysType = device.sps_controller_system_type;
+		if (!sysType) return '-';
+		const number = sysType.number ?? '';
+		const docName = sysType.document_name ?? '';
+		if (number && docName) return `${number} - ${docName}`;
+		if (number) return String(number);
+		if (docName) return docName;
+		return '-';
+	}
+
+	async function handleApparatChange(device: FieldDevice, newApparatId: string) {
+		if (!newApparatId || newApparatId === device.apparat_id) return;
+		try {
+			await updateFieldDevice(device.id, {
+				apparat_id: newApparatId
+			});
+			addToast('Apparat updated successfully', 'success');
+			fieldDeviceStore.reload();
+		} catch (error: any) {
+			addToast(`Failed to update apparat: ${error.message}`, 'error');
+		}
+	}
+
+	async function handleSystemPartChange(device: FieldDevice, newSystemPartId: string) {
+		if (!newSystemPartId || newSystemPartId === device.system_part_id) return;
+		try {
+			await updateFieldDevice(device.id, {
+				system_part_id: newSystemPartId
+			});
+			addToast('System Part updated successfully', 'success');
+			fieldDeviceStore.reload();
+		} catch (error: any) {
+			addToast(`Failed to update system part: ${error.message}`, 'error');
+		}
+	}
+
+	function handleSearchInput(e: Event) {
+		const value = (e.target as HTMLInputElement).value;
+		searchInput = value;
+		fieldDeviceStore.search(value);
+	}
+
+	function handlePrevious() {
+		if ($fieldDeviceStore.page > 1) {
+			fieldDeviceStore.goToPage($fieldDeviceStore.page - 1);
+		}
+	}
+
+	function handleNext() {
+		if ($fieldDeviceStore.page < $fieldDeviceStore.totalPages) {
+			fieldDeviceStore.goToPage($fieldDeviceStore.page + 1);
+		}
+	}
+
 	// Reactive statement to check if any filters are active
 	const hasActiveFilters = $derived(
 		buildingId || controlCabinetId || spsControllerId || spsControllerSystemTypeId
+	);
+
+	// Selection functions
+	function toggleSelectAll() {
+		if (allSelected) {
+			selectedIds = new Set();
+		} else {
+			selectedIds = new Set($fieldDeviceStore.items.map((d) => d.id));
+		}
+	}
+
+	function toggleSelect(id: string) {
+		const newSet = new Set(selectedIds);
+		if (newSet.has(id)) {
+			newSet.delete(id);
+		} else {
+			newSet.add(id);
+		}
+		selectedIds = newSet;
+	}
+
+	function clearSelection() {
+		selectedIds = new Set();
+	}
+
+	// Column count for colspan (base columns + specification columns when shown)
+	const baseColumnCount = 10;
+	const specColumnCount = 11; // Additional columns for specification
+	const columnCount = $derived(
+		showSpecifications ? baseColumnCount + specColumnCount : baseColumnCount
 	);
 </script>
 
@@ -138,35 +272,376 @@
 		</Card.Content>
 	</Card.Root>
 
-	<PaginatedList
-		state={$fieldDeviceStore}
-		columns={[
-			{ key: 'bmk', label: 'BMK' },
-			{ key: 'description', label: 'Description' },
-			{ key: 'apparat_nr', label: 'Apparat Nr' },
-			{ key: 'created', label: 'Created' },
-			{ key: 'actions', label: 'Actions', width: 'w-[100px]' }
-		]}
-		searchPlaceholder="Search field devices..."
-		emptyMessage="No field devices found. Create your first field device to get started."
-		onSearch={(text) => fieldDeviceStore.search(text)}
-		onPageChange={(page) => fieldDeviceStore.goToPage(page)}
-		onReload={() => fieldDeviceStore.reload()}
-	>
-		{#snippet rowSnippet(device: FieldDevice)}
-			<Table.Cell class="font-medium">{device.bmk}</Table.Cell>
-			<Table.Cell>{device.description}</Table.Cell>
-			<Table.Cell>
-				<code class="rounded bg-muted px-1.5 py-0.5 text-sm">
-					{device.apparat_nr}
-				</code>
-			</Table.Cell>
-			<Table.Cell>
-				{new Date(device.created_at).toLocaleDateString()}
-			</Table.Cell>
-			<Table.Cell>
-				<Button variant="ghost" size="sm">View</Button>
-			</Table.Cell>
-		{/snippet}
-	</PaginatedList>
+	<!-- Data Table with Expandable Rows and Selection -->
+	<div class="flex flex-col gap-4">
+		<!-- Search Bar and Selection Actions -->
+		<div class="flex items-center gap-4">
+			<div class="relative flex-1">
+				<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+				<Input
+					type="search"
+					placeholder="Search field devices..."
+					class="pl-9"
+					value={searchInput}
+					oninput={handleSearchInput}
+				/>
+			</div>
+
+			{#if selectedCount > 0}
+				<div class="flex items-center gap-2">
+					<span class="text-sm text-muted-foreground">{selectedCount} selected</span>
+					<Button variant="outline" size="sm" onclick={clearSelection}>
+						<X class="mr-1 h-4 w-4" />
+						Clear
+					</Button>
+					<Button variant="destructive" size="sm">
+						<Trash2 class="mr-1 h-4 w-4" />
+						Delete
+					</Button>
+				</div>
+			{/if}
+
+			<Button
+				variant="outline"
+				onclick={() => fieldDeviceStore.reload()}
+				disabled={$fieldDeviceStore.loading}
+			>
+				Refresh
+			</Button>
+		</div>
+
+		<!-- Error Message -->
+		{#if $fieldDeviceStore.error}
+			<div
+				class="rounded-md border border-destructive/50 bg-destructive/15 px-4 py-3 text-destructive"
+			>
+				<p class="font-medium">Error</p>
+				<p class="text-sm">{$fieldDeviceStore.error}</p>
+			</div>
+		{/if}
+
+		<!-- Table -->
+		<div class="rounded-lg border bg-background">
+			<Table.Root>
+				<Table.Header>
+					<Table.Row>
+						<!-- Selection Checkbox -->
+						<Table.Head class="w-10">
+							<Checkbox
+								checked={allSelected}
+								indeterminate={someSelected}
+								onCheckedChange={toggleSelectAll}
+								aria-label="Select all"
+							/>
+						</Table.Head>
+						<!-- Expand Column for BACnet Objects -->
+						<Table.Head class="w-10"></Table.Head>
+						<Table.Head>SPS System Type</Table.Head>
+						<Table.Head>BMK</Table.Head>
+						<Table.Head>Description</Table.Head>
+						<Table.Head class="w-24">Apparat Nr</Table.Head>
+						<Table.Head class="w-48">Apparat</Table.Head>
+						<Table.Head class="w-48">System Part</Table.Head>
+						<!-- Specification Toggle Header -->
+						<Table.Head class="w-10">
+							<Button
+								variant={showSpecifications ? 'secondary' : 'ghost'}
+								size="sm"
+								class="h-7 w-7 p-0"
+								onclick={toggleSpecifications}
+								title={showSpecifications ? 'Hide specifications' : 'Show specifications'}
+							>
+								<Settings2 class="h-4 w-4" />
+							</Button>
+						</Table.Head>
+						{#if showSpecifications}
+							<Table.Head class="text-xs">Supplier</Table.Head>
+							<Table.Head class="text-xs">Brand</Table.Head>
+							<Table.Head class="text-xs">Type</Table.Head>
+							<Table.Head class="text-xs">Motor/Valve</Table.Head>
+							<Table.Head class="text-xs">Size</Table.Head>
+							<Table.Head class="text-xs">Install Loc.</Table.Head>
+							<Table.Head class="text-xs">PH</Table.Head>
+							<Table.Head class="text-xs">AC/DC</Table.Head>
+							<Table.Head class="text-xs">Amperage</Table.Head>
+							<Table.Head class="text-xs">Power</Table.Head>
+							<Table.Head class="text-xs">Rotation</Table.Head>
+						{/if}
+						<Table.Head class="w-28">Created</Table.Head>
+						<Table.Head class="w-24">Actions</Table.Head>
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{#if $fieldDeviceStore.loading && $fieldDeviceStore.items.length === 0}
+						{#each Array(5) as _}
+							<Table.Row>
+								{#each Array(columnCount) as _}
+									<Table.Cell>
+										<Skeleton class="h-8 w-full" />
+									</Table.Cell>
+								{/each}
+							</Table.Row>
+						{/each}
+					{:else if $fieldDeviceStore.items.length === 0}
+						<Table.Row>
+							<Table.Cell colspan={columnCount} class="h-24 text-center">
+								<div class="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+									<p class="font-medium">
+										No field devices found. Create your first field device to get started.
+									</p>
+									{#if searchInput}
+										<p class="text-sm">Try adjusting your search</p>
+									{/if}
+								</div>
+							</Table.Cell>
+						</Table.Row>
+					{:else}
+						{#each $fieldDeviceStore.items as device (device.id)}
+							<!-- Main Row -->
+							<Table.Row
+								class={[
+									$fieldDeviceStore.loading ? 'opacity-60' : '',
+									selectedIds.has(device.id) ? 'bg-muted/50' : ''
+								]
+									.filter(Boolean)
+									.join(' ')}
+							>
+								<!-- Selection Checkbox -->
+								<Table.Cell class="p-2">
+									<Checkbox
+										checked={selectedIds.has(device.id)}
+										onCheckedChange={() => toggleSelect(device.id)}
+										aria-label={`Select ${device.bmk || device.id}`}
+									/>
+								</Table.Cell>
+								<!-- Expand button for BACnet Objects -->
+								<Table.Cell class="p-2">
+									<Button
+										variant="ghost"
+										size="sm"
+										class="h-6 w-6 p-0"
+										onclick={() => toggleRowExpansion(device.id)}
+										title="Expand BACnet objects"
+									>
+										{#if expandedBacnetRows.has(device.id)}
+											<ChevronDown class="h-4 w-4" />
+										{:else}
+											<ChevronRight class="h-4 w-4" />
+										{/if}
+									</Button>
+								</Table.Cell>
+								<!-- SPS Controller System Type -->
+								<Table.Cell class="font-medium">
+									{formatSPSControllerSystemType(device)}
+								</Table.Cell>
+								<!-- BMK -->
+								<Table.Cell>
+									{#if device.bmk}
+										<code class="rounded bg-muted px-1.5 py-0.5 text-sm">{device.bmk}</code>
+									{:else}
+										<span class="text-muted-foreground">-</span>
+									{/if}
+								</Table.Cell>
+								<!-- Description -->
+								<Table.Cell class="max-w-48 truncate" title={device.description || ''}>
+									{device.description || '-'}
+								</Table.Cell>
+								<!-- Apparat Nr -->
+								<Table.Cell>
+									<code class="rounded bg-muted px-1.5 py-0.5 text-sm">
+										{device.apparat_nr}
+									</code>
+								</Table.Cell>
+								<!-- Apparat (combobox with cache) -->
+								<Table.Cell>
+									<CachedApparatSelect
+										value={device.apparat_id}
+										width="w-full"
+										onValueChange={(newVal) => handleApparatChange(device, newVal)}
+									/>
+								</Table.Cell>
+								<!-- System Part (combobox with cache) -->
+								<Table.Cell>
+									<CachedSystemPartSelect
+										value={device.system_part_id || ''}
+										width="w-full"
+										onValueChange={(newVal) => handleSystemPartChange(device, newVal)}
+									/>
+								</Table.Cell>
+								<!-- Specification indicator -->
+								<Table.Cell class="text-center">
+									{#if device.specification}
+										<span
+											class="inline-block h-2 w-2 rounded-full bg-green-500"
+											title="Has specification"
+										></span>
+									{:else}
+										<span
+											class="inline-block h-2 w-2 rounded-full bg-gray-300"
+											title="No specification"
+										></span>
+									{/if}
+								</Table.Cell>
+								<!-- Specification columns (shown when toggled) -->
+								{#if showSpecifications}
+									<Table.Cell class="text-xs"
+										>{device.specification?.specification_supplier || '-'}</Table.Cell
+									>
+									<Table.Cell class="text-xs"
+										>{device.specification?.specification_brand || '-'}</Table.Cell
+									>
+									<Table.Cell class="text-xs"
+										>{device.specification?.specification_type || '-'}</Table.Cell
+									>
+									<Table.Cell class="text-xs"
+										>{device.specification?.additional_info_motor_valve || '-'}</Table.Cell
+									>
+									<Table.Cell class="text-xs"
+										>{device.specification?.additional_info_size ?? '-'}</Table.Cell
+									>
+									<Table.Cell class="text-xs"
+										>{device.specification?.additional_information_installation_location ||
+											'-'}</Table.Cell
+									>
+									<Table.Cell class="text-xs"
+										>{device.specification?.electrical_connection_ph ?? '-'}</Table.Cell
+									>
+									<Table.Cell class="text-xs"
+										>{device.specification?.electrical_connection_acdc || '-'}</Table.Cell
+									>
+									<Table.Cell class="text-xs"
+										>{device.specification?.electrical_connection_amperage != null
+											? `${device.specification.electrical_connection_amperage}A`
+											: '-'}</Table.Cell
+									>
+									<Table.Cell class="text-xs"
+										>{device.specification?.electrical_connection_power != null
+											? `${device.specification.electrical_connection_power}W`
+											: '-'}</Table.Cell
+									>
+									<Table.Cell class="text-xs"
+										>{device.specification?.electrical_connection_rotation != null
+											? `${device.specification.electrical_connection_rotation} RPM`
+											: '-'}</Table.Cell
+									>
+								{/if}
+								<!-- Created -->
+								<Table.Cell>
+									{new Date(device.created_at).toLocaleDateString()}
+								</Table.Cell>
+								<!-- Actions -->
+								<Table.Cell>
+									<Button variant="ghost" size="sm">View</Button>
+								</Table.Cell>
+							</Table.Row>
+
+							<!-- Expanded BACnet Objects Row -->
+							{#if expandedBacnetRows.has(device.id)}
+								<Table.Row
+									class="bg-purple-50/50 hover:bg-purple-50/70 dark:bg-purple-950/20 dark:hover:bg-purple-950/30"
+								>
+									<Table.Cell colspan={columnCount} class="p-0">
+										<div class="border-l-4 border-l-purple-500 py-4 pr-4 pl-14">
+											<!-- BACnet Objects Section -->
+											<div class="mb-3 flex items-center gap-2">
+												<span
+													class="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900 dark:text-purple-300"
+												>
+													BACnet Objects
+												</span>
+												<span class="text-xs text-muted-foreground">
+													{device.bacnet_objects?.length || 0} object(s)
+												</span>
+											</div>
+											{#if device.bacnet_objects && device.bacnet_objects.length > 0}
+												<div class="overflow-x-auto">
+													<table class="w-full text-sm">
+														<thead>
+															<tr class="border-b text-left text-xs text-muted-foreground">
+																<th class="pr-4 pb-2">Text Fix</th>
+																<th class="pr-4 pb-2">Description</th>
+																<th class="pr-4 pb-2">Software Type</th>
+																<th class="pr-4 pb-2">Software Nr</th>
+																<th class="pr-4 pb-2">Hardware Type</th>
+																<th class="pr-4 pb-2">Hardware Qty</th>
+																<th class="pr-4 pb-2">GMS Visible</th>
+																<th class="pb-2">Optional</th>
+															</tr>
+														</thead>
+														<tbody>
+															{#each device.bacnet_objects as obj (obj.id)}
+																<tr
+																	class="border-b border-purple-100 last:border-0 dark:border-purple-900"
+																>
+																	<td class="py-2 pr-4 font-medium">{obj.text_fix}</td>
+																	<td class="py-2 pr-4">{obj.description || '-'}</td>
+																	<td class="py-2 pr-4">{obj.software_type}</td>
+																	<td class="py-2 pr-4">{obj.software_number}</td>
+																	<td class="py-2 pr-4">{obj.hardware_type}</td>
+																	<td class="py-2 pr-4">{obj.hardware_quantity}</td>
+																	<td class="py-2 pr-4">
+																		{#if obj.gms_visible}
+																			<span class="text-green-600">Yes</span>
+																		{:else}
+																			<span class="text-muted-foreground">No</span>
+																		{/if}
+																	</td>
+																	<td class="py-2">
+																		{#if obj.optional}
+																			<span class="text-amber-600">Yes</span>
+																		{:else}
+																			<span class="text-muted-foreground">No</span>
+																		{/if}
+																	</td>
+																</tr>
+															{/each}
+														</tbody>
+													</table>
+												</div>
+											{:else}
+												<p class="text-sm text-muted-foreground italic">
+													No BACnet objects configured for this field device.
+												</p>
+											{/if}
+										</div>
+									</Table.Cell>
+								</Table.Row>
+							{/if}
+						{/each}
+					{/if}
+				</Table.Body>
+			</Table.Root>
+		</div>
+
+		<!-- Pagination -->
+		{#if $fieldDeviceStore.totalPages > 1}
+			<div class="flex items-center justify-between">
+				<div class="text-sm text-muted-foreground">
+					Page {$fieldDeviceStore.page} of {$fieldDeviceStore.totalPages} • {$fieldDeviceStore.total}
+					{$fieldDeviceStore.total === 1 ? 'item' : 'items'} total
+				</div>
+				<div class="flex items-center gap-2">
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={$fieldDeviceStore.page <= 1 || $fieldDeviceStore.loading}
+						onclick={handlePrevious}
+					>
+						<ChevronLeft class="mr-1 h-4 w-4" />
+						Previous
+					</Button>
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={$fieldDeviceStore.page >= $fieldDeviceStore.totalPages ||
+							$fieldDeviceStore.loading}
+						onclick={handleNext}
+					>
+						Next
+						<ChevronRight class="ml-1 h-4 w-4" />
+					</Button>
+				</div>
+			</div>
+		{/if}
+	</div>
 </div>

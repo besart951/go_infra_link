@@ -175,8 +175,7 @@
 			const query = searchQuery.toLowerCase();
 			result = result.filter(
 				(od) =>
-					od.description.toLowerCase().includes(query) ||
-					od.version.toLowerCase().includes(query)
+					od.description.toLowerCase().includes(query) || od.version.toLowerCase().includes(query)
 			);
 		}
 
@@ -186,7 +185,7 @@
 	// Handler for ObjectData selection change
 	function handleObjectDataChange(newObjectDataId: string) {
 		object_data_id = newObjectDataId;
-		
+
 		// Reset Apparat if it's no longer valid
 		if (apparat_id) {
 			const filteredApps = filterApparats(
@@ -206,7 +205,7 @@
 	// Handler for Apparat selection change
 	function handleApparatChange(newApparatId: string) {
 		apparat_id = newApparatId;
-		
+
 		// Reset SystemPart if it's no longer valid
 		if (system_part_id) {
 			const filteredSps = filterSystemParts(
@@ -316,7 +315,6 @@
 		try {
 			if (initialData) {
 				const res = await updateFieldDevice(initialData.id, {
-					id: initialData.id,
 					bmk: bmk || undefined,
 					description: description || undefined,
 					apparat_nr: apparatNumber,
@@ -348,7 +346,13 @@
 	}
 </script>
 
-<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4 rounded-md border bg-muted/20 p-4">
+<form
+	onsubmit={(e) => {
+		e.preventDefault();
+		handleSubmit();
+	}}
+	class="space-y-4 rounded-md border bg-muted/20 p-4"
+>
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">
 			{initialData ? 'Edit Field Device' : 'New Field Device'}

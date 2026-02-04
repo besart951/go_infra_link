@@ -4,6 +4,11 @@
  */
 
 import type { Pagination } from '../utils/index.ts';
+import type { Apparat } from './apparat.js';
+import type { BacnetObject } from './bacnet-object.js';
+import type { Specification } from './specification.js';
+import type { SPSControllerSystemType } from './sps-sys-type.js';
+import type { SystemPart } from './system.js';
 
 export interface FieldDevice {
 	id: string;
@@ -16,6 +21,13 @@ export interface FieldDevice {
 	apparat_id: string;
 	created_at: string;
 	updated_at: string;
+
+	// Embedded related entities for display
+	sps_controller_system_type?: SPSControllerSystemType;
+	apparat?: Apparat;
+	system_part?: SystemPart;
+	specification?: Specification;
+	bacnet_objects?: BacnetObject[];
 }
 
 export interface BacnetObjectInput {
@@ -46,7 +58,6 @@ export interface CreateFieldDeviceRequest {
 }
 
 export interface UpdateFieldDeviceRequest {
-	id: string;
 	bmk?: string;
 	description?: string;
 	apparat_nr?: number;
