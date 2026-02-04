@@ -8,7 +8,12 @@
       "Bash(go fmt:*)",
       "Bash(go list:*)",
       "Bash(grep:*)",
-      "Bash(cut:*)"
+      "Bash(cut:*)",
+      "Bash(ls:*)",
+      "Bash(pnpm run check:*)",
+      "Bash(findstr:*)",
+      "Bash(pnpm run build:*)",
+      "Bash(xargs -I {} bash -c 'echo \"\"=== {} ===\"\" && cat \"\"{}\"\"')"
     ]
   }
 }

@@ -16,7 +16,7 @@ type AdminLockUserRequest struct {
 }
 
 type AdminSetUserRoleRequest struct {
-	Role string `json:"role" binding:"required,oneof=user admin superadmin"`
+	Role string `json:"role" binding:"required,oneof=superadmin admin_fzag fzag admin_planer planer admin_entrepreneur entrepreneur"`
 }
 
 type LoginAttemptResponse struct {

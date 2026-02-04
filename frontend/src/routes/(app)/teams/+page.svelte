@@ -4,9 +4,12 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { addToast } from '$lib/components/toast.svelte';
-	import { createTeam } from '$lib/api/teams.js';
-	import { Plus } from '@lucide/svelte';
+	import { confirm } from '$lib/stores/confirm-dialog.js';
+	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+	import { createTeam, deleteTeam, listTeamMembers } from '$lib/api/teams.js';
+	import { Plus, Trash2 } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { teamsStore } from '$lib/stores/list/entityStores.js';
 	import type { Team } from '$lib/domain/entities/team.js';
@@ -19,6 +22,7 @@
 	let createOpen = $state(false);
 	let createBusy = $state(false);
 	let form = $state<CreateTeamForm>({ name: '', description: '' });
+	let memberCounts = $state<Map<string, number>>(new Map());
 
 	function canSubmitCreate(): boolean {
 		return form.name.trim().length > 0 && !createBusy;
@@ -43,6 +47,48 @@
 			createBusy = false;
 		}
 	}
+
+	async function handleDeleteTeam(team: Team) {
+		const confirmed = await confirm({
+			title: 'Delete Team',
+			message: `Are you sure you want to delete "${team.name}"? This action cannot be undone.`,
+			confirmText: 'Delete',
+			cancelText: 'Cancel',
+			variant: 'destructive'
+		});
+
+		if (confirmed) {
+			try {
+				await deleteTeam(team.id);
+				teamsStore.reload();
+				addToast('Team deleted successfully', 'success');
+			} catch (err) {
+				addToast(err instanceof Error ? err.message : 'Failed to delete team', 'error');
+			}
+		}
+	}
+
+	async function loadMemberCounts(teams: Team[]) {
+		const counts = new Map<string, number>();
+		await Promise.all(
+			teams.map(async (t) => {
+				try {
+					const res = await listTeamMembers(t.id, { page: 1, limit: 1 });
+					counts.set(t.id, res.total);
+				} catch {
+					counts.set(t.id, 0);
+				}
+			})
+		);
+		memberCounts = counts;
+	}
+
+	$effect(() => {
+		const items = $teamsStore.items;
+		if (items.length > 0) {
+			loadMemberCounts(items);
+		}
+	});
 
 	onMount(() => {
 		teamsStore.load();
@@ -97,7 +143,8 @@
 		columns={[
 			{ key: 'name', label: 'Name' },
 			{ key: 'description', label: 'Description' },
-			{ key: 'actions', label: '', width: 'w-30' }
+			{ key: 'members', label: 'Members', width: 'w-24' },
+			{ key: 'actions', label: '', width: 'w-40' }
 		]}
 		searchPlaceholder="Search teams..."
 		emptyMessage="No teams yet. Create your first team to start assigning access."
@@ -108,9 +155,28 @@
 		{#snippet rowSnippet(team: Team)}
 			<Table.Cell class="font-medium">{team.name}</Table.Cell>
 			<Table.Cell class="text-muted-foreground">{team.description ?? ''}</Table.Cell>
+			<Table.Cell>
+				{@const count = memberCounts.get(team.id)}
+				{#if count !== undefined}
+					<Badge variant="secondary">{count}</Badge>
+				{:else}
+					<span class="text-sm text-muted-foreground">&mdash;</span>
+				{/if}
+			</Table.Cell>
 			<Table.Cell class="text-right">
-				<Button variant="outline" onclick={() => goto(`/teams/${team.id}`)}>Manage</Button>
+				<div class="flex items-center justify-end gap-2">
+					<Button variant="outline" onclick={() => goto(`/teams/${team.id}`)}>Manage</Button>
+					<Button
+						variant="outline"
+						size="icon"
+						onclick={() => handleDeleteTeam(team)}
+					>
+						<Trash2 class="h-4 w-4 text-destructive" />
+					</Button>
+				</div>
 			</Table.Cell>
 		{/snippet}
 	</PaginatedList>
 </div>
+
+<ConfirmDialog />

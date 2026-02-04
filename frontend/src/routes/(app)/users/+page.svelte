@@ -4,24 +4,30 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { addToast } from '$lib/components/toast.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+	import RoleBadge from '$lib/components/role-badge.svelte';
+	import UserAvatar from '$lib/components/user-avatar.svelte';
+	import UserManagementForm from '$lib/components/user-management-form.svelte';
 	import { setUserRole, disableUser, enableUser, deleteUser } from '$lib/api/users.js';
+	import type { UserRole } from '$lib/api/users.js';
 	import { listTeams, listTeamMembers } from '$lib/api/teams.js';
 	import type { Team } from '$lib/domain/entities/team.js';
 	import type { User } from '$lib/domain/entities/user.js';
+	import { getAllowedRolesForCreation } from '$lib/stores/auth.svelte.js';
+	import { getRoleLabel } from '$lib/utils/permissions.js';
 	import {
-		UserCircle,
-		Shield,
-		ShieldCheck,
 		MoreVertical,
 		UserMinus,
 		UserCheck,
 		Trash2,
 		BadgeCheck,
 		BadgeX,
-		KeyRound
+		KeyRound,
+		UserPlus
 	} from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { usersStore } from '$lib/stores/list/entityStores.js';
@@ -31,7 +37,7 @@
 	let selectedTeamId = $state<string>('all');
 	let teamsLoading = $state(true);
 	let teamsError = $state<string | null>(null);
-	let showActionsMenu = $state<string | null>(null);
+	let createDialogOpen = $state(false);
 
 	function getUserTeams(userId: string): string[] {
 		return teamByUserId.get(userId) ?? [];
@@ -80,7 +86,7 @@
 		}
 	}
 
-	async function handleRoleChange(userId: string, newRole: 'user' | 'admin' | 'superadmin') {
+	async function handleRoleChange(userId: string, newRole: UserRole) {
 		try {
 			await setUserRole(userId, newRole);
 			usersStore.reload();
@@ -140,35 +146,12 @@
 		return `${Math.floor(diffInDays / 365)} years ago`;
 	}
 
-	function getRoleBadgeVariant(role: string) {
-		if (role === 'superadmin') return 'default';
-		if (role === 'admin') return 'secondary';
-		return 'outline';
-	}
-
-	function roleLabel(role: User['role']) {
-		switch (role) {
-			case 'superadmin':
-				return 'Super Admin';
-			case 'admin':
-				return 'Admin';
-			case 'user':
-			default:
-				return 'Member';
-		}
-	}
-
 	function authVerified(user: User): boolean {
 		return Boolean(user.is_active && !user.disabled_at);
 	}
 
 	function twoFactorEnabled(_user: User): boolean {
 		return false;
-	}
-
-	function getRoleIcon(role: string) {
-		if (role === 'superadmin' || role === 'admin') return ShieldCheck;
-		return UserCircle;
 	}
 
 	onMount(() => {
@@ -184,6 +167,10 @@
 			<h1 class="text-3xl font-bold tracking-tight">User Management</h1>
 			<p class="mt-1 text-muted-foreground">Manage all users and their permissions</p>
 		</div>
+		<Button onclick={() => (createDialogOpen = true)}>
+			<UserPlus class="mr-2 h-4 w-4" />
+			Create User
+		</Button>
 	</div>
 
 	<!-- Team Filter -->
@@ -238,18 +225,21 @@
 			{@const isVisible = userMatchesTeam(user.id)}
 			{#if isVisible || selectedTeamId === 'all'}
 				<Table.Cell>
-					<div class="flex flex-col">
-						<div class="font-medium">
-							{user.first_name}
-							{user.last_name}
+					<div class="flex items-center gap-3">
+						<UserAvatar firstName={user.first_name} lastName={user.last_name} />
+						<div class="flex flex-col">
+							<div class="font-medium">
+								{user.first_name}
+								{user.last_name}
+							</div>
+							<div class="text-sm text-muted-foreground">{user.email}</div>
 						</div>
-						<div class="text-sm text-muted-foreground">{user.email}</div>
 					</div>
 				</Table.Cell>
 				<Table.Cell>
 					{@const tnames = getUserTeams(user.id)}
 					{#if tnames.length === 0}
-						<span class="text-sm text-muted-foreground">—</span>
+						<span class="text-sm text-muted-foreground">&mdash;</span>
 					{:else}
 						<div class="flex items-center gap-2">
 							<span class="text-sm font-medium">{tnames[0]}</span>
@@ -267,21 +257,7 @@
 					{/if}
 				</Table.Cell>
 				<Table.Cell>
-					<Badge variant={getRoleBadgeVariant(user.role)}>
-						{@const Icon = getRoleIcon(user.role)}
-						<Icon class="mr-1 h-3 w-3" />
-						{roleLabel(user.role)}
-					</Badge>
-					<select
-						class="ml-2 h-8 rounded-md border bg-background px-2 text-xs"
-						value={user.role}
-						onchange={(e) =>
-							handleRoleChange(user.id, (e.currentTarget as HTMLSelectElement).value as any)}
-					>
-						<option value="user">Member</option>
-						<option value="admin">Admin</option>
-						<option value="superadmin">Super Admin</option>
-					</select>
+					<RoleBadge role={user.role} />
 				</Table.Cell>
 				<Table.Cell>
 					<div class="flex items-center gap-2">
@@ -339,82 +315,72 @@
 					<span class="text-sm">{formatDate(user.last_login_at)}</span>
 				</Table.Cell>
 				<Table.Cell class="text-right">
-					<div class="relative inline-block">
-						<Button
-							variant="ghost"
-							size="sm"
-							onclick={() => (showActionsMenu = showActionsMenu === user.id ? null : user.id)}
-						>
-							<MoreVertical class="h-4 w-4" />
-						</Button>
-						{#if showActionsMenu === user.id}
-							<div
-								class="absolute right-0 z-10 mt-2 w-56 rounded-md border bg-popover p-1 shadow-md"
-							>
-								<div class="px-2 py-1.5 text-sm font-medium">Change Role</div>
-								<button
-									class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-									onclick={() => {
-										handleRoleChange(user.id, 'user');
-										showActionsMenu = null;
-									}}
+					<DropdownMenu.Root>
+						<DropdownMenu.Trigger>
+							{#snippet child({ props })}
+								<Button variant="ghost" size="sm" {...props}>
+									<MoreVertical class="h-4 w-4" />
+								</Button>
+							{/snippet}
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Content align="end" class="w-56">
+							<DropdownMenu.Label>Change Role</DropdownMenu.Label>
+							<DropdownMenu.Separator />
+							{#each getAllowedRolesForCreation() as role (role)}
+								<DropdownMenu.Item
+									disabled={user.role === role}
+									onclick={() => handleRoleChange(user.id, role)}
 								>
-									<UserCircle class="mr-2 h-4 w-4" />
-									User
-								</button>
-								<button
-									class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-									onclick={() => {
-										handleRoleChange(user.id, 'admin');
-										showActionsMenu = null;
-									}}
-								>
-									<Shield class="mr-2 h-4 w-4" />
-									Admin
-								</button>
-								<button
-									class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-									onclick={() => {
-										handleRoleChange(user.id, 'superadmin');
-										showActionsMenu = null;
-									}}
-								>
-									<ShieldCheck class="mr-2 h-4 w-4" />
-									Super Admin
-								</button>
-								<div class="my-1 h-px bg-border"></div>
-								<button
-									class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-									onclick={() => {
-										handleToggleActive(user.id, user.is_active);
-										showActionsMenu = null;
-									}}
-								>
-									{#if user.is_active}
-										<UserMinus class="mr-2 h-4 w-4" />
-										Disable User
-									{:else}
-										<UserCheck class="mr-2 h-4 w-4" />
-										Enable User
+									{getRoleLabel(role)}
+									{#if user.role === role}
+										<DropdownMenu.Shortcut>Current</DropdownMenu.Shortcut>
 									{/if}
-								</button>
-								<div class="my-1 h-px bg-border"></div>
-								<button
-									class="flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
-									onclick={() => {
-										handleDeleteUser(user.id, `${user.first_name} ${user.last_name}`);
-										showActionsMenu = null;
-									}}
-								>
-									<Trash2 class="mr-2 h-4 w-4" />
-									Delete User
-								</button>
-							</div>
-						{/if}
-					</div>
+								</DropdownMenu.Item>
+							{/each}
+							<DropdownMenu.Separator />
+							<DropdownMenu.Item
+								onclick={() => handleToggleActive(user.id, user.is_active)}
+							>
+								{#if user.is_active}
+									<UserMinus class="mr-2 h-4 w-4" />
+									Disable User
+								{:else}
+									<UserCheck class="mr-2 h-4 w-4" />
+									Enable User
+								{/if}
+							</DropdownMenu.Item>
+							<DropdownMenu.Separator />
+							<DropdownMenu.Item
+								class="text-destructive"
+								onclick={() =>
+									handleDeleteUser(user.id, `${user.first_name} ${user.last_name}`)}
+							>
+								<Trash2 class="mr-2 h-4 w-4" />
+								Delete User
+							</DropdownMenu.Item>
+						</DropdownMenu.Content>
+					</DropdownMenu.Root>
 				</Table.Cell>
 			{/if}
 		{/snippet}
 	</PaginatedList>
 </div>
+
+<Dialog.Root bind:open={createDialogOpen}>
+	<Dialog.Content class="sm:max-w-lg">
+		<Dialog.Header>
+			<Dialog.Title>Create User</Dialog.Title>
+			<Dialog.Description>Add a new user to the system.</Dialog.Description>
+		</Dialog.Header>
+		<UserManagementForm
+			onSuccess={() => {
+				createDialogOpen = false;
+				usersStore.reload();
+				addToast('User created successfully', 'success');
+			}}
+			onCancel={() => (createDialogOpen = false)}
+		/>
+	</Dialog.Content>
+</Dialog.Root>
+
 <ConfirmDialog />

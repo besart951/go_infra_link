@@ -4,11 +4,14 @@
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
+	import * as Popover from '$lib/components/ui/popover/index.js';
+	import * as Command from '$lib/components/ui/command/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
-	import { ArrowLeft, UserMinus } from '@lucide/svelte';
+	import UserAvatar from '$lib/components/user-avatar.svelte';
+	import { ArrowLeft, UserMinus, UserPlus } from '@lucide/svelte';
 
 	import {
 		addTeamMember,
@@ -29,8 +32,19 @@
 	let error = $state<string | null>(null);
 	let busy = $state(false);
 
+	// Add Member popover state
+	let addMemberOpen = $state(false);
+	let addMemberSearch = $state('');
+	let addMemberResults = $state<User[]>([]);
+	let addMemberLoading = $state(false);
+	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+
 	function userById(id: string): User | undefined {
 		return users.find((u) => u.id === id);
+	}
+
+	function memberUserIds(): Set<string> {
+		return new Set(members.map((m) => m.user_id));
 	}
 
 	async function load() {
@@ -54,6 +68,44 @@
 			error = err instanceof Error ? err.message : 'Failed to load team';
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function searchUsers(query: string) {
+		addMemberLoading = true;
+		try {
+			const res = await listUsers({ page: 1, limit: 20, search: query });
+			const existingIds = memberUserIds();
+			addMemberResults = res.items.filter((u) => !existingIds.has(u.id));
+		} catch {
+			addMemberResults = [];
+		} finally {
+			addMemberLoading = false;
+		}
+	}
+
+	$effect(() => {
+		const query = addMemberSearch;
+		clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			searchUsers(query);
+		}, 300);
+	});
+
+	async function handleAddMember(userId: string) {
+		if (!teamId) return;
+		busy = true;
+		try {
+			await addTeamMember(teamId, { user_id: userId, role: 'member' });
+			addToast('Member added', 'success');
+			addMemberOpen = false;
+			addMemberSearch = '';
+			addMemberResults = [];
+			await load();
+		} catch (err) {
+			addToast(err instanceof Error ? err.message : 'Failed to add member', 'error');
+		} finally {
+			busy = false;
 		}
 	}
 
@@ -95,6 +147,12 @@
 		}
 	}
 
+	$effect(() => {
+		if (addMemberOpen) {
+			searchUsers('');
+		}
+	});
+
 	onMount(() => {
 		load();
 	});
@@ -103,15 +161,60 @@
 <ConfirmDialog />
 
 <div class="flex flex-col gap-6">
-	<div class="flex items-start gap-3">
-		<Button variant="outline" onclick={() => goto('/teams')}>
-			<ArrowLeft class="mr-2 h-4 w-4" />
-			Back
-		</Button>
-		<div>
-			<h1 class="text-3xl font-bold tracking-tight">{team?.name ?? 'Team'}</h1>
-			<p class="mt-1 text-muted-foreground">Manage members and permissions.</p>
+	<div class="flex items-start justify-between">
+		<div class="flex items-start gap-3">
+			<Button variant="outline" onclick={() => goto('/teams')}>
+				<ArrowLeft class="mr-2 h-4 w-4" />
+				Back
+			</Button>
+			<div>
+				<h1 class="text-3xl font-bold tracking-tight">{team?.name ?? 'Team'}</h1>
+				<p class="mt-1 text-muted-foreground">Manage members and permissions.</p>
+			</div>
 		</div>
+		<Popover.Root bind:open={addMemberOpen}>
+			<Popover.Trigger>
+				{#snippet child({ props })}
+					<Button {...props}>
+						<UserPlus class="mr-2 h-4 w-4" />
+						Add Member
+					</Button>
+				{/snippet}
+			</Popover.Trigger>
+			<Popover.Content class="w-72 p-0" align="end">
+				<Command.Root shouldFilter={false}>
+					<Command.Input
+						placeholder="Search users..."
+						bind:value={addMemberSearch}
+					/>
+					<Command.List>
+						<Command.Empty>
+							{addMemberLoading ? 'Searching...' : 'No users found'}
+						</Command.Empty>
+						<Command.Group>
+							{#each addMemberResults as user (user.id)}
+								<Command.Item
+									value={user.id}
+									onSelect={() => handleAddMember(user.id)}
+								>
+									<div class="flex items-center gap-2">
+										<UserAvatar
+											firstName={user.first_name}
+											lastName={user.last_name}
+											class="h-6 w-6"
+										/>
+										<div class="flex flex-col">
+											<span class="text-sm">{user.first_name} {user.last_name}</span>
+											<span class="text-xs text-muted-foreground">{user.email}</span>
+										</div>
+									</div>
+								</Command.Item>
+							{/each}
+						</Command.Group>
+					</Command.List>
+				</Command.Root>
+			</Popover.Content>
+		</Popover.Root>
 	</div>
 
 	{#if team?.description}
@@ -148,6 +251,7 @@
 						<Table.Cell colspan={3}>
 							<div class="flex flex-col items-center justify-center gap-2 py-10 text-center">
 								<div class="text-sm font-medium">No members yet</div>
+								<p class="text-sm text-muted-foreground">Use the "Add Member" button to add users to this team.</p>
 							</div>
 						</Table.Cell>
 					</Table.Row>
@@ -156,12 +260,16 @@
 						<Table.Row>
 							<Table.Cell>
 								{#if userById(m.user_id)}
-									<div class="flex flex-col">
-										<div class="font-medium">
-											{userById(m.user_id)?.first_name}
-											{userById(m.user_id)?.last_name}
+									{@const u = userById(m.user_id)!}
+									<div class="flex items-center gap-3">
+										<UserAvatar firstName={u.first_name} lastName={u.last_name} />
+										<div class="flex flex-col">
+											<div class="font-medium">
+												{u.first_name}
+												{u.last_name}
+											</div>
+											<div class="text-sm text-muted-foreground">{u.email}</div>
 										</div>
-										<div class="text-sm text-muted-foreground">{userById(m.user_id)?.email}</div>
 									</div>
 								{:else}
 									<div class="font-medium">{m.user_id}</div>
@@ -169,7 +277,7 @@
 							</Table.Cell>
 							<Table.Cell>
 								<select
-									class="h-8 rounded-md border bg-background px-2 text-sm"
+									class="flex h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
 									onchange={(e) =>
 										changeRole(m.user_id, (e.target as HTMLSelectElement).value as any)}
 									disabled={busy}

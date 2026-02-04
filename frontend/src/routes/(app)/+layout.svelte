@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
 	import Toasts from '$lib/components/toast.svelte';
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
@@ -6,8 +7,13 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { page } from '$app/stores';
 	import type { LayoutData } from './$types.js';
+	import { loadAuth } from '$lib/stores/auth.svelte.js';
 
 	const { children, data } = $props<{ children: any; data: LayoutData }>();
+
+	onMount(async () => {
+		await loadAuth();
+	});
 
 	const titleForPath = (pathname: string) => {
 		if (pathname === '/') return 'Dashboard';

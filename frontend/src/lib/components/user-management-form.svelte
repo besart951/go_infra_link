@@ -1,16 +1,17 @@
 <script lang="ts">
-	/**
-	 * User Management Form
-	 *
-	 * Form for creating/editing users with role selection
-	 * filtered by current user's permissions
-	 */
-
 	import type { UserRole } from '$lib/api/users';
 	import { createUser } from '$lib/api/users';
-	import { auth, getAllowedRolesForCreation } from '$lib/stores/auth.svelte';
+	import { getAllowedRolesForCreation } from '$lib/stores/auth.svelte';
 	import { getRoleLabel } from '$lib/utils/permissions';
 	import { getErrorMessage, getFieldErrors } from '$lib/api/client';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import * as Popover from '$lib/components/ui/popover/index.js';
+	import * as Command from '$lib/components/ui/command/index.js';
+	import { Check } from '@lucide/svelte';
+	import { cn } from '$lib/utils';
 
 	interface Props {
 		onSuccess?: () => void;
@@ -19,19 +20,18 @@
 
 	let { onSuccess, onCancel }: Props = $props();
 
-	// Form state
 	let firstName = $state('');
 	let lastName = $state('');
 	let email = $state('');
 	let password = $state('');
 	let isActive = $state(true);
 	let selectedRole = $state<UserRole | ''>('');
+	let openCombobox = $state(false);
 
 	let isSubmitting = $state(false);
 	let error = $state('');
 	let fieldErrors = $state<Record<string, string>>({});
 
-	// Get allowed roles for the current user
 	const allowedRoles = $derived(getAllowedRolesForCreation());
 
 	async function handleSubmit(e: Event) {
@@ -56,7 +56,6 @@
 				role: selectedRole
 			});
 
-			// Reset form
 			firstName = '';
 			lastName = '';
 			email = '';
@@ -75,126 +74,146 @@
 </script>
 
 <form onsubmit={handleSubmit} class="space-y-4">
-	<h2 class="mb-4 text-2xl font-bold">Create User</h2>
-
 	{#if error}
-		<div class="rounded-md bg-red-50 p-4 text-red-800">
+		<div class="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
 			{error}
 		</div>
 	{/if}
 
 	<div class="grid grid-cols-2 gap-4">
-		<div>
-			<label for="firstName" class="mb-1 block text-sm font-medium"> First Name </label>
-			<input
+		<div class="space-y-2">
+			<Label for="firstName">First Name</Label>
+			<Input
 				type="text"
 				id="firstName"
 				bind:value={firstName}
 				required
-				class="w-full rounded-md border px-3 py-2"
-				class:border-red-500={fieldErrors.first_name}
+				class={fieldErrors.first_name ? 'border-destructive' : ''}
 			/>
 			{#if fieldErrors.first_name}
-				<p class="mt-1 text-sm text-red-600">{fieldErrors.first_name}</p>
+				<p class="text-sm text-destructive">{fieldErrors.first_name}</p>
 			{/if}
 		</div>
 
-		<div>
-			<label for="lastName" class="mb-1 block text-sm font-medium"> Last Name </label>
-			<input
+		<div class="space-y-2">
+			<Label for="lastName">Last Name</Label>
+			<Input
 				type="text"
 				id="lastName"
 				bind:value={lastName}
 				required
-				class="w-full rounded-md border px-3 py-2"
-				class:border-red-500={fieldErrors.last_name}
+				class={fieldErrors.last_name ? 'border-destructive' : ''}
 			/>
 			{#if fieldErrors.last_name}
-				<p class="mt-1 text-sm text-red-600">{fieldErrors.last_name}</p>
+				<p class="text-sm text-destructive">{fieldErrors.last_name}</p>
 			{/if}
 		</div>
 	</div>
 
-	<div>
-		<label for="email" class="mb-1 block text-sm font-medium"> Email </label>
-		<input
+	<div class="space-y-2">
+		<Label for="email">Email</Label>
+		<Input
 			type="email"
 			id="email"
 			bind:value={email}
 			required
-			class="w-full rounded-md border px-3 py-2"
-			class:border-red-500={fieldErrors.email}
+			class={fieldErrors.email ? 'border-destructive' : ''}
 		/>
 		{#if fieldErrors.email}
-			<p class="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+			<p class="text-sm text-destructive">{fieldErrors.email}</p>
 		{/if}
 	</div>
 
-	<div>
-		<label for="password" class="mb-1 block text-sm font-medium"> Password </label>
-		<input
+	<div class="space-y-2">
+		<Label for="password">Password</Label>
+		<Input
 			type="password"
 			id="password"
 			bind:value={password}
 			required
-			minlength="8"
-			class="w-full rounded-md border px-3 py-2"
-			class:border-red-500={fieldErrors.password}
+			minlength={8}
+			class={fieldErrors.password ? 'border-destructive' : ''}
 		/>
 		{#if fieldErrors.password}
-			<p class="mt-1 text-sm text-red-600">{fieldErrors.password}</p>
+			<p class="text-sm text-destructive">{fieldErrors.password}</p>
 		{/if}
 	</div>
 
-	<div>
-		<label for="role" class="mb-1 block text-sm font-medium"> Role </label>
-		<select
-			id="role"
-			bind:value={selectedRole}
-			required
-			class="w-full rounded-md border px-3 py-2"
-			class:border-red-500={fieldErrors.role}
-		>
-			<option value="">Select a role</option>
-			{#each allowedRoles as role}
-				<option value={role}>{getRoleLabel(role)}</option>
-			{/each}
-		</select>
+	<div class="space-y-2">
+		<Label for="role">Role</Label>
+		<Popover.Root bind:open={openCombobox}>
+			<Popover.Trigger asChild let:builder>
+				<Button
+					variant="outline"
+					role="combobox"
+					aria-expanded={openCombobox}
+					class={cn(
+						'w-full justify-between',
+						!selectedRole && 'text-muted-foreground',
+						fieldErrors.role && 'border-destructive'
+					)}
+					builders={[builder]}
+				>
+					{selectedRole ? getRoleLabel(selectedRole) : 'Select a role...'}
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="24"
+						height="24"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						class="ml-2 h-4 w-4 shrink-0 opacity-50"
+					>
+						<path d="m7 15 5 5 5-5" />
+						<path d="m7 9 5-5 5 5" />
+					</svg>
+				</Button>
+			</Popover.Trigger>
+			<Popover.Content class="w-full p-0 bg-background text-foreground" side="bottom" align="start">
+				<Command.Root>
+					<Command.Input placeholder="Search roles..." />
+					<Command.Empty>No role found.</Command.Empty>
+					<Command.List>
+						{#each allowedRoles as role (role)}
+							<Command.Item
+								value={role}
+								onSelect={(currentValue) => {
+									selectedRole = currentValue as UserRole;
+									openCombobox = false;
+								}}
+							>
+								<Check class={cn('mr-2 h-4 w-4', selectedRole !== role && 'text-transparent')} />
+								{getRoleLabel(role)}
+							</Command.Item>
+						{/each}
+					</Command.List>
+				</Command.Root>
+			</Popover.Content>
+		</Popover.Root>
 		{#if fieldErrors.role}
-			<p class="mt-1 text-sm text-red-600">{fieldErrors.role}</p>
+			<p class="text-sm text-destructive">{fieldErrors.role}</p>
 		{/if}
-		<p class="mt-1 text-sm text-gray-500">
+		<p class="text-sm text-muted-foreground">
 			You can only assign roles that you have permission to manage
 		</p>
 	</div>
 
-	<div class="flex items-center">
-		<input
-			type="checkbox"
-			id="isActive"
-			bind:checked={isActive}
-			class="h-4 w-4 rounded text-blue-600"
-		/>
-		<label for="isActive" class="ml-2 text-sm"> User is active </label>
+	<div class="flex items-center gap-2">
+		<Checkbox id="isActive" checked={isActive} onCheckedChange={(v) => (isActive = !!v)} />
+		<Label for="isActive" class="text-sm font-normal">User is active</Label>
 	</div>
 
-	<div class="flex justify-end gap-2 pt-4">
+	<div class="flex justify-end gap-2 pt-2">
 		{#if onCancel}
-			<button
-				type="button"
-				onclick={onCancel}
-				class="rounded-md border px-4 py-2 hover:bg-gray-50"
-				disabled={isSubmitting}
-			>
+			<Button type="button" variant="outline" onclick={onCancel} disabled={isSubmitting}>
 				Cancel
-			</button>
+			</Button>
 		{/if}
-		<button
-			type="submit"
-			disabled={isSubmitting}
-			class="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-		>
+		<Button type="submit" disabled={isSubmitting}>
 			{isSubmitting ? 'Creating...' : 'Create User'}
-		</button>
+		</Button>
 	</div>
 </form>

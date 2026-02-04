@@ -10,7 +10,7 @@
 import { getCurrentUser, getAllowedRoles, type User, type UserRole } from '$lib/api/users';
 
 // Role hierarchy levels (higher = more privileged)
-const ROLE_LEVELS: Record<UserRole, number> = {
+export const ROLE_LEVELS: Record<UserRole, number> = {
 	superadmin: 100,
 	admin_fzag: 90,
 	fzag: 80,
