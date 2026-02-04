@@ -3,6 +3,8 @@ package wire
 import (
 	"time"
 
+	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	adminservice "github.com/besart951/go_infra_link/backend/internal/service/admin"
 	authservice "github.com/besart951/go_infra_link/backend/internal/service/auth"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
@@ -21,11 +23,11 @@ type Services struct {
 	PhasePermission *phaseservice.PermissionService
 	User            *userservice.Service
 	Auth            *authservice.Service
-	JWT             authservice.JWTService
+	JWT             domainAuth.TokenService
 	RBAC            *rbacservice.Service
 	Team            *teamservice.Service
 	Admin           *adminservice.Service
-	Password        passwordsvc.Service
+	Password        domainUser.PasswordHasher
 
 	Facility *facilityservice.Services
 }

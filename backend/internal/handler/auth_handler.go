@@ -11,7 +11,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
-	authsvc "github.com/besart951/go_infra_link/backend/internal/service/auth"
 	"github.com/gin-gonic/gin"
 )
 
@@ -174,7 +173,7 @@ func (h *AuthHandler) handleLoginError(c *gin.Context, err error) {
 }
 
 // buildAuthResponse creates a consistent auth response
-func (h *AuthHandler) buildAuthResponse(result *authsvc.LoginResult) dto.AuthResponse {
+func (h *AuthHandler) buildAuthResponse(result *domainAuth.LoginResult) dto.AuthResponse {
 	return dto.AuthResponse{
 		User: dto.AuthUserResponse{
 			ID:        result.User.ID,
@@ -261,7 +260,7 @@ func (h *AuthHandler) handlePasswordResetError(c *gin.Context, err error) {
 	}
 }
 
-func (h *AuthHandler) setAuthCookies(c *gin.Context, result *authsvc.LoginResult) {
+func (h *AuthHandler) setAuthCookies(c *gin.Context, result *domainAuth.LoginResult) {
 	setCookie(c, "access_token", result.AccessToken, h.accessTokenTTL, h.cookieSettings)
 	setCookie(c, "refresh_token", result.RefreshToken, h.refreshTokenTTL, h.cookieSettings)
 	setCSRFCookie(c, result.CSRFFriendlyToken, h.cookieSettings)

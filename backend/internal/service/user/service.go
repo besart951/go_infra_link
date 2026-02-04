@@ -3,18 +3,16 @@ package user
 import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
-	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
 	"github.com/google/uuid"
 )
 
 type Service struct {
 	repo        domainUser.UserRepository
-	passwordSvc passwordsvc.Service
+	passwordSvc domainUser.PasswordHasher
 }
 
-// New creates a user service with the given repository and password service.
-// Password service must be injected for proper dependency inversion.
-func New(repo domainUser.UserRepository, passwordSvc passwordsvc.Service) *Service {
+// New creates a user service with the given repository and password hasher.
+func New(repo domainUser.UserRepository, passwordSvc domainUser.PasswordHasher) *Service {
 	return &Service{repo: repo, passwordSvc: passwordSvc}
 }
 

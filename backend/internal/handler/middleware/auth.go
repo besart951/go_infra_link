@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	authsvc "github.com/besart951/go_infra_link/backend/internal/service/auth"
+	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -15,9 +15,8 @@ const (
 	ContextUserIDKey = "user_id"
 )
 
-// AuthGuard creates a middleware that validates authentication using the provided JWT service
-// This middleware is now more extensible through the strategy pattern
-func AuthGuard(jwtService authsvc.JWTService) gin.HandlerFunc {
+// AuthGuard creates a middleware that validates authentication using a TokenValidator port.
+func AuthGuard(tokenValidator domainAuth.TokenValidator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString, err := c.Cookie("access_token")
 		if err != nil || tokenString == "" {
@@ -26,10 +25,7 @@ func AuthGuard(jwtService authsvc.JWTService) gin.HandlerFunc {
 			return
 		}
 
-		// Use the strategy pattern through the JWT service
-		// This allows for easier extension to other authentication methods in the future
-		strategy := jwtService.GetStrategy()
-		userID, err := strategy.ValidateToken(tokenString)
+		userID, err := tokenValidator.ValidateToken(tokenString)
 		if err != nil {
 			if errorsIsJWTExpired(err) {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "token_expired"})

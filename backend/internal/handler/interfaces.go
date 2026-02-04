@@ -9,7 +9,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/besart951/go_infra_link/backend/internal/domain/team"
 	"github.com/besart951/go_infra_link/backend/internal/domain/user"
-	authsvc "github.com/besart951/go_infra_link/backend/internal/service/auth"
 	"github.com/google/uuid"
 )
 
@@ -68,10 +67,16 @@ type AdminService interface {
 }
 
 type AuthService interface {
-	Login(email, password string, userAgent, ip *string) (*authsvc.LoginResult, error)
-	Refresh(refreshToken string, userAgent, ip *string) (*authsvc.LoginResult, error)
+	Login(email, password string, userAgent, ip *string) (*domainAuth.LoginResult, error)
+	Refresh(refreshToken string, userAgent, ip *string) (*domainAuth.LoginResult, error)
 	Logout(refreshToken string) error
 	CreatePasswordResetToken(adminID, userID uuid.UUID) (string, time.Time, error)
 	ConfirmPasswordReset(token, newPassword string) error
 	ListLoginAttempts(page, limit int, search string) (*domain.PaginatedList[domainAuth.LoginAttempt], error)
+}
+
+// RoleQueryService provides role-based queries for the handler layer.
+type RoleQueryService interface {
+	GetGlobalRole(userID uuid.UUID) (user.Role, error)
+	GetAllowedRoles(requesterRole user.Role) []user.Role
 }

@@ -4,12 +4,11 @@ import (
 	"net/http"
 
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
-	rbacsvc "github.com/besart951/go_infra_link/backend/internal/service/rbac"
 	"github.com/gin-gonic/gin"
 )
 
 // RequirePermission creates middleware that checks if the current user has a specific permission
-func RequirePermission(rbac *rbacsvc.Service, permission string) gin.HandlerFunc {
+func RequirePermission(authz AuthorizationChecker, permission string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, ok := GetUserID(c)
 		if !ok {
@@ -18,7 +17,7 @@ func RequirePermission(rbac *rbacsvc.Service, permission string) gin.HandlerFunc
 			return
 		}
 
-		role, err := rbac.GetGlobalRole(userID)
+		role, err := authz.GetGlobalRole(userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 			c.Abort()
@@ -38,7 +37,7 @@ func RequirePermission(rbac *rbacsvc.Service, permission string) gin.HandlerFunc
 }
 
 // RequireCanManageRole creates middleware that checks if the current user can manage a specific role
-func RequireCanManageRole(rbac *rbacsvc.Service, targetRole domainUser.Role) gin.HandlerFunc {
+func RequireCanManageRole(authz AuthorizationChecker, targetRole domainUser.Role) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, ok := GetUserID(c)
 		if !ok {
@@ -47,14 +46,14 @@ func RequireCanManageRole(rbac *rbacsvc.Service, targetRole domainUser.Role) gin
 			return
 		}
 
-		role, err := rbac.GetGlobalRole(userID)
+		role, err := authz.GetGlobalRole(userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 			c.Abort()
 			return
 		}
 
-		if !rbac.CanManageRole(role, targetRole) {
+		if !domainUser.CanManageRole(role, targetRole) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden", "message": "You cannot manage users with this role"})
 			c.Abort()
 			return

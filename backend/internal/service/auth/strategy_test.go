@@ -79,37 +79,29 @@ func TestJWTAuthStrategy_ExpiredToken(t *testing.T) {
 	}
 }
 
-// TestJWTService_UsesStrategy verifies that JWTService uses the strategy pattern
-func TestJWTService_UsesStrategy(t *testing.T) {
+// TestJWTService_TokenService verifies that JWTService implements TokenService
+func TestJWTService_TokenService(t *testing.T) {
 	secret := "test-secret-key"
 	issuer := "test-issuer"
 
-	jwtService := auth.NewJWTService(secret, issuer)
-
-	strategy := jwtService.GetStrategy()
-	if strategy == nil {
-		t.Fatal("Expected strategy to be set")
-	}
-
-	if strategy.Name() != "JWT" {
-		t.Errorf("Expected strategy name to be 'JWT', got '%s'", strategy.Name())
-	}
+	tokenService := auth.NewJWTService(secret, issuer)
 
 	// Verify token operations work through the service
 	userID := uuid.New()
 	expiresAt := time.Now().Add(1 * time.Hour)
 
-	token, err := jwtService.CreateAccessToken(userID, expiresAt)
+	token, err := tokenService.CreateAccessToken(userID, expiresAt)
 	if err != nil {
 		t.Fatalf("Failed to create access token: %v", err)
 	}
 
-	claims, err := jwtService.ParseAccessToken(token)
+	// Validate token through the TokenValidator interface
+	validatedUserID, err := tokenService.ValidateToken(token)
 	if err != nil {
-		t.Fatalf("Failed to parse access token: %v", err)
+		t.Fatalf("Failed to validate token: %v", err)
 	}
 
-	if claims.Subject != userID.String() {
-		t.Errorf("Expected subject %s, got %s", userID.String(), claims.Subject)
+	if validatedUserID != userID {
+		t.Errorf("Expected userID %s, got %s", userID, validatedUserID)
 	}
 }

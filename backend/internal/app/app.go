@@ -17,7 +17,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler"
-	userservice "github.com/besart951/go_infra_link/backend/internal/service/user"
 	"github.com/besart951/go_infra_link/backend/internal/wire"
 	applogger "github.com/besart951/go_infra_link/backend/pkg/logger"
 	"github.com/gin-gonic/gin"
@@ -172,7 +171,14 @@ func Run() error {
 	return nil
 }
 
-func ensureSeedUser(cfg config.Config, log applogger.Logger, userService *userservice.Service, userEmailRepo domainUser.UserEmailRepository) error {
+// seedUserService defines the subset of user service methods needed for seeding.
+type seedUserService interface {
+	CreateWithPassword(user *domainUser.User, password string) error
+	UpdateWithPassword(user *domainUser.User, password *string) error
+	Update(user *domainUser.User) error
+}
+
+func ensureSeedUser(cfg config.Config, log applogger.Logger, userService seedUserService, userEmailRepo domainUser.UserEmailRepository) error {
 	if !cfg.SeedUserEnabled {
 		return nil
 	}

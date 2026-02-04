@@ -11,31 +11,30 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
-	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
 	"github.com/google/uuid"
 )
 
 type Service struct {
-	jwtService        JWTService
+	jwtService        domainAuth.TokenService
 	userRepo          domainUser.UserRepository
 	userEmailRepo     domainUser.UserEmailRepository
 	refreshTokenRepo  domainAuth.RefreshTokenRepository
 	loginAttemptRepo  domainAuth.LoginAttemptRepository
 	passwordResetRepo domainAuth.PasswordResetTokenRepository
-	passwordService   passwordsvc.Service
+	passwordHasher    domainUser.PasswordHasher
 	accessTokenTTL    time.Duration
 	refreshTokenTTL   time.Duration
 	issuer            string
 }
 
 func NewService(
-	jwtService JWTService,
+	jwtService domainAuth.TokenService,
 	userRepo domainUser.UserRepository,
 	userEmailRepo domainUser.UserEmailRepository,
 	refreshTokenRepo domainAuth.RefreshTokenRepository,
 	loginAttemptRepo domainAuth.LoginAttemptRepository,
 	passwordResetRepo domainAuth.PasswordResetTokenRepository,
-	passwordService passwordsvc.Service,
+	passwordHasher domainUser.PasswordHasher,
 	accessTokenTTL time.Duration,
 	refreshTokenTTL time.Duration,
 	issuer string,
@@ -47,7 +46,7 @@ func NewService(
 		refreshTokenRepo:  refreshTokenRepo,
 		loginAttemptRepo:  loginAttemptRepo,
 		passwordResetRepo: passwordResetRepo,
-		passwordService:   passwordService,
+		passwordHasher:    passwordHasher,
 		accessTokenTTL:    accessTokenTTL,
 		refreshTokenTTL:   refreshTokenTTL,
 		issuer:            issuer,
@@ -56,16 +55,7 @@ func NewService(
 
 const defaultPasswordResetTTL = time.Hour
 
-type LoginResult struct {
-	User               *domainUser.User
-	AccessToken        string
-	AccessTokenExpiry  time.Time
-	RefreshToken       string
-	RefreshTokenExpiry time.Time
-	CSRFFriendlyToken  string
-}
-
-func (s *Service) Login(email, password string, userAgent, ip *string) (*LoginResult, error) {
+func (s *Service) Login(email, password string, userAgent, ip *string) (*domainAuth.LoginResult, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 
 	usr, err := s.userEmailRepo.GetByEmail(email)
@@ -86,7 +76,7 @@ func (s *Service) Login(email, password string, userAgent, ip *string) (*LoginRe
 		return nil, domainAuth.ErrAccountLocked
 	}
 
-	if err := s.passwordService.Compare(usr.Password, password); err != nil {
+	if err := s.passwordHasher.Compare(usr.Password, password); err != nil {
 		usr.FailedLoginAttempts++
 		if err := s.userRepo.Update(usr); err != nil {
 			// best-effort: do not block login on audit update failures
@@ -188,7 +178,7 @@ func (s *Service) ConfirmPasswordReset(token, newPassword string) error {
 		return domainAuth.ErrPasswordResetTokenUsed
 	}
 
-	hashedPassword, err := s.passwordService.Hash(newPassword)
+	hashedPassword, err := s.passwordHasher.Hash(newPassword)
 	if err != nil {
 		return domainUser.ErrPasswordHashingFailed
 	}
@@ -212,7 +202,7 @@ func (s *Service) ListLoginAttempts(page, limit int, search string) (*domain.Pag
 	return s.loginAttemptRepo.GetPaginatedList(domain.PaginationParams{Page: page, Limit: limit, Search: search})
 }
 
-func (s *Service) Refresh(refreshToken string, userAgent, ip *string) (*LoginResult, error) {
+func (s *Service) Refresh(refreshToken string, userAgent, ip *string) (*domainAuth.LoginResult, error) {
 	if refreshToken == "" {
 		return nil, domainAuth.ErrInvalidToken
 	}
@@ -258,7 +248,7 @@ func (s *Service) Logout(refreshToken string) error {
 	return s.refreshTokenRepo.RevokeByTokenHash(hash, time.Now().UTC())
 }
 
-func (s *Service) issueTokens(usr *domainUser.User, userAgent, ip *string) (*LoginResult, error) {
+func (s *Service) issueTokens(usr *domainUser.User, userAgent, ip *string) (*domainAuth.LoginResult, error) {
 	accessExpiry := time.Now().UTC().Add(s.accessTokenTTL)
 	accessToken, err := s.jwtService.CreateAccessToken(usr.ID, accessExpiry)
 	if err != nil {
@@ -288,7 +278,7 @@ func (s *Service) issueTokens(usr *domainUser.User, userAgent, ip *string) (*Log
 		return nil, err
 	}
 
-	return &LoginResult{
+	return &domainAuth.LoginResult{
 		User:               usr,
 		AccessToken:        accessToken,
 		AccessTokenExpiry:  accessExpiry,

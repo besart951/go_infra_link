@@ -5,12 +5,11 @@ import (
 
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
-	rbacsvc "github.com/besart951/go_infra_link/backend/internal/service/rbac"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-func RequireGlobalRole(rbac *rbacsvc.Service, min domainUser.Role) gin.HandlerFunc {
+func RequireGlobalRole(authz AuthorizationChecker, min domainUser.Role) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, ok := GetUserID(c)
 		if !ok {
@@ -19,13 +18,13 @@ func RequireGlobalRole(rbac *rbacsvc.Service, min domainUser.Role) gin.HandlerFu
 			return
 		}
 
-		role, err := rbac.GetGlobalRole(userID)
+		role, err := authz.GetGlobalRole(userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 			c.Abort()
 			return
 		}
-		if rbacsvc.GlobalRoleLevel(role) < rbacsvc.GlobalRoleLevel(min) {
+		if domainUser.RoleLevel(role) < domainUser.RoleLevel(min) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			c.Abort()
 			return
@@ -34,7 +33,7 @@ func RequireGlobalRole(rbac *rbacsvc.Service, min domainUser.Role) gin.HandlerFu
 	}
 }
 
-func RequireTeamRole(rbac *rbacsvc.Service, teamIDParam string, min domainTeam.MemberRole) gin.HandlerFunc {
+func RequireTeamRole(authz AuthorizationChecker, teamIDParam string, min domainTeam.MemberRole) gin.HandlerFunc {
 	if teamIDParam == "" {
 		teamIDParam = "id"
 	}
@@ -46,13 +45,13 @@ func RequireTeamRole(rbac *rbacsvc.Service, teamIDParam string, min domainTeam.M
 			return
 		}
 
-		globalRole, err := rbac.GetGlobalRole(userID)
+		globalRole, err := authz.GetGlobalRole(userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 			c.Abort()
 			return
 		}
-		if rbacsvc.IsGlobalAdmin(globalRole) {
+		if domainUser.IsAdmin(globalRole) {
 			c.Next()
 			return
 		}
@@ -64,7 +63,7 @@ func RequireTeamRole(rbac *rbacsvc.Service, teamIDParam string, min domainTeam.M
 			return
 		}
 
-		role, err := rbac.GetTeamRole(teamID, userID)
+		role, err := authz.GetTeamRole(teamID, userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 			c.Abort()
@@ -75,7 +74,7 @@ func RequireTeamRole(rbac *rbacsvc.Service, teamIDParam string, min domainTeam.M
 			c.Abort()
 			return
 		}
-		if rbacsvc.TeamRoleLevel(*role) < rbacsvc.TeamRoleLevel(min) {
+		if domainTeam.RoleLevel(*role) < domainTeam.RoleLevel(min) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			c.Abort()
 			return

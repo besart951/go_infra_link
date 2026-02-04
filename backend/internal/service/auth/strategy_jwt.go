@@ -3,6 +3,7 @@ package auth
 import (
 	"time"
 
+	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
@@ -15,7 +16,7 @@ type jwtAuthStrategy struct {
 }
 
 // NewJWTAuthStrategy creates a new JWT authentication strategy
-func NewJWTAuthStrategy(secret, issuer string) AuthStrategy {
+func NewJWTAuthStrategy(secret, issuer string) domainAuth.AuthStrategy {
 	return &jwtAuthStrategy{
 		secret: []byte(secret),
 		issuer: issuer,

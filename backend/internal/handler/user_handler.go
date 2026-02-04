@@ -9,19 +9,18 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/handler/mapper"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
-	rbacsvc "github.com/besart951/go_infra_link/backend/internal/service/rbac"
 	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
 	service     UserService
-	rbacService *rbacsvc.Service
+	roleService RoleQueryService
 }
 
-func NewUserHandler(service UserService, rbacService *rbacsvc.Service) *UserHandler {
+func NewUserHandler(service UserService, roleService RoleQueryService) *UserHandler {
 	return &UserHandler{
 		service:     service,
-		rbacService: rbacService,
+		roleService: roleService,
 	}
 }
 
@@ -194,13 +193,13 @@ func (h *UserHandler) GetAllowedRoles(c *gin.Context) {
 		return
 	}
 
-	role, err := h.rbacService.GetGlobalRole(userID)
+	role, err := h.roleService.GetGlobalRole(userID)
 	if err != nil {
 		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return
 	}
 
-	allowedRoles := h.rbacService.GetAllowedRoles(role)
+	allowedRoles := h.roleService.GetAllowedRoles(role)
 	roleStrings := make([]string, len(allowedRoles))
 	for i, r := range allowedRoles {
 		roleStrings[i] = string(r)

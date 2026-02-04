@@ -3,17 +3,14 @@ package password
 import (
 	"errors"
 
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type Service interface {
-	Hash(plain string) (string, error)
-	Compare(hash string, plain string) error
-}
-
 type bcryptService struct{}
 
-func New() Service {
+// New creates a new password hasher backed by bcrypt.
+func New() domainUser.PasswordHasher {
 	return &bcryptService{}
 }
 
