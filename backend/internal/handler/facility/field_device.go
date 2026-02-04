@@ -452,3 +452,76 @@ func (h *FieldDeviceHandler) UpdateFieldDeviceSpecification(c *gin.Context) {
 
 	c.JSON(http.StatusOK, toSpecificationResponse(*spec))
 }
+
+// BulkUpdateFieldDevices godoc
+// @Summary Bulk update multiple field devices
+// @Tags facility-field-devices
+// @Accept json
+// @Produce json
+// @Param request body dto.BulkUpdateFieldDeviceRequest true "Bulk update request"
+// @Success 200 {object} dto.BulkUpdateFieldDeviceResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/field-devices/bulk-update [patch]
+func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
+	var req dto.BulkUpdateFieldDeviceRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+
+	// Convert DTOs to domain models
+	updates := make([]domainFacility.BulkFieldDeviceUpdate, len(req.Updates))
+	for i, item := range req.Updates {
+		updates[i] = domainFacility.BulkFieldDeviceUpdate{
+			ID:           item.ID,
+			BMK:          item.BMK,
+			Description:  item.Description,
+			ApparatNr:    item.ApparatNr,
+			ApparatID:    item.ApparatID,
+			SystemPartID: item.SystemPartID,
+		}
+	}
+
+	result := h.service.BulkUpdate(updates)
+
+	c.JSON(http.StatusOK, toBulkOperationResponse(result))
+}
+
+// BulkDeleteFieldDevices godoc
+// @Summary Bulk delete multiple field devices
+// @Tags facility-field-devices
+// @Accept json
+// @Produce json
+// @Param request body dto.BulkDeleteFieldDeviceRequest true "Bulk delete request"
+// @Success 200 {object} dto.BulkDeleteFieldDeviceResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/field-devices/bulk-delete [delete]
+func (h *FieldDeviceHandler) BulkDeleteFieldDevices(c *gin.Context) {
+	var req dto.BulkDeleteFieldDeviceRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+
+	result := h.service.BulkDelete(req.IDs)
+
+	c.JSON(http.StatusOK, toBulkOperationResponse(result))
+}
+
+func toBulkOperationResponse(result *domainFacility.BulkOperationResult) dto.BulkUpdateFieldDeviceResponse {
+	results := make([]dto.BulkOperationResultItem, len(result.Results))
+	for i, r := range result.Results {
+		results[i] = dto.BulkOperationResultItem{
+			ID:      r.ID,
+			Success: r.Success,
+			Error:   r.Error,
+		}
+	}
+	return dto.BulkUpdateFieldDeviceResponse{
+		Results:      results,
+		TotalCount:   result.TotalCount,
+		SuccessCount: result.SuccessCount,
+		FailureCount: result.FailureCount,
+	}
+}
+

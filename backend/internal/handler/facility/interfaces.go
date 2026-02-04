@@ -74,6 +74,8 @@ type FieldDeviceService interface {
 	ListBacnetObjects(fieldDeviceID uuid.UUID) ([]domainFacility.BacnetObject, error)
 	CreateSpecification(fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error
 	UpdateSpecification(fieldDeviceID uuid.UUID, patch *domainFacility.Specification) (*domainFacility.Specification, error)
+	BulkUpdate(updates []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult
+	BulkDelete(ids []uuid.UUID) *domainFacility.BulkOperationResult
 }
 
 type ControlCabinetService interface {

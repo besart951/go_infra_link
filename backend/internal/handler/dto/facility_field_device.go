@@ -92,3 +92,47 @@ type MultiCreateFieldDeviceResponse struct {
 	SuccessCount  int                               `json:"success_count"`
 	FailureCount  int                               `json:"failure_count"`
 }
+
+// BulkUpdateFieldDeviceItem represents a single field device update in a bulk operation
+type BulkUpdateFieldDeviceItem struct {
+	ID          uuid.UUID `json:"id" binding:"required"`
+	BMK         *string   `json:"bmk" binding:"omitempty,max=10"`
+	Description *string   `json:"description" binding:"omitempty,max=250"`
+	ApparatNr   *int      `json:"apparat_nr" binding:"omitempty,min=1,max=99"`
+	ApparatID   *uuid.UUID `json:"apparat_id"`
+	SystemPartID *uuid.UUID `json:"system_part_id"`
+}
+
+// BulkUpdateFieldDeviceRequest represents a request to update multiple field devices
+type BulkUpdateFieldDeviceRequest struct {
+	Updates []BulkUpdateFieldDeviceItem `json:"updates" binding:"required,min=1,dive"`
+}
+
+// BulkOperationResultItem represents the result of a single item in a bulk operation
+type BulkOperationResultItem struct {
+	ID      uuid.UUID `json:"id"`
+	Success bool      `json:"success"`
+	Error   string    `json:"error,omitempty"`
+}
+
+// BulkUpdateFieldDeviceResponse represents the response from a bulk update operation
+type BulkUpdateFieldDeviceResponse struct {
+	Results      []BulkOperationResultItem `json:"results"`
+	TotalCount   int                       `json:"total_count"`
+	SuccessCount int                       `json:"success_count"`
+	FailureCount int                       `json:"failure_count"`
+}
+
+// BulkDeleteFieldDeviceRequest represents a request to delete multiple field devices
+type BulkDeleteFieldDeviceRequest struct {
+	IDs []uuid.UUID `json:"ids" binding:"required,min=1"`
+}
+
+// BulkDeleteFieldDeviceResponse represents the response from a bulk delete operation
+type BulkDeleteFieldDeviceResponse struct {
+	Results      []BulkOperationResultItem `json:"results"`
+	TotalCount   int                       `json:"total_count"`
+	SuccessCount int                       `json:"success_count"`
+	FailureCount int                       `json:"failure_count"`
+}
+

@@ -341,6 +341,34 @@ export async function multiCreateFieldDevices(
 	);
 }
 
+export async function bulkUpdateFieldDevices(
+	data: import('$lib/domain/facility/field-device.js').BulkUpdateFieldDeviceRequest,
+	options?: ApiOptions
+): Promise<import('$lib/domain/facility/field-device.js').BulkUpdateFieldDeviceResponse> {
+	return api<import('$lib/domain/facility/field-device.js').BulkUpdateFieldDeviceResponse>(
+		'/facility/field-devices/bulk-update',
+		{
+			...options,
+			method: 'PATCH',
+			body: JSON.stringify(data)
+		}
+	);
+}
+
+export async function bulkDeleteFieldDevices(
+	ids: string[],
+	options?: ApiOptions
+): Promise<import('$lib/domain/facility/field-device.js').BulkDeleteFieldDeviceResponse> {
+	return api<import('$lib/domain/facility/field-device.js').BulkDeleteFieldDeviceResponse>(
+		'/facility/field-devices/bulk-delete',
+		{
+			...options,
+			method: 'DELETE',
+			body: JSON.stringify({ ids })
+		}
+	);
+}
+
 // ============================================================================
 // SYSTEM TYPES
 // ============================================================================

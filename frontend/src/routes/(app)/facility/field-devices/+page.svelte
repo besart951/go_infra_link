@@ -6,6 +6,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import { EditableCell } from '$lib/components/ui/editable-cell/index.js';
 	import {
 		Plus,
 		X,
@@ -15,13 +16,15 @@
 		Search,
 		ChevronLeft,
 		Trash2,
-		Settings2
+		Settings2,
+		Save,
+		Undo
 	} from '@lucide/svelte';
 	import { fieldDeviceStore } from '$lib/stores/facility/fieldDeviceStore.js';
 	import { lookupCache } from '$lib/stores/facility/lookupCache.js';
-	import { updateFieldDevice } from '$lib/infrastructure/api/facility.adapter.js';
+	import { updateFieldDevice, bulkDeleteFieldDevices, bulkUpdateFieldDevices } from '$lib/infrastructure/api/facility.adapter.js';
 	import { addToast } from '$lib/components/toast.svelte';
-	import type { FieldDevice } from '$lib/domain/facility/index.js';
+	import type { FieldDevice, UpdateFieldDeviceRequest, BulkUpdateFieldDeviceItem } from '$lib/domain/facility/index.js';
 	import BuildingSelect from '$lib/components/facility/BuildingSelect.svelte';
 	import ControlCabinetSelect from '$lib/components/facility/ControlCabinetSelect.svelte';
 	import SPSControllerSelect from '$lib/components/facility/SPSControllerSelect.svelte';
@@ -42,6 +45,16 @@
 
 	// Selection state
 	let selectedIds = $state<Set<string>>(new Set());
+
+	// Pending edits state for inline editing
+	let pendingEdits = $state<Map<string, Partial<UpdateFieldDeviceRequest>>>(new Map());
+
+	// Error tracking state per device ID
+	let editErrors = $state<Map<string, string>>(new Map());
+
+	// Derived: has unsaved changes
+	const hasUnsavedChanges = $derived(pendingEdits.size > 0);
+	const pendingCount = $derived(pendingEdits.size);
 
 	// Derived states for selection
 	const allSelected = $derived(
@@ -185,6 +198,108 @@
 	const columnCount = $derived(
 		showSpecifications ? baseColumnCount + specColumnCount : baseColumnCount
 	);
+
+	// Inline editing functions
+	function queueEdit(deviceId: string, field: keyof UpdateFieldDeviceRequest, value: unknown) {
+		const existing = pendingEdits.get(deviceId) || {};
+		pendingEdits = new Map(pendingEdits).set(deviceId, { ...existing, [field]: value });
+		// Clear any existing error for this device when editing
+		if (editErrors.has(deviceId)) {
+			const newErrors = new Map(editErrors);
+			newErrors.delete(deviceId);
+			editErrors = newErrors;
+		}
+	}
+
+	function isFieldDirty(deviceId: string, field: keyof UpdateFieldDeviceRequest): boolean {
+		const edit = pendingEdits.get(deviceId);
+		return edit ? field in edit : false;
+	}
+
+	function getPendingValue(deviceId: string, field: keyof UpdateFieldDeviceRequest): string | undefined {
+		const edit = pendingEdits.get(deviceId);
+		if (!edit || !(field in edit)) return undefined;
+		const val = edit[field];
+		return val !== undefined ? String(val) : undefined;
+	}
+
+	function getError(deviceId: string): string | undefined {
+		return editErrors.get(deviceId);
+	}
+
+	async function saveAllPendingEdits() {
+		if (pendingEdits.size === 0) return;
+
+		const updates: BulkUpdateFieldDeviceItem[] = [];
+		for (const [id, changes] of pendingEdits) {
+			updates.push({
+				id,
+				bmk: changes.bmk,
+				description: changes.description,
+				apparat_nr: changes.apparat_nr
+			});
+		}
+
+		try {
+			const result = await bulkUpdateFieldDevices({ updates });
+			
+			// Process results and track errors
+			const newErrors = new Map<string, string>();
+			const successIds = new Set<string>();
+			
+			for (const r of result.results) {
+				if (r.success) {
+					successIds.add(r.id);
+				} else if (r.error) {
+					newErrors.set(r.id, r.error);
+				}
+			}
+			
+			// Remove successful edits from pending, keep failed ones
+			const remainingEdits = new Map(pendingEdits);
+			for (const id of successIds) {
+				remainingEdits.delete(id);
+			}
+			pendingEdits = remainingEdits;
+			editErrors = newErrors;
+			
+			if (result.success_count > 0) {
+				addToast(`Updated ${result.success_count} field device(s)`, 'success');
+				fieldDeviceStore.reload();
+			}
+			if (result.failure_count > 0) {
+				addToast(`Failed to update ${result.failure_count} device(s). Check highlighted fields.`, 'error');
+			}
+		} catch (error: unknown) {
+			const err = error as Error;
+			addToast(`Bulk update failed: ${err.message}`, 'error');
+		}
+	}
+
+	function discardAllEdits() {
+		pendingEdits = new Map();
+		editErrors = new Map();
+	}
+
+	async function handleBulkDelete() {
+		if (selectedIds.size === 0) return;
+		if (!confirm(`Delete ${selectedIds.size} field device(s)? This action cannot be undone.`)) return;
+
+		try {
+			const result = await bulkDeleteFieldDevices([...selectedIds]);
+			if (result.success_count > 0) {
+				addToast(`Deleted ${result.success_count} field device(s)`, 'success');
+			}
+			if (result.failure_count > 0) {
+				addToast(`Failed to delete ${result.failure_count} device(s)`, 'error');
+			}
+			selectedIds = new Set();
+			fieldDeviceStore.reload();
+		} catch (error: unknown) {
+			const err = error as Error;
+			addToast(`Bulk delete failed: ${err.message}`, 'error');
+		}
+	}
 </script>
 
 <svelte:head>
@@ -294,7 +409,7 @@
 						<X class="mr-1 h-4 w-4" />
 						Clear
 					</Button>
-					<Button variant="destructive" size="sm">
+					<Button variant="destructive" size="sm" onclick={handleBulkDelete}>
 						<Trash2 class="mr-1 h-4 w-4" />
 						Delete
 					</Button>
@@ -435,22 +550,39 @@
 									{formatSPSControllerSystemType(device)}
 								</Table.Cell>
 								<!-- BMK -->
-								<Table.Cell>
-									{#if device.bmk}
-										<code class="rounded bg-muted px-1.5 py-0.5 text-sm">{device.bmk}</code>
-									{:else}
-										<span class="text-muted-foreground">-</span>
-									{/if}
+								<Table.Cell class="p-1">
+									<EditableCell
+										value={device.bmk ?? ''}
+										pendingValue={getPendingValue(device.id, 'bmk')}
+										type="text"
+										maxlength={10}
+										isDirty={isFieldDirty(device.id, 'bmk')}
+										onSave={(v) => queueEdit(device.id, 'bmk', v || undefined)}
+									/>
 								</Table.Cell>
 								<!-- Description -->
-								<Table.Cell class="max-w-48 truncate" title={device.description || ''}>
-									{device.description || '-'}
+								<Table.Cell class="max-w-48 p-1">
+									<EditableCell
+										value={device.description ?? ''}
+										pendingValue={getPendingValue(device.id, 'description')}
+										type="text"
+										maxlength={250}
+										isDirty={isFieldDirty(device.id, 'description')}
+										onSave={(v) => queueEdit(device.id, 'description', v || undefined)}
+									/>
 								</Table.Cell>
 								<!-- Apparat Nr -->
-								<Table.Cell>
-									<code class="rounded bg-muted px-1.5 py-0.5 text-sm">
-										{device.apparat_nr}
-									</code>
+								<Table.Cell class="p-1">
+									<EditableCell
+										value={device.apparat_nr}
+										pendingValue={getPendingValue(device.id, 'apparat_nr')}
+										type="number"
+										min={1}
+										max={99}
+										isDirty={isFieldDirty(device.id, 'apparat_nr')}
+										error={getError(device.id)}
+										onSave={(v) => queueEdit(device.id, 'apparat_nr', v ? parseInt(v) : undefined)}
+									/>
 								</Table.Cell>
 								<!-- Apparat (combobox with cache) -->
 								<Table.Cell>
@@ -644,4 +776,21 @@
 			</div>
 		{/if}
 	</div>
+
+	<!-- Floating Save Bar -->
+	{#if hasUnsavedChanges}
+		<div
+			class="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-lg"
+		>
+			<span class="text-sm font-medium">{pendingCount} unsaved change{pendingCount !== 1 ? 's' : ''}</span>
+			<Button size="sm" onclick={saveAllPendingEdits}>
+				<Save class="mr-1 h-4 w-4" />
+				Save All
+			</Button>
+			<Button variant="ghost" size="sm" onclick={discardAllEdits}>
+				<Undo class="mr-1 h-4 w-4" />
+				Discard
+			</Button>
+		</div>
+	{/if}
 </div>

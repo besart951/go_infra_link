@@ -123,3 +123,58 @@ export interface MultiCreateFieldDeviceResponse {
 	success_count: number;
 	failure_count: number;
 }
+
+/**
+ * Bulk update field device item
+ */
+export interface BulkUpdateFieldDeviceItem {
+	id: string;
+	bmk?: string;
+	description?: string;
+	apparat_nr?: number;
+	apparat_id?: string;
+	system_part_id?: string;
+}
+
+/**
+ * Bulk update field device request
+ */
+export interface BulkUpdateFieldDeviceRequest {
+	updates: BulkUpdateFieldDeviceItem[];
+}
+
+/**
+ * Bulk operation result item
+ */
+export interface BulkOperationResultItem {
+	id: string;
+	success: boolean;
+	error?: string;
+}
+
+/**
+ * Bulk update field device response
+ */
+export interface BulkUpdateFieldDeviceResponse {
+	results: BulkOperationResultItem[];
+	total_count: number;
+	success_count: number;
+	failure_count: number;
+}
+
+/**
+ * Bulk delete field device request
+ */
+export interface BulkDeleteFieldDeviceRequest {
+	ids: string[];
+}
+
+/**
+ * Bulk delete field device response
+ */
+export interface BulkDeleteFieldDeviceResponse {
+	results: BulkOperationResultItem[];
+	total_count: number;
+	success_count: number;
+	failure_count: number;
+}

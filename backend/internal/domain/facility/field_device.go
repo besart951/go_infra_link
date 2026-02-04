@@ -62,3 +62,29 @@ type FieldDeviceMultiCreateResult struct {
 	SuccessCount  int
 	FailureCount  int
 }
+
+// BulkFieldDeviceUpdate represents a single field device update in a bulk operation
+type BulkFieldDeviceUpdate struct {
+	ID           uuid.UUID
+	BMK          *string
+	Description  *string
+	ApparatNr    *int
+	ApparatID    *uuid.UUID
+	SystemPartID *uuid.UUID
+}
+
+// BulkOperationResultItem represents the result of a single item in a bulk operation
+type BulkOperationResultItem struct {
+	ID      uuid.UUID
+	Success bool
+	Error   string
+}
+
+// BulkOperationResult represents the result of a bulk operation
+type BulkOperationResult struct {
+	Results      []BulkOperationResultItem
+	TotalCount   int
+	SuccessCount int
+	FailureCount int
+}
+

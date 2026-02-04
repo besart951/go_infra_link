@@ -215,6 +215,8 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		facility.PUT("/field-devices/:id/specification", handlers.FacilityFieldDeviceHandler.UpdateFieldDeviceSpecification)
 		facility.PUT("/field-devices/:id", handlers.FacilityFieldDeviceHandler.UpdateFieldDevice)
 		facility.DELETE("/field-devices/:id", handlers.FacilityFieldDeviceHandler.DeleteFieldDevice)
+		facility.PATCH("/field-devices/bulk-update", handlers.FacilityFieldDeviceHandler.BulkUpdateFieldDevices)
+		facility.DELETE("/field-devices/bulk-delete", handlers.FacilityFieldDeviceHandler.BulkDeleteFieldDevices)
 
 		facility.POST("/bacnet-objects", handlers.FacilityBacnetObjectHandler.CreateBacnetObject)
 		facility.PUT("/bacnet-objects/:id", handlers.FacilityBacnetObjectHandler.UpdateBacnetObject)

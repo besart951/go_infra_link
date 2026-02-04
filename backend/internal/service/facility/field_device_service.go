@@ -815,3 +815,96 @@ func (s *FieldDeviceService) MultiCreate(items []domainFacility.FieldDeviceCreat
 
 	return result
 }
+
+// BulkUpdate updates multiple field devices in a single operation.
+// It processes each update independently and returns detailed results.
+func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult {
+	result := &domainFacility.BulkOperationResult{
+		Results:      make([]domainFacility.BulkOperationResultItem, len(updates)),
+		TotalCount:   len(updates),
+		SuccessCount: 0,
+		FailureCount: 0,
+	}
+
+	for i, update := range updates {
+		resultItem := &result.Results[i]
+		resultItem.ID = update.ID
+		resultItem.Success = false
+
+		// Fetch the existing field device
+		fieldDevice, err := s.GetByID(update.ID)
+		if err != nil {
+			if err == domain.ErrNotFound {
+				resultItem.Error = "field device not found"
+			} else {
+				resultItem.Error = err.Error()
+			}
+			result.FailureCount++
+			continue
+		}
+
+		// Apply partial updates
+		if update.BMK != nil {
+			fieldDevice.BMK = update.BMK
+		}
+		if update.Description != nil {
+			fieldDevice.Description = update.Description
+		}
+		if update.ApparatNr != nil {
+			fieldDevice.ApparatNr = *update.ApparatNr
+		}
+		if update.ApparatID != nil {
+			fieldDevice.ApparatID = *update.ApparatID
+		}
+		if update.SystemPartID != nil {
+			fieldDevice.SystemPartID = *update.SystemPartID
+		}
+
+		// Validate and update
+		if err := s.Update(fieldDevice); err != nil {
+			if ve, ok := domain.AsValidationError(err); ok {
+				for _, msg := range ve.Fields {
+					resultItem.Error = msg
+					break
+				}
+			} else {
+				resultItem.Error = err.Error()
+			}
+			result.FailureCount++
+			continue
+		}
+
+		resultItem.Success = true
+		result.SuccessCount++
+	}
+
+	return result
+}
+
+// BulkDelete deletes multiple field devices in a single operation.
+// It processes each deletion independently and returns detailed results.
+func (s *FieldDeviceService) BulkDelete(ids []uuid.UUID) *domainFacility.BulkOperationResult {
+	result := &domainFacility.BulkOperationResult{
+		Results:      make([]domainFacility.BulkOperationResultItem, len(ids)),
+		TotalCount:   len(ids),
+		SuccessCount: 0,
+		FailureCount: 0,
+	}
+
+	for i, id := range ids {
+		resultItem := &result.Results[i]
+		resultItem.ID = id
+		resultItem.Success = false
+
+		if err := s.DeleteByID(id); err != nil {
+			resultItem.Error = err.Error()
+			result.FailureCount++
+			continue
+		}
+
+		resultItem.Success = true
+		result.SuccessCount++
+	}
+
+	return result
+}
