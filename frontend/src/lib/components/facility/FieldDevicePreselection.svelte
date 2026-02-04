@@ -167,6 +167,32 @@
 	type ApparatItem = { id: string; label: string; raw: Apparat };
 	type SystemPartItem = { id: string; label: string; raw: SystemPart };
 
+	// Full items from options (for fetchById lookup)
+	const allObjectDataItems = $derived.by((): ObjectDataItem[] =>
+		(options?.object_datas ?? []).map((od) => ({
+			id: od.id,
+			label: `${od.description} (v${od.version})`,
+			raw: od
+		}))
+	);
+
+	const allApparatItems = $derived.by((): ApparatItem[] =>
+		(options?.apparats ?? []).map((a) => ({
+			id: a.id,
+			label: `${a.short_name} - ${a.name}`,
+			raw: a
+		}))
+	);
+
+	const allSystemPartItems = $derived.by((): SystemPartItem[] =>
+		(options?.system_parts ?? []).map((sp) => ({
+			id: sp.id,
+			label: `${sp.short_name} - ${sp.name}`,
+			raw: sp
+		}))
+	);
+
+	// Filtered items for dropdown display
 	const objectDataItems = $derived.by((): ObjectDataItem[] =>
 		searchFilteredObjectDatas.map((od) => ({
 			id: od.id,
@@ -278,7 +304,7 @@
 					const q = search.toLowerCase();
 					return objectDataItems.filter((i) => i.label.toLowerCase().includes(q));
 				}}
-				fetchById={async (id: string) => objectDataItems.find((i) => i.id === id) ?? null}
+				fetchById={async (id: string) => allObjectDataItems.find((i) => i.id === id) ?? null}
 				labelKey="label"
 				width="w-full"
 				value={value.objectDataId}
@@ -301,7 +327,7 @@
 					const q = search.toLowerCase();
 					return apparatItems.filter((i) => i.label.toLowerCase().includes(q));
 				}}
-				fetchById={async (id: string) => apparatItems.find((i) => i.id === id) ?? null}
+				fetchById={async (id: string) => allApparatItems.find((i) => i.id === id) ?? null}
 				labelKey="label"
 				width="w-full"
 				value={value.apparatId}
@@ -324,7 +350,7 @@
 					const q = search.toLowerCase();
 					return systemPartItems.filter((i) => i.label.toLowerCase().includes(q));
 				}}
-				fetchById={async (id: string) => systemPartItems.find((i) => i.id === id) ?? null}
+				fetchById={async (id: string) => allSystemPartItems.find((i) => i.id === id) ?? null}
 				labelKey="label"
 				width="w-full"
 				value={value.systemPartId}

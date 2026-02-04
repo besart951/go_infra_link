@@ -386,40 +386,62 @@ func (s *FieldDeviceService) ListAvailableApparatNumbers(spsControllerSystemType
 // GetFieldDeviceOptions returns all metadata needed for creating/editing field devices.
 // This implements the "Single-Fetch Metadata Strategy" to avoid multiple API calls.
 func (s *FieldDeviceService) GetFieldDeviceOptions() (*domainFacility.FieldDeviceOptions, error) {
-	// Fetch all apparats with their system parts (many-to-many)
-	apparatList, err := s.apparatRepo.GetPaginatedList(domain.PaginationParams{
-		Page:  1,
-		Limit: 1000, // Get all apparats
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Fetch all system parts with their apparats (many-to-many)
-	systemPartList, err := s.systemPartRepo.GetPaginatedList(domain.PaginationParams{
-		Page:  1,
-		Limit: 1000, // Get all system parts
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	// Fetch all active object datas (templates) with their apparats
 	objectDatas, err := s.objectDataRepo.GetTemplates()
 	if err != nil {
 		return nil, err
 	}
 
+	// Build sets of unique apparats and system parts from the object datas
+	apparatSet := make(map[uuid.UUID]*domainFacility.Apparat)
+	systemPartSet := make(map[uuid.UUID]*domainFacility.SystemPart)
+
+	// Collect all apparats from object datas
+	for _, od := range objectDatas {
+		if od == nil {
+			continue
+		}
+		for _, app := range od.Apparats {
+			if app != nil {
+				apparatSet[app.ID] = app
+			}
+		}
+	}
+
+	// Fetch full apparat data with system parts for the collected apparats
+	apparatIDs := make([]uuid.UUID, 0, len(apparatSet))
+	for id := range apparatSet {
+		apparatIDs = append(apparatIDs, id)
+	}
+
+	if len(apparatIDs) > 0 {
+		fullApparats, err := s.apparatRepo.GetByIds(apparatIDs)
+		if err != nil {
+			return nil, err
+		}
+		for _, app := range fullApparats {
+			if app != nil {
+				apparatSet[app.ID] = app
+				// Collect system parts from each apparat
+				for _, sp := range app.SystemParts {
+					if sp != nil {
+						systemPartSet[sp.ID] = sp
+					}
+				}
+			}
+		}
+	}
+
 	// Build relationship maps
 	apparatToSystemPart := make(map[uuid.UUID][]uuid.UUID)
-	for _, apparat := range apparatList.Items {
+	for id, apparat := range apparatSet {
 		systemPartIDs := make([]uuid.UUID, 0, len(apparat.SystemParts))
 		for _, sp := range apparat.SystemParts {
 			if sp != nil {
 				systemPartIDs = append(systemPartIDs, sp.ID)
 			}
 		}
-		apparatToSystemPart[apparat.ID] = systemPartIDs
+		apparatToSystemPart[id] = systemPartIDs
 	}
 
 	objectDataToApparat := make(map[uuid.UUID][]uuid.UUID)
@@ -436,15 +458,15 @@ func (s *FieldDeviceService) GetFieldDeviceOptions() (*domainFacility.FieldDevic
 		objectDataToApparat[od.ID] = apparatIDs
 	}
 
-	// Convert pointer slices to value slices
-	apparats := make([]domainFacility.Apparat, len(apparatList.Items))
-	for i, item := range apparatList.Items {
-		apparats[i] = item
+	// Convert maps to slices
+	apparats := make([]domainFacility.Apparat, 0, len(apparatSet))
+	for _, app := range apparatSet {
+		apparats = append(apparats, *app)
 	}
 
-	systemParts := make([]domainFacility.SystemPart, len(systemPartList.Items))
-	for i, item := range systemPartList.Items {
-		systemParts[i] = item
+	systemParts := make([]domainFacility.SystemPart, 0, len(systemPartSet))
+	for _, sp := range systemPartSet {
+		systemParts = append(systemParts, *sp)
 	}
 
 	objectDataValues := make([]domainFacility.ObjectData, 0, len(objectDatas))
