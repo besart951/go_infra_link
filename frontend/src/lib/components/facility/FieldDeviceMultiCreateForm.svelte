@@ -1,38 +1,64 @@
 <script lang="ts">
 	/**
-	 * Multi-Create Field Device Form
-	 * Allows creating multiple field devices with:
+	 * Multi-Create Field Device Form (Refactored)
+	 * 
+	 * Architecture: Hexagonal / Clean Architecture
+	 * - Domain logic in $lib/domain/facility/fieldDeviceMultiCreate.ts
+	 * - UI components are thin wrappers around domain logic
+	 * - Clear separation of concerns
+	 * 
+	 * Features:
 	 * - Selection flow: SPS Controller System Type → Object Data → Apparat → System Part
-	 * - Dynamic row generation with + button
-	 * - Auto-calculated apparat_nr with placeholder
-	 * - Field-level validation display
-	 * - State persistence on navigation
+	 * - Dynamic row generation
+	 * - Real-time validation with swap detection
+	 * - State persistence
 	 */
 	import { onMount, onDestroy } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
 	import FieldDevicePreselection from '$lib/components/facility/FieldDevicePreselection.svelte';
+	import FieldDeviceRow from '$lib/components/facility/FieldDeviceRow.svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
-	import { Plus, Trash2, AlertCircle } from '@lucide/svelte';
-	import { FieldDeviceMultiCreateUseCase } from '$lib/application/useCases/facility/fieldDeviceMultiCreateUseCase.js';
-	import { facilityFieldDeviceMultiCreateRepository } from '$lib/infrastructure/api/facilityFieldDeviceMultiCreateRepository.js';
+	import { Plus, AlertCircle } from '@lucide/svelte';
 	import { addToast } from '$lib/components/toast.svelte';
 	import { ApiException } from '$lib/api/client.js';
+
+	// Domain imports
+	import {
+		type FieldDeviceRowData,
+		type FieldDeviceRowError,
+		type MultiCreateSelection,
+		createSelectionKey,
+		hasRequiredSelections,
+		canFetchAvailableNumbers,
+		createNewRow,
+		getUsedApparatNumbers,
+		validateAllRows,
+		loadPersistedState,
+		savePersistedState,
+		clearPersistedState
+	} from '$lib/domain/facility/fieldDeviceMultiCreate.js';
+
+	// Application layer imports
+	import { FieldDeviceMultiCreateUseCase } from '$lib/application/useCases/facility/fieldDeviceMultiCreateUseCase.js';
+	import { facilityFieldDeviceMultiCreateRepository } from '$lib/infrastructure/api/facilityFieldDeviceMultiCreateRepository.js';
+
 	import type {
 		FieldDevice,
 		SPSControllerSystemType,
-		CreateFieldDeviceRequest,
-		AvailableApparatNumbersResponse
+		CreateFieldDeviceRequest
 	} from '$lib/domain/facility/index.js';
-	import type { FieldDevicePreselection as Preselection } from '$lib/domain/facility/preselectionFilter.js';
+	import type { FieldDevicePreselection as PreselectionType } from '$lib/domain/facility/preselectionFilter.js';
 
+	// Use case instance
 	const useCase = new FieldDeviceMultiCreateUseCase(facilityFieldDeviceMultiCreateRepository);
 
+	// ─────────────────────────────────────────────────────────────────────────────
 	// Props
+	// ─────────────────────────────────────────────────────────────────────────────
 	interface Props {
 		projectId?: string;
 		onSuccess?: (createdDevices: FieldDevice[]) => void;
@@ -41,228 +67,152 @@
 
 	let { projectId, onSuccess, onCancel }: Props = $props();
 
-	// State for selection flow
-	let spsControllerSystemTypeId = $state('');
-	let preselection = $state<Preselection>({ objectDataId: '', apparatId: '', systemPartId: '' });
-	let apparatId = $state('');
-	let systemPartId = $state('');
-	let objectDataId = $state('');
-	let selectionKey = $state('');
-	// State for available apparat numbers
+	// ─────────────────────────────────────────────────────────────────────────────
+	// State
+	// ─────────────────────────────────────────────────────────────────────────────
+	
+	// Selection state
+	let selection = $state<MultiCreateSelection>({
+		spsControllerSystemTypeId: '',
+		objectDataId: '',
+		apparatId: '',
+		systemPartId: ''
+	});
+	
+	// For FieldDevicePreselection component
+	let preselectionValue = $state<PreselectionType>({
+		objectDataId: '',
+		apparatId: '',
+		systemPartId: ''
+	});
+
+	// Row data
+	let rows = $state<FieldDeviceRowData[]>([]);
+	
+	// Validation errors (reactive map)
+	let rowErrors = $state<Map<number, FieldDeviceRowError>>(new Map());
+
+	// Available apparat numbers from backend
 	let availableNumbers = $state<number[]>([]);
 	let loadingAvailableNumbers = $state(false);
-	let availableNumbersAbortController: AbortController | null = null;
-
-	// State for field device rows
-	interface FieldDeviceRow {
-		id: string; // temporary ID for UI
-		bmk: string;
-		description: string;
-		apparatNr: number | null;
-		error: string;
-		errorField: string;
-	}
-
-	let rows = $state<FieldDeviceRow[]>([]);
 
 	// Form state
 	let submitting = $state(false);
 	let globalError = $state('');
 
-	// Derived states
-	const hasRequiredSelection = $derived(
-		Boolean(spsControllerSystemTypeId && objectDataId && apparatId && systemPartId)
-	);
+	// Internal tracking
+	let selectionKey = $state('');
+	let abortController: AbortController | null = null;
 
-	const canAddRow = $derived(hasRequiredSelection && availableNumbers.length > rows.length);
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Derived State
+	// ─────────────────────────────────────────────────────────────────────────────
+	
+	const showConfiguration = $derived(hasRequiredSelections(selection));
+	const showRowsSection = $derived(showConfiguration);
+	const canAddRow = $derived(
+		showConfiguration && availableNumbers.length > rows.length && !loadingAvailableNumbers
+	);
+	const hasValidationErrors = $derived(rowErrors.size > 0);
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Lifecycle
+	// ─────────────────────────────────────────────────────────────────────────────
 
 	onMount(() => {
-		loadPersistedState();
-		preselection = {
-			objectDataId,
-			apparatId,
-			systemPartId
-		};
-	});
-
-	// Save state on unmount
-	onDestroy(() => {
-		if (rows.length > 0 || spsControllerSystemTypeId) {
-			saveState();
+		const persisted = loadPersistedState();
+		if (persisted) {
+			selection = persisted.selection;
+			rows = persisted.rows;
+			preselectionValue = {
+				objectDataId: persisted.selection.objectDataId,
+				apparatId: persisted.selection.apparatId,
+				systemPartId: persisted.selection.systemPartId
+			};
 		}
 	});
 
-	// Watch for changes in selection and fetch available numbers
+	onDestroy(() => {
+		abortController?.abort();
+		if (rows.length > 0 || selection.spsControllerSystemTypeId) {
+			savePersistedState(selection, rows);
+		}
+	});
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Effects
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	// Fetch available numbers when selection changes
 	$effect(() => {
-		if (spsControllerSystemTypeId && apparatId && systemPartId) {
+		const newKey = createSelectionKey(selection);
+		const keyChanged = selectionKey !== '' && newKey !== selectionKey;
+		
+		// Reset on key change
+		if (keyChanged) {
+			availableNumbers = [];
+			rows = [];
+			rowErrors = new Map();
+		}
+		
+		selectionKey = newKey;
+
+		// Fetch if we have the required selections
+		if (canFetchAvailableNumbers(selection)) {
 			fetchAvailableNumbers();
 		}
 	});
 
+	// Re-validate rows when availableNumbers or rows change
 	$effect(() => {
-		const nextKey = `${spsControllerSystemTypeId}|${objectDataId}|${apparatId}|${systemPartId}`;
-		if (!selectionKey) {
-			selectionKey = nextKey;
-			return;
-		}
-		if (nextKey !== selectionKey) {
-			selectionKey = nextKey;
-			availableNumbersAbortController?.abort();
-			availableNumbers = [];
-			rows = [];
+		// This effect depends on availableNumbers and rows
+		if (availableNumbers.length > 0 && rows.length > 0) {
+			revalidateAllRows();
 		}
 	});
 
+	// ─────────────────────────────────────────────────────────────────────────────
+	// API Functions
+	// ─────────────────────────────────────────────────────────────────────────────
+
 	async function fetchAvailableNumbers() {
-		if (!spsControllerSystemTypeId || !apparatId || !systemPartId) {
+		if (!canFetchAvailableNumbers(selection)) {
 			availableNumbers = [];
-			loadingAvailableNumbers = false;
 			return;
 		}
 
+		// Abort previous request
+		abortController?.abort();
+		
 		loadingAvailableNumbers = true;
-		availableNumbersAbortController?.abort();
-		availableNumbersAbortController = new AbortController();
-		const signal = availableNumbersAbortController.signal;
-		try {
-			const response: AvailableApparatNumbersResponse = await useCase.getAvailableApparatNumbers(
-				spsControllerSystemTypeId,
-				apparatId,
-				systemPartId || undefined,
-				signal
-			);
-			availableNumbers = response.available;
+		const controller = new AbortController();
+		abortController = controller;
 
-			// Update rows with available numbers
-			updateRowsWithAvailableNumbers();
-		} catch (err: any) {
-			if (err instanceof DOMException && err.name === 'AbortError') {
-				return;
+		try {
+			const response = await useCase.getAvailableApparatNumbers(
+				selection.spsControllerSystemTypeId,
+				selection.apparatId,
+				selection.systemPartId,
+				controller.signal
+			);
+
+			if (!controller.signal.aborted) {
+				availableNumbers = response.available;
+				autoAssignApparatNumbers();
 			}
-			const msg =
-				err instanceof ApiException
-					? `Failed to fetch available apparat numbers (${err.status} ${err.error}): ${err.message}`
-					: `Failed to fetch available apparat numbers: ${err?.message ?? String(err)}`;
+		} catch (err) {
+			if (err instanceof DOMException && err.name === 'AbortError') return;
+			
+			const msg = err instanceof ApiException
+				? `Failed to fetch available numbers (${err.status}): ${err.message}`
+				: `Failed to fetch available numbers: ${(err as Error)?.message ?? String(err)}`;
 			addToast(msg, 'error');
 			availableNumbers = [];
 		} finally {
-			loadingAvailableNumbers = false;
-		}
-	}
-
-	function updateRowsWithAvailableNumbers() {
-		// Auto-assign available numbers to rows that don't have a number yet
-		const used = new Set<number>();
-		rows.forEach((row) => {
-			if (typeof row.apparatNr === 'number') used.add(row.apparatNr);
-		});
-
-		rows.forEach((row, index) => {
-			if (row.apparatNr !== null) return;
-			const nextAvailable = availableNumbers.find((nr) => !used.has(nr));
-			if (nextAvailable === undefined) return;
-			row.apparatNr = nextAvailable;
-			used.add(nextAvailable);
-			validateRow(index, { requireApparatNr: false });
-		});
-
-		// Re-validate rows when the available set changes
-		rows.forEach((_, index) => validateRow(index, { requireApparatNr: false }));
-	}
-
-	function validateRow(index: number, opts: { requireApparatNr: boolean }) {
-		const row = rows[index];
-		if (!row) return false;
-
-		row.error = '';
-		row.errorField = '';
-
-		if (row.apparatNr === null) {
-			if (opts.requireApparatNr) {
-				row.error = 'Apparat number is required';
-				row.errorField = 'apparat_nr';
-				return false;
+			if (abortController === controller) {
+				loadingAvailableNumbers = false;
 			}
-			return true;
 		}
-
-		if (row.apparatNr < 1 || row.apparatNr > 99) {
-			row.error = 'Apparat number must be between 1 and 99';
-			row.errorField = 'apparat_nr';
-			return false;
-		}
-
-		if (!availableNumbers.includes(row.apparatNr)) {
-			row.error = 'This apparat number is not available';
-			row.errorField = 'apparat_nr';
-			return false;
-		}
-
-		const duplicateIndex = rows.findIndex(
-			(r, i) => i !== index && r.apparatNr !== null && r.apparatNr === row.apparatNr
-		);
-		if (duplicateIndex !== -1) {
-			row.error = `Duplicate apparat number (also used in row #${duplicateIndex + 1})`;
-			row.errorField = 'apparat_nr';
-			return false;
-		}
-
-		return true;
-	}
-
-	function addRow() {
-		if (!canAddRow) return;
-
-		const nextAvailableNr = availableNumbers.find(
-			(nr) => !rows.some((row) => row.apparatNr === nr)
-		);
-
-		if (nextAvailableNr === undefined) {
-			addToast('No more available apparat numbers (all are assigned).', 'warning');
-			return;
-		}
-
-		rows.push({
-			id: crypto.randomUUID(),
-			bmk: '',
-			description: '',
-			apparatNr: nextAvailableNr,
-			error: '',
-			errorField: ''
-		});
-	}
-
-	function removeRow(index: number) {
-		rows.splice(index, 1);
-	}
-
-	function getPlaceholderForRow(index: number): string {
-		const usedNumbers = rows
-			.filter((r, i) => i !== index && r.apparatNr !== null)
-			.map((r) => r.apparatNr);
-		const nextAvailable = availableNumbers.find((nr) => !usedNumbers.includes(nr));
-		return nextAvailable !== undefined ? `Next available: ${nextAvailable}` : '';
-	}
-
-	function handleApparatNrChange(index: number, value: string) {
-		const trimmed = value.trim();
-		if (!trimmed) {
-			rows[index].apparatNr = null;
-			rows[index].error = '';
-			rows[index].errorField = '';
-			return;
-		}
-
-		const num = Number.parseInt(trimmed, 10);
-		if (Number.isNaN(num)) {
-			rows[index].apparatNr = null;
-			rows[index].error = 'Please enter a valid number';
-			rows[index].errorField = 'apparat_nr';
-			return;
-		}
-
-		rows[index].apparatNr = num;
-		validateRow(index, { requireApparatNr: false });
 	}
 
 	async function handleSubmit() {
@@ -271,15 +221,12 @@
 			return;
 		}
 
-		// Validate all rows
-		let hasErrors = false;
-		rows.forEach((_, index) => {
-			const ok = validateRow(index, { requireApparatNr: true });
-			if (!ok) hasErrors = true;
-		});
+		// Validate all rows (requiring values)
+		const errors = validateAllRows(rows, availableNumbers, true);
+		rowErrors = errors;
 
-		if (hasErrors) {
-			addToast('Please fix the validation errors in the form.', 'error');
+		if (errors.size > 0) {
+			addToast('Please fix the validation errors.', 'error');
 			return;
 		}
 
@@ -291,21 +238,25 @@
 				bmk: row.bmk || undefined,
 				description: row.description || undefined,
 				apparat_nr: row.apparatNr!,
-				sps_controller_system_type_id: spsControllerSystemTypeId,
-				system_part_id: systemPartId,
-				apparat_id: apparatId,
-				object_data_id: objectDataId || undefined
+				sps_controller_system_type_id: selection.spsControllerSystemTypeId,
+				system_part_id: selection.systemPartId,
+				apparat_id: selection.apparatId,
+				object_data_id: selection.objectDataId || undefined
 			}));
 
 			const response = await useCase.multiCreate(fieldDevices);
 
-			// Update rows with errors from backend
+			// Map backend errors to rows
+			const newErrors = new Map<number, FieldDeviceRowError>();
 			response.results.forEach((result) => {
 				if (!result.success && result.index < rows.length) {
-					rows[result.index].error = result.error;
-					rows[result.index].errorField = result.error_field;
+					newErrors.set(result.index, {
+						message: result.error,
+						field: (result.error_field as FieldDeviceRowError['field']) || ''
+					});
 				}
 			});
+			rowErrors = newErrors;
 
 			if (response.failure_count > 0) {
 				addToast(
@@ -314,10 +265,10 @@
 				);
 			} else {
 				addToast(`Created ${response.success_count} field device(s).`, 'success');
-
-				// Clear state and notify parent
-				clearState();
+				clearPersistedState();
 				rows = [];
+				rowErrors = new Map();
+
 				if (onSuccess) {
 					const createdDevices = response.results
 						.filter((r) => r.success)
@@ -326,92 +277,138 @@
 					onSuccess(createdDevices);
 				}
 			}
-		} catch (err: any) {
-			globalError = err.message || 'Failed to create field devices';
-			addToast(`Failed to create field devices: ${err?.message ?? String(err)}`, 'error');
+		} catch (err) {
+			globalError = (err as Error)?.message || 'Failed to create field devices';
+			addToast(`Failed: ${globalError}`, 'error');
 		} finally {
 			submitting = false;
 		}
 	}
 
-	// State persistence
-	const STORAGE_KEY = 'fieldDeviceMultiCreate';
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Row Management
+	// ─────────────────────────────────────────────────────────────────────────────
 
-	function saveState() {
-		if (typeof sessionStorage === 'undefined') return;
-		const state = {
-			spsControllerSystemTypeId,
-			apparatId,
-			systemPartId,
-			objectDataId,
-			rows
-		};
-		try {
-			sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-		} catch (err) {
-			console.error('Failed to persist state:', err);
+	function addRow() {
+		if (!canAddRow) return;
+
+		const usedNumbers = getUsedApparatNumbers(rows);
+		const newRow = createNewRow(availableNumbers, usedNumbers);
+
+		if (!newRow) {
+			addToast('No more available apparat numbers.', 'warning');
+			return;
 		}
+
+		rows = [...rows, newRow];
 	}
 
-	function loadPersistedState() {
-		if (typeof sessionStorage === 'undefined') return;
-		const stored = sessionStorage.getItem(STORAGE_KEY);
-		if (stored) {
-			try {
-				const state = JSON.parse(stored);
-				spsControllerSystemTypeId = state.spsControllerSystemTypeId || '';
-				apparatId = state.apparatId || '';
-				systemPartId = state.systemPartId || '';
-				objectDataId = state.objectDataId || '';
-				rows = Array.isArray(state.rows)
-					? state.rows.map((r: any) => ({
-							id: typeof r?.id === 'string' ? r.id : crypto.randomUUID(),
-							bmk: typeof r?.bmk === 'string' ? r.bmk : '',
-							description: typeof r?.description === 'string' ? r.description : '',
-							apparatNr: typeof r?.apparatNr === 'number' ? r.apparatNr : null,
-							error: typeof r?.error === 'string' ? r.error : '',
-							errorField: typeof r?.errorField === 'string' ? r.errorField : ''
-						}))
-					: [];
-			} catch (err) {
-				console.error('Failed to load persisted state:', err);
+	function removeRow(index: number) {
+		rows = rows.filter((_, i) => i !== index);
+		revalidateAllRows();
+	}
+
+	function autoAssignApparatNumbers() {
+		const used = getUsedApparatNumbers(rows);
+		let changed = false;
+
+		rows.forEach((row) => {
+			if (row.apparatNr === null) {
+				const nextAvailable = availableNumbers.find((nr) => !used.has(nr));
+				if (nextAvailable !== undefined) {
+					row.apparatNr = nextAvailable;
+					used.add(nextAvailable);
+					changed = true;
+				}
 			}
+		});
+
+		if (changed) {
+			rows = [...rows]; // Trigger reactivity
+			revalidateAllRows();
 		}
 	}
 
-	function clearState() {
-		if (typeof sessionStorage === 'undefined') return;
-		sessionStorage.removeItem(STORAGE_KEY);
+	function revalidateAllRows() {
+		rowErrors = validateAllRows(rows, availableNumbers, false);
 	}
 
-	// Handle selection changes - clear dependent fields
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Row Event Handlers
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	function handleRowBmkChange(index: number, value: string) {
+		rows[index].bmk = value;
+		rows = [...rows];
+	}
+
+	function handleRowDescriptionChange(index: number, value: string) {
+		rows[index].description = value;
+		rows = [...rows];
+	}
+
+	function handleRowApparatNrChange(index: number, value: string) {
+		const trimmed = value.trim();
+		
+		if (!trimmed) {
+			rows[index].apparatNr = null;
+		} else {
+			const num = parseInt(trimmed, 10);
+			rows[index].apparatNr = isNaN(num) ? null : num;
+		}
+		
+		rows = [...rows];
+		revalidateAllRows();
+	}
+
+	function getPlaceholderForRow(index: number): string {
+		const usedNumbers = rows
+			.filter((_, i) => i !== index)
+			.map((r) => r.apparatNr)
+			.filter((n): n is number => n !== null);
+		const nextAvailable = availableNumbers.find((nr) => !usedNumbers.includes(nr));
+		return nextAvailable !== undefined ? `Next: ${nextAvailable}` : '';
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Selection Handlers
+	// ─────────────────────────────────────────────────────────────────────────────
+
 	function handleSpsSystemTypeChange(value: string) {
-		if (value !== spsControllerSystemTypeId) {
-			availableNumbersAbortController?.abort();
-			preselection = { objectDataId: '', apparatId: '', systemPartId: '' };
-			apparatId = '';
-			systemPartId = '';
-			objectDataId = '';
+		if (value !== selection.spsControllerSystemTypeId) {
+			abortController?.abort();
+			selection = {
+				spsControllerSystemTypeId: value,
+				objectDataId: '',
+				apparatId: '',
+				systemPartId: ''
+			};
+			preselectionValue = { objectDataId: '', apparatId: '', systemPartId: '' };
 			rows = [];
 			availableNumbers = [];
+			rowErrors = new Map();
 		}
-		spsControllerSystemTypeId = value;
 	}
 
-	function handlePreselectionChange(next: Preselection) {
-		preselection = next;
-		objectDataId = next.objectDataId;
-		apparatId = next.apparatId;
-		systemPartId = next.systemPartId;
+	function handlePreselectionChange(next: PreselectionType) {
+		preselectionValue = next;
+		selection = {
+			...selection,
+			objectDataId: next.objectDataId,
+			apparatId: next.apparatId,
+			systemPartId: next.systemPartId
+		};
 	}
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// SPS Controller System Type Fetchers
+	// ─────────────────────────────────────────────────────────────────────────────
 
 	async function fetchSpsControllerSystemTypes(search: string): Promise<SPSControllerSystemType[]> {
 		return useCase.searchSpsControllerSystemTypes({ search, limit: 50 });
 	}
 
-	async function fetchSpsControllerSystemTypeById(
-		id: string
-	): Promise<SPSControllerSystemType | null> {
+	async function fetchSpsControllerSystemTypeById(id: string): Promise<SPSControllerSystemType | null> {
 		try {
 			return await useCase.getSpsControllerSystemType(id);
 		} catch {
@@ -449,7 +446,7 @@
 					fetchById={fetchSpsControllerSystemTypeById}
 					labelKey="system_type_name"
 					width="w-full"
-					value={spsControllerSystemTypeId}
+					value={selection.spsControllerSystemTypeId}
 					onValueChange={handleSpsSystemTypeChange}
 					clearable
 					clearText="Clear SPS controller system type"
@@ -460,15 +457,16 @@
 
 		<div class="mt-4">
 			<FieldDevicePreselection
-				value={preselection}
+				value={preselectionValue}
 				onChange={handlePreselectionChange}
 				{projectId}
-				disabled={!spsControllerSystemTypeId || submitting}
+				disabled={!selection.spsControllerSystemTypeId || submitting}
 				className="grid grid-cols-1 gap-4 md:grid-cols-3"
 			/>
 		</div>
 
-		{#if spsControllerSystemTypeId && apparatId && systemPartId && objectDataId}
+		<!-- Configuration Status -->
+		{#if canFetchAvailableNumbers(selection)}
 			<div class="mt-4">
 				<Alert.Root>
 					<Alert.Description>
@@ -493,7 +491,7 @@
 	</Card.Root>
 
 	<!-- Field Device Rows -->
-	{#if spsControllerSystemTypeId && apparatId && systemPartId && objectDataId}
+	{#if showRowsSection}
 		<Card.Root class="p-6">
 			<div class="mb-4 flex items-center justify-between">
 				<div>
@@ -508,13 +506,13 @@
 				</Button>
 			</div>
 
-			{#if !canAddRow && rows.length === 0}
+			<!-- Empty State -->
+			{#if rows.length === 0}
 				<Alert.Root>
 					<AlertCircle class="size-4" />
 					<Alert.Description>
 						{#if availableNumbers.length === 0 && !loadingAvailableNumbers}
-							All apparat numbers are assigned. Cannot create more field devices for this
-							configuration.
+							All apparat numbers are assigned. Cannot create more field devices for this configuration.
 						{:else if loadingAvailableNumbers}
 							Loading available apparat numbers...
 						{:else}
@@ -524,91 +522,44 @@
 				</Alert.Root>
 			{/if}
 
+			<!-- Rows -->
 			{#if rows.length > 0}
 				<div class="space-y-4">
 					{#each rows as row, index (row.id)}
-						<div class="rounded-lg border p-4">
-							<div class="mb-3 flex items-center justify-between">
-								<h4 class="font-medium">Field Device #{index + 1}</h4>
-								<Button
-									variant="ghost"
-									size="sm"
-									onclick={() => removeRow(index)}
-									disabled={submitting}
-								>
-									<Trash2 class="size-4 text-destructive" />
-								</Button>
-							</div>
-
-							<div class="grid gap-4 md:grid-cols-3">
-								<!-- BMK -->
-								<div class="space-y-2">
-									<Label for={`bmk-${index}`}>BMK</Label>
-									<Input
-										id={`bmk-${index}`}
-										bind:value={row.bmk}
-										placeholder="BMK identifier (optional)"
-										maxlength={10}
-										disabled={submitting}
-									/>
-								</div>
-
-								<!-- Description -->
-								<div class="space-y-2">
-									<Label for={`description-${index}`}>Description</Label>
-									<Input
-										id={`description-${index}`}
-										bind:value={row.description}
-										placeholder="Description (optional)"
-										maxlength={250}
-										disabled={submitting}
-									/>
-								</div>
-
-								<!-- Apparat Nr -->
-								<div class="space-y-2">
-									<Label for={`apparat-nr-${index}`}>Apparat Nr *</Label>
-									<Input
-										id={`apparat-nr-${index}`}
-										type="number"
-										value={row.apparatNr?.toString() ?? ''}
-										oninput={(e) =>
-											handleApparatNrChange(index, (e.target as HTMLInputElement).value)}
-										placeholder={getPlaceholderForRow(index)}
-										min={1}
-										max={99}
-										disabled={submitting}
-										class={row.errorField === 'apparat_nr' ? 'border-destructive' : ''}
-									/>
-									{#if row.errorField === 'apparat_nr' && row.error}
-										<p class="text-sm text-destructive">{row.error}</p>
-									{/if}
-								</div>
-							</div>
-
-							<!-- Row Error -->
-							{#if row.error && row.errorField !== 'apparat_nr'}
-								<Alert.Root variant="destructive" class="mt-3">
-									<AlertCircle class="size-4" />
-									<Alert.Description>{row.error}</Alert.Description>
-								</Alert.Root>
-							{/if}
-						</div>
+						<FieldDeviceRow
+							{index}
+							{row}
+							error={rowErrors.get(index) ?? null}
+							placeholder={getPlaceholderForRow(index)}
+							disabled={submitting}
+							onBmkChange={(v) => handleRowBmkChange(index, v)}
+							onDescriptionChange={(v) => handleRowDescriptionChange(index, v)}
+							onApparatNrChange={(v) => handleRowApparatNrChange(index, v)}
+							onRemove={() => removeRow(index)}
+						/>
 					{/each}
 				</div>
 
 				<Separator class="my-4" />
 
-				<!-- Summary -->
+				<!-- Summary & Actions -->
 				<div class="flex items-center justify-between">
 					<p class="text-sm text-muted-foreground">
 						{rows.length} field device(s) ready to create
+						{#if hasValidationErrors}
+							<span class="text-destructive">({rowErrors.size} with errors)</span>
+						{/if}
 					</p>
 					<div class="flex gap-2">
 						{#if onCancel}
-							<Button variant="outline" onclick={onCancel} disabled={submitting}>Cancel</Button>
+							<Button variant="outline" onclick={onCancel} disabled={submitting}>
+								Cancel
+							</Button>
 						{/if}
-						<Button onclick={handleSubmit} disabled={submitting || rows.length === 0}>
+						<Button
+							onclick={handleSubmit}
+							disabled={submitting || rows.length === 0 || hasValidationErrors}
+						>
 							{submitting
 								? 'Creating...'
 								: `Create ${rows.length} Field Device${rows.length !== 1 ? 's' : ''}`}

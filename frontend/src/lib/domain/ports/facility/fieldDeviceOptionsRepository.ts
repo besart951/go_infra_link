@@ -5,4 +5,5 @@ import type { FieldDeviceOptions } from '$lib/domain/facility/index.js';
  */
 export interface FieldDeviceOptionsRepository {
 	getOptions(signal?: AbortSignal): Promise<FieldDeviceOptions>;
+	getOptionsForProject(projectId: string, signal?: AbortSignal): Promise<FieldDeviceOptions>;
 }

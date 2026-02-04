@@ -298,6 +298,16 @@ export async function getFieldDeviceOptions(
 	);
 }
 
+export async function getFieldDeviceOptionsForProject(
+	projectId: string,
+	options?: ApiOptions
+): Promise<import('$lib/domain/facility/field-device.js').FieldDeviceOptions> {
+	return api<import('$lib/domain/facility/field-device.js').FieldDeviceOptions>(
+		`/projects/${projectId}/field-device-options`,
+		options
+	);
+}
+
 export async function getAvailableApparatNumbers(
 	spsControllerSystemTypeId: string,
 	apparatId: string,

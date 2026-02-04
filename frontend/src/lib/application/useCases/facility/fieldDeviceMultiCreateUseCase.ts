@@ -22,6 +22,10 @@ export class FieldDeviceMultiCreateUseCase {
 		return this.repository.getFieldDeviceOptions(signal);
 	}
 
+	getOptionsForProject(projectId: string, signal?: AbortSignal): Promise<FieldDeviceOptions> {
+		return this.repository.getFieldDeviceOptionsForProject(projectId, signal);
+	}
+
 	searchSpsControllerSystemTypes(
 		params: SPSControllerSystemTypeSearchParams,
 		signal?: AbortSignal

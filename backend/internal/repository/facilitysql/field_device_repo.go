@@ -92,10 +92,9 @@ func (r *fieldDeviceRepo) ExistsApparatNrConflict(spsControllerSystemTypeID uuid
 		Where("apparat_id = ?", apparatID).
 		Where("apparat_nr = ?", apparatNr)
 
+	// Only filter by system_part_id if provided (it's always a non-null UUID in the database)
 	if systemPartID != nil {
 		db = db.Where("system_part_id = ?", *systemPartID)
-	} else {
-		db = db.Where("system_part_id IS NULL")
 	}
 
 	if excludeID != nil {
@@ -113,10 +112,9 @@ func (r *fieldDeviceRepo) GetUsedApparatNumbers(spsControllerSystemTypeID uuid.U
 		Where("sps_controller_system_type_id = ?", spsControllerSystemTypeID).
 		Where("apparat_id = ?", apparatID)
 
+	// Only filter by system_part_id if provided (it's always a non-null UUID in the database)
 	if systemPartID != nil {
 		query = query.Where("system_part_id = ?", *systemPartID)
-	} else {
-		query = query.Where("system_part_id IS NULL")
 	}
 
 	var nums []int

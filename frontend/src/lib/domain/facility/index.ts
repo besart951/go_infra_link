@@ -9,3 +9,4 @@ export * from './lookups.js';
 export * from './object-data.js';
 export * from './sps-sys-type.js';
 export * from './bacnet-object.js';
+export * from './fieldDeviceMultiCreate.js';

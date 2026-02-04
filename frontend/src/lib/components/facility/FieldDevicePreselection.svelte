@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
 	import { RefreshCw } from '@lucide/svelte';
 
@@ -39,6 +40,11 @@
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 
+	// Search queries for client-side filtering
+	let objectDataSearch = $state('');
+	let apparatSearch = $state('');
+	let systemPartSearch = $state('');
+
 	const maxRetries = 3;
 	let retryCycles = $state(0);
 	let hasFetched = $state(false);
@@ -48,9 +54,48 @@
 	const canRetry = $derived(retryCycles < maxRetries);
 
 	function filterByProject(objectDatas: ObjectData[]): ObjectData[] {
-		if (!projectId) return objectDatas;
-		return objectDatas.filter((od) => !od.project_id || od.project_id === projectId);
+		// When using project-specific endpoint, all data is already filtered
+		// No need for additional client-side project filtering
+		return objectDatas;
 	}
+
+	// Apply search filter to object datas
+	const searchFilteredObjectDatas = $derived.by(() => {
+		const base = filtered.objectDatas;
+		if (!objectDataSearch.trim()) return base;
+		const query = objectDataSearch.toLowerCase();
+		return base.filter(
+			(od) =>
+				od.description.toLowerCase().includes(query) ||
+				od.version.toLowerCase().includes(query)
+		);
+	});
+
+	// Apply search filter to apparats
+	const searchFilteredApparats = $derived.by(() => {
+		const base = filtered.apparats;
+		if (!apparatSearch.trim()) return base;
+		const query = apparatSearch.toLowerCase();
+		return base.filter(
+			(a) =>
+				a.short_name.toLowerCase().includes(query) ||
+				a.name.toLowerCase().includes(query) ||
+				(a.description && a.description.toLowerCase().includes(query))
+		);
+	});
+
+	// Apply search filter to system parts
+	const searchFilteredSystemParts = $derived.by(() => {
+		const base = filtered.systemParts;
+		if (!systemPartSearch.trim()) return base;
+		const query = systemPartSearch.toLowerCase();
+		return base.filter(
+			(sp) =>
+				sp.short_name.toLowerCase().includes(query) ||
+				sp.name.toLowerCase().includes(query) ||
+				(sp.description && sp.description.toLowerCase().includes(query))
+		);
+	});
 
 	const filtered = $derived.by(() => {
 		if (!options) {
@@ -123,7 +168,7 @@
 	type SystemPartItem = { id: string; label: string; raw: SystemPart };
 
 	const objectDataItems = $derived.by((): ObjectDataItem[] =>
-		filtered.objectDatas.map((od) => ({
+		searchFilteredObjectDatas.map((od) => ({
 			id: od.id,
 			label: `${od.description} (v${od.version})`,
 			raw: od
@@ -131,7 +176,7 @@
 	);
 
 	const apparatItems = $derived.by((): ApparatItem[] =>
-		filtered.apparats.map((a) => ({
+		searchFilteredApparats.map((a) => ({
 			id: a.id,
 			label: `${a.short_name} - ${a.name}`,
 			raw: a
@@ -139,7 +184,7 @@
 	);
 
 	const systemPartItems = $derived.by((): SystemPartItem[] =>
-		filtered.systemParts.map((sp) => ({
+		searchFilteredSystemParts.map((sp) => ({
 			id: sp.id,
 			label: `${sp.short_name} - ${sp.name}`,
 			raw: sp
@@ -155,7 +200,13 @@
 		abortController = new AbortController();
 
 		try {
-			const res = await useCase.execute(abortController.signal);
+			// Load options based on whether we're in a project context or not
+			let res: FieldDeviceOptions;
+			if (projectId) {
+				res = await useCase.executeForProject(projectId, abortController.signal);
+			} else {
+				res = await useCase.execute(abortController.signal);
+			}
 			options = res;
 			hasFetched = true;
 		} catch (e: any) {

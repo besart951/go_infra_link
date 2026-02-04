@@ -463,6 +463,108 @@ func (s *FieldDeviceService) GetFieldDeviceOptions() (*domainFacility.FieldDevic
 	}, nil
 }
 
+// GetFieldDeviceOptionsForProject returns all metadata needed for creating/editing field devices within a project.
+// This fetches object data that belongs to the specified project (project_id = projectID AND is_active = true).
+func (s *FieldDeviceService) GetFieldDeviceOptionsForProject(projectID uuid.UUID) (*domainFacility.FieldDeviceOptions, error) {
+	// Fetch object datas for the project with their apparats
+	objectDatas, err := s.objectDataRepo.GetForProject(projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build sets of unique apparats and system parts from the object datas
+	apparatSet := make(map[uuid.UUID]*domainFacility.Apparat)
+	systemPartSet := make(map[uuid.UUID]*domainFacility.SystemPart)
+
+	// Collect all apparats from object datas
+	for _, od := range objectDatas {
+		if od == nil {
+			continue
+		}
+		for _, app := range od.Apparats {
+			if app != nil {
+				apparatSet[app.ID] = app
+			}
+		}
+	}
+
+	// Fetch full apparat data with system parts for the collected apparats
+	apparatIDs := make([]uuid.UUID, 0, len(apparatSet))
+	for id := range apparatSet {
+		apparatIDs = append(apparatIDs, id)
+	}
+
+	if len(apparatIDs) > 0 {
+		fullApparats, err := s.apparatRepo.GetByIds(apparatIDs)
+		if err != nil {
+			return nil, err
+		}
+		for _, app := range fullApparats {
+			if app != nil {
+				apparatSet[app.ID] = app
+				// Collect system parts from each apparat
+				for _, sp := range app.SystemParts {
+					if sp != nil {
+						systemPartSet[sp.ID] = sp
+					}
+				}
+			}
+		}
+	}
+
+	// Build relationship maps
+	apparatToSystemPart := make(map[uuid.UUID][]uuid.UUID)
+	for id, apparat := range apparatSet {
+		systemPartIDs := make([]uuid.UUID, 0, len(apparat.SystemParts))
+		for _, sp := range apparat.SystemParts {
+			if sp != nil {
+				systemPartIDs = append(systemPartIDs, sp.ID)
+			}
+		}
+		apparatToSystemPart[id] = systemPartIDs
+	}
+
+	objectDataToApparat := make(map[uuid.UUID][]uuid.UUID)
+	for _, od := range objectDatas {
+		if od == nil {
+			continue
+		}
+		apparatIDs := make([]uuid.UUID, 0, len(od.Apparats))
+		for _, app := range od.Apparats {
+			if app != nil {
+				apparatIDs = append(apparatIDs, app.ID)
+			}
+		}
+		objectDataToApparat[od.ID] = apparatIDs
+	}
+
+	// Convert maps to slices
+	apparats := make([]domainFacility.Apparat, 0, len(apparatSet))
+	for _, app := range apparatSet {
+		apparats = append(apparats, *app)
+	}
+
+	systemParts := make([]domainFacility.SystemPart, 0, len(systemPartSet))
+	for _, sp := range systemPartSet {
+		systemParts = append(systemParts, *sp)
+	}
+
+	objectDataValues := make([]domainFacility.ObjectData, 0, len(objectDatas))
+	for _, od := range objectDatas {
+		if od != nil {
+			objectDataValues = append(objectDataValues, *od)
+		}
+	}
+
+	return &domainFacility.FieldDeviceOptions{
+		Apparats:            apparats,
+		SystemParts:         systemParts,
+		ObjectDatas:         objectDataValues,
+		ApparatToSystemPart: apparatToSystemPart,
+		ObjectDataToApparat: objectDataToApparat,
+	}, nil
+}
+
 func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.FieldDevice) error {
 	ve := domain.NewValidationError()
 	if fieldDevice.SPSControllerSystemTypeID == uuid.Nil {

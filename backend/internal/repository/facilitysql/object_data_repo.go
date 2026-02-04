@@ -182,6 +182,12 @@ func (r *objectDataRepo) GetTemplates() ([]*domainFacility.ObjectData, error) {
 	return items, err
 }
 
+func (r *objectDataRepo) GetForProject(projectID uuid.UUID) ([]*domainFacility.ObjectData, error) {
+	var items []*domainFacility.ObjectData
+	err := r.db.Where("deleted_at IS NULL").Where("is_active = ? AND project_id = ?", true, projectID).Preload("BacnetObjects").Preload("Apparats").Find(&items).Error
+	return items, err
+}
+
 func (r *objectDataRepo) GetPaginatedListForProject(projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	return r.getPaginatedListFiltered(&projectID, nil, nil, params)
 }

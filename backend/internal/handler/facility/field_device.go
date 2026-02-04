@@ -219,7 +219,7 @@ func (h *FieldDeviceHandler) ListAvailableApparatNumbers(c *gin.Context) {
 
 // GetFieldDeviceOptions godoc
 // @Summary Get all metadata needed for creating/editing field devices
-// @Description Returns all apparats, system parts, object datas and their relationships in a single call
+// @Description Returns all apparats, system parts, object datas and their relationships in a single call. This returns global templates (object data where project_id is null and is_active = true).
 // @Tags facility-field-devices
 // @Produce json
 // @Success 200 {object} dto.FieldDeviceOptionsResponse
@@ -227,6 +227,31 @@ func (h *FieldDeviceHandler) ListAvailableApparatNumbers(c *gin.Context) {
 // @Router /api/v1/facility/field-devices/options [get]
 func (h *FieldDeviceHandler) GetFieldDeviceOptions(c *gin.Context) {
 	options, err := h.service.GetFieldDeviceOptions()
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, toFieldDeviceOptionsResponse(options))
+}
+
+// GetFieldDeviceOptionsForProject godoc
+// @Summary Get all metadata needed for creating/editing field devices within a project
+// @Description Returns all apparats, system parts, object datas and their relationships for a specific project. This returns project-specific object data (object data where project_id = :id and is_active = true).
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Success 200 {object} dto.FieldDeviceOptionsResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/field-device-options [get]
+func (h *FieldDeviceHandler) GetFieldDeviceOptionsForProject(c *gin.Context) {
+	projectID, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	options, err := h.service.GetFieldDeviceOptionsForProject(projectID)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return

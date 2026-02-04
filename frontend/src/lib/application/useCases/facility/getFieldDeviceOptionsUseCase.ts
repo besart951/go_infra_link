@@ -7,4 +7,8 @@ export class GetFieldDeviceOptionsUseCase {
 	execute(signal?: AbortSignal): Promise<FieldDeviceOptions> {
 		return this.repository.getOptions(signal);
 	}
+
+	executeForProject(projectId: string, signal?: AbortSignal): Promise<FieldDeviceOptions> {
+		return this.repository.getOptionsForProject(projectId, signal);
+	}
 }

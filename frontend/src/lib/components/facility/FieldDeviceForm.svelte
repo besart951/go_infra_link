@@ -8,11 +8,11 @@
 		createFieldDevice,
 		updateFieldDevice,
 		getFieldDeviceOptions,
+		getFieldDeviceOptionsForProject,
 		listSPSControllerSystemTypes,
 		getSPSControllerSystemType,
 		getObjectDataBacnetObjects
 	} from '$lib/infrastructure/api/facility.adapter.js';
-	import { listProjectObjectData } from '$lib/infrastructure/api/project.adapter.js';
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type {
 		FieldDevice,
@@ -35,6 +35,11 @@
 	let system_part_id = initialData?.system_part_id ?? '';
 	let apparat_id = initialData?.apparat_id ?? '';
 	let object_data_id = '';
+
+	// Search queries for client-side filtering
+	let objectDataSearch = '';
+	let apparatSearch = '';
+	let systemPartSearch = '';
 
 	let bacnetObjects: BacnetObject[] = [];
 	let loadingBacnet = false;
@@ -67,7 +72,8 @@
 	$: filteredApparats = filterApparats(
 		options?.apparats || [],
 		object_data_id,
-		options?.object_data_to_apparat || {}
+		options?.object_data_to_apparat || {},
+		apparatSearch
 	);
 
 	/**
@@ -77,7 +83,8 @@
 	$: filteredSystemParts = filterSystemParts(
 		options?.system_parts || [],
 		apparat_id,
-		options?.apparat_to_system_part || {}
+		options?.apparat_to_system_part || {},
+		systemPartSearch
 	);
 
 	/**
@@ -87,73 +94,137 @@
 	$: filteredObjectDatas = filterObjectDatas(
 		options?.object_datas || [],
 		apparat_id,
-		options?.object_data_to_apparat || {}
+		options?.object_data_to_apparat || {},
+		objectDataSearch
 	);
 
 	function filterApparats(
 		apparats: Apparat[],
 		objectDataId: string,
-		objectDataToApparat: Record<string, string[]>
+		objectDataToApparat: Record<string, string[]>,
+		searchQuery: string
 	): Apparat[] {
-		if (!objectDataId) {
-			return apparats;
+		let result = apparats;
+
+		// Filter by ObjectData relationship
+		if (objectDataId) {
+			const allowedApparatIds = objectDataToApparat[objectDataId] || [];
+			result = result.filter((app) => allowedApparatIds.includes(app.id));
 		}
 
-		const allowedApparatIds = objectDataToApparat[objectDataId] || [];
-		return apparats.filter((app) => allowedApparatIds.includes(app.id));
+		// Filter by search query (client-side)
+		if (searchQuery.trim()) {
+			const query = searchQuery.toLowerCase();
+			result = result.filter(
+				(app) =>
+					app.short_name.toLowerCase().includes(query) ||
+					app.name.toLowerCase().includes(query) ||
+					(app.description && app.description.toLowerCase().includes(query))
+			);
+		}
+
+		return result;
 	}
 
 	function filterSystemParts(
 		systemParts: SystemPart[],
 		apparatId: string,
-		apparatToSystemPart: Record<string, string[]>
+		apparatToSystemPart: Record<string, string[]>,
+		searchQuery: string
 	): SystemPart[] {
-		if (!apparatId) {
-			return systemParts;
+		let result = systemParts;
+
+		// Filter by Apparat relationship
+		if (apparatId) {
+			const allowedSystemPartIds = apparatToSystemPart[apparatId] || [];
+			result = result.filter((sp) => allowedSystemPartIds.includes(sp.id));
 		}
 
-		const allowedSystemPartIds = apparatToSystemPart[apparatId] || [];
-		return systemParts.filter((sp) => allowedSystemPartIds.includes(sp.id));
+		// Filter by search query (client-side)
+		if (searchQuery.trim()) {
+			const query = searchQuery.toLowerCase();
+			result = result.filter(
+				(sp) =>
+					sp.short_name.toLowerCase().includes(query) ||
+					sp.name.toLowerCase().includes(query) ||
+					(sp.description && sp.description.toLowerCase().includes(query))
+			);
+		}
+
+		return result;
 	}
 
 	function filterObjectDatas(
 		objectDatas: ObjectData[],
 		apparatId: string,
-		objectDataToApparat: Record<string, string[]>
+		objectDataToApparat: Record<string, string[]>,
+		searchQuery: string
 	): ObjectData[] {
-		if (!apparatId) {
-			return objectDatas;
+		let result = objectDatas;
+
+		// Filter by Apparat relationship
+		if (apparatId) {
+			result = result.filter((od) => {
+				const apparatIds = objectDataToApparat[od.id] || [];
+				return apparatIds.includes(apparatId);
+			});
 		}
 
-		return objectDatas.filter((od) => {
-			const apparatIds = objectDataToApparat[od.id] || [];
-			return apparatIds.includes(apparatId);
-		});
+		// Filter by search query (client-side)
+		if (searchQuery.trim()) {
+			const query = searchQuery.toLowerCase();
+			result = result.filter(
+				(od) =>
+					od.description.toLowerCase().includes(query) ||
+					od.version.toLowerCase().includes(query)
+			);
+		}
+
+		return result;
 	}
 
-	// When ObjectData selection changes, reset Apparat if it's no longer valid
-	$: if (object_data_id && apparat_id) {
-		const isApparatValid = filteredApparats.some((app) => app.id === apparat_id);
-		if (!isApparatValid) {
-			apparat_id = '';
-			system_part_id = '';
+	// Handler for ObjectData selection change
+	function handleObjectDataChange(newObjectDataId: string) {
+		object_data_id = newObjectDataId;
+		
+		// Reset Apparat if it's no longer valid
+		if (apparat_id) {
+			const filteredApps = filterApparats(
+				options?.apparats || [],
+				newObjectDataId,
+				options?.object_data_to_apparat || {},
+				''
+			);
+			const isApparatValid = filteredApps.some((app) => app.id === apparat_id);
+			if (!isApparatValid) {
+				apparat_id = '';
+				system_part_id = '';
+			}
 		}
 	}
 
-	// When Apparat selection changes, reset SystemPart if it's no longer valid
-	$: if (apparat_id && system_part_id) {
-		const isSystemPartValid = filteredSystemParts.some((sp) => sp.id === system_part_id);
-		if (!isSystemPartValid) {
-			system_part_id = '';
+	// Handler for Apparat selection change
+	function handleApparatChange(newApparatId: string) {
+		apparat_id = newApparatId;
+		
+		// Reset SystemPart if it's no longer valid
+		if (system_part_id) {
+			const filteredSps = filterSystemParts(
+				options?.system_parts || [],
+				newApparatId,
+				options?.apparat_to_system_part || {},
+				''
+			);
+			const isSystemPartValid = filteredSps.some((sp) => sp.id === system_part_id);
+			if (!isSystemPartValid) {
+				system_part_id = '';
+			}
 		}
 	}
 
-	// When Apparat selection changes, reset ObjectData if it's no longer valid
-	$: if (apparat_id && object_data_id) {
-		const isObjectDataValid = filteredObjectDatas.some((od) => od.id === object_data_id);
-		if (!isObjectDataValid) {
-			object_data_id = '';
-		}
+	// Handler for SystemPart selection change
+	function handleSystemPartChange(newSystemPartId: string) {
+		system_part_id = newSystemPartId;
 	}
 
 	// ============================================================================
@@ -162,7 +233,12 @@
 
 	onMount(async () => {
 		try {
-			options = await getFieldDeviceOptions();
+			// Load options based on whether we're in a project context or not
+			if (projectId) {
+				options = await getFieldDeviceOptionsForProject(projectId);
+			} else {
+				options = await getFieldDeviceOptions();
+			}
 			loadingOptions = false;
 		} catch (e) {
 			console.error('Failed to load field device options:', e);
@@ -272,7 +348,7 @@
 	}
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
+<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4 rounded-md border bg-muted/20 p-4">
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">
 			{initialData ? 'Edit Field Device' : 'New Field Device'}
@@ -326,9 +402,16 @@
 			<!-- Object Data Selection (with reactive filtering) -->
 			<div class="space-y-2">
 				<Label for="field_device_object_data">Object Data (optional)</Label>
+				<Input
+					type="text"
+					placeholder="Search object data..."
+					bind:value={objectDataSearch}
+					class="mb-1"
+				/>
 				<select
 					id="field_device_object_data"
-					bind:value={object_data_id}
+					value={object_data_id}
+					onchange={(e) => handleObjectDataChange(e.currentTarget.value)}
 					class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					<option value="">None</option>
@@ -349,9 +432,16 @@
 			<!-- Apparat Selection (with reactive filtering) -->
 			<div class="space-y-2">
 				<Label for="field_device_apparat">Apparat *</Label>
+				<Input
+					type="text"
+					placeholder="Search apparat..."
+					bind:value={apparatSearch}
+					class="mb-1"
+				/>
 				<select
 					id="field_device_apparat"
-					bind:value={apparat_id}
+					value={apparat_id}
+					onchange={(e) => handleApparatChange(e.currentTarget.value)}
 					required
 					class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				>
@@ -373,9 +463,16 @@
 			<!-- System Part Selection (with reactive filtering) -->
 			<div class="space-y-2">
 				<Label for="field_device_system_part">System Part *</Label>
+				<Input
+					type="text"
+					placeholder="Search system part..."
+					bind:value={systemPartSearch}
+					class="mb-1"
+				/>
 				<select
 					id="field_device_system_part"
-					bind:value={system_part_id}
+					value={system_part_id}
+					onchange={(e) => handleSystemPartChange(e.currentTarget.value)}
 					required
 					class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				>

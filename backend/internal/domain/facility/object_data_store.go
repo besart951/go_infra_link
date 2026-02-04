@@ -12,6 +12,7 @@ type ObjectDataStore interface {
 
 	GetBacnetObjectIDs(objectDataID uuid.UUID) ([]uuid.UUID, error)
 	GetTemplates() ([]*ObjectData, error)
+	GetForProject(projectID uuid.UUID) ([]*ObjectData, error)
 	GetPaginatedListForProject(projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ObjectData], error)
 	GetPaginatedListByApparatID(apparatID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ObjectData], error)
 	GetPaginatedListBySystemPartID(systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ObjectData], error)

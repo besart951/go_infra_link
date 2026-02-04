@@ -2,6 +2,7 @@ import type { FieldDeviceMultiCreateRepository } from '$lib/domain/ports/facilit
 import {
 	getAvailableApparatNumbers,
 	getFieldDeviceOptions,
+	getFieldDeviceOptionsForProject,
 	getSPSControllerSystemType,
 	listSPSControllerSystemTypes,
 	multiCreateFieldDevices
@@ -10,6 +11,10 @@ import {
 export const facilityFieldDeviceMultiCreateRepository: FieldDeviceMultiCreateRepository = {
 	async getFieldDeviceOptions(signal) {
 		return getFieldDeviceOptions({ signal });
+	},
+
+	async getFieldDeviceOptionsForProject(projectId, signal) {
+		return getFieldDeviceOptionsForProject(projectId, { signal });
 	},
 
 	async listSpsControllerSystemTypes(params, signal) {
