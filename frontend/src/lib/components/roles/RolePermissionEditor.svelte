@@ -1,14 +1,16 @@
 <script lang="ts">
 	import type { Role, Permission } from '$lib/domain/role/index.js';
-	import type { UserRole } from '$lib/domain/user/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { Textarea } from '$lib/components/ui/textarea/index.js';
-	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { ChevronDown, ChevronRight, Search } from '@lucide/svelte';
-	import { cn } from '$lib/utils.js';
+	import { Search } from '@lucide/svelte';
+	import Users from '@lucide/svelte/icons/users';
+	import Building2 from '@lucide/svelte/icons/building-2';
+	import FolderKanban from '@lucide/svelte/icons/folder-kanban';
+	import CategorySection from './CategorySection.svelte';
+
+	// ============================================================================
+	// Props
+	// ============================================================================
 
 	interface Props {
 		role: Role;
@@ -28,61 +30,149 @@
 		error = null
 	}: Props = $props();
 
-	// Track selected permissions - use $derived for initial value from role
-	const initialPermissions = $derived(new Set(role.permissions.filter((p) => p !== '*')));
+	// ============================================================================
+	// Category Configuration
+	// ============================================================================
 
+	type CategoryId = 'users' | 'facility' | 'projects';
+
+	const categories: { id: CategoryId; label: string; icon: typeof Users; resources: string[] }[] = [
+		{
+			id: 'users',
+			label: 'Users & Access',
+			icon: Users,
+			resources: ['user', 'team', 'role', 'permission']
+		},
+		{
+			id: 'facility',
+			label: 'Facility',
+			icon: Building2,
+			resources: [
+				'building',
+				'controlcabinet',
+				'spscontroller',
+				'spscontrollersystemtype',
+				'fielddevice',
+				'bacnetobject',
+				'systemtype',
+				'systempart',
+				'apparat',
+				'objectdata',
+				'specification',
+				'statetext',
+				'alarmdefinition',
+				'notificationclass'
+			]
+		},
+		{
+			id: 'projects',
+			label: 'Projects',
+			icon: FolderKanban,
+			resources: [] // Will include all project.* permissions
+		}
+	];
+
+	// ============================================================================
+	// State
+	// ============================================================================
+
+	const initialPermissions = $derived(new Set(role.permissions.filter((p) => p !== '*')));
 	let selectedPermissions = $state<Set<string>>(new Set());
 	let searchQuery = $state('');
+	let expandedCategories = $state<Set<CategoryId>>(new Set(['users', 'facility', 'projects']));
 	let expandedResources = $state<Set<string>>(new Set());
 
-	// Initialize selected permissions when role changes
+	// Initialize when role changes
 	$effect(() => {
 		selectedPermissions = new Set(initialPermissions);
 	});
 
-	// Check if role has all permissions (superadmin)
+	// ============================================================================
+	// Derived State
+	// ============================================================================
+
 	const hasAllPermissions = $derived(role.permissions.includes('*'));
 
-	// Group permissions by resource
-	const permissionsByResource = $derived(() => {
-		const grouped: Record<string, Permission[]> = {};
-		for (const perm of allPermissions) {
-			if (!grouped[perm.resource]) {
-				grouped[perm.resource] = [];
-			}
-			grouped[perm.resource].push(perm);
+	// Categorize a permission
+	function categorizePermission(perm: Permission): CategoryId {
+		if (perm.name.startsWith('project.') || perm.resource.startsWith('project.')) {
+			return 'projects';
 		}
-		return grouped;
+		for (const cat of categories) {
+			if (cat.resources.includes(perm.resource)) {
+				return cat.id;
+			}
+		}
+		return 'facility';
+	}
+
+	// Group permissions by category, then by resource
+	const permissionsByCategory = $derived(() => {
+		const result: Record<CategoryId, Record<string, Permission[]>> = {
+			users: {},
+			facility: {},
+			projects: {}
+		};
+
+		for (const perm of allPermissions) {
+			const category = categorizePermission(perm);
+			const resource = perm.resource;
+
+			if (!result[category][resource]) {
+				result[category][resource] = [];
+			}
+			result[category][resource].push(perm);
+		}
+
+		// Sort permissions within each resource
+		for (const cat of Object.keys(result) as CategoryId[]) {
+			for (const resource of Object.keys(result[cat])) {
+				result[cat][resource].sort((a, b) => a.action.localeCompare(b.action));
+			}
+		}
+
+		return result;
 	});
 
 	// Filter permissions based on search
-	const filteredPermissionsByResource = $derived(() => {
-		const grouped = permissionsByResource();
+	const filteredPermissionsByCategory = $derived(() => {
+		const grouped = permissionsByCategory();
 		if (!searchQuery.trim()) return grouped;
 
 		const query = searchQuery.toLowerCase();
-		const filtered: Record<string, Permission[]> = {};
+		const filtered: Record<CategoryId, Record<string, Permission[]>> = {
+			users: {},
+			facility: {},
+			projects: {}
+		};
 
-		for (const [resource, perms] of Object.entries(grouped)) {
-			const matchingPerms = perms.filter(
-				(p) =>
-					p.name.toLowerCase().includes(query) ||
-					p.description.toLowerCase().includes(query) ||
-					p.resource.toLowerCase().includes(query) ||
-					p.action.toLowerCase().includes(query)
-			);
-			if (matchingPerms.length > 0) {
-				filtered[resource] = matchingPerms;
+		for (const cat of Object.keys(grouped) as CategoryId[]) {
+			for (const [resource, perms] of Object.entries(grouped[cat])) {
+				const matchingPerms = perms.filter(
+					(p) =>
+						p.name.toLowerCase().includes(query) ||
+						p.description.toLowerCase().includes(query) ||
+						p.resource.toLowerCase().includes(query) ||
+						p.action.toLowerCase().includes(query)
+				);
+				if (matchingPerms.length > 0) {
+					filtered[cat][resource] = matchingPerms;
+				}
 			}
 		}
 		return filtered;
 	});
 
-	const resources = $derived(Object.keys(filteredPermissionsByResource()).sort());
+	const hasAnyPermissions = $derived(
+		Object.values(filteredPermissionsByCategory()).some((cat) => Object.keys(cat).length > 0)
+	);
+
+	// ============================================================================
+	// Actions
+	// ============================================================================
 
 	function togglePermission(permissionName: string) {
-		if (hasAllPermissions) return; // Can't modify superadmin permissions
-
+		if (hasAllPermissions) return;
 		const newSet = new Set(selectedPermissions);
 		if (newSet.has(permissionName)) {
 			newSet.delete(permissionName);
@@ -90,6 +180,16 @@
 			newSet.add(permissionName);
 		}
 		selectedPermissions = newSet;
+	}
+
+	function toggleCategory(categoryId: CategoryId) {
+		const newExpanded = new Set(expandedCategories);
+		if (newExpanded.has(categoryId)) {
+			newExpanded.delete(categoryId);
+		} else {
+			newExpanded.add(categoryId);
+		}
+		expandedCategories = newExpanded;
 	}
 
 	function toggleResource(resource: string) {
@@ -102,44 +202,32 @@
 		expandedResources = newExpanded;
 	}
 
-	function toggleAllInResource(resource: string) {
+	function toggleAllInResource(resource: string, categoryId: CategoryId) {
 		if (hasAllPermissions) return;
-
-		const resourcePerms = permissionsByResource()[resource] || [];
+		const resourcePerms = permissionsByCategory()[categoryId][resource] || [];
 		const allSelected = resourcePerms.every((p) => selectedPermissions.has(p.name));
 
 		const newSet = new Set(selectedPermissions);
 		if (allSelected) {
-			// Deselect all
 			resourcePerms.forEach((p) => newSet.delete(p.name));
 		} else {
-			// Select all
 			resourcePerms.forEach((p) => newSet.add(p.name));
 		}
 		selectedPermissions = newSet;
 	}
 
-	function isResourceFullySelected(resource: string): boolean {
-		const resourcePerms = permissionsByResource()[resource] || [];
-		return resourcePerms.length > 0 && resourcePerms.every((p) => selectedPermissions.has(p.name));
-	}
+	function toggleAllInCategory(categoryId: CategoryId) {
+		if (hasAllPermissions) return;
+		const categoryPerms = Object.values(permissionsByCategory()[categoryId]).flat();
+		const allSelected = categoryPerms.every((p) => selectedPermissions.has(p.name));
 
-	function isResourcePartiallySelected(resource: string): boolean {
-		const resourcePerms = permissionsByResource()[resource] || [];
-		const selectedCount = resourcePerms.filter((p) => selectedPermissions.has(p.name)).length;
-		return selectedCount > 0 && selectedCount < resourcePerms.length;
-	}
-
-	function getResourceSelectedCount(resource: string): number {
-		const resourcePerms = permissionsByResource()[resource] || [];
-		return resourcePerms.filter((p) => selectedPermissions.has(p.name)).length;
-	}
-
-	function handleSubmit(e: Event) {
-		e.preventDefault();
-		onSubmit({
-			permissions: Array.from(selectedPermissions)
-		});
+		const newSet = new Set(selectedPermissions);
+		if (allSelected) {
+			categoryPerms.forEach((p) => newSet.delete(p.name));
+		} else {
+			categoryPerms.forEach((p) => newSet.add(p.name));
+		}
+		selectedPermissions = newSet;
 	}
 
 	function selectAll() {
@@ -152,42 +240,98 @@
 		selectedPermissions = new Set();
 	}
 
-	// Expand all resources when searching
+	function handleSubmit(e: Event) {
+		e.preventDefault();
+		onSubmit({ permissions: Array.from(selectedPermissions) });
+	}
+
+	const RESOURCE_DISPLAY_NAMES: Record<string, string> = {
+		// Users & Access
+		user: 'Users',
+		team: 'Teams',
+		role: 'Roles',
+		permission: 'Permissions',
+		// Facility
+		building: 'Buildings',
+		controlcabinet: 'Control Cabinets',
+		spscontroller: 'SPS Controllers',
+		spscontrollersystemtype: 'SPS Controller System Types',
+		fielddevice: 'Field Devices',
+		bacnetobject: 'BACnet Objects',
+		systemtype: 'System Types',
+		systempart: 'System Parts',
+		apparat: 'Apparats',
+		objectdata: 'Object Data',
+		specification: 'Specifications',
+		statetext: 'State Texts',
+		alarmdefinition: 'Alarm Definitions',
+		notificationclass: 'Notification Classes',
+		// Projects
+		'project.controlcabinet': 'Control Cabinets',
+		'project.spscontroller': 'SPS Controllers',
+		'project.spscontrollersystemtype': 'SPS Controller System Types',
+		'project.fielddevice': 'Field Devices',
+		'project.bacnetobject': 'BACnet Objects',
+		'project.systemtype': 'System Types'
+	};
+
+	function getResourceDisplayName(resource: string): string {
+		if (RESOURCE_DISPLAY_NAMES[resource]) {
+			return RESOURCE_DISPLAY_NAMES[resource];
+		}
+		// Handle project.* resources
+		if (resource.startsWith('project.')) {
+			const subResource = resource.replace('project.', '');
+			return RESOURCE_DISPLAY_NAMES[subResource] || subResource;
+		}
+		return resource;
+	}
+
+	// Expand all when searching
 	$effect(() => {
 		if (searchQuery.trim()) {
-			expandedResources = new Set(Object.keys(filteredPermissionsByResource()));
+			const allResources = new Set<string>();
+			for (const cat of Object.keys(filteredPermissionsByCategory()) as CategoryId[]) {
+				for (const resource of Object.keys(filteredPermissionsByCategory()[cat])) {
+					allResources.add(resource);
+				}
+			}
+			expandedResources = allResources;
+			expandedCategories = new Set(['users', 'facility', 'projects']);
 		}
 	});
 </script>
 
-<form onsubmit={handleSubmit} class="flex flex-col gap-4">
+<form onsubmit={handleSubmit} class="flex h-full flex-col gap-4 p-6">
 	<!-- Header -->
-	<div>
+	<div class="shrink-0">
 		<h3 class="text-lg font-semibold">Edit Role Permissions</h3>
 		<p class="text-sm text-muted-foreground">
 			Configure permissions for <span class="font-medium">{role.display_name}</span>
 		</p>
 	</div>
 
+	<!-- Error Message -->
 	{#if error}
 		<div
-			class="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive"
+			class="shrink-0 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive"
 		>
 			{error}
 		</div>
 	{/if}
 
+	<!-- Full Access Warning -->
 	{#if hasAllPermissions}
 		<div
-			class="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200"
+			class="shrink-0 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200"
 		>
 			<p class="font-medium">Full Access Role</p>
 			<p>This role has all permissions and cannot be modified.</p>
 		</div>
 	{/if}
 
-	<!-- Search and bulk actions -->
-	<div class="flex items-center gap-4">
+	<!-- Search and Bulk Actions -->
+	<div class="flex shrink-0 items-center gap-4">
 		<div class="relative flex-1">
 			<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
@@ -200,15 +344,14 @@
 		{#if !hasAllPermissions}
 			<div class="flex gap-2">
 				<Button type="button" variant="outline" size="sm" onclick={selectAll}>Select All</Button>
-				<Button type="button" variant="outline" size="sm" onclick={deselectAll}>
-					Deselect All
-				</Button>
+				<Button type="button" variant="outline" size="sm" onclick={deselectAll}>Deselect All</Button
+				>
 			</div>
 		{/if}
 	</div>
 
-	<!-- Selected count -->
-	<div class="text-sm text-muted-foreground">
+	<!-- Selected Count -->
+	<div class="shrink-0 text-sm text-muted-foreground">
 		{#if hasAllPermissions}
 			All permissions granted
 		{:else}
@@ -216,80 +359,30 @@
 		{/if}
 	</div>
 
-	<!-- Permission Groups -->
-	<div class="max-h-100 space-y-2 overflow-y-auto rounded-md border p-2">
-		{#each resources as resource}
-			{@const resourcePerms = filteredPermissionsByResource()[resource] || []}
-			{@const isExpanded = expandedResources.has(resource)}
-			{@const isFullySelected = isResourceFullySelected(resource)}
-			{@const isPartiallySelected = isResourcePartiallySelected(resource)}
-			{@const selectedCount = getResourceSelectedCount(resource)}
-			{@const totalCount = (permissionsByResource()[resource] || []).length}
-
-			<div class="rounded-md border bg-card">
-				<!-- Resource Header -->
-				<div class="flex items-center gap-2 p-3">
-					{#if !hasAllPermissions}
-						<Checkbox
-							checked={isFullySelected}
-							indeterminate={isPartiallySelected}
-							onCheckedChange={() => toggleAllInResource(resource)}
-							aria-label={`Select all ${resource} permissions`}
-						/>
-					{/if}
-
-					<button
-						type="button"
-						class="-ml-2 flex flex-1 items-center gap-2 rounded px-2 py-1 text-left hover:bg-accent/50"
-						onclick={() => toggleResource(resource)}
-					>
-						{#if isExpanded}
-							<ChevronDown class="h-4 w-4 text-muted-foreground" />
-						{:else}
-							<ChevronRight class="h-4 w-4 text-muted-foreground" />
-						{/if}
-						<span class="font-medium capitalize">{resource}</span>
-						<Badge variant="secondary" class="ml-auto">
-							{selectedCount}/{totalCount}
-						</Badge>
-					</button>
-				</div>
-
-				<!-- Permission List -->
-				{#if isExpanded}
-					<div class="border-t px-3 pb-3">
-						<div class="mt-2 space-y-1">
-							{#each resourcePerms as perm}
-								{@const isSelected = hasAllPermissions || selectedPermissions.has(perm.name)}
-								<label
-									class={cn(
-										'flex items-start gap-3 rounded-md p-2 transition-colors',
-										hasAllPermissions
-											? 'cursor-not-allowed opacity-60'
-											: 'cursor-pointer hover:bg-accent/50'
-									)}
-								>
-									<Checkbox
-										checked={isSelected}
-										disabled={hasAllPermissions}
-										onCheckedChange={() => togglePermission(perm.name)}
-										class="mt-0.5"
-									/>
-									<div class="flex-1 space-y-1">
-										<div class="flex items-center gap-2">
-											<span class="font-mono text-sm">{perm.name}</span>
-										</div>
-										<p class="text-xs text-muted-foreground">{perm.description}</p>
-									</div>
-								</label>
-							{/each}
-						</div>
-					</div>
-				{/if}
-			</div>
+	<!-- Permission Categories -->
+	<div class="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-lg border bg-muted/30 p-3">
+		{#each categories as category (category.id)}
+			{@const categoryResources = Object.keys(filteredPermissionsByCategory()[category.id]).sort()}
+			<CategorySection
+				id={category.id}
+				label={category.label}
+				icon={category.icon}
+				resources={categoryResources}
+				permissionsByResource={filteredPermissionsByCategory()[category.id]}
+				{selectedPermissions}
+				isExpanded={expandedCategories.has(category.id)}
+				{expandedResources}
+				disabled={hasAllPermissions}
+				onToggleExpand={() => toggleCategory(category.id)}
+				onToggleAll={() => toggleAllInCategory(category.id)}
+				onToggleResource={toggleResource}
+				onToggleResourceAll={(resource) => toggleAllInResource(resource, category.id)}
+				onTogglePermission={togglePermission}
+				{getResourceDisplayName}
+			/>
 		{/each}
 
-		{#if resources.length === 0}
+		{#if !hasAnyPermissions}
 			<div class="py-8 text-center text-muted-foreground">
 				{#if searchQuery}
 					No permissions found matching "{searchQuery}"
@@ -301,7 +394,7 @@
 	</div>
 
 	<!-- Actions -->
-	<div class="flex justify-end gap-3 pt-2">
+	<div class="flex shrink-0 justify-end gap-3 border-t pt-4">
 		<Button type="button" variant="outline" onclick={onCancel} disabled={isSubmitting}>
 			Cancel
 		</Button>

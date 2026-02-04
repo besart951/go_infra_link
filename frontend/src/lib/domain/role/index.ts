@@ -78,10 +78,19 @@ export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
  */
 export const FACILITY_RESOURCES = [
 	'building',
+	'controlcabinet',
+	'spscontroller',
+	'spscontrollersystemtype',
+	'fielddevice',
+	'bacnetobject',
 	'systempart',
 	'systemtype',
 	'specification',
-	'apparat'
+	'apparat',
+	'notificationclass',
+	'statetext',
+	'objectdata',
+	'alarmdefinition'
 ] as const;
 export type FacilityResource = (typeof FACILITY_RESOURCES)[number];
 
@@ -93,7 +102,8 @@ export const PROJECT_SUB_RESOURCES = [
 	'spscontroller',
 	'spscontrollersystemtype',
 	'fielddevice',
-	'bacnetobject'
+	'bacnetobject',
+	'systemtype'
 ] as const;
 export type ProjectSubResource = (typeof PROJECT_SUB_RESOURCES)[number];
 

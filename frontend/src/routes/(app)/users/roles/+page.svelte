@@ -392,7 +392,7 @@
 
 <!-- Edit Role Permissions Sheet -->
 <Sheet.Root bind:open={editRoleSheetOpen}>
-	<Sheet.Content side="right" class="w-full overflow-y-auto sm:max-w-xl">
+	<Sheet.Content side="right" class="flex h-full w-full flex-col p-0 sm:max-w-2xl">
 		{#if selectedRole}
 			<RolePermissionEditor
 				role={selectedRole}

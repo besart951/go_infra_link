@@ -90,8 +90,23 @@ export async function listPermissions(): Promise<Permission[]> {
 		}
 	}
 
-	// Add facility permissions
-	const facilityResources = ['building', 'systempart', 'systemtype', 'specification', 'apparat'];
+	// Add facility permissions (all facility-level resources)
+	const facilityResources = [
+		'building',
+		'controlcabinet',
+		'spscontroller',
+		'spscontrollersystemtype',
+		'fielddevice',
+		'bacnetobject',
+		'systempart',
+		'systemtype',
+		'specification',
+		'apparat',
+		'notificationclass',
+		'statetext',
+		'objectdata',
+		'alarmdefinition'
+	];
 	const actions = ['create', 'read', 'update', 'delete'];
 	for (const resource of facilityResources) {
 		for (const action of actions) {
@@ -99,13 +114,14 @@ export async function listPermissions(): Promise<Permission[]> {
 		}
 	}
 
-	// Add project-level resource permissions
+	// Add project-level resource permissions (resources that belong to a project)
 	const projectResources = [
 		'controlcabinet',
 		'spscontroller',
 		'spscontrollersystemtype',
 		'fielddevice',
-		'bacnetobject'
+		'bacnetobject',
+		'systemtype'
 	];
 	for (const resource of projectResources) {
 		for (const action of actions) {
