@@ -18,7 +18,10 @@ export interface SPSControllerSystemTypeSearchParams {
  */
 export interface FieldDeviceMultiCreateRepository {
 	getFieldDeviceOptions(signal?: AbortSignal): Promise<FieldDeviceOptions>;
-	getFieldDeviceOptionsForProject(projectId: string, signal?: AbortSignal): Promise<FieldDeviceOptions>;
+	getFieldDeviceOptionsForProject(
+		projectId: string,
+		signal?: AbortSignal
+	): Promise<FieldDeviceOptions>;
 
 	listSpsControllerSystemTypes(
 		params: SPSControllerSystemTypeSearchParams,

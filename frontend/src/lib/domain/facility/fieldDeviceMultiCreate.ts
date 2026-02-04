@@ -44,9 +44,9 @@ export function createSelectionKey(selection: MultiCreateSelection): string {
 export function hasRequiredSelections(selection: MultiCreateSelection): boolean {
 	return Boolean(
 		selection.spsControllerSystemTypeId &&
-			selection.objectDataId &&
-			selection.apparatId &&
-			selection.systemPartId
+		selection.objectDataId &&
+		selection.apparatId &&
+		selection.systemPartId
 	);
 }
 
@@ -62,7 +62,10 @@ export function canFetchAvailableNumbers(selection: MultiCreateSelection): boole
 /**
  * Creates a new empty row with the next available apparat number
  */
-export function createNewRow(availableNumbers: number[], usedNumbers: Set<number>): FieldDeviceRowData | null {
+export function createNewRow(
+	availableNumbers: number[],
+	usedNumbers: Set<number>
+): FieldDeviceRowData | null {
 	const nextAvailable = availableNumbers.find((nr) => !usedNumbers.has(nr));
 	if (nextAvailable === undefined) {
 		return null;
@@ -119,9 +122,7 @@ export function validateApparatNr(
 	}
 
 	// Check for duplicates within the form (excluding current row)
-	const duplicateIndex = allRows.findIndex(
-		(r, i) => i !== rowIndex && r.apparatNr === apparatNr
-	);
+	const duplicateIndex = allRows.findIndex((r, i) => i !== rowIndex && r.apparatNr === apparatNr);
 	if (duplicateIndex !== -1) {
 		return {
 			message: `Duplicate: also used in row #${duplicateIndex + 1}`,
@@ -141,14 +142,14 @@ export function validateAllRows(
 	requireValues: boolean
 ): Map<number, FieldDeviceRowError> {
 	const errors = new Map<number, FieldDeviceRowError>();
-	
+
 	for (let i = 0; i < rows.length; i++) {
 		const error = validateApparatNr(rows[i].apparatNr, i, availableNumbers, rows, requireValues);
 		if (error) {
 			errors.set(i, error);
 		}
 	}
-	
+
 	return errors;
 }
 
@@ -170,10 +171,10 @@ export interface PersistedState {
  */
 export function loadPersistedState(): PersistedState | null {
 	if (typeof sessionStorage === 'undefined') return null;
-	
+
 	const stored = sessionStorage.getItem(STORAGE_KEY);
 	if (!stored) return null;
-	
+
 	try {
 		const parsed = JSON.parse(stored);
 		return {
@@ -203,9 +204,12 @@ export function loadPersistedState(): PersistedState | null {
 /**
  * Saves state to session storage
  */
-export function savePersistedState(selection: MultiCreateSelection, rows: FieldDeviceRowData[]): void {
+export function savePersistedState(
+	selection: MultiCreateSelection,
+	rows: FieldDeviceRowData[]
+): void {
 	if (typeof sessionStorage === 'undefined') return;
-	
+
 	try {
 		sessionStorage.setItem(
 			STORAGE_KEY,
