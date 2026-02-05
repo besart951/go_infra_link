@@ -818,6 +818,7 @@ func (s *FieldDeviceService) MultiCreate(items []domainFacility.FieldDeviceCreat
 
 // BulkUpdate updates multiple field devices in a single operation.
 // It processes each update independently and returns detailed results.
+// Supports nested specification updates (create or update) and BACnet objects replacement.
 func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult {
 	result := &domainFacility.BulkOperationResult{
 		Results:      make([]domainFacility.BulkOperationResultItem, len(updates)),
@@ -860,7 +861,7 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 			fieldDevice.SystemPartID = *update.SystemPartID
 		}
 
-		// Validate and update
+		// Validate and update the field device
 		if err := s.Update(fieldDevice); err != nil {
 			if ve, ok := domain.AsValidationError(err); ok {
 				for _, msg := range ve.Fields {
@@ -872,6 +873,48 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 			}
 			result.FailureCount++
 			continue
+		}
+
+		// Handle specification update/create
+		if update.Specification != nil {
+			specs, err := s.specificationRepo.GetByFieldDeviceIDs([]uuid.UUID{fieldDevice.ID})
+			if err != nil {
+				resultItem.Error = "failed to fetch specification: " + err.Error()
+				result.FailureCount++
+				continue
+			}
+
+			if len(specs) > 0 {
+				// Update existing specification
+				if _, err := s.UpdateSpecification(fieldDevice.ID, update.Specification); err != nil {
+					resultItem.Error = "failed to update specification: " + err.Error()
+					result.FailureCount++
+					continue
+				}
+			} else {
+				// Create new specification
+				if err := s.CreateSpecification(fieldDevice.ID, update.Specification); err != nil {
+					resultItem.Error = "failed to create specification: " + err.Error()
+					result.FailureCount++
+					continue
+				}
+			}
+		}
+
+		// Handle BACnet objects replacement
+		if update.BacnetObjects != nil {
+			if err := s.replaceBacnetObjects(fieldDevice.ID, *update.BacnetObjects); err != nil {
+				if ve, ok := domain.AsValidationError(err); ok {
+					for _, msg := range ve.Fields {
+						resultItem.Error = msg
+						break
+					}
+				} else {
+					resultItem.Error = "failed to update BACnet objects: " + err.Error()
+				}
+				result.FailureCount++
+				continue
+			}
 		}
 
 		resultItem.Success = true

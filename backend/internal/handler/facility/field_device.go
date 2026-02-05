@@ -455,6 +455,7 @@ func (h *FieldDeviceHandler) UpdateFieldDeviceSpecification(c *gin.Context) {
 
 // BulkUpdateFieldDevices godoc
 // @Summary Bulk update multiple field devices
+// @Description Updates multiple field devices in a single operation. Supports nested specification and BACnet objects updates.
 // @Tags facility-field-devices
 // @Accept json
 // @Produce json
@@ -472,13 +473,26 @@ func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
 	// Convert DTOs to domain models
 	updates := make([]domainFacility.BulkFieldDeviceUpdate, len(req.Updates))
 	for i, item := range req.Updates {
+		var spec *domainFacility.Specification
+		if item.Specification != nil {
+			spec = toSpecificationFromInput(item.Specification)
+		}
+
+		var bacnetObjs *[]domainFacility.BacnetObject
+		if item.BacnetObjects != nil {
+			mapped := toFieldDeviceBacnetObjects(*item.BacnetObjects)
+			bacnetObjs = &mapped
+		}
+
 		updates[i] = domainFacility.BulkFieldDeviceUpdate{
-			ID:           item.ID,
-			BMK:          item.BMK,
-			Description:  item.Description,
-			ApparatNr:    item.ApparatNr,
-			ApparatID:    item.ApparatID,
-			SystemPartID: item.SystemPartID,
+			ID:            item.ID,
+			BMK:           item.BMK,
+			Description:   item.Description,
+			ApparatNr:     item.ApparatNr,
+			ApparatID:     item.ApparatID,
+			SystemPartID:  item.SystemPartID,
+			Specification: spec,
+			BacnetObjects: bacnetObjs,
 		}
 	}
 
@@ -524,4 +538,3 @@ func toBulkOperationResponse(result *domainFacility.BulkOperationResult) dto.Bul
 		FailureCount: result.FailureCount,
 	}
 }
-

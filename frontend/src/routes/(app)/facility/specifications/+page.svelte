@@ -60,8 +60,8 @@
 	{#if showForm}
 		<SpecificationForm
 			initialData={editingItem}
-			on:success={handleSuccess}
-			on:cancel={handleCancel}
+			onSuccess={handleSuccess}
+			onCancel={handleCancel}
 		/>
 	{/if}
 

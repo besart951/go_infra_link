@@ -9,23 +9,28 @@
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { ControlCabinet } from '$lib/domain/facility/index.js';
-	import { createEventDispatcher } from 'svelte';
 
-	export let initialData: ControlCabinet | undefined = undefined;
-
-	let control_cabinet_nr = initialData?.control_cabinet_nr ?? '';
-	let building_id = initialData?.building_id ?? '';
-	let loading = false;
-	let error = '';
-	let fieldErrors: Record<string, string> = {};
-
-	// React to initialData changes
-	$: if (initialData) {
-		control_cabinet_nr = initialData.control_cabinet_nr;
-		building_id = initialData.building_id;
+	interface Props {
+		initialData?: ControlCabinet;
+		onSuccess?: (cabinet: ControlCabinet) => void;
+		onCancel?: () => void;
 	}
 
-	const dispatch = createEventDispatcher();
+	let { initialData, onSuccess, onCancel }: Props = $props();
+
+	let control_cabinet_nr = $state(initialData?.control_cabinet_nr ?? '');
+	let building_id = $state(initialData?.building_id ?? '');
+	let loading = $state(false);
+	let error = $state('');
+	let fieldErrors = $state<Record<string, string>>({});
+
+	// React to initialData changes
+	$effect(() => {
+		if (initialData) {
+			control_cabinet_nr = initialData.control_cabinet_nr;
+			building_id = initialData.building_id;
+		}
+	});
 
 	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['controlcabinet']);
 
@@ -47,13 +52,13 @@
 					control_cabinet_nr,
 					building_id
 				});
-				dispatch('success', res);
+				onSuccess?.(res);
 			} else {
 				const res = await createControlCabinet({
 					control_cabinet_nr,
 					building_id
 				});
-				dispatch('success', res);
+				onSuccess?.(res);
 			}
 		} catch (e) {
 			console.error(e);
@@ -65,7 +70,13 @@
 	}
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
+<form
+	onsubmit={(e) => {
+		e.preventDefault();
+		handleSubmit();
+	}}
+	class="space-y-4 rounded-md border bg-muted/20 p-4"
+>
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">
 			{initialData ? 'Edit Control Cabinet' : 'New Control Cabinet'}
@@ -97,7 +108,7 @@
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={() => dispatch('cancel')}>Cancel</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
 		<Button type="submit" disabled={loading}>
 			{initialData ? 'Update' : 'Create'}
 		</Button>

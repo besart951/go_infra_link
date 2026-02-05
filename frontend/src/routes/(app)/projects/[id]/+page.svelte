@@ -239,9 +239,8 @@
 		}
 	}
 
-	async function handleControlCabinetCreated(event: CustomEvent<ControlCabinet>) {
+	async function handleControlCabinetCreated(item: ControlCabinet) {
 		if (!projectId) return;
-		const item = event.detail;
 		try {
 			await addProjectControlCabinet(projectId, item.id);
 			addToast('Control cabinet created', 'success');
@@ -295,9 +294,8 @@
 		spsControllerPage = page;
 	}
 
-	async function handleSpsControllerSuccess(event: CustomEvent<SPSController>) {
+	async function handleSpsControllerSuccess(item: SPSController) {
 		if (!projectId) return;
-		const item = event.detail;
 		try {
 			if (!editingSpsController) {
 				await addProjectSPSController(projectId, item.id);
@@ -331,9 +329,8 @@
 		}
 	}
 
-	async function handleFieldDeviceCreated(event: CustomEvent<FieldDevice>) {
+	async function handleFieldDeviceCreated(item: FieldDevice) {
 		if (!projectId) return;
-		const item = event.detail;
 		try {
 			await addProjectFieldDevice(projectId, item.id);
 			addToast('Field device created', 'success');
@@ -347,26 +344,25 @@
 	async function handleFieldDeviceMultiCreateSuccess(createdDevices: FieldDevice[]) {
 		if (!projectId) return;
 		showFieldDeviceMultiCreateForm = false;
-		
+
 		try {
 			// Link all created devices to the project
 			await Promise.all(
 				createdDevices.map((device) => addProjectFieldDevice(projectId, device.id))
 			);
-			
-			addToast({
-				type: 'success',
-				message: 'Field devices created and linked',
-				description: `Created ${createdDevices.length} field device(s) and linked them to the project`
-			});
-			
+
+			addToast(
+				`Created ${createdDevices.length} field device(s) and linked them to the project`,
+				'success'
+			);
+
 			await loadFieldDevices();
 		} catch (err) {
-			addToast({
-				type: 'error',
-				message: 'Failed to link field devices',
-				description: err instanceof Error ? err.message : 'Some field devices were created but could not be linked to the project'
-			});
+			const message =
+				err instanceof Error
+					? err.message
+					: 'Some field devices were created but could not be linked';
+			addToast(`Failed to link field devices: ${message}`, 'error');
 		}
 	}
 
@@ -461,8 +457,8 @@
 
 				{#if showControlCabinetForm}
 					<ControlCabinetForm
-						on:success={handleControlCabinetCreated}
-						on:cancel={() => (showControlCabinetForm = false)}
+						onSuccess={handleControlCabinetCreated}
+						onCancel={() => (showControlCabinetForm = false)}
 					/>
 				{/if}
 
@@ -526,8 +522,8 @@
 				{#if showSpsControllerForm}
 					<SPSControllerForm
 						initialData={editingSpsController}
-						on:success={handleSpsControllerSuccess}
-						on:cancel={handleSpsControllerCancel}
+						onSuccess={handleSpsControllerSuccess}
+						onCancel={handleSpsControllerCancel}
 					/>
 				{/if}
 
@@ -623,15 +619,15 @@
 				{#if showFieldDeviceForm}
 					<FieldDeviceForm
 						{projectId}
-						on:success={handleFieldDeviceCreated}
-						on:cancel={() => (showFieldDeviceForm = false)}
+						onSuccess={handleFieldDeviceCreated}
+						onCancel={() => (showFieldDeviceForm = false)}
 					/>
 				{/if}
 
 				{#if showFieldDeviceMultiCreateForm}
 					<div class="mt-6">
 						<FieldDeviceMultiCreateForm
-							projectId={projectId}
+							{projectId}
 							onSuccess={handleFieldDeviceMultiCreateSuccess}
 							onCancel={() => (showFieldDeviceMultiCreateForm = false)}
 						/>

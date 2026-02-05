@@ -56,7 +56,7 @@
 	</div>
 
 	{#if showForm}
-		<SystemTypeForm initialData={editingItem} on:success={handleSuccess} on:cancel={handleCancel} />
+		<SystemTypeForm initialData={editingItem} onSuccess={handleSuccess} onCancel={handleCancel} />
 	{/if}
 
 	<PaginatedList

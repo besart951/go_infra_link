@@ -56,11 +56,7 @@
 	</div>
 
 	{#if showForm}
-		<BuildingForm
-			initialData={editingBuilding}
-			on:success={handleSuccess}
-			on:cancel={handleCancel}
-		/>
+		<BuildingForm initialData={editingBuilding} onSuccess={handleSuccess} onCancel={handleCancel} />
 	{/if}
 
 	<PaginatedList

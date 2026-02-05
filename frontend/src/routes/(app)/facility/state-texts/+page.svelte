@@ -56,7 +56,7 @@
 	</div>
 
 	{#if showForm}
-		<StateTextForm initialData={editingItem} on:success={handleSuccess} on:cancel={handleCancel} />
+		<StateTextForm initialData={editingItem} onSuccess={handleSuccess} onCancel={handleCancel} />
 	{/if}
 
 	<PaginatedList

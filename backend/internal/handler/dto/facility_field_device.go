@@ -93,14 +93,31 @@ type MultiCreateFieldDeviceResponse struct {
 	FailureCount  int                               `json:"failure_count"`
 }
 
+// SpecificationInput is used for nested create/update under FieldDevice bulk operations
+type SpecificationInput struct {
+	SpecificationSupplier                     *string  `json:"specification_supplier" binding:"omitempty,max=250"`
+	SpecificationBrand                        *string  `json:"specification_brand" binding:"omitempty,max=250"`
+	SpecificationType                         *string  `json:"specification_type" binding:"omitempty,max=250"`
+	AdditionalInfoMotorValve                  *string  `json:"additional_info_motor_valve" binding:"omitempty,max=250"`
+	AdditionalInfoSize                        *int     `json:"additional_info_size"`
+	AdditionalInformationInstallationLocation *string  `json:"additional_information_installation_location" binding:"omitempty,max=250"`
+	ElectricalConnectionPH                    *int     `json:"electrical_connection_ph"`
+	ElectricalConnectionACDC                  *string  `json:"electrical_connection_acdc" binding:"omitempty,len=2"`
+	ElectricalConnectionAmperage              *float64 `json:"electrical_connection_amperage"`
+	ElectricalConnectionPower                 *float64 `json:"electrical_connection_power"`
+	ElectricalConnectionRotation              *int     `json:"electrical_connection_rotation"`
+}
+
 // BulkUpdateFieldDeviceItem represents a single field device update in a bulk operation
 type BulkUpdateFieldDeviceItem struct {
-	ID          uuid.UUID `json:"id" binding:"required"`
-	BMK         *string   `json:"bmk" binding:"omitempty,max=10"`
-	Description *string   `json:"description" binding:"omitempty,max=250"`
-	ApparatNr   *int      `json:"apparat_nr" binding:"omitempty,min=1,max=99"`
-	ApparatID   *uuid.UUID `json:"apparat_id"`
-	SystemPartID *uuid.UUID `json:"system_part_id"`
+	ID            uuid.UUID            `json:"id" binding:"required"`
+	BMK           *string              `json:"bmk" binding:"omitempty,max=10"`
+	Description   *string              `json:"description" binding:"omitempty,max=250"`
+	ApparatNr     *int                 `json:"apparat_nr" binding:"omitempty,min=1,max=99"`
+	ApparatID     *uuid.UUID           `json:"apparat_id"`
+	SystemPartID  *uuid.UUID           `json:"system_part_id"`
+	Specification *SpecificationInput  `json:"specification" binding:"omitempty"`
+	BacnetObjects *[]BacnetObjectInput `json:"bacnet_objects" binding:"omitempty,dive"`
 }
 
 // BulkUpdateFieldDeviceRequest represents a request to update multiple field devices

@@ -75,7 +75,7 @@ export interface FieldDeviceListParams {
 	sps_controller_system_type_id?: string;
 }
 
-export interface FieldDeviceListResponse extends Pagination<FieldDevice> {}
+export interface FieldDeviceListResponse extends Pagination<FieldDevice> { }
 
 /**
  * FieldDeviceOptions - Response from /api/v1/facility/field-devices/options
@@ -125,6 +125,23 @@ export interface MultiCreateFieldDeviceResponse {
 }
 
 /**
+ * Specification input for bulk update
+ */
+export interface SpecificationInput {
+	specification_supplier?: string;
+	specification_brand?: string;
+	specification_type?: string;
+	additional_info_motor_valve?: string;
+	additional_info_size?: number;
+	additional_information_installation_location?: string;
+	electrical_connection_ph?: number;
+	electrical_connection_acdc?: string;
+	electrical_connection_amperage?: number;
+	electrical_connection_power?: number;
+	electrical_connection_rotation?: number;
+}
+
+/**
  * Bulk update field device item
  */
 export interface BulkUpdateFieldDeviceItem {
@@ -134,6 +151,8 @@ export interface BulkUpdateFieldDeviceItem {
 	apparat_nr?: number;
 	apparat_id?: string;
 	system_part_id?: string;
+	specification?: SpecificationInput;
+	bacnet_objects?: BacnetObjectInput[];
 }
 
 /**

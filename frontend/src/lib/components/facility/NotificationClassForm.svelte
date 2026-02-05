@@ -9,41 +9,46 @@
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { NotificationClass } from '$lib/domain/facility/index.js';
-	import { createEventDispatcher } from 'svelte';
 
-	export let initialData: NotificationClass | undefined = undefined;
-
-	let event_category = initialData?.event_category ?? '';
-	let nc = initialData?.nc ?? 0;
-	let object_description = initialData?.object_description ?? '';
-	let internal_description = initialData?.internal_description ?? '';
-	let meaning = initialData?.meaning ?? '';
-	let ack_required_not_normal = initialData?.ack_required_not_normal ?? false;
-	let ack_required_error = initialData?.ack_required_error ?? false;
-	let ack_required_normal = initialData?.ack_required_normal ?? false;
-	let norm_not_normal = initialData?.norm_not_normal ?? 0;
-	let norm_error = initialData?.norm_error ?? 0;
-	let norm_normal = initialData?.norm_normal ?? 0;
-
-	let loading = false;
-	let error = '';
-	let fieldErrors: Record<string, string> = {};
-
-	$: if (initialData) {
-		event_category = initialData.event_category;
-		nc = initialData.nc;
-		object_description = initialData.object_description;
-		internal_description = initialData.internal_description;
-		meaning = initialData.meaning;
-		ack_required_not_normal = initialData.ack_required_not_normal;
-		ack_required_error = initialData.ack_required_error;
-		ack_required_normal = initialData.ack_required_normal;
-		norm_not_normal = initialData.norm_not_normal;
-		norm_error = initialData.norm_error;
-		norm_normal = initialData.norm_normal;
+	interface Props {
+		initialData?: NotificationClass;
+		onSuccess?: (nc: NotificationClass) => void;
+		onCancel?: () => void;
 	}
 
-	const dispatch = createEventDispatcher();
+	let { initialData, onSuccess, onCancel }: Props = $props();
+
+	let event_category = $state(initialData?.event_category ?? '');
+	let nc = $state(initialData?.nc ?? 0);
+	let object_description = $state(initialData?.object_description ?? '');
+	let internal_description = $state(initialData?.internal_description ?? '');
+	let meaning = $state(initialData?.meaning ?? '');
+	let ack_required_not_normal = $state(initialData?.ack_required_not_normal ?? false);
+	let ack_required_error = $state(initialData?.ack_required_error ?? false);
+	let ack_required_normal = $state(initialData?.ack_required_normal ?? false);
+	let norm_not_normal = $state(initialData?.norm_not_normal ?? 0);
+	let norm_error = $state(initialData?.norm_error ?? 0);
+	let norm_normal = $state(initialData?.norm_normal ?? 0);
+
+	let loading = $state(false);
+	let error = $state('');
+	let fieldErrors = $state<Record<string, string>>({});
+
+	$effect(() => {
+		if (initialData) {
+			event_category = initialData.event_category;
+			nc = initialData.nc;
+			object_description = initialData.object_description;
+			internal_description = initialData.internal_description;
+			meaning = initialData.meaning;
+			ack_required_not_normal = initialData.ack_required_not_normal;
+			ack_required_error = initialData.ack_required_error;
+			ack_required_normal = initialData.ack_required_normal;
+			norm_not_normal = initialData.norm_not_normal;
+			norm_error = initialData.norm_error;
+			norm_normal = initialData.norm_normal;
+		}
+	});
 
 	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['notificationclass']);
 
@@ -67,7 +72,7 @@
 					norm_error,
 					norm_normal
 				});
-				dispatch('success', res);
+				onSuccess?.(res);
 			} else {
 				const res = await createNotificationClass({
 					event_category,
@@ -82,7 +87,7 @@
 					norm_error,
 					norm_normal
 				});
-				dispatch('success', res);
+				onSuccess?.(res);
 			}
 		} catch (e) {
 			console.error(e);
@@ -94,7 +99,13 @@
 	}
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
+<form
+	onsubmit={(e) => {
+		e.preventDefault();
+		handleSubmit();
+	}}
+	class="space-y-4 rounded-md border bg-muted/20 p-4"
+>
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">
 			{initialData ? 'Edit Notification Class' : 'New Notification Class'}
@@ -196,7 +207,7 @@
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={() => dispatch('cancel')}>Cancel</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
 		<Button type="submit" disabled={loading}>{initialData ? 'Update' : 'Create'}</Button>
 	</div>
 </form>

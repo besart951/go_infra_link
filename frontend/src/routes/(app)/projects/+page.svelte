@@ -97,10 +97,11 @@
 		const optimisticProject: Project = {
 			id: `temp-${Date.now()}`, // Temporary ID
 			name: payload.name,
-			description: payload.description || '',
-			status: payload.status,
-			start_date: payload.start_date || '',
+			description: payload.description ?? '',
+			status: form.status,
+			start_date: payload.start_date ?? '',
 			phase_id: payload.phase_id,
+			creator_id: '', // Will be set by server
 			created_at: new Date().toISOString(),
 			updated_at: new Date().toISOString()
 		};
@@ -132,8 +133,8 @@
 					createOpen = true;
 					form = {
 						name: payload.name,
-						description: payload.description || '',
-						status: payload.status,
+						description: payload.description ?? '',
+						status: form.status,
 						start_date: payload.start_date ? payload.start_date.split('T')[0] : todayInputValue(),
 						phase_id: payload.phase_id
 					};

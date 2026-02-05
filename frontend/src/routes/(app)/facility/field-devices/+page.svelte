@@ -22,9 +22,18 @@
 	} from '@lucide/svelte';
 	import { fieldDeviceStore } from '$lib/stores/facility/fieldDeviceStore.js';
 	import { lookupCache } from '$lib/stores/facility/lookupCache.js';
-	import { updateFieldDevice, bulkDeleteFieldDevices, bulkUpdateFieldDevices } from '$lib/infrastructure/api/facility.adapter.js';
+	import {
+		updateFieldDevice,
+		bulkDeleteFieldDevices,
+		bulkUpdateFieldDevices
+	} from '$lib/infrastructure/api/facility.adapter.js';
 	import { addToast } from '$lib/components/toast.svelte';
-	import type { FieldDevice, UpdateFieldDeviceRequest, BulkUpdateFieldDeviceItem } from '$lib/domain/facility/index.js';
+	import type {
+		FieldDevice,
+		UpdateFieldDeviceRequest,
+		BulkUpdateFieldDeviceItem,
+		SpecificationInput
+	} from '$lib/domain/facility/index.js';
 	import BuildingSelect from '$lib/components/facility/BuildingSelect.svelte';
 	import ControlCabinetSelect from '$lib/components/facility/ControlCabinetSelect.svelte';
 	import SPSControllerSelect from '$lib/components/facility/SPSControllerSelect.svelte';
@@ -211,12 +220,52 @@
 		}
 	}
 
+	// Specification edit helpers
+	function queueSpecEdit(deviceId: string, field: keyof SpecificationInput, value: unknown) {
+		const existing = pendingEdits.get(deviceId) || {};
+		const existingSpec =
+			((existing as Record<string, unknown>)._specification as SpecificationInput) || {};
+		const newSpec = { ...existingSpec, [field]: value };
+		pendingEdits = new Map(pendingEdits).set(deviceId, {
+			...existing,
+			_specification: newSpec
+		} as Partial<UpdateFieldDeviceRequest>);
+		// Clear any existing error
+		if (editErrors.has(deviceId)) {
+			const newErrors = new Map(editErrors);
+			newErrors.delete(deviceId);
+			editErrors = newErrors;
+		}
+	}
+
+	function isSpecFieldDirty(deviceId: string, field: keyof SpecificationInput): boolean {
+		const edit = pendingEdits.get(deviceId);
+		if (!edit) return false;
+		const spec = (edit as Record<string, unknown>)._specification as SpecificationInput | undefined;
+		return spec ? field in spec : false;
+	}
+
+	function getPendingSpecValue(
+		deviceId: string,
+		field: keyof SpecificationInput
+	): string | undefined {
+		const edit = pendingEdits.get(deviceId);
+		if (!edit) return undefined;
+		const spec = (edit as Record<string, unknown>)._specification as SpecificationInput | undefined;
+		if (!spec || !(field in spec)) return undefined;
+		const val = spec[field];
+		return val !== undefined ? String(val) : undefined;
+	}
+
 	function isFieldDirty(deviceId: string, field: keyof UpdateFieldDeviceRequest): boolean {
 		const edit = pendingEdits.get(deviceId);
 		return edit ? field in edit : false;
 	}
 
-	function getPendingValue(deviceId: string, field: keyof UpdateFieldDeviceRequest): string | undefined {
+	function getPendingValue(
+		deviceId: string,
+		field: keyof UpdateFieldDeviceRequest
+	): string | undefined {
 		const edit = pendingEdits.get(deviceId);
 		if (!edit || !(field in edit)) return undefined;
 		const val = edit[field];
@@ -232,21 +281,25 @@
 
 		const updates: BulkUpdateFieldDeviceItem[] = [];
 		for (const [id, changes] of pendingEdits) {
+			const spec = (changes as Record<string, unknown>)._specification as
+				| SpecificationInput
+				| undefined;
 			updates.push({
 				id,
 				bmk: changes.bmk,
 				description: changes.description,
-				apparat_nr: changes.apparat_nr
+				apparat_nr: changes.apparat_nr,
+				specification: spec
 			});
 		}
 
 		try {
 			const result = await bulkUpdateFieldDevices({ updates });
-			
+
 			// Process results and track errors
 			const newErrors = new Map<string, string>();
 			const successIds = new Set<string>();
-			
+
 			for (const r of result.results) {
 				if (r.success) {
 					successIds.add(r.id);
@@ -254,7 +307,7 @@
 					newErrors.set(r.id, r.error);
 				}
 			}
-			
+
 			// Remove successful edits from pending, keep failed ones
 			const remainingEdits = new Map(pendingEdits);
 			for (const id of successIds) {
@@ -262,13 +315,16 @@
 			}
 			pendingEdits = remainingEdits;
 			editErrors = newErrors;
-			
+
 			if (result.success_count > 0) {
 				addToast(`Updated ${result.success_count} field device(s)`, 'success');
 				fieldDeviceStore.reload();
 			}
 			if (result.failure_count > 0) {
-				addToast(`Failed to update ${result.failure_count} device(s). Check highlighted fields.`, 'error');
+				addToast(
+					`Failed to update ${result.failure_count} device(s). Check highlighted fields.`,
+					'error'
+				);
 			}
 		} catch (error: unknown) {
 			const err = error as Error;
@@ -283,7 +339,8 @@
 
 	async function handleBulkDelete() {
 		if (selectedIds.size === 0) return;
-		if (!confirm(`Delete ${selectedIds.size} field device(s)? This action cannot be undone.`)) return;
+		if (!confirm(`Delete ${selectedIds.size} field device(s)? This action cannot be undone.`))
+			return;
 
 		try {
 			const result = await bulkDeleteFieldDevices([...selectedIds]);
@@ -614,48 +671,169 @@
 										></span>
 									{/if}
 								</Table.Cell>
-								<!-- Specification columns (shown when toggled) -->
+								<!-- Specification columns (shown when toggled) - now editable -->
 								{#if showSpecifications}
-									<Table.Cell class="text-xs"
-										>{device.specification?.specification_supplier || '-'}</Table.Cell
-									>
-									<Table.Cell class="text-xs"
-										>{device.specification?.specification_brand || '-'}</Table.Cell
-									>
-									<Table.Cell class="text-xs"
-										>{device.specification?.specification_type || '-'}</Table.Cell
-									>
-									<Table.Cell class="text-xs"
-										>{device.specification?.additional_info_motor_valve || '-'}</Table.Cell
-									>
-									<Table.Cell class="text-xs"
-										>{device.specification?.additional_info_size ?? '-'}</Table.Cell
-									>
-									<Table.Cell class="text-xs"
-										>{device.specification?.additional_information_installation_location ||
-											'-'}</Table.Cell
-									>
-									<Table.Cell class="text-xs"
-										>{device.specification?.electrical_connection_ph ?? '-'}</Table.Cell
-									>
-									<Table.Cell class="text-xs"
-										>{device.specification?.electrical_connection_acdc || '-'}</Table.Cell
-									>
-									<Table.Cell class="text-xs"
-										>{device.specification?.electrical_connection_amperage != null
-											? `${device.specification.electrical_connection_amperage}A`
-											: '-'}</Table.Cell
-									>
-									<Table.Cell class="text-xs"
-										>{device.specification?.electrical_connection_power != null
-											? `${device.specification.electrical_connection_power}W`
-											: '-'}</Table.Cell
-									>
-									<Table.Cell class="text-xs"
-										>{device.specification?.electrical_connection_rotation != null
-											? `${device.specification.electrical_connection_rotation} RPM`
-											: '-'}</Table.Cell
-									>
+									<Table.Cell class="text-xs">
+										<EditableCell
+											value={device.specification?.specification_supplier || ''}
+											pendingValue={getPendingSpecValue(device.id, 'specification_supplier')}
+											isDirty={isSpecFieldDirty(device.id, 'specification_supplier')}
+											error={getError(device.id)}
+											maxlength={250}
+											onSave={(v) =>
+												queueSpecEdit(device.id, 'specification_supplier', v || undefined)}
+										/>
+									</Table.Cell>
+									<Table.Cell class="text-xs">
+										<EditableCell
+											value={device.specification?.specification_brand || ''}
+											pendingValue={getPendingSpecValue(device.id, 'specification_brand')}
+											isDirty={isSpecFieldDirty(device.id, 'specification_brand')}
+											error={getError(device.id)}
+											maxlength={250}
+											onSave={(v) =>
+												queueSpecEdit(device.id, 'specification_brand', v || undefined)}
+										/>
+									</Table.Cell>
+									<Table.Cell class="text-xs">
+										<EditableCell
+											value={device.specification?.specification_type || ''}
+											pendingValue={getPendingSpecValue(device.id, 'specification_type')}
+											isDirty={isSpecFieldDirty(device.id, 'specification_type')}
+											error={getError(device.id)}
+											maxlength={250}
+											onSave={(v) => queueSpecEdit(device.id, 'specification_type', v || undefined)}
+										/>
+									</Table.Cell>
+									<Table.Cell class="text-xs">
+										<EditableCell
+											value={device.specification?.additional_info_motor_valve || ''}
+											pendingValue={getPendingSpecValue(device.id, 'additional_info_motor_valve')}
+											isDirty={isSpecFieldDirty(device.id, 'additional_info_motor_valve')}
+											error={getError(device.id)}
+											maxlength={250}
+											onSave={(v) =>
+												queueSpecEdit(device.id, 'additional_info_motor_valve', v || undefined)}
+										/>
+									</Table.Cell>
+									<Table.Cell class="text-xs">
+										<EditableCell
+											value={device.specification?.additional_info_size?.toString() || ''}
+											pendingValue={getPendingSpecValue(device.id, 'additional_info_size')}
+											isDirty={isSpecFieldDirty(device.id, 'additional_info_size')}
+											error={getError(device.id)}
+											type="number"
+											onSave={(v) =>
+												queueSpecEdit(
+													device.id,
+													'additional_info_size',
+													v ? parseInt(v) : undefined
+												)}
+										/>
+									</Table.Cell>
+									<Table.Cell class="text-xs">
+										<EditableCell
+											value={device.specification?.additional_information_installation_location ||
+												''}
+											pendingValue={getPendingSpecValue(
+												device.id,
+												'additional_information_installation_location'
+											)}
+											isDirty={isSpecFieldDirty(
+												device.id,
+												'additional_information_installation_location'
+											)}
+											error={getError(device.id)}
+											maxlength={250}
+											onSave={(v) =>
+												queueSpecEdit(
+													device.id,
+													'additional_information_installation_location',
+													v || undefined
+												)}
+										/>
+									</Table.Cell>
+									<Table.Cell class="text-xs">
+										<EditableCell
+											value={device.specification?.electrical_connection_ph?.toString() || ''}
+											pendingValue={getPendingSpecValue(device.id, 'electrical_connection_ph')}
+											isDirty={isSpecFieldDirty(device.id, 'electrical_connection_ph')}
+											error={getError(device.id)}
+											type="number"
+											onSave={(v) =>
+												queueSpecEdit(
+													device.id,
+													'electrical_connection_ph',
+													v ? parseInt(v) : undefined
+												)}
+										/>
+									</Table.Cell>
+									<Table.Cell class="text-xs">
+										<EditableCell
+											value={device.specification?.electrical_connection_acdc || ''}
+											pendingValue={getPendingSpecValue(device.id, 'electrical_connection_acdc')}
+											isDirty={isSpecFieldDirty(device.id, 'electrical_connection_acdc')}
+											error={getError(device.id)}
+											maxlength={2}
+											placeholder="AC/DC"
+											onSave={(v) =>
+												queueSpecEdit(device.id, 'electrical_connection_acdc', v || undefined)}
+										/>
+									</Table.Cell>
+									<Table.Cell class="text-xs">
+										<EditableCell
+											value={device.specification?.electrical_connection_amperage?.toString() || ''}
+											pendingValue={getPendingSpecValue(
+												device.id,
+												'electrical_connection_amperage'
+											)}
+											isDirty={isSpecFieldDirty(device.id, 'electrical_connection_amperage')}
+											error={getError(device.id)}
+											type="number"
+											placeholder="A"
+											onSave={(v) =>
+												queueSpecEdit(
+													device.id,
+													'electrical_connection_amperage',
+													v ? parseFloat(v) : undefined
+												)}
+										/>
+									</Table.Cell>
+									<Table.Cell class="text-xs">
+										<EditableCell
+											value={device.specification?.electrical_connection_power?.toString() || ''}
+											pendingValue={getPendingSpecValue(device.id, 'electrical_connection_power')}
+											isDirty={isSpecFieldDirty(device.id, 'electrical_connection_power')}
+											error={getError(device.id)}
+											type="number"
+											placeholder="W"
+											onSave={(v) =>
+												queueSpecEdit(
+													device.id,
+													'electrical_connection_power',
+													v ? parseFloat(v) : undefined
+												)}
+										/>
+									</Table.Cell>
+									<Table.Cell class="text-xs">
+										<EditableCell
+											value={device.specification?.electrical_connection_rotation?.toString() || ''}
+											pendingValue={getPendingSpecValue(
+												device.id,
+												'electrical_connection_rotation'
+											)}
+											isDirty={isSpecFieldDirty(device.id, 'electrical_connection_rotation')}
+											error={getError(device.id)}
+											type="number"
+											placeholder="RPM"
+											onSave={(v) =>
+												queueSpecEdit(
+													device.id,
+													'electrical_connection_rotation',
+													v ? parseInt(v) : undefined
+												)}
+										/>
+									</Table.Cell>
 								{/if}
 								<!-- Created -->
 								<Table.Cell>
@@ -782,7 +960,9 @@
 		<div
 			class="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-lg"
 		>
-			<span class="text-sm font-medium">{pendingCount} unsaved change{pendingCount !== 1 ? 's' : ''}</span>
+			<span class="text-sm font-medium"
+				>{pendingCount} unsaved change{pendingCount !== 1 ? 's' : ''}</span
+			>
 			<Button size="sm" onclick={saveAllPendingEdits}>
 				<Save class="mr-1 h-4 w-4" />
 				Save All

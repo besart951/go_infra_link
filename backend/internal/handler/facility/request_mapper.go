@@ -244,6 +244,27 @@ func toFieldDeviceSpecificationPatch(req dto.UpdateFieldDeviceSpecificationReque
 	}
 }
 
+// toSpecificationFromInput converts a SpecificationInput DTO to a domain Specification.
+// Used for bulk update operations with nested specification data.
+func toSpecificationFromInput(input *dto.SpecificationInput) *domainFacility.Specification {
+	if input == nil {
+		return nil
+	}
+	return &domainFacility.Specification{
+		SpecificationSupplier:                     input.SpecificationSupplier,
+		SpecificationBrand:                        input.SpecificationBrand,
+		SpecificationType:                         input.SpecificationType,
+		AdditionalInfoMotorValve:                  input.AdditionalInfoMotorValve,
+		AdditionalInfoSize:                        input.AdditionalInfoSize,
+		AdditionalInformationInstallationLocation: input.AdditionalInformationInstallationLocation,
+		ElectricalConnectionPH:                    input.ElectricalConnectionPH,
+		ElectricalConnectionACDC:                  input.ElectricalConnectionACDC,
+		ElectricalConnectionAmperage:              input.ElectricalConnectionAmperage,
+		ElectricalConnectionPower:                 input.ElectricalConnectionPower,
+		ElectricalConnectionRotation:              input.ElectricalConnectionRotation,
+	}
+}
+
 func toBuildingModel(req dto.CreateBuildingRequest) *domainFacility.Building {
 	return &domainFacility.Building{
 		IWSCode:       req.IWSCode,

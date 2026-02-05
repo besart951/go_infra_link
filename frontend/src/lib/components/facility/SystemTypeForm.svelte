@@ -3,61 +3,61 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { createSystemType, updateSystemType } from '$lib/infrastructure/api/facility.adapter.js';
-	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { SystemType } from '$lib/domain/facility/index.js';
-	import { createEventDispatcher } from 'svelte';
+	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 
-	export let initialData: SystemType | undefined = undefined;
-
-	let name = initialData?.name ?? '';
-	let number_min = initialData?.number_min ?? 0;
-	let number_max = initialData?.number_max ?? 0;
-	let loading = false;
-	let error = '';
-	let fieldErrors: Record<string, string> = {};
-
-	$: if (initialData) {
-		name = initialData.name;
-		number_min = initialData.number_min;
-		number_max = initialData.number_max;
+	interface SystemTypeFormProps {
+		initialData?: SystemType;
+		onSuccess?: (systemType: SystemType) => void;
+		onCancel?: () => void;
 	}
 
-	const dispatch = createEventDispatcher();
+	let { initialData, onSuccess, onCancel }: SystemTypeFormProps = $props();
 
-	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['systemtype']);
+	let name = $state(initialData?.name ?? '');
+	let number_min = $state(initialData?.number_min ?? 0);
+	let number_max = $state(initialData?.number_max ?? 0);
+
+	$effect(() => {
+		if (initialData) {
+			name = initialData.name;
+			number_min = initialData.number_min;
+			number_max = initialData.number_max;
+		}
+	});
+
+	const formState = useFormState({
+		onSuccess: (result: SystemType) => {
+			onSuccess?.(result);
+		}
+	});
 
 	async function handleSubmit() {
-		loading = true;
-		error = '';
-		fieldErrors = {};
-
-		try {
+		await formState.handleSubmit(async () => {
 			if (initialData) {
-				const res = await updateSystemType(initialData.id, {
+				return await updateSystemType(initialData.id, {
 					name,
 					number_min,
 					number_max
 				});
-				dispatch('success', res);
 			} else {
-				const res = await createSystemType({
+				return await createSystemType({
 					name,
 					number_min,
 					number_max
 				});
-				dispatch('success', res);
 			}
-		} catch (e) {
-			console.error(e);
-			fieldErrors = getFieldErrors(e);
-			error = Object.keys(fieldErrors).length ? '' : getErrorMessage(e);
-		} finally {
-			loading = false;
-		}
+		});
 	}
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
+<form
+	onsubmit={(e) => {
+		e.preventDefault();
+		handleSubmit();
+	}}
+	class="space-y-4 rounded-md border bg-muted/20 p-4"
+>
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">{initialData ? 'Edit System Type' : 'New System Type'}</h3>
 	</div>
@@ -66,32 +66,32 @@
 		<div class="space-y-2 md:col-span-1">
 			<Label for="system_type_name">Name</Label>
 			<Input id="system_type_name" bind:value={name} required maxlength={150} />
-			{#if fieldError('name')}
-				<p class="text-sm text-red-500">{fieldError('name')}</p>
+			{#if formState.getFieldError('name', ['systemtype'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('name', ['systemtype'])}</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="system_type_min">Min Number</Label>
 			<Input id="system_type_min" type="number" bind:value={number_min} required />
-			{#if fieldError('number_min')}
-				<p class="text-sm text-red-500">{fieldError('number_min')}</p>
+			{#if formState.getFieldError('number_min', ['systemtype'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('number_min', ['systemtype'])}</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="system_type_max">Max Number</Label>
 			<Input id="system_type_max" type="number" bind:value={number_max} required />
-			{#if fieldError('number_max')}
-				<p class="text-sm text-red-500">{fieldError('number_max')}</p>
+			{#if formState.getFieldError('number_max', ['systemtype'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('number_max', ['systemtype'])}</p>
 			{/if}
 		</div>
 	</div>
 
-	{#if error}
-		<p class="text-sm text-red-500">{error}</p>
+	{#if formState.error}
+		<p class="text-sm text-red-500">{formState.error}</p>
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={() => dispatch('cancel')}>Cancel</Button>
-		<Button type="submit" disabled={loading}>{initialData ? 'Update' : 'Create'}</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
+		<Button type="submit" disabled={formState.loading}>{initialData ? 'Update' : 'Create'}</Button>
 	</div>
 </form>

@@ -16,13 +16,14 @@
 		SPSControllerSystemType,
 		SPSControllerSystemTypeInput
 	} from '$lib/domain/facility/index.js';
-	import { createEventDispatcher } from 'svelte';
 
 	interface Props {
 		initialData?: SPSController;
+		onSuccess?: (controller: SPSController) => void;
+		onCancel?: () => void;
 	}
 
-	let { initialData }: Props = $props();
+	let { initialData, onSuccess, onCancel }: Props = $props();
 
 	let ga_device = $state('');
 	let device_name = $state('');
@@ -59,8 +60,6 @@
 			systemTypeNames = {};
 		}
 	});
-
-	const dispatch = createEventDispatcher();
 
 	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['spscontroller']);
 
@@ -154,7 +153,7 @@
 					control_cabinet_id,
 					system_types: systemTypes
 				});
-				dispatch('success', res);
+				onSuccess?.(res);
 			} else {
 				const res = await createSPSController({
 					ga_device,
@@ -163,7 +162,7 @@
 					control_cabinet_id,
 					system_types: systemTypes
 				});
-				dispatch('success', res);
+				onSuccess?.(res);
 			}
 		} catch (e) {
 			console.error(e);
@@ -290,7 +289,7 @@
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={() => dispatch('cancel')}>Cancel</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
 		<Button type="submit" disabled={loading}>
 			{initialData ? 'Update' : 'Create'}
 		</Button>

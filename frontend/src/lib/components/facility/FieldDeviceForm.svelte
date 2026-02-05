@@ -27,6 +27,8 @@
 
 	export let initialData: FieldDevice | undefined = undefined;
 	export let projectId: string | undefined = undefined;
+	export let onSuccess: ((device: FieldDevice) => void) | undefined = undefined;
+	export let onCancel: (() => void) | undefined = undefined;
 
 	let bmk = initialData?.bmk ?? '';
 	let description = initialData?.description ?? '';
@@ -323,7 +325,7 @@
 					apparat_id,
 					object_data_id: object_data_id || undefined
 				});
-				dispatch('success', res);
+				if (onSuccess) onSuccess(res);
 			} else {
 				const res = await createFieldDevice({
 					bmk: bmk || undefined,
@@ -334,7 +336,7 @@
 					apparat_id,
 					object_data_id: object_data_id || undefined
 				});
-				dispatch('success', res);
+				if (onSuccess) onSuccess(res);
 			}
 		} catch (e) {
 			console.error(e);
@@ -533,7 +535,7 @@
 		{/if}
 
 		<div class="flex justify-end gap-2 pt-2">
-			<Button type="button" variant="ghost" onclick={() => dispatch('cancel')}>Cancel</Button>
+			<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
 			<Button type="submit" disabled={loading}>
 				{initialData ? 'Update' : 'Create'}
 			</Button>

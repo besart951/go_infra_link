@@ -507,8 +507,8 @@
 				{#if showObjectDataForm}
 					<ObjectDataForm
 						initialData={editingObjectData}
-						on:success={handleObjectDataSuccess}
-						on:cancel={handleObjectDataCancel}
+						onSuccess={handleObjectDataSuccess}
+						onCancel={handleObjectDataCancel}
 					/>
 				{/if}
 

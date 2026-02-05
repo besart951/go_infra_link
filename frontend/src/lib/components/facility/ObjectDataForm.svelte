@@ -5,16 +5,18 @@
 	import { createObjectData, updateObjectData } from '$lib/infrastructure/api/facility.adapter.js';
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { ObjectData, BacnetObjectInput } from '$lib/domain/facility/index.js';
-	import { createEventDispatcher } from 'svelte';
+
 	import { Plus } from '@lucide/svelte';
 	import BacnetObjectRow from './BacnetObjectRow.svelte';
 	import ApparatMultiSelect from './ApparatMultiSelect.svelte';
 
 	interface Props {
 		initialData?: ObjectData;
+		onSuccess?: (objectData: ObjectData) => void;
+		onCancel?: () => void;
 	}
 
-	let { initialData }: Props = $props();
+	let { initialData, onSuccess, onCancel }: Props = $props();
 
 	let description = $state('');
 	let version = $state('1.0');
@@ -50,8 +52,6 @@
 			bacnetObjects = [];
 		}
 	});
-
-	const dispatch = createEventDispatcher();
 
 	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['objectdata']);
 
@@ -100,7 +100,7 @@
 					apparat_ids,
 					bacnet_objects: bacnetObjects
 				});
-				dispatch('success', res);
+				onSuccess?.(res);
 			} else {
 				const res = await createObjectData({
 					description,
@@ -109,7 +109,7 @@
 					apparat_ids,
 					bacnet_objects: bacnetObjects
 				});
-				dispatch('success', res);
+				onSuccess?.(res);
 			}
 		} catch (e) {
 			console.error(e);
@@ -205,7 +205,7 @@
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={() => dispatch('cancel')}>Cancel</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
 		<Button type="submit" disabled={loading}>{initialData ? 'Update' : 'Create'}</Button>
 	</div>
 </form>
