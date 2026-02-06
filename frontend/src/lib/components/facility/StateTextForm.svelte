@@ -14,11 +14,11 @@
 
 	let { initialData, onSuccess, onCancel }: StateTextFormProps = $props();
 
-	let ref_number = $state(initialData?.ref_number ?? 0);
-	let state_text1 = $state(initialData?.state_text1 ?? '');
-	let state_text2 = $state(initialData?.state_text2 ?? '');
-	let state_text3 = $state(initialData?.state_text3 ?? '');
-	let state_text4 = $state(initialData?.state_text4 ?? '');
+	let ref_number = $state(0);
+	let state_text1 = $state('');
+	let state_text2 = $state('');
+	let state_text3 = $state('');
+	let state_text4 = $state('');
 
 	$effect(() => {
 		if (initialData) {

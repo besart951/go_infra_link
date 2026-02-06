@@ -14,9 +14,9 @@
 
 	let { initialData, onSuccess, onCancel }: SystemTypeFormProps = $props();
 
-	let name = $state(initialData?.name ?? '');
-	let number_min = $state(initialData?.number_min ?? 0);
-	let number_max = $state(initialData?.number_max ?? 0);
+	let name = $state('');
+	let number_min = $state(0);
+	let number_max = $state(0);
 
 	$effect(() => {
 		if (initialData) {

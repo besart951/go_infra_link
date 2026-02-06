@@ -15,9 +15,9 @@
 
 	let { initialData, onSuccess, onCancel }: SystemPartFormProps = $props();
 
-	let short_name = $state(initialData?.short_name ?? '');
-	let name = $state(initialData?.name ?? '');
-	let description = $state(initialData?.description ?? '');
+	let short_name = $state('');
+	let name = $state('');
+	let description = $state('');
 
 	$effect(() => {
 		if (initialData) {

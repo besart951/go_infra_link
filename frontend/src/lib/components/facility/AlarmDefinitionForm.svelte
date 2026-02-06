@@ -18,8 +18,8 @@
 
 	let { initialData, onSuccess, onCancel }: AlarmDefinitionFormProps = $props();
 
-	let name = $state(initialData?.name ?? '');
-	let alarm_note = $state(initialData?.alarm_note ?? '');
+	let name = $state('');
+	let alarm_note = $state('');
 
 	$effect(() => {
 		if (initialData) {
@@ -51,7 +51,13 @@
 	}
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
+<form
+	onsubmit={(e) => {
+		e.preventDefault();
+		handleSubmit();
+	}}
+	class="space-y-4 rounded-md border bg-muted/20 p-4"
+>
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">
 			{initialData ? 'Edit Alarm Definition' : 'New Alarm Definition'}

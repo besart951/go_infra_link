@@ -75,7 +75,7 @@ export function useFormState<T = unknown>(options: UseFormStateOptions<T> = {}) 
 	/**
 	 * Wrap an async form submission handler with error handling
 	 */
-	async function handleSubmit<R = T>(submitFn: () => Promise<R>): Promise<R | undefined> {
+	async function handleSubmit<R extends T = T>(submitFn: () => Promise<R>): Promise<R | undefined> {
 		resetErrors();
 		state.loading = true;
 

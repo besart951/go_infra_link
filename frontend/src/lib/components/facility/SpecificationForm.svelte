@@ -19,26 +19,18 @@
 
 	let { initialData, onSuccess, onCancel }: SpecificationFormProps = $props();
 
-	let field_device_id = $state(initialData?.field_device_id ?? '');
-	let specification_supplier = $state(initialData?.specification_supplier ?? '');
-	let specification_brand = $state(initialData?.specification_brand ?? '');
-	let specification_type = $state(initialData?.specification_type ?? '');
-	let additional_info_motor_valve = $state(initialData?.additional_info_motor_valve ?? '');
-	let additional_info_size = $state(initialData?.additional_info_size?.toString() ?? '');
-	let additional_information_installation_location = $state(
-		initialData?.additional_information_installation_location ?? ''
-	);
-	let electrical_connection_ph = $state(initialData?.electrical_connection_ph?.toString() ?? '');
-	let electrical_connection_acdc = $state(initialData?.electrical_connection_acdc ?? '');
-	let electrical_connection_amperage = $state(
-		initialData?.electrical_connection_amperage?.toString() ?? ''
-	);
-	let electrical_connection_power = $state(
-		initialData?.electrical_connection_power?.toString() ?? ''
-	);
-	let electrical_connection_rotation = $state(
-		initialData?.electrical_connection_rotation?.toString() ?? ''
-	);
+	let field_device_id = $state('');
+	let specification_supplier = $state('');
+	let specification_brand = $state('');
+	let specification_type = $state('');
+	let additional_info_motor_valve = $state('');
+	let additional_info_size = $state('');
+	let additional_information_installation_location = $state('');
+	let electrical_connection_ph = $state('');
+	let electrical_connection_acdc = $state('');
+	let electrical_connection_amperage = $state('');
+	let electrical_connection_power = $state('');
+	let electrical_connection_rotation = $state('');
 
 	$effect(() => {
 		if (initialData) {
@@ -112,7 +104,13 @@
 	}
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
+<form
+	onsubmit={(e) => {
+		e.preventDefault();
+		handleSubmit();
+	}}
+	class="space-y-4 rounded-md border bg-muted/20 p-4"
+>
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">{initialData ? 'Edit Specification' : 'New Specification'}</h3>
 	</div>

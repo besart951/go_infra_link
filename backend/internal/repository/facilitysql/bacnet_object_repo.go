@@ -83,3 +83,12 @@ func (r *bacnetObjectRepo) SoftDeleteByFieldDeviceIDs(ids []uuid.UUID) error {
 		Where("field_device_id IN ?", ids).
 		Updates(map[string]any{"deleted_at": now, "updated_at": now}).Error
 }
+
+func (r *bacnetObjectRepo) HardDeleteByFieldDeviceIDs(ids []uuid.UUID) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	return r.db.Unscoped().
+		Where("field_device_id IN ?", ids).
+		Delete(&domainFacility.BacnetObject{}).Error
+}

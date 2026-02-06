@@ -1,0 +1,466 @@
+
+> frontend@0.0.1 check C:\Users\besart.morina\Documents\schrott\go_infra_link\frontend
+> svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+
+Loading svelte-check in workspace: c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend
+Getting Svelte diagnostics...
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\role-badge.svelte[39m:2:32
+[31mError[39m: Cannot find module '$lib/api/users' or its corresponding type declarations. (ts)
+[36m<script lang="ts">
+	import type { UserRole } from [35m'$lib/api/users'[36m;
+	import { Badge } from '$lib/components/ui/badge/index.js';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\role-badge.svelte[39m:4:31
+[31mError[39m: Cannot find module '$lib/utils/permissions' or its corresponding type declarations. (ts)
+[36m	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { getRoleLabel } from [35m'$lib/utils/permissions'[36m;
+	import { ShieldCheck, UserCircle } from '@lucide/svelte';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\stores\auth.svelte.ts[39m:10:75
+[31mError[39m: Cannot find module '$lib/api/users' or its corresponding type declarations. 
+[36m
+import { getCurrentUser, getAllowedRoles, type User, type UserRole } from [35m'$lib/api/users'[36m;[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\utils\permissions.ts[39m:8:31
+[31mError[39m: Cannot find module '$lib/api/users' or its corresponding type declarations. 
+[36m
+import type { UserRole } from [35m'$lib/api/users'[36m;
+import { canManageRole, hasRole, hasMinRole, auth } from '$lib/stores/auth.svelte';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\ui\editable-cell\EditableCell.svelte[39m:41:25
+[33mWarn[39m: This reference only captures the initial value of `value`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let isEditing = $state(false);
+	let editValue = $state([35mvalue[36m);
+	let inputElement: HTMLInputElement | null = $state(null);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\ui\editable-cell\EditableCell.svelte[39m:113:22
+[31mError[39m: Object literal may only specify known properties, and '"asChild"' does not exist in type 'Omit<{ disabled?: boolean | null | undefined; }, "child" | "children"> & { child?: Snippet<[{ props: Record<string, unknown>; }]> | undefined; children?: Snippet<[]> | undefined; style?: any; ref?: HTMLElement | ... 1 more ... | undefined; } & Without<...>'. (ts)
+[36m			<Tooltip.Root>
+				<Tooltip.Trigger [35masChil[36md>
+					<button[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\hooks\useFormState.svelte.ts[39m:90:16
+[31mError[39m: Argument of type 'Awaited<R>' is not assignable to parameter of type 'T'.
+  'T' could be instantiated with an arbitrary type which could be unrelated to 'Awaited<R>'. 
+[36m
+			onSuccess?.([35mresult[36m);
+			return result;[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\server\backend.example.ts[39m:7:9
+[31mError[39m: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`. 
+[36mexport function getBackendUrl(): string {
+	return [35mprocess[36m.env.BACKEND_URL || 'http://localhost:8080';
+}[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\permission-guard.svelte[39m:18:32
+[31mError[39m: Cannot find module '$lib/api/users' or its corresponding type declarations. (ts)
+[36m	import type { Snippet } from 'svelte';
+	import type { UserRole } from [35m'$lib/api/users'[36m;
+	import { canPerform } from '$lib/utils/permissions';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\permission-guard.svelte[39m:19:29
+[31mError[39m: Cannot find module '$lib/utils/permissions' or its corresponding type declarations. (ts)
+[36m	import type { UserRole } from '$lib/api/users';
+	import { canPerform } from [35m'$lib/utils/permissions'[36m;
+	import { canManageRole } from '$lib/stores/auth.svelte';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:2:32
+[31mError[39m: Cannot find module '$lib/api/users' or its corresponding type declarations. (ts)
+[36m<script lang="ts">
+	import type { UserRole } from [35m'$lib/api/users'[36m;
+	import { createUser } from '$lib/api/users';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:3:29
+[31mError[39m: Cannot find module '$lib/api/users' or its corresponding type declarations. (ts)
+[36m	import type { UserRole } from '$lib/api/users';
+	import { createUser } from [35m'$lib/api/users'[36m;
+	import { getAllowedRolesForCreation } from '$lib/stores/auth.svelte';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:5:31
+[31mError[39m: Cannot find module '$lib/utils/permissions' or its corresponding type declarations. (ts)
+[36m	import { getAllowedRolesForCreation } from '$lib/stores/auth.svelte';
+	import { getRoleLabel } from [35m'$lib/utils/permissions'[36m;
+	import { getErrorMessage, getFieldErrors } from '$lib/api/client';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:6:50
+[31mError[39m: Cannot find module '$lib/api/client' or its corresponding type declarations. (ts)
+[36m	import { getRoleLabel } from '$lib/utils/permissions';
+	import { getErrorMessage, getFieldErrors } from [35m'$lib/api/client'[36m;
+	import { Button } from '$lib/components/ui/button/index.js';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:14:21
+[31mError[39m: Cannot find module '$lib/utils' or its corresponding type declarations. (ts)
+[36m	import { Check } from '@lucide/svelte';
+	import { cn } from [35m'$lib/utils'[36m;[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:145:21
+[31mError[39m: Object literal may only specify known properties, and '"asChild"' does not exist in type 'Omit<{ openOnHover?: boolean | undefined; openDelay?: number | undefined; closeDelay?: number | undefined; }, "child" | "children"> & { child?: Snippet<[{ props: Record<string, unknown>; }]> | undefined; children?: Snippet<...> | undefined; style?: any; ref?: HTMLElement | ... 1 more ... | undefined; } & Without<...>'. (ts)
+[36m		<Popover.Root bind:open={openCombobox}>
+			<Popover.Trigger [35masChild[36m let:builder>
+				<Button[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:145:39
+[31mError[39m: '$$_reggirT_revopoP3.$$slot_def' is of type 'unknown'. (ts)
+[36m		<Popover.Root bind:open={openCombobox}>
+			<Popover.Trigger asChild let:builde[35m[36mr>
+				<Button[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:155:6
+[31mError[39m: Object literal may only specify known properties, and '"builders"' does not exist in type 'HTMLButtonAttributes & { ref?: HTMLElement | null | undefined; } & HTMLAnchorAttributes & { variant?: "default" | "destructive" | ... 4 more ... | undefined; size?: "default" | ... 5 more ... | undefined; }'. (ts)
+[36m					)}
+					[35mbuilders[36m={[builder]}
+				>[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:183:9
+[31mError[39m: Type '(currentValue: any) => void' is not assignable to type '() => void'.
+  Target signature provides too few arguments. Expected 1 or more, but got 0. (ts)
+[36m								value={role}
+								[35monSelect[36m={(currentValue) => {
+									selectedRole = currentValue as UserRole;[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:183:20
+[31mError[39m: Parameter 'currentValue' implicitly has an 'any' type. (ts)
+[36m								value={role}
+								onSelect={([35mcurrentValue[36m) => {
+									selectedRole = currentValue as UserRole;[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\AlarmDefinitionForm.svelte[39m:21:20
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m
+	let name = $state([35minitialData[36m?.name ?? '');
+	let alarm_note = $state(initialData?.alarm_note ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\AlarmDefinitionForm.svelte[39m:22:26
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let name = $state(initialData?.name ?? '');
+	let alarm_note = $state([35minitialData[36m?.alarm_note ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\AlarmDefinitionForm.svelte[39m:54:7
+[33mWarn[39m: Using `on:submit` to listen to the submit event is deprecated. Use the event attribute `onsubmit` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m
+<form [35mon:submit|preventDefault={handleSubmit}[36m class="space-y-4 rounded-md border bg-muted/20 p-4">
+	<div class="mb-4 flex items-center justify-between">[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\ApparatForm.svelte[39m:19:26
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m
+	let short_name = $state([35minitialData[36m?.short_name ?? '');
+	let name = $state(initialData?.name ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\ApparatForm.svelte[39m:20:20
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let short_name = $state(initialData?.short_name ?? '');
+	let name = $state([35minitialData[36m?.name ?? '');
+	let description = $state(initialData?.description ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\ApparatForm.svelte[39m:21:27
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let name = $state(initialData?.name ?? '');
+	let description = $state([35minitialData[36m?.description ?? '');
+	let system_part_ids = $state(initialData?.system_parts?.map((sp) => sp.id) ?? []);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\ApparatForm.svelte[39m:22:31
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let description = $state(initialData?.description ?? '');
+	let system_part_ids = $state([35minitialData[36m?.system_parts?.map((sp) => sp.id) ?? []);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\ApparatForm.svelte[39m:60:7
+[33mWarn[39m: Using `on:submit` to listen to the submit event is deprecated. Use the event attribute `onsubmit` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m
+<form [35mon:submit|preventDefault={handleSubmit}[36m class="space-y-4 rounded-md border bg-muted/20 p-4">
+	<div class="mb-4 flex items-center justify-between">[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\ControlCabinetForm.svelte[39m:21:34
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m
+	let control_cabinet_nr = $state([35minitialData[36m?.control_cabinet_nr ?? '');
+	let building_id = $state(initialData?.building_id ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\ControlCabinetForm.svelte[39m:22:27
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let control_cabinet_nr = $state(initialData?.control_cabinet_nr ?? '');
+	let building_id = $state([35minitialData[36m?.building_id ?? '');
+	let loading = $state(false);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\NotificationClassForm.svelte[39m:21:30
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m
+	let event_category = $state([35minitialData[36m?.event_category ?? '');
+	let nc = $state(initialData?.nc ?? 0);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\NotificationClassForm.svelte[39m:22:18
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let event_category = $state(initialData?.event_category ?? '');
+	let nc = $state([35minitialData[36m?.nc ?? 0);
+	let object_description = $state(initialData?.object_description ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\NotificationClassForm.svelte[39m:23:34
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let nc = $state(initialData?.nc ?? 0);
+	let object_description = $state([35minitialData[36m?.object_description ?? '');
+	let internal_description = $state(initialData?.internal_description ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\NotificationClassForm.svelte[39m:24:36
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let object_description = $state(initialData?.object_description ?? '');
+	let internal_description = $state([35minitialData[36m?.internal_description ?? '');
+	let meaning = $state(initialData?.meaning ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\NotificationClassForm.svelte[39m:25:23
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let internal_description = $state(initialData?.internal_description ?? '');
+	let meaning = $state([35minitialData[36m?.meaning ?? '');
+	let ack_required_not_normal = $state(initialData?.ack_required_not_normal ?? false);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\NotificationClassForm.svelte[39m:26:39
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let meaning = $state(initialData?.meaning ?? '');
+	let ack_required_not_normal = $state([35minitialData[36m?.ack_required_not_normal ?? false);
+	let ack_required_error = $state(initialData?.ack_required_error ?? false);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\NotificationClassForm.svelte[39m:27:34
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let ack_required_not_normal = $state(initialData?.ack_required_not_normal ?? false);
+	let ack_required_error = $state([35minitialData[36m?.ack_required_error ?? false);
+	let ack_required_normal = $state(initialData?.ack_required_normal ?? false);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\NotificationClassForm.svelte[39m:28:35
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let ack_required_error = $state(initialData?.ack_required_error ?? false);
+	let ack_required_normal = $state([35minitialData[36m?.ack_required_normal ?? false);
+	let norm_not_normal = $state(initialData?.norm_not_normal ?? 0);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\NotificationClassForm.svelte[39m:29:31
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let ack_required_normal = $state(initialData?.ack_required_normal ?? false);
+	let norm_not_normal = $state([35minitialData[36m?.norm_not_normal ?? 0);
+	let norm_error = $state(initialData?.norm_error ?? 0);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\NotificationClassForm.svelte[39m:30:26
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let norm_not_normal = $state(initialData?.norm_not_normal ?? 0);
+	let norm_error = $state([35minitialData[36m?.norm_error ?? 0);
+	let norm_normal = $state(initialData?.norm_normal ?? 0);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\NotificationClassForm.svelte[39m:31:27
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let norm_error = $state(initialData?.norm_error ?? 0);
+	let norm_normal = $state([35minitialData[36m?.norm_normal ?? 0);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SPSControllerSelect.svelte[39m:26:2
+[31mError[39m: Type '"document_name"' is not assignable to type 'keyof SPSController'. (ts)
+[36m	{fetchById}
+	[35mlabelKey[36m="document_name"
+	placeholder="Select SPS Controller..."[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SpecificationForm.svelte[39m:22:31
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m
+	let field_device_id = $state([35minitialData[36m?.field_device_id ?? '');
+	let specification_supplier = $state(initialData?.specification_supplier ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SpecificationForm.svelte[39m:23:38
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let field_device_id = $state(initialData?.field_device_id ?? '');
+	let specification_supplier = $state([35minitialData[36m?.specification_supplier ?? '');
+	let specification_brand = $state(initialData?.specification_brand ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SpecificationForm.svelte[39m:24:35
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let specification_supplier = $state(initialData?.specification_supplier ?? '');
+	let specification_brand = $state([35minitialData[36m?.specification_brand ?? '');
+	let specification_type = $state(initialData?.specification_type ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SpecificationForm.svelte[39m:25:34
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let specification_brand = $state(initialData?.specification_brand ?? '');
+	let specification_type = $state([35minitialData[36m?.specification_type ?? '');
+	let additional_info_motor_valve = $state(initialData?.additional_info_motor_valve ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SpecificationForm.svelte[39m:26:43
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let specification_type = $state(initialData?.specification_type ?? '');
+	let additional_info_motor_valve = $state([35minitialData[36m?.additional_info_motor_valve ?? '');
+	let additional_info_size = $state(initialData?.additional_info_size?.toString() ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SpecificationForm.svelte[39m:27:36
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let additional_info_motor_valve = $state(initialData?.additional_info_motor_valve ?? '');
+	let additional_info_size = $state([35minitialData[36m?.additional_info_size?.toString() ?? '');
+	let additional_information_installation_location = $state([39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SpecificationForm.svelte[39m:29:3
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let additional_information_installation_location = $state(
+		[35minitialData[36m?.additional_information_installation_location ?? ''
+	);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SpecificationForm.svelte[39m:31:40
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	);
+	let electrical_connection_ph = $state([35minitialData[36m?.electrical_connection_ph?.toString() ?? '');
+	let electrical_connection_acdc = $state(initialData?.electrical_connection_acdc ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SpecificationForm.svelte[39m:32:42
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let electrical_connection_ph = $state(initialData?.electrical_connection_ph?.toString() ?? '');
+	let electrical_connection_acdc = $state([35minitialData[36m?.electrical_connection_acdc ?? '');
+	let electrical_connection_amperage = $state([39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SpecificationForm.svelte[39m:34:3
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let electrical_connection_amperage = $state(
+		[35minitialData[36m?.electrical_connection_amperage?.toString() ?? ''
+	);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SpecificationForm.svelte[39m:37:3
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let electrical_connection_power = $state(
+		[35minitialData[36m?.electrical_connection_power?.toString() ?? ''
+	);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SpecificationForm.svelte[39m:40:3
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let electrical_connection_rotation = $state(
+		[35minitialData[36m?.electrical_connection_rotation?.toString() ?? ''
+	);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SpecificationForm.svelte[39m:115:7
+[33mWarn[39m: Using `on:submit` to listen to the submit event is deprecated. Use the event attribute `onsubmit` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m
+<form [35mon:submit|preventDefault={handleSubmit}[36m class="space-y-4 rounded-md border bg-muted/20 p-4">
+	<div class="mb-4 flex items-center justify-between">[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\StateTextForm.svelte[39m:17:26
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m
+	let ref_number = $state([35minitialData[36m?.ref_number ?? 0);
+	let state_text1 = $state(initialData?.state_text1 ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\StateTextForm.svelte[39m:18:27
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let ref_number = $state(initialData?.ref_number ?? 0);
+	let state_text1 = $state([35minitialData[36m?.state_text1 ?? '');
+	let state_text2 = $state(initialData?.state_text2 ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\StateTextForm.svelte[39m:19:27
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let state_text1 = $state(initialData?.state_text1 ?? '');
+	let state_text2 = $state([35minitialData[36m?.state_text2 ?? '');
+	let state_text3 = $state(initialData?.state_text3 ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\StateTextForm.svelte[39m:20:27
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let state_text2 = $state(initialData?.state_text2 ?? '');
+	let state_text3 = $state([35minitialData[36m?.state_text3 ?? '');
+	let state_text4 = $state(initialData?.state_text4 ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\StateTextForm.svelte[39m:21:27
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let state_text3 = $state(initialData?.state_text3 ?? '');
+	let state_text4 = $state([35minitialData[36m?.state_text4 ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SystemPartForm.svelte[39m:18:26
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m
+	let short_name = $state([35minitialData[36m?.short_name ?? '');
+	let name = $state(initialData?.name ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SystemPartForm.svelte[39m:19:20
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let short_name = $state(initialData?.short_name ?? '');
+	let name = $state([35minitialData[36m?.name ?? '');
+	let description = $state(initialData?.description ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SystemPartForm.svelte[39m:20:27
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let name = $state(initialData?.name ?? '');
+	let description = $state([35minitialData[36m?.description ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SystemTypeForm.svelte[39m:17:20
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m
+	let name = $state([35minitialData[36m?.name ?? '');
+	let number_min = $state(initialData?.number_min ?? 0);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SystemTypeForm.svelte[39m:18:26
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let name = $state(initialData?.name ?? '');
+	let number_min = $state([35minitialData[36m?.number_min ?? 0);
+	let number_max = $state(initialData?.number_max ?? 0);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SystemTypeForm.svelte[39m:19:26
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m	let number_min = $state(initialData?.number_min ?? 0);
+	let number_max = $state([35minitialData[36m?.number_max ?? 0);[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\project\PhaseForm.svelte[39m:17:20
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m
+	let name = $state([35minitialData[36m?.name ?? '');[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\project\PhaseForm.svelte[39m:31:19
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m		showSuccessToast: true,
+		successMessage: [35minitialData[36m ? 'Phase updated successfully' : 'Phase created successfully'
+	});[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\project\PhaseForm.svelte[39m:51:7
+[33mWarn[39m: Using `on:submit` to listen to the submit event is deprecated. Use the event attribute `onsubmit` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m
+<form [35mon:submit|preventDefault={handleSubmit}[36m class="space-y-4 rounded-md border bg-muted/20 p-4">
+	<div class="mb-4 flex items-center justify-between">[39m
+
+====================================
+[31msvelte-check found 20 errors and 49 warnings in 18 files
+[39mÔÇëELIFECYCLEÔÇë Command failed with exit code 1.

@@ -6,8 +6,12 @@
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import type { SPSController } from '$lib/domain/facility/index.js';
 
-	export let value: string = '';
-	export let width: string = 'w-[250px]';
+	interface Props {
+		value?: string;
+		width?: string;
+	}
+
+	let { value = $bindable(''), width = 'w-[250px]' }: Props = $props();
 
 	async function fetcher(search: string): Promise<SPSController[]> {
 		const res = await listSPSControllers({ search, limit: 20 });
@@ -23,7 +27,7 @@
 	bind:value
 	{fetcher}
 	{fetchById}
-	labelKey="document_name"
+	labelKey="device_name"
 	placeholder="Select SPS Controller..."
 	{width}
 />

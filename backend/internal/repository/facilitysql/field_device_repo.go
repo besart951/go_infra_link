@@ -85,7 +85,7 @@ func (r *fieldDeviceRepo) GetIDsBySPSControllerSystemTypeIDs(ids []uuid.UUID) ([
 	return out, nil
 }
 
-func (r *fieldDeviceRepo) ExistsApparatNrConflict(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID, apparatNr int, excludeID *uuid.UUID) (bool, error) {
+func (r *fieldDeviceRepo) ExistsApparatNrConflict(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID, apparatNr int, excludeIDs []uuid.UUID) (bool, error) {
 	db := r.db.Model(&domainFacility.FieldDevice{}).
 		Where("deleted_at IS NULL").
 		Where("sps_controller_system_type_id = ?", spsControllerSystemTypeID).
@@ -97,8 +97,8 @@ func (r *fieldDeviceRepo) ExistsApparatNrConflict(spsControllerSystemTypeID uuid
 		db = db.Where("system_part_id = ?", *systemPartID)
 	}
 
-	if excludeID != nil {
-		db = db.Where("id != ?", *excludeID)
+	if len(excludeIDs) > 0 {
+		db = db.Where("id NOT IN ?", excludeIDs)
 	}
 
 	var count int64
@@ -154,6 +154,11 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 			Joins("JOIN sps_controllers sc2 ON sc2.id = scts2.sps_controller_id").
 			Joins("JOIN control_cabinets cc ON cc.id = sc2.control_cabinet_id").
 			Where("cc.building_id = ?", *filters.BuildingID)
+	}
+
+	if filters.ProjectID != nil {
+		query = query.Joins("JOIN project_field_devices pfd ON pfd.field_device_id = field_devices.id AND pfd.deleted_at IS NULL").
+			Where("pfd.project_id = ?", *filters.ProjectID)
 	}
 
 	// Apply search

@@ -43,9 +43,9 @@
 		if (!initialData) {
 			return;
 		}
-		ga_device = initialData.ga_device;
+		ga_device = initialData.ga_device ?? '';
 		device_name = initialData.device_name;
-		ip_address = initialData.ip_address;
+		ip_address = initialData.ip_address ?? '';
 		control_cabinet_id = initialData.control_cabinet_id;
 	});
 

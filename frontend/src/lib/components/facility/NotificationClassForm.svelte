@@ -18,17 +18,17 @@
 
 	let { initialData, onSuccess, onCancel }: Props = $props();
 
-	let event_category = $state(initialData?.event_category ?? '');
-	let nc = $state(initialData?.nc ?? 0);
-	let object_description = $state(initialData?.object_description ?? '');
-	let internal_description = $state(initialData?.internal_description ?? '');
-	let meaning = $state(initialData?.meaning ?? '');
-	let ack_required_not_normal = $state(initialData?.ack_required_not_normal ?? false);
-	let ack_required_error = $state(initialData?.ack_required_error ?? false);
-	let ack_required_normal = $state(initialData?.ack_required_normal ?? false);
-	let norm_not_normal = $state(initialData?.norm_not_normal ?? 0);
-	let norm_error = $state(initialData?.norm_error ?? 0);
-	let norm_normal = $state(initialData?.norm_normal ?? 0);
+	let event_category = $state('');
+	let nc = $state(0);
+	let object_description = $state('');
+	let internal_description = $state('');
+	let meaning = $state('');
+	let ack_required_not_normal = $state(false);
+	let ack_required_error = $state(false);
+	let ack_required_normal = $state(false);
+	let norm_not_normal = $state(0);
+	let norm_error = $state(0);
+	let norm_normal = $state(0);
 
 	let loading = $state(false);
 	let error = $state('');

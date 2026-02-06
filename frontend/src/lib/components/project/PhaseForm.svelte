@@ -14,7 +14,7 @@
 
 	let { initialData, onSuccess, onCancel }: PhaseFormProps = $props();
 
-	let name = $state(initialData?.name ?? '');
+	let name = $state('');
 
 	// Watch for changes to initialData
 	$effect(() => {
@@ -28,6 +28,7 @@
 			onSuccess?.(result);
 		},
 		showSuccessToast: true,
+		// svelte-ignore state_referenced_locally
 		successMessage: initialData ? 'Phase updated successfully' : 'Phase created successfully'
 	});
 
@@ -48,7 +49,13 @@
 	}
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
+<form
+	onsubmit={(e) => {
+		e.preventDefault();
+		handleSubmit();
+	}}
+	class="space-y-4 rounded-md border bg-muted/20 p-4"
+>
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">{initialData ? 'Edit Phase' : 'New Phase'}</h3>
 	</div>

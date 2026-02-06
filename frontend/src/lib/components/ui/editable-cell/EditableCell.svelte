@@ -38,7 +38,7 @@
 	}: Props = $props();
 
 	let isEditing = $state(false);
-	let editValue = $state(value);
+	let editValue = $state('');
 	let inputElement: HTMLInputElement | null = $state(null);
 
 	// Display value: use pending value if available, otherwise original value
@@ -106,12 +106,13 @@
 			.filter(Boolean)
 			.join(' ')}
 	/>
-{:else}
-	{#if hasError}
-		<Tooltip.Provider>
-			<Tooltip.Root>
-				<Tooltip.Trigger asChild>
+{:else if hasError}
+	<Tooltip.Provider>
+		<Tooltip.Root>
+			<Tooltip.Trigger>
+				{#snippet child({ props })}
 					<button
+						{...props}
 						type="button"
 						onclick={startEditing}
 						{disabled}
@@ -133,35 +134,35 @@
 							<span class="text-muted-foreground">{emptyText}</span>
 						{/if}
 					</button>
-				</Tooltip.Trigger>
-				<Tooltip.Content side="top" class="max-w-xs bg-destructive text-destructive-foreground">
-					<p>{error}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
-		</Tooltip.Provider>
-	{:else}
-		<button
-			type="button"
-			onclick={startEditing}
-			{disabled}
-			class={[
-				'flex h-7 min-h-7 w-full cursor-pointer items-center rounded-sm px-2 py-1 text-left text-sm transition-colors',
-				'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
-				isDirty ? 'bg-yellow-50 dark:bg-yellow-950/30' : '',
-				disabled ? 'cursor-not-allowed opacity-50' : ''
-			]
-				.filter(Boolean)
-				.join(' ')}
-		>
-			{#if displayValue}
-				{#if type === 'number'}
-					<code class="rounded bg-muted px-1.5 py-0.5 text-sm">{displayValue}</code>
-				{:else}
-					<span class="truncate">{displayValue}</span>
-				{/if}
+				{/snippet}
+			</Tooltip.Trigger>
+			<Tooltip.Content side="top" class="text-destructive-foreground max-w-xs bg-destructive">
+				<p>{error}</p>
+			</Tooltip.Content>
+		</Tooltip.Root>
+	</Tooltip.Provider>
+{:else}
+	<button
+		type="button"
+		onclick={startEditing}
+		{disabled}
+		class={[
+			'flex h-7 min-h-7 w-full cursor-pointer items-center rounded-sm px-2 py-1 text-left text-sm transition-colors',
+			'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
+			isDirty ? 'bg-yellow-50 dark:bg-yellow-950/30' : '',
+			disabled ? 'cursor-not-allowed opacity-50' : ''
+		]
+			.filter(Boolean)
+			.join(' ')}
+	>
+		{#if displayValue}
+			{#if type === 'number'}
+				<code class="rounded bg-muted px-1.5 py-0.5 text-sm">{displayValue}</code>
 			{:else}
-				<span class="text-muted-foreground">{emptyText}</span>
+				<span class="truncate">{displayValue}</span>
 			{/if}
-		</button>
-	{/if}
+		{:else}
+			<span class="text-muted-foreground">{emptyText}</span>
+		{/if}
+	</button>
 {/if}

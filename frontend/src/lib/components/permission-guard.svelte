@@ -15,8 +15,8 @@
 	 */
 
 	import type { Snippet } from 'svelte';
-	import type { UserRole } from '$lib/api/users';
-	import { canPerform } from '$lib/utils/permissions';
+	import type { UserRole } from '$lib/api/users.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	import { canManageRole } from '$lib/stores/auth.svelte';
 
 	interface Props {

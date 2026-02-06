@@ -16,10 +16,10 @@
 
 	let { initialData, onSuccess, onCancel }: ApparatFormProps = $props();
 
-	let short_name = $state(initialData?.short_name ?? '');
-	let name = $state(initialData?.name ?? '');
-	let description = $state(initialData?.description ?? '');
-	let system_part_ids = $state(initialData?.system_parts?.map((sp) => sp.id) ?? []);
+	let short_name = $state('');
+	let name = $state('');
+	let description = $state('');
+	let system_part_ids = $state<string[]>([]);
 
 	$effect(() => {
 		if (initialData) {
@@ -57,7 +57,13 @@
 	}
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
+<form
+	onsubmit={(e) => {
+		e.preventDefault();
+		handleSubmit();
+	}}
+	class="space-y-4 rounded-md border bg-muted/20 p-4"
+>
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">{initialData ? 'Edit Apparat' : 'New Apparat'}</h3>
 	</div>

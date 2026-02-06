@@ -164,6 +164,10 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 		filters.SPSControllerSystemTypeID = spsControllerSystemTypeID
 	}
 
+	if projectID, ok := parseUUIDQueryParam(c, "project_id"); ok && projectID != nil {
+		filters.ProjectID = projectID
+	}
+
 	result, err := h.service.ListWithFilters(query.Page, query.Limit, query.Search, filters)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
@@ -529,6 +533,7 @@ func toBulkOperationResponse(result *domainFacility.BulkOperationResult) dto.Bul
 			ID:      r.ID,
 			Success: r.Success,
 			Error:   r.Error,
+			Fields:  r.Fields,
 		}
 	}
 	return dto.BulkUpdateFieldDeviceResponse{

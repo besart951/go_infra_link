@@ -18,8 +18,8 @@
 
 	let { initialData, onSuccess, onCancel }: Props = $props();
 
-	let control_cabinet_nr = $state(initialData?.control_cabinet_nr ?? '');
-	let building_id = $state(initialData?.building_id ?? '');
+	let control_cabinet_nr = $state('');
+	let building_id = $state('');
 	let loading = $state(false);
 	let error = $state('');
 	let fieldErrors = $state<Record<string, string>>({});

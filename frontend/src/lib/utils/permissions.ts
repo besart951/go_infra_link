@@ -5,7 +5,7 @@
  * based on user permissions and role hierarchy
  */
 
-import type { UserRole } from '$lib/api/users';
+import type { UserRole } from '$lib/api/users.js';
 import { canManageRole, hasRole, hasMinRole, auth } from '$lib/stores/auth.svelte';
 
 /**

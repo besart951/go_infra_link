@@ -9,4 +9,5 @@ type BacnetObjectStore interface {
 
 	GetByFieldDeviceIDs(ids []uuid.UUID) ([]*BacnetObject, error)
 	SoftDeleteByFieldDeviceIDs(ids []uuid.UUID) error
+	HardDeleteByFieldDeviceIDs(ids []uuid.UUID) error
 }

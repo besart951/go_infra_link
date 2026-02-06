@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { UserRole } from '$lib/api/users';
-	import { createUser } from '$lib/api/users';
+	import type { UserRole } from '$lib/api/users.js';
+	import { createUser } from '$lib/api/users.js';
 	import { getAllowedRolesForCreation } from '$lib/stores/auth.svelte';
-	import { getRoleLabel } from '$lib/utils/permissions';
-	import { getErrorMessage, getFieldErrors } from '$lib/api/client';
+	import { getRoleLabel } from '$lib/utils/permissions.js';
+	import { getErrorMessage, getFieldErrors } from '$lib/api/client.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
@@ -11,7 +11,7 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import { Check } from '@lucide/svelte';
-	import { cn } from '$lib/utils';
+	import { cn } from '$lib/utils.js';
 
 	interface Props {
 		onSuccess?: () => void;
@@ -142,35 +142,37 @@
 	<div class="space-y-2">
 		<Label for="role">Role</Label>
 		<Popover.Root bind:open={openCombobox}>
-			<Popover.Trigger asChild let:builder>
-				<Button
-					variant="outline"
-					role="combobox"
-					aria-expanded={openCombobox}
-					class={cn(
-						'w-full justify-between',
-						!selectedRole && 'text-muted-foreground',
-						fieldErrors.role && 'border-destructive'
-					)}
-					builders={[builder]}
-				>
-					{selectedRole ? getRoleLabel(selectedRole) : 'Select a role...'}
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="24"
-						height="24"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						class="ml-2 h-4 w-4 shrink-0 opacity-50"
+			<Popover.Trigger>
+				{#snippet child({ props })}
+					<Button
+						{...props}
+						variant="outline"
+						role="combobox"
+						aria-expanded={openCombobox}
+						class={cn(
+							'w-full justify-between',
+							!selectedRole && 'text-muted-foreground',
+							fieldErrors.role && 'border-destructive'
+						)}
 					>
-						<path d="m7 15 5 5 5-5" />
-						<path d="m7 9 5-5 5 5" />
-					</svg>
-				</Button>
+						{selectedRole ? getRoleLabel(selectedRole) : 'Select a role...'}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="24"
+							height="24"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							class="ml-2 h-4 w-4 shrink-0 opacity-50"
+						>
+							<path d="m7 15 5 5 5-5" />
+							<path d="m7 9 5-5 5 5" />
+						</svg>
+					</Button>
+				{/snippet}
 			</Popover.Trigger>
 			<Popover.Content class="w-full p-0 bg-background text-foreground" side="bottom" align="start">
 				<Command.Root>
@@ -180,8 +182,8 @@
 						{#each allowedRoles as role (role)}
 							<Command.Item
 								value={role}
-								onSelect={(currentValue) => {
-									selectedRole = currentValue as UserRole;
+								onSelect={() => {
+									selectedRole = role;
 									openCombobox = false;
 								}}
 							>

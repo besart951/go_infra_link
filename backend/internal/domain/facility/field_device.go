@@ -37,6 +37,7 @@ type FieldDeviceFilterParams struct {
 	ControlCabinetID          *uuid.UUID
 	SPSControllerID           *uuid.UUID
 	SPSControllerSystemTypeID *uuid.UUID
+	ProjectID                 *uuid.UUID
 }
 
 // FieldDeviceCreateItem represents a single field device to create in a multi-create operation
@@ -80,6 +81,7 @@ type BulkOperationResultItem struct {
 	ID      uuid.UUID
 	Success bool
 	Error   string
+	Fields  map[string]string // Per-field validation errors (e.g., "bacnet_objects.0.text_fix" -> "message")
 }
 
 // BulkOperationResult represents the result of a bulk operation

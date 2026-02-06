@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"fmt"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
@@ -333,6 +335,14 @@ func (s *FieldDeviceService) ensureParentsExist(fieldDevice *domainFacility.Fiel
 }
 
 func (s *FieldDeviceService) ensureApparatNrAvailable(fieldDevice *domainFacility.FieldDevice, excludeID *uuid.UUID) error {
+	var excludeIDs []uuid.UUID
+	if excludeID != nil {
+		excludeIDs = []uuid.UUID{*excludeID}
+	}
+	return s.ensureApparatNrAvailableWithExclusions(fieldDevice, excludeIDs)
+}
+
+func (s *FieldDeviceService) ensureApparatNrAvailableWithExclusions(fieldDevice *domainFacility.FieldDevice, excludeIDs []uuid.UUID) error {
 	if fieldDevice.ApparatNr == 0 {
 		return domain.NewValidationError().Add("fielddevice.apparat_nr", "apparat_nr is required")
 	}
@@ -350,7 +360,7 @@ func (s *FieldDeviceService) ensureApparatNrAvailable(fieldDevice *domainFacilit
 		systemPartID,
 		fieldDevice.ApparatID,
 		fieldDevice.ApparatNr,
-		excludeID,
+		excludeIDs,
 	)
 	if err != nil {
 		return err
@@ -602,18 +612,23 @@ func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.
 }
 
 func (s *FieldDeviceService) replaceBacnetObjects(fieldDeviceID uuid.UUID, bacnetObjects []domainFacility.BacnetObject) error {
-	seen := make(map[string]struct{}, len(bacnetObjects))
-	for _, obj := range bacnetObjects {
+	ve := domain.NewValidationError()
+	seen := make(map[string]int, len(bacnetObjects))
+	for i, obj := range bacnetObjects {
 		if obj.TextFix == "" {
+			ve = ve.Add(fmt.Sprintf("bacnet_objects.%d.text_fix", i), "text_fix is required")
 			continue
 		}
-		if _, ok := seen[obj.TextFix]; ok {
-			return domain.NewValidationError().Add("fielddevice.bacnetobject.textfix", "textfix must be unique within the field device")
+		if prevIdx, ok := seen[obj.TextFix]; ok {
+			ve = ve.Add(fmt.Sprintf("bacnet_objects.%d.text_fix", i), fmt.Sprintf("text_fix must be unique within the field device (duplicate of row %d)", prevIdx))
 		}
-		seen[obj.TextFix] = struct{}{}
+		seen[obj.TextFix] = i
+	}
+	if len(ve.Fields) > 0 {
+		return ve
 	}
 
-	if err := s.bacnetObjectRepo.SoftDeleteByFieldDeviceIDs([]uuid.UUID{fieldDeviceID}); err != nil {
+	if err := s.bacnetObjectRepo.HardDeleteByFieldDeviceIDs([]uuid.UUID{fieldDeviceID}); err != nil {
 		return err
 	}
 
@@ -640,7 +655,7 @@ func (s *FieldDeviceService) replaceBacnetObjectsFromObjectData(fieldDeviceID uu
 		return domain.ErrNotFound
 	}
 
-	if err := s.bacnetObjectRepo.SoftDeleteByFieldDeviceIDs([]uuid.UUID{fieldDeviceID}); err != nil {
+	if err := s.bacnetObjectRepo.HardDeleteByFieldDeviceIDs([]uuid.UUID{fieldDeviceID}); err != nil {
 		return err
 	}
 
@@ -817,8 +832,8 @@ func (s *FieldDeviceService) MultiCreate(items []domainFacility.FieldDeviceCreat
 }
 
 // BulkUpdate updates multiple field devices in a single operation.
-// It processes each update independently and returns detailed results.
-// Supports nested specification updates (create or update) and BACnet objects replacement.
+// It processes updates ensuring that swaps/permutations within the batch are handled correctly.
+// Uniqueness constraints are checked against the database (excluding batch items) AND internally within the batch.
 func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult {
 	result := &domainFacility.BulkOperationResult{
 		Results:      make([]domainFacility.BulkOperationResultItem, len(updates)),
@@ -827,43 +842,101 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 		FailureCount: 0,
 	}
 
+	// 1. Collect all IDs involved in the batch
+	ids := make([]uuid.UUID, 0, len(updates))
+	updateMap := make(map[uuid.UUID]domainFacility.BulkFieldDeviceUpdate)
+	for _, u := range updates {
+		ids = append(ids, u.ID)
+		updateMap[u.ID] = u
+	}
+
+	// 2. Fetch existing items from DB to build context
+	existingItems, err := s.repo.GetByIds(ids)
+	if err != nil {
+		// If we can't fetch state, we can't safely proceed
+		for i := range result.Results {
+			result.Results[i].Error = "failed to fetch existing items: " + err.Error()
+			result.FailureCount++
+		}
+		return result
+	}
+
+	existingMap := make(map[uuid.UUID]*domainFacility.FieldDevice)
+	for _, item := range existingItems {
+		existingMap[item.ID] = item
+	}
+
+	// 3. Build "Proposed State" for all items
+	// This represents what the items WILL look like if updates succeed.
+	proposedMap := make(map[uuid.UUID]*domainFacility.FieldDevice)
+	for _, update := range updates {
+		existing, ok := existingMap[update.ID]
+		if !ok {
+			continue // Handled in the processing loop
+		}
+
+		// Shallow copy existing item to apply updates
+		clone := *existing
+		if update.BMK != nil {
+			clone.BMK = update.BMK
+		}
+		if update.Description != nil {
+			clone.Description = update.Description
+		}
+		if update.ApparatNr != nil {
+			clone.ApparatNr = *update.ApparatNr
+		}
+		if update.ApparatID != nil {
+			clone.ApparatID = *update.ApparatID
+		}
+		if update.SystemPartID != nil {
+			clone.SystemPartID = *update.SystemPartID
+		}
+		proposedMap[update.ID] = &clone
+	}
+
+	// Helper to check conflict between two proposed states
+	isApparatNrConflict := func(a, b *domainFacility.FieldDevice) bool {
+		if a.SPSControllerSystemTypeID != b.SPSControllerSystemTypeID {
+			return false
+		}
+		if a.ApparatID != b.ApparatID {
+			return false
+		}
+		if a.ApparatNr != b.ApparatNr {
+			return false
+		}
+
+		// System Part Logic (matching Repo implementation)
+		// If A has no part (Nil), it effectively matches ANY B (wildcard behavior in validation).
+		if a.SystemPartID == uuid.Nil {
+			return true
+		}
+		// If A has a part, it only matches if B has the SAME part.
+		// (A with part X does not conflict with B with part Nil in the SQL query).
+		if b.SystemPartID == uuid.Nil {
+			return false
+		}
+		return a.SystemPartID == b.SystemPartID
+	}
+
+	// 4. Process Updates
 	for i, update := range updates {
 		resultItem := &result.Results[i]
 		resultItem.ID = update.ID
 		resultItem.Success = false
 
-		// Fetch the existing field device
-		fieldDevice, err := s.GetByID(update.ID)
-		if err != nil {
-			if err == domain.ErrNotFound {
-				resultItem.Error = "field device not found"
-			} else {
-				resultItem.Error = err.Error()
-			}
+		proposed, ok := proposedMap[update.ID]
+		if !ok {
+			resultItem.Error = "field device not found"
 			result.FailureCount++
 			continue
 		}
 
-		// Apply partial updates
-		if update.BMK != nil {
-			fieldDevice.BMK = update.BMK
-		}
-		if update.Description != nil {
-			fieldDevice.Description = update.Description
-		}
-		if update.ApparatNr != nil {
-			fieldDevice.ApparatNr = *update.ApparatNr
-		}
-		if update.ApparatID != nil {
-			fieldDevice.ApparatID = *update.ApparatID
-		}
-		if update.SystemPartID != nil {
-			fieldDevice.SystemPartID = *update.SystemPartID
-		}
-
-		// Validate and update the field device
-		if err := s.Update(fieldDevice); err != nil {
+		// Basic Validation
+		if err := s.validateRequiredFields(proposed); err != nil {
 			if ve, ok := domain.AsValidationError(err); ok {
+				resultItem.Fields = ve.Fields
 				for _, msg := range ve.Fields {
 					resultItem.Error = msg
 					break
@@ -875,9 +948,61 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 			continue
 		}
 
+		if err := s.ensureParentsExist(proposed); err != nil {
+			if err == domain.ErrNotFound {
+				resultItem.Error = "one or more parent entities not found"
+			} else {
+				resultItem.Error = err.Error()
+			}
+			result.FailureCount++
+			continue
+		}
+
+		// ApparatNr Validation (The "Swap" Logic)
+		// A. Check for conflicts within the proposed batch
+		batchConflict := false
+		for otherID, otherProposed := range proposedMap {
+			if otherID == update.ID {
+				continue
+			}
+			if isApparatNrConflict(proposed, otherProposed) {
+				resultItem.Error = fmt.Sprintf("Conflict with another item in this batch (ID: %s)", otherID)
+				batchConflict = true
+				break
+			}
+		}
+		if batchConflict {
+			result.FailureCount++
+			continue
+		}
+
+		// B. Check for conflicts in DB (Excluding ALL batch items)
+		// We use strict=false or similar by passing the Exclusion List
+		if err := s.ensureApparatNrAvailableWithExclusions(proposed, ids); err != nil {
+			if ve, ok := domain.AsValidationError(err); ok {
+				resultItem.Fields = ve.Fields
+				for _, msg := range ve.Fields {
+					resultItem.Error = msg
+					break
+				}
+			} else {
+				resultItem.Error = err.Error()
+			}
+			result.FailureCount++
+			continue
+		}
+
+		// Update in DB
+		// Bypass s.Update() to skip the standard ensureApparatNrAvailable check
+		if err := s.repo.Update(proposed); err != nil {
+			resultItem.Error = err.Error()
+			result.FailureCount++
+			continue
+		}
+
 		// Handle specification update/create
 		if update.Specification != nil {
-			specs, err := s.specificationRepo.GetByFieldDeviceIDs([]uuid.UUID{fieldDevice.ID})
+			specs, err := s.specificationRepo.GetByFieldDeviceIDs([]uuid.UUID{proposed.ID})
 			if err != nil {
 				resultItem.Error = "failed to fetch specification: " + err.Error()
 				result.FailureCount++
@@ -885,15 +1010,13 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 			}
 
 			if len(specs) > 0 {
-				// Update existing specification
-				if _, err := s.UpdateSpecification(fieldDevice.ID, update.Specification); err != nil {
+				if _, err := s.UpdateSpecification(proposed.ID, update.Specification); err != nil {
 					resultItem.Error = "failed to update specification: " + err.Error()
 					result.FailureCount++
 					continue
 				}
 			} else {
-				// Create new specification
-				if err := s.CreateSpecification(fieldDevice.ID, update.Specification); err != nil {
+				if err := s.CreateSpecification(proposed.ID, update.Specification); err != nil {
 					resultItem.Error = "failed to create specification: " + err.Error()
 					result.FailureCount++
 					continue
@@ -903,8 +1026,9 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 
 		// Handle BACnet objects replacement
 		if update.BacnetObjects != nil {
-			if err := s.replaceBacnetObjects(fieldDevice.ID, *update.BacnetObjects); err != nil {
+			if err := s.replaceBacnetObjects(proposed.ID, *update.BacnetObjects); err != nil {
 				if ve, ok := domain.AsValidationError(err); ok {
+					resultItem.Fields = ve.Fields
 					for _, msg := range ve.Fields {
 						resultItem.Error = msg
 						break

@@ -1,0 +1,137 @@
+
+> frontend@0.0.1 check C:\Users\besart.morina\Documents\schrott\go_infra_link\frontend
+> svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+
+Loading svelte-check in workspace: c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend
+Getting Svelte diagnostics...
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\role-badge.svelte[39m:2:32
+[31mError[39m: Cannot find module '$lib/api/users' or its corresponding type declarations. (ts)
+[36m<script lang="ts">
+	import type { UserRole } from [35m'$lib/api/users'[36m;
+	import { Badge } from '$lib/components/ui/badge/index.js';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\role-badge.svelte[39m:4:31
+[31mError[39m: Cannot find module '$lib/utils/permissions' or its corresponding type declarations. (ts)
+[36m	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { getRoleLabel } from [35m'$lib/utils/permissions'[36m;
+	import { ShieldCheck, UserCircle } from '@lucide/svelte';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\stores\auth.svelte.ts[39m:10:75
+[31mError[39m: Cannot find module '$lib/api/users' or its corresponding type declarations. 
+[36m
+import { getCurrentUser, getAllowedRoles, type User, type UserRole } from [35m'$lib/api/users'[36m;[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\utils\permissions.ts[39m:8:31
+[31mError[39m: Cannot find module '$lib/api/users' or its corresponding type declarations. 
+[36m
+import type { UserRole } from [35m'$lib/api/users'[36m;
+import { canManageRole, hasRole, hasMinRole, auth } from '$lib/stores/auth.svelte';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\ui\editable-cell\EditableCell.svelte[39m:112:21
+[31mError[39m: Object literal may only specify known properties, and '"asChild"' does not exist in type 'Omit<{ disabled?: boolean | null | undefined; }, "child" | "children"> & { child?: Snippet<[{ props: Record<string, unknown>; }]> | undefined; children?: Snippet<[]> | undefined; style?: any; ref?: HTMLElement | ... 1 more ... | undefined; } & Without<...>'. (ts)
+[36m		<Tooltip.Root>
+			<Tooltip.Trigger [35masChil[36md>
+				<button[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\hooks\useFormState.svelte.ts[39m:90:16
+[31mError[39m: Argument of type 'Awaited<R>' is not assignable to parameter of type 'T'.
+  'T' could be instantiated with an arbitrary type which could be unrelated to 'Awaited<R>'. 
+[36m
+			onSuccess?.([35mresult[36m);
+			return result;[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\server\backend.example.ts[39m:7:9
+[31mError[39m: Cannot find name 'process'. Do you need to install type definitions for node? Try `npm i --save-dev @types/node`. 
+[36mexport function getBackendUrl(): string {
+	return [35mprocess[36m.env.BACKEND_URL || 'http://localhost:8080';
+}[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\permission-guard.svelte[39m:18:32
+[31mError[39m: Cannot find module '$lib/api/users' or its corresponding type declarations. (ts)
+[36m	import type { Snippet } from 'svelte';
+	import type { UserRole } from [35m'$lib/api/users'[36m;
+	import { canPerform } from '$lib/utils/permissions';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\permission-guard.svelte[39m:19:29
+[31mError[39m: Cannot find module '$lib/utils/permissions' or its corresponding type declarations. (ts)
+[36m	import type { UserRole } from '$lib/api/users';
+	import { canPerform } from [35m'$lib/utils/permissions'[36m;
+	import { canManageRole } from '$lib/stores/auth.svelte';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:2:32
+[31mError[39m: Cannot find module '$lib/api/users' or its corresponding type declarations. (ts)
+[36m<script lang="ts">
+	import type { UserRole } from [35m'$lib/api/users'[36m;
+	import { createUser } from '$lib/api/users';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:3:29
+[31mError[39m: Cannot find module '$lib/api/users' or its corresponding type declarations. (ts)
+[36m	import type { UserRole } from '$lib/api/users';
+	import { createUser } from [35m'$lib/api/users'[36m;
+	import { getAllowedRolesForCreation } from '$lib/stores/auth.svelte';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:5:31
+[31mError[39m: Cannot find module '$lib/utils/permissions' or its corresponding type declarations. (ts)
+[36m	import { getAllowedRolesForCreation } from '$lib/stores/auth.svelte';
+	import { getRoleLabel } from [35m'$lib/utils/permissions'[36m;
+	import { getErrorMessage, getFieldErrors } from '$lib/api/client';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:6:50
+[31mError[39m: Cannot find module '$lib/api/client' or its corresponding type declarations. (ts)
+[36m	import { getRoleLabel } from '$lib/utils/permissions';
+	import { getErrorMessage, getFieldErrors } from [35m'$lib/api/client'[36m;
+	import { Button } from '$lib/components/ui/button/index.js';[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:14:21
+[31mError[39m: Cannot find module '$lib/utils' or its corresponding type declarations. (ts)
+[36m	import { Check } from '@lucide/svelte';
+	import { cn } from [35m'$lib/utils'[36m;[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:145:21
+[31mError[39m: Object literal may only specify known properties, and '"asChild"' does not exist in type 'Omit<{ openOnHover?: boolean | undefined; openDelay?: number | undefined; closeDelay?: number | undefined; }, "child" | "children"> & { child?: Snippet<[{ props: Record<string, unknown>; }]> | undefined; children?: Snippet<...> | undefined; style?: any; ref?: HTMLElement | ... 1 more ... | undefined; } & Without<...>'. (ts)
+[36m		<Popover.Root bind:open={openCombobox}>
+			<Popover.Trigger [35masChild[36m let:builder>
+				<Button[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:145:39
+[31mError[39m: '$$_reggirT_revopoP3.$$slot_def' is of type 'unknown'. (ts)
+[36m		<Popover.Root bind:open={openCombobox}>
+			<Popover.Trigger asChild let:builde[35m[36mr>
+				<Button[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:155:6
+[31mError[39m: Object literal may only specify known properties, and '"builders"' does not exist in type 'HTMLButtonAttributes & { ref?: HTMLElement | null | undefined; } & HTMLAnchorAttributes & { variant?: "default" | "destructive" | ... 4 more ... | undefined; size?: "default" | ... 5 more ... | undefined; }'. (ts)
+[36m					)}
+					[35mbuilders[36m={[builder]}
+				>[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:183:9
+[31mError[39m: Type '(currentValue: any) => void' is not assignable to type '() => void'.
+  Target signature provides too few arguments. Expected 1 or more, but got 0. (ts)
+[36m								value={role}
+								[35monSelect[36m={(currentValue) => {
+									selectedRole = currentValue as UserRole;[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\user-management-form.svelte[39m:183:20
+[31mError[39m: Parameter 'currentValue' implicitly has an 'any' type. (ts)
+[36m								value={role}
+								onSelect={([35mcurrentValue[36m) => {
+									selectedRole = currentValue as UserRole;[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\facility\SPSControllerSelect.svelte[39m:26:2
+[31mError[39m: Type '"document_name"' is not assignable to type 'keyof SPSController'. (ts)
+[36m	{fetchById}
+	[35mlabelKey[36m="document_name"
+	placeholder="Select SPS Controller..."[39m
+
+c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend\[32msrc\lib\components\project\PhaseForm.svelte[39m:31:19
+[33mWarn[39m: This reference only captures the initial value of `initialData`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+[36m		showSuccessToast: true,
+		successMessage: [35minitialData[36m ? 'Phase updated successfully' : 'Phase created successfully'
+	});[39m
+
+====================================
+[31msvelte-check found 20 errors and 1 warning in 10 files
+[39mÔÇëELIFECYCLEÔÇë Command failed with exit code 1.

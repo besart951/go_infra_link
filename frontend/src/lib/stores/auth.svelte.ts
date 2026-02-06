@@ -7,7 +7,7 @@
  * - Hierarchical permission checks (can-manage logic)
  */
 
-import { getCurrentUser, getAllowedRoles, type User, type UserRole } from '$lib/api/users';
+import { getCurrentUser, getAllowedRoles, type User, type UserRole } from '$lib/api/users.js';
 
 // Role hierarchy levels (higher = more privileged)
 export const ROLE_LEVELS: Record<UserRole, number> = {

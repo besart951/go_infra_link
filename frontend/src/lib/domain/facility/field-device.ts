@@ -169,6 +169,7 @@ export interface BulkOperationResultItem {
 	id: string;
 	success: boolean;
 	error?: string;
+	fields?: Record<string, string>;
 }
 
 /**

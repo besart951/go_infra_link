@@ -39,8 +39,10 @@ interface BackendListResponse {
 
 /**
  * Creates a field device store with filtering support
+ * @param pageSize - Number of items per page
+ * @param projectId - Optional project ID to scope field devices to a project
  */
-export function createFieldDeviceStore(pageSize = 300) {
+export function createFieldDeviceStore(pageSize = 300, projectId?: string) {
 	const initialState: FieldDeviceListState = {
 		items: [],
 		total: 0,
@@ -91,6 +93,10 @@ export function createFieldDeviceStore(pageSize = 300) {
 			}
 			if (state.filters.spsControllerSystemTypeId) {
 				searchParams.set('sps_controller_system_type_id', state.filters.spsControllerSystemTypeId);
+			}
+
+			if (projectId) {
+				searchParams.set('project_id', projectId);
 			}
 
 			const query = searchParams.toString();

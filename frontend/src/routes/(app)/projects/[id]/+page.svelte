@@ -12,33 +12,27 @@
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import ControlCabinetForm from '$lib/components/facility/ControlCabinetForm.svelte';
 	import SPSControllerForm from '$lib/components/facility/SPSControllerForm.svelte';
-	import FieldDeviceForm from '$lib/components/facility/FieldDeviceForm.svelte';
-	import FieldDeviceMultiCreateForm from '$lib/components/facility/FieldDeviceMultiCreateForm.svelte';
+	import FieldDeviceListView from '$lib/components/facility/FieldDeviceListView.svelte';
 	import {
 		getProject,
 		listProjectControlCabinets,
 		addProjectControlCabinet,
 		removeProjectControlCabinet,
 		listProjectSPSControllers,
-		addProjectSPSController,
-		listProjectFieldDevices,
-		addProjectFieldDevice,
-		removeProjectFieldDevice
+		addProjectSPSController
 	} from '$lib/infrastructure/api/project.adapter.js';
 	import {
 		getControlCabinet,
 		getSPSController,
-		listFieldDevices,
 		deleteSPSController
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import type { Project } from '$lib/domain/project/index.js';
 	import type {
 		ProjectControlCabinetLink,
-		ProjectSPSControllerLink,
-		ProjectFieldDeviceLink
+		ProjectSPSControllerLink
 	} from '$lib/domain/project/index.js';
-	import type { ControlCabinet, SPSController, FieldDevice } from '$lib/domain/facility/index.js';
-	import { ArrowLeft, Plus, Pencil, ListPlus } from '@lucide/svelte';
+	import type { ControlCabinet, SPSController } from '$lib/domain/facility/index.js';
+	import { ArrowLeft, Plus, Pencil } from '@lucide/svelte';
 
 	const projectId = $derived($page.params.id ?? '');
 
@@ -61,12 +55,6 @@
 	let spsControllerPage = $state(1);
 	const spsControllerPageSize = 10;
 
-	let fieldDeviceLinks = $state<ProjectFieldDeviceLink[]>([]);
-	let fieldDeviceOptions = $state<FieldDevice[]>([]);
-	let fieldDeviceLoading = $state(false);
-	let showFieldDeviceForm = $state(false);
-	let showFieldDeviceMultiCreateForm = $state(false);
-	let fieldDeviceSearch = $state('');
 
 	const filteredControlCabinetLinks = $derived(
 		controlCabinetSearch.trim()
@@ -133,24 +121,9 @@
 		error: null
 	}));
 
-	const filteredFieldDeviceLinks = $derived(
-		fieldDeviceSearch.trim()
-			? fieldDeviceLinks.filter((link) =>
-					fieldDeviceLabel(link.field_device_id)
-						.toLowerCase()
-						.includes(fieldDeviceSearch.trim().toLowerCase())
-				)
-			: fieldDeviceLinks
-	);
-
 	function controlCabinetLabel(id: string): string {
 		const item = controlCabinetOptions.find((c) => c.id === id);
 		return item?.control_cabinet_nr || item?.id || id;
-	}
-
-	function fieldDeviceLabel(id: string): string {
-		const item = fieldDeviceOptions.find((c) => c.id === id);
-		return item?.bmk || item?.apparat_nr?.toString() || item?.id || id;
 	}
 
 	$effect(() => {
@@ -219,23 +192,6 @@
 			addToast(err instanceof Error ? err.message : 'Failed to load SPS controllers', 'error');
 		} finally {
 			spsControllerLoading = false;
-		}
-	}
-
-	async function loadFieldDevices() {
-		if (!projectId) return;
-		fieldDeviceLoading = true;
-		try {
-			const [linksRes, optionsRes] = await Promise.all([
-				listProjectFieldDevices(projectId, { page: 1, limit: 100 }),
-				listFieldDevices({ page: 1, limit: 100 })
-			]);
-			fieldDeviceLinks = linksRes.items;
-			fieldDeviceOptions = optionsRes.items;
-		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to load field devices', 'error');
-		} finally {
-			fieldDeviceLoading = false;
 		}
 	}
 
@@ -329,67 +285,10 @@
 		}
 	}
 
-	async function handleFieldDeviceCreated(item: FieldDevice) {
-		if (!projectId) return;
-		try {
-			await addProjectFieldDevice(projectId, item.id);
-			addToast('Field device created', 'success');
-			showFieldDeviceForm = false;
-			await loadFieldDevices();
-		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to link field device', 'error');
-		}
-	}
-
-	async function handleFieldDeviceMultiCreateSuccess(createdDevices: FieldDevice[]) {
-		if (!projectId) return;
-		showFieldDeviceMultiCreateForm = false;
-
-		try {
-			// Link all created devices to the project
-			await Promise.all(
-				createdDevices.map((device) => addProjectFieldDevice(projectId, device.id))
-			);
-
-			addToast(
-				`Created ${createdDevices.length} field device(s) and linked them to the project`,
-				'success'
-			);
-
-			await loadFieldDevices();
-		} catch (err) {
-			const message =
-				err instanceof Error
-					? err.message
-					: 'Some field devices were created but could not be linked';
-			addToast(`Failed to link field devices: ${message}`, 'error');
-		}
-	}
-
-	async function removeFieldDevice(linkId: string) {
-		if (!projectId) return;
-		const ok = await confirm({
-			title: 'Remove field device',
-			message: 'Remove this field device from the project?',
-			confirmText: 'Remove',
-			cancelText: 'Cancel',
-			variant: 'destructive'
-		});
-		if (!ok) return;
-		try {
-			await removeProjectFieldDevice(projectId, linkId);
-			addToast('Field device removed', 'success');
-			await loadFieldDevices();
-		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to remove field device', 'error');
-		}
-	}
-
 	onMount(() => {
 		loadProject();
 		loadControlCabinets();
 		loadSpsControllers();
-		loadFieldDevices();
 	});
 </script>
 
@@ -589,90 +488,13 @@
 			</div>
 
 			<div class="rounded-lg border bg-background p-6">
-				<div class="flex flex-wrap items-center justify-between gap-3">
-					<div>
-						<h2 class="text-lg font-semibold">Field Devices</h2>
-						<p class="text-sm text-muted-foreground">Create and assign field devices.</p>
-					</div>
-					<div class="flex items-center gap-2">
-						<Input
-							class="w-64"
-							placeholder="Search field devices..."
-							bind:value={fieldDeviceSearch}
-						/>
-						<Button variant="outline" onclick={loadFieldDevices} disabled={fieldDeviceLoading}
-							>Refresh</Button
-						>
-						{#if !showFieldDeviceForm && !showFieldDeviceMultiCreateForm}
-							<Button variant="outline" onclick={() => (showFieldDeviceMultiCreateForm = true)}>
-								<ListPlus class="mr-2 size-4" />
-								Multi-Create
-							</Button>
-							<Button onclick={() => (showFieldDeviceForm = true)}>
-								<Plus class="mr-2 size-4" />
-								New Field Device
-							</Button>
-						{/if}
-					</div>
+				<div class="mb-4">
+					<h2 class="text-lg font-semibold">Field Devices</h2>
+					<p class="text-sm text-muted-foreground">
+						Manage field devices linked to this project with full inline editing.
+					</p>
 				</div>
-
-				{#if showFieldDeviceForm}
-					<FieldDeviceForm
-						{projectId}
-						onSuccess={handleFieldDeviceCreated}
-						onCancel={() => (showFieldDeviceForm = false)}
-					/>
-				{/if}
-
-				{#if showFieldDeviceMultiCreateForm}
-					<div class="mt-6">
-						<FieldDeviceMultiCreateForm
-							{projectId}
-							onSuccess={handleFieldDeviceMultiCreateSuccess}
-							onCancel={() => (showFieldDeviceMultiCreateForm = false)}
-						/>
-					</div>
-				{/if}
-
-				<div class="mt-6 rounded-lg border bg-background">
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>Field Device</Table.Head>
-								<Table.Head class="w-32"></Table.Head>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#if fieldDeviceLoading}
-								{#each Array(4) as _}
-									<Table.Row>
-										<Table.Cell><Skeleton class="h-4 w-60" /></Table.Cell>
-										<Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
-									</Table.Row>
-								{/each}
-							{:else if filteredFieldDeviceLinks.length === 0}
-								<Table.Row>
-									<Table.Cell colspan={2} class="h-20 text-center text-sm text-muted-foreground">
-										No field devices found.
-									</Table.Cell>
-								</Table.Row>
-							{:else}
-								{#each filteredFieldDeviceLinks as link (link.id)}
-									<Table.Row>
-										<Table.Cell class="font-medium">
-											{fieldDeviceLabel(link.field_device_id)}
-										</Table.Cell>
-										<Table.Cell class="text-right">
-											<Button variant="outline" onclick={() => removeFieldDevice(link.id)}>
-												Remove
-											</Button>
-										</Table.Cell>
-									</Table.Row>
-								{/each}
-							{/if}
-						</Table.Body>
-					</Table.Root>
-				</div>
+				<FieldDeviceListView {projectId} />
 			</div>
 		</div>
 	{/if}
