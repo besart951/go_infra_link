@@ -8,11 +8,14 @@
 coverage.*
 *.coverprofile
 profile.cov
+coverage.html
 
 # Build / binaries
 bin/
 dist/
 *.tmp
+backend/bin/
+backend/tmp/
 
 # Logs
 *.log
@@ -21,22 +24,30 @@ dist/
 .DS_Store
 Thumbs.db
 Desktop.ini
+*.swp
+*.swo
 
 # Workspace / IDE
 go.work
 go.work.sum
+.idea/
+.vscode/
+*.iml
 
 # Environment
 .env
 !.env.example
+.env.local
 
 # Local data (sqlite, exports, etc.)
 backend/data/
 !backend/data/.gitkeep
 
-.idea/
-.vscode/
+# Bruno
+bruno/.env
+
 server
 backend/server
 backend/app
 /backend/main
+
