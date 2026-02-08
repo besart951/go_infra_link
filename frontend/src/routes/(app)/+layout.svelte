@@ -8,11 +8,18 @@
 	import { page } from '$app/stores';
 	import type { LayoutData } from './$types.js';
 	import { loadAuth } from '$lib/stores/auth.svelte.js';
+	import { goto } from '$app/navigation';
 
 	const { children, data } = $props<{ children: any; data: LayoutData }>();
 
 	onMount(async () => {
 		await loadAuth();
+	});
+
+	$effect(() => {
+		if (!data.user && data.backendAvailable !== false) {
+			goto('/login');
+		}
 	});
 
 	const titleForPath = (pathname: string) => {
@@ -36,24 +43,12 @@
 		if (pathname.startsWith('/facility')) return 'Facility';
 		return 'App';
 	};
-
-	// Provide a default user if not loaded
-	const defaultUser = {
-		id: '',
-		first_name: 'User',
-		last_name: '',
-		email: '',
-		role: 'user' as const,
-		is_active: true,
-		failed_login_attempts: 0,
-		created_at: '',
-		updated_at: ''
-	};
 </script>
 
+{#if data.user}
 <Sidebar.Provider>
 	<AppSidebar
-		user={data.user ?? defaultUser}
+		user={data.user}
 		teams={data.teams ?? []}
 		projects={data.projects ?? []}
 	/>
@@ -86,3 +81,13 @@
 	</Sidebar.Inset>
 	<Toasts />
 </Sidebar.Provider>
+{:else if data.backendAvailable === false}
+	<div class="flex h-screen w-full items-center justify-center p-4">
+		<div class="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
+			<h2 class="mb-2 text-lg font-semibold text-destructive">Backend Unavailable</h2>
+			<p class="text-sm text-muted-foreground">
+				The backend service is currently unreachable. Please check your connection or contact support.
+			</p>
+		</div>
+	</div>
+{/if}

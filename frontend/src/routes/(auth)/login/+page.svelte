@@ -3,7 +3,8 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as InputGroup from '$lib/components/ui/input-group/index.js';
-	import type { ActionData } from './$types.js';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { api } from '$lib/api/client';
 	import {
 		Field,
 		FieldGroup,
@@ -12,22 +13,19 @@
 		FieldError
 	} from '$lib/components/ui/field/index.js';
 	import { dev } from '$app/environment';
-	import { enhance } from '$app/forms';
 
-	export let form: ActionData;
 	let showPassword = false;
 	let email = dev ? 'besart_morina@hotmail.com' : '';
 	let password = dev ? 'password' : '';
+	let error: string | null = null;
+	let isLoading = false;
 
 	const toogleShowPassword = () => {
 		showPassword = !showPassword;
 	};
 
-	const errorMessage = (error?: string) => {
-		if (form?.message && form.error !== 'missing_fields' && form.error !== 'service_unavailable') {
-			return form.message;
-		}
-		switch (error) {
+	const errorMessage = (errCode: string | null) => {
+		switch (errCode) {
 			case 'missing_fields':
 				return 'Email and password are required.';
 			case 'service_unavailable':
@@ -40,10 +38,41 @@
 				return 'Your account is locked.';
 			case 'missing_auth_cookies':
 				return 'Login succeeded but tokens were missing.';
-			default:
+			case 'login_failed':
 				return 'Login failed.';
+			default:
+				if (errCode) return errCode; 
+				return null;
 		}
 	};
+
+	async function handleLogin(e: Event) {
+		e.preventDefault();
+		error = null;
+		isLoading = true;
+
+		if (!email || !password) {
+			error = 'missing_fields';
+			isLoading = false;
+			return;
+		}
+
+		try {
+			// Using backend relative path via proxy
+			await api('/auth/login', {
+				method: 'POST',
+				body: JSON.stringify({ email, password })
+			});
+			
+			await invalidateAll();
+			await goto('/');
+		} catch (err: any) {
+			error = err.error || 'login_failed';
+			console.error('Login error:', err);
+		} finally {
+			isLoading = false;
+		}
+	}
 </script>
 
 <div class="space-y-6">
@@ -52,15 +81,15 @@
 		<p class="text-sm text-muted-foreground">Use your account credentials.</p>
 	</div>
 
-	{#if form?.error}
+	{#if error}
 		<div
 			class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
 		>
-			{errorMessage(form.error)}
+			{errorMessage(error)}
 		</div>
 	{/if}
 
-	<form method="POST" use:enhance class="space-y-6">
+	<form onsubmit={handleLogin} class="space-y-6">
 		<FieldGroup>
 			<Field>
 				<FieldLabel for="email" class="text-sm font-medium">Email</FieldLabel>
@@ -72,10 +101,8 @@
 						autocomplete="email"
 						required
 						bind:value={email}
+						disabled={isLoading}
 					/>
-					{#if form?.error === 'missing_fields'}
-						<FieldError errors={[{ message: 'Email is required.' }]} />
-					{/if}
 				</FieldContent>
 			</Field>
 
@@ -90,6 +117,7 @@
 							autocomplete="current-password"
 							required
 							bind:value={password}
+							disabled={isLoading}
 						/>
 						<InputGroup.Addon align="inline-end">
 							<InputGroup.Button
@@ -99,23 +127,22 @@
 								onclick={toogleShowPassword}
 								aria-pressed={showPassword}
 								aria-label={showPassword ? 'Hide password' : 'Show password'}
-								title={showPassword ? 'Hide password' : 'Show password'}
+								disabled={isLoading}
 							>
 								{#if showPassword}
-									<EyeOff class="size-4" />
+									<EyeOff class="h-4 w-4" />
 								{:else}
-									<Eye class="size-4" />
+									<Eye class="h-4 w-4" />
 								{/if}
 							</InputGroup.Button>
 						</InputGroup.Addon>
 					</InputGroup.Root>
-					{#if form?.error && form.error !== 'missing_fields'}
-						<FieldError errors={[{ message: errorMessage(form.error) }]} />
-					{/if}
 				</FieldContent>
 			</Field>
 		</FieldGroup>
 
-		<Button type="submit" class="w-full">Sign in</Button>
+		<Button type="submit" class="w-full" disabled={isLoading}>
+			{isLoading ? 'Signing in...' : 'Sign in'}
+		</Button>
 	</form>
 </div>

@@ -4,17 +4,72 @@
 	import * as Field from '$lib/components/ui/field/index.js';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import TrashIcon from '@lucide/svelte/icons/trash-2';
-	import type { PageData, ActionData } from './$types.js';
-	import { enhance } from '$app/forms';
+	import type { PageData } from './$types.js';
+	import { updateBuilding, deleteBuilding } from '$lib/infrastructure/api/facility.adapter';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { page } from '$app/stores';
 
-	let { data, form }: { data: PageData; form: ActionData } = $props();
+	let { data }: { data: PageData } = $props();
 
-	let deleteFormEl: HTMLFormElement | null = $state(null);
+	let isSubmitting = $state(false);
+	let errors: Record<string, string> = $state({});
+	let successMessage = $state('');
 
-	function handleDeleteClick(e: Event) {
+	async function handleDeleteClick() {
+		if (!confirm('Are you sure you want to delete this building? This action cannot be undone.')) {
+			return;
+		}
+
+		try {
+			isSubmitting = true;
+			await deleteBuilding(data.building.id);
+			await goto('/facility/buildings');
+		} catch (e: any) {
+			console.error('Delete failed', e);
+			alert(e.message || 'Failed to delete building');
+		} finally {
+			isSubmitting = false;
+		}
+	}
+
+	async function handleUpdate(e: SubmitEvent) {
 		e.preventDefault();
-		if (confirm('Are you sure you want to delete this building? This action cannot be undone.')) {
-			deleteFormEl?.submit();
+		isSubmitting = true;
+		errors = {};
+		successMessage = '';
+
+		const formData = new FormData(e.currentTarget as HTMLFormElement);
+		const iws_code = formData.get('iws_code')?.toString().trim();
+		const building_group = formData.get('building_group')?.toString().trim();
+
+		// Validation
+		if (!iws_code) {
+			errors.iws_code = 'IWS Code is required';
+		}
+
+		if (!building_group) {
+			errors.building_group = 'Building Group is required';
+		} else if (isNaN(Number(building_group))) {
+			errors.building_group = 'Building Group must be a number';
+		}
+
+		if (Object.keys(errors).length > 0) {
+			isSubmitting = false;
+			return;
+		}
+
+		try {
+			await updateBuilding(data.building.id, {
+				iws_code,
+				building_group: Number(building_group)
+			});
+			successMessage = 'Building updated successfully!';
+			await invalidateAll();
+		} catch (e: any) {
+			console.error('Update failed', e);
+			errors.form = e.message || 'An unexpected error occurred';
+		} finally {
+			isSubmitting = false;
 		}
 	}
 </script>
@@ -34,29 +89,35 @@
 				<p class="text-sm text-muted-foreground">Edit building details</p>
 			</div>
 		</div>
-		<form method="POST" action="?/delete" bind:this={deleteFormEl} use:enhance>
-			<Button variant="destructive" size="sm" type="button" onclick={handleDeleteClick}>
+		<div>
+			<Button
+				variant="destructive"
+				size="sm"
+				type="button"
+				onclick={handleDeleteClick}
+				disabled={isSubmitting}
+			>
 				<TrashIcon class="mr-2 size-4" />
 				Delete
 			</Button>
-		</form>
+		</div>
 	</div>
 
-	{#if form?.errors?.form}
+	{#if errors.form}
 		<div class="rounded-md border border-destructive bg-destructive/10 p-4 text-destructive">
-			{form.errors.form}
+			{errors.form}
 		</div>
 	{/if}
 
-	{#if form?.success}
+	{#if successMessage}
 		<div
 			class="rounded-md border border-green-500 bg-green-500/10 p-4 text-green-700 dark:text-green-400"
 		>
-			Building updated successfully!
+			{successMessage}
 		</div>
 	{/if}
 
-	<form method="POST" action="?/update" use:enhance class="space-y-6">
+	<form onsubmit={handleUpdate} class="space-y-6">
 		<div class="rounded-lg border bg-card p-6">
 			<Field.Set>
 				<Field.Legend>Building Details</Field.Legend>
@@ -68,11 +129,11 @@
 							id="iws_code"
 							name="iws_code"
 							placeholder="e.g. ABCD"
-							value={form?.values?.iws_code ?? data.building.iws_code}
-							aria-invalid={!!form?.errors?.iws_code}
+							value={data.building.iws_code}
+							aria-invalid={!!errors.iws_code}
 						/>
-						{#if form?.errors?.iws_code}
-							<Field.Error>{form.errors.iws_code}</Field.Error>
+						{#if errors.iws_code}
+							<Field.Error>{errors.iws_code}</Field.Error>
 						{/if}
 					</Field.Content>
 					<Field.Description>The unique IWS code identifier for this building.</Field.Description>
@@ -86,11 +147,11 @@
 							name="building_group"
 							type="number"
 							placeholder="e.g. 1"
-							value={form?.values?.building_group ?? data.building.building_group}
-							aria-invalid={!!form?.errors?.building_group}
+							value={data.building.building_group}
+							aria-invalid={!!errors.building_group}
 						/>
-						{#if form?.errors?.building_group}
-							<Field.Error>{form.errors.building_group}</Field.Error>
+						{#if errors.building_group}
+							<Field.Error>{errors.building_group}</Field.Error>
 						{/if}
 					</Field.Content>
 					<Field.Description>The group number this building belongs to.</Field.Description>
@@ -100,25 +161,9 @@
 
 		<div class="flex justify-end gap-4">
 			<Button variant="outline" href="/facility/buildings">Cancel</Button>
-			<Button type="submit">Save Changes</Button>
+			<Button type="submit" disabled={isSubmitting}>
+				{isSubmitting ? 'Saving...' : 'Save Changes'}
+			</Button>
 		</div>
 	</form>
-
-	<div class="rounded-lg border bg-card p-6">
-		<h2 class="mb-4 text-lg font-medium">Additional Information</h2>
-		<dl class="grid gap-4 text-sm">
-			<div class="flex justify-between">
-				<dt class="text-muted-foreground">ID</dt>
-				<dd class="font-mono">{data.building.id}</dd>
-			</div>
-			<div class="flex justify-between">
-				<dt class="text-muted-foreground">Created</dt>
-				<dd>{new Date(data.building.created_at).toLocaleString()}</dd>
-			</div>
-			<div class="flex justify-between">
-				<dt class="text-muted-foreground">Last Updated</dt>
-				<dd>{new Date(data.building.updated_at).toLocaleString()}</dd>
-			</div>
-		</dl>
-	</div>
 </div>

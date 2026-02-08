@@ -1,7 +1,13 @@
 import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
+import { building } from '$app/environment';
 
 export const handle: Handle = async ({ event, resolve }) => {
+	// Bypass auth checks during build time (for adapter-static fallback generation)
+	if (building) {
+		return await resolve(event);
+	}
+
 	const { pathname } = event.url;
 
 	// Never redirect API requests to HTML login pages.
