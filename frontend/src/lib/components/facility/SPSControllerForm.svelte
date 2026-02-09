@@ -8,7 +8,8 @@
 		createSPSController,
 		getSystemType,
 		listSPSControllerSystemTypes,
-		updateSPSController
+		updateSPSController,
+		validateSPSController
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type {
@@ -16,6 +17,7 @@
 		SPSControllerSystemType,
 		SPSControllerSystemTypeInput
 	} from '$lib/domain/facility/index.js';
+	import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
 
 	interface Props {
 		initialData?: SPSController;
@@ -28,6 +30,9 @@
 	let ga_device = $state('');
 	let device_name = $state('');
 	let ip_address = $state('');
+	let subnet = $state('');
+	let gateway = $state('');
+	let vlan = $state('');
 	let control_cabinet_id = $state('');
 	let system_type_id = $state('');
 	let systemTypes: SPSControllerSystemTypeInput[] = $state([]);
@@ -38,6 +43,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let fieldErrors = $state<Record<string, string>>({});
+	const liveValidation = useLiveValidation(validateSPSController, { debounceMs: 400 });
 
 	$effect(() => {
 		if (!initialData) {
@@ -46,6 +52,9 @@
 		ga_device = initialData.ga_device ?? '';
 		device_name = initialData.device_name;
 		ip_address = initialData.ip_address ?? '';
+		subnet = initialData.subnet ?? '';
+		gateway = initialData.gateway ?? '';
+		vlan = initialData.vlan ?? '';
 		control_cabinet_id = initialData.control_cabinet_id;
 	});
 
@@ -61,7 +70,29 @@
 		}
 	});
 
+	$effect(() => {
+		if (!control_cabinet_id) return;
+		triggerValidation();
+	});
+
 	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['spscontroller']);
+	const liveFieldError = (name: string) =>
+		getFieldError(liveValidation.fieldErrors, name, ['spscontroller']);
+	const combinedFieldError = (name: string) => liveFieldError(name) || fieldError(name);
+
+	function triggerValidation() {
+		if (!control_cabinet_id) return;
+		liveValidation.trigger({
+			id: initialData?.id,
+			control_cabinet_id,
+			ga_device: ga_device || undefined,
+			device_name,
+			ip_address: ip_address || undefined,
+			subnet: subnet || undefined,
+			gateway: gateway || undefined,
+			vlan: vlan || undefined
+		});
+	}
 
 	async function loadSystemTypes() {
 		if (!initialData?.id) return;
@@ -150,6 +181,9 @@
 					ga_device,
 					device_name,
 					ip_address,
+					subnet: subnet || undefined,
+					gateway: gateway || undefined,
+					vlan: vlan || undefined,
 					control_cabinet_id,
 					system_types: systemTypes
 				});
@@ -159,6 +193,9 @@
 					ga_device,
 					device_name,
 					ip_address,
+					subnet: subnet || undefined,
+					gateway: gateway || undefined,
+					vlan: vlan || undefined,
 					control_cabinet_id,
 					system_types: systemTypes
 				});
@@ -184,23 +221,65 @@
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		<div class="space-y-2">
 			<Label for="ga_device">GA Device</Label>
-			<Input id="ga_device" bind:value={ga_device} required maxlength={10} />
-			{#if fieldError('ga_device')}
-				<p class="text-sm text-red-500">{fieldError('ga_device')}</p>
+			<Input
+				id="ga_device"
+				value={ga_device}
+				required
+				maxlength={3}
+				oninput={(e) => {
+					ga_device = (e.target as HTMLInputElement).value.toUpperCase();
+					triggerValidation();
+				}}
+			/>
+			{#if combinedFieldError('ga_device')}
+				<p class="text-sm text-red-500">{combinedFieldError('ga_device')}</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="device_name">Device Name</Label>
-			<Input id="device_name" bind:value={device_name} required maxlength={100} />
-			{#if fieldError('device_name')}
-				<p class="text-sm text-red-500">{fieldError('device_name')}</p>
+			<Input
+				id="device_name"
+				bind:value={device_name}
+				required
+				maxlength={100}
+				oninput={triggerValidation}
+			/>
+			{#if combinedFieldError('device_name')}
+				<p class="text-sm text-red-500">{combinedFieldError('device_name')}</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="ip_address">IP Address</Label>
-			<Input id="ip_address" bind:value={ip_address} required maxlength={50} />
-			{#if fieldError('ip_address')}
-				<p class="text-sm text-red-500">{fieldError('ip_address')}</p>
+			<Input
+				id="ip_address"
+				bind:value={ip_address}
+				required
+				maxlength={50}
+				oninput={triggerValidation}
+			/>
+			{#if combinedFieldError('ip_address')}
+				<p class="text-sm text-red-500">{combinedFieldError('ip_address')}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="subnet">Subnet Mask</Label>
+			<Input id="subnet" bind:value={subnet} maxlength={50} oninput={triggerValidation} />
+			{#if combinedFieldError('subnet')}
+				<p class="text-sm text-red-500">{combinedFieldError('subnet')}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="gateway">Gateway</Label>
+			<Input id="gateway" bind:value={gateway} maxlength={50} oninput={triggerValidation} />
+			{#if combinedFieldError('gateway')}
+				<p class="text-sm text-red-500">{combinedFieldError('gateway')}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="vlan">VLAN</Label>
+			<Input id="vlan" bind:value={vlan} maxlength={50} oninput={triggerValidation} />
+			{#if combinedFieldError('vlan')}
+				<p class="text-sm text-red-500">{combinedFieldError('vlan')}</p>
 			{/if}
 		</div>
 
@@ -209,8 +288,8 @@
 			<div class="block">
 				<ControlCabinetSelect bind:value={control_cabinet_id} width="w-full" />
 			</div>
-			{#if fieldError('control_cabinet_id')}
-				<p class="text-sm text-red-500">{fieldError('control_cabinet_id')}</p>
+			{#if combinedFieldError('control_cabinet_id')}
+				<p class="text-sm text-red-500">{combinedFieldError('control_cabinet_id')}</p>
 			{/if}
 		</div>
 	</div>
@@ -284,8 +363,8 @@
 		{/if}
 	</div>
 
-	{#if error}
-		<p class="text-sm text-red-500">{error}</p>
+	{#if error || liveValidation.error}
+		<p class="text-sm text-red-500">{error || liveValidation.error}</p>
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">

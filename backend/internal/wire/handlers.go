@@ -53,6 +53,7 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devA
 		FacilityFieldDeviceHandler:    facilityHandlers.FieldDevice,
 		FacilityBacnetObjectHandler:   facilityHandlers.BacnetObject,
 		FacilitySPSControllerHandler:  facilityHandlers.SPSController,
+		FacilityValidationHandler:     facilityHandlers.Validation,
 
 		FacilityStateTextHandler:               facilityHandlers.StateText,
 		FacilityNotificationClassHandler:       facilityHandlers.NotificationClass,

@@ -10,27 +10,27 @@ Full-stack infrastructure management application. Go backend (Gin + GORM) with S
 
 ### Backend (`cd backend`)
 
-| Task | Command |
-|------|---------|
-| Run server | `go run ./cmd/app` |
-| Build | `go build ./cmd/app` |
-| Lint | `make lint` |
-| Lint + fix | `make lint-fix` |
-| Migrate up | `make migrate-up` |
-| Migrate down | `make migrate-down` |
+| Task         | Command                                    |
+| ------------ | ------------------------------------------ |
+| Run server   | `go run ./cmd/app`                         |
+| Build        | `go build ./cmd/app`                       |
+| Lint         | `make lint`                                |
+| Lint + fix   | `make lint-fix`                            |
+| Migrate up   | `make migrate-up`                          |
+| Migrate down | `make migrate-down`                        |
 | Swagger docs | `swag init -g ./cmd/app/main.go -o ./docs` |
-| Seed data | `go run ./cmd/seeder` |
+| Seed data    | `go run ./cmd/seeder`                      |
 
 ### Frontend (`cd frontend`)
 
-| Task | Command |
-|------|---------|
-| Dev server | `pnpm run dev` |
-| Build | `pnpm run build` |
-| Type check | `pnpm run check` |
+| Task               | Command                |
+| ------------------ | ---------------------- |
+| Dev server         | `pnpm run dev`         |
+| Build              | `pnpm run build`       |
+| Type check         | `pnpm run check`       |
 | Type check (watch) | `pnpm run check:watch` |
-| Format | `pnpm run format` |
-| Lint (Prettier) | `pnpm run lint` |
+| Format             | `pnpm run format`      |
+| Lint (Prettier)    | `pnpm run lint`        |
 
 ### Full Stack
 
@@ -55,10 +55,11 @@ internal/
     mapper/              → Entity ↔ DTO conversion
   wire/                  → Manual DI wiring (repositories.go → services.go → handlers.go)
   config/                → Environment-based configuration
-  db/                    → Database connection (supports SQLite, PostgreSQL, MySQL)
+  db/                    → Database connection (supports PostgreSQL, MySQL)
 ```
 
 **Key patterns:**
+
 - REST API at `/api/v1/*`, Swagger at `/swagger/index.html`
 - JWT access tokens (15min default) + refresh tokens in cookies
 - CSRF double-submit cookie pattern for state-changing requests
@@ -93,6 +94,7 @@ src/
 ```
 
 **Key patterns:**
+
 - shadcn-svelte component library via bits-ui (headless) + Tailwind CSS
 - DropdownMenu trigger uses `{#snippet child({ props })}` pattern (see `nav-user.svelte`)
 - Popover+Command combo for searchable selects (see `AsyncCombobox.svelte`)
@@ -112,12 +114,13 @@ src/
 ## Environment
 
 - Backend config via `.env` (see `backend/example.env`): `DB_TYPE`, `DATABASE_URL`, `JWT_SECRET`, `SEED_USER_*`
-- Default dev DB: SQLite at `backend/data/app.db`
+- Default dev DB: PostgreSQL (see `backend/example.env`)
 - Frontend dev server proxies to backend at `localhost:8080`
 
 ## Pre-existing Issues
 
 The following build/check issues pre-date current work and are not regressions:
+
 - `svelte-check` reports module resolution errors for non-`.js` imports (e.g., `$lib/api/users` instead of `$lib/api/users.js`)
 - `FieldDeviceForm.svelte` has a Svelte 4 reactive declaration cycle (`$:`) blocking `vite build`
 - Several facility form components use deprecated `on:` event directives (Svelte 4 syntax)

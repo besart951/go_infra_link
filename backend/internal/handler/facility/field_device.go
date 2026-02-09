@@ -482,9 +482,9 @@ func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
 			spec = toSpecificationFromInput(item.Specification)
 		}
 
-		var bacnetObjs *[]domainFacility.BacnetObject
+		var bacnetObjs *[]domainFacility.BacnetObjectPatch
 		if item.BacnetObjects != nil {
-			mapped := toFieldDeviceBacnetObjects(*item.BacnetObjects)
+			mapped := toBacnetObjectPatches(*item.BacnetObjects)
 			bacnetObjs = &mapped
 		}
 

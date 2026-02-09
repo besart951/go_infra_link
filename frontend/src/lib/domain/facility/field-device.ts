@@ -46,6 +46,23 @@ export interface BacnetObjectInput {
 	alarm_definition_id?: string;
 }
 
+export interface BacnetObjectPatchInput {
+	id: string;
+	text_fix?: string;
+	description?: string;
+	gms_visible?: boolean;
+	optional?: boolean;
+	text_individual?: string;
+	software_type?: string;
+	software_number?: number;
+	hardware_type?: string;
+	hardware_quantity?: number;
+	software_reference_id?: string;
+	state_text_id?: string;
+	notification_class_id?: string;
+	alarm_definition_id?: string;
+}
+
 export interface CreateFieldDeviceRequest {
 	bmk?: string;
 	description?: string;
@@ -75,7 +92,7 @@ export interface FieldDeviceListParams {
 	sps_controller_system_type_id?: string;
 }
 
-export interface FieldDeviceListResponse extends Pagination<FieldDevice> { }
+export interface FieldDeviceListResponse extends Pagination<FieldDevice> {}
 
 /**
  * FieldDeviceOptions - Response from /api/v1/facility/field-devices/options
@@ -152,7 +169,7 @@ export interface BulkUpdateFieldDeviceItem {
 	apparat_id?: string;
 	system_part_id?: string;
 	specification?: SpecificationInput;
-	bacnet_objects?: BacnetObjectInput[];
+	bacnet_objects?: BacnetObjectPatchInput[];
 }
 
 /**

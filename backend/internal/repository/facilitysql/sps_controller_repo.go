@@ -103,3 +103,37 @@ func (r *spsControllerRepo) GetIDsByControlCabinetID(controlCabinetID uuid.UUID)
 	}
 	return ids, nil
 }
+
+func (r *spsControllerRepo) ExistsGADevice(controlCabinetID uuid.UUID, gaDevice string, excludeID *uuid.UUID) (bool, error) {
+	query := r.db.Model(&domainFacility.SPSController{}).
+		Where("deleted_at IS NULL").
+		Where("control_cabinet_id = ?", controlCabinetID).
+		Where("UPPER(ga_device) = ?", strings.ToUpper(strings.TrimSpace(gaDevice)))
+
+	if excludeID != nil {
+		query = query.Where("id <> ?", *excludeID)
+	}
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *spsControllerRepo) ExistsIPAddressVlan(ipAddress string, vlan string, excludeID *uuid.UUID) (bool, error) {
+	query := r.db.Model(&domainFacility.SPSController{}).
+		Where("deleted_at IS NULL").
+		Where("ip_address = ?", strings.TrimSpace(ipAddress)).
+		Where("vlan = ?", strings.TrimSpace(vlan))
+
+	if excludeID != nil {
+		query = query.Where("id <> ?", *excludeID)
+	}
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

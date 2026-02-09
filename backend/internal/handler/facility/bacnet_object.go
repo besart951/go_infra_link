@@ -97,7 +97,10 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 		return
 	}
 
-	applyBacnetObjectUpdate(existing, req)
+	applyBacnetObjectPatch(existing, req.BacnetObjectPatchInput)
+	if req.FieldDeviceID != nil {
+		existing.FieldDeviceID = req.FieldDeviceID
+	}
 
 	if err := h.service.Update(existing, req.ObjectDataID); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {

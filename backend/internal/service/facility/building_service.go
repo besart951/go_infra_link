@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"strings"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
@@ -15,7 +17,7 @@ func NewBuildingService(repo domainFacility.BuildingRepository) *BuildingService
 }
 
 func (s *BuildingService) Create(building *domainFacility.Building) error {
-	if err := s.validateRequiredFields(building); err != nil {
+	if err := s.Validate(building, nil); err != nil {
 		return err
 	}
 	return s.repo.Create(building)
@@ -42,10 +44,20 @@ func (s *BuildingService) List(page, limit int, search string) (*domain.Paginate
 }
 
 func (s *BuildingService) Update(building *domainFacility.Building) error {
-	if err := s.validateRequiredFields(building); err != nil {
+	if err := s.Validate(building, &building.ID); err != nil {
 		return err
 	}
 	return s.repo.Update(building)
+}
+
+func (s *BuildingService) Validate(building *domainFacility.Building, excludeID *uuid.UUID) error {
+	if err := s.validateRequiredFields(building); err != nil {
+		return err
+	}
+	if err := s.ensureUnique(building, excludeID); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *BuildingService) DeleteByID(id uuid.UUID) error {
@@ -54,11 +66,30 @@ func (s *BuildingService) DeleteByID(id uuid.UUID) error {
 
 func (s *BuildingService) validateRequiredFields(building *domainFacility.Building) error {
 	ve := domain.NewValidationError()
+	if strings.TrimSpace(building.IWSCode) == "" {
+		ve = ve.Add("building.iws_code", "iws_code is required")
+	} else if len(strings.TrimSpace(building.IWSCode)) != 4 {
+		ve = ve.Add("building.iws_code", "iws_code must be exactly 4 characters")
+	}
 	if building.BuildingGroup == 0 {
 		ve = ve.Add("building.building_group", "building_group is required")
 	}
 	if len(ve.Fields) > 0 {
 		return ve
+	}
+	return nil
+}
+
+func (s *BuildingService) ensureUnique(building *domainFacility.Building, excludeID *uuid.UUID) error {
+	if strings.TrimSpace(building.IWSCode) == "" || building.BuildingGroup == 0 {
+		return nil
+	}
+	exists, err := s.repo.ExistsIWSCodeGroup(building.IWSCode, building.BuildingGroup, excludeID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return domain.NewValidationError().Add("building.iws_code", "iws_code must be unique within the building group")
 	}
 	return nil
 }

@@ -2,9 +2,15 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { createBuilding, updateBuilding } from '$lib/infrastructure/api/facility.adapter.js';
+	import {
+		createBuilding,
+		updateBuilding,
+		validateBuilding
+	} from '$lib/infrastructure/api/facility.adapter.js';
 	import type { Building } from '$lib/domain/facility/index.js';
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
+	import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
+	import { getFieldError } from '$lib/api/client.js';
 
 	interface BuildingFormProps {
 		initialData?: Building;
@@ -27,6 +33,23 @@
 			onSuccess?.(result);
 		}
 	});
+
+	const liveValidation = useLiveValidation(validateBuilding, { debounceMs: 400 });
+
+	function triggerValidation() {
+		liveValidation.trigger({
+			id: initialData?.id,
+			iws_code,
+			building_group: Number(building_group)
+		});
+	}
+
+	function getError(field: string) {
+		return (
+			getFieldError(liveValidation.fieldErrors, field, ['building']) ??
+			formState.getFieldError(field, ['building'])
+		);
+	}
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
@@ -61,10 +84,11 @@
 				placeholder="e.g. ABCD"
 				minlength={4}
 				maxlength={4}
+				oninput={triggerValidation}
 			/>
 			<p class="text-xs text-muted-foreground">Exactly 4 characters</p>
-			{#if formState.getFieldError('iws_code', ['building'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('iws_code', ['building'])}</p>
+			{#if getError('iws_code')}
+				<p class="text-sm text-red-500">{getError('iws_code')}</p>
 			{/if}
 		</div>
 
@@ -76,17 +100,16 @@
 				bind:value={building_group}
 				required
 				placeholder="e.g. 1"
+				oninput={triggerValidation}
 			/>
-			{#if formState.getFieldError('building_group', ['building'])}
-				<p class="text-sm text-red-500">
-					{formState.getFieldError('building_group', ['building'])}
-				</p>
+			{#if getError('building_group')}
+				<p class="text-sm text-red-500">{getError('building_group')}</p>
 			{/if}
 		</div>
 	</div>
 
-	{#if formState.error}
-		<p class="text-sm text-red-500">{formState.error}</p>
+	{#if formState.error || liveValidation.error}
+		<p class="text-sm text-red-500">{formState.error || liveValidation.error}</p>
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">

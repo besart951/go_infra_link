@@ -61,11 +61,8 @@ func Load() (Config, error) {
 	seedUserEnabled := getEnvBool("SEED_USER_ENABLED", !IsProduction(appEnv))
 	devAuthEnabled := getEnvBool("DEV_AUTH_ENABLED", false)
 
-	dbType := normalizeDBType(getEnvFirst("sqlite", "DB_TYPE", "DB_DRIVER"))
-	dbDsnFallback := "host=localhost user=postgres password=postgres dbname=mydb port=5432 sslmode=disable"
-	if dbType == "sqlite" {
-		dbDsnFallback = "./data/app.db"
-	}
+	dbType := normalizeDBType(getEnvFirst("postgres", "DB_TYPE", "DB_DRIVER"))
+	dbDsnFallback := "host=localhost user=postgres password=postgres dbname=go_infra_link port=5432 sslmode=disable"
 	dbDsn := getEnvFirst(dbDsnFallback, "DATABASE_URL", "DB_DSN")
 
 	return Config{
@@ -177,8 +174,6 @@ func getEnv(key, fallback string) string {
 func normalizeDBType(dbType string) string {
 	dbType = strings.ToLower(strings.TrimSpace(dbType))
 	switch dbType {
-	case "sqlite3", "sqlite":
-		return "sqlite"
 	case "postgres", "pg", "postgresql", "pgx":
 		return "postgres"
 	case "mysql", "mariadb":

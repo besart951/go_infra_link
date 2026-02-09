@@ -121,6 +121,17 @@ export async function deleteBuilding(id: string, options?: ApiOptions): Promise<
 	return api<void>(`/facility/buildings/${id}`, { ...options, method: 'DELETE' });
 }
 
+export async function validateBuilding(
+	data: { id?: string; iws_code: string; building_group: number },
+	options?: ApiOptions
+): Promise<void> {
+	return api<void>('/facility/buildings/validate', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
 // ============================================================================
 // CONTROL CABINETS
 // ============================================================================
@@ -174,6 +185,17 @@ export async function updateControlCabinet(
 
 export async function deleteControlCabinet(id: string, options?: RequestInit): Promise<void> {
 	return api<void>(`/facility/control-cabinets/${id}`, { ...options, method: 'DELETE' });
+}
+
+export async function validateControlCabinet(
+	data: { id?: string; building_id: string; control_cabinet_nr?: string },
+	options?: ApiOptions
+): Promise<void> {
+	return api<void>('/facility/control-cabinets/validate', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
 }
 
 export async function getControlCabinetDeleteImpact(
@@ -233,6 +255,26 @@ export async function updateSPSController(
 
 export async function deleteSPSController(id: string, options?: RequestInit): Promise<void> {
 	return api<void>(`/facility/sps-controllers/${id}`, { ...options, method: 'DELETE' });
+}
+
+export async function validateSPSController(
+	data: {
+		id?: string;
+		control_cabinet_id: string;
+		ga_device?: string;
+		device_name: string;
+		ip_address?: string;
+		subnet?: string;
+		gateway?: string;
+		vlan?: string;
+	},
+	options?: ApiOptions
+): Promise<void> {
+	return api<void>('/facility/sps-controllers/validate', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
 }
 
 // ============================================================================

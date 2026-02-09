@@ -2,10 +2,7 @@ package db
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
-	sqlite "github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -24,13 +21,6 @@ func Connect(cfg config.Config) (*gorm.DB, error) {
 	var dialector gorm.Dialector
 
 	switch cfg.DBType {
-	case "sqlite":
-		sqliteDsn := resolveSQLiteDSN(cfg.DBDsn)
-		if err := ensureSQLiteDir(sqliteDsn); err != nil {
-			return nil, fmt.Errorf("ensure sqlite directory: %w", err)
-		}
-		dialector = sqlite.Open(sqliteDsn)
-
 	case "postgres":
 		dialector = postgres.Open(cfg.DBDsn)
 
@@ -39,7 +29,7 @@ func Connect(cfg config.Config) (*gorm.DB, error) {
 		dialector = mysql.Open(cfg.DBDsn)
 
 	default:
-		return nil, fmt.Errorf("unsupported database type: %s (supported: sqlite, postgres, mysql, mariadb)", cfg.DBType)
+		return nil, fmt.Errorf("unsupported database type: %s (supported: postgres, mysql, mariadb)", cfg.DBType)
 	}
 
 	db, err := gorm.Open(dialector, &gorm.Config{})
@@ -125,44 +115,6 @@ func autoMigrate(db *gorm.DB) error {
 	}
 
 	return nil
-}
-
-func resolveSQLiteDSN(dsn string) string {
-	if dsn == ":memory:" {
-		return dsn
-	}
-	if filepath.IsAbs(dsn) {
-		return dsn
-	}
-	// If you run from repo root, ./data/app.db doesn't exist, but backend/data/app.db does.
-	// If you run from backend/, ./data/app.db exists and will be used.
-	if fileExists(dsn) {
-		return dsn
-	}
-	alt := filepath.Join("backend", dsn)
-	if fileExists(alt) {
-		return alt
-	}
-	return dsn
-}
-
-func fileExists(path string) bool {
-	if _, err := os.Stat(path); err != nil {
-		return false
-	}
-	return true
-}
-
-// ensureSQLiteDir creates the directory for SQLite database file if needed
-func ensureSQLiteDir(dsn string) error {
-	if dsn == ":memory:" {
-		return nil
-	}
-	dir := filepath.Dir(dsn)
-	if dir == "." || dir == "" {
-		return nil
-	}
-	return os.MkdirAll(dir, 0o755)
 }
 
 // GetModels returns a list of all domain models for reference

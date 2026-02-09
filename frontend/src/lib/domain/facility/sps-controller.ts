@@ -30,6 +30,9 @@ export interface CreateSPSControllerRequest {
 	ga_device: string;
 	device_name: string;
 	ip_address: string;
+	subnet?: string;
+	gateway?: string;
+	vlan?: string;
 	control_cabinet_id: string;
 	system_types?: SPSControllerSystemTypeInput[];
 }
@@ -39,6 +42,9 @@ export interface UpdateSPSControllerRequest {
 	ga_device?: string;
 	device_name?: string;
 	ip_address?: string;
+	subnet?: string;
+	gateway?: string;
+	vlan?: string;
 	control_cabinet_id?: string;
 	system_types?: SPSControllerSystemTypeInput[];
 }

@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"strings"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
@@ -37,7 +39,7 @@ func NewControlCabinetService(
 }
 
 func (s *ControlCabinetService) Create(controlCabinet *domainFacility.ControlCabinet) error {
-	if err := s.validateRequiredFields(controlCabinet); err != nil {
+	if err := s.Validate(controlCabinet, nil); err != nil {
 		return err
 	}
 	if err := s.ensureBuildingExists(controlCabinet.BuildingID); err != nil {
@@ -117,13 +119,23 @@ func (s *ControlCabinetService) ListByBuildingID(buildingID uuid.UUID, page, lim
 }
 
 func (s *ControlCabinetService) Update(controlCabinet *domainFacility.ControlCabinet) error {
-	if err := s.validateRequiredFields(controlCabinet); err != nil {
+	if err := s.Validate(controlCabinet, &controlCabinet.ID); err != nil {
 		return err
 	}
 	if err := s.ensureBuildingExists(controlCabinet.BuildingID); err != nil {
 		return err
 	}
 	return s.repo.Update(controlCabinet)
+}
+
+func (s *ControlCabinetService) Validate(controlCabinet *domainFacility.ControlCabinet, excludeID *uuid.UUID) error {
+	if err := s.validateRequiredFields(controlCabinet); err != nil {
+		return err
+	}
+	if err := s.ensureUnique(controlCabinet, excludeID); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *ControlCabinetService) DeleteByID(id uuid.UUID) error {
@@ -190,8 +202,27 @@ func (s *ControlCabinetService) validateRequiredFields(controlCabinet *domainFac
 	if controlCabinet.BuildingID == uuid.Nil {
 		ve = ve.Add("controlcabinet.building_id", "building_id is required")
 	}
+	if controlCabinet.ControlCabinetNr == nil || strings.TrimSpace(*controlCabinet.ControlCabinetNr) == "" {
+		ve = ve.Add("controlcabinet.control_cabinet_nr", "control_cabinet_nr is required")
+	} else if len(strings.TrimSpace(*controlCabinet.ControlCabinetNr)) > 11 {
+		ve = ve.Add("controlcabinet.control_cabinet_nr", "control_cabinet_nr must be 11 characters or less")
+	}
 	if len(ve.Fields) > 0 {
 		return ve
+	}
+	return nil
+}
+
+func (s *ControlCabinetService) ensureUnique(controlCabinet *domainFacility.ControlCabinet, excludeID *uuid.UUID) error {
+	if controlCabinet.ControlCabinetNr == nil || strings.TrimSpace(*controlCabinet.ControlCabinetNr) == "" || controlCabinet.BuildingID == uuid.Nil {
+		return nil
+	}
+	exists, err := s.repo.ExistsControlCabinetNr(controlCabinet.BuildingID, *controlCabinet.ControlCabinetNr, excludeID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return domain.NewValidationError().Add("controlcabinet.control_cabinet_nr", "control_cabinet_nr must be unique within the building")
 	}
 	return nil
 }

@@ -24,23 +24,82 @@ func toBacnetObjectModel(req dto.CreateBacnetObjectRequest) *domainFacility.Bacn
 	}
 }
 
-func applyBacnetObjectUpdate(target *domainFacility.BacnetObject, req dto.UpdateBacnetObjectRequest) {
-	target.TextFix = req.TextFix
-	target.Description = req.Description
-	target.GMSVisible = req.GMSVisible
-	target.Optional = req.Optional
-	target.TextIndividual = req.TextIndividual
-	target.SoftwareType = domainFacility.BacnetSoftwareType(req.SoftwareType)
-	target.SoftwareNumber = uint16(req.SoftwareNumber)
-	target.HardwareType = domainFacility.BacnetHardwareType(req.HardwareType)
-	target.HardwareQuantity = uint8(req.HardwareQuantity)
-	target.SoftwareReferenceID = req.SoftwareReferenceID
-	target.StateTextID = req.StateTextID
-	target.NotificationClassID = req.NotificationClassID
-	target.AlarmDefinitionID = req.AlarmDefinitionID
-	if req.FieldDeviceID != nil {
-		target.FieldDeviceID = req.FieldDeviceID
+func applyBacnetObjectPatch(target *domainFacility.BacnetObject, req dto.BacnetObjectPatchInput) {
+	if req.TextFix != nil {
+		target.TextFix = *req.TextFix
 	}
+	if req.Description != nil {
+		target.Description = req.Description
+	}
+	if req.GMSVisible != nil {
+		target.GMSVisible = *req.GMSVisible
+	}
+	if req.Optional != nil {
+		target.Optional = *req.Optional
+	}
+	if req.TextIndividual != nil {
+		target.TextIndividual = req.TextIndividual
+	}
+	if req.SoftwareType != nil {
+		target.SoftwareType = domainFacility.BacnetSoftwareType(*req.SoftwareType)
+	}
+	if req.SoftwareNumber != nil {
+		target.SoftwareNumber = uint16(*req.SoftwareNumber)
+	}
+	if req.HardwareType != nil {
+		target.HardwareType = domainFacility.BacnetHardwareType(*req.HardwareType)
+	}
+	if req.HardwareQuantity != nil {
+		target.HardwareQuantity = uint8(*req.HardwareQuantity)
+	}
+	if req.SoftwareReferenceID != nil {
+		target.SoftwareReferenceID = req.SoftwareReferenceID
+	}
+	if req.StateTextID != nil {
+		target.StateTextID = req.StateTextID
+	}
+	if req.NotificationClassID != nil {
+		target.NotificationClassID = req.NotificationClassID
+	}
+	if req.AlarmDefinitionID != nil {
+		target.AlarmDefinitionID = req.AlarmDefinitionID
+	}
+}
+
+func toBacnetObjectPatches(inputs []dto.BacnetObjectBulkPatchInput) []domainFacility.BacnetObjectPatch {
+	items := make([]domainFacility.BacnetObjectPatch, 0, len(inputs))
+	for _, input := range inputs {
+		patch := domainFacility.BacnetObjectPatch{
+			ID:                  input.ID,
+			TextFix:             input.TextFix,
+			Description:         input.Description,
+			GMSVisible:          input.GMSVisible,
+			Optional:            input.Optional,
+			TextIndividual:      input.TextIndividual,
+			SoftwareReferenceID: input.SoftwareReferenceID,
+			StateTextID:         input.StateTextID,
+			NotificationClassID: input.NotificationClassID,
+			AlarmDefinitionID:   input.AlarmDefinitionID,
+		}
+		if input.SoftwareType != nil {
+			st := domainFacility.BacnetSoftwareType(*input.SoftwareType)
+			patch.SoftwareType = &st
+		}
+		if input.SoftwareNumber != nil {
+			num := uint16(*input.SoftwareNumber)
+			patch.SoftwareNumber = &num
+		}
+		if input.HardwareType != nil {
+			ht := domainFacility.BacnetHardwareType(*input.HardwareType)
+			patch.HardwareType = &ht
+		}
+		if input.HardwareQuantity != nil {
+			qty := uint8(*input.HardwareQuantity)
+			patch.HardwareQuantity = &qty
+		}
+		items = append(items, patch)
+	}
+	return items
 }
 
 func toSPSControllerModel(req dto.CreateSPSControllerRequest) *domainFacility.SPSController {

@@ -10,7 +10,7 @@ import (
 
 type CreateSPSControllerRequest struct {
 	ControlCabinetID  uuid.UUID                      `json:"control_cabinet_id" binding:"required"`
-	GADevice          *string                        `json:"ga_device" binding:"omitempty,max=10"`
+	GADevice          *string                        `json:"ga_device" binding:"required,len=3"`
 	DeviceName        string                         `json:"device_name" binding:"required,max=100"`
 	DeviceDescription *string                        `json:"device_description" binding:"omitempty,max=250"`
 	DeviceLocation    *string                        `json:"device_location" binding:"omitempty,max=250"`
@@ -23,7 +23,7 @@ type CreateSPSControllerRequest struct {
 
 type UpdateSPSControllerRequest struct {
 	ControlCabinetID  uuid.UUID                       `json:"control_cabinet_id"`
-	GADevice          *string                         `json:"ga_device" binding:"omitempty,max=10"`
+	GADevice          *string                         `json:"ga_device" binding:"omitempty,len=3"`
 	DeviceName        string                          `json:"device_name" binding:"omitempty,max=100"`
 	DeviceDescription *string                         `json:"device_description" binding:"omitempty,max=250"`
 	DeviceLocation    *string                         `json:"device_location" binding:"omitempty,max=250"`

@@ -16,7 +16,8 @@ import type {
 	UpdateFieldDeviceRequest,
 	BulkUpdateFieldDeviceItem,
 	SpecificationInput,
-	BacnetObjectInput
+	BacnetObjectInput,
+	BacnetObjectPatchInput
 } from '$lib/domain/facility/index.js';
 
 export interface EditErrorInfo {
@@ -395,32 +396,72 @@ export function useFieldDeviceEditing() {
 	function buildBacnetObjectsPayload(
 		device: FieldDevice,
 		deviceEdits: Map<string, Partial<BacnetObjectInput>>
-	): BacnetObjectInput[] {
+	): BacnetObjectPatchInput[] {
 		if (!device.bacnet_objects) return [];
-		return device.bacnet_objects.map((obj) => {
-			const edits = deviceEdits.get(obj.id) || {};
-			return {
-				text_fix: 'text_fix' in edits ? (edits.text_fix as string) : obj.text_fix,
-				description:
-					'description' in edits ? (edits.description as string | undefined) : obj.description,
-				gms_visible: 'gms_visible' in edits ? (edits.gms_visible as boolean) : obj.gms_visible,
-				optional: 'optional' in edits ? (edits.optional as boolean) : obj.optional,
-				software_type:
-					'software_type' in edits ? (edits.software_type as string) : obj.software_type,
-				software_number:
-					'software_number' in edits ? (edits.software_number as number) : obj.software_number,
-				hardware_type:
-					'hardware_type' in edits ? (edits.hardware_type as string) : obj.hardware_type,
-				hardware_quantity:
-					'hardware_quantity' in edits
-						? (edits.hardware_quantity as number)
-						: obj.hardware_quantity,
-				software_reference_id: obj.software_reference_id,
-				state_text_id: obj.state_text_id,
-				notification_class_id: obj.notification_class_id,
-				alarm_definition_id: obj.alarm_definition_id
-			};
-		});
+		const patches: BacnetObjectPatchInput[] = [];
+		for (const [objectId, edits] of deviceEdits.entries()) {
+			const patch: BacnetObjectPatchInput = { id: objectId };
+			let hasChanges = false;
+
+			if ('text_fix' in edits) {
+				patch.text_fix = edits.text_fix as string;
+				hasChanges = true;
+			}
+			if ('description' in edits) {
+				patch.description = edits.description as string | undefined;
+				hasChanges = true;
+			}
+			if ('gms_visible' in edits) {
+				patch.gms_visible = edits.gms_visible as boolean;
+				hasChanges = true;
+			}
+			if ('optional' in edits) {
+				patch.optional = edits.optional as boolean;
+				hasChanges = true;
+			}
+			if ('text_individual' in edits) {
+				patch.text_individual = edits.text_individual as string | undefined;
+				hasChanges = true;
+			}
+			if ('software_type' in edits) {
+				patch.software_type = edits.software_type as string;
+				hasChanges = true;
+			}
+			if ('software_number' in edits) {
+				patch.software_number = edits.software_number as number;
+				hasChanges = true;
+			}
+			if ('hardware_type' in edits) {
+				patch.hardware_type = edits.hardware_type as string;
+				hasChanges = true;
+			}
+			if ('hardware_quantity' in edits) {
+				patch.hardware_quantity = edits.hardware_quantity as number;
+				hasChanges = true;
+			}
+			if ('software_reference_id' in edits) {
+				patch.software_reference_id = edits.software_reference_id as string | undefined;
+				hasChanges = true;
+			}
+			if ('state_text_id' in edits) {
+				patch.state_text_id = edits.state_text_id as string | undefined;
+				hasChanges = true;
+			}
+			if ('notification_class_id' in edits) {
+				patch.notification_class_id = edits.notification_class_id as string | undefined;
+				hasChanges = true;
+			}
+			if ('alarm_definition_id' in edits) {
+				patch.alarm_definition_id = edits.alarm_definition_id as string | undefined;
+				hasChanges = true;
+			}
+
+			if (hasChanges) {
+				patches.push(patch);
+			}
+		}
+
+		return patches;
 	}
 
 	async function saveAllPendingEdits(
@@ -486,25 +527,19 @@ export function useFieldDeviceEditing() {
 					}
 					// Parse field-level errors for BACnet objects
 					if (r.fields) {
-						const device = storeItems.find((d) => d.id === r.id);
-						if (device?.bacnet_objects) {
-							const objErrors = new Map<string, Record<string, string>>();
-							for (const [fieldPath, msg] of Object.entries(r.fields)) {
-								const match = fieldPath.match(/^bacnet_objects\.(\d+)\.(.+)$/);
-								if (match) {
-									const idx = parseInt(match[1]);
-									const field = match[2];
-									if (device.bacnet_objects[idx]) {
-										const objId = device.bacnet_objects[idx].id;
-										const existing = objErrors.get(objId) || {};
-										existing[field] = msg;
-										objErrors.set(objId, existing);
-									}
-								}
+						const objErrors = new Map<string, Record<string, string>>();
+						for (const [fieldPath, msg] of Object.entries(r.fields)) {
+							const match = fieldPath.match(/^bacnet_objects\.([0-9a-f-]+)\.(.+)$/i);
+							if (match) {
+								const objId = match[1];
+								const field = match[2];
+								const existing = objErrors.get(objId) || {};
+								existing[field] = msg;
+								objErrors.set(objId, existing);
 							}
-							if (objErrors.size > 0) {
-								newBacnetFieldErrors.set(r.id, objErrors);
-							}
+						}
+						if (objErrors.size > 0) {
+							newBacnetFieldErrors.set(r.id, objErrors);
 						}
 					}
 				}
@@ -643,25 +678,20 @@ export function useFieldDeviceEditing() {
 			nextErrors.set(device.id, { message: item?.error, fields: errorFields });
 			editErrors = nextErrors;
 
-			if (device.bacnet_objects) {
-				const objErrors = new Map<string, Record<string, string>>();
-				for (const [fieldPath, msg] of Object.entries(errorFields)) {
-					const match = fieldPath.match(/^bacnet_objects\.(\d+)\.(.+)$/);
-					if (!match) continue;
-					const idx = parseInt(match[1]);
-					const field = match[2];
-					if (device.bacnet_objects[idx]) {
-						const objId = device.bacnet_objects[idx].id;
-						const existing = objErrors.get(objId) || {};
-						existing[field] = msg;
-						objErrors.set(objId, existing);
-					}
-				}
-				if (objErrors.size > 0) {
-					const nextBacnetErrors = new Map(bacnetFieldErrors);
-					nextBacnetErrors.set(device.id, objErrors);
-					bacnetFieldErrors = nextBacnetErrors;
-				}
+			const objErrors = new Map<string, Record<string, string>>();
+			for (const [fieldPath, msg] of Object.entries(errorFields)) {
+				const match = fieldPath.match(/^bacnet_objects\.([0-9a-f-]+)\.(.+)$/i);
+				if (!match) continue;
+				const objId = match[1];
+				const field = match[2];
+				const existing = objErrors.get(objId) || {};
+				existing[field] = msg;
+				objErrors.set(objId, existing);
+			}
+			if (objErrors.size > 0) {
+				const nextBacnetErrors = new Map(bacnetFieldErrors);
+				nextBacnetErrors.set(device.id, objErrors);
+				bacnetFieldErrors = nextBacnetErrors;
 			}
 
 			addToast(item?.error || 'Update failed. Check highlighted fields.', 'error');

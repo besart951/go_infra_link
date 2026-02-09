@@ -15,13 +15,13 @@ type CreateBacnetObjectRequest struct {
 	BacnetObjectInput
 }
 
-// UpdateBacnetObjectRequest is a full update (PUT-style) payload.
+// UpdateBacnetObjectRequest is a partial update payload.
 // If object_data_id is provided, the object will also be attached to that object data template.
 type UpdateBacnetObjectRequest struct {
 	FieldDeviceID *uuid.UUID `json:"field_device_id"`
 	ObjectDataID  *uuid.UUID `json:"object_data_id"`
 
-	BacnetObjectInput
+	BacnetObjectPatchInput
 }
 
 // BacnetObjectInput is used for nested create/update under FieldDevice.
@@ -43,6 +43,33 @@ type BacnetObjectInput struct {
 	StateTextID         *uuid.UUID `json:"state_text_id"`
 	NotificationClassID *uuid.UUID `json:"notification_class_id"`
 	AlarmDefinitionID   *uuid.UUID `json:"alarm_definition_id"`
+}
+
+// BacnetObjectPatchInput is used for partial updates.
+// Only non-nil fields are applied.
+type BacnetObjectPatchInput struct {
+	TextFix        *string `json:"text_fix" binding:"omitempty,max=250"`
+	Description    *string `json:"description" binding:"omitempty"`
+	GMSVisible     *bool   `json:"gms_visible"`
+	Optional       *bool   `json:"optional"`
+	TextIndividual *string `json:"text_individual" binding:"omitempty,max=250"`
+
+	SoftwareType   *string `json:"software_type"`
+	SoftwareNumber *int    `json:"software_number" binding:"omitempty,min=0,max=65535"`
+
+	HardwareType     *string `json:"hardware_type"`
+	HardwareQuantity *int    `json:"hardware_quantity" binding:"omitempty,min=1,max=255"`
+
+	SoftwareReferenceID *uuid.UUID `json:"software_reference_id"`
+	StateTextID         *uuid.UUID `json:"state_text_id"`
+	NotificationClassID *uuid.UUID `json:"notification_class_id"`
+	AlarmDefinitionID   *uuid.UUID `json:"alarm_definition_id"`
+}
+
+// BacnetObjectBulkPatchInput is used for bulk patch updates under field devices.
+type BacnetObjectBulkPatchInput struct {
+	ID uuid.UUID `json:"id" binding:"required"`
+	BacnetObjectPatchInput
 }
 
 type BacnetObjectResponse struct {

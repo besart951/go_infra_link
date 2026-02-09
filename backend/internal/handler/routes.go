@@ -27,6 +27,7 @@ type Handlers struct {
 	FacilityBacnetObjectHandler   *facilityhandler.BacnetObjectHandler
 	FacilityControlCabinetHandler *facilityhandler.ControlCabinetHandler
 	FacilitySPSControllerHandler  *facilityhandler.SPSControllerHandler
+	FacilityValidationHandler     *facilityhandler.ValidationHandler
 
 	FacilityStateTextHandler               *facilityhandler.StateTextHandler
 	FacilityNotificationClassHandler       *facilityhandler.NotificationClassHandler
@@ -167,6 +168,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 	// Facility routes
 	facility := protectedV1.Group("/facility")
 	{
+		facility.POST("/buildings/validate", handlers.FacilityValidationHandler.ValidateBuilding)
 		facility.POST("/buildings", handlers.FacilityBuildingHandler.CreateBuilding)
 		facility.GET("/buildings", handlers.FacilityBuildingHandler.ListBuildings)
 		facility.GET("/buildings/:id", handlers.FacilityBuildingHandler.GetBuilding)
@@ -197,6 +199,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		facility.PUT("/apparats/:id", handlers.FacilityApparatHandler.UpdateApparat)
 		facility.DELETE("/apparats/:id", handlers.FacilityApparatHandler.DeleteApparat)
 
+		facility.POST("/control-cabinets/validate", handlers.FacilityValidationHandler.ValidateControlCabinet)
 		facility.POST("/control-cabinets", handlers.FacilityControlCabinetHandler.CreateControlCabinet)
 		facility.GET("/control-cabinets", handlers.FacilityControlCabinetHandler.ListControlCabinets)
 		facility.GET("/control-cabinets/:id", handlers.FacilityControlCabinetHandler.GetControlCabinet)
@@ -221,6 +224,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		facility.POST("/bacnet-objects", handlers.FacilityBacnetObjectHandler.CreateBacnetObject)
 		facility.PUT("/bacnet-objects/:id", handlers.FacilityBacnetObjectHandler.UpdateBacnetObject)
 
+		facility.POST("/sps-controllers/validate", handlers.FacilityValidationHandler.ValidateSPSController)
 		facility.POST("/sps-controllers", handlers.FacilitySPSControllerHandler.CreateSPSController)
 		facility.GET("/sps-controllers", handlers.FacilitySPSControllerHandler.ListSPSControllers)
 		facility.GET("/sps-controllers/:id", handlers.FacilitySPSControllerHandler.GetSPSController)

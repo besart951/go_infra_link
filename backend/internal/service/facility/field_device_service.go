@@ -2,6 +2,7 @@ package facility
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -643,6 +644,128 @@ func (s *FieldDeviceService) replaceBacnetObjects(fieldDeviceID uuid.UUID, bacne
 	return nil
 }
 
+func applyBacnetObjectPatch(target *domainFacility.BacnetObject, patch domainFacility.BacnetObjectPatch) {
+	if patch.TextFix != nil {
+		target.TextFix = *patch.TextFix
+	}
+	if patch.Description != nil {
+		target.Description = patch.Description
+	}
+	if patch.GMSVisible != nil {
+		target.GMSVisible = *patch.GMSVisible
+	}
+	if patch.Optional != nil {
+		target.Optional = *patch.Optional
+	}
+	if patch.TextIndividual != nil {
+		target.TextIndividual = patch.TextIndividual
+	}
+	if patch.SoftwareType != nil {
+		target.SoftwareType = *patch.SoftwareType
+	}
+	if patch.SoftwareNumber != nil {
+		target.SoftwareNumber = *patch.SoftwareNumber
+	}
+	if patch.HardwareType != nil {
+		target.HardwareType = *patch.HardwareType
+	}
+	if patch.HardwareQuantity != nil {
+		target.HardwareQuantity = *patch.HardwareQuantity
+	}
+	if patch.SoftwareReferenceID != nil {
+		target.SoftwareReferenceID = patch.SoftwareReferenceID
+	}
+	if patch.StateTextID != nil {
+		target.StateTextID = patch.StateTextID
+	}
+	if patch.NotificationClassID != nil {
+		target.NotificationClassID = patch.NotificationClassID
+	}
+	if patch.AlarmDefinitionID != nil {
+		target.AlarmDefinitionID = patch.AlarmDefinitionID
+	}
+}
+
+func (s *FieldDeviceService) patchBacnetObjects(fieldDeviceID uuid.UUID, patches []domainFacility.BacnetObjectPatch) error {
+	if len(patches) == 0 {
+		return nil
+	}
+
+	existingItems, err := s.bacnetObjectRepo.GetByFieldDeviceIDs([]uuid.UUID{fieldDeviceID})
+	if err != nil {
+		return err
+	}
+
+	existingMap := make(map[uuid.UUID]*domainFacility.BacnetObject, len(existingItems))
+	for _, item := range existingItems {
+		existingMap[item.ID] = item
+	}
+
+	updatedMap := make(map[uuid.UUID]*domainFacility.BacnetObject, len(patches))
+	patchedIDs := make(map[uuid.UUID]struct{}, len(patches))
+	ve := domain.NewValidationError()
+
+	for _, patch := range patches {
+		patchedIDs[patch.ID] = struct{}{}
+		existing, ok := existingMap[patch.ID]
+		if !ok {
+			ve = ve.Add(fmt.Sprintf("bacnet_objects.%s.id", patch.ID), "bacnet object not found for field device")
+			continue
+		}
+
+		clone := *existing
+		applyBacnetObjectPatch(&clone, patch)
+
+		if strings.TrimSpace(clone.TextFix) == "" {
+			ve = ve.Add(fmt.Sprintf("bacnet_objects.%s.text_fix", patch.ID), "text_fix is required")
+		}
+		if strings.TrimSpace(string(clone.SoftwareType)) == "" {
+			ve = ve.Add(fmt.Sprintf("bacnet_objects.%s.software_type", patch.ID), "software_type is required")
+		}
+
+		updatedMap[patch.ID] = &clone
+	}
+
+	seen := make(map[string]uuid.UUID, len(existingItems))
+	for _, item := range existingItems {
+		candidate := item
+		if updated, ok := updatedMap[item.ID]; ok {
+			candidate = updated
+		}
+		if candidate.TextFix == "" {
+			continue
+		}
+		if prevID, ok := seen[candidate.TextFix]; ok {
+			if _, ok := patchedIDs[candidate.ID]; ok {
+				ve = ve.Add(
+					fmt.Sprintf("bacnet_objects.%s.text_fix", candidate.ID),
+					fmt.Sprintf("text_fix must be unique within the field device (duplicate of %s)", prevID),
+				)
+			}
+			if _, ok := patchedIDs[prevID]; ok {
+				ve = ve.Add(
+					fmt.Sprintf("bacnet_objects.%s.text_fix", prevID),
+					fmt.Sprintf("text_fix must be unique within the field device (duplicate of %s)", candidate.ID),
+				)
+			}
+			continue
+		}
+		seen[candidate.TextFix] = candidate.ID
+	}
+
+	if len(ve.Fields) > 0 {
+		return ve
+	}
+
+	for _, updated := range updatedMap {
+		if err := s.bacnetObjectRepo.Update(updated); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s *FieldDeviceService) replaceBacnetObjectsFromObjectData(fieldDeviceID uuid.UUID, objectDataID uuid.UUID) error {
 	ods, err := s.objectDataRepo.GetByIds([]uuid.UUID{objectDataID})
 	if err != nil {
@@ -1024,9 +1147,9 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 			}
 		}
 
-		// Handle BACnet objects replacement
+		// Handle BACnet objects patch updates
 		if update.BacnetObjects != nil {
-			if err := s.replaceBacnetObjects(proposed.ID, *update.BacnetObjects); err != nil {
+			if err := s.patchBacnetObjects(proposed.ID, *update.BacnetObjects); err != nil {
 				if ve, ok := domain.AsValidationError(err); ok {
 					resultItem.Fields = ve.Fields
 					for _, msg := range ve.Fields {

@@ -34,6 +34,7 @@ type Handlers struct {
 	AlarmDefinition         *AlarmDefinitionHandler
 	ObjectData              *ObjectDataHandler
 	SPSControllerSystemType *SPSControllerSystemTypeHandler
+	Validation              *ValidationHandler
 }
 
 // NewHandlers creates facility handlers using service dependencies.
@@ -53,5 +54,6 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 		AlarmDefinition:         NewAlarmDefinitionHandler(deps.AlarmDefinition),
 		ObjectData:              NewObjectDataHandler(deps.ObjectData, deps.BacnetObject, deps.Apparat),
 		SPSControllerSystemType: NewSPSControllerSystemTypeHandler(deps.SPSControllerSystemType),
+		Validation:              NewValidationHandler(deps.Building, deps.ControlCabinet, deps.SPSController),
 	}
 }

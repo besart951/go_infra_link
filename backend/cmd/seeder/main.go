@@ -97,7 +97,7 @@ func main() {
 
 	for i := 0; i < NumBuildings; i++ {
 		bID := uuid.New()
-		iwsCode := fmt.Sprintf("%04d", rand.Intn(10000)) // Random 4 digits
+		iwsCode := fmt.Sprintf("%04d", i) // Unique 4 digits within seed batch
 
 		buildings = append(buildings, facility.Building{
 			Base: domain.Base{
@@ -113,6 +113,9 @@ func main() {
 			cID := uuid.New()
 			// Ensure cabNr is <= 11 chars. "C%04d-%02d" = 1+4+1+2 = 8 chars. Safe.
 			cabNr := fmt.Sprintf("C%s-%02d", iwsCode, j)
+			netA := i % 256
+			netB := j % 256
+			vlan := fmt.Sprintf("%d", i+1)
 
 			controlCabinets = append(controlCabinets, facility.ControlCabinet{
 				Base: domain.Base{
@@ -126,8 +129,10 @@ func main() {
 
 			for k := 0; k < SPSPerCabinet; k++ {
 				sID := uuid.New()
-				// GA Device <= 10 chars. "GA-%05d" = 3+5 = 8 chars.
-				gaDevice := fmt.Sprintf("GA-%05d", rand.Intn(99999))
+				gaDevice := gaDeviceCode(k)
+				ip := fmt.Sprintf("10.%d.%d.%d", netA, netB, k+2)
+				gateway := fmt.Sprintf("10.%d.%d.1", netA, netB)
+				subnet := "255.255.255.0"
 
 				spsControllers = append(spsControllers, facility.SPSController{
 					Base: domain.Base{
@@ -138,7 +143,10 @@ func main() {
 					ControlCabinetID: cID,
 					GADevice:         ptr(gaDevice),
 					DeviceName:       fmt.Sprintf("SPS-%s-%d", cabNr, k),
-					IPAddress:        ptr(fmt.Sprintf("192.168.%d.%d", rand.Intn(255), rand.Intn(255))),
+					IPAddress:        ptr(ip),
+					Subnet:           ptr(subnet),
+					Gateway:          ptr(gateway),
+					Vlan:             ptr(vlan),
 				})
 			}
 		}
@@ -389,4 +397,12 @@ func main() {
 
 func ptr(s string) *string {
 	return &s
+}
+
+func gaDeviceCode(index int) string {
+	// Base-26 encoding to 3 uppercase letters.
+	first := rune('A' + (index % 26))
+	second := rune('A' + ((index / 26) % 26))
+	third := rune('A' + ((index / (26 * 26)) % 26))
+	return string([]rune{third, second, first})
 }

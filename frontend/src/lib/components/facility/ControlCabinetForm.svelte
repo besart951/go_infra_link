@@ -5,10 +5,12 @@
 	import BuildingSelect from './BuildingSelect.svelte';
 	import {
 		createControlCabinet,
-		updateControlCabinet
+		updateControlCabinet,
+		validateControlCabinet
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { ControlCabinet } from '$lib/domain/facility/index.js';
+	import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
 
 	interface Props {
 		initialData?: ControlCabinet;
@@ -23,6 +25,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let fieldErrors = $state<Record<string, string>>({});
+	const liveValidation = useLiveValidation(validateControlCabinet, { debounceMs: 400 });
 
 	// React to initialData changes
 	$effect(() => {
@@ -32,7 +35,24 @@
 		}
 	});
 
+	$effect(() => {
+		if (!building_id) return;
+		triggerValidation();
+	});
+
 	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['controlcabinet']);
+	const liveFieldError = (name: string) =>
+		getFieldError(liveValidation.fieldErrors, name, ['controlcabinet']);
+	const combinedFieldError = (name: string) => liveFieldError(name) || fieldError(name);
+
+	function triggerValidation() {
+		if (!building_id) return;
+		liveValidation.trigger({
+			id: initialData?.id,
+			building_id,
+			control_cabinet_nr: control_cabinet_nr || undefined
+		});
+	}
 
 	async function handleSubmit() {
 		loading = true;
@@ -86,9 +106,15 @@
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		<div class="space-y-2">
 			<Label for="control_cabinet_nr">Control Cabinet Nr</Label>
-			<Input id="control_cabinet_nr" bind:value={control_cabinet_nr} required maxlength={11} />
-			{#if fieldError('control_cabinet_nr')}
-				<p class="text-sm text-red-500">{fieldError('control_cabinet_nr')}</p>
+			<Input
+				id="control_cabinet_nr"
+				bind:value={control_cabinet_nr}
+				required
+				maxlength={11}
+				oninput={triggerValidation}
+			/>
+			{#if combinedFieldError('control_cabinet_nr')}
+				<p class="text-sm text-red-500">{combinedFieldError('control_cabinet_nr')}</p>
 			{/if}
 		</div>
 
@@ -97,14 +123,14 @@
 			<div class="block">
 				<BuildingSelect bind:value={building_id} width="w-full" />
 			</div>
-			{#if fieldError('building_id')}
-				<p class="text-sm text-red-500">{fieldError('building_id')}</p>
+			{#if combinedFieldError('building_id')}
+				<p class="text-sm text-red-500">{combinedFieldError('building_id')}</p>
 			{/if}
 		</div>
 	</div>
 
-	{#if error}
-		<p class="text-sm text-red-500">{error}</p>
+	{#if error || liveValidation.error}
+		<p class="text-sm text-red-500">{error || liveValidation.error}</p>
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">

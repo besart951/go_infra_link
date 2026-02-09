@@ -5,15 +5,36 @@
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import TrashIcon from '@lucide/svelte/icons/trash-2';
 	import type { PageData } from './$types.js';
-	import { updateBuilding, deleteBuilding } from '$lib/infrastructure/api/facility.adapter';
+	import {
+		updateBuilding,
+		deleteBuilding,
+		validateBuilding
+	} from '$lib/infrastructure/api/facility.adapter';
 	import { goto, invalidateAll } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
+	import { getFieldError } from '$lib/api/client.js';
 
 	let { data }: { data: PageData } = $props();
 
 	let isSubmitting = $state(false);
 	let errors: Record<string, string> = $state({});
 	let successMessage = $state('');
+	let iwsCode = $state(data.building.iws_code);
+	let buildingGroup = $state(data.building.building_group);
+
+	$effect(() => {
+		iwsCode = data.building.iws_code;
+		buildingGroup = data.building.building_group;
+	});
+	const liveValidation = useLiveValidation(validateBuilding, { debounceMs: 400 });
+
+	function triggerValidation() {
+		liveValidation.trigger({
+			id: data.building.id,
+			iws_code: iwsCode,
+			building_group: Number(buildingGroup)
+		});
+	}
 
 	async function handleDeleteClick() {
 		if (!confirm('Are you sure you want to delete this building? This action cannot be undone.')) {
@@ -39,8 +60,8 @@
 		successMessage = '';
 
 		const formData = new FormData(e.currentTarget as HTMLFormElement);
-		const iws_code = formData.get('iws_code')?.toString().trim();
-		const building_group = formData.get('building_group')?.toString().trim();
+		const iws_code = iwsCode?.toString().trim();
+		const building_group = String(buildingGroup).trim();
 
 		// Validation
 		if (!iws_code) {
@@ -109,6 +130,12 @@
 		</div>
 	{/if}
 
+	{#if liveValidation.error}
+		<div class="rounded-md border border-destructive bg-destructive/10 p-4 text-destructive">
+			{liveValidation.error}
+		</div>
+	{/if}
+
 	{#if successMessage}
 		<div
 			class="rounded-md border border-green-500 bg-green-500/10 p-4 text-green-700 dark:text-green-400"
@@ -129,11 +156,16 @@
 							id="iws_code"
 							name="iws_code"
 							placeholder="e.g. ABCD"
-							value={data.building.iws_code}
-							aria-invalid={!!errors.iws_code}
+							bind:value={iwsCode}
+							aria-invalid={
+								!!errors.iws_code || !!getFieldError(liveValidation.fieldErrors, 'iws_code', ['building'])
+							}
+							oninput={triggerValidation}
 						/>
-						{#if errors.iws_code}
-							<Field.Error>{errors.iws_code}</Field.Error>
+						{#if errors.iws_code || getFieldError(liveValidation.fieldErrors, 'iws_code', ['building'])}
+							<Field.Error>
+								{errors.iws_code || getFieldError(liveValidation.fieldErrors, 'iws_code', ['building'])}
+							</Field.Error>
 						{/if}
 					</Field.Content>
 					<Field.Description>The unique IWS code identifier for this building.</Field.Description>
@@ -147,11 +179,17 @@
 							name="building_group"
 							type="number"
 							placeholder="e.g. 1"
-							value={data.building.building_group}
-							aria-invalid={!!errors.building_group}
+							bind:value={buildingGroup}
+							aria-invalid={
+								!!errors.building_group ||
+								!!getFieldError(liveValidation.fieldErrors, 'building_group', ['building'])
+							}
+							oninput={triggerValidation}
 						/>
-						{#if errors.building_group}
-							<Field.Error>{errors.building_group}</Field.Error>
+						{#if errors.building_group || getFieldError(liveValidation.fieldErrors, 'building_group', ['building'])}
+							<Field.Error>
+								{errors.building_group || getFieldError(liveValidation.fieldErrors, 'building_group', ['building'])}
+							</Field.Error>
 						{/if}
 					</Field.Content>
 					<Field.Description>The group number this building belongs to.</Field.Description>

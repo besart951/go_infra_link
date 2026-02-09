@@ -73,7 +73,7 @@ type BulkFieldDeviceUpdate struct {
 	ApparatID     *uuid.UUID
 	SystemPartID  *uuid.UUID
 	Specification *Specification
-	BacnetObjects *[]BacnetObject
+	BacnetObjects *[]BacnetObjectPatch
 }
 
 // BulkOperationResultItem represents the result of a single item in a bulk operation

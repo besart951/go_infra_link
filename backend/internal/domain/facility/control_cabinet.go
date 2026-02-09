@@ -7,9 +7,9 @@ import (
 
 type ControlCabinet struct {
 	domain.Base
-	BuildingID       uuid.UUID `gorm:"type:uuid;not null;index"`
+	BuildingID       uuid.UUID `gorm:"type:uuid;not null;index;uniqueIndex:idx_cabinet_building_nr"`
 	Building         Building  `gorm:"foreignKey:BuildingID"`
-	ControlCabinetNr *string
+	ControlCabinetNr *string   `gorm:"uniqueIndex:idx_cabinet_building_nr"`
 
 	SPSControllers []SPSController `gorm:"foreignKey:ControlCabinetID"`
 }

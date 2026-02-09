@@ -13,6 +13,7 @@ import (
 
 type buildingRepo struct {
 	*gormbase.BaseRepository[*domainFacility.Building]
+	db *gorm.DB
 }
 
 func NewBuildingRepository(db *gorm.DB) domainFacility.BuildingRepository {
@@ -25,7 +26,7 @@ func NewBuildingRepository(db *gorm.DB) domainFacility.BuildingRepository {
 	}
 
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.Building](db, searchCallback)
-	return &buildingRepo{BaseRepository: baseRepo}
+	return &buildingRepo{BaseRepository: baseRepo, db: db}
 }
 
 func (r *buildingRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Building, error) {
@@ -62,4 +63,21 @@ func (r *buildingRepo) GetPaginatedList(params domain.PaginationParams) (*domain
 		Page:       result.Page,
 		TotalPages: result.TotalPages,
 	}, nil
+}
+
+func (r *buildingRepo) ExistsIWSCodeGroup(iwsCode string, buildingGroup int, excludeID *uuid.UUID) (bool, error) {
+	query := r.db.Model(&domainFacility.Building{}).
+		Where("deleted_at IS NULL").
+		Where("LOWER(iws_code) = ?", strings.ToLower(strings.TrimSpace(iwsCode))).
+		Where("building_group = ?", buildingGroup)
+
+	if excludeID != nil {
+		query = query.Where("id <> ?", *excludeID)
+	}
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

@@ -11,6 +11,7 @@ type BuildingService interface {
 	GetByID(id uuid.UUID) (*domainFacility.Building, error)
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.Building], error)
 	Update(building *domainFacility.Building) error
+	Validate(building *domainFacility.Building, excludeID *uuid.UUID) error
 	DeleteByID(id uuid.UUID) error
 }
 
@@ -85,6 +86,7 @@ type ControlCabinetService interface {
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.ControlCabinet], error)
 	ListByBuildingID(buildingID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.ControlCabinet], error)
 	Update(controlCabinet *domainFacility.ControlCabinet) error
+	Validate(controlCabinet *domainFacility.ControlCabinet, excludeID *uuid.UUID) error
 	DeleteByID(id uuid.UUID) error
 }
 
@@ -96,6 +98,7 @@ type SPSControllerService interface {
 	ListByControlCabinetID(controlCabinetID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSController], error)
 	Update(spsController *domainFacility.SPSController) error
 	UpdateWithSystemTypes(spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error
+	Validate(spsController *domainFacility.SPSController, excludeID *uuid.UUID) error
 	DeleteByID(id uuid.UUID) error
 }
 

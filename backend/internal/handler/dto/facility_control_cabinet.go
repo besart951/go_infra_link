@@ -10,7 +10,7 @@ import (
 
 type CreateControlCabinetRequest struct {
 	BuildingID       uuid.UUID `json:"building_id" binding:"required"`
-	ControlCabinetNr *string   `json:"control_cabinet_nr" binding:"omitempty,max=11"`
+	ControlCabinetNr *string   `json:"control_cabinet_nr" binding:"required,max=11"`
 }
 
 type UpdateControlCabinetRequest struct {

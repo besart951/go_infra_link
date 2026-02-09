@@ -91,3 +91,20 @@ func (r *controlCabinetRepo) GetPaginatedListByBuildingID(buildingID uuid.UUID, 
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
 }
+
+func (r *controlCabinetRepo) ExistsControlCabinetNr(buildingID uuid.UUID, controlCabinetNr string, excludeID *uuid.UUID) (bool, error) {
+	query := r.db.Model(&domainFacility.ControlCabinet{}).
+		Where("deleted_at IS NULL").
+		Where("building_id = ?", buildingID).
+		Where("LOWER(control_cabinet_nr) = ?", strings.ToLower(strings.TrimSpace(controlCabinetNr)))
+
+	if excludeID != nil {
+		query = query.Where("id <> ?", *excludeID)
+	}
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

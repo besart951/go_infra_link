@@ -12,11 +12,35 @@
 	import { addToast } from '$lib/components/toast.svelte';
 	import {
 		deleteControlCabinet,
-		getControlCabinetDeleteImpact
+		getControlCabinetDeleteImpact,
+		listBuildings
 	} from '$lib/infrastructure/api/facility.adapter.js';
+	import type { Building } from '$lib/domain/facility/index.js';
 
 	let showForm = $state(false);
 	let editingItem: ControlCabinet | undefined = $state(undefined);
+	let buildingMap = $state(new Map<string, string>());
+
+	function formatBuildingLabel(building: Building): string {
+		return `${building.iws_code}-${building.building_group}`;
+	}
+
+	async function loadBuildingMap() {
+		try {
+			const res = await listBuildings({ page: 1, limit: 1000 });
+			const next = new Map<string, string>();
+			for (const building of res.items || []) {
+				next.set(building.id, formatBuildingLabel(building));
+			}
+			buildingMap = next;
+		} catch (err) {
+			console.error('Failed to load buildings:', err);
+		}
+	}
+
+	function getBuildingLabel(buildingId: string): string {
+		return buildingMap.get(buildingId) ?? buildingId;
+	}
 
 	function handleEdit(item: ControlCabinet) {
 		editingItem = item;
@@ -32,6 +56,7 @@
 		showForm = false;
 		editingItem = undefined;
 		controlCabinetsStore.reload();
+		loadBuildingMap();
 	}
 
 	function handleCancel() {
@@ -73,6 +98,7 @@
 
 	onMount(() => {
 		controlCabinetsStore.load();
+		loadBuildingMap();
 	});
 </script>
 
@@ -108,7 +134,7 @@
 		state={$controlCabinetsStore}
 		columns={[
 			{ key: 'cabinet_nr', label: 'Cabinet Nr' },
-			{ key: 'building', label: 'Building ID' },
+			{ key: 'building', label: 'Building' },
 			{ key: 'created', label: 'Created' },
 			{ key: 'actions', label: 'Actions', width: 'w-[100px]' }
 		]}
@@ -124,7 +150,7 @@
 					{cabinet.control_cabinet_nr ?? 'N/A'}
 				</a>
 			</Table.Cell>
-			<Table.Cell>{cabinet.building_id}</Table.Cell>
+			<Table.Cell>{getBuildingLabel(cabinet.building_id)}</Table.Cell>
 			<Table.Cell>
 				{new Date(cabinet.created_at).toLocaleDateString()}
 			</Table.Cell>

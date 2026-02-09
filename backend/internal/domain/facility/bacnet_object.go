@@ -31,6 +31,25 @@ type BacnetObject struct {
 	AlarmDefinition     *AlarmDefinition   `gorm:"foreignKey:AlarmDefinitionID"`
 }
 
+// BacnetObjectPatch represents a partial update for a bacnet object.
+// Only non-nil fields are applied.
+type BacnetObjectPatch struct {
+	ID                  uuid.UUID
+	TextFix             *string
+	Description         *string
+	GMSVisible          *bool
+	Optional            *bool
+	TextIndividual      *string
+	SoftwareType        *BacnetSoftwareType
+	SoftwareNumber      *uint16
+	HardwareType        *BacnetHardwareType
+	HardwareQuantity    *uint8
+	SoftwareReferenceID *uuid.UUID
+	StateTextID         *uuid.UUID
+	NotificationClassID *uuid.UUID
+	AlarmDefinitionID   *uuid.UUID
+}
+
 type BacnetSoftwareType string
 
 const (
