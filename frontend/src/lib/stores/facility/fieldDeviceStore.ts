@@ -189,6 +189,16 @@ export function createFieldDeviceStore(pageSize = 300, projectId?: string) {
 		 */
 		reset: () => {
 			store.set(initialState);
+		},
+
+		/**
+		 * Replace a field device in the current page
+		 */
+		updateItem: (updated: FieldDevice) => {
+			store.update((s) => ({
+				...s,
+				items: s.items.map((item) => (item.id === updated.id ? updated : item))
+			}));
 		}
 	};
 }

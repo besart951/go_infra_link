@@ -8,6 +8,7 @@
 		width?: string;
 		onValueChange?: (value: string) => void;
 		disabled?: boolean;
+		error?: string;
 	}
 
 	let {
@@ -15,7 +16,8 @@
 		value = $bindable(''),
 		width = 'w-full',
 		onValueChange,
-		disabled = false
+		disabled = false,
+		error
 	}: Props = $props();
 </script>
 
@@ -27,4 +29,5 @@
 	{width}
 	{onValueChange}
 	{disabled}
+	{error}
 />

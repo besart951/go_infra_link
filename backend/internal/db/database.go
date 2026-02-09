@@ -77,7 +77,6 @@ func autoMigrate(db *gorm.DB) error {
 		// User domain
 		&user.User{},
 		&user.BusinessDetails{},
-		&user.UserTeam{},
 		&user.Permission{},
 		&user.RolePermission{},
 
@@ -89,6 +88,7 @@ func autoMigrate(db *gorm.DB) error {
 		// Team domain
 		&team.Team{},
 		&team.TeamMember{},
+		&user.UserTeam{},
 
 		// Project domain
 		&project.Phase{},

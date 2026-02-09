@@ -29,9 +29,7 @@ export function useFieldDeviceEditing() {
 	let pendingEdits = $state<Map<string, Partial<UpdateFieldDeviceRequest>>>(new Map());
 
 	// BACnet pending edits: deviceId -> (objectId -> partial edits)
-	let pendingBacnetEdits = $state<Map<string, Map<string, Partial<BacnetObjectInput>>>>(
-		new Map()
-	);
+	let pendingBacnetEdits = $state<Map<string, Map<string, Partial<BacnetObjectInput>>>>(new Map());
 
 	// Error tracking state per device ID
 	let editErrors = $state<Map<string, EditErrorInfo>>(new Map());
@@ -41,15 +39,21 @@ export function useFieldDeviceEditing() {
 	// BACnet client-side validation errors: deviceId -> (objectId -> { field: error })
 	let bacnetClientErrors = $state<Map<string, Map<string, Record<string, string>>>>(new Map());
 
+	function setEditError(deviceId: string, info?: EditErrorInfo) {
+		const next = new Map(editErrors);
+		if (info) {
+			next.set(deviceId, info);
+		} else {
+			next.delete(deviceId);
+		}
+		editErrors = next;
+	}
+
 	function queueEdit(deviceId: string, field: keyof UpdateFieldDeviceRequest, value: unknown) {
 		const existing = pendingEdits.get(deviceId) || {};
 		pendingEdits = new Map(pendingEdits).set(deviceId, { ...existing, [field]: value });
 		// Clear any existing error for this device when editing
-		if (editErrors.has(deviceId)) {
-			const newErrors = new Map(editErrors);
-			newErrors.delete(deviceId);
-			editErrors = newErrors;
-		}
+		setEditError(deviceId);
 	}
 
 	function queueSpecEdit(deviceId: string, field: keyof SpecificationInput, value: unknown) {
@@ -62,11 +66,171 @@ export function useFieldDeviceEditing() {
 			_specification: newSpec
 		} as Partial<UpdateFieldDeviceRequest>);
 		// Clear any existing error
-		if (editErrors.has(deviceId)) {
-			const newErrors = new Map(editErrors);
-			newErrors.delete(deviceId);
-			editErrors = newErrors;
+		setEditError(deviceId);
+	}
+
+	function buildSpecificationPatch(
+		spec: SpecificationInput | undefined
+	): SpecificationInput | undefined {
+		if (!spec) return undefined;
+		const patch: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(spec)) {
+			if (value !== undefined) {
+				patch[key] = value;
+			}
 		}
+		return Object.keys(patch).length > 0 ? (patch as SpecificationInput) : undefined;
+	}
+
+	function buildUpdateForDevice(
+		deviceId: string,
+		storeItems: FieldDevice[],
+		options: { includeBacnet: boolean }
+	): BulkUpdateFieldDeviceItem | null {
+		const changes = pendingEdits.get(deviceId);
+		const bacnetEdits = pendingBacnetEdits.get(deviceId);
+		const includeBacnet = options.includeBacnet && bacnetEdits && bacnetEdits.size > 0;
+		const update: BulkUpdateFieldDeviceItem = { id: deviceId };
+		let hasChanges = false;
+
+		if (changes) {
+			if ('bmk' in changes) {
+				update.bmk = changes.bmk;
+				hasChanges = true;
+			}
+			if ('description' in changes) {
+				update.description = changes.description;
+				hasChanges = true;
+			}
+			if ('apparat_nr' in changes) {
+				update.apparat_nr = changes.apparat_nr;
+				hasChanges = true;
+			}
+			if ('apparat_id' in changes) {
+				update.apparat_id = changes.apparat_id;
+				hasChanges = true;
+			}
+			if ('system_part_id' in changes) {
+				update.system_part_id = changes.system_part_id;
+				hasChanges = true;
+			}
+
+			const spec = buildSpecificationPatch(
+				(changes as Record<string, unknown>)._specification as SpecificationInput | undefined
+			);
+			if (spec) {
+				update.specification = spec;
+				hasChanges = true;
+			}
+		}
+
+		if (includeBacnet) {
+			const device = storeItems.find((d) => d.id === deviceId);
+			if (device) {
+				update.bacnet_objects = buildBacnetObjectsPayload(device, bacnetEdits);
+				hasChanges = true;
+			}
+		}
+
+		return hasChanges ? update : null;
+	}
+
+	function applyEditsToDevice(
+		device: FieldDevice,
+		options: { includeBacnet: boolean }
+	): FieldDevice {
+		const changes = pendingEdits.get(device.id);
+		const bacnetEdits = pendingBacnetEdits.get(device.id);
+		let updated: FieldDevice = { ...device };
+
+		if (changes) {
+			if ('bmk' in changes) {
+				updated = { ...updated, bmk: changes.bmk };
+			}
+			if ('description' in changes) {
+				updated = { ...updated, description: changes.description };
+			}
+			if ('apparat_nr' in changes) {
+				updated = { ...updated, apparat_nr: changes.apparat_nr as FieldDevice['apparat_nr'] };
+			}
+			if ('apparat_id' in changes) {
+				updated = { ...updated, apparat_id: changes.apparat_id as string };
+			}
+			if ('system_part_id' in changes) {
+				updated = { ...updated, system_part_id: changes.system_part_id as string };
+			}
+
+			const specPatch = buildSpecificationPatch(
+				(changes as Record<string, unknown>)._specification as SpecificationInput | undefined
+			);
+			if (specPatch) {
+				updated = {
+					...updated,
+					specification: { ...(updated.specification ?? {}), ...specPatch }
+				};
+			}
+		}
+
+		if (options.includeBacnet && bacnetEdits && bacnetEdits.size > 0 && device.bacnet_objects) {
+			updated = {
+				...updated,
+				bacnet_objects: device.bacnet_objects.map((obj) => {
+					const edits = bacnetEdits.get(obj.id);
+					return edits ? { ...obj, ...edits } : obj;
+				})
+			};
+		}
+
+		return updated;
+	}
+
+	function validatePendingEdits(deviceId: string): EditErrorInfo | null {
+		const changes = pendingEdits.get(deviceId);
+		if (!changes) return null;
+
+		const fields: Record<string, string> = {};
+		const bmk = changes.bmk;
+		if (bmk !== undefined && bmk !== null && String(bmk).length > 10) {
+			fields['fielddevice.bmk'] = 'BMK must be 10 characters or less';
+		}
+		const description = changes.description;
+		if (description !== undefined && description !== null && String(description).length > 250) {
+			fields['fielddevice.description'] = 'Description must be 250 characters or less';
+		}
+		const apparatNr = changes.apparat_nr;
+		if (apparatNr !== undefined && apparatNr !== null) {
+			const nr = Number(apparatNr);
+			if (Number.isNaN(nr) || nr < 1 || nr > 99) {
+				fields['fielddevice.apparat_nr'] = 'Apparat Nr must be between 1 and 99';
+			}
+		}
+
+		const spec = (changes as Record<string, unknown>)._specification as
+			| SpecificationInput
+			| undefined;
+		if (spec) {
+			const checkMax = (key: keyof SpecificationInput, label: string) => {
+				const value = spec[key];
+				if (value !== undefined && value !== null && String(value).length > 250) {
+					fields[`specification.${key}`] = `${label} must be 250 characters or less`;
+				}
+			};
+			checkMax('specification_supplier', 'Supplier');
+			checkMax('specification_brand', 'Brand');
+			checkMax('specification_type', 'Type');
+			checkMax('additional_info_motor_valve', 'Motor/Valve');
+			checkMax('additional_information_installation_location', 'Install Location');
+
+			const acdc = spec.electrical_connection_acdc;
+			if (acdc !== undefined && acdc !== null && String(acdc).length !== 2) {
+				fields['specification.electrical_connection_acdc'] = 'AC/DC must be 2 characters';
+			}
+		}
+
+		if (Object.keys(fields).length > 0) {
+			return { message: 'validation_error', fields };
+		}
+		return null;
 	}
 
 	function isFieldDirty(deviceId: string, field: keyof UpdateFieldDeviceRequest): boolean {
@@ -77,9 +241,7 @@ export function useFieldDeviceEditing() {
 	function isSpecFieldDirty(deviceId: string, field: keyof SpecificationInput): boolean {
 		const edit = pendingEdits.get(deviceId);
 		if (!edit) return false;
-		const spec = (edit as Record<string, unknown>)._specification as
-			| SpecificationInput
-			| undefined;
+		const spec = (edit as Record<string, unknown>)._specification as SpecificationInput | undefined;
 		return spec ? field in spec : false;
 	}
 
@@ -99,9 +261,7 @@ export function useFieldDeviceEditing() {
 	): string | undefined {
 		const edit = pendingEdits.get(deviceId);
 		if (!edit) return undefined;
-		const spec = (edit as Record<string, unknown>)._specification as
-			| SpecificationInput
-			| undefined;
+		const spec = (edit as Record<string, unknown>)._specification as SpecificationInput | undefined;
 		if (!spec || !(field in spec)) return undefined;
 		const val = spec[field];
 		return val !== undefined ? String(val) : undefined;
@@ -113,8 +273,7 @@ export function useFieldDeviceEditing() {
 
 		if (errorInfo.fields && Object.keys(errorInfo.fields).length > 0) {
 			if (errorInfo.fields[field]) return errorInfo.fields[field];
-			if (errorInfo.fields[`fielddevice.${field}`])
-				return errorInfo.fields[`fielddevice.${field}`];
+			if (errorInfo.fields[`fielddevice.${field}`]) return errorInfo.fields[`fielddevice.${field}`];
 			if (errorInfo.fields[`specification.${field}`])
 				return errorInfo.fields[`specification.${field}`];
 			return undefined;
@@ -243,24 +402,15 @@ export function useFieldDeviceEditing() {
 			return {
 				text_fix: 'text_fix' in edits ? (edits.text_fix as string) : obj.text_fix,
 				description:
-					'description' in edits
-						? (edits.description as string | undefined)
-						: obj.description,
-				gms_visible:
-					'gms_visible' in edits ? (edits.gms_visible as boolean) : obj.gms_visible,
+					'description' in edits ? (edits.description as string | undefined) : obj.description,
+				gms_visible: 'gms_visible' in edits ? (edits.gms_visible as boolean) : obj.gms_visible,
 				optional: 'optional' in edits ? (edits.optional as boolean) : obj.optional,
 				software_type:
-					'software_type' in edits
-						? (edits.software_type as string)
-						: obj.software_type,
+					'software_type' in edits ? (edits.software_type as string) : obj.software_type,
 				software_number:
-					'software_number' in edits
-						? (edits.software_number as number)
-						: obj.software_number,
+					'software_number' in edits ? (edits.software_number as number) : obj.software_number,
 				hardware_type:
-					'hardware_type' in edits
-						? (edits.hardware_type as string)
-						: obj.hardware_type,
+					'hardware_type' in edits ? (edits.hardware_type as string) : obj.hardware_type,
 				hardware_quantity:
 					'hardware_quantity' in edits
 						? (edits.hardware_quantity as number)
@@ -275,7 +425,7 @@ export function useFieldDeviceEditing() {
 
 	async function saveAllPendingEdits(
 		storeItems: FieldDevice[],
-		reloadFn: () => void
+		onSuccess?: (updated: FieldDevice[]) => void
 	): Promise<void> {
 		if (pendingEdits.size === 0 && pendingBacnetEdits.size === 0) return;
 
@@ -293,41 +443,37 @@ export function useFieldDeviceEditing() {
 
 		// Collect all device IDs that need updates
 		const allDeviceIds = new Set([...pendingEdits.keys(), ...pendingBacnetEdits.keys()]);
-
 		const updates: BulkUpdateFieldDeviceItem[] = [];
+		const nextErrors = new Map(editErrors);
+
 		for (const id of allDeviceIds) {
-			const changes = pendingEdits.get(id) || {};
-			const spec = (changes as Record<string, unknown>)._specification as
-				| SpecificationInput
-				| undefined;
-
-			const update: BulkUpdateFieldDeviceItem = {
-				id,
-				bmk: changes.bmk,
-				description: changes.description,
-				apparat_nr: changes.apparat_nr,
-				apparat_id: changes.apparat_id,
-				system_part_id: changes.system_part_id,
-				specification: spec
-			};
-
-			// Include BACnet objects if there are pending BACnet edits for this device
-			const bacnetEditsForDevice = pendingBacnetEdits.get(id);
-			if (bacnetEditsForDevice && bacnetEditsForDevice.size > 0) {
-				const device = storeItems.find((d) => d.id === id);
-				if (device) {
-					update.bacnet_objects = buildBacnetObjectsPayload(device, bacnetEditsForDevice);
-				}
+			const clientError = validatePendingEdits(id);
+			if (clientError) {
+				nextErrors.set(id, clientError);
+				continue;
 			}
+			nextErrors.delete(id);
 
-			updates.push(update);
+			const update = buildUpdateForDevice(id, storeItems, { includeBacnet: true });
+			if (update) {
+				updates.push(update);
+			}
 		}
+
+		if (updates.length === 0) {
+			editErrors = nextErrors;
+			addToast('Fix validation errors before saving.', 'error');
+			return;
+		}
+
+		const pendingSnapshot = new Map(pendingEdits);
+		const pendingBacnetSnapshot = new Map(pendingBacnetEdits);
 
 		try {
 			const result = await bulkUpdateFieldDevices({ updates });
 
 			// Process results and track errors
-			const newErrors = new Map<string, EditErrorInfo>();
+			const newErrors = new Map(nextErrors);
 			const newBacnetFieldErrors = new Map<string, Map<string, Record<string, string>>>();
 			const successIds = new Set<string>();
 
@@ -364,12 +510,25 @@ export function useFieldDeviceEditing() {
 				}
 			}
 
+			const optimisticUpdates: FieldDevice[] = [];
+			for (const id of successIds) {
+				const device = storeItems.find((item) => item.id === id);
+				if (device) {
+					optimisticUpdates.push(applyEditsToDevice(device, { includeBacnet: true }));
+				}
+			}
+
 			// Remove successful edits from pending, keep failed ones
 			const remainingEdits = new Map(pendingEdits);
 			const remainingBacnetEdits = new Map(pendingBacnetEdits);
 			for (const id of successIds) {
-				remainingEdits.delete(id);
-				remainingBacnetEdits.delete(id);
+				if (pendingEdits.get(id) === pendingSnapshot.get(id)) {
+					remainingEdits.delete(id);
+				}
+				if (pendingBacnetEdits.get(id) === pendingBacnetSnapshot.get(id)) {
+					remainingBacnetEdits.delete(id);
+				}
+				newErrors.delete(id);
 			}
 			pendingEdits = remainingEdits;
 			pendingBacnetEdits = remainingBacnetEdits;
@@ -378,7 +537,7 @@ export function useFieldDeviceEditing() {
 
 			if (result.success_count > 0) {
 				addToast(`Updated ${result.success_count} field device(s)`, 'success');
-				reloadFn();
+				onSuccess?.(optimisticUpdates);
 			}
 			if (result.failure_count > 0) {
 				addToast(
@@ -392,6 +551,126 @@ export function useFieldDeviceEditing() {
 		}
 	}
 
+	async function saveDeviceEdits(
+		device: FieldDevice,
+		onSuccess?: (updated: FieldDevice) => void
+	): Promise<void> {
+		const update = buildUpdateForDevice(device.id, [device], { includeBacnet: false });
+		if (!update) return;
+
+		const clientError = validatePendingEdits(device.id);
+		if (clientError) {
+			setEditError(device.id, clientError);
+			addToast('Fix validation errors before saving.', 'error');
+			return;
+		}
+		setEditError(device.id);
+
+		const pendingSnapshot = pendingEdits.get(device.id);
+
+		const optimistic = applyEditsToDevice(device, { includeBacnet: false });
+
+		try {
+			const result = await bulkUpdateFieldDevices({ updates: [update] });
+			const item = result.results.find((r) => r.id === device.id);
+			if (item?.success) {
+				if (pendingEdits.get(device.id) === pendingSnapshot) {
+					const remaining = new Map(pendingEdits);
+					remaining.delete(device.id);
+					pendingEdits = remaining;
+				}
+				setEditError(device.id);
+				onSuccess?.(optimistic);
+				return;
+			}
+
+			setEditError(device.id, { message: item?.error, fields: item?.fields });
+			addToast(item?.error || 'Update failed. Check highlighted fields.', 'error');
+		} catch (error: unknown) {
+			const err = error as Error;
+			addToast(`Update failed: ${err.message}`, 'error');
+		}
+	}
+
+	async function saveDeviceBacnetEdits(
+		device: FieldDevice,
+		onSuccess?: (updated: FieldDevice) => void
+	): Promise<void> {
+		const update = buildUpdateForDevice(device.id, [device], { includeBacnet: true });
+		if (!update) return;
+
+		if (!validateBacnetEdits([device], device.id)) {
+			addToast('Fix validation errors before saving.', 'error');
+			return;
+		}
+
+		const clientError = validatePendingEdits(device.id);
+		if (clientError) {
+			setEditError(device.id, clientError);
+			addToast('Fix validation errors before saving.', 'error');
+			return;
+		}
+		setEditError(device.id);
+
+		const pendingEditsSnapshot = pendingEdits.get(device.id);
+		const pendingBacnetSnapshot = pendingBacnetEdits.get(device.id);
+		const optimistic = applyEditsToDevice(device, { includeBacnet: true });
+
+		try {
+			const result = await bulkUpdateFieldDevices({ updates: [update] });
+			const item = result.results.find((r) => r.id === device.id);
+			if (item?.success) {
+				if (pendingEdits.get(device.id) === pendingEditsSnapshot) {
+					const remaining = new Map(pendingEdits);
+					remaining.delete(device.id);
+					pendingEdits = remaining;
+				}
+				if (pendingBacnetEdits.get(device.id) === pendingBacnetSnapshot) {
+					const remainingBacnet = new Map(pendingBacnetEdits);
+					remainingBacnet.delete(device.id);
+					pendingBacnetEdits = remainingBacnet;
+				}
+
+				const nextBacnetErrors = new Map(bacnetFieldErrors);
+				nextBacnetErrors.delete(device.id);
+				bacnetFieldErrors = nextBacnetErrors;
+				onSuccess?.(optimistic);
+				return;
+			}
+
+			const errorFields = item?.fields ?? {};
+			const nextErrors = new Map(editErrors);
+			nextErrors.set(device.id, { message: item?.error, fields: errorFields });
+			editErrors = nextErrors;
+
+			if (device.bacnet_objects) {
+				const objErrors = new Map<string, Record<string, string>>();
+				for (const [fieldPath, msg] of Object.entries(errorFields)) {
+					const match = fieldPath.match(/^bacnet_objects\.(\d+)\.(.+)$/);
+					if (!match) continue;
+					const idx = parseInt(match[1]);
+					const field = match[2];
+					if (device.bacnet_objects[idx]) {
+						const objId = device.bacnet_objects[idx].id;
+						const existing = objErrors.get(objId) || {};
+						existing[field] = msg;
+						objErrors.set(objId, existing);
+					}
+				}
+				if (objErrors.size > 0) {
+					const nextBacnetErrors = new Map(bacnetFieldErrors);
+					nextBacnetErrors.set(device.id, objErrors);
+					bacnetFieldErrors = nextBacnetErrors;
+				}
+			}
+
+			addToast(item?.error || 'Update failed. Check highlighted fields.', 'error');
+		} catch (error: unknown) {
+			const err = error as Error;
+			addToast(`Update failed: ${err.message}`, 'error');
+		}
+	}
+
 	function discardAllEdits() {
 		pendingEdits = new Map();
 		pendingBacnetEdits = new Map();
@@ -400,21 +679,15 @@ export function useFieldDeviceEditing() {
 		bacnetClientErrors = new Map();
 	}
 
-	function getBacnetPendingEdits(
-		deviceId: string
-	): Map<string, Partial<BacnetObjectInput>> {
+	function getBacnetPendingEdits(deviceId: string): Map<string, Partial<BacnetObjectInput>> {
 		return pendingBacnetEdits.get(deviceId) ?? new Map();
 	}
 
-	function getBacnetFieldErrors(
-		deviceId: string
-	): Map<string, Record<string, string>> {
+	function getBacnetFieldErrors(deviceId: string): Map<string, Record<string, string>> {
 		return bacnetFieldErrors.get(deviceId) ?? new Map();
 	}
 
-	function getBacnetClientErrors(
-		deviceId: string
-	): Map<string, Record<string, string>> {
+	function getBacnetClientErrors(deviceId: string): Map<string, Record<string, string>> {
 		return bacnetClientErrors.get(deviceId) ?? new Map();
 	}
 
@@ -440,6 +713,8 @@ export function useFieldDeviceEditing() {
 		discardAllEdits,
 		getBacnetPendingEdits,
 		getBacnetFieldErrors,
-		getBacnetClientErrors
+		getBacnetClientErrors,
+		saveDeviceEdits,
+		saveDeviceBacnetEdits
 	};
 }

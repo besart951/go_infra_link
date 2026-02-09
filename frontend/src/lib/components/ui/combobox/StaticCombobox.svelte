@@ -2,6 +2,7 @@
 	import * as Command from '$lib/components/ui/command/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { cn } from '$lib/utils.js';
 	import Check from 'lucide-svelte/icons/check';
 	import ChevronsUpDown from 'lucide-svelte/icons/chevrons-up-down';
@@ -20,6 +21,7 @@
 		emptyText?: string;
 		width?: string;
 		onValueChange?: (value: string) => void;
+		error?: string;
 	}
 
 	let {
@@ -35,7 +37,8 @@
 		searchPlaceholder = 'Search...',
 		emptyText = 'No results found.',
 		width = 'w-[200px]',
-		onValueChange
+		onValueChange,
+		error
 	}: StaticComboboxProps<T> = $props();
 
 	let open = $state(false);
@@ -43,6 +46,7 @@
 
 	const selectedItem = $derived(items.find((i) => String(i[idKey]) === value));
 	const selectedLabel = $derived(selectedItem ? String(selectedItem[labelKey] ?? '') : undefined);
+	const hasError = $derived(!!error);
 
 	const filteredItems = $derived(
 		search
@@ -64,19 +68,50 @@
 <Popover.Root bind:open>
 	<Popover.Trigger>
 		{#snippet child({ props })}
-			<Button
-				{...props}
-				{id}
-				variant="outline"
-				role="combobox"
-				aria-expanded={open}
-				{disabled}
-				aria-disabled={disabled}
-				class={cn('justify-between', width)}
-			>
-				{selectedLabel || (value ? value : placeholder)}
-				<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-			</Button>
+				{#if hasError}
+					<Tooltip.Provider>
+						<Tooltip.Root>
+							<Tooltip.Trigger>
+								{#snippet child({ props: tooltipProps })}
+									<Button
+										{...props}
+										{...tooltipProps}
+										{id}
+										variant="outline"
+										role="combobox"
+										aria-expanded={open}
+										{disabled}
+										aria-disabled={disabled}
+										class={cn(
+											'justify-between border-destructive text-destructive',
+											width
+										)}
+									>
+										{selectedLabel || (value ? value : placeholder)}
+										<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+									</Button>
+								{/snippet}
+							</Tooltip.Trigger>
+							<Tooltip.Content side="top">
+								<p>{error}</p>
+							</Tooltip.Content>
+						</Tooltip.Root>
+					</Tooltip.Provider>
+				{:else}
+					<Button
+						{...props}
+						{id}
+						variant="outline"
+						role="combobox"
+						aria-expanded={open}
+						{disabled}
+						aria-disabled={disabled}
+						class={cn('justify-between', width)}
+					>
+						{selectedLabel || (value ? value : placeholder)}
+						<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+					</Button>
+				{/if}
 		{/snippet}
 	</Popover.Trigger>
 	<Popover.Content class={cn('p-0', width)}>

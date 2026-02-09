@@ -1,12 +1,13 @@
 import type { RequestHandler } from './$types.js';
 import { getBackendUrl } from '$lib/server/backend.js';
 
-function cloneHeaders(src: Headers): Headers {
+function cloneHeaders(src: Headers, options: { skipSetCookie?: boolean } = {}): Headers {
 	const h = new Headers();
 	src.forEach((value, key) => {
 		const lower = key.toLowerCase();
 		// Let fetch set these appropriately.
 		if (lower === 'host' || lower === 'content-length') return;
+		if (options.skipSetCookie && lower === 'set-cookie') return;
 		h.set(key, value);
 	});
 	return h;
@@ -32,7 +33,11 @@ async function proxy({ request, params }: Parameters<RequestHandler>[0]): Promis
 
 	const upstream = await fetch(targetUrl, init);
 
-	const resHeaders = cloneHeaders(upstream.headers);
+	const resHeaders = cloneHeaders(upstream.headers, { skipSetCookie: true });
+	const setCookies = upstream.headers.getSetCookie?.() ?? [];
+	for (const cookie of setCookies) {
+		resHeaders.append('set-cookie', cookie);
+	}
 	return new Response(upstream.body, {
 		status: upstream.status,
 		statusText: upstream.statusText,

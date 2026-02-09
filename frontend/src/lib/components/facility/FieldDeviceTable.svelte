@@ -21,6 +21,7 @@
 		someSelected: boolean;
 		onToggleSelect: (id: string) => void;
 		onToggleSelectAll: () => void;
+		onAutoSave: (updated: FieldDevice) => void;
 	}
 
 	let {
@@ -34,7 +35,8 @@
 		allSelected,
 		someSelected,
 		onToggleSelect,
-		onToggleSelectAll
+		onToggleSelectAll,
+		onAutoSave
 	}: Props = $props();
 
 	let expandedBacnetRows = $state<Set<string>>(new Set());
@@ -148,6 +150,7 @@
 						{editing}
 						onToggleSelect={() => onToggleSelect(device.id)}
 						onToggleExpansion={() => toggleRowExpansion(device.id)}
+						onAutoSave={onAutoSave}
 					/>
 
 					<!-- Expanded BACnet Objects Row -->
@@ -167,13 +170,15 @@
 											{device.bacnet_objects?.length || 0} object(s)
 										</span>
 									</div>
-									<BacnetObjectsEditor
+										<BacnetObjectsEditor
 										bacnetObjects={device.bacnet_objects ?? []}
 										pendingEdits={editing.getBacnetPendingEdits(device.id)}
 										fieldErrors={editing.getBacnetFieldErrors(device.id)}
 										clientErrors={editing.getBacnetClientErrors(device.id)}
-										onEdit={(objectId, field, value) =>
-											editing.queueBacnetEdit(device.id, objectId, field, value)}
+											onEdit={(objectId, field, value) => {
+												editing.queueBacnetEdit(device.id, objectId, field, value);
+												editing.saveDeviceBacnetEdits(device, onAutoSave);
+											}}
 									/>
 								</div>
 							</Table.Cell>

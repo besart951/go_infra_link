@@ -176,11 +176,17 @@
 
 	// Save / discard
 	function handleSave() {
-		editing.saveAllPendingEdits($store.items, () => store.reload());
+		editing.saveAllPendingEdits($store.items, (updated) => {
+			updated.forEach((item) => store.updateItem(item));
+		});
 	}
 
 	function handleDiscard() {
 		editing.discardAllEdits();
+	}
+
+	function handleAutoSave(updated: FieldDevice) {
+		store.updateItem(updated);
 	}
 </script>
 
@@ -273,6 +279,7 @@
 			{someSelected}
 			onToggleSelect={toggleSelect}
 			onToggleSelectAll={toggleSelectAll}
+			onAutoSave={handleAutoSave}
 		/>
 
 		<!-- Pagination -->

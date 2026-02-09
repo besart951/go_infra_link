@@ -20,6 +20,7 @@
 		editing: ReturnType<typeof useFieldDeviceEditing>;
 		onToggleSelect: () => void;
 		onToggleExpansion: () => void;
+		onAutoSave: (updated: FieldDevice) => void;
 	}
 
 	let {
@@ -32,7 +33,8 @@
 		loading,
 		editing,
 		onToggleSelect,
-		onToggleExpansion
+		onToggleExpansion,
+		onAutoSave
 	}: Props = $props();
 
 	function formatSPSControllerSystemType(dev: FieldDevice): string {
@@ -49,11 +51,13 @@
 	function handleApparatChange(newApparatId: string) {
 		if (!newApparatId || newApparatId === device.apparat_id) return;
 		editing.queueEdit(device.id, 'apparat_id', newApparatId);
+		editing.saveDeviceEdits(device, onAutoSave);
 	}
 
 	function handleSystemPartChange(newSystemPartId: string) {
 		if (!newSystemPartId || newSystemPartId === device.system_part_id) return;
 		editing.queueEdit(device.id, 'system_part_id', newSystemPartId);
+		editing.saveDeviceEdits(device, onAutoSave);
 	}
 </script>
 
@@ -98,7 +102,11 @@
 			type="text"
 			maxlength={10}
 			isDirty={editing.isFieldDirty(device.id, 'bmk')}
-			onSave={(v) => editing.queueEdit(device.id, 'bmk', v || undefined)}
+			error={editing.getFieldError(device.id, 'bmk')}
+			onSave={(v) => {
+				editing.queueEdit(device.id, 'bmk', v || undefined);
+				editing.saveDeviceEdits(device, onAutoSave);
+			}}
 		/>
 	</Table.Cell>
 	<!-- Description -->
@@ -109,7 +117,11 @@
 			type="text"
 			maxlength={250}
 			isDirty={editing.isFieldDirty(device.id, 'description')}
-			onSave={(v) => editing.queueEdit(device.id, 'description', v || undefined)}
+			error={editing.getFieldError(device.id, 'description')}
+			onSave={(v) => {
+				editing.queueEdit(device.id, 'description', v || undefined);
+				editing.saveDeviceEdits(device, onAutoSave);
+			}}
 		/>
 	</Table.Cell>
 	<!-- Apparat Nr -->
@@ -122,7 +134,10 @@
 			max={99}
 			isDirty={editing.isFieldDirty(device.id, 'apparat_nr')}
 			error={editing.getFieldError(device.id, 'apparat_nr')}
-			onSave={(v) => editing.queueEdit(device.id, 'apparat_nr', v ? parseInt(v) : undefined)}
+			onSave={(v) => {
+				editing.queueEdit(device.id, 'apparat_nr', v ? parseInt(v) : undefined);
+				editing.saveDeviceEdits(device, onAutoSave);
+			}}
 		/>
 	</Table.Cell>
 	<!-- Apparat (static select with preloaded data) -->
@@ -131,6 +146,7 @@
 			items={allApparats}
 			value={device.apparat_id}
 			width="w-full"
+			error={editing.getFieldError(device.id, 'apparat_id')}
 			onValueChange={(newVal) => handleApparatChange(newVal)}
 		/>
 	</Table.Cell>
@@ -140,6 +156,7 @@
 			items={allSystemParts}
 			value={device.system_part_id || ''}
 			width="w-full"
+			error={editing.getFieldError(device.id, 'system_part_id')}
 			onValueChange={(newVal) => handleSystemPartChange(newVal)}
 		/>
 	</Table.Cell>
@@ -166,8 +183,10 @@
 				isDirty={editing.isSpecFieldDirty(device.id, 'specification_supplier')}
 				error={editing.getFieldError(device.id, 'specification_supplier')}
 				maxlength={250}
-				onSave={(v) =>
-					editing.queueSpecEdit(device.id, 'specification_supplier', v || undefined)}
+				onSave={(v) => {
+					editing.queueSpecEdit(device.id, 'specification_supplier', v || undefined);
+					editing.saveDeviceEdits(device, onAutoSave);
+				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
@@ -177,8 +196,10 @@
 				isDirty={editing.isSpecFieldDirty(device.id, 'specification_brand')}
 				error={editing.getFieldError(device.id, 'specification_brand')}
 				maxlength={250}
-				onSave={(v) =>
-					editing.queueSpecEdit(device.id, 'specification_brand', v || undefined)}
+				onSave={(v) => {
+					editing.queueSpecEdit(device.id, 'specification_brand', v || undefined);
+					editing.saveDeviceEdits(device, onAutoSave);
+				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
@@ -188,7 +209,10 @@
 				isDirty={editing.isSpecFieldDirty(device.id, 'specification_type')}
 				error={editing.getFieldError(device.id, 'specification_type')}
 				maxlength={250}
-				onSave={(v) => editing.queueSpecEdit(device.id, 'specification_type', v || undefined)}
+				onSave={(v) => {
+					editing.queueSpecEdit(device.id, 'specification_type', v || undefined);
+					editing.saveDeviceEdits(device, onAutoSave);
+				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
@@ -198,8 +222,10 @@
 				isDirty={editing.isSpecFieldDirty(device.id, 'additional_info_motor_valve')}
 				error={editing.getFieldError(device.id, 'additional_info_motor_valve')}
 				maxlength={250}
-				onSave={(v) =>
-					editing.queueSpecEdit(device.id, 'additional_info_motor_valve', v || undefined)}
+				onSave={(v) => {
+					editing.queueSpecEdit(device.id, 'additional_info_motor_valve', v || undefined);
+					editing.saveDeviceEdits(device, onAutoSave);
+				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
@@ -209,12 +235,14 @@
 				isDirty={editing.isSpecFieldDirty(device.id, 'additional_info_size')}
 				error={editing.getFieldError(device.id, 'additional_info_size')}
 				type="number"
-				onSave={(v) =>
+				onSave={(v) => {
 					editing.queueSpecEdit(
 						device.id,
 						'additional_info_size',
 						v ? parseInt(v) : undefined
-					)}
+					);
+					editing.saveDeviceEdits(device, onAutoSave);
+				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
@@ -233,12 +261,14 @@
 					'additional_information_installation_location'
 				)}
 				maxlength={250}
-				onSave={(v) =>
+				onSave={(v) => {
 					editing.queueSpecEdit(
 						device.id,
 						'additional_information_installation_location',
 						v || undefined
-					)}
+					);
+					editing.saveDeviceEdits(device, onAutoSave);
+				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
@@ -248,12 +278,14 @@
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_ph')}
 				error={editing.getFieldError(device.id, 'electrical_connection_ph')}
 				type="number"
-				onSave={(v) =>
+				onSave={(v) => {
 					editing.queueSpecEdit(
 						device.id,
 						'electrical_connection_ph',
 						v ? parseInt(v) : undefined
-					)}
+					);
+					editing.saveDeviceEdits(device, onAutoSave);
+				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
@@ -264,8 +296,10 @@
 				error={editing.getFieldError(device.id, 'electrical_connection_acdc')}
 				maxlength={2}
 				placeholder="AC/DC"
-				onSave={(v) =>
-					editing.queueSpecEdit(device.id, 'electrical_connection_acdc', v || undefined)}
+				onSave={(v) => {
+					editing.queueSpecEdit(device.id, 'electrical_connection_acdc', v || undefined);
+					editing.saveDeviceEdits(device, onAutoSave);
+				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
@@ -279,12 +313,14 @@
 				error={editing.getFieldError(device.id, 'electrical_connection_amperage')}
 				type="number"
 				placeholder="A"
-				onSave={(v) =>
+				onSave={(v) => {
 					editing.queueSpecEdit(
 						device.id,
 						'electrical_connection_amperage',
 						v ? parseFloat(v) : undefined
-					)}
+					);
+					editing.saveDeviceEdits(device, onAutoSave);
+				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
@@ -295,12 +331,14 @@
 				error={editing.getFieldError(device.id, 'electrical_connection_power')}
 				type="number"
 				placeholder="W"
-				onSave={(v) =>
+				onSave={(v) => {
 					editing.queueSpecEdit(
 						device.id,
 						'electrical_connection_power',
 						v ? parseFloat(v) : undefined
-					)}
+					);
+					editing.saveDeviceEdits(device, onAutoSave);
+				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
@@ -314,12 +352,14 @@
 				error={editing.getFieldError(device.id, 'electrical_connection_rotation')}
 				type="number"
 				placeholder="RPM"
-				onSave={(v) =>
+				onSave={(v) => {
 					editing.queueSpecEdit(
 						device.id,
 						'electrical_connection_rotation',
 						v ? parseInt(v) : undefined
-					)}
+					);
+					editing.saveDeviceEdits(device, onAutoSave);
+				}}
 			/>
 		</Table.Cell>
 	{/if}

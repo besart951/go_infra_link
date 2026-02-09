@@ -8,7 +8,7 @@ RUN go mod download
 FROM base AS dev
 RUN go install github.com/air-verse/air@latest
 COPY . .
-CMD ["air", "--build.cmd", "go build -o tmp/main ./cmd/app", "--build.bin", "./tmp/main"]
+CMD ["air", "--build.cmd", "go build -o tmp/main ./cmd/app", "--build.entrypoint", "./tmp/main"]
 
 # builder stage
 FROM base AS builder
