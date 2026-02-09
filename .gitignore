@@ -33,6 +33,7 @@ go.work.sum
 .idea/
 .vscode/
 *.iml
+.claude/
 
 # Environment
 .env
@@ -50,4 +51,10 @@ server
 backend/server
 backend/app
 /backend/main
+
+# Local pnpm store
+frontend/.pnpm-store/
+
+# Accidental connection string files
+backend/host=postgres*
 
