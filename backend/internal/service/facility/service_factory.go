@@ -26,7 +26,6 @@ type Services struct {
 	Building                *BuildingService
 	SystemType              *SystemTypeService
 	SystemPart              *SystemPartService
-	Specification           *SpecificationService
 	Apparat                 *ApparatService
 	ControlCabinet          *ControlCabinetService
 	FieldDevice             *FieldDeviceService
@@ -45,7 +44,6 @@ func NewServices(repos Repositories) *Services {
 		Building:      NewBuildingService(repos.Buildings),
 		SystemType:    NewSystemTypeService(repos.SystemTypes),
 		SystemPart:    NewSystemPartService(repos.SystemParts),
-		Specification: NewSpecificationService(repos.Specifications),
 		Apparat:       NewApparatService(repos.Apparats),
 		ControlCabinet: NewControlCabinetService(
 			repos.ControlCabinets,

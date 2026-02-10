@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"strings"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
@@ -15,6 +17,12 @@ func NewSystemPartService(repo domainFacility.SystemPartRepository) *SystemPartS
 }
 
 func (s *SystemPartService) Create(systemPart *domainFacility.SystemPart) error {
+	if err := s.validateRequiredFields(systemPart); err != nil {
+		return err
+	}
+	if err := s.ensureUnique(systemPart, nil); err != nil {
+		return err
+	}
 	return s.repo.Create(systemPart)
 }
 
@@ -58,9 +66,72 @@ func (s *SystemPartService) List(page, limit int, search string) (*domain.Pagina
 }
 
 func (s *SystemPartService) Update(systemPart *domainFacility.SystemPart) error {
+	if err := s.validateRequiredFields(systemPart); err != nil {
+		return err
+	}
+	if err := s.ensureUnique(systemPart, &systemPart.ID); err != nil {
+		return err
+	}
 	return s.repo.Update(systemPart)
 }
 
 func (s *SystemPartService) DeleteByID(id uuid.UUID) error {
 	return s.repo.DeleteByIds([]uuid.UUID{id})
+}
+
+func (s *SystemPartService) validateRequiredFields(systemPart *domainFacility.SystemPart) error {
+	ve := domain.NewValidationError()
+	if strings.TrimSpace(systemPart.ShortName) == "" {
+		ve = ve.Add("system_part.short_name", "short_name is required")
+	}
+	if strings.TrimSpace(systemPart.Name) == "" {
+		ve = ve.Add("system_part.name", "name is required")
+	}
+	if len(ve.Fields) > 0 {
+		return ve
+	}
+	return nil
+}
+
+func (s *SystemPartService) ensureUnique(systemPart *domainFacility.SystemPart, excludeID *uuid.UUID) error {
+	ve := domain.NewValidationError()
+
+	if strings.TrimSpace(systemPart.ShortName) != "" {
+		items, err := s.repo.GetPaginatedList(domain.PaginationParams{Page: 1, Limit: 1000, Search: systemPart.ShortName})
+		if err != nil {
+			return err
+		}
+		for i := range items.Items {
+			item := items.Items[i]
+			if excludeID != nil && item.ID == *excludeID {
+				continue
+			}
+			if strings.EqualFold(item.ShortName, systemPart.ShortName) {
+				ve = ve.Add("system_part.short_name", "short_name must be unique")
+				break
+			}
+		}
+	}
+
+	if strings.TrimSpace(systemPart.Name) != "" {
+		items, err := s.repo.GetPaginatedList(domain.PaginationParams{Page: 1, Limit: 1000, Search: systemPart.Name})
+		if err != nil {
+			return err
+		}
+		for i := range items.Items {
+			item := items.Items[i]
+			if excludeID != nil && item.ID == *excludeID {
+				continue
+			}
+			if strings.EqualFold(item.Name, systemPart.Name) {
+				ve = ve.Add("system_part.name", "name must be unique")
+				break
+			}
+		}
+	}
+
+	if len(ve.Fields) > 0 {
+		return ve
+	}
+	return nil
 }

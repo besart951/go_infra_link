@@ -36,13 +36,20 @@ func (s *SPSControllerService) Create(spsController *domainFacility.SPSControlle
 }
 
 func (s *SPSControllerService) CreateWithSystemTypes(spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
-	if err := s.Validate(spsController, nil); err != nil {
-		return err
-	}
 	if err := s.ensureControlCabinetExists(spsController.ControlCabinetID); err != nil {
 		return err
 	}
-	if err := s.ensureSystemTypesExist(systemTypes); err != nil {
+	if err := s.ensureGADeviceAssigned(spsController, nil); err != nil {
+		return err
+	}
+	if err := s.Validate(spsController, nil); err != nil {
+		return err
+	}
+	systemTypeMap, err := s.loadSystemTypes(systemTypes)
+	if err != nil {
+		return err
+	}
+	if err := s.assignSystemTypeNumbers(systemTypes, systemTypeMap); err != nil {
 		return err
 	}
 
@@ -113,7 +120,11 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 	if err := s.ensureControlCabinetExists(spsController.ControlCabinetID); err != nil {
 		return err
 	}
-	if err := s.ensureSystemTypesExist(systemTypes); err != nil {
+	systemTypeMap, err := s.loadSystemTypes(systemTypes)
+	if err != nil {
+		return err
+	}
+	if err := s.assignSystemTypeNumbers(systemTypes, systemTypeMap); err != nil {
 		return err
 	}
 
@@ -154,16 +165,16 @@ func (s *SPSControllerService) ensureControlCabinetExists(controlCabinetID uuid.
 	return nil
 }
 
-func (s *SPSControllerService) ensureSystemTypesExist(systemTypes []domainFacility.SPSControllerSystemType) error {
+func (s *SPSControllerService) loadSystemTypes(systemTypes []domainFacility.SPSControllerSystemType) (map[uuid.UUID]domainFacility.SystemType, error) {
 	if len(systemTypes) == 0 {
-		return nil
+		return map[uuid.UUID]domainFacility.SystemType{}, nil
 	}
 
 	unique := make(map[uuid.UUID]struct{}, len(systemTypes))
 	ids := make([]uuid.UUID, 0, len(systemTypes))
 	for _, st := range systemTypes {
 		if st.SystemTypeID == uuid.Nil {
-			return domain.ErrNotFound
+			return nil, domain.ErrNotFound
 		}
 		if _, ok := unique[st.SystemTypeID]; ok {
 			continue
@@ -174,12 +185,148 @@ func (s *SPSControllerService) ensureSystemTypesExist(systemTypes []domainFacili
 
 	found, err := s.systemTypeRepo.GetByIds(ids)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(found) != len(ids) {
-		return domain.ErrNotFound
+		return nil, domain.ErrNotFound
+	}
+
+	mapOut := make(map[uuid.UUID]domainFacility.SystemType, len(found))
+	for _, item := range found {
+		mapOut[item.ID] = *item
+	}
+	return mapOut, nil
+}
+
+func (s *SPSControllerService) assignSystemTypeNumbers(systemTypes []domainFacility.SPSControllerSystemType, systemTypeMap map[uuid.UUID]domainFacility.SystemType) error {
+	if len(systemTypes) == 0 {
+		return nil
+	}
+
+	ve := domain.NewValidationError()
+	usedNumbers := make(map[uuid.UUID]map[int]struct{}, len(systemTypes))
+
+	for _, st := range systemTypes {
+		systemType, ok := systemTypeMap[st.SystemTypeID]
+		if !ok {
+			return domain.ErrNotFound
+		}
+		if st.Number == nil {
+			continue
+		}
+		number := *st.Number
+		if number < systemType.NumberMin || number > systemType.NumberMax {
+			ve = ve.Add("spscontroller.system_types", "number must be within the system type range")
+			continue
+		}
+		if usedNumbers[st.SystemTypeID] == nil {
+			usedNumbers[st.SystemTypeID] = map[int]struct{}{}
+		}
+		if _, exists := usedNumbers[st.SystemTypeID][number]; exists {
+			ve = ve.Add("spscontroller.system_types", "number must be unique per system type")
+			continue
+		}
+		usedNumbers[st.SystemTypeID][number] = struct{}{}
+	}
+
+	if len(ve.Fields) > 0 {
+		return ve
+	}
+
+	for i := range systemTypes {
+		if systemTypes[i].Number != nil {
+			continue
+		}
+		systemType, ok := systemTypeMap[systemTypes[i].SystemTypeID]
+		if !ok {
+			return domain.ErrNotFound
+		}
+		if usedNumbers[systemTypes[i].SystemTypeID] == nil {
+			usedNumbers[systemTypes[i].SystemTypeID] = map[int]struct{}{}
+		}
+		next, ok := findLowestAvailableNumber(systemType.NumberMin, systemType.NumberMax, usedNumbers[systemTypes[i].SystemTypeID])
+		if !ok {
+			return domain.NewValidationError().Add("spscontroller.system_types", "no available number in the system type range")
+		}
+		systemTypes[i].Number = &next
+		usedNumbers[systemTypes[i].SystemTypeID][next] = struct{}{}
+	}
+
+	return nil
+}
+
+func findLowestAvailableNumber(min, max int, used map[int]struct{}) (int, bool) {
+	for i := min; i <= max; i++ {
+		if _, exists := used[i]; !exists {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
+func (s *SPSControllerService) GetNextGADevice(controlCabinetID uuid.UUID) (string, error) {
+	if controlCabinetID == uuid.Nil {
+		return "", domain.ErrInvalidArgument
+	}
+	if err := s.ensureControlCabinetExists(controlCabinetID); err != nil {
+		return "", err
+	}
+	return s.nextAvailableGADevice(controlCabinetID)
+}
+
+func (s *SPSControllerService) ensureGADeviceAssigned(spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
+	if spsController.GADevice != nil && strings.TrimSpace(*spsController.GADevice) != "" {
+		return nil
+	}
+
+	next, err := s.nextAvailableGADevice(spsController.ControlCabinetID)
+	if err != nil {
+		return err
+	}
+	if next == "" {
+		return domain.NewValidationError().Add("spscontroller.ga_device", "no available ga_device for control cabinet")
+	}
+	spsController.GADevice = &next
+
+	if excludeID != nil {
+		if err := s.ensureUnique(spsController, excludeID); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func (s *SPSControllerService) nextAvailableGADevice(controlCabinetID uuid.UUID) (string, error) {
+	devices, err := s.repo.ListGADevicesByControlCabinetID(controlCabinetID)
+	if err != nil {
+		return "", err
+	}
+
+	used := make(map[string]struct{}, len(devices))
+	for _, device := range devices {
+		normalized := strings.TrimSpace(strings.ToUpper(device))
+		if len(normalized) == 3 {
+			used[normalized] = struct{}{}
+		}
+	}
+
+	const max = 26 * 26 * 26
+	for i := 0; i < max; i++ {
+		candidate := gaDeviceFromIndex(i)
+		if _, exists := used[candidate]; !exists {
+			return candidate, nil
+		}
+	}
+
+	return "", nil
+}
+
+func gaDeviceFromIndex(index int) string {
+	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	first := index % 26
+	second := (index / 26) % 26
+	third := (index / (26 * 26)) % 26
+	return string([]byte{alphabet[first], alphabet[second], alphabet[third]})
 }
 
 func (s *SPSControllerService) validateRequiredFields(spsController *domainFacility.SPSController) error {
@@ -217,6 +364,46 @@ func (s *SPSControllerService) Validate(spsController *domainFacility.SPSControl
 		return err
 	}
 	return nil
+}
+
+func (s *SPSControllerService) NextAvailableGADevice(controlCabinetID uuid.UUID, excludeID *uuid.UUID) (string, error) {
+	if err := s.ensureControlCabinetExists(controlCabinetID); err != nil {
+		return "", err
+	}
+
+	items, err := s.repo.ListGADevicesByControlCabinetID(controlCabinetID)
+	if err != nil {
+		return "", err
+	}
+
+	used := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		normalized := strings.ToUpper(strings.TrimSpace(item))
+		if isValidGADevice(normalized) {
+			used[normalized] = struct{}{}
+		}
+	}
+
+	if excludeID != nil {
+		controllers, err := s.repo.GetByIds([]uuid.UUID{*excludeID})
+		if err != nil {
+			return "", err
+		}
+		if len(controllers) == 0 {
+			return "", domain.ErrNotFound
+		}
+		if controllers[0].GADevice != nil {
+			current := strings.ToUpper(strings.TrimSpace(*controllers[0].GADevice))
+			if current != "" {
+				delete(used, current)
+			}
+		}
+	}
+
+	if next, ok := findLowestAvailableGADevice(used); ok {
+		return next, nil
+	}
+	return "", domain.ErrConflict
 }
 
 func (s *SPSControllerService) ensureUnique(spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
@@ -281,6 +468,25 @@ func isValidGADevice(value string) bool {
 		}
 	}
 	return true
+}
+
+func findLowestAvailableGADevice(used map[string]struct{}) (string, bool) {
+	const max = 26 * 26 * 26
+	for i := 0; i < max; i++ {
+		candidate := gaDeviceFromIndex(i)
+		if _, exists := used[candidate]; !exists {
+			return candidate, true
+		}
+	}
+	return "", false
+}
+
+func gaDeviceFromIndex(index int) string {
+	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	first := index % 26
+	second := (index / 26) % 26
+	third := (index / (26 * 26)) % 26
+	return string([]byte{alphabet[first], alphabet[second], alphabet[third]})
 }
 
 func validateNetworkFields(spsController *domainFacility.SPSController) error {

@@ -57,3 +57,7 @@ export interface SPSControllerListParams {
 }
 
 export interface SPSControllerListResponse extends Pagination<SPSController> {}
+
+export interface NextGADeviceResponse {
+	ga_device: string;
+}

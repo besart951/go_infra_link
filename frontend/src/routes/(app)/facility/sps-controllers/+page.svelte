@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import { Plus, Pencil } from '@lucide/svelte';
+	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
+	import { Plus } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { spsControllersStore } from '$lib/stores/list/entityStores.js';
 	import type { SPSController } from '$lib/domain/facility/index.js';
@@ -54,6 +57,14 @@
 		}
 	}
 
+	async function handleCopy(value: string) {
+		try {
+			await navigator.clipboard.writeText(value);
+		} catch (error) {
+			console.error('Failed to copy to clipboard:', error);
+		}
+	}
+
 	onMount(() => {
 		spsControllersStore.load();
 	});
@@ -63,7 +74,6 @@
 	<title>SPS Controllers | Infra Link</title>
 </svelte:head>
 <ConfirmDialog />
-
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
 		<div>
@@ -95,8 +105,7 @@
 			{ key: 'ga_device', label: 'GA Device' },
 			{ key: 'ip_address', label: 'IP Address' },
 			{ key: 'cabinet', label: 'Cabinet' },
-			{ key: 'created', label: 'Created' },
-			{ key: 'actions', label: 'Actions', width: 'w-[100px]' }
+			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
 		searchPlaceholder="Search SPS controllers..."
 		emptyMessage="No SPS controllers found. Create your first SPS controller to get started."
@@ -121,19 +130,35 @@
 				{/if}
 			</Table.Cell>
 			<Table.Cell>{controller.control_cabinet_id}</Table.Cell>
-			<Table.Cell>
-				{new Date(controller.created_at).toLocaleDateString()}
-			</Table.Cell>
-			<Table.Cell>
-				<div class="flex items-center gap-2">
-					<Button variant="ghost" size="icon" onclick={() => handleEdit(controller)}>
-						<Pencil class="size-4" />
-					</Button>
-					<Button variant="ghost" size="sm" href="/facility/sps-controllers/{controller.id}">
-						View
-					</Button>
-					<Button variant="ghost" size="sm" onclick={() => handleDelete(controller)}>Delete</Button>
-				</div>
+			<Table.Cell class="text-right">
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger>
+						{#snippet child({ props })}
+							<Button variant="ghost" size="icon" {...props}>
+								<EllipsisIcon class="size-4" />
+							</Button>
+						{/snippet}
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content align="end" class="w-40">
+						<DropdownMenu.Item
+							onclick={() => handleCopy(controller.device_name ?? controller.id)}
+						>
+							Copy
+						</DropdownMenu.Item>
+						<DropdownMenu.Item
+							onclick={() => goto(`/facility/sps-controllers/${controller.id}`)}
+						>
+							View
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleEdit(controller)}>
+							Edit
+						</DropdownMenu.Item>
+						<DropdownMenu.Separator />
+						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(controller)}>
+							Delete
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
 			</Table.Cell>
 		{/snippet}
 	</PaginatedList>

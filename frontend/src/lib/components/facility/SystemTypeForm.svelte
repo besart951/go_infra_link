@@ -32,7 +32,34 @@
 		}
 	});
 
+	let localErrors = $state<Record<string, string>>({});
+
+	function clearLocalErrors() {
+		if (Object.keys(localErrors).length > 0) {
+			localErrors = {};
+		}
+	}
+
+	function validateLocal(): boolean {
+		localErrors = {};
+		const minValue = Number(number_min);
+		const maxValue = Number(number_max);
+		if (Number.isFinite(minValue) && Number.isFinite(maxValue) && minValue >= maxValue) {
+			localErrors = {
+				number_max: 'Max number must be greater than min number.'
+			};
+		}
+		return Object.keys(localErrors).length === 0;
+	}
+
+	function getError(field: string) {
+		return localErrors[field] ?? formState.getFieldError(field, ['systemtype']);
+	}
+
 	async function handleSubmit() {
+		if (!validateLocal()) {
+			return;
+		}
 		await formState.handleSubmit(async () => {
 			if (initialData) {
 				return await updateSystemType(initialData.id, {
@@ -65,23 +92,35 @@
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
 		<div class="space-y-2 md:col-span-1">
 			<Label for="system_type_name">Name</Label>
-			<Input id="system_type_name" bind:value={name} required maxlength={150} />
-			{#if formState.getFieldError('name', ['systemtype'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('name', ['systemtype'])}</p>
+			<Input id="system_type_name" bind:value={name} required maxlength={150} oninput={clearLocalErrors} />
+			{#if getError('name')}
+				<p class="text-sm text-red-500">{getError('name')}</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="system_type_min">Min Number</Label>
-			<Input id="system_type_min" type="number" bind:value={number_min} required />
-			{#if formState.getFieldError('number_min', ['systemtype'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('number_min', ['systemtype'])}</p>
+			<Input
+				id="system_type_min"
+				type="number"
+				bind:value={number_min}
+				required
+				oninput={clearLocalErrors}
+			/>
+			{#if getError('number_min')}
+				<p class="text-sm text-red-500">{getError('number_min')}</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
 			<Label for="system_type_max">Max Number</Label>
-			<Input id="system_type_max" type="number" bind:value={number_max} required />
-			{#if formState.getFieldError('number_max', ['systemtype'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('number_max', ['systemtype'])}</p>
+			<Input
+				id="system_type_max"
+				type="number"
+				bind:value={number_max}
+				required
+				oninput={clearLocalErrors}
+			/>
+			{#if getError('number_max')}
+				<p class="text-sm text-red-500">{getError('number_max')}</p>
 			{/if}
 		</div>
 	</div>

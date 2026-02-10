@@ -5,7 +5,6 @@ type ServiceDeps struct {
 	Building                BuildingService
 	SystemType              SystemTypeService
 	SystemPart              SystemPartService
-	Specification           SpecificationService
 	Apparat                 ApparatService
 	ControlCabinet          ControlCabinetService
 	FieldDevice             FieldDeviceService
@@ -23,7 +22,6 @@ type Handlers struct {
 	Building                *BuildingHandler
 	SystemType              *SystemTypeHandler
 	SystemPart              *SystemPartHandler
-	Specification           *SpecificationHandler
 	Apparat                 *ApparatHandler
 	ControlCabinet          *ControlCabinetHandler
 	FieldDevice             *FieldDeviceHandler
@@ -43,7 +41,6 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 		Building:                NewBuildingHandler(deps.Building),
 		SystemType:              NewSystemTypeHandler(deps.SystemType),
 		SystemPart:              NewSystemPartHandler(deps.SystemPart, deps.Apparat, deps.ObjectData),
-		Specification:           NewSpecificationHandler(deps.Specification),
 		Apparat:                 NewApparatHandler(deps.Apparat, deps.SystemPart, deps.ObjectData),
 		ControlCabinet:          NewControlCabinetHandler(deps.ControlCabinet),
 		FieldDevice:             NewFieldDeviceHandler(deps.FieldDevice),

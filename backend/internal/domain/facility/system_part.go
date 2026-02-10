@@ -6,8 +6,8 @@ import (
 
 type SystemPart struct {
 	domain.Base
-	ShortName   string `gorm:"not null"`
-	Name        string `gorm:"not null"`
+	ShortName   string `gorm:"uniqueIndex;idx_name_deleted;not null"`
+	Name        string `gorm:"uniqueIndex;idx_name_deleted;not null"`
 	Description *string
 
 	Apparats []*Apparat `gorm:"many2many:system_part_apparats;"`

@@ -3,6 +3,7 @@ package facility
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -37,7 +38,26 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 		return
 	}
 
+	if req.BacnetObjects != nil && len(*req.BacnetObjects) > 0 {
+		if err := validateObjectDataBacnetInputs(*req.BacnetObjects); err != nil {
+			if ve, ok := domain.AsValidationError(err); ok {
+				respondValidationError(c, ve.Fields)
+				return
+			}
+			respondError(c, http.StatusBadRequest, "invalid_bacnet_objects", "Invalid bacnet object data")
+			return
+		}
+	}
+
 	obj := toObjectDataModel(req)
+	if err := h.ensureObjectDataDescriptionUnique(obj.ProjectID, obj.Description, nil); err != nil {
+		if ve, ok := domain.AsValidationError(err); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
+		respondError(c, http.StatusInternalServerError, "validation_failed", err.Error())
+		return
+	}
 
 	// Load apparats if IDs are provided
 	if len(req.ApparatIDs) > 0 {
@@ -89,6 +109,44 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, toObjectDataResponse(*obj))
+}
+
+func validateObjectDataBacnetInputs(inputs []dto.BacnetObjectInput) error {
+	ve := domain.NewValidationError()
+	seen := make(map[string]struct{}, len(inputs))
+
+	for i := range inputs {
+		input := inputs[i]
+		textFix := strings.TrimSpace(input.TextFix)
+		if textFix == "" {
+			ve = ve.Add("objectdata.bacnetobject.textfix", "textfix is required")
+		} else {
+			if _, exists := seen[textFix]; exists {
+				ve = ve.Add("objectdata.bacnetobject.textfix", "textfix must be unique within the object data")
+			} else {
+				seen[textFix] = struct{}{}
+			}
+		}
+		if strings.TrimSpace(input.SoftwareType) == "" {
+			ve = ve.Add("objectdata.bacnetobject.software_type", "software_type is required")
+		}
+	}
+
+	if len(ve.Fields) > 0 {
+		return ve
+	}
+	return nil
+}
+
+func (h *ObjectDataHandler) ensureObjectDataDescriptionUnique(projectID *uuid.UUID, description string, excludeID *uuid.UUID) error {
+	exists, err := h.service.ExistsByDescription(projectID, description, excludeID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return domain.NewValidationError().Add("objectdata.description", "description must be unique")
+	}
+	return nil
 }
 
 // GetObjectData godoc
@@ -218,6 +276,14 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 	}
 
 	applyObjectDataUpdate(obj, req)
+	if err := h.ensureObjectDataDescriptionUnique(obj.ProjectID, obj.Description, &obj.ID); err != nil {
+		if ve, ok := domain.AsValidationError(err); ok {
+			respondValidationError(c, ve.Fields)
+			return
+		}
+		respondError(c, http.StatusInternalServerError, "validation_failed", err.Error())
+		return
+	}
 
 	// Load apparats if IDs are provided
 	if req.ApparatIDs != nil {

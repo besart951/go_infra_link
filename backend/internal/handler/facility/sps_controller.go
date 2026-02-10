@@ -119,6 +119,50 @@ func (h *SPSControllerHandler) ListSPSControllers(c *gin.Context) {
 	c.JSON(http.StatusOK, toSPSControllerListResponse(result))
 }
 
+// GetNextAvailableGADevice godoc
+// @Summary Suggest next available GA device for a control cabinet
+// @Tags facility-sps-controllers
+// @Produce json
+// @Param control_cabinet_id query string true "Control Cabinet ID"
+// @Param exclude_id query string false "SPS Controller ID to exclude"
+// @Success 200 {object} dto.NextAvailableGADeviceResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/sps-controllers/next-ga-device [get]
+func (h *SPSControllerHandler) GetNextAvailableGADevice(c *gin.Context) {
+	controlCabinetID, ok := parseUUIDQueryParam(c, "control_cabinet_id")
+	if !ok {
+		return
+	}
+	if controlCabinetID == nil {
+		respondInvalidArgument(c, "control_cabinet_id is required")
+		return
+	}
+
+	excludeID, ok := parseUUIDQueryParam(c, "exclude_id")
+	if !ok {
+		return
+	}
+
+	gaDevice, err := h.service.NextAvailableGADevice(*controlCabinetID, excludeID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			respondNotFound(c, "Control cabinet not found")
+			return
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			respondConflict(c, "No available GA device")
+			return
+		}
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.NextAvailableGADeviceResponse{GADevice: gaDevice})
+}
+
 // UpdateSPSController godoc
 // @Summary Update an SPS controller
 // @Tags facility-sps-controllers

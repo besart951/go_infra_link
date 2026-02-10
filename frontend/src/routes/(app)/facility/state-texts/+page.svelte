@@ -1,12 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import { Plus, Pencil } from '@lucide/svelte';
+	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
+	import { Plus } from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
+	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+	import { addToast } from '$lib/components/toast.svelte';
+	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import { stateTextsStore } from '$lib/stores/list/entityStores.js';
 	import type { StateText } from '$lib/domain/facility/index.js';
 	import StateTextForm from '$lib/components/facility/StateTextForm.svelte';
+	import { deleteStateText } from '$lib/infrastructure/api/facility.adapter.js';
 
 	let showForm = $state(false);
 	let editingItem: StateText | undefined = $state(undefined);
@@ -32,6 +39,32 @@
 		editingItem = undefined;
 	}
 
+	async function handleCopy(value: string) {
+		try {
+			await navigator.clipboard.writeText(value);
+		} catch (error) {
+			console.error('Failed to copy to clipboard:', error);
+		}
+	}
+
+	async function handleDelete(item: StateText) {
+		const ok = await confirm({
+			title: 'Delete state text',
+			message: `Delete ${item.ref_number}?`,
+			confirmText: 'Delete',
+			cancelText: 'Cancel',
+			variant: 'destructive'
+		});
+		if (!ok) return;
+		try {
+			await deleteStateText(item.id);
+			addToast('State text deleted', 'success');
+			stateTextsStore.reload();
+		} catch (err) {
+			addToast(err instanceof Error ? err.message : 'Failed to delete state text', 'error');
+		}
+	}
+
 	onMount(() => {
 		stateTextsStore.load();
 	});
@@ -40,6 +73,8 @@
 <svelte:head>
 	<title>State Texts | Infra Link</title>
 </svelte:head>
+
+<ConfirmDialog />
 
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
@@ -64,8 +99,7 @@
 		columns={[
 			{ key: 'ref_number', label: 'Ref Number' },
 			{ key: 'state_text1', label: 'State Text' },
-			{ key: 'created', label: 'Created' },
-			{ key: 'actions', label: 'Actions', width: 'w-[100px]' }
+			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
 		searchPlaceholder="Search state texts..."
 		emptyMessage="No state texts found. Create your first state text to get started."
@@ -76,15 +110,31 @@
 		{#snippet rowSnippet(item: StateText)}
 			<Table.Cell class="font-medium">{item.ref_number}</Table.Cell>
 			<Table.Cell>{item.state_text1 ?? 'N/A'}</Table.Cell>
-			<Table.Cell>
-				{new Date(item.created_at).toLocaleDateString()}
-			</Table.Cell>
-			<Table.Cell>
-				<div class="flex items-center gap-2">
-					<Button variant="ghost" size="icon" onclick={() => handleEdit(item)}>
-						<Pencil class="size-4" />
-					</Button>
-				</div>
+			<Table.Cell class="text-right">
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger>
+						{#snippet child({ props })}
+							<Button variant="ghost" size="icon" {...props}>
+								<EllipsisIcon class="size-4" />
+							</Button>
+						{/snippet}
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content align="end" class="w-40">
+						<DropdownMenu.Item onclick={() => handleCopy(String(item.ref_number ?? item.id))}>
+							Copy
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => goto(`/facility/state-texts/${item.id}`)}>
+							View
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleEdit(item)}>
+							Edit
+						</DropdownMenu.Item>
+						<DropdownMenu.Separator />
+						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+							Delete
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
 			</Table.Cell>
 		{/snippet}
 	</PaginatedList>

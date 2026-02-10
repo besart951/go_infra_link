@@ -61,7 +61,6 @@
 				{ title: 'System Parts', url: '/facility/system-parts' },
 				{ title: 'Apparats', url: '/facility/apparats' },
 				{ title: 'Object Data', url: '/facility/object-data' },
-				{ title: 'Specifications', url: '/facility/specifications' },
 				{ title: 'State Texts', url: '/facility/state-texts' },
 				{ title: 'Alarm Definitions', url: '/facility/alarm-definitions' },
 				{ title: 'Notification Classes', url: '/facility/notification-classes' }

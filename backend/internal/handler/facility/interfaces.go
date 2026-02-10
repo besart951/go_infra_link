@@ -33,14 +33,6 @@ type SystemPartService interface {
 	DeleteByID(id uuid.UUID) error
 }
 
-type SpecificationService interface {
-	Create(specification *domainFacility.Specification) error
-	GetByID(id uuid.UUID) (*domainFacility.Specification, error)
-	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.Specification], error)
-	Update(specification *domainFacility.Specification) error
-	DeleteByID(id uuid.UUID) error
-}
-
 type ApparatService interface {
 	Create(apparat *domainFacility.Apparat) error
 	GetByID(id uuid.UUID) (*domainFacility.Apparat, error)
@@ -99,6 +91,7 @@ type SPSControllerService interface {
 	Update(spsController *domainFacility.SPSController) error
 	UpdateWithSystemTypes(spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error
 	Validate(spsController *domainFacility.SPSController, excludeID *uuid.UUID) error
+	NextAvailableGADevice(controlCabinetID uuid.UUID, excludeID *uuid.UUID) (string, error)
 	DeleteByID(id uuid.UUID) error
 }
 
@@ -137,6 +130,7 @@ type ObjectDataService interface {
 	DeleteByID(id uuid.UUID) error
 	GetBacnetObjectIDs(id uuid.UUID) ([]uuid.UUID, error)
 	GetApparatIDs(id uuid.UUID) ([]uuid.UUID, error)
+	ExistsByDescription(projectID *uuid.UUID, description string, excludeID *uuid.UUID) (bool, error)
 }
 
 type SPSControllerSystemTypeService interface {

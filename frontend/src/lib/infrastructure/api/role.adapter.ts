@@ -100,7 +100,6 @@ export async function listPermissions(): Promise<Permission[]> {
 		'bacnetobject',
 		'systempart',
 		'systemtype',
-		'specification',
 		'apparat',
 		'notificationclass',
 		'statetext',

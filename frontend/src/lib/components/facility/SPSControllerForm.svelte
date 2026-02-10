@@ -6,6 +6,7 @@
 	import SystemTypeSelect from './SystemTypeSelect.svelte';
 	import {
 		createSPSController,
+		getNextSPSControllerGADevice,
 		getSystemType,
 		listSPSControllerSystemTypes,
 		updateSPSController,
@@ -39,6 +40,8 @@
 	let systemTypeNames: Record<string, string> = $state({});
 	let systemTypesLoading = $state(false);
 	let lastLoadedSystemTypesFor: string | null = $state(null);
+	let gaDeviceTouched = $state(false);
+	let lastGADeviceControlCabinetId: string | null = $state(null);
 
 	let loading = $state(false);
 	let error = $state('');
@@ -73,6 +76,24 @@
 	$effect(() => {
 		if (!control_cabinet_id) return;
 		triggerValidation();
+		if (!initialData && lastGADeviceControlCabinetId !== control_cabinet_id) {
+			lastGADeviceControlCabinetId = control_cabinet_id;
+			loadNextGADevice();
+		}
+	});
+
+	$effect(() => {
+		if (initialData || !control_cabinet_id) return;
+		if (ga_device.trim() === '' && gaDeviceTouched) {
+			loadNextGADevice(true);
+		}
+	});
+
+	$effect(() => {
+		if (initialData || !control_cabinet_id) return;
+		if (combinedFieldError('ga_device')) {
+			loadNextGADevice(true);
+		}
 	});
 
 	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['spscontroller']);
@@ -92,6 +113,23 @@
 			gateway: gateway || undefined,
 			vlan: vlan || undefined
 		});
+	}
+
+	async function loadNextGADevice(force = false) {
+		if (!control_cabinet_id || initialData) return;
+		if (!force && gaDeviceTouched && ga_device.trim() !== '') return;
+		try {
+			const res = await getNextSPSControllerGADevice(
+				control_cabinet_id,
+				initialData?.id
+			);
+			if (res?.ga_device) {
+				ga_device = res.ga_device;
+				triggerValidation();
+			}
+		} catch (e) {
+			console.error(e);
+		}
 	}
 
 	async function loadSystemTypes() {
@@ -228,6 +266,10 @@
 				maxlength={3}
 				oninput={(e) => {
 					ga_device = (e.target as HTMLInputElement).value.toUpperCase();
+					gaDeviceTouched = true;
+					if (ga_device.trim() === '') {
+						loadNextGADevice(true);
+					}
 					triggerValidation();
 				}}
 			/>
@@ -360,6 +402,10 @@
 					</div>
 				{/each}
 			</div>
+		{/if}
+
+		{#if combinedFieldError('system_types')}
+			<p class="text-sm text-red-500">{combinedFieldError('system_types')}</p>
 		{/if}
 	</div>
 

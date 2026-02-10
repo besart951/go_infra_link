@@ -184,10 +184,6 @@
 	function handleDiscard() {
 		editing.discardAllEdits();
 	}
-
-	function handleAutoSave(updated: FieldDevice) {
-		store.updateItem(updated);
-	}
 </script>
 
 <div class="flex flex-col gap-6">
@@ -279,7 +275,6 @@
 			{someSelected}
 			onToggleSelect={toggleSelect}
 			onToggleSelectAll={toggleSelectAll}
-			onAutoSave={handleAutoSave}
 		/>
 
 		<!-- Pagination -->

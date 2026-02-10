@@ -176,6 +176,31 @@ func (r *objectDataRepo) GetBacnetObjectIDs(objectDataID uuid.UUID) ([]uuid.UUID
 	return ids, err
 }
 
+func (r *objectDataRepo) ExistsByDescription(projectID *uuid.UUID, description string, excludeID *uuid.UUID) (bool, error) {
+	desc := strings.ToLower(strings.TrimSpace(description))
+	if desc == "" {
+		return false, nil
+	}
+
+	query := r.db.Model(&domainFacility.ObjectData{}).Where("deleted_at IS NULL")
+	if projectID == nil {
+		query = query.Where("project_id IS NULL")
+	} else {
+		query = query.Where("project_id = ?", *projectID)
+	}
+
+	query = query.Where("LOWER(description) = ?", desc)
+	if excludeID != nil {
+		query = query.Where("id <> ?", *excludeID)
+	}
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (r *objectDataRepo) GetTemplates() ([]*domainFacility.ObjectData, error) {
 	var items []*domainFacility.ObjectData
 	err := r.db.Where("deleted_at IS NULL").Where("is_active = ? AND project_id IS NULL", true).Preload("BacnetObjects").Preload("Apparats").Find(&items).Error

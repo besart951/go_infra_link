@@ -11,6 +11,7 @@ type ObjectDataStore interface {
 	ObjectDataRepository
 
 	GetBacnetObjectIDs(objectDataID uuid.UUID) ([]uuid.UUID, error)
+	ExistsByDescription(projectID *uuid.UUID, description string, excludeID *uuid.UUID) (bool, error)
 	GetTemplates() ([]*ObjectData, error)
 	GetForProject(projectID uuid.UUID) ([]*ObjectData, error)
 	GetPaginatedListForProject(projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ObjectData], error)

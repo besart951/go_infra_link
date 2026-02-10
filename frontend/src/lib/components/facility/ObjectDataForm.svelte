@@ -54,6 +54,11 @@
 	});
 
 	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['objectdata']);
+	const bacnetFieldError = (name: string) =>
+		getFieldError(fieldErrors, `bacnetobject.${name}`, ['objectdata']) ??
+		getFieldError(fieldErrors, `bacnetobject.${name.replace('_', '')}`, ['objectdata']) ??
+		fieldErrors[`objectdata.bacnetobject.${name}`] ??
+		fieldErrors[`objectdata.bacnetobject.${name.replace('_', '')}`];
 
 	function addBacnetObject() {
 		bacnetObjects = [
@@ -192,6 +197,7 @@
 						bind:softwareNumber={obj.software_number}
 						bind:hardwareType={obj.hardware_type}
 						bind:hardwareQuantity={obj.hardware_quantity}
+						textFixError={bacnetFieldError('text_fix')}
 						onRemove={() => removeBacnetObject(index)}
 						onUpdate={(field, value) => updateBacnetObject(index, field, value)}
 					/>

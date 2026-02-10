@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"strings"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
@@ -15,6 +17,9 @@ func NewObjectDataService(repo domainFacility.ObjectDataStore) *ObjectDataServic
 }
 
 func (s *ObjectDataService) Create(objectData *domainFacility.ObjectData) error {
+	if err := s.ensureUnique(objectData, nil); err != nil {
+		return err
+	}
 	return s.repo.Create(objectData)
 }
 
@@ -54,7 +59,26 @@ func (s *ObjectDataService) GetByID(id uuid.UUID) (*domainFacility.ObjectData, e
 }
 
 func (s *ObjectDataService) Update(objectData *domainFacility.ObjectData) error {
+	if err := s.ensureUnique(objectData, &objectData.ID); err != nil {
+		return err
+	}
 	return s.repo.Update(objectData)
+}
+
+func (s *ObjectDataService) ensureUnique(objectData *domainFacility.ObjectData, excludeID *uuid.UUID) error {
+	description := strings.TrimSpace(objectData.Description)
+	if description == "" {
+		return nil
+	}
+
+	exists, err := s.repo.ExistsByDescription(objectData.ProjectID, description, excludeID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return domain.NewValidationError().Add("objectdata.description", "description must be unique")
+	}
+	return nil
 }
 
 func (s *ObjectDataService) DeleteByID(id uuid.UUID) error {
@@ -79,4 +103,8 @@ func (s *ObjectDataService) GetApparatIDs(id uuid.UUID) ([]uuid.UUID, error) {
 		}
 	}
 	return apparatIDs, nil
+}
+
+func (s *ObjectDataService) ExistsByDescription(projectID *uuid.UUID, description string, excludeID *uuid.UUID) (bool, error) {
+	return s.repo.ExistsByDescription(projectID, description, excludeID)
 }

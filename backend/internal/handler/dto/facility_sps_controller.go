@@ -61,3 +61,7 @@ type SPSControllerListResponse struct {
 	Page       int                     `json:"page"`
 	TotalPages int                     `json:"total_pages"`
 }
+
+type NextAvailableGADeviceResponse struct {
+	GADevice string `json:"ga_device"`
+}

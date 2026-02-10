@@ -21,7 +21,6 @@ type Handlers struct {
 	FacilityBuildingHandler       *facilityhandler.BuildingHandler
 	FacilitySystemTypeHandler     *facilityhandler.SystemTypeHandler
 	FacilitySystemPartHandler     *facilityhandler.SystemPartHandler
-	FacilitySpecificationHandler  *facilityhandler.SpecificationHandler
 	FacilityApparatHandler        *facilityhandler.ApparatHandler
 	FacilityFieldDeviceHandler    *facilityhandler.FieldDeviceHandler
 	FacilityBacnetObjectHandler   *facilityhandler.BacnetObjectHandler
@@ -187,12 +186,6 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		facility.PUT("/system-parts/:id", handlers.FacilitySystemPartHandler.UpdateSystemPart)
 		facility.DELETE("/system-parts/:id", handlers.FacilitySystemPartHandler.DeleteSystemPart)
 
-		facility.POST("/specifications", handlers.FacilitySpecificationHandler.CreateSpecification)
-		facility.GET("/specifications", handlers.FacilitySpecificationHandler.ListSpecifications)
-		facility.GET("/specifications/:id", handlers.FacilitySpecificationHandler.GetSpecification)
-		facility.PUT("/specifications/:id", handlers.FacilitySpecificationHandler.UpdateSpecification)
-		facility.DELETE("/specifications/:id", handlers.FacilitySpecificationHandler.DeleteSpecification)
-
 		facility.POST("/apparats", handlers.FacilityApparatHandler.CreateApparat)
 		facility.GET("/apparats", handlers.FacilityApparatHandler.ListApparats)
 		facility.GET("/apparats/:id", handlers.FacilityApparatHandler.GetApparat)
@@ -227,6 +220,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		facility.POST("/sps-controllers/validate", handlers.FacilityValidationHandler.ValidateSPSController)
 		facility.POST("/sps-controllers", handlers.FacilitySPSControllerHandler.CreateSPSController)
 		facility.GET("/sps-controllers", handlers.FacilitySPSControllerHandler.ListSPSControllers)
+		facility.GET("/sps-controllers/next-ga-device", handlers.FacilitySPSControllerHandler.GetNextAvailableGADevice)
 		facility.GET("/sps-controllers/:id", handlers.FacilitySPSControllerHandler.GetSPSController)
 		facility.PUT("/sps-controllers/:id", handlers.FacilitySPSControllerHandler.UpdateSPSController)
 		facility.DELETE("/sps-controllers/:id", handlers.FacilitySPSControllerHandler.DeleteSPSController)

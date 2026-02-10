@@ -9,7 +9,6 @@ import type { SPSControllerSystemType } from '$lib/domain/entities/spsController
 import type { ObjectData } from '$lib/domain/facility/index.js';
 import type { SystemType } from '$lib/domain/facility/index.js';
 import type { FieldDevice } from '$lib/domain/facility/index.js';
-import type { Specification } from '$lib/domain/facility/index.js';
 import type { StateText } from '$lib/domain/facility/index.js';
 import type { NotificationClass } from '$lib/domain/facility/index.js';
 import type { AlarmDefinition } from '$lib/domain/facility/index.js';
@@ -87,14 +86,6 @@ export const systemTypesStore = createListStore<SystemType>(
 export const fieldDevicesStore = createListStore<FieldDevice>(
 	createApiAdapter<FieldDevice>('/facility/field-devices'),
 	{ pageSize: 300 }
-);
-
-/**
- * Specifications store
- */
-export const specificationsStore = createListStore<Specification>(
-	createApiAdapter<Specification>('/facility/specifications'),
-	{ pageSize: 10 }
 );
 
 /**

@@ -9,7 +9,11 @@ type BuildingRepository interface {
 	domain.Repository[Building]
 	ExistsIWSCodeGroup(iwsCode string, buildingGroup int, excludeID *uuid.UUID) (bool, error)
 }
-type SystemTypeRepository = domain.Repository[SystemType]
+type SystemTypeRepository interface {
+	domain.Repository[SystemType]
+	ExistsName(name string, excludeID *uuid.UUID) (bool, error)
+	ExistsRange(numberMin, numberMax int, excludeID *uuid.UUID) (bool, error)
+}
 type SystemPartRepository = domain.Repository[SystemPart]
 type SpecificationRepository = domain.Repository[Specification]
 type StateTextRepository = domain.Repository[StateText]
@@ -27,6 +31,7 @@ type SPSControllerRepository interface {
 	domain.Repository[SPSController]
 	GetPaginatedListByControlCabinetID(controlCabinetID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[SPSController], error)
 	GetIDsByControlCabinetID(controlCabinetID uuid.UUID) ([]uuid.UUID, error)
+	ListGADevicesByControlCabinetID(controlCabinetID uuid.UUID) ([]string, error)
 	ExistsGADevice(controlCabinetID uuid.UUID, gaDevice string, excludeID *uuid.UUID) (bool, error)
 	ExistsIPAddressVlan(ipAddress string, vlan string, excludeID *uuid.UUID) (bool, error)
 }

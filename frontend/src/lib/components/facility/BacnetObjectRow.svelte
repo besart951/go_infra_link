@@ -17,6 +17,7 @@
 		softwareNumber: number;
 		hardwareType: string;
 		hardwareQuantity: number;
+		textFixError?: string;
 		onRemove: () => void;
 		onUpdate: (field: string, value: any) => void;
 	}
@@ -32,6 +33,7 @@
 		softwareNumber = $bindable(1),
 		hardwareType = $bindable('ai'),
 		hardwareQuantity = $bindable(1),
+		textFixError,
 		onRemove,
 		onUpdate
 	}: Props = $props();
@@ -101,6 +103,9 @@
 			placeholder="e.g., AI_001"
 			class="h-8 text-sm"
 		/>
+		{#if textFixError}
+			<p class="text-xs text-red-500">{textFixError}</p>
+		{/if}
 	</div>
 
 	<!-- Description -->

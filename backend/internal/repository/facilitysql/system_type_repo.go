@@ -12,6 +12,7 @@ import (
 
 type systemTypeRepo struct {
 	*gormbase.BaseRepository[*domainFacility.SystemType]
+	db *gorm.DB
 }
 
 func NewSystemTypeRepository(db *gorm.DB) domainFacility.SystemTypeRepository {
@@ -21,7 +22,7 @@ func NewSystemTypeRepository(db *gorm.DB) domainFacility.SystemTypeRepository {
 	}
 
 	baseRepo := gormbase.NewBaseRepository[*domainFacility.SystemType](db, searchCallback)
-	return &systemTypeRepo{BaseRepository: baseRepo}
+	return &systemTypeRepo{BaseRepository: baseRepo, db: db}
 }
 
 func (r *systemTypeRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SystemType, error) {
@@ -58,4 +59,37 @@ func (r *systemTypeRepo) GetPaginatedList(params domain.PaginationParams) (*doma
 		Page:       result.Page,
 		TotalPages: result.TotalPages,
 	}, nil
+}
+
+func (r *systemTypeRepo) ExistsName(name string, excludeID *uuid.UUID) (bool, error) {
+	query := r.db.Model(&domainFacility.SystemType{}).
+		Where("deleted_at IS NULL").
+		Where("LOWER(name) = ?", strings.ToLower(strings.TrimSpace(name)))
+
+	if excludeID != nil {
+		query = query.Where("id <> ?", *excludeID)
+	}
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *systemTypeRepo) ExistsRange(numberMin, numberMax int, excludeID *uuid.UUID) (bool, error) {
+	query := r.db.Model(&domainFacility.SystemType{}).
+		Where("deleted_at IS NULL").
+		Where("number_min = ?", numberMin).
+		Where("number_max = ?", numberMax)
+
+	if excludeID != nil {
+		query = query.Where("id <> ?", *excludeID)
+	}
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

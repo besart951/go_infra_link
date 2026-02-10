@@ -20,7 +20,6 @@
 		editing: ReturnType<typeof useFieldDeviceEditing>;
 		onToggleSelect: () => void;
 		onToggleExpansion: () => void;
-		onAutoSave: (updated: FieldDevice) => void;
 	}
 
 	let {
@@ -33,14 +32,16 @@
 		loading,
 		editing,
 		onToggleSelect,
-		onToggleExpansion,
-		onAutoSave
+		onToggleExpansion
 	}: Props = $props();
 
 	function formatSPSControllerSystemType(dev: FieldDevice): string {
 		const sysType = dev.sps_controller_system_type;
 		if (!sysType) return '-';
-		const number = sysType.number ?? '';
+		const number =
+			sysType.number === null || sysType.number === undefined
+				? ''
+				: String(sysType.number).padStart(4, '0');
 		const docName = sysType.document_name ?? '';
 		if (number && docName) return `${number} - ${docName}`;
 		if (number) return String(number);
@@ -51,13 +52,11 @@
 	function handleApparatChange(newApparatId: string) {
 		if (!newApparatId || newApparatId === device.apparat_id) return;
 		editing.queueEdit(device.id, 'apparat_id', newApparatId);
-		editing.saveDeviceEdits(device, onAutoSave);
 	}
 
 	function handleSystemPartChange(newSystemPartId: string) {
 		if (!newSystemPartId || newSystemPartId === device.system_part_id) return;
 		editing.queueEdit(device.id, 'system_part_id', newSystemPartId);
-		editing.saveDeviceEdits(device, onAutoSave);
 	}
 </script>
 
@@ -105,7 +104,6 @@
 			error={editing.getFieldError(device.id, 'bmk')}
 			onSave={(v) => {
 				editing.queueEdit(device.id, 'bmk', v || undefined);
-				editing.saveDeviceEdits(device, onAutoSave);
 			}}
 		/>
 	</Table.Cell>
@@ -120,7 +118,6 @@
 			error={editing.getFieldError(device.id, 'description')}
 			onSave={(v) => {
 				editing.queueEdit(device.id, 'description', v || undefined);
-				editing.saveDeviceEdits(device, onAutoSave);
 			}}
 		/>
 	</Table.Cell>
@@ -136,7 +133,6 @@
 			error={editing.getFieldError(device.id, 'apparat_nr')}
 			onSave={(v) => {
 				editing.queueEdit(device.id, 'apparat_nr', v ? parseInt(v) : undefined);
-				editing.saveDeviceEdits(device, onAutoSave);
 			}}
 		/>
 	</Table.Cell>
@@ -185,7 +181,6 @@
 				maxlength={250}
 				onSave={(v) => {
 					editing.queueSpecEdit(device.id, 'specification_supplier', v || undefined);
-					editing.saveDeviceEdits(device, onAutoSave);
 				}}
 			/>
 		</Table.Cell>
@@ -198,7 +193,6 @@
 				maxlength={250}
 				onSave={(v) => {
 					editing.queueSpecEdit(device.id, 'specification_brand', v || undefined);
-					editing.saveDeviceEdits(device, onAutoSave);
 				}}
 			/>
 		</Table.Cell>
@@ -211,7 +205,6 @@
 				maxlength={250}
 				onSave={(v) => {
 					editing.queueSpecEdit(device.id, 'specification_type', v || undefined);
-					editing.saveDeviceEdits(device, onAutoSave);
 				}}
 			/>
 		</Table.Cell>
@@ -224,7 +217,6 @@
 				maxlength={250}
 				onSave={(v) => {
 					editing.queueSpecEdit(device.id, 'additional_info_motor_valve', v || undefined);
-					editing.saveDeviceEdits(device, onAutoSave);
 				}}
 			/>
 		</Table.Cell>
@@ -241,7 +233,6 @@
 						'additional_info_size',
 						v ? parseInt(v) : undefined
 					);
-					editing.saveDeviceEdits(device, onAutoSave);
 				}}
 			/>
 		</Table.Cell>
@@ -267,7 +258,6 @@
 						'additional_information_installation_location',
 						v || undefined
 					);
-					editing.saveDeviceEdits(device, onAutoSave);
 				}}
 			/>
 		</Table.Cell>
@@ -284,7 +274,6 @@
 						'electrical_connection_ph',
 						v ? parseInt(v) : undefined
 					);
-					editing.saveDeviceEdits(device, onAutoSave);
 				}}
 			/>
 		</Table.Cell>
@@ -298,7 +287,6 @@
 				placeholder="AC/DC"
 				onSave={(v) => {
 					editing.queueSpecEdit(device.id, 'electrical_connection_acdc', v || undefined);
-					editing.saveDeviceEdits(device, onAutoSave);
 				}}
 			/>
 		</Table.Cell>
@@ -319,7 +307,6 @@
 						'electrical_connection_amperage',
 						v ? parseFloat(v) : undefined
 					);
-					editing.saveDeviceEdits(device, onAutoSave);
 				}}
 			/>
 		</Table.Cell>
@@ -337,7 +324,6 @@
 						'electrical_connection_power',
 						v ? parseFloat(v) : undefined
 					);
-					editing.saveDeviceEdits(device, onAutoSave);
 				}}
 			/>
 		</Table.Cell>
@@ -358,7 +344,6 @@
 						'electrical_connection_rotation',
 						v ? parseInt(v) : undefined
 					);
-					editing.saveDeviceEdits(device, onAutoSave);
 				}}
 			/>
 		</Table.Cell>

@@ -40,11 +40,6 @@ import type {
 	ApparatListResponse,
 	CreateApparatRequest,
 	UpdateApparatRequest,
-	Specification,
-	SpecificationListParams,
-	SpecificationListResponse,
-	CreateSpecificationRequest,
-	UpdateSpecificationRequest,
 	StateText,
 	StateTextListParams,
 	StateTextListResponse,
@@ -222,6 +217,21 @@ export async function listSPSControllers(
 	const query = searchParams.toString();
 	return api<SPSControllerListResponse>(
 		`/facility/sps-controllers${query ? `?${query}` : ''}`,
+		options
+	);
+}
+
+export async function getNextSPSControllerGADevice(
+	controlCabinetId: string,
+	excludeId?: string,
+	options?: ApiOptions
+): Promise<import('$lib/domain/facility/sps-controller.js').NextGADeviceResponse> {
+	const searchParams = new URLSearchParams();
+	searchParams.set('control_cabinet_id', controlCabinetId);
+	if (excludeId) searchParams.set('exclude_id', excludeId);
+	const query = searchParams.toString();
+	return api<import('$lib/domain/facility/sps-controller.js').NextGADeviceResponse>(
+		`/facility/sps-controllers/next-ga-device?${query}`,
 		options
 	);
 }
@@ -557,57 +567,6 @@ export async function deleteApparat(id: string, options?: ApiOptions): Promise<v
 
 export async function getApparat(id: string, options?: ApiOptions): Promise<Apparat> {
 	return api<Apparat>(`/facility/apparats/${id}`, options);
-}
-
-// ============================================================================
-// SPECIFICATIONS
-// ============================================================================
-
-export async function listSpecifications(
-	params?: SpecificationListParams,
-	options?: ApiOptions
-): Promise<SpecificationListResponse> {
-	const searchParams = new URLSearchParams();
-	if (params?.page) searchParams.set('page', String(params.page));
-	if (params?.limit) searchParams.set('limit', String(params.limit));
-	if (params?.search) searchParams.set('search', params.search);
-
-	const query = searchParams.toString();
-	return api<SpecificationListResponse>(
-		`/facility/specifications${query ? `?${query}` : ''}`,
-		options
-	);
-}
-
-export async function createSpecification(
-	data: CreateSpecificationRequest,
-	options?: ApiOptions
-): Promise<Specification> {
-	return api<Specification>('/facility/specifications', {
-		...options,
-		method: 'POST',
-		body: JSON.stringify(data)
-	});
-}
-
-export async function updateSpecification(
-	id: string,
-	data: UpdateSpecificationRequest,
-	options?: ApiOptions
-): Promise<Specification> {
-	return api<Specification>(`/facility/specifications/${id}`, {
-		...options,
-		method: 'PUT',
-		body: JSON.stringify(data)
-	});
-}
-
-export async function deleteSpecification(id: string, options?: ApiOptions): Promise<void> {
-	return api<void>(`/facility/specifications/${id}`, { ...options, method: 'DELETE' });
-}
-
-export async function getSpecification(id: string, options?: ApiOptions): Promise<Specification> {
-	return api<Specification>(`/facility/specifications/${id}`, options);
 }
 
 // ============================================================================

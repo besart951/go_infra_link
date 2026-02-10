@@ -36,7 +36,6 @@
 		if (pathname.startsWith('/facility/system-parts')) return 'System Parts';
 		if (pathname.startsWith('/facility/apparats')) return 'Apparats';
 		if (pathname.startsWith('/facility/object-data')) return 'Object Data';
-		if (pathname.startsWith('/facility/specifications')) return 'Specifications';
 		if (pathname.startsWith('/facility/state-texts')) return 'State Texts';
 		if (pathname.startsWith('/facility/alarm-definitions')) return 'Alarm Definitions';
 		if (pathname.startsWith('/facility/notification-classes')) return 'Notification Classes';

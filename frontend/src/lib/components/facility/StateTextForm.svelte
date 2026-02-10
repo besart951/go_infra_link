@@ -19,6 +19,18 @@
 	let state_text2 = $state('');
 	let state_text3 = $state('');
 	let state_text4 = $state('');
+	let state_text5 = $state('');
+	let state_text6 = $state('');
+	let state_text7 = $state('');
+	let state_text8 = $state('');
+	let state_text9 = $state('');
+	let state_text10 = $state('');
+	let state_text11 = $state('');
+	let state_text12 = $state('');
+	let state_text13 = $state('');
+	let state_text14 = $state('');
+	let state_text15 = $state('');
+	let state_text16 = $state('');
 
 	$effect(() => {
 		if (initialData) {
@@ -27,6 +39,18 @@
 			state_text2 = initialData.state_text2 ?? '';
 			state_text3 = initialData.state_text3 ?? '';
 			state_text4 = initialData.state_text4 ?? '';
+			state_text5 = initialData.state_text5 ?? '';
+			state_text6 = initialData.state_text6 ?? '';
+			state_text7 = initialData.state_text7 ?? '';
+			state_text8 = initialData.state_text8 ?? '';
+			state_text9 = initialData.state_text9 ?? '';
+			state_text10 = initialData.state_text10 ?? '';
+			state_text11 = initialData.state_text11 ?? '';
+			state_text12 = initialData.state_text12 ?? '';
+			state_text13 = initialData.state_text13 ?? '';
+			state_text14 = initialData.state_text14 ?? '';
+			state_text15 = initialData.state_text15 ?? '';
+			state_text16 = initialData.state_text16 ?? '';
 		}
 	});
 
@@ -44,7 +68,19 @@
 					state_text1: state_text1 || undefined,
 					state_text2: state_text2 || undefined,
 					state_text3: state_text3 || undefined,
-					state_text4: state_text4 || undefined
+					state_text4: state_text4 || undefined,
+					state_text5: state_text5 || undefined,
+					state_text6: state_text6 || undefined,
+					state_text7: state_text7 || undefined,
+					state_text8: state_text8 || undefined,
+					state_text9: state_text9 || undefined,
+					state_text10: state_text10 || undefined,
+					state_text11: state_text11 || undefined,
+					state_text12: state_text12 || undefined,
+					state_text13: state_text13 || undefined,
+					state_text14: state_text14 || undefined,
+					state_text15: state_text15 || undefined,
+					state_text16: state_text16 || undefined
 				});
 			} else {
 				return await createStateText({
@@ -52,7 +88,19 @@
 					state_text1: state_text1 || undefined,
 					state_text2: state_text2 || undefined,
 					state_text3: state_text3 || undefined,
-					state_text4: state_text4 || undefined
+					state_text4: state_text4 || undefined,
+					state_text5: state_text5 || undefined,
+					state_text6: state_text6 || undefined,
+					state_text7: state_text7 || undefined,
+					state_text8: state_text8 || undefined,
+					state_text9: state_text9 || undefined,
+					state_text10: state_text10 || undefined,
+					state_text11: state_text11 || undefined,
+					state_text12: state_text12 || undefined,
+					state_text13: state_text13 || undefined,
+					state_text14: state_text14 || undefined,
+					state_text15: state_text15 || undefined,
+					state_text16: state_text16 || undefined
 				});
 			}
 		});
@@ -104,6 +152,90 @@
 			<Input id="state_text4" bind:value={state_text4} />
 			{#if formState.getFieldError('state_text4', ['statetext'])}
 				<p class="text-sm text-red-500">{formState.getFieldError('state_text4', ['statetext'])}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="state_text5">State Text 5</Label>
+			<Input id="state_text5" bind:value={state_text5} />
+			{#if formState.getFieldError('state_text5', ['statetext'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('state_text5', ['statetext'])}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="state_text6">State Text 6</Label>
+			<Input id="state_text6" bind:value={state_text6} />
+			{#if formState.getFieldError('state_text6', ['statetext'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('state_text6', ['statetext'])}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="state_text7">State Text 7</Label>
+			<Input id="state_text7" bind:value={state_text7} />
+			{#if formState.getFieldError('state_text7', ['statetext'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('state_text7', ['statetext'])}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="state_text8">State Text 8</Label>
+			<Input id="state_text8" bind:value={state_text8} />
+			{#if formState.getFieldError('state_text8', ['statetext'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('state_text8', ['statetext'])}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="state_text9">State Text 9</Label>
+			<Input id="state_text9" bind:value={state_text9} />
+			{#if formState.getFieldError('state_text9', ['statetext'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('state_text9', ['statetext'])}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="state_text10">State Text 10</Label>
+			<Input id="state_text10" bind:value={state_text10} />
+			{#if formState.getFieldError('state_text10', ['statetext'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('state_text10', ['statetext'])}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="state_text11">State Text 11</Label>
+			<Input id="state_text11" bind:value={state_text11} />
+			{#if formState.getFieldError('state_text11', ['statetext'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('state_text11', ['statetext'])}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="state_text12">State Text 12</Label>
+			<Input id="state_text12" bind:value={state_text12} />
+			{#if formState.getFieldError('state_text12', ['statetext'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('state_text12', ['statetext'])}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="state_text13">State Text 13</Label>
+			<Input id="state_text13" bind:value={state_text13} />
+			{#if formState.getFieldError('state_text13', ['statetext'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('state_text13', ['statetext'])}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="state_text14">State Text 14</Label>
+			<Input id="state_text14" bind:value={state_text14} />
+			{#if formState.getFieldError('state_text14', ['statetext'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('state_text14', ['statetext'])}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="state_text15">State Text 15</Label>
+			<Input id="state_text15" bind:value={state_text15} />
+			{#if formState.getFieldError('state_text15', ['statetext'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('state_text15', ['statetext'])}</p>
+			{/if}
+		</div>
+		<div class="space-y-2">
+			<Label for="state_text16">State Text 16</Label>
+			<Input id="state_text16" bind:value={state_text16} />
+			{#if formState.getFieldError('state_text16', ['statetext'])}
+				<p class="text-sm text-red-500">{formState.getFieldError('state_text16', ['statetext'])}</p>
 			{/if}
 		</div>
 	</div>
