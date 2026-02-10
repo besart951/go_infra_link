@@ -145,9 +145,7 @@
 						<DropdownMenu.Item onclick={() => goto(`/facility/object-data/${item.id}`)}>
 							View
 						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(item)}>
-							Edit
-						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleEdit(item)}>Edit</DropdownMenu.Item>
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
 							Delete

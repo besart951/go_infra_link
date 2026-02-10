@@ -61,10 +61,7 @@
 			addToast('Notification class deleted', 'success');
 			notificationClassesStore.reload();
 		} catch (err) {
-			addToast(
-				err instanceof Error ? err.message : 'Failed to delete notification class',
-				'error'
-			);
+			addToast(err instanceof Error ? err.message : 'Failed to delete notification class', 'error');
 		}
 	}
 
@@ -137,9 +134,7 @@
 						<DropdownMenu.Item onclick={() => goto(`/facility/notification-classes/${item.id}`)}>
 							View
 						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(item)}>
-							Edit
-						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleEdit(item)}>Edit</DropdownMenu.Item>
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
 							Delete

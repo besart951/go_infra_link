@@ -140,19 +140,13 @@
 						{/snippet}
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
-						<DropdownMenu.Item
-							onclick={() => handleCopy(controller.device_name ?? controller.id)}
-						>
+						<DropdownMenu.Item onclick={() => handleCopy(controller.device_name ?? controller.id)}>
 							Copy
 						</DropdownMenu.Item>
-						<DropdownMenu.Item
-							onclick={() => goto(`/facility/sps-controllers/${controller.id}`)}
-						>
+						<DropdownMenu.Item onclick={() => goto(`/facility/sps-controllers/${controller.id}`)}>
 							View
 						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(controller)}>
-							Edit
-						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleEdit(controller)}>Edit</DropdownMenu.Item>
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(controller)}>
 							Delete

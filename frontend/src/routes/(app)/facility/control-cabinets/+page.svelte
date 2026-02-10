@@ -171,19 +171,13 @@
 						{/snippet}
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
-						<DropdownMenu.Item
-							onclick={() => handleCopy(cabinet.control_cabinet_nr ?? cabinet.id)}
-						>
+						<DropdownMenu.Item onclick={() => handleCopy(cabinet.control_cabinet_nr ?? cabinet.id)}>
 							Copy
 						</DropdownMenu.Item>
-						<DropdownMenu.Item
-							onclick={() => goto(`/facility/control-cabinets/${cabinet.id}`)}
-						>
+						<DropdownMenu.Item onclick={() => goto(`/facility/control-cabinets/${cabinet.id}`)}>
 							View
 						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(cabinet)}>
-							Edit
-						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleEdit(cabinet)}>Edit</DropdownMenu.Item>
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(cabinet)}>
 							Delete

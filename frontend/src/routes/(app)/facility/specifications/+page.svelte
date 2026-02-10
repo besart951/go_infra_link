@@ -10,15 +10,15 @@
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { addToast } from '$lib/components/toast.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
-	import { apparatsStore } from '$lib/stores/list/entityStores.js';
-	import type { Apparat } from '$lib/domain/facility/index.js';
-	import ApparatForm from '$lib/components/facility/ApparatForm.svelte';
-	import { deleteApparat } from '$lib/infrastructure/api/facility.adapter.js';
+	import { specificationsStore } from '$lib/stores/list/entityStores.js';
+	import type { Specification } from '$lib/domain/facility/index.js';
+	import SpecificationForm from '$lib/components/facility/SpecificationForm.svelte';
+	import { deleteSpecification } from '$lib/infrastructure/api/facility.adapter.js';
 
 	let showForm = $state(false);
-	let editingItem: Apparat | undefined = $state(undefined);
+	let editingItem: Specification | undefined = $state(undefined);
 
-	function handleEdit(item: Apparat) {
+	function handleEdit(item: Specification) {
 		editingItem = item;
 		showForm = true;
 	}
@@ -31,7 +31,7 @@
 	function handleSuccess() {
 		showForm = false;
 		editingItem = undefined;
-		apparatsStore.reload();
+		specificationsStore.reload();
 	}
 
 	function handleCancel() {
@@ -47,31 +47,31 @@
 		}
 	}
 
-	async function handleDelete(item: Apparat) {
+	async function handleDelete(item: Specification) {
 		const ok = await confirm({
-			title: 'Delete apparat',
-			message: `Delete ${item.short_name ?? item.name}?`,
+			title: 'Delete specification',
+			message: `Delete ${item.specification_supplier ?? item.specification_type ?? 'specification'}?`,
 			confirmText: 'Delete',
 			cancelText: 'Cancel',
 			variant: 'destructive'
 		});
 		if (!ok) return;
 		try {
-			await deleteApparat(item.id);
-			addToast('Apparat deleted', 'success');
-			apparatsStore.reload();
+			await deleteSpecification(item.id);
+			addToast('Specification deleted', 'success');
+			specificationsStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to delete apparat', 'error');
+			addToast(err instanceof Error ? err.message : 'Failed to delete specification', 'error');
 		}
 	}
 
 	onMount(() => {
-		apparatsStore.load();
+		specificationsStore.load();
 	});
 </script>
 
 <svelte:head>
-	<title>Apparats | Infra Link</title>
+	<title>Specifications | Infra Link</title>
 </svelte:head>
 
 <ConfirmDialog />
@@ -79,39 +79,45 @@
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Apparats</h1>
-			<p class="text-sm text-muted-foreground">Manage apparats and their configurations.</p>
+			<h1 class="text-2xl font-semibold tracking-tight">Specifications</h1>
+			<p class="text-sm text-muted-foreground">
+				Manage technical specifications for field devices.
+			</p>
 		</div>
 		{#if !showForm}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
-				New Apparat
+				New Specification
 			</Button>
 		{/if}
 	</div>
 
 	{#if showForm}
-		<ApparatForm initialData={editingItem} onSuccess={handleSuccess} onCancel={handleCancel} />
+		<SpecificationForm
+			initialData={editingItem}
+			onSuccess={handleSuccess}
+			onCancel={handleCancel}
+		/>
 	{/if}
 
 	<PaginatedList
-		state={$apparatsStore}
+		state={$specificationsStore}
 		columns={[
-			{ key: 'short_name', label: 'Short Name' },
-			{ key: 'name', label: 'Name' },
-			{ key: 'description', label: 'Description' },
+			{ key: 'supplier', label: 'Supplier' },
+			{ key: 'brand', label: 'Brand' },
+			{ key: 'type', label: 'Type' },
 			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
-		searchPlaceholder="Search apparats..."
-		emptyMessage="No apparats found. Create your first apparat to get started."
-		onSearch={(text) => apparatsStore.search(text)}
-		onPageChange={(page) => apparatsStore.goToPage(page)}
-		onReload={() => apparatsStore.reload()}
+		searchPlaceholder="Search specifications..."
+		emptyMessage="No specifications found. Create your first specification to get started."
+		onSearch={(text) => specificationsStore.search(text)}
+		onPageChange={(page) => specificationsStore.goToPage(page)}
+		onReload={() => specificationsStore.reload()}
 	>
-		{#snippet rowSnippet(item: Apparat)}
-			<Table.Cell class="font-medium">{item.short_name}</Table.Cell>
-			<Table.Cell>{item.name}</Table.Cell>
-			<Table.Cell>{item.description ?? 'N/A'}</Table.Cell>
+		{#snippet rowSnippet(item: Specification)}
+			<Table.Cell class="font-medium">{item.specification_supplier ?? 'N/A'}</Table.Cell>
+			<Table.Cell>{item.specification_brand ?? 'N/A'}</Table.Cell>
+			<Table.Cell>{item.specification_type ?? 'N/A'}</Table.Cell>
 			<Table.Cell class="text-right">
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>
@@ -122,10 +128,10 @@
 						{/snippet}
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
-						<DropdownMenu.Item onclick={() => handleCopy(item.short_name ?? item.id)}>
+						<DropdownMenu.Item onclick={() => handleCopy(item.specification_supplier ?? item.id)}>
 							Copy
 						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => goto(`/facility/apparats/${item.id}`)}>
+						<DropdownMenu.Item onclick={() => goto(`/facility/specifications/${item.id}`)}>
 							View
 						</DropdownMenu.Item>
 						<DropdownMenu.Item onclick={() => handleEdit(item)}>Edit</DropdownMenu.Item>

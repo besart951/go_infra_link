@@ -130,9 +130,7 @@
 						<DropdownMenu.Item onclick={() => goto(`/facility/buildings/${building.id}`)}>
 							View
 						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(building)}>
-							Edit
-						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleEdit(building)}>Edit</DropdownMenu.Item>
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(building)}>
 							Delete
