@@ -23,13 +23,13 @@ type UpdateApparatRequest struct {
 }
 
 type ApparatResponse struct {
-	ID          uuid.UUID              `json:"id"`
-	ShortName   string                 `json:"short_name"`
-	Name        string                 `json:"name"`
-	Description *string                `json:"description"`
-	SystemParts []SystemPartResponse   `json:"system_parts"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
+	ID          uuid.UUID            `json:"id"`
+	ShortName   string               `json:"short_name"`
+	Name        string               `json:"name"`
+	Description *string              `json:"description"`
+	SystemParts []SystemPartResponse `json:"system_parts"`
+	CreatedAt   time.Time            `json:"created_at"`
+	UpdatedAt   time.Time            `json:"updated_at"`
 }
 
 type ApparatListResponse struct {
@@ -37,4 +37,12 @@ type ApparatListResponse struct {
 	Total      int64             `json:"total"`
 	Page       int               `json:"page"`
 	TotalPages int               `json:"total_pages"`
+}
+
+type ApparatBulkRequest struct {
+	Ids []uuid.UUID `json:"ids" binding:"required,min=1,dive,required"`
+}
+
+type ApparatBulkResponse struct {
+	Items []ApparatResponse `json:"items"`
 }

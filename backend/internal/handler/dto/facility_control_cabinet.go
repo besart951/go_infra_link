@@ -32,3 +32,11 @@ type ControlCabinetListResponse struct {
 	Page       int                      `json:"page"`
 	TotalPages int                      `json:"total_pages"`
 }
+
+type ControlCabinetBulkRequest struct {
+	Ids []uuid.UUID `json:"ids" binding:"required,min=1,dive,required"`
+}
+
+type ControlCabinetBulkResponse struct {
+	Items []ControlCabinetResponse `json:"items"`
+}

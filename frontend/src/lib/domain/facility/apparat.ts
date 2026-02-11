@@ -36,3 +36,11 @@ export interface ApparatListParams {
 export interface ApparatListResponse extends Pagination<Apparat> {
 	total_pages: number;
 }
+
+export interface ApparatBulkRequest {
+	ids: string[];
+}
+
+export interface ApparatBulkResponse {
+	items: Apparat[];
+}

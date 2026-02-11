@@ -68,6 +68,35 @@ func (h *BuildingHandler) GetBuilding(c *gin.Context) {
 	c.JSON(http.StatusOK, toBuildingResponse(*building))
 }
 
+// GetBuildingsByIDs godoc
+// @Summary Get multiple buildings by IDs
+// @Tags facility-buildings
+// @Accept json
+// @Produce json
+// @Param request body dto.BuildingBulkRequest true "Building IDs"
+// @Success 200 {object} dto.BuildingBulkResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/buildings/bulk [post]
+func (h *BuildingHandler) GetBuildingsByIDs(c *gin.Context) {
+	var req dto.BuildingBulkRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	if len(req.Ids) == 0 {
+		respondInvalidArgument(c, "ids is required")
+		return
+	}
+
+	buildings, err := h.service.GetByIDs(req.Ids)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.BuildingBulkResponse{Items: toBuildingResponses(buildings)})
+}
+
 // ListBuildings godoc
 // @Summary List buildings with pagination
 // @Tags facility-buildings

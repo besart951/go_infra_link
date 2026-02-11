@@ -17,6 +17,7 @@ func NewSystemTypeHandler(service SystemTypeService) *SystemTypeHandler {
 
 // CreateSystemType godoc
 // @Summary Create a new system type
+// @Description number_min and number_max must not overlap existing ranges. number_min may equal number_max.
 // @Tags facility-system-types
 // @Accept json
 // @Produce json
@@ -96,6 +97,7 @@ func (h *SystemTypeHandler) ListSystemTypes(c *gin.Context) {
 
 // UpdateSystemType godoc
 // @Summary Update a system type
+// @Description number_min and number_max must not overlap existing ranges. number_min may equal number_max.
 // @Tags facility-system-types
 // @Accept json
 // @Produce json

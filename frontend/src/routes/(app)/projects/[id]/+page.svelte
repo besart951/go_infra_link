@@ -22,8 +22,8 @@
 		addProjectSPSController
 	} from '$lib/infrastructure/api/project.adapter.js';
 	import {
-		getControlCabinet,
-		getSPSController,
+		getControlCabinets,
+		getSPSControllers,
 		deleteSPSController
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import type { Project } from '$lib/domain/project/index.js';
@@ -55,7 +55,6 @@
 	let spsControllerPage = $state(1);
 	const spsControllerPageSize = 10;
 
-
 	const filteredControlCabinetLinks = $derived(
 		controlCabinetSearch.trim()
 			? controlCabinetLinks.filter((link) =>
@@ -70,10 +69,18 @@
 		return Array.from(new Set(ids.filter(Boolean)));
 	}
 
-	async function fetchByIds<T>(ids: string[], fetchOne: (id: string) => Promise<T>): Promise<T[]> {
+	async function fetchControlCabinetsByIds(ids: string[]): Promise<ControlCabinet[]> {
 		const unique = uniqueIds(ids);
-		const results = await Promise.all(unique.map((id) => fetchOne(id).catch(() => null)));
-		return results.filter(Boolean) as T[];
+		if (unique.length === 0) return [];
+		const res = await getControlCabinets(unique);
+		return res.items || [];
+	}
+
+	async function fetchSpsControllersByIds(ids: string[]): Promise<SPSController[]> {
+		const unique = uniqueIds(ids);
+		if (unique.length === 0) return [];
+		const res = await getSPSControllers(unique);
+		return res.items || [];
 	}
 
 	const spsControllerLinkMap = $derived.by(
@@ -160,7 +167,7 @@
 
 			// Hydrate labels by fetching the exact linked cabinets (avoid global list limits).
 			const cabinetIds = linksRes.items.map((l) => l.control_cabinet_id);
-			controlCabinetOptions = await fetchByIds<ControlCabinet>(cabinetIds, getControlCabinet);
+			controlCabinetOptions = await fetchControlCabinetsByIds(cabinetIds);
 		} catch (err) {
 			addToast(err instanceof Error ? err.message : 'Failed to load control cabinets', 'error');
 		} finally {
@@ -178,14 +185,14 @@
 			// Hydrate linked SPS controllers by ID (avoid global list limits so newly created
 			// controllers always appear).
 			const controllerIds = linksRes.items.map((l) => l.sps_controller_id);
-			spsControllerOptions = await fetchByIds<SPSController>(controllerIds, getSPSController);
+			spsControllerOptions = await fetchSpsControllersByIds(controllerIds);
 
 			// Ensure control cabinet labels are available for the cabinet column.
 			const cabinetIds = spsControllerOptions.map((c) => c.control_cabinet_id);
 			const existing = new Set(controlCabinetOptions.map((c) => c.id));
 			const missing = uniqueIds(cabinetIds).filter((id) => !existing.has(id));
 			if (missing.length > 0) {
-				const fetched = await fetchByIds<ControlCabinet>(missing, getControlCabinet);
+				const fetched = await fetchControlCabinetsByIds(missing);
 				controlCabinetOptions = [...controlCabinetOptions, ...fetched];
 			}
 		} catch (err) {

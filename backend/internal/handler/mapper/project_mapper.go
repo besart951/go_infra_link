@@ -1,6 +1,8 @@
 package mapper
 
 import (
+	"time"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 )
@@ -11,7 +13,7 @@ func ToProjectModel(req dto.CreateProjectRequest) *project.Project {
 		Name:        req.Name,
 		Description: req.Description,
 		Status:      project.ProjectStatus(req.Status),
-		StartDate:   req.StartDate,
+		StartDate:   toTimePtr(req.StartDate),
 		PhaseID:     req.PhaseID,
 	}
 
@@ -30,11 +32,19 @@ func ApplyProjectUpdate(target *project.Project, req dto.UpdateProjectRequest) {
 		target.Status = req.Status
 	}
 	if req.StartDate != nil {
-		target.StartDate = req.StartDate
+		target.StartDate = toTimePtr(req.StartDate)
 	}
 	if req.PhaseID != nil {
 		target.PhaseID = *req.PhaseID
 	}
+}
+
+func toTimePtr(value *dto.SwissDateTime) *time.Time {
+	if value == nil {
+		return nil
+	}
+	parsed := value.Time
+	return &parsed
 }
 
 // ToProjectResponse converts a Project domain model to a ProjectResponse DTO

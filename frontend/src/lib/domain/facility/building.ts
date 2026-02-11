@@ -30,3 +30,11 @@ export interface BuildingListParams {
 }
 
 export interface BuildingListResponse extends Pagination<Building> {}
+
+export interface BuildingBulkRequest {
+	ids: string[];
+}
+
+export interface BuildingBulkResponse {
+	items: Building[];
+}

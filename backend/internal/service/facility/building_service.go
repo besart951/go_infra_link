@@ -34,6 +34,18 @@ func (s *BuildingService) GetByID(id uuid.UUID) (*domainFacility.Building, error
 	return buildings[0], nil
 }
 
+func (s *BuildingService) GetByIDs(ids []uuid.UUID) ([]domainFacility.Building, error) {
+	buildings, err := s.repo.GetByIds(ids)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]domainFacility.Building, len(buildings))
+	for i, item := range buildings {
+		items[i] = *item
+	}
+	return items, nil
+}
+
 func (s *BuildingService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.Building], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
 	return s.repo.GetPaginatedList(domain.PaginationParams{

@@ -17,14 +17,17 @@ func toBuildingResponse(building domainFacility.Building) dto.BuildingResponse {
 	}
 }
 
-func toBuildingListResponse(list *domain.PaginatedList[domainFacility.Building]) dto.BuildingListResponse {
-	items := make([]dto.BuildingResponse, len(list.Items))
-	for i, item := range list.Items {
+func toBuildingResponses(buildings []domainFacility.Building) []dto.BuildingResponse {
+	items := make([]dto.BuildingResponse, len(buildings))
+	for i, item := range buildings {
 		items[i] = toBuildingResponse(item)
 	}
+	return items
+}
 
+func toBuildingListResponse(list *domain.PaginatedList[domainFacility.Building]) dto.BuildingListResponse {
 	return dto.BuildingListResponse{
-		Items:      items,
+		Items:      toBuildingResponses(list.Items),
 		Total:      list.Total,
 		Page:       list.Page,
 		TotalPages: list.TotalPages,
@@ -137,14 +140,17 @@ func toApparatResponse(apparat domainFacility.Apparat) dto.ApparatResponse {
 	}
 }
 
-func toApparatListResponse(list *domain.PaginatedList[domainFacility.Apparat]) dto.ApparatListResponse {
-	items := make([]dto.ApparatResponse, len(list.Items))
-	for i, item := range list.Items {
+func toApparatResponses(apparats []domainFacility.Apparat) []dto.ApparatResponse {
+	items := make([]dto.ApparatResponse, len(apparats))
+	for i, item := range apparats {
 		items[i] = toApparatResponse(item)
 	}
+	return items
+}
 
+func toApparatListResponse(list *domain.PaginatedList[domainFacility.Apparat]) dto.ApparatListResponse {
 	return dto.ApparatListResponse{
-		Items:      items,
+		Items:      toApparatResponses(list.Items),
 		Total:      list.Total,
 		Page:       list.Page,
 		TotalPages: list.TotalPages,
@@ -161,14 +167,17 @@ func toControlCabinetResponse(controlCabinet domainFacility.ControlCabinet) dto.
 	}
 }
 
-func toControlCabinetListResponse(list *domain.PaginatedList[domainFacility.ControlCabinet]) dto.ControlCabinetListResponse {
-	items := make([]dto.ControlCabinetResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toControlCabinetResponse(item)
+func toControlCabinetResponses(items []domainFacility.ControlCabinet) []dto.ControlCabinetResponse {
+	responses := make([]dto.ControlCabinetResponse, len(items))
+	for i, item := range items {
+		responses[i] = toControlCabinetResponse(item)
 	}
+	return responses
+}
 
+func toControlCabinetListResponse(list *domain.PaginatedList[domainFacility.ControlCabinet]) dto.ControlCabinetListResponse {
 	return dto.ControlCabinetListResponse{
-		Items:      items,
+		Items:      toControlCabinetResponses(list.Items),
 		Total:      list.Total,
 		Page:       list.Page,
 		TotalPages: list.TotalPages,
@@ -192,14 +201,17 @@ func toSPSControllerResponse(controller domainFacility.SPSController) dto.SPSCon
 	}
 }
 
-func toSPSControllerListResponse(list *domain.PaginatedList[domainFacility.SPSController]) dto.SPSControllerListResponse {
-	items := make([]dto.SPSControllerResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toSPSControllerResponse(item)
+func toSPSControllerResponses(items []domainFacility.SPSController) []dto.SPSControllerResponse {
+	responses := make([]dto.SPSControllerResponse, len(items))
+	for i, item := range items {
+		responses[i] = toSPSControllerResponse(item)
 	}
+	return responses
+}
 
+func toSPSControllerListResponse(list *domain.PaginatedList[domainFacility.SPSController]) dto.SPSControllerListResponse {
 	return dto.SPSControllerListResponse{
-		Items:      items,
+		Items:      toSPSControllerResponses(list.Items),
 		Total:      list.Total,
 		Page:       list.Page,
 		TotalPages: list.TotalPages,

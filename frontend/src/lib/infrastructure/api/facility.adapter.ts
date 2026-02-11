@@ -7,17 +7,23 @@ import type {
 	Building,
 	BuildingListParams,
 	BuildingListResponse,
+	BuildingBulkRequest,
+	BuildingBulkResponse,
 	CreateBuildingRequest,
 	UpdateBuildingRequest,
 	ControlCabinet,
 	ControlCabinetListParams,
 	ControlCabinetListResponse,
+	ControlCabinetBulkRequest,
+	ControlCabinetBulkResponse,
 	ControlCabinetDeleteImpact,
 	CreateControlCabinetRequest,
 	UpdateControlCabinetRequest,
 	SPSController,
 	SPSControllerListParams,
 	SPSControllerListResponse,
+	SPSControllerBulkRequest,
+	SPSControllerBulkResponse,
 	CreateSPSControllerRequest,
 	UpdateSPSControllerRequest,
 	FieldDevice,
@@ -38,6 +44,8 @@ import type {
 	Apparat,
 	ApparatListParams,
 	ApparatListResponse,
+	ApparatBulkRequest,
+	ApparatBulkResponse,
 	CreateApparatRequest,
 	UpdateApparatRequest,
 	StateText,
@@ -87,6 +95,17 @@ export async function listBuildings(
 
 export async function getBuilding(id: string, options?: ApiOptions): Promise<Building> {
 	return api<Building>(`/facility/buildings/${id}`, options);
+}
+
+export async function getBuildings(
+	ids: BuildingBulkRequest['ids'],
+	options?: ApiOptions
+): Promise<BuildingBulkResponse> {
+	return api<BuildingBulkResponse>('/facility/buildings/bulk', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify({ ids })
+	});
 }
 
 export async function createBuilding(
@@ -153,6 +172,17 @@ export async function getControlCabinet(
 	options?: RequestInit
 ): Promise<ControlCabinet> {
 	return api<ControlCabinet>(`/facility/control-cabinets/${id}`, options);
+}
+
+export async function getControlCabinets(
+	ids: ControlCabinetBulkRequest['ids'],
+	options?: ApiOptions
+): Promise<ControlCabinetBulkResponse> {
+	return api<ControlCabinetBulkResponse>('/facility/control-cabinets/bulk', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify({ ids })
+	});
 }
 
 export async function createControlCabinet(
@@ -238,6 +268,17 @@ export async function getNextSPSControllerGADevice(
 
 export async function getSPSController(id: string, options?: RequestInit): Promise<SPSController> {
 	return api<SPSController>(`/facility/sps-controllers/${id}`, options);
+}
+
+export async function getSPSControllers(
+	ids: SPSControllerBulkRequest['ids'],
+	options?: ApiOptions
+): Promise<SPSControllerBulkResponse> {
+	return api<SPSControllerBulkResponse>('/facility/sps-controllers/bulk', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify({ ids })
+	});
 }
 
 export async function createSPSController(
@@ -567,6 +608,17 @@ export async function deleteApparat(id: string, options?: ApiOptions): Promise<v
 
 export async function getApparat(id: string, options?: ApiOptions): Promise<Apparat> {
 	return api<Apparat>(`/facility/apparats/${id}`, options);
+}
+
+export async function getApparats(
+	ids: ApparatBulkRequest['ids'],
+	options?: ApiOptions
+): Promise<ApparatBulkResponse> {
+	return api<ApparatBulkResponse>('/facility/apparats/bulk', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify({ ids })
+	});
 }
 
 // ============================================================================

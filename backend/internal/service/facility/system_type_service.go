@@ -73,8 +73,8 @@ func (s *SystemTypeService) validateRequiredFields(systemType *domainFacility.Sy
 		ve = ve.Add("systemtype.name", "name must be 150 characters or less")
 	}
 
-	if systemType.NumberMin >= systemType.NumberMax {
-		ve = ve.Add("systemtype.number_max", "number_max must be greater than number_min")
+	if systemType.NumberMin > systemType.NumberMax {
+		ve = ve.Add("systemtype.number_max", "number_max must be greater than or equal to number_min")
 	}
 
 	if len(ve.Fields) > 0 {
@@ -95,17 +95,15 @@ func (s *SystemTypeService) ensureUnique(systemType *domainFacility.SystemType, 
 		}
 	}
 
-	if systemType.NumberMin < systemType.NumberMax {
-		exists, err := s.repo.ExistsRange(systemType.NumberMin, systemType.NumberMax, excludeID)
-		if err != nil {
-			return err
-		}
-		if exists {
-			return domain.NewValidationError().Add(
-				"systemtype.number_min",
-				"number_min and number_max range must be unique",
-			)
-		}
+	exists, err := s.repo.ExistsOverlappingRange(systemType.NumberMin, systemType.NumberMax, excludeID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return domain.NewValidationError().Add(
+			"systemtype.number_min",
+			"number_min and number_max range must not overlap existing ranges",
+		)
 	}
 
 	return nil

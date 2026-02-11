@@ -21,6 +21,8 @@
 		someSelected: boolean;
 		onToggleSelect: (id: string) => void;
 		onToggleSelectAll: () => void;
+		onCopy: (value: string) => void;
+		onDelete: (device: FieldDevice) => void;
 	}
 
 	let {
@@ -34,7 +36,9 @@
 		allSelected,
 		someSelected,
 		onToggleSelect,
-		onToggleSelectAll
+		onToggleSelectAll,
+		onCopy,
+		onDelete
 	}: Props = $props();
 
 	let expandedBacnetRows = $state<Set<string>>(new Set());
@@ -62,7 +66,7 @@
 </script>
 
 <div class="rounded-lg border bg-background">
-	<Table.Root>
+	<Table.Root class="[&_td]:p-2 [&_th]:h-10 [&_th]:px-2">
 		<Table.Header>
 			<Table.Row>
 				<!-- Selection Checkbox -->
@@ -107,8 +111,6 @@
 					<Table.Head class="text-xs">Power</Table.Head>
 					<Table.Head class="text-xs">Rotation</Table.Head>
 				{/if}
-				<Table.Head class="w-28">Created</Table.Head>
-				<Table.Head class="w-24">Actions</Table.Head>
 			</Table.Row>
 		</Table.Header>
 		<Table.Body>
@@ -146,6 +148,8 @@
 						isExpanded={expandedBacnetRows.has(device.id)}
 						{loading}
 						{editing}
+						{onCopy}
+						{onDelete}
 						onToggleSelect={() => onToggleSelect(device.id)}
 						onToggleExpansion={() => toggleRowExpansion(device.id)}
 					/>
@@ -167,14 +171,14 @@
 											{device.bacnet_objects?.length || 0} object(s)
 										</span>
 									</div>
-										<BacnetObjectsEditor
+									<BacnetObjectsEditor
 										bacnetObjects={device.bacnet_objects ?? []}
 										pendingEdits={editing.getBacnetPendingEdits(device.id)}
 										fieldErrors={editing.getBacnetFieldErrors(device.id)}
 										clientErrors={editing.getBacnetClientErrors(device.id)}
-											onEdit={(objectId, field, value) => {
-												editing.queueBacnetEdit(device.id, objectId, field, value);
-											}}
+										onEdit={(objectId, field, value) => {
+											editing.queueBacnetEdit(device.id, objectId, field, value);
+										}}
 									/>
 								</div>
 							</Table.Cell>

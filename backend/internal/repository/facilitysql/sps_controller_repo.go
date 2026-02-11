@@ -118,19 +118,6 @@ func (r *spsControllerRepo) ListGADevicesByControlCabinetID(controlCabinetID uui
 	return devices, nil
 }
 
-func (r *spsControllerRepo) ListGADevicesByControlCabinetID(controlCabinetID uuid.UUID) ([]string, error) {
-	var devices []string
-	err := r.db.Model(&domainFacility.SPSController{}).
-		Where("deleted_at IS NULL").
-		Where("control_cabinet_id = ?", controlCabinetID).
-		Where("ga_device IS NOT NULL").
-		Pluck("ga_device", &devices).Error
-	if err != nil {
-		return nil, err
-	}
-	return devices, nil
-}
-
 func (r *spsControllerRepo) ExistsGADevice(controlCabinetID uuid.UUID, gaDevice string, excludeID *uuid.UUID) (bool, error) {
 	query := r.db.Model(&domainFacility.SPSController{}).
 		Where("deleted_at IS NULL").

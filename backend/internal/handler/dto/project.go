@@ -10,18 +10,18 @@ import (
 // Project DTOs
 
 type CreateProjectRequest struct {
-	Name        string     `json:"name" binding:"required,min=1,max=255"`
-	Description string     `json:"description"`
-	Status      string     `json:"status" binding:"omitempty,oneof=planned ongoing completed"`
-	StartDate   *time.Time `json:"start_date"`
-	PhaseID     uuid.UUID  `json:"phase_id" binding:"required"`
+	Name        string         `json:"name" binding:"required,min=1,max=255"`
+	Description string         `json:"description"`
+	Status      string         `json:"status" binding:"omitempty,oneof=planned ongoing completed"`
+	StartDate   *SwissDateTime `json:"start_date"`
+	PhaseID     uuid.UUID      `json:"phase_id" binding:"required"`
 }
 
 type UpdateProjectRequest struct {
 	Name        string                `json:"name" binding:"omitempty,min=1,max=255"`
 	Description string                `json:"description"`
 	Status      project.ProjectStatus `json:"status" binding:"omitempty,oneof=planned ongoing completed"`
-	StartDate   *time.Time            `json:"start_date"`
+	StartDate   *SwissDateTime        `json:"start_date"`
 	PhaseID     *uuid.UUID            `json:"phase_id"`
 }
 

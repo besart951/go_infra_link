@@ -13,10 +13,50 @@
 	import { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
-	import { deleteSPSController } from '$lib/infrastructure/api/facility.adapter.js';
+	import {
+		deleteSPSController,
+		getControlCabinets
+	} from '$lib/infrastructure/api/facility.adapter.js';
+	import type { ControlCabinet } from '$lib/domain/facility/index.js';
 
 	let showForm = $state(false);
 	let editingItem: SPSController | undefined = $state(undefined);
+	let cabinetMap = $state(new Map<string, string>());
+	const cabinetRequests = new Set<string>();
+
+	function updateCabinetMap(cabinets: ControlCabinet[]) {
+		const next = new Map(cabinetMap);
+		for (const cabinet of cabinets) {
+			next.set(cabinet.id, cabinet.control_cabinet_nr ?? cabinet.id);
+		}
+		cabinetMap = next;
+	}
+
+	function getCabinetLabel(cabinetId: string): string {
+		return cabinetMap.get(cabinetId) ?? cabinetId;
+	}
+
+	async function ensureCabinetLabels(items: SPSController[]) {
+		const uniqueIds = new Set(
+			items.map((item) => item.control_cabinet_id).filter((id): id is string => Boolean(id))
+		);
+		const missingIds = Array.from(uniqueIds).filter(
+			(id) => !cabinetMap.has(id) && !cabinetRequests.has(id)
+		);
+
+		if (missingIds.length === 0) return;
+
+		missingIds.forEach((id) => cabinetRequests.add(id));
+
+		try {
+			const res = await getControlCabinets(missingIds);
+			updateCabinetMap(res.items || []);
+		} catch (err) {
+			console.error('Failed to load control cabinets:', err);
+		} finally {
+			missingIds.forEach((id) => cabinetRequests.delete(id));
+		}
+	}
 
 	function handleEdit(item: SPSController) {
 		editingItem = item;
@@ -68,6 +108,13 @@
 	onMount(() => {
 		spsControllersStore.load();
 	});
+
+	$effect(() => {
+		const items = $spsControllersStore.items;
+		if (items.length > 0) {
+			void ensureCabinetLabels(items);
+		}
+	});
 </script>
 
 <svelte:head>
@@ -104,7 +151,7 @@
 			{ key: 'device_name', label: 'Device Name' },
 			{ key: 'ga_device', label: 'GA Device' },
 			{ key: 'ip_address', label: 'IP Address' },
-			{ key: 'cabinet', label: 'Cabinet' },
+			{ key: 'cabinet', label: 'Cabinet Nr' },
 			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
 		searchPlaceholder="Search SPS controllers..."
@@ -129,7 +176,7 @@
 					-
 				{/if}
 			</Table.Cell>
-			<Table.Cell>{controller.control_cabinet_id}</Table.Cell>
+			<Table.Cell>{getCabinetLabel(controller.control_cabinet_id)}</Table.Cell>
 			<Table.Cell class="text-right">
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>

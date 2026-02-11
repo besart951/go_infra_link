@@ -6,6 +6,7 @@
 	import { createFieldDeviceStore } from '$lib/stores/facility/fieldDeviceStore.js';
 	import {
 		bulkDeleteFieldDevices,
+		deleteFieldDevice,
 		listApparats,
 		listSystemParts
 	} from '$lib/infrastructure/api/facility.adapter.js';
@@ -51,9 +52,7 @@
 	const allSelected = $derived(
 		$store.items.length > 0 && $store.items.every((d) => selectedIds.has(d.id))
 	);
-	const someSelected = $derived(
-		$store.items.some((d) => selectedIds.has(d.id)) && !allSelected
-	);
+	const someSelected = $derived($store.items.some((d) => selectedIds.has(d.id)) && !allSelected);
 	const selectedCount = $derived(selectedIds.size);
 
 	// Auto-hide bulk edit panel when nothing is selected
@@ -169,6 +168,29 @@
 		}
 	}
 
+	async function handleCopy(value: string) {
+		try {
+			await navigator.clipboard.writeText(value);
+		} catch (error) {
+			console.error('Failed to copy to clipboard:', error);
+		}
+	}
+
+	async function handleDelete(device: FieldDevice) {
+		if (!confirm(`Delete ${device.bmk ?? device.id}? This action cannot be undone.`)) return;
+		try {
+			await deleteFieldDevice(device.id);
+			addToast('Field device deleted', 'success');
+			const nextSelected = new Set(selectedIds);
+			nextSelected.delete(device.id);
+			selectedIds = nextSelected;
+			store.reload();
+		} catch (error: unknown) {
+			const err = error as Error;
+			addToast(`Delete failed: ${err.message}`, 'error');
+		}
+	}
+
 	// Bulk edit toggle
 	function toggleBulkEdit() {
 		showBulkEditPanel = !showBulkEditPanel;
@@ -221,10 +243,7 @@
 	{/if}
 
 	<!-- Filter Card -->
-	<FieldDeviceFilterCard
-		onApplyFilters={handleApplyFilters}
-		onClearFilters={handleClearFilters}
-	/>
+	<FieldDeviceFilterCard onApplyFilters={handleApplyFilters} onClearFilters={handleClearFilters} />
 
 	<!-- Data Table with Expandable Rows and Selection -->
 	<div class="flex flex-col gap-4">
@@ -273,6 +292,8 @@
 			{editing}
 			{allSelected}
 			{someSelected}
+			onCopy={handleCopy}
+			onDelete={handleDelete}
 			onToggleSelect={toggleSelect}
 			onToggleSelectAll={toggleSelectAll}
 		/>
@@ -289,9 +310,5 @@
 	</div>
 
 	<!-- Floating Save Bar -->
-	<FieldDeviceFloatingSaveBar
-		{editing}
-		onSave={handleSave}
-		onDiscard={handleDiscard}
-	/>
+	<FieldDeviceFloatingSaveBar {editing} onSave={handleSave} onDiscard={handleDiscard} />
 </div>

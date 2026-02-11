@@ -77,11 +77,11 @@ func (r *systemTypeRepo) ExistsName(name string, excludeID *uuid.UUID) (bool, er
 	return count > 0, nil
 }
 
-func (r *systemTypeRepo) ExistsRange(numberMin, numberMax int, excludeID *uuid.UUID) (bool, error) {
+func (r *systemTypeRepo) ExistsOverlappingRange(numberMin, numberMax int, excludeID *uuid.UUID) (bool, error) {
 	query := r.db.Model(&domainFacility.SystemType{}).
 		Where("deleted_at IS NULL").
-		Where("number_min = ?", numberMin).
-		Where("number_max = ?", numberMax)
+		Where("number_min <= ?", numberMax).
+		Where("number_max >= ?", numberMin)
 
 	if excludeID != nil {
 		query = query.Where("id <> ?", *excludeID)

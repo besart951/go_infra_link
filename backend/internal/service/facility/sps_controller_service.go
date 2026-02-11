@@ -85,6 +85,18 @@ func (s *SPSControllerService) GetByID(id uuid.UUID) (*domainFacility.SPSControl
 	return spsControllers[0], nil
 }
 
+func (s *SPSControllerService) GetByIDs(ids []uuid.UUID) ([]domainFacility.SPSController, error) {
+	spsControllers, err := s.repo.GetByIds(ids)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]domainFacility.SPSController, len(spsControllers))
+	for i, item := range spsControllers {
+		items[i] = *item
+	}
+	return items, nil
+}
+
 func (s *SPSControllerService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSController], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
 	return s.repo.GetPaginatedList(domain.PaginationParams{
@@ -319,14 +331,6 @@ func (s *SPSControllerService) nextAvailableGADevice(controlCabinetID uuid.UUID)
 	}
 
 	return "", nil
-}
-
-func gaDeviceFromIndex(index int) string {
-	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	first := index % 26
-	second := (index / 26) % 26
-	third := (index / (26 * 26)) % 26
-	return string([]byte{alphabet[first], alphabet[second], alphabet[third]})
 }
 
 func (s *SPSControllerService) validateRequiredFields(spsController *domainFacility.SPSController) error {

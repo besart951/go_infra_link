@@ -3,7 +3,9 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { EditableCell } from '$lib/components/ui/editable-cell/index.js';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { ChevronDown, ChevronRight } from '@lucide/svelte';
+	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
 	import TableApparatSelect from '$lib/components/facility/TableApparatSelect.svelte';
 	import TableSystemPartSelect from '$lib/components/facility/TableSystemPartSelect.svelte';
 	import type { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
@@ -20,6 +22,8 @@
 		editing: ReturnType<typeof useFieldDeviceEditing>;
 		onToggleSelect: () => void;
 		onToggleExpansion: () => void;
+		onCopy: (value: string) => void;
+		onDelete: (device: FieldDevice) => void;
 	}
 
 	let {
@@ -32,7 +36,9 @@
 		loading,
 		editing,
 		onToggleSelect,
-		onToggleExpansion
+		onToggleExpansion,
+		onCopy,
+		onDelete
 	}: Props = $props();
 
 	function formatSPSControllerSystemType(dev: FieldDevice): string {
@@ -61,9 +67,7 @@
 </script>
 
 <Table.Row
-	class={[loading ? 'opacity-60' : '', isSelected ? 'bg-muted/50' : '']
-		.filter(Boolean)
-		.join(' ')}
+	class={[loading ? 'opacity-60' : '', isSelected ? 'bg-muted/50' : ''].filter(Boolean).join(' ')}
 >
 	<!-- Selection Checkbox -->
 	<Table.Cell class="p-2">
@@ -159,15 +163,9 @@
 	<!-- Specification indicator -->
 	<Table.Cell class="text-center">
 		{#if device.specification}
-			<span
-				class="inline-block h-2 w-2 rounded-full bg-green-500"
-				title="Has specification"
-			></span>
+			<span class="inline-block h-2 w-2 rounded-full bg-green-500" title="Has specification"></span>
 		{:else}
-			<span
-				class="inline-block h-2 w-2 rounded-full bg-gray-300"
-				title="No specification"
-			></span>
+			<span class="inline-block h-2 w-2 rounded-full bg-gray-300" title="No specification"></span>
 		{/if}
 	</Table.Cell>
 	<!-- Specification columns (shown when toggled) -->
@@ -228,11 +226,7 @@
 				error={editing.getFieldError(device.id, 'additional_info_size')}
 				type="number"
 				onSave={(v) => {
-					editing.queueSpecEdit(
-						device.id,
-						'additional_info_size',
-						v ? parseInt(v) : undefined
-					);
+					editing.queueSpecEdit(device.id, 'additional_info_size', v ? parseInt(v) : undefined);
 				}}
 			/>
 		</Table.Cell>
@@ -247,10 +241,7 @@
 					device.id,
 					'additional_information_installation_location'
 				)}
-				error={editing.getFieldError(
-					device.id,
-					'additional_information_installation_location'
-				)}
+				error={editing.getFieldError(device.id, 'additional_information_installation_location')}
 				maxlength={250}
 				onSave={(v) => {
 					editing.queueSpecEdit(
@@ -269,11 +260,7 @@
 				error={editing.getFieldError(device.id, 'electrical_connection_ph')}
 				type="number"
 				onSave={(v) => {
-					editing.queueSpecEdit(
-						device.id,
-						'electrical_connection_ph',
-						v ? parseInt(v) : undefined
-					);
+					editing.queueSpecEdit(device.id, 'electrical_connection_ph', v ? parseInt(v) : undefined);
 				}}
 			/>
 		</Table.Cell>
@@ -293,10 +280,7 @@
 		<Table.Cell class="text-xs">
 			<EditableCell
 				value={device.specification?.electrical_connection_amperage?.toString() || ''}
-				pendingValue={editing.getPendingSpecValue(
-					device.id,
-					'electrical_connection_amperage'
-				)}
+				pendingValue={editing.getPendingSpecValue(device.id, 'electrical_connection_amperage')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_amperage')}
 				error={editing.getFieldError(device.id, 'electrical_connection_amperage')}
 				type="number"
@@ -330,10 +314,7 @@
 		<Table.Cell class="text-xs">
 			<EditableCell
 				value={device.specification?.electrical_connection_rotation?.toString() || ''}
-				pendingValue={editing.getPendingSpecValue(
-					device.id,
-					'electrical_connection_rotation'
-				)}
+				pendingValue={editing.getPendingSpecValue(device.id, 'electrical_connection_rotation')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_rotation')}
 				error={editing.getFieldError(device.id, 'electrical_connection_rotation')}
 				type="number"
@@ -348,12 +329,30 @@
 			/>
 		</Table.Cell>
 	{/if}
-	<!-- Created -->
-	<Table.Cell>
-		{new Date(device.created_at).toLocaleDateString()}
-	</Table.Cell>
 	<!-- Actions -->
-	<Table.Cell>
-		<Button variant="ghost" size="sm">View</Button>
+	<Table.Cell class="text-right">
+		<DropdownMenu.Root>
+			<DropdownMenu.Trigger>
+				{#snippet child({ props })}
+					<Button variant="ghost" size="icon" {...props}>
+						<EllipsisIcon class="size-4" />
+					</Button>
+				{/snippet}
+			</DropdownMenu.Trigger>
+			<DropdownMenu.Content align="end" class="w-40">
+				<DropdownMenu.Item
+					onclick={() =>
+						onCopy(
+							device.bmk?.trim() || (device.apparat_nr ? String(device.apparat_nr) : device.id)
+						)}
+				>
+					Copy
+				</DropdownMenu.Item>
+				<DropdownMenu.Separator />
+				<DropdownMenu.Item variant="destructive" onclick={() => onDelete(device)}>
+					Delete
+				</DropdownMenu.Item>
+			</DropdownMenu.Content>
+		</DropdownMenu.Root>
 	</Table.Cell>
 </Table.Row>

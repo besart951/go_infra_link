@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AsyncMultiSelect from '$lib/components/ui/combobox/AsyncMultiSelect.svelte';
-	import { getApparat, listApparats } from '$lib/infrastructure/api/facility.adapter.js';
+	import { getApparats, listApparats } from '$lib/infrastructure/api/facility.adapter.js';
 	import type { Apparat } from '$lib/domain/facility/index.js';
 
 	export let value: string[] = [];
@@ -23,11 +23,9 @@
 	}
 
 	async function fetchByIds(ids: string[]): Promise<ApparatOption[]> {
-		const promises = ids.map((id) => getApparat(id));
-		const results = await Promise.allSettled(promises);
-		return results
-			.filter((r): r is PromiseFulfilledResult<Apparat> => r.status === 'fulfilled')
-			.map((r) => toOption(r.value));
+		if (ids.length === 0) return [];
+		const res = await getApparats(ids);
+		return (res.items || []).map(toOption);
 	}
 </script>
 

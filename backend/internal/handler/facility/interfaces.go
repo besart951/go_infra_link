@@ -9,6 +9,7 @@ import (
 type BuildingService interface {
 	Create(building *domainFacility.Building) error
 	GetByID(id uuid.UUID) (*domainFacility.Building, error)
+	GetByIDs(ids []uuid.UUID) ([]domainFacility.Building, error)
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.Building], error)
 	Update(building *domainFacility.Building) error
 	Validate(building *domainFacility.Building, excludeID *uuid.UUID) error
@@ -74,6 +75,7 @@ type FieldDeviceService interface {
 type ControlCabinetService interface {
 	Create(controlCabinet *domainFacility.ControlCabinet) error
 	GetByID(id uuid.UUID) (*domainFacility.ControlCabinet, error)
+	GetByIDs(ids []uuid.UUID) ([]domainFacility.ControlCabinet, error)
 	GetDeleteImpact(id uuid.UUID) (*domainFacility.ControlCabinetDeleteImpact, error)
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.ControlCabinet], error)
 	ListByBuildingID(buildingID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.ControlCabinet], error)
@@ -86,6 +88,7 @@ type SPSControllerService interface {
 	Create(spsController *domainFacility.SPSController) error
 	CreateWithSystemTypes(spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error
 	GetByID(id uuid.UUID) (*domainFacility.SPSController, error)
+	GetByIDs(ids []uuid.UUID) ([]domainFacility.SPSController, error)
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSController], error)
 	ListByControlCabinetID(controlCabinetID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSController], error)
 	Update(spsController *domainFacility.SPSController) error

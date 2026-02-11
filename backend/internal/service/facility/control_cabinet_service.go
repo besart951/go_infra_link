@@ -59,6 +59,18 @@ func (s *ControlCabinetService) GetByID(id uuid.UUID) (*domainFacility.ControlCa
 	return controlCabinets[0], nil
 }
 
+func (s *ControlCabinetService) GetByIDs(ids []uuid.UUID) ([]domainFacility.ControlCabinet, error) {
+	controlCabinets, err := s.repo.GetByIds(ids)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]domainFacility.ControlCabinet, len(controlCabinets))
+	for i, item := range controlCabinets {
+		items[i] = *item
+	}
+	return items, nil
+}
+
 func (s *ControlCabinetService) GetDeleteImpact(id uuid.UUID) (*domainFacility.ControlCabinetDeleteImpact, error) {
 	// Ensure cabinet exists
 	if _, err := s.GetByID(id); err != nil {

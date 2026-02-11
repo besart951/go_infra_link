@@ -32,3 +32,11 @@ type BuildingListResponse struct {
 	Page       int                `json:"page"`
 	TotalPages int                `json:"total_pages"`
 }
+
+type BuildingBulkRequest struct {
+	Ids []uuid.UUID `json:"ids" binding:"required,min=1,dive,required"`
+}
+
+type BuildingBulkResponse struct {
+	Items []BuildingResponse `json:"items"`
+}

@@ -169,6 +169,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 	{
 		facility.POST("/buildings/validate", handlers.FacilityValidationHandler.ValidateBuilding)
 		facility.POST("/buildings", handlers.FacilityBuildingHandler.CreateBuilding)
+		facility.POST("/buildings/bulk", handlers.FacilityBuildingHandler.GetBuildingsByIDs)
 		facility.GET("/buildings", handlers.FacilityBuildingHandler.ListBuildings)
 		facility.GET("/buildings/:id", handlers.FacilityBuildingHandler.GetBuilding)
 		facility.PUT("/buildings/:id", handlers.FacilityBuildingHandler.UpdateBuilding)
@@ -187,6 +188,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		facility.DELETE("/system-parts/:id", handlers.FacilitySystemPartHandler.DeleteSystemPart)
 
 		facility.POST("/apparats", handlers.FacilityApparatHandler.CreateApparat)
+		facility.POST("/apparats/bulk", handlers.FacilityApparatHandler.GetApparatsByIDs)
 		facility.GET("/apparats", handlers.FacilityApparatHandler.ListApparats)
 		facility.GET("/apparats/:id", handlers.FacilityApparatHandler.GetApparat)
 		facility.PUT("/apparats/:id", handlers.FacilityApparatHandler.UpdateApparat)
@@ -194,6 +196,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 
 		facility.POST("/control-cabinets/validate", handlers.FacilityValidationHandler.ValidateControlCabinet)
 		facility.POST("/control-cabinets", handlers.FacilityControlCabinetHandler.CreateControlCabinet)
+		facility.POST("/control-cabinets/bulk", handlers.FacilityControlCabinetHandler.GetControlCabinetsByIDs)
 		facility.GET("/control-cabinets", handlers.FacilityControlCabinetHandler.ListControlCabinets)
 		facility.GET("/control-cabinets/:id", handlers.FacilityControlCabinetHandler.GetControlCabinet)
 		facility.GET("/control-cabinets/:id/delete-impact", handlers.FacilityControlCabinetHandler.GetControlCabinetDeleteImpact)
@@ -219,6 +222,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 
 		facility.POST("/sps-controllers/validate", handlers.FacilityValidationHandler.ValidateSPSController)
 		facility.POST("/sps-controllers", handlers.FacilitySPSControllerHandler.CreateSPSController)
+		facility.POST("/sps-controllers/bulk", handlers.FacilitySPSControllerHandler.GetSPSControllersByIDs)
 		facility.GET("/sps-controllers", handlers.FacilitySPSControllerHandler.ListSPSControllers)
 		facility.GET("/sps-controllers/next-ga-device", handlers.FacilitySPSControllerHandler.GetNextAvailableGADevice)
 		facility.GET("/sps-controllers/:id", handlers.FacilitySPSControllerHandler.GetSPSController)

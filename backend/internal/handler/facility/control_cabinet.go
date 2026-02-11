@@ -80,6 +80,35 @@ func (h *ControlCabinetHandler) GetControlCabinet(c *gin.Context) {
 	c.JSON(http.StatusOK, toControlCabinetResponse(*controlCabinet))
 }
 
+// GetControlCabinetsByIDs godoc
+// @Summary Get multiple control cabinets by IDs
+// @Tags facility-control-cabinets
+// @Accept json
+// @Produce json
+// @Param request body dto.ControlCabinetBulkRequest true "Control Cabinet IDs"
+// @Success 200 {object} dto.ControlCabinetBulkResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/control-cabinets/bulk [post]
+func (h *ControlCabinetHandler) GetControlCabinetsByIDs(c *gin.Context) {
+	var req dto.ControlCabinetBulkRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	if len(req.Ids) == 0 {
+		respondInvalidArgument(c, "ids is required")
+		return
+	}
+
+	items, err := h.service.GetByIDs(req.Ids)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.ControlCabinetBulkResponse{Items: toControlCabinetResponses(items)})
+}
+
 // GetControlCabinetDeleteImpact godoc
 // @Summary Preview delete impact for a control cabinet
 // @Tags facility-control-cabinets

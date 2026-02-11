@@ -81,6 +81,35 @@ func (h *SPSControllerHandler) GetSPSController(c *gin.Context) {
 	c.JSON(http.StatusOK, toSPSControllerResponse(*spsController))
 }
 
+// GetSPSControllersByIDs godoc
+// @Summary Get multiple SPS controllers by IDs
+// @Tags facility-sps-controllers
+// @Accept json
+// @Produce json
+// @Param request body dto.SPSControllerBulkRequest true "SPS Controller IDs"
+// @Success 200 {object} dto.SPSControllerBulkResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/sps-controllers/bulk [post]
+func (h *SPSControllerHandler) GetSPSControllersByIDs(c *gin.Context) {
+	var req dto.SPSControllerBulkRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	if len(req.Ids) == 0 {
+		respondInvalidArgument(c, "ids is required")
+		return
+	}
+
+	items, err := h.service.GetByIDs(req.Ids)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SPSControllerBulkResponse{Items: toSPSControllerResponses(items)})
+}
+
 // ListSPSControllers godoc
 // @Summary List SPS controllers with pagination
 // @Tags facility-sps-controllers

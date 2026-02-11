@@ -6,6 +6,8 @@
 	import SystemTypeSelect from './SystemTypeSelect.svelte';
 	import {
 		createSPSController,
+		getBuilding,
+		getControlCabinet,
 		getNextSPSControllerGADevice,
 		getSystemType,
 		listSPSControllerSystemTypes,
@@ -14,9 +16,12 @@
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type {
+		Building,
+		ControlCabinet,
 		SPSController,
 		SPSControllerSystemType,
-		SPSControllerSystemTypeInput
+		SPSControllerSystemTypeInput,
+		SystemType
 	} from '$lib/domain/facility/index.js';
 	import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
 
@@ -37,11 +42,21 @@
 	let control_cabinet_id = $state('');
 	let system_type_id = $state('');
 	let systemTypes: SPSControllerSystemTypeInput[] = $state([]);
-	let systemTypeNames: Record<string, string> = $state({});
+	let systemTypeLabels: Record<string, string> = $state({});
+	let systemTypeDetails: Record<string, SystemType> = $state({});
+	let systemTypeDetailsLoading = $state(false);
 	let systemTypesLoading = $state(false);
 	let lastLoadedSystemTypesFor: string | null = $state(null);
+	let controlCabinet: ControlCabinet | null = $state(null);
+	let building: Building | null = $state(null);
+	let cabinetLoading = $state(false);
+	let buildingLoading = $state(false);
+	let lastLoadedCabinetId: string | null = $state(null);
 	let gaDeviceTouched = $state(false);
 	let lastGADeviceControlCabinetId: string | null = $state(null);
+	let nextGADevice = $state<string | null>(null);
+	let gaDeviceSuggestionLoading = $state(false);
+	let gaDeviceCheckTimer: ReturnType<typeof setTimeout> | null = null;
 
 	let loading = $state(false);
 	let error = $state('');
@@ -59,6 +74,8 @@
 		gateway = initialData.gateway ?? '';
 		vlan = initialData.vlan ?? '';
 		control_cabinet_id = initialData.control_cabinet_id;
+		gaDeviceTouched = false;
+		nextGADevice = null;
 	});
 
 	$effect(() => {
@@ -69,30 +86,50 @@
 		if (!initialData?.id && lastLoadedSystemTypesFor !== null) {
 			lastLoadedSystemTypesFor = null;
 			systemTypes = [];
-			systemTypeNames = {};
+			systemTypeLabels = {};
+		}
+	});
+
+	$effect(() => {
+		if (!control_cabinet_id) {
+			nextGADevice = null;
+			controlCabinet = null;
+			building = null;
+			device_name = '';
+			if (gaDeviceCheckTimer) {
+				clearTimeout(gaDeviceCheckTimer);
+				gaDeviceCheckTimer = null;
+			}
+			return;
+		}
+		triggerValidation();
+		if (lastGADeviceControlCabinetId !== control_cabinet_id) {
+			lastGADeviceControlCabinetId = control_cabinet_id;
+			if (!initialData) {
+				ga_device = '';
+				gaDeviceTouched = false;
+				void refreshNextGADevice(true);
+			} else {
+				void refreshNextGADevice(false);
+			}
+		} else if (!nextGADevice && !gaDeviceSuggestionLoading) {
+			void refreshNextGADevice(false);
 		}
 	});
 
 	$effect(() => {
 		if (!control_cabinet_id) return;
-		triggerValidation();
-		if (!initialData && lastGADeviceControlCabinetId !== control_cabinet_id) {
-			lastGADeviceControlCabinetId = control_cabinet_id;
-			loadNextGADevice();
-		}
+		if (lastLoadedCabinetId === control_cabinet_id) return;
+		lastLoadedCabinetId = control_cabinet_id;
+		void loadCabinetAndBuilding(control_cabinet_id);
 	});
 
 	$effect(() => {
-		if (initialData || !control_cabinet_id) return;
-		if (ga_device.trim() === '' && gaDeviceTouched) {
-			loadNextGADevice(true);
-		}
-	});
-
-	$effect(() => {
-		if (initialData || !control_cabinet_id) return;
-		if (combinedFieldError('ga_device')) {
-			loadNextGADevice(true);
+		const nextName = buildDeviceName(controlCabinet, building, ga_device);
+		if (nextName === null) return;
+		if (nextName !== device_name) {
+			device_name = nextName;
+			triggerValidation();
 		}
 	});
 
@@ -100,6 +137,11 @@
 	const liveFieldError = (name: string) =>
 		getFieldError(liveValidation.fieldErrors, name, ['spscontroller']);
 	const combinedFieldError = (name: string) => liveFieldError(name) || fieldError(name);
+	const gaDeviceIsSuboptimal = $derived.by(() => {
+		if (!gaDeviceTouched || !nextGADevice) return false;
+		const current = ga_device.trim().toUpperCase();
+		return current !== '' && current !== nextGADevice;
+	});
 
 	function triggerValidation() {
 		if (!control_cabinet_id) return;
@@ -115,20 +157,50 @@
 		});
 	}
 
-	async function loadNextGADevice(force = false) {
-		if (!control_cabinet_id || initialData) return;
-		if (!force && gaDeviceTouched && ga_device.trim() !== '') return;
+	function scheduleNextGADeviceCheck() {
+		if (!control_cabinet_id) return;
+		if (gaDeviceCheckTimer) {
+			clearTimeout(gaDeviceCheckTimer);
+		}
+		gaDeviceCheckTimer = setTimeout(() => {
+			gaDeviceCheckTimer = null;
+			void refreshNextGADevice(false);
+		}, 400);
+	}
+
+	async function fetchNextGADevice(): Promise<string | null> {
+		if (!control_cabinet_id) return null;
+		gaDeviceSuggestionLoading = true;
 		try {
-			const res = await getNextSPSControllerGADevice(
-				control_cabinet_id,
-				initialData?.id
-			);
-			if (res?.ga_device) {
-				ga_device = res.ga_device;
-				triggerValidation();
-			}
+			const res = await getNextSPSControllerGADevice(control_cabinet_id, initialData?.id);
+			nextGADevice = res?.ga_device ?? null;
+			return nextGADevice;
 		} catch (e) {
 			console.error(e);
+			return null;
+		} finally {
+			gaDeviceSuggestionLoading = false;
+		}
+	}
+
+	async function refreshNextGADevice(applyIfEmpty: boolean) {
+		const next = await fetchNextGADevice();
+		if (applyIfEmpty && next) {
+			ga_device = next;
+			gaDeviceTouched = false;
+			triggerValidation();
+		}
+	}
+
+	async function applySuggestedGADevice() {
+		if (!control_cabinet_id) return;
+		if (!nextGADevice) {
+			await refreshNextGADevice(false);
+		}
+		if (nextGADevice) {
+			ga_device = nextGADevice;
+			gaDeviceTouched = false;
+			triggerValidation();
 		}
 	}
 
@@ -141,18 +213,23 @@
 				limit: 100,
 				sps_controller_id: initialData.id
 			});
-			const names: Record<string, string> = {};
-			systemTypes = (res.items ?? []).map((item: SPSControllerSystemType) => {
+			const items = res.items ?? [];
+			const labelFallbacks: Record<string, string> = {};
+			const uniqueIds = Array.from(
+				new Set(items.map((item) => item.system_type_id).filter(Boolean))
+			);
+			items.forEach((item) => {
 				if (item.system_type_name) {
-					names[item.system_type_id] = item.system_type_name;
+					labelFallbacks[item.system_type_id] = item.system_type_name;
 				}
-				return {
-					system_type_id: item.system_type_id,
-					number: item.number ?? undefined,
-					document_name: item.document_name ?? undefined
-				};
 			});
-			systemTypeNames = names;
+			systemTypes = items.map((item: SPSControllerSystemType) => ({
+				system_type_id: item.system_type_id,
+				number: item.number ?? undefined,
+				document_name: item.document_name ?? undefined
+			}));
+			systemTypeLabels = await buildSystemTypeLabels(uniqueIds, labelFallbacks);
+			await Promise.all(uniqueIds.map((id) => ensureSystemTypeDetails(id)));
 		} catch (e) {
 			console.error(e);
 		} finally {
@@ -160,25 +237,126 @@
 		}
 	}
 
+	$effect(() => {
+		if (!system_type_id) return;
+		if (systemTypeDetails[system_type_id]) return;
+		void ensureSystemTypeDetails(system_type_id);
+	});
+
 	async function addSystemType() {
 		if (!system_type_id) {
 			return;
 		}
 		try {
-			const systemType = await getSystemType(system_type_id);
-			systemTypeNames = {
-				...systemTypeNames,
-				[system_type_id]: systemType.name
+			const systemType = await ensureSystemTypeDetails(system_type_id);
+			if (!systemType) return;
+			systemTypeLabels = {
+				...systemTypeLabels,
+				[system_type_id]: buildSystemTypeLabel(
+					systemType.name,
+					systemType.number_min,
+					systemType.number_max
+				)
 			};
+			const nextNumber = getNextAvailableSystemTypeNumber(
+				system_type_id,
+				systemType.number_min,
+				systemType.number_max
+			);
+			if (nextNumber == null) {
+				return;
+			}
+			systemTypes = [
+				...systemTypes,
+				{
+					system_type_id,
+					number: nextNumber
+				}
+			];
 		} catch (e) {
 			console.error(e);
 		}
-		systemTypes = [
-			...systemTypes,
-			{
-				system_type_id
+	}
+
+	function formatNumber(value: number): string {
+		return String(value).padStart(4, '0');
+	}
+
+	function buildSystemTypeLabel(name: string, min: number, max: number): string {
+		return `${name} (${formatNumber(min)}-${formatNumber(max)})`;
+	}
+
+	async function ensureSystemTypeDetails(id: string): Promise<SystemType | null> {
+		if (systemTypeDetails[id]) return systemTypeDetails[id];
+		systemTypeDetailsLoading = true;
+		try {
+			const systemType = await getSystemType(id);
+			systemTypeDetails = { ...systemTypeDetails, [id]: systemType };
+			return systemType;
+		} catch (e) {
+			console.error(e);
+			return null;
+		} finally {
+			systemTypeDetailsLoading = false;
+		}
+	}
+
+	function buildDeviceName(
+		cabinet: ControlCabinet | null,
+		cabinetBuilding: Building | null,
+		gaDeviceValue: string
+	): string | null {
+		const ga = gaDeviceValue.trim();
+		if (!ga) return '';
+		const iwsCode = cabinetBuilding?.iws_code?.trim();
+		const cabinetNr = cabinet?.control_cabinet_nr?.trim();
+		if (!iwsCode || !cabinetNr) return null;
+		return `${iwsCode}_${cabinetNr}_${ga}`;
+	}
+
+	async function loadCabinetAndBuilding(cabinetId: string) {
+		cabinetLoading = true;
+		buildingLoading = true;
+		try {
+			const cabinet = await getControlCabinet(cabinetId);
+			if (control_cabinet_id !== cabinetId) return;
+			controlCabinet = cabinet;
+			if (!cabinet?.building_id) {
+				building = null;
+				return;
 			}
-		];
+			const b = await getBuilding(cabinet.building_id);
+			if (control_cabinet_id !== cabinetId) return;
+			building = b;
+		} catch (e) {
+			console.error(e);
+			controlCabinet = null;
+			building = null;
+		} finally {
+			cabinetLoading = false;
+			buildingLoading = false;
+		}
+	}
+
+	async function buildSystemTypeLabels(
+		ids: string[],
+		fallbacks: Record<string, string>
+	): Promise<Record<string, string>> {
+		const entries = await Promise.all(
+			ids.map(async (id) => {
+				try {
+					const systemType = await getSystemType(id);
+					return [
+						id,
+						buildSystemTypeLabel(systemType.name, systemType.number_min, systemType.number_max)
+					] as const;
+				} catch (error) {
+					console.error('Failed to load system type details:', error);
+					return [id, fallbacks[id] ?? id] as const;
+				}
+			})
+		);
+		return Object.fromEntries(entries);
 	}
 
 	function removeSystemType(index: number) {
@@ -200,6 +378,54 @@
 		});
 	}
 
+	function getNextAvailableSystemTypeNumber(
+		systemTypeId: string,
+		min: number,
+		max: number
+	): number | null {
+		const usedNumbers = new Set(
+			systemTypes
+				.filter((item) => item.system_type_id === systemTypeId)
+				.map((item) => item.number)
+				.filter((value): value is number => typeof value === 'number')
+		);
+		for (let number = min; number <= max; number += 1) {
+			if (!usedNumbers.has(number)) return number;
+		}
+		return null;
+	}
+
+	const systemTypeAddState = $derived.by(() => {
+		if (!system_type_id) {
+			return { disabled: true, tooltip: 'Select a system type first.' };
+		}
+		const details = systemTypeDetails[system_type_id];
+		if (!details) {
+			return {
+				disabled: true,
+				tooltip: systemTypeDetailsLoading
+					? 'Loading system type details...'
+					: 'Loading system type.'
+			};
+		}
+		const rangeSize = details.number_max - details.number_min + 1;
+		const usedNumbers = new Set(
+			systemTypes
+				.filter(
+					(item) =>
+						item.system_type_id === system_type_id &&
+						typeof item.number === 'number' &&
+						item.number >= details.number_min &&
+						item.number <= details.number_max
+				)
+				.map((item) => item.number as number)
+		);
+		if (usedNumbers.size >= rangeSize) {
+			return { disabled: true, tooltip: 'All numbers are used for this system type.' };
+		}
+		return { disabled: false, tooltip: 'Add next available number.' };
+	});
+
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
 		loading = true;
@@ -218,7 +444,7 @@
 					id: initialData.id,
 					ga_device,
 					device_name,
-					ip_address,
+					ip_address: ip_address || undefined,
 					subnet: subnet || undefined,
 					gateway: gateway || undefined,
 					vlan: vlan || undefined,
@@ -230,7 +456,7 @@
 				const res = await createSPSController({
 					ga_device,
 					device_name,
-					ip_address,
+					ip_address: ip_address || undefined,
 					subnet: subnet || undefined,
 					gateway: gateway || undefined,
 					vlan: vlan || undefined,
@@ -256,158 +482,194 @@
 		</h3>
 	</div>
 
-	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-		<div class="space-y-2">
-			<Label for="ga_device">GA Device</Label>
-			<Input
-				id="ga_device"
-				value={ga_device}
-				required
-				maxlength={3}
-				oninput={(e) => {
-					ga_device = (e.target as HTMLInputElement).value.toUpperCase();
-					gaDeviceTouched = true;
-					if (ga_device.trim() === '') {
-						loadNextGADevice(true);
-					}
-					triggerValidation();
-				}}
-			/>
-			{#if combinedFieldError('ga_device')}
-				<p class="text-sm text-red-500">{combinedFieldError('ga_device')}</p>
-			{/if}
+	<div class="space-y-2">
+		<Label>Control Cabinet</Label>
+		<div class="block">
+			<ControlCabinetSelect bind:value={control_cabinet_id} width="w-full" />
 		</div>
-		<div class="space-y-2">
-			<Label for="device_name">Device Name</Label>
-			<Input
-				id="device_name"
-				bind:value={device_name}
-				required
-				maxlength={100}
-				oninput={triggerValidation}
-			/>
-			{#if combinedFieldError('device_name')}
-				<p class="text-sm text-red-500">{combinedFieldError('device_name')}</p>
-			{/if}
-		</div>
-		<div class="space-y-2">
-			<Label for="ip_address">IP Address</Label>
-			<Input
-				id="ip_address"
-				bind:value={ip_address}
-				required
-				maxlength={50}
-				oninput={triggerValidation}
-			/>
-			{#if combinedFieldError('ip_address')}
-				<p class="text-sm text-red-500">{combinedFieldError('ip_address')}</p>
-			{/if}
-		</div>
-		<div class="space-y-2">
-			<Label for="subnet">Subnet Mask</Label>
-			<Input id="subnet" bind:value={subnet} maxlength={50} oninput={triggerValidation} />
-			{#if combinedFieldError('subnet')}
-				<p class="text-sm text-red-500">{combinedFieldError('subnet')}</p>
-			{/if}
-		</div>
-		<div class="space-y-2">
-			<Label for="gateway">Gateway</Label>
-			<Input id="gateway" bind:value={gateway} maxlength={50} oninput={triggerValidation} />
-			{#if combinedFieldError('gateway')}
-				<p class="text-sm text-red-500">{combinedFieldError('gateway')}</p>
-			{/if}
-		</div>
-		<div class="space-y-2">
-			<Label for="vlan">VLAN</Label>
-			<Input id="vlan" bind:value={vlan} maxlength={50} oninput={triggerValidation} />
-			{#if combinedFieldError('vlan')}
-				<p class="text-sm text-red-500">{combinedFieldError('vlan')}</p>
-			{/if}
-		</div>
-
-		<div class="space-y-2">
-			<Label>Control Cabinet</Label>
-			<div class="block">
-				<ControlCabinetSelect bind:value={control_cabinet_id} width="w-full" />
-			</div>
-			{#if combinedFieldError('control_cabinet_id')}
-				<p class="text-sm text-red-500">{combinedFieldError('control_cabinet_id')}</p>
-			{/if}
-		</div>
+		{#if combinedFieldError('control_cabinet_id')}
+			<p class="text-sm text-red-500">{combinedFieldError('control_cabinet_id')}</p>
+		{:else if !control_cabinet_id}
+			<p class="text-sm text-muted-foreground">
+				Select a control cabinet to unlock the remaining fields.
+			</p>
+		{/if}
 	</div>
 
-	<div class="space-y-3 pt-4">
-		<div class="flex items-center justify-between border-t pt-4">
-			<div>
-				<h4 class="text-base font-medium">System Types</h4>
-				<p class="text-sm text-muted-foreground">Assign system types to this SPS controller</p>
+	{#if control_cabinet_id}
+		<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+			<div class="space-y-2">
+				<Label for="ga_device" class="flex items-center gap-2">
+					GA Device
+					<span
+						class="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[10px] text-muted-foreground"
+						title="Yellow means there is a lower unused GA device available. You can keep your value or press 'Use next'."
+					>
+						i
+					</span>
+				</Label>
+				<div class="flex items-start gap-2">
+					<Input
+						id="ga_device"
+						value={ga_device}
+						required
+						maxlength={3}
+						class={`flex-1 ${
+							gaDeviceIsSuboptimal
+								? 'border-yellow-400 bg-yellow-50/60 focus-visible:ring-yellow-300'
+								: ''
+						}`}
+						oninput={(e) => {
+							ga_device = (e.target as HTMLInputElement).value.toUpperCase();
+							gaDeviceTouched = true;
+							triggerValidation();
+							scheduleNextGADeviceCheck();
+						}}
+					/>
+					{#if gaDeviceIsSuboptimal}
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							class="mt-1"
+							onclick={applySuggestedGADevice}
+						>
+							Use next
+						</Button>
+					{/if}
+				</div>
+				{#if gaDeviceIsSuboptimal && nextGADevice}
+					<p class="text-xs text-yellow-700">
+						Lowest available is {nextGADevice}.
+					</p>
+				{/if}
+				{#if gaDeviceSuggestionLoading}
+					<p class="text-xs text-muted-foreground">Checking lowest available GA device...</p>
+				{/if}
+				{#if combinedFieldError('ga_device')}
+					<p class="text-sm text-red-500">{combinedFieldError('ga_device')}</p>
+				{/if}
 			</div>
-			<div class="flex items-center gap-2">
-				<SystemTypeSelect bind:value={system_type_id} width="w-[250px]" />
-				<Button
-					type="button"
-					variant="outline"
-					size="sm"
-					onclick={addSystemType}
-					disabled={!system_type_id}
-				>
-					Add
-				</Button>
+			<div class="space-y-2">
+				<Label for="device_name">Device Name</Label>
+				<Input
+					id="device_name"
+					bind:value={device_name}
+					disabled
+					readonly
+					required
+					maxlength={100}
+				/>
+				{#if cabinetLoading || buildingLoading}
+					<p class="text-xs text-muted-foreground">Loading device name...</p>
+				{/if}
+				{#if combinedFieldError('device_name')}
+					<p class="text-sm text-red-500">{combinedFieldError('device_name')}</p>
+				{/if}
+			</div>
+			<div class="space-y-2">
+				<Label for="ip_address">IP Address</Label>
+				<Input id="ip_address" bind:value={ip_address} maxlength={50} oninput={triggerValidation} />
+				{#if combinedFieldError('ip_address')}
+					<p class="text-sm text-red-500">{combinedFieldError('ip_address')}</p>
+				{/if}
+			</div>
+			<div class="space-y-2">
+				<Label for="subnet">Subnet Mask</Label>
+				<Input id="subnet" bind:value={subnet} maxlength={50} oninput={triggerValidation} />
+				{#if combinedFieldError('subnet')}
+					<p class="text-sm text-red-500">{combinedFieldError('subnet')}</p>
+				{/if}
+			</div>
+			<div class="space-y-2">
+				<Label for="gateway">Gateway</Label>
+				<Input id="gateway" bind:value={gateway} maxlength={50} oninput={triggerValidation} />
+				{#if combinedFieldError('gateway')}
+					<p class="text-sm text-red-500">{combinedFieldError('gateway')}</p>
+				{/if}
+			</div>
+			<div class="space-y-2">
+				<Label for="vlan">VLAN</Label>
+				<Input id="vlan" bind:value={vlan} maxlength={50} oninput={triggerValidation} />
+				{#if combinedFieldError('vlan')}
+					<p class="text-sm text-red-500">{combinedFieldError('vlan')}</p>
+				{/if}
 			</div>
 		</div>
 
-		{#if systemTypesLoading}
-			<p class="text-sm text-muted-foreground">Loading system types...</p>
-		{:else if systemTypes.length === 0}
-			<div class="rounded-md border border-dashed p-6 text-center">
-				<p class="text-sm text-muted-foreground">No system types added yet.</p>
+		<div class="space-y-3 pt-4">
+			<div class="flex items-center justify-between border-t pt-4">
+				<div>
+					<h4 class="text-base font-medium">System Types</h4>
+					<p class="text-sm text-muted-foreground">Assign system types to this SPS controller</p>
+				</div>
+				<div class="flex items-center gap-2">
+					<SystemTypeSelect bind:value={system_type_id} width="w-[250px]" />
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						onclick={addSystemType}
+						disabled={systemTypeAddState.disabled}
+						title={systemTypeAddState.tooltip}
+					>
+						Add
+					</Button>
+				</div>
 			</div>
-		{:else}
-			<div class="max-h-80 space-y-2 overflow-y-auto pr-1">
-				{#each systemTypes as st, index (index)}
-					<div class="grid grid-cols-1 gap-3 rounded-md border p-3 md:grid-cols-12">
-						<div class="md:col-span-4">
-							<div class="text-xs text-muted-foreground">System Type</div>
-							<div class="text-sm font-medium">
-								{systemTypeNames[st.system_type_id] ?? st.system_type_id}
+
+			{#if systemTypesLoading}
+				<p class="text-sm text-muted-foreground">Loading system types...</p>
+			{:else if systemTypes.length === 0}
+				<div class="rounded-md border border-dashed p-6 text-center">
+					<p class="text-sm text-muted-foreground">No system types added yet.</p>
+				</div>
+			{:else}
+				<div class="max-h-80 space-y-2 overflow-y-auto pr-1">
+					{#each systemTypes as st, index (index)}
+						<div class="grid grid-cols-1 gap-3 rounded-md border p-3 md:grid-cols-12">
+							<div class="md:col-span-4">
+								<div class="text-xs text-muted-foreground">System Type</div>
+								<div class="text-sm font-medium">
+									{systemTypeLabels[st.system_type_id] ?? st.system_type_id}
+								</div>
+							</div>
+							<div class="md:col-span-3">
+								<Label class="text-xs">Number</Label>
+								<Input
+									type="number"
+									value={st.number ?? ''}
+									oninput={(e) =>
+										updateSystemTypeField(index, 'number', (e.target as HTMLInputElement).value)}
+								/>
+							</div>
+							<div class="md:col-span-4">
+								<Label class="text-xs">Document name</Label>
+								<Input
+									value={st.document_name ?? ''}
+									oninput={(e) =>
+										updateSystemTypeField(
+											index,
+											'document_name',
+											(e.target as HTMLInputElement).value
+										)}
+									maxlength={250}
+								/>
+							</div>
+							<div class="flex items-end justify-end md:col-span-1">
+								<Button type="button" variant="ghost" onclick={() => removeSystemType(index)}>
+									Remove
+								</Button>
 							</div>
 						</div>
-						<div class="md:col-span-3">
-							<Label class="text-xs">Number</Label>
-							<Input
-								type="number"
-								value={st.number ?? ''}
-								oninput={(e) =>
-									updateSystemTypeField(index, 'number', (e.target as HTMLInputElement).value)}
-							/>
-						</div>
-						<div class="md:col-span-4">
-							<Label class="text-xs">Document name</Label>
-							<Input
-								value={st.document_name ?? ''}
-								oninput={(e) =>
-									updateSystemTypeField(
-										index,
-										'document_name',
-										(e.target as HTMLInputElement).value
-									)}
-								maxlength={250}
-							/>
-						</div>
-						<div class="flex items-end justify-end md:col-span-1">
-							<Button type="button" variant="ghost" onclick={() => removeSystemType(index)}>
-								Remove
-							</Button>
-						</div>
-					</div>
-				{/each}
-			</div>
-		{/if}
-
-		{#if combinedFieldError('system_types')}
-			<p class="text-sm text-red-500">{combinedFieldError('system_types')}</p>
-		{/if}
-	</div>
+					{/each}
+				</div>
+			{/if}
+			{#if combinedFieldError('system_types')}
+				<p class="text-sm text-red-500">{combinedFieldError('system_types')}</p>
+			{/if}
+		</div>
+	{/if}
 
 	{#if error || liveValidation.error}
 		<p class="text-sm text-red-500">{error || liveValidation.error}</p>

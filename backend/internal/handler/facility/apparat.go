@@ -88,6 +88,43 @@ func (h *ApparatHandler) GetApparat(c *gin.Context) {
 	c.JSON(http.StatusOK, toApparatResponse(*apparat))
 }
 
+// GetApparatsByIDs godoc
+// @Summary Get multiple apparats by IDs
+// @Tags facility-apparats
+// @Accept json
+// @Produce json
+// @Param request body dto.ApparatBulkRequest true "Apparat IDs"
+// @Success 200 {object} dto.ApparatBulkResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/apparats/bulk [post]
+func (h *ApparatHandler) GetApparatsByIDs(c *gin.Context) {
+	var req dto.ApparatBulkRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	if len(req.Ids) == 0 {
+		respondInvalidArgument(c, "ids is required")
+		return
+	}
+
+	apparats, err := h.service.GetByIDs(req.Ids)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	items := make([]domainFacility.Apparat, 0, len(apparats))
+	for _, apparat := range apparats {
+		if apparat == nil {
+			continue
+		}
+		items = append(items, *apparat)
+	}
+
+	c.JSON(http.StatusOK, dto.ApparatBulkResponse{Items: toApparatResponses(items)})
+}
+
 // ListApparats godoc
 // @Summary List apparats with pagination
 // @Tags facility-apparats

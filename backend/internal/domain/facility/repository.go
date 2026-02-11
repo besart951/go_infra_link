@@ -12,7 +12,7 @@ type BuildingRepository interface {
 type SystemTypeRepository interface {
 	domain.Repository[SystemType]
 	ExistsName(name string, excludeID *uuid.UUID) (bool, error)
-	ExistsRange(numberMin, numberMax int, excludeID *uuid.UUID) (bool, error)
+	ExistsOverlappingRange(numberMin, numberMax int, excludeID *uuid.UUID) (bool, error)
 }
 type SystemPartRepository = domain.Repository[SystemPart]
 type SpecificationRepository = domain.Repository[Specification]

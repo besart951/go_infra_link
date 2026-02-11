@@ -14,21 +14,26 @@ import (
 )
 
 const (
-	NumBuildings        = 1000
-	CabinetsPerBuilding = 10
-	SPSPerCabinet       = 10
+	NumBuildings        = 50
+	CabinetsPerBuilding = 4
+	SPSPerCabinet       = 3
 
 	// Additional seed data
-	NumSystemTypes           = 50
-	SystemTypesPerSPS        = 1
-	NumObjectDatas           = 200
-	BacnetObjectsPerObjData  = 5
-	NumSystemParts           = 120
-	NumApparats              = 250
-	MinSystemPartsPerApparat = 1
-	MaxSystemPartsPerApparat = 4
-	MinApparatsPerObjectData = 1
-	MaxApparatsPerObjectData = 3
+	NumSystemTypes              = 20
+	SystemTypesPerSPS           = 1
+	NumObjectDatas              = 30
+	BacnetObjectsPerObjData     = 3
+	NumSystemParts              = 40
+	NumApparats                 = 60
+	MinSystemPartsPerApparat    = 1
+	MaxSystemPartsPerApparat    = 3
+	MinApparatsPerObjectData    = 1
+	MaxApparatsPerObjectData    = 3
+	NumStateTexts               = 20
+	NumNotificationClasses      = 10
+	NumAlarmDefinitions         = 10
+	FieldDevicesPerSpsSysType   = 1
+	BacnetObjectsPerFieldDevice = 2
 )
 
 type objectDataBacnetObject struct {
@@ -83,8 +88,14 @@ func main() {
 		systemParts         []facility.SystemPart
 		apparats            []facility.Apparat
 		spsSysTypes         []facility.SPSControllerSystemType
+		stateTexts          []facility.StateText
+		notificationClasses []facility.NotificationClass
+		alarmDefinitions    []facility.AlarmDefinition
+		specifications      []facility.Specification
+		fieldDevices        []facility.FieldDevice
 		objectDatas         []facility.ObjectData
 		bacnetObjects       []facility.BacnetObject
+		fieldDeviceBos      []facility.BacnetObject
 		objDataLinks        []objectDataBacnetObject
 		objDataApparatLinks []objectDataApparat
 		sysPartApparatLinks []systemPartApparat
@@ -202,6 +213,58 @@ func main() {
 		})
 	}
 
+	// State texts
+	for i := 0; i < NumStateTexts; i++ {
+		st1 := fmt.Sprintf("StateText-%03d-A", i+1)
+		st2 := fmt.Sprintf("StateText-%03d-B", i+1)
+		stateTexts = append(stateTexts, facility.StateText{
+			Base: domain.Base{
+				ID:        uuid.New(),
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			RefNumber:  i + 1,
+			StateText1: &st1,
+			StateText2: &st2,
+		})
+	}
+
+	// Notification classes
+	for i := 0; i < NumNotificationClasses; i++ {
+		notificationClasses = append(notificationClasses, facility.NotificationClass{
+			Base: domain.Base{
+				ID:        uuid.New(),
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			EventCategory:        "event",
+			Nc:                   100 + i,
+			ObjectDescription:    fmt.Sprintf("NC-%03d", i+1),
+			InternalDescription:  fmt.Sprintf("Notification Class %03d", i+1),
+			Meaning:              "seeded",
+			AckRequiredNotNormal: i%2 == 0,
+			AckRequiredError:     i%3 == 0,
+			AckRequiredNormal:    i%4 == 0,
+			NormNotNormal:        rand.Intn(3),
+			NormError:            rand.Intn(3),
+			NormNormal:           rand.Intn(3),
+		})
+	}
+
+	// Alarm definitions
+	for i := 0; i < NumAlarmDefinitions; i++ {
+		note := fmt.Sprintf("Alarm note %03d", i+1)
+		alarmDefinitions = append(alarmDefinitions, facility.AlarmDefinition{
+			Base: domain.Base{
+				ID:        uuid.New(),
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			Name:      fmt.Sprintf("Alarm Definition %03d", i+1),
+			AlarmNote: &note,
+		})
+	}
+
 	// Link SystemPart <-> Apparat
 	if len(systemParts) > 0 {
 		for i := 0; i < len(apparats); i++ {
@@ -222,6 +285,12 @@ func main() {
 				sysPartApparatLinks = append(sysPartApparatLinks, systemPartApparat{ApparatID: ap.ID, SystemPartID: sp.ID})
 			}
 		}
+	}
+
+	// Build lookup map for apparat -> system parts
+	apparatToSystemParts := make(map[uuid.UUID][]uuid.UUID, len(apparats))
+	for _, link := range sysPartApparatLinks {
+		apparatToSystemParts[link.ApparatID] = append(apparatToSystemParts[link.ApparatID], link.SystemPartID)
 	}
 
 	// SPS controller system types (linking SPS controllers to system types)
@@ -264,6 +333,94 @@ func main() {
 		facility.BacnetSoftwareTypeNC,
 		facility.BacnetSoftwareTypeSC,
 		facility.BacnetSoftwareTypeTL,
+	}
+
+	// Field devices + specifications + field device bacnet objects
+	if len(spsSysTypes) > 0 && len(apparats) > 0 && len(systemParts) > 0 {
+		for i := 0; i < len(spsSysTypes); i++ {
+			spsType := spsSysTypes[i]
+			for j := 0; j < FieldDevicesPerSpsSysType; j++ {
+				fdID := uuid.New()
+				apparat := apparats[rand.Intn(len(apparats))]
+				systemPartIDs := apparatToSystemParts[apparat.ID]
+				spID := systemParts[rand.Intn(len(systemParts))].ID
+				if len(systemPartIDs) > 0 {
+					spID = systemPartIDs[rand.Intn(len(systemPartIDs))]
+				}
+
+				bmk := fmt.Sprintf("BMK-%03d-%02d", i+1, j+1)
+				desc := fmt.Sprintf("Field device %s", bmk)
+				spec := facility.Specification{
+					Base: domain.Base{
+						ID:        uuid.New(),
+						CreatedAt: time.Now(),
+						UpdatedAt: time.Now(),
+					},
+					SpecificationSupplier: ptr("Supplier"),
+					SpecificationBrand:    ptr("Brand"),
+					SpecificationType:     ptr("Type"),
+				}
+				specifications = append(specifications, spec)
+
+				fieldDevices = append(fieldDevices, facility.FieldDevice{
+					Base: domain.Base{
+						ID:        fdID,
+						CreatedAt: time.Now(),
+						UpdatedAt: time.Now(),
+					},
+					BMK:                       &bmk,
+					Description:               &desc,
+					ApparatNr:                 rand.Intn(99) + 1,
+					SPSControllerSystemTypeID: spsType.ID,
+					SystemPartID:              spID,
+					SpecificationID:           &spec.ID,
+					ApparatID:                 apparat.ID,
+				})
+
+				for k := 0; k < BacnetObjectsPerFieldDevice; k++ {
+					boID := uuid.New()
+					textFix := fmt.Sprintf("FD%03d-%02d-%s", i+1, k+1, boID.String()[:6])
+					descBo := fmt.Sprintf("Bacnet object FD %s", bmk)
+
+					var stID *uuid.UUID
+					if len(stateTexts) > 0 {
+						id := stateTexts[rand.Intn(len(stateTexts))].ID
+						stID = &id
+					}
+					var ncID *uuid.UUID
+					if len(notificationClasses) > 0 {
+						id := notificationClasses[rand.Intn(len(notificationClasses))].ID
+						ncID = &id
+					}
+					var adID *uuid.UUID
+					if len(alarmDefinitions) > 0 {
+						id := alarmDefinitions[rand.Intn(len(alarmDefinitions))].ID
+						adID = &id
+					}
+
+					fieldDeviceBos = append(fieldDeviceBos, facility.BacnetObject{
+						Base: domain.Base{
+							ID:        boID,
+							CreatedAt: time.Now(),
+							UpdatedAt: time.Now(),
+						},
+						TextFix:             textFix,
+						Description:         &descBo,
+						GMSVisible:          rand.Intn(2) == 0,
+						Optional:            rand.Intn(3) == 0,
+						SoftwareType:        softwareTypes[rand.Intn(len(softwareTypes))],
+						SoftwareNumber:      uint16(rand.Intn(65000) + 1),
+						HardwareType:        facility.BacnetHardwareType(""),
+						HardwareQuantity:    0,
+						FieldDeviceID:       &fdID,
+						SoftwareReferenceID: nil,
+						StateTextID:         stID,
+						NotificationClassID: ncID,
+						AlarmDefinitionID:   adID,
+					})
+				}
+			}
+		}
 	}
 
 	for i := 0; i < NumObjectDatas; i++ {
@@ -367,8 +524,34 @@ func main() {
 		log.Fatalf("Error inserting sps controller system types: %v", err)
 	}
 
-	log.Printf("Inserting %d Bacnet Objects...", len(bacnetObjects))
-	if err := database.CreateInBatches(bacnetObjects, 1000).Error; err != nil {
+	log.Printf("Inserting %d State Texts...", len(stateTexts))
+	if err := database.CreateInBatches(stateTexts, 1000).Error; err != nil {
+		log.Fatalf("Error inserting state texts: %v", err)
+	}
+
+	log.Printf("Inserting %d Notification Classes...", len(notificationClasses))
+	if err := database.CreateInBatches(notificationClasses, 1000).Error; err != nil {
+		log.Fatalf("Error inserting notification classes: %v", err)
+	}
+
+	log.Printf("Inserting %d Alarm Definitions...", len(alarmDefinitions))
+	if err := database.CreateInBatches(alarmDefinitions, 1000).Error; err != nil {
+		log.Fatalf("Error inserting alarm definitions: %v", err)
+	}
+
+	log.Printf("Inserting %d Specifications...", len(specifications))
+	if err := database.CreateInBatches(specifications, 1000).Error; err != nil {
+		log.Fatalf("Error inserting specifications: %v", err)
+	}
+
+	log.Printf("Inserting %d Field Devices...", len(fieldDevices))
+	if err := database.CreateInBatches(fieldDevices, 1000).Error; err != nil {
+		log.Fatalf("Error inserting field devices: %v", err)
+	}
+
+	allBos := append(bacnetObjects, fieldDeviceBos...)
+	log.Printf("Inserting %d Bacnet Objects...", len(allBos))
+	if err := database.CreateInBatches(allBos, 1000).Error; err != nil {
 		log.Fatalf("Error inserting bacnet objects: %v", err)
 	}
 

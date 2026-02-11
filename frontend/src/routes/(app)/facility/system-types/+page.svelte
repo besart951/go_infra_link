@@ -18,6 +18,10 @@
 	let showForm = $state(false);
 	let editingItem: SystemType | undefined = $state(undefined);
 
+	function formatNumber(value: number) {
+		return String(value).padStart(4, '0');
+	}
+
 	function handleEdit(item: SystemType) {
 		editingItem = item;
 		showForm = true;
@@ -110,8 +114,8 @@
 	>
 		{#snippet rowSnippet(item: SystemType)}
 			<Table.Cell class="font-medium">{item.name}</Table.Cell>
-			<Table.Cell>{item.number_min}</Table.Cell>
-			<Table.Cell>{item.number_max}</Table.Cell>
+			<Table.Cell>{formatNumber(item.number_min)}</Table.Cell>
+			<Table.Cell>{formatNumber(item.number_max)}</Table.Cell>
 			<Table.Cell class="text-right">
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>

@@ -16,33 +16,51 @@
 	import {
 		deleteControlCabinet,
 		getControlCabinetDeleteImpact,
-		listBuildings
+		getBuildings
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import type { Building } from '$lib/domain/facility/index.js';
 
 	let showForm = $state(false);
 	let editingItem: ControlCabinet | undefined = $state(undefined);
 	let buildingMap = $state(new Map<string, string>());
+	const buildingRequests = new Set<string>();
 
 	function formatBuildingLabel(building: Building): string {
 		return `${building.iws_code}-${building.building_group}`;
 	}
 
-	async function loadBuildingMap() {
-		try {
-			const res = await listBuildings({ page: 1, limit: 1000 });
-			const next = new Map<string, string>();
-			for (const building of res.items || []) {
-				next.set(building.id, formatBuildingLabel(building));
-			}
-			buildingMap = next;
-		} catch (err) {
-			console.error('Failed to load buildings:', err);
-		}
-	}
-
 	function getBuildingLabel(buildingId: string): string {
 		return buildingMap.get(buildingId) ?? buildingId;
+	}
+
+	function updateBuildingMap(buildings: Building[]) {
+		const next = new Map(buildingMap);
+		for (const building of buildings) {
+			next.set(building.id, formatBuildingLabel(building));
+		}
+		buildingMap = next;
+	}
+
+	async function ensureBuildingLabels(items: ControlCabinet[]) {
+		const uniqueIds = new Set(
+			items.map((item) => item.building_id).filter((id): id is string => Boolean(id))
+		);
+		const missingIds = Array.from(uniqueIds).filter(
+			(id) => !buildingMap.has(id) && !buildingRequests.has(id)
+		);
+
+		if (missingIds.length === 0) return;
+
+		missingIds.forEach((id) => buildingRequests.add(id));
+
+		try {
+			const res = await getBuildings(missingIds);
+			updateBuildingMap(res.items || []);
+		} catch (err) {
+			console.error('Failed to load buildings:', err);
+		} finally {
+			missingIds.forEach((id) => buildingRequests.delete(id));
+		}
 	}
 
 	function handleEdit(item: ControlCabinet) {
@@ -59,7 +77,6 @@
 		showForm = false;
 		editingItem = undefined;
 		controlCabinetsStore.reload();
-		loadBuildingMap();
 	}
 
 	function handleCancel() {
@@ -109,7 +126,13 @@
 
 	onMount(() => {
 		controlCabinetsStore.load();
-		loadBuildingMap();
+	});
+
+	$effect(() => {
+		const items = $controlCabinetsStore.items;
+		if (items.length > 0) {
+			void ensureBuildingLabels(items);
+		}
 	});
 </script>
 
@@ -144,8 +167,8 @@
 	<PaginatedList
 		state={$controlCabinetsStore}
 		columns={[
-			{ key: 'cabinet_nr', label: 'Cabinet Nr' },
 			{ key: 'building', label: 'Building' },
+			{ key: 'cabinet_nr', label: 'Cabinet Nr' },
 			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
 		searchPlaceholder="Search control cabinets..."

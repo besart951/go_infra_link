@@ -33,6 +33,14 @@ export interface ControlCabinetListParams {
 
 export interface ControlCabinetListResponse extends Pagination<ControlCabinet> {}
 
+export interface ControlCabinetBulkRequest {
+	ids: string[];
+}
+
+export interface ControlCabinetBulkResponse {
+	items: ControlCabinet[];
+}
+
 export interface ControlCabinetDeleteImpact {
 	control_cabinet_id: string;
 	sps_controllers_count: number;

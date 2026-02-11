@@ -62,6 +62,14 @@ type SPSControllerListResponse struct {
 	TotalPages int                     `json:"total_pages"`
 }
 
+type SPSControllerBulkRequest struct {
+	Ids []uuid.UUID `json:"ids" binding:"required,min=1,dive,required"`
+}
+
+type SPSControllerBulkResponse struct {
+	Items []SPSControllerResponse `json:"items"`
+}
+
 type NextAvailableGADeviceResponse struct {
 	GADevice string `json:"ga_device"`
 }

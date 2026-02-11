@@ -29,7 +29,7 @@ export interface SPSControllerSystemTypeInput {
 export interface CreateSPSControllerRequest {
 	ga_device: string;
 	device_name: string;
-	ip_address: string;
+	ip_address?: string;
 	subnet?: string;
 	gateway?: string;
 	vlan?: string;
@@ -57,6 +57,14 @@ export interface SPSControllerListParams {
 }
 
 export interface SPSControllerListResponse extends Pagination<SPSController> {}
+
+export interface SPSControllerBulkRequest {
+	ids: string[];
+}
+
+export interface SPSControllerBulkResponse {
+	items: SPSController[];
+}
 
 export interface NextGADeviceResponse {
 	ga_device: string;
