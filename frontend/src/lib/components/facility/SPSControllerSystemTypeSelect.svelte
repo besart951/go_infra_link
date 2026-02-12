@@ -17,6 +17,12 @@
 	async function fetchById(id: string): Promise<SPSControllerSystemType> {
 		return getSPSControllerSystemType(id);
 	}
+
+	function formatLabel(item: SPSControllerSystemType): string {
+		const number = item.number ?? '';
+		const documentName = item.document_name ?? '';
+		return `${number} - ${documentName}`;
+	}
 </script>
 
 <AsyncCombobox
@@ -24,6 +30,7 @@
 	{fetcher}
 	{fetchById}
 	labelKey="document_name"
+	labelFormatter={formatLabel}
 	placeholder="Select SPS Controller System Type..."
 	{width}
 />

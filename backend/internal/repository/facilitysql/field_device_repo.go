@@ -51,22 +51,40 @@ func (r *fieldDeviceRepo) DeleteByIds(ids []uuid.UUID) error {
 }
 
 func (r *fieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
-	if err != nil {
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
+	offset := (page - 1) * limit
+
+	query := r.db.Model(&domainFacility.FieldDevice{}).Where("deleted_at IS NULL")
+
+	// Apply search
+	if strings.TrimSpace(params.Search) != "" {
+		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
+		query = query.Where("LOWER(bmk) LIKE ? OR LOWER(description) LIKE ?", pattern, pattern)
+	}
+
+	// Count total
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	// Convert []*FieldDevice to []FieldDevice for the interface
-	items := make([]domainFacility.FieldDevice, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
+	// Fetch items with preloads
+	var items []domainFacility.FieldDevice
+	if err := query.
+		Order("created_at DESC").
+		Preload("Specification").
+		Preload("BacnetObjects").
+		Limit(limit).
+		Offset(offset).
+		Find(&items).Error; err != nil {
+		return nil, err
 	}
 
 	return &domain.PaginatedList[domainFacility.FieldDevice]{
 		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
 }
 

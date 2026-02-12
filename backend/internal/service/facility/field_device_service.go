@@ -184,7 +184,14 @@ func (s *FieldDeviceService) CreateSpecification(fieldDeviceID uuid.UUID, specif
 
 	id := fieldDeviceID
 	specification.FieldDeviceID = &id
-	return s.specificationRepo.Create(specification)
+	if err := s.specificationRepo.Create(specification); err != nil {
+		return err
+	}
+
+	// Update the bidirectional relationship: set field_device.specification_id
+	fieldDevice := fds[0]
+	fieldDevice.SpecificationID = &specification.ID
+	return s.repo.Update(fieldDevice)
 }
 
 func (s *FieldDeviceService) UpdateSpecification(fieldDeviceID uuid.UUID, patch *domainFacility.Specification) (*domainFacility.Specification, error) {
@@ -268,7 +275,10 @@ func (s *FieldDeviceService) ListBacnetObjects(fieldDeviceID uuid.UUID) ([]domai
 }
 
 func (s *FieldDeviceService) ensureParentsExist(fieldDevice *domainFacility.FieldDevice) error {
-	// sps_controller_system_type must exist and not be deleted
+	// With cascaded deletes, we only need to check direct parents.
+	// If SPSControllerSystemType exists, all ancestors (SPSController, ControlCabinet, Building) are guaranteed to exist.
+
+	// 1. sps_controller_system_type must exist and not be deleted
 	sts, err := s.spsControllerSystemTypeRepo.GetByIds([]uuid.UUID{fieldDevice.SPSControllerSystemTypeID})
 	if err != nil {
 		return err
@@ -277,7 +287,7 @@ func (s *FieldDeviceService) ensureParentsExist(fieldDevice *domainFacility.Fiel
 		return domain.ErrNotFound
 	}
 
-	// system_type must exist and not be deleted (prevents new instances on soft-deleted/deprecated types)
+	// 2. system_type must exist (business rule: prevent creating instances with deprecated types)
 	systemTypes, err := s.systemTypeRepo.GetByIds([]uuid.UUID{sts[0].SystemTypeID})
 	if err != nil {
 		return err
@@ -286,34 +296,7 @@ func (s *FieldDeviceService) ensureParentsExist(fieldDevice *domainFacility.Fiel
 		return domain.ErrNotFound
 	}
 
-	// sps_controller must exist and not be deleted
-	controllers, err := s.spsControllerRepo.GetByIds([]uuid.UUID{sts[0].SPSControllerID})
-	if err != nil {
-		return err
-	}
-	if len(controllers) == 0 {
-		return domain.ErrNotFound
-	}
-
-	// control cabinet must exist and not be deleted
-	cabs, err := s.controlCabinetRepo.GetByIds([]uuid.UUID{controllers[0].ControlCabinetID})
-	if err != nil {
-		return err
-	}
-	if len(cabs) == 0 {
-		return domain.ErrNotFound
-	}
-
-	// building must exist and not be deleted (avoid linking into a soft-deleted building)
-	buildings, err := s.buildingRepo.GetByIds([]uuid.UUID{cabs[0].BuildingID})
-	if err != nil {
-		return err
-	}
-	if len(buildings) == 0 {
-		return domain.ErrNotFound
-	}
-
-	// apparat must exist and not be deleted
+	// 3. apparat must exist and not be deleted
 	apparats, err := s.apparatRepo.GetByIds([]uuid.UUID{fieldDevice.ApparatID})
 	if err != nil {
 		return err
@@ -322,7 +305,7 @@ func (s *FieldDeviceService) ensureParentsExist(fieldDevice *domainFacility.Fiel
 		return domain.ErrNotFound
 	}
 
-	// optional parents
+	// 4. system_part (optional) must exist if provided
 	if fieldDevice.SystemPartID != uuid.Nil {
 		parts, err := s.systemPartRepo.GetByIds([]uuid.UUID{fieldDevice.SystemPartID})
 		if err != nil {
@@ -332,6 +315,7 @@ func (s *FieldDeviceService) ensureParentsExist(fieldDevice *domainFacility.Fiel
 			return domain.ErrNotFound
 		}
 	}
+
 	return nil
 }
 
@@ -1043,11 +1027,24 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 		return a.SystemPartID == b.SystemPartID
 	}
 
-	// 4. Process Updates
+	// 4. Process Updates with Granular Field-Level Success Tracking
+	// Each device update is now split into 3 independent phases:
+	// - Phase 1: Base FieldDevice fields (bmk, description, apparat_nr, etc.)
+	// - Phase 2: Specification update/create
+	// - Phase 3: BACnet objects patch
+	// If any phase fails, we still attempt the other phases and track field-level errors.
 	for i, update := range updates {
 		resultItem := &result.Results[i]
 		resultItem.ID = update.ID
 		resultItem.Success = false
+		resultItem.Fields = make(map[string]string)
+
+		_, ok := existingMap[update.ID]
+		if !ok {
+			resultItem.Error = "field device not found"
+			result.FailureCount++
+			continue
+		}
 
 		proposed, ok := proposedMap[update.ID]
 		if !ok {
@@ -1056,116 +1053,135 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 			continue
 		}
 
-		// Basic Validation
-		if err := s.validateRequiredFields(proposed); err != nil {
-			if ve, ok := domain.AsValidationError(err); ok {
-				resultItem.Fields = ve.Fields
-				for _, msg := range ve.Fields {
-					resultItem.Error = msg
-					break
-				}
-			} else {
-				resultItem.Error = err.Error()
-			}
-			result.FailureCount++
-			continue
-		}
+		hasBaseFieldUpdates := update.BMK != nil || update.Description != nil || update.ApparatNr != nil || update.ApparatID != nil || update.SystemPartID != nil
+		phaseErrors := make(map[string]string)
+		phaseSuccesses := 0
+		totalPhases := 0
 
-		if err := s.ensureParentsExist(proposed); err != nil {
-			if err == domain.ErrNotFound {
-				resultItem.Error = "one or more parent entities not found"
-			} else {
-				resultItem.Error = err.Error()
-			}
-			result.FailureCount++
-			continue
-		}
+		// PHASE 1: Update base FieldDevice fields
+		if hasBaseFieldUpdates {
+			totalPhases++
+			baseUpdateSuccess := true
 
-		// ApparatNr Validation (The "Swap" Logic)
-		// A. Check for conflicts within the proposed batch
-		batchConflict := false
-		for otherID, otherProposed := range proposedMap {
-			if otherID == update.ID {
-				continue
-			}
-			if isApparatNrConflict(proposed, otherProposed) {
-				resultItem.Error = fmt.Sprintf("Conflict with another item in this batch (ID: %s)", otherID)
-				batchConflict = true
-				break
-			}
-		}
-		if batchConflict {
-			result.FailureCount++
-			continue
-		}
-
-		// B. Check for conflicts in DB (Excluding ALL batch items)
-		// We use strict=false or similar by passing the Exclusion List
-		if err := s.ensureApparatNrAvailableWithExclusions(proposed, ids); err != nil {
-			if ve, ok := domain.AsValidationError(err); ok {
-				resultItem.Fields = ve.Fields
-				for _, msg := range ve.Fields {
-					resultItem.Error = msg
-					break
-				}
-			} else {
-				resultItem.Error = err.Error()
-			}
-			result.FailureCount++
-			continue
-		}
-
-		// Update in DB
-		// Bypass s.Update() to skip the standard ensureApparatNrAvailable check
-		if err := s.repo.Update(proposed); err != nil {
-			resultItem.Error = err.Error()
-			result.FailureCount++
-			continue
-		}
-
-		// Handle specification update/create
-		if update.Specification != nil {
-			specs, err := s.specificationRepo.GetByFieldDeviceIDs([]uuid.UUID{proposed.ID})
-			if err != nil {
-				resultItem.Error = "failed to fetch specification: " + err.Error()
-				result.FailureCount++
-				continue
-			}
-
-			if len(specs) > 0 {
-				if _, err := s.UpdateSpecification(proposed.ID, update.Specification); err != nil {
-					resultItem.Error = "failed to update specification: " + err.Error()
-					result.FailureCount++
-					continue
-				}
-			} else {
-				if err := s.CreateSpecification(proposed.ID, update.Specification); err != nil {
-					resultItem.Error = "failed to create specification: " + err.Error()
-					result.FailureCount++
-					continue
-				}
-			}
-		}
-
-		// Handle BACnet objects patch updates
-		if update.BacnetObjects != nil {
-			if err := s.patchBacnetObjects(proposed.ID, *update.BacnetObjects); err != nil {
+			// Basic Validation
+			if err := s.validateRequiredFields(proposed); err != nil {
+				baseUpdateSuccess = false
 				if ve, ok := domain.AsValidationError(err); ok {
-					resultItem.Fields = ve.Fields
-					for _, msg := range ve.Fields {
-						resultItem.Error = msg
-						break
+					for field, msg := range ve.Fields {
+						phaseErrors["fielddevice."+field] = msg
 					}
 				} else {
-					resultItem.Error = "failed to update BACnet objects: " + err.Error()
+					phaseErrors["fielddevice"] = err.Error()
 				}
-				result.FailureCount++
-				continue
+			}
+
+			// Check if parents exist
+			if baseUpdateSuccess {
+				if err := s.ensureParentsExist(proposed); err != nil {
+					baseUpdateSuccess = false
+					if err == domain.ErrNotFound {
+						phaseErrors["fielddevice"] = "one or more parent entities not found"
+					} else {
+						phaseErrors["fielddevice"] = err.Error()
+					}
+				}
+			}
+
+			// ApparatNr Validation (The "Swap" Logic)
+			// Validate if ANY of the uniqueness-constraint fields changed: apparat_nr, apparat_id, system_part_id
+			hasApparatNrConstraintChanges := update.ApparatNr != nil || update.ApparatID != nil || update.SystemPartID != nil
+			if baseUpdateSuccess && hasApparatNrConstraintChanges {
+				for otherID, otherProposed := range proposedMap {
+					if otherID == update.ID {
+						continue
+					}
+					if isApparatNrConflict(proposed, otherProposed) {
+						baseUpdateSuccess = false
+						phaseErrors["fielddevice.apparat_nr"] = fmt.Sprintf("apparatnummer ist bereits vergeben")
+						break
+					}
+				}
+
+				// B. Check for conflicts in DB (Excluding ALL batch items)
+				if baseUpdateSuccess {
+					if err := s.ensureApparatNrAvailableWithExclusions(proposed, ids); err != nil {
+						baseUpdateSuccess = false
+						if ve, ok := domain.AsValidationError(err); ok {
+							for field, msg := range ve.Fields {
+								phaseErrors["fielddevice."+field] = msg
+							}
+						} else {
+							phaseErrors["fielddevice.apparat_nr"] = err.Error()
+						}
+					}
+				}
+			}
+
+			// Attempt to save base fields if validation passed
+			if baseUpdateSuccess {
+				if err := s.repo.Update(proposed); err != nil {
+					phaseErrors["fielddevice"] = err.Error()
+				} else {
+					phaseSuccesses++
+				}
 			}
 		}
 
-		resultItem.Success = true
-		result.SuccessCount++
+		// PHASE 2: Handle specification update/create (independent of Phase 1)
+		if update.Specification != nil {
+			totalPhases++
+			specs, err := s.specificationRepo.GetByFieldDeviceIDs([]uuid.UUID{proposed.ID})
+			if err != nil {
+				phaseErrors["specification"] = "failed to fetch specification: " + err.Error()
+			} else {
+				if len(specs) > 0 {
+					if _, err := s.UpdateSpecification(proposed.ID, update.Specification); err != nil {
+						phaseErrors["specification"] = "failed to update specification: " + err.Error()
+					} else {
+						phaseSuccesses++
+					}
+				} else {
+					if err := s.CreateSpecification(proposed.ID, update.Specification); err != nil {
+						phaseErrors["specification"] = "failed to create specification: " + err.Error()
+					} else {
+						phaseSuccesses++
+					}
+				}
+			}
+		}
+
+		// PHASE 3: Handle BACnet objects patch updates (independent of Phase 1 and 2)
+		if update.BacnetObjects != nil {
+			totalPhases++
+			if err := s.patchBacnetObjects(proposed.ID, *update.BacnetObjects); err != nil {
+				if ve, ok := domain.AsValidationError(err); ok {
+					for field, msg := range ve.Fields {
+						phaseErrors[field] = msg
+					}
+				} else {
+					phaseErrors["bacnet_objects"] = "failed to update BACnet objects: " + err.Error()
+				}
+			} else {
+				phaseSuccesses++
+			}
+		}
+
+		// Determine overall success
+		if len(phaseErrors) == 0 && totalPhases > 0 {
+			resultItem.Success = true
+			result.SuccessCount++
+		} else {
+			resultItem.Fields = phaseErrors
+			// Set a summary error message
+			if len(phaseErrors) > 0 {
+				// Pick the first error as the main error message
+				for _, msg := range phaseErrors {
+					resultItem.Error = msg
+					break
+				}
+			}
+			result.FailureCount++
+		}
 	}
 
 	return result

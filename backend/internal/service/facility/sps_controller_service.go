@@ -15,6 +15,9 @@ type SPSControllerService struct {
 	controlCabinetRepo       domainFacility.ControlCabinetRepository
 	systemTypeRepo           domainFacility.SystemTypeRepository
 	spsControllerSystemTyper domainFacility.SPSControllerSystemTypeStore
+	fieldDeviceRepo          domainFacility.FieldDeviceStore
+	specificationRepo        domainFacility.SpecificationStore
+	bacnetObjectRepo         domainFacility.BacnetObjectStore
 }
 
 func NewSPSControllerService(
@@ -22,12 +25,18 @@ func NewSPSControllerService(
 	controlCabinetRepo domainFacility.ControlCabinetRepository,
 	systemTypeRepo domainFacility.SystemTypeRepository,
 	spsControllerSystemTypeStore domainFacility.SPSControllerSystemTypeStore,
+	fieldDeviceRepo domainFacility.FieldDeviceStore,
+	specificationRepo domainFacility.SpecificationStore,
+	bacnetObjectRepo domainFacility.BacnetObjectStore,
 ) *SPSControllerService {
 	return &SPSControllerService{
 		repo:                     repo,
 		controlCabinetRepo:       controlCabinetRepo,
 		systemTypeRepo:           systemTypeRepo,
 		spsControllerSystemTyper: spsControllerSystemTypeStore,
+		fieldDeviceRepo:          fieldDeviceRepo,
+		specificationRepo:        specificationRepo,
+		bacnetObjectRepo:         bacnetObjectRepo,
 	}
 }
 
@@ -163,6 +172,37 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 }
 
 func (s *SPSControllerService) DeleteByID(id uuid.UUID) error {
+	// Cascade delete: SPSController → SPSControllerSystemTypes → FieldDevices
+	spsControllerSystemTypeIDs, err := s.spsControllerSystemTyper.GetIDsBySPSControllerIDs([]uuid.UUID{id})
+	if err != nil {
+		return err
+	}
+
+	if len(spsControllerSystemTypeIDs) == 0 {
+		// No children, delete directly
+		return s.repo.DeleteByIds([]uuid.UUID{id})
+	}
+
+	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(spsControllerSystemTypeIDs)
+	if err != nil {
+		return err
+	}
+
+	// Delete in correct order (bottom-up)
+	if err := s.bacnetObjectRepo.SoftDeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+		return err
+	}
+	if err := s.specificationRepo.SoftDeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+		return err
+	}
+	if err := s.fieldDeviceRepo.DeleteByIds(fieldDeviceIDs); err != nil {
+		return err
+	}
+
+	if err := s.spsControllerSystemTyper.SoftDeleteBySPSControllerIDs([]uuid.UUID{id}); err != nil {
+		return err
+	}
+
 	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 

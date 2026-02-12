@@ -108,3 +108,15 @@ func (r *controlCabinetRepo) ExistsControlCabinetNr(buildingID uuid.UUID, contro
 	}
 	return count > 0, nil
 }
+
+func (r *controlCabinetRepo) GetIDsByBuildingID(buildingID uuid.UUID) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	err := r.db.Model(&domainFacility.ControlCabinet{}).
+		Where("deleted_at IS NULL").
+		Where("building_id = ?", buildingID).
+		Pluck("id", &ids).Error
+	if err != nil {
+		return nil, err
+	}
+	return ids, nil
+}

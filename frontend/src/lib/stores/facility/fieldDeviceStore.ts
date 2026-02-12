@@ -10,6 +10,7 @@ export interface FieldDeviceFilters {
 	controlCabinetId?: string;
 	spsControllerId?: string;
 	spsControllerSystemTypeId?: string;
+	projectId?: string;
 }
 
 /**
@@ -95,8 +96,9 @@ export function createFieldDeviceStore(pageSize = 300, projectId?: string) {
 				searchParams.set('sps_controller_system_type_id', state.filters.spsControllerSystemTypeId);
 			}
 
-			if (projectId) {
-				searchParams.set('project_id', projectId);
+			const effectiveProjectId = projectId ?? state.filters.projectId;
+			if (effectiveProjectId) {
+				searchParams.set('project_id', effectiveProjectId);
 			}
 
 			const query = searchParams.toString();

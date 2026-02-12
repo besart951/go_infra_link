@@ -12,6 +12,7 @@
 		fetchById?: (id: string) => Promise<T | null | undefined>;
 		labelKey: keyof T;
 		idKey?: keyof T;
+		labelFormatter?: (item: T) => string;
 		id?: string;
 		disabled?: boolean;
 		clearable?: boolean;
@@ -29,6 +30,7 @@
 		fetchById,
 		labelKey,
 		idKey = 'id' as keyof T,
+		labelFormatter,
 		id,
 		disabled = false,
 		clearable = false,
@@ -54,6 +56,10 @@
 	// Derived state
 	const selectedItem = $derived(items.find((i) => String(i[idKey]) === value));
 
+	function getItemLabel(item: T): string {
+		return labelFormatter ? labelFormatter(item) : String(item[labelKey] ?? '');
+	}
+
 	function clearSelection() {
 		value = '';
 		selectedLabel = undefined;
@@ -71,7 +77,7 @@
 			const item = await fetchById(id);
 			if (requestId !== selectedRequestId) return;
 			if (item) {
-				selectedLabel = String(item[labelKey] ?? '');
+				selectedLabel = getItemLabel(item);
 				selectedValue = id;
 			}
 		} catch (error) {
@@ -116,7 +122,7 @@
 
 	$effect(() => {
 		if (selectedItem) {
-			selectedLabel = String(selectedItem[labelKey] ?? '');
+			selectedLabel = getItemLabel(selectedItem);
 			selectedValue = value;
 		}
 	});
@@ -185,7 +191,7 @@
 									return;
 								}
 								value = next;
-								selectedLabel = String(item[labelKey] ?? '');
+								selectedLabel = getItemLabel(item);
 								selectedValue = value;
 								onValueChange?.(value);
 								open = false;
@@ -197,7 +203,7 @@
 									value === String(item[idKey]) ? 'opacity-100' : 'opacity-0'
 								)}
 							/>
-							{String(item[labelKey] ?? '')}
+							{getItemLabel(item)}
 						</Command.Item>
 					{/each}
 				</Command.Group>

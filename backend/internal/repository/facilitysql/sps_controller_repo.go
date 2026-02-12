@@ -104,6 +104,21 @@ func (r *spsControllerRepo) GetIDsByControlCabinetID(controlCabinetID uuid.UUID)
 	return ids, nil
 }
 
+func (r *spsControllerRepo) GetIDsByControlCabinetIDs(controlCabinetIDs []uuid.UUID) ([]uuid.UUID, error) {
+	if len(controlCabinetIDs) == 0 {
+		return []uuid.UUID{}, nil
+	}
+	var ids []uuid.UUID
+	err := r.db.Model(&domainFacility.SPSController{}).
+		Where("deleted_at IS NULL").
+		Where("control_cabinet_id IN ?", controlCabinetIDs).
+		Pluck("id", &ids).Error
+	if err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
 func (r *spsControllerRepo) ListGADevicesByControlCabinetID(controlCabinetID uuid.UUID) ([]string, error) {
 	var devices []string
 	err := r.db.Model(&domainFacility.SPSController{}).

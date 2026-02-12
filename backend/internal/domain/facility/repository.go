@@ -24,6 +24,7 @@ type ObjectDataRepository = domain.Repository[ObjectData]
 type ControlCabinetRepository interface {
 	domain.Repository[ControlCabinet]
 	GetPaginatedListByBuildingID(buildingID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ControlCabinet], error)
+	GetIDsByBuildingID(buildingID uuid.UUID) ([]uuid.UUID, error)
 	ExistsControlCabinetNr(buildingID uuid.UUID, controlCabinetNr string, excludeID *uuid.UUID) (bool, error)
 }
 
@@ -31,6 +32,7 @@ type SPSControllerRepository interface {
 	domain.Repository[SPSController]
 	GetPaginatedListByControlCabinetID(controlCabinetID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[SPSController], error)
 	GetIDsByControlCabinetID(controlCabinetID uuid.UUID) ([]uuid.UUID, error)
+	GetIDsByControlCabinetIDs(controlCabinetIDs []uuid.UUID) ([]uuid.UUID, error)
 	ListGADevicesByControlCabinetID(controlCabinetID uuid.UUID) ([]string, error)
 	ExistsGADevice(controlCabinetID uuid.UUID, gaDevice string, excludeID *uuid.UUID) (bool, error)
 	ExistsIPAddressVlan(ipAddress string, vlan string, excludeID *uuid.UUID) (bool, error)

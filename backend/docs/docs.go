@@ -558,6 +558,49 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-alarm-definitions"
+                ],
+                "summary": "Create a new alarm definition",
+                "parameters": [
+                    {
+                        "description": "Alarm Definition data",
+                        "name": "alarm_definition",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateAlarmDefinitionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/facility/alarm-definitions/{id}": {
@@ -604,6 +647,97 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-alarm-definitions"
+                ],
+                "summary": "Update an alarm definition",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Alarm Definition ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Alarm Definition data",
+                        "name": "alarm_definition",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateAlarmDefinitionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-alarm-definitions"
+                ],
+                "summary": "Delete an alarm definition",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Alarm Definition ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/facility/apparats": {
@@ -634,6 +768,18 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Search query",
                         "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by Object Data ID",
+                        "name": "object_data_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by System Part ID",
+                        "name": "system_part_id",
                         "in": "query"
                     }
                 ],
@@ -685,6 +831,51 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/apparats/bulk": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-apparats"
+                ],
+                "summary": "Get multiple apparats by IDs",
+                "parameters": [
+                    {
+                        "description": "Apparat IDs",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatBulkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatBulkResponse"
                         }
                     },
                     "400": {
@@ -1050,6 +1241,93 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/facility/buildings/bulk": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-buildings"
+                ],
+                "summary": "Get multiple buildings by IDs",
+                "parameters": [
+                    {
+                        "description": "Building IDs",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingBulkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingBulkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/buildings/validate": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-validation"
+                ],
+                "summary": "Validate building fields",
+                "parameters": [
+                    {
+                        "description": "Validation payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ValidateBuildingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/facility/buildings/{id}": {
             "get": {
                 "produces": [
@@ -1289,6 +1567,93 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/facility/control-cabinets/bulk": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-control-cabinets"
+                ],
+                "summary": "Get multiple control cabinets by IDs",
+                "parameters": [
+                    {
+                        "description": "Control Cabinet IDs",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetBulkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetBulkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/control-cabinets/validate": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-validation"
+                ],
+                "summary": "Validate control cabinet fields",
+                "parameters": [
+                    {
+                        "description": "Validation payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ValidateControlCabinetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/facility/control-cabinets/{id}": {
             "get": {
                 "produces": [
@@ -1426,6 +1791,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/facility/control-cabinets/{id}/delete-impact": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-control-cabinets"
+                ],
+                "summary": "Preview delete impact for a control cabinet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Control Cabinet ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetDeleteImpactResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/facility/field-devices": {
             "get": {
                 "produces": [
@@ -1434,7 +1845,7 @@ const docTemplate = `{
                 "tags": [
                     "facility-field-devices"
                 ],
-                "summary": "List field devices with pagination",
+                "summary": "List field devices with pagination and filtering",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1445,7 +1856,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "default": 10,
+                        "default": 300,
                         "description": "Items per page",
                         "name": "limit",
                         "in": "query"
@@ -1454,6 +1865,36 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Search query",
                         "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by building ID",
+                        "name": "building_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by control cabinet ID",
+                        "name": "control_cabinet_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by SPS controller ID",
+                        "name": "sps_controller_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by SPS controller system type ID",
+                        "name": "sps_controller_system_type_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by project ID",
+                        "name": "project_id",
                         "in": "query"
                     }
                 ],
@@ -1477,8 +1918,63 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "post": {
+            }
+        },
+        "/api/v1/facility/field-devices/available-apparat-nr": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-field-devices"
+                ],
+                "summary": "List available apparat numbers for field devices",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "SPS Controller System Type ID",
+                        "name": "sps_controller_system_type_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Apparat ID",
+                        "name": "apparat_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "System Part ID",
+                        "name": "system_part_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AvailableApparatNumbersResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/field-devices/bulk-delete": {
+            "delete": {
                 "consumes": [
                     "application/json"
                 ],
@@ -1488,29 +1984,147 @@ const docTemplate = `{
                 "tags": [
                     "facility-field-devices"
                 ],
-                "summary": "Create a new field device",
+                "summary": "Bulk delete multiple field devices",
                 "parameters": [
                     {
-                        "description": "Field Device data",
-                        "name": "field_device",
+                        "description": "Bulk delete request",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateFieldDeviceRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkDeleteFieldDeviceRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkDeleteFieldDeviceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/field-devices/bulk-update": {
+            "patch": {
+                "description": "Updates multiple field devices in a single operation. Supports nested specification and BACnet objects updates.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-field-devices"
+                ],
+                "summary": "Bulk update multiple field devices",
+                "parameters": [
+                    {
+                        "description": "Bulk update request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkUpdateFieldDeviceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkUpdateFieldDeviceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/field-devices/multi-create": {
+            "post": {
+                "description": "Creates multiple field devices with independent validation. Returns detailed results for each device. To link created devices to a project, use the CreateProjectFieldDevice endpoint with the returned field device IDs.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-field-devices"
+                ],
+                "summary": "Create multiple field devices in a single operation",
+                "parameters": [
+                    {
+                        "description": "Multi-create request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.MultiCreateFieldDeviceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.MultiCreateFieldDeviceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/field-devices/options": {
+            "get": {
+                "description": "Returns all apparats, system parts, object datas and their relationships in a single call. This returns global templates (object data where project_id is null and is_active = true).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-field-devices"
+                ],
+                "summary": "Get all metadata needed for creating/editing field devices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceOptionsResponse"
                         }
                     },
                     "500": {
@@ -1879,6 +2493,49 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-notification-classes"
+                ],
+                "summary": "Create a new notification class",
+                "parameters": [
+                    {
+                        "description": "Notification Class data",
+                        "name": "notification_class",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateNotificationClassRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/facility/notification-classes/{id}": {
@@ -1925,6 +2582,97 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-notification-classes"
+                ],
+                "summary": "Update a notification class",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Notification Class ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Notification Class data",
+                        "name": "notification_class",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateNotificationClassRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-notification-classes"
+                ],
+                "summary": "Delete a notification class",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Notification Class ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/facility/object-data": {
@@ -1956,6 +2704,18 @@ const docTemplate = `{
                         "description": "Search query",
                         "name": "search",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by Apparat ID",
+                        "name": "apparat_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by System Part ID",
+                        "name": "system_part_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1975,6 +2735,49 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/internal_handler_facility.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-object-data"
+                ],
+                "summary": "Create object data",
+                "parameters": [
+                    {
+                        "description": "Object Data",
+                        "name": "object_data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateObjectDataRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2024,148 +2827,6 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/api/v1/facility/specifications": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "facility-specifications"
-                ],
-                "summary": "List specifications with pagination",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Items per page",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "search",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "facility-specifications"
-                ],
-                "summary": "Create a new specification",
-                "parameters": [
-                    {
-                        "description": "Specification data",
-                        "name": "specification",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSpecificationRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/facility/specifications/{id}": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "facility-specifications"
-                ],
-                "summary": "Get a specification by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Specification ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
-                        }
-                    }
-                }
             },
             "put": {
                 "consumes": [
@@ -2175,24 +2836,24 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "facility-specifications"
+                    "facility-object-data"
                 ],
-                "summary": "Update a specification",
+                "summary": "Update object data",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Specification ID",
+                        "description": "Object Data ID",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Specification data",
-                        "name": "specification",
+                        "description": "Object Data",
+                        "name": "object_data",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSpecificationRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateObjectDataRequest"
                         }
                     }
                 ],
@@ -2200,7 +2861,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse"
                         }
                     },
                     "400": {
@@ -2228,13 +2889,13 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "facility-specifications"
+                    "facility-object-data"
                 ],
-                "summary": "Delete a specification",
+                "summary": "Delete object data",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Specification ID",
+                        "description": "Object Data ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2246,6 +2907,55 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/object-data/{id}/bacnet-objects": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-object-data"
+                ],
+                "summary": "Get bacnet objects for object data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Object Data ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
                         }
@@ -2404,6 +3114,151 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse"
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/sps-controllers/bulk": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-sps-controllers"
+                ],
+                "summary": "Get multiple SPS controllers by IDs",
+                "parameters": [
+                    {
+                        "description": "SPS Controller IDs",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerBulkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerBulkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/sps-controllers/next-ga-device": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-sps-controllers"
+                ],
+                "summary": "Suggest next available GA device for a control cabinet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Control Cabinet ID",
+                        "name": "control_cabinet_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "SPS Controller ID to exclude",
+                        "name": "exclude_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.NextAvailableGADeviceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/sps-controllers/validate": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-validation"
+                ],
+                "summary": "Validate SPS controller fields",
+                "parameters": [
+                    {
+                        "description": "Validation payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ValidateSPSControllerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -2608,6 +3463,49 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-state-texts"
+                ],
+                "summary": "Create a new state text",
+                "parameters": [
+                    {
+                        "description": "State Text data",
+                        "name": "state_text",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateStateTextRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/facility/state-texts/{id}": {
@@ -2654,6 +3552,97 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-state-texts"
+                ],
+                "summary": "Update a state text",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "State Text ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "State Text data",
+                        "name": "state_text",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateStateTextRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-state-texts"
+                ],
+                "summary": "Delete a state text",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "State Text ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/facility/system-parts": {
@@ -2684,6 +3673,18 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Search query",
                         "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by Apparat ID",
+                        "name": "apparat_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by Object Data ID",
+                        "name": "object_data_id",
                         "in": "query"
                     }
                 ],
@@ -2942,6 +3943,7 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "description": "number_min and number_max must not overlap existing ranges. number_min may equal number_max.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3031,6 +4033,7 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "description": "number_min and number_max must not overlap existing ranges. number_min may equal number_max.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3098,6 +4101,459 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "System Type ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/phase-permissions": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "phase-permissions"
+                ],
+                "summary": "List permissions for a specific phase",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Phase ID",
+                        "name": "phase_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhasePermissionListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "phase-permissions"
+                ],
+                "summary": "Create a new phase permission",
+                "parameters": [
+                    {
+                        "description": "Permission data",
+                        "name": "permission",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreatePhasePermissionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhasePermissionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/phase-permissions/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "phase-permissions"
+                ],
+                "summary": "Get a phase permission by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Permission ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhasePermissionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "phase-permissions"
+                ],
+                "summary": "Update a phase permission",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Permission ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Permission data",
+                        "name": "permission",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdatePhasePermissionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhasePermissionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "phase-permissions"
+                ],
+                "summary": "Delete a phase permission",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Permission ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/phases": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "phases"
+                ],
+                "summary": "List phases with pagination",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "phases"
+                ],
+                "summary": "Create a new phase",
+                "parameters": [
+                    {
+                        "description": "Phase data",
+                        "name": "phase",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreatePhaseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/phases/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "phases"
+                ],
+                "summary": "Get a phase by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Phase ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "phases"
+                ],
+                "summary": "Update a phase",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Phase ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Phase data",
+                        "name": "phase",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdatePhaseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "phases"
+                ],
+                "summary": "Delete a phase",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Phase ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -3584,6 +5040,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/projects/{id}/field-device-options": {
+            "get": {
+                "description": "Returns all apparats, system parts, object datas and their relationships for a specific project. This returns project-specific object data (object data where project_id = :id and is_active = true).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Get all metadata needed for creating/editing field devices within a project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceOptionsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/projects/{id}/field-devices": {
             "get": {
                 "produces": [
@@ -3843,6 +5340,24 @@ const docTemplate = `{
                         "description": "Items per page",
                         "name": "limit",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by Apparat ID",
+                        "name": "apparat_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by System Part ID",
+                        "name": "system_part_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3850,6 +5365,121 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Attach object data to project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Object data link",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectObjectDataRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{id}/object-data/{objectDataId}": {
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Detach object data from project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Object Data ID",
+                        "name": "objectDataId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse"
                         }
                     },
                     "400": {
@@ -4103,6 +5733,50 @@ const docTemplate = `{
             }
         },
         "/api/v1/projects/{id}/users": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "List users in a project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectUserListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -4138,6 +5812,56 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectUserResponse"
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{id}/users/{userId}": {
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Remove user from project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -4625,6 +6349,37 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/users/allowed-roles": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get roles that the current user can assign",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AllowedRolesResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/users/{id}": {
             "get": {
                 "produces": [
@@ -4764,6 +6519,23 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "github_com_besart951_go_infra_link_backend_internal_domain_project.PermissionType": {
+            "type": "string",
+            "enum": [
+                "edit",
+                "suggest_changes",
+                "view",
+                "delete",
+                "manage_users"
+            ],
+            "x-enum-varnames": [
+                "PermissionEdit",
+                "PermissionSuggestChanges",
+                "PermissionView",
+                "PermissionDelete",
+                "PermissionManageUsers"
+            ]
+        },
         "github_com_besart951_go_infra_link_backend_internal_domain_project.ProjectStatus": {
             "type": "string",
             "enum": [
@@ -4775,6 +6547,27 @@ const docTemplate = `{
                 "StatusPlanned",
                 "StatusOngoing",
                 "StatusCompleted"
+            ]
+        },
+        "github_com_besart951_go_infra_link_backend_internal_domain_user.Role": {
+            "type": "string",
+            "enum": [
+                "superadmin",
+                "admin_fzag",
+                "fzag",
+                "admin_planer",
+                "planer",
+                "admin_entrepreneur",
+                "entrepreneur"
+            ],
+            "x-enum-varnames": [
+                "RoleSuperAdmin",
+                "RoleAdminFZAG",
+                "RoleFZAG",
+                "RoleAdminPlaner",
+                "RolePlaner",
+                "RoleAdminEnterpreneur",
+                "RoleEnterpreneur"
             ]
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.AddTeamMemberRequest": {
@@ -4828,9 +6621,13 @@ const docTemplate = `{
                 "role": {
                     "type": "string",
                     "enum": [
-                        "user",
-                        "admin",
-                        "superadmin"
+                        "superadmin",
+                        "admin_fzag",
+                        "fzag",
+                        "admin_planer",
+                        "planer",
+                        "admin_entrepreneur",
+                        "entrepreneur"
                     ]
                 }
             }
@@ -4852,6 +6649,43 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AllowedRolesResponse": {
+            "type": "object",
+            "properties": {
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatBulkRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatBulkResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
+                    }
                 }
             }
         },
@@ -4893,6 +6727,12 @@ const docTemplate = `{
                 "short_name": {
                     "type": "string"
                 },
+                "system_parts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse"
+                    }
+                },
                 "updated_at": {
                     "type": "string"
                 }
@@ -4932,6 +6772,73 @@ const docTemplate = `{
                 },
                 "last_name": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AvailableApparatNumbersResponse": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectBulkPatchInput": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "alarm_definition_id": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "gms_visible": {
+                    "type": "boolean"
+                },
+                "hardware_quantity": {
+                    "type": "integer",
+                    "maximum": 255,
+                    "minimum": 1
+                },
+                "hardware_type": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notification_class_id": {
+                    "type": "string"
+                },
+                "optional": {
+                    "type": "boolean"
+                },
+                "software_number": {
+                    "type": "integer",
+                    "maximum": 65535,
+                    "minimum": 0
+                },
+                "software_reference_id": {
+                    "type": "string"
+                },
+                "software_type": {
+                    "type": "string"
+                },
+                "state_text_id": {
+                    "type": "string"
+                },
+                "text_fix": {
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "text_individual": {
+                    "type": "string",
+                    "maxLength": 250
                 }
             }
         },
@@ -5048,6 +6955,32 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingBulkRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingBulkResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingResponse"
+                    }
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingListResponse": {
             "type": "object",
             "properties": {
@@ -5085,6 +7018,184 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkDeleteFieldDeviceRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkDeleteFieldDeviceResponse": {
+            "type": "object",
+            "properties": {
+                "failure_count": {
+                    "type": "integer"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkOperationResultItem"
+                    }
+                },
+                "success_count": {
+                    "type": "integer"
+                },
+                "total_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkOperationResultItem": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkUpdateFieldDeviceItem": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "apparat_id": {
+                    "type": "string"
+                },
+                "apparat_nr": {
+                    "type": "integer",
+                    "maximum": 99,
+                    "minimum": 1
+                },
+                "bacnet_objects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectBulkPatchInput"
+                    }
+                },
+                "bmk": {
+                    "type": "string",
+                    "maxLength": 10
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "id": {
+                    "type": "string"
+                },
+                "specification": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationInput"
+                },
+                "system_part_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkUpdateFieldDeviceRequest": {
+            "type": "object",
+            "required": [
+                "updates"
+            ],
+            "properties": {
+                "updates": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkUpdateFieldDeviceItem"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkUpdateFieldDeviceResponse": {
+            "type": "object",
+            "properties": {
+                "failure_count": {
+                    "type": "integer"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkOperationResultItem"
+                    }
+                },
+                "success_count": {
+                    "type": "integer"
+                },
+                "total_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetBulkRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetBulkResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetResponse"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetDeleteImpactResponse": {
+            "type": "object",
+            "properties": {
+                "bacnet_objects_count": {
+                    "type": "integer"
+                },
+                "control_cabinet_id": {
+                    "type": "string"
+                },
+                "field_devices_count": {
+                    "type": "integer"
+                },
+                "specifications_count": {
+                    "type": "integer"
+                },
+                "sps_controller_system_types_count": {
+                    "type": "integer"
+                },
+                "sps_controllers_count": {
+                    "type": "integer"
                 }
             }
         },
@@ -5128,6 +7239,20 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateAlarmDefinitionRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "alarm_note": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateApparatRequest": {
             "type": "object",
             "required": [
@@ -5146,6 +7271,12 @@ const docTemplate = `{
                 "short_name": {
                     "type": "string",
                     "maxLength": 255
+                },
+                "system_part_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -5230,7 +7361,8 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateControlCabinetRequest": {
             "type": "object",
             "required": [
-                "building_id"
+                "building_id",
+                "control_cabinet_nr"
             ],
             "properties": {
                 "building_id": {
@@ -5327,6 +7459,142 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateNotificationClassRequest": {
+            "type": "object",
+            "required": [
+                "event_category",
+                "internal_description",
+                "meaning",
+                "nc",
+                "object_description"
+            ],
+            "properties": {
+                "ack_required_error": {
+                    "type": "boolean"
+                },
+                "ack_required_normal": {
+                    "type": "boolean"
+                },
+                "ack_required_not_normal": {
+                    "type": "boolean"
+                },
+                "event_category": {
+                    "type": "string"
+                },
+                "internal_description": {
+                    "type": "string"
+                },
+                "meaning": {
+                    "type": "string"
+                },
+                "nc": {
+                    "type": "integer"
+                },
+                "norm_error": {
+                    "type": "integer"
+                },
+                "norm_normal": {
+                    "type": "integer"
+                },
+                "norm_not_normal": {
+                    "type": "integer"
+                },
+                "object_description": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateObjectDataRequest": {
+            "type": "object",
+            "required": [
+                "description",
+                "version"
+            ],
+            "properties": {
+                "apparat_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "bacnet_objects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectInput"
+                    }
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string",
+                    "maxLength": 100
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreatePhasePermissionRequest": {
+            "type": "object",
+            "required": [
+                "permission",
+                "phase_id",
+                "role"
+            ],
+            "properties": {
+                "permission": {
+                    "enum": [
+                        "edit",
+                        "suggest_changes",
+                        "view",
+                        "delete",
+                        "manage_users"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_project.PermissionType"
+                        }
+                    ]
+                },
+                "phase_id": {
+                    "type": "string"
+                },
+                "role": {
+                    "enum": [
+                        "user",
+                        "admin",
+                        "superadmin",
+                        "admin_planer",
+                        "planer",
+                        "admin_entrepreneur",
+                        "entrepreneur"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_user.Role"
+                        }
+                    ]
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreatePhaseRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectControlCabinetRequest": {
             "type": "object",
             "required": [
@@ -5349,16 +7617,24 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectObjectDataRequest": {
+            "type": "object",
+            "required": [
+                "object_data_id"
+            ],
+            "properties": {
+                "object_data_id": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectRequest": {
             "type": "object",
             "required": [
-                "creator_id",
-                "name"
+                "name",
+                "phase_id"
             ],
             "properties": {
-                "creator_id": {
-                    "type": "string"
-                },
                 "description": {
                     "type": "string"
                 },
@@ -5371,7 +7647,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "start_date": {
-                    "type": "string"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SwissDateTime"
                 },
                 "status": {
                     "type": "string",
@@ -5409,7 +7685,8 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "control_cabinet_id",
-                "device_name"
+                "device_name",
+                "ga_device"
             ],
             "properties": {
                 "control_cabinet_id": {
@@ -5428,8 +7705,7 @@ const docTemplate = `{
                     "maxLength": 100
                 },
                 "ga_device": {
-                    "type": "string",
-                    "maxLength": 10
+                    "type": "string"
                 },
                 "gateway": {
                     "type": "string",
@@ -5455,52 +7731,62 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSpecificationRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateStateTextRequest": {
             "type": "object",
             "required": [
-                "field_device_id"
+                "ref_number"
             ],
             "properties": {
-                "additional_info_motor_valve": {
-                    "type": "string",
-                    "maxLength": 250
-                },
-                "additional_info_size": {
+                "ref_number": {
                     "type": "integer"
                 },
-                "additional_information_installation_location": {
-                    "type": "string",
-                    "maxLength": 250
-                },
-                "electrical_connection_acdc": {
+                "state_text1": {
                     "type": "string"
                 },
-                "electrical_connection_amperage": {
-                    "type": "number"
-                },
-                "electrical_connection_ph": {
-                    "type": "integer"
-                },
-                "electrical_connection_power": {
-                    "type": "number"
-                },
-                "electrical_connection_rotation": {
-                    "type": "integer"
-                },
-                "field_device_id": {
+                "state_text10": {
                     "type": "string"
                 },
-                "specification_brand": {
-                    "type": "string",
-                    "maxLength": 250
+                "state_text11": {
+                    "type": "string"
                 },
-                "specification_supplier": {
-                    "type": "string",
-                    "maxLength": 250
+                "state_text12": {
+                    "type": "string"
                 },
-                "specification_type": {
-                    "type": "string",
-                    "maxLength": 250
+                "state_text13": {
+                    "type": "string"
+                },
+                "state_text14": {
+                    "type": "string"
+                },
+                "state_text15": {
+                    "type": "string"
+                },
+                "state_text16": {
+                    "type": "string"
+                },
+                "state_text2": {
+                    "type": "string"
+                },
+                "state_text3": {
+                    "type": "string"
+                },
+                "state_text4": {
+                    "type": "string"
+                },
+                "state_text5": {
+                    "type": "string"
+                },
+                "state_text6": {
+                    "type": "string"
+                },
+                "state_text7": {
+                    "type": "string"
+                },
+                "state_text8": {
+                    "type": "string"
+                },
+                "state_text9": {
+                    "type": "string"
                 }
             }
         },
@@ -5596,9 +7882,13 @@ const docTemplate = `{
                 "role": {
                     "type": "string",
                     "enum": [
-                        "user",
-                        "admin",
-                        "superadmin"
+                        "superadmin",
+                        "admin_fzag",
+                        "fzag",
+                        "admin_planer",
+                        "planer",
+                        "admin_entrepreneur",
+                        "entrepreneur"
                     ]
                 }
             }
@@ -5617,6 +7907,35 @@ const docTemplate = `{
                 },
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceCreateResultResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "Error message if failed (empty if succeeded)",
+                    "type": "string"
+                },
+                "error_field": {
+                    "description": "Specific field that caused the error (if applicable)",
+                    "type": "string"
+                },
+                "field_device": {
+                    "description": "The created field device (null if failed)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceResponse"
+                        }
+                    ]
+                },
+                "index": {
+                    "description": "Index in the original request array",
+                    "type": "integer"
+                },
+                "success": {
+                    "description": "Whether the creation succeeded",
+                    "type": "boolean"
                 }
             }
         },
@@ -5640,14 +7959,66 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceOptionsResponse": {
+            "type": "object",
+            "properties": {
+                "apparat_to_system_part": {
+                    "description": "apparat_id -\u003e [system_part_ids]",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "apparats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
+                    }
+                },
+                "object_data_to_apparat": {
+                    "description": "object_data_id -\u003e [apparat_ids]",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "object_datas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse"
+                    }
+                },
+                "system_parts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse"
+                    }
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceResponse": {
             "type": "object",
             "properties": {
+                "apparat": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
+                },
                 "apparat_id": {
                     "type": "string"
                 },
                 "apparat_nr": {
                     "type": "integer"
+                },
+                "bacnet_objects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse"
+                    }
                 },
                 "bmk": {
                     "type": "string"
@@ -5661,11 +8032,25 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "specification": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse"
+                },
                 "specification_id": {
                     "type": "string"
                 },
+                "sps_controller_system_type": {
+                    "description": "Embedded related entities for display",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeResponse"
+                        }
+                    ]
+                },
                 "sps_controller_system_type_id": {
                     "type": "string"
+                },
+                "system_part": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse"
                 },
                 "system_part_id": {
                     "type": "string"
@@ -5740,6 +8125,49 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.MultiCreateFieldDeviceRequest": {
+            "type": "object",
+            "required": [
+                "field_devices"
+            ],
+            "properties": {
+                "field_devices": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateFieldDeviceRequest"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.MultiCreateFieldDeviceResponse": {
+            "type": "object",
+            "properties": {
+                "failure_count": {
+                    "type": "integer"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceCreateResultResponse"
+                    }
+                },
+                "success_count": {
+                    "type": "integer"
+                },
+                "total_requests": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.NextAvailableGADeviceResponse": {
+            "type": "object",
+            "properties": {
+                "ga_device": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassResponse": {
             "type": "object",
             "properties": {
@@ -5810,6 +8238,18 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse": {
             "type": "object",
             "properties": {
+                "apparats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
+                    }
+                },
+                "bacnet_objects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse"
+                    }
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -5845,6 +8285,86 @@ const docTemplate = `{
                     "minLength": 8
                 },
                 "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.PhasePermissionListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhasePermissionResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.PhasePermissionResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "permission": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_project.PermissionType"
+                },
+                "phase_id": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_user.Role"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -6021,6 +8541,17 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectUserListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UserResponse"
+                    }
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectUserResponse": {
             "type": "object",
             "properties": {
@@ -6029,6 +8560,32 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerBulkRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerBulkResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse"
+                    }
                 }
             }
         },
@@ -6144,23 +8701,46 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationListResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationInput": {
             "type": "object",
             "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse"
-                    }
+                "additional_info_motor_valve": {
+                    "type": "string",
+                    "maxLength": 250
                 },
-                "page": {
+                "additional_info_size": {
                     "type": "integer"
                 },
-                "total": {
+                "additional_information_installation_location": {
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "electrical_connection_acdc": {
+                    "type": "string"
+                },
+                "electrical_connection_amperage": {
+                    "type": "number"
+                },
+                "electrical_connection_ph": {
                     "type": "integer"
                 },
-                "total_pages": {
+                "electrical_connection_power": {
+                    "type": "number"
+                },
+                "electrical_connection_rotation": {
                     "type": "integer"
+                },
+                "specification_brand": {
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "specification_supplier": {
+                    "type": "string",
+                    "maxLength": 250
+                },
+                "specification_type": {
+                    "type": "string",
+                    "maxLength": 250
                 }
             }
         },
@@ -6276,6 +8856,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SwissDateTime": {
+            "type": "object",
+            "properties": {
+                "time.Time": {
                     "type": "string"
                 }
             }
@@ -6443,6 +9031,17 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateAlarmDefinitionRequest": {
+            "type": "object",
+            "properties": {
+                "alarm_note": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateApparatRequest": {
             "type": "object",
             "properties": {
@@ -6457,18 +9056,17 @@ const docTemplate = `{
                 "short_name": {
                     "type": "string",
                     "maxLength": 255
+                },
+                "system_part_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateBacnetObjectRequest": {
             "type": "object",
-            "required": [
-                "hardware_quantity",
-                "hardware_type",
-                "software_number",
-                "software_type",
-                "text_fix"
-            ],
             "properties": {
                 "alarm_definition_id": {
                     "type": "string"
@@ -6548,6 +9146,9 @@ const docTemplate = `{
         },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateFieldDeviceRequest": {
             "type": "object",
+            "required": [
+                "system_part_id"
+            ],
             "properties": {
                 "apparat_id": {
                     "type": "string"
@@ -6625,6 +9226,105 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateNotificationClassRequest": {
+            "type": "object",
+            "properties": {
+                "ack_required_error": {
+                    "type": "boolean"
+                },
+                "ack_required_normal": {
+                    "type": "boolean"
+                },
+                "ack_required_not_normal": {
+                    "type": "boolean"
+                },
+                "event_category": {
+                    "type": "string"
+                },
+                "internal_description": {
+                    "type": "string"
+                },
+                "meaning": {
+                    "type": "string"
+                },
+                "nc": {
+                    "type": "integer"
+                },
+                "norm_error": {
+                    "type": "integer"
+                },
+                "norm_normal": {
+                    "type": "integer"
+                },
+                "norm_not_normal": {
+                    "type": "integer"
+                },
+                "object_description": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateObjectDataRequest": {
+            "type": "object",
+            "properties": {
+                "apparat_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "bacnet_objects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectInput"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdatePhasePermissionRequest": {
+            "type": "object",
+            "required": [
+                "permission"
+            ],
+            "properties": {
+                "permission": {
+                    "enum": [
+                        "edit",
+                        "suggest_changes",
+                        "view",
+                        "delete",
+                        "manage_users"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_project.PermissionType"
+                        }
+                    ]
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdatePhaseRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateProjectControlCabinetRequest": {
             "type": "object",
             "required": [
@@ -6662,7 +9362,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "start_date": {
-                    "type": "string"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SwissDateTime"
                 },
                 "status": {
                     "enum": [
@@ -6708,8 +9408,7 @@ const docTemplate = `{
                     "maxLength": 100
                 },
                 "ga_device": {
-                    "type": "string",
-                    "maxLength": 10
+                    "type": "string"
                 },
                 "gateway": {
                     "type": "string",
@@ -6735,46 +9434,59 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSpecificationRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateStateTextRequest": {
             "type": "object",
             "properties": {
-                "additional_info_motor_valve": {
-                    "type": "string",
-                    "maxLength": 250
-                },
-                "additional_info_size": {
+                "ref_number": {
                     "type": "integer"
                 },
-                "additional_information_installation_location": {
-                    "type": "string",
-                    "maxLength": 250
-                },
-                "electrical_connection_acdc": {
+                "state_text1": {
                     "type": "string"
                 },
-                "electrical_connection_amperage": {
-                    "type": "number"
+                "state_text10": {
+                    "type": "string"
                 },
-                "electrical_connection_ph": {
-                    "type": "integer"
+                "state_text11": {
+                    "type": "string"
                 },
-                "electrical_connection_power": {
-                    "type": "number"
+                "state_text12": {
+                    "type": "string"
                 },
-                "electrical_connection_rotation": {
-                    "type": "integer"
+                "state_text13": {
+                    "type": "string"
                 },
-                "specification_brand": {
-                    "type": "string",
-                    "maxLength": 250
+                "state_text14": {
+                    "type": "string"
                 },
-                "specification_supplier": {
-                    "type": "string",
-                    "maxLength": 250
+                "state_text15": {
+                    "type": "string"
                 },
-                "specification_type": {
-                    "type": "string",
-                    "maxLength": 250
+                "state_text16": {
+                    "type": "string"
+                },
+                "state_text2": {
+                    "type": "string"
+                },
+                "state_text3": {
+                    "type": "string"
+                },
+                "state_text4": {
+                    "type": "string"
+                },
+                "state_text5": {
+                    "type": "string"
+                },
+                "state_text6": {
+                    "type": "string"
+                },
+                "state_text7": {
+                    "type": "string"
+                },
+                "state_text8": {
+                    "type": "string"
+                },
+                "state_text9": {
+                    "type": "string"
                 }
             }
         },
@@ -6849,9 +9561,13 @@ const docTemplate = `{
                 "role": {
                     "type": "string",
                     "enum": [
-                        "user",
-                        "admin",
-                        "superadmin"
+                        "superadmin",
+                        "admin_fzag",
+                        "fzag",
+                        "admin_planer",
+                        "planer",
+                        "admin_entrepreneur",
+                        "entrepreneur"
                     ]
                 }
             }
@@ -6913,6 +9629,63 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ValidateBuildingRequest": {
+            "type": "object",
+            "properties": {
+                "building_group": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "iws_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ValidateControlCabinetRequest": {
+            "type": "object",
+            "properties": {
+                "building_id": {
+                    "type": "string"
+                },
+                "control_cabinet_nr": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ValidateSPSControllerRequest": {
+            "type": "object",
+            "properties": {
+                "control_cabinet_id": {
+                    "type": "string"
+                },
+                "device_name": {
+                    "type": "string"
+                },
+                "ga_device": {
+                    "type": "string"
+                },
+                "gateway": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ip_address": {
+                    "type": "string"
+                },
+                "subnet": {
+                    "type": "string"
+                },
+                "vlan": {
                     "type": "string"
                 }
             }
@@ -7064,6 +9837,18 @@ const docTemplate = `{
         "internal_handler_facility.ObjectDataResponse": {
             "type": "object",
             "properties": {
+                "apparats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
+                    }
+                },
+                "bacnet_objects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse"
+                    }
+                },
                 "created_at": {
                     "type": "string"
                 },

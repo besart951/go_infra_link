@@ -41,10 +41,18 @@ type Services struct {
 // NewServices creates facility services using a factory-style constructor.
 func NewServices(repos Repositories) *Services {
 	return &Services{
-		Building:      NewBuildingService(repos.Buildings),
-		SystemType:    NewSystemTypeService(repos.SystemTypes),
-		SystemPart:    NewSystemPartService(repos.SystemParts),
-		Apparat:       NewApparatService(repos.Apparats),
+		Building: NewBuildingService(
+			repos.Buildings,
+			repos.ControlCabinets,
+			repos.SPSControllers,
+			repos.SPSControllerSystemTypes,
+			repos.FieldDevices,
+			repos.Specifications,
+			repos.BacnetObjects,
+		),
+		SystemType: NewSystemTypeService(repos.SystemTypes),
+		SystemPart: NewSystemPartService(repos.SystemParts),
+		Apparat:    NewApparatService(repos.Apparats),
 		ControlCabinet: NewControlCabinetService(
 			repos.ControlCabinets,
 			repos.Buildings,
@@ -78,6 +86,9 @@ func NewServices(repos Repositories) *Services {
 			repos.ControlCabinets,
 			repos.SystemTypes,
 			repos.SPSControllerSystemTypes,
+			repos.FieldDevices,
+			repos.Specifications,
+			repos.BacnetObjects,
 		),
 		StateText:               NewStateTextService(repos.StateTexts),
 		NotificationClass:       NewNotificationClassService(repos.NotificationClasses),

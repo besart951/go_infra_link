@@ -82,6 +82,7 @@ export interface UpdateFieldDeviceRequest {
 	system_part_id?: string;
 	apparat_id?: string;
 	object_data_id?: string;
+	specification?: SpecificationInput;
 	bacnet_objects?: BacnetObjectInput[];
 }
 

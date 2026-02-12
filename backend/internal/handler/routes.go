@@ -203,7 +203,6 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		facility.PUT("/control-cabinets/:id", handlers.FacilityControlCabinetHandler.UpdateControlCabinet)
 		facility.DELETE("/control-cabinets/:id", handlers.FacilityControlCabinetHandler.DeleteControlCabinet)
 
-		facility.POST("/field-devices", handlers.FacilityFieldDeviceHandler.CreateFieldDevice)
 		facility.POST("/field-devices/multi-create", handlers.FacilityFieldDeviceHandler.MultiCreateFieldDevices)
 		facility.GET("/field-devices/options", handlers.FacilityFieldDeviceHandler.GetFieldDeviceOptions)
 		facility.GET("/field-devices/available-apparat-nr", handlers.FacilityFieldDeviceHandler.ListAvailableApparatNumbers)

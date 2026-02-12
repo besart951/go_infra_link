@@ -18,49 +18,6 @@ func NewFieldDeviceHandler(service FieldDeviceService) *FieldDeviceHandler {
 	return &FieldDeviceHandler{service: service}
 }
 
-// CreateFieldDevice godoc
-// @Summary Create a new field device
-// @Tags facility-field-devices
-// @Accept json
-// @Produce json
-// @Param field_device body dto.CreateFieldDeviceRequest true "Field Device data"
-// @Success 201 {object} dto.FieldDeviceResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
-// @Router /api/v1/facility/field-devices [post]
-func (h *FieldDeviceHandler) CreateFieldDevice(c *gin.Context) {
-	var req dto.CreateFieldDeviceRequest
-	if !bindJSON(c, &req) {
-		return
-	}
-
-	fieldDevice := toFieldDeviceModel(req)
-	bacnetObjects := toFieldDeviceBacnetObjects(req.BacnetObjects)
-
-	if err := h.service.CreateWithBacnetObjects(fieldDevice, req.ObjectDataID, bacnetObjects); err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		if errors.Is(err, domain.ErrInvalidArgument) {
-			respondInvalidArgument(c, "object_data_id and bacnet_objects are mutually exclusive")
-			return
-		}
-		if errors.Is(err, domain.ErrNotFound) {
-			respondInvalidReference(c)
-			return
-		}
-		if errors.Is(err, domain.ErrConflict) {
-			respondConflict(c, "apparat_nr is already used in this scope")
-			return
-		}
-		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
-		return
-	}
-
-	c.JSON(http.StatusCreated, toFieldDeviceResponse(*fieldDevice))
-}
-
 // MultiCreateFieldDevices godoc
 // @Summary Create multiple field devices in a single operation
 // @Description Creates multiple field devices with independent validation. Returns detailed results for each device. To link created devices to a project, use the CreateProjectFieldDevice endpoint with the returned field device IDs.
@@ -135,6 +92,7 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 // @Param control_cabinet_id query string false "Filter by control cabinet ID"
 // @Param sps_controller_id query string false "Filter by SPS controller ID"
 // @Param sps_controller_system_type_id query string false "Filter by SPS controller system type ID"
+// @Param project_id query string false "Filter by project ID"
 // @Success 200 {object} dto.FieldDeviceListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse

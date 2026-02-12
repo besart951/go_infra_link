@@ -1,12 +1,12 @@
 <script lang="ts">
 	/**
 	 * Multi-Create Field Device Form (Refactored)
-	 * 
+	 *
 	 * Architecture: Hexagonal / Clean Architecture
 	 * - Domain logic in $lib/domain/facility/fieldDeviceMultiCreate.ts
 	 * - UI components are thin wrappers around domain logic
 	 * - Clear separation of concerns
-	 * 
+	 *
 	 * Features:
 	 * - Selection flow: SPS Controller System Type → Object Data → Apparat → System Part
 	 * - Dynamic row generation
@@ -70,7 +70,7 @@
 	// ─────────────────────────────────────────────────────────────────────────────
 	// State
 	// ─────────────────────────────────────────────────────────────────────────────
-	
+
 	// Selection state
 	let selection = $state<MultiCreateSelection>({
 		spsControllerSystemTypeId: '',
@@ -78,7 +78,7 @@
 		apparatId: '',
 		systemPartId: ''
 	});
-	
+
 	// For FieldDevicePreselection component
 	let preselectionValue = $state<PreselectionType>({
 		objectDataId: '',
@@ -88,7 +88,7 @@
 
 	// Row data
 	let rows = $state<FieldDeviceRowData[]>([]);
-	
+
 	// Validation errors (reactive map)
 	let rowErrors = $state<Map<number, FieldDeviceRowError>>(new Map());
 
@@ -107,7 +107,7 @@
 	// ─────────────────────────────────────────────────────────────────────────────
 	// Derived State
 	// ─────────────────────────────────────────────────────────────────────────────
-	
+
 	const showConfiguration = $derived(hasRequiredSelections(selection));
 	const showRowsSection = $derived(showConfiguration);
 	const canAddRow = $derived(
@@ -147,14 +147,14 @@
 	$effect(() => {
 		const newKey = createSelectionKey(selection);
 		const keyChanged = selectionKey !== '' && newKey !== selectionKey;
-		
+
 		// Reset on key change
 		if (keyChanged) {
 			availableNumbers = [];
 			rows = [];
 			rowErrors = new Map();
 		}
-		
+
 		selectionKey = newKey;
 
 		// Fetch if we have the required selections
@@ -183,7 +183,7 @@
 
 		// Abort previous request
 		abortController?.abort();
-		
+
 		loadingAvailableNumbers = true;
 		const controller = new AbortController();
 		abortController = controller;
@@ -202,10 +202,11 @@
 			}
 		} catch (err) {
 			if (err instanceof DOMException && err.name === 'AbortError') return;
-			
-			const msg = err instanceof ApiException
-				? `Failed to fetch available numbers (${err.status}): ${err.message}`
-				: `Failed to fetch available numbers: ${(err as Error)?.message ?? String(err)}`;
+
+			const msg =
+				err instanceof ApiException
+					? `Failed to fetch available numbers (${err.status}): ${err.message}`
+					: `Failed to fetch available numbers: ${(err as Error)?.message ?? String(err)}`;
 			addToast(msg, 'error');
 			availableNumbers = [];
 		} finally {
@@ -349,14 +350,14 @@
 
 	function handleRowApparatNrChange(index: number, value: string) {
 		const trimmed = value.trim();
-		
+
 		if (!trimmed) {
 			rows[index].apparatNr = null;
 		} else {
 			const num = parseInt(trimmed, 10);
 			rows[index].apparatNr = isNaN(num) ? null : num;
 		}
-		
+
 		rows = [...rows];
 		revalidateAllRows();
 	}
@@ -408,12 +409,20 @@
 		return useCase.searchSpsControllerSystemTypes({ search, limit: 50 });
 	}
 
-	async function fetchSpsControllerSystemTypeById(id: string): Promise<SPSControllerSystemType | null> {
+	async function fetchSpsControllerSystemTypeById(
+		id: string
+	): Promise<SPSControllerSystemType | null> {
 		try {
 			return await useCase.getSpsControllerSystemType(id);
 		} catch {
 			return null;
 		}
+	}
+
+	function formatSpsControllerSystemTypeLabel(item: SPSControllerSystemType): string {
+		const number = item.number ?? '';
+		const documentName = item.document_name ?? '';
+		return `${number} - ${documentName}`;
 	}
 </script>
 
@@ -445,6 +454,7 @@
 					fetcher={fetchSpsControllerSystemTypes}
 					fetchById={fetchSpsControllerSystemTypeById}
 					labelKey="system_type_name"
+					labelFormatter={formatSpsControllerSystemTypeLabel}
 					width="w-full"
 					value={selection.spsControllerSystemTypeId}
 					onValueChange={handleSpsSystemTypeChange}
@@ -512,7 +522,8 @@
 					<AlertCircle class="size-4" />
 					<Alert.Description>
 						{#if availableNumbers.length === 0 && !loadingAvailableNumbers}
-							All apparat numbers are assigned. Cannot create more field devices for this configuration.
+							All apparat numbers are assigned. Cannot create more field devices for this
+							configuration.
 						{:else if loadingAvailableNumbers}
 							Loading available apparat numbers...
 						{:else}
@@ -552,9 +563,7 @@
 					</p>
 					<div class="flex gap-2">
 						{#if onCancel}
-							<Button variant="outline" onclick={onCancel} disabled={submitting}>
-								Cancel
-							</Button>
+							<Button variant="outline" onclick={onCancel} disabled={submitting}>Cancel</Button>
 						{/if}
 						<Button
 							onclick={handleSubmit}

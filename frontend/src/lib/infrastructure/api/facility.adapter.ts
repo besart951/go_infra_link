@@ -355,17 +355,6 @@ export async function getFieldDevice(id: string, options?: RequestInit): Promise
 	return api<FieldDevice>(`/facility/field-devices/${id}`, options);
 }
 
-export async function createFieldDevice(
-	data: CreateFieldDeviceRequest,
-	options?: RequestInit
-): Promise<FieldDevice> {
-	return api<FieldDevice>('/facility/field-devices', {
-		...options,
-		method: 'POST',
-		body: JSON.stringify(data)
-	});
-}
-
 export async function updateFieldDevice(
 	id: string,
 	data: UpdateFieldDeviceRequest,

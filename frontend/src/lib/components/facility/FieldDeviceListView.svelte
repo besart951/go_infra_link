@@ -13,6 +13,7 @@
 	import { addProjectFieldDevice } from '$lib/infrastructure/api/project.adapter.js';
 	import { addToast } from '$lib/components/toast.svelte';
 	import { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
+	import { useUnsavedChangesWarning } from '$lib/hooks/useUnsavedChangesWarning.svelte.js';
 	import type { FieldDevice, Apparat, SystemPart } from '$lib/domain/facility/index.js';
 	import type { FieldDeviceFilters } from '$lib/stores/facility/fieldDeviceStore.js';
 	import FieldDeviceMultiCreateForm from '$lib/components/facility/FieldDeviceMultiCreateForm.svelte';
@@ -34,7 +35,10 @@
 	const store = createFieldDeviceStore(300, projectId);
 
 	// Editing composable
-	const editing = useFieldDeviceEditing();
+	const editing = useFieldDeviceEditing(projectId);
+
+	// Browser warning for unsaved changes
+	useUnsavedChangesWarning(() => editing.hasUnsavedChanges);
 
 	// Preloaded lookup data for table selects
 	let allApparats = $state<Apparat[]>([]);
@@ -243,7 +247,11 @@
 	{/if}
 
 	<!-- Filter Card -->
-	<FieldDeviceFilterCard onApplyFilters={handleApplyFilters} onClearFilters={handleClearFilters} />
+	<FieldDeviceFilterCard
+		onApplyFilters={handleApplyFilters}
+		onClearFilters={handleClearFilters}
+		showProjectFilter={!projectId}
+	/>
 
 	<!-- Data Table with Expandable Rows and Selection -->
 	<div class="flex flex-col gap-4">
