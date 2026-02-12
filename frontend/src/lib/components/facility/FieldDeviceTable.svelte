@@ -3,7 +3,7 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { Settings2 } from '@lucide/svelte';
+	import { ArrowDown, ArrowUp, Settings2 } from '@lucide/svelte';
 	import FieldDeviceTableRow from '$lib/components/facility/FieldDeviceTableRow.svelte';
 	import BacnetObjectsEditor from '$lib/components/facility/BacnetObjectsEditor.svelte';
 	import type { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
@@ -23,6 +23,9 @@
 		onToggleSelectAll: () => void;
 		onCopy: (value: string) => void;
 		onDelete: (device: FieldDevice) => void;
+		sortBy?: string;
+		sortOrder?: 'asc' | 'desc';
+		onSort: (orderBy: string) => void;
 	}
 
 	let {
@@ -38,7 +41,10 @@
 		onToggleSelect,
 		onToggleSelectAll,
 		onCopy,
-		onDelete
+		onDelete,
+		sortBy,
+		sortOrder,
+		onSort
 	}: Props = $props();
 
 	let expandedBacnetRows = $state<Set<string>>(new Set());
@@ -63,6 +69,11 @@
 	function toggleSpecifications() {
 		showSpecifications = !showSpecifications;
 	}
+
+	function sortState(key: string) {
+		if (!sortBy || sortBy !== key) return undefined;
+		return sortOrder === 'desc' ? 'desc' : 'asc';
+	}
 </script>
 
 <div class="rounded-lg border bg-background">
@@ -80,12 +91,90 @@
 				</Table.Head>
 				<!-- Expand Column for BACnet Objects -->
 				<Table.Head class="w-10"></Table.Head>
-				<Table.Head>SPS System Type</Table.Head>
-				<Table.Head>BMK</Table.Head>
-				<Table.Head>Description</Table.Head>
-				<Table.Head class="w-24">Apparat Nr</Table.Head>
-				<Table.Head class="w-48">Apparat</Table.Head>
-				<Table.Head class="w-48">System Part</Table.Head>
+				<Table.Head>
+					<button
+						type="button"
+						class="inline-flex cursor-pointer items-center gap-1 text-left underline-offset-4 hover:underline"
+						onclick={() => onSort('sps_system_type')}
+					>
+						<span>SPS System Type</span>
+						{#if sortState('sps_system_type') === 'asc'}
+							<ArrowUp class="h-3 w-3" />
+						{:else if sortState('sps_system_type') === 'desc'}
+							<ArrowDown class="h-3 w-3" />
+						{/if}
+					</button>
+				</Table.Head>
+				<Table.Head>
+					<button
+						type="button"
+						class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+						onclick={() => onSort('bmk')}
+					>
+						<span>BMK</span>
+						{#if sortState('bmk') === 'asc'}
+							<ArrowUp class="h-3 w-3" />
+						{:else if sortState('bmk') === 'desc'}
+							<ArrowDown class="h-3 w-3" />
+						{/if}
+					</button>
+				</Table.Head>
+				<Table.Head>
+					<button
+						type="button"
+						class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+						onclick={() => onSort('description')}
+					>
+						<span>Description</span>
+						{#if sortState('description') === 'asc'}
+							<ArrowUp class="h-3 w-3" />
+						{:else if sortState('description') === 'desc'}
+							<ArrowDown class="h-3 w-3" />
+						{/if}
+					</button>
+				</Table.Head>
+				<Table.Head class="w-24">
+					<button
+						type="button"
+						class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+						onclick={() => onSort('apparat_nr')}
+					>
+						<span>Apparat Nr</span>
+						{#if sortState('apparat_nr') === 'asc'}
+							<ArrowUp class="h-3 w-3" />
+						{:else if sortState('apparat_nr') === 'desc'}
+							<ArrowDown class="h-3 w-3" />
+						{/if}
+					</button>
+				</Table.Head>
+				<Table.Head class="w-48">
+					<button
+						type="button"
+						class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+						onclick={() => onSort('apparat')}
+					>
+						<span>Apparat</span>
+						{#if sortState('apparat') === 'asc'}
+							<ArrowUp class="h-3 w-3" />
+						{:else if sortState('apparat') === 'desc'}
+							<ArrowDown class="h-3 w-3" />
+						{/if}
+					</button>
+				</Table.Head>
+				<Table.Head class="w-48">
+					<button
+						type="button"
+						class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+						onclick={() => onSort('system_part')}
+					>
+						<span>System Part</span>
+						{#if sortState('system_part') === 'asc'}
+							<ArrowUp class="h-3 w-3" />
+						{:else if sortState('system_part') === 'desc'}
+							<ArrowDown class="h-3 w-3" />
+						{/if}
+					</button>
+				</Table.Head>
 				<!-- Specification Toggle Header -->
 				<Table.Head class="w-10">
 					<Button
@@ -99,17 +188,160 @@
 					</Button>
 				</Table.Head>
 				{#if showSpecifications}
-					<Table.Head class="text-xs">Supplier</Table.Head>
-					<Table.Head class="text-xs">Brand</Table.Head>
-					<Table.Head class="text-xs">Type</Table.Head>
-					<Table.Head class="text-xs">Motor/Valve</Table.Head>
-					<Table.Head class="text-xs">Size</Table.Head>
-					<Table.Head class="text-xs">Install Loc.</Table.Head>
-					<Table.Head class="text-xs">PH</Table.Head>
-					<Table.Head class="text-xs">AC/DC</Table.Head>
-					<Table.Head class="text-xs">Amperage</Table.Head>
-					<Table.Head class="text-xs">Power</Table.Head>
-					<Table.Head class="text-xs">Rotation</Table.Head>
+					<Table.Head class="text-xs">
+						<button
+							type="button"
+							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+							onclick={() => onSort('spec_supplier')}
+						>
+							<span>Supplier</span>
+							{#if sortState('spec_supplier') === 'asc'}
+								<ArrowUp class="h-3 w-3" />
+							{:else if sortState('spec_supplier') === 'desc'}
+								<ArrowDown class="h-3 w-3" />
+							{/if}
+						</button>
+					</Table.Head>
+					<Table.Head class="text-xs">
+						<button
+							type="button"
+							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+							onclick={() => onSort('spec_brand')}
+						>
+							<span>Brand</span>
+							{#if sortState('spec_brand') === 'asc'}
+								<ArrowUp class="h-3 w-3" />
+							{:else if sortState('spec_brand') === 'desc'}
+								<ArrowDown class="h-3 w-3" />
+							{/if}
+						</button>
+					</Table.Head>
+					<Table.Head class="text-xs">
+						<button
+							type="button"
+							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+							onclick={() => onSort('spec_type')}
+						>
+							<span>Type</span>
+							{#if sortState('spec_type') === 'asc'}
+								<ArrowUp class="h-3 w-3" />
+							{:else if sortState('spec_type') === 'desc'}
+								<ArrowDown class="h-3 w-3" />
+							{/if}
+						</button>
+					</Table.Head>
+					<Table.Head class="text-xs">
+						<button
+							type="button"
+							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+							onclick={() => onSort('spec_motor_valve')}
+						>
+							<span>Motor/Valve</span>
+							{#if sortState('spec_motor_valve') === 'asc'}
+								<ArrowUp class="h-3 w-3" />
+							{:else if sortState('spec_motor_valve') === 'desc'}
+								<ArrowDown class="h-3 w-3" />
+							{/if}
+						</button>
+					</Table.Head>
+					<Table.Head class="text-xs">
+						<button
+							type="button"
+							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+							onclick={() => onSort('spec_size')}
+						>
+							<span>Size</span>
+							{#if sortState('spec_size') === 'asc'}
+								<ArrowUp class="h-3 w-3" />
+							{:else if sortState('spec_size') === 'desc'}
+								<ArrowDown class="h-3 w-3" />
+							{/if}
+						</button>
+					</Table.Head>
+					<Table.Head class="text-xs">
+						<button
+							type="button"
+							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+							onclick={() => onSort('spec_install_loc')}
+						>
+							<span>Install Loc.</span>
+							{#if sortState('spec_install_loc') === 'asc'}
+								<ArrowUp class="h-3 w-3" />
+							{:else if sortState('spec_install_loc') === 'desc'}
+								<ArrowDown class="h-3 w-3" />
+							{/if}
+						</button>
+					</Table.Head>
+					<Table.Head class="text-xs">
+						<button
+							type="button"
+							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+							onclick={() => onSort('spec_ph')}
+						>
+							<span>PH</span>
+							{#if sortState('spec_ph') === 'asc'}
+								<ArrowUp class="h-3 w-3" />
+							{:else if sortState('spec_ph') === 'desc'}
+								<ArrowDown class="h-3 w-3" />
+							{/if}
+						</button>
+					</Table.Head>
+					<Table.Head class="text-xs">
+						<button
+							type="button"
+							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+							onclick={() => onSort('spec_acdc')}
+						>
+							<span>AC/DC</span>
+							{#if sortState('spec_acdc') === 'asc'}
+								<ArrowUp class="h-3 w-3" />
+							{:else if sortState('spec_acdc') === 'desc'}
+								<ArrowDown class="h-3 w-3" />
+							{/if}
+						</button>
+					</Table.Head>
+					<Table.Head class="text-xs">
+						<button
+							type="button"
+							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+							onclick={() => onSort('spec_amperage')}
+						>
+							<span>Amperage</span>
+							{#if sortState('spec_amperage') === 'asc'}
+								<ArrowUp class="h-3 w-3" />
+							{:else if sortState('spec_amperage') === 'desc'}
+								<ArrowDown class="h-3 w-3" />
+							{/if}
+						</button>
+					</Table.Head>
+					<Table.Head class="text-xs">
+						<button
+							type="button"
+							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+							onclick={() => onSort('spec_power')}
+						>
+							<span>Power</span>
+							{#if sortState('spec_power') === 'asc'}
+								<ArrowUp class="h-3 w-3" />
+							{:else if sortState('spec_power') === 'desc'}
+								<ArrowDown class="h-3 w-3" />
+							{/if}
+						</button>
+					</Table.Head>
+					<Table.Head class="text-xs">
+						<button
+							type="button"
+							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+							onclick={() => onSort('spec_rotation')}
+						>
+							<span>Rotation</span>
+							{#if sortState('spec_rotation') === 'asc'}
+								<ArrowUp class="h-3 w-3" />
+							{:else if sortState('spec_rotation') === 'desc'}
+								<ArrowDown class="h-3 w-3" />
+							{/if}
+						</button>
+					</Table.Head>
 				{/if}
 			</Table.Row>
 		</Table.Header>

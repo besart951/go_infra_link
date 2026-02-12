@@ -102,13 +102,11 @@ func (s *FieldDeviceService) List(page, limit int, search string) (*domain.Pagin
 	})
 }
 
-func (s *FieldDeviceService) ListWithFilters(page, limit int, search string, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
-	page, limit = domain.NormalizePagination(page, limit, 300)
-	return s.repo.GetPaginatedListWithFilters(domain.PaginationParams{
-		Page:   page,
-		Limit:  limit,
-		Search: search,
-	}, filters)
+func (s *FieldDeviceService) ListWithFilters(params domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 300)
+	params.Page = page
+	params.Limit = limit
+	return s.repo.GetPaginatedListWithFilters(params, filters)
 }
 func (s *FieldDeviceService) Update(fieldDevice *domainFacility.FieldDevice) error {
 	if err := s.validateRequiredFields(fieldDevice); err != nil {

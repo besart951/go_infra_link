@@ -24,14 +24,15 @@
 	import {
 		getControlCabinets,
 		getSPSControllers,
-		deleteSPSController
+		deleteSPSController,
+		getBuildings
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import type { Project } from '$lib/domain/project/index.js';
 	import type {
 		ProjectControlCabinetLink,
 		ProjectSPSControllerLink
 	} from '$lib/domain/project/index.js';
-	import type { ControlCabinet, SPSController } from '$lib/domain/facility/index.js';
+	import type { Building, ControlCabinet, SPSController } from '$lib/domain/facility/index.js';
 	import { ArrowLeft, Plus, Pencil } from '@lucide/svelte';
 
 	const projectId = $derived($page.params.id ?? '');
@@ -45,6 +46,8 @@
 	let controlCabinetLoading = $state(false);
 	let showControlCabinetForm = $state(false);
 	let controlCabinetSearch = $state('');
+	let buildingMap = $state(new Map<string, string>());
+	const buildingRequests = new Set<string>();
 
 	let spsControllerLinks = $state<ProjectSPSControllerLink[]>([]);
 	let spsControllerOptions = $state<SPSController[]>([]);
@@ -128,6 +131,45 @@
 		error: null
 	}));
 
+	function formatBuildingLabel(building: Building): string {
+		return `${building.iws_code}-${building.building_group}`;
+	}
+
+	function getBuildingLabel(buildingId: string | undefined | null): string {
+		if (!buildingId) return '-';
+		return buildingMap.get(buildingId) ?? buildingId;
+	}
+
+	function updateBuildingMap(buildings: Building[]) {
+		const next = new Map(buildingMap);
+		for (const building of buildings) {
+			next.set(building.id, formatBuildingLabel(building));
+		}
+		buildingMap = next;
+	}
+
+	async function ensureBuildingLabels(items: ControlCabinet[]) {
+		const uniqueIds = new Set(
+			items.map((item) => item.building_id).filter((id): id is string => Boolean(id))
+		);
+		const missingIds = Array.from(uniqueIds).filter(
+			(id) => !buildingMap.has(id) && !buildingRequests.has(id)
+		);
+
+		if (missingIds.length === 0) return;
+
+		missingIds.forEach((id) => buildingRequests.add(id));
+
+		try {
+			const res = await getBuildings(missingIds);
+			updateBuildingMap(res.items || []);
+		} catch (err) {
+			console.error('Failed to load buildings:', err);
+		} finally {
+			missingIds.forEach((id) => buildingRequests.delete(id));
+		}
+	}
+
 	function controlCabinetLabel(id: string): string {
 		const item = controlCabinetOptions.find((c) => c.id === id);
 		return item?.control_cabinet_nr || item?.id || id;
@@ -168,6 +210,7 @@
 			// Hydrate labels by fetching the exact linked cabinets (avoid global list limits).
 			const cabinetIds = linksRes.items.map((l) => l.control_cabinet_id);
 			controlCabinetOptions = await fetchControlCabinetsByIds(cabinetIds);
+			await ensureBuildingLabels(controlCabinetOptions);
 		} catch (err) {
 			addToast(err instanceof Error ? err.message : 'Failed to load control cabinets', 'error');
 		} finally {
@@ -194,6 +237,7 @@
 			if (missing.length > 0) {
 				const fetched = await fetchControlCabinetsByIds(missing);
 				controlCabinetOptions = [...controlCabinetOptions, ...fetched];
+				await ensureBuildingLabels(fetched);
 			}
 		} catch (err) {
 			addToast(err instanceof Error ? err.message : 'Failed to load SPS controllers', 'error');
@@ -373,6 +417,7 @@
 						<Table.Header>
 							<Table.Row>
 								<Table.Head>Control Cabinet</Table.Head>
+								<Table.Head>Building</Table.Head>
 								<Table.Head class="w-32"></Table.Head>
 							</Table.Row>
 						</Table.Header>
@@ -381,12 +426,13 @@
 								{#each Array(4) as _}
 									<Table.Row>
 										<Table.Cell><Skeleton class="h-4 w-60" /></Table.Cell>
+										<Table.Cell><Skeleton class="h-4 w-40" /></Table.Cell>
 										<Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
 									</Table.Row>
 								{/each}
 							{:else if filteredControlCabinetLinks.length === 0}
 								<Table.Row>
-									<Table.Cell colspan={2} class="h-20 text-center text-sm text-muted-foreground">
+									<Table.Cell colspan={3} class="h-20 text-center text-sm text-muted-foreground">
 										No control cabinets found.
 									</Table.Cell>
 								</Table.Row>
@@ -395,6 +441,12 @@
 									<Table.Row>
 										<Table.Cell class="font-medium">
 											{controlCabinetLabel(link.control_cabinet_id)}
+										</Table.Cell>
+										<Table.Cell>
+											{getBuildingLabel(
+												controlCabinetOptions.find((c) => c.id === link.control_cabinet_id)
+													?.building_id
+											)}
 										</Table.Cell>
 										<Table.Cell class="text-right">
 											<Button variant="outline" onclick={() => removeControlCabinet(link.id)}>

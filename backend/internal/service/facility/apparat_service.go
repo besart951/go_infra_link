@@ -82,8 +82,11 @@ func (s *ApparatService) GetSystemPartIDs(id uuid.UUID) ([]uuid.UUID, error) {
 
 func (s *ApparatService) validateRequiredFields(apparat *domainFacility.Apparat) error {
 	ve := domain.NewValidationError()
-	if strings.TrimSpace(apparat.ShortName) == "" {
+	shortName := strings.TrimSpace(apparat.ShortName)
+	if shortName == "" {
 		ve = ve.Add("apparat.short_name", "short_name is required")
+	} else if len(shortName) != 3 {
+		ve = ve.Add("apparat.short_name", "short_name must be exactly 3 characters")
 	}
 	if strings.TrimSpace(apparat.Name) == "" {
 		ve = ve.Add("apparat.name", "name is required")

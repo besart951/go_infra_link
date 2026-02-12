@@ -81,8 +81,11 @@ func (s *SystemPartService) DeleteByID(id uuid.UUID) error {
 
 func (s *SystemPartService) validateRequiredFields(systemPart *domainFacility.SystemPart) error {
 	ve := domain.NewValidationError()
-	if strings.TrimSpace(systemPart.ShortName) == "" {
+	shortName := strings.TrimSpace(systemPart.ShortName)
+	if shortName == "" {
 		ve = ve.Add("system_part.short_name", "short_name is required")
+	} else if len(shortName) != 3 {
+		ve = ve.Add("system_part.short_name", "short_name must be exactly 3 characters")
 	}
 	if strings.TrimSpace(systemPart.Name) == "" {
 		ve = ve.Add("system_part.name", "name is required")

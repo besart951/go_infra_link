@@ -23,6 +23,8 @@ export interface FieldDeviceListState {
 	pageSize: number;
 	totalPages: number;
 	searchText: string;
+	orderBy?: string;
+	order?: 'asc' | 'desc';
 	filters: FieldDeviceFilters;
 	loading: boolean;
 	error: string | null;
@@ -51,6 +53,8 @@ export function createFieldDeviceStore(pageSize = 300, projectId?: string) {
 		pageSize,
 		totalPages: 0,
 		searchText: '',
+		orderBy: undefined,
+		order: undefined,
 		filters: {},
 		loading: false,
 		error: null
@@ -80,6 +84,13 @@ export function createFieldDeviceStore(pageSize = 300, projectId?: string) {
 
 			if (state.searchText) {
 				searchParams.set('search', state.searchText);
+			}
+
+			if (state.orderBy) {
+				searchParams.set('order_by', state.orderBy);
+			}
+			if (state.order) {
+				searchParams.set('order', state.order);
 			}
 
 			// Add filter parameters
@@ -163,6 +174,14 @@ export function createFieldDeviceStore(pageSize = 300, projectId?: string) {
 		 */
 		setFilters: (filters: FieldDeviceFilters) => {
 			store.update((s) => ({ ...s, filters, page: 1 }));
+			load();
+		},
+
+		/**
+		 * Update sorting and reload
+		 */
+		setSort: (orderBy?: string, order?: 'asc' | 'desc') => {
+			store.update((s) => ({ ...s, orderBy, order, page: 1 }));
 			load();
 		},
 

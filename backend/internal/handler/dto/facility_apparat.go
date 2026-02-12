@@ -9,14 +9,14 @@ import (
 // Facility DTOs - Apparat
 
 type CreateApparatRequest struct {
-	ShortName     string      `json:"short_name" binding:"required,max=255"`
+	ShortName     string      `json:"short_name" binding:"required,min=3,max=3"`
 	Name          string      `json:"name" binding:"required,max=250"`
 	Description   *string     `json:"description" binding:"omitempty,max=250"`
 	SystemPartIDs []uuid.UUID `json:"system_part_ids" binding:"omitempty"`
 }
 
 type UpdateApparatRequest struct {
-	ShortName     string       `json:"short_name" binding:"omitempty,max=255"`
+	ShortName     string       `json:"short_name" binding:"omitempty,min=3,max=3"`
 	Name          string       `json:"name" binding:"omitempty,max=250"`
 	Description   *string      `json:"description" binding:"omitempty,max=250"`
 	SystemPartIDs *[]uuid.UUID `json:"system_part_ids" binding:"omitempty"`

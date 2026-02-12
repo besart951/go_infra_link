@@ -114,6 +114,24 @@
 		store.search(value);
 	}
 
+	// Sorting
+	function handleSort(orderBy: string) {
+		const currentOrderBy = $store.orderBy;
+		const currentOrder = $store.order ?? 'asc';
+
+		if (currentOrderBy !== orderBy) {
+			store.setSort(orderBy, 'asc');
+			return;
+		}
+
+		if (currentOrder === 'asc') {
+			store.setSort(orderBy, 'desc');
+			return;
+		}
+
+		store.setSort(undefined, undefined);
+	}
+
 	// Pagination
 	function handlePrevious() {
 		if ($store.page > 1) {
@@ -220,10 +238,6 @@
 				<ListPlus class="mr-2 size-4" />
 				Multi-Create
 			</Button>
-			<Button>
-				<Plus class="mr-2 size-4" />
-				New Field Device
-			</Button>
 		{/if}
 	</div>
 
@@ -293,6 +307,8 @@
 		<FieldDeviceTable
 			items={$store.items}
 			loading={$store.loading}
+			sortBy={$store.orderBy}
+			sortOrder={$store.order}
 			{searchInput}
 			{allApparats}
 			{allSystemParts}
@@ -304,6 +320,7 @@
 			onDelete={handleDelete}
 			onToggleSelect={toggleSelect}
 			onToggleSelectAll={toggleSelectAll}
+			onSort={handleSort}
 		/>
 
 		<!-- Pagination -->

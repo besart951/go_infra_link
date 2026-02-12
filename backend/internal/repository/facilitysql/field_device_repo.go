@@ -28,6 +28,73 @@ func NewFieldDeviceRepository(db *gorm.DB) domainFacility.FieldDeviceStore {
 	}
 }
 
+func applyFieldDeviceSorting(query *gorm.DB, params domain.PaginationParams) *gorm.DB {
+	orderBy := strings.TrimSpace(params.OrderBy)
+	if orderBy == "" {
+		return query.Order("field_devices.created_at DESC")
+	}
+
+	order := strings.ToLower(strings.TrimSpace(params.Order))
+	if order != "asc" && order != "desc" {
+		order = "asc"
+	}
+
+	switch orderBy {
+	case "sps_system_type":
+		query = query.Joins("LEFT JOIN sps_controller_system_types scts_sort ON scts_sort.id = field_devices.sps_controller_system_type_id")
+		return query.Order("scts_sort.number " + order).Order("scts_sort.document_name " + order)
+	case "bmk":
+		return query.Order("field_devices.bmk " + order)
+	case "description":
+		return query.Order("field_devices.description " + order)
+	case "apparat_nr":
+		return query.Order("field_devices.apparat_nr " + order)
+	case "apparat":
+		query = query.Joins("LEFT JOIN apparats apparats_sort ON apparats_sort.id = field_devices.apparat_id")
+		return query.Order("apparats_sort.name " + order)
+	case "system_part":
+		query = query.Joins("LEFT JOIN system_parts system_parts_sort ON system_parts_sort.id = field_devices.system_part_id")
+		return query.Order("system_parts_sort.name " + order)
+	case "spec_supplier":
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		return query.Order("specs_sort.specification_supplier " + order)
+	case "spec_brand":
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		return query.Order("specs_sort.specification_brand " + order)
+	case "spec_type":
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		return query.Order("specs_sort.specification_type " + order)
+	case "spec_motor_valve":
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		return query.Order("specs_sort.additional_info_motor_valve " + order)
+	case "spec_size":
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		return query.Order("specs_sort.additional_info_size " + order)
+	case "spec_install_loc":
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		return query.Order("specs_sort.additional_information_installation_location " + order)
+	case "spec_ph":
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		return query.Order("specs_sort.electrical_connection_ph " + order)
+	case "spec_acdc":
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		return query.Order("specs_sort.electrical_connection_acdc " + order)
+	case "spec_amperage":
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		return query.Order("specs_sort.electrical_connection_amperage " + order)
+	case "spec_power":
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		return query.Order("specs_sort.electrical_connection_power " + order)
+	case "spec_rotation":
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		return query.Order("specs_sort.electrical_connection_rotation " + order)
+	case "created_at":
+		return query.Order("field_devices.created_at " + order)
+	default:
+		return query.Order("field_devices.created_at DESC")
+	}
+}
+
 func (r *fieldDeviceRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {
 	// FieldDevice needs to preload Specification
 	if len(ids) == 0 {
@@ -193,9 +260,10 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 
 	// Fetch items with preloads
 	var items []domainFacility.FieldDevice
+	query = applyFieldDeviceSorting(query, params)
+
 	if err := query.
 		Select("DISTINCT field_devices.*").
-		Order("field_devices.created_at DESC").
 		Preload("Specification").
 		Preload("SPSControllerSystemType").
 		Preload("SPSControllerSystemType.SPSController").

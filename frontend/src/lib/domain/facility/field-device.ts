@@ -91,6 +91,8 @@ export interface FieldDeviceListParams {
 	limit?: number;
 	search?: string;
 	sps_controller_system_type_id?: string;
+	order_by?: string;
+	order?: 'asc' | 'desc';
 }
 
 export interface FieldDeviceListResponse extends Pagination<FieldDevice> {}

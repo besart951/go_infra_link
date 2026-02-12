@@ -19,12 +19,23 @@
 		disabled = false,
 		error
 	}: Props = $props();
+
+	function formatLabel(item: Apparat): string {
+		return `${item.short_name ?? ''} - ${item.name ?? ''}`.trim();
+	}
+
+	const formattedItems = $derived(
+		items.map((item) => ({
+			...item,
+			display_name: formatLabel(item)
+		}))
+	);
 </script>
 
 <StaticCombobox
-	{items}
+	items={formattedItems}
 	bind:value
-	labelKey="name"
+	labelKey="display_name"
 	placeholder="Select Apparat..."
 	{width}
 	{onValueChange}

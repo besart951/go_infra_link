@@ -9,13 +9,13 @@ import (
 // Facility DTOs - SystemPart
 
 type CreateSystemPartRequest struct {
-	ShortName   string  `json:"short_name" binding:"required,max=10"`
+	ShortName   string  `json:"short_name" binding:"required,min=3,max=3"`
 	Name        string  `json:"name" binding:"required,max=250"`
 	Description *string `json:"description" binding:"omitempty,max=250"`
 }
 
 type UpdateSystemPartRequest struct {
-	ShortName   string  `json:"short_name" binding:"omitempty,max=10"`
+	ShortName   string  `json:"short_name" binding:"omitempty,min=3,max=3"`
 	Name        string  `json:"name" binding:"omitempty,max=250"`
 	Description *string `json:"description" binding:"omitempty,max=250"`
 }

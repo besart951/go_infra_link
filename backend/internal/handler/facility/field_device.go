@@ -88,6 +88,8 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(300)
 // @Param search query string false "Search query"
+// @Param order_by query string false "Order by (created_at,sps_system_type,bmk,description,apparat_nr,apparat,system_part,spec_supplier,spec_brand,spec_type,spec_motor_valve,spec_size,spec_install_loc,spec_ph,spec_acdc,spec_amperage,spec_power,spec_rotation)"
+// @Param order query string false "Order direction (asc, desc)"
 // @Param building_id query string false "Filter by building ID"
 // @Param control_cabinet_id query string false "Filter by control cabinet ID"
 // @Param sps_controller_id query string false "Filter by SPS controller ID"
@@ -126,7 +128,15 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 		filters.ProjectID = projectID
 	}
 
-	result, err := h.service.ListWithFilters(query.Page, query.Limit, query.Search, filters)
+	params := domain.PaginationParams{
+		Page:    query.Page,
+		Limit:   query.Limit,
+		Search:  query.Search,
+		OrderBy: query.OrderBy,
+		Order:   query.Order,
+	}
+
+	result, err := h.service.ListWithFilters(params, filters)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
 		return

@@ -18,6 +18,7 @@
 	let short_name = $state('');
 	let name = $state('');
 	let description = $state('');
+	let shortNameError = $state('');
 
 	$effect(() => {
 		if (initialData) {
@@ -34,16 +35,23 @@
 	});
 
 	async function handleSubmit() {
+		const trimmedShortName = short_name.trim();
+		if (trimmedShortName.length !== 3) {
+			shortNameError = 'Short name must be exactly 3 characters.';
+			return;
+		}
+		shortNameError = '';
+
 		await formState.handleSubmit(async () => {
 			if (initialData) {
 				return await updateSystemPart(initialData.id, {
-					short_name,
+					short_name: trimmedShortName,
 					name,
 					description: description || undefined
 				});
 			} else {
 				return await createSystemPart({
-					short_name,
+					short_name: trimmedShortName,
 					name,
 					description: description || undefined
 				});
@@ -66,9 +74,13 @@
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		<div class="space-y-2">
 			<Label for="system_part_short">Short Name</Label>
-			<Input id="system_part_short" bind:value={short_name} required maxlength={10} />
-			{#if formState.getFieldError('short_name', ['systempart'])}
-				<p class="text-sm text-red-500">{formState.getFieldError('short_name', ['systempart'])}</p>
+			<Input id="system_part_short" bind:value={short_name} required minlength={3} maxlength={3} />
+			{#if shortNameError}
+				<p class="text-sm text-red-500">{shortNameError}</p>
+			{:else if formState.getFieldError('short_name', ['systempart'])}
+				<p class="text-sm text-red-500">
+					{formState.getFieldError('short_name', ['systempart'])}
+				</p>
 			{/if}
 		</div>
 		<div class="space-y-2">

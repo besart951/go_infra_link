@@ -340,6 +340,8 @@ export async function listFieldDevices(
 	if (params?.page) searchParams.set('page', String(params.page));
 	if (params?.limit) searchParams.set('limit', String(params.limit));
 	if (params?.search) searchParams.set('search', params.search);
+	if (params?.order_by) searchParams.set('order_by', params.order_by);
+	if (params?.order) searchParams.set('order', params.order);
 	if (params?.sps_controller_system_type_id) {
 		searchParams.set('sps_controller_system_type_id', params.sps_controller_system_type_id);
 	}
