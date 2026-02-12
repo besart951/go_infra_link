@@ -289,8 +289,7 @@
 					<div>{activeJob.progress}%</div>
 				</div>
 				<div class="h-2 w-full overflow-hidden rounded bg-muted">
-					<div class="h-full bg-primary transition-all" style={`width: ${progressWidth};`}>
-					</div>
+					<div class="h-full bg-primary transition-all" style={`width: ${progressWidth};`}></div>
 				</div>
 				<p class="text-xs text-muted-foreground">{activeJob.message}</p>
 				{#if isFailed && activeJob.error}
