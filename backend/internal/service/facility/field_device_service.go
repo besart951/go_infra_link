@@ -211,39 +211,11 @@ func (s *FieldDeviceService) UpdateSpecification(fieldDeviceID uuid.UUID, patch 
 	}
 	spec := specs[0]
 
-	if patch.SpecificationSupplier != nil {
-		spec.SpecificationSupplier = patch.SpecificationSupplier
-	}
-	if patch.SpecificationBrand != nil {
-		spec.SpecificationBrand = patch.SpecificationBrand
-	}
-	if patch.SpecificationType != nil {
-		spec.SpecificationType = patch.SpecificationType
-	}
-	if patch.AdditionalInfoMotorValve != nil {
-		spec.AdditionalInfoMotorValve = patch.AdditionalInfoMotorValve
-	}
-	if patch.AdditionalInfoSize != nil {
-		spec.AdditionalInfoSize = patch.AdditionalInfoSize
-	}
-	if patch.AdditionalInformationInstallationLocation != nil {
-		spec.AdditionalInformationInstallationLocation = patch.AdditionalInformationInstallationLocation
-	}
-	if patch.ElectricalConnectionPH != nil {
-		spec.ElectricalConnectionPH = patch.ElectricalConnectionPH
-	}
-	if patch.ElectricalConnectionACDC != nil {
-		spec.ElectricalConnectionACDC = patch.ElectricalConnectionACDC
-	}
-	if patch.ElectricalConnectionAmperage != nil {
-		spec.ElectricalConnectionAmperage = patch.ElectricalConnectionAmperage
-	}
-	if patch.ElectricalConnectionPower != nil {
-		spec.ElectricalConnectionPower = patch.ElectricalConnectionPower
-	}
-	if patch.ElectricalConnectionRotation != nil {
-		spec.ElectricalConnectionRotation = patch.ElectricalConnectionRotation
-	}
+	// Apply patch updates - if a field is explicitly provided in the request, use it
+	// This allows setting fields to nil to delete them
+	// Note: The frontend only sends fields that were actually edited, ensuring we don't
+	// accidentally overwrite unmodified fields
+	applySpecificationUpdate(spec, patch)
 
 	if err := s.specificationRepo.Update(spec); err != nil {
 		return nil, err

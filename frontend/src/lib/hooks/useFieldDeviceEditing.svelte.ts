@@ -149,9 +149,14 @@ export function useFieldDeviceEditing(projectId?: string) {
 		spec: SpecificationInput | undefined
 	): SpecificationInput | undefined {
 		if (!spec) return undefined;
+		// Include all fields - preserve null values for deletion support
+		// Only filter out empty strings, convert them to null for server-side deletion
 		const patch: Record<string, unknown> = {};
 		for (const [key, value] of Object.entries(spec)) {
-			if (value !== undefined) {
+			if (value === '') {
+				// Empty string means user wants to delete this field
+				patch[key] = null;
+			} else if (value !== undefined) {
 				patch[key] = value;
 			}
 		}
