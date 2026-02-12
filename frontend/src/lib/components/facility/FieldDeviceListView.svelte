@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { Plus, ListPlus } from '@lucide/svelte';
+	import { FileSpreadsheet, ListPlus } from '@lucide/svelte';
 	import { createFieldDeviceStore } from '$lib/stores/facility/fieldDeviceStore.js';
 	import {
 		bulkDeleteFieldDevices,
@@ -23,6 +23,7 @@
 	import FieldDeviceTable from '$lib/components/facility/FieldDeviceTable.svelte';
 	import FieldDevicePagination from '$lib/components/facility/FieldDevicePagination.svelte';
 	import FieldDeviceFloatingSaveBar from '$lib/components/facility/FieldDeviceFloatingSaveBar.svelte';
+	import FieldDeviceExportPanel from '$lib/components/facility/FieldDeviceExportPanel.svelte';
 
 	interface Props {
 		projectId?: string;
@@ -47,6 +48,7 @@
 	// UI toggles
 	let showMultiCreateForm = $state(false);
 	let showBulkEditPanel = $state(false);
+	let showExportPanel = $state(false);
 	let searchInput = $state('');
 
 	// Selection state
@@ -233,6 +235,10 @@
 <div class="flex flex-col gap-6">
 	<!-- Action Buttons -->
 	<div class="flex justify-end gap-2">
+		<Button variant="outline" onclick={() => (showExportPanel = !showExportPanel)}>
+			<FileSpreadsheet class="mr-2 size-4" />
+			{showExportPanel ? 'Hide Export' : 'Export Excel'}
+		</Button>
 		{#if !showMultiCreateForm}
 			<Button variant="outline" onclick={() => (showMultiCreateForm = true)}>
 				<ListPlus class="mr-2 size-4" />
@@ -240,6 +246,10 @@
 			</Button>
 		{/if}
 	</div>
+
+	{#if showExportPanel}
+		<FieldDeviceExportPanel {projectId} />
+	{/if}
 
 	<!-- Multi-Create Form -->
 	{#if showMultiCreateForm}

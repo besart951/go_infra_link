@@ -1,12 +1,15 @@
 package wire
 
 import (
+	"path/filepath"
 	"time"
 
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	exportinfra "github.com/besart951/go_infra_link/backend/internal/infrastructure/exporting"
 	adminservice "github.com/besart951/go_infra_link/backend/internal/service/admin"
 	authservice "github.com/besart951/go_infra_link/backend/internal/service/auth"
+	exportservice "github.com/besart951/go_infra_link/backend/internal/service/exporting"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
 	phaseservice "github.com/besart951/go_infra_link/backend/internal/service/phase"
@@ -28,6 +31,7 @@ type Services struct {
 	Team            *teamservice.Service
 	Admin           *adminservice.Service
 	Password        domainUser.PasswordHasher
+	Export          *exportservice.Service
 
 	Facility *facilityservice.Services
 }
@@ -63,6 +67,27 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 		AlarmDefinitions:         repos.FacilityAlarmDefinitions,
 	})
 
+	jobStore := exportinfra.NewMemoryJobStore()
+	fileStore, err := exportinfra.NewLocalFileStore(filepath.Join("data", "exports"))
+	if err != nil {
+		panic(err)
+	}
+	dataProvider := exportinfra.NewDataProvider(repos.FacilityFieldDevices, repos.FacilitySPSControllers, repos.FacilityControlCabinet)
+	excelGenerator := exportinfra.NewExcelizeGenerator()
+	exportSvc := exportservice.NewService(
+		dataProvider,
+		excelGenerator,
+		excelGenerator,
+		jobStore,
+		fileStore,
+		exportservice.Config{
+			QueueSize:             200,
+			MaxConcurrent:         1,
+			SingleFileDeviceLimit: 5000,
+			PageSize:              1000,
+		},
+	)
+
 	return &Services{
 		Project: projectservice.New(
 			repos.Project,
@@ -93,6 +118,7 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 			cfg.RefreshTokenTTL,
 			cfg.Issuer,
 		),
+		Export:   exportSvc,
 		Facility: facilityServices,
 	}
 }
