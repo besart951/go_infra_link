@@ -81,13 +81,18 @@ func Run() error {
 		SameSite: http.SameSiteStrictMode,
 	}
 
+	// Initialize WebSocket hub
+	hub := handler.NewHub()
+	go hub.Run()
+	log.Info("WebSocket Hub started")
+
 	handlers := wire.NewHandlers(services, cookieSettings, wire.DevAuthConfig{
 		Enabled:         cfg.DevAuthEnabled,
 		Email:           cfg.DevAuthEmail,
 		Password:        cfg.DevAuthPassword,
 		AccessTokenTTL:  cfg.AccessTokenTTL,
 		RefreshTokenTTL: cfg.RefreshTokenTTL,
-	})
+	}, hub)
 
 	// Setup Gin router
 	if config.IsProduction(cfg.AppEnv) {

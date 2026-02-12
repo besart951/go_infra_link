@@ -10,16 +10,18 @@ Full-stack infrastructure management application. Go backend (Gin + GORM) with S
 
 ### Backend (`cd backend`)
 
-| Task         | Command                                    |
-| ------------ | ------------------------------------------ |
-| Run server   | `go run ./cmd/app`                         |
-| Build        | `go build ./cmd/app`                       |
-| Lint         | `make lint`                                |
-| Lint + fix   | `make lint-fix`                            |
-| Migrate up   | `make migrate-up`                          |
-| Migrate down | `make migrate-down`                        |
-| Swagger docs | `swag init -g ./cmd/app/main.go -o ./docs` |
-| Seed data    | `go run ./cmd/seeder`                      |
+| Task           | Command                                       |
+| -------------- | --------------------------------------------- |
+| Run server     | `go run ./cmd/app`                            |
+| Build          | `go build ./cmd/app`                          |
+| Run tests      | `go test ./...`                               |
+| Run with coverage | `go test -cover ./...`                     |
+| Lint           | `make lint`                                   |
+| Lint + fix     | `make lint-fix`                               |
+| Migrate up     | `make migrate-up`                             |
+| Migrate down   | `make migrate-down`                           |
+| Swagger docs   | `swag init -g ./cmd/app/main.go -o ./docs`    |
+| Seed data      | `go run ./cmd/seeder`                         |
 
 ### Frontend (`cd frontend`)
 
@@ -34,7 +36,15 @@ Full-stack infrastructure management application. Go backend (Gin + GORM) with S
 
 ### Full Stack
 
-`docker-compose up` from root (backend + PostgreSQL).
+`docker-compose up` from root starts all services:
+- **backend** (port 8080) - Go API server with hot reload
+- **frontend** (port 5173) - SvelteKit dev server
+- **postgres** (port 5432) - PostgreSQL 16 database
+
+Useful commands:
+- `docker compose exec backend go run ./cmd/seeder` - Seed database
+- `docker compose logs -f backend` - View backend logs
+- `docker compose down -v` - Stop and remove volumes
 
 ## Architecture
 
@@ -63,7 +73,7 @@ internal/
 - REST API at `/api/v1/*`, Swagger at `/swagger/index.html`
 - JWT access tokens (15min default) + refresh tokens in cookies
 - CSRF double-submit cookie pattern for state-changing requests
-- GORM AutoMigrate runs at startup (no separate migration step needed for dev)
+- **Migrations**: Supports both AutoMigrate (GORM auto-creates/updates schema on startup, default for dev) and manual SQL migrations (`backend/migrations/` via `make migrate-up` for production)
 - Adding a feature: domain entity → repository interface → repository impl → service → handler → routes → wire
 
 **Role hierarchy (7-tier):** `superadmin(100)` > `admin_fzag(90)` > `fzag(80)` > `admin_planer(70)` > `planer(60)` > `admin_entrepreneur(50)` > `entrepreneur(40)`
@@ -95,6 +105,8 @@ src/
 
 **Key patterns:**
 
+- **API Proxy**: Frontend proxies all `/api/v1/*` requests to backend via SvelteKit catch-all route (`routes/api/v1/[...path]/+server.ts`). Backend URL configurable via `BACKEND_URL` env var (defaults to `localhost:8080`)
+- **SPA Mode**: Uses `@sveltejs/adapter-static` with fallback routing for client-side navigation
 - shadcn-svelte component library via bits-ui (headless) + Tailwind CSS
 - DropdownMenu trigger uses `{#snippet child({ props })}` pattern (see `nav-user.svelte`)
 - Popover+Command combo for searchable selects (see `AsyncCombobox.svelte`)
@@ -113,9 +125,20 @@ src/
 
 ## Environment
 
-- Backend config via `.env` (see `backend/example.env`): `DB_TYPE`, `DATABASE_URL`, `JWT_SECRET`, `SEED_USER_*`
-- Default dev DB: PostgreSQL (see `backend/example.env`)
-- Frontend dev server proxies to backend at `localhost:8080`
+**Backend** (`.env` in root, see `backend/example.env`):
+- `DB_DRIVER`: Database type (`postgres` or `mysql`)
+- `DB_DSN`: Database connection string
+- `JWT_SECRET`: Secret for signing JWT tokens
+- `ACCESS_TOKEN_TTL`: Access token lifetime (default: `15m`)
+- `REFRESH_TOKEN_TTL`: Refresh token lifetime (default: `720h` / 30 days)
+- `HTTP_ADDR`: Server address (default: `:8080`)
+- `COOKIE_SECURE`: Set `true` in production for HTTPS-only cookies
+- Default dev DB: PostgreSQL
+
+**Frontend**:
+- `BACKEND_URL`: Backend API URL for server-side proxy
+  - Development: defaults to `http://localhost:8080`
+  - Docker: set to `http://backend:8080` in docker-compose.yml
 
 ## Pre-existing Issues
 

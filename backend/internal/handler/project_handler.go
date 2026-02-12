@@ -2,7 +2,9 @@ package handler
 
 import (
 	"errors"
+	"log"
 	"net/http"
+	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
@@ -11,14 +13,23 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 )
 
 type ProjectHandler struct {
-	service ProjectService
+	service     ProjectService
+	userService UserService
+	hub         *Hub
+	wsRouter    *WSMessageRouter
 }
 
-func NewProjectHandler(service ProjectService) *ProjectHandler {
-	return &ProjectHandler{service: service}
+func NewProjectHandler(service ProjectService, userService UserService, hub *Hub) *ProjectHandler {
+	return &ProjectHandler{
+		service:     service,
+		userService: userService,
+		hub:         hub,
+		wsRouter:    NewWSMessageRouter(hub),
+	}
 }
 
 // CreateProject godoc
@@ -971,4 +982,99 @@ func (h *ProjectHandler) RemoveProjectObjectData(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, mapper.ToObjectDataResponse(*obj))
+}
+
+// HandleWebSocket godoc
+// @Summary Upgrade to WebSocket for real-time project collaboration
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Param id path string true "Project ID"
+// @Success 101 "Switching Protocols"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/ws [get]
+func (h *ProjectHandler) HandleWebSocket(c *gin.Context) {
+	// 1. Extract project ID from URL param
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	// 2. Get authenticated user ID
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		return
+	}
+
+	// 3. Verify user has access to project
+	_, err := h.service.GetByID(projectID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondNotFound(c, "Project not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	// 4. Get user details for presence information
+	user, err := h.userService.GetByID(userID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not found")
+			return
+		}
+		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		return
+	}
+
+	// 5. Configure WebSocket upgrader with security check
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			origin := r.Header.Get("Origin")
+			// Allow same-origin requests
+			if origin == "" {
+				return true
+			}
+			// Check if origin matches the request host
+			return isSameOrigin(r.Host, origin)
+		},
+	}
+
+	// 6. Upgrade HTTP connection to WebSocket
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		log.Printf("WebSocket upgrade failed: %v", err)
+		return
+	}
+
+	// 7. Create client and register with hub
+	client := NewClient(h.hub, conn, userID, projectID, user, h.wsRouter)
+	h.hub.register <- client
+
+	// 8. Start read/write pumps in separate goroutines
+	go client.writePump()
+	go client.readPump()
+}
+
+// isSameOrigin checks if the origin matches the host
+func isSameOrigin(host, origin string) bool {
+	// Extract host from origin (remove protocol)
+	originHost := origin
+	if strings.HasPrefix(origin, "http://") {
+		originHost = strings.TrimPrefix(origin, "http://")
+	} else if strings.HasPrefix(origin, "https://") {
+		originHost = strings.TrimPrefix(origin, "https://")
+	}
+
+	// Remove trailing slash if present
+	originHost = strings.TrimSuffix(originHost, "/")
+
+	// Compare hosts (case-insensitive)
+	return strings.EqualFold(host, originHost)
 }

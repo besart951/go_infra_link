@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -13,6 +13,8 @@
 	import ControlCabinetForm from '$lib/components/facility/ControlCabinetForm.svelte';
 	import SPSControllerForm from '$lib/components/facility/SPSControllerForm.svelte';
 	import FieldDeviceListView from '$lib/components/facility/FieldDeviceListView.svelte';
+	import ActiveUsers from '$lib/components/project/active-users.svelte';
+	import { websocketStore } from '$lib/stores/websocket.svelte.js';
 	import {
 		getProject,
 		listProjectControlCabinets,
@@ -36,6 +38,36 @@
 	import { ArrowLeft, Plus, Pencil } from '@lucide/svelte';
 
 	const projectId = $derived($page.params.id ?? '');
+
+	// WebSocket connection management
+	$effect(() => {
+		if (projectId) {
+			websocketStore.connect(projectId);
+		}
+
+		return () => {
+			websocketStore.disconnect();
+		};
+	});
+
+	// Listen for bulk operations from other users
+	let bulkOpListener: ((e: CustomEvent) => void) | null = null;
+
+	onMount(() => {
+		bulkOpListener = (e: CustomEvent) => {
+			const message = e.detail;
+			console.log('Received bulk operation:', message);
+			// TODO: Refresh affected lists/views based on entity_type
+			// For now, just log the operation
+		};
+		window.addEventListener('ws-bulk-operation', bulkOpListener as EventListener);
+	});
+
+	onDestroy(() => {
+		if (bulkOpListener) {
+			window.removeEventListener('ws-bulk-operation', bulkOpListener as EventListener);
+		}
+	});
 
 	let project = $state<Project | null>(null);
 	let loading = $state(true);
@@ -351,14 +383,27 @@
 			<ArrowLeft class="mr-2 h-4 w-4" />
 			Back
 		</Button>
-		<div>
+		<div class="flex-1">
 			<h1 class="text-3xl font-bold tracking-tight">{project?.name ?? 'Project'}</h1>
 			<p class="mt-1 text-muted-foreground">Manage project assets and assignments.</p>
 		</div>
-		<div class="ml-auto">
+		<div class="ml-auto flex items-center gap-4">
+			<ActiveUsers users={websocketStore.activeUsers} />
 			<Button variant="outline" href={`/projects/${projectId}/settings`}>Settings</Button>
 		</div>
 	</div>
+
+	<!-- WebSocket Connection Status -->
+	{#if websocketStore.connecting}
+		<div class="rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
+			<p>Connecting to collaboration service...</p>
+		</div>
+	{:else if websocketStore.error}
+		<div class="rounded-md border border-destructive/50 bg-destructive/15 px-4 py-2 text-sm text-destructive">
+			<p class="font-medium">Connection Error</p>
+			<p>{websocketStore.error}</p>
+		</div>
+	{/if}
 
 	{#if error}
 		<div class="rounded-md border bg-muted px-4 py-3 text-muted-foreground">

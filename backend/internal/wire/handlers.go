@@ -8,7 +8,7 @@ import (
 )
 
 // NewHandlers creates all HTTP handler instances from services.
-func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devAuthCfg DevAuthConfig) *handler.Handlers {
+func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devAuthCfg DevAuthConfig, hub *handler.Hub) *handler.Handlers {
 	facilityHandlers := facilityhandler.NewHandlers(facilityhandler.ServiceDeps{
 		Building:                services.Facility.Building,
 		SystemType:              services.Facility.SystemType,
@@ -27,7 +27,7 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devA
 	})
 
 	return &handler.Handlers{
-		ProjectHandler:         handler.NewProjectHandler(services.Project),
+		ProjectHandler:         handler.NewProjectHandler(services.Project, services.User, hub),
 		PhaseHandler:           handler.NewPhaseHandler(services.Phase),
 		PhasePermissionHandler: handler.NewPhasePermissionHandler(services.PhasePermission),
 		UserHandler:            handler.NewUserHandler(services.User, services.RBAC),
