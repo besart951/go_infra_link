@@ -31,6 +31,9 @@
 	} from '@lucide/svelte';
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { usersStore } from '$lib/stores/list/entityStores.js';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 
 	let teams = $state<Team[]>([]);
 	let teamByUserId = $state<Map<string, string[]>>(new Map());
@@ -90,9 +93,9 @@
 		try {
 			await setUserRole(userId, newRole);
 			usersStore.reload();
-			addToast('Role updated successfully', 'success');
+			addToast($t('messages.role_updated_success'), 'success');
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to change role', 'error');
+			addToast(err instanceof Error ? err.message : $t('errors.change_role_failed'), 'error');
 		}
 	}
 
@@ -100,23 +103,23 @@
 		try {
 			if (isActive) {
 				await disableUser(userId);
-				addToast('User disabled successfully', 'success');
+				addToast($t('messages.user_disabled_success'), 'success');
 			} else {
 				await enableUser(userId);
-				addToast('User enabled successfully', 'success');
+				addToast($t('messages.user_enabled_success'), 'success');
 			}
 			usersStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to toggle user status', 'error');
+			addToast(err instanceof Error ? err.message : $t('errors.toggle_user_status_failed'), 'error');
 		}
 	}
 
 	async function handleDeleteUser(userId: string, userName: string) {
 		const confirmed = await confirm({
-			title: 'Delete User',
-			message: `Are you sure you want to delete ${userName}? This action cannot be undone.`,
-			confirmText: 'Delete',
-			cancelText: 'Cancel',
+			title: $t('common.delete_user'),
+			message: $t('messages.delete_user_confirm', { name: userName }),
+			confirmText: $t('common.delete'),
+			cancelText: $t('common.cancel'),
 			variant: 'destructive'
 		});
 
@@ -124,9 +127,9 @@
 			try {
 				await deleteUser(userId);
 				usersStore.reload();
-				addToast('User deleted successfully', 'success');
+				addToast($t('messages.user_deleted_success'), 'success');
 			} catch (err) {
-				addToast(err instanceof Error ? err.message : 'Failed to delete user', 'error');
+				addToast(err instanceof Error ? err.message : $t('errors.delete_user_failed'), 'error');
 			}
 		}
 	}
@@ -164,12 +167,12 @@
 	<!-- Header -->
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-3xl font-bold tracking-tight">User Management</h1>
-			<p class="mt-1 text-muted-foreground">Manage all users and their permissions</p>
+			<h1 class="text-3xl font-bold tracking-tight">{$t('pages.user_management')}</h1>
+			<p class="mt-1 text-muted-foreground">{$t('pages.user_management_desc')}</p>
 		</div>
 		<Button onclick={() => (createDialogOpen = true)}>
 			<UserPlus class="mr-2 h-4 w-4" />
-			Create User
+			{$t('common.create_user')}
 		</Button>
 	</div>
 
@@ -177,19 +180,19 @@
 	<div class="flex items-center justify-end gap-3">
 		<div class="text-sm text-muted-foreground">
 			{#if selectedTeamId === 'all'}
-				{$usersStore.total} {$usersStore.total === 1 ? 'user' : 'users'} total
+				{$usersStore.total} {$usersStore.total === 1 ? $t('common.user') : $t('common.users')} {$t('common.total')}
 			{:else}
-				{visibleUsers().length} shown • {$usersStore.total} total
+				{visibleUsers().length} {$t('common.shown')} • {$usersStore.total} {$t('common.total')}
 			{/if}
 		</div>
 		<div class="flex items-center gap-2">
-			<span class="text-sm text-muted-foreground">Team</span>
+			<span class="text-sm text-muted-foreground">{$t('common.team')}</span>
 			<select
 				class="h-9 rounded-md border bg-background px-3 text-sm"
 				bind:value={selectedTeamId}
 				disabled={teamsLoading || teams.length === 0}
 			>
-				<option value="all">All teams</option>
+				<option value="all">{$t('common.all_teams')}</option>
 				{#each teams as t (t.id)}
 					<option value={t.id}>{t.name}</option>
 				{/each}
@@ -199,7 +202,7 @@
 
 	{#if teamsError}
 		<div class="rounded-md border bg-muted px-4 py-3 text-muted-foreground">
-			<p class="font-medium">Teams unavailable</p>
+			<p class="font-medium">{$t('messages.teams_unavailable')}</p>
 			<p class="text-sm">{teamsError}</p>
 		</div>
 	{/if}
@@ -207,16 +210,16 @@
 	<PaginatedList
 		state={$usersStore}
 		columns={[
-			{ key: 'name', label: 'Name/Email' },
-			{ key: 'team', label: 'Team' },
-			{ key: 'role', label: 'Role' },
-			{ key: 'auth', label: 'Auth' },
-			{ key: 'status', label: 'Status' },
-			{ key: 'last_active', label: 'Last Active' },
-			{ key: 'actions', label: 'Actions', width: 'text-right' }
+			{ key: 'name', label: $t('common.name_email') },
+			{ key: 'team', label: $t('common.team') },
+			{ key: 'role', label: $t('common.role') },
+			{ key: 'auth', label: $t('common.auth') },
+			{ key: 'status', label: $t('common.status') },
+			{ key: 'last_active', label: $t('common.last_active') },
+			{ key: 'actions', label: $t('common.actions'), width: 'text-right' }
 		]}
-		searchPlaceholder="Search users by name or email..."
-		emptyMessage="No users found"
+		searchPlaceholder={$t('messages.search_users')}
+		emptyMessage={$t('messages.no_users_found')}
 		onSearch={(text) => usersStore.search(text)}
 		onPageChange={(page) => usersStore.goToPage(page)}
 		onReload={() => usersStore.reload()}
@@ -266,17 +269,17 @@
 								{#if authVerified(user)}
 									<Badge variant="success">
 										<BadgeCheck class="mr-1 h-3 w-3" />
-										Verified
+										{$t('common.verified')}
 									</Badge>
 								{:else}
 									<Badge variant="outline">
 										<BadgeX class="mr-1 h-3 w-3" />
-										Unverified
+										{$t('common.unverified')}
 									</Badge>
 								{/if}
 							</Tooltip.Trigger>
 							<Tooltip.Content>
-								<div class="text-sm">Email verification is not tracked in the backend yet.</div>
+								<div class="text-sm">{$t('messages.email_verification_info')}</div>
 							</Tooltip.Content>
 						</Tooltip.Root>
 
@@ -285,30 +288,30 @@
 								{#if twoFactorEnabled(user)}
 									<Badge variant="secondary">
 										<KeyRound class="mr-1 h-3 w-3" />
-										2FA
+										{$t('common.2fa')}
 									</Badge>
 								{:else}
 									<Badge variant="outline">
 										<KeyRound class="mr-1 h-3 w-3" />
-										2FA off
+										{$t('common.2fa_off')}
 									</Badge>
 								{/if}
 							</Tooltip.Trigger>
 							<Tooltip.Content>
-								<div class="text-sm">Two-factor authentication is not implemented yet.</div>
+								<div class="text-sm">{$t('messages.2fa_not_implemented')}</div>
 							</Tooltip.Content>
 						</Tooltip.Root>
 					</div>
 				</Table.Cell>
 				<Table.Cell>
 					{#if user.disabled_at}
-						<Badge variant="destructive">Disabled</Badge>
+						<Badge variant="destructive">{$t('common.disabled')}</Badge>
 					{:else if user.locked_until}
-						<Badge variant="warning">Locked</Badge>
+						<Badge variant="warning">{$t('common.locked')}</Badge>
 					{:else if user.is_active}
-						<Badge variant="success">Active</Badge>
+						<Badge variant="success">{$t('common.active')}</Badge>
 					{:else}
-						<Badge variant="outline">Inactive</Badge>
+						<Badge variant="outline">{$t('common.inactive')}</Badge>
 					{/if}
 				</Table.Cell>
 				<Table.Cell>
@@ -324,7 +327,7 @@
 							{/snippet}
 						</DropdownMenu.Trigger>
 						<DropdownMenu.Content align="end" class="w-56">
-							<DropdownMenu.Label>Change Role</DropdownMenu.Label>
+							<DropdownMenu.Label>{$t('common.change_role')}</DropdownMenu.Label>
 							<DropdownMenu.Separator />
 							{#each getAllowedRolesForCreation() as role (role)}
 								<DropdownMenu.Item
@@ -333,7 +336,7 @@
 								>
 									{getRoleLabel(role)}
 									{#if user.role === role}
-										<DropdownMenu.Shortcut>Current</DropdownMenu.Shortcut>
+										<DropdownMenu.Shortcut>{$t('common.current')}</DropdownMenu.Shortcut>
 									{/if}
 								</DropdownMenu.Item>
 							{/each}
@@ -343,10 +346,10 @@
 							>
 								{#if user.is_active}
 									<UserMinus class="mr-2 h-4 w-4" />
-									Disable User
+									{$t('actions.disable_user')}
 								{:else}
 									<UserCheck class="mr-2 h-4 w-4" />
-									Enable User
+									{$t('actions.enable_user')}
 								{/if}
 							</DropdownMenu.Item>
 							<DropdownMenu.Separator />
@@ -356,7 +359,7 @@
 									handleDeleteUser(user.id, `${user.first_name} ${user.last_name}`)}
 							>
 								<Trash2 class="mr-2 h-4 w-4" />
-								Delete User
+								{$t('actions.delete_user')}
 							</DropdownMenu.Item>
 						</DropdownMenu.Content>
 					</DropdownMenu.Root>
@@ -369,14 +372,14 @@
 <Dialog.Root bind:open={createDialogOpen}>
 	<Dialog.Content class="sm:max-w-lg">
 		<Dialog.Header>
-			<Dialog.Title>Create User</Dialog.Title>
-			<Dialog.Description>Add a new user to the system.</Dialog.Description>
+			<Dialog.Title>{$t('common.create_user')}</Dialog.Title>
+			<Dialog.Description>{$t('messages.add_new_user')}</Dialog.Description>
 		</Dialog.Header>
 		<UserManagementForm
 			onSuccess={() => {
 				createDialogOpen = false;
 				usersStore.reload();
-				addToast('User created successfully', 'success');
+				addToast($t('messages.user_created_success'), 'success');
 			}}
 			onCancel={() => (createDialogOpen = false)}
 		/>

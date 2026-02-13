@@ -6,11 +6,14 @@
 	import type { User } from '$lib/domain/user/index.js';
 	import type { Team } from '$lib/domain/team/index.js';
 	import type { Project } from '$lib/domain/project/index.js';
+	import { createTranslator } from '$lib/i18n/translator';
 
 	// Icons
 	import UsersIcon from '@lucide/svelte/icons/users';
 	import Building2Icon from '@lucide/svelte/icons/building-2';
 	import FolderKanbanIcon from '@lucide/svelte/icons/folder-kanban';
+
+	const t = createTranslator();
 
 	// Props from layout
 	let {
@@ -34,7 +37,7 @@
 	// Navigation items with collapsible sub-menus
 	const navItems = $derived([
 		{
-			title: 'Users',
+			title: $t('navigation.users'),
 			url: '/users',
 			icon: UsersIcon,
 			isActive:
@@ -42,38 +45,38 @@
 				$page.url.pathname.startsWith('/auth') ||
 				$page.url.pathname.startsWith('/teams'),
 			items: [
-				{ title: 'All Users', url: '/users' },
-				{ title: 'Teams', url: '/teams' },
-				{ title: 'Roles & Permissions', url: '/users/roles' }
+				{ title: $t('navigation.all_users'), url: '/users' },
+				{ title: $t('navigation.teams'), url: '/teams' },
+				{ title: $t('navigation.roles_permissions'), url: '/users/roles' }
 			]
 		},
 		{
-			title: 'Facility',
+			title: $t('navigation.facility'),
 			url: '/facility',
 			icon: Building2Icon,
 			isActive: $page.url.pathname.startsWith('/facility'),
 			items: [
-				{ title: 'Buildings', url: '/facility/buildings' },
-				{ title: 'Control Cabinets', url: '/facility/control-cabinets' },
-				{ title: 'SPS Controllers', url: '/facility/sps-controllers' },
-				{ title: 'Field Devices', url: '/facility/field-devices' },
-				{ title: 'System Types', url: '/facility/system-types' },
-				{ title: 'System Parts', url: '/facility/system-parts' },
-				{ title: 'Apparats', url: '/facility/apparats' },
-				{ title: 'Object Data', url: '/facility/object-data' },
-				{ title: 'State Texts', url: '/facility/state-texts' },
-				{ title: 'Alarm Definitions', url: '/facility/alarm-definitions' },
-				{ title: 'Notification Classes', url: '/facility/notification-classes' }
+				{ title: $t('navigation.buildings'), url: '/facility/buildings' },
+				{ title: $t('navigation.control_cabinets'), url: '/facility/control-cabinets' },
+				{ title: $t('navigation.sps_controllers'), url: '/facility/sps-controllers' },
+				{ title: $t('navigation.field_devices'), url: '/facility/field-devices' },
+				{ title: $t('navigation.system_types'), url: '/facility/system-types' },
+				{ title: $t('navigation.system_parts'), url: '/facility/system-parts' },
+				{ title: $t('navigation.apparats'), url: '/facility/apparats' },
+				{ title: $t('navigation.object_data'), url: '/facility/object-data' },
+				{ title: $t('navigation.state_texts'), url: '/facility/state-texts' },
+				{ title: $t('navigation.alarm_definitions'), url: '/facility/alarm-definitions' },
+				{ title: $t('navigation.notification_classes'), url: '/facility/notification-classes' }
 			]
 		},
 		{
-			title: 'Projects',
+			title: $t('navigation.projects'),
 			url: '/projects',
 			icon: FolderKanbanIcon,
 			isActive: $page.url.pathname.startsWith('/projects'),
 			items: [
-				{ title: 'All Projects', url: '/projects' },
-				{ title: 'Phases', url: '/projects/phases' }
+				{ title: $t('navigation.projects'), url: '/projects' },
+				{ title: $t('phase.phases'), url: '/projects/phases' }
 			]
 		}
 	]);

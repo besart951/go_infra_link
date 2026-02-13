@@ -13,6 +13,12 @@
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { teamsStore } from '$lib/stores/list/entityStores.js';
 	import type { Team } from '$lib/domain/entities/team.js';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 
 	type CreateTeamForm = {
 		name: string;
@@ -32,17 +38,17 @@
 		if (!canSubmitCreate()) return;
 		createBusy = true;
 		try {
-			const t = await createTeam({
+			const t_team = await createTeam({
 				name: form.name.trim(),
 				description: form.description.trim() ? form.description.trim() : null
 			});
-			addToast('Team created', 'success');
+			addToast($t('messages.team_created'), 'success');
 			form = { name: '', description: '' };
 			createOpen = false;
 			teamsStore.reload();
-			goto(`/teams/${t.id}`);
+			goto(`/teams/${t_team.id}`);
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to create team', 'error');
+			addToast(err instanceof Error ? err.message : $t('errors.create_team_failed'), 'error');
 		} finally {
 			createBusy = false;
 		}
@@ -50,10 +56,10 @@
 
 	async function handleDeleteTeam(team: Team) {
 		const confirmed = await confirm({
-			title: 'Delete Team',
-			message: `Are you sure you want to delete "${team.name}"? This action cannot be undone.`,
-			confirmText: 'Delete',
-			cancelText: 'Cancel',
+			title: $t('common.delete_team'),
+			message: $t('messages.delete_team_confirm', { name: team.name }),
+			confirmText: $t('common.delete'),
+			cancelText: $t('common.cancel'),
 			variant: 'destructive'
 		});
 
@@ -61,9 +67,9 @@
 			try {
 				await deleteTeam(team.id);
 				teamsStore.reload();
-				addToast('Team deleted successfully', 'success');
+				addToast($t('messages.team_deleted_success'), 'success');
 			} catch (err) {
-				addToast(err instanceof Error ? err.message : 'Failed to delete team', 'error');
+				addToast(err instanceof Error ? err.message : $t('errors.delete_team_failed'), 'error');
 			}
 		}
 	}
@@ -98,12 +104,12 @@
 <div class="flex flex-col gap-6">
 	<div class="flex items-start justify-between gap-4">
 		<div>
-			<h1 class="text-3xl font-bold tracking-tight">Teams</h1>
-			<p class="mt-1 text-muted-foreground">Create teams and manage access.</p>
+			<h1 class="text-3xl font-bold tracking-tight">{$t('navigation.teams')}</h1>
+			<p class="mt-1 text-muted-foreground">{$t('pages.teams_desc')}</p>
 		</div>
 		<Button variant="outline" onclick={() => (createOpen = !createOpen)}>
 			<Plus class="mr-2 h-4 w-4" />
-			Create team
+			{$t('pages.create_team')}
 		</Button>
 	</div>
 
@@ -111,7 +117,7 @@
 		<div class="rounded-lg border bg-background p-4">
 			<div class="grid gap-3 md:grid-cols-3">
 				<div class="md:col-span-1">
-					<label class="text-sm font-medium" for="team_name">Name</label>
+					<label class="text-sm font-medium" for="team_name">{$t('common.name')}</label>
 					<Input
 						id="team_name"
 						placeholder="Operations"
@@ -120,7 +126,7 @@
 					/>
 				</div>
 				<div class="md:col-span-2">
-					<label class="text-sm font-medium" for="team_desc">Description (optional)</label>
+					<label class="text-sm font-medium" for="team_desc">{$t('common.description')} ({$t('pages.optional')})</label>
 					<Input
 						id="team_desc"
 						placeholder="Optional"
@@ -131,9 +137,9 @@
 			</div>
 			<div class="mt-4 flex items-center justify-end gap-2">
 				<Button variant="outline" onclick={() => (createOpen = false)} disabled={createBusy}
-					>Cancel</Button
+					>{$t('common.cancel')}</Button
 				>
-				<Button onclick={submitCreate} disabled={!canSubmitCreate()}>Create</Button>
+				<Button onclick={submitCreate} disabled={!canSubmitCreate()}>{$t('common.create')}</Button>
 			</div>
 		</div>
 	{/if}
@@ -141,13 +147,13 @@
 	<PaginatedList
 		state={$teamsStore}
 		columns={[
-			{ key: 'name', label: 'Name' },
-			{ key: 'description', label: 'Description' },
-			{ key: 'members', label: 'Members', width: 'w-24' },
+			{ key: 'name', label: $t('common.name') },
+			{ key: 'description', label: $t('common.description') },
+			{ key: 'members', label: $t('common.members'), width: 'w-24' },
 			{ key: 'actions', label: '', width: 'w-40' }
 		]}
-		searchPlaceholder="Search teams..."
-		emptyMessage="No teams yet. Create your first team to start assigning access."
+		searchPlaceholder={$t('messages.search_teams')}
+		emptyMessage={$t('messages.no_teams_found')}
 		onSearch={(text) => teamsStore.search(text)}
 		onPageChange={(page) => teamsStore.goToPage(page)}
 		onReload={() => teamsStore.reload()}
@@ -165,7 +171,7 @@
 			</Table.Cell>
 			<Table.Cell class="text-right">
 				<div class="flex items-center justify-end gap-2">
-					<Button variant="outline" onclick={() => goto(`/teams/${team.id}`)}>Manage</Button>
+					<Button variant="outline" onclick={() => goto(`/teams/${team.id}`)}>{$t('common.manage')}</Button>
 					<Button
 						variant="outline"
 						size="icon"

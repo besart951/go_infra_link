@@ -9,6 +9,10 @@
 	import type { LayoutData } from './$types.js';
 	import { loadAuth } from '$lib/stores/auth.svelte.js';
 	import { goto } from '$app/navigation';
+	import { t } from '$lib/i18n/index.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
+
+	const translator = createTranslator();
 
 	const { children, data } = $props<{ children: any; data: LayoutData }>();
 
@@ -23,23 +27,23 @@
 	});
 
 	const titleForPath = (pathname: string) => {
-		if (pathname === '/') return 'Dashboard';
-		if (pathname.startsWith('/projects')) return 'Projects';
-		if (pathname.startsWith('/users')) return 'Users';
-		if (pathname.startsWith('/teams')) return 'Teams';
-		if (pathname.startsWith('/settings')) return 'Settings';
-		if (pathname.startsWith('/facility/buildings')) return 'Buildings';
-		if (pathname.startsWith('/facility/control-cabinets')) return 'Control Cabinets';
-		if (pathname.startsWith('/facility/sps-controllers')) return 'SPS Controllers';
-		if (pathname.startsWith('/facility/field-devices')) return 'Field Devices';
-		if (pathname.startsWith('/facility/system-types')) return 'System Types';
-		if (pathname.startsWith('/facility/system-parts')) return 'System Parts';
-		if (pathname.startsWith('/facility/apparats')) return 'Apparats';
-		if (pathname.startsWith('/facility/object-data')) return 'Object Data';
-		if (pathname.startsWith('/facility/state-texts')) return 'State Texts';
-		if (pathname.startsWith('/facility/alarm-definitions')) return 'Alarm Definitions';
-		if (pathname.startsWith('/facility/notification-classes')) return 'Notification Classes';
-		if (pathname.startsWith('/facility')) return 'Facility';
+		if (pathname === '/') return t('navigation.dashboard');
+		if (pathname.startsWith('/projects')) return t('navigation.projects');
+		if (pathname.startsWith('/users')) return t('navigation.users');
+		if (pathname.startsWith('/teams')) return t('navigation.teams');
+		if (pathname.startsWith('/settings')) return t('navigation.settings');
+		if (pathname.startsWith('/facility/buildings')) return t('navigation.buildings');
+		if (pathname.startsWith('/facility/control-cabinets')) return t('navigation.control_cabinets');
+		if (pathname.startsWith('/facility/sps-controllers')) return t('navigation.sps_controllers');
+		if (pathname.startsWith('/facility/field-devices')) return t('navigation.field_devices');
+		if (pathname.startsWith('/facility/system-types')) return t('navigation.system_types');
+		if (pathname.startsWith('/facility/system-parts')) return t('navigation.system_parts');
+		if (pathname.startsWith('/facility/apparats')) return t('navigation.apparats');
+		if (pathname.startsWith('/facility/object-data')) return t('navigation.object_data');
+		if (pathname.startsWith('/facility/state-texts')) return t('navigation.state_texts');
+		if (pathname.startsWith('/facility/alarm-definitions')) return t('navigation.alarm_definitions');
+		if (pathname.startsWith('/facility/notification-classes')) return t('navigation.notification_classes');
+		if (pathname.startsWith('/facility')) return t('navigation.facility');
 		return 'App';
 	};
 </script>
@@ -72,7 +76,7 @@
 		{#if data && data.backendAvailable === false}
 			<div class="px-4">
 				<div class="rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
-					Backend service is currently unavailable. Some actions may fail.
+					{$translator('pages.backend_unavailable')}
 				</div>
 			</div>
 		{/if}
@@ -83,9 +87,9 @@
 {:else if data.backendAvailable === false}
 	<div class="flex h-screen w-full items-center justify-center p-4">
 		<div class="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
-			<h2 class="mb-2 text-lg font-semibold text-destructive">Backend Unavailable</h2>
+			<h2 class="mb-2 text-lg font-semibold text-destructive">{$translator('pages.backend_unavailable_title')}</h2>
 			<p class="text-sm text-muted-foreground">
-				The backend service is currently unreachable. Please check your connection or contact support.
+				{$translator('pages.backend_unavailable_desc')}
 			</p>
 		</div>
 	</div>

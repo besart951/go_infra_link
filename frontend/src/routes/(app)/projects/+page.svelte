@@ -12,8 +12,11 @@
 	import { projectListStore } from '$lib/stores/projects/projectListStore.js';
 	import { createProject } from '$lib/infrastructure/api/project.adapter.js';
 	import type { CreateProjectRequest, Project, ProjectStatus } from '$lib/domain/project/index.js';
+	import { createTranslator } from '$lib/i18n/translator';
 
 	import { useOptimisticUpdate } from '$lib/hooks/useOptimisticUpdate.svelte.js';
+
+	const t = createTranslator();
 
 	function getStatusClass(status: string): string {
 		switch (status) {
@@ -162,15 +165,14 @@
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Projects</h1>
+			<h1 class="text-2xl font-semibold tracking-tight">{$t('navigation.projects')}</h1>
 			<p class="text-sm text-muted-foreground">
-				Manage your infrastructure projects. You can only see projects you have permission to
-				access.
+				{$t('pages.projects_desc')}
 			</p>
 		</div>
 		<Button onclick={() => (createOpen = !createOpen)}>
 			<Plus class="mr-2 size-4" />
-			New Project
+			{$t('common.create')}
 		</Button>
 	</div>
 
@@ -260,8 +262,8 @@
 			{ key: 'created', label: 'Created' },
 			{ key: 'actions', label: 'Actions', width: 'w-[100px]' }
 		]}
-		searchPlaceholder="Search projects..."
-		emptyMessage="No projects found. Create your first project to get started."
+		searchPlaceholder={$t('messages.search_projects')}
+		emptyMessage={$t('messages.no_projects_found')}
 		onSearch={(text) => projectListStore.search(text)}
 		onPageChange={(page) => projectListStore.goToPage(page)}
 		onReload={() => projectListStore.reload()}

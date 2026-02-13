@@ -261,12 +261,12 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 	// Fetch items with preloads
 	// Create subquery to handle DISTINCT with ORDER BY properly
 	var items []domainFacility.FieldDevice
-	
+
 	// Get distinct IDs with sorting
 	var distinctIDs []uuid.UUID
 	subquery := query
 	subquery = applyFieldDeviceSorting(subquery, params)
-	
+
 	if err := subquery.
 		Select("DISTINCT field_devices.id").
 		Limit(limit).

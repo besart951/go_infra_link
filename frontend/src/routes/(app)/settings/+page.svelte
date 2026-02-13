@@ -2,6 +2,9 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { setThemePreference, themePreference, type ThemePreference } from '$lib/stores/theme.js';
 	import { LaptopMinimal, Moon, Sun } from '@lucide/svelte';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 
 	type ThemeOption = {
 		value: ThemePreference;
@@ -13,20 +16,20 @@
 	const options: ThemeOption[] = [
 		{
 			value: 'system',
-			label: 'System',
-			description: 'Follow your OS appearance.',
+			label: $t('pages.settings_theme_system'),
+			description: $t('pages.settings_theme_system_desc'),
 			icon: LaptopMinimal
 		},
 		{
 			value: 'light',
-			label: 'Light',
-			description: 'Always use light theme.',
+			label: $t('pages.settings_theme_light'),
+			description: $t('pages.settings_theme_light_desc'),
 			icon: Sun
 		},
 		{
 			value: 'dark',
-			label: 'Dark',
-			description: 'Always use dark theme.',
+			label: $t('pages.settings_theme_dark'),
+			description: $t('pages.settings_theme_dark_desc'),
 			icon: Moon
 		}
 	];
@@ -34,14 +37,14 @@
 
 <div class="flex flex-col gap-6">
 	<div>
-		<h1 class="text-3xl font-bold tracking-tight">Settings</h1>
-		<p class="mt-2 text-sm text-muted-foreground">Customize your console preferences.</p>
+		<h1 class="text-3xl font-bold tracking-tight">{$t('pages.settings')}</h1>
+		<p class="mt-2 text-sm text-muted-foreground">{$t('pages.settings_desc')}</p>
 	</div>
 
 	<div class="rounded-lg border bg-card p-4">
 		<div class="flex flex-col gap-1">
-			<h2 class="text-base font-semibold">Appearance</h2>
-			<p class="text-sm text-muted-foreground">Choose how Infra Link looks on this device.</p>
+			<h2 class="text-base font-semibold">{$t('pages.settings_appearance')}</h2>
+			<p class="text-sm text-muted-foreground">{$t('pages.settings_appearance_desc')}</p>
 		</div>
 
 		<div class="mt-4 grid gap-2 sm:grid-cols-3">

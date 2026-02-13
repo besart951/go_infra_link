@@ -13,12 +13,14 @@
 		FieldError
 	} from '$lib/components/ui/field/index.js';
 	import { dev } from '$app/environment';
+	import { createTranslator } from '$lib/i18n/translator';
 
 	let showPassword = false;
 	let email = dev ? 'besart_morina@hotmail.com' : '';
 	let password = dev ? 'password' : '';
 	let error: string | null = null;
 	let isLoading = false;
+	const t = createTranslator();
 
 	const toogleShowPassword = () => {
 		showPassword = !showPassword;
@@ -27,19 +29,19 @@
 	const errorMessage = (errCode: string | null) => {
 		switch (errCode) {
 			case 'missing_fields':
-				return 'Email and password are required.';
+				return $t('auth.missing_fields');
 			case 'service_unavailable':
-				return 'Service is currently unavailable. Please try again in a moment.';
+				return $t('auth.service_unavailable');
 			case 'invalid_credentials':
-				return 'Invalid email or password.';
+				return $t('auth.invalid_credentials');
 			case 'account_disabled':
-				return 'Your account is disabled.';
+				return $t('auth.account_disabled');
 			case 'account_locked':
-				return 'Your account is locked.';
+				return $t('auth.account_locked');
 			case 'missing_auth_cookies':
-				return 'Login succeeded but tokens were missing.';
+				return $t('auth.missing_auth_cookies');
 			case 'login_failed':
-				return 'Login failed.';
+				return $t('auth.login_failed');
 			default:
 				if (errCode) return errCode; 
 				return null;
@@ -77,8 +79,8 @@
 
 <div class="space-y-6">
 	<div class="space-y-2">
-		<h1 class="text-2xl font-semibold tracking-tight">Sign in</h1>
-		<p class="text-sm text-muted-foreground">Use your account credentials.</p>
+		<h1 class="text-2xl font-semibold tracking-tight">{$t('auth.sign_in')}</h1>
+		<p class="text-sm text-muted-foreground">{$t('auth.login')}</p>
 	</div>
 
 	{#if error}
@@ -92,7 +94,7 @@
 	<form onsubmit={handleLogin} class="space-y-6">
 		<FieldGroup>
 			<Field>
-				<FieldLabel for="email" class="text-sm font-medium">Email</FieldLabel>
+				<FieldLabel for="email" class="text-sm font-medium">{$t('auth.email')}</FieldLabel>
 				<FieldContent>
 					<Input
 						id="email"
@@ -107,7 +109,7 @@
 			</Field>
 
 			<Field>
-				<FieldLabel for="password" class="text-sm font-medium">Password</FieldLabel>
+				<FieldLabel for="password" class="text-sm font-medium">{$t('auth.password')}</FieldLabel>
 				<FieldContent>
 					<InputGroup.Root>
 						<InputGroup.Input
@@ -142,7 +144,7 @@
 		</FieldGroup>
 
 		<Button type="submit" class="w-full" disabled={isLoading}>
-			{isLoading ? 'Signing in...' : 'Sign in'}
+			{isLoading ? $t('auth.working') : $t('auth.login')}
 		</Button>
 	</form>
 </div>
