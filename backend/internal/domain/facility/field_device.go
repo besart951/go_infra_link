@@ -38,6 +38,7 @@ type FieldDeviceFilterParams struct {
 	SPSControllerID           *uuid.UUID
 	SPSControllerSystemTypeID *uuid.UUID
 	ProjectID                 *uuid.UUID
+	ProjectIDs                []uuid.UUID
 }
 
 // FieldDeviceCreateItem represents a single field device to create in a multi-create operation

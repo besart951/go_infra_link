@@ -236,39 +236,19 @@ func toSpecificationModel(req dto.CreateSpecificationRequest) *domainFacility.Sp
 }
 
 func applySpecificationUpdate(target *domainFacility.Specification, req dto.UpdateSpecificationRequest) {
-	if req.SpecificationSupplier != nil {
-		target.SpecificationSupplier = req.SpecificationSupplier
-	}
-	if req.SpecificationBrand != nil {
-		target.SpecificationBrand = req.SpecificationBrand
-	}
-	if req.SpecificationType != nil {
-		target.SpecificationType = req.SpecificationType
-	}
-	if req.AdditionalInfoMotorValve != nil {
-		target.AdditionalInfoMotorValve = req.AdditionalInfoMotorValve
-	}
-	if req.AdditionalInfoSize != nil {
-		target.AdditionalInfoSize = req.AdditionalInfoSize
-	}
-	if req.AdditionalInformationInstallationLocation != nil {
-		target.AdditionalInformationInstallationLocation = req.AdditionalInformationInstallationLocation
-	}
-	if req.ElectricalConnectionPH != nil {
-		target.ElectricalConnectionPH = req.ElectricalConnectionPH
-	}
-	if req.ElectricalConnectionACDC != nil {
-		target.ElectricalConnectionACDC = req.ElectricalConnectionACDC
-	}
-	if req.ElectricalConnectionAmperage != nil {
-		target.ElectricalConnectionAmperage = req.ElectricalConnectionAmperage
-	}
-	if req.ElectricalConnectionPower != nil {
-		target.ElectricalConnectionPower = req.ElectricalConnectionPower
-	}
-	if req.ElectricalConnectionRotation != nil {
-		target.ElectricalConnectionRotation = req.ElectricalConnectionRotation
-	}
+	// Apply all fields from the patch - if a field is present, update it (even if nil for deletion)
+	// The frontend sends only edited fields, so this ensures proper JSON PATCH semantics
+	target.SpecificationSupplier = req.SpecificationSupplier
+	target.SpecificationBrand = req.SpecificationBrand
+	target.SpecificationType = req.SpecificationType
+	target.AdditionalInfoMotorValve = req.AdditionalInfoMotorValve
+	target.AdditionalInfoSize = req.AdditionalInfoSize
+	target.AdditionalInformationInstallationLocation = req.AdditionalInformationInstallationLocation
+	target.ElectricalConnectionPH = req.ElectricalConnectionPH
+	target.ElectricalConnectionACDC = req.ElectricalConnectionACDC
+	target.ElectricalConnectionAmperage = req.ElectricalConnectionAmperage
+	target.ElectricalConnectionPower = req.ElectricalConnectionPower
+	target.ElectricalConnectionRotation = req.ElectricalConnectionRotation
 }
 
 func toFieldDeviceSpecification(req dto.CreateFieldDeviceSpecificationRequest) *domainFacility.Specification {

@@ -244,6 +244,9 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 	if filters.ProjectID != nil {
 		query = query.Joins("JOIN project_field_devices pfd ON pfd.field_device_id = field_devices.id AND pfd.deleted_at IS NULL").
 			Where("pfd.project_id = ?", *filters.ProjectID)
+	} else if len(filters.ProjectIDs) > 0 {
+		query = query.Joins("JOIN project_field_devices pfd ON pfd.field_device_id = field_devices.id AND pfd.deleted_at IS NULL").
+			Where("pfd.project_id IN ?", filters.ProjectIDs)
 	}
 
 	// Apply search
@@ -285,6 +288,11 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 		Preload("Apparat").
 		Preload("SystemPart").
 		Preload("BacnetObjects").
+		Preload("BacnetObjects.StateText").
+		Preload("BacnetObjects.NotificationClass").
+		Preload("BacnetObjects.AlarmDefinition").
+		Limit(limit).
+		Offset(offset).
 		Find(&items).Error; err != nil {
 		return nil, err
 	}

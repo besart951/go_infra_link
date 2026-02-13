@@ -15,6 +15,7 @@ type ServiceDeps struct {
 	AlarmDefinition         AlarmDefinitionService
 	ObjectData              ObjectDataService
 	SPSControllerSystemType SPSControllerSystemTypeService
+	Export                  ExportService
 }
 
 // Handlers groups all facility HTTP handlers.
@@ -32,6 +33,7 @@ type Handlers struct {
 	AlarmDefinition         *AlarmDefinitionHandler
 	ObjectData              *ObjectDataHandler
 	SPSControllerSystemType *SPSControllerSystemTypeHandler
+	Export                  *ExportHandler
 	Validation              *ValidationHandler
 }
 
@@ -51,6 +53,7 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 		AlarmDefinition:         NewAlarmDefinitionHandler(deps.AlarmDefinition),
 		ObjectData:              NewObjectDataHandler(deps.ObjectData, deps.BacnetObject, deps.Apparat),
 		SPSControllerSystemType: NewSPSControllerSystemTypeHandler(deps.SPSControllerSystemType),
+		Export:                  NewExportHandler(deps.Export),
 		Validation:              NewValidationHandler(deps.Building, deps.ControlCabinet, deps.SPSController),
 	}
 }

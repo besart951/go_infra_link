@@ -23,6 +23,7 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devA
 		AlarmDefinition:         services.Facility.AlarmDefinition,
 		ObjectData:              services.Facility.ObjectData,
 		SPSControllerSystemType: services.Facility.SPSControllerSystemType,
+		Export:                  services.Export,
 	})
 
 	return &handler.Handlers{
@@ -58,6 +59,7 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devA
 		FacilityAlarmDefinitionHandler:         facilityHandlers.AlarmDefinition,
 		FacilityObjectDataHandler:              facilityHandlers.ObjectData,
 		FacilitySPSControllerSystemTypeHandler: facilityHandlers.SPSControllerSystemType,
+		FacilityExportHandler:                  facilityHandlers.Export,
 	}
 }
 

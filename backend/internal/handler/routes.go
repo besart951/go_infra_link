@@ -27,6 +27,7 @@ type Handlers struct {
 	FacilityControlCabinetHandler *facilityhandler.ControlCabinetHandler
 	FacilitySPSControllerHandler  *facilityhandler.SPSControllerHandler
 	FacilityValidationHandler     *facilityhandler.ValidationHandler
+	FacilityExportHandler         *facilityhandler.ExportHandler
 
 	FacilityStateTextHandler               *facilityhandler.StateTextHandler
 	FacilityNotificationClassHandler       *facilityhandler.NotificationClassHandler
@@ -254,5 +255,9 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		facility.DELETE("/object-data/:id", handlers.FacilityObjectDataHandler.DeleteObjectData)
 
 		facility.GET("/sps-controller-system-types", handlers.FacilitySPSControllerSystemTypeHandler.ListSPSControllerSystemTypes)
+
+		facility.POST("/exports/field-devices", handlers.FacilityExportHandler.CreateFieldDeviceExport)
+		facility.GET("/exports/jobs/:jobId", handlers.FacilityExportHandler.GetExportStatus)
+		facility.GET("/exports/jobs/:jobId/download", handlers.FacilityExportHandler.DownloadExport)
 	}
 }

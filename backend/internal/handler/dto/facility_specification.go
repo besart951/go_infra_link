@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,6 +22,34 @@ type CreateSpecificationRequest struct {
 	ElectricalConnectionAmperage              *float64  `json:"electrical_connection_amperage"`
 	ElectricalConnectionPower                 *float64  `json:"electrical_connection_power"`
 	ElectricalConnectionRotation              *int      `json:"electrical_connection_rotation"`
+}
+
+// RequestedFields tracks which fields were explicitly provided in an update request
+// This allows distinguishing between "field not provided" (will be ignored)
+// and "field set to null" (will be deleted)
+type RequestedFields struct {
+	raw map[string]bool
+}
+
+// NewRequestedFields creates a RequestedFields tracker from raw JSON bytes
+func NewRequestedFields(data json.RawMessage) (*RequestedFields, error) {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
+	requests := make(map[string]bool)
+	for key := range raw {
+		requests[key] = true
+	}
+	return &RequestedFields{raw: requests}, nil
+}
+
+// Has checks if a field was present in the request
+func (rf *RequestedFields) Has(fieldName string) bool {
+	if rf == nil {
+		return false
+	}
+	return rf.raw[fieldName]
 }
 
 type UpdateSpecificationRequest struct {

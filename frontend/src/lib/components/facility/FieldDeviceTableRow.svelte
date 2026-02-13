@@ -41,6 +41,13 @@
 		onDelete
 	}: Props = $props();
 
+	// Convert specification field values to display strings, handling null/undefined gracefully
+	function toDisplayString(value: any, isNumeric = false): string {
+		if (value === null || value === undefined || value === '') return '';
+		if (isNumeric && typeof value === 'number') return String(value);
+		return String(value);
+	}
+
 	function formatSPSControllerSystemType(dev: FieldDevice): string {
 		const sysType = dev.sps_controller_system_type;
 		if (!sysType) return '-';
@@ -172,67 +179,71 @@
 	{#if showSpecifications}
 		<Table.Cell class="text-xs">
 			<EditableCell
-				value={device.specification?.specification_supplier || ''}
+				value={toDisplayString(device.specification?.specification_supplier)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'specification_supplier')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'specification_supplier')}
 				error={editing.getFieldError(device.id, 'specification_supplier')}
 				maxlength={250}
 				onSave={(v) => {
-					editing.queueSpecEdit(device.id, 'specification_supplier', v || undefined);
+					editing.queueSpecEdit(device.id, 'specification_supplier', v === '' ? null : v);
 				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
 			<EditableCell
-				value={device.specification?.specification_brand || ''}
+				value={toDisplayString(device.specification?.specification_brand)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'specification_brand')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'specification_brand')}
 				error={editing.getFieldError(device.id, 'specification_brand')}
 				maxlength={250}
 				onSave={(v) => {
-					editing.queueSpecEdit(device.id, 'specification_brand', v || undefined);
+					editing.queueSpecEdit(device.id, 'specification_brand', v === '' ? null : v);
 				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
 			<EditableCell
-				value={device.specification?.specification_type || ''}
+				value={toDisplayString(device.specification?.specification_type)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'specification_type')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'specification_type')}
 				error={editing.getFieldError(device.id, 'specification_type')}
 				maxlength={250}
 				onSave={(v) => {
-					editing.queueSpecEdit(device.id, 'specification_type', v || undefined);
+					editing.queueSpecEdit(device.id, 'specification_type', v === '' ? null : v);
 				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
 			<EditableCell
-				value={device.specification?.additional_info_motor_valve || ''}
+				value={toDisplayString(device.specification?.additional_info_motor_valve)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'additional_info_motor_valve')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'additional_info_motor_valve')}
 				error={editing.getFieldError(device.id, 'additional_info_motor_valve')}
 				maxlength={250}
 				onSave={(v) => {
-					editing.queueSpecEdit(device.id, 'additional_info_motor_valve', v || undefined);
+					editing.queueSpecEdit(device.id, 'additional_info_motor_valve', v === '' ? null : v);
 				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
 			<EditableCell
-				value={device.specification?.additional_info_size?.toString() || ''}
+				value={toDisplayString(device.specification?.additional_info_size, true)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'additional_info_size')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'additional_info_size')}
 				error={editing.getFieldError(device.id, 'additional_info_size')}
 				type="number"
 				onSave={(v) => {
-					editing.queueSpecEdit(device.id, 'additional_info_size', v ? parseInt(v) : undefined);
+					editing.queueSpecEdit(
+						device.id,
+						'additional_info_size',
+						v === '' ? null : v ? parseInt(v) : null
+					);
 				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
 			<EditableCell
-				value={device.specification?.additional_information_installation_location || ''}
+				value={toDisplayString(device.specification?.additional_information_installation_location)}
 				pendingValue={editing.getPendingSpecValue(
 					device.id,
 					'additional_information_installation_location'
@@ -247,39 +258,43 @@
 					editing.queueSpecEdit(
 						device.id,
 						'additional_information_installation_location',
-						v || undefined
+						v === '' ? null : v
 					);
 				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
 			<EditableCell
-				value={device.specification?.electrical_connection_ph?.toString() || ''}
+				value={toDisplayString(device.specification?.electrical_connection_ph, true)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'electrical_connection_ph')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_ph')}
 				error={editing.getFieldError(device.id, 'electrical_connection_ph')}
 				type="number"
 				onSave={(v) => {
-					editing.queueSpecEdit(device.id, 'electrical_connection_ph', v ? parseInt(v) : undefined);
+					editing.queueSpecEdit(
+						device.id,
+						'electrical_connection_ph',
+						v === '' ? null : v ? parseInt(v) : null
+					);
 				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
 			<EditableCell
-				value={device.specification?.electrical_connection_acdc || ''}
+				value={toDisplayString(device.specification?.electrical_connection_acdc)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'electrical_connection_acdc')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_acdc')}
 				error={editing.getFieldError(device.id, 'electrical_connection_acdc')}
 				maxlength={2}
 				placeholder="AC/DC"
 				onSave={(v) => {
-					editing.queueSpecEdit(device.id, 'electrical_connection_acdc', v || undefined);
+					editing.queueSpecEdit(device.id, 'electrical_connection_acdc', v === '' ? null : v);
 				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
 			<EditableCell
-				value={device.specification?.electrical_connection_amperage?.toString() || ''}
+				value={toDisplayString(device.specification?.electrical_connection_amperage, true)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'electrical_connection_amperage')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_amperage')}
 				error={editing.getFieldError(device.id, 'electrical_connection_amperage')}
@@ -289,14 +304,14 @@
 					editing.queueSpecEdit(
 						device.id,
 						'electrical_connection_amperage',
-						v ? parseFloat(v) : undefined
+						v === '' ? null : v ? parseFloat(v) : null
 					);
 				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
 			<EditableCell
-				value={device.specification?.electrical_connection_power?.toString() || ''}
+				value={toDisplayString(device.specification?.electrical_connection_power, true)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'electrical_connection_power')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_power')}
 				error={editing.getFieldError(device.id, 'electrical_connection_power')}
@@ -306,14 +321,14 @@
 					editing.queueSpecEdit(
 						device.id,
 						'electrical_connection_power',
-						v ? parseFloat(v) : undefined
+						v === '' ? null : v ? parseFloat(v) : null
 					);
 				}}
 			/>
 		</Table.Cell>
 		<Table.Cell class="text-xs">
 			<EditableCell
-				value={device.specification?.electrical_connection_rotation?.toString() || ''}
+				value={toDisplayString(device.specification?.electrical_connection_rotation, true)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'electrical_connection_rotation')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_rotation')}
 				error={editing.getFieldError(device.id, 'electrical_connection_rotation')}
@@ -323,7 +338,7 @@
 					editing.queueSpecEdit(
 						device.id,
 						'electrical_connection_rotation',
-						v ? parseInt(v) : undefined
+						v === '' ? null : v ? parseInt(v) : null
 					);
 				}}
 			/>

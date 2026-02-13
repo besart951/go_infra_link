@@ -44,6 +44,9 @@ import type {
 	Apparat,
 	ApparatListParams,
 	ApparatListResponse,
+	Specification,
+	SpecificationListParams,
+	SpecificationListResponse,
 	ApparatBulkRequest,
 	ApparatBulkResponse,
 	CreateApparatRequest,
@@ -73,7 +76,9 @@ import type {
 	SPSControllerSystemTypeListResponse,
 	BacnetObject,
 	CreateBacnetObjectRequest,
-	UpdateBacnetObjectRequest
+	UpdateBacnetObjectRequest,
+	CreateFieldDeviceExportRequest,
+	FieldDeviceExportJobResponse
 } from '$lib/domain/facility/index.js';
 
 // ============================================================================
@@ -894,6 +899,32 @@ export async function deleteBacnetObject(id: string, options?: ApiOptions): Prom
 	return api<void>(`/facility/bacnet-objects/${id}`, { ...options, method: 'DELETE' });
 }
 
+// ============================================================================
+// FIELD DEVICE EXPORTS
+// ============================================================================
+
+export async function createFieldDeviceExport(
+	data: CreateFieldDeviceExportRequest,
+	options?: ApiOptions
+): Promise<FieldDeviceExportJobResponse> {
+	return api<FieldDeviceExportJobResponse>('/facility/exports/field-devices', {
+		...options,
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function getFieldDeviceExportJob(
+	jobId: string,
+	options?: ApiOptions
+): Promise<FieldDeviceExportJobResponse> {
+	return api<FieldDeviceExportJobResponse>(`/facility/exports/jobs/${jobId}`, options);
+}
+
+export function getFieldDeviceExportDownloadUrl(jobId: string): string {
+	return `/api/v1/facility/exports/jobs/${jobId}/download`;
+}
+
 // Re-export all types
 export type {
 	Building,
@@ -945,5 +976,7 @@ export type {
 	SPSControllerSystemTypeListResponse,
 	BacnetObject,
 	CreateBacnetObjectRequest,
-	UpdateBacnetObjectRequest
+	UpdateBacnetObjectRequest,
+	CreateFieldDeviceExportRequest,
+	FieldDeviceExportJobResponse
 };

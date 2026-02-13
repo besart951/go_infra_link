@@ -1,7 +1,10 @@
 package facility
 
 import (
+	"context"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainExport "github.com/besart951/go_infra_link/backend/internal/domain/exporting"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
 )
@@ -139,4 +142,9 @@ type ObjectDataService interface {
 type SPSControllerSystemTypeService interface {
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
 	ListBySPSControllerID(spsControllerID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
+}
+
+type ExportService interface {
+	Create(ctx context.Context, req domainExport.Request) (domainExport.Job, error)
+	Get(ctx context.Context, id uuid.UUID) (domainExport.Job, error)
 }
