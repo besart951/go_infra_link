@@ -19,6 +19,9 @@
 		getBuildings
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import type { Building } from '$lib/domain/facility/index.js';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 
 	let showForm = $state(false);
 	let editingItem: ControlCabinet | undefined = $state(undefined);
@@ -90,29 +93,32 @@
 
 			if (impact.sps_controllers_count > 0) {
 				const ok1 = await confirm({
-					title: 'Delete control cabinet',
-					message: `This will also delete ${impact.sps_controllers_count} SPS controller(s). Continue?`,
-					confirmText: 'Continue',
-					cancelText: 'Cancel',
+					title: $t('facility.delete_control_cabinet_confirm'),
+					message: $t('facility.delete_control_cabinet_message').replace('{count}', impact.sps_controllers_count.toString()),
+					confirmText: $t('common.confirm'),
+					cancelText: $t('common.cancel'),
 					variant: 'destructive'
 				});
 				if (!ok1) return;
 
 				const ok2 = await confirm({
-					title: 'Confirm cascading delete',
-					message: `This will also delete ${impact.sps_controller_system_types_count} system type link(s), ${impact.field_devices_count} field device(s), and ${impact.bacnet_objects_count} bacnet object(s).`,
-					confirmText: 'Delete everything',
-					cancelText: 'Cancel',
+					title: $t('facility.confirm_cascading_delete'),
+					message: $t('facility.cascading_delete_message')
+						.replace('{systemTypes}', impact.sps_controller_system_types_count.toString())
+						.replace('{fieldDevices}', impact.field_devices_count.toString())
+						.replace('{bacnetObjects}', impact.bacnet_objects_count.toString()),
+					confirmText: $t('facility.delete_everything'),
+					cancelText: $t('common.cancel'),
 					variant: 'destructive'
 				});
 				if (!ok2) return;
 			}
 
 			await deleteControlCabinet(item.id);
-			addToast('Control cabinet deleted', 'success');
+			addToast($t('facility.control_cabinet_deleted'), 'success');
 			controlCabinetsStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to delete control cabinet', 'error');
+			addToast(err instanceof Error ? err.message : $t('facility.delete_control_cabinet_failed'), 'error');
 		}
 	}
 
@@ -137,7 +143,7 @@
 </script>
 
 <svelte:head>
-	<title>Control Cabinets | Infra Link</title>
+	<title>{$t('facility.control_cabinets_title')} | Infra Link</title>
 </svelte:head>
 
 <ConfirmDialog />
@@ -145,13 +151,13 @@
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Control Cabinets</h1>
-			<p class="text-sm text-muted-foreground">Manage control cabinets and their configurations.</p>
+			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.control_cabinets_title')}</h1>
+			<p class="text-sm text-muted-foreground">{$t('facility.control_cabinets_desc')}</p>
 		</div>
 		{#if !showForm}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
-				New Control Cabinet
+				{$t('facility.new_control_cabinet')}
 			</Button>
 		{/if}
 	</div>
@@ -167,12 +173,12 @@
 	<PaginatedList
 		state={$controlCabinetsStore}
 		columns={[
-			{ key: 'building', label: 'Building' },
+			{ key: 'building', label: $t('facility.building') },
 			{ key: 'cabinet_nr', label: 'Cabinet Nr' },
 			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
-		searchPlaceholder="Search control cabinets..."
-		emptyMessage="No control cabinets found. Create your first control cabinet to get started."
+		searchPlaceholder={$t('facility.search_control_cabinets')}
+		emptyMessage={$t('facility.no_control_cabinets_found')}
 		onSearch={(text) => controlCabinetsStore.search(text)}
 		onPageChange={(page) => controlCabinetsStore.goToPage(page)}
 		onReload={() => controlCabinetsStore.reload()}
@@ -195,15 +201,15 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(cabinet.control_cabinet_nr ?? cabinet.id)}>
-							Copy
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => goto(`/facility/control-cabinets/${cabinet.id}`)}>
-							View
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(cabinet)}>Edit</DropdownMenu.Item>
-						<DropdownMenu.Separator />
-						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(cabinet)}>
-							Delete
+						{$t('facility.copy')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => goto(`/facility/control-cabinets/${cabinet.id}`)}>
+						{$t('facility.view')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => handleEdit(cabinet)}>{$t('common.edit')}</DropdownMenu.Item>
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(cabinet)}>
+						{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

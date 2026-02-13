@@ -14,6 +14,9 @@
 	import type { SystemType } from '$lib/domain/facility/index.js';
 	import SystemTypeForm from '$lib/components/facility/SystemTypeForm.svelte';
 	import { deleteSystemType } from '$lib/infrastructure/api/facility.adapter.js';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 
 	let showForm = $state(false);
 	let editingItem: SystemType | undefined = $state(undefined);
@@ -53,19 +56,19 @@
 
 	async function handleDelete(item: SystemType) {
 		const ok = await confirm({
-			title: 'Delete system type',
-			message: `Delete ${item.name}?`,
-			confirmText: 'Delete',
-			cancelText: 'Cancel',
+			title: $t('common.delete'),
+			message: $t('facility.delete_system_type_confirm').replace('{name}', item.name),
+			confirmText: $t('common.delete'),
+			cancelText: $t('common.cancel'),
 			variant: 'destructive'
 		});
 		if (!ok) return;
 		try {
 			await deleteSystemType(item.id);
-			addToast('System type deleted', 'success');
+			addToast($t('facility.system_type_deleted'), 'success');
 			systemTypesStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to delete system type', 'error');
+			addToast(err instanceof Error ? err.message : $t('facility.delete_system_type_failed'), 'error');
 		}
 	}
 
@@ -75,7 +78,7 @@
 </script>
 
 <svelte:head>
-	<title>System Types | Infra Link</title>
+	<title>{$t('facility.system_types_title')} | Infra Link</title>
 </svelte:head>
 
 <ConfirmDialog />
@@ -83,13 +86,13 @@
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">System Types</h1>
-			<p class="text-sm text-muted-foreground">Manage system types and their configurations.</p>
+			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.system_types_title')}</h1>
+			<p class="text-sm text-muted-foreground">{$t('facility.system_types_desc')}</p>
 		</div>
 		{#if !showForm}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
-				New System Type
+				{$t('facility.new_system_type')}
 			</Button>
 		{/if}
 	</div>
@@ -101,13 +104,13 @@
 	<PaginatedList
 		state={$systemTypesStore}
 		columns={[
-			{ key: 'name', label: 'Name' },
+			{ key: 'name', label: $t('common.name') },
 			{ key: 'number_min', label: 'Min Number' },
 			{ key: 'number_max', label: 'Max Number' },
 			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
-		searchPlaceholder="Search system types..."
-		emptyMessage="No system types found. Create your first system type to get started."
+		searchPlaceholder={$t('facility.search_system_types')}
+		emptyMessage={$t('facility.no_system_types_found')}
 		onSearch={(text) => systemTypesStore.search(text)}
 		onPageChange={(page) => systemTypesStore.goToPage(page)}
 		onReload={() => systemTypesStore.reload()}
@@ -127,15 +130,15 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(item.name ?? item.id)}>
-							Copy
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => goto(`/facility/system-types/${item.id}`)}>
-							View
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(item)}>Edit</DropdownMenu.Item>
-						<DropdownMenu.Separator />
-						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
-							Delete
+						{$t('facility.copy')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => goto(`/facility/system-types/${item.id}`)}>
+						{$t('facility.view')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => handleEdit(item)}>{$t('common.edit')}</DropdownMenu.Item>
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+						{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

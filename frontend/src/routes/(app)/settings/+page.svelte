@@ -35,6 +35,10 @@
 	];
 </script>
 
+<svelte:head>
+	<title>{$t('navigation.settings')} | Infra Link</title>
+</svelte:head>
+
 <div class="flex flex-col gap-6">
 	<div>
 		<h1 class="text-3xl font-bold tracking-tight">{$t('pages.settings')}</h1>

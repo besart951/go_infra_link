@@ -14,6 +14,9 @@
 	import type { ObjectData } from '$lib/domain/facility/index.js';
 	import { deleteObjectData, getObjectData } from '$lib/infrastructure/api/facility.adapter.js';
 	import ObjectDataForm from '$lib/components/facility/ObjectDataForm.svelte';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 
 	let showForm = $state(false);
 	let editingItem: ObjectData | undefined = $state(undefined);
@@ -54,19 +57,19 @@
 
 	async function handleDelete(item: ObjectData) {
 		const ok = await confirm({
-			title: 'Delete object data',
-			message: `Delete ${item.description}?`,
-			confirmText: 'Delete',
-			cancelText: 'Cancel',
+			title: $t('facility.delete_object_data_confirm').replace('{desc}', ''),
+			message: $t('facility.delete_object_data_confirm').replace('{desc}', item.description || ''),
+			confirmText: $t('common.delete'),
+			cancelText: $t('common.cancel'),
 			variant: 'destructive'
 		});
 		if (!ok) return;
 		try {
 			await deleteObjectData(item.id);
-			addToast('Object data deleted', 'success');
+			addToast($t('facility.object_data_deleted'), 'success');
 			objectDataStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to delete object data', 'error');
+			addToast(err instanceof Error ? err.message : $t('facility.delete_object_data_failed'), 'error');
 		}
 	}
 
@@ -76,7 +79,7 @@
 </script>
 
 <svelte:head>
-	<title>Object Data | Infra Link</title>
+	<title>{$t('facility.object_data')} | Infra Link</title>
 </svelte:head>
 
 <ConfirmDialog />
@@ -84,15 +87,15 @@
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Object Data</h1>
+			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.object_data_title')}</h1>
 			<p class="text-sm text-muted-foreground">
-				Manage object data configurations and BACnet objects.
+				{$t('facility.object_data_desc')}
 			</p>
 		</div>
 		{#if !showForm}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
-				New Object Data
+				{$t('facility.new_object_data')}
 			</Button>
 		{/if}
 	</div>
@@ -104,13 +107,13 @@
 	<PaginatedList
 		state={$objectDataStore}
 		columns={[
-			{ key: 'description', label: 'Description' },
-			{ key: 'version', label: 'Version' },
-			{ key: 'is_active', label: 'Status' },
+			{ key: 'description', label: $t('common.description') },
+			{ key: 'version', label: $t('facility.version') },
+			{ key: 'is_active', label: $t('common.status') },
 			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
-		searchPlaceholder="Search object data..."
-		emptyMessage="No object data found. Create your first object data to get started."
+		searchPlaceholder={$t('facility.search_object_data')}
+		emptyMessage={$t('facility.no_object_data_found')}
 		onSearch={(text) => objectDataStore.search(text)}
 		onPageChange={(page) => objectDataStore.goToPage(page)}
 		onReload={() => objectDataStore.reload()}
@@ -126,7 +129,7 @@
 						? 'bg-green-50 text-green-700'
 						: 'bg-gray-50 text-gray-700'}"
 				>
-					{item.is_active ? 'Active' : 'Inactive'}
+					{item.is_active ? $t('common.active') : $t('common.inactive')}
 				</span>
 			</Table.Cell>
 			<Table.Cell class="text-right">
@@ -140,15 +143,15 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(item.description ?? item.id)}>
-							Copy
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => goto(`/facility/object-data/${item.id}`)}>
-							View
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(item)}>Edit</DropdownMenu.Item>
-						<DropdownMenu.Separator />
-						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
-							Delete
+						{$t('facility.copy')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => goto(`/facility/object-data/${item.id}`)}>
+						{$t('facility.view')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => handleEdit(item)}>{$t('common.edit')}</DropdownMenu.Item>
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+						{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

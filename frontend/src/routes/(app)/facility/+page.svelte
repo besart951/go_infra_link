@@ -1,16 +1,19 @@
 <script lang="ts">
 	import Building2Icon from '@lucide/svelte/icons/building-2';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 </script>
 
 <svelte:head>
-	<title>Facility | Infra Link</title>
+	<title>{$t('facility.facility_overview')} | Infra Link</title>
 </svelte:head>
 
 <div class="space-y-6">
 	<div>
-		<h1 class="text-2xl font-semibold tracking-tight">Facility Management</h1>
+		<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.facility_overview')}</h1>
 		<p class="text-sm text-muted-foreground">
-			Select a category from the sidebar to manage your facility infrastructure.
+			{$t('facility.facility_overview_desc')}
 		</p>
 	</div>
 
@@ -24,8 +27,8 @@
 					<Building2Icon class="size-6 text-primary" />
 				</div>
 				<div>
-					<h3 class="font-semibold">Buildings</h3>
-					<p class="text-sm text-muted-foreground">Manage building infrastructure</p>
+					<h3 class="font-semibold">{$t('facility.buildings')}</h3>
+					<p class="text-sm text-muted-foreground">{$t('facility.manage_building_infrastructure')}</p>
 				</div>
 			</div>
 		</a>
@@ -39,8 +42,8 @@
 					<Building2Icon class="size-6 text-primary" />
 				</div>
 				<div>
-					<h3 class="font-semibold">Control Cabinets</h3>
-					<p class="text-sm text-muted-foreground">Manage cabinet configurations</p>
+					<h3 class="font-semibold">{$t('facility.control_cabinets')}</h3>
+					<p class="text-sm text-muted-foreground">{$t('facility.manage_cabinet_configurations')}</p>
 				</div>
 			</div>
 		</a>
@@ -54,8 +57,8 @@
 					<Building2Icon class="size-6 text-primary" />
 				</div>
 				<div>
-					<h3 class="font-semibold">SPS Controllers</h3>
-					<p class="text-sm text-muted-foreground">Manage SPS devices</p>
+					<h3 class="font-semibold">{$t('facility.sps_controllers')}</h3>
+					<p class="text-sm text-muted-foreground">{$t('facility.manage_sps_devices')}</p>
 				</div>
 			</div>
 		</a>
@@ -69,8 +72,8 @@
 					<Building2Icon class="size-6 text-primary" />
 				</div>
 				<div>
-					<h3 class="font-semibold">Field Devices</h3>
-					<p class="text-sm text-muted-foreground">Manage field devices</p>
+					<h3 class="font-semibold">{$t('facility.field_devices')}</h3>
+					<p class="text-sm text-muted-foreground">{$t('facility.field_devices_desc')}</p>
 				</div>
 			</div>
 		</a>

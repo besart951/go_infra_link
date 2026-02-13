@@ -5,10 +5,11 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/handler"
 	facilityhandler "github.com/besart951/go_infra_link/backend/internal/handler/facility"
+	"github.com/besart951/go_infra_link/backend/pkg/i18n"
 )
 
 // NewHandlers creates all HTTP handler instances from services.
-func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devAuthCfg DevAuthConfig) *handler.Handlers {
+func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18nLoader *i18n.Loader, devAuthCfg DevAuthConfig) *handler.Handlers {
 	facilityHandlers := facilityhandler.NewHandlers(facilityhandler.ServiceDeps{
 		Building:                services.Facility.Building,
 		SystemType:              services.Facility.SystemType,
@@ -33,6 +34,7 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, devA
 		UserHandler:            handler.NewUserHandler(services.User, services.RBAC),
 		TeamHandler:            handler.NewTeamHandler(services.Team),
 		AdminHandler:           handler.NewAdminHandler(services.Admin, services.Auth),
+		I18nHandler:            handler.NewI18nHandler(i18nLoader),
 		AuthHandler: handler.NewAuthHandler(
 			services.Auth,
 			services.User,

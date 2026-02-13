@@ -14,6 +14,9 @@
 	import type { SystemPart } from '$lib/domain/facility/index.js';
 	import SystemPartForm from '$lib/components/facility/SystemPartForm.svelte';
 	import { deleteSystemPart } from '$lib/infrastructure/api/facility.adapter.js';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 
 	let showForm = $state(false);
 	let editingItem: SystemPart | undefined = $state(undefined);
@@ -49,19 +52,19 @@
 
 	async function handleDelete(item: SystemPart) {
 		const ok = await confirm({
-			title: 'Delete system part',
-			message: `Delete ${item.short_name ?? item.name}?`,
-			confirmText: 'Delete',
-			cancelText: 'Cancel',
+			title: $t('common.delete'),
+			message: $t('facility.delete_system_part_confirm').replace('{name}', item.short_name ?? item.name),
+			confirmText: $t('common.delete'),
+			cancelText: $t('common.cancel'),
 			variant: 'destructive'
 		});
 		if (!ok) return;
 		try {
 			await deleteSystemPart(item.id);
-			addToast('System part deleted', 'success');
+			addToast($t('facility.system_part_deleted'), 'success');
 			systemPartsStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to delete system part', 'error');
+			addToast(err instanceof Error ? err.message : $t('facility.delete_system_part_failed'), 'error');
 		}
 	}
 
@@ -71,7 +74,7 @@
 </script>
 
 <svelte:head>
-	<title>System Parts | Infra Link</title>
+	<title>{$t('facility.system_parts_title')} | Infra Link</title>
 </svelte:head>
 
 <ConfirmDialog />
@@ -79,13 +82,13 @@
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">System Parts</h1>
-			<p class="text-sm text-muted-foreground">Manage system parts and components.</p>
+			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.system_parts_title')}</h1>
+			<p class="text-sm text-muted-foreground">{$t('facility.system_parts_desc')}</p>
 		</div>
 		{#if !showForm}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
-				New System Part
+				{$t('facility.new_system_part')}
 			</Button>
 		{/if}
 	</div>
@@ -97,13 +100,13 @@
 	<PaginatedList
 		state={$systemPartsStore}
 		columns={[
-			{ key: 'short_name', label: 'Short Name' },
-			{ key: 'name', label: 'Name' },
-			{ key: 'description', label: 'Description' },
+			{ key: 'short_name', label: $t('facility.short_name') },
+			{ key: 'name', label: $t('common.name') },
+			{ key: 'description', label: $t('common.description') },
 			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
-		searchPlaceholder="Search system parts..."
-		emptyMessage="No system parts found. Create your first system part to get started."
+		searchPlaceholder={$t('facility.search_system_parts')}
+		emptyMessage={$t('facility.no_system_parts_found')}
 		onSearch={(text) => systemPartsStore.search(text)}
 		onPageChange={(page) => systemPartsStore.goToPage(page)}
 		onReload={() => systemPartsStore.reload()}
@@ -123,15 +126,15 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(item.short_name ?? item.id)}>
-							Copy
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => goto(`/facility/system-parts/${item.id}`)}>
-							View
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(item)}>Edit</DropdownMenu.Item>
-						<DropdownMenu.Separator />
-						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
-							Delete
+						{$t('facility.copy')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => goto(`/facility/system-parts/${item.id}`)}>
+						{$t('facility.view')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => handleEdit(item)}>{$t('common.edit')}</DropdownMenu.Item>
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+						{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

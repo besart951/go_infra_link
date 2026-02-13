@@ -16,9 +16,6 @@
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();
-	import { createTranslator } from '$lib/i18n/translator';
-
-	const t = createTranslator();
 
 	type CreateTeamForm = {
 		name: string;
@@ -101,6 +98,10 @@
 	});
 </script>
 
+<svelte:head>
+	<title>{$t('navigation.teams')} | Infra Link</title>
+</svelte:head>
+
 <div class="flex flex-col gap-6">
 	<div class="flex items-start justify-between gap-4">
 		<div>
@@ -120,16 +121,16 @@
 					<label class="text-sm font-medium" for="team_name">{$t('common.name')}</label>
 					<Input
 						id="team_name"
-						placeholder="Operations"
+						placeholder={$t('messages.team_name_placeholder')}
 						bind:value={form.name}
 						disabled={createBusy}
 					/>
 				</div>
 				<div class="md:col-span-2">
-					<label class="text-sm font-medium" for="team_desc">{$t('common.description')} ({$t('pages.optional')})</label>
+					<label class="text-sm font-medium" for="team_desc">{$t('messages.team_description')}</label>
 					<Input
 						id="team_desc"
-						placeholder="Optional"
+						placeholder={$t('pages.optional')}
 						bind:value={form.description}
 						disabled={createBusy}
 					/>

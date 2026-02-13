@@ -6,6 +6,9 @@
 	import { Search, ChevronLeft, ChevronRight } from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import type { ListState } from '$lib/application/useCases/listUseCase.js';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 
 	interface Props {
 		state: ListState<T>;
@@ -63,7 +66,7 @@
 			/>
 		</div>
 		{#if onReload}
-			<Button variant="outline" onclick={onReload} disabled={state.loading}>Refresh</Button>
+			<Button variant="outline" onclick={onReload} disabled={state.loading}>{$t('messages.refresh')}</Button>
 		{/if}
 	</div>
 
@@ -72,7 +75,7 @@
 		<div
 			class="rounded-md border border-destructive/50 bg-destructive/15 px-4 py-3 text-destructive"
 		>
-			<p class="font-medium">Error</p>
+			<p class="font-medium">{$t('messages.error')}</p>
 			<p class="text-sm">{state.error}</p>
 		</div>
 	{/if}
@@ -104,7 +107,7 @@
 							<div class="flex flex-col items-center justify-center gap-2 text-muted-foreground">
 								<p class="font-medium">{emptyMessage}</p>
 								{#if state.searchText}
-									<p class="text-sm">Try adjusting your search</p>
+									<p class="text-sm">{$t('messages.try_adjusting_search')}</p>
 								{/if}
 							</div>
 						</Table.Cell>
@@ -124,8 +127,7 @@
 	{#if state.totalPages > 1}
 		<div class="flex items-center justify-between">
 			<div class="text-sm text-muted-foreground">
-				Page {state.page} of {state.totalPages} • {state.total}
-				{state.total === 1 ? 'item' : 'items'} total
+				{$t('messages.page_of').replace('{page}', String(state.page)).replace('{total}', String(state.totalPages))} • {$t('messages.total_items').replace('{count}', String(state.total))}
 			</div>
 			<div class="flex items-center gap-2">
 				<Button
@@ -135,7 +137,7 @@
 					onclick={handlePrevious}
 				>
 					<ChevronLeft class="mr-1 h-4 w-4" />
-					Previous
+					{$t('messages.previous')}
 				</Button>
 				<Button
 					variant="outline"
@@ -143,7 +145,7 @@
 					disabled={state.page >= state.totalPages || state.loading}
 					onclick={handleNext}
 				>
-					Next
+					{$t('messages.next')}
 					<ChevronRight class="ml-1 h-4 w-4" />
 				</Button>
 			</div>

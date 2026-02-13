@@ -14,6 +14,9 @@
 	import type { Building } from '$lib/domain/facility/index.js';
 	import BuildingForm from '$lib/components/facility/BuildingForm.svelte';
 	import { deleteBuilding } from '$lib/infrastructure/api/facility.adapter.js';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 
 	let showForm = $state(false);
 	let editingBuilding: Building | undefined = $state(undefined);
@@ -49,19 +52,19 @@
 
 	async function handleDelete(building: Building) {
 		const ok = await confirm({
-			title: 'Delete building',
-			message: `Delete ${building.iws_code}?`,
-			confirmText: 'Delete',
-			cancelText: 'Cancel',
+			title: $t('common.delete'),
+			message: $t('facility.delete_building_confirm').replace('{name}', building.iws_code),
+			confirmText: $t('common.delete'),
+			cancelText: $t('common.cancel'),
 			variant: 'destructive'
 		});
 		if (!ok) return;
 		try {
 			await deleteBuilding(building.id);
-			addToast('Building deleted', 'success');
+			addToast($t('facility.building_deleted'), 'success');
 			buildingsStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to delete building', 'error');
+			addToast(err instanceof Error ? err.message : $t('facility.delete_building_failed'), 'error');
 		}
 	}
 
@@ -71,7 +74,7 @@
 </script>
 
 <svelte:head>
-	<title>Buildings | Infra Link</title>
+	<title>{$t('facility.buildings_title')} | Infra Link</title>
 </svelte:head>
 
 <ConfirmDialog />
@@ -79,13 +82,13 @@
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Buildings</h1>
-			<p class="text-sm text-muted-foreground">Manage building infrastructure and IWS codes.</p>
+			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.buildings_title')}</h1>
+			<p class="text-sm text-muted-foreground">{$t('facility.buildings_desc')}</p>
 		</div>
 		{#if !showForm}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
-				New Building
+				{$t('facility.new_building')}
 			</Button>
 		{/if}
 	</div>
@@ -97,12 +100,12 @@
 	<PaginatedList
 		state={$buildingsStore}
 		columns={[
-			{ key: 'iws_code', label: 'IWS Code' },
-			{ key: 'building_group', label: 'Building Group' },
+			{ key: 'iws_code', label: $t('facility.iws_code') },
+			{ key: 'building_group', label: $t('facility.building_group') },
 			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
-		searchPlaceholder="Search buildings..."
-		emptyMessage="No buildings found. Create your first building to get started."
+		searchPlaceholder={$t('facility.search_buildings')}
+		emptyMessage={$t('facility.no_buildings_found')}
 		onSearch={(text) => buildingsStore.search(text)}
 		onPageChange={(page) => buildingsStore.goToPage(page)}
 		onReload={() => buildingsStore.reload()}
@@ -125,15 +128,15 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(building.iws_code)}>
-							Copy
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => goto(`/facility/buildings/${building.id}`)}>
-							View
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(building)}>Edit</DropdownMenu.Item>
-						<DropdownMenu.Separator />
-						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(building)}>
-							Delete
+						{$t('facility.copy')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => goto(`/facility/buildings/${building.id}`)}>
+						{$t('facility.view')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => handleEdit(building)}>{$t('common.edit')}</DropdownMenu.Item>
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(building)}>
+						{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

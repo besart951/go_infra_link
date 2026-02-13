@@ -17,6 +17,7 @@ type Handlers struct {
 	AdminHandler           *AdminHandler
 	PhaseHandler           *PhaseHandler
 	PhasePermissionHandler *PhasePermissionHandler
+	I18nHandler            *I18nHandler
 
 	FacilityBuildingHandler       *facilityhandler.BuildingHandler
 	FacilitySystemTypeHandler     *facilityhandler.SystemTypeHandler
@@ -40,6 +41,10 @@ type Handlers struct {
 func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth.TokenValidator, authChecker middleware.AuthorizationChecker, userStatusSvc middleware.UserStatusService) {
 	// Public API v1 group (login only)
 	publicV1 := r.Group("/api/v1")
+
+	// I18n route (public, no authentication required)
+	publicV1.GET("/i18n/:locale", handlers.I18nHandler.GetTranslations)
+
 	publicAuth := publicV1.Group("/auth")
 	{
 		publicAuth.POST("/login", handlers.AuthHandler.Login)

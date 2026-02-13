@@ -30,16 +30,16 @@
 	}
 
 	const statusOptions: Array<{ value: ProjectStatus | 'all'; label: string }> = [
-		{ value: 'all', label: 'All statuses' },
-		{ value: 'planned', label: 'Planned' },
-		{ value: 'ongoing', label: 'Ongoing' },
-		{ value: 'completed', label: 'Completed' }
+		{ value: 'all', label: $t('messages.all_statuses') },
+		{ value: 'planned', label: $t('messages.planned') },
+		{ value: 'ongoing', label: $t('messages.ongoing') },
+		{ value: 'completed', label: $t('messages.completed') }
 	];
 
 	const createStatusOptions: Array<{ value: ProjectStatus; label: string }> = [
-		{ value: 'planned', label: 'Planned' },
-		{ value: 'ongoing', label: 'Ongoing' },
-		{ value: 'completed', label: 'Completed' }
+		{ value: 'planned', label: $t('messages.planned') },
+		{ value: 'ongoing', label: $t('messages.ongoing') },
+		{ value: 'completed', label: $t('messages.completed') }
 	];
 
 	type CreateProjectForm = {
@@ -159,7 +159,7 @@
 </script>
 
 <svelte:head>
-	<title>Projects | Infra Link</title>
+	<title>{$t('navigation.projects')} | Infra Link</title>
 </svelte:head>
 
 <div class="flex flex-col gap-6">
@@ -180,17 +180,17 @@
 		<div class="rounded-lg border bg-background p-4">
 			<div class="grid gap-4 md:grid-cols-2">
 				<div class="flex flex-col gap-2">
-					<label class="text-sm font-medium" for="project_name_create">Name</label>
+					<label class="text-sm font-medium" for="project_name_create">{$t('common.name')}</label>
 					<Input
 						id="project_name_create"
-						placeholder="Project name"
+						placeholder={$t('messages.project_name_placeholder')}
 						bind:value={form.name}
 						disabled={createBusy}
 					/>
 				</div>
 
 				<div class="flex flex-col gap-2">
-					<label class="text-sm font-medium" for="project_status_create">Status</label>
+					<label class="text-sm font-medium" for="project_status_create">{$t('common.status')}</label>
 					<select
 						id="project_status_create"
 						class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
@@ -204,7 +204,7 @@
 				</div>
 
 				<div class="flex flex-col gap-2">
-					<label class="text-sm font-medium" for="project_start_create">Start date</label>
+					<label class="text-sm font-medium" for="project_start_create">{$t('messages.start_date')}</label>
 					<Input
 						id="project_start_create"
 						type="date"
@@ -214,15 +214,15 @@
 				</div>
 
 				<div class="flex flex-col gap-2">
-					<label class="text-sm font-medium" for="project_phase_create">Phase</label>
+					<label class="text-sm font-medium" for="project_phase_create">{$t('messages.phase')}</label>
 					<ProjectPhaseSelect id="project_phase_create" bind:value={form.phase_id} width="w-full" />
 				</div>
 
 				<div class="flex flex-col gap-2 md:col-span-2">
-					<label class="text-sm font-medium" for="project_desc_create">Description</label>
+					<label class="text-sm font-medium" for="project_desc_create">{$t('common.description')}</label>
 					<Textarea
 						id="project_desc_create"
-						placeholder="Describe the project goals"
+						placeholder={$t('messages.project_description_placeholder')}
 						rows={3}
 						bind:value={form.description}
 						disabled={createBusy}
@@ -232,15 +232,15 @@
 
 			<div class="mt-4 flex items-center justify-end gap-2">
 				<Button variant="outline" onclick={() => (createOpen = false)} disabled={createBusy}
-					>Cancel</Button
+					>{$t('common.cancel')}</Button
 				>
-				<Button onclick={submitCreate} disabled={!canSubmitCreate()}>Create</Button>
+				<Button onclick={submitCreate} disabled={!canSubmitCreate()}>{$t('common.create')}</Button>
 			</div>
 		</div>
 	{/if}
 
 	<div class="flex flex-wrap items-center gap-3">
-		<label class="text-sm font-medium" for="project_status_filter">Status</label>
+		<label class="text-sm font-medium" for="project_status_filter">{$t('common.status')}</label>
 		<select
 			id="project_status_filter"
 			class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
@@ -256,11 +256,11 @@
 	<PaginatedList
 		state={$projectListStore}
 		columns={[
-			{ key: 'name', label: 'Name' },
-			{ key: 'status', label: 'Status' },
-			{ key: 'start_date', label: 'Start Date' },
-			{ key: 'created', label: 'Created' },
-			{ key: 'actions', label: 'Actions', width: 'w-[100px]' }
+			{ key: 'name', label: $t('common.name') },
+			{ key: 'status', label: $t('common.status') },
+			{ key: 'start_date', label: $t('messages.start_date') },
+			{ key: 'created', label: $t('messages.created') },
+			{ key: 'actions', label: $t('messages.actions'), width: 'w-[100px]' }
 		]}
 		searchPlaceholder={$t('messages.search_projects')}
 		emptyMessage={$t('messages.no_projects_found')}
@@ -290,7 +290,7 @@
 				{new Date(project.created_at).toLocaleDateString()}
 			</Table.Cell>
 			<Table.Cell>
-				<Button variant="ghost" size="sm" href="/projects/{project.id}">View</Button>
+				<Button variant="ghost" size="sm" href="/projects/{project.id}">{$t('messages.view')}</Button>
 			</Table.Cell>
 		{/snippet}
 	</PaginatedList>

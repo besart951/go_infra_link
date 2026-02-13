@@ -14,6 +14,9 @@
 	import type { Apparat } from '$lib/domain/facility/index.js';
 	import ApparatForm from '$lib/components/facility/ApparatForm.svelte';
 	import { deleteApparat } from '$lib/infrastructure/api/facility.adapter.js';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 
 	let showForm = $state(false);
 	let editingItem: Apparat | undefined = $state(undefined);
@@ -49,19 +52,19 @@
 
 	async function handleDelete(item: Apparat) {
 		const ok = await confirm({
-			title: 'Delete apparat',
-			message: `Delete ${item.short_name ?? item.name}?`,
-			confirmText: 'Delete',
-			cancelText: 'Cancel',
+			title: $t('common.delete'),
+			message: $t('facility.delete_apparat_confirm').replace('{name}', item.short_name ?? item.name),
+			confirmText: $t('common.delete'),
+			cancelText: $t('common.cancel'),
 			variant: 'destructive'
 		});
 		if (!ok) return;
 		try {
 			await deleteApparat(item.id);
-			addToast('Apparat deleted', 'success');
+			addToast($t('facility.apparat_deleted'), 'success');
 			apparatsStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to delete apparat', 'error');
+			addToast(err instanceof Error ? err.message : $t('facility.delete_apparat_failed'), 'error');
 		}
 	}
 
@@ -71,7 +74,7 @@
 </script>
 
 <svelte:head>
-	<title>Apparats | Infra Link</title>
+	<title>{$t('facility.apparats_title')} | Infra Link</title>
 </svelte:head>
 
 <ConfirmDialog />
@@ -79,13 +82,13 @@
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Apparats</h1>
-			<p class="text-sm text-muted-foreground">Manage apparats and their configurations.</p>
+			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.apparats_title')}</h1>
+			<p class="text-sm text-muted-foreground">{$t('facility.apparats_desc')}</p>
 		</div>
 		{#if !showForm}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
-				New Apparat
+				{$t('facility.new_apparat')}
 			</Button>
 		{/if}
 	</div>
@@ -97,13 +100,13 @@
 	<PaginatedList
 		state={$apparatsStore}
 		columns={[
-			{ key: 'short_name', label: 'Short Name' },
-			{ key: 'name', label: 'Name' },
-			{ key: 'description', label: 'Description' },
+			{ key: 'short_name', label: $t('facility.short_name') },
+			{ key: 'name', label: $t('common.name') },
+			{ key: 'description', label: $t('common.description') },
 			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
-		searchPlaceholder="Search apparats..."
-		emptyMessage="No apparats found. Create your first apparat to get started."
+		searchPlaceholder={$t('facility.search_apparats')}
+		emptyMessage={$t('facility.no_apparats_found')}
 		onSearch={(text) => apparatsStore.search(text)}
 		onPageChange={(page) => apparatsStore.goToPage(page)}
 		onReload={() => apparatsStore.reload()}
@@ -123,15 +126,15 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(item.short_name ?? item.id)}>
-							Copy
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => goto(`/facility/apparats/${item.id}`)}>
-							View
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(item)}>Edit</DropdownMenu.Item>
-						<DropdownMenu.Separator />
-						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
-							Delete
+						{$t('facility.copy')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => goto(`/facility/apparats/${item.id}`)}>
+						{$t('facility.view')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => handleEdit(item)}>{$t('common.edit')}</DropdownMenu.Item>
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+						{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

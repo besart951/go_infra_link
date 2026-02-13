@@ -83,7 +83,10 @@ func Run() error {
 		SameSite: http.SameSiteStrictMode,
 	}
 
-	handlers := wire.NewHandlers(services, cookieSettings, wire.DevAuthConfig{
+	// Initialize i18n (translations)
+	translator, i18nLoader := initializeTranslator(log)
+
+	handlers := wire.NewHandlers(services, cookieSettings, i18nLoader, wire.DevAuthConfig{
 		Enabled:         cfg.DevAuthEnabled,
 		Email:           cfg.DevAuthEmail,
 		Password:        cfg.DevAuthPassword,
@@ -103,9 +106,6 @@ func Run() error {
 	router := gin.Default()
 	docs.SwaggerInfo.BasePath = "/api/v1"
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
-	// Initialize i18n (translations)
-	translator := initializeTranslator(log)
 
 	// Register locale middleware (must be early to ensure all handlers have access)
 	router.Use(middleware.LocaleMiddleware(translator, "de_CH"))
@@ -312,18 +312,19 @@ func localURL(addr, path string) string {
 }
 
 // initializeTranslator initializes the i18n translator with all available translations.
-func initializeTranslator(log applogger.Logger) *i18n.Translator {
+// Returns both the translator and the loader for handler use.
+func initializeTranslator(log applogger.Logger) (*i18n.Translator, *i18n.Loader) {
 	translator := i18n.NewTranslator("de_CH")
 
 	// Load translations from JSON files
-	// The locale files are stored in internal/locales/
-	loader := i18n.NewLoader("./internal/locales")
+	// The locale files are stored in the shared translations/ directory at project root
+	loader := i18n.NewLoader("./translations")
 
 	allTranslations, err := loader.LoadAll()
 	if err != nil {
 		// Log error but continue - translator will use keys as fallback
 		log.Error("Failed to load translations", "err", err)
-		return translator
+		return translator, loader
 	}
 
 	// Load all language translations
@@ -338,5 +339,5 @@ func initializeTranslator(log applogger.Logger) *i18n.Translator {
 		log.Info("Default language 'de_CH' translations may not be loaded")
 	}
 
-	return translator
+	return translator, loader
 }

@@ -14,6 +14,9 @@
 	import type { AlarmDefinition } from '$lib/domain/facility/index.js';
 	import AlarmDefinitionForm from '$lib/components/facility/AlarmDefinitionForm.svelte';
 	import { deleteAlarmDefinition } from '$lib/infrastructure/api/facility.adapter.js';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 
 	let showForm = $state(false);
 	let editingItem: AlarmDefinition | undefined = $state(undefined);
@@ -49,19 +52,19 @@
 
 	async function handleDelete(item: AlarmDefinition) {
 		const ok = await confirm({
-			title: 'Delete alarm definition',
-			message: `Delete ${item.name}?`,
-			confirmText: 'Delete',
-			cancelText: 'Cancel',
+			title: $t('facility.delete_alarm_definition_confirm').replace('{name}', ''),
+			message: $t('facility.delete_alarm_definition_confirm').replace('{name}', item.name || ''),
+			confirmText: $t('common.delete'),
+			cancelText: $t('common.cancel'),
 			variant: 'destructive'
 		});
 		if (!ok) return;
 		try {
 			await deleteAlarmDefinition(item.id);
-			addToast('Alarm definition deleted', 'success');
+			addToast($t('facility.alarm_definition_deleted'), 'success');
 			alarmDefinitionsStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to delete alarm definition', 'error');
+			addToast(err instanceof Error ? err.message : $t('facility.delete_alarm_definition_failed'), 'error');
 		}
 	}
 
@@ -71,7 +74,7 @@
 </script>
 
 <svelte:head>
-	<title>Alarm Definitions | Infra Link</title>
+	<title>{$t('facility.alarm_definitions')} | Infra Link</title>
 </svelte:head>
 
 <ConfirmDialog />
@@ -79,13 +82,13 @@
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Alarm Definitions</h1>
-			<p class="text-sm text-muted-foreground">Manage alarm definitions and notifications.</p>
+			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.alarm_definitions_title')}</h1>
+			<p class="text-sm text-muted-foreground">{$t('facility.alarm_definitions_desc')}</p>
 		</div>
 		{#if !showForm}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
-				New Alarm Definition
+				{$t('facility.new_alarm_definition')}
 			</Button>
 		{/if}
 	</div>
@@ -101,12 +104,12 @@
 	<PaginatedList
 		state={$alarmDefinitionsStore}
 		columns={[
-			{ key: 'name', label: 'Name' },
-			{ key: 'alarm_note', label: 'Note' },
+			{ key: 'name', label: $t('common.name') },
+			{ key: 'alarm_note', label: $t('facility.alarm_note') },
 			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
-		searchPlaceholder="Search alarm definitions..."
-		emptyMessage="No alarm definitions found. Create your first alarm definition to get started."
+		searchPlaceholder={$t('facility.search_alarm_definitions')}
+		emptyMessage={$t('facility.no_alarm_definitions_found')}
 		onSearch={(text) => alarmDefinitionsStore.search(text)}
 		onPageChange={(page) => alarmDefinitionsStore.goToPage(page)}
 		onReload={() => alarmDefinitionsStore.reload()}
@@ -125,15 +128,15 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(item.name ?? item.id)}>
-							Copy
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => goto(`/facility/alarm-definitions/${item.id}`)}>
-							View
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(item)}>Edit</DropdownMenu.Item>
-						<DropdownMenu.Separator />
-						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
-							Delete
+						{$t('facility.copy')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => goto(`/facility/alarm-definitions/${item.id}`)}>
+						{$t('facility.view')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => handleEdit(item)}>{$t('common.edit')}</DropdownMenu.Item>
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+						{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

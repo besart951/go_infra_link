@@ -14,6 +14,9 @@
 	import type { StateText } from '$lib/domain/facility/index.js';
 	import StateTextForm from '$lib/components/facility/StateTextForm.svelte';
 	import { deleteStateText } from '$lib/infrastructure/api/facility.adapter.js';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 
 	let showForm = $state(false);
 	let editingItem: StateText | undefined = $state(undefined);
@@ -49,19 +52,19 @@
 
 	async function handleDelete(item: StateText) {
 		const ok = await confirm({
-			title: 'Delete state text',
-			message: `Delete ${item.ref_number}?`,
-			confirmText: 'Delete',
-			cancelText: 'Cancel',
+			title: $t('facility.delete_state_text_confirm').replace('{ref}', ''),
+			message: $t('facility.delete_state_text_confirm').replace('{ref}', String(item.ref_number || '')),
+			confirmText: $t('common.delete'),
+			cancelText: $t('common.cancel'),
 			variant: 'destructive'
 		});
 		if (!ok) return;
 		try {
 			await deleteStateText(item.id);
-			addToast('State text deleted', 'success');
+			addToast($t('facility.state_text_deleted'), 'success');
 			stateTextsStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to delete state text', 'error');
+			addToast(err instanceof Error ? err.message : $t('facility.delete_state_text_failed'), 'error');
 		}
 	}
 
@@ -71,7 +74,7 @@
 </script>
 
 <svelte:head>
-	<title>State Texts | Infra Link</title>
+	<title>{$t('facility.state_texts')} | Infra Link</title>
 </svelte:head>
 
 <ConfirmDialog />
@@ -79,13 +82,13 @@
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">State Texts</h1>
-			<p class="text-sm text-muted-foreground">Manage state text definitions and references.</p>
+			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.state_texts_title')}</h1>
+			<p class="text-sm text-muted-foreground">{$t('facility.state_texts_desc')}</p>
 		</div>
 		{#if !showForm}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
-				New State Text
+				{$t('facility.new_state_text')}
 			</Button>
 		{/if}
 	</div>
@@ -97,12 +100,12 @@
 	<PaginatedList
 		state={$stateTextsStore}
 		columns={[
-			{ key: 'ref_number', label: 'Ref Number' },
-			{ key: 'state_text1', label: 'State Text' },
+			{ key: 'ref_number', label: $t('facility.ref_number') },
+			{ key: 'state_text1', label: $t('facility.state_text1') },
 			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
-		searchPlaceholder="Search state texts..."
-		emptyMessage="No state texts found. Create your first state text to get started."
+		searchPlaceholder={$t('facility.search_state_texts')}
+		emptyMessage={$t('facility.no_state_texts_found')}
 		onSearch={(text) => stateTextsStore.search(text)}
 		onPageChange={(page) => stateTextsStore.goToPage(page)}
 		onReload={() => stateTextsStore.reload()}
@@ -121,15 +124,15 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(String(item.ref_number ?? item.id))}>
-							Copy
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => goto(`/facility/state-texts/${item.id}`)}>
-							View
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(item)}>Edit</DropdownMenu.Item>
-						<DropdownMenu.Separator />
-						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
-							Delete
+						{$t('facility.copy')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => goto(`/facility/state-texts/${item.id}`)}>
+						{$t('facility.view')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => handleEdit(item)}>{$t('common.edit')}</DropdownMenu.Item>
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+						{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

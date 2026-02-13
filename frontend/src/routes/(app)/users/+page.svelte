@@ -135,18 +135,18 @@
 	}
 
 	function formatDate(dateString: string | null | undefined): string {
-		if (!dateString) return 'Never';
+		if (!dateString) return $t('messages.never');
 		const date = new Date(dateString);
 		const now = new Date();
 		const diffInMs = now.getTime() - date.getTime();
 		const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
-		if (diffInDays === 0) return 'Today';
-		if (diffInDays === 1) return 'Yesterday';
-		if (diffInDays < 7) return `${diffInDays} days ago`;
-		if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
-		if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`;
-		return `${Math.floor(diffInDays / 365)} years ago`;
+		if (diffInDays === 0) return $t('messages.today');
+		if (diffInDays === 1) return $t('messages.yesterday');
+		if (diffInDays < 7) return $t('messages.days_ago').replace('{count}', String(diffInDays));
+		if (diffInDays < 30) return $t('messages.weeks_ago').replace('{count}', String(Math.floor(diffInDays / 7)));
+		if (diffInDays < 365) return $t('messages.months_ago').replace('{count}', String(Math.floor(diffInDays / 30)));
+		return $t('messages.years_ago').replace('{count}', String(Math.floor(diffInDays / 365)));
 	}
 
 	function authVerified(user: User): boolean {
@@ -162,6 +162,10 @@
 		usersStore.load();
 	});
 </script>
+
+<svelte:head>
+	<title>{$t('navigation.users')} | Infra Link</title>
+</svelte:head>
 
 <div class="flex flex-col gap-6">
 	<!-- Header -->

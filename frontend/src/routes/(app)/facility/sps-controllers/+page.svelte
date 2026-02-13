@@ -18,6 +18,9 @@
 		getControlCabinets
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import type { ControlCabinet } from '$lib/domain/facility/index.js';
+	import { createTranslator } from '$lib/i18n/translator';
+
+	const t = createTranslator();
 
 	let showForm = $state(false);
 	let editingItem: SPSController | undefined = $state(undefined);
@@ -81,19 +84,19 @@
 
 	async function handleDelete(item: SPSController) {
 		const ok = await confirm({
-			title: 'Delete SPS controller',
-			message: `Delete ${item.device_name}?`,
-			confirmText: 'Delete',
-			cancelText: 'Cancel',
+			title: $t('common.delete'),
+			message: $t('facility.delete_sps_controller_confirm').replace('{name}', item.device_name),
+			confirmText: $t('common.delete'),
+			cancelText: $t('common.cancel'),
 			variant: 'destructive'
 		});
 		if (!ok) return;
 		try {
 			await deleteSPSController(item.id);
-			addToast('SPS controller deleted', 'success');
+			addToast($t('facility.sps_controller_deleted'), 'success');
 			spsControllersStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to delete SPS controller', 'error');
+			addToast(err instanceof Error ? err.message : $t('facility.delete_sps_controller_failed'), 'error');
 		}
 	}
 
@@ -118,21 +121,21 @@
 </script>
 
 <svelte:head>
-	<title>SPS Controllers | Infra Link</title>
+	<title>{$t('facility.sps_controllers_title')} | Infra Link</title>
 </svelte:head>
 <ConfirmDialog />
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">SPS Controllers</h1>
+			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.sps_controllers_title')}</h1>
 			<p class="text-sm text-muted-foreground">
-				Manage SPS controller devices and their configurations.
+				{$t('facility.sps_controllers_desc')}
 			</p>
 		</div>
 		{#if !showForm}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
-				New SPS Controller
+				{$t('facility.new_sps_controller')}
 			</Button>
 		{/if}
 	</div>
@@ -148,14 +151,14 @@
 	<PaginatedList
 		state={$spsControllersStore}
 		columns={[
-			{ key: 'device_name', label: 'Device Name' },
-			{ key: 'ga_device', label: 'GA Device' },
-			{ key: 'ip_address', label: 'IP Address' },
+			{ key: 'device_name', label: $t('facility.device_name') },
+			{ key: 'ga_device', label: $t('facility.ga_device') },
+			{ key: 'ip_address', label: $t('facility.ip_address') },
 			{ key: 'cabinet', label: 'Cabinet Nr' },
 			{ key: 'actions', label: '', width: 'w-[100px]' }
 		]}
-		searchPlaceholder="Search SPS controllers..."
-		emptyMessage="No SPS controllers found. Create your first SPS controller to get started."
+		searchPlaceholder={$t('facility.search_sps_controllers')}
+		emptyMessage={$t('facility.no_sps_controllers_found')}
 		onSearch={(text) => spsControllersStore.search(text)}
 		onPageChange={(page) => spsControllersStore.goToPage(page)}
 		onReload={() => spsControllersStore.reload()}
@@ -188,15 +191,15 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(controller.device_name ?? controller.id)}>
-							Copy
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => goto(`/facility/sps-controllers/${controller.id}`)}>
-							View
-						</DropdownMenu.Item>
-						<DropdownMenu.Item onclick={() => handleEdit(controller)}>Edit</DropdownMenu.Item>
-						<DropdownMenu.Separator />
-						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(controller)}>
-							Delete
+						{$t('facility.copy')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => goto(`/facility/sps-controllers/${controller.id}`)}>
+						{$t('facility.view')}
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => handleEdit(controller)}>{$t('common.edit')}</DropdownMenu.Item>
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(controller)}>
+						{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
