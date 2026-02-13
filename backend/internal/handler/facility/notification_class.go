@@ -33,7 +33,7 @@ func (h *NotificationClassHandler) CreateNotificationClass(c *gin.Context) {
 
 	nc := toNotificationClassModel(req)
 
-	if err := h.service.Create(nc); respondValidationOrError(c, err, "creation_failed") {
+	if err := h.service.Create(nc); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
 		return
 	}
 
@@ -58,10 +58,10 @@ func (h *NotificationClassHandler) GetNotificationClass(c *gin.Context) {
 
 	nc, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Notification class not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.notification_class_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -87,7 +87,7 @@ func (h *NotificationClassHandler) ListNotificationClasses(c *gin.Context) {
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -119,16 +119,16 @@ func (h *NotificationClassHandler) UpdateNotificationClass(c *gin.Context) {
 
 	nc, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Notification class not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.notification_class_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
 	applyNotificationClassUpdate(nc, req)
 
-	if err := h.service.Update(nc); respondValidationOrError(c, err, "update_failed") {
+	if err := h.service.Update(nc); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
 
@@ -151,7 +151,7 @@ func (h *NotificationClassHandler) DeleteNotificationClass(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}
 

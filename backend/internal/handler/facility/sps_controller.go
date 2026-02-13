@@ -46,7 +46,7 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 			respondInvalidReference(c)
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
 		return
 	}
 
@@ -71,10 +71,10 @@ func (h *SPSControllerHandler) GetSPSController(c *gin.Context) {
 
 	spsController, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "SPS Controller not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.sps_controller_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -97,13 +97,13 @@ func (h *SPSControllerHandler) GetSPSControllersByIDs(c *gin.Context) {
 		return
 	}
 	if len(req.Ids) == 0 {
-		respondInvalidArgument(c, "ids is required")
+		respondLocalizedInvalidArgument(c, "facility.ids_required")
 		return
 	}
 
 	items, err := h.service.GetByIDs(req.Ids)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -141,7 +141,7 @@ func (h *SPSControllerHandler) ListSPSControllers(c *gin.Context) {
 		result, err = h.service.List(query.Page, query.Limit, query.Search)
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -166,7 +166,7 @@ func (h *SPSControllerHandler) GetNextAvailableGADevice(c *gin.Context) {
 		return
 	}
 	if controlCabinetID == nil {
-		respondInvalidArgument(c, "control_cabinet_id is required")
+		respondLocalizedInvalidArgument(c, "facility.control_cabinet_id_required")
 		return
 	}
 
@@ -178,14 +178,14 @@ func (h *SPSControllerHandler) GetNextAvailableGADevice(c *gin.Context) {
 	gaDevice, err := h.service.NextAvailableGADevice(*controlCabinetID, excludeID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			respondNotFound(c, "Control cabinet not found")
+			respondLocalizedNotFoundError(c, "facility.control_cabinet_not_found")
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			respondConflict(c, "No available GA device")
+			respondLocalizedConflict(c, "facility.no_available_ga_device")
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -217,10 +217,10 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 
 	spsController, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "SPS Controller not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.sps_controller_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -242,7 +242,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 			respondInvalidReference(c)
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "update_failed", updateErr.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
 		return
 	}
 
@@ -265,7 +265,7 @@ func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}
 

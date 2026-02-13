@@ -33,7 +33,7 @@ func (h *AlarmDefinitionHandler) CreateAlarmDefinition(c *gin.Context) {
 
 	alarmDef := toAlarmDefinitionModel(req)
 
-	if err := h.service.Create(alarmDef); respondValidationOrError(c, err, "creation_failed") {
+	if err := h.service.Create(alarmDef); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
 		return
 	}
 
@@ -58,10 +58,10 @@ func (h *AlarmDefinitionHandler) GetAlarmDefinition(c *gin.Context) {
 
 	alarmDef, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Alarm definition not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.alarm_definition_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -87,7 +87,7 @@ func (h *AlarmDefinitionHandler) ListAlarmDefinitions(c *gin.Context) {
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -119,16 +119,16 @@ func (h *AlarmDefinitionHandler) UpdateAlarmDefinition(c *gin.Context) {
 
 	alarmDef, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Alarm definition not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.alarm_definition_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
 	applyAlarmDefinitionUpdate(alarmDef, req)
 
-	if err := h.service.Update(alarmDef); respondValidationOrError(c, err, "update_failed") {
+	if err := h.service.Update(alarmDef); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
 
@@ -151,7 +151,7 @@ func (h *AlarmDefinitionHandler) DeleteAlarmDefinition(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}
 

@@ -47,7 +47,7 @@ func (h *SPSControllerSystemTypeHandler) ListSPSControllerSystemTypes(c *gin.Con
 		result, err = h.service.List(query.Page, query.Limit, query.Search)
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 

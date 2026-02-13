@@ -252,18 +252,32 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 		query = query.Where("LOWER(field_devices.bmk) LIKE ? OR LOWER(field_devices.description) LIKE ?", pattern, pattern)
 	}
 
-	// Count total
+	// Count total (count before DISTINCT to get accurate total)
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
 	// Fetch items with preloads
+	// Create subquery to handle DISTINCT with ORDER BY properly
 	var items []domainFacility.FieldDevice
-	query = applyFieldDeviceSorting(query, params)
+	
+	// Get distinct IDs with sorting
+	var distinctIDs []uuid.UUID
+	subquery := query
+	subquery = applyFieldDeviceSorting(subquery, params)
+	
+	if err := subquery.
+		Select("DISTINCT field_devices.id").
+		Limit(limit).
+		Offset(offset).
+		Scan(&distinctIDs).Error; err != nil {
+		return nil, err
+	}
 
-	if err := query.
-		Select("DISTINCT field_devices.*").
+	// Fetch full records with preloads
+	if err := r.db.
+		Where("id IN ?", distinctIDs).
 		Preload("Specification").
 		Preload("SPSControllerSystemType").
 		Preload("SPSControllerSystemType.SPSController").
@@ -271,8 +285,6 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 		Preload("Apparat").
 		Preload("SystemPart").
 		Preload("BacnetObjects").
-		Limit(limit).
-		Offset(offset).
 		Find(&items).Error; err != nil {
 		return nil, err
 	}

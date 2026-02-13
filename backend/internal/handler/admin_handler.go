@@ -33,7 +33,7 @@ func NewAdminHandler(adminService AdminService, authService AuthService) *AdminH
 func (h *AdminHandler) ResetUserPassword(c *gin.Context) {
 	adminID, ok := middleware.GetUserID(c)
 	if !ok {
-		handlerutil.RespondError(c, http.StatusUnauthorized, "unauthorized", "")
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 		return
 	}
 
@@ -44,7 +44,7 @@ func (h *AdminHandler) ResetUserPassword(c *gin.Context) {
 
 	resetToken, expiresAt, err := h.authService.CreatePasswordResetToken(adminID, userID)
 	if err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "reset_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "reset_failed", "admin.password_reset_requested")
 		return
 	}
 
@@ -65,7 +65,7 @@ func (h *AdminHandler) DisableUser(c *gin.Context) {
 		return
 	}
 	if err := h.adminService.DisableUser(userID); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "admin.user_disabled")
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -85,7 +85,7 @@ func (h *AdminHandler) EnableUser(c *gin.Context) {
 		return
 	}
 	if err := h.adminService.EnableUser(userID); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "admin.user_enabled")
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -112,11 +112,11 @@ func (h *AdminHandler) LockUser(c *gin.Context) {
 	}
 	until := req.Until.UTC()
 	if until.Before(time.Now().UTC()) {
-		handlerutil.RespondError(c, http.StatusBadRequest, "validation_error", "until must be in the future")
+		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "validation_error", "validation.until_must_be_future")
 		return
 	}
 	if err := h.adminService.LockUserUntil(userID, until); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "admin.user_locked")
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -136,7 +136,7 @@ func (h *AdminHandler) UnlockUser(c *gin.Context) {
 		return
 	}
 	if err := h.adminService.UnlockUser(userID); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "admin.user_unlocked")
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -163,7 +163,7 @@ func (h *AdminHandler) SetUserRole(c *gin.Context) {
 	}
 
 	if err := h.adminService.SetUserRole(userID, user.Role(req.Role)); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "admin.user_role_updated")
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -188,7 +188,7 @@ func (h *AdminHandler) ListLoginAttempts(c *gin.Context) {
 
 	res, err := h.authService.ListLoginAttempts(query.Page, query.Limit, query.Search)
 	if err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "admin.fetch_failed")
 		return
 	}
 

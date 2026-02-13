@@ -74,7 +74,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Router /api/v1/auth/dev-login [post]
 func (h *AuthHandler) DevLogin(c *gin.Context) {
 	if !h.devAuthEnabled || h.devAuthEmail == "" || h.devAuthPassword == "" {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "not_found"})
+		handlerutil.RespondLocalizedNotFound(c)
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *AuthHandler) DevLogin(c *gin.Context) {
 func (h *AuthHandler) Refresh(c *gin.Context) {
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil || strings.TrimSpace(refreshToken) == "" {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized"})
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 		return
 	}
 
@@ -114,9 +114,9 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 func (h *AuthHandler) handleRefreshError(c *gin.Context, err error) {
 	switch err {
 	case domainAuth.ErrInvalidToken, domainAuth.ErrTokenExpired, domainAuth.ErrTokenRevoked:
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: err.Error()})
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 	default:
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "refresh_failed", Message: err.Error()})
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "refresh_failed", "auth.refresh_failed")
 	}
 }
 
@@ -162,13 +162,13 @@ func (h *AuthHandler) handleLogin(c *gin.Context, email, password string) {
 func (h *AuthHandler) handleLoginError(c *gin.Context, err error) {
 	switch err {
 	case domainAuth.ErrInvalidCredentials:
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "invalid_credentials"})
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "invalid_credentials", "auth.invalid_credentials")
 	case domainAuth.ErrAccountDisabled:
-		c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "account_disabled"})
+		handlerutil.RespondLocalizedError(c, http.StatusForbidden, "account_disabled", "auth.account_disabled")
 	case domainAuth.ErrAccountLocked:
-		c.JSON(http.StatusLocked, dto.ErrorResponse{Error: "account_locked"})
+		handlerutil.RespondLocalizedError(c, http.StatusLocked, "account_locked", "auth.account_locked")
 	default:
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "login_failed", Message: err.Error()})
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "login_failed", "auth.login_failed")
 	}
 }
 
@@ -199,17 +199,17 @@ func (h *AuthHandler) buildAuthResponse(result *domainAuth.LoginResult) dto.Auth
 func (h *AuthHandler) Me(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized"})
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 		return
 	}
 
 	usr, err := h.userService.GetByID(userID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized"})
+			handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "fetch_failed", Message: err.Error()})
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "user.fetch_failed")
 		return
 	}
 
@@ -250,13 +250,13 @@ func (h *AuthHandler) ConfirmPasswordReset(c *gin.Context) {
 func (h *AuthHandler) handlePasswordResetError(c *gin.Context, err error) {
 	switch err {
 	case domainAuth.ErrPasswordResetTokenInvalid:
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "password_reset_token_invalid"})
+		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "password_reset_token_invalid", "auth.password_reset_token_invalid")
 	case domainAuth.ErrPasswordResetTokenExpired:
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "password_reset_token_expired"})
+		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "password_reset_token_expired", "auth.password_reset_token_expired")
 	case domainAuth.ErrPasswordResetTokenUsed:
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "password_reset_token_used"})
+		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "password_reset_token_used", "auth.password_reset_token_used")
 	default:
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "reset_failed", Message: err.Error()})
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "reset_failed", "auth.reset_failed")
 	}
 }
 

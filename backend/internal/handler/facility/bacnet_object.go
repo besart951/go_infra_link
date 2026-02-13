@@ -42,7 +42,7 @@ func (h *BacnetObjectHandler) CreateBacnetObject(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, domain.ErrInvalidArgument) {
-			respondInvalidArgument(c, "exactly one of field_device_id or object_data_id must be set")
+			respondLocalizedInvalidArgument(c, "facility.exactly_one_required")
 			return
 		}
 		if errors.Is(err, domain.ErrNotFound) {
@@ -50,10 +50,10 @@ func (h *BacnetObjectHandler) CreateBacnetObject(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			respondConflict(c, "entity conflict")
+			respondLocalizedConflict(c, "facility.entity_conflict")
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
 		return
 	}
 
@@ -84,16 +84,16 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 		return
 	}
 	if req.FieldDeviceID != nil && req.ObjectDataID != nil {
-		respondError(c, http.StatusBadRequest, "validation_error", "field_device_id and object_data_id are mutually exclusive")
+		respondLocalizedError(c, http.StatusBadRequest, "validation_error", "facility.validation_error")
 		return
 	}
 
 	existing, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Bacnet Object not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.bacnet_object_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -116,10 +116,10 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			respondConflict(c, "entity conflict")
+			respondLocalizedConflict(c, "facility.entity_conflict")
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
 		return
 	}
 

@@ -43,7 +43,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	usr := mapper.ToUserModel(req)
 
 	if err := h.service.CreateWithPassword(usr, req.Password); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "user.creation_failed")
 		return
 	}
 
@@ -69,10 +69,10 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	usr, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondNotFound(c, "User not found")
+			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "user.user_not_found")
 			return
 		}
-		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "user.fetch_failed")
 		return
 	}
 
@@ -98,7 +98,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search, query.OrderBy, query.Order)
 	if err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "user.fetch_failed")
 		return
 	}
 
@@ -138,17 +138,17 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	usr, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondNotFound(c, "User not found")
+			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "user.user_not_found")
 			return
 		}
-		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "user.fetch_failed")
 		return
 	}
 
 	mapper.ApplyUserUpdate(usr, req)
 
 	if err := h.service.UpdateWithPassword(usr, &req.Password); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "user.update_failed")
 		return
 	}
 
@@ -171,7 +171,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "user.deletion_failed")
 		return
 	}
 
@@ -189,13 +189,13 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 func (h *UserHandler) GetAllowedRoles(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		handlerutil.RespondError(c, http.StatusUnauthorized, "unauthorized", "User not authenticated")
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 		return
 	}
 
 	role, err := h.roleService.GetGlobalRole(userID)
 	if err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "user.fetch_failed")
 		return
 	}
 

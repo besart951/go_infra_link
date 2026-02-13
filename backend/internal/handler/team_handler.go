@@ -38,7 +38,7 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 
 	t := mapper.ToTeamModel(req)
 	if err := h.service.Create(t); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "team.creation_failed")
 		return
 	}
 
@@ -64,7 +64,7 @@ func (h *TeamHandler) ListTeams(c *gin.Context) {
 
 	res, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "team.fetch_failed")
 		return
 	}
 
@@ -95,10 +95,10 @@ func (h *TeamHandler) GetTeam(c *gin.Context) {
 	t, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondNotFound(c, "Team not found")
+			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "team.team_not_found")
 			return
 		}
-		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "team.fetch_failed")
 		return
 	}
 
@@ -131,17 +131,17 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 	t, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondNotFound(c, "Team not found")
+			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "team.team_not_found")
 			return
 		}
-		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "team.fetch_failed")
 		return
 	}
 
 	mapper.ApplyTeamUpdate(t, req)
 
 	if err := h.service.Update(t); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "team.update_failed")
 		return
 	}
 
@@ -163,7 +163,7 @@ func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "team.deletion_failed")
 		return
 	}
 
@@ -192,7 +192,7 @@ func (h *TeamHandler) AddMember(c *gin.Context) {
 	}
 
 	if err := h.service.AddMember(teamID, req.UserID, team.MemberRole(req.Role)); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "team.update_failed")
 		return
 	}
 
@@ -220,7 +220,7 @@ func (h *TeamHandler) RemoveMember(c *gin.Context) {
 	}
 
 	if err := h.service.RemoveMember(teamID, userID); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "team.update_failed")
 		return
 	}
 
@@ -251,7 +251,7 @@ func (h *TeamHandler) ListMembers(c *gin.Context) {
 
 	res, err := h.service.ListMembers(teamID, query.Page, query.Limit)
 	if err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "team.fetch_failed")
 		return
 	}
 

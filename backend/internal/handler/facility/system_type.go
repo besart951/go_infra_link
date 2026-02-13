@@ -34,7 +34,7 @@ func (h *SystemTypeHandler) CreateSystemType(c *gin.Context) {
 
 	systemType := toSystemTypeModel(req)
 
-	if err := h.service.Create(systemType); respondValidationOrError(c, err, "creation_failed") {
+	if err := h.service.Create(systemType); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
 		return
 	}
 
@@ -59,10 +59,10 @@ func (h *SystemTypeHandler) GetSystemType(c *gin.Context) {
 
 	systemType, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "System Type not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.system_type_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -88,7 +88,7 @@ func (h *SystemTypeHandler) ListSystemTypes(c *gin.Context) {
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -121,16 +121,16 @@ func (h *SystemTypeHandler) UpdateSystemType(c *gin.Context) {
 
 	systemType, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "System Type not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.system_type_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
 	applySystemTypeUpdate(systemType, req)
 
-	if err := h.service.Update(systemType); respondValidationOrError(c, err, "update_failed") {
+	if err := h.service.Update(systemType); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
 
@@ -153,7 +153,7 @@ func (h *SystemTypeHandler) DeleteSystemType(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}
 

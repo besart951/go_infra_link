@@ -17,7 +17,9 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/wire"
+	"github.com/besart951/go_infra_link/backend/pkg/i18n"
 	applogger "github.com/besart951/go_infra_link/backend/pkg/logger"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -101,6 +103,12 @@ func Run() error {
 	router := gin.Default()
 	docs.SwaggerInfo.BasePath = "/api/v1"
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Initialize i18n (translations)
+	translator := initializeTranslator(log)
+
+	// Register locale middleware (must be early to ensure all handlers have access)
+	router.Use(middleware.LocaleMiddleware(translator, "de_CH"))
 
 	// Register all routes
 	handler.RegisterRoutes(router, handlers, services.JWT, services.RBAC, services.User)
@@ -301,4 +309,34 @@ func localURL(addr, path string) string {
 		host = "http://" + host
 	}
 	return host + path
+}
+
+// initializeTranslator initializes the i18n translator with all available translations.
+func initializeTranslator(log applogger.Logger) *i18n.Translator {
+	translator := i18n.NewTranslator("de_CH")
+
+	// Load translations from JSON files
+	// The locale files are stored in internal/locales/
+	loader := i18n.NewLoader("./internal/locales")
+
+	allTranslations, err := loader.LoadAll()
+	if err != nil {
+		// Log error but continue - translator will use keys as fallback
+		log.Error("Failed to load translations", "err", err)
+		return translator
+	}
+
+	// Load all language translations
+	for lang, translations := range allTranslations {
+		if err := translator.LoadLanguage(lang, translations); err != nil {
+			log.Error("Failed to load language translations", "lang", lang, "err", err)
+		}
+	}
+
+	// Check if default language was loaded
+	if _, ok := allTranslations["de_CH"]; !ok {
+		log.Info("Default language 'de_CH' translations may not be loaded")
+	}
+
+	return translator
 }

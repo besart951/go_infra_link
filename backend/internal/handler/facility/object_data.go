@@ -44,7 +44,7 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 				respondValidationError(c, ve.Fields)
 				return
 			}
-			respondError(c, http.StatusBadRequest, "invalid_bacnet_objects", "Invalid bacnet object data")
+			respondLocalizedError(c, http.StatusBadRequest, "invalid_bacnet_objects", "facility.invalid_bacnet_objects")
 			return
 		}
 	}
@@ -55,7 +55,7 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 			respondValidationError(c, ve.Fields)
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "validation_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "validation_failed", "facility.validation_failed")
 		return
 	}
 
@@ -63,13 +63,13 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 	if len(req.ApparatIDs) > 0 {
 		apparats, err := h.apparatService.GetByIDs(req.ApparatIDs)
 		if err != nil {
-			respondError(c, http.StatusBadRequest, "invalid_apparats", "Failed to load apparats")
+			respondLocalizedError(c, http.StatusBadRequest, "invalid_apparats", "facility.invalid_apparat_id")
 			return
 		}
 		obj.Apparats = apparats
 	}
 
-	if err := h.service.Create(obj); respondValidationOrError(c, err, "creation_failed") {
+	if err := h.service.Create(obj); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
 		return
 	}
 
@@ -86,7 +86,7 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 					return
 				}
 				if errors.Is(err, domain.ErrInvalidArgument) {
-					respondInvalidArgument(c, "invalid bacnet object data")
+					respondLocalizedInvalidArgument(c, "facility.invalid_bacnet_object_data")
 					return
 				}
 				if errors.Is(err, domain.ErrNotFound) {
@@ -94,10 +94,10 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 					return
 				}
 				if errors.Is(err, domain.ErrConflict) {
-					respondConflict(c, "entity conflict")
+					respondLocalizedConflict(c, "facility.entity_conflict")
 					return
 				}
-				respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+				respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
 				return
 			}
 		}
@@ -167,10 +167,10 @@ func (h *ObjectDataHandler) GetObjectData(c *gin.Context) {
 
 	obj, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Object data not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.object_data_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -205,7 +205,7 @@ func (h *ObjectDataHandler) ListObjectData(c *gin.Context) {
 	if apparatIDStr != "" {
 		id, err := parseUUIDString(apparatIDStr)
 		if err != nil {
-			respondError(c, http.StatusBadRequest, "invalid_apparat_id", "Invalid apparat_id format")
+			respondLocalizedError(c, http.StatusBadRequest, "invalid_apparat_id", "facility.invalid_apparat_id")
 			return
 		}
 		apparatID = &id
@@ -214,7 +214,7 @@ func (h *ObjectDataHandler) ListObjectData(c *gin.Context) {
 	if systemPartIDStr != "" {
 		id, err := parseUUIDString(systemPartIDStr)
 		if err != nil {
-			respondError(c, http.StatusBadRequest, "invalid_system_part_id", "Invalid system_part_id format")
+			respondLocalizedError(c, http.StatusBadRequest, "invalid_system_part_id", "facility.invalid_system_part_id")
 			return
 		}
 		systemPartID = &id
@@ -236,7 +236,7 @@ func (h *ObjectDataHandler) ListObjectData(c *gin.Context) {
 		result, err = h.service.List(query.Page, query.Limit, query.Search)
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -268,10 +268,10 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 
 	obj, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Object data not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.object_data_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -281,7 +281,7 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 			respondValidationError(c, ve.Fields)
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "validation_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "validation_failed", "facility.validation_failed")
 		return
 	}
 
@@ -290,7 +290,7 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 		if len(*req.ApparatIDs) > 0 {
 			apparats, err := h.apparatService.GetByIDs(*req.ApparatIDs)
 			if err != nil {
-				respondError(c, http.StatusBadRequest, "invalid_apparats", "Failed to load apparats")
+				respondLocalizedError(c, http.StatusBadRequest, "invalid_apparats", "facility.invalid_apparats")
 				return
 			}
 			obj.Apparats = apparats
@@ -300,7 +300,7 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 		}
 	}
 
-	if err := h.service.Update(obj); respondValidationOrError(c, err, "update_failed") {
+	if err := h.service.Update(obj); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
 
@@ -311,20 +311,20 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 				respondValidationError(c, ve.Fields)
 				return
 			}
-			if respondNotFoundIf(c, err, "Object data not found") {
+			if respondLocalizedNotFoundIf(c, err, "facility.object_data_not_found") {
 				return
 			}
-			respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+			respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
 			return
 		}
 	}
 
 	updated, err := h.service.GetByID(obj.ID)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Object data not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.object_data_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -347,7 +347,7 @@ func (h *ObjectDataHandler) DeleteObjectData(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}
 
@@ -372,10 +372,10 @@ func (h *ObjectDataHandler) GetObjectDataBacnetObjects(c *gin.Context) {
 
 	bacnetObjectIDs, err := h.service.GetBacnetObjectIDs(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Object data not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.object_data_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -386,7 +386,7 @@ func (h *ObjectDataHandler) GetObjectDataBacnetObjects(c *gin.Context) {
 
 	bacnetObjects, err := h.bacnetService.GetByIDs(bacnetObjectIDs)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 

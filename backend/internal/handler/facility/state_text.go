@@ -33,7 +33,7 @@ func (h *StateTextHandler) CreateStateText(c *gin.Context) {
 
 	stateText := toStateTextModel(req)
 
-	if err := h.service.Create(stateText); respondValidationOrError(c, err, "creation_failed") {
+	if err := h.service.Create(stateText); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
 		return
 	}
 
@@ -58,10 +58,10 @@ func (h *StateTextHandler) GetStateText(c *gin.Context) {
 
 	stateText, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "State text not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.state_text_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -87,7 +87,7 @@ func (h *StateTextHandler) ListStateTexts(c *gin.Context) {
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -119,16 +119,16 @@ func (h *StateTextHandler) UpdateStateText(c *gin.Context) {
 
 	stateText, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "State text not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.state_text_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
 	applyStateTextUpdate(stateText, req)
 
-	if err := h.service.Update(stateText); respondValidationOrError(c, err, "update_failed") {
+	if err := h.service.Update(stateText); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
 
@@ -151,7 +151,7 @@ func (h *StateTextHandler) DeleteStateText(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}
 

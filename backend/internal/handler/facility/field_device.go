@@ -71,10 +71,10 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 
 	fieldDevice, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Field Device not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -138,7 +138,7 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 
 	result, err := h.service.ListWithFilters(params, filters)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -162,7 +162,7 @@ func (h *FieldDeviceHandler) ListAvailableApparatNumbers(c *gin.Context) {
 		return
 	}
 	if spsControllerSystemTypeID == nil {
-		respondInvalidArgument(c, "sps_controller_system_type_id is required")
+		respondLocalizedInvalidArgument(c, "facility.sps_controller_system_type_id_required")
 		return
 	}
 
@@ -171,7 +171,7 @@ func (h *FieldDeviceHandler) ListAvailableApparatNumbers(c *gin.Context) {
 		return
 	}
 	if apparatID == nil {
-		respondInvalidArgument(c, "apparat_id is required")
+		respondLocalizedInvalidArgument(c, "facility.apparat_id_required")
 		return
 	}
 
@@ -182,7 +182,7 @@ func (h *FieldDeviceHandler) ListAvailableApparatNumbers(c *gin.Context) {
 
 	available, err := h.service.ListAvailableApparatNumbers(*spsControllerSystemTypeID, systemPartID, *apparatID)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -200,7 +200,7 @@ func (h *FieldDeviceHandler) ListAvailableApparatNumbers(c *gin.Context) {
 func (h *FieldDeviceHandler) GetFieldDeviceOptions(c *gin.Context) {
 	options, err := h.service.GetFieldDeviceOptions()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -225,7 +225,7 @@ func (h *FieldDeviceHandler) GetFieldDeviceOptionsForProject(c *gin.Context) {
 
 	options, err := h.service.GetFieldDeviceOptionsForProject(projectID)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -257,10 +257,10 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 
 	fieldDevice, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Field Device not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -278,7 +278,7 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, domain.ErrInvalidArgument) {
-			respondInvalidArgument(c, "object_data_id and bacnet_objects are mutually exclusive")
+			respondLocalizedInvalidArgument(c, "facility.mutually_exclusive_error")
 			return
 		}
 		if errors.Is(err, domain.ErrNotFound) {
@@ -286,10 +286,10 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			respondConflict(c, "apparat_nr is already used in this scope")
+			respondLocalizedConflict(c, "facility.apparat_nr_already_used")
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
 		return
 	}
 
@@ -312,7 +312,7 @@ func (h *FieldDeviceHandler) DeleteFieldDevice(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}
 
@@ -337,10 +337,10 @@ func (h *FieldDeviceHandler) ListFieldDeviceBacnetObjects(c *gin.Context) {
 
 	objs, err := h.service.ListBacnetObjects(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Field Device not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -374,14 +374,14 @@ func (h *FieldDeviceHandler) CreateFieldDeviceSpecification(c *gin.Context) {
 	spec := toFieldDeviceSpecification(req)
 
 	if err := h.service.CreateSpecification(fieldDeviceID, spec); err != nil {
-		if respondNotFoundIf(c, err, "Field Device not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
 			return
 		}
 		if errors.Is(err, domain.ErrConflict) {
-			respondConflict(c, "Specification already exists for this field device")
+			respondLocalizedConflict(c, "facility.specification_already_exists")
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
 		return
 	}
 
@@ -415,10 +415,10 @@ func (h *FieldDeviceHandler) UpdateFieldDeviceSpecification(c *gin.Context) {
 
 	spec, err := h.service.UpdateSpecification(fieldDeviceID, patch)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Field Device or specification not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
 		return
 	}
 

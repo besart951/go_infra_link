@@ -42,7 +42,7 @@ func (h *SystemPartHandler) CreateSystemPart(c *gin.Context) {
 
 	systemPart := toSystemPartModel(req)
 
-	if err := h.service.Create(systemPart); respondValidationOrError(c, err, "creation_failed") {
+	if err := h.service.Create(systemPart); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
 		return
 	}
 
@@ -67,10 +67,10 @@ func (h *SystemPartHandler) GetSystemPart(c *gin.Context) {
 
 	systemPart, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "System Part not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.system_part_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -107,15 +107,15 @@ func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
 		if apparatIDStr != "" {
 			apparatID, err := parseUUIDString(apparatIDStr)
 			if err != nil {
-				respondError(c, http.StatusBadRequest, "invalid_apparat_id", "Invalid apparat_id format")
+				respondLocalizedError(c, http.StatusBadRequest, "invalid_apparat_id", "facility.invalid_apparat_id")
 				return
 			}
 			ids, err := h.apparatService.GetSystemPartIDs(apparatID)
 			if err != nil {
-				if respondNotFoundIf(c, err, "Apparat not found") {
+				if respondLocalizedNotFoundIf(c, err, "facility.system_part_not_found") {
 					return
 				}
-				respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+				respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 				return
 			}
 			byApparat = ids
@@ -124,16 +124,16 @@ func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
 		if objectDataIDStr != "" {
 			objectDataID, err := parseUUIDString(objectDataIDStr)
 			if err != nil {
-				respondError(c, http.StatusBadRequest, "invalid_object_data_id", "Invalid object_data_id format")
+				respondLocalizedError(c, http.StatusBadRequest, "invalid_object_data_id", "facility.invalid_object_data_id")
 				return
 			}
 
 			apparatIDs, err := h.objectDataService.GetApparatIDs(objectDataID)
 			if err != nil {
-				if respondNotFoundIf(c, err, "Object data not found") {
+				if respondLocalizedNotFoundIf(c, err, "facility.system_part_not_found") {
 					return
 				}
-				respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+				respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 				return
 			}
 
@@ -178,7 +178,7 @@ func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
 
 		systemParts, err := h.service.GetByIDs(finalIDs)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+			respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 			return
 		}
 
@@ -222,7 +222,7 @@ func (h *SystemPartHandler) ListSystemParts(c *gin.Context) {
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -254,16 +254,16 @@ func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
 
 	systemPart, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "System Part not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.system_part_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
 	applySystemPartUpdate(systemPart, req)
 
-	if err := h.service.Update(systemPart); respondValidationOrError(c, err, "update_failed") {
+	if err := h.service.Update(systemPart); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
 
@@ -286,7 +286,7 @@ func (h *SystemPartHandler) DeleteSystemPart(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}
 

@@ -33,7 +33,7 @@ func (h *BuildingHandler) CreateBuilding(c *gin.Context) {
 
 	building := toBuildingModel(req)
 
-	if err := h.service.Create(building); respondValidationOrError(c, err, "creation_failed") {
+	if err := h.service.Create(building); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
 		return
 	}
 
@@ -58,10 +58,10 @@ func (h *BuildingHandler) GetBuilding(c *gin.Context) {
 
 	building, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Building not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.building_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -84,13 +84,13 @@ func (h *BuildingHandler) GetBuildingsByIDs(c *gin.Context) {
 		return
 	}
 	if len(req.Ids) == 0 {
-		respondInvalidArgument(c, "ids is required")
+		respondLocalizedInvalidArgument(c, "facility.ids_required")
 		return
 	}
 
 	buildings, err := h.service.GetByIDs(req.Ids)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -116,7 +116,7 @@ func (h *BuildingHandler) ListBuildings(c *gin.Context) {
 
 	result, err := h.service.List(query.Page, query.Limit, query.Search)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
@@ -148,16 +148,16 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 
 	building, err := h.service.GetByID(id)
 	if err != nil {
-		if respondNotFoundIf(c, err, "Building not found") {
+		if respondLocalizedNotFoundIf(c, err, "facility.building_not_found") {
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
 
 	applyBuildingUpdate(building, req)
 
-	if err := h.service.Update(building); respondValidationOrError(c, err, "update_failed") {
+	if err := h.service.Update(building); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
 
@@ -180,7 +180,7 @@ func (h *BuildingHandler) DeleteBuilding(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		respondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}
 

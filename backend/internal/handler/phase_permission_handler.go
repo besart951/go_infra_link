@@ -51,7 +51,7 @@ func (h *PhasePermissionHandler) CreatePhasePermission(c *gin.Context) {
 	perm := mapper.ToPhasePermissionModel(req)
 
 	if err := h.service.Create(perm); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "creation_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "phase_permission.creation_failed")
 		return
 	}
 
@@ -77,10 +77,10 @@ func (h *PhasePermissionHandler) GetPhasePermission(c *gin.Context) {
 	perm, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondNotFound(c, "Permission not found")
+			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "phase_permission.permission_not_found")
 			return
 		}
-		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "phase_permission.fetch_failed")
 		return
 	}
 
@@ -99,19 +99,19 @@ func (h *PhasePermissionHandler) GetPhasePermission(c *gin.Context) {
 func (h *PhasePermissionHandler) ListPhasePermissions(c *gin.Context) {
 	phaseIDStr := c.Query("phase_id")
 	if phaseIDStr == "" {
-		handlerutil.RespondError(c, http.StatusBadRequest, "invalid_input", "phase_id is required")
+		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_input", "validation.phase_id_required")
 		return
 	}
 
 	phaseID, err := uuid.Parse(phaseIDStr)
 	if err != nil {
-		handlerutil.RespondError(c, http.StatusBadRequest, "invalid_input", "Invalid phase_id format")
+		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_input", "validation.invalid_uuid_format")
 		return
 	}
 
 	perms, err := h.service.ListByPhase(phaseID)
 	if err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "phase_permission.fetch_failed")
 		return
 	}
 
@@ -151,17 +151,17 @@ func (h *PhasePermissionHandler) UpdatePhasePermission(c *gin.Context) {
 	perm, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondNotFound(c, "Permission not found")
+			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "phase_permission.permission_not_found")
 			return
 		}
-		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "phase_permission.fetch_failed")
 		return
 	}
 
 	mapper.ApplyPhasePermissionUpdate(perm, req)
 
 	if err := h.service.Update(perm); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "phase_permission.update_failed")
 		return
 	}
 
@@ -184,7 +184,7 @@ func (h *PhasePermissionHandler) DeletePhasePermission(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(id); err != nil {
-		handlerutil.RespondError(c, http.StatusInternalServerError, "deletion_failed", err.Error())
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "phase_permission.deletion_failed")
 		return
 	}
 
