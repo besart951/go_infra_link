@@ -1,70 +1,25 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
-	"github.com/besart951/go_infra_link/backend/internal/domain"
-	"github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
-
-const (
-	NumBuildings        = 50
-	CabinetsPerBuilding = 4
-	SPSPerCabinet       = 3
-
-	// Additional seed data
-	NumSystemTypes              = 20
-	SystemTypesPerSPS           = 1
-	NumObjectDatas              = 30
-	BacnetObjectsPerObjData     = 3
-	NumSystemParts              = 40
-	NumApparats                 = 60
-	MinSystemPartsPerApparat    = 1
-	MaxSystemPartsPerApparat    = 3
-	MinApparatsPerObjectData    = 1
-	MaxApparatsPerObjectData    = 3
-	NumStateTexts               = 20
-	NumNotificationClasses      = 10
-	NumAlarmDefinitions         = 10
-	FieldDevicesPerSpsSysType   = 1
-	BacnetObjectsPerFieldDevice = 2
-)
-
-type objectDataBacnetObject struct {
-	ObjectDataID   uuid.UUID `gorm:"type:uuid;column:object_data_id;primaryKey"`
-	BacnetObjectID uuid.UUID `gorm:"type:uuid;column:bacnet_object_id;primaryKey"`
-}
-
-func (objectDataBacnetObject) TableName() string {
-	return "object_data_bacnet_objects"
-}
-
-type objectDataApparat struct {
-	ObjectDataID uuid.UUID `gorm:"type:uuid;column:object_data_id;primaryKey"`
-	ApparatID    uuid.UUID `gorm:"type:uuid;column:apparat_id;primaryKey"`
-}
-
-func (objectDataApparat) TableName() string {
-	return "object_data_apparats"
-}
-
-type systemPartApparat struct {
-	ApparatID    uuid.UUID `gorm:"type:uuid;column:apparat_id;primaryKey"`
-	SystemPartID uuid.UUID `gorm:"type:uuid;column:system_part_id;primaryKey"`
-}
-
-func (systemPartApparat) TableName() string {
-	return "system_part_apparats"
-}
 
 type permissionSeed struct {
 	Name        string
@@ -214,9 +169,628 @@ func seedPermissions(database *gorm.DB) error {
 	return nil
 }
 
-func main() {
-	rand.Seed(time.Now().UnixNano())
+type apparatSeedFile struct {
+	Apparats []apparatSeed `json:"apparats"`
+}
 
+type apparatSeed struct {
+	ID          int     `json:"id"`
+	ShortName   string  `json:"short_name"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+}
+
+type systemPartSeedFile struct {
+	SystemParts []systemPartSeed `json:"system_parts"`
+}
+
+type systemPartSeed struct {
+	ID          int     `json:"id"`
+	ShortName   string  `json:"short_name"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+}
+
+type apparatSystemPartSeedFile struct {
+	ApparatSystemPart []apparatSystemPartSeed `json:"apparat_systempart"`
+}
+
+type apparatSystemPartSeed struct {
+	ApparatID    int `json:"apparat_id"`
+	SystemPartID int `json:"system_part_id"`
+}
+
+type buildingSeedFile struct {
+	Buildings []buildingSeed `json:"buildings"`
+}
+
+type buildingSeed struct {
+	ID            int    `json:"id"`
+	IWSCode       string `json:"iws_code"`
+	BuildingGroup int    `json:"building_group"`
+}
+
+type systemTypeSeedFile struct {
+	SystemTypes []systemTypeSeed `json:"system_types"`
+}
+
+type systemTypeSeed struct {
+	ID        int    `json:"id"`
+	NumberMin int    `json:"number_min"`
+	NumberMax int    `json:"number_max"`
+	Name      string `json:"name"`
+}
+
+type notificationClassSeedFile struct {
+	NotificationClasses []notificationClassSeed `json:"notification_classes"`
+}
+
+type notificationClassSeed struct {
+	ID                   int    `json:"id"`
+	EventCategory        string `json:"event_category"`
+	Nc                   int    `json:"nc"`
+	ObjectDescription    string `json:"object_description"`
+	InternalDescription  string `json:"internal_description"`
+	Meaning              string `json:"meaning"`
+	AckRequiredNotNormal int    `json:"ack_required_not_normal"`
+	AckRequiredError     int    `json:"ack_required_error"`
+	AckRequiredNormal    int    `json:"ack_required_normal"`
+	NormNotNormal        int    `json:"norm_not_normal"`
+	NormError            int    `json:"norm_error"`
+	NormNormal           int    `json:"norm_normal"`
+}
+
+type stateTextSeedFile struct {
+	StateTexts []stateTextSeed `json:"state_texts"`
+}
+
+type stateTextSeed struct {
+	ID          int     `json:"id"`
+	RefNumber   int     `json:"ref_number"`
+	StateText1  *string `json:"state_text_1"`
+	StateText2  *string `json:"state_text_2"`
+	StateText3  *string `json:"state_text_3"`
+	StateText4  *string `json:"state_text_4"`
+	StateText5  *string `json:"state_text_5"`
+	StateText6  *string `json:"state_text_6"`
+	StateText7  *string `json:"state_text_7"`
+	StateText8  *string `json:"state_text_8"`
+	StateText9  *string `json:"state_text_9"`
+	StateText10 *string `json:"state_text_10"`
+	StateText11 *string `json:"state_text_11"`
+	StateText12 *string `json:"state_text_12"`
+	StateText13 *string `json:"state_text_13"`
+	StateText14 *string `json:"state_text_14"`
+	StateText15 *string `json:"state_text_15"`
+	StateText16 *string `json:"state_text_16"`
+}
+
+type phaseSeedFile struct {
+	Phases []phaseSeed `json:"phases"`
+}
+
+type phaseSeed struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+type systemPartApparatLink struct {
+	SystemPartID uuid.UUID `gorm:"column:system_part_id"`
+	ApparatID    uuid.UUID `gorm:"column:apparat_id"`
+}
+
+func findSeedFile(seedDir, prefix string) (string, error) {
+	pattern := filepath.Join(seedDir, prefix+"_*.json")
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return "", err
+	}
+	if len(matches) == 0 {
+		return "", fmt.Errorf("seed file not found for pattern %s", pattern)
+	}
+	sort.Strings(matches)
+	return matches[len(matches)-1], nil
+}
+
+func readSeedFile(path string, dest any) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, dest)
+}
+
+func normalizeKey(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func seedPhases(database *gorm.DB, seedDir string) error {
+	path, err := findSeedFile(seedDir, "phases")
+	if err != nil {
+		return err
+	}
+
+	var payload phaseSeedFile
+	if err := readSeedFile(path, &payload); err != nil {
+		return err
+	}
+
+	var existing []domainProject.Phase
+	if err := database.Model(&domainProject.Phase{}).
+		Select("id", "name").
+		Where("deleted_at IS NULL").
+		Find(&existing).Error; err != nil {
+		return err
+	}
+
+	existingByName := make(map[string]uuid.UUID, len(existing))
+	for _, item := range existing {
+		existingByName[normalizeKey(item.Name)] = item.ID
+	}
+
+	toCreate := make([]*domainProject.Phase, 0, len(payload.Phases))
+	now := time.Now().UTC()
+	created := 0
+	for _, seed := range payload.Phases {
+		name := strings.TrimSpace(seed.Name)
+		if name == "" {
+			continue
+		}
+		key := normalizeKey(name)
+		if _, ok := existingByName[key]; ok {
+			continue
+		}
+		phase := domainProject.Phase{Name: name}
+		if err := phase.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		existingByName[key] = phase.ID
+		toCreate = append(toCreate, &phase)
+		created++
+	}
+
+	if len(toCreate) > 0 {
+		if err := database.CreateInBatches(toCreate, 100).Error; err != nil {
+			return err
+		}
+	}
+
+	log.Printf("Seeded phases: %d new (file=%s)", created, filepath.Base(path))
+	return nil
+}
+
+func seedBuildings(database *gorm.DB, seedDir string) error {
+	path, err := findSeedFile(seedDir, "buildings")
+	if err != nil {
+		return err
+	}
+
+	var payload buildingSeedFile
+	if err := readSeedFile(path, &payload); err != nil {
+		return err
+	}
+
+	var existing []domainFacility.Building
+	if err := database.Model(&domainFacility.Building{}).
+		Select("id", "iws_code", "building_group").
+		Where("deleted_at IS NULL").
+		Find(&existing).Error; err != nil {
+		return err
+	}
+
+	existingKeys := make(map[string]uuid.UUID, len(existing))
+	for _, item := range existing {
+		key := normalizeKey(item.IWSCode) + ":" + strconv.Itoa(item.BuildingGroup)
+		existingKeys[key] = item.ID
+	}
+
+	toCreate := make([]*domainFacility.Building, 0, len(payload.Buildings))
+	now := time.Now().UTC()
+	created := 0
+	for _, seed := range payload.Buildings {
+		iwsCode := strings.TrimSpace(seed.IWSCode)
+		if iwsCode == "" || seed.BuildingGroup == 0 {
+			continue
+		}
+		key := normalizeKey(iwsCode) + ":" + strconv.Itoa(seed.BuildingGroup)
+		if _, ok := existingKeys[key]; ok {
+			continue
+		}
+		building := domainFacility.Building{IWSCode: iwsCode, BuildingGroup: seed.BuildingGroup}
+		if err := building.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		existingKeys[key] = building.ID
+		toCreate = append(toCreate, &building)
+		created++
+	}
+
+	if len(toCreate) > 0 {
+		if err := database.CreateInBatches(toCreate, 200).Error; err != nil {
+			return err
+		}
+	}
+
+	log.Printf("Seeded buildings: %d new (file=%s)", created, filepath.Base(path))
+	return nil
+}
+
+func seedSystemTypes(database *gorm.DB, seedDir string) error {
+	path, err := findSeedFile(seedDir, "system_types")
+	if err != nil {
+		return err
+	}
+
+	var payload systemTypeSeedFile
+	if err := readSeedFile(path, &payload); err != nil {
+		return err
+	}
+
+	var existing []domainFacility.SystemType
+	if err := database.Model(&domainFacility.SystemType{}).
+		Select("id", "name").
+		Where("deleted_at IS NULL").
+		Find(&existing).Error; err != nil {
+		return err
+	}
+
+	existingByName := make(map[string]uuid.UUID, len(existing))
+	for _, item := range existing {
+		existingByName[normalizeKey(item.Name)] = item.ID
+	}
+
+	toCreate := make([]*domainFacility.SystemType, 0, len(payload.SystemTypes))
+	now := time.Now().UTC()
+	created := 0
+	for _, seed := range payload.SystemTypes {
+		name := strings.TrimSpace(seed.Name)
+		if name == "" {
+			continue
+		}
+		key := normalizeKey(name)
+		if _, ok := existingByName[key]; ok {
+			continue
+		}
+		systemType := domainFacility.SystemType{
+			NumberMin: seed.NumberMin,
+			NumberMax: seed.NumberMax,
+			Name:      name,
+		}
+		if err := systemType.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		existingByName[key] = systemType.ID
+		toCreate = append(toCreate, &systemType)
+		created++
+	}
+
+	if len(toCreate) > 0 {
+		if err := database.CreateInBatches(toCreate, 200).Error; err != nil {
+			return err
+		}
+	}
+
+	log.Printf("Seeded system types: %d new (file=%s)", created, filepath.Base(path))
+	return nil
+}
+
+func seedSystemParts(database *gorm.DB, seedDir string) (map[int]uuid.UUID, error) {
+	path, err := findSeedFile(seedDir, "system_parts")
+	if err != nil {
+		return nil, err
+	}
+
+	var payload systemPartSeedFile
+	if err := readSeedFile(path, &payload); err != nil {
+		return nil, err
+	}
+
+	var existing []domainFacility.SystemPart
+	if err := database.Model(&domainFacility.SystemPart{}).
+		Select("id", "short_name", "name").
+		Where("deleted_at IS NULL").
+		Find(&existing).Error; err != nil {
+		return nil, err
+	}
+
+	byShort := make(map[string]uuid.UUID, len(existing))
+	byName := make(map[string]uuid.UUID, len(existing))
+	for _, item := range existing {
+		byShort[normalizeKey(item.ShortName)] = item.ID
+		byName[normalizeKey(item.Name)] = item.ID
+	}
+
+	toCreate := make([]*domainFacility.SystemPart, 0, len(payload.SystemParts))
+	seedIDMap := make(map[int]uuid.UUID, len(payload.SystemParts))
+	now := time.Now().UTC()
+	created := 0
+	for _, seed := range payload.SystemParts {
+		shortName := strings.TrimSpace(seed.ShortName)
+		name := strings.TrimSpace(seed.Name)
+		if shortName == "" || name == "" {
+			continue
+		}
+		keyShort := normalizeKey(shortName)
+		keyName := normalizeKey(name)
+		if existingID, ok := byShort[keyShort]; ok {
+			seedIDMap[seed.ID] = existingID
+			continue
+		}
+		if existingID, ok := byName[keyName]; ok {
+			seedIDMap[seed.ID] = existingID
+			continue
+		}
+		systemPart := domainFacility.SystemPart{
+			ShortName:   shortName,
+			Name:        name,
+			Description: seed.Description,
+		}
+		if err := systemPart.Base.InitForCreate(now); err != nil {
+			return nil, err
+		}
+		byShort[keyShort] = systemPart.ID
+		byName[keyName] = systemPart.ID
+		seedIDMap[seed.ID] = systemPart.ID
+		toCreate = append(toCreate, &systemPart)
+		created++
+	}
+
+	if len(toCreate) > 0 {
+		if err := database.CreateInBatches(toCreate, 200).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	log.Printf("Seeded system parts: %d new (file=%s)", created, filepath.Base(path))
+	return seedIDMap, nil
+}
+
+func seedApparats(database *gorm.DB, seedDir string) (map[int]uuid.UUID, error) {
+	path, err := findSeedFile(seedDir, "apparats")
+	if err != nil {
+		return nil, err
+	}
+
+	var payload apparatSeedFile
+	if err := readSeedFile(path, &payload); err != nil {
+		return nil, err
+	}
+
+	var existing []domainFacility.Apparat
+	if err := database.Model(&domainFacility.Apparat{}).
+		Select("id", "short_name", "name").
+		Where("deleted_at IS NULL").
+		Find(&existing).Error; err != nil {
+		return nil, err
+	}
+
+	byShort := make(map[string]uuid.UUID, len(existing))
+	byName := make(map[string]uuid.UUID, len(existing))
+	for _, item := range existing {
+		byShort[normalizeKey(item.ShortName)] = item.ID
+		byName[normalizeKey(item.Name)] = item.ID
+	}
+
+	toCreate := make([]*domainFacility.Apparat, 0, len(payload.Apparats))
+	seedIDMap := make(map[int]uuid.UUID, len(payload.Apparats))
+	now := time.Now().UTC()
+	created := 0
+	for _, seed := range payload.Apparats {
+		shortName := strings.TrimSpace(seed.ShortName)
+		name := strings.TrimSpace(seed.Name)
+		if shortName == "" || name == "" {
+			continue
+		}
+		keyShort := normalizeKey(shortName)
+		keyName := normalizeKey(name)
+		if existingID, ok := byShort[keyShort]; ok {
+			seedIDMap[seed.ID] = existingID
+			continue
+		}
+		if existingID, ok := byName[keyName]; ok {
+			seedIDMap[seed.ID] = existingID
+			continue
+		}
+		apparat := domainFacility.Apparat{
+			ShortName:   shortName,
+			Name:        name,
+			Description: seed.Description,
+		}
+		if err := apparat.Base.InitForCreate(now); err != nil {
+			return nil, err
+		}
+		byShort[keyShort] = apparat.ID
+		byName[keyName] = apparat.ID
+		seedIDMap[seed.ID] = apparat.ID
+		toCreate = append(toCreate, &apparat)
+		created++
+	}
+
+	if len(toCreate) > 0 {
+		if err := database.CreateInBatches(toCreate, 200).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	log.Printf("Seeded apparats: %d new (file=%s)", created, filepath.Base(path))
+	return seedIDMap, nil
+}
+
+func seedApparatSystemParts(database *gorm.DB, seedDir string, apparatIDs map[int]uuid.UUID, systemPartIDs map[int]uuid.UUID) error {
+	path, err := findSeedFile(seedDir, "apparat_systempart")
+	if err != nil {
+		return err
+	}
+
+	var payload apparatSystemPartSeedFile
+	if err := readSeedFile(path, &payload); err != nil {
+		return err
+	}
+
+	links := make([]systemPartApparatLink, 0, len(payload.ApparatSystemPart))
+	skipped := 0
+	for _, seed := range payload.ApparatSystemPart {
+		apparatID, okApparat := apparatIDs[seed.ApparatID]
+		systemPartID, okSystemPart := systemPartIDs[seed.SystemPartID]
+		if !okApparat || !okSystemPart {
+			skipped++
+			continue
+		}
+		links = append(links, systemPartApparatLink{
+			SystemPartID: systemPartID,
+			ApparatID:    apparatID,
+		})
+	}
+
+	if len(links) > 0 {
+		if err := database.Table("system_part_apparats").
+			Clauses(clause.OnConflict{DoNothing: true}).
+			CreateInBatches(links, 500).Error; err != nil {
+			return err
+		}
+	}
+
+	log.Printf("Seeded apparat-system parts: %d links (%d skipped, file=%s)", len(links), skipped, filepath.Base(path))
+	return nil
+}
+
+func seedNotificationClasses(database *gorm.DB, seedDir string) error {
+	path, err := findSeedFile(seedDir, "notification_classes")
+	if err != nil {
+		return err
+	}
+
+	var payload notificationClassSeedFile
+	if err := readSeedFile(path, &payload); err != nil {
+		return err
+	}
+
+	var existing []domainFacility.NotificationClass
+	if err := database.Model(&domainFacility.NotificationClass{}).
+		Select("id", "nc").
+		Where("deleted_at IS NULL").
+		Find(&existing).Error; err != nil {
+		return err
+	}
+
+	existingByNc := make(map[int]uuid.UUID, len(existing))
+	for _, item := range existing {
+		existingByNc[item.Nc] = item.ID
+	}
+
+	toCreate := make([]*domainFacility.NotificationClass, 0, len(payload.NotificationClasses))
+	now := time.Now().UTC()
+	created := 0
+	for _, seed := range payload.NotificationClasses {
+		if strings.TrimSpace(seed.EventCategory) == "" {
+			continue
+		}
+		if _, ok := existingByNc[seed.Nc]; ok {
+			continue
+		}
+		nc := domainFacility.NotificationClass{
+			EventCategory:        strings.TrimSpace(seed.EventCategory),
+			Nc:                   seed.Nc,
+			ObjectDescription:    strings.TrimSpace(seed.ObjectDescription),
+			InternalDescription:  strings.TrimSpace(seed.InternalDescription),
+			Meaning:              strings.TrimSpace(seed.Meaning),
+			AckRequiredNotNormal: seed.AckRequiredNotNormal != 0,
+			AckRequiredError:     seed.AckRequiredError != 0,
+			AckRequiredNormal:    seed.AckRequiredNormal != 0,
+			NormNotNormal:        seed.NormNotNormal,
+			NormError:            seed.NormError,
+			NormNormal:           seed.NormNormal,
+		}
+		if err := nc.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		existingByNc[seed.Nc] = nc.ID
+		toCreate = append(toCreate, &nc)
+		created++
+	}
+
+	if len(toCreate) > 0 {
+		if err := database.CreateInBatches(toCreate, 200).Error; err != nil {
+			return err
+		}
+	}
+
+	log.Printf("Seeded notification classes: %d new (file=%s)", created, filepath.Base(path))
+	return nil
+}
+
+func seedStateTexts(database *gorm.DB, seedDir string) error {
+	path, err := findSeedFile(seedDir, "state_texts")
+	if err != nil {
+		return err
+	}
+
+	var payload stateTextSeedFile
+	if err := readSeedFile(path, &payload); err != nil {
+		return err
+	}
+
+	var existing []domainFacility.StateText
+	if err := database.Model(&domainFacility.StateText{}).
+		Select("id", "ref_number").
+		Where("deleted_at IS NULL").
+		Find(&existing).Error; err != nil {
+		return err
+	}
+
+	existingByRef := make(map[int]uuid.UUID, len(existing))
+	for _, item := range existing {
+		existingByRef[item.RefNumber] = item.ID
+	}
+
+	toCreate := make([]*domainFacility.StateText, 0, len(payload.StateTexts))
+	now := time.Now().UTC()
+	created := 0
+	for _, seed := range payload.StateTexts {
+		if seed.RefNumber == 0 {
+			continue
+		}
+		if _, ok := existingByRef[seed.RefNumber]; ok {
+			continue
+		}
+		stateText := domainFacility.StateText{
+			RefNumber:   seed.RefNumber,
+			StateText1:  seed.StateText1,
+			StateText2:  seed.StateText2,
+			StateText3:  seed.StateText3,
+			StateText4:  seed.StateText4,
+			StateText5:  seed.StateText5,
+			StateText6:  seed.StateText6,
+			StateText7:  seed.StateText7,
+			StateText8:  seed.StateText8,
+			StateText9:  seed.StateText9,
+			StateText10: seed.StateText10,
+			StateText11: seed.StateText11,
+			StateText12: seed.StateText12,
+			StateText13: seed.StateText13,
+			StateText14: seed.StateText14,
+			StateText15: seed.StateText15,
+			StateText16: seed.StateText16,
+		}
+		if err := stateText.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		existingByRef[seed.RefNumber] = stateText.ID
+		toCreate = append(toCreate, &stateText)
+		created++
+	}
+
+	if len(toCreate) > 0 {
+		if err := database.CreateInBatches(toCreate, 500).Error; err != nil {
+			return err
+		}
+	}
+
+	log.Printf("Seeded state texts: %d new (file=%s)", created, filepath.Base(path))
+	return nil
+}
+
+func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		log.Printf("Warning: Failed to load config from file: %v. Proceeding with defaults/overrides.", err)
@@ -234,512 +808,34 @@ func main() {
 		log.Fatalf("Failed to seed permissions: %v", err)
 	}
 
-	var (
-		buildings           []facility.Building
-		controlCabinets     []facility.ControlCabinet
-		spsControllers      []facility.SPSController
-		systemTypes         []facility.SystemType
-		systemParts         []facility.SystemPart
-		apparats            []facility.Apparat
-		spsSysTypes         []facility.SPSControllerSystemType
-		stateTexts          []facility.StateText
-		notificationClasses []facility.NotificationClass
-		alarmDefinitions    []facility.AlarmDefinition
-		specifications      []facility.Specification
-		fieldDevices        []facility.FieldDevice
-		objectDatas         []facility.ObjectData
-		bacnetObjects       []facility.BacnetObject
-		fieldDeviceBos      []facility.BacnetObject
-		objDataLinks        []objectDataBacnetObject
-		objDataApparatLinks []objectDataApparat
-		sysPartApparatLinks []systemPartApparat
-	)
-
-	// Generate data in memory
-	log.Println("Generating data structures...")
-
-	start := time.Now()
-
-	for i := 0; i < NumBuildings; i++ {
-		bID := uuid.New()
-		iwsCode := fmt.Sprintf("%04d", i) // Unique 4 digits within seed batch
-
-		buildings = append(buildings, facility.Building{
-			Base: domain.Base{
-				ID:        bID,
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
-			},
-			IWSCode:       iwsCode,
-			BuildingGroup: rand.Intn(10) + 1,
-		})
-
-		for j := 0; j < CabinetsPerBuilding; j++ {
-			cID := uuid.New()
-			// Ensure cabNr is <= 11 chars. "C%04d-%02d" = 1+4+1+2 = 8 chars. Safe.
-			cabNr := fmt.Sprintf("C%s-%02d", iwsCode, j)
-			netA := i % 256
-			netB := j % 256
-			vlan := fmt.Sprintf("%d", i+1)
-
-			controlCabinets = append(controlCabinets, facility.ControlCabinet{
-				Base: domain.Base{
-					ID:        cID,
-					CreatedAt: time.Now(),
-					UpdatedAt: time.Now(),
-				},
-				ControlCabinetNr: ptr(cabNr),
-				BuildingID:       bID,
-			})
-
-			for k := 0; k < SPSPerCabinet; k++ {
-				sID := uuid.New()
-				gaDevice := gaDeviceCode(k)
-				ip := fmt.Sprintf("10.%d.%d.%d", netA, netB, k+2)
-				gateway := fmt.Sprintf("10.%d.%d.1", netA, netB)
-				subnet := "255.255.255.0"
-
-				spsControllers = append(spsControllers, facility.SPSController{
-					Base: domain.Base{
-						ID:        sID,
-						CreatedAt: time.Now(),
-						UpdatedAt: time.Now(),
-					},
-					ControlCabinetID: cID,
-					GADevice:         ptr(gaDevice),
-					DeviceName:       fmt.Sprintf("SPS-%s-%d", cabNr, k),
-					IPAddress:        ptr(ip),
-					Subnet:           ptr(subnet),
-					Gateway:          ptr(gateway),
-					Vlan:             ptr(vlan),
-				})
-			}
-		}
+	seedDir := filepath.Join("data", "seed")
+	if err := seedPhases(database, seedDir); err != nil {
+		log.Fatalf("Failed to seed phases: %v", err)
+	}
+	if err := seedBuildings(database, seedDir); err != nil {
+		log.Fatalf("Failed to seed buildings: %v", err)
+	}
+	if err := seedSystemTypes(database, seedDir); err != nil {
+		log.Fatalf("Failed to seed system types: %v", err)
+	}
+	if err := seedNotificationClasses(database, seedDir); err != nil {
+		log.Fatalf("Failed to seed notification classes: %v", err)
+	}
+	if err := seedStateTexts(database, seedDir); err != nil {
+		log.Fatalf("Failed to seed state texts: %v", err)
 	}
 
-	// System types
-	for i := 0; i < NumSystemTypes; i++ {
-		min := i*10 + 1
-		max := (i + 1) * 10
-		systemTypes = append(systemTypes, facility.SystemType{
-			Base: domain.Base{
-				ID:        uuid.New(),
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
-			},
-			NumberMin: min,
-			NumberMax: max,
-			Name:      fmt.Sprintf("SystemType-%02d", i+1),
-		})
+	systemPartIDs, err := seedSystemParts(database, seedDir)
+	if err != nil {
+		log.Fatalf("Failed to seed system parts: %v", err)
 	}
-
-	// System parts
-	for i := 0; i < NumSystemParts; i++ {
-		id := uuid.New()
-		suffix := id.String()[:8]
-		desc := fmt.Sprintf("SystemPart seeded %s", suffix)
-		systemParts = append(systemParts, facility.SystemPart{
-			Base: domain.Base{
-				ID:        id,
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
-			},
-			ShortName:   fmt.Sprintf("SP-%03d-%s", i+1, suffix),
-			Name:        fmt.Sprintf("SystemPart-%03d-%s", i+1, suffix),
-			Description: &desc,
-		})
+	apparatIDs, err := seedApparats(database, seedDir)
+	if err != nil {
+		log.Fatalf("Failed to seed apparats: %v", err)
 	}
-
-	// Apparats
-	for i := 0; i < NumApparats; i++ {
-		id := uuid.New()
-		suffix := id.String()[:8]
-		desc := fmt.Sprintf("Apparat seeded %s", suffix)
-		apparats = append(apparats, facility.Apparat{
-			Base: domain.Base{
-				ID:        id,
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
-			},
-			ShortName:   fmt.Sprintf("A-%03d-%s", i+1, suffix),
-			Name:        fmt.Sprintf("Apparat-%03d-%s", i+1, suffix),
-			Description: &desc,
-		})
-	}
-
-	// State texts
-	for i := 0; i < NumStateTexts; i++ {
-		st1 := fmt.Sprintf("StateText-%03d-A", i+1)
-		st2 := fmt.Sprintf("StateText-%03d-B", i+1)
-		stateTexts = append(stateTexts, facility.StateText{
-			Base: domain.Base{
-				ID:        uuid.New(),
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
-			},
-			RefNumber:  i + 1,
-			StateText1: &st1,
-			StateText2: &st2,
-		})
-	}
-
-	// Notification classes
-	for i := 0; i < NumNotificationClasses; i++ {
-		notificationClasses = append(notificationClasses, facility.NotificationClass{
-			Base: domain.Base{
-				ID:        uuid.New(),
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
-			},
-			EventCategory:        "event",
-			Nc:                   100 + i,
-			ObjectDescription:    fmt.Sprintf("NC-%03d", i+1),
-			InternalDescription:  fmt.Sprintf("Notification Class %03d", i+1),
-			Meaning:              "seeded",
-			AckRequiredNotNormal: i%2 == 0,
-			AckRequiredError:     i%3 == 0,
-			AckRequiredNormal:    i%4 == 0,
-			NormNotNormal:        rand.Intn(3),
-			NormError:            rand.Intn(3),
-			NormNormal:           rand.Intn(3),
-		})
-	}
-
-	// Alarm definitions
-	for i := 0; i < NumAlarmDefinitions; i++ {
-		note := fmt.Sprintf("Alarm note %03d", i+1)
-		alarmDefinitions = append(alarmDefinitions, facility.AlarmDefinition{
-			Base: domain.Base{
-				ID:        uuid.New(),
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
-			},
-			Name:      fmt.Sprintf("Alarm Definition %03d", i+1),
-			AlarmNote: &note,
-		})
-	}
-
-	// Link SystemPart <-> Apparat
-	if len(systemParts) > 0 {
-		for i := 0; i < len(apparats); i++ {
-			ap := apparats[i]
-			n := MinSystemPartsPerApparat
-			if MaxSystemPartsPerApparat > MinSystemPartsPerApparat {
-				n += rand.Intn(MaxSystemPartsPerApparat - MinSystemPartsPerApparat + 1)
-			}
-
-			seen := make(map[uuid.UUID]struct{}, n)
-			for j := 0; j < n; j++ {
-				sp := systemParts[rand.Intn(len(systemParts))]
-				if _, ok := seen[sp.ID]; ok {
-					j--
-					continue
-				}
-				seen[sp.ID] = struct{}{}
-				sysPartApparatLinks = append(sysPartApparatLinks, systemPartApparat{ApparatID: ap.ID, SystemPartID: sp.ID})
-			}
-		}
-	}
-
-	// Build lookup map for apparat -> system parts
-	apparatToSystemParts := make(map[uuid.UUID][]uuid.UUID, len(apparats))
-	for _, link := range sysPartApparatLinks {
-		apparatToSystemParts[link.ApparatID] = append(apparatToSystemParts[link.ApparatID], link.SystemPartID)
-	}
-
-	// SPS controller system types (linking SPS controllers to system types)
-	if len(systemTypes) > 0 {
-		for i := 0; i < len(spsControllers); i++ {
-			sps := spsControllers[i]
-			for j := 0; j < SystemTypesPerSPS; j++ {
-				st := systemTypes[(i+j)%len(systemTypes)]
-				n := (j + 1)
-				doc := fmt.Sprintf("DOC-%s-%d", sps.DeviceName, n)
-				spsSysTypes = append(spsSysTypes, facility.SPSControllerSystemType{
-					Base: domain.Base{
-						ID:        uuid.New(),
-						CreatedAt: time.Now(),
-						UpdatedAt: time.Now(),
-					},
-					Number:          &n,
-					DocumentName:    &doc,
-					SPSControllerID: sps.ID,
-					SystemTypeID:    st.ID,
-				})
-			}
-		}
-	}
-
-	// Object data templates + bacnet objects, linked via join table
-	softwareTypes := []facility.BacnetSoftwareType{
-		facility.BacnetSoftwareTypeAI,
-		facility.BacnetSoftwareTypeAO,
-		facility.BacnetSoftwareTypeAV,
-		facility.BacnetSoftwareTypeBI,
-		facility.BacnetSoftwareTypeBO,
-		facility.BacnetSoftwareTypeBV,
-		facility.BacnetSoftwareTypeMI,
-		facility.BacnetSoftwareTypeMO,
-		facility.BacnetSoftwareTypeMV,
-		facility.BacnetSoftwareTypeCA,
-		facility.BacnetSoftwareTypeEE,
-		facility.BacnetSoftwareTypeLP,
-		facility.BacnetSoftwareTypeNC,
-		facility.BacnetSoftwareTypeSC,
-		facility.BacnetSoftwareTypeTL,
-	}
-
-	// Field devices + specifications + field device bacnet objects
-	if len(spsSysTypes) > 0 && len(apparats) > 0 && len(systemParts) > 0 {
-		for i := 0; i < len(spsSysTypes); i++ {
-			spsType := spsSysTypes[i]
-			for j := 0; j < FieldDevicesPerSpsSysType; j++ {
-				fdID := uuid.New()
-				apparat := apparats[rand.Intn(len(apparats))]
-				systemPartIDs := apparatToSystemParts[apparat.ID]
-				spID := systemParts[rand.Intn(len(systemParts))].ID
-				if len(systemPartIDs) > 0 {
-					spID = systemPartIDs[rand.Intn(len(systemPartIDs))]
-				}
-
-				bmk := fmt.Sprintf("BMK-%03d-%02d", i+1, j+1)
-				desc := fmt.Sprintf("Field device %s", bmk)
-				spec := facility.Specification{
-					Base: domain.Base{
-						ID:        uuid.New(),
-						CreatedAt: time.Now(),
-						UpdatedAt: time.Now(),
-					},
-					SpecificationSupplier: ptr("Supplier"),
-					SpecificationBrand:    ptr("Brand"),
-					SpecificationType:     ptr("Type"),
-				}
-				specifications = append(specifications, spec)
-
-				fieldDevices = append(fieldDevices, facility.FieldDevice{
-					Base: domain.Base{
-						ID:        fdID,
-						CreatedAt: time.Now(),
-						UpdatedAt: time.Now(),
-					},
-					BMK:                       &bmk,
-					Description:               &desc,
-					ApparatNr:                 rand.Intn(99) + 1,
-					SPSControllerSystemTypeID: spsType.ID,
-					SystemPartID:              spID,
-					SpecificationID:           &spec.ID,
-					ApparatID:                 apparat.ID,
-				})
-
-				for k := 0; k < BacnetObjectsPerFieldDevice; k++ {
-					boID := uuid.New()
-					textFix := fmt.Sprintf("FD%03d-%02d-%s", i+1, k+1, boID.String()[:6])
-					descBo := fmt.Sprintf("Bacnet object FD %s", bmk)
-
-					var stID *uuid.UUID
-					if len(stateTexts) > 0 {
-						id := stateTexts[rand.Intn(len(stateTexts))].ID
-						stID = &id
-					}
-					var ncID *uuid.UUID
-					if len(notificationClasses) > 0 {
-						id := notificationClasses[rand.Intn(len(notificationClasses))].ID
-						ncID = &id
-					}
-					var adID *uuid.UUID
-					if len(alarmDefinitions) > 0 {
-						id := alarmDefinitions[rand.Intn(len(alarmDefinitions))].ID
-						adID = &id
-					}
-
-					fieldDeviceBos = append(fieldDeviceBos, facility.BacnetObject{
-						Base: domain.Base{
-							ID:        boID,
-							CreatedAt: time.Now(),
-							UpdatedAt: time.Now(),
-						},
-						TextFix:             textFix,
-						Description:         &descBo,
-						GMSVisible:          rand.Intn(2) == 0,
-						Optional:            rand.Intn(3) == 0,
-						SoftwareType:        softwareTypes[rand.Intn(len(softwareTypes))],
-						SoftwareNumber:      uint16(rand.Intn(65000) + 1),
-						HardwareType:        facility.BacnetHardwareType(""),
-						HardwareQuantity:    0,
-						FieldDeviceID:       &fdID,
-						SoftwareReferenceID: nil,
-						StateTextID:         stID,
-						NotificationClassID: ncID,
-						AlarmDefinitionID:   adID,
-					})
-				}
-			}
-		}
-	}
-
-	for i := 0; i < NumObjectDatas; i++ {
-		odID := uuid.New()
-		objectDatas = append(objectDatas, facility.ObjectData{
-			Base: domain.Base{
-				ID:        odID,
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
-			},
-			Description: fmt.Sprintf("ObjectData-%03d", i+1),
-			Version:     fmt.Sprintf("%d.%d", 1+(i/50), (i%50)+1),
-			IsActive:    true,
-			ProjectID:   nil,
-		})
-
-		// Link ObjectData <-> Apparats
-		if len(apparats) > 0 {
-			n := MinApparatsPerObjectData
-			if MaxApparatsPerObjectData > MinApparatsPerObjectData {
-				n += rand.Intn(MaxApparatsPerObjectData - MinApparatsPerObjectData + 1)
-			}
-			seen := make(map[uuid.UUID]struct{}, n)
-			for j := 0; j < n; j++ {
-				ap := apparats[rand.Intn(len(apparats))]
-				if _, ok := seen[ap.ID]; ok {
-					j--
-					continue
-				}
-				seen[ap.ID] = struct{}{}
-				objDataApparatLinks = append(objDataApparatLinks, objectDataApparat{ObjectDataID: odID, ApparatID: ap.ID})
-			}
-		}
-
-		for j := 0; j < BacnetObjectsPerObjData; j++ {
-			boID := uuid.New()
-			textFix := fmt.Sprintf("OD%03d-%02d-%s", i+1, j+1, boID.String()[:8])
-			desc := fmt.Sprintf("Bacnet object %d/%d for OD %d", j+1, BacnetObjectsPerObjData, i+1)
-
-			bo := facility.BacnetObject{
-				Base: domain.Base{
-					ID:        boID,
-					CreatedAt: time.Now(),
-					UpdatedAt: time.Now(),
-				},
-				TextFix:             textFix,
-				Description:         &desc,
-				GMSVisible:          rand.Intn(2) == 0,
-				Optional:            rand.Intn(3) == 0,
-				TextIndividual:      nil,
-				SoftwareType:        softwareTypes[rand.Intn(len(softwareTypes))],
-				SoftwareNumber:      uint16(rand.Intn(65000) + 1),
-				HardwareType:        facility.BacnetHardwareType(""),
-				HardwareQuantity:    0,
-				FieldDeviceID:       nil,
-				SoftwareReferenceID: nil,
-				StateTextID:         nil,
-				NotificationClassID: nil,
-				AlarmDefinitionID:   nil,
-			}
-
-			bacnetObjects = append(bacnetObjects, bo)
-			objDataLinks = append(objDataLinks, objectDataBacnetObject{ObjectDataID: odID, BacnetObjectID: boID})
-		}
-	}
-
-	log.Printf("Generation took %v", time.Since(start))
-
-	log.Printf("Inserting %d SystemTypes...", len(systemTypes))
-	if err := database.CreateInBatches(systemTypes, 1000).Error; err != nil {
-		log.Fatalf("Error inserting system types: %v", err)
-	}
-
-	log.Printf("Inserting %d SystemParts...", len(systemParts))
-	if err := database.CreateInBatches(systemParts, 1000).Error; err != nil {
-		log.Fatalf("Error inserting system parts: %v", err)
-	}
-
-	log.Printf("Inserting %d Apparats...", len(apparats))
-	if err := database.CreateInBatches(apparats, 1000).Error; err != nil {
-		log.Fatalf("Error inserting apparats: %v", err)
-	}
-
-	log.Printf("Inserting %d Buildings...", len(buildings))
-	if err := database.CreateInBatches(buildings, 1000).Error; err != nil {
-		log.Fatalf("Error inserting buildings: %v", err)
-	}
-
-	log.Printf("Inserting %d Control Cabinets...", len(controlCabinets))
-	if err := database.CreateInBatches(controlCabinets, 1000).Error; err != nil {
-		log.Fatalf("Error inserting control cabinets: %v", err)
-	}
-
-	log.Printf("Inserting %d SPS Controllers...", len(spsControllers))
-	if err := database.CreateInBatches(spsControllers, 1000).Error; err != nil {
-		log.Fatalf("Error inserting sps controllers: %v", err)
-	}
-
-	log.Printf("Inserting %d SPS Controller System Types...", len(spsSysTypes))
-	if err := database.CreateInBatches(spsSysTypes, 1000).Error; err != nil {
-		log.Fatalf("Error inserting sps controller system types: %v", err)
-	}
-
-	log.Printf("Inserting %d State Texts...", len(stateTexts))
-	if err := database.CreateInBatches(stateTexts, 1000).Error; err != nil {
-		log.Fatalf("Error inserting state texts: %v", err)
-	}
-
-	log.Printf("Inserting %d Notification Classes...", len(notificationClasses))
-	if err := database.CreateInBatches(notificationClasses, 1000).Error; err != nil {
-		log.Fatalf("Error inserting notification classes: %v", err)
-	}
-
-	log.Printf("Inserting %d Alarm Definitions...", len(alarmDefinitions))
-	if err := database.CreateInBatches(alarmDefinitions, 1000).Error; err != nil {
-		log.Fatalf("Error inserting alarm definitions: %v", err)
-	}
-
-	log.Printf("Inserting %d Specifications...", len(specifications))
-	if err := database.CreateInBatches(specifications, 1000).Error; err != nil {
-		log.Fatalf("Error inserting specifications: %v", err)
-	}
-
-	log.Printf("Inserting %d Field Devices...", len(fieldDevices))
-	if err := database.CreateInBatches(fieldDevices, 1000).Error; err != nil {
-		log.Fatalf("Error inserting field devices: %v", err)
-	}
-
-	allBos := append(bacnetObjects, fieldDeviceBos...)
-	log.Printf("Inserting %d Bacnet Objects...", len(allBos))
-	if err := database.CreateInBatches(allBos, 1000).Error; err != nil {
-		log.Fatalf("Error inserting bacnet objects: %v", err)
-	}
-
-	log.Printf("Inserting %d Object Datas...", len(objectDatas))
-	if err := database.CreateInBatches(objectDatas, 1000).Error; err != nil {
-		log.Fatalf("Error inserting object datas: %v", err)
-	}
-
-	log.Printf("Linking %d SystemPart <-> Apparat rows...", len(sysPartApparatLinks))
-	if err := database.CreateInBatches(sysPartApparatLinks, 2000).Error; err != nil {
-		log.Fatalf("Error inserting system_part_apparats links: %v", err)
-	}
-
-	log.Printf("Linking %d ObjectData <-> Apparat rows...", len(objDataApparatLinks))
-	if err := database.CreateInBatches(objDataApparatLinks, 2000).Error; err != nil {
-		log.Fatalf("Error inserting object_data_apparats links: %v", err)
-	}
-
-	log.Printf("Linking %d ObjectData <-> BacnetObject rows...", len(objDataLinks))
-	if err := database.CreateInBatches(objDataLinks, 2000).Error; err != nil {
-		log.Fatalf("Error inserting object_data_bacnet_objects links: %v", err)
+	if err := seedApparatSystemParts(database, seedDir, apparatIDs, systemPartIDs); err != nil {
+		log.Fatalf("Failed to seed apparat-system parts: %v", err)
 	}
 
 	log.Println("Seeding complete!")
-}
-
-func ptr(s string) *string {
-	return &s
-}
-
-func gaDeviceCode(index int) string {
-	// Base-26 encoding to 3 uppercase letters.
-	first := rune('A' + (index % 26))
-	second := rune('A' + ((index / 26) % 26))
-	third := rune('A' + ((index / (26 * 26)) % 26))
-	return string([]rune{third, second, first})
 }
