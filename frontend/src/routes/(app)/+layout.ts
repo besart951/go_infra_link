@@ -16,29 +16,28 @@ export const load: LayoutLoad = async ({ fetch }) => {
 	const customFetch = fetch;
 
 	try {
-        try {
-            const userRes = await api<User>('/auth/me', { customFetch });
-            user = userRes;
-        } catch (e) {
-            // 401 or network error; handled below if backend is unavailable.
-        }
+		try {
+			const userRes = await api<User>('/auth/me', { customFetch });
+			user = userRes;
+		} catch (e) {
+			// 401 or network error; handled below if backend is unavailable.
+		}
 
-        if (user) {
-            try {
-                const [t, p] = await Promise.all([
-                    api<Team[]>('/teams', { customFetch }),
-                    api<Project[]>('/projects', { customFetch })
-                ]);
-                teams = t;
-                projects = p;
-            } catch (e) {
-                console.error("Failed to load user data", e);
-            }
-        }
-		
-    } catch (e) {
-        // If /auth/me failed with network error, backend might be down.
-		backendAvailable = false; 
+		if (user) {
+			try {
+				const [t, p] = await Promise.all([
+					api<Team[]>('/teams', { customFetch }),
+					api<Project[]>('/projects', { customFetch })
+				]);
+				teams = t;
+				projects = p;
+			} catch (e) {
+				console.error('Failed to load user data', e);
+			}
+		}
+	} catch (e) {
+		// If /auth/me failed with network error, backend might be down.
+		backendAvailable = false;
 	}
 
 	return {
