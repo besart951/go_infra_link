@@ -6,13 +6,22 @@ import (
 	"github.com/google/uuid"
 )
 
+// normalizeTextIndividual converts empty-string pointers to nil so the DB
+// always stores either NULL (disabled) or a non-empty value (enabled).
+func normalizeTextIndividual(s *string) *string {
+	if s != nil && *s == "" {
+		return nil
+	}
+	return s
+}
+
 func toBacnetObjectModel(req dto.CreateBacnetObjectRequest) *domainFacility.BacnetObject {
 	return &domainFacility.BacnetObject{
 		TextFix:             req.TextFix,
 		Description:         req.Description,
 		GMSVisible:          req.GMSVisible,
 		Optional:            req.Optional,
-		TextIndividual:      req.TextIndividual,
+		TextIndividual:      normalizeTextIndividual(req.TextIndividual),
 		SoftwareType:        domainFacility.BacnetSoftwareType(req.SoftwareType),
 		SoftwareNumber:      uint16(req.SoftwareNumber),
 		HardwareType:        domainFacility.BacnetHardwareType(req.HardwareType),
@@ -38,7 +47,7 @@ func applyBacnetObjectPatch(target *domainFacility.BacnetObject, req dto.BacnetO
 		target.Optional = *req.Optional
 	}
 	if req.TextIndividual != nil {
-		target.TextIndividual = req.TextIndividual
+		target.TextIndividual = normalizeTextIndividual(req.TextIndividual)
 	}
 	if req.SoftwareType != nil {
 		target.SoftwareType = domainFacility.BacnetSoftwareType(*req.SoftwareType)
@@ -75,7 +84,7 @@ func toBacnetObjectPatches(inputs []dto.BacnetObjectBulkPatchInput) []domainFaci
 			Description:         input.Description,
 			GMSVisible:          input.GMSVisible,
 			Optional:            input.Optional,
-			TextIndividual:      input.TextIndividual,
+			TextIndividual:      normalizeTextIndividual(input.TextIndividual),
 			SoftwareReferenceID: input.SoftwareReferenceID,
 			StateTextID:         input.StateTextID,
 			NotificationClassID: input.NotificationClassID,
@@ -204,7 +213,7 @@ func toFieldDeviceBacnetObjects(inputs []dto.BacnetObjectInput) []domainFacility
 			Description:         bo.Description,
 			GMSVisible:          bo.GMSVisible,
 			Optional:            bo.Optional,
-			TextIndividual:      bo.TextIndividual,
+			TextIndividual:      normalizeTextIndividual(bo.TextIndividual),
 			SoftwareType:        domainFacility.BacnetSoftwareType(bo.SoftwareType),
 			SoftwareNumber:      uint16(bo.SoftwareNumber),
 			HardwareType:        domainFacility.BacnetHardwareType(bo.HardwareType),

@@ -56,6 +56,14 @@
 		return (edits as Record<string, unknown>)[field] as boolean;
 	}
 
+	function hasTextIndividual(obj: BacnetObject): boolean {
+		const edits = pendingEdits.get(obj.id);
+		if (edits && 'text_individual' in edits) {
+			return !!edits.text_individual;
+		}
+		return !!obj.text_individual;
+	}
+
 	function getFieldError(objectId: string, field: string): string | undefined {
 		return fieldErrors.get(objectId)?.[field] || clientErrors.get(objectId)?.[field];
 	}
@@ -73,7 +81,8 @@
 					<th class="pr-2 pb-2">Hardware Type</th>
 					<th class="pr-2 pb-2">Hardware Qty</th>
 					<th class="pr-2 pb-2">GMS Visible</th>
-					<th class="pb-2">Optional</th>
+					<th class="pr-2 pb-2">Optional</th>
+					<th class="pb-2">Text Individual</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -159,7 +168,7 @@
 								onToggle={(v) => onEdit(obj.id, 'gms_visible', v)}
 							/>
 						</td>
-						<td class="py-1">
+						<td class="py-1 pr-1">
 							<EditableBooleanCell
 								value={obj.optional}
 								pendingValue={getPendingBoolValue(obj.id, 'optional')}
@@ -168,6 +177,19 @@
 								{disabled}
 								onToggle={(v) => onEdit(obj.id, 'optional', v)}
 							/>
+						</td>
+						<td class="py-1">
+							{#if hasTextIndividual(obj)}
+								<EditableCell
+									value={obj.text_individual || ''}
+									pendingValue={getPendingTextValue(obj.id, 'text_individual', obj.text_individual || '')}
+									maxlength={250}
+									isDirty={isDirty(obj.id, 'text_individual')}
+									error={getFieldError(obj.id, 'text_individual')}
+									{disabled}
+									onSave={(v) => onEdit(obj.id, 'text_individual', v || undefined)}
+								/>
+							{/if}
 						</td>
 					</tr>
 				{/each}

@@ -24,9 +24,14 @@ func RequirePermission(authz AuthorizationChecker, permission string) gin.Handle
 			return
 		}
 
-		// Check if role has the required permission
-		// For now, we'll use a simple mapping - this can be extended to use the Permission entities
-		if !hasPermission(role, permission) {
+		hasPerm, err := authz.HasPermission(role, permission)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
+			c.Abort()
+			return
+		}
+
+		if !hasPerm {
 			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			c.Abort()
 			return
@@ -61,60 +66,4 @@ func RequireCanManageRole(authz AuthorizationChecker, targetRole domainUser.Role
 
 		c.Next()
 	}
-}
-
-// hasPermission checks if a role has a specific permission
-// This is a simplified implementation - in a full system, this would query the database
-func hasPermission(role domainUser.Role, permission string) bool {
-	// Define permission mappings
-	permissions := map[domainUser.Role][]string{
-		domainUser.RoleSuperAdmin: {
-			"user.create", "user.read", "user.update", "user.delete",
-			"team.create", "team.read", "team.update", "team.delete",
-			"project.create", "project.read", "project.update", "project.delete",
-			"system.configure",
-		},
-		domainUser.RoleAdminFZAG: {
-			"user.create", "user.read", "user.update", "user.delete",
-			"team.create", "team.read", "team.update", "team.delete",
-			"project.create", "project.read", "project.update", "project.delete",
-		},
-		domainUser.RoleFZAG: {
-			"user.create", "user.read", "user.update",
-			"team.read", "team.update",
-			"project.create", "project.read", "project.update", "project.delete",
-		},
-		domainUser.RoleAdminPlaner: {
-			"user.create", "user.read", "user.update",
-			"team.read",
-			"project.create", "project.read", "project.update",
-		},
-		domainUser.RolePlaner: {
-			"user.read",
-			"team.read",
-			"project.read", "project.update",
-		},
-		domainUser.RoleAdminEnterpreneur: {
-			"user.create", "user.read",
-			"team.read",
-			"project.read",
-		},
-		domainUser.RoleEnterpreneur: {
-			"team.read",
-			"project.read",
-		},
-	}
-
-	rolePerms, ok := permissions[role]
-	if !ok {
-		return false
-	}
-
-	for _, perm := range rolePerms {
-		if perm == permission {
-			return true
-		}
-	}
-
-	return false
 }

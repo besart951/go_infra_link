@@ -125,6 +125,13 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
 		if (!response.ok) {
 			const error = await parseError(response);
 
+			// 401 Unauthorized: session expired or not logged in → redirect to login
+			if (response.status === 401 && typeof window !== 'undefined') {
+				const { goto } = await import('$app/navigation');
+				goto('/login');
+				throw new HandledApiException(401, error.error, error.message || 'Unauthorized');
+			}
+
 			// Central handling: authorization errors should be surfaced via toast,
 			// not rendered inline in table/list UIs.
 			if (error.error === 'authorization_failed') {

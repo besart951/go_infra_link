@@ -48,7 +48,7 @@ type ServiceConfig struct {
 func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 	passwordService := passwordsvc.New()
 	jwtService := authservice.NewJWTService(cfg.JWTSecret, cfg.Issuer)
-	rbacSvc := rbacservice.New(repos.User, repos.TeamMember)
+	rbacSvc := rbacservice.New(repos.User, repos.TeamMember, repos.Permissions, repos.RolePermissions)
 	facilityServices := facilityservice.NewServices(facilityservice.Repositories{
 		Buildings:                repos.FacilityBuildings,
 		SystemTypes:              repos.FacilitySystemTypes,

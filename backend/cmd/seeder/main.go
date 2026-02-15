@@ -4,13 +4,16 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 const (
@@ -63,6 +66,154 @@ func (systemPartApparat) TableName() string {
 	return "system_part_apparats"
 }
 
+type permissionSeed struct {
+	Name        string
+	Description string
+	Resource    string
+	Action      string
+}
+
+func seedPermissions(database *gorm.DB) error {
+	log.Println("Seeding permissions...")
+
+	actions := []string{"create", "read", "update", "delete"}
+	generalResources := []string{"user", "team", "project", "phase", "role", "permission"}
+	facilityResources := []string{
+		"building",
+		"controlcabinet",
+		"spscontroller",
+		"spscontrollersystemtype",
+		"fielddevice",
+		"bacnetobject",
+		"systempart",
+		"systemtype",
+		"specification",
+		"apparat",
+		"notificationclass",
+		"statetext",
+		"objectdata",
+		"alarmdefinition",
+	}
+	projectSubResources := []string{
+		"controlcabinet",
+		"spscontroller",
+		"spscontrollersystemtype",
+		"fielddevice",
+		"bacnetobject",
+		"systemtype",
+	}
+
+	seeds := make([]permissionSeed, 0, 200)
+	addPermission := func(name, resource, action string) {
+		description := fmt.Sprintf("%s %s", strings.Title(action), strings.ReplaceAll(resource, ".", " "))
+		seeds = append(seeds, permissionSeed{
+			Name:        name,
+			Description: description,
+			Resource:    resource,
+			Action:      action,
+		})
+	}
+
+	for _, resource := range generalResources {
+		for _, action := range actions {
+			addPermission(fmt.Sprintf("%s.%s", resource, action), resource, action)
+		}
+	}
+
+	for _, resource := range facilityResources {
+		for _, action := range actions {
+			addPermission(fmt.Sprintf("%s.%s", resource, action), resource, action)
+		}
+	}
+
+	for _, resource := range projectSubResources {
+		for _, action := range actions {
+			name := fmt.Sprintf("project.%s.%s", resource, action)
+			addPermission(name, fmt.Sprintf("project.%s", resource), action)
+		}
+	}
+
+	if len(seeds) == 0 {
+		return nil
+	}
+
+	names := make([]string, len(seeds))
+	for i, seed := range seeds {
+		names[i] = seed.Name
+	}
+
+	var existing []domainUser.Permission
+	if err := database.Where("name IN ?", names).Find(&existing).Error; err != nil {
+		return err
+	}
+
+	existingNames := make(map[string]struct{}, len(existing))
+	for _, perm := range existing {
+		existingNames[perm.Name] = struct{}{}
+	}
+
+	now := time.Now().UTC()
+	missing := make([]domainUser.Permission, 0, len(seeds))
+	for _, seed := range seeds {
+		if _, ok := existingNames[seed.Name]; ok {
+			continue
+		}
+		perm := domainUser.Permission{
+			Name:        seed.Name,
+			Description: seed.Description,
+			Resource:    seed.Resource,
+			Action:      seed.Action,
+		}
+		if err := perm.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		missing = append(missing, perm)
+	}
+
+	if len(missing) > 0 {
+		if err := database.Create(&missing).Error; err != nil {
+			return err
+		}
+		log.Printf("Seeded %d permissions", len(missing))
+	} else {
+		log.Println("No new permissions to seed")
+	}
+
+	// Ensure superadmin has all permissions.
+	var rolePerms []domainUser.RolePermission
+	if err := database.Where("role = ? AND permission IN ?", domainUser.RoleSuperAdmin, names).Find(&rolePerms).Error; err != nil {
+		return err
+	}
+	existingRolePerms := make(map[string]struct{}, len(rolePerms))
+	for _, rp := range rolePerms {
+		existingRolePerms[rp.Permission] = struct{}{}
+	}
+
+	missingRolePerms := make([]domainUser.RolePermission, 0, len(names))
+	for _, name := range names {
+		if _, ok := existingRolePerms[name]; ok {
+			continue
+		}
+		rp := domainUser.RolePermission{
+			Role:       domainUser.RoleSuperAdmin,
+			Permission: name,
+		}
+		if err := rp.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		missingRolePerms = append(missingRolePerms, rp)
+	}
+
+	if len(missingRolePerms) > 0 {
+		if err := database.Create(&missingRolePerms).Error; err != nil {
+			return err
+		}
+		log.Printf("Assigned %d permissions to superadmin", len(missingRolePerms))
+	}
+
+	return nil
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
@@ -79,6 +230,9 @@ func main() {
 	}
 
 	log.Println("Connected to database. Starting seed...")
+	if err := seedPermissions(database); err != nil {
+		log.Fatalf("Failed to seed permissions: %v", err)
+	}
 
 	var (
 		buildings           []facility.Building

@@ -476,6 +476,12 @@ export function useFieldDeviceEditing(projectId?: string) {
 			if ('hardware_type' in edits && !validHardwareTypes.has(edits.hardware_type as string)) {
 				objErrors['hardware_type'] = 'Invalid hardware type';
 			}
+			if ('text_individual' in edits) {
+				const val = edits.text_individual as string | undefined;
+				if (val && val.length > 250) {
+					objErrors['text_individual'] = 'Must be 250 characters or less';
+				}
+			}
 
 			if (Object.keys(objErrors).length > 0) {
 				errors.set(objectId, objErrors);

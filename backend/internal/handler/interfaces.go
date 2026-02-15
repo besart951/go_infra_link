@@ -80,3 +80,25 @@ type RoleQueryService interface {
 	GetGlobalRole(userID uuid.UUID) (user.Role, error)
 	GetAllowedRoles(requesterRole user.Role) []user.Role
 }
+
+// PermissionQueryService provides permission lookups for roles.
+type PermissionQueryService interface {
+	GetRolePermissions(role user.Role) ([]string, error)
+}
+
+// PermissionService manages permission types.
+type PermissionService interface {
+	ListPermissions() ([]user.Permission, error)
+	GetPermissionByID(id uuid.UUID) (*user.Permission, error)
+	CreatePermission(permission *user.Permission) error
+	UpdatePermission(permission *user.Permission) error
+	DeletePermission(id uuid.UUID) error
+}
+
+// RolePermissionService manages role permission assignments.
+type RolePermissionService interface {
+	ListRolesWithPermissions() ([]user.RoleInfo, error)
+	UpdateRolePermissions(role user.Role, permissions []string) ([]string, error)
+	AddRolePermission(role user.Role, permission string) (*user.RolePermission, error)
+	RemoveRolePermission(role user.Role, permission string) error
+}

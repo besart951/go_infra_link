@@ -76,7 +76,7 @@
 	// State
 	// ============================================================================
 
-	const initialPermissions = $derived(new Set(role.permissions.filter((p) => p !== '*')));
+	const initialPermissions = $derived(new Set(role.permissions));
 	let selectedPermissions = $state<Set<string>>(new Set());
 	let searchQuery = $state('');
 	let expandedCategories = $state<Set<CategoryId>>(new Set(['users', 'facility', 'projects']));
@@ -90,8 +90,6 @@
 	// ============================================================================
 	// Derived State
 	// ============================================================================
-
-	const hasAllPermissions = $derived(role.permissions.includes('*'));
 
 	// Categorize a permission
 	function categorizePermission(perm: Permission): CategoryId {
@@ -172,7 +170,6 @@
 	// ============================================================================
 
 	function togglePermission(permissionName: string) {
-		if (hasAllPermissions) return;
 		const newSet = new Set(selectedPermissions);
 		if (newSet.has(permissionName)) {
 			newSet.delete(permissionName);
@@ -203,7 +200,6 @@
 	}
 
 	function toggleAllInResource(resource: string, categoryId: CategoryId) {
-		if (hasAllPermissions) return;
 		const resourcePerms = permissionsByCategory()[categoryId][resource] || [];
 		const allSelected = resourcePerms.every((p) => selectedPermissions.has(p.name));
 
@@ -217,7 +213,6 @@
 	}
 
 	function toggleAllInCategory(categoryId: CategoryId) {
-		if (hasAllPermissions) return;
 		const categoryPerms = Object.values(permissionsByCategory()[categoryId]).flat();
 		const allSelected = categoryPerms.every((p) => selectedPermissions.has(p.name));
 
@@ -231,12 +226,10 @@
 	}
 
 	function selectAll() {
-		if (hasAllPermissions) return;
 		selectedPermissions = new Set(allPermissions.map((p) => p.name));
 	}
 
 	function deselectAll() {
-		if (hasAllPermissions) return;
 		selectedPermissions = new Set();
 	}
 
@@ -321,15 +314,6 @@
 	{/if}
 
 	<!-- Full Access Warning -->
-	{#if hasAllPermissions}
-		<div
-			class="shrink-0 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200"
-		>
-			<p class="font-medium">Full Access Role</p>
-			<p>This role has all permissions and cannot be modified.</p>
-		</div>
-	{/if}
-
 	<!-- Search and Bulk Actions -->
 	<div class="flex shrink-0 items-center gap-4">
 		<div class="relative flex-1">
@@ -341,22 +325,15 @@
 				bind:value={searchQuery}
 			/>
 		</div>
-		{#if !hasAllPermissions}
 			<div class="flex gap-2">
 				<Button type="button" variant="outline" size="sm" onclick={selectAll}>Select All</Button>
-				<Button type="button" variant="outline" size="sm" onclick={deselectAll}>Deselect All</Button
-				>
+				<Button type="button" variant="outline" size="sm" onclick={deselectAll}>Deselect All</Button>
 			</div>
-		{/if}
 	</div>
 
 	<!-- Selected Count -->
 	<div class="shrink-0 text-sm text-muted-foreground">
-		{#if hasAllPermissions}
-			All permissions granted
-		{:else}
-			{selectedPermissions.size} of {allPermissions.length} permissions selected
-		{/if}
+		{selectedPermissions.size} of {allPermissions.length} permissions selected
 	</div>
 
 	<!-- Permission Categories -->
@@ -372,7 +349,7 @@
 				{selectedPermissions}
 				isExpanded={expandedCategories.has(category.id)}
 				{expandedResources}
-				disabled={hasAllPermissions}
+					disabled={false}
 				onToggleExpand={() => toggleCategory(category.id)}
 				onToggleAll={() => toggleAllInCategory(category.id)}
 				onToggleResource={toggleResource}
@@ -398,7 +375,7 @@
 		<Button type="button" variant="outline" onclick={onCancel} disabled={isSubmitting}>
 			Cancel
 		</Button>
-		<Button type="submit" disabled={isSubmitting || hasAllPermissions}>
+		<Button type="submit" disabled={isSubmitting}>
 			{#if isSubmitting}
 				<span class="mr-2 h-4 w-4 animate-spin">⟳</span>
 			{/if}

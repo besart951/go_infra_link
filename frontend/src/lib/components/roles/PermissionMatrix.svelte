@@ -63,7 +63,7 @@
 	}
 
 	function hasPermission(role: Role, permissionName: string): boolean {
-		return role.permissions.includes('*') || role.permissions.includes(permissionName);
+		return role.permissions.includes(permissionName);
 	}
 
 	function getResourcePermissionCount(
@@ -76,9 +76,6 @@
 	} {
 		const resourcePerms = permissionsByCategory()[category][resource] || [];
 		const total = resourcePerms.length;
-		if (role.permissions.includes('*')) {
-			return { count: total, total };
-		}
 		const count = resourcePerms.filter((p) => role.permissions.includes(p.name)).length;
 		return { count, total };
 	}

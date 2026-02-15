@@ -10,4 +10,5 @@ import (
 type AuthorizationChecker interface {
 	GetGlobalRole(userID uuid.UUID) (domainUser.Role, error)
 	GetTeamRole(teamID, userID uuid.UUID) (*domainTeam.MemberRole, error)
+	HasPermission(role domainUser.Role, permission string) (bool, error)
 }

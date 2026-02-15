@@ -34,10 +34,13 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18n
 		UserHandler:            handler.NewUserHandler(services.User, services.RBAC),
 		TeamHandler:            handler.NewTeamHandler(services.Team),
 		AdminHandler:           handler.NewAdminHandler(services.Admin, services.Auth),
+		RoleHandler:            handler.NewRoleHandler(services.RBAC),
+		PermissionHandler:      handler.NewPermissionHandler(services.RBAC),
 		I18nHandler:            handler.NewI18nHandler(i18nLoader),
 		AuthHandler: handler.NewAuthHandler(
 			services.Auth,
 			services.User,
+			services.RBAC,
 			devAuthCfg.AccessTokenTTL,
 			devAuthCfg.RefreshTokenTTL,
 			cookieSettings,

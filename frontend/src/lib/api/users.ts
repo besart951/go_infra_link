@@ -16,6 +16,7 @@ export interface User {
 	email: string;
 	is_active: boolean;
 	role: UserRole;
+	permissions?: string[];
 	created_at: string;
 	updated_at: string;
 	last_login_at?: string | null;

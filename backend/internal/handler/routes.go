@@ -15,6 +15,8 @@ type Handlers struct {
 	AuthHandler            *AuthHandler
 	TeamHandler            *TeamHandler
 	AdminHandler           *AdminHandler
+	RoleHandler            *RoleHandler
+	PermissionHandler      *PermissionHandler
 	PhaseHandler           *PhaseHandler
 	PhasePermissionHandler *PhasePermissionHandler
 	I18nHandler            *I18nHandler
@@ -133,6 +135,25 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		usersAdmin.GET("/:id", handlers.UserHandler.GetUser)
 		usersAdmin.PUT("/:id", handlers.UserHandler.UpdateUser)
 		usersAdmin.DELETE("/:id", handlers.UserHandler.DeleteUser)
+	}
+
+	// Role and permission management (admin only)
+	roles := protectedV1.Group("/roles")
+	roles.Use(middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG))
+	{
+		roles.GET("", handlers.RoleHandler.ListRoles)
+		roles.PUT("/:role/permissions", handlers.RoleHandler.UpdateRolePermissions)
+		roles.POST("/:role/permissions", handlers.RoleHandler.AddRolePermission)
+		roles.DELETE("/:role/permissions/:permission", handlers.RoleHandler.RemoveRolePermission)
+	}
+
+	permissions := protectedV1.Group("/permissions")
+	permissions.Use(middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG))
+	{
+		permissions.GET("", handlers.PermissionHandler.ListPermissions)
+		permissions.POST("", handlers.PermissionHandler.CreatePermission)
+		permissions.PUT("/:id", handlers.PermissionHandler.UpdatePermission)
+		permissions.DELETE("/:id", handlers.PermissionHandler.DeletePermission)
 	}
 
 	// Team routes

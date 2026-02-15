@@ -8,6 +8,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
@@ -23,6 +24,7 @@ type CookieSettings struct {
 type AuthHandler struct {
 	service         AuthService
 	userService     UserService
+	permissionSvc   PermissionQueryService
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
 	cookieSettings  CookieSettings
@@ -31,10 +33,11 @@ type AuthHandler struct {
 	devAuthPassword string
 }
 
-func NewAuthHandler(service AuthService, userService UserService, accessTokenTTL, refreshTokenTTL time.Duration, cookieSettings CookieSettings, devAuthEnabled bool, devAuthEmail, devAuthPassword string) *AuthHandler {
+func NewAuthHandler(service AuthService, userService UserService, permissionSvc PermissionQueryService, accessTokenTTL, refreshTokenTTL time.Duration, cookieSettings CookieSettings, devAuthEnabled bool, devAuthEmail, devAuthPassword string) *AuthHandler {
 	return &AuthHandler{
 		service:         service,
 		userService:     userService,
+		permissionSvc:   permissionSvc,
 		accessTokenTTL:  accessTokenTTL,
 		refreshTokenTTL: refreshTokenTTL,
 		cookieSettings:  cookieSettings,
@@ -174,13 +177,22 @@ func (h *AuthHandler) handleLoginError(c *gin.Context, err error) {
 
 // buildAuthResponse creates a consistent auth response
 func (h *AuthHandler) buildAuthResponse(result *domainAuth.LoginResult) dto.AuthResponse {
+	permissions := h.getRolePermissions(result.User.Role)
 	return dto.AuthResponse{
 		User: dto.AuthUserResponse{
-			ID:        result.User.ID,
-			FirstName: result.User.FirstName,
-			LastName:  result.User.LastName,
-			Email:     result.User.Email,
-			IsActive:  result.User.IsActive,
+			ID:                  result.User.ID,
+			FirstName:           result.User.FirstName,
+			LastName:            result.User.LastName,
+			Email:               result.User.Email,
+			IsActive:            result.User.IsActive,
+			Role:                string(result.User.Role),
+			Permissions:         permissions,
+			CreatedAt:           result.User.CreatedAt,
+			UpdatedAt:           result.User.UpdatedAt,
+			LastLoginAt:         result.User.LastLoginAt,
+			DisabledAt:          result.User.DisabledAt,
+			LockedUntil:         result.User.LockedUntil,
+			FailedLoginAttempts: result.User.FailedLoginAttempts,
 		},
 		AccessTokenExpiresAt:  result.AccessTokenExpiry,
 		RefreshTokenExpiresAt: result.RefreshTokenExpiry,
@@ -214,12 +226,31 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.AuthUserResponse{
-		ID:        usr.ID,
-		FirstName: usr.FirstName,
-		LastName:  usr.LastName,
-		Email:     usr.Email,
-		IsActive:  usr.IsActive,
+		ID:                  usr.ID,
+		FirstName:           usr.FirstName,
+		LastName:            usr.LastName,
+		Email:               usr.Email,
+		IsActive:            usr.IsActive,
+		Role:                string(usr.Role),
+		Permissions:         h.getRolePermissions(usr.Role),
+		CreatedAt:           usr.CreatedAt,
+		UpdatedAt:           usr.UpdatedAt,
+		LastLoginAt:         usr.LastLoginAt,
+		DisabledAt:          usr.DisabledAt,
+		LockedUntil:         usr.LockedUntil,
+		FailedLoginAttempts: usr.FailedLoginAttempts,
 	})
+}
+
+func (h *AuthHandler) getRolePermissions(role domainUser.Role) []string {
+	if h.permissionSvc == nil {
+		return []string{}
+	}
+	permissions, err := h.permissionSvc.GetRolePermissions(role)
+	if err != nil {
+		return []string{}
+	}
+	return permissions
 }
 
 // ConfirmPasswordReset godoc

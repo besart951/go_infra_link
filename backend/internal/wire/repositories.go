@@ -27,6 +27,8 @@ type Repositories struct {
 	ProjectFieldDevices    domainProject.ProjectFieldDeviceRepository
 	User                   domainUser.UserRepository
 	UserEmail              domainUser.UserEmailRepository
+	Permissions            domainUser.PermissionRepository
+	RolePermissions        domainUser.RolePermissionRepository
 	RefreshToken           domainAuth.RefreshTokenRepository
 	LoginAttempt           domainAuth.LoginAttemptRepository
 	PasswordReset          domainAuth.PasswordResetTokenRepository
@@ -54,6 +56,8 @@ type Repositories struct {
 // NewRepositories creates all repository instances from the database connection.
 func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 	userRepo := userrepo.NewUserRepository(gormDB)
+	permissionRepo := userrepo.NewPermissionRepository(gormDB)
+	rolePermissionRepo := userrepo.NewRolePermissionRepository(gormDB)
 	userEmailRepo, ok := userRepo.(domainUser.UserEmailRepository)
 	if !ok {
 		return nil, ErrUserRepoMissingEmailLookup
@@ -68,6 +72,8 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 		ProjectFieldDevices:    projectsqlrepo.NewProjectFieldDeviceRepository(gormDB),
 		User:                   userRepo,
 		UserEmail:              userEmailRepo,
+		Permissions:            permissionRepo,
+		RolePermissions:        rolePermissionRepo,
 		RefreshToken:           authrepo.NewRefreshTokenRepository(gormDB),
 		LoginAttempt:           authrepo.NewLoginAttemptRepository(gormDB),
 		PasswordReset:          authrepo.NewPasswordResetTokenRepository(gormDB),

@@ -7,12 +7,19 @@ import (
 )
 
 type Service struct {
-	userRepo   domainUser.UserRepository
-	memberRepo domainTeam.TeamMemberRepository
+	userRepo           domainUser.UserRepository
+	memberRepo         domainTeam.TeamMemberRepository
+	permissionRepo     domainUser.PermissionRepository
+	rolePermissionRepo domainUser.RolePermissionRepository
 }
 
-func New(userRepo domainUser.UserRepository, memberRepo domainTeam.TeamMemberRepository) *Service {
-	return &Service{userRepo: userRepo, memberRepo: memberRepo}
+func New(userRepo domainUser.UserRepository, memberRepo domainTeam.TeamMemberRepository, permissionRepo domainUser.PermissionRepository, rolePermissionRepo domainUser.RolePermissionRepository) *Service {
+	return &Service{
+		userRepo:           userRepo,
+		memberRepo:         memberRepo,
+		permissionRepo:     permissionRepo,
+		rolePermissionRepo: rolePermissionRepo,
+	}
 }
 
 func (s *Service) GetGlobalRole(userID uuid.UUID) (domainUser.Role, error) {

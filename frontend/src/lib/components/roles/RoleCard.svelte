@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Role } from '$lib/domain/role/index.js';
-	import type { UserRole } from '$lib/domain/user/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -17,10 +16,6 @@
 	}
 
 	let { role, onEdit, onViewPermissions, canEdit = false }: Props = $props();
-
-	const permissionCount = $derived(
-		role.permissions.includes('*') ? 'All' : role.permissions.length.toString()
-	);
 
 	const canManageCount = $derived(role.can_manage.length);
 </script>
@@ -61,9 +56,7 @@
 				<span>Permissions</span>
 			</div>
 			<div class="flex flex-wrap gap-1">
-				{#if role.permissions.includes('*')}
-					<Badge variant="default" class="text-xs">All permissions</Badge>
-				{:else if role.permissions.length === 0}
+				{#if role.permissions.length === 0}
 					<span class="text-xs text-muted-foreground">No permissions assigned</span>
 				{:else if role.permissions.length <= 4}
 					{#each role.permissions as perm}

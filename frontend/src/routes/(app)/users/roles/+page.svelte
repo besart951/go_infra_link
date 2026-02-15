@@ -2,7 +2,15 @@
 	import { onMount } from 'svelte';
 	import type { Role, Permission } from '$lib/domain/role/index.js';
 	import type { UserRole } from '$lib/domain/user/index.js';
-	import { listRoles, listPermissions } from '$lib/infrastructure/api/role.adapter.js';
+	import {
+		listRoles,
+		listPermissions,
+		createPermission,
+		updatePermission,
+		deletePermission,
+		updateRolePermissions
+	} from '$lib/infrastructure/api/role.adapter.js';
+	import { getErrorMessage } from '$lib/api/client.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
@@ -76,13 +84,12 @@
 		permissionError = null;
 
 		try {
-			// Note: This would call the backend API in a real implementation
-			// For now, we'll simulate the creation
+			await createPermission(data);
 			addToast('Permission created successfully', 'success');
 			createPermissionDialogOpen = false;
 			await loadData();
 		} catch (err) {
-			permissionError = err instanceof Error ? err.message : 'Failed to create permission';
+			permissionError = getErrorMessage(err);
 		} finally {
 			isSubmittingPermission = false;
 		}
@@ -100,13 +107,13 @@
 		permissionError = null;
 
 		try {
-			// Note: This would call the backend API in a real implementation
+			await updatePermission(selectedPermission.id, { description: data.description });
 			addToast('Permission updated successfully', 'success');
 			editPermissionDialogOpen = false;
 			selectedPermission = null;
 			await loadData();
 		} catch (err) {
-			permissionError = err instanceof Error ? err.message : 'Failed to update permission';
+			permissionError = getErrorMessage(err);
 		} finally {
 			isSubmittingPermission = false;
 		}
@@ -123,11 +130,11 @@
 
 		if (confirmed) {
 			try {
-				// Note: This would call the backend API in a real implementation
+				await deletePermission(permission.id);
 				addToast('Permission deleted successfully', 'success');
 				await loadData();
 			} catch (err) {
-				addToast(err instanceof Error ? err.message : 'Failed to delete permission', 'error');
+				addToast(getErrorMessage(err), 'error');
 			}
 		}
 	}
@@ -152,13 +159,13 @@
 		roleError = null;
 
 		try {
-			// Note: This would call the backend API in a real implementation
+			await updateRolePermissions(selectedRole.name, data);
 			addToast(`Permissions updated for ${selectedRole.display_name}`, 'success');
 			editRoleSheetOpen = false;
 			selectedRole = null;
 			await loadData();
 		} catch (err) {
-			roleError = err instanceof Error ? err.message : 'Failed to update role permissions';
+			roleError = getErrorMessage(err);
 		} finally {
 			isSubmittingRole = false;
 		}

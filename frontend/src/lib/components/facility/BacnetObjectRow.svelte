@@ -65,7 +65,7 @@
 	});
 
 	$effect(() => {
-		const value = textIndividualEnabled ? 'Text Individual' : '';
+		const value = textIndividualEnabled ? 'Text Individuell' : '';
 		if (textIndividual !== value) {
 			textIndividual = value;
 			onUpdate('text_individual', textIndividual);

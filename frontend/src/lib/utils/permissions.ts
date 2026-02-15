@@ -6,65 +6,12 @@
  */
 
 import type { UserRole } from '$lib/api/users.js';
-import { canManageRole, hasRole, hasMinRole, auth } from '$lib/stores/auth.svelte';
-
-/**
- * Check if the current user can perform an action on a resource
- */
-/**
- * Permission mappings for each role
- */
-export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
-	superadmin: ['*'], // Can do everything
-	admin_fzag: [
-		'user.create',
-		'user.read',
-		'user.update',
-		'user.delete',
-		'team.create',
-		'team.read',
-		'team.update',
-		'team.delete',
-		'project.create',
-		'project.read',
-		'project.update',
-		'project.delete'
-	],
-	fzag: [
-		'user.create',
-		'user.read',
-		'user.update',
-		'team.read',
-		'team.update',
-		'project.create',
-		'project.read',
-		'project.update',
-		'project.delete'
-	],
-	admin_planer: [
-		'user.create',
-		'user.read',
-		'user.update',
-		'team.read',
-		'project.create',
-		'project.read',
-		'project.update'
-	],
-	planer: ['user.read', 'team.read', 'project.read', 'project.update'],
-	admin_entrepreneur: ['user.create', 'user.read', 'team.read', 'project.read'],
-	entrepreneur: ['team.read', 'project.read']
-};
+import { canManageRole, auth } from '$lib/stores/auth.svelte';
 
 export function canPerform(action: string, resource: string): boolean {
 	if (!auth.user) return false;
-
-	const role = auth.user.role;
-	const rolePerms = ROLE_PERMISSIONS[role] || [];
+	const rolePerms = auth.user.permissions || [];
 	const permission = `${resource}.${action}`;
-
-	// Superadmin has all permissions
-	if (rolePerms.includes('*')) return true;
-
 	return rolePerms.includes(permission);
 }
 
