@@ -2,6 +2,10 @@ package exporting
 
 import (
 	"context"
+	"fmt"
+	"math"
+	"strings"
+	"unicode"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainExport "github.com/besart951/go_infra_link/backend/internal/domain/exporting"
@@ -77,22 +81,14 @@ func (p *DataProvider) ResolveControllers(ctx context.Context, req domainExport.
 		ids = append(ids, id)
 	}
 
-	controllers, err := p.spsControllers.GetByIds(ids)
+	controllers, err := p.spsControllers.GetByIdsForExport(ids)
 	if err != nil {
 		return nil, err
 	}
 
 	out := make([]domainExport.Controller, 0, len(controllers))
 	for _, c := range controllers {
-		ga := ""
-		if c.GADevice != nil {
-			ga = *c.GADevice
-		}
-		out = append(out, domainExport.Controller{
-			ID:               c.ID,
-			ControlCabinetID: c.ControlCabinetID,
-			GADevice:         ga,
-		})
+		out = append(out, buildExportController(c))
 	}
 
 	return out, nil
@@ -114,6 +110,80 @@ func (p *DataProvider) ListFieldDevicesByController(ctx context.Context, control
 	}
 
 	return result.Items, result.Total, nil
+}
+
+func buildExportController(c domainFacility.SPSController) domainExport.Controller {
+	ga := derefStr(c.GADevice)
+	building := c.ControlCabinet.Building
+	minSysPart := minSystemPartNumber(c.SPSControllerSystemTypes)
+	bgStr := fmt.Sprintf("%d", building.BuildingGroup)
+
+	return domainExport.Controller{
+		ID:               c.ID,
+		ControlCabinetID: c.ControlCabinetID,
+		GADevice:         ga,
+
+		IWSCode:             building.IWSCode,
+		BuildingGroup:       building.BuildingGroup,
+		ControlCabinetNr:    derefStr(c.ControlCabinet.ControlCabinetNr),
+		MinSystemPartNumber: minSysPart,
+		DeviceName:          strings.Join(filterEmpty([]string{building.IWSCode, bgStr, minSysPart, ga}), "_"),
+		DeviceInstance:      lastTwoIWSCode(building.IWSCode) + convertGADeviceToIndex(ga) + bgStr,
+		DeviceDescription:   derefStr(c.DeviceDescription),
+		DeviceLocation:      derefStr(c.DeviceLocation),
+		IPAddress:           derefStr(c.IPAddress),
+		Subnet:              derefStr(c.Subnet),
+		Gateway:             derefStr(c.Gateway),
+		VLAN:                derefStr(c.Vlan),
+	}
+}
+
+func minSystemPartNumber(systemTypes []domainFacility.SPSControllerSystemType) string {
+	lowest := math.MaxInt
+	for _, st := range systemTypes {
+		if st.Number != nil && *st.Number < lowest {
+			lowest = *st.Number
+		}
+	}
+	if lowest == math.MaxInt {
+		lowest = 0
+	}
+	return fmt.Sprintf("%04d", lowest)
+}
+
+func convertGADeviceToIndex(gaDevice string) string {
+	if gaDevice == "" {
+		return "00"
+	}
+	ch := unicode.ToUpper(rune(gaDevice[0]))
+	if ch < 'A' || ch > 'Z' {
+		return "00"
+	}
+	return fmt.Sprintf("%02d", ch-'A')
+}
+
+func lastTwoIWSCode(iwsCode string) string {
+	if len(iwsCode) < 2 {
+		return iwsCode
+	}
+	return iwsCode[len(iwsCode)-2:]
+}
+
+func derefStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+func filterEmpty(parts []string) []string {
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func uniqueUUIDs(ids []uuid.UUID) []uuid.UUID {

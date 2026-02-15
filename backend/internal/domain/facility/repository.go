@@ -36,6 +36,7 @@ type SPSControllerRepository interface {
 	ListGADevicesByControlCabinetID(controlCabinetID uuid.UUID) ([]string, error)
 	ExistsGADevice(controlCabinetID uuid.UUID, gaDevice string, excludeID *uuid.UUID) (bool, error)
 	ExistsIPAddressVlan(ipAddress string, vlan string, excludeID *uuid.UUID) (bool, error)
+	GetByIdsForExport(ids []uuid.UUID) ([]SPSController, error)
 }
 type SPSControllerSystemTypeRepository = domain.Repository[SPSControllerSystemType]
 type FieldDeviceRepository = domain.Repository[FieldDevice]

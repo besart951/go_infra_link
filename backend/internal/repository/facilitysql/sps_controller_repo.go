@@ -166,3 +166,18 @@ func (r *spsControllerRepo) ExistsIPAddressVlan(ipAddress string, vlan string, e
 	}
 	return count > 0, nil
 }
+
+func (r *spsControllerRepo) GetByIdsForExport(ids []uuid.UUID) ([]domainFacility.SPSController, error) {
+	if len(ids) == 0 {
+		return []domainFacility.SPSController{}, nil
+	}
+	var items []domainFacility.SPSController
+	err := r.db.
+		Where("sps_controllers.deleted_at IS NULL").
+		Where("sps_controllers.id IN ?", ids).
+		Preload("ControlCabinet").
+		Preload("ControlCabinet.Building").
+		Preload("SPSControllerSystemTypes").
+		Find(&items).Error
+	return items, err
+}

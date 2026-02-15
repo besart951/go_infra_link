@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 
 	domainExport "github.com/besart951/go_infra_link/backend/internal/domain/exporting"
@@ -50,6 +49,51 @@ var headings = []string{
 	"Drehzahl",
 }
 
+// styles holds pre-created excelize style IDs for the workbook.
+type styles struct {
+	headerTitle    int // Row 1: bold, size 16
+	headerInfo     int // Rows 2-10: bold
+	columnHeading  int // Heading row: bold, size 12, light gray background
+	firstLineStyle int // Device first-line: bold, light blue background
+}
+
+func createStyles(f *excelize.File) (styles, error) {
+	var s styles
+	var err error
+
+	s.headerTitle, err = f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Bold: true, Size: 16},
+	})
+	if err != nil {
+		return s, err
+	}
+
+	s.headerInfo, err = f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Bold: true},
+	})
+	if err != nil {
+		return s, err
+	}
+
+	s.columnHeading, err = f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Bold: true, Size: 12},
+		Fill: excelize.Fill{Type: "pattern", Pattern: 1, Color: []string{"F0F0F0"}},
+	})
+	if err != nil {
+		return s, err
+	}
+
+	s.firstLineStyle, err = f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Bold: true},
+		Fill: excelize.Fill{Type: "pattern", Pattern: 1, Color: []string{"ADD8E6"}},
+	})
+	if err != nil {
+		return s, err
+	}
+
+	return s, nil
+}
+
 type ExcelizeGenerator struct{}
 
 func NewExcelizeGenerator() *ExcelizeGenerator {
@@ -59,6 +103,11 @@ func NewExcelizeGenerator() *ExcelizeGenerator {
 func (g *ExcelizeGenerator) GenerateWorkbook(ctx context.Context, outputPath string, controllers []domainExport.Controller, perControllerDevices map[uuid.UUID][]domainFacility.FieldDevice) error {
 	f := excelize.NewFile()
 	defer func() { _ = f.Close() }()
+
+	st, err := createStyles(f)
+	if err != nil {
+		return err
+	}
 
 	defaultSheet := f.GetSheetName(0)
 	if defaultSheet != "" {
@@ -80,30 +129,41 @@ func (g *ExcelizeGenerator) GenerateWorkbook(ctx context.Context, outputPath str
 		}
 
 		rowIdx := 1
-		for _, row := range controllerHeaderRows(controller) {
-			if err := stream.SetRow(fmt.Sprintf("A%d", rowIdx), toRow(row)); err != nil {
+
+		// Controller header rows
+		headerRows := controllerHeaderRows(controller)
+		for i, row := range headerRows {
+			styleID := st.headerInfo
+			if i == 0 {
+				styleID = st.headerTitle
+			}
+			if err := stream.SetRow(cell("A", rowIdx), styledRow(row, styleID)); err != nil {
 				return err
 			}
 			rowIdx++
 		}
-		if err := stream.SetRow(fmt.Sprintf("A%d", rowIdx), toRow([]string{" "})); err != nil {
+
+		// Blank separator row
+		if err := stream.SetRow(cell("A", rowIdx), []any{excelize.Cell{Value: " "}}); err != nil {
 			return err
 		}
 		rowIdx++
 
-		if err := stream.SetRow(fmt.Sprintf("A%d", rowIdx), toRow(headings)); err != nil {
+		// Column headings
+		if err := stream.SetRow(cell("A", rowIdx), styledRow(headings, st.columnHeading)); err != nil {
 			return err
 		}
 		rowIdx++
 
+		// Data rows
 		for _, device := range perControllerDevices[controller.ID] {
-			if err := stream.SetRow(fmt.Sprintf("A%d", rowIdx), toAnyRow(firstLine(device))); err != nil {
+			if err := stream.SetRow(cell("A", rowIdx), styledAnyRow(firstLine(controller, device), st.firstLineStyle)); err != nil {
 				return err
 			}
 			rowIdx++
 
 			for _, bo := range device.BacnetObjects {
-				if err := stream.SetRow(fmt.Sprintf("A%d", rowIdx), toAnyRow(bacnetLine(device, bo))); err != nil {
+				if err := stream.SetRow(cell("A", rowIdx), anyToCells(bacnetLine(controller, device, bo))); err != nil {
 					return err
 				}
 				rowIdx++
@@ -183,23 +243,34 @@ func (g *ExcelizeGenerator) GenerateZipByCabinet(ctx context.Context, outputPath
 	return zw.Close()
 }
 
-func controllerHeaderRows(controller domainExport.Controller) [][]string {
+// ---------------------------------------------------------------------------
+// Controller header
+// ---------------------------------------------------------------------------
+
+func controllerHeaderRows(ctrl domainExport.Controller) [][]string {
+	bgStr := fmt.Sprintf("%d", ctrl.BuildingGroup)
+	schaltschrankNr := strings.Join(filterEmpty([]string{bgStr, ctrl.MinSystemPartNumber, "00"}), "_")
+
 	return [][]string{
-		{"Projekt Controller", controller.GADevice},
-		{"GA-Gerät:", controller.GADevice},
-		{"Schaltschrank-Nr.", controller.ControlCabinetID.String()},
-		{"Device Name:", ""},
-		{"Device Instance:", ""},
-		{"Device Description:", ""},
-		{"Device Location:", ""},
-		{"IP-Adresse:", ""},
-		{"Subnetz:", ""},
-		{"Gateway:", ""},
-		{"VLAN:", ""},
+		{"Projekt Controller", ctrl.GADevice},
+		{"GA-Gerät:", ctrl.GADevice},
+		{"Schaltschrank-Nr.", schaltschrankNr},
+		{"Device Name:", ctrl.DeviceName},
+		{"Device Instance:", ctrl.DeviceInstance},
+		{"Device Description:", ctrl.DeviceDescription},
+		{"Device Location:", ctrl.DeviceLocation},
+		{"IP-Adresse:", ctrl.IPAddress},
+		{"Subnetz:", ctrl.Subnet},
+		{"Gateway:", ctrl.Gateway},
+		{"VLAN:", ctrl.VLAN},
 	}
 }
 
-func firstLine(device domainFacility.FieldDevice) []any {
+// ---------------------------------------------------------------------------
+// Data row builders
+// ---------------------------------------------------------------------------
+
+func firstLine(ctrl domainExport.Controller, device domainFacility.FieldDevice) []any {
 	softwareSums := map[string]float64{}
 	hardwareSums := map[string]float64{}
 	for _, key := range softwareKeys {
@@ -226,7 +297,7 @@ func firstLine(device domainFacility.FieldDevice) []any {
 	}
 
 	row := []any{
-		buildBacnetObjectName(device, ""),
+		buildBacnetObjectName(ctrl, device, ""),
 		buildDescription(device, ""),
 		"",
 		"",
@@ -267,13 +338,13 @@ func firstLine(device domainFacility.FieldDevice) []any {
 	return row
 }
 
-func bacnetLine(device domainFacility.FieldDevice, bo domainFacility.BacnetObject) []any {
+func bacnetLine(ctrl domainExport.Controller, device domainFacility.FieldDevice, bo domainFacility.BacnetObject) []any {
 	s := softwareMetrics(bo)
 	h := hardwareMetrics(bo)
 	address := softwareAddress(bo)
 
 	row := []any{
-		buildBacnetObjectName(device, address),
+		buildBacnetObjectName(ctrl, device, address),
 		buildDescription(device, bo.TextFix),
 		aggregateStateTexts(bo.StateText),
 		notificationNC(bo.NotificationClass),
@@ -304,6 +375,10 @@ func bacnetLine(device domainFacility.FieldDevice, bo domainFacility.BacnetObjec
 	return row
 }
 
+// ---------------------------------------------------------------------------
+// BACnet helpers
+// ---------------------------------------------------------------------------
+
 func softwareMetrics(bo domainFacility.BacnetObject) map[string]float64 {
 	out := map[string]float64{}
 	for _, key := range softwareKeys {
@@ -321,7 +396,7 @@ func softwareAddress(bo domainFacility.BacnetObject) string {
 	if key == "" {
 		return ""
 	}
-	return key + strconv.FormatInt(int64(bo.SoftwareNumber), 10)
+	return fmt.Sprintf("%s%02d", key, bo.SoftwareNumber)
 }
 
 func hardwareMetrics(bo domainFacility.BacnetObject) map[string]float64 {
@@ -336,15 +411,26 @@ func hardwareMetrics(bo domainFacility.BacnetObject) map[string]float64 {
 	return out
 }
 
-func buildBacnetObjectName(device domainFacility.FieldDevice, suffix string) string {
-	parts := []string{}
-	if sysController := device.SPSControllerSystemType.SPSController; sysController.GADevice != nil {
-		parts = append(parts, *sysController.GADevice)
+func buildBacnetObjectName(ctrl domainExport.Controller, device domainFacility.FieldDevice, suffix string) string {
+	sysTypeNr := ""
+	if device.SPSControllerSystemType.Number != nil {
+		sysTypeNr = fmt.Sprintf("%04d", *device.SPSControllerSystemType.Number)
 	}
+
+	devicePart := ""
 	if device.SystemPart.ShortName != "" || device.Apparat.ShortName != "" {
-		parts = append(parts, device.SystemPart.ShortName+device.Apparat.ShortName+fmt.Sprintf("%02d", device.ApparatNr))
+		devicePart = device.SystemPart.ShortName + device.Apparat.ShortName + fmt.Sprintf("%02d", device.ApparatNr)
 	}
-	base := strings.Join(parts, "_")
+
+	nameParts := filterEmpty([]string{
+		ctrl.IWSCode,
+		fmt.Sprintf("%d", ctrl.BuildingGroup),
+		sysTypeNr,
+		ctrl.GADevice,
+		devicePart,
+	})
+
+	base := strings.Join(nameParts, "_")
 	if suffix == "" {
 		return base
 	}
@@ -401,6 +487,10 @@ func alarmName(ad *domainFacility.AlarmDefinition) string {
 	return ad.Name
 }
 
+// ---------------------------------------------------------------------------
+// Specification helpers
+// ---------------------------------------------------------------------------
+
 func strPtr(v *string) string {
 	if v == nil {
 		return ""
@@ -441,6 +531,10 @@ func specFloat(spec *domainFacility.Specification, getter func(*domainFacility.S
 	return *v
 }
 
+// ---------------------------------------------------------------------------
+// Sorting / naming
+// ---------------------------------------------------------------------------
+
 func sortedControllers(controllers []domainExport.Controller) []domainExport.Controller {
 	out := append([]domainExport.Controller{}, controllers...)
 	sort.Slice(out, func(i, j int) bool {
@@ -453,8 +547,8 @@ func sortedControllers(controllers []domainExport.Controller) []domainExport.Con
 }
 
 func safeSheetName(ga string, id uuid.UUID) string {
-	name := strings.TrimSpace(ga)
-	if name == "" {
+	name := "Projekt Controller " + strings.TrimSpace(ga)
+	if strings.TrimSpace(ga) == "" {
 		name = "controller-" + id.String()[:8]
 	}
 	invalid := []string{"\\", "/", "*", "?", ":", "[", "]"}
@@ -467,14 +561,34 @@ func safeSheetName(ga string, id uuid.UUID) string {
 	return name
 }
 
-func toRow(values []string) []any {
+// ---------------------------------------------------------------------------
+// Cell / row helpers for excelize StreamWriter
+// ---------------------------------------------------------------------------
+
+func cell(col string, row int) string {
+	return fmt.Sprintf("%s%d", col, row)
+}
+
+func styledRow(values []string, styleID int) []any {
 	out := make([]any, 0, len(values))
 	for _, v := range values {
-		out = append(out, v)
+		out = append(out, excelize.Cell{StyleID: styleID, Value: v})
 	}
 	return out
 }
 
-func toAnyRow(values []any) []any {
-	return values
+func styledAnyRow(values []any, styleID int) []any {
+	out := make([]any, 0, len(values))
+	for _, v := range values {
+		out = append(out, excelize.Cell{StyleID: styleID, Value: v})
+	}
+	return out
+}
+
+func anyToCells(values []any) []any {
+	out := make([]any, 0, len(values))
+	for _, v := range values {
+		out = append(out, excelize.Cell{Value: v})
+	}
+	return out
 }

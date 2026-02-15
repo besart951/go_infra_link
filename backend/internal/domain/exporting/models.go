@@ -48,4 +48,17 @@ type Controller struct {
 	ID               uuid.UUID
 	ControlCabinetID uuid.UUID
 	GADevice         string
+
+	IWSCode             string
+	BuildingGroup       int
+	ControlCabinetNr    string
+	MinSystemPartNumber string // 4-digit zero-padded, e.g. "0100"
+	DeviceName          string // computed: {iwsCode}_{buildingGroup}_{minSysPart}_{gaDevice}
+	DeviceInstance      string // computed: {lastTwoIws}{gaDeviceIndex}{buildingGroup}
+	DeviceDescription   string
+	DeviceLocation      string
+	IPAddress           string
+	Subnet              string
+	Gateway             string
+	VLAN                string
 }
