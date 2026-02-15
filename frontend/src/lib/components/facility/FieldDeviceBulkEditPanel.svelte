@@ -11,7 +11,7 @@
 	import type {
 		Apparat,
 		SystemPart,
-		UpdateFieldDeviceRequest,
+		BulkUpdateFieldDeviceItem,
 		SpecificationInput
 	} from '$lib/domain/facility/index.js';
 
@@ -25,7 +25,7 @@
 
 	let { selectedCount, selectedIds, allApparats, allSystemParts, editing }: Props = $props();
 
-	let bulkEditValues = $state<Partial<UpdateFieldDeviceRequest>>({});
+	let bulkEditValues = $state<Partial<BulkUpdateFieldDeviceItem>>({});
 	let bulkSpecValues = $state<Partial<SpecificationInput>>({});
 	let showBulkSpecFields = $state(false);
 
@@ -41,7 +41,7 @@
 		for (const deviceId of selectedIds) {
 			for (const [field, value] of Object.entries(bulkEditValues)) {
 				if (value !== undefined && value !== '') {
-					editing.queueEdit(deviceId, field as keyof UpdateFieldDeviceRequest, value);
+					editing.queueEdit(deviceId, field as keyof BulkUpdateFieldDeviceItem, value);
 					appliedCount++;
 				}
 			}

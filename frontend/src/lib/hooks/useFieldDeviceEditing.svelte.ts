@@ -255,7 +255,6 @@ export function useFieldDeviceEditing(projectId?: string) {
 							id: '', // Temporary, will be filled on next refresh
 							created_at: new Date().toISOString(),
 							updated_at: new Date().toISOString(),
-							deleted_at: null,
 							field_device_id: updated.id,
 							specification_supplier: undefined,
 							specification_brand: undefined,
@@ -263,11 +262,11 @@ export function useFieldDeviceEditing(projectId?: string) {
 							additional_info_motor_valve: undefined,
 							additional_info_size: undefined,
 							additional_information_installation_location: undefined,
-							electricalConnectionPH: undefined,
-							electricalConnectionACDC: undefined,
-							electricalConnectionAmperage: undefined,
-							electricalConnectionPower: undefined,
-							electricalConnectionRotation: undefined,
+							electrical_connection_ph: undefined,
+							electrical_connection_acdc: undefined,
+							electrical_connection_amperage: undefined,
+							electrical_connection_power: undefined,
+							electrical_connection_rotation: undefined,
 							...specPatch
 						}
 					};
@@ -745,7 +744,6 @@ export function useFieldDeviceEditing(projectId?: string) {
 										id: '', // Will be populated on next full refresh
 										created_at: new Date().toISOString(),
 										updated_at: new Date().toISOString(),
-										deleted_at: null,
 										field_device_id: updated.id,
 										specification_supplier: undefined,
 										specification_brand: undefined,
@@ -753,11 +751,11 @@ export function useFieldDeviceEditing(projectId?: string) {
 										additional_info_motor_valve: undefined,
 										additional_info_size: undefined,
 										additional_information_installation_location: undefined,
-										electricalConnectionPH: undefined,
-										electricalConnectionACDC: undefined,
-										electricalConnectionAmperage: undefined,
-										electricalConnectionPower: undefined,
-										electricalConnectionRotation: undefined,
+										electrical_connection_ph: undefined,
+										electrical_connection_acdc: undefined,
+										electrical_connection_amperage: undefined,
+										electrical_connection_power: undefined,
+										electrical_connection_rotation: undefined,
 										...successfulSpecPatch
 									}
 								};

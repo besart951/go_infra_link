@@ -10,7 +10,7 @@ services:
       - .env
     environment:
       - HTTP_ADDR=:${BACKEND_PORT:-8080}
-      - DATABASE_URL=${DATABASE_URL:-host=postgres user=${POSTGRES_USER:-postgres} password=${POSTGRES_PASSWORD:-postgres} dbname=${POSTGRES_DB:-go_infra_link} port=5432 sslmode=disable}
+      - DATABASE_URL=host=postgres user=${POSTGRES_USER:-postgres} password=${POSTGRES_PASSWORD:-postgres} dbname=${POSTGRES_DB:-go_infra_link} port=5432 sslmode=disable
     volumes:
       - ./backend:/src
     depends_on:

@@ -261,26 +261,15 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 		return nil, err
 	}
 
-	// Fetch items with preloads
-	// Create subquery to handle DISTINCT with ORDER BY properly
 	var items []domainFacility.FieldDevice
 
-	// Get distinct IDs with sorting
-	var distinctIDs []uuid.UUID
-	subquery := query
-	subquery = applyFieldDeviceSorting(subquery, params)
+	distinctIDs := query.Select("DISTINCT field_devices.id")
+	orderedQuery := r.db.
+		Model(&domainFacility.FieldDevice{}).
+		Joins("JOIN (?) ids ON ids.id = field_devices.id", distinctIDs)
+	orderedQuery = applyFieldDeviceSorting(orderedQuery, params)
 
-	if err := subquery.
-		Select("DISTINCT field_devices.id").
-		Limit(limit).
-		Offset(offset).
-		Scan(&distinctIDs).Error; err != nil {
-		return nil, err
-	}
-
-	// Fetch full records with preloads
-	if err := r.db.
-		Where("id IN ?", distinctIDs).
+	if err := orderedQuery.
 		Preload("Specification").
 		Preload("SPSControllerSystemType").
 		Preload("SPSControllerSystemType.SPSController").

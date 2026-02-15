@@ -1,6 +1,8 @@
 import { writable } from 'svelte/store';
+import deCHFallback from './translations/de_CH.json';
 
 export type Locale = 'de-CH';
+export type TranslationParams = Record<string, string | number | boolean | null | undefined>;
 
 interface TranslationStore {
 	locale: Locale;
@@ -13,7 +15,11 @@ const translations: Record<Locale, Record<string, any>> = {
 	'de-CH': {}
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const localTranslations: Record<Locale, Record<string, any>> = {
+	'de-CH': deCHFallback as Record<string, any>
+};
+
+const API_BASE_PATH = '/api/v1';
 
 function createI18nStore() {
 	const defaultLocale: Locale = 'de-CH';
@@ -30,10 +36,27 @@ function createI18nStore() {
 	async function loadTranslations(locale: Locale): Promise<void> {
 		update((store) => ({ ...store, isLoading: true, error: null }));
 
+		const fallbackData = localTranslations[locale];
+		const hasFallback = Boolean(fallbackData && Object.keys(fallbackData).length > 0);
+
+		if (hasFallback) {
+			translations[locale] = fallbackData;
+			currentTranslations = fallbackData;
+			update((store) => ({
+				...store,
+				locale,
+				translations: fallbackData,
+				isLoading: false,
+				error: null
+			}));
+		}
+
 		try {
 			// Convert locale format: 'de-CH' -> 'de_CH'
 			const localeParam = locale.replace('-', '_');
-			const response = await fetch(`${API_BASE_URL}/api/v1/i18n/${localeParam}`);
+			const response = await fetch(`${API_BASE_PATH}/i18n/${localeParam}`, {
+				credentials: 'include'
+			});
 
 			if (!response.ok) {
 				throw new Error(`Failed to load translations: ${response.statusText}`);
@@ -51,6 +74,11 @@ function createI18nStore() {
 				error: null
 			}));
 		} catch (err) {
+			if (hasFallback) {
+				console.warn('Failed to refresh translations from backend, using local fallback:', err);
+				return;
+			}
+
 			const errorMsg = err instanceof Error ? err.message : 'Failed to load translations';
 			update((store) => ({
 				...store,
@@ -86,21 +114,40 @@ function createI18nStore() {
 			});
 			return loadTranslations(currentLocale);
 		},
-		getTranslation: (key: string): string => {
-			const parts = key.split('.');
-			let current: any = currentTranslations;
-
-			for (const part of parts) {
-				if (current && typeof current === 'object' && part in current) {
-					current = current[part];
-				} else {
-					return key; // Return key if translation not found
-				}
-			}
-
-			return typeof current === 'string' ? current : key;
+		getTranslation: (key: string, params?: TranslationParams): string => {
+			return getTranslationWithParams(key, params);
 		}
 	};
+
+	function interpolate(template: string, params?: TranslationParams): string {
+		if (!params) return template;
+
+		let result = template;
+		for (const [name, rawValue] of Object.entries(params)) {
+			const value = String(rawValue ?? '');
+			result = result
+				.replaceAll(`{${name}}`, value)
+				.replaceAll(`{{${name}}}`, value)
+				.replaceAll(`:${name}`, value);
+		}
+
+		return result;
+	}
+
+	function getTranslationWithParams(key: string, params?: TranslationParams): string {
+		const parts = key.split('.');
+		let current: any = currentTranslations;
+
+		for (const part of parts) {
+			if (current && typeof current === 'object' && part in current) {
+				current = current[part];
+			} else {
+				return key; // Return key if translation not found
+			}
+		}
+
+		return typeof current === 'string' ? interpolate(current, params) : key;
+	}
 }
 
 export const i18n = createI18nStore();
@@ -109,6 +156,6 @@ export const i18n = createI18nStore();
  * Helper function to get translation by key
  * Usage: t('auth.login') returns 'Anmelden'
  */
-export function t(key: string): string {
-	return i18n.getTranslation(key);
+export function t(key: string, params?: TranslationParams): string {
+	return i18n.getTranslation(key, params);
 }

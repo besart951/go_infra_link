@@ -19,8 +19,8 @@
 	let isSubmitting = $state(false);
 	let errors: Record<string, string> = $state({});
 	let successMessage = $state('');
-	let iwsCode = $state(data.building.iws_code);
-	let buildingGroup = $state(data.building.building_group);
+	let iwsCode = $state('');
+	let buildingGroup = $state(0);
 
 	$effect(() => {
 		iwsCode = data.building.iws_code;

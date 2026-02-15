@@ -1,6 +1,8 @@
 import { i18n } from './index.js';
 import type { Readable } from 'svelte/store';
 
+export type TranslationParams = Record<string, string | number | boolean | null | undefined>;
+
 /**
  * Reactive translation getter
  * Returns a Svelte store that provides the translation function
@@ -11,11 +13,13 @@ import type { Readable } from 'svelte/store';
  * </script>
  * <div>{$t('auth.login')}</div>
  */
-export function createTranslator(): Readable<(key: string) => string> {
+export function createTranslator(): Readable<
+	(key: string, params?: TranslationParams) => string
+> {
 	return {
 		subscribe(fn) {
 			return i18n.subscribe(() => {
-				fn((key: string) => i18n.getTranslation(key));
+				fn((key: string, params?: TranslationParams) => i18n.getTranslation(key, params));
 			});
 		}
 	};
