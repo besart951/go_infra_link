@@ -12,7 +12,9 @@
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import { objectDataStore } from '$lib/stores/list/entityStores.js';
 	import type { ObjectData } from '$lib/domain/facility/index.js';
-	import { deleteObjectData, getObjectData } from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageObjectDataUseCase } from '$lib/application/useCases/facility/manageObjectDataUseCase.js';
+	import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
+	const manageObjectData = new ManageObjectDataUseCase(objectDataRepository);
 	import ObjectDataForm from '$lib/components/facility/ObjectDataForm.svelte';
 	import { createTranslator } from '$lib/i18n/translator';
 
@@ -23,7 +25,7 @@
 
 	async function handleEdit(item: ObjectData) {
 		try {
-			editingItem = await getObjectData(item.id);
+			editingItem = await manageObjectData.get(item.id);
 		} catch (error) {
 			console.error(error);
 			editingItem = item;
@@ -65,7 +67,7 @@
 		});
 		if (!ok) return;
 		try {
-			await deleteObjectData(item.id);
+			await manageObjectData.delete(item.id);
 			addToast($t('facility.object_data_deleted'), 'success');
 			objectDataStore.reload();
 		} catch (err) {

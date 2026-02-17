@@ -3,11 +3,10 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import {
-		createAlarmDefinition,
-		updateAlarmDefinition
-	} from '$lib/infrastructure/api/facility.adapter.js';
 	import type { AlarmDefinition } from '$lib/domain/facility/index.js';
+	import { ManageAlarmDefinitionUseCase } from '$lib/application/useCases/facility/manageAlarmDefinitionUseCase.js';
+	import { alarmDefinitionRepository } from '$lib/infrastructure/api/alarmDefinitionRepository.js';
+	const manageAlarmDefinition = new ManageAlarmDefinitionUseCase(alarmDefinitionRepository);
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 
 	interface AlarmDefinitionFormProps {
@@ -37,12 +36,12 @@
 	async function handleSubmit() {
 		await formState.handleSubmit(async () => {
 			if (initialData) {
-				return await updateAlarmDefinition(initialData.id, {
+				return await manageAlarmDefinition.update(initialData.id, {
 					name,
 					alarm_note: alarm_note || undefined
 				});
 			} else {
-				return await createAlarmDefinition({
+				return await manageAlarmDefinition.create({
 					name,
 					alarm_note: alarm_note || undefined
 				});

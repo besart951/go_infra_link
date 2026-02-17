@@ -19,7 +19,9 @@
       "Bash(node -e \"\nconst fs = require\\(''fs''\\);\nconst path = ''C:/Users/besart.morina/Documents/schrott/go_infra_link/frontend/src/lib/components/facility/FieldDeviceListView.svelte'';\nlet lines = fs.readFileSync\\(path, ''utf-8''\\).split\\(''\\\\n''\\);\n// Line 919 \\(index 918\\): add one more tab to match siblings \\(10 tabs\\)\n// Line 928 \\(index 927\\): same\nfor \\(const idx of [918, 927]\\) {\n  // Count current tabs\n  const match = lines[idx].match\\(/^\\\\t+/\\);\n  if \\(match && match[0].length === 9\\) {\n    lines[idx] = ''\\\\t'' + lines[idx];\n  }\n}\nfs.writeFileSync\\(path, lines.join\\(''\\\\n''\\)\\);\nconsole.log\\(''Fixed indentation''\\);\n\")",
       "Read(//c/Users/besar/dev/infralink/**)",
       "Bash(golangci-lint run:*)",
-      "Bash(go vet:*)"
+      "Bash(go vet:*)",
+      "Bash(cat:*)",
+      "Bash(git -C \"C:/Users/besart.morina/Documents/schrott/go_infra_link\" status --short)"
     ]
   }
 }

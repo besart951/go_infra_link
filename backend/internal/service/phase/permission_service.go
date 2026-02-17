@@ -25,14 +25,7 @@ func (s *PermissionService) Create(perm *project.PhasePermission) error {
 }
 
 func (s *PermissionService) GetByID(id uuid.UUID) (*project.PhasePermission, error) {
-	perms, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(perms) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return perms[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *PermissionService) GetByPhaseAndRole(phaseID uuid.UUID, role user.Role) (*project.PhasePermission, error) {

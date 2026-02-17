@@ -28,14 +28,7 @@ func (s *AlarmDefinitionService) List(page, limit int, search string) (*domain.P
 }
 
 func (s *AlarmDefinitionService) GetByID(id uuid.UUID) (*domainFacility.AlarmDefinition, error) {
-	items, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(items) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return items[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *AlarmDefinitionService) Update(alarmDefinition *domainFacility.AlarmDefinition) error {

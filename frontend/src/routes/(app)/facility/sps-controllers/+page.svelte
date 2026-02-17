@@ -13,10 +13,10 @@
 	import { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
-	import {
-		deleteSPSController,
-		getControlCabinets
-	} from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageSPSControllerUseCase } from '$lib/application/useCases/facility/manageSPSControllerUseCase.js';
+	import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
+	import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
+	const manageSPSController = new ManageSPSControllerUseCase(spsControllerRepository);
 	import type { ControlCabinet } from '$lib/domain/facility/index.js';
 	import { createTranslator } from '$lib/i18n/translator';
 
@@ -52,8 +52,8 @@
 		missingIds.forEach((id) => cabinetRequests.add(id));
 
 		try {
-			const res = await getControlCabinets(missingIds);
-			updateCabinetMap(res.items || []);
+			const cabinets = await controlCabinetRepository.getBulk(missingIds);
+			updateCabinetMap(cabinets);
 		} catch (err) {
 			console.error('Failed to load control cabinets:', err);
 		} finally {
@@ -92,7 +92,7 @@
 		});
 		if (!ok) return;
 		try {
-			await deleteSPSController(item.id);
+			await manageSPSController.delete(item.id);
 			addToast($t('facility.sps_controller_deleted'), 'success');
 			spsControllersStore.reload();
 		} catch (err) {

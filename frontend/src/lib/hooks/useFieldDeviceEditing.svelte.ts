@@ -9,7 +9,7 @@ import {
 	BACNET_SOFTWARE_TYPES,
 	BACNET_HARDWARE_TYPES
 } from '$lib/domain/facility/bacnet-object.js';
-import { bulkUpdateFieldDevices } from '$lib/infrastructure/api/facility.adapter.js';
+import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 import { addToast } from '$lib/components/toast.svelte';
 import { sessionStorage } from '$lib/services/sessionStorageService.js';
 import type {
@@ -617,7 +617,7 @@ export function useFieldDeviceEditing(projectId?: string) {
 		const pendingBacnetSnapshot = new Map(pendingBacnetEdits);
 
 		try {
-			const result = await bulkUpdateFieldDevices({ updates });
+			const result = await fieldDeviceRepository.bulkUpdate({ updates });
 
 			// Process results and track errors
 			const newErrors = new Map(nextErrors);
@@ -961,7 +961,7 @@ export function useFieldDeviceEditing(projectId?: string) {
 		const optimistic = applyEditsToDevice(device, { includeBacnet: false });
 
 		try {
-			const result = await bulkUpdateFieldDevices({ updates: [update] });
+			const result = await fieldDeviceRepository.bulkUpdate({ updates: [update] });
 			const item = result.results.find((r) => r.id === device.id);
 			if (item?.success) {
 				if (pendingEdits.get(device.id) === pendingSnapshot) {
@@ -1007,7 +1007,7 @@ export function useFieldDeviceEditing(projectId?: string) {
 		const optimistic = applyEditsToDevice(device, { includeBacnet: true });
 
 		try {
-			const result = await bulkUpdateFieldDevices({ updates: [update] });
+			const result = await fieldDeviceRepository.bulkUpdate({ updates: [update] });
 			const item = result.results.find((r) => r.id === device.id);
 			if (item?.success) {
 				if (pendingEdits.get(device.id) === pendingEditsSnapshot) {

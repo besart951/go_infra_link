@@ -3,8 +3,10 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { createApparat, updateApparat } from '$lib/infrastructure/api/facility.adapter.js';
 	import type { Apparat } from '$lib/domain/facility/index.js';
+	import { ManageApparatUseCase } from '$lib/application/useCases/facility/manageApparatUseCase.js';
+	import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
+	const manageApparat = new ManageApparatUseCase(apparatRepository);
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 	import SystemPartMultiSelect from './SystemPartMultiSelect.svelte';
 
@@ -47,14 +49,14 @@
 
 		await formState.handleSubmit(async () => {
 			if (initialData) {
-				return await updateApparat(initialData.id, {
+				return await manageApparat.update(initialData.id, {
 					short_name: trimmedShortName,
 					name,
 					description: description || undefined,
 					system_part_ids
 				});
 			} else {
-				return await createApparat({
+				return await manageApparat.create({
 					short_name: trimmedShortName,
 					name,
 					description: description || undefined,

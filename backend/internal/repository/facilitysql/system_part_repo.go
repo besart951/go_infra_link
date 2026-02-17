@@ -40,34 +40,10 @@ func (r *systemPartRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SystemPart
 	return result, nil
 }
 
-func (r *systemPartRepo) Create(entity *domainFacility.SystemPart) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *systemPartRepo) Update(entity *domainFacility.SystemPart) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *systemPartRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *systemPartRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SystemPart], error) {
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*SystemPart to []SystemPart for the interface
-	items := make([]domainFacility.SystemPart, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[domainFacility.SystemPart]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }

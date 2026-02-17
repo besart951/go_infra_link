@@ -28,14 +28,7 @@ func (s *NotificationClassService) List(page, limit int, search string) (*domain
 }
 
 func (s *NotificationClassService) GetByID(id uuid.UUID) (*domainFacility.NotificationClass, error) {
-	items, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(items) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return items[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *NotificationClassService) Update(notificationClass *domainFacility.NotificationClass) error {

@@ -29,40 +29,12 @@ func NewSpecificationRepository(db *gorm.DB) domainFacility.SpecificationStore {
 	}
 }
 
-func (r *specificationRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Specification, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
-func (r *specificationRepo) Create(entity *domainFacility.Specification) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *specificationRepo) Update(entity *domainFacility.Specification) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *specificationRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *specificationRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Specification], error) {
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*Specification to []Specification for the interface
-	items := make([]domainFacility.Specification, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[domainFacility.Specification]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }
 
 func (r *specificationRepo) GetByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) ([]*domainFacility.Specification, error) {

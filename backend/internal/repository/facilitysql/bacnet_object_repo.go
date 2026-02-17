@@ -29,40 +29,12 @@ func NewBacnetObjectRepository(db *gorm.DB) domainFacility.BacnetObjectStore {
 	}
 }
 
-func (r *bacnetObjectRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.BacnetObject, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
-func (r *bacnetObjectRepo) Create(entity *domainFacility.BacnetObject) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *bacnetObjectRepo) Update(entity *domainFacility.BacnetObject) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *bacnetObjectRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *bacnetObjectRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.BacnetObject], error) {
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*BacnetObject to []BacnetObject for the interface
-	items := make([]domainFacility.BacnetObject, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[domainFacility.BacnetObject]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }
 
 func (r *bacnetObjectRepo) GetByFieldDeviceIDs(ids []uuid.UUID) ([]*domainFacility.BacnetObject, error) {

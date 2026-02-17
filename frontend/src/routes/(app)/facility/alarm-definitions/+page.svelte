@@ -13,7 +13,9 @@
 	import { alarmDefinitionsStore } from '$lib/stores/list/entityStores.js';
 	import type { AlarmDefinition } from '$lib/domain/facility/index.js';
 	import AlarmDefinitionForm from '$lib/components/facility/AlarmDefinitionForm.svelte';
-	import { deleteAlarmDefinition } from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageAlarmDefinitionUseCase } from '$lib/application/useCases/facility/manageAlarmDefinitionUseCase.js';
+	import { alarmDefinitionRepository } from '$lib/infrastructure/api/alarmDefinitionRepository.js';
+	const manageAlarmDefinition = new ManageAlarmDefinitionUseCase(alarmDefinitionRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();
@@ -60,7 +62,7 @@
 		});
 		if (!ok) return;
 		try {
-			await deleteAlarmDefinition(item.id);
+			await manageAlarmDefinition.delete(item.id);
 			addToast($t('facility.alarm_definition_deleted'), 'success');
 			alarmDefinitionsStore.reload();
 		} catch (err) {

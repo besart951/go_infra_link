@@ -135,14 +135,13 @@ func (s *Service) CreateControlCabinet(projectID, controlCabinetID uuid.UUID) (*
 }
 
 func (s *Service) UpdateControlCabinet(linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
-	items, err := s.projectControlCabinetRepo.GetByIds([]uuid.UUID{linkID})
+	entity, err := domain.GetByID(s.projectControlCabinetRepo, linkID)
 	if err != nil {
 		return nil, err
 	}
-	if len(items) == 0 || items[0].ProjectID != projectID {
+	if entity.ProjectID != projectID {
 		return nil, domain.ErrNotFound
 	}
-	entity := items[0]
 	entity.ControlCabinetID = controlCabinetID
 	if err := s.projectControlCabinetRepo.Update(entity); err != nil {
 		return nil, err
@@ -151,11 +150,11 @@ func (s *Service) UpdateControlCabinet(linkID, projectID, controlCabinetID uuid.
 }
 
 func (s *Service) DeleteControlCabinet(linkID, projectID uuid.UUID) error {
-	items, err := s.projectControlCabinetRepo.GetByIds([]uuid.UUID{linkID})
+	entity, err := domain.GetByID(s.projectControlCabinetRepo, linkID)
 	if err != nil {
 		return err
 	}
-	if len(items) == 0 || items[0].ProjectID != projectID {
+	if entity.ProjectID != projectID {
 		return domain.ErrNotFound
 	}
 	return s.projectControlCabinetRepo.DeleteByIds([]uuid.UUID{linkID})
@@ -173,14 +172,13 @@ func (s *Service) CreateSPSController(projectID, spsControllerID uuid.UUID) (*do
 }
 
 func (s *Service) UpdateSPSController(linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
-	items, err := s.projectSPSControllerRepo.GetByIds([]uuid.UUID{linkID})
+	entity, err := domain.GetByID(s.projectSPSControllerRepo, linkID)
 	if err != nil {
 		return nil, err
 	}
-	if len(items) == 0 || items[0].ProjectID != projectID {
+	if entity.ProjectID != projectID {
 		return nil, domain.ErrNotFound
 	}
-	entity := items[0]
 	entity.SPSControllerID = spsControllerID
 	if err := s.projectSPSControllerRepo.Update(entity); err != nil {
 		return nil, err
@@ -189,11 +187,11 @@ func (s *Service) UpdateSPSController(linkID, projectID, spsControllerID uuid.UU
 }
 
 func (s *Service) DeleteSPSController(linkID, projectID uuid.UUID) error {
-	items, err := s.projectSPSControllerRepo.GetByIds([]uuid.UUID{linkID})
+	entity, err := domain.GetByID(s.projectSPSControllerRepo, linkID)
 	if err != nil {
 		return err
 	}
-	if len(items) == 0 || items[0].ProjectID != projectID {
+	if entity.ProjectID != projectID {
 		return domain.ErrNotFound
 	}
 	return s.projectSPSControllerRepo.DeleteByIds([]uuid.UUID{linkID})
@@ -211,61 +209,40 @@ func (s *Service) CreateFieldDevice(projectID, fieldDeviceID uuid.UUID) (*domain
 }
 
 func (s *Service) InviteUser(projectID, userID uuid.UUID) error {
-	projects, err := s.repo.GetByIds([]uuid.UUID{projectID})
-	if err != nil {
+	if _, err := domain.GetByID(s.repo, projectID); err != nil {
 		return err
 	}
-	if len(projects) == 0 {
-		return domain.ErrNotFound
-	}
-	users, err := s.userRepo.GetByIds([]uuid.UUID{userID})
-	if err != nil {
+	if _, err := domain.GetByID(s.userRepo, userID); err != nil {
 		return err
-	}
-	if len(users) == 0 {
-		return domain.ErrNotFound
 	}
 	return s.repo.AddUser(projectID, userID)
 }
 
 func (s *Service) ListUsers(projectID uuid.UUID) ([]domainUser.User, error) {
-	projects, err := s.repo.GetByIds([]uuid.UUID{projectID})
-	if err != nil {
+	if _, err := domain.GetByID(s.repo, projectID); err != nil {
 		return nil, err
-	}
-	if len(projects) == 0 {
-		return nil, domain.ErrNotFound
 	}
 	return s.repo.ListUsers(projectID)
 }
 
 func (s *Service) RemoveUser(projectID, userID uuid.UUID) error {
-	projects, err := s.repo.GetByIds([]uuid.UUID{projectID})
-	if err != nil {
+	if _, err := domain.GetByID(s.repo, projectID); err != nil {
 		return err
 	}
-	if len(projects) == 0 {
-		return domain.ErrNotFound
-	}
-	users, err := s.userRepo.GetByIds([]uuid.UUID{userID})
-	if err != nil {
+	if _, err := domain.GetByID(s.userRepo, userID); err != nil {
 		return err
-	}
-	if len(users) == 0 {
-		return domain.ErrNotFound
 	}
 	return s.repo.RemoveUser(projectID, userID)
 }
 
 func (s *Service) UpdateFieldDevice(linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
-	items, err := s.projectFieldDeviceRepo.GetByIds([]uuid.UUID{linkID})
+	entity, err := domain.GetByID(s.projectFieldDeviceRepo, linkID)
 	if err != nil {
 		return nil, err
 	}
-	if len(items) == 0 || items[0].ProjectID != projectID {
+	if entity.ProjectID != projectID {
 		return nil, domain.ErrNotFound
 	}
-	entity := items[0]
 	entity.FieldDeviceID = fieldDeviceID
 	if err := s.projectFieldDeviceRepo.Update(entity); err != nil {
 		return nil, err
@@ -274,32 +251,24 @@ func (s *Service) UpdateFieldDevice(linkID, projectID, fieldDeviceID uuid.UUID) 
 }
 
 func (s *Service) DeleteFieldDevice(linkID, projectID uuid.UUID) error {
-	items, err := s.projectFieldDeviceRepo.GetByIds([]uuid.UUID{linkID})
+	entity, err := domain.GetByID(s.projectFieldDeviceRepo, linkID)
 	if err != nil {
 		return err
 	}
-	if len(items) == 0 || items[0].ProjectID != projectID {
+	if entity.ProjectID != projectID {
 		return domain.ErrNotFound
 	}
 	return s.projectFieldDeviceRepo.DeleteByIds([]uuid.UUID{linkID})
 }
 
 func (s *Service) AddObjectData(projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error) {
-	projects, err := s.repo.GetByIds([]uuid.UUID{projectID})
+	if _, err := domain.GetByID(s.repo, projectID); err != nil {
+		return nil, err
+	}
+	obj, err := domain.GetByID(s.objectDataRepo, objectDataID)
 	if err != nil {
 		return nil, err
 	}
-	if len(projects) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	objects, err := s.objectDataRepo.GetByIds([]uuid.UUID{objectDataID})
-	if err != nil {
-		return nil, err
-	}
-	if len(objects) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	obj := objects[0]
 	if obj.ProjectID != nil && *obj.ProjectID != projectID {
 		return nil, domain.ErrConflict
 	}
@@ -314,21 +283,13 @@ func (s *Service) AddObjectData(projectID, objectDataID uuid.UUID) (*domainFacil
 }
 
 func (s *Service) RemoveObjectData(projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error) {
-	projects, err := s.repo.GetByIds([]uuid.UUID{projectID})
+	if _, err := domain.GetByID(s.repo, projectID); err != nil {
+		return nil, err
+	}
+	obj, err := domain.GetByID(s.objectDataRepo, objectDataID)
 	if err != nil {
 		return nil, err
 	}
-	if len(projects) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	objects, err := s.objectDataRepo.GetByIds([]uuid.UUID{objectDataID})
-	if err != nil {
-		return nil, err
-	}
-	if len(objects) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	obj := objects[0]
 	if obj.ProjectID == nil || *obj.ProjectID != projectID {
 		return nil, domain.ErrNotFound
 	}
@@ -343,14 +304,7 @@ func (s *Service) GetByIds(ids []uuid.UUID) ([]*domainProject.Project, error) {
 }
 
 func (s *Service) GetByID(id uuid.UUID) (*domainProject.Project, error) {
-	projects, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(projects) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return projects[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *Service) Update(project *domainProject.Project) error {
@@ -405,9 +359,7 @@ func (s *Service) ListObjectData(projectID uuid.UUID, page, limit int, search st
 // For each successfully created field device, it creates a ProjectFieldDevice link.
 // Returns the IDs of the created field devices and any association errors.
 func (s *Service) MultiCreateFieldDevices(projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) ([]uuid.UUID, []string) {
-	// Verify project exists
-	projects, err := s.repo.GetByIds([]uuid.UUID{projectID})
-	if err != nil || len(projects) == 0 {
+	if _, err := domain.GetByID(s.repo, projectID); err != nil {
 		return nil, []string{"project not found"}
 	}
 

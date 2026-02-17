@@ -4,17 +4,10 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import AsyncMultiSelect from '$lib/components/ui/combobox/AsyncMultiSelect.svelte';
 	import { addToast } from '$lib/components/toast.svelte';
-	import {
-		createFieldDeviceExport,
-		getFieldDeviceExportDownloadUrl,
-		getFieldDeviceExportJob,
-		getBuildings,
-		getControlCabinets,
-		getSPSControllers,
-		listBuildings,
-		listControlCabinets,
-		listSPSControllers
-	} from '$lib/infrastructure/api/facility.adapter.js';
+	import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
+	import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
+	import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
+	import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
 	import { getProject, listProjects } from '$lib/infrastructure/api/project.adapter.js';
 	import type {
 		Building,
@@ -90,33 +83,42 @@
 	}
 
 	async function fetchBuildings(search: string): Promise<OptionItem[]> {
-		const res = await listBuildings({ page: 1, limit: 100, search });
+		const res = await buildingRepository.list({
+			pagination: { page: 1, pageSize: 100 },
+			search: { text: search }
+		});
 		return res.items.map(toBuildingOption);
 	}
 
 	async function fetchBuildingsByIds(ids: string[]): Promise<OptionItem[]> {
-		const res = await getBuildings(ids);
-		return res.items.map(toBuildingOption);
+		const items = await buildingRepository.getBulk(ids);
+		return items.map(toBuildingOption);
 	}
 
 	async function fetchControlCabinets(search: string): Promise<OptionItem[]> {
-		const res = await listControlCabinets({ page: 1, limit: 100, search });
+		const res = await controlCabinetRepository.list({
+			pagination: { page: 1, pageSize: 100 },
+			search: { text: search }
+		});
 		return res.items.map(toCabinetOption);
 	}
 
 	async function fetchControlCabinetsByIds(ids: string[]): Promise<OptionItem[]> {
-		const res = await getControlCabinets(ids);
-		return res.items.map(toCabinetOption);
+		const items = await controlCabinetRepository.getBulk(ids);
+		return items.map(toCabinetOption);
 	}
 
 	async function fetchSpsControllers(search: string): Promise<OptionItem[]> {
-		const res = await listSPSControllers({ page: 1, limit: 100, search });
+		const res = await spsControllerRepository.list({
+			pagination: { page: 1, pageSize: 100 },
+			search: { text: search }
+		});
 		return res.items.map(toControllerOption);
 	}
 
 	async function fetchSpsControllersByIds(ids: string[]): Promise<OptionItem[]> {
-		const res = await getSPSControllers(ids);
-		return res.items.map(toControllerOption);
+		const items = await spsControllerRepository.getBulk(ids);
+		return items.map(toControllerOption);
 	}
 
 	function stopPolling() {
@@ -130,7 +132,7 @@
 	async function refreshJobStatus() {
 		if (!activeJob?.job_id) return;
 		try {
-			const next = await getFieldDeviceExportJob(activeJob.job_id);
+			const next = await fieldDeviceRepository.getExportJob(activeJob.job_id);
 			activeJob = next;
 			if (next.status === 'completed') {
 				stopPolling();
@@ -161,7 +163,7 @@
 		}
 		submitting = true;
 		try {
-			const job = await createFieldDeviceExport({
+			const job = await fieldDeviceRepository.createExport({
 				project_ids: selectedProjectIds,
 				buildings_id: selectedBuildingIds,
 				control_cabinet_id: selectedControlCabinetIds,
@@ -185,7 +187,7 @@
 
 	function handleDownload() {
 		if (!activeJob?.job_id) return;
-		window.location.href = getFieldDeviceExportDownloadUrl(activeJob.job_id);
+		window.location.href = fieldDeviceRepository.getExportDownloadUrl(activeJob.job_id);
 	}
 
 	onDestroy(() => {

@@ -48,14 +48,7 @@ func (s *ObjectDataService) ListByApparatAndSystemPartID(page, limit int, search
 }
 
 func (s *ObjectDataService) GetByID(id uuid.UUID) (*domainFacility.ObjectData, error) {
-	items, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(items) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return items[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *ObjectDataService) Update(objectData *domainFacility.ObjectData) error {

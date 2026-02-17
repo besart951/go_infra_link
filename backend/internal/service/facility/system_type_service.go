@@ -24,14 +24,7 @@ func (s *SystemTypeService) Create(systemType *domainFacility.SystemType) error 
 }
 
 func (s *SystemTypeService) GetByID(id uuid.UUID) (*domainFacility.SystemType, error) {
-	systemTypes, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(systemTypes) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return systemTypes[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *SystemTypeService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SystemType], error) {

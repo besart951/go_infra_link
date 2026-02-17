@@ -25,40 +25,12 @@ func NewControlCabinetRepository(db *gorm.DB) domainFacility.ControlCabinetRepos
 	return &controlCabinetRepo{BaseRepository: baseRepo, db: db}
 }
 
-func (r *controlCabinetRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.ControlCabinet, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
-func (r *controlCabinetRepo) Create(entity *domainFacility.ControlCabinet) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *controlCabinetRepo) Update(entity *domainFacility.ControlCabinet) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *controlCabinetRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *controlCabinetRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ControlCabinet], error) {
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*ControlCabinet to []ControlCabinet for the interface
-	items := make([]domainFacility.ControlCabinet, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[domainFacility.ControlCabinet]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }
 
 func (r *controlCabinetRepo) GetPaginatedListByBuildingID(buildingID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ControlCabinet], error) {

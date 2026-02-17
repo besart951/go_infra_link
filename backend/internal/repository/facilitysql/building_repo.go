@@ -29,40 +29,12 @@ func NewBuildingRepository(db *gorm.DB) domainFacility.BuildingRepository {
 	return &buildingRepo{BaseRepository: baseRepo, db: db}
 }
 
-func (r *buildingRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Building, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
-func (r *buildingRepo) Create(entity *domainFacility.Building) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *buildingRepo) Update(entity *domainFacility.Building) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *buildingRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *buildingRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Building], error) {
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*Building to []Building for the interface
-	items := make([]domainFacility.Building, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[domainFacility.Building]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }
 
 func (r *buildingRepo) ExistsIWSCodeGroup(iwsCode string, buildingGroup int, excludeID *uuid.UUID) (bool, error) {

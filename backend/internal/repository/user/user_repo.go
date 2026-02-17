@@ -8,7 +8,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -30,10 +29,6 @@ func NewUserRepository(db *gorm.DB) domainUser.UserRepository {
 	}
 }
 
-func (r *userRepo) GetByIds(ids []uuid.UUID) ([]*domainUser.User, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
 func (r *userRepo) GetByEmail(email string) (*domainUser.User, error) {
 	var user domainUser.User
 	err := r.db.Where("deleted_at IS NULL").Where("email = ?", email).First(&user).Error
@@ -44,10 +39,6 @@ func (r *userRepo) GetByEmail(email string) (*domainUser.User, error) {
 		return nil, err
 	}
 	return &user, nil
-}
-
-func (r *userRepo) Create(entity *domainUser.User) error {
-	return r.BaseRepository.Create(entity)
 }
 
 func (r *userRepo) Update(entity *domainUser.User) error {
@@ -73,10 +64,6 @@ func (r *userRepo) Update(entity *domainUser.User) error {
 	return r.db.Model(&domainUser.User{}).
 		Where("deleted_at IS NULL AND id = ?", entity.ID).
 		Updates(updates).Error
-}
-
-func (r *userRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
 }
 
 func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainUser.User], error) {

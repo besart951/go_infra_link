@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AsyncMultiSelect from '$lib/components/ui/combobox/AsyncMultiSelect.svelte';
-	import { getApparats, listApparats } from '$lib/infrastructure/api/facility.adapter.js';
+	import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
 	import type { Apparat } from '$lib/domain/facility/index.js';
 
 	export let value: string[] = [];
@@ -18,14 +18,17 @@
 	}
 
 	async function fetcher(search: string): Promise<ApparatOption[]> {
-		const res = await listApparats({ search, limit: 50 });
-		return (res.items || []).map(toOption);
+		const res = await apparatRepository.list({
+			pagination: { page: 1, pageSize: 50 },
+			search: { text: search }
+		});
+		return res.items.map(toOption);
 	}
 
 	async function fetchByIds(ids: string[]): Promise<ApparatOption[]> {
 		if (ids.length === 0) return [];
-		const res = await getApparats(ids);
-		return (res.items || []).map(toOption);
+		const items = await apparatRepository.getBulk(ids);
+		return items.map(toOption);
 	}
 </script>
 

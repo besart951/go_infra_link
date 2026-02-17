@@ -13,11 +13,10 @@
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { addToast } from '$lib/components/toast.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
-	import {
-		deleteControlCabinet,
-		getControlCabinetDeleteImpact,
-		getBuildings
-	} from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageControlCabinetUseCase } from '$lib/application/useCases/facility/manageControlCabinetUseCase.js';
+	import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
+	import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
+	const manageControlCabinet = new ManageControlCabinetUseCase(controlCabinetRepository);
 	import type { Building } from '$lib/domain/facility/index.js';
 	import { createTranslator } from '$lib/i18n/translator';
 
@@ -57,8 +56,8 @@
 		missingIds.forEach((id) => buildingRequests.add(id));
 
 		try {
-			const res = await getBuildings(missingIds);
-			updateBuildingMap(res.items || []);
+			const buildings = await buildingRepository.getBulk(missingIds);
+			updateBuildingMap(buildings);
 		} catch (err) {
 			console.error('Failed to load buildings:', err);
 		} finally {
@@ -89,7 +88,7 @@
 
 	async function handleDelete(item: ControlCabinet) {
 		try {
-			const impact = await getControlCabinetDeleteImpact(item.id);
+			const impact = await manageControlCabinet.getDeleteImpact(item.id);
 
 			if (impact.sps_controllers_count > 0) {
 				const ok1 = await confirm({
@@ -114,7 +113,7 @@
 				if (!ok2) return;
 			}
 
-			await deleteControlCabinet(item.id);
+			await manageControlCabinet.delete(item.id);
 			addToast($t('facility.control_cabinet_deleted'), 'success');
 			controlCabinetsStore.reload();
 		} catch (err) {

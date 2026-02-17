@@ -21,40 +21,12 @@ func NewProjectControlCabinetRepository(db *gorm.DB) project.ProjectControlCabin
 	}
 }
 
-func (r *projectControlCabinetRepo) GetByIds(ids []uuid.UUID) ([]*project.ProjectControlCabinet, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
-func (r *projectControlCabinetRepo) Create(entity *project.ProjectControlCabinet) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *projectControlCabinetRepo) Update(entity *project.ProjectControlCabinet) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *projectControlCabinetRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *projectControlCabinetRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[project.ProjectControlCabinet], error) {
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*ProjectControlCabinet to []ProjectControlCabinet for the interface
-	items := make([]project.ProjectControlCabinet, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[project.ProjectControlCabinet]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }
 
 // GetPaginatedListByProjectID retrieves control cabinets for a project with pagination

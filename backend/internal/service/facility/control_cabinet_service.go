@@ -49,14 +49,7 @@ func (s *ControlCabinetService) Create(controlCabinet *domainFacility.ControlCab
 }
 
 func (s *ControlCabinetService) GetByID(id uuid.UUID) (*domainFacility.ControlCabinet, error) {
-	controlCabinets, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(controlCabinets) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return controlCabinets[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *ControlCabinetService) GetByIDs(ids []uuid.UUID) ([]domainFacility.ControlCabinet, error) {
@@ -199,14 +192,8 @@ func (s *ControlCabinetService) DeleteByID(id uuid.UUID) error {
 }
 
 func (s *ControlCabinetService) ensureBuildingExists(buildingID uuid.UUID) error {
-	buildings, err := s.buildingRepo.GetByIds([]uuid.UUID{buildingID})
-	if err != nil {
-		return err
-	}
-	if len(buildings) == 0 {
-		return domain.ErrNotFound
-	}
-	return nil
+	_, err := domain.GetByID(s.buildingRepo, buildingID)
+	return err
 }
 
 func (s *ControlCabinetService) validateRequiredFields(controlCabinet *domainFacility.ControlCabinet) error {

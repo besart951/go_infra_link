@@ -84,14 +84,7 @@ func (s *SPSControllerService) CreateWithSystemTypes(spsController *domainFacili
 }
 
 func (s *SPSControllerService) GetByID(id uuid.UUID) (*domainFacility.SPSController, error) {
-	spsControllers, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(spsControllers) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return spsControllers[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *SPSControllerService) GetByIDs(ids []uuid.UUID) ([]domainFacility.SPSController, error) {
@@ -207,14 +200,8 @@ func (s *SPSControllerService) DeleteByID(id uuid.UUID) error {
 }
 
 func (s *SPSControllerService) ensureControlCabinetExists(controlCabinetID uuid.UUID) error {
-	controlCabinets, err := s.controlCabinetRepo.GetByIds([]uuid.UUID{controlCabinetID})
-	if err != nil {
-		return err
-	}
-	if len(controlCabinets) == 0 {
-		return domain.ErrNotFound
-	}
-	return nil
+	_, err := domain.GetByID(s.controlCabinetRepo, controlCabinetID)
+	return err
 }
 
 func (s *SPSControllerService) loadSystemTypes(systemTypes []domainFacility.SPSControllerSystemType) (map[uuid.UUID]domainFacility.SystemType, error) {
@@ -429,15 +416,12 @@ func (s *SPSControllerService) NextAvailableGADevice(controlCabinetID uuid.UUID,
 	}
 
 	if excludeID != nil {
-		controllers, err := s.repo.GetByIds([]uuid.UUID{*excludeID})
+		controller, err := domain.GetByID(s.repo, *excludeID)
 		if err != nil {
 			return "", err
 		}
-		if len(controllers) == 0 {
-			return "", domain.ErrNotFound
-		}
-		if controllers[0].GADevice != nil {
-			current := strings.ToUpper(strings.TrimSpace(*controllers[0].GADevice))
+		if controller.GADevice != nil {
+			current := strings.ToUpper(strings.TrimSpace(*controller.GADevice))
 			if current != "" {
 				delete(used, current)
 			}

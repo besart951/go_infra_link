@@ -1,10 +1,6 @@
 import { writable, get } from 'svelte/store';
-import {
-	listApparats,
-	listSystemParts,
-	getApparat,
-	getSystemPart
-} from '$lib/infrastructure/api/facility.adapter.js';
+import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
+import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
 import type { Apparat, SystemPart } from '$lib/domain/facility/index.js';
 
 /**
@@ -73,8 +69,11 @@ async function fetchApparats(search: string = ''): Promise<Apparat[]> {
 	}));
 
 	try {
-		const res = await listApparats({ search, limit: 100 });
-		const items = res.items || [];
+		const res = await apparatRepository.list({
+			pagination: { page: 1, pageSize: 100 },
+			search: { text: search }
+		});
+		const items = res.items;
 
 		// Update cache and store items by ID
 		store.update((s) => {
@@ -125,7 +124,7 @@ async function fetchApparatById(id: string): Promise<Apparat | null> {
 
 	// Fetch from API
 	try {
-		const item = await getApparat(id);
+		const item = await apparatRepository.get(id);
 		if (item) {
 			store.update((s) => {
 				const newById = new Map(s.apparatById);
@@ -163,8 +162,11 @@ async function fetchSystemParts(search: string = ''): Promise<SystemPart[]> {
 	}));
 
 	try {
-		const res = await listSystemParts({ search, limit: 100 });
-		const items = res.items || [];
+		const res = await systemPartRepository.list({
+			pagination: { page: 1, pageSize: 100 },
+			search: { text: search }
+		});
+		const items = res.items;
 
 		// Update cache and store items by ID
 		store.update((s) => {
@@ -215,7 +217,7 @@ async function fetchSystemPartById(id: string): Promise<SystemPart | null> {
 
 	// Fetch from API
 	try {
-		const item = await getSystemPart(id);
+		const item = await systemPartRepository.get(id);
 		if (item) {
 			store.update((s) => {
 				const newById = new Map(s.systemPartById);

@@ -151,3 +151,20 @@ func (r *BaseRepository[T]) BulkUpdate(entities []T) error {
 func (r *BaseRepository[T]) DB() *gorm.DB {
 	return r.db
 }
+
+// DerefPaginatedList converts a PaginatedList[*T] to PaginatedList[T]
+// by dereferencing each item pointer. This bridges BaseRepository (which
+// operates on pointer types) with domain interfaces (which use value types
+// in PaginatedList).
+func DerefPaginatedList[T any](src *domain.PaginatedList[*T]) *domain.PaginatedList[T] {
+	items := make([]T, len(src.Items))
+	for i, item := range src.Items {
+		items[i] = *item
+	}
+	return &domain.PaginatedList[T]{
+		Items:      items,
+		Total:      src.Total,
+		Page:       src.Page,
+		TotalPages: src.TotalPages,
+	}
+}

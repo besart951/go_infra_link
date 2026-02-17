@@ -2,7 +2,9 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { createObjectData, updateObjectData } from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageObjectDataUseCase } from '$lib/application/useCases/facility/manageObjectDataUseCase.js';
+	import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
+	const manageObjectData = new ManageObjectDataUseCase(objectDataRepository);
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { ObjectData, BacnetObjectInput } from '$lib/domain/facility/index.js';
 
@@ -98,7 +100,7 @@
 
 		try {
 			if (initialData) {
-				const res = await updateObjectData(initialData.id, {
+				const res = await manageObjectData.update(initialData.id, {
 					description,
 					version,
 					is_active,
@@ -107,7 +109,7 @@
 				});
 				onSuccess?.(res);
 			} else {
-				const res = await createObjectData({
+				const res = await manageObjectData.create({
 					description,
 					version,
 					is_active,

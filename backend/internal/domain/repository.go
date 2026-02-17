@@ -1,12 +1,27 @@
 package domain
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 // Small, composable repository interfaces (ISP-friendly).
 //
 // In Go, prefer defining the interface at the consumer side.
 // These are provided as building blocks so each module can depend
 // only on the capabilities it actually needs.
+
+// GetByID is a convenience wrapper that fetches a single entity by ID
+// using any Reader implementation. Returns ErrNotFound when absent.
+func GetByID[T any](r Reader[T], id uuid.UUID) (*T, error) {
+	items, err := r.GetByIds([]uuid.UUID{id})
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, ErrNotFound
+	}
+	return items[0], nil
+}
 
 type Reader[T any] interface {
 	GetByIds(ids []uuid.UUID) ([]*T, error)

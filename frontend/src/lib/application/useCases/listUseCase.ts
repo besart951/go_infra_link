@@ -23,7 +23,7 @@ export interface ListState<T> {
  * This is framework-agnostic and can be used with any UI library
  */
 export class ListUseCase<T> {
-	constructor(private repository: ListRepository<T>) {}
+	constructor(private repository: ListRepository<T>) { }
 
 	/**
 	 * Execute the list operation
@@ -35,12 +35,12 @@ export class ListUseCase<T> {
 	/**
 	 * Get a single item by ID
 	 */
-	async getById(id: string, signal?: AbortSignal): Promise<T | null> {
-		if (!this.repository.getById) {
-			throw new Error('getById not implemented for this repository');
+	async get(id: string, signal?: AbortSignal): Promise<T | null> {
+		if (!this.repository.get) {
+			throw new Error('get not implemented for this repository');
 		}
 		try {
-			return await this.repository.getById(id, signal);
+			return await this.repository.get(id, signal);
 		} catch (error) {
 			return null;
 		}

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
-	import { getBuilding, listBuildings } from '$lib/infrastructure/api/facility.adapter.js';
+	import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
 	import type { Building } from '$lib/domain/facility/index.js';
 
 	type BuildingOption = Building & { display_name: string };
@@ -16,12 +16,15 @@
 	}
 
 	async function fetcher(search: string): Promise<BuildingOption[]> {
-		const res = await listBuildings({ search, limit: 20 });
-		return (res.items || []).map(toOption);
+		const res = await buildingRepository.list({
+			pagination: { page: 1, pageSize: 20 },
+			search: { text: search }
+		});
+		return res.items.map(toOption);
 	}
 
 	async function fetchById(id: string): Promise<BuildingOption> {
-		const building = await getBuilding(id);
+		const building = await buildingRepository.get(id);
 		return toOption(building);
 	}
 </script>

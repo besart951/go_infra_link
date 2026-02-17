@@ -13,7 +13,9 @@
 	import { notificationClassesStore } from '$lib/stores/list/entityStores.js';
 	import type { NotificationClass } from '$lib/domain/facility/index.js';
 	import NotificationClassForm from '$lib/components/facility/NotificationClassForm.svelte';
-	import { deleteNotificationClass } from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageNotificationClassUseCase } from '$lib/application/useCases/facility/manageNotificationClassUseCase.js';
+	import { notificationClassRepository } from '$lib/infrastructure/api/notificationClassRepository.js';
+	const manageNotificationClass = new ManageNotificationClassUseCase(notificationClassRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();
@@ -60,7 +62,7 @@
 		});
 		if (!ok) return;
 		try {
-			await deleteNotificationClass(item.id);
+			await manageNotificationClass.delete(item.id);
 			addToast($t('facility.notification_class_deleted'), 'success');
 			notificationClassesStore.reload();
 		} catch (err) {

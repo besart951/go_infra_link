@@ -3,11 +3,9 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import {
-		createSystemType,
-		listSystemTypes,
-		updateSystemType
-	} from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageSystemTypeUseCase } from '$lib/application/useCases/facility/manageSystemTypeUseCase.js';
+	import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
+	const manageSystemType = new ManageSystemTypeUseCase(systemTypeRepository);
 	import type { SystemType } from '$lib/domain/facility/index.js';
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 
@@ -161,9 +159,12 @@
 			let totalPages = 1;
 			const limit = 200;
 			while (page <= totalPages) {
-				const result = await listSystemTypes({ page, limit });
-				collected.push(...(result.items ?? []));
-				totalPages = result.total_pages || 1;
+				const result = await systemTypeRepository.list({
+					pagination: { page, pageSize: limit },
+					search: { text: '' }
+				});
+				collected.push(...result.items);
+				totalPages = result.metadata.totalPages;
 				page += 1;
 			}
 			systemTypes = collected;
@@ -205,13 +206,13 @@
 		const maxValue = Number(number_max);
 		await formState.handleSubmit(async () => {
 			if (initialData) {
-				return await updateSystemType(initialData.id, {
+				return await manageSystemType.update(initialData.id, {
 					name,
 					number_min: minValue,
 					number_max: maxValue
 				});
 			} else {
-				return await createSystemType({
+				return await manageSystemType.create({
 					name,
 					number_min: minValue,
 					number_max: maxValue

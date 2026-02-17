@@ -25,40 +25,12 @@ func NewSPSControllerRepository(db *gorm.DB) domainFacility.SPSControllerReposit
 	return &spsControllerRepo{BaseRepository: baseRepo, db: db}
 }
 
-func (r *spsControllerRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SPSController, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
-func (r *spsControllerRepo) Create(entity *domainFacility.SPSController) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *spsControllerRepo) Update(entity *domainFacility.SPSController) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *spsControllerRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *spsControllerRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSController], error) {
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*SPSController to []SPSController for the interface
-	items := make([]domainFacility.SPSController, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[domainFacility.SPSController]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }
 
 func (r *spsControllerRepo) GetPaginatedListByControlCabinetID(controlCabinetID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSController], error) {

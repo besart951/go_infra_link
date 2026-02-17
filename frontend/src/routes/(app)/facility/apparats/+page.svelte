@@ -13,7 +13,9 @@
 	import { apparatsStore } from '$lib/stores/list/entityStores.js';
 	import type { Apparat } from '$lib/domain/facility/index.js';
 	import ApparatForm from '$lib/components/facility/ApparatForm.svelte';
-	import { deleteApparat } from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageApparatUseCase } from '$lib/application/useCases/facility/manageApparatUseCase.js';
+	import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
+	const manageApparat = new ManageApparatUseCase(apparatRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();
@@ -60,7 +62,7 @@
 		});
 		if (!ok) return;
 		try {
-			await deleteApparat(item.id);
+			await manageApparat.delete(item.id);
 			addToast($t('facility.apparat_deleted'), 'success');
 			apparatsStore.reload();
 		} catch (err) {

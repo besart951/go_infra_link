@@ -3,8 +3,10 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { createSystemPart, updateSystemPart } from '$lib/infrastructure/api/facility.adapter.js';
 	import type { SystemPart } from '$lib/domain/facility/index.js';
+	import { ManageSystemPartUseCase } from '$lib/application/useCases/facility/manageSystemPartUseCase.js';
+	import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
+	const manageSystemPart = new ManageSystemPartUseCase(systemPartRepository);
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 
 	interface SystemPartFormProps {
@@ -44,13 +46,13 @@
 
 		await formState.handleSubmit(async () => {
 			if (initialData) {
-				return await updateSystemPart(initialData.id, {
+				return await manageSystemPart.update(initialData.id, {
 					short_name: trimmedShortName,
 					name,
 					description: description || undefined
 				});
 			} else {
-				return await createSystemPart({
+				return await manageSystemPart.create({
 					short_name: trimmedShortName,
 					name,
 					description: description || undefined

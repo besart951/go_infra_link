@@ -52,17 +52,5 @@ func (r *phasePermissionRepo) GetPaginatedList(params domain.PaginationParams) (
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*PhasePermission to []PhasePermission for the interface
-	items := make([]domainProject.PhasePermission, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[domainProject.PhasePermission]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }

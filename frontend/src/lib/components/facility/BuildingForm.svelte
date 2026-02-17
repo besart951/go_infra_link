@@ -2,12 +2,10 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import {
-		createBuilding,
-		updateBuilding,
-		validateBuilding
-	} from '$lib/infrastructure/api/facility.adapter.js';
 	import type { Building } from '$lib/domain/facility/index.js';
+	import { ManageBuildingUseCase } from '$lib/application/useCases/facility/manageBuildingUseCase.js';
+	import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
+	const manageBuilding = new ManageBuildingUseCase(buildingRepository);
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 	import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
 	import { getFieldError } from '$lib/api/client.js';
@@ -34,7 +32,7 @@
 		}
 	});
 
-	const liveValidation = useLiveValidation(validateBuilding, { debounceMs: 400 });
+	const liveValidation = useLiveValidation((data: { id?: string; iws_code: string; building_group: number }) => manageBuilding.validate(data), { debounceMs: 400 });
 
 	function triggerValidation() {
 		liveValidation.trigger({
@@ -55,12 +53,12 @@
 		event.preventDefault();
 		await formState.handleSubmit(async () => {
 			if (initialData) {
-				return await updateBuilding(initialData.id, {
+				return await manageBuilding.update(initialData.id, {
 					iws_code,
 					building_group: Number(building_group)
 				});
 			} else {
-				return await createBuilding({
+				return await manageBuilding.create({
 					iws_code,
 					building_group: Number(building_group)
 				});

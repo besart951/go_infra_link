@@ -4,12 +4,9 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { FileSpreadsheet, ListPlus } from '@lucide/svelte';
 	import { createFieldDeviceStore } from '$lib/stores/facility/fieldDeviceStore.js';
-	import {
-		bulkDeleteFieldDevices,
-		deleteFieldDevice,
-		listApparats,
-		listSystemParts
-	} from '$lib/infrastructure/api/facility.adapter.js';
+	import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
+	import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
+	import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
 	import { addProjectFieldDevice } from '$lib/infrastructure/api/project.adapter.js';
 	import { addToast } from '$lib/components/toast.svelte';
 	import { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
@@ -70,8 +67,8 @@
 
 	onMount(() => {
 		store.load();
-		listApparats({ limit: 1000 }).then((res) => (allApparats = res.items));
-		listSystemParts({ limit: 1000 }).then((res) => (allSystemParts = res.items));
+		apparatRepository.list({ pagination: { page: 1, pageSize: 1000 }, search: { text: '' } }).then((res) => (allApparats = res.items));
+		systemPartRepository.list({ pagination: { page: 1, pageSize: 1000 }, search: { text: '' } }).then((res) => (allSystemParts = res.items));
 	});
 
 	// Filter callbacks
@@ -177,7 +174,7 @@
 			return;
 
 		try {
-			const result = await bulkDeleteFieldDevices([...selectedIds]);
+			const result = await fieldDeviceRepository.bulkDelete([...selectedIds]);
 			if (result.success_count > 0) {
 				addToast(`Deleted ${result.success_count} field device(s)`, 'success');
 			}
@@ -203,7 +200,7 @@
 	async function handleDelete(device: FieldDevice) {
 		if (!confirm(`Delete ${device.bmk ?? device.id}? This action cannot be undone.`)) return;
 		try {
-			await deleteFieldDevice(device.id);
+			await fieldDeviceRepository.delete(device.id);
 			addToast('Field device deleted', 'success');
 			const nextSelected = new Set(selectedIds);
 			nextSelected.delete(device.id);

@@ -21,12 +21,9 @@
 		listProjectSPSControllers,
 		addProjectSPSController
 	} from '$lib/infrastructure/api/project.adapter.js';
-	import {
-		getControlCabinets,
-		getSPSControllers,
-		deleteSPSController,
-		getBuildings
-	} from '$lib/infrastructure/api/facility.adapter.js';
+	import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
+	import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
+	import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
 	import type { Project } from '$lib/domain/project/index.js';
 	import type {
 		ProjectControlCabinetLink,
@@ -75,15 +72,13 @@
 	async function fetchControlCabinetsByIds(ids: string[]): Promise<ControlCabinet[]> {
 		const unique = uniqueIds(ids);
 		if (unique.length === 0) return [];
-		const res = await getControlCabinets(unique);
-		return res.items || [];
+		return controlCabinetRepository.getBulk(unique);
 	}
 
 	async function fetchSpsControllersByIds(ids: string[]): Promise<SPSController[]> {
 		const unique = uniqueIds(ids);
 		if (unique.length === 0) return [];
-		const res = await getSPSControllers(unique);
-		return res.items || [];
+		return spsControllerRepository.getBulk(unique);
 	}
 
 	const spsControllerLinkMap = $derived.by(
@@ -161,8 +156,8 @@
 		missingIds.forEach((id) => buildingRequests.add(id));
 
 		try {
-			const res = await getBuildings(missingIds);
-			updateBuildingMap(res.items || []);
+			const items = await buildingRepository.getBulk(missingIds);
+			updateBuildingMap(items);
 		} catch (err) {
 			console.error('Failed to load buildings:', err);
 		} finally {
@@ -328,7 +323,7 @@
 		});
 		if (!ok) return;
 		try {
-			await deleteSPSController(item.id);
+			await spsControllerRepository.delete(item.id);
 			addToast('SPS controller deleted', 'success');
 			await loadSpsControllers();
 		} catch (err) {

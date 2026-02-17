@@ -2,8 +2,10 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { createStateText, updateStateText } from '$lib/infrastructure/api/facility.adapter.js';
 	import type { StateText } from '$lib/domain/facility/index.js';
+	import { ManageStateTextUseCase } from '$lib/application/useCases/facility/manageStateTextUseCase.js';
+	import { stateTextRepository } from '$lib/infrastructure/api/stateTextRepository.js';
+	const manageStateText = new ManageStateTextUseCase(stateTextRepository);
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 
 	interface StateTextFormProps {
@@ -63,7 +65,7 @@
 	async function handleSubmit() {
 		await formState.handleSubmit(async () => {
 			if (initialData) {
-				return await updateStateText(initialData.id, {
+				return await manageStateText.update(initialData.id, {
 					ref_number,
 					state_text1: state_text1 || undefined,
 					state_text2: state_text2 || undefined,
@@ -83,7 +85,7 @@
 					state_text16: state_text16 || undefined
 				});
 			} else {
-				return await createStateText({
+				return await manageStateText.create({
 					ref_number,
 					state_text1: state_text1 || undefined,
 					state_text2: state_text2 || undefined,

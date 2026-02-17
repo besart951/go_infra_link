@@ -42,14 +42,7 @@ func (s *Service) GetByIds(ids []uuid.UUID) ([]*domainUser.User, error) {
 }
 
 func (s *Service) GetByID(id uuid.UUID) (*domainUser.User, error) {
-	users, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(users) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return users[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *Service) Update(user *domainUser.User) error {

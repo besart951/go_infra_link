@@ -46,14 +46,7 @@ func (s *BuildingService) Create(building *domainFacility.Building) error {
 }
 
 func (s *BuildingService) GetByID(id uuid.UUID) (*domainFacility.Building, error) {
-	buildings, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(buildings) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return buildings[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *BuildingService) GetByIDs(ids []uuid.UUID) ([]domainFacility.Building, error) {

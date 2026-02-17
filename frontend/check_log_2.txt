@@ -1,0 +1,9 @@
+
+> frontend@0.0.1 check C:\Users\besart.morina\Documents\schrott\go_infra_link\frontend
+> svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+
+Loading svelte-check in workspace: c:\Users\besart.morina\Documents\schrott\go_infra_link\frontend
+Getting Svelte diagnostics...
+
+[32msvelte-check found 0 errors and 0 warnings
+[39m

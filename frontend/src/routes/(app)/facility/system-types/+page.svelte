@@ -13,7 +13,9 @@
 	import { systemTypesStore } from '$lib/stores/list/entityStores.js';
 	import type { SystemType } from '$lib/domain/facility/index.js';
 	import SystemTypeForm from '$lib/components/facility/SystemTypeForm.svelte';
-	import { deleteSystemType } from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageSystemTypeUseCase } from '$lib/application/useCases/facility/manageSystemTypeUseCase.js';
+	import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
+	const manageSystemType = new ManageSystemTypeUseCase(systemTypeRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();
@@ -64,7 +66,7 @@
 		});
 		if (!ok) return;
 		try {
-			await deleteSystemType(item.id);
+			await manageSystemType.delete(item.id);
 			addToast($t('facility.system_type_deleted'), 'success');
 			systemTypesStore.reload();
 		} catch (err) {

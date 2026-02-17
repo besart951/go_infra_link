@@ -24,14 +24,7 @@ func (s *Service) Create(phase *project.Phase) error {
 }
 
 func (s *Service) GetByID(id uuid.UUID) (*project.Phase, error) {
-	phases, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(phases) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return phases[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *Service) List(page, limit int, search string) (*domain.PaginatedList[project.Phase], error) {

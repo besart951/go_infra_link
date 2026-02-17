@@ -28,14 +28,7 @@ func (s *StateTextService) List(page, limit int, search string) (*domain.Paginat
 }
 
 func (s *StateTextService) GetByID(id uuid.UUID) (*domainFacility.StateText, error) {
-	items, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(items) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return items[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *StateTextService) Update(stateText *domainFacility.StateText) error {

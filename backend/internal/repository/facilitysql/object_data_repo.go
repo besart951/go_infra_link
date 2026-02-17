@@ -127,10 +127,6 @@ func (r *objectDataRepo) Update(entity *domainFacility.ObjectData) error {
 	})
 }
 
-func (r *objectDataRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *objectDataRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit

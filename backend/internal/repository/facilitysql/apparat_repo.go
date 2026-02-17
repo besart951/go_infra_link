@@ -29,19 +29,15 @@ func (r *apparatRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Apparat, erro
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Preload SystemParts for each apparat
 	for _, apparat := range result {
 		if err := r.DB().Model(apparat).Association("SystemParts").Find(&apparat.SystemParts); err != nil {
 			return nil, err
 		}
 	}
-	
-	return result, nil
-}
 
-func (r *apparatRepo) Create(entity *domainFacility.Apparat) error {
-	return r.BaseRepository.Create(entity)
+	return result, nil
 }
 
 func (r *apparatRepo) Update(entity *domainFacility.Apparat) error {
@@ -51,18 +47,14 @@ func (r *apparatRepo) Update(entity *domainFacility.Apparat) error {
 		if err := tx.Model(entity).Updates(entity).Error; err != nil {
 			return err
 		}
-		
+
 		// Replace SystemParts association
 		if err := tx.Model(entity).Association("SystemParts").Replace(entity.SystemParts); err != nil {
 			return err
 		}
-		
+
 		return nil
 	})
-}
-
-func (r *apparatRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
 }
 
 func (r *apparatRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Apparat], error) {
@@ -78,16 +70,5 @@ func (r *apparatRepo) GetPaginatedList(params domain.PaginationParams) (*domain.
 		}
 	}
 
-	// Convert []*Apparat to []Apparat for the interface
-	items := make([]domainFacility.Apparat, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[domainFacility.Apparat]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }

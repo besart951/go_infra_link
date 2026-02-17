@@ -21,40 +21,12 @@ func NewProjectFieldDeviceRepository(db *gorm.DB) project.ProjectFieldDeviceRepo
 	}
 }
 
-func (r *projectFieldDeviceRepo) GetByIds(ids []uuid.UUID) ([]*project.ProjectFieldDevice, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
-func (r *projectFieldDeviceRepo) Create(entity *project.ProjectFieldDevice) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *projectFieldDeviceRepo) Update(entity *project.ProjectFieldDevice) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *projectFieldDeviceRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *projectFieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[project.ProjectFieldDevice], error) {
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*ProjectFieldDevice to []ProjectFieldDevice for the interface
-	items := make([]project.ProjectFieldDevice, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[project.ProjectFieldDevice]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }
 
 // GetPaginatedListByProjectID retrieves field devices for a project with pagination

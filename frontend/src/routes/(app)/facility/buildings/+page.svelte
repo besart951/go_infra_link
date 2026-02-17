@@ -13,7 +13,9 @@
 	import { buildingsStore } from '$lib/stores/list/entityStores.js';
 	import type { Building } from '$lib/domain/facility/index.js';
 	import BuildingForm from '$lib/components/facility/BuildingForm.svelte';
-	import { deleteBuilding } from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageBuildingUseCase } from '$lib/application/useCases/facility/manageBuildingUseCase.js';
+	import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
+	const manageBuilding = new ManageBuildingUseCase(buildingRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();
@@ -60,7 +62,7 @@
 		});
 		if (!ok) return;
 		try {
-			await deleteBuilding(building.id);
+			await manageBuilding.delete(building.id);
 			addToast($t('facility.building_deleted'), 'success');
 			buildingsStore.reload();
 		} catch (err) {

@@ -1,21 +1,21 @@
 <script lang="ts">
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
-	import {
-		getNotificationClass,
-		listNotificationClasses
-	} from '$lib/infrastructure/api/facility.adapter.js';
+	import { notificationClassRepository } from '$lib/infrastructure/api/notificationClassRepository.js';
 	import type { NotificationClass } from '$lib/domain/facility/index.js';
 
 	export let value: string = '';
 	export let width: string = 'w-[250px]';
 
 	async function fetcher(search: string): Promise<NotificationClass[]> {
-		const res = await listNotificationClasses({ search, limit: 20 });
-		return res.items || [];
+		const res = await notificationClassRepository.list({
+			pagination: { page: 1, pageSize: 20 },
+			search: { text: search }
+		});
+		return res.items;
 	}
 
 	async function fetchById(id: string): Promise<NotificationClass> {
-		return getNotificationClass(id);
+		return notificationClassRepository.get(id);
 	}
 </script>
 

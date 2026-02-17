@@ -4,16 +4,13 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import ControlCabinetSelect from './ControlCabinetSelect.svelte';
 	import SystemTypeSelect from './SystemTypeSelect.svelte';
-	import {
-		createSPSController,
-		getBuilding,
-		getControlCabinet,
-		getNextSPSControllerGADevice,
-		getSystemType,
-		listSPSControllerSystemTypes,
-		updateSPSController,
-		validateSPSController
-	} from '$lib/infrastructure/api/facility.adapter.js';
+	import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
+	import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
+	import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
+	import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsControllerSystemTypeRepository.js';
+	import { ManageSPSControllerUseCase } from '$lib/application/useCases/facility/manageSPSControllerUseCase.js';
+	import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
+	const manageSPSController = new ManageSPSControllerUseCase(spsControllerRepository);
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type {
 		Building,
@@ -61,7 +58,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let fieldErrors = $state<Record<string, string>>({});
-	const liveValidation = useLiveValidation(validateSPSController, { debounceMs: 400 });
+	const liveValidation = useLiveValidation((data: { id?: string; control_cabinet_id: string; ga_device?: string; device_name: string; ip_address?: string; subnet?: string; gateway?: string; vlan?: string }) => manageSPSController.validate(data), { debounceMs: 400 });
 
 	$effect(() => {
 		if (!initialData) {
@@ -172,7 +169,7 @@
 		if (!control_cabinet_id) return null;
 		gaDeviceSuggestionLoading = true;
 		try {
-			const res = await getNextSPSControllerGADevice(control_cabinet_id, initialData?.id);
+			const res = await manageSPSController.getNextGADevice(control_cabinet_id, initialData?.id);
 			nextGADevice = res?.ga_device ?? null;
 			return nextGADevice;
 		} catch (e) {
@@ -208,12 +205,12 @@
 		if (!initialData?.id) return;
 		systemTypesLoading = true;
 		try {
-			const res = await listSPSControllerSystemTypes({
-				page: 1,
-				limit: 100,
-				sps_controller_id: initialData.id
+			const res = await spsControllerSystemTypeRepository.list({
+				pagination: { page: 1, pageSize: 100 },
+				search: { text: '' },
+				filters: { sps_controller_id: initialData.id }
 			});
-			const items = res.items ?? [];
+			const items = res.items;
 			const labelFallbacks: Record<string, string> = {};
 			const uniqueIds = Array.from(
 				new Set(items.map((item) => item.system_type_id).filter(Boolean))
@@ -290,7 +287,7 @@
 		if (systemTypeDetails[id]) return systemTypeDetails[id];
 		systemTypeDetailsLoading = true;
 		try {
-			const systemType = await getSystemType(id);
+			const systemType = await systemTypeRepository.get(id);
 			systemTypeDetails = { ...systemTypeDetails, [id]: systemType };
 			return systemType;
 		} catch (e) {
@@ -318,14 +315,14 @@
 		cabinetLoading = true;
 		buildingLoading = true;
 		try {
-			const cabinet = await getControlCabinet(cabinetId);
+			const cabinet = await controlCabinetRepository.get(cabinetId);
 			if (control_cabinet_id !== cabinetId) return;
 			controlCabinet = cabinet;
 			if (!cabinet?.building_id) {
 				building = null;
 				return;
 			}
-			const b = await getBuilding(cabinet.building_id);
+			const b = await buildingRepository.get(cabinet.building_id);
 			if (control_cabinet_id !== cabinetId) return;
 			building = b;
 		} catch (e) {
@@ -345,7 +342,7 @@
 		const entries = await Promise.all(
 			ids.map(async (id) => {
 				try {
-					const systemType = await getSystemType(id);
+					const systemType = await systemTypeRepository.get(id);
 					return [
 						id,
 						buildSystemTypeLabel(systemType.name, systemType.number_min, systemType.number_max)
@@ -440,7 +437,7 @@
 
 		try {
 			if (initialData) {
-				const res = await updateSPSController(initialData.id, {
+				const res = await manageSPSController.update(initialData.id, {
 					id: initialData.id,
 					ga_device,
 					device_name,
@@ -453,7 +450,7 @@
 				});
 				onSuccess?.(res);
 			} else {
-				const res = await createSPSController({
+				const res = await manageSPSController.create({
 					ga_device,
 					device_name,
 					ip_address: ip_address || undefined,

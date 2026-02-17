@@ -3,11 +3,9 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import BuildingSelect from './BuildingSelect.svelte';
-	import {
-		createControlCabinet,
-		updateControlCabinet,
-		validateControlCabinet
-	} from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageControlCabinetUseCase } from '$lib/application/useCases/facility/manageControlCabinetUseCase.js';
+	import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
+	const manageControlCabinet = new ManageControlCabinetUseCase(controlCabinetRepository);
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { ControlCabinet } from '$lib/domain/facility/index.js';
 	import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
@@ -25,7 +23,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let fieldErrors = $state<Record<string, string>>({});
-	const liveValidation = useLiveValidation(validateControlCabinet, { debounceMs: 400 });
+	const liveValidation = useLiveValidation((data: { id?: string; building_id: string; control_cabinet_nr?: string }) => manageControlCabinet.validate(data), { debounceMs: 400 });
 
 	// React to initialData changes
 	$effect(() => {
@@ -67,14 +65,14 @@
 
 		try {
 			if (initialData) {
-				const res = await updateControlCabinet(initialData.id, {
+				const res = await manageControlCabinet.update(initialData.id, {
 					id: initialData.id,
 					control_cabinet_nr,
 					building_id
 				});
 				onSuccess?.(res);
 			} else {
-				const res = await createControlCabinet({
+				const res = await manageControlCabinet.create({
 					control_cabinet_nr,
 					building_id
 				});

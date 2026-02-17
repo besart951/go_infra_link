@@ -15,6 +15,7 @@ export interface PaginatedResponse<T> {
 export interface ListParams {
 	pagination: Pagination;
 	search: SearchQuery;
+	filters?: Record<string, string>;
 }
 
 /**
@@ -30,5 +31,5 @@ export interface ListRepository<T> {
 	/**
 	 * Get a single item by ID
 	 */
-	getById?(id: string, signal?: AbortSignal): Promise<T>;
+	get?(id: string, signal?: AbortSignal): Promise<T>;
 }

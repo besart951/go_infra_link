@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
-	import { getSystemType, listSystemTypes } from '$lib/infrastructure/api/facility.adapter.js';
+	import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
 	import type { SystemType } from '$lib/domain/facility/index.js';
 
 	export let value: string = '';
@@ -15,15 +15,18 @@
 	}
 
 	async function fetcher(search: string): Promise<(SystemType & { display_label: string })[]> {
-		const res = await listSystemTypes({ search, limit: 20 });
-		return (res.items || []).map((item) => ({
+		const res = await systemTypeRepository.list({
+			pagination: { page: 1, pageSize: 20 },
+			search: { text: search }
+		});
+		return res.items.map((item) => ({
 			...item,
 			display_label: buildLabel(item)
 		}));
 	}
 
 	async function fetchById(id: string): Promise<SystemType & { display_label: string }> {
-		const item = await getSystemType(id);
+		const item = await systemTypeRepository.get(id);
 		return {
 			...item,
 			display_label: buildLabel(item)

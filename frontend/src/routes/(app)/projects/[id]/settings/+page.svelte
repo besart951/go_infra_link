@@ -21,13 +21,12 @@
 		addProjectObjectData,
 		removeProjectObjectData
 	} from '$lib/infrastructure/api/project.adapter.js';
-	import { listObjectData } from '$lib/infrastructure/api/facility.adapter.js';
+	import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
 	import { listUsers } from '$lib/infrastructure/api/user.adapter.js';
 	import type { Project, ProjectStatus, UpdateProjectRequest } from '$lib/domain/project/index.js';
 	import type { User } from '$lib/domain/user/index.js';
 	import type { ObjectData } from '$lib/domain/facility/index.js';
 	import { ArrowLeft, Pencil } from '@lucide/svelte';
-	import { getObjectData } from '$lib/infrastructure/api/facility.adapter.js';
 	import ObjectDataForm from '$lib/components/facility/ObjectDataForm.svelte';
 
 	const projectId = $derived($page.params.id ?? '');
@@ -211,7 +210,10 @@
 					limit: 100,
 					search: objectDataSearch.trim() || undefined
 				}),
-				listObjectData({ page: 1, limit: 100, search: objectDataSearch.trim() || undefined })
+				objectDataRepository.list({
+					pagination: { page: 1, pageSize: 100 },
+					search: { text: objectDataSearch.trim() }
+				}).then((res) => ({ items: res.items }))
 			]);
 			const projectItems = projectRes.items ?? [];
 			const templateItems = templateRes.items ?? [];
@@ -266,7 +268,7 @@
 
 	async function editObjectData(item: ObjectData) {
 		try {
-			editingObjectData = await getObjectData(item.id);
+			editingObjectData = await objectDataRepository.get(item.id);
 		} catch (err) {
 			editingObjectData = item;
 		}

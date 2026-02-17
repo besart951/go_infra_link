@@ -27,14 +27,7 @@ func (s *SystemPartService) Create(systemPart *domainFacility.SystemPart) error 
 }
 
 func (s *SystemPartService) GetByID(id uuid.UUID) (*domainFacility.SystemPart, error) {
-	systemParts, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(systemParts) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return systemParts[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *SystemPartService) GetByIDs(ids []uuid.UUID) ([]*domainFacility.SystemPart, error) {

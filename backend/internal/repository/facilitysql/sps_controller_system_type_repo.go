@@ -45,18 +45,6 @@ func (r *spsControllerSystemTypeRepo) GetByIds(ids []uuid.UUID) ([]*domainFacili
 	return items, err
 }
 
-func (r *spsControllerSystemTypeRepo) Create(entity *domainFacility.SPSControllerSystemType) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *spsControllerSystemTypeRepo) Update(entity *domainFacility.SPSControllerSystemType) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *spsControllerSystemTypeRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *spsControllerSystemTypeRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit

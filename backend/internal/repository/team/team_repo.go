@@ -7,7 +7,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -29,14 +28,6 @@ func NewTeamRepository(db *gorm.DB) domainTeam.TeamRepository {
 	}
 }
 
-func (r *teamRepo) GetByIds(ids []uuid.UUID) ([]*domainTeam.Team, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
-func (r *teamRepo) Create(entity *domainTeam.Team) error {
-	return r.BaseRepository.Create(entity)
-}
-
 func (r *teamRepo) Update(entity *domainTeam.Team) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
 	return r.db.Model(&domainTeam.Team{}).
@@ -48,26 +39,10 @@ func (r *teamRepo) Update(entity *domainTeam.Team) error {
 		}).Error
 }
 
-func (r *teamRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *teamRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainTeam.Team], error) {
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*Team to []Team for the interface
-	items := make([]domainTeam.Team, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[domainTeam.Team]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }

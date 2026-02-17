@@ -13,7 +13,9 @@
 	import { stateTextsStore } from '$lib/stores/list/entityStores.js';
 	import type { StateText } from '$lib/domain/facility/index.js';
 	import StateTextForm from '$lib/components/facility/StateTextForm.svelte';
-	import { deleteStateText } from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageStateTextUseCase } from '$lib/application/useCases/facility/manageStateTextUseCase.js';
+	import { stateTextRepository } from '$lib/infrastructure/api/stateTextRepository.js';
+	const manageStateText = new ManageStateTextUseCase(stateTextRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();
@@ -60,7 +62,7 @@
 		});
 		if (!ok) return;
 		try {
-			await deleteStateText(item.id);
+			await manageStateText.delete(item.id);
 			addToast($t('facility.state_text_deleted'), 'success');
 			stateTextsStore.reload();
 		} catch (err) {

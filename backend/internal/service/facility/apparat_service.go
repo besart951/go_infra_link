@@ -27,14 +27,7 @@ func (s *ApparatService) Create(apparat *domainFacility.Apparat) error {
 }
 
 func (s *ApparatService) GetByID(id uuid.UUID) (*domainFacility.Apparat, error) {
-	apparats, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(apparats) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return apparats[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *ApparatService) GetByIDs(ids []uuid.UUID) ([]*domainFacility.Apparat, error) {

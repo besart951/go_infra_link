@@ -13,7 +13,9 @@
 	import { systemPartsStore } from '$lib/stores/list/entityStores.js';
 	import type { SystemPart } from '$lib/domain/facility/index.js';
 	import SystemPartForm from '$lib/components/facility/SystemPartForm.svelte';
-	import { deleteSystemPart } from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageSystemPartUseCase } from '$lib/application/useCases/facility/manageSystemPartUseCase.js';
+	import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
+	const manageSystemPart = new ManageSystemPartUseCase(systemPartRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();
@@ -60,7 +62,7 @@
 		});
 		if (!ok) return;
 		try {
-			await deleteSystemPart(item.id);
+			await manageSystemPart.delete(item.id);
 			addToast($t('facility.system_part_deleted'), 'success');
 			systemPartsStore.reload();
 		} catch (err) {

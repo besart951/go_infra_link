@@ -6,7 +6,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -23,39 +22,12 @@ func NewRolePermissionRepository(db *gorm.DB) domainUser.RolePermissionRepositor
 	}
 }
 
-func (r *rolePermissionRepo) GetByIds(ids []uuid.UUID) ([]*domainUser.RolePermission, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
-func (r *rolePermissionRepo) Create(entity *domainUser.RolePermission) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *rolePermissionRepo) Update(entity *domainUser.RolePermission) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *rolePermissionRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *rolePermissionRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainUser.RolePermission], error) {
-	list, err := r.BaseRepository.GetPaginatedList(params, 50)
+	result, err := r.BaseRepository.GetPaginatedList(params, 50)
 	if err != nil {
 		return nil, err
 	}
-	items := make([]domainUser.RolePermission, len(list.Items))
-	for i, perm := range list.Items {
-		if perm != nil {
-			items[i] = *perm
-		}
-	}
-	return &domain.PaginatedList[domainUser.RolePermission]{
-		Items:      items,
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }
 
 func (r *rolePermissionRepo) ListByRole(role domainUser.Role) ([]domainUser.RolePermission, error) {

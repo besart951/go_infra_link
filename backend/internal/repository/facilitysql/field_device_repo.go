@@ -105,18 +105,6 @@ func (r *fieldDeviceRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.FieldDevi
 	return items, err
 }
 
-func (r *fieldDeviceRepo) Create(entity *domainFacility.FieldDevice) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *fieldDeviceRepo) Update(entity *domainFacility.FieldDevice) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *fieldDeviceRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *fieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit

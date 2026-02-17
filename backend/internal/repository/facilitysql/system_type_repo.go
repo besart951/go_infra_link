@@ -25,40 +25,12 @@ func NewSystemTypeRepository(db *gorm.DB) domainFacility.SystemTypeRepository {
 	return &systemTypeRepo{BaseRepository: baseRepo, db: db}
 }
 
-func (r *systemTypeRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SystemType, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
-func (r *systemTypeRepo) Create(entity *domainFacility.SystemType) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *systemTypeRepo) Update(entity *domainFacility.SystemType) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *systemTypeRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *systemTypeRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SystemType], error) {
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*SystemType to []SystemType for the interface
-	items := make([]domainFacility.SystemType, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[domainFacility.SystemType]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }
 
 func (r *systemTypeRepo) ExistsName(name string, excludeID *uuid.UUID) (bool, error) {

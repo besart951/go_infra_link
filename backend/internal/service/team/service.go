@@ -20,14 +20,7 @@ func (s *Service) Create(team *domainTeam.Team) error {
 }
 
 func (s *Service) GetByID(id uuid.UUID) (*domainTeam.Team, error) {
-	teams, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(teams) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return teams[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *Service) List(page, limit int, search string) (*domain.PaginatedList[domainTeam.Team], error) {

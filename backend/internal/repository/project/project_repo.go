@@ -30,14 +30,6 @@ func NewProjectRepository(db *gorm.DB) domainProject.ProjectRepository {
 	}
 }
 
-func (r *projectRepo) GetByIds(ids []uuid.UUID) ([]*domainProject.Project, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
-func (r *projectRepo) Create(entity *domainProject.Project) error {
-	return r.BaseRepository.Create(entity)
-}
-
 func (r *projectRepo) Update(entity *domainProject.Project) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
 	return r.db.Model(&domainProject.Project{}).
@@ -53,28 +45,12 @@ func (r *projectRepo) Update(entity *domainProject.Project) error {
 		}).Error
 }
 
-func (r *projectRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *projectRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainProject.Project], error) {
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*Project to []Project for the interface
-	items := make([]domainProject.Project, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[domainProject.Project]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }
 
 func (r *projectRepo) AddUser(projectID, userID uuid.UUID) error {

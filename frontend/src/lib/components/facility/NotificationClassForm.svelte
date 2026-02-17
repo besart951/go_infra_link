@@ -3,10 +3,9 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
-	import {
-		createNotificationClass,
-		updateNotificationClass
-	} from '$lib/infrastructure/api/facility.adapter.js';
+	import { ManageNotificationClassUseCase } from '$lib/application/useCases/facility/manageNotificationClassUseCase.js';
+	import { notificationClassRepository } from '$lib/infrastructure/api/notificationClassRepository.js';
+	const manageNotificationClass = new ManageNotificationClassUseCase(notificationClassRepository);
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { NotificationClass } from '$lib/domain/facility/index.js';
 
@@ -59,7 +58,7 @@
 
 		try {
 			if (initialData) {
-				const res = await updateNotificationClass(initialData.id, {
+				const res = await manageNotificationClass.update(initialData.id, {
 					event_category,
 					nc,
 					object_description,
@@ -74,7 +73,7 @@
 				});
 				onSuccess?.(res);
 			} else {
-				const res = await createNotificationClass({
+				const res = await manageNotificationClass.create({
 					event_category,
 					nc,
 					object_description,

@@ -85,14 +85,7 @@ func NewBacnetObjectService(
 }
 
 func (s *BacnetObjectService) GetByID(id uuid.UUID) (*domainFacility.BacnetObject, error) {
-	items, err := s.repo.GetByIds([]uuid.UUID{id})
-	if err != nil {
-		return nil, err
-	}
-	if len(items) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	return items[0], nil
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *BacnetObjectService) GetByIDs(ids []uuid.UUID) ([]*domainFacility.BacnetObject, error) {
@@ -118,12 +111,8 @@ func (s *BacnetObjectService) CreateWithParent(bacnetObject *domainFacility.Bacn
 	}
 
 	if fieldDeviceID != nil {
-		fds, err := s.fieldDeviceRepo.GetByIds([]uuid.UUID{*fieldDeviceID})
-		if err != nil {
+		if _, err := domain.GetByID(s.fieldDeviceRepo, *fieldDeviceID); err != nil {
 			return err
-		}
-		if len(fds) == 0 {
-			return domain.ErrNotFound
 		}
 		if err := s.ensureTextFixUniqueForFieldDevice(*fieldDeviceID, bacnetObject.TextFix, nil); err != nil {
 			return err
@@ -132,11 +121,11 @@ func (s *BacnetObjectService) CreateWithParent(bacnetObject *domainFacility.Bacn
 		return s.repo.Create(bacnetObject)
 	}
 
-	ods, err := s.objectDataRepo.GetByIds([]uuid.UUID{*objectDataID})
+	od, err := domain.GetByID(s.objectDataRepo, *objectDataID)
 	if err != nil {
 		return err
 	}
-	if len(ods) == 0 || !ods[0].IsActive {
+	if !od.IsActive {
 		return domain.ErrNotFound
 	}
 
@@ -164,12 +153,8 @@ func (s *BacnetObjectService) Update(bacnetObject *domainFacility.BacnetObject, 
 		}
 	}
 
-	items, err := s.repo.GetByIds([]uuid.UUID{bacnetObject.ID})
-	if err != nil {
+	if _, err := domain.GetByID(s.repo, bacnetObject.ID); err != nil {
 		return err
-	}
-	if len(items) == 0 {
-		return domain.ErrNotFound
 	}
 	if bacnetObject.FieldDeviceID != nil {
 		if err := s.ensureTextFixUniqueForFieldDevice(*bacnetObject.FieldDeviceID, bacnetObject.TextFix, &bacnetObject.ID); err != nil {
@@ -188,11 +173,11 @@ func (s *BacnetObjectService) Update(bacnetObject *domainFacility.BacnetObject, 
 	}
 
 	if objectDataID != nil {
-		ods, err := s.objectDataRepo.GetByIds([]uuid.UUID{*objectDataID})
+		od, err := domain.GetByID(s.objectDataRepo, *objectDataID)
 		if err != nil {
 			return err
 		}
-		if len(ods) == 0 || !ods[0].IsActive {
+		if !od.IsActive {
 			return domain.ErrNotFound
 		}
 		return s.objectDataBacnetStore.Add(*objectDataID, bacnetObject.ID)
@@ -204,11 +189,11 @@ func (s *BacnetObjectService) Update(bacnetObject *domainFacility.BacnetObject, 
 // ReplaceForObjectData replaces all bacnet objects for an object data template.
 // Existing links are removed and the provided list is created and attached.
 func (s *BacnetObjectService) ReplaceForObjectData(objectDataID uuid.UUID, inputs []domainFacility.BacnetObject) error {
-	ods, err := s.objectDataRepo.GetByIds([]uuid.UUID{objectDataID})
+	od, err := domain.GetByID(s.objectDataRepo, objectDataID)
 	if err != nil {
 		return err
 	}
-	if len(ods) == 0 || !ods[0].IsActive {
+	if !od.IsActive {
 		return domain.ErrNotFound
 	}
 

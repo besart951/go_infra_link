@@ -21,40 +21,12 @@ func NewProjectSPSControllerRepository(db *gorm.DB) project.ProjectSPSController
 	}
 }
 
-func (r *projectSPSControllerRepo) GetByIds(ids []uuid.UUID) ([]*project.ProjectSPSController, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
-func (r *projectSPSControllerRepo) Create(entity *project.ProjectSPSController) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *projectSPSControllerRepo) Update(entity *project.ProjectSPSController) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *projectSPSControllerRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *projectSPSControllerRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[project.ProjectSPSController], error) {
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*ProjectSPSController to []ProjectSPSController for the interface
-	items := make([]project.ProjectSPSController, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[project.ProjectSPSController]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }
 
 // GetPaginatedListByProjectID retrieves SPS controllers for a project with pagination

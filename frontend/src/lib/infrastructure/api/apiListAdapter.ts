@@ -24,7 +24,7 @@ export class ApiListAdapter<T> implements ListRepository<T> {
 	constructor(
 		private endpoint: string,
 		private searchParam: string = 'search'
-	) {}
+	) { }
 
 	/**
 	 * List items with pagination and search
@@ -36,6 +36,12 @@ export class ApiListAdapter<T> implements ListRepository<T> {
 
 		if (params.search.text) {
 			searchParams.set(this.searchParam, params.search.text);
+		}
+
+		if (params.filters) {
+			Object.entries(params.filters).forEach(([key, value]) => {
+				if (value !== undefined && value !== null) searchParams.set(key, value);
+			});
 		}
 
 		const query = searchParams.toString();
@@ -59,7 +65,7 @@ export class ApiListAdapter<T> implements ListRepository<T> {
 	/**
 	 * Get a single item by ID
 	 */
-	async getById(id: string, signal?: AbortSignal): Promise<T> {
+	async get(id: string, signal?: AbortSignal): Promise<T> {
 		return api<T>(`${this.endpoint}/${id}`, { signal });
 	}
 }

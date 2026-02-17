@@ -7,7 +7,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -30,38 +29,10 @@ func NewStateTextRepository(db *gorm.DB) domainFacility.StateTextRepository {
 	return &stateTextRepo{BaseRepository: baseRepo}
 }
 
-func (r *stateTextRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.StateText, error) {
-	return r.BaseRepository.GetByIds(ids)
-}
-
-func (r *stateTextRepo) Create(entity *domainFacility.StateText) error {
-	return r.BaseRepository.Create(entity)
-}
-
-func (r *stateTextRepo) Update(entity *domainFacility.StateText) error {
-	return r.BaseRepository.Update(entity)
-}
-
-func (r *stateTextRepo) DeleteByIds(ids []uuid.UUID) error {
-	return r.BaseRepository.DeleteByIds(ids)
-}
-
 func (r *stateTextRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.StateText], error) {
 	result, err := r.BaseRepository.GetPaginatedList(params, 10)
 	if err != nil {
 		return nil, err
 	}
-
-	// Convert []*StateText to []StateText for the interface
-	items := make([]domainFacility.StateText, len(result.Items))
-	for i, item := range result.Items {
-		items[i] = *item
-	}
-
-	return &domain.PaginatedList[domainFacility.StateText]{
-		Items:      items,
-		Total:      result.Total,
-		Page:       result.Page,
-		TotalPages: result.TotalPages,
-	}, nil
+	return gormbase.DerefPaginatedList(result), nil
 }
