@@ -4,9 +4,9 @@
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import type { AlarmDefinition } from '$lib/domain/facility/index.js';
-	import { ManageAlarmDefinitionUseCase } from '$lib/application/useCases/facility/manageAlarmDefinitionUseCase.js';
+	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { alarmDefinitionRepository } from '$lib/infrastructure/api/alarmDefinitionRepository.js';
-	const manageAlarmDefinition = new ManageAlarmDefinitionUseCase(alarmDefinitionRepository);
+	const manageAlarmDefinition = new ManageEntityUseCase(alarmDefinitionRepository);
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 
 	interface AlarmDefinitionFormProps {

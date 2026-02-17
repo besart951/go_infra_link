@@ -3,9 +3,9 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
-	import { ManageNotificationClassUseCase } from '$lib/application/useCases/facility/manageNotificationClassUseCase.js';
+	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { notificationClassRepository } from '$lib/infrastructure/api/notificationClassRepository.js';
-	const manageNotificationClass = new ManageNotificationClassUseCase(notificationClassRepository);
+	const manageNotificationClass = new ManageEntityUseCase(notificationClassRepository);
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { NotificationClass } from '$lib/domain/facility/index.js';
 

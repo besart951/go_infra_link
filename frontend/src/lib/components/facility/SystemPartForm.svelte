@@ -4,9 +4,9 @@
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import type { SystemPart } from '$lib/domain/facility/index.js';
-	import { ManageSystemPartUseCase } from '$lib/application/useCases/facility/manageSystemPartUseCase.js';
+	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
-	const manageSystemPart = new ManageSystemPartUseCase(systemPartRepository);
+	const manageSystemPart = new ManageEntityUseCase(systemPartRepository);
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 
 	interface SystemPartFormProps {

@@ -13,9 +13,9 @@
 	import { apparatsStore } from '$lib/stores/list/entityStores.js';
 	import type { Apparat } from '$lib/domain/facility/index.js';
 	import ApparatForm from '$lib/components/facility/ApparatForm.svelte';
-	import { ManageApparatUseCase } from '$lib/application/useCases/facility/manageApparatUseCase.js';
+	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
-	const manageApparat = new ManageApparatUseCase(apparatRepository);
+	const manageApparat = new ManageEntityUseCase(apparatRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();

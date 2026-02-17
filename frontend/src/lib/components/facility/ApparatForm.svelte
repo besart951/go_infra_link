@@ -4,9 +4,9 @@
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import type { Apparat } from '$lib/domain/facility/index.js';
-	import { ManageApparatUseCase } from '$lib/application/useCases/facility/manageApparatUseCase.js';
+	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
-	const manageApparat = new ManageApparatUseCase(apparatRepository);
+	const manageApparat = new ManageEntityUseCase(apparatRepository);
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 	import SystemPartMultiSelect from './SystemPartMultiSelect.svelte';
 

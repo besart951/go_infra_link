@@ -13,9 +13,9 @@
 	import { stateTextsStore } from '$lib/stores/list/entityStores.js';
 	import type { StateText } from '$lib/domain/facility/index.js';
 	import StateTextForm from '$lib/components/facility/StateTextForm.svelte';
-	import { ManageStateTextUseCase } from '$lib/application/useCases/facility/manageStateTextUseCase.js';
+	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { stateTextRepository } from '$lib/infrastructure/api/stateTextRepository.js';
-	const manageStateText = new ManageStateTextUseCase(stateTextRepository);
+	const manageStateText = new ManageEntityUseCase(stateTextRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();

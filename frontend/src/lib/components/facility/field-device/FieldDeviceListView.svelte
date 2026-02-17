@@ -21,15 +21,14 @@
 
 	// Use Cases
 	import { ManageFieldDeviceUseCase } from '$lib/application/useCases/facility/manageFieldDeviceUseCase.js';
-	import { ListApparatsUseCase } from '$lib/application/useCases/facility/listApparatsUseCase.js';
-	import { ListSystemPartsUseCase } from '$lib/application/useCases/facility/listSystemPartsUseCase.js';
+	import { ListEntityUseCase } from '$lib/application/useCases/listEntityUseCase.js';
 	import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 	import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
 	import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
 
 	const manageFieldDeviceUseCase = new ManageFieldDeviceUseCase(fieldDeviceRepository);
-	const listApparatsUseCase = new ListApparatsUseCase(apparatRepository);
-	const listSystemPartsUseCase = new ListSystemPartsUseCase(systemPartRepository);
+	const listApparatsUseCase = new ListEntityUseCase(apparatRepository);
+	const listSystemPartsUseCase = new ListEntityUseCase(systemPartRepository);
 
 	interface Props {
 		projectId?: string;

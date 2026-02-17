@@ -13,9 +13,9 @@
 	import { notificationClassesStore } from '$lib/stores/list/entityStores.js';
 	import type { NotificationClass } from '$lib/domain/facility/index.js';
 	import NotificationClassForm from '$lib/components/facility/NotificationClassForm.svelte';
-	import { ManageNotificationClassUseCase } from '$lib/application/useCases/facility/manageNotificationClassUseCase.js';
+	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { notificationClassRepository } from '$lib/infrastructure/api/notificationClassRepository.js';
-	const manageNotificationClass = new ManageNotificationClassUseCase(notificationClassRepository);
+	const manageNotificationClass = new ManageEntityUseCase(notificationClassRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();

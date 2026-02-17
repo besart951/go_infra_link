@@ -7,9 +7,7 @@
 
 	// Use Cases
 	import { ExportFieldDevicesUseCase } from '$lib/application/useCases/facility/exportFieldDevicesUseCase.js';
-	import { ListBuildingsUseCase } from '$lib/application/useCases/facility/listBuildingsUseCase.js';
-	import { ListControlCabinetsUseCase } from '$lib/application/useCases/facility/listControlCabinetsUseCase.js';
-	import { ListSPSControllersUseCase } from '$lib/application/useCases/facility/listSPSControllersUseCase.js';
+	import { ListEntityUseCase } from '$lib/application/useCases/listEntityUseCase.js';
 	import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 	import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
 	import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
@@ -36,9 +34,9 @@
 
 	// Instantiate Use Cases
 	const exportUseCase = new ExportFieldDevicesUseCase(fieldDeviceRepository);
-	const listBuildingsUseCase = new ListBuildingsUseCase(buildingRepository);
-	const listControlCabinetsUseCase = new ListControlCabinetsUseCase(controlCabinetRepository);
-	const listSPSControllersUseCase = new ListSPSControllersUseCase(spsControllerRepository);
+	const listBuildingsUseCase = new ListEntityUseCase(buildingRepository);
+	const listControlCabinetsUseCase = new ListEntityUseCase(controlCabinetRepository);
+	const listSPSControllersUseCase = new ListEntityUseCase(spsControllerRepository);
 
 	let selectedProjectIds = $state<string[]>([]);
 	let selectedBuildingIds = $state<string[]>([]);

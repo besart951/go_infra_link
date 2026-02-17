@@ -1,5 +1,7 @@
 import type {
     FieldDevice,
+    CreateFieldDeviceRequest,
+    UpdateFieldDeviceRequest,
     FieldDeviceOptions
 } from '$lib/domain/facility/index.js';
 import type { FieldDeviceRepository } from '$lib/domain/ports/facility/fieldDeviceRepository.js';

@@ -13,9 +13,9 @@
 	import { systemPartsStore } from '$lib/stores/list/entityStores.js';
 	import type { SystemPart } from '$lib/domain/facility/index.js';
 	import SystemPartForm from '$lib/components/facility/SystemPartForm.svelte';
-	import { ManageSystemPartUseCase } from '$lib/application/useCases/facility/manageSystemPartUseCase.js';
+	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
-	const manageSystemPart = new ManageSystemPartUseCase(systemPartRepository);
+	const manageSystemPart = new ManageEntityUseCase(systemPartRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();

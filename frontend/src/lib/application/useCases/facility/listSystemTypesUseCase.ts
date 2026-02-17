@@ -1,15 +1,9 @@
-import type { SystemType } from '$lib/domain/facility/index.js';
+import type { SystemType, CreateSystemTypeRequest, UpdateSystemTypeRequest } from '$lib/domain/facility/index.js';
 import type { SystemTypeRepository } from '$lib/domain/ports/facility/systemTypeRepository.js';
-import type { ListParams, PaginatedResponse } from '$lib/domain/ports/listRepository.js';
+import { ListEntityUseCase } from '$lib/application/useCases/listEntityUseCase.js';
 
-export class ListSystemTypesUseCase {
-    constructor(private repository: SystemTypeRepository) { }
-
-    async execute(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<SystemType>> {
-        return this.repository.list(params, signal);
-    }
-
-    async get(id: string, signal?: AbortSignal): Promise<SystemType> {
-        return this.repository.get(id, signal);
+export class ListSystemTypesUseCase extends ListEntityUseCase<SystemType, CreateSystemTypeRequest, UpdateSystemTypeRequest> {
+    constructor(repository: SystemTypeRepository) {
+        super(repository);
     }
 }

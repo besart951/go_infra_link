@@ -3,9 +3,9 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import type { StateText } from '$lib/domain/facility/index.js';
-	import { ManageStateTextUseCase } from '$lib/application/useCases/facility/manageStateTextUseCase.js';
+	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { stateTextRepository } from '$lib/infrastructure/api/stateTextRepository.js';
-	const manageStateText = new ManageStateTextUseCase(stateTextRepository);
+	const manageStateText = new ManageEntityUseCase(stateTextRepository);
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 
 	interface StateTextFormProps {

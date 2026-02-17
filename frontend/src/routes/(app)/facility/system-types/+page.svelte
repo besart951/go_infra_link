@@ -13,9 +13,9 @@
 	import { systemTypesStore } from '$lib/stores/list/entityStores.js';
 	import type { SystemType } from '$lib/domain/facility/index.js';
 	import SystemTypeForm from '$lib/components/facility/SystemTypeForm.svelte';
-	import { ManageSystemTypeUseCase } from '$lib/application/useCases/facility/manageSystemTypeUseCase.js';
+	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
-	const manageSystemType = new ManageSystemTypeUseCase(systemTypeRepository);
+	const manageSystemType = new ManageEntityUseCase(systemTypeRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();
