@@ -87,7 +87,10 @@
 	}
 
 	async function fetchProjects(search: string): Promise<OptionItem[]> {
-		const res = await projectRepository.list({ page: 1, limit: 100, search });
+		const res = await projectRepository.list({
+			pagination: { page: 1, pageSize: 100 },
+			search: { text: search }
+		});
 		return res.items.map(toProjectOption);
 	}
 
@@ -97,7 +100,10 @@
 	}
 
 	async function fetchBuildings(search: string): Promise<OptionItem[]> {
-		const res = await listBuildingsUseCase.execute({ page: 1, limit: 100, search });
+		const res = await listBuildingsUseCase.execute({
+			pagination: { page: 1, pageSize: 100 },
+			search: { text: search }
+		});
 		return res.items.map(toBuildingOption);
 	}
 
@@ -107,7 +113,10 @@
 	}
 
 	async function fetchControlCabinets(search: string): Promise<OptionItem[]> {
-		const res = await listControlCabinetsUseCase.execute({ page: 1, limit: 100, search });
+		const res = await listControlCabinetsUseCase.execute({
+			pagination: { page: 1, pageSize: 100 },
+			search: { text: search }
+		});
 		return res.items.map(toCabinetOption);
 	}
 
@@ -117,7 +126,10 @@
 	}
 
 	async function fetchSpsControllers(search: string): Promise<OptionItem[]> {
-		const res = await listSPSControllersUseCase.execute({ page: 1, limit: 100, search });
+		const res = await listSPSControllersUseCase.execute({
+			pagination: { page: 1, pageSize: 100 },
+			search: { text: search }
+		});
 		return res.items.map(toControllerOption);
 	}
 

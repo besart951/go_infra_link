@@ -19,7 +19,7 @@
 		<!-- Action bar -->
 		<div class="flex items-center gap-3">
 			<span class="text-sm font-medium"
-				>{editing.pendingEditCount} unsaved change{editing.pendingEditCount !== 1 ? 's' : ''}</span
+				>{editing.pendingCount} unsaved change{editing.pendingCount !== 1 ? 's' : ''}</span
 			>
 			<Button size="sm" onclick={onSave}>
 				<Save class="mr-1 h-4 w-4" />

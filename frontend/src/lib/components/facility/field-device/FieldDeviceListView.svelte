@@ -78,11 +78,11 @@
 		store.load();
 		// Load lookups
 		listApparatsUseCase
-			.execute({ limit: 1000 })
+			.execute({ pagination: { page: 1, pageSize: 1000 }, search: { text: '' } })
 			.then((res) => (allApparats = res.items))
 			.catch(console.error);
 		listSystemPartsUseCase
-			.execute({ limit: 1000 })
+			.execute({ pagination: { page: 1, pageSize: 1000 }, search: { text: '' } })
 			.then((res) => (allSystemParts = res.items))
 			.catch(console.error);
 	});
