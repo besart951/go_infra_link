@@ -476,12 +476,12 @@ func (s *ControlCabinetService) copyFieldDevicesForSPSController(originalSPSCont
 		}
 
 		// Copy specification if exists
-		if err := s.copySpecificationForFieldDevice(originalFD.ID, fieldDeviceCopy.ID); err != nil {
+		if err := copySpecificationForFieldDevice(s.specificationRepo, originalFD.ID, fieldDeviceCopy.ID); err != nil {
 			return err
 		}
 
 		// Copy BACnet objects if exist
-		if err := s.copyBacnetObjectsForFieldDevice(originalFD.ID, fieldDeviceCopy.ID); err != nil {
+		if err := copyBacnetObjectsForFieldDevice(s.bacnetObjectRepo, originalFD.ID, fieldDeviceCopy.ID); err != nil {
 			return err
 		}
 	}
@@ -509,77 +509,4 @@ func (s *ControlCabinetService) listFieldDevicesBySPSControllerID(spsControllerI
 	}
 
 	return items, nil
-}
-
-// copySpecificationForFieldDevice copies the specification from the original field device to the new field device
-func (s *ControlCabinetService) copySpecificationForFieldDevice(originalFieldDeviceID, newFieldDeviceID uuid.UUID) error {
-	// Get specifications for original field device
-	specs, err := s.specificationRepo.GetByFieldDeviceIDs([]uuid.UUID{originalFieldDeviceID})
-	if err != nil {
-		return err
-	}
-
-	// If no specification exists, nothing to copy
-	if len(specs) == 0 {
-		return nil
-	}
-
-	// Copy the specification
-	originalSpec := specs[0]
-	newSpec := &domainFacility.Specification{
-		FieldDeviceID:                             &newFieldDeviceID,
-		SpecificationSupplier:                     originalSpec.SpecificationSupplier,
-		SpecificationBrand:                        originalSpec.SpecificationBrand,
-		SpecificationType:                         originalSpec.SpecificationType,
-		AdditionalInfoMotorValve:                  originalSpec.AdditionalInfoMotorValve,
-		AdditionalInfoSize:                        originalSpec.AdditionalInfoSize,
-		AdditionalInformationInstallationLocation: originalSpec.AdditionalInformationInstallationLocation,
-		ElectricalConnectionPH:                    originalSpec.ElectricalConnectionPH,
-		ElectricalConnectionACDC:                  originalSpec.ElectricalConnectionACDC,
-		ElectricalConnectionAmperage:              originalSpec.ElectricalConnectionAmperage,
-		ElectricalConnectionPower:                 originalSpec.ElectricalConnectionPower,
-		ElectricalConnectionRotation:              originalSpec.ElectricalConnectionRotation,
-	}
-
-	return s.specificationRepo.Create(newSpec)
-}
-
-// copyBacnetObjectsForFieldDevice copies all BACnet objects from the original field device to the new field device
-func (s *ControlCabinetService) copyBacnetObjectsForFieldDevice(originalFieldDeviceID, newFieldDeviceID uuid.UUID) error {
-	// Get BACnet objects for original field device
-	bacnetObjects, err := s.bacnetObjectRepo.GetByFieldDeviceIDs([]uuid.UUID{originalFieldDeviceID})
-	if err != nil {
-		return err
-	}
-
-	// If no BACnet objects exist, nothing to copy
-	if len(bacnetObjects) == 0 {
-		return nil
-	}
-
-	// Copy each BACnet object
-	for _, originalObj := range bacnetObjects {
-		newObj := &domainFacility.BacnetObject{
-			TextFix:             originalObj.TextFix,
-			Description:         originalObj.Description,
-			GMSVisible:          originalObj.GMSVisible,
-			Optional:            originalObj.Optional,
-			TextIndividual:      originalObj.TextIndividual,
-			SoftwareType:        originalObj.SoftwareType,
-			SoftwareNumber:      originalObj.SoftwareNumber,
-			HardwareType:        originalObj.HardwareType,
-			HardwareQuantity:    originalObj.HardwareQuantity,
-			FieldDeviceID:       &newFieldDeviceID,
-			SoftwareReferenceID: originalObj.SoftwareReferenceID,
-			StateTextID:         originalObj.StateTextID,
-			NotificationClassID: originalObj.NotificationClassID,
-			AlarmDefinitionID:   originalObj.AlarmDefinitionID,
-		}
-
-		if err := s.bacnetObjectRepo.Create(newObj); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
