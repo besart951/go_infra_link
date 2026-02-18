@@ -13,6 +13,7 @@ import (
 type SPSControllerService struct {
 	repo                     domainFacility.SPSControllerRepository
 	controlCabinetRepo       domainFacility.ControlCabinetRepository
+	buildingRepo             domainFacility.BuildingRepository
 	systemTypeRepo           domainFacility.SystemTypeRepository
 	spsControllerSystemTyper domainFacility.SPSControllerSystemTypeStore
 	fieldDeviceRepo          domainFacility.FieldDeviceStore
@@ -23,6 +24,7 @@ type SPSControllerService struct {
 func NewSPSControllerService(
 	repo domainFacility.SPSControllerRepository,
 	controlCabinetRepo domainFacility.ControlCabinetRepository,
+	buildingRepo domainFacility.BuildingRepository,
 	systemTypeRepo domainFacility.SystemTypeRepository,
 	spsControllerSystemTypeStore domainFacility.SPSControllerSystemTypeStore,
 	fieldDeviceRepo domainFacility.FieldDeviceStore,
@@ -32,6 +34,7 @@ func NewSPSControllerService(
 	return &SPSControllerService{
 		repo:                     repo,
 		controlCabinetRepo:       controlCabinetRepo,
+		buildingRepo:             buildingRepo,
 		systemTypeRepo:           systemTypeRepo,
 		spsControllerSystemTyper: spsControllerSystemTypeStore,
 		fieldDeviceRepo:          fieldDeviceRepo,
@@ -105,15 +108,46 @@ func (s *SPSControllerService) CopyByID(id uuid.UUID) (*domainFacility.SPSContro
 		return nil, err
 	}
 
-	nextDeviceName, err := s.nextAvailableDeviceName(original.ControlCabinetID, original.DeviceName)
+	// Load control cabinet to get building ID
+	controlCabinet, err := domain.GetByID(s.controlCabinetRepo, original.ControlCabinetID)
 	if err != nil {
 		return nil, err
 	}
 
+	// Load building
+	building, err := domain.GetByID(s.buildingRepo, controlCabinet.BuildingID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get next available GA Device
+	nextGADevice, err := s.nextAvailableGADevice(original.ControlCabinetID)
+	if err != nil {
+		return nil, err
+	}
+	if nextGADevice == "" {
+		return nil, domain.NewValidationError().Add("spscontroller.ga_device", "no available ga_device for control cabinet")
+	}
+
+	// Generate device name using the same logic as frontend: {iwsCode}_{cabinetNr}_{gaDevice}
+	iwsCode := strings.TrimSpace(building.IWSCode)
+	cabinetNr := ""
+	if controlCabinet.ControlCabinetNr != nil {
+		cabinetNr = strings.TrimSpace(*controlCabinet.ControlCabinetNr)
+	}
+
+	var deviceName string
+	if iwsCode != "" && cabinetNr != "" {
+		deviceName = strings.ToUpper(iwsCode + "_" + cabinetNr + "_" + nextGADevice)
+	} else {
+		// Fallback if building or cabinet number is missing
+		deviceName = nextGADevice
+	}
+
 	copyEntity := &domainFacility.SPSController{
 		ControlCabinetID:  original.ControlCabinetID,
-		GADevice:          nil,
-		DeviceName:        nextDeviceName,
+		GADevice:          &nextGADevice,
+		DeviceName:        deviceName,
 		DeviceDescription: original.DeviceDescription,
 		DeviceLocation:    original.DeviceLocation,
 		IPAddress:         nil,
@@ -249,10 +283,28 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 		return err
 	}
 
-	if err := s.spsControllerSystemTyper.DeleteBySPSControllerIDs([]uuid.UUID{spsController.ID}); err != nil {
+	existing, err := s.spsControllerSystemTyper.ListBySPSControllerID(spsController.ID)
+	if err != nil {
 		return err
 	}
+
+	existingBySystemType := make(map[uuid.UUID]*domainFacility.SPSControllerSystemType, len(existing))
+	for _, item := range existing {
+		existingBySystemType[item.SystemTypeID] = item
+	}
+
+	incomingSystemTypeIDs := make(map[uuid.UUID]struct{}, len(systemTypes))
 	for _, st := range systemTypes {
+		incomingSystemTypeIDs[st.SystemTypeID] = struct{}{}
+		if existingItem, ok := existingBySystemType[st.SystemTypeID]; ok {
+			existingItem.Number = st.Number
+			existingItem.DocumentName = st.DocumentName
+			if err := s.spsControllerSystemTyper.Update(existingItem); err != nil {
+				return err
+			}
+			continue
+		}
+
 		entity := &domainFacility.SPSControllerSystemType{
 			Number:          st.Number,
 			DocumentName:    st.DocumentName,
@@ -260,6 +312,26 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 			SystemTypeID:    st.SystemTypeID,
 		}
 		if err := s.spsControllerSystemTyper.Create(entity); err != nil {
+			return err
+		}
+	}
+
+	var deleteIDs []uuid.UUID
+	for _, item := range existing {
+		if _, ok := incomingSystemTypeIDs[item.SystemTypeID]; !ok {
+			deleteIDs = append(deleteIDs, item.ID)
+		}
+	}
+
+	if len(deleteIDs) > 0 {
+		fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(deleteIDs)
+		if err != nil {
+			return err
+		}
+		if len(fieldDeviceIDs) > 0 {
+			return domain.NewValidationError().Add("spscontroller.system_types", "referenced_entity_in_use")
+		}
+		if err := s.spsControllerSystemTyper.DeleteByIds(deleteIDs); err != nil {
 			return err
 		}
 	}

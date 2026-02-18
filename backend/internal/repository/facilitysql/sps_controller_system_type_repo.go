@@ -110,6 +110,14 @@ func (r *spsControllerSystemTypeRepo) GetPaginatedListBySPSControllerID(spsContr
 	}, nil
 }
 
+func (r *spsControllerSystemTypeRepo) ListBySPSControllerID(spsControllerID uuid.UUID) ([]*domainFacility.SPSControllerSystemType, error) {
+	var items []*domainFacility.SPSControllerSystemType
+	err := r.db.
+		Where("sps_controller_id = ?", spsControllerID).
+		Find(&items).Error
+	return items, err
+}
+
 func (r *spsControllerSystemTypeRepo) GetIDsBySPSControllerIDs(ids []uuid.UUID) ([]uuid.UUID, error) {
 	if len(ids) == 0 {
 		return []uuid.UUID{}, nil

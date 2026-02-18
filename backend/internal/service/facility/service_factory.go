@@ -84,6 +84,7 @@ func NewServices(repos Repositories) *Services {
 		SPSController: NewSPSControllerService(
 			repos.SPSControllers,
 			repos.ControlCabinets,
+			repos.Buildings,
 			repos.SystemTypes,
 			repos.SPSControllerSystemTypes,
 			repos.FieldDevices,

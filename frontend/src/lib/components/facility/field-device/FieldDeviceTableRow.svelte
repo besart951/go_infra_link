@@ -54,14 +54,28 @@
 	function formatSPSControllerSystemType(dev: FieldDevice): string {
 		const sysType = dev.sps_controller_system_type;
 		if (!sysType) return '-';
+		
+		const deviceName = sysType.sps_controller_name ?? '';
 		const number =
 			sysType.number === null || sysType.number === undefined
 				? ''
 				: String(sysType.number).padStart(4, '0');
 		const docName = sysType.document_name ?? '';
-		if (number && docName) return `${number} - ${docName}`;
-		if (number) return String(number);
-		if (docName) return docName;
+		
+		// Build the system type part
+		let sysTypePart = '';
+		if (number && docName) {
+			sysTypePart = `${number} - ${docName}`;
+		} else if (number) {
+			sysTypePart = String(number);
+		} else if (docName) {
+			sysTypePart = docName;
+		}
+		
+		// Combine device name with system type part
+		if (deviceName && sysTypePart) return `${deviceName}_${sysTypePart}`;
+		if (deviceName) return deviceName;
+		if (sysTypePart) return sysTypePart;
 		return '-';
 	}
 

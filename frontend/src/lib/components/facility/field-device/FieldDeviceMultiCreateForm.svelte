@@ -447,9 +447,11 @@
 	}
 
 	function formatSpsControllerSystemTypeLabel(item: SPSControllerSystemType): string {
+		const deviceName = item.sps_controller_name ?? '';
 		const number = item.number ?? '';
 		const documentName = item.document_name ?? '';
-		return `${number} - ${documentName}`;
+		const sysTypePart = number || documentName ? `${number}_${documentName}` : '';
+		return deviceName && sysTypePart ? `${deviceName}_${sysTypePart}` : (deviceName || sysTypePart || '');
 	}
 </script>
 
