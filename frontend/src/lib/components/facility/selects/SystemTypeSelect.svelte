@@ -2,6 +2,7 @@
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
 	import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
 	import type { SystemType } from '$lib/domain/facility/index.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	type Props = {
 		value?: string;
@@ -9,6 +10,8 @@
 	};
 
 	let { value = $bindable(''), width = 'w-[250px]' }: Props = $props();
+
+	const t = createTranslator();
 
 	function formatNumber(value: number): string {
 		return String(value).padStart(4, '0');
@@ -43,6 +46,6 @@
 	{fetcher}
 	{fetchById}
 	labelKey="display_label"
-	placeholder="Select System Type..."
+	placeholder={$t('facility.selects.system_type')}
 	{width}
 />

@@ -14,6 +14,7 @@
 	} from '$lib/domain/facility/bacnet-object.js';
 	import type { BacnetObject } from '$lib/domain/facility/bacnet-object.js';
 	import type { BacnetObjectInput } from '$lib/domain/facility/field-device.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface Props {
 		bacnetObjects: BacnetObject[];
@@ -32,6 +33,8 @@
 		disabled = false,
 		onEdit
 	}: Props = $props();
+
+	const t = createTranslator();
 
 	const softwareTypeOptions = BACNET_SOFTWARE_TYPES.map((t) => ({
 		value: t.value,
@@ -82,13 +85,15 @@
 		<table class="w-full text-sm">
 			<thead>
 				<tr class="border-b text-left text-xs text-muted-foreground">
-					<th class="pr-2 pb-2">Text Fix</th>
-					<th class="pr-2 pb-2">Description</th>
-					<th class="pr-2 pb-2 text-center">SW</th>
-					<th class="pr-2 pb-2 text-center">HW</th>
-					<th class="pr-2 pb-2 text-center">GMS Visible</th>
-					<th class="pr-2 pb-2 text-center">Optional</th>
-					<th class="pr-2 pb-2 text-center">Text Individual</th>
+					<th class="pr-2 pb-2">{$t('field_device.bacnet.table.text_fix')}</th>
+					<th class="pr-2 pb-2">{$t('field_device.bacnet.table.description')}</th>
+					<th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.software')}</th>
+					<th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.hardware')}</th>
+					<th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.gms_visible')}</th>
+					<th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.optional')}</th>
+					<th class="pr-2 pb-2 text-center">
+						{$t('field_device.bacnet.table.text_individual')}
+					</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -222,6 +227,6 @@
 	</div>
 {:else}
 	<p class="text-sm text-muted-foreground italic">
-		No BACnet objects configured for this field device.
+		{$t('field_device.bacnet.empty')}
 	</p>
 {/if}

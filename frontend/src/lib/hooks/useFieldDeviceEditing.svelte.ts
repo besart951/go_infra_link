@@ -12,6 +12,7 @@ import {
 import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 import { addToast } from '$lib/components/toast.svelte';
 import { sessionStorage } from '$lib/services/sessionStorageService.js';
+import { t as translate } from '$lib/i18n/index.js';
 import type {
 	FieldDevice,
 	UpdateFieldDeviceRequest,
@@ -299,17 +300,17 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 		const fields: Record<string, string> = {};
 		const bmk = changes.bmk;
 		if (bmk !== undefined && bmk !== null && String(bmk).length > 10) {
-			fields['fielddevice.bmk'] = 'BMK must be 10 characters or less';
+			fields['fielddevice.bmk'] = translate('field_device.validation.bmk_max');
 		}
 		const description = changes.description;
 		if (description !== undefined && description !== null && String(description).length > 250) {
-			fields['fielddevice.description'] = 'Description must be 250 characters or less';
+			fields['fielddevice.description'] = translate('field_device.validation.description_max');
 		}
 		const apparatNr = changes.apparat_nr;
 		if (apparatNr !== undefined && apparatNr !== null) {
 			const nr = Number(apparatNr);
 			if (Number.isNaN(nr) || nr < 1 || nr > 99) {
-				fields['fielddevice.apparat_nr'] = 'Apparat Nr must be between 1 and 99';
+				fields['fielddevice.apparat_nr'] = translate('field_device.validation.apparat_nr_range');
 			}
 		}
 
@@ -318,18 +319,25 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 			const checkMax = (key: keyof SpecificationInput, label: string) => {
 				const value = spec[key];
 				if (value !== undefined && value !== null && String(value).length > 250) {
-					fields[`specification.${key}`] = `${label} must be 250 characters or less`;
+					fields[`specification.${key}`] = translate('field_device.validation.spec_max', {
+						label
+					});
 				}
 			};
-			checkMax('specification_supplier', 'Supplier');
-			checkMax('specification_brand', 'Brand');
-			checkMax('specification_type', 'Type');
-			checkMax('additional_info_motor_valve', 'Motor/Valve');
-			checkMax('additional_information_installation_location', 'Install Location');
+			checkMax('specification_supplier', translate('field_device.validation.supplier'));
+			checkMax('specification_brand', translate('field_device.validation.brand'));
+			checkMax('specification_type', translate('field_device.validation.type'));
+			checkMax('additional_info_motor_valve', translate('field_device.validation.motor_valve'));
+			checkMax(
+				'additional_information_installation_location',
+				translate('field_device.validation.install_location')
+			);
 
 			const acdc = spec.electrical_connection_acdc;
 			if (acdc !== undefined && acdc !== null && String(acdc).length !== 2) {
-				fields['specification.electrical_connection_acdc'] = 'AC/DC must be 2 characters';
+				fields['specification.electrical_connection_acdc'] = translate(
+					'field_device.validation.acdc_length'
+				);
 			}
 		}
 
@@ -449,7 +457,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 				const existing = textFixMap.get(effectiveTextFix);
 				if (existing && existing !== obj.id) {
 					const objErrors = errors.get(obj.id) || {};
-					objErrors['text_fix'] = 'text_fix must be unique within the field device';
+					objErrors['text_fix'] = translate('field_device.bacnet.validation.text_fix_unique');
 					errors.set(obj.id, objErrors);
 				}
 				textFixMap.set(effectiveTextFix, obj.id);
@@ -461,30 +469,36 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 			const objErrors = errors.get(objectId) || {};
 
 			if ('text_fix' in edits && !edits.text_fix) {
-				objErrors['text_fix'] = 'text_fix is required';
+				objErrors['text_fix'] = translate('field_device.bacnet.validation.text_fix_required');
 			}
 			if ('software_number' in edits) {
 				const num = edits.software_number as number;
 				if (num < 0 || num > 65535) {
-					objErrors['software_number'] = 'Must be between 0 and 65535';
+					objErrors['software_number'] = translate(
+						'field_device.bacnet.validation.software_number_range'
+					);
 				}
 			}
 			if ('hardware_quantity' in edits) {
 				const num = edits.hardware_quantity as number;
 				if (num < 1 || num > 255) {
-					objErrors['hardware_quantity'] = 'Must be between 1 and 255';
+					objErrors['hardware_quantity'] = translate(
+						'field_device.bacnet.validation.hardware_quantity_range'
+					);
 				}
 			}
 			if ('software_type' in edits && !validSoftwareTypes.has(edits.software_type as string)) {
-				objErrors['software_type'] = 'Invalid software type';
+				objErrors['software_type'] = translate('field_device.bacnet.validation.software_type');
 			}
 			if ('hardware_type' in edits && !validHardwareTypes.has(edits.hardware_type as string)) {
-				objErrors['hardware_type'] = 'Invalid hardware type';
+				objErrors['hardware_type'] = translate('field_device.bacnet.validation.hardware_type');
 			}
 			if ('text_individual' in edits) {
 				const val = edits.text_individual as string | undefined;
 				if (val && val.length > 250) {
-					objErrors['text_individual'] = 'Must be 250 characters or less';
+					objErrors['text_individual'] = translate(
+						'field_device.bacnet.validation.text_individual_max'
+					);
 				}
 			}
 

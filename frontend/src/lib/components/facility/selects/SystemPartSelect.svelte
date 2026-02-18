@@ -2,6 +2,7 @@
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
 	import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
 	import type { SystemPart } from '$lib/domain/facility/index.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	type Props = {
 		value?: string;
@@ -10,6 +11,8 @@
 	};
 
 	let { value = $bindable(''), width = 'w-[250px]', onValueChange }: Props = $props();
+
+	const t = createTranslator();
 
 	async function fetcher(search: string): Promise<SystemPart[]> {
 		const res = await systemPartRepository.list({
@@ -29,7 +32,7 @@
 	{fetcher}
 	{fetchById}
 	labelKey="name"
-	placeholder="Select System Part..."
+	placeholder={$t('facility.selects.system_part')}
 	{width}
 	{onValueChange}
 />

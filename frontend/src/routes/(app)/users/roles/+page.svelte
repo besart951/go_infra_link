@@ -20,6 +20,8 @@
 	import { addToast } from '$lib/components/toast.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 	import {
 		RoleCard,
 		PermissionForm,
@@ -29,6 +31,8 @@
 	} from '$lib/components/roles/index.js';
 	import { auth, hasMinRole } from '$lib/stores/auth.svelte.js';
 	import { Plus, RefreshCw, Grid3X3, LayoutGrid, Shield, Users } from '@lucide/svelte';
+
+	const t = createTranslator();
 
 	// State
 	let roles = $state<Role[]>([]);
@@ -67,7 +71,7 @@
 			roles = rolesData;
 			permissions = permissionsData;
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to load data';
+			error = err instanceof Error ? err.message : translate('roles.errors.load_failed');
 		} finally {
 			isLoading = false;
 		}
@@ -85,7 +89,7 @@
 
 		try {
 			await createPermission(data);
-			addToast('Permission created successfully', 'success');
+			addToast(translate('roles.toasts.permission_created'), 'success');
 			createPermissionDialogOpen = false;
 			await loadData();
 		} catch (err) {
@@ -108,7 +112,7 @@
 
 		try {
 			await updatePermission(selectedPermission.id, { description: data.description });
-			addToast('Permission updated successfully', 'success');
+			addToast(translate('roles.toasts.permission_updated'), 'success');
 			editPermissionDialogOpen = false;
 			selectedPermission = null;
 			await loadData();
@@ -121,17 +125,17 @@
 
 	async function handleDeletePermission(permission: Permission) {
 		const confirmed = await confirm({
-			title: 'Delete Permission',
-			message: `Are you sure you want to delete "${permission.name}"? This action cannot be undone.`,
-			confirmText: 'Delete',
-			cancelText: 'Cancel',
+			title: translate('roles.permissions.delete_confirm_title'),
+			message: translate('roles.permissions.delete_confirm_message', { name: permission.name }),
+			confirmText: translate('roles.permissions.delete_confirm_confirm'),
+			cancelText: translate('common.cancel'),
 			variant: 'destructive'
 		});
 
 		if (confirmed) {
 			try {
 				await deletePermission(permission.id);
-				addToast('Permission deleted successfully', 'success');
+				addToast(translate('roles.toasts.permission_deleted'), 'success');
 				await loadData();
 			} catch (err) {
 				addToast(getErrorMessage(err), 'error');
@@ -160,7 +164,12 @@
 
 		try {
 			await updateRolePermissions(selectedRole.name, data);
-			addToast(`Permissions updated for ${selectedRole.display_name}`, 'success');
+			addToast(
+				translate('roles.toasts.role_permissions_updated', {
+					role: selectedRole.display_name
+				}),
+				'success'
+			);
 			editRoleSheetOpen = false;
 			selectedRole = null;
 			await loadData();
@@ -182,7 +191,7 @@
 </script>
 
 <svelte:head>
-	<title>Roles & Permissions</title>
+	<title>{$t('roles.page.title')}</title>
 </svelte:head>
 
 <ConfirmDialog />
@@ -191,18 +200,18 @@
 	<!-- Header -->
 	<div class="flex items-start justify-between">
 		<div>
-			<h1 class="text-3xl font-bold tracking-tight">Roles & Permissions</h1>
-			<p class="mt-1 text-muted-foreground">Manage role hierarchy and permission assignments</p>
+			<h1 class="text-3xl font-bold tracking-tight">{$t('roles.page.title')}</h1>
+			<p class="mt-1 text-muted-foreground">{$t('roles.page.description')}</p>
 		</div>
 		<div class="flex items-center gap-2">
 			<Button variant="outline" onclick={loadData} disabled={isLoading}>
 				<RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
-				Refresh
+				{$t('roles.actions.refresh')}
 			</Button>
 			{#if canManageRoles}
 				<Button onclick={() => (createPermissionDialogOpen = true)}>
 					<Plus class="mr-2 h-4 w-4" />
-					Create Permission
+					{$t('roles.actions.create_permission')}
 				</Button>
 			{/if}
 		</div>
@@ -216,7 +225,7 @@
 					<Users class="h-5 w-5 text-primary" />
 				</div>
 				<div>
-					<p class="text-sm text-muted-foreground">Total Roles</p>
+					<p class="text-sm text-muted-foreground">{$t('roles.stats.total_roles')}</p>
 					{#if isLoading}
 						<Skeleton class="h-7 w-12" />
 					{:else}
@@ -232,7 +241,7 @@
 					<Shield class="h-5 w-5 text-green-600" />
 				</div>
 				<div>
-					<p class="text-sm text-muted-foreground">Total Permissions</p>
+					<p class="text-sm text-muted-foreground">{$t('roles.stats.total_permissions')}</p>
 					{#if isLoading}
 						<Skeleton class="h-7 w-12" />
 					{:else}
@@ -248,7 +257,7 @@
 					<Grid3X3 class="h-5 w-5 text-blue-600" />
 				</div>
 				<div>
-					<p class="text-sm text-muted-foreground">Resources</p>
+					<p class="text-sm text-muted-foreground">{$t('roles.stats.resources')}</p>
 					{#if isLoading}
 						<Skeleton class="h-7 w-12" />
 					{:else}
@@ -262,7 +271,7 @@
 	<!-- Error State -->
 	{#if error}
 		<div class="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-destructive">
-			<p class="font-medium">Error loading data</p>
+			<p class="font-medium">{$t('roles.errors.load_title')}</p>
 			<p class="text-sm">{error}</p>
 		</div>
 	{/if}
@@ -272,15 +281,15 @@
 		<Tabs.List>
 			<Tabs.Trigger value="roles" class="gap-2">
 				<LayoutGrid class="h-4 w-4" />
-				Roles
+				{$t('roles.tabs.roles')}
 			</Tabs.Trigger>
 			<Tabs.Trigger value="permissions" class="gap-2">
 				<Shield class="h-4 w-4" />
-				Permissions
+				{$t('roles.tabs.permissions')}
 			</Tabs.Trigger>
 			<Tabs.Trigger value="matrix" class="gap-2">
 				<Grid3X3 class="h-4 w-4" />
-				Matrix
+				{$t('roles.tabs.matrix')}
 			</Tabs.Trigger>
 		</Tabs.List>
 

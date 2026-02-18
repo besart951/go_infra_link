@@ -93,7 +93,10 @@
 			if (impact.sps_controllers_count > 0) {
 				const ok1 = await confirm({
 					title: $t('facility.delete_control_cabinet_confirm'),
-					message: $t('facility.delete_control_cabinet_message').replace('{count}', impact.sps_controllers_count.toString()),
+					message: $t('facility.delete_control_cabinet_message').replace(
+						'{count}',
+						impact.sps_controllers_count.toString()
+					),
 					confirmText: $t('common.confirm'),
 					cancelText: $t('common.cancel'),
 					variant: 'destructive'
@@ -117,7 +120,10 @@
 			addToast($t('facility.control_cabinet_deleted'), 'success');
 			controlCabinetsStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : $t('facility.delete_control_cabinet_failed'), 'error');
+			addToast(
+				err instanceof Error ? err.message : $t('facility.delete_control_cabinet_failed'),
+				'error'
+			);
 		}
 	}
 
@@ -185,7 +191,7 @@
 		{#snippet rowSnippet(cabinet: ControlCabinet)}
 			<Table.Cell class="font-medium">
 				<a href="/facility/control-cabinets/{cabinet.id}" class="hover:underline">
-					{cabinet.control_cabinet_nr ?? 'N/A'}
+					{cabinet.control_cabinet_nr ?? $t('common.not_available')}
 				</a>
 			</Table.Cell>
 			<Table.Cell>{getBuildingLabel(cabinet.building_id)}</Table.Cell>
@@ -200,15 +206,17 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(cabinet.control_cabinet_nr ?? cabinet.id)}>
-						{$t('facility.copy')}
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={() => goto(`/facility/control-cabinets/${cabinet.id}`)}>
-						{$t('facility.view')}
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={() => handleEdit(cabinet)}>{$t('common.edit')}</DropdownMenu.Item>
-					<DropdownMenu.Separator />
-					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(cabinet)}>
-						{$t('common.delete')}
+							{$t('facility.copy')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => goto(`/facility/control-cabinets/${cabinet.id}`)}>
+							{$t('facility.view')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleEdit(cabinet)}
+							>{$t('common.edit')}</DropdownMenu.Item
+						>
+						<DropdownMenu.Separator />
+						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(cabinet)}>
+							{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

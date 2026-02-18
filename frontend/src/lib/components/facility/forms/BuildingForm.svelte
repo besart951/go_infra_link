@@ -9,6 +9,7 @@
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
 	import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
 	import { getFieldError } from '$lib/api/client.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface BuildingFormProps {
 		initialData?: Building;
@@ -17,6 +18,8 @@
 	}
 
 	let { initialData, onSuccess, onCancel }: BuildingFormProps = $props();
+
+	const t = createTranslator();
 
 	let iws_code = $state('');
 	let building_group = $state(0);
@@ -32,7 +35,11 @@
 		}
 	});
 
-	const liveValidation = useLiveValidation((data: { id?: string; iws_code: string; building_group: number }) => manageBuilding.validate(data), { debounceMs: 400 });
+	const liveValidation = useLiveValidation(
+		(data: { id?: string; iws_code: string; building_group: number }) =>
+			manageBuilding.validate(data),
+		{ debounceMs: 400 }
+	);
 
 	function triggerValidation() {
 		liveValidation.trigger({
@@ -69,35 +76,39 @@
 
 <form onsubmit={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
 	<div class="mb-4 flex items-center justify-between">
-		<h3 class="text-lg font-medium">{initialData ? 'Edit Building' : 'New Building'}</h3>
+		<h3 class="text-lg font-medium">
+			{initialData
+				? $t('facility.forms.building.title_edit')
+				: $t('facility.forms.building.title_new')}
+		</h3>
 	</div>
 
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		<div class="space-y-2">
-			<Label for="iws_code">IWS Code</Label>
+			<Label for="iws_code">{$t('facility.forms.building.iws_label')}</Label>
 			<Input
 				id="iws_code"
 				bind:value={iws_code}
 				required
-				placeholder="e.g. ABCD"
+				placeholder={$t('facility.forms.building.iws_placeholder')}
 				minlength={4}
 				maxlength={4}
 				oninput={triggerValidation}
 			/>
-			<p class="text-xs text-muted-foreground">Exactly 4 characters</p>
+			<p class="text-xs text-muted-foreground">{$t('facility.forms.building.iws_exact')}</p>
 			{#if getError('iws_code')}
 				<p class="text-sm text-red-500">{getError('iws_code')}</p>
 			{/if}
 		</div>
 
 		<div class="space-y-2">
-			<Label for="building_group">Building Group</Label>
+			<Label for="building_group">{$t('facility.forms.building.group_label')}</Label>
 			<Input
 				id="building_group"
 				type="number"
 				bind:value={building_group}
 				required
-				placeholder="e.g. 1"
+				placeholder={$t('facility.forms.building.group_placeholder')}
 				oninput={triggerValidation}
 			/>
 			{#if getError('building_group')}
@@ -111,9 +122,9 @@
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>{$t('common.cancel')}</Button>
 		<Button type="submit" disabled={formState.loading}>
-			{initialData ? 'Update' : 'Create'}
+			{initialData ? $t('common.update') : $t('common.create')}
 		</Button>
 	</div>
 </form>

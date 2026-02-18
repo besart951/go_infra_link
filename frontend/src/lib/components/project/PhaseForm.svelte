@@ -5,6 +5,8 @@
 	import type { Phase } from '$lib/domain/phase/index.js';
 	import { createPhase, updatePhase } from '$lib/infrastructure/api/phase.adapter.js';
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 
 	interface PhaseFormProps {
 		initialData?: Phase;
@@ -13,6 +15,8 @@
 	}
 
 	let { initialData, onSuccess, onCancel }: PhaseFormProps = $props();
+
+	const t = createTranslator();
 
 	let name = $state('');
 
@@ -29,7 +33,9 @@
 		},
 		showSuccessToast: true,
 		// svelte-ignore state_referenced_locally
-		successMessage: initialData ? 'Phase updated successfully' : 'Phase created successfully'
+		successMessage: initialData
+			? translate('phases.toasts.updated')
+			: translate('phases.toasts.created')
 	});
 
 	async function handleSubmit() {
@@ -57,13 +63,20 @@
 	class="space-y-4 rounded-md border bg-muted/20 p-4"
 >
 	<div class="mb-4 flex items-center justify-between">
-		<h3 class="text-lg font-medium">{initialData ? 'Edit Phase' : 'New Phase'}</h3>
+		<h3 class="text-lg font-medium">
+			{initialData ? $t('phases.form.title_edit') : $t('phases.form.title_new')}
+		</h3>
 	</div>
 
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		<div class="space-y-2">
-			<Label for="phase_name">Phase Name</Label>
-			<Input id="phase_name" bind:value={name} required placeholder="e.g. SIA:51" />
+			<Label for="phase_name">{$t('phases.form.name_label')}</Label>
+			<Input
+				id="phase_name"
+				bind:value={name}
+				required
+				placeholder={$t('phases.form.name_placeholder')}
+			/>
 			{#if formState.getFieldError('name')}
 				<p class="text-sm text-red-500">{formState.getFieldError('name')}</p>
 			{/if}
@@ -75,9 +88,9 @@
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>{$t('common.cancel')}</Button>
 		<Button type="submit" disabled={formState.loading}>
-			{initialData ? 'Update' : 'Create'}
+			{initialData ? $t('common.update') : $t('common.create')}
 		</Button>
 	</div>
 </form>

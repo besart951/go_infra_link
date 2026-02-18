@@ -25,6 +25,28 @@ function createI18nStore() {
 	const defaultLocale: Locale = 'de-CH';
 	let currentTranslations: Record<string, any> = {};
 
+	function deepMerge(
+		base: Record<string, any>,
+		override: Record<string, any>
+	): Record<string, any> {
+		const result: Record<string, any> = { ...base };
+		for (const [key, value] of Object.entries(override)) {
+			if (
+				value &&
+				typeof value === 'object' &&
+				!Array.isArray(value) &&
+				base[key] &&
+				typeof base[key] === 'object' &&
+				!Array.isArray(base[key])
+			) {
+				result[key] = deepMerge(base[key], value as Record<string, any>);
+			} else {
+				result[key] = value;
+			}
+		}
+		return result;
+	}
+
 	const { subscribe, set, update } = writable<TranslationStore>({
 		locale: defaultLocale,
 		translations: {},
@@ -63,13 +85,14 @@ function createI18nStore() {
 			}
 
 			const data = await response.json();
-			translations[locale] = data;
-			currentTranslations = data;
+			const merged = hasFallback ? deepMerge(fallbackData, data) : data;
+			translations[locale] = merged;
+			currentTranslations = merged;
 
 			update((store) => ({
 				...store,
 				locale,
-				translations: data,
+				translations: merged,
 				isLoading: false,
 				error: null
 			}));

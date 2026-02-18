@@ -9,14 +9,15 @@
 	import MoonIcon from '@lucide/svelte/icons/moon';
 	import SunIcon from '@lucide/svelte/icons/sun';
 	import MonitorIcon from '@lucide/svelte/icons/monitor';
-	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import UserIcon from '@lucide/svelte/icons/user';
 	import { goto } from '$app/navigation';
 	import type { User } from '$lib/domain/user/index.js';
 	import { onMount } from 'svelte';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	let { user }: { user: User } = $props();
 	const sidebar = useSidebar();
+	const t = createTranslator();
 
 	const logout = async () => {
 		await goto('/logout');
@@ -73,32 +74,28 @@
 				<DropdownMenu.Group>
 					<DropdownMenu.Item onclick={() => setThemePreference('light')}>
 						<SunIcon class="size-4" />
-						<span>Light</span>
+						<span>{$t('pages.settings_theme_light')}</span>
 					</DropdownMenu.Item>
 					<DropdownMenu.Item onclick={() => setThemePreference('dark')}>
 						<MoonIcon class="size-4" />
-						<span>Dark</span>
+						<span>{$t('pages.settings_theme_dark')}</span>
 					</DropdownMenu.Item>
 					<DropdownMenu.Item onclick={() => setThemePreference('system')}>
 						<MonitorIcon class="size-4" />
-						<span>System</span>
+						<span>{$t('pages.settings_theme_system')}</span>
 					</DropdownMenu.Item>
 				</DropdownMenu.Group>
 				<DropdownMenu.Separator />
 				<DropdownMenu.Group>
 					<DropdownMenu.Item onclick={() => goto('/account')}>
 						<UserIcon class="size-4" />
-						<span>Account</span>
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={() => goto('/settings')}>
-						<SettingsIcon class="size-4" />
-						<span>Settings</span>
+						<span>{$t('navigation.account')}</span>
 					</DropdownMenu.Item>
 				</DropdownMenu.Group>
 				<DropdownMenu.Separator />
 				<DropdownMenu.Item onclick={logout}>
 					<LogOutIcon class="size-4" />
-					<span>Log out</span>
+					<span>{$t('auth.logout')}</span>
 				</DropdownMenu.Item>
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>

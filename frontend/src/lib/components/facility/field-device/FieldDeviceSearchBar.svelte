@@ -2,6 +2,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Search, X, Trash2, Settings2, RefreshCw } from '@lucide/svelte';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface Props {
 		searchInput: string;
@@ -27,6 +28,8 @@
 		onRefresh
 	}: Props = $props();
 
+	const t = createTranslator();
+
 	function handleSearchInput(e: Event) {
 		const value = (e.target as HTMLInputElement).value;
 		onSearch(value);
@@ -38,7 +41,7 @@
 		<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 		<Input
 			type="search"
-			placeholder="Search field devices..."
+			placeholder={$t('field_device.search.placeholder')}
 			class="pl-9"
 			value={searchInput}
 			oninput={handleSearchInput}
@@ -47,14 +50,16 @@
 
 	{#if selectedCount > 0}
 		<div class="flex items-center gap-2">
-			<span class="text-sm text-muted-foreground">{selectedCount} selected</span>
+			<span class="text-sm text-muted-foreground">
+				{$t('field_device.search.selected', { count: selectedCount })}
+			</span>
 			<Button variant="outline" size="sm" onclick={onClearSelection}>
 				<X class="mr-1 h-4 w-4" />
-				Clear
+				{$t('field_device.search.clear')}
 			</Button>
 			<Button variant="destructive" size="sm" onclick={onBulkDelete}>
 				<Trash2 class="mr-1 h-4 w-4" />
-				Delete
+				{$t('field_device.search.delete')}
 			</Button>
 			<Button
 				variant={showBulkEditPanel ? 'secondary' : 'outline'}
@@ -62,16 +67,12 @@
 				onclick={onToggleBulkEdit}
 			>
 				<Settings2 class="mr-1 h-4 w-4" />
-				Bulk Edit
+				{$t('field_device.search.bulk_edit')}
 			</Button>
 		</div>
 	{/if}
 
-	<Button
-		variant="outline"
-		onclick={onRefresh}
-		disabled={loading}
-	>
-		Refresh
+	<Button variant="outline" onclick={onRefresh} disabled={loading}>
+		{$t('field_device.search.refresh')}
 	</Button>
 </div>

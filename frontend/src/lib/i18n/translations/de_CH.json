@@ -1,6 +1,11 @@
 {
   "app": {
     "name": "Infrastruktur Link",
+    "brand": "Infra Link",
+    "brand_short": "IL",
+    "loading": "Laden...",
+    "translation_error_title": "Fehler beim Laden der Übersetzungen",
+    "retry": "Erneut versuchen",
     "version": "1.0.0"
   },
   "common": {
@@ -13,9 +18,12 @@
     "close": "Schließen",
     "cancel": "Abbrechen",
     "save": "Speichern",
+    "save_changes": "Änderungen speichern",
+    "saving": "Speichern...",
     "delete": "Löschen",
     "edit": "Bearbeiten",
     "create": "Erstellen",
+    "update": "Aktualisieren",
     "create_user": "Benutzer erstellen",
     "add": "Hinzufügen",
     "remove": "Entfernen",
@@ -24,6 +32,7 @@
     "sort": "Sortieren",
     "export": "Exportieren",
     "import": "Importieren",
+    "refresh": "Aktualisieren",
     "next": "Nächste",
     "previous": "Vorherige",
     "back": "Zurück",
@@ -63,7 +72,11 @@
     "members": "Mitglieder",
     "manage": "Verwalten",
     "created": "Erstellt am {date}",
-    "modified": "Geändert am {date}"
+    "modified": "Geändert am {date}",
+    "id": "ID",
+    "not_available": "—",
+    "id": "ID",
+    "not_available": "—"
   },
   "actions": {
     "disable_user": "Benutzer deaktivieren",
@@ -85,6 +98,8 @@
     "new_password": "Neues Passwort",
     "sign_in": "Mit Konto anmelden",
     "sign_up": "Konto erstellen",
+    "show_password": "Passwort anzeigen",
+    "hide_password": "Passwort verbergen",
     "working": "Wird angemeldet...",
     "missing_fields": "E-Mail und Passwort sind erforderlich.",
     "service_unavailable": "Der Dienst ist derzeit nicht verfügbar. Bitte versuchen Sie es in einem Moment erneut.",
@@ -218,6 +233,152 @@
     "project_or_object_data_not_found": "Projekt oder Objekt nicht gefunden.",
     "object_data_already_linked": "Das Objekt ist bereits mit einem anderen Projekt verknüpft."
   },
+  "projects": {
+    "redirect": "Weiterleitung zu Projekten...",
+    "detail": {
+      "description": "Projektressourcen und Zuweisungen verwalten.",
+      "settings": "Einstellungen"
+    },
+    "errors": {
+      "missing_id": "Projekt-ID fehlt",
+      "load_failed": "Projekt konnte nicht geladen werden",
+      "load_title": "Projekt konnte nicht geladen werden",
+      "not_found": "Projekt nicht gefunden."
+    },
+    "control_cabinets": {
+      "description": "Schaltschränke erstellen und zuweisen.",
+      "search_placeholder": "Schaltschränke suchen...",
+      "new": "Neuer Schaltschrank",
+      "created": "Schaltschrank erstellt",
+      "link_failed": "Schaltschrank konnte nicht verknüpft werden",
+      "load_failed": "Schaltschränke konnten nicht geladen werden",
+      "remove_title": "Schaltschrank entfernen",
+      "remove_message": "Diesen Schaltschrank aus dem Projekt entfernen?",
+      "remove_confirm": "Entfernen",
+      "removed": "Schaltschrank entfernt",
+      "remove_failed": "Schaltschrank konnte nicht entfernt werden",
+      "empty": "Keine Schaltschränke gefunden.",
+      "table": {
+        "control_cabinet": "Schaltschrank",
+        "building": "Gebäude"
+      }
+    },
+    "sps_controllers": {
+      "description": "SPS-Regler erstellen und zuweisen.",
+      "new": "Neuer SPS-Regler",
+      "search_placeholder": "SPS-Regler suchen...",
+      "empty": "Keine SPS-Regler gefunden. Erstellen Sie Ihren ersten SPS-Regler, um zu starten.",
+      "columns": {
+        "device_name": "Gerätename",
+        "ga_device": "GA-Gerät",
+        "ip_address": "IP-Adresse",
+        "cabinet": "Schaltschrank",
+        "created": "Erstellt"
+      },
+      "created": "SPS-Regler erstellt",
+      "updated": "SPS-Regler aktualisiert",
+      "save_failed": "SPS-Regler konnte nicht gespeichert werden",
+      "delete_title": "SPS-Regler löschen",
+      "delete_message": "{name} löschen?",
+      "deleted": "SPS-Regler gelöscht",
+      "delete_failed": "SPS-Regler konnte nicht gelöscht werden",
+      "load_failed": "SPS-Regler konnten nicht geladen werden"
+    },
+    "field_devices": {
+      "title": "Feldgeräte",
+      "description": "Feldgeräte für dieses Projekt mit Inline-Bearbeitung verwalten."
+    },
+    "settings": {
+      "title": "Projekteinstellungen",
+      "description": "Projektmetadaten und Phase aktualisieren.",
+      "tabs": {
+        "settings": "Einstellungen",
+        "users": "Benutzer",
+        "object_data": "Objektdaten"
+      },
+      "status": {
+        "planned": "Geplant",
+        "ongoing": "Laufend",
+        "completed": "Abgeschlossen"
+      },
+      "start_date": "Startdatum",
+      "phase": "Phase",
+      "save_changes": "Änderungen speichern",
+      "phase_required": "Phase ist erforderlich",
+      "updated": "Projekt aktualisiert",
+      "update_failed": "Projekt konnte nicht aktualisiert werden"
+    },
+    "users": {
+      "search_label": "Benutzer suchen",
+      "search_placeholder": "Suche nach Name oder E-Mail",
+      "empty": "Keine Benutzer gefunden.",
+      "load_failed": "Benutzer konnten nicht geladen werden",
+      "remove_title": "Benutzer entfernen",
+      "remove_message": "Diesen Benutzer aus dem Projekt entfernen?",
+      "remove_confirm": "Entfernen",
+      "removed": "Benutzer entfernt",
+      "remove_failed": "Benutzer konnte nicht entfernt werden",
+      "added": "Benutzer hinzugefügt",
+      "add_failed": "Benutzer konnte nicht hinzugefügt werden"
+    },
+    "object_data": {
+      "search_label": "Objektdaten suchen",
+      "search_placeholder": "Suche nach Beschreibung",
+      "status_all": "Alle",
+      "version": "Version",
+      "project_status": "Projektstatus",
+      "empty": "Keine Objektdaten gefunden.",
+      "load_failed": "Objektdaten konnten nicht geladen werden",
+      "activate": "Aktivieren",
+      "deactivate": "Deaktivieren",
+      "activate_failed": "Objektdaten konnten nicht aktiviert werden",
+      "deactivate_failed": "Objektdaten konnten nicht deaktiviert werden",
+      "activated": "Objektdaten aktiviert",
+      "deactivated": "Objektdaten deaktiviert",
+      "deactivate_title": "Objektdaten deaktivieren",
+      "deactivate_message": "Diese Objektdaten für das Projekt deaktivieren?",
+      "deactivate_confirm": "Deaktivieren"
+    }
+  },
+  "phases": {
+    "page": {
+      "title": "Phasen | Infra Link",
+      "heading": "Phasen",
+      "description": "Projektphasen und ihre Zuweisungen verwalten.",
+      "new": "Neue Phase",
+      "search_placeholder": "Phasen suchen...",
+      "empty": "Keine Phasen gefunden. Erstellen Sie Ihre erste Phase, um zu starten."
+    },
+    "new": {
+      "title": "Phase erstellen",
+      "description": "Neue Phase zu einem Projekt hinzufügen."
+    },
+    "detail": {
+      "fallback": "Phase",
+      "description": "Phasendetails und Metadaten."
+    },
+    "form": {
+      "title_new": "Neue Phase",
+      "title_edit": "Phase bearbeiten",
+      "name_label": "Phasenname",
+      "name_placeholder": "z. B. SIA:51"
+    },
+    "confirm": {
+      "delete_title": "Phase löschen",
+      "delete_message": "{name} löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+    },
+    "toasts": {
+      "created": "Phase erfolgreich erstellt",
+      "updated": "Phase erfolgreich aktualisiert",
+      "deleted": "Phase erfolgreich gelöscht",
+      "delete_failed": "Phase konnte nicht gelöscht werden"
+    },
+    "errors": {
+      "missing_id": "Phasen-ID fehlt",
+      "load_failed": "Phase konnte nicht geladen werden",
+      "load_title": "Phase konnte nicht geladen werden"
+    }
+  },
   "facility": {
     "management": "Anlagenverwaltung",
     "building": "Gebäude",
@@ -232,6 +393,23 @@
     "building_deleted": "Gebäude gelöscht",
     "delete_building_confirm": "Gebäude {name} löschen?",
     "delete_building_failed": "Gebäude löschen fehlgeschlagen",
+    "building_detail": {
+      "edit_description": "Gebäudedetails bearbeiten",
+      "legend": "Gebäudedetails",
+      "iws_label": "IWS-Code",
+      "iws_placeholder": "z. B. ABCD",
+      "iws_help": "Der eindeutige IWS-Code für dieses Gebäude.",
+      "group_label": "Gebäudegruppe",
+      "group_placeholder": "z. B. 1",
+      "group_help": "Die Gruppennummer, zu der dieses Gebäude gehört.",
+      "delete_confirm": "Möchten Sie dieses Gebäude löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "delete_failed": "Gebäude konnte nicht gelöscht werden",
+      "iws_required": "IWS-Code ist erforderlich",
+      "group_required": "Gebäudegruppe ist erforderlich",
+      "group_number": "Gebäudegruppe muss eine Zahl sein",
+      "updated": "Gebäude erfolgreich aktualisiert",
+      "update_failed": "Ein unerwarteter Fehler ist aufgetreten"
+    },
     "copy": "Kopieren",
     "view": "Anzeigen",
     "control_cabinets": "Schaltschränke",
@@ -286,6 +464,23 @@
     "new_sps_controller": "Neuer SPS-Regler",
     "search_sps_controllers": "SPS-Regler suchen...",
     "no_sps_controllers_found": "Keine SPS-Regler gefunden. Erstellen Sie Ihren ersten SPS-Regler, um zu beginnen.",
+    "selects": {
+      "apparat": "Apparat auswählen...",
+      "building": "Gebäude auswählen...",
+      "control_cabinet": "Schaltschrank auswählen...",
+      "sps_controller": "SPS-Regler auswählen...",
+      "sps_controller_system_type": "SPS-Regler-Systemtyp auswählen...",
+      "system_part": "Systemteil auswählen...",
+      "system_type": "Systemtyp auswählen..."
+    },
+    "multi_selects": {
+      "apparats_placeholder": "Apparate auswählen...",
+      "apparats_search": "Apparate suchen...",
+      "apparats_empty": "Keine Apparate gefunden.",
+      "system_parts_placeholder": "Systemteile auswählen...",
+      "system_parts_search": "Systemteile suchen...",
+      "system_parts_empty": "Keine Systemteile gefunden."
+    },
     "sps_controller_deleted": "SPS-Regler gelöscht",
     "delete_sps_controller_confirm": "SPS-Regler {name} löschen?",
     "delete_sps_controller_failed": "SPS-Regler löschen fehlgeschlagen",
@@ -400,7 +595,121 @@
     "specification_already_exists": "Spezifikation existiert bereits für dieses Feldgerät.",
     "invalid_bacnet_object_data": "Ungültige BACnet-Objektdaten.",
     "entity_conflict": "Entitätskonflikt.",
-    "exactly_one_required": "Genau einer von field_device_id oder object_data_id muss gesetzt sein."
+    "exactly_one_required": "Genau einer von field_device_id oder object_data_id muss gesetzt sein.",
+    "forms": {
+      "building": {
+        "title_new": "Neues Gebäude",
+        "title_edit": "Gebäude bearbeiten",
+        "iws_label": "IWS-Code",
+        "iws_placeholder": "z. B. ABCD",
+        "iws_exact": "Genau 4 Zeichen",
+        "group_label": "Gebäudegruppe",
+        "group_placeholder": "z. B. 1"
+      },
+      "control_cabinet": {
+        "title_new": "Neuer Schaltschrank",
+        "title_edit": "Schaltschrank bearbeiten",
+        "number_label": "Schaltschrank-Nr.",
+        "building_label": "Gebäude",
+        "building_required": "Bitte ein Gebäude auswählen"
+      },
+      "sps_controller": {
+        "title_new": "Neuer SPS-Regler",
+        "title_edit": "SPS-Regler bearbeiten",
+        "control_cabinet_label": "Schaltschrank",
+        "control_cabinet_help": "Wählen Sie einen Schaltschrank aus, um die übrigen Felder freizuschalten.",
+        "control_cabinet_required": "Bitte einen Schaltschrank auswählen",
+        "ga_device_label": "GA-Gerät",
+        "ga_device_tooltip": "Gelb bedeutet, dass ein niedrigeres ungenutztes GA-Gerät verfügbar ist. Sie können den Wert behalten oder \"Nächstes verwenden\" klicken.",
+        "ga_device_use_next": "Nächstes verwenden",
+        "ga_device_lowest": "Niedrigster verfügbarer Wert: {value}.",
+        "ga_device_checking": "Prüfe niedrigstes verfügbares GA-Gerät...",
+        "device_name_label": "Gerätename",
+        "device_name_loading": "Gerätename wird geladen...",
+        "ip_address_label": "IP-Adresse",
+        "subnet_label": "Subnetzmaske",
+        "gateway_label": "Gateway",
+        "vlan_label": "VLAN",
+        "system_types_title": "Systemtypen",
+        "system_types_description": "Systemtypen diesem SPS-Regler zuweisen",
+        "system_type_select_first": "Bitte zuerst einen Systemtyp auswählen.",
+        "system_type_loading_details": "Systemtyp-Details werden geladen...",
+        "system_type_loading": "Systemtyp wird geladen...",
+        "system_type_all_used": "Alle Nummern für diesen Systemtyp sind vergeben.",
+        "system_type_add_next": "Nächste verfügbare Nummer hinzufügen.",
+        "system_types_loading": "Systemtypen werden geladen...",
+        "system_types_empty": "Noch keine Systemtypen hinzugefügt.",
+        "system_type_label": "Systemtyp",
+        "system_type_number": "Nummer",
+        "system_type_document": "Dokumentname"
+      },
+      "system_type": {
+        "title_new": "Neuer Systemtyp",
+        "title_edit": "Systemtyp bearbeiten",
+        "min_label": "Min. Nummer",
+        "max_label": "Max. Nummer",
+        "min_placeholder": "0001",
+        "max_placeholder": "9999",
+        "min_digits": "Min.-Nummer muss 4-stellig sein.",
+        "max_digits": "Max.-Nummer muss 4-stellig sein.",
+        "min_range": "Min.-Nummer muss zwischen {min} und {max} liegen.",
+        "max_range": "Max.-Nummer muss zwischen {min} und {max} liegen.",
+        "max_greater": "Max.-Nummer muss größer als die Min.-Nummer sein.",
+        "available_ranges_failed": "Verfügbare Nummern konnten nicht geladen werden.",
+        "loading_ranges": "Verfügbare Nummern werden geladen...",
+        "available_ranges": "Verfügbare Nummern: {ranges}",
+        "no_ranges": "Keine verfügbaren Nummern in {min}-{max}."
+      },
+      "system_part": {
+        "title_new": "Neues Systemteil",
+        "title_edit": "Systemteil bearbeiten",
+        "short_name_label": "Kurzbezeichnung",
+        "short_name_length": "Kurzbezeichnung muss genau 3 Zeichen haben."
+      },
+      "apparat": {
+        "title_new": "Neuer Apparat",
+        "title_edit": "Apparat bearbeiten",
+        "short_name_label": "Kurzbezeichnung",
+        "short_name_length": "Kurzbezeichnung muss genau 3 Zeichen haben.",
+        "system_parts_label": "Systemteile"
+      },
+      "object_data": {
+        "title_new": "Neue Objektdaten",
+        "title_edit": "Objektdaten bearbeiten",
+        "version_label": "Version",
+        "apparats_label": "Apparate",
+        "bacnet_title": "BACnet-Objekte",
+        "bacnet_description": "BACnet-Objekte für diese Vorlage hinzufügen und konfigurieren",
+        "bacnet_add": "Objekt hinzufügen",
+        "bacnet_empty": "Noch keine BACnet-Objekte hinzugefügt. Klicken Sie auf \"Objekt hinzufügen\", um zu starten."
+      },
+      "notification_class": {
+        "title_new": "Neue Benachrichtigungsklasse",
+        "title_edit": "Benachrichtigungsklasse bearbeiten",
+        "event_category": "Ereigniskategorie",
+        "nc_label": "NC",
+        "object_description": "Objektbeschreibung",
+        "internal_description": "Interne Beschreibung",
+        "meaning": "Bedeutung",
+        "ack_not_normal": "Quittierung erforderlich (nicht normal)",
+        "ack_error": "Quittierung erforderlich (Fehler)",
+        "ack_normal": "Quittierung erforderlich (normal)",
+        "norm_not_normal": "Norm nicht normal",
+        "norm_error": "Norm Fehler",
+        "norm_normal": "Norm normal"
+      },
+      "state_text": {
+        "title_new": "Neuer Statustext",
+        "title_edit": "Statustext bearbeiten",
+        "ref_label": "Referenznummer",
+        "state_text": "Statustext {index}"
+      },
+      "alarm_definition": {
+        "title_new": "Neue Alarmdefinition",
+        "title_edit": "Alarmdefinition bearbeiten",
+        "note_label": "Alarmhinweis"
+      }
+    }
   },
   "phase": {
     "management": "Phasenverwaltung",
@@ -490,6 +799,7 @@
     "file_not_found": "Die Datei wurde nicht gefunden."
   },
   "navigation": {
+    "app": "App",
     "dashboard": "Dashboard",
     "projects": "Projekte",
     "teams": "Teams",
@@ -514,6 +824,177 @@
     "help": "Hilfe",
     "excel_importer": "Excel-Importer"
   },
+  "roles": {
+    "page": {
+      "title": "Rollen & Berechtigungen",
+      "description": "Rollenhierarchie und Berechtigungen verwalten"
+    },
+    "actions": {
+      "refresh": "Aktualisieren",
+      "create_permission": "Berechtigung erstellen",
+      "select_all": "Alle auswählen",
+      "deselect_all": "Alle abwählen",
+      "save_changes": "Änderungen speichern"
+    },
+    "stats": {
+      "total_roles": "Rollen gesamt",
+      "total_permissions": "Berechtigungen gesamt",
+      "resources": "Ressourcen"
+    },
+    "errors": {
+      "load_title": "Fehler beim Laden",
+      "load_failed": "Daten konnten nicht geladen werden"
+    },
+    "tabs": {
+      "roles": "Rollen",
+      "permissions": "Berechtigungen",
+      "matrix": "Matrix"
+    },
+    "categories": {
+      "general": "Allgemein",
+      "facility": "Anlage",
+      "project": "Projektressourcen",
+      "projects": "Projekte",
+      "users_access": "Benutzer & Zugriff"
+    },
+    "permissions": {
+      "search_placeholder": "Berechtigungen suchen...",
+      "count": "{count} Berechtigungen",
+      "matching": "passend zu \"{query}\"",
+      "category_badge": "{category}: {count}",
+      "table": {
+        "permission": "Berechtigung",
+        "category": "Kategorie",
+        "resource": "Ressource",
+        "action": "Aktion",
+        "description": "Beschreibung",
+        "actions": "Aktionen"
+      },
+      "empty_match": "Keine Berechtigungen gefunden für \"{query}\"",
+      "empty": "Keine Berechtigungen verfügbar",
+      "menu_open": "Menü öffnen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "delete_confirm_title": "Berechtigung löschen",
+      "delete_confirm_message": "Möchten Sie \"{name}\" löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "delete_confirm_confirm": "Löschen"
+    },
+    "editor": {
+      "title": "Rollenberechtigungen bearbeiten",
+      "description": "Berechtigungen konfigurieren für {role}",
+      "selected_count": "{selected} von {total} Berechtigungen ausgewählt"
+    },
+    "permission_form": {
+      "title_create": "Berechtigung erstellen",
+      "title_edit": "Berechtigung bearbeiten",
+      "subtitle_create": "Neue Berechtigung für die Rollenzuweisung erstellen",
+      "subtitle_edit": "Berechtigungsdetails aktualisieren",
+      "category_label": "Berechtigungskategorie",
+      "category_general_desc": "Benutzer, Team, Projekt, Phase...",
+      "category_facility_desc": "Gebäude, Systemteil, Apparat...",
+      "category_project_desc": "Schaltschrank, SPS-Regler...",
+      "resource_label": "Ressource",
+      "resource_placeholder": "Ressource eingeben oder auswählen...",
+      "project_resource_label": "Projektressource",
+      "project_resource_help": "Wählen Sie die Projektressource für diese Berechtigung",
+      "project_resource_placeholder": "Projektressource eingeben oder auswählen...",
+      "action_label": "Aktion",
+      "action_placeholder": "Aktion eingeben oder auswählen...",
+      "permission_name_label": "Berechtigungsname",
+      "project_badge": "Projektressource",
+      "description_label": "Beschreibung",
+      "description_placeholder": "Beschreiben Sie, was diese Berechtigung erlaubt..."
+    },
+    "resources": {
+      "user": "Benutzer",
+      "team": "Teams",
+      "role": "Rollen",
+      "permission": "Berechtigungen",
+      "building": "Gebäude",
+      "controlcabinet": "Schaltschränke",
+      "spscontroller": "SPS-Regler",
+      "spscontrollersystemtype": "SPS-Regler-Systemtypen",
+      "fielddevice": "Feldgeräte",
+      "bacnetobject": "BACnet-Objekte",
+      "systemtype": "Systemtypen",
+      "systempart": "Systemteile",
+      "apparat": "Apparate",
+      "objectdata": "Objektdaten",
+      "specification": "Spezifikationen",
+      "statetext": "Statustexte",
+      "alarmdefinition": "Alarmdefinitionen",
+      "notificationclass": "Benachrichtigungsklassen",
+      "project": {
+        "controlcabinet": "Schaltschränke",
+        "spscontroller": "SPS-Regler",
+        "spscontrollersystemtype": "SPS-Regler-Systemtypen",
+        "fielddevice": "Feldgeräte",
+        "bacnetobject": "BACnet-Objekte",
+        "systemtype": "Systemtypen"
+      }
+    },
+    "toasts": {
+      "permission_created": "Berechtigung erfolgreich erstellt",
+      "permission_updated": "Berechtigung erfolgreich aktualisiert",
+      "permission_deleted": "Berechtigung erfolgreich gelöscht",
+      "role_permissions_updated": "Berechtigungen aktualisiert für {role}"
+    }
+  },
+  "users": {
+    "form": {
+      "role_required": "Bitte eine Rolle auswählen",
+      "select_role_placeholder": "Rolle auswählen...",
+      "search_roles_placeholder": "Rollen suchen...",
+      "no_role_found": "Keine Rolle gefunden.",
+      "allowed_roles_help": "Sie können nur Rollen zuweisen, die Sie verwalten dürfen",
+      "user_active": "Benutzer ist aktiv",
+      "creating_user": "Wird erstellt..."
+    }
+  },
+  "teams": {
+    "detail": {
+      "description": "Mitglieder und Berechtigungen verwalten.",
+      "add_member": "Mitglied hinzufügen",
+      "remove_member": "Entfernen",
+      "search_users_placeholder": "Benutzer suchen...",
+      "searching": "Suche läuft...",
+      "no_users_found": "Keine Benutzer gefunden",
+      "empty_title": "Noch keine Mitglieder",
+      "empty_description": "Verwenden Sie die Schaltfläche \"Mitglied hinzufügen\", um Benutzer zu diesem Team hinzuzufügen."
+    },
+    "errors": {
+      "missing_id": "Team-ID fehlt",
+      "load_failed": "Team konnte nicht geladen werden",
+      "load_title": "Team konnte nicht geladen werden"
+    },
+    "confirm": {
+      "remove_title": "Mitglied entfernen",
+      "remove_message": "{name} aus dem Team entfernen?",
+      "remove_confirm": "Entfernen",
+      "user_fallback": "diesen Benutzer"
+    },
+    "roles": {
+      "member": "Mitglied",
+      "manager": "Manager",
+      "owner": "Eigentümer"
+    },
+    "toasts": {
+      "member_added": "Mitglied hinzugefügt",
+      "member_add_failed": "Mitglied konnte nicht hinzugefügt werden",
+      "role_updated": "Rolle aktualisiert",
+      "role_update_failed": "Rolle konnte nicht aktualisiert werden",
+      "member_removed": "Mitglied entfernt",
+      "member_remove_failed": "Mitglied konnte nicht entfernt werden"
+    }
+  },
+  "sidebar": {
+    "team_switcher": {
+      "label": "Teams",
+      "add_team": "Team hinzufügen",
+      "team": "Team",
+      "console": "Konsole"
+    }
+  },
   "pages": {
     "facility_management_title": "Anlagenverwaltung",
     "facility_management_desc": "Wählen Sie eine Kategorie in der Seitenleiste, um Ihre Anlageninfrastruktur zu verwalten.",
@@ -535,12 +1016,321 @@
     "settings_theme_light_desc": "Verwenden Sie immer das helle Design.",
     "settings_theme_dark": "Dunkel",
     "settings_theme_dark_desc": "Verwenden Sie immer das dunkle Design.",
+    "account_desc": "Verwalten Sie Ihre Kontodaten, Passwort und Einstellungen.",
+    "account_tabs_information": "Information",
+    "account_tabs_notifications": "Benachrichtigungen",
+    "account_tabs_password": "Passwort",
+    "account_tabs_preferences": "Präferenzen",
+    "account_information_title": "Kontoinformationen",
+    "account_information_desc": "Aktualisieren Sie Ihre persönlichen Daten.",
+    "account_access_title": "Rolle, Berechtigungen und Teams",
+    "account_permissions_empty": "Keine Berechtigungen zugewiesen.",
+    "account_teams_empty": "Keinen Teams zugeordnet.",
+    "account_notifications_title": "Benachrichtigungen",
+    "account_notifications_empty": "Dieser Bereich bleibt vorerst leer.",
+    "account_password_title": "Passwort ändern",
+    "account_password_desc": "Legen Sie ein neues Passwort für Ihr Konto fest.",
+    "account_password_save": "Passwort speichern",
     "optional": "optional",
     "teams_desc": "Erstellen Sie Teams und verwalten Sie den Zugriff.",
     "create_team": "Team erstellen",
     "backend_unavailable": "Der Backend-Dienst ist derzeit nicht verfügbar. Einige Aktionen können fehlschlagen.",
     "backend_unavailable_title": "Backend nicht verfügbar",
     "backend_unavailable_desc": "Der Backend-Dienst ist derzeit nicht erreichbar. Bitte überprüfen Sie Ihre Verbindung oder kontaktieren Sie den Support."
+  },
+  "field_device": {
+    "actions": {
+      "hide_export": "Export ausblenden",
+      "export": "Excel exportieren",
+      "multi_create": "Mehrfach anlegen"
+    },
+    "confirm": {
+      "bulk_delete": "{count} Feldgeräte löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "delete": "{label} löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+    },
+    "toasts": {
+      "created_and_linked": "{count} Feldgerät(e) erstellt und dem Projekt zugeordnet.",
+      "partial_link_failed": "Einige Feldgeräte wurden erstellt, konnten aber nicht zugeordnet werden.",
+      "link_failed": "Zuordnung fehlgeschlagen: {message}",
+      "created": "{count} Feldgerät(e) erstellt.",
+      "bulk_deleted": "{count} Feldgerät(e) gelöscht.",
+      "bulk_delete_failed": "{count} Feldgerät(e) konnten nicht gelöscht werden.",
+      "bulk_delete_failed_message": "Sammellöschung fehlgeschlagen: {message}",
+      "deleted": "Feldgerät gelöscht.",
+      "delete_failed": "Löschen fehlgeschlagen: {message}"
+    },
+    "table": {
+      "select_all": "Alles auswählen",
+      "sps_system_type": "SPS-Systemtyp",
+      "bmk": "BMK",
+      "description": "Beschreibung",
+      "apparat_nr": "Apparat-Nr.",
+      "apparat": "Apparat",
+      "system_part": "Systemteil",
+      "show_specifications": "Spezifikationen anzeigen",
+      "hide_specifications": "Spezifikationen ausblenden",
+      "supplier": "Lieferant",
+      "brand": "Marke",
+      "type": "Typ",
+      "motor_valve": "Motor/Ventil",
+      "size": "Größe",
+      "install_location": "Einbauort",
+      "ph": "PH",
+      "acdc": "AC/DC",
+      "amperage": "Stromstärke",
+      "power": "Leistung",
+      "rotation": "Drehzahl",
+      "acdc_placeholder": "AC/DC",
+      "amperage_placeholder": "A",
+      "power_placeholder": "W",
+      "rotation_placeholder": "U/min",
+      "select_aria": "{label} auswählen",
+      "bacnet_expand": "BACnet-Objekte erweitern",
+      "spec_available": "Spezifikation vorhanden",
+      "spec_missing": "Keine Spezifikation"
+    },
+    "empty": {
+      "title": "Keine Feldgeräte gefunden. Erstellen Sie Ihr erstes Feldgerät, um zu beginnen.",
+      "search_hint": "Versuchen Sie, Ihre Suche anzupassen"
+    },
+    "bulk_edit": {
+      "title": "Sammelbearbeitung ({count} ausgewählt)",
+      "description": "Felder ausfüllen und \"Auf Auswahl anwenden\" klicken. Dann \"Alles speichern\", um zu speichern.",
+      "device_fields": "Gerätefelder",
+      "bmk": "BMK",
+      "bmk_placeholder": "BMK",
+      "description": "Beschreibung",
+      "description_placeholder": "Beschreibung",
+      "apparat_nr": "Apparat-Nr.",
+      "apparat_nr_placeholder": "1-99",
+      "apparat": "Apparat",
+      "system_part": "Systemteil",
+      "spec_fields": "Spezifikationsfelder",
+      "supplier": "Lieferant",
+      "supplier_placeholder": "Lieferant",
+      "brand": "Marke",
+      "brand_placeholder": "Marke",
+      "type": "Typ",
+      "type_placeholder": "Typ",
+      "motor_valve": "Motor/Ventil",
+      "motor_valve_placeholder": "Motor/Ventil",
+      "size": "Größe",
+      "size_placeholder": "Größe",
+      "install_location": "Einbauort",
+      "install_location_placeholder": "Einbauort",
+      "ph": "PH",
+      "ph_placeholder": "PH",
+      "acdc": "AC/DC",
+      "acdc_placeholder": "AC/DC",
+      "amperage": "Stromstärke",
+      "amperage_placeholder": "A",
+      "power": "Leistung",
+      "power_placeholder": "W",
+      "rotation": "Drehzahl",
+      "rotation_placeholder": "U/min",
+      "apply": "Auf Auswahl anwenden",
+      "clear": "Leeren",
+      "toasts": {
+        "applied": "Änderungen auf {count} Gerät(e) angewendet.",
+        "no_fields": "Keine Felder zum Anwenden ausgefüllt."
+      }
+    },
+    "filters": {
+      "title": "Filter",
+      "description": "Feldgeräte nach Gebäude, Schaltschrank, SPS-Regler, Systemtyp",
+      "description_project": ", oder Projekt.",
+      "description_end": ".",
+      "building": "Gebäude",
+      "control_cabinet": "Schaltschrank",
+      "sps_controller": "SPS-Regler",
+      "sps_system_type": "SPS-Regler-Systemtyp",
+      "project": "Projekt",
+      "apply": "Filter anwenden",
+      "clear": "Filter löschen"
+    },
+    "multi_create": {
+      "errors": {
+        "fetch_numbers_status": "Verfügbare Nummern konnten nicht geladen werden ({status}): {message}",
+        "fetch_numbers_failed": "Verfügbare Nummern konnten nicht geladen werden: {message}",
+        "no_rows": "Bitte fügen Sie mindestens eine Feldgeräte-Zeile hinzu.",
+        "validation": "Bitte beheben Sie die Validierungsfehler.",
+        "create": "Feldgeräte konnten nicht erstellt werden.",
+        "create_with_message": "Fehlgeschlagen: {message}",
+        "no_more_numbers": "Keine weiteren verfügbaren Apparatnummern."
+      },
+      "toasts": {
+        "partial_created": "{success} von {total} Feldgeräten erstellt ({failed} fehlgeschlagen).",
+        "created": "{count} Feldgerät(e) erstellt."
+      },
+      "next_available": "Nächste: {value}",
+      "selection": {
+        "title": "Auswahl",
+        "description": "Wählen Sie die Konfigurationsparameter für die Feldgeräte, die Sie erstellen möchten.",
+        "sps_system_type": "SPS-Regler-Systemtyp *",
+        "sps_system_type_placeholder": "SPS-Regler-Systemtyp auswählen...",
+        "sps_system_type_search": "SPS-Systemtypen suchen...",
+        "sps_system_type_empty": "Keine SPS-Systemtypen gefunden.",
+        "sps_system_type_clear": "SPS-Regler-Systemtyp löschen"
+      },
+      "status": {
+        "title": "Konfiguration gewählt:",
+        "available": "Verfügbare Apparatnummern: {count}",
+        "loading_suffix": " (lädt...)",
+        "none_available": "Keine verfügbaren Apparatnummern für diese Konfiguration"
+      },
+      "rows": {
+        "title": "Feldgeräte",
+        "description": "Feldgeräte zum Erstellen hinzufügen. Jedes verwendet die oben gewählte Konfiguration.",
+        "add": "Feldgerät hinzufügen",
+        "none_available": "Alle Apparatnummern sind vergeben. Für diese Konfiguration können keine weiteren Feldgeräte erstellt werden.",
+        "loading_numbers": "Verfügbare Apparatnummern werden geladen...",
+        "empty_prompt": "Klicken Sie auf \"Feldgerät hinzufügen\", um Zeilen zu erstellen.",
+        "summary": "{count} Feldgerät(e) bereit zur Erstellung",
+        "errors": "({count} mit Fehlern)"
+      },
+      "actions": {
+        "creating": "Erstelle...",
+        "create": "Erstelle {count} Feldgerät(e)"
+      }
+    },
+    "row": {
+      "title": "Feldgerät {index}",
+      "bmk": "BMK",
+      "bmk_placeholder": "BMK (optional)",
+      "description": "Beschreibung",
+      "description_placeholder": "Beschreibung (optional)",
+      "apparat_nr": "Apparat-Nr. *"
+    },
+    "preselection": {
+      "errors": {
+        "load": "Auswahldaten konnten nicht geladen werden.",
+        "load_with_message": "Objektdaten konnten nicht geladen werden: {message}",
+        "max_retries": "Maximale Versuche erreicht. Bitte laden Sie die Seite neu."
+      },
+      "actions": {
+        "retry": "Erneut versuchen ({count} übrig)"
+      },
+      "object_data": "Objektdaten *",
+      "object_data_placeholder": "Objektdaten auswählen...",
+      "object_data_search": "Objektdaten suchen...",
+      "object_data_empty": "Keine Objektdaten gefunden.",
+      "object_data_clear": "Objektdaten löschen",
+      "apparat": "Apparat *",
+      "apparat_placeholder": "Apparat auswählen...",
+      "apparat_search": "Apparate suchen...",
+      "apparat_empty": "Keine Apparate gefunden.",
+      "apparat_clear": "Apparat löschen",
+      "system_part": "Systemteil *",
+      "system_part_placeholder": "Systemteil auswählen...",
+      "system_part_search": "Systemteile suchen...",
+      "system_part_empty": "Keine Systemteile gefunden.",
+      "system_part_clear": "Systemteil löschen",
+      "loading": "Laden...",
+      "options": "{count} Option(en)"
+    },
+    "export": {
+      "title": "Excel-Export",
+      "description": "Wählen Sie Projekte, Gebäude, Schaltschränke oder SPS-Regler für den Export.",
+      "projects": "Projekte",
+      "projects_placeholder": "Projekte auswählen",
+      "projects_search": "Projekte suchen...",
+      "buildings": "Gebäude",
+      "buildings_placeholder": "Gebäude auswählen",
+      "buildings_search": "Gebäude suchen...",
+      "control_cabinets": "Schaltschränke",
+      "control_cabinets_placeholder": "Schaltschränke auswählen",
+      "control_cabinets_search": "Schaltschränke suchen...",
+      "sps_controllers": "SPS-Regler",
+      "sps_controllers_placeholder": "SPS-Regler auswählen",
+      "sps_controllers_search": "SPS-Regler suchen...",
+      "force_async": "Export immer einreihen (asynchron)",
+      "actions": {
+        "start": "Export starten",
+        "download": "Download {type}"
+      },
+      "status": {
+        "label": "Status: "
+      },
+      "toasts": {
+        "completed_ready": "Export abgeschlossen. Sie können die Datei jetzt herunterladen.",
+        "failed": "Export fehlgeschlagen",
+        "refresh_failed": "Exportstatus konnte nicht aktualisiert werden",
+        "select_filter": "Bitte mindestens einen Filter für den Export auswählen.",
+        "started": "Export gestartet. Status wird aktualisiert...",
+        "completed": "Export abgeschlossen. Bereit zum Download.",
+        "start_failed": "Export konnte nicht gestartet werden"
+      }
+    },
+    "search": {
+      "placeholder": "Feldgeräte suchen...",
+      "selected": "{count} ausgewählt",
+      "clear": "Auswahl löschen",
+      "delete": "Löschen",
+      "bulk_edit": "Sammelbearbeitung",
+      "refresh": "Aktualisieren"
+    },
+    "save_bar": {
+      "unsaved": "{count} ungespeicherte Änderung(en)",
+      "save_all": "Alles speichern",
+      "discard": "Verwerfen",
+      "notice": "Änderungen werden lokal gespeichert und bleiben beim Navigieren erhalten"
+    },
+    "table_select": {
+      "apparat": "Apparat auswählen...",
+      "system_part": "Systemteil auswählen..."
+    },
+    "validation": {
+      "bmk_max": "BMK darf maximal 10 Zeichen haben.",
+      "description_max": "Beschreibung darf maximal 250 Zeichen haben.",
+      "apparat_nr_range": "Apparat-Nr. muss zwischen 1 und 99 liegen.",
+      "spec_max": "{label} darf maximal 250 Zeichen haben.",
+      "supplier": "Lieferant",
+      "brand": "Marke",
+      "type": "Typ",
+      "motor_valve": "Motor/Ventil",
+      "install_location": "Einbauort",
+      "acdc_length": "AC/DC muss 2 Zeichen lang sein."
+    },
+    "bacnet": {
+      "empty": "Keine BACnet-Objekte für dieses Feldgerät konfiguriert.",
+      "table": {
+        "text_fix": "Text Fix",
+        "description": "Beschreibung",
+        "software": "SW",
+        "hardware": "HW",
+        "gms_visible": "GMS sichtbar",
+        "optional": "Optional",
+        "text_individual": "Text individuell"
+      },
+      "row": {
+        "title": "BACnet-Objekt {index}",
+        "text_fix": "Text Fix",
+        "text_fix_placeholder": "Text Fix",
+        "description": "Beschreibung",
+        "description_placeholder": "Beschreibung",
+        "software": "Software",
+        "hardware": "Hardware",
+        "type": "Typ",
+        "number": "Nummer",
+        "quantity": "Anzahl",
+        "select": "Auswählen...",
+        "software_number_placeholder": "0-65535",
+        "hardware_quantity_placeholder": "1-255",
+        "gms_visible": "GMS sichtbar",
+        "optional": "Optional",
+        "text_individual": "Text individuell",
+        "text_individual_value": "Text Individuell"
+      },
+      "validation": {
+        "text_fix_unique": "text_fix muss innerhalb des Feldgeräts eindeutig sein.",
+        "text_fix_required": "text_fix ist erforderlich.",
+        "software_number_range": "Muss zwischen 0 und 65535 liegen.",
+        "hardware_quantity_range": "Muss zwischen 1 und 255 liegen.",
+        "software_type": "Ungültiger Softwaretyp.",
+        "hardware_type": "Ungültiger Hardwaretyp.",
+        "text_individual_max": "Darf maximal 250 Zeichen haben."
+      }
+    }
   },
   "messages": {
     "search_users": "Benutzer nach Name oder E-Mail suchen...",
@@ -589,6 +1379,8 @@
     "team_description": "Team-Beschreibung (optional)",
     "loading_teams": "Teams werden geladen...",
     "account_page": "Konto-Seite",
+    "account_info_saved": "Kontoinformationen erfolgreich gespeichert.",
+    "account_password_saved": "Passwort erfolgreich aktualisiert.",
     "never": "Nie",
     "today": "Heute",
     "yesterday": "Gestern",

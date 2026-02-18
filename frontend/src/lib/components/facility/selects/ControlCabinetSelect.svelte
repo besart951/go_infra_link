@@ -2,6 +2,7 @@
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
 	import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
 	import type { ControlCabinet } from '$lib/domain/facility/index.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	type Props = {
 		value?: string;
@@ -9,6 +10,8 @@
 	};
 
 	let { value = $bindable(''), width = 'w-[250px]' }: Props = $props();
+
+	const t = createTranslator();
 
 	async function fetcher(search: string): Promise<ControlCabinet[]> {
 		const res = await controlCabinetRepository.list({
@@ -28,6 +31,6 @@
 	{fetcher}
 	{fetchById}
 	labelKey="control_cabinet_nr"
-	placeholder="Select Control Cabinet..."
+	placeholder={$t('facility.selects.control_cabinet')}
 	{width}
 />

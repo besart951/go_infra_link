@@ -7,6 +7,8 @@
 	import Building2 from '@lucide/svelte/icons/building-2';
 	import FolderKanban from '@lucide/svelte/icons/folder-kanban';
 	import CategorySection from './CategorySection.svelte';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 
 	// ============================================================================
 	// Props
@@ -30,6 +32,8 @@
 		error = null
 	}: Props = $props();
 
+	const t = createTranslator();
+
 	// ============================================================================
 	// Category Configuration
 	// ============================================================================
@@ -39,13 +43,13 @@
 	const categories: { id: CategoryId; label: string; icon: typeof Users; resources: string[] }[] = [
 		{
 			id: 'users',
-			label: 'Users & Access',
+			label: 'roles.categories.users_access',
 			icon: Users,
 			resources: ['user', 'team', 'role', 'permission']
 		},
 		{
 			id: 'facility',
-			label: 'Facility',
+			label: 'roles.categories.facility',
 			icon: Building2,
 			resources: [
 				'building',
@@ -66,7 +70,7 @@
 		},
 		{
 			id: 'projects',
-			label: 'Projects',
+			label: 'roles.categories.projects',
 			icon: FolderKanban,
 			resources: [] // Will include all project.* permissions
 		}
@@ -240,42 +244,44 @@
 
 	const RESOURCE_DISPLAY_NAMES: Record<string, string> = {
 		// Users & Access
-		user: 'Users',
-		team: 'Teams',
-		role: 'Roles',
-		permission: 'Permissions',
+		user: 'roles.resources.user',
+		team: 'roles.resources.team',
+		role: 'roles.resources.role',
+		permission: 'roles.resources.permission',
 		// Facility
-		building: 'Buildings',
-		controlcabinet: 'Control Cabinets',
-		spscontroller: 'SPS Controllers',
-		spscontrollersystemtype: 'SPS Controller System Types',
-		fielddevice: 'Field Devices',
-		bacnetobject: 'BACnet Objects',
-		systemtype: 'System Types',
-		systempart: 'System Parts',
-		apparat: 'Apparats',
-		objectdata: 'Object Data',
-		specification: 'Specifications',
-		statetext: 'State Texts',
-		alarmdefinition: 'Alarm Definitions',
-		notificationclass: 'Notification Classes',
+		building: 'roles.resources.building',
+		controlcabinet: 'roles.resources.controlcabinet',
+		spscontroller: 'roles.resources.spscontroller',
+		spscontrollersystemtype: 'roles.resources.spscontrollersystemtype',
+		fielddevice: 'roles.resources.fielddevice',
+		bacnetobject: 'roles.resources.bacnetobject',
+		systemtype: 'roles.resources.systemtype',
+		systempart: 'roles.resources.systempart',
+		apparat: 'roles.resources.apparat',
+		objectdata: 'roles.resources.objectdata',
+		specification: 'roles.resources.specification',
+		statetext: 'roles.resources.statetext',
+		alarmdefinition: 'roles.resources.alarmdefinition',
+		notificationclass: 'roles.resources.notificationclass',
 		// Projects
-		'project.controlcabinet': 'Control Cabinets',
-		'project.spscontroller': 'SPS Controllers',
-		'project.spscontrollersystemtype': 'SPS Controller System Types',
-		'project.fielddevice': 'Field Devices',
-		'project.bacnetobject': 'BACnet Objects',
-		'project.systemtype': 'System Types'
+		'project.controlcabinet': 'roles.resources.project.controlcabinet',
+		'project.spscontroller': 'roles.resources.project.spscontroller',
+		'project.spscontrollersystemtype': 'roles.resources.project.spscontrollersystemtype',
+		'project.fielddevice': 'roles.resources.project.fielddevice',
+		'project.bacnetobject': 'roles.resources.project.bacnetobject',
+		'project.systemtype': 'roles.resources.project.systemtype'
 	};
 
 	function getResourceDisplayName(resource: string): string {
 		if (RESOURCE_DISPLAY_NAMES[resource]) {
-			return RESOURCE_DISPLAY_NAMES[resource];
+			return translate(RESOURCE_DISPLAY_NAMES[resource]);
 		}
 		// Handle project.* resources
 		if (resource.startsWith('project.')) {
 			const subResource = resource.replace('project.', '');
-			return RESOURCE_DISPLAY_NAMES[subResource] || subResource;
+			return RESOURCE_DISPLAY_NAMES[subResource]
+				? translate(RESOURCE_DISPLAY_NAMES[subResource])
+				: subResource;
 		}
 		return resource;
 	}
@@ -298,9 +304,9 @@
 <form onsubmit={handleSubmit} class="flex h-full flex-col gap-4 p-6">
 	<!-- Header -->
 	<div class="shrink-0">
-		<h3 class="text-lg font-semibold">Edit Role Permissions</h3>
+		<h3 class="text-lg font-semibold">{$t('roles.editor.title')}</h3>
 		<p class="text-sm text-muted-foreground">
-			Configure permissions for <span class="font-medium">{role.display_name}</span>
+			{$t('roles.editor.description', { role: role.display_name })}
 		</p>
 	</div>
 
@@ -320,20 +326,27 @@
 			<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
 				type="search"
-				placeholder="Search permissions..."
+				placeholder={$t('roles.permissions.search_placeholder')}
 				class="pl-9"
 				bind:value={searchQuery}
 			/>
 		</div>
-			<div class="flex gap-2">
-				<Button type="button" variant="outline" size="sm" onclick={selectAll}>Select All</Button>
-				<Button type="button" variant="outline" size="sm" onclick={deselectAll}>Deselect All</Button>
-			</div>
+		<div class="flex gap-2">
+			<Button type="button" variant="outline" size="sm" onclick={selectAll}>
+				{$t('roles.actions.select_all')}
+			</Button>
+			<Button type="button" variant="outline" size="sm" onclick={deselectAll}>
+				{$t('roles.actions.deselect_all')}
+			</Button>
+		</div>
 	</div>
 
 	<!-- Selected Count -->
 	<div class="shrink-0 text-sm text-muted-foreground">
-		{selectedPermissions.size} of {allPermissions.length} permissions selected
+		{$t('roles.editor.selected_count', {
+			selected: selectedPermissions.size,
+			total: allPermissions.length
+		})}
 	</div>
 
 	<!-- Permission Categories -->
@@ -342,14 +355,14 @@
 			{@const categoryResources = Object.keys(filteredPermissionsByCategory()[category.id]).sort()}
 			<CategorySection
 				id={category.id}
-				label={category.label}
+				label={$t(category.label)}
 				icon={category.icon}
 				resources={categoryResources}
 				permissionsByResource={filteredPermissionsByCategory()[category.id]}
 				{selectedPermissions}
 				isExpanded={expandedCategories.has(category.id)}
 				{expandedResources}
-					disabled={false}
+				disabled={false}
 				onToggleExpand={() => toggleCategory(category.id)}
 				onToggleAll={() => toggleAllInCategory(category.id)}
 				onToggleResource={toggleResource}
@@ -362,9 +375,9 @@
 		{#if !hasAnyPermissions}
 			<div class="py-8 text-center text-muted-foreground">
 				{#if searchQuery}
-					No permissions found matching "{searchQuery}"
+					{$t('roles.permissions.empty_match', { query: searchQuery })}
 				{:else}
-					No permissions available
+					{$t('roles.permissions.empty')}
 				{/if}
 			</div>
 		{/if}
@@ -373,13 +386,13 @@
 	<!-- Actions -->
 	<div class="flex shrink-0 justify-end gap-3 border-t pt-4">
 		<Button type="button" variant="outline" onclick={onCancel} disabled={isSubmitting}>
-			Cancel
+			{$t('common.cancel')}
 		</Button>
 		<Button type="submit" disabled={isSubmitting}>
 			{#if isSubmitting}
 				<span class="mr-2 h-4 w-4 animate-spin">⟳</span>
 			{/if}
-			Save Changes
+			{$t('roles.actions.save_changes')}
 		</Button>
 	</div>
 </form>

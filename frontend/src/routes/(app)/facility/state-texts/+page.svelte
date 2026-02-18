@@ -55,7 +55,10 @@
 	async function handleDelete(item: StateText) {
 		const ok = await confirm({
 			title: $t('facility.delete_state_text_confirm').replace('{ref}', ''),
-			message: $t('facility.delete_state_text_confirm').replace('{ref}', String(item.ref_number || '')),
+			message: $t('facility.delete_state_text_confirm').replace(
+				'{ref}',
+				String(item.ref_number || '')
+			),
 			confirmText: $t('common.delete'),
 			cancelText: $t('common.cancel'),
 			variant: 'destructive'
@@ -66,7 +69,10 @@
 			addToast($t('facility.state_text_deleted'), 'success');
 			stateTextsStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : $t('facility.delete_state_text_failed'), 'error');
+			addToast(
+				err instanceof Error ? err.message : $t('facility.delete_state_text_failed'),
+				'error'
+			);
 		}
 	}
 
@@ -114,7 +120,7 @@
 	>
 		{#snippet rowSnippet(item: StateText)}
 			<Table.Cell class="font-medium">{item.ref_number}</Table.Cell>
-			<Table.Cell>{item.state_text1 ?? 'N/A'}</Table.Cell>
+			<Table.Cell>{item.state_text1 ?? $t('common.not_available')}</Table.Cell>
 			<Table.Cell class="text-right">
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>
@@ -126,15 +132,17 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(String(item.ref_number ?? item.id))}>
-						{$t('facility.copy')}
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={() => goto(`/facility/state-texts/${item.id}`)}>
-						{$t('facility.view')}
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={() => handleEdit(item)}>{$t('common.edit')}</DropdownMenu.Item>
-					<DropdownMenu.Separator />
-					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
-						{$t('common.delete')}
+							{$t('facility.copy')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => goto(`/facility/state-texts/${item.id}`)}>
+							{$t('facility.view')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleEdit(item)}
+							>{$t('common.edit')}</DropdownMenu.Item
+						>
+						<DropdownMenu.Separator />
+						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+							{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

@@ -31,7 +31,7 @@
 		if (pathname.startsWith('/projects')) return t('navigation.projects');
 		if (pathname.startsWith('/users')) return t('navigation.users');
 		if (pathname.startsWith('/teams')) return t('navigation.teams');
-		if (pathname.startsWith('/settings')) return t('navigation.settings');
+		if (pathname.startsWith('/account')) return t('navigation.account');
 		if (pathname.startsWith('/facility/buildings')) return t('navigation.buildings');
 		if (pathname.startsWith('/facility/control-cabinets')) return t('navigation.control_cabinets');
 		if (pathname.startsWith('/facility/sps-controllers')) return t('navigation.sps_controllers');
@@ -41,53 +41,53 @@
 		if (pathname.startsWith('/facility/apparats')) return t('navigation.apparats');
 		if (pathname.startsWith('/facility/object-data')) return t('navigation.object_data');
 		if (pathname.startsWith('/facility/state-texts')) return t('navigation.state_texts');
-		if (pathname.startsWith('/facility/alarm-definitions')) return t('navigation.alarm_definitions');
-		if (pathname.startsWith('/facility/notification-classes')) return t('navigation.notification_classes');
+		if (pathname.startsWith('/facility/alarm-definitions'))
+			return t('navigation.alarm_definitions');
+		if (pathname.startsWith('/facility/notification-classes'))
+			return t('navigation.notification_classes');
 		if (pathname.startsWith('/facility')) return t('navigation.facility');
-		return 'App';
+		return t('navigation.app');
 	};
 </script>
 
 {#if data.user}
-<Sidebar.Provider>
-	<AppSidebar
-		user={data.user}
-		teams={data.teams ?? []}
-		projects={data.projects ?? []}
-	/>
-	<Sidebar.Inset>
-		<header class="flex h-16 shrink-0 items-center gap-2">
-			<div class="flex items-center gap-2 px-4">
-				<Sidebar.Trigger class="-ms-1" />
-				<Separator orientation="vertical" class="me-2 data-[orientation=vertical]:h-4" />
-				<Breadcrumb.Root>
-					<Breadcrumb.List>
-						<Breadcrumb.Item class="hidden md:block">
-							<Breadcrumb.Link href="/">Infrastructure Link</Breadcrumb.Link>
-						</Breadcrumb.Item>
-						<Breadcrumb.Separator class="hidden md:block" />
-						<Breadcrumb.Item>
-							<Breadcrumb.Page>{titleForPath($page.url.pathname)}</Breadcrumb.Page>
-						</Breadcrumb.Item>
-					</Breadcrumb.List>
-				</Breadcrumb.Root>
-			</div>
-		</header>
-		{#if data && data.backendAvailable === false}
-			<div class="px-4">
-				<div class="rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
-					{$translator('pages.backend_unavailable')}
+	<Sidebar.Provider>
+		<AppSidebar user={data.user} teams={data.teams ?? []} projects={data.projects ?? []} />
+		<Sidebar.Inset>
+			<header class="flex h-16 shrink-0 items-center gap-2">
+				<div class="flex items-center gap-2 px-4">
+					<Sidebar.Trigger class="-ms-1" />
+					<Separator orientation="vertical" class="me-2 data-[orientation=vertical]:h-4" />
+					<Breadcrumb.Root>
+						<Breadcrumb.List>
+							<Breadcrumb.Item class="hidden md:block">
+								<Breadcrumb.Link href="/">{$translator('app.brand')}</Breadcrumb.Link>
+							</Breadcrumb.Item>
+							<Breadcrumb.Separator class="hidden md:block" />
+							<Breadcrumb.Item>
+								<Breadcrumb.Page>{titleForPath($page.url.pathname)}</Breadcrumb.Page>
+							</Breadcrumb.Item>
+						</Breadcrumb.List>
+					</Breadcrumb.Root>
 				</div>
-			</div>
-		{/if}
-		<div class="flex flex-1 flex-col gap-4 p-4 pt-0">{@render children?.()}</div>
-	</Sidebar.Inset>
-	<Toasts />
-</Sidebar.Provider>
+			</header>
+			{#if data && data.backendAvailable === false}
+				<div class="px-4">
+					<div class="rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
+						{$translator('pages.backend_unavailable')}
+					</div>
+				</div>
+			{/if}
+			<div class="flex flex-1 flex-col gap-4 p-4 pt-0">{@render children?.()}</div>
+		</Sidebar.Inset>
+		<Toasts />
+	</Sidebar.Provider>
 {:else if data.backendAvailable === false}
 	<div class="flex h-screen w-full items-center justify-center p-4">
 		<div class="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm">
-			<h2 class="mb-2 text-lg font-semibold text-destructive">{$translator('pages.backend_unavailable_title')}</h2>
+			<h2 class="mb-2 text-lg font-semibold text-destructive">
+				{$translator('pages.backend_unavailable_title')}
+			</h2>
 			<p class="text-sm text-muted-foreground">
 				{$translator('pages.backend_unavailable_desc')}
 			</p>

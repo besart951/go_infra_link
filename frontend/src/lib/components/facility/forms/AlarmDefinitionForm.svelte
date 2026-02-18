@@ -8,6 +8,7 @@
 	import { alarmDefinitionRepository } from '$lib/infrastructure/api/alarmDefinitionRepository.js';
 	const manageAlarmDefinition = new ManageEntityUseCase(alarmDefinitionRepository);
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface AlarmDefinitionFormProps {
 		initialData?: AlarmDefinition;
@@ -16,6 +17,8 @@
 	}
 
 	let { initialData, onSuccess, onCancel }: AlarmDefinitionFormProps = $props();
+
+	const t = createTranslator();
 
 	let name = $state('');
 	let alarm_note = $state('');
@@ -59,20 +62,22 @@
 >
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">
-			{initialData ? 'Edit Alarm Definition' : 'New Alarm Definition'}
+			{initialData
+				? $t('facility.forms.alarm_definition.title_edit')
+				: $t('facility.forms.alarm_definition.title_new')}
 		</h3>
 	</div>
 
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		<div class="space-y-2">
-			<Label for="alarm_name">Name</Label>
+			<Label for="alarm_name">{$t('common.name')}</Label>
 			<Input id="alarm_name" bind:value={name} required />
 			{#if formState.getFieldError('name', ['alarmdefinition'])}
 				<p class="text-sm text-red-500">{formState.getFieldError('name', ['alarmdefinition'])}</p>
 			{/if}
 		</div>
 		<div class="space-y-2 md:col-span-2">
-			<Label for="alarm_note">Alarm Note</Label>
+			<Label for="alarm_note">{$t('facility.forms.alarm_definition.note_label')}</Label>
 			<Textarea id="alarm_note" bind:value={alarm_note} rows={3} />
 			{#if formState.getFieldError('alarm_note', ['alarmdefinition'])}
 				<p class="text-sm text-red-500">
@@ -87,7 +92,9 @@
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
-		<Button type="submit" disabled={formState.loading}>{initialData ? 'Update' : 'Create'}</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>{$t('common.cancel')}</Button>
+		<Button type="submit" disabled={formState.loading}>
+			{initialData ? $t('common.update') : $t('common.create')}
+		</Button>
 	</div>
 </form>

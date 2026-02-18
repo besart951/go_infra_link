@@ -66,7 +66,10 @@
 			addToast($t('facility.alarm_definition_deleted'), 'success');
 			alarmDefinitionsStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : $t('facility.delete_alarm_definition_failed'), 'error');
+			addToast(
+				err instanceof Error ? err.message : $t('facility.delete_alarm_definition_failed'),
+				'error'
+			);
 		}
 	}
 
@@ -84,7 +87,9 @@
 <div class="flex flex-col gap-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.alarm_definitions_title')}</h1>
+			<h1 class="text-2xl font-semibold tracking-tight">
+				{$t('facility.alarm_definitions_title')}
+			</h1>
 			<p class="text-sm text-muted-foreground">{$t('facility.alarm_definitions_desc')}</p>
 		</div>
 		{#if !showForm}
@@ -118,7 +123,7 @@
 	>
 		{#snippet rowSnippet(item: AlarmDefinition)}
 			<Table.Cell class="font-medium">{item.name}</Table.Cell>
-			<Table.Cell>{item.alarm_note ?? 'N/A'}</Table.Cell>
+			<Table.Cell>{item.alarm_note ?? $t('common.not_available')}</Table.Cell>
 			<Table.Cell class="text-right">
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>
@@ -130,15 +135,17 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(item.name ?? item.id)}>
-						{$t('facility.copy')}
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={() => goto(`/facility/alarm-definitions/${item.id}`)}>
-						{$t('facility.view')}
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={() => handleEdit(item)}>{$t('common.edit')}</DropdownMenu.Item>
-					<DropdownMenu.Separator />
-					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
-						{$t('common.delete')}
+							{$t('facility.copy')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => goto(`/facility/alarm-definitions/${item.id}`)}>
+							{$t('facility.view')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleEdit(item)}
+							>{$t('common.edit')}</DropdownMenu.Item
+						>
+						<DropdownMenu.Separator />
+						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+							{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

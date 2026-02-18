@@ -2,6 +2,7 @@
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
 	import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
 	import type { Building } from '$lib/domain/facility/index.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	type BuildingOption = Building & { display_name: string };
 
@@ -11,6 +12,8 @@
 	};
 
 	let { value = $bindable(''), width = 'w-[250px]' }: Props = $props();
+
+	const t = createTranslator();
 
 	function toOption(item: Building): BuildingOption {
 		return {
@@ -38,6 +41,6 @@
 	{fetcher}
 	{fetchById}
 	labelKey="display_name"
-	placeholder="Select Building..."
+	placeholder={$t('facility.selects.building')}
 	{width}
 />

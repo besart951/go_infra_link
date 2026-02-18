@@ -25,6 +25,8 @@
 	import { Plus, AlertCircle } from '@lucide/svelte';
 	import { addToast } from '$lib/components/toast.svelte';
 	import { ApiException } from '$lib/api/client.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 
 	// Domain imports
 	import {
@@ -58,6 +60,8 @@
 	// Use case instances
 	const manageUseCase = new ManageFieldDeviceUseCase(fieldDeviceRepository);
 	const spsUseCase = new ListSPSControllersUseCase(spsControllerRepository);
+
+	const t = createTranslator();
 
 	// ─────────────────────────────────────────────────────────────────────────────
 	// Props
@@ -208,8 +212,13 @@
 
 			const msg =
 				err instanceof ApiException
-					? `Failed to fetch available numbers (${err.status}): ${err.message}`
-					: `Failed to fetch available numbers: ${(err as Error)?.message ?? String(err)}`;
+					? translate('field_device.multi_create.errors.fetch_numbers_status', {
+							status: err.status,
+							message: err.message
+						})
+					: translate('field_device.multi_create.errors.fetch_numbers_failed', {
+							message: (err as Error)?.message ?? String(err)
+						});
 			addToast(msg, 'error');
 			availableNumbers = [];
 		} finally {
@@ -221,7 +230,7 @@
 
 	async function handleSubmit() {
 		if (rows.length === 0) {
-			addToast('Please add at least one field device row.', 'warning');
+			addToast(translate('field_device.multi_create.errors.no_rows'), 'warning');
 			return;
 		}
 
@@ -230,7 +239,7 @@
 		rowErrors = errors;
 
 		if (errors.size > 0) {
-			addToast('Please fix the validation errors.', 'error');
+			addToast(translate('field_device.multi_create.errors.validation'), 'error');
 			return;
 		}
 
@@ -264,11 +273,20 @@
 
 			if (response.failure_count > 0) {
 				addToast(
-					`Created ${response.success_count} of ${response.total_requests} field devices (${response.failure_count} failed).`,
+					translate('field_device.multi_create.toasts.partial_created', {
+						success: response.success_count,
+						total: response.total_requests,
+						failed: response.failure_count
+					}),
 					'warning'
 				);
 			} else {
-				addToast(`Created ${response.success_count} field device(s).`, 'success');
+				addToast(
+					translate('field_device.multi_create.toasts.created', {
+						count: response.success_count
+					}),
+					'success'
+				);
 				clearPersistedState();
 				rows = [];
 				rowErrors = new Map();
@@ -282,8 +300,11 @@
 				}
 			}
 		} catch (err) {
-			globalError = (err as Error)?.message || 'Failed to create field devices';
-			addToast(`Failed: ${globalError}`, 'error');
+			globalError = (err as Error)?.message || translate('field_device.multi_create.errors.create');
+			addToast(
+				translate('field_device.multi_create.errors.create_with_message', { message: globalError }),
+				'error'
+			);
 		} finally {
 			submitting = false;
 		}
@@ -300,7 +321,7 @@
 		const newRow = createNewRow(availableNumbers, usedNumbers);
 
 		if (!newRow) {
-			addToast('No more available apparat numbers.', 'warning');
+			addToast(translate('field_device.multi_create.errors.no_more_numbers'), 'warning');
 			return;
 		}
 
@@ -371,7 +392,9 @@
 			.map((r) => r.apparatNr)
 			.filter((n): n is number => n !== null);
 		const nextAvailable = availableNumbers.find((nr) => !usedNumbers.includes(nr));
-		return nextAvailable !== undefined ? `Next: ${nextAvailable}` : '';
+		return nextAvailable !== undefined
+			? translate('field_device.multi_create.next_available', { value: nextAvailable })
+			: '';
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────────
@@ -441,20 +464,22 @@
 
 	<!-- Selection Flow Card -->
 	<Card.Root class="p-6">
-		<h3 class="mb-4 text-lg font-semibold">Selection Flow</h3>
+		<h3 class="mb-4 text-lg font-semibold">{$t('field_device.multi_create.selection.title')}</h3>
 		<p class="mb-4 text-sm text-muted-foreground">
-			Select the configuration parameters for the field devices you want to create.
+			{$t('field_device.multi_create.selection.description')}
 		</p>
 
 		<div class="grid gap-4 md:grid-cols-2">
 			<!-- SPS Controller System Type -->
 			<div class="space-y-2">
-				<Label for="sps-system-type">SPS Controller System Type *</Label>
+				<Label for="sps-system-type"
+					>{$t('field_device.multi_create.selection.sps_system_type')}</Label
+				>
 				<AsyncCombobox
 					id="sps-system-type"
-					placeholder="Select SPS controller system type..."
-					searchPlaceholder="Search SPS system types..."
-					emptyText="No SPS system types found."
+					placeholder={$t('field_device.multi_create.selection.sps_system_type_placeholder')}
+					searchPlaceholder={$t('field_device.multi_create.selection.sps_system_type_search')}
+					emptyText={$t('field_device.multi_create.selection.sps_system_type_empty')}
 					fetcher={fetchSpsControllerSystemTypes}
 					fetchById={fetchSpsControllerSystemTypeById}
 					labelKey="system_type_name"
@@ -463,7 +488,7 @@
 					value={selection.spsControllerSystemTypeId}
 					onValueChange={handleSpsSystemTypeChange}
 					clearable
-					clearText="Clear SPS controller system type"
+					clearText={$t('field_device.multi_create.selection.sps_system_type_clear')}
 					disabled={submitting}
 				/>
 			</div>
@@ -485,15 +510,21 @@
 				<Alert.Root>
 					<Alert.Description>
 						<div class="text-sm">
-							<p class="font-medium">Configuration selected:</p>
+							<p class="font-medium">
+								{$t('field_device.multi_create.status.title')}
+							</p>
 							<ul class="mt-2 space-y-1 text-muted-foreground">
 								<li>
-									• Available apparat numbers: {availableNumbers.length}
-									{loadingAvailableNumbers ? '(loading...)' : ''}
+									• {$t('field_device.multi_create.status.available', {
+										count: availableNumbers.length
+									})}
+									{#if loadingAvailableNumbers}
+										{$t('field_device.multi_create.status.loading_suffix')}
+									{/if}
 								</li>
 								{#if availableNumbers.length === 0 && !loadingAvailableNumbers}
 									<li class="text-destructive">
-										• No available apparat numbers for this configuration
+										• {$t('field_device.multi_create.status.none_available')}
 									</li>
 								{/if}
 							</ul>
@@ -509,14 +540,14 @@
 		<Card.Root class="p-6">
 			<div class="mb-4 flex items-center justify-between">
 				<div>
-					<h3 class="text-lg font-semibold">Field Devices</h3>
+					<h3 class="text-lg font-semibold">{$t('field_device.multi_create.rows.title')}</h3>
 					<p class="text-sm text-muted-foreground">
-						Add field devices to create. Each will use the configuration selected above.
+						{$t('field_device.multi_create.rows.description')}
 					</p>
 				</div>
 				<Button onclick={addRow} disabled={!canAddRow} size="sm">
 					<Plus class="mr-2 size-4" />
-					Add Field Device
+					{$t('field_device.multi_create.rows.add')}
 				</Button>
 			</div>
 
@@ -526,12 +557,11 @@
 					<AlertCircle class="size-4" />
 					<Alert.Description>
 						{#if availableNumbers.length === 0 && !loadingAvailableNumbers}
-							All apparat numbers are assigned. Cannot create more field devices for this
-							configuration.
+							{$t('field_device.multi_create.rows.none_available')}
 						{:else if loadingAvailableNumbers}
-							Loading available apparat numbers...
+							{$t('field_device.multi_create.rows.loading_numbers')}
 						{:else}
-							Click "Add Field Device" to create field device rows.
+							{$t('field_device.multi_create.rows.empty_prompt')}
 						{/if}
 					</Alert.Description>
 				</Alert.Root>
@@ -560,22 +590,26 @@
 				<!-- Summary & Actions -->
 				<div class="flex items-center justify-between">
 					<p class="text-sm text-muted-foreground">
-						{rows.length} field device(s) ready to create
+						{$t('field_device.multi_create.rows.summary', { count: rows.length })}
 						{#if hasValidationErrors}
-							<span class="text-destructive">({rowErrors.size} with errors)</span>
+							<span class="text-destructive">
+								{$t('field_device.multi_create.rows.errors', { count: rowErrors.size })}
+							</span>
 						{/if}
 					</p>
 					<div class="flex gap-2">
 						{#if onCancel}
-							<Button variant="outline" onclick={onCancel} disabled={submitting}>Cancel</Button>
+							<Button variant="outline" onclick={onCancel} disabled={submitting}>
+								{$t('common.cancel')}
+							</Button>
 						{/if}
 						<Button
 							onclick={handleSubmit}
 							disabled={submitting || rows.length === 0 || hasValidationErrors}
 						>
 							{submitting
-								? 'Creating...'
-								: `Create ${rows.length} Field Device${rows.length !== 1 ? 's' : ''}`}
+								? $t('field_device.multi_create.actions.creating')
+								: $t('field_device.multi_create.actions.create', { count: rows.length })}
 						</Button>
 					</div>
 				</div>

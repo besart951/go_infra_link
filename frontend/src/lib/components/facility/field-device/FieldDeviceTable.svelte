@@ -8,6 +8,7 @@
 	import BacnetObjectsEditor from '../bacnet/BacnetObjectsEditor.svelte';
 	import type { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
 	import type { FieldDevice, Apparat, SystemPart } from '$lib/domain/facility/index.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface Props {
 		items: FieldDevice[];
@@ -50,6 +51,8 @@
 	let expandedBacnetRows = $state<Set<string>>(new Set());
 	let showSpecifications = $state(false);
 
+	const t = createTranslator();
+
 	const baseColumnCount = 10;
 	const specColumnCount = 11;
 	const columnCount = $derived(
@@ -86,7 +89,7 @@
 						checked={allSelected}
 						indeterminate={someSelected}
 						onCheckedChange={onToggleSelectAll}
-						aria-label="Select all"
+						aria-label={$t('field_device.table.select_all')}
 					/>
 				</Table.Head>
 				<!-- Expand Column for BACnet Objects -->
@@ -97,7 +100,7 @@
 						class="inline-flex cursor-pointer items-center gap-1 text-left underline-offset-4 hover:underline"
 						onclick={() => onSort('sps_system_type')}
 					>
-						<span>SPS System Type</span>
+						<span>{$t('field_device.table.sps_system_type')}</span>
 						{#if sortState('sps_system_type') === 'asc'}
 							<ArrowUp class="h-3 w-3" />
 						{:else if sortState('sps_system_type') === 'desc'}
@@ -111,7 +114,7 @@
 						class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 						onclick={() => onSort('bmk')}
 					>
-						<span>BMK</span>
+						<span>{$t('field_device.table.bmk')}</span>
 						{#if sortState('bmk') === 'asc'}
 							<ArrowUp class="h-3 w-3" />
 						{:else if sortState('bmk') === 'desc'}
@@ -125,7 +128,7 @@
 						class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 						onclick={() => onSort('description')}
 					>
-						<span>Description</span>
+						<span>{$t('field_device.table.description')}</span>
 						{#if sortState('description') === 'asc'}
 							<ArrowUp class="h-3 w-3" />
 						{:else if sortState('description') === 'desc'}
@@ -139,7 +142,7 @@
 						class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 						onclick={() => onSort('apparat_nr')}
 					>
-						<span>Apparat Nr</span>
+						<span>{$t('field_device.table.apparat_nr')}</span>
 						{#if sortState('apparat_nr') === 'asc'}
 							<ArrowUp class="h-3 w-3" />
 						{:else if sortState('apparat_nr') === 'desc'}
@@ -153,7 +156,7 @@
 						class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 						onclick={() => onSort('apparat')}
 					>
-						<span>Apparat</span>
+						<span>{$t('field_device.table.apparat')}</span>
 						{#if sortState('apparat') === 'asc'}
 							<ArrowUp class="h-3 w-3" />
 						{:else if sortState('apparat') === 'desc'}
@@ -167,7 +170,7 @@
 						class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 						onclick={() => onSort('system_part')}
 					>
-						<span>System Part</span>
+						<span>{$t('field_device.table.system_part')}</span>
 						{#if sortState('system_part') === 'asc'}
 							<ArrowUp class="h-3 w-3" />
 						{:else if sortState('system_part') === 'desc'}
@@ -182,7 +185,9 @@
 						size="sm"
 						class="h-7 w-7 p-0"
 						onclick={toggleSpecifications}
-						title={showSpecifications ? 'Hide specifications' : 'Show specifications'}
+						title={showSpecifications
+							? $t('field_device.table.hide_specifications')
+							: $t('field_device.table.show_specifications')}
 					>
 						<Settings2 class="h-4 w-4" />
 					</Button>
@@ -194,7 +199,7 @@
 							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 							onclick={() => onSort('spec_supplier')}
 						>
-							<span>Supplier</span>
+							<span>{$t('field_device.table.supplier')}</span>
 							{#if sortState('spec_supplier') === 'asc'}
 								<ArrowUp class="h-3 w-3" />
 							{:else if sortState('spec_supplier') === 'desc'}
@@ -208,7 +213,7 @@
 							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 							onclick={() => onSort('spec_brand')}
 						>
-							<span>Brand</span>
+							<span>{$t('field_device.table.brand')}</span>
 							{#if sortState('spec_brand') === 'asc'}
 								<ArrowUp class="h-3 w-3" />
 							{:else if sortState('spec_brand') === 'desc'}
@@ -222,7 +227,7 @@
 							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 							onclick={() => onSort('spec_type')}
 						>
-							<span>Type</span>
+							<span>{$t('field_device.table.type')}</span>
 							{#if sortState('spec_type') === 'asc'}
 								<ArrowUp class="h-3 w-3" />
 							{:else if sortState('spec_type') === 'desc'}
@@ -236,7 +241,7 @@
 							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 							onclick={() => onSort('spec_motor_valve')}
 						>
-							<span>Motor/Valve</span>
+							<span>{$t('field_device.table.motor_valve')}</span>
 							{#if sortState('spec_motor_valve') === 'asc'}
 								<ArrowUp class="h-3 w-3" />
 							{:else if sortState('spec_motor_valve') === 'desc'}
@@ -250,7 +255,7 @@
 							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 							onclick={() => onSort('spec_size')}
 						>
-							<span>Size</span>
+							<span>{$t('field_device.table.size')}</span>
 							{#if sortState('spec_size') === 'asc'}
 								<ArrowUp class="h-3 w-3" />
 							{:else if sortState('spec_size') === 'desc'}
@@ -264,7 +269,7 @@
 							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 							onclick={() => onSort('spec_install_loc')}
 						>
-							<span>Install Loc.</span>
+							<span>{$t('field_device.table.install_location')}</span>
 							{#if sortState('spec_install_loc') === 'asc'}
 								<ArrowUp class="h-3 w-3" />
 							{:else if sortState('spec_install_loc') === 'desc'}
@@ -278,7 +283,7 @@
 							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 							onclick={() => onSort('spec_ph')}
 						>
-							<span>PH</span>
+							<span>{$t('field_device.table.ph')}</span>
 							{#if sortState('spec_ph') === 'asc'}
 								<ArrowUp class="h-3 w-3" />
 							{:else if sortState('spec_ph') === 'desc'}
@@ -292,7 +297,7 @@
 							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 							onclick={() => onSort('spec_acdc')}
 						>
-							<span>AC/DC</span>
+							<span>{$t('field_device.table.acdc')}</span>
 							{#if sortState('spec_acdc') === 'asc'}
 								<ArrowUp class="h-3 w-3" />
 							{:else if sortState('spec_acdc') === 'desc'}
@@ -306,7 +311,7 @@
 							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 							onclick={() => onSort('spec_amperage')}
 						>
-							<span>Amperage</span>
+							<span>{$t('field_device.table.amperage')}</span>
 							{#if sortState('spec_amperage') === 'asc'}
 								<ArrowUp class="h-3 w-3" />
 							{:else if sortState('spec_amperage') === 'desc'}
@@ -320,7 +325,7 @@
 							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 							onclick={() => onSort('spec_power')}
 						>
-							<span>Power</span>
+							<span>{$t('field_device.table.power')}</span>
 							{#if sortState('spec_power') === 'asc'}
 								<ArrowUp class="h-3 w-3" />
 							{:else if sortState('spec_power') === 'desc'}
@@ -334,7 +339,7 @@
 							class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
 							onclick={() => onSort('spec_rotation')}
 						>
-							<span>Rotation</span>
+							<span>{$t('field_device.table.rotation')}</span>
 							{#if sortState('spec_rotation') === 'asc'}
 								<ArrowUp class="h-3 w-3" />
 							{:else if sortState('spec_rotation') === 'desc'}
@@ -360,11 +365,9 @@
 				<Table.Row>
 					<Table.Cell colspan={columnCount} class="h-24 text-center">
 						<div class="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-							<p class="font-medium">
-								No field devices found. Create your first field device to get started.
-							</p>
+							<p class="font-medium">{$t('field_device.empty.title')}</p>
 							{#if searchInput}
-								<p class="text-sm">Try adjusting your search</p>
+								<p class="text-sm">{$t('field_device.empty.search_hint')}</p>
 							{/if}
 						</div>
 					</Table.Cell>
@@ -392,15 +395,15 @@
 							class="bg-purple-50/50 hover:bg-purple-50/70 dark:bg-purple-950/20 dark:hover:bg-purple-950/30"
 						>
 							<Table.Cell colspan={columnCount} class="p-0">
-									<BacnetObjectsEditor
-										bacnetObjects={device.bacnet_objects ?? []}
-										pendingEdits={editing.getBacnetPendingEdits(device.id) ?? new Map()}
-										fieldErrors={editing.getBacnetFieldErrors(device.id) ?? new Map()}
-										clientErrors={editing.getBacnetClientErrors(device.id) ?? new Map()}
-										onEdit={(objectId, field, value) => {
-											editing.queueBacnetEdit(device.id, objectId, field, value);
-										}}
-									/>
+								<BacnetObjectsEditor
+									bacnetObjects={device.bacnet_objects ?? []}
+									pendingEdits={editing.getBacnetPendingEdits(device.id) ?? new Map()}
+									fieldErrors={editing.getBacnetFieldErrors(device.id) ?? new Map()}
+									clientErrors={editing.getBacnetClientErrors(device.id) ?? new Map()}
+									onEdit={(objectId, field, value) => {
+										editing.queueBacnetEdit(device.id, objectId, field, value);
+									}}
+								/>
 							</Table.Cell>
 						</Table.Row>
 					{/if}

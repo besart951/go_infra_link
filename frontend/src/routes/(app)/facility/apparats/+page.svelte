@@ -55,7 +55,10 @@
 	async function handleDelete(item: Apparat) {
 		const ok = await confirm({
 			title: $t('common.delete'),
-			message: $t('facility.delete_apparat_confirm').replace('{name}', item.short_name ?? item.name),
+			message: $t('facility.delete_apparat_confirm').replace(
+				'{name}',
+				item.short_name ?? item.name
+			),
 			confirmText: $t('common.delete'),
 			cancelText: $t('common.cancel'),
 			variant: 'destructive'
@@ -116,7 +119,7 @@
 		{#snippet rowSnippet(item: Apparat)}
 			<Table.Cell class="font-medium">{item.short_name}</Table.Cell>
 			<Table.Cell>{item.name}</Table.Cell>
-			<Table.Cell>{item.description ?? 'N/A'}</Table.Cell>
+			<Table.Cell>{item.description ?? $t('common.not_available')}</Table.Cell>
 			<Table.Cell class="text-right">
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>
@@ -128,15 +131,17 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(item.short_name ?? item.id)}>
-						{$t('facility.copy')}
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={() => goto(`/facility/apparats/${item.id}`)}>
-						{$t('facility.view')}
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={() => handleEdit(item)}>{$t('common.edit')}</DropdownMenu.Item>
-					<DropdownMenu.Separator />
-					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
-						{$t('common.delete')}
+							{$t('facility.copy')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => goto(`/facility/apparats/${item.id}`)}>
+							{$t('facility.view')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleEdit(item)}
+							>{$t('common.edit')}</DropdownMenu.Item
+						>
+						<DropdownMenu.Separator />
+						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+							{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

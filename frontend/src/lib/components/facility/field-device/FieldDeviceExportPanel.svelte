@@ -4,6 +4,8 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import AsyncMultiSelect from '$lib/components/ui/combobox/AsyncMultiSelect.svelte';
 	import { addToast } from '$lib/components/toast.svelte';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 
 	// Use Cases
 	import { ExportFieldDevicesUseCase } from '$lib/application/useCases/facility/exportFieldDevicesUseCase.js';
@@ -31,6 +33,8 @@
 	type OptionItem = { id: string; label: string };
 
 	let { projectId }: Props = $props();
+
+	const t = createTranslator();
 
 	// Instantiate Use Cases
 	const exportUseCase = new ExportFieldDevicesUseCase(fieldDeviceRepository);
@@ -151,15 +155,20 @@
 			activeJob = next;
 			if (next.status === 'completed') {
 				stopPolling();
-				addToast('Export completed. You can download the file now.', 'success');
+				addToast(translate('field_device.export.toasts.completed_ready'), 'success');
 			}
 			if (next.status === 'failed') {
 				stopPolling();
-				addToast(next.error || 'Export failed', 'error');
+				addToast(next.error || translate('field_device.export.toasts.failed'), 'error');
 			}
 		} catch (error) {
 			stopPolling();
-			addToast(error instanceof Error ? error.message : 'Failed to refresh export status', 'error');
+			addToast(
+				error instanceof Error
+					? error.message
+					: translate('field_device.export.toasts.refresh_failed'),
+				'error'
+			);
 		}
 	}
 
@@ -173,7 +182,7 @@
 
 	async function handleStartExport() {
 		if (!canStartExport) {
-			addToast('Select at least one filter before export.', 'error');
+			addToast(translate('field_device.export.toasts.select_filter'), 'error');
 			return;
 		}
 		submitting = true;
@@ -188,13 +197,18 @@
 			activeJob = job;
 			if (job.status === 'queued' || job.status === 'processing') {
 				startPolling();
-				addToast('Export gestartet. Status wird aktualisiert…', 'success');
+				addToast(translate('field_device.export.toasts.started'), 'success');
 			}
 			if (job.status === 'completed') {
-				addToast('Export completed. Ready for download.', 'success');
+				addToast(translate('field_device.export.toasts.completed'), 'success');
 			}
 		} catch (error) {
-			addToast(error instanceof Error ? error.message : 'Failed to start export', 'error');
+			addToast(
+				error instanceof Error
+					? error.message
+					: translate('field_device.export.toasts.start_failed'),
+				'error'
+			);
 		} finally {
 			submitting = false;
 		}
@@ -214,16 +228,18 @@
 	<Card.Header>
 		<Card.Title class="flex items-center gap-2">
 			<FileSpreadsheet class="size-4" />
-			Excel Export
+			{$t('field_device.export.title')}
 		</Card.Title>
 		<Card.Description>
-			Wähle einzelne Projekte, Gebäude, Schaltschränke oder SPS-Controller für den Export.
+			{$t('field_device.export.description')}
 		</Card.Description>
 	</Card.Header>
 	<Card.Content class="space-y-4">
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 			<div class="space-y-2">
-				<label class="text-sm font-medium" for="export-projects">Projects</label>
+				<label class="text-sm font-medium" for="export-projects">
+					{$t('field_device.export.projects')}
+				</label>
 				<AsyncMultiSelect
 					id="export-projects"
 					bind:value={selectedProjectIds}
@@ -231,12 +247,14 @@
 					fetchByIds={fetchProjectsByIds}
 					labelKey="label"
 					idKey="id"
-					placeholder="Select projects"
-					searchPlaceholder="Search projects..."
+					placeholder={$t('field_device.export.projects_placeholder')}
+					searchPlaceholder={$t('field_device.export.projects_search')}
 				/>
 			</div>
 			<div class="space-y-2">
-				<label class="text-sm font-medium" for="export-buildings">Buildings</label>
+				<label class="text-sm font-medium" for="export-buildings">
+					{$t('field_device.export.buildings')}
+				</label>
 				<AsyncMultiSelect
 					id="export-buildings"
 					bind:value={selectedBuildingIds}
@@ -244,12 +262,14 @@
 					fetchByIds={fetchBuildingsByIds}
 					labelKey="label"
 					idKey="id"
-					placeholder="Select buildings"
-					searchPlaceholder="Search buildings..."
+					placeholder={$t('field_device.export.buildings_placeholder')}
+					searchPlaceholder={$t('field_device.export.buildings_search')}
 				/>
 			</div>
 			<div class="space-y-2">
-				<label class="text-sm font-medium" for="export-cabinets">Control Cabinets</label>
+				<label class="text-sm font-medium" for="export-cabinets">
+					{$t('field_device.export.control_cabinets')}
+				</label>
 				<AsyncMultiSelect
 					id="export-cabinets"
 					bind:value={selectedControlCabinetIds}
@@ -257,12 +277,14 @@
 					fetchByIds={fetchControlCabinetsByIds}
 					labelKey="label"
 					idKey="id"
-					placeholder="Select control cabinets"
-					searchPlaceholder="Search control cabinets..."
+					placeholder={$t('field_device.export.control_cabinets_placeholder')}
+					searchPlaceholder={$t('field_device.export.control_cabinets_search')}
 				/>
 			</div>
 			<div class="space-y-2">
-				<label class="text-sm font-medium" for="export-controllers">SPS Controllers</label>
+				<label class="text-sm font-medium" for="export-controllers">
+					{$t('field_device.export.sps_controllers')}
+				</label>
 				<AsyncMultiSelect
 					id="export-controllers"
 					bind:value={selectedSPSControllerIds}
@@ -270,15 +292,15 @@
 					fetchByIds={fetchSpsControllersByIds}
 					labelKey="label"
 					idKey="id"
-					placeholder="Select SPS controllers"
-					searchPlaceholder="Search SPS controllers..."
+					placeholder={$t('field_device.export.sps_controllers_placeholder')}
+					searchPlaceholder={$t('field_device.export.sps_controllers_search')}
 				/>
 			</div>
 		</div>
 
 		<div class="flex items-center gap-2">
 			<input id="force-async" type="checkbox" bind:checked={forceAsync} class="h-4 w-4" />
-			<label for="force-async" class="text-sm">Always queue export (async)</label>
+			<label for="force-async" class="text-sm">{$t('field_device.export.force_async')}</label>
 		</div>
 
 		<div class="flex gap-2">
@@ -288,13 +310,15 @@
 				{:else}
 					<Play class="mr-2 size-4" />
 				{/if}
-				Start Export
+				{$t('field_device.export.actions.start')}
 			</Button>
 
 			{#if isCompleted}
 				<Button variant="outline" onclick={handleDownload}>
 					<Download class="mr-2 size-4" />
-					Download {activeJob?.output_type === 'zip' ? 'ZIP' : 'Excel'}
+					{$t('field_device.export.actions.download', {
+						type: activeJob?.output_type === 'zip' ? 'ZIP' : 'Excel'
+					})}
 				</Button>
 			{/if}
 		</div>
@@ -302,7 +326,10 @@
 		{#if activeJob}
 			<div class="space-y-2 rounded-md border p-3">
 				<div class="flex items-center justify-between text-sm">
-					<div>Status: <span class="font-medium">{activeJob.status}</span></div>
+					<div>
+						{$t('field_device.export.status.label')}
+						<span class="font-medium">{activeJob.status}</span>
+					</div>
 					<div>{activeJob.progress}%</div>
 				</div>
 				<div class="h-2 w-full overflow-hidden rounded bg-muted">

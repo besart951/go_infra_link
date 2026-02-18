@@ -12,6 +12,8 @@
 	import * as Command from '$lib/components/ui/command/index.js';
 	import { Check } from '@lucide/svelte';
 	import { cn } from '$lib/utils.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 
 	interface Props {
 		onSuccess?: () => void;
@@ -19,6 +21,8 @@
 	}
 
 	let { onSuccess, onCancel }: Props = $props();
+
+	const t = createTranslator();
 
 	let firstName = $state('');
 	let lastName = $state('');
@@ -38,7 +42,7 @@
 		e.preventDefault();
 
 		if (!selectedRole) {
-			error = 'Please select a role';
+			error = translate('users.form.role_required');
 			return;
 		}
 
@@ -75,14 +79,16 @@
 
 <form onsubmit={handleSubmit} class="space-y-4">
 	{#if error}
-		<div class="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+		<div
+			class="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive"
+		>
 			{error}
 		</div>
 	{/if}
 
 	<div class="grid grid-cols-2 gap-4">
 		<div class="space-y-2">
-			<Label for="firstName">First Name</Label>
+			<Label for="firstName">{$t('user.firstname')}</Label>
 			<Input
 				type="text"
 				id="firstName"
@@ -96,7 +102,7 @@
 		</div>
 
 		<div class="space-y-2">
-			<Label for="lastName">Last Name</Label>
+			<Label for="lastName">{$t('user.lastname')}</Label>
 			<Input
 				type="text"
 				id="lastName"
@@ -111,7 +117,7 @@
 	</div>
 
 	<div class="space-y-2">
-		<Label for="email">Email</Label>
+		<Label for="email">{$t('auth.email')}</Label>
 		<Input
 			type="email"
 			id="email"
@@ -125,7 +131,7 @@
 	</div>
 
 	<div class="space-y-2">
-		<Label for="password">Password</Label>
+		<Label for="password">{$t('auth.password')}</Label>
 		<Input
 			type="password"
 			id="password"
@@ -140,7 +146,7 @@
 	</div>
 
 	<div class="space-y-2">
-		<Label for="role">Role</Label>
+		<Label for="role">{$t('common.role')}</Label>
 		<Popover.Root bind:open={openCombobox}>
 			<Popover.Trigger>
 				{#snippet child({ props })}
@@ -155,7 +161,7 @@
 							fieldErrors.role && 'border-destructive'
 						)}
 					>
-						{selectedRole ? getRoleLabel(selectedRole) : 'Select a role...'}
+						{selectedRole ? getRoleLabel(selectedRole) : $t('users.form.select_role_placeholder')}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							width="24"
@@ -174,10 +180,10 @@
 					</Button>
 				{/snippet}
 			</Popover.Trigger>
-			<Popover.Content class="w-full p-0 bg-background text-foreground" side="bottom" align="start">
+			<Popover.Content class="w-full bg-background p-0 text-foreground" side="bottom" align="start">
 				<Command.Root>
-					<Command.Input placeholder="Search roles..." />
-					<Command.Empty>No role found.</Command.Empty>
+					<Command.Input placeholder={$t('users.form.search_roles_placeholder')} />
+					<Command.Empty>{$t('users.form.no_role_found')}</Command.Empty>
 					<Command.List>
 						{#each allowedRoles as role (role)}
 							<Command.Item
@@ -199,23 +205,23 @@
 			<p class="text-sm text-destructive">{fieldErrors.role}</p>
 		{/if}
 		<p class="text-sm text-muted-foreground">
-			You can only assign roles that you have permission to manage
+			{$t('users.form.allowed_roles_help')}
 		</p>
 	</div>
 
 	<div class="flex items-center gap-2">
 		<Checkbox id="isActive" checked={isActive} onCheckedChange={(v) => (isActive = !!v)} />
-		<Label for="isActive" class="text-sm font-normal">User is active</Label>
+		<Label for="isActive" class="text-sm font-normal">{$t('users.form.user_active')}</Label>
 	</div>
 
 	<div class="flex justify-end gap-2 pt-2">
 		{#if onCancel}
 			<Button type="button" variant="outline" onclick={onCancel} disabled={isSubmitting}>
-				Cancel
+				{$t('common.cancel')}
 			</Button>
 		{/if}
 		<Button type="submit" disabled={isSubmitting}>
-			{isSubmitting ? 'Creating...' : 'Create User'}
+			{isSubmitting ? $t('users.form.creating_user') : $t('common.create_user')}
 		</Button>
 	</div>
 </form>

@@ -10,6 +10,8 @@
 	import { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 	import ControlCabinetForm from '$lib/components/facility/forms/ControlCabinetForm.svelte';
 	import SPSControllerForm from '$lib/components/facility/forms/SPSControllerForm.svelte';
 	import FieldDeviceListView from '$lib/components/facility/field-device/FieldDeviceListView.svelte';
@@ -31,6 +33,8 @@
 	} from '$lib/domain/project/index.js';
 	import type { Building, ControlCabinet, SPSController } from '$lib/domain/facility/index.js';
 	import { ArrowLeft, Plus, Pencil } from '@lucide/svelte';
+
+	const t = createTranslator();
 
 	const projectId = $derived($page.params.id ?? '');
 
@@ -187,7 +191,7 @@
 		try {
 			project = await getProject(projectId);
 		} catch (err) {
-			const message = err instanceof Error ? err.message : 'Failed to load project';
+			const message = err instanceof Error ? err.message : translate('projects.errors.load_failed');
 			error = message;
 			addToast(message, 'error');
 		} finally {
@@ -207,7 +211,10 @@
 			controlCabinetOptions = await fetchControlCabinetsByIds(cabinetIds);
 			await ensureBuildingLabels(controlCabinetOptions);
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to load control cabinets', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('projects.control_cabinets.load_failed'),
+				'error'
+			);
 		} finally {
 			controlCabinetLoading = false;
 		}
@@ -235,7 +242,10 @@
 				await ensureBuildingLabels(fetched);
 			}
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to load SPS controllers', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('projects.sps_controllers.load_failed'),
+				'error'
+			);
 		} finally {
 			spsControllerLoading = false;
 		}
@@ -245,30 +255,36 @@
 		if (!projectId) return;
 		try {
 			await addProjectControlCabinet(projectId, item.id);
-			addToast('Control cabinet created', 'success');
+			addToast(translate('projects.control_cabinets.created'), 'success');
 			showControlCabinetForm = false;
 			await loadControlCabinets();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to link control cabinet', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('projects.control_cabinets.link_failed'),
+				'error'
+			);
 		}
 	}
 
 	async function removeControlCabinet(linkId: string) {
 		if (!projectId) return;
 		const ok = await confirm({
-			title: 'Remove control cabinet',
-			message: 'Remove this control cabinet from the project?',
-			confirmText: 'Remove',
-			cancelText: 'Cancel',
+			title: translate('projects.control_cabinets.remove_title'),
+			message: translate('projects.control_cabinets.remove_message'),
+			confirmText: translate('projects.control_cabinets.remove_confirm'),
+			cancelText: translate('common.cancel'),
 			variant: 'destructive'
 		});
 		if (!ok) return;
 		try {
 			await removeProjectControlCabinet(projectId, linkId);
-			addToast('Control cabinet removed', 'success');
+			addToast(translate('projects.control_cabinets.removed'), 'success');
 			await loadControlCabinets();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to remove control cabinet', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('projects.control_cabinets.remove_failed'),
+				'error'
+			);
 		}
 	}
 
@@ -301,33 +317,39 @@
 		try {
 			if (!editingSpsController) {
 				await addProjectSPSController(projectId, item.id);
-				addToast('SPS controller created', 'success');
+				addToast(translate('projects.sps_controllers.created'), 'success');
 			} else {
-				addToast('SPS controller updated', 'success');
+				addToast(translate('projects.sps_controllers.updated'), 'success');
 			}
 			showSpsControllerForm = false;
 			editingSpsController = undefined;
 			await loadSpsControllers();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to save SPS controller', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('projects.sps_controllers.save_failed'),
+				'error'
+			);
 		}
 	}
 
 	async function handleDeleteSpsController(item: SPSController) {
 		const ok = await confirm({
-			title: 'Delete SPS controller',
-			message: `Delete ${item.device_name}?`,
-			confirmText: 'Delete',
-			cancelText: 'Cancel',
+			title: translate('projects.sps_controllers.delete_title'),
+			message: translate('projects.sps_controllers.delete_message', { name: item.device_name }),
+			confirmText: translate('common.delete'),
+			cancelText: translate('common.cancel'),
 			variant: 'destructive'
 		});
 		if (!ok) return;
 		try {
 			await spsControllerRepository.delete(item.id);
-			addToast('SPS controller deleted', 'success');
+			addToast(translate('projects.sps_controllers.deleted'), 'success');
 			await loadSpsControllers();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to delete SPS controller', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('projects.sps_controllers.delete_failed'),
+				'error'
+			);
 		}
 	}
 
@@ -344,20 +366,22 @@
 	<div class="flex items-start gap-3">
 		<Button variant="outline" onclick={() => goto('/projects')}>
 			<ArrowLeft class="mr-2 h-4 w-4" />
-			Back
+			{$t('common.back')}
 		</Button>
 		<div>
-			<h1 class="text-3xl font-bold tracking-tight">{project?.name ?? 'Project'}</h1>
-			<p class="mt-1 text-muted-foreground">Manage project assets and assignments.</p>
+			<h1 class="text-3xl font-bold tracking-tight">{project?.name ?? $t('project.project')}</h1>
+			<p class="mt-1 text-muted-foreground">{$t('projects.detail.description')}</p>
 		</div>
 		<div class="ml-auto">
-			<Button variant="outline" href={`/projects/${projectId}/settings`}>Settings</Button>
+			<Button variant="outline" href={`/projects/${projectId}/settings`}>
+				{$t('projects.detail.settings')}
+			</Button>
 		</div>
 	</div>
 
 	{#if error}
 		<div class="rounded-md border bg-muted px-4 py-3 text-muted-foreground">
-			<p class="font-medium">Could not load project</p>
+			<p class="font-medium">{$t('projects.errors.load_title')}</p>
 			<p class="text-sm">{error}</p>
 		</div>
 	{/if}
@@ -372,7 +396,7 @@
 		</div>
 	{:else if !project}
 		<div class="rounded-lg border bg-background p-6 text-sm text-muted-foreground">
-			Project not found.
+			{$t('projects.errors.not_found')}
 		</div>
 	{:else}
 		<div class="grid gap-6">
@@ -380,21 +404,23 @@
 				<div class="flex flex-wrap items-center justify-between gap-3">
 					<div>
 						<h2 class="text-lg font-semibold">Control Cabinets</h2>
-						<p class="text-sm text-muted-foreground">Create and assign control cabinets.</p>
+						<p class="text-sm text-muted-foreground">
+							{$t('projects.control_cabinets.description')}
+						</p>
 					</div>
 					<div class="flex items-center gap-2">
 						<Input
 							class="w-64"
-							placeholder="Search control cabinets..."
+							placeholder={$t('projects.control_cabinets.search_placeholder')}
 							bind:value={controlCabinetSearch}
 						/>
 						<Button variant="outline" onclick={loadControlCabinets} disabled={controlCabinetLoading}
-							>Refresh</Button
+							>{$t('common.refresh')}</Button
 						>
 						{#if !showControlCabinetForm}
 							<Button onclick={() => (showControlCabinetForm = true)}>
 								<Plus class="mr-2 size-4" />
-								New Control Cabinet
+								{$t('projects.control_cabinets.new')}
 							</Button>
 						{/if}
 					</div>
@@ -411,8 +437,8 @@
 					<Table.Root>
 						<Table.Header>
 							<Table.Row>
-								<Table.Head>Control Cabinet</Table.Head>
-								<Table.Head>Building</Table.Head>
+								<Table.Head>{$t('projects.control_cabinets.table.control_cabinet')}</Table.Head>
+								<Table.Head>{$t('projects.control_cabinets.table.building')}</Table.Head>
 								<Table.Head class="w-32"></Table.Head>
 							</Table.Row>
 						</Table.Header>
@@ -428,7 +454,7 @@
 							{:else if filteredControlCabinetLinks.length === 0}
 								<Table.Row>
 									<Table.Cell colspan={3} class="h-20 text-center text-sm text-muted-foreground">
-										No control cabinets found.
+										{$t('projects.control_cabinets.empty')}
 									</Table.Cell>
 								</Table.Row>
 							{:else}
@@ -445,7 +471,7 @@
 										</Table.Cell>
 										<Table.Cell class="text-right">
 											<Button variant="outline" onclick={() => removeControlCabinet(link.id)}>
-												Remove
+												{$t('common.remove')}
 											</Button>
 										</Table.Cell>
 									</Table.Row>
@@ -460,13 +486,15 @@
 				<div class="flex flex-wrap items-center justify-between gap-3">
 					<div>
 						<h2 class="text-lg font-semibold">SPS Controllers</h2>
-						<p class="text-sm text-muted-foreground">Create and assign SPS controllers.</p>
+						<p class="text-sm text-muted-foreground">
+							{$t('projects.sps_controllers.description')}
+						</p>
 					</div>
 					<div class="flex items-center gap-2">
 						{#if !showSpsControllerForm}
 							<Button onclick={handleSpsControllerCreate}>
 								<Plus class="mr-2 size-4" />
-								New SPS Controller
+								{$t('projects.sps_controllers.new')}
 							</Button>
 						{/if}
 					</div>
@@ -483,15 +511,15 @@
 				<PaginatedList
 					state={spsControllerListState}
 					columns={[
-						{ key: 'device_name', label: 'Device Name' },
-						{ key: 'ga_device', label: 'GA Device' },
-						{ key: 'ip_address', label: 'IP Address' },
-						{ key: 'cabinet', label: 'Cabinet' },
-						{ key: 'created', label: 'Created' },
-						{ key: 'actions', label: 'Actions', width: 'w-[120px]' }
+						{ key: 'device_name', label: $t('projects.sps_controllers.columns.device_name') },
+						{ key: 'ga_device', label: $t('projects.sps_controllers.columns.ga_device') },
+						{ key: 'ip_address', label: $t('projects.sps_controllers.columns.ip_address') },
+						{ key: 'cabinet', label: $t('projects.sps_controllers.columns.cabinet') },
+						{ key: 'created', label: $t('projects.sps_controllers.columns.created') },
+						{ key: 'actions', label: $t('common.actions'), width: 'w-[120px]' }
 					]}
-					searchPlaceholder="Search SPS controllers..."
-					emptyMessage="No SPS controllers found. Create your first SPS controller to get started."
+					searchPlaceholder={$t('projects.sps_controllers.search_placeholder')}
+					emptyMessage={$t('projects.sps_controllers.empty')}
 					onSearch={handleSpsControllerSearch}
 					onPageChange={handleSpsControllerPageChange}
 					onReload={loadSpsControllers}
@@ -526,14 +554,14 @@
 									<Pencil class="size-4" />
 								</Button>
 								<Button variant="ghost" size="sm" href="/facility/sps-controllers/{controller.id}">
-									View
+									{$t('common.view')}
 								</Button>
 								<Button
 									variant="ghost"
 									size="sm"
 									onclick={() => handleDeleteSpsController(controller)}
 								>
-									Delete
+									{$t('common.delete')}
 								</Button>
 							</div>
 						</Table.Cell>
@@ -543,9 +571,9 @@
 
 			<div class="rounded-lg border bg-background p-6">
 				<div class="mb-4">
-					<h2 class="text-lg font-semibold">Field Devices</h2>
+					<h2 class="text-lg font-semibold">{$t('projects.field_devices.title')}</h2>
 					<p class="text-sm text-muted-foreground">
-						Manage field devices linked to this project with full inline editing.
+						{$t('projects.field_devices.description')}
 					</p>
 				</div>
 				<FieldDeviceListView {projectId} />

@@ -10,6 +10,8 @@
 	import { useUnsavedChangesWarning } from '$lib/hooks/useUnsavedChangesWarning.svelte.js';
 	import type { FieldDevice, Apparat, SystemPart } from '$lib/domain/facility/index.js';
 	import type { FieldDeviceFilters } from '$lib/stores/facility/fieldDeviceStore.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 	import FieldDeviceMultiCreateForm from './FieldDeviceMultiCreateForm.svelte';
 	import FieldDeviceFilterCard from './FieldDeviceFilterCard.svelte';
 	import FieldDeviceSearchBar from './FieldDeviceSearchBar.svelte';
@@ -25,6 +27,8 @@
 	import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 	import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
 	import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
+
+	const t = createTranslator();
 
 	const manageFieldDeviceUseCase = new ManageFieldDeviceUseCase(fieldDeviceRepository);
 	const listApparatsUseCase = new ListEntityUseCase(apparatRepository);
@@ -104,18 +108,21 @@
 					createdDevices.map((device) => projectRepository.addFieldDevice(projectId!, device.id))
 				);
 				addToast(
-					`Created ${createdDevices.length} field device(s) and linked them to the project.`,
+					translate('field_device.toasts.created_and_linked', {
+						count: createdDevices.length
+					}),
 					'success'
 				);
 			} catch (err) {
 				const message =
-					err instanceof Error
-						? err.message
-						: 'Some field devices were created but could not be linked';
-				addToast(`Failed to link field devices: ${message}`, 'error');
+					err instanceof Error ? err.message : translate('field_device.toasts.partial_link_failed');
+				addToast(translate('field_device.toasts.link_failed', { message }), 'error');
 			}
 		} else {
-			addToast(`Created ${createdDevices.length} field device(s).`, 'success');
+			addToast(
+				translate('field_device.toasts.created', { count: createdDevices.length }),
+				'success'
+			);
 		}
 
 		store.reload();
@@ -184,22 +191,33 @@
 	// Bulk delete
 	async function handleBulkDelete() {
 		if (selectedIds.size === 0) return;
-		if (!confirm(`Delete ${selectedIds.size} field device(s)? This action cannot be undone.`))
+		if (!confirm(translate('field_device.confirm.bulk_delete', { count: selectedIds.size })))
 			return;
 
 		try {
 			const result = await manageFieldDeviceUseCase.bulkDelete([...selectedIds]);
 			if (result.success_count > 0) {
-				addToast(`Deleted ${result.success_count} field device(s)`, 'success');
+				addToast(
+					translate('field_device.toasts.bulk_deleted', { count: result.success_count }),
+					'success'
+				);
 			}
 			if (result.failure_count > 0) {
-				addToast(`Failed to delete ${result.failure_count} device(s)`, 'error');
+				addToast(
+					translate('field_device.toasts.bulk_delete_failed', {
+						count: result.failure_count
+					}),
+					'error'
+				);
 			}
 			selectedIds = new Set();
 			store.reload();
 		} catch (error: unknown) {
 			const err = error as Error;
-			addToast(`Bulk delete failed: ${err.message}`, 'error');
+			addToast(
+				translate('field_device.toasts.bulk_delete_failed_message', { message: err.message }),
+				'error'
+			);
 		}
 	}
 
@@ -212,17 +230,24 @@
 	}
 
 	async function handleDelete(device: FieldDevice) {
-		if (!confirm(`Delete ${device.bmk ?? device.id}? This action cannot be undone.`)) return;
+		if (
+			!confirm(
+				translate('field_device.confirm.delete', {
+					label: device.bmk ?? device.id
+				})
+			)
+		)
+			return;
 		try {
 			await manageFieldDeviceUseCase.delete(device.id);
-			addToast('Field device deleted', 'success');
+			addToast(translate('field_device.toasts.deleted'), 'success');
 			const nextSelected = new Set(selectedIds);
 			nextSelected.delete(device.id);
 			selectedIds = nextSelected;
 			store.reload();
 		} catch (error: unknown) {
 			const err = error as Error;
-			addToast(`Delete failed: ${err.message}`, 'error');
+			addToast(translate('field_device.toasts.delete_failed', { message: err.message }), 'error');
 		}
 	}
 
@@ -248,12 +273,12 @@
 	<div class="flex justify-end gap-2">
 		<Button variant="outline" onclick={() => (showExportPanel = !showExportPanel)}>
 			<FileSpreadsheet class="mr-2 size-4" />
-			{showExportPanel ? 'Hide Export' : 'Export Excel'}
+			{showExportPanel ? $t('field_device.actions.hide_export') : $t('field_device.actions.export')}
 		</Button>
 		{#if !showMultiCreateForm}
 			<Button variant="outline" onclick={() => (showMultiCreateForm = true)}>
 				<ListPlus class="mr-2 size-4" />
-				Multi-Create
+				{$t('field_device.actions.multi_create')}
 			</Button>
 		{/if}
 	</div>
@@ -266,9 +291,9 @@
 	{#if showMultiCreateForm}
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Multi-Create Field Devices</Card.Title>
+				<Card.Title>{$t('field_device.multi_create.title')}</Card.Title>
 				<Card.Description>
-					Create multiple field devices at once with automatic apparat number assignment.
+					{$t('field_device.multi_create.description')}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -319,7 +344,7 @@
 			<div
 				class="rounded-md border border-destructive/50 bg-destructive/15 px-4 py-3 text-destructive"
 			>
-				<p class="font-medium">Error</p>
+				<p class="font-medium">{$t('common.error')}</p>
 				<p class="text-sm">{$store.error}</p>
 			</div>
 		{/if}

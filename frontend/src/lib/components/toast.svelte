@@ -34,6 +34,9 @@
 <script lang="ts">
 	import { fly } from 'svelte/transition';
 	import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from '@lucide/svelte';
+	import { createTranslator } from '$lib/i18n/translator.js';
+
+	const t = createTranslator();
 
 	function getIcon(type: ToastType) {
 		switch (type) {
@@ -75,7 +78,7 @@
 				<button
 					onclick={() => removeToast(toast.id)}
 					class="shrink-0 rounded-sm opacity-70 transition-opacity hover:opacity-100"
-					aria-label="Close notification"
+					aria-label={$t('common.close')}
 				>
 					<X class="h-4 w-4" />
 				</button>

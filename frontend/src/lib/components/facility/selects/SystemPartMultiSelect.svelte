@@ -2,6 +2,7 @@
 	import AsyncMultiSelect from '$lib/components/ui/combobox/AsyncMultiSelect.svelte';
 	import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
 	import type { SystemPart } from '$lib/domain/facility/index.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	type Props = {
 		value?: string[];
@@ -11,6 +12,8 @@
 	};
 
 	let { value = $bindable([]), width = 'w-full', disabled = false, id }: Props = $props();
+
+	const t = createTranslator();
 
 	async function fetcher(search: string): Promise<SystemPart[]> {
 		const res = await systemPartRepository.list({
@@ -34,9 +37,9 @@
 	{fetcher}
 	{fetchByIds}
 	labelKey="name"
-	placeholder="Select System Parts..."
-	searchPlaceholder="Search system parts..."
-	emptyText="No system parts found."
+	placeholder={$t('facility.multi_selects.system_parts_placeholder')}
+	searchPlaceholder={$t('facility.multi_selects.system_parts_search')}
+	emptyText={$t('facility.multi_selects.system_parts_empty')}
 	{width}
 	{disabled}
 	{id}

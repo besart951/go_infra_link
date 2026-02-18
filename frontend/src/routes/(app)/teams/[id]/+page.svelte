@@ -12,6 +12,8 @@
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import UserAvatar from '$lib/components/user-avatar.svelte';
 	import { ArrowLeft, UserMinus, UserPlus } from '@lucide/svelte';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 
 	import {
 		addTeamMember,
@@ -32,6 +34,8 @@
 	let error = $state<string | null>(null);
 	let busy = $state(false);
 
+	const t = createTranslator();
+
 	// Add Member popover state
 	let addMemberOpen = $state(false);
 	let addMemberSearch = $state('');
@@ -49,7 +53,7 @@
 
 	async function load() {
 		if (!teamId) {
-			error = 'Missing team id';
+			error = translate('teams.errors.missing_id');
 			loading = false;
 			return;
 		}
@@ -65,7 +69,7 @@
 			members = m.items;
 			users = u.items;
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to load team';
+			error = err instanceof Error ? err.message : translate('teams.errors.load_failed');
 		} finally {
 			loading = false;
 		}
@@ -97,13 +101,16 @@
 		busy = true;
 		try {
 			await addTeamMember(teamId, { user_id: userId, role: 'member' });
-			addToast('Member added', 'success');
+			addToast(translate('teams.toasts.member_added'), 'success');
 			addMemberOpen = false;
 			addMemberSearch = '';
 			addMemberResults = [];
 			await load();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to add member', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('teams.toasts.member_add_failed'),
+				'error'
+			);
 		} finally {
 			busy = false;
 		}
@@ -114,10 +121,13 @@
 		busy = true;
 		try {
 			await addTeamMember(teamId, { user_id: userId, role });
-			addToast('Role updated', 'success');
+			addToast(translate('teams.toasts.role_updated'), 'success');
 			await load();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to update role', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('teams.toasts.role_update_failed'),
+				'error'
+			);
 		} finally {
 			busy = false;
 		}
@@ -127,10 +137,12 @@
 		if (!teamId) return;
 		const u = userById(userId);
 		const ok = await confirm({
-			title: 'Remove member',
-			message: `Remove ${u ? `${u.first_name} ${u.last_name}` : 'this user'} from the team?`,
-			confirmText: 'Remove',
-			cancelText: 'Cancel',
+			title: translate('teams.confirm.remove_title'),
+			message: translate('teams.confirm.remove_message', {
+				name: u ? `${u.first_name} ${u.last_name}` : translate('teams.confirm.user_fallback')
+			}),
+			confirmText: translate('teams.confirm.remove_confirm'),
+			cancelText: translate('common.cancel'),
 			variant: 'destructive'
 		});
 		if (!ok) return;
@@ -138,10 +150,13 @@
 		busy = true;
 		try {
 			await removeTeamMember(teamId, userId);
-			addToast('Member removed', 'success');
+			addToast(translate('teams.toasts.member_removed'), 'success');
 			await load();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to remove member', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('teams.toasts.member_remove_failed'),
+				'error'
+			);
 		} finally {
 			busy = false;
 		}
@@ -165,11 +180,11 @@
 		<div class="flex items-start gap-3">
 			<Button variant="outline" onclick={() => goto('/teams')}>
 				<ArrowLeft class="mr-2 h-4 w-4" />
-				Back
+				{$t('common.back')}
 			</Button>
 			<div>
-				<h1 class="text-3xl font-bold tracking-tight">{team?.name ?? 'Team'}</h1>
-				<p class="mt-1 text-muted-foreground">Manage members and permissions.</p>
+				<h1 class="text-3xl font-bold tracking-tight">{team?.name ?? $t('team.team')}</h1>
+				<p class="mt-1 text-muted-foreground">{$t('teams.detail.description')}</p>
 			</div>
 		</div>
 		<Popover.Root bind:open={addMemberOpen}>
@@ -177,26 +192,23 @@
 				{#snippet child({ props })}
 					<Button {...props}>
 						<UserPlus class="mr-2 h-4 w-4" />
-						Add Member
+						{$t('teams.detail.add_member')}
 					</Button>
 				{/snippet}
 			</Popover.Trigger>
 			<Popover.Content class="w-72 p-0" align="end">
 				<Command.Root shouldFilter={false}>
 					<Command.Input
-						placeholder="Search users..."
+						placeholder={$t('teams.detail.search_users_placeholder')}
 						bind:value={addMemberSearch}
 					/>
 					<Command.List>
 						<Command.Empty>
-							{addMemberLoading ? 'Searching...' : 'No users found'}
+							{addMemberLoading ? $t('teams.detail.searching') : $t('teams.detail.no_users_found')}
 						</Command.Empty>
 						<Command.Group>
 							{#each addMemberResults as user (user.id)}
-								<Command.Item
-									value={user.id}
-									onSelect={() => handleAddMember(user.id)}
-								>
+								<Command.Item value={user.id} onSelect={() => handleAddMember(user.id)}>
 									<div class="flex items-center gap-2">
 										<UserAvatar
 											firstName={user.first_name}
@@ -223,7 +235,7 @@
 
 	{#if error}
 		<div class="rounded-md border bg-muted px-4 py-3 text-muted-foreground">
-			<p class="font-medium">Could not load team</p>
+			<p class="font-medium">{$t('teams.errors.load_title')}</p>
 			<p class="text-sm">{error}</p>
 		</div>
 	{/if}
@@ -232,8 +244,8 @@
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
-					<Table.Head>User</Table.Head>
-					<Table.Head>Role</Table.Head>
+					<Table.Head>{$t('common.user')}</Table.Head>
+					<Table.Head>{$t('common.role')}</Table.Head>
 					<Table.Head class="w-30"></Table.Head>
 				</Table.Row>
 			</Table.Header>
@@ -250,8 +262,10 @@
 					<Table.Row>
 						<Table.Cell colspan={3}>
 							<div class="flex flex-col items-center justify-center gap-2 py-10 text-center">
-								<div class="text-sm font-medium">No members yet</div>
-								<p class="text-sm text-muted-foreground">Use the "Add Member" button to add users to this team.</p>
+								<div class="text-sm font-medium">{$t('teams.detail.empty_title')}</div>
+								<p class="text-sm text-muted-foreground">
+									{$t('teams.detail.empty_description')}
+								</p>
 							</div>
 						</Table.Cell>
 					</Table.Row>
@@ -282,15 +296,21 @@
 										changeRole(m.user_id, (e.target as HTMLSelectElement).value as any)}
 									disabled={busy}
 								>
-									<option value="member" selected={m.role === 'member'}>Member</option>
-									<option value="manager" selected={m.role === 'manager'}>Manager</option>
-									<option value="owner" selected={m.role === 'owner'}>Owner</option>
+									<option value="member" selected={m.role === 'member'}
+										>{$t('teams.roles.member')}</option
+									>
+									<option value="manager" selected={m.role === 'manager'}
+										>{$t('teams.roles.manager')}</option
+									>
+									<option value="owner" selected={m.role === 'owner'}
+										>{$t('teams.roles.owner')}</option
+									>
 								</select>
 							</Table.Cell>
 							<Table.Cell class="text-right">
 								<Button variant="outline" onclick={() => remove(m.user_id)} disabled={busy}>
 									<UserMinus class="mr-2 h-4 w-4" />
-									Remove
+									{$t('teams.detail.remove_member')}
 								</Button>
 							</Table.Cell>
 						</Table.Row>

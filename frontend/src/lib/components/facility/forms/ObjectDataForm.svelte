@@ -11,6 +11,7 @@
 	import { Plus } from '@lucide/svelte';
 	import BacnetObjectRow from '../bacnet/BacnetObjectRow.svelte';
 	import ApparatMultiSelect from '../selects/ApparatMultiSelect.svelte';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface Props {
 		initialData?: ObjectData;
@@ -19,6 +20,8 @@
 	}
 
 	let { initialData, onSuccess, onCancel }: Props = $props();
+
+	const t = createTranslator();
 
 	let description = $state('');
 	let version = $state('1.0');
@@ -130,19 +133,23 @@
 
 <form onsubmit={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
 	<div class="mb-4 flex items-center justify-between">
-		<h3 class="text-lg font-medium">{initialData ? 'Edit Object Data' : 'New Object Data'}</h3>
+		<h3 class="text-lg font-medium">
+			{initialData
+				? $t('facility.forms.object_data.title_edit')
+				: $t('facility.forms.object_data.title_new')}
+		</h3>
 	</div>
 
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
 		<div class="space-y-2 md:col-span-2">
-			<Label for="object_data_description">Description</Label>
+			<Label for="object_data_description">{$t('common.description')}</Label>
 			<Input id="object_data_description" bind:value={description} required maxlength={250} />
 			{#if fieldError('description')}
 				<p class="text-sm text-red-500">{fieldError('description')}</p>
 			{/if}
 		</div>
 		<div class="space-y-2">
-			<Label for="object_data_version">Version</Label>
+			<Label for="object_data_version">{$t('facility.forms.object_data.version_label')}</Label>
 			<Input id="object_data_version" bind:value={version} required maxlength={100} />
 			{#if fieldError('version')}
 				<p class="text-sm text-red-500">{fieldError('version')}</p>
@@ -150,13 +157,13 @@
 		</div>
 		<div class="flex items-center gap-2 md:col-span-3">
 			<input id="object_data_active" type="checkbox" bind:checked={is_active} class="h-4 w-4" />
-			<Label for="object_data_active">Active</Label>
+			<Label for="object_data_active">{$t('common.active')}</Label>
 		</div>
 		{#if fieldError('is_active')}
 			<p class="text-sm text-red-500 md:col-span-3">{fieldError('is_active')}</p>
 		{/if}
 		<div class="space-y-2 md:col-span-3">
-			<Label for="object_data_apparats">Apparats</Label>
+			<Label for="object_data_apparats">{$t('facility.forms.object_data.apparats_label')}</Label>
 			<ApparatMultiSelect id="object_data_apparats" bind:value={apparat_ids} />
 			{#if fieldError('apparat_ids')}
 				<p class="text-sm text-red-500">{fieldError('apparat_ids')}</p>
@@ -168,21 +175,21 @@
 	<div class="space-y-3 pt-4">
 		<div class="flex items-center justify-between border-t pt-4">
 			<div>
-				<h4 class="text-base font-medium">BACnet Objects</h4>
+				<h4 class="text-base font-medium">{$t('facility.forms.object_data.bacnet_title')}</h4>
 				<p class="text-sm text-muted-foreground">
-					Add and configure BACnet objects for this template
+					{$t('facility.forms.object_data.bacnet_description')}
 				</p>
 			</div>
 			<Button type="button" variant="outline" size="sm" onclick={addBacnetObject}>
 				<Plus class="mr-2 size-4" />
-				Add Object
+				{$t('facility.forms.object_data.bacnet_add')}
 			</Button>
 		</div>
 
 		{#if bacnetObjects.length === 0}
 			<div class="rounded-md border border-dashed p-8 text-center">
 				<p class="text-sm text-muted-foreground">
-					No BACnet objects added yet. Click "Add Object" to get started.
+					{$t('facility.forms.object_data.bacnet_empty')}
 				</p>
 			</div>
 		{:else}
@@ -213,7 +220,9 @@
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
-		<Button type="submit" disabled={loading}>{initialData ? 'Update' : 'Create'}</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>{$t('common.cancel')}</Button>
+		<Button type="submit" disabled={loading}>
+			{initialData ? $t('common.update') : $t('common.create')}
+		</Button>
 	</div>
 </form>

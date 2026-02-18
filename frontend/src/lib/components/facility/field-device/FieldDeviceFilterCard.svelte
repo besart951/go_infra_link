@@ -8,6 +8,7 @@
 	import SPSControllerSystemTypeSelect from '../selects/SPSControllerSystemTypeSelect.svelte';
 	import ProjectSelect from '$lib/components/project/ProjectSelect.svelte';
 	import type { FieldDeviceFilters } from '$lib/stores/facility/fieldDeviceStore.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface Props {
 		onApplyFilters: (filters: FieldDeviceFilters) => void;
@@ -16,6 +17,8 @@
 	}
 
 	let { onApplyFilters, onClearFilters, showProjectFilter = false }: Props = $props();
+
+	const t = createTranslator();
 
 	let buildingId = $state('');
 	let controlCabinetId = $state('');
@@ -59,49 +62,57 @@
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>Filters</Card.Title>
+		<Card.Title>{$t('field_device.filters.title')}</Card.Title>
 		<Card.Description>
-			Filter field devices by building, control cabinet, SPS controller, system type
+			{$t('field_device.filters.description')}
 			{#if showProjectFilter}
-				, or project.
+				{$t('field_device.filters.description_project')}
 			{:else}
-				.
+				{$t('field_device.filters.description_end')}
 			{/if}
 		</Card.Description>
 	</Card.Header>
 	<Card.Content>
 		<div class={gridClass}>
 			<div class="flex flex-col gap-2">
-				<label for="building-filter" class="text-sm font-medium">Building</label>
+				<label for="building-filter" class="text-sm font-medium">
+					{$t('field_device.filters.building')}
+				</label>
 				<BuildingSelect bind:value={buildingId} width="w-full" />
 			</div>
 			<div class="flex flex-col gap-2">
-				<label for="control-cabinet-filter" class="text-sm font-medium">Control Cabinet</label>
+				<label for="control-cabinet-filter" class="text-sm font-medium">
+					{$t('field_device.filters.control_cabinet')}
+				</label>
 				<ControlCabinetSelect bind:value={controlCabinetId} width="w-full" />
 			</div>
 			<div class="flex flex-col gap-2">
-				<label for="sps-controller-filter" class="text-sm font-medium">SPS Controller</label>
+				<label for="sps-controller-filter" class="text-sm font-medium">
+					{$t('field_device.filters.sps_controller')}
+				</label>
 				<SPSControllerSelect bind:value={spsControllerId} width="w-full" />
 			</div>
 			<div class="flex flex-col gap-2">
 				<label for="sps-controller-system-type-filter" class="text-sm font-medium">
-					SPS Controller System Type
+					{$t('field_device.filters.sps_system_type')}
 				</label>
 				<SPSControllerSystemTypeSelect bind:value={spsControllerSystemTypeId} width="w-full" />
 			</div>
 			{#if showProjectFilter}
 				<div class="flex flex-col gap-2">
-					<label for="project-filter" class="text-sm font-medium">Project</label>
+					<label for="project-filter" class="text-sm font-medium">
+						{$t('field_device.filters.project')}
+					</label>
 					<ProjectSelect bind:value={projectId} width="w-full" />
 				</div>
 			{/if}
 		</div>
 		<div class="mt-4 flex gap-2">
-			<Button onclick={applyFilters}>Apply Filters</Button>
+			<Button onclick={applyFilters}>{$t('field_device.filters.apply')}</Button>
 			{#if hasActiveFilters}
 				<Button variant="outline" onclick={clearFilters}>
 					<X class="mr-2 size-4" />
-					Clear Filters
+					{$t('field_device.filters.clear')}
 				</Button>
 			{/if}
 		</div>

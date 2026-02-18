@@ -5,6 +5,7 @@
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import type { Team } from '$lib/domain/team/index.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	let {
 		teams,
@@ -15,6 +16,8 @@
 		activeTeam?: Team;
 		onCreateTeam?: () => void;
 	} = $props();
+
+	const t = createTranslator();
 
 	const sidebar = useSidebar();
 </script>
@@ -32,12 +35,14 @@
 						<div
 							class="flex size-8 items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground"
 						>
-							{activeTeam?.name?.[0]?.toUpperCase() ?? 'IL'}
+							{activeTeam?.name?.[0]?.toUpperCase() ?? $t('app.brand_short')}
 						</div>
 						<div class="grid flex-1 text-start text-sm leading-tight">
-							<span class="truncate font-semibold">{activeTeam?.name ?? 'Infra Link'}</span>
+							<span class="truncate font-semibold">{activeTeam?.name ?? $t('app.brand')}</span>
 							<span class="truncate text-xs text-muted-foreground">
-								{activeTeam ? 'Team' : 'Console'}
+								{activeTeam
+									? $t('sidebar.team_switcher.team')
+									: $t('sidebar.team_switcher.console')}
 							</span>
 						</div>
 						<ChevronsUpDownIcon class="ms-auto" />
@@ -50,7 +55,9 @@
 				align="start"
 				sideOffset={4}
 			>
-				<DropdownMenu.Label class="text-xs text-muted-foreground">Teams</DropdownMenu.Label>
+				<DropdownMenu.Label class="text-xs text-muted-foreground">
+					{$t('sidebar.team_switcher.label')}
+				</DropdownMenu.Label>
 				{#each teams as team (team.id)}
 					<DropdownMenu.Item onclick={() => (activeTeam = team)} class="gap-2 p-2">
 						<div
@@ -67,7 +74,9 @@
 						<div class="flex size-6 items-center justify-center rounded-md border bg-background">
 							<PlusIcon class="size-4" />
 						</div>
-						<span class="font-medium text-muted-foreground">Add team</span>
+						<span class="font-medium text-muted-foreground">
+							{$t('sidebar.team_switcher.add_team')}
+						</span>
 					</DropdownMenu.Item>
 				{/if}
 			</DropdownMenu.Content>

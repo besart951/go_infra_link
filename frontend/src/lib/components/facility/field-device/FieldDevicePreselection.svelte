@@ -4,6 +4,8 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
 	import { RefreshCw } from '@lucide/svelte';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 
 	import type {
 		Apparat,
@@ -33,6 +35,8 @@
 		disabled = false,
 		className = 'grid grid-cols-1 gap-4 md:grid-cols-3'
 	}: Props = $props();
+
+	const t = createTranslator();
 
 	const useCase = new GetFieldDeviceOptionsUseCase(facilityFieldDeviceOptionsRepository);
 
@@ -66,8 +70,7 @@
 		const query = objectDataSearch.toLowerCase();
 		return base.filter(
 			(od) =>
-				od.description.toLowerCase().includes(query) ||
-				od.version.toLowerCase().includes(query)
+				od.description.toLowerCase().includes(query) || od.version.toLowerCase().includes(query)
 		);
 	});
 
@@ -237,7 +240,7 @@
 			hasFetched = true;
 		} catch (e: any) {
 			if (e instanceof DOMException && e.name === 'AbortError') return;
-			error = e?.message ?? 'Failed to load selectable object data';
+			error = e?.message ?? translate('field_device.preselection.errors.load');
 			if (isUserRetry) {
 				retryCycles = Math.min(maxRetries, retryCycles);
 			}
@@ -278,15 +281,17 @@
 		<div
 			class="flex items-center gap-3 rounded-md border border-destructive/50 bg-destructive/10 p-3"
 		>
-			<span class="flex-1 text-sm text-destructive">Failed to load object data: {error}</span>
+			<span class="flex-1 text-sm text-destructive">
+				{$t('field_device.preselection.errors.load_with_message', { message: error })}
+			</span>
 			{#if canRetry}
 				<Button variant="outline" size="sm" onclick={handleRetry} disabled={loading} class="gap-2">
 					<RefreshCw class={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-					Retry ({maxRetries - retryCycles} left)
+					{$t('field_device.preselection.actions.retry', { count: maxRetries - retryCycles })}
 				</Button>
 			{:else}
 				<span class="text-xs text-muted-foreground"
-					>Max retries reached. Please reload the page.</span
+					>{$t('field_device.preselection.errors.max_retries')}</span
 				>
 			{/if}
 		</div>
@@ -294,12 +299,14 @@
 
 	<div class={className}>
 		<div class="space-y-2">
-			<Label for="fd-object-data">Object Data *</Label>
+			<Label for="fd-object-data">{$t('field_device.preselection.object_data')}</Label>
 			<AsyncCombobox
 				id="fd-object-data"
-				placeholder="Select object data..."
-				searchPlaceholder="Search object data..."
-				emptyText={loading ? 'Loading...' : 'No object data found.'}
+				placeholder={$t('field_device.preselection.object_data_placeholder')}
+				searchPlaceholder={$t('field_device.preselection.object_data_search')}
+				emptyText={loading
+					? $t('field_device.preselection.loading')
+					: $t('field_device.preselection.object_data_empty')}
 				fetcher={async (search: string) => {
 					const q = search.toLowerCase();
 					return objectDataItems.filter((i) => i.label.toLowerCase().includes(q));
@@ -310,19 +317,23 @@
 				value={value.objectDataId}
 				onValueChange={handleObjectDataChange}
 				clearable
-				clearText="Clear object data"
+				clearText={$t('field_device.preselection.object_data_clear')}
 				disabled={disabled || loading}
 			/>
-			<p class="text-xs text-muted-foreground">{objectDataItems.length} option(s)</p>
+			<p class="text-xs text-muted-foreground">
+				{$t('field_device.preselection.options', { count: objectDataItems.length })}
+			</p>
 		</div>
 
 		<div class="space-y-2">
-			<Label for="fd-apparat">Apparat *</Label>
+			<Label for="fd-apparat">{$t('field_device.preselection.apparat')}</Label>
 			<AsyncCombobox
 				id="fd-apparat"
-				placeholder="Select apparat..."
-				searchPlaceholder="Search apparats..."
-				emptyText={loading ? 'Loading...' : 'No apparats found.'}
+				placeholder={$t('field_device.preselection.apparat_placeholder')}
+				searchPlaceholder={$t('field_device.preselection.apparat_search')}
+				emptyText={loading
+					? $t('field_device.preselection.loading')
+					: $t('field_device.preselection.apparat_empty')}
 				fetcher={async (search: string) => {
 					const q = search.toLowerCase();
 					return apparatItems.filter((i) => i.label.toLowerCase().includes(q));
@@ -333,19 +344,23 @@
 				value={value.apparatId}
 				onValueChange={handleApparatChange}
 				clearable
-				clearText="Clear apparat"
+				clearText={$t('field_device.preselection.apparat_clear')}
 				disabled={disabled || loading}
 			/>
-			<p class="text-xs text-muted-foreground">{apparatItems.length} option(s)</p>
+			<p class="text-xs text-muted-foreground">
+				{$t('field_device.preselection.options', { count: apparatItems.length })}
+			</p>
 		</div>
 
 		<div class="space-y-2">
-			<Label for="fd-system-part">System Part *</Label>
+			<Label for="fd-system-part">{$t('field_device.preselection.system_part')}</Label>
 			<AsyncCombobox
 				id="fd-system-part"
-				placeholder="Select system part..."
-				searchPlaceholder="Search system parts..."
-				emptyText={loading ? 'Loading...' : 'No system parts found.'}
+				placeholder={$t('field_device.preselection.system_part_placeholder')}
+				searchPlaceholder={$t('field_device.preselection.system_part_search')}
+				emptyText={loading
+					? $t('field_device.preselection.loading')
+					: $t('field_device.preselection.system_part_empty')}
 				fetcher={async (search: string) => {
 					const q = search.toLowerCase();
 					return systemPartItems.filter((i) => i.label.toLowerCase().includes(q));
@@ -356,10 +371,12 @@
 				value={value.systemPartId}
 				onValueChange={handleSystemPartChange}
 				clearable
-				clearText="Clear system part"
+				clearText={$t('field_device.preselection.system_part_clear')}
 				disabled={disabled || loading}
 			/>
-			<p class="text-xs text-muted-foreground">{systemPartItems.length} option(s)</p>
+			<p class="text-xs text-muted-foreground">
+				{$t('field_device.preselection.options', { count: systemPartItems.length })}
+			</p>
 		</div>
 	</div>
 </div>

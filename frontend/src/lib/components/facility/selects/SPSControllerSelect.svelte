@@ -2,6 +2,7 @@
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
 	import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
 	import type { SPSController } from '$lib/domain/facility/index.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface Props {
 		value?: string;
@@ -9,6 +10,8 @@
 	}
 
 	let { value = $bindable(''), width = 'w-[250px]' }: Props = $props();
+
+	const t = createTranslator();
 
 	async function fetcher(search: string): Promise<SPSController[]> {
 		const res = await spsControllerRepository.list({
@@ -28,6 +31,6 @@
 	{fetcher}
 	{fetchById}
 	labelKey="device_name"
-	placeholder="Select SPS Controller..."
+	placeholder={$t('facility.selects.sps_controller')}
 	{width}
 />

@@ -2,6 +2,7 @@
 	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
 	import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsControllerSystemTypeRepository.js';
 	import type { SPSControllerSystemType } from '$lib/domain/facility/index.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	type Props = {
 		value?: string;
@@ -9,6 +10,8 @@
 	};
 
 	let { value = $bindable(''), width = 'w-[250px]' }: Props = $props();
+
+	const t = createTranslator();
 
 	async function fetcher(search: string): Promise<SPSControllerSystemType[]> {
 		const res = await spsControllerSystemTypeRepository.list({
@@ -35,6 +38,6 @@
 	{fetchById}
 	labelKey="document_name"
 	labelFormatter={formatLabel}
-	placeholder="Select SPS Controller System Type..."
+	placeholder={$t('facility.selects.sps_controller_system_type')}
 	{width}
 />

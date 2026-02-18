@@ -2,6 +2,9 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { AlertTriangle } from '@lucide/svelte';
 	import { confirmDialogState } from '$lib/stores/confirm-dialog.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
+
+	const t = createTranslator();
 </script>
 
 {#if $confirmDialogState.open}
@@ -9,7 +12,7 @@
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
 		role="button"
 		tabindex="0"
-		aria-label="Close dialog"
+		aria-label={$t('common.close')}
 		onclick={(e) => {
 			if (e.target === e.currentTarget) {
 				$confirmDialogState.onCancel?.();

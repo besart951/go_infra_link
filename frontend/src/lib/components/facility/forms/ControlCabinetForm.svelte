@@ -9,6 +9,8 @@
 	import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
 	import type { ControlCabinet } from '$lib/domain/facility/index.js';
 	import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 
 	interface Props {
 		initialData?: ControlCabinet;
@@ -18,12 +20,18 @@
 
 	let { initialData, onSuccess, onCancel }: Props = $props();
 
+	const t = createTranslator();
+
 	let control_cabinet_nr = $state('');
 	let building_id = $state('');
 	let loading = $state(false);
 	let error = $state('');
 	let fieldErrors = $state<Record<string, string>>({});
-	const liveValidation = useLiveValidation((data: { id?: string; building_id: string; control_cabinet_nr?: string }) => manageControlCabinet.validate(data), { debounceMs: 400 });
+	const liveValidation = useLiveValidation(
+		(data: { id?: string; building_id: string; control_cabinet_nr?: string }) =>
+			manageControlCabinet.validate(data),
+		{ debounceMs: 400 }
+	);
 
 	// React to initialData changes
 	$effect(() => {
@@ -58,7 +66,7 @@
 		fieldErrors = {};
 
 		if (!building_id) {
-			error = 'Please select a building';
+			error = translate('facility.forms.control_cabinet.building_required');
 			loading = false;
 			return;
 		}
@@ -97,13 +105,15 @@
 >
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">
-			{initialData ? 'Edit Control Cabinet' : 'New Control Cabinet'}
+			{initialData
+				? $t('facility.forms.control_cabinet.title_edit')
+				: $t('facility.forms.control_cabinet.title_new')}
 		</h3>
 	</div>
 
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		<div class="space-y-2">
-			<Label for="control_cabinet_nr">Control Cabinet Nr</Label>
+			<Label for="control_cabinet_nr">{$t('facility.forms.control_cabinet.number_label')}</Label>
 			<Input
 				id="control_cabinet_nr"
 				bind:value={control_cabinet_nr}
@@ -117,7 +127,7 @@
 		</div>
 
 		<div class="space-y-2">
-			<Label>Building</Label>
+			<Label>{$t('facility.forms.control_cabinet.building_label')}</Label>
 			<div class="block">
 				<BuildingSelect bind:value={building_id} width="w-full" />
 			</div>
@@ -132,9 +142,9 @@
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>{$t('common.cancel')}</Button>
 		<Button type="submit" disabled={loading}>
-			{initialData ? 'Update' : 'Create'}
+			{initialData ? $t('common.update') : $t('common.create')}
 		</Button>
 	</div>
 </form>

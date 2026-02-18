@@ -11,6 +11,8 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
 	import { getFieldError } from '$lib/api/client.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 
 	let { data }: { data: PageData } = $props();
 
@@ -20,11 +22,15 @@
 	let iwsCode = $state('');
 	let buildingGroup = $state(0);
 
+	const t = createTranslator();
+
 	$effect(() => {
 		iwsCode = data.building.iws_code;
 		buildingGroup = data.building.building_group;
 	});
-	const liveValidation = useLiveValidation((data: any) => manageBuilding.validate(data), { debounceMs: 400 });
+	const liveValidation = useLiveValidation((data: any) => manageBuilding.validate(data), {
+		debounceMs: 400
+	});
 
 	function triggerValidation() {
 		liveValidation.trigger({
@@ -35,7 +41,7 @@
 	}
 
 	async function handleDeleteClick() {
-		if (!confirm('Are you sure you want to delete this building? This action cannot be undone.')) {
+		if (!confirm(translate('facility.building_detail.delete_confirm'))) {
 			return;
 		}
 
@@ -45,7 +51,7 @@
 			await goto('/facility/buildings');
 		} catch (e: any) {
 			console.error('Delete failed', e);
-			alert(e.message || 'Failed to delete building');
+			alert(e.message || translate('facility.building_detail.delete_failed'));
 		} finally {
 			isSubmitting = false;
 		}
@@ -63,13 +69,13 @@
 
 		// Validation
 		if (!iws_code) {
-			errors.iws_code = 'IWS Code is required';
+			errors.iws_code = translate('facility.building_detail.iws_required');
 		}
 
 		if (!building_group) {
-			errors.building_group = 'Building Group is required';
+			errors.building_group = translate('facility.building_detail.group_required');
 		} else if (isNaN(Number(building_group))) {
-			errors.building_group = 'Building Group must be a number';
+			errors.building_group = translate('facility.building_detail.group_number');
 		}
 
 		if (Object.keys(errors).length > 0) {
@@ -82,11 +88,11 @@
 				iws_code,
 				building_group: Number(building_group)
 			});
-			successMessage = 'Building updated successfully!';
+			successMessage = translate('facility.building_detail.updated');
 			await invalidateAll();
 		} catch (e: any) {
 			console.error('Update failed', e);
-			errors.form = e.message || 'An unexpected error occurred';
+			errors.form = e.message || translate('facility.building_detail.update_failed');
 		} finally {
 			isSubmitting = false;
 		}
@@ -94,7 +100,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.building.iws_code} | Buildings | Infra Link</title>
+	<title>{data.building.iws_code} | {$t('facility.buildings')} | {$t('app.brand')}</title>
 </svelte:head>
 
 <div class="mx-auto max-w-2xl space-y-6">
@@ -105,7 +111,9 @@
 			</Button>
 			<div>
 				<h1 class="text-2xl font-semibold tracking-tight">{data.building.iws_code}</h1>
-				<p class="text-sm text-muted-foreground">Edit building details</p>
+				<p class="text-sm text-muted-foreground">
+					{$t('facility.building_detail.edit_description')}
+				</p>
 			</div>
 		</div>
 		<div>
@@ -117,7 +125,7 @@
 				disabled={isSubmitting}
 			>
 				<TrashIcon class="mr-2 size-4" />
-				Delete
+				{$t('common.delete')}
 			</Button>
 		</div>
 	</div>
@@ -145,60 +153,61 @@
 	<form onsubmit={handleUpdate} class="space-y-6">
 		<div class="rounded-lg border bg-card p-6">
 			<Field.Set>
-				<Field.Legend>Building Details</Field.Legend>
+				<Field.Legend>{$t('facility.building_detail.legend')}</Field.Legend>
 
 				<Field.Field>
-					<Field.Label for="iws_code">IWS Code</Field.Label>
+					<Field.Label for="iws_code">{$t('facility.building_detail.iws_label')}</Field.Label>
 					<Field.Content>
 						<Input
 							id="iws_code"
 							name="iws_code"
-							placeholder="e.g. ABCD"
+							placeholder={$t('facility.building_detail.iws_placeholder')}
 							bind:value={iwsCode}
-							aria-invalid={
-								!!errors.iws_code || !!getFieldError(liveValidation.fieldErrors, 'iws_code', ['building'])
-							}
+							aria-invalid={!!errors.iws_code ||
+								!!getFieldError(liveValidation.fieldErrors, 'iws_code', ['building'])}
 							oninput={triggerValidation}
 						/>
-						{#if errors.iws_code || getFieldError(liveValidation.fieldErrors, 'iws_code', ['building'])}
+						{#if errors.iws_code || getFieldError( liveValidation.fieldErrors, 'iws_code', ['building'] )}
 							<Field.Error>
-								{errors.iws_code || getFieldError(liveValidation.fieldErrors, 'iws_code', ['building'])}
+								{errors.iws_code ||
+									getFieldError(liveValidation.fieldErrors, 'iws_code', ['building'])}
 							</Field.Error>
 						{/if}
 					</Field.Content>
-					<Field.Description>The unique IWS code identifier for this building.</Field.Description>
+					<Field.Description>{$t('facility.building_detail.iws_help')}</Field.Description>
 				</Field.Field>
 
 				<Field.Field>
-					<Field.Label for="building_group">Building Group</Field.Label>
+					<Field.Label for="building_group"
+						>{$t('facility.building_detail.group_label')}</Field.Label
+					>
 					<Field.Content>
 						<Input
 							id="building_group"
 							name="building_group"
 							type="number"
-							placeholder="e.g. 1"
+							placeholder={$t('facility.building_detail.group_placeholder')}
 							bind:value={buildingGroup}
-							aria-invalid={
-								!!errors.building_group ||
-								!!getFieldError(liveValidation.fieldErrors, 'building_group', ['building'])
-							}
+							aria-invalid={!!errors.building_group ||
+								!!getFieldError(liveValidation.fieldErrors, 'building_group', ['building'])}
 							oninput={triggerValidation}
 						/>
-						{#if errors.building_group || getFieldError(liveValidation.fieldErrors, 'building_group', ['building'])}
+						{#if errors.building_group || getFieldError( liveValidation.fieldErrors, 'building_group', ['building'] )}
 							<Field.Error>
-								{errors.building_group || getFieldError(liveValidation.fieldErrors, 'building_group', ['building'])}
+								{errors.building_group ||
+									getFieldError(liveValidation.fieldErrors, 'building_group', ['building'])}
 							</Field.Error>
 						{/if}
 					</Field.Content>
-					<Field.Description>The group number this building belongs to.</Field.Description>
+					<Field.Description>{$t('facility.building_detail.group_help')}</Field.Description>
 				</Field.Field>
 			</Field.Set>
 		</div>
 
 		<div class="flex justify-end gap-4">
-			<Button variant="outline" href="/facility/buildings">Cancel</Button>
+			<Button variant="outline" href="/facility/buildings">{$t('common.cancel')}</Button>
 			<Button type="submit" disabled={isSubmitting}>
-				{isSubmitting ? 'Saving...' : 'Save Changes'}
+				{isSubmitting ? $t('common.saving') : $t('common.save_changes')}
 			</Button>
 		</div>
 	</form>

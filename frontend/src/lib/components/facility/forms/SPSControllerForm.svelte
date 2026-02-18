@@ -21,6 +21,8 @@
 		SystemType
 	} from '$lib/domain/facility/index.js';
 	import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 
 	interface Props {
 		initialData?: SPSController;
@@ -29,6 +31,8 @@
 	}
 
 	let { initialData, onSuccess, onCancel }: Props = $props();
+
+	const t = createTranslator();
 
 	let ga_device = $state('');
 	let device_name = $state('');
@@ -58,7 +62,19 @@
 	let loading = $state(false);
 	let error = $state('');
 	let fieldErrors = $state<Record<string, string>>({});
-	const liveValidation = useLiveValidation((data: { id?: string; control_cabinet_id: string; ga_device?: string; device_name: string; ip_address?: string; subnet?: string; gateway?: string; vlan?: string }) => manageSPSController.validate(data), { debounceMs: 400 });
+	const liveValidation = useLiveValidation(
+		(data: {
+			id?: string;
+			control_cabinet_id: string;
+			ga_device?: string;
+			device_name: string;
+			ip_address?: string;
+			subnet?: string;
+			gateway?: string;
+			vlan?: string;
+		}) => manageSPSController.validate(data),
+		{ debounceMs: 400 }
+	);
 
 	$effect(() => {
 		if (!initialData) {
@@ -394,15 +410,18 @@
 
 	const systemTypeAddState = $derived.by(() => {
 		if (!system_type_id) {
-			return { disabled: true, tooltip: 'Select a system type first.' };
+			return {
+				disabled: true,
+				tooltip: translate('facility.forms.sps_controller.system_type_select_first')
+			};
 		}
 		const details = systemTypeDetails[system_type_id];
 		if (!details) {
 			return {
 				disabled: true,
 				tooltip: systemTypeDetailsLoading
-					? 'Loading system type details...'
-					: 'Loading system type.'
+					? translate('facility.forms.sps_controller.system_type_loading_details')
+					: translate('facility.forms.sps_controller.system_type_loading')
 			};
 		}
 		const rangeSize = details.number_max - details.number_min + 1;
@@ -418,9 +437,15 @@
 				.map((item) => item.number as number)
 		);
 		if (usedNumbers.size >= rangeSize) {
-			return { disabled: true, tooltip: 'All numbers are used for this system type.' };
+			return {
+				disabled: true,
+				tooltip: translate('facility.forms.sps_controller.system_type_all_used')
+			};
 		}
-		return { disabled: false, tooltip: 'Add next available number.' };
+		return {
+			disabled: false,
+			tooltip: translate('facility.forms.sps_controller.system_type_add_next')
+		};
 	});
 
 	async function handleSubmit(event: SubmitEvent) {
@@ -430,7 +455,7 @@
 		fieldErrors = {};
 
 		if (!control_cabinet_id) {
-			error = 'Please select a control cabinet';
+			error = translate('facility.forms.sps_controller.control_cabinet_required');
 			loading = false;
 			return;
 		}
@@ -475,12 +500,14 @@
 <form onsubmit={handleSubmit} class="space-y-4 rounded-md border bg-muted/20 p-4">
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-lg font-medium">
-			{initialData ? 'Edit SPS Controller' : 'New SPS Controller'}
+			{initialData
+				? $t('facility.forms.sps_controller.title_edit')
+				: $t('facility.forms.sps_controller.title_new')}
 		</h3>
 	</div>
 
 	<div class="space-y-2">
-		<Label>Control Cabinet</Label>
+		<Label>{$t('facility.forms.sps_controller.control_cabinet_label')}</Label>
 		<div class="block">
 			<ControlCabinetSelect bind:value={control_cabinet_id} width="w-full" />
 		</div>
@@ -488,7 +515,7 @@
 			<p class="text-sm text-red-500">{combinedFieldError('control_cabinet_id')}</p>
 		{:else if !control_cabinet_id}
 			<p class="text-sm text-muted-foreground">
-				Select a control cabinet to unlock the remaining fields.
+				{$t('facility.forms.sps_controller.control_cabinet_help')}
 			</p>
 		{/if}
 	</div>
@@ -497,10 +524,10 @@
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 			<div class="space-y-2">
 				<Label for="ga_device" class="flex items-center gap-2">
-					GA Device
+					{$t('facility.forms.sps_controller.ga_device_label')}
 					<span
 						class="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[10px] text-muted-foreground"
-						title="Yellow means there is a lower unused GA device available. You can keep your value or press 'Use next'."
+						title={$t('facility.forms.sps_controller.ga_device_tooltip')}
 					>
 						i
 					</span>
@@ -531,24 +558,26 @@
 							class="mt-1"
 							onclick={applySuggestedGADevice}
 						>
-							Use next
+							{$t('facility.forms.sps_controller.ga_device_use_next')}
 						</Button>
 					{/if}
 				</div>
 				{#if gaDeviceIsSuboptimal && nextGADevice}
 					<p class="text-xs text-yellow-700">
-						Lowest available is {nextGADevice}.
+						{$t('facility.forms.sps_controller.ga_device_lowest', { value: nextGADevice })}
 					</p>
 				{/if}
 				{#if gaDeviceSuggestionLoading}
-					<p class="text-xs text-muted-foreground">Checking lowest available GA device...</p>
+					<p class="text-xs text-muted-foreground">
+						{$t('facility.forms.sps_controller.ga_device_checking')}
+					</p>
 				{/if}
 				{#if combinedFieldError('ga_device')}
 					<p class="text-sm text-red-500">{combinedFieldError('ga_device')}</p>
 				{/if}
 			</div>
 			<div class="space-y-2">
-				<Label for="device_name">Device Name</Label>
+				<Label for="device_name">{$t('facility.forms.sps_controller.device_name_label')}</Label>
 				<Input
 					id="device_name"
 					bind:value={device_name}
@@ -558,35 +587,37 @@
 					maxlength={100}
 				/>
 				{#if cabinetLoading || buildingLoading}
-					<p class="text-xs text-muted-foreground">Loading device name...</p>
+					<p class="text-xs text-muted-foreground">
+						{$t('facility.forms.sps_controller.device_name_loading')}
+					</p>
 				{/if}
 				{#if combinedFieldError('device_name')}
 					<p class="text-sm text-red-500">{combinedFieldError('device_name')}</p>
 				{/if}
 			</div>
 			<div class="space-y-2">
-				<Label for="ip_address">IP Address</Label>
+				<Label for="ip_address">{$t('facility.forms.sps_controller.ip_address_label')}</Label>
 				<Input id="ip_address" bind:value={ip_address} maxlength={50} oninput={triggerValidation} />
 				{#if combinedFieldError('ip_address')}
 					<p class="text-sm text-red-500">{combinedFieldError('ip_address')}</p>
 				{/if}
 			</div>
 			<div class="space-y-2">
-				<Label for="subnet">Subnet Mask</Label>
+				<Label for="subnet">{$t('facility.forms.sps_controller.subnet_label')}</Label>
 				<Input id="subnet" bind:value={subnet} maxlength={50} oninput={triggerValidation} />
 				{#if combinedFieldError('subnet')}
 					<p class="text-sm text-red-500">{combinedFieldError('subnet')}</p>
 				{/if}
 			</div>
 			<div class="space-y-2">
-				<Label for="gateway">Gateway</Label>
+				<Label for="gateway">{$t('facility.forms.sps_controller.gateway_label')}</Label>
 				<Input id="gateway" bind:value={gateway} maxlength={50} oninput={triggerValidation} />
 				{#if combinedFieldError('gateway')}
 					<p class="text-sm text-red-500">{combinedFieldError('gateway')}</p>
 				{/if}
 			</div>
 			<div class="space-y-2">
-				<Label for="vlan">VLAN</Label>
+				<Label for="vlan">{$t('facility.forms.sps_controller.vlan_label')}</Label>
 				<Input id="vlan" bind:value={vlan} maxlength={50} oninput={triggerValidation} />
 				{#if combinedFieldError('vlan')}
 					<p class="text-sm text-red-500">{combinedFieldError('vlan')}</p>
@@ -597,8 +628,12 @@
 		<div class="space-y-3 pt-4">
 			<div class="flex items-center justify-between border-t pt-4">
 				<div>
-					<h4 class="text-base font-medium">System Types</h4>
-					<p class="text-sm text-muted-foreground">Assign system types to this SPS controller</p>
+					<h4 class="text-base font-medium">
+						{$t('facility.forms.sps_controller.system_types_title')}
+					</h4>
+					<p class="text-sm text-muted-foreground">
+						{$t('facility.forms.sps_controller.system_types_description')}
+					</p>
 				</div>
 				<div class="flex items-center gap-2">
 					<SystemTypeSelect bind:value={system_type_id} width="w-[250px]" />
@@ -610,29 +645,37 @@
 						disabled={systemTypeAddState.disabled}
 						title={systemTypeAddState.tooltip}
 					>
-						Add
+						{$t('common.add')}
 					</Button>
 				</div>
 			</div>
 
 			{#if systemTypesLoading}
-				<p class="text-sm text-muted-foreground">Loading system types...</p>
+				<p class="text-sm text-muted-foreground">
+					{$t('facility.forms.sps_controller.system_types_loading')}
+				</p>
 			{:else if systemTypes.length === 0}
 				<div class="rounded-md border border-dashed p-6 text-center">
-					<p class="text-sm text-muted-foreground">No system types added yet.</p>
+					<p class="text-sm text-muted-foreground">
+						{$t('facility.forms.sps_controller.system_types_empty')}
+					</p>
 				</div>
 			{:else}
 				<div class="max-h-80 space-y-2 overflow-y-auto pr-1">
 					{#each systemTypes as st, index (index)}
 						<div class="grid grid-cols-1 gap-3 rounded-md border p-3 md:grid-cols-12">
 							<div class="md:col-span-4">
-								<div class="text-xs text-muted-foreground">System Type</div>
+								<div class="text-xs text-muted-foreground">
+									{$t('facility.forms.sps_controller.system_type_label')}
+								</div>
 								<div class="text-sm font-medium">
 									{systemTypeLabels[st.system_type_id] ?? st.system_type_id}
 								</div>
 							</div>
 							<div class="md:col-span-3">
-								<Label class="text-xs">Number</Label>
+								<Label class="text-xs"
+									>{$t('facility.forms.sps_controller.system_type_number')}</Label
+								>
 								<Input
 									type="number"
 									value={st.number ?? ''}
@@ -641,7 +684,9 @@
 								/>
 							</div>
 							<div class="md:col-span-4">
-								<Label class="text-xs">Document name</Label>
+								<Label class="text-xs"
+									>{$t('facility.forms.sps_controller.system_type_document')}</Label
+								>
 								<Input
 									value={st.document_name ?? ''}
 									oninput={(e) =>
@@ -655,7 +700,7 @@
 							</div>
 							<div class="flex items-end justify-end md:col-span-1">
 								<Button type="button" variant="ghost" onclick={() => removeSystemType(index)}>
-									Remove
+									{$t('common.remove')}
 								</Button>
 							</div>
 						</div>
@@ -673,9 +718,9 @@
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>{$t('common.cancel')}</Button>
 		<Button type="submit" disabled={loading}>
-			{initialData ? 'Update' : 'Create'}
+			{initialData ? $t('common.update') : $t('common.create')}
 		</Button>
 	</div>
 </form>

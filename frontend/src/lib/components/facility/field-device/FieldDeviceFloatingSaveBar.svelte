@@ -2,6 +2,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Save, Undo } from '@lucide/svelte';
 	import type { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface Props {
 		editing: ReturnType<typeof useFieldDeviceEditing>;
@@ -10,6 +11,8 @@
 	}
 
 	let { editing, onSave, onDiscard }: Props = $props();
+
+	const t = createTranslator();
 </script>
 
 {#if editing.hasUnsavedChanges}
@@ -18,22 +21,22 @@
 	>
 		<!-- Action bar -->
 		<div class="flex items-center gap-3">
-			<span class="text-sm font-medium"
-				>{editing.pendingCount} unsaved change{editing.pendingCount !== 1 ? 's' : ''}</span
-			>
+			<span class="text-sm font-medium">
+				{$t('field_device.save_bar.unsaved', { count: editing.pendingCount })}
+			</span>
 			<Button size="sm" onclick={onSave}>
 				<Save class="mr-1 h-4 w-4" />
-				Save All
+				{$t('field_device.save_bar.save_all')}
 			</Button>
 			<Button variant="ghost" size="sm" onclick={onDiscard}>
 				<Undo class="mr-1 h-4 w-4" />
-				Discard
+				{$t('field_device.save_bar.discard')}
 			</Button>
 		</div>
 
 		<!-- Warning message -->
 		<p class="text-xs text-muted-foreground">
-			💾 Changes are saved locally and persist across page navigation
+			{$t('field_device.save_bar.notice')}
 		</p>
 	</div>
 {/if}

@@ -14,6 +14,8 @@
 		BulkUpdateFieldDeviceItem,
 		SpecificationInput
 	} from '$lib/domain/facility/index.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 
 	interface Props {
 		selectedCount: number;
@@ -24,6 +26,8 @@
 	}
 
 	let { selectedCount, selectedIds, allApparats, allSystemParts, editing }: Props = $props();
+
+	const t = createTranslator();
 
 	let bulkEditValues = $state<Partial<BulkUpdateFieldDeviceItem>>({});
 	let bulkSpecValues = $state<Partial<SpecificationInput>>({});
@@ -54,9 +58,12 @@
 		}
 
 		if (appliedCount > 0) {
-			addToast(`Applied edits to ${selectedIds.size} device(s)`, 'success');
+			addToast(
+				translate('field_device.bulk_edit.toasts.applied', { count: selectedIds.size }),
+				'success'
+			);
 		} else {
-			addToast('No fields filled in to apply', 'error');
+			addToast(translate('field_device.bulk_edit.toasts.no_fields'), 'error');
 		}
 	}
 
@@ -68,21 +75,23 @@
 
 <Card.Root class="border-primary/30 bg-primary/5">
 	<Card.Header class="pb-3">
-		<Card.Title class="text-base">Bulk Edit ({selectedCount} selected)</Card.Title>
+		<Card.Title class="text-base">
+			{$t('field_device.bulk_edit.title', { count: selectedCount })}
+		</Card.Title>
 		<Card.Description>
-			Fill in fields and click "Apply to Selected" to queue changes. Then "Save All" to persist.
+			{$t('field_device.bulk_edit.description')}
 		</Card.Description>
 	</Card.Header>
 	<Card.Content>
 		<!-- Device Fields -->
 		<div class="mb-4">
-			<h4 class="mb-2 text-sm font-medium">Device Fields</h4>
+			<h4 class="mb-2 text-sm font-medium">{$t('field_device.bulk_edit.device_fields')}</h4>
 			<div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
 				<div class="flex flex-col gap-1">
-					<Label class="text-xs">BMK</Label>
+					<Label class="text-xs">{$t('field_device.bulk_edit.bmk')}</Label>
 					<Input
 						type="text"
-						placeholder="BMK"
+						placeholder={$t('field_device.bulk_edit.bmk_placeholder')}
 						maxlength={10}
 						value={bulkEditValues.bmk ?? ''}
 						oninput={(e: Event) => {
@@ -92,10 +101,10 @@
 					/>
 				</div>
 				<div class="flex flex-col gap-1">
-					<Label class="text-xs">Description</Label>
+					<Label class="text-xs">{$t('field_device.bulk_edit.description')}</Label>
 					<Input
 						type="text"
-						placeholder="Description"
+						placeholder={$t('field_device.bulk_edit.description_placeholder')}
 						maxlength={250}
 						value={bulkEditValues.description ?? ''}
 						oninput={(e: Event) => {
@@ -105,10 +114,10 @@
 					/>
 				</div>
 				<div class="flex flex-col gap-1">
-					<Label class="text-xs">Apparat Nr</Label>
+					<Label class="text-xs">{$t('field_device.bulk_edit.apparat_nr')}</Label>
 					<Input
 						type="number"
-						placeholder="1-99"
+						placeholder={$t('field_device.bulk_edit.apparat_nr_placeholder')}
 						min={1}
 						max={99}
 						value={bulkEditValues.apparat_nr?.toString() ?? ''}
@@ -122,7 +131,7 @@
 					/>
 				</div>
 				<div class="flex flex-col gap-1">
-					<Label class="text-xs">Apparat</Label>
+					<Label class="text-xs">{$t('field_device.bulk_edit.apparat')}</Label>
 					<TableApparatSelect
 						items={allApparats}
 						value={bulkEditValues.apparat_id ?? ''}
@@ -133,7 +142,7 @@
 					/>
 				</div>
 				<div class="flex flex-col gap-1">
-					<Label class="text-xs">System Part</Label>
+					<Label class="text-xs">{$t('field_device.bulk_edit.system_part')}</Label>
 					<TableSystemPartSelect
 						items={allSystemParts}
 						value={bulkEditValues.system_part_id ?? ''}
@@ -158,15 +167,15 @@
 				{:else}
 					<ChevronRight class="h-4 w-4" />
 				{/if}
-				Specification Fields
+				{$t('field_device.bulk_edit.spec_fields')}
 			</button>
 			{#if showBulkSpecFields}
 				<div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
 					<div class="flex flex-col gap-1">
-						<Label class="text-xs">Supplier</Label>
+						<Label class="text-xs">{$t('field_device.bulk_edit.supplier')}</Label>
 						<Input
 							type="text"
-							placeholder="Supplier"
+							placeholder={$t('field_device.bulk_edit.supplier_placeholder')}
 							maxlength={250}
 							value={bulkSpecValues.specification_supplier ?? ''}
 							oninput={(e: Event) => {
@@ -179,10 +188,10 @@
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
-						<Label class="text-xs">Brand</Label>
+						<Label class="text-xs">{$t('field_device.bulk_edit.brand')}</Label>
 						<Input
 							type="text"
-							placeholder="Brand"
+							placeholder={$t('field_device.bulk_edit.brand_placeholder')}
 							maxlength={250}
 							value={bulkSpecValues.specification_brand ?? ''}
 							oninput={(e: Event) => {
@@ -195,10 +204,10 @@
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
-						<Label class="text-xs">Type</Label>
+						<Label class="text-xs">{$t('field_device.bulk_edit.type')}</Label>
 						<Input
 							type="text"
-							placeholder="Type"
+							placeholder={$t('field_device.bulk_edit.type_placeholder')}
 							maxlength={250}
 							value={bulkSpecValues.specification_type ?? ''}
 							oninput={(e: Event) => {
@@ -211,10 +220,10 @@
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
-						<Label class="text-xs">Motor/Valve</Label>
+						<Label class="text-xs">{$t('field_device.bulk_edit.motor_valve')}</Label>
 						<Input
 							type="text"
-							placeholder="Motor/Valve"
+							placeholder={$t('field_device.bulk_edit.motor_valve_placeholder')}
 							maxlength={250}
 							value={bulkSpecValues.additional_info_motor_valve ?? ''}
 							oninput={(e: Event) => {
@@ -227,10 +236,10 @@
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
-						<Label class="text-xs">Size</Label>
+						<Label class="text-xs">{$t('field_device.bulk_edit.size')}</Label>
 						<Input
 							type="number"
-							placeholder="Size"
+							placeholder={$t('field_device.bulk_edit.size_placeholder')}
 							value={bulkSpecValues.additional_info_size?.toString() ?? ''}
 							oninput={(e: Event) => {
 								const v = (e.target as HTMLInputElement).value;
@@ -242,10 +251,10 @@
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
-						<Label class="text-xs">Install Location</Label>
+						<Label class="text-xs">{$t('field_device.bulk_edit.install_location')}</Label>
 						<Input
 							type="text"
-							placeholder="Install Location"
+							placeholder={$t('field_device.bulk_edit.install_location_placeholder')}
 							maxlength={250}
 							value={bulkSpecValues.additional_information_installation_location ?? ''}
 							oninput={(e: Event) => {
@@ -258,10 +267,10 @@
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
-						<Label class="text-xs">PH</Label>
+						<Label class="text-xs">{$t('field_device.bulk_edit.ph')}</Label>
 						<Input
 							type="number"
-							placeholder="PH"
+							placeholder={$t('field_device.bulk_edit.ph_placeholder')}
 							value={bulkSpecValues.electrical_connection_ph?.toString() ?? ''}
 							oninput={(e: Event) => {
 								const v = (e.target as HTMLInputElement).value;
@@ -273,10 +282,10 @@
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
-						<Label class="text-xs">AC/DC</Label>
+						<Label class="text-xs">{$t('field_device.bulk_edit.acdc')}</Label>
 						<Input
 							type="text"
-							placeholder="AC/DC"
+							placeholder={$t('field_device.bulk_edit.acdc_placeholder')}
 							maxlength={2}
 							value={bulkSpecValues.electrical_connection_acdc ?? ''}
 							oninput={(e: Event) => {
@@ -289,10 +298,10 @@
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
-						<Label class="text-xs">Amperage</Label>
+						<Label class="text-xs">{$t('field_device.bulk_edit.amperage')}</Label>
 						<Input
 							type="number"
-							placeholder="A"
+							placeholder={$t('field_device.bulk_edit.amperage_placeholder')}
 							value={bulkSpecValues.electrical_connection_amperage?.toString() ?? ''}
 							oninput={(e: Event) => {
 								const v = (e.target as HTMLInputElement).value;
@@ -304,10 +313,10 @@
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
-						<Label class="text-xs">Power</Label>
+						<Label class="text-xs">{$t('field_device.bulk_edit.power')}</Label>
 						<Input
 							type="number"
-							placeholder="W"
+							placeholder={$t('field_device.bulk_edit.power_placeholder')}
 							value={bulkSpecValues.electrical_connection_power?.toString() ?? ''}
 							oninput={(e: Event) => {
 								const v = (e.target as HTMLInputElement).value;
@@ -319,10 +328,10 @@
 						/>
 					</div>
 					<div class="flex flex-col gap-1">
-						<Label class="text-xs">Rotation</Label>
+						<Label class="text-xs">{$t('field_device.bulk_edit.rotation')}</Label>
 						<Input
 							type="number"
-							placeholder="RPM"
+							placeholder={$t('field_device.bulk_edit.rotation_placeholder')}
 							value={bulkSpecValues.electrical_connection_rotation?.toString() ?? ''}
 							oninput={(e: Event) => {
 								const v = (e.target as HTMLInputElement).value;
@@ -341,11 +350,11 @@
 		<div class="flex gap-2">
 			<Button size="sm" onclick={applyBulkEdits} disabled={!hasBulkValues}>
 				<CopyCheck class="mr-1 h-4 w-4" />
-				Apply to Selected
+				{$t('field_device.bulk_edit.apply')}
 			</Button>
 			<Button variant="outline" size="sm" onclick={clearBulkEdit} disabled={!hasBulkValues}>
 				<Eraser class="mr-1 h-4 w-4" />
-				Clear
+				{$t('field_device.bulk_edit.clear')}
 			</Button>
 		</div>
 	</Card.Content>

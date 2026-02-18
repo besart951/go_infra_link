@@ -10,6 +10,8 @@
 	import { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 	import ProjectPhaseSelect from '$lib/components/project/ProjectPhaseSelect.svelte';
 	import {
 		getProject,
@@ -28,6 +30,8 @@
 	import type { ObjectData } from '$lib/domain/facility/index.js';
 	import { ArrowLeft, Pencil } from '@lucide/svelte';
 	import ObjectDataForm from '$lib/components/facility/forms/ObjectDataForm.svelte';
+
+	const t = createTranslator();
 
 	const projectId = $derived($page.params.id ?? '');
 
@@ -52,9 +56,9 @@
 	});
 
 	const statusOptions: Array<{ value: ProjectStatus; label: string }> = [
-		{ value: 'planned', label: 'Planned' },
-		{ value: 'ongoing', label: 'Ongoing' },
-		{ value: 'completed', label: 'Completed' }
+		{ value: 'planned', label: 'projects.settings.status.planned' },
+		{ value: 'ongoing', label: 'projects.settings.status.ongoing' },
+		{ value: 'completed', label: 'projects.settings.status.completed' }
 	];
 
 	let projectUsers = $state<User[]>([]);
@@ -103,7 +107,7 @@
 	async function saveSettings() {
 		if (!projectId || !project) return;
 		if (!form.phase_id.trim()) {
-			addToast('Phase is required', 'error');
+			addToast(translate('projects.settings.phase_required'), 'error');
 			return;
 		}
 		saving = true;
@@ -118,9 +122,12 @@
 			};
 			project = await updateProject(projectId, payload);
 			hydrateForm(project);
-			addToast('Project updated', 'success');
+			addToast(translate('projects.settings.updated'), 'success');
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to update project', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('projects.settings.update_failed'),
+				'error'
+			);
 		} finally {
 			saving = false;
 		}
@@ -128,7 +135,7 @@
 
 	async function load() {
 		if (!projectId) {
-			error = 'Missing project id';
+			error = translate('projects.errors.missing_id');
 			loading = false;
 			return;
 		}
@@ -140,7 +147,7 @@
 			project = await getProject(projectId);
 			hydrateForm(project);
 		} catch (err) {
-			const message = err instanceof Error ? err.message : 'Failed to load project';
+			const message = err instanceof Error ? err.message : translate('projects.errors.load_failed');
 			error = message;
 			addToast(message, 'error');
 		} finally {
@@ -160,7 +167,10 @@
 			availableUsers = usersRes.items;
 			usersLoaded = true;
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to load users', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('projects.users.load_failed'),
+				'error'
+			);
 		} finally {
 			usersLoading = false;
 		}
@@ -174,29 +184,35 @@
 		if (!projectId) return;
 		if (isUserInProject(user.id)) {
 			const ok = await confirm({
-				title: 'Remove user',
-				message: 'Remove this user from the project?',
-				confirmText: 'Remove',
-				cancelText: 'Cancel',
+				title: translate('projects.users.remove_title'),
+				message: translate('projects.users.remove_message'),
+				confirmText: translate('projects.users.remove_confirm'),
+				cancelText: translate('common.cancel'),
 				variant: 'destructive'
 			});
 			if (!ok) return;
 			try {
 				await removeProjectUser(projectId, user.id);
-				addToast('User removed', 'success');
+				addToast(translate('projects.users.removed'), 'success');
 				await loadUsers();
 			} catch (err) {
-				addToast(err instanceof Error ? err.message : 'Failed to remove user', 'error');
+				addToast(
+					err instanceof Error ? err.message : translate('projects.users.remove_failed'),
+					'error'
+				);
 			}
 			return;
 		}
 
 		try {
 			await addProjectUser(projectId, user.id);
-			addToast('User added', 'success');
+			addToast(translate('projects.users.added'), 'success');
 			await loadUsers();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to add user', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('projects.users.add_failed'),
+				'error'
+			);
 		}
 	}
 
@@ -225,7 +241,10 @@
 				...templateItems.filter((obj) => !projectIds.has(obj.id))
 			];
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to load object data', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('projects.object_data.load_failed'),
+				'error'
+			);
 		} finally {
 			objectDataLoading = false;
 			objectDataLoaded = true;
@@ -238,29 +257,35 @@
 		const isActive = isAssigned && objectData.is_active;
 		if (isActive) {
 			const ok = await confirm({
-				title: 'Deactivate object data',
-				message: 'Deactivate this object data for the project?',
-				confirmText: 'Deactivate',
-				cancelText: 'Cancel',
+				title: translate('projects.object_data.deactivate_title'),
+				message: translate('projects.object_data.deactivate_message'),
+				confirmText: translate('projects.object_data.deactivate_confirm'),
+				cancelText: translate('common.cancel'),
 				variant: 'destructive'
 			});
 			if (!ok) return;
 			try {
 				await removeProjectObjectData(projectId, objectData.id);
-				addToast('Object data deactivated', 'success');
+				addToast(translate('projects.object_data.deactivated'), 'success');
 				await loadObjectData();
 			} catch (err) {
-				addToast(err instanceof Error ? err.message : 'Failed to remove object data', 'error');
+				addToast(
+					err instanceof Error ? err.message : translate('projects.object_data.deactivate_failed'),
+					'error'
+				);
 			}
 			return;
 		}
 
 		try {
 			await addProjectObjectData(projectId, objectData.id);
-			addToast('Object data activated', 'success');
+			addToast(translate('projects.object_data.activated'), 'success');
 			await loadObjectData();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : 'Failed to add object data', 'error');
+			addToast(
+				err instanceof Error ? err.message : translate('projects.object_data.activate_failed'),
+				'error'
+			);
 		}
 	}
 
@@ -333,17 +358,17 @@
 	<div class="flex items-start gap-3">
 		<Button variant="outline" onclick={() => goto(`/projects/${projectId}`)}>
 			<ArrowLeft class="mr-2 h-4 w-4" />
-			Back
+			{$t('common.back')}
 		</Button>
 		<div>
-			<h1 class="text-3xl font-bold tracking-tight">Project Settings</h1>
-			<p class="mt-1 text-muted-foreground">Update project metadata and phase.</p>
+			<h1 class="text-3xl font-bold tracking-tight">{$t('projects.settings.title')}</h1>
+			<p class="mt-1 text-muted-foreground">{$t('projects.settings.description')}</p>
 		</div>
 	</div>
 
 	{#if error}
 		<div class="rounded-md border bg-muted px-4 py-3 text-muted-foreground">
-			<p class="font-medium">Could not load project</p>
+			<p class="font-medium">{$t('projects.errors.load_title')}</p>
 			<p class="text-sm">{error}</p>
 		</div>
 	{/if}
@@ -354,19 +379,19 @@
 				variant={activeTab === 'settings' ? 'default' : 'ghost'}
 				onclick={() => (activeTab = 'settings')}
 			>
-				Settings
+				{$t('projects.settings.tabs.settings')}
 			</Button>
 			<Button
 				variant={activeTab === 'users' ? 'default' : 'ghost'}
 				onclick={() => (activeTab = 'users')}
 			>
-				Users
+				{$t('projects.settings.tabs.users')}
 			</Button>
 			<Button
 				variant={activeTab === 'object-data' ? 'default' : 'ghost'}
 				onclick={() => (activeTab = 'object-data')}
 			>
-				Object data
+				{$t('projects.settings.tabs.object_data')}
 			</Button>
 		</div>
 
@@ -379,17 +404,17 @@
 				</div>
 			</div>
 		{:else if !project}
-			<div class="p-6 text-sm text-muted-foreground">Project not found.</div>
+			<div class="p-6 text-sm text-muted-foreground">{$t('projects.errors.not_found')}</div>
 		{:else if activeTab === 'settings'}
 			<div class="p-6">
 				<div class="grid gap-4 md:grid-cols-2">
 					<div class="flex flex-col gap-2">
-						<label class="text-sm font-medium" for="project_name">Name</label>
+						<label class="text-sm font-medium" for="project_name">{$t('common.name')}</label>
 						<Input id="project_name" bind:value={form.name} disabled={saving} />
 					</div>
 
 					<div class="flex flex-col gap-2">
-						<label class="text-sm font-medium" for="project_status">Status</label>
+						<label class="text-sm font-medium" for="project_status">{$t('common.status')}</label>
 						<select
 							id="project_status"
 							class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
@@ -397,23 +422,27 @@
 							disabled={saving}
 						>
 							{#each statusOptions as opt}
-								<option value={opt.value}>{opt.label}</option>
+								<option value={opt.value}>{$t(opt.label)}</option>
 							{/each}
 						</select>
 					</div>
 
 					<div class="flex flex-col gap-2">
-						<label class="text-sm font-medium" for="project_start">Start date</label>
+						<label class="text-sm font-medium" for="project_start">
+							{$t('projects.settings.start_date')}
+						</label>
 						<Input id="project_start" type="date" bind:value={form.start_date} disabled={saving} />
 					</div>
 
 					<div class="flex flex-col gap-2">
-						<label class="text-sm font-medium" for="project_phase_edit">Phase</label>
+						<label class="text-sm font-medium" for="project_phase_edit"
+							>{$t('projects.settings.phase')}</label
+						>
 						<ProjectPhaseSelect id="project_phase_edit" bind:value={form.phase_id} width="w-full" />
 					</div>
 
 					<div class="flex flex-col gap-2 md:col-span-2">
-						<label class="text-sm font-medium" for="project_desc">Description</label>
+						<label class="text-sm font-medium" for="project_desc">{$t('common.description')}</label>
 						<Textarea id="project_desc" rows={4} bind:value={form.description} disabled={saving} />
 					</div>
 				</div>
@@ -424,18 +453,20 @@
 						onclick={() => project && hydrateForm(project)}
 						disabled={saving}
 					>
-						Reset
+						{$t('common.reset')}
 					</Button>
-					<Button onclick={saveSettings} disabled={saving}>Save changes</Button>
+					<Button onclick={saveSettings} disabled={saving}>
+						{$t('projects.settings.save_changes')}
+					</Button>
 				</div>
 
 				<div class="mt-8 grid gap-6 md:grid-cols-2">
 					<div class="space-y-2">
-						<div class="text-xs text-muted-foreground uppercase">Created</div>
+						<div class="text-xs text-muted-foreground uppercase">{$t('common.created')}</div>
 						<div class="text-sm font-medium">{formatDate(project.created_at)}</div>
 					</div>
 					<div class="space-y-2">
-						<div class="text-xs text-muted-foreground uppercase">Updated</div>
+						<div class="text-xs text-muted-foreground uppercase">{$t('common.modified')}</div>
 						<div class="text-sm font-medium">{formatDate(project.updated_at)}</div>
 					</div>
 				</div>
@@ -444,24 +475,28 @@
 			<div class="p-6">
 				<div class="flex flex-wrap items-end justify-between gap-3">
 					<div class="flex w-full max-w-sm flex-col gap-2">
-						<label class="text-sm font-medium" for="project_user_search">Search users</label>
+						<label class="text-sm font-medium" for="project_user_search">
+							{$t('projects.users.search_label')}
+						</label>
 						<Input
 							id="project_user_search"
-							placeholder="Search by name or email"
+							placeholder={$t('projects.users.search_placeholder')}
 							bind:value={userSearch}
 							oninput={handleUserSearchInput}
 						/>
 					</div>
-					<Button variant="outline" onclick={loadUsers} disabled={usersLoading}>Refresh</Button>
+					<Button variant="outline" onclick={loadUsers} disabled={usersLoading}>
+						{$t('common.refresh')}
+					</Button>
 				</div>
 
 				<div class="mt-6 rounded-lg border bg-background">
 					<Table.Root>
 						<Table.Header>
 							<Table.Row>
-								<Table.Head>Name</Table.Head>
-								<Table.Head>Email</Table.Head>
-								<Table.Head>Status</Table.Head>
+								<Table.Head>{$t('common.name')}</Table.Head>
+								<Table.Head>{$t('auth.email')}</Table.Head>
+								<Table.Head>{$t('common.status')}</Table.Head>
 								<Table.Head class="w-44"></Table.Head>
 							</Table.Row>
 						</Table.Header>
@@ -477,7 +512,7 @@
 							{:else if availableUsers.length === 0}
 								<Table.Row>
 									<Table.Cell colspan={4} class="h-20 text-center text-sm text-muted-foreground">
-										No users found.
+										{$t('projects.users.empty')}
 									</Table.Cell>
 								</Table.Row>
 							{:else}
@@ -489,14 +524,14 @@
 										</Table.Cell>
 										<Table.Cell class="text-muted-foreground">{user.email}</Table.Cell>
 										<Table.Cell>
-											{isUserInProject(user.id) ? 'Active' : 'Inactive'}
+											{isUserInProject(user.id) ? $t('common.active') : $t('common.inactive')}
 										</Table.Cell>
 										<Table.Cell class="text-right">
 											<Button
 												variant={isUserInProject(user.id) ? 'outline' : 'default'}
 												onclick={() => toggleUser(user)}
 											>
-												{isUserInProject(user.id) ? 'Remove' : 'Add'}
+												{isUserInProject(user.id) ? $t('common.remove') : $t('common.add')}
 											</Button>
 										</Table.Cell>
 									</Table.Row>
@@ -518,31 +553,33 @@
 
 				<div class="flex flex-wrap items-end justify-between gap-3">
 					<div class="flex w-full max-w-sm flex-col gap-2">
-						<label class="text-sm font-medium" for="project_object_data_search"
-							>Search object data</label
-						>
+						<label class="text-sm font-medium" for="project_object_data_search">
+							{$t('projects.object_data.search_label')}
+						</label>
 						<Input
 							id="project_object_data_search"
-							placeholder="Search by description"
+							placeholder={$t('projects.object_data.search_placeholder')}
 							bind:value={objectDataSearch}
 							oninput={handleObjectDataSearchInput}
 						/>
 					</div>
 					<div class="flex items-end gap-3">
 						<div class="flex flex-col gap-2">
-							<label class="text-sm font-medium" for="project_object_data_status">Status</label>
+							<label class="text-sm font-medium" for="project_object_data_status">
+								{$t('common.status')}
+							</label>
 							<select
 								id="project_object_data_status"
 								class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
 								bind:value={objectDataStatusFilter}
 							>
-								<option value="all">All</option>
-								<option value="active">Active</option>
-								<option value="inactive">Inactive</option>
+								<option value="all">{$t('projects.object_data.status_all')}</option>
+								<option value="active">{$t('common.active')}</option>
+								<option value="inactive">{$t('common.inactive')}</option>
 							</select>
 						</div>
 						<Button variant="outline" onclick={loadObjectData} disabled={objectDataLoading}
-							>Refresh</Button
+							>{$t('common.refresh')}</Button
 						>
 					</div>
 				</div>
@@ -551,9 +588,9 @@
 					<Table.Root>
 						<Table.Header>
 							<Table.Row>
-								<Table.Head>Description</Table.Head>
-								<Table.Head>Version</Table.Head>
-								<Table.Head>Project status</Table.Head>
+								<Table.Head>{$t('common.description')}</Table.Head>
+								<Table.Head>{$t('projects.object_data.version')}</Table.Head>
+								<Table.Head>{$t('projects.object_data.project_status')}</Table.Head>
 								<Table.Head class="w-44"></Table.Head>
 							</Table.Row>
 						</Table.Header>
@@ -570,7 +607,7 @@
 							{:else if getFilteredObjectData().length === 0}
 								<Table.Row>
 									<Table.Cell colspan={4} class="h-20 text-center text-sm text-muted-foreground">
-										No object data found.
+										{$t('projects.object_data.empty')}
 									</Table.Cell>
 								</Table.Row>
 							{:else}
@@ -579,19 +616,21 @@
 										<Table.Cell class="font-medium">{obj.description}</Table.Cell>
 										<Table.Cell class="text-muted-foreground">{obj.version}</Table.Cell>
 										<Table.Cell>
-											{isObjectDataActive(obj) ? 'Active' : 'Inactive'}
+											{isObjectDataActive(obj) ? $t('common.active') : $t('common.inactive')}
 										</Table.Cell>
 										<Table.Cell class="text-right">
 											<div class="flex items-center justify-end gap-2">
 												<Button variant="outline" onclick={() => editObjectData(obj)}>
 													<Pencil class="mr-2 h-4 w-4" />
-													Edit
+													{$t('common.edit')}
 												</Button>
 												<Button
 													variant={isObjectDataActive(obj) ? 'outline' : 'default'}
 													onclick={() => toggleObjectData(obj)}
 												>
-													{isObjectDataActive(obj) ? 'Deactivate' : 'Activate'}
+													{isObjectDataActive(obj)
+														? $t('projects.object_data.deactivate')
+														: $t('projects.object_data.activate')}
 												</Button>
 											</div>
 										</Table.Cell>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import StaticCombobox from '$lib/components/ui/combobox/StaticCombobox.svelte';
 	import type { Apparat } from '$lib/domain/facility/index.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface Props {
 		items: Apparat[];
@@ -20,6 +21,8 @@
 		error
 	}: Props = $props();
 
+	const t = createTranslator();
+
 	function formatLabel(item: Apparat): string {
 		return `${item.short_name ?? ''} - ${item.name ?? ''}`.trim();
 	}
@@ -36,7 +39,7 @@
 	items={formattedItems}
 	bind:value
 	labelKey="display_name"
-	placeholder="Select Apparat..."
+	placeholder={$t('field_device.table_select.apparat')}
 	{width}
 	{onValueChange}
 	{disabled}

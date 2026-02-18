@@ -8,6 +8,8 @@
 	const manageSystemType = new ManageEntityUseCase(systemTypeRepository);
 	import type { SystemType } from '$lib/domain/facility/index.js';
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 
 	interface SystemTypeFormProps {
 		initialData?: SystemType;
@@ -16,6 +18,8 @@
 	}
 
 	let { initialData, onSuccess, onCancel }: SystemTypeFormProps = $props();
+
+	const t = createTranslator();
 
 	const NUMBER_MIN_LIMIT = 1;
 	const NUMBER_MAX_LIMIT = 9999;
@@ -64,31 +68,37 @@
 		if (number_min.length !== 4) {
 			localErrors = {
 				...localErrors,
-				number_min: 'Min number must be 4 digits.'
+				number_min: translate('facility.forms.system_type.min_digits')
 			};
 		}
 		if (number_max.length !== 4) {
 			localErrors = {
 				...localErrors,
-				number_max: 'Max number must be 4 digits.'
+				number_max: translate('facility.forms.system_type.max_digits')
 			};
 		}
 		if (Number.isFinite(minValue) && (minValue < NUMBER_MIN_LIMIT || minValue > NUMBER_MAX_LIMIT)) {
 			localErrors = {
 				...localErrors,
-				number_min: `Min number must be between ${formatNumber(NUMBER_MIN_LIMIT)} and ${formatNumber(NUMBER_MAX_LIMIT)}.`
+				number_min: translate('facility.forms.system_type.min_range', {
+					min: formatNumber(NUMBER_MIN_LIMIT),
+					max: formatNumber(NUMBER_MAX_LIMIT)
+				})
 			};
 		}
 		if (Number.isFinite(maxValue) && (maxValue < NUMBER_MIN_LIMIT || maxValue > NUMBER_MAX_LIMIT)) {
 			localErrors = {
 				...localErrors,
-				number_max: `Max number must be between ${formatNumber(NUMBER_MIN_LIMIT)} and ${formatNumber(NUMBER_MAX_LIMIT)}.`
+				number_max: translate('facility.forms.system_type.max_range', {
+					min: formatNumber(NUMBER_MIN_LIMIT),
+					max: formatNumber(NUMBER_MAX_LIMIT)
+				})
 			};
 		}
 		if (Number.isFinite(minValue) && Number.isFinite(maxValue) && minValue >= maxValue) {
 			localErrors = {
 				...localErrors,
-				number_max: 'Max number must be greater than min number.'
+				number_max: translate('facility.forms.system_type.max_greater')
 			};
 		}
 		return Object.keys(localErrors).length === 0;
@@ -171,7 +181,7 @@
 			availableRanges = calculateAvailableRanges(collected, initialData?.id);
 		} catch (error) {
 			console.error('Failed to load system types:', error);
-			availableRangesError = 'Failed to load available numbers.';
+			availableRangesError = translate('facility.forms.system_type.available_ranges_failed');
 		} finally {
 			availableRangesLoading = false;
 		}
@@ -234,12 +244,16 @@
 	class="space-y-4 rounded-md border bg-muted/20 p-4"
 >
 	<div class="mb-4 flex items-center justify-between">
-		<h3 class="text-lg font-medium">{initialData ? 'Edit System Type' : 'New System Type'}</h3>
+		<h3 class="text-lg font-medium">
+			{initialData
+				? $t('facility.forms.system_type.title_edit')
+				: $t('facility.forms.system_type.title_new')}
+		</h3>
 	</div>
 
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
 		<div class="space-y-2 md:col-span-1">
-			<Label for="system_type_name">Name</Label>
+			<Label for="system_type_name">{$t('common.name')}</Label>
 			<Input
 				id="system_type_name"
 				bind:value={name}
@@ -252,14 +266,14 @@
 			{/if}
 		</div>
 		<div class="space-y-2">
-			<Label for="system_type_min">Min Number</Label>
+			<Label for="system_type_min">{$t('facility.forms.system_type.min_label')}</Label>
 			<Input
 				id="system_type_min"
 				type="text"
 				inputmode="numeric"
 				pattern="[0-9]*"
 				maxlength={4}
-				placeholder="0001"
+				placeholder={$t('facility.forms.system_type.min_placeholder')}
 				value={number_min}
 				min={NUMBER_MIN_LIMIT}
 				max={NUMBER_MAX_LIMIT}
@@ -272,14 +286,14 @@
 			{/if}
 		</div>
 		<div class="space-y-2">
-			<Label for="system_type_max">Max Number</Label>
+			<Label for="system_type_max">{$t('facility.forms.system_type.max_label')}</Label>
 			<Input
 				id="system_type_max"
 				type="text"
 				inputmode="numeric"
 				pattern="[0-9]*"
 				maxlength={4}
-				placeholder="9999"
+				placeholder={$t('facility.forms.system_type.max_placeholder')}
 				value={number_max}
 				min={NUMBER_MIN_LIMIT}
 				max={NUMBER_MAX_LIMIT}
@@ -294,16 +308,21 @@
 	</div>
 
 	{#if availableRangesLoading}
-		<p class="text-xs text-muted-foreground">Loading available numbers...</p>
+		<p class="text-xs text-muted-foreground">{$t('facility.forms.system_type.loading_ranges')}</p>
 	{:else if availableRangesError}
 		<p class="text-xs text-red-500">{availableRangesError}</p>
 	{:else if availableRanges.length > 0}
 		<p class="text-xs text-muted-foreground">
-			Available numbers: {availableRanges.map(formatRange).join(', ')}
+			{$t('facility.forms.system_type.available_ranges', {
+				ranges: availableRanges.map(formatRange).join(', ')
+			})}
 		</p>
 	{:else}
 		<p class="text-xs text-muted-foreground">
-			No available numbers in {formatNumber(NUMBER_MIN_LIMIT)}-{formatNumber(NUMBER_MAX_LIMIT)}.
+			{$t('facility.forms.system_type.no_ranges', {
+				min: formatNumber(NUMBER_MIN_LIMIT),
+				max: formatNumber(NUMBER_MAX_LIMIT)
+			})}
 		</p>
 	{/if}
 
@@ -312,7 +331,9 @@
 	{/if}
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Button type="button" variant="ghost" onclick={onCancel}>Cancel</Button>
-		<Button type="submit" disabled={formState.loading}>{initialData ? 'Update' : 'Create'}</Button>
+		<Button type="button" variant="ghost" onclick={onCancel}>{$t('common.cancel')}</Button>
+		<Button type="submit" disabled={formState.loading}>
+			{initialData ? $t('common.update') : $t('common.create')}
+		</Button>
 	</div>
 </form>

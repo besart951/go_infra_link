@@ -11,6 +11,8 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { MoreVertical, Pencil, Trash2, Search, Plus } from '@lucide/svelte';
+	import { createTranslator } from '$lib/i18n/translator.js';
+	import { t as translate } from '$lib/i18n/index.js';
 
 	interface Props {
 		permissions: Permission[];
@@ -21,6 +23,8 @@
 	}
 
 	let { permissions, onEdit, onDelete, onCreate, canManage = false }: Props = $props();
+
+	const t = createTranslator();
 
 	let searchQuery = $state('');
 
@@ -60,11 +64,11 @@
 	function getCategoryLabel(cat: string): string {
 		switch (cat) {
 			case 'general':
-				return 'General';
+				return translate('roles.categories.general');
 			case 'facility':
-				return 'Facility';
+				return translate('roles.categories.facility');
 			case 'project':
-				return 'Project Resources';
+				return translate('roles.categories.project');
 			default:
 				return cat;
 		}
@@ -112,7 +116,7 @@
 			<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
 				type="search"
-				placeholder="Search permissions..."
+				placeholder={$t('roles.permissions.search_placeholder')}
 				class="pl-9"
 				bind:value={searchQuery}
 			/>
@@ -120,21 +124,24 @@
 		{#if canManage && onCreate}
 			<Button onclick={onCreate}>
 				<Plus class="mr-2 h-4 w-4" />
-				Create Permission
+				{$t('roles.actions.create_permission')}
 			</Button>
 		{/if}
 	</div>
 
 	<!-- Stats -->
 	<div class="flex flex-wrap gap-3 text-sm text-muted-foreground">
-		<span>{filteredPermissions().length} permissions</span>
+		<span>{$t('roles.permissions.count', { count: filteredPermissions().length })}</span>
 		{#if searchQuery}
-			<span>matching "{searchQuery}"</span>
+			<span>{$t('roles.permissions.matching', { query: searchQuery })}</span>
 		{/if}
 		<span class="text-muted-foreground/50">|</span>
 		{#each categories as cat}
 			<span class={getCategoryBadgeClass(cat) + ' rounded px-2 py-0.5 text-xs'}>
-				{getCategoryLabel(cat)}: {groupedByCategory()[cat].length}
+				{$t('roles.permissions.category_badge', {
+					category: getCategoryLabel(cat),
+					count: groupedByCategory()[cat].length
+				})}
 			</span>
 		{/each}
 	</div>
@@ -144,13 +151,13 @@
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
-					<Table.Head class="w-50">Permission</Table.Head>
-					<Table.Head class="w-30">Category</Table.Head>
-					<Table.Head class="w-36">Resource</Table.Head>
-					<Table.Head class="w-25">Action</Table.Head>
-					<Table.Head>Description</Table.Head>
+					<Table.Head class="w-50">{$t('roles.permissions.table.permission')}</Table.Head>
+					<Table.Head class="w-30">{$t('roles.permissions.table.category')}</Table.Head>
+					<Table.Head class="w-36">{$t('roles.permissions.table.resource')}</Table.Head>
+					<Table.Head class="w-25">{$t('roles.permissions.table.action')}</Table.Head>
+					<Table.Head>{$t('roles.permissions.table.description')}</Table.Head>
 					{#if canManage}
-						<Table.Head class="w-20">Actions</Table.Head>
+						<Table.Head class="w-20">{$t('roles.permissions.table.actions')}</Table.Head>
 					{/if}
 				</Table.Row>
 			</Table.Header>
@@ -161,9 +168,9 @@
 							<div class="flex flex-col items-center justify-center gap-2 text-muted-foreground">
 								<p class="font-medium">
 									{#if searchQuery}
-										No permissions found matching "{searchQuery}"
+										{$t('roles.permissions.empty_match', { query: searchQuery })}
 									{:else}
-										No permissions available
+										{$t('roles.permissions.empty')}
 									{/if}
 								</p>
 							</div>
@@ -202,14 +209,14 @@
 										<DropdownMenu.Trigger>
 											<Button variant="ghost" size="icon" class="h-8 w-8">
 												<MoreVertical class="h-4 w-4" />
-												<span class="sr-only">Open menu</span>
+												<span class="sr-only">{$t('roles.permissions.menu_open')}</span>
 											</Button>
 										</DropdownMenu.Trigger>
 										<DropdownMenu.Content align="end">
 											{#if onEdit}
 												<DropdownMenu.Item onclick={() => onEdit(permission)}>
 													<Pencil class="mr-2 h-4 w-4" />
-													Edit
+													{$t('roles.permissions.edit')}
 												</DropdownMenu.Item>
 											{/if}
 											{#if onDelete}
@@ -219,7 +226,7 @@
 													onclick={() => onDelete(permission)}
 												>
 													<Trash2 class="mr-2 h-4 w-4" />
-													Delete
+													{$t('roles.permissions.delete')}
 												</DropdownMenu.Item>
 											{/if}
 										</DropdownMenu.Content>

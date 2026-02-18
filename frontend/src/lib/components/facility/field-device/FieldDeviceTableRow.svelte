@@ -10,6 +10,7 @@
 	import TableSystemPartSelect from '../table-selects/TableSystemPartSelect.svelte';
 	import type { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
 	import type { FieldDevice, Apparat, SystemPart } from '$lib/domain/facility/index.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface Props {
 		device: FieldDevice;
@@ -40,6 +41,8 @@
 		onCopy,
 		onDelete
 	}: Props = $props();
+
+	const t = createTranslator();
 
 	// Convert specification field values to display strings, handling null/undefined gracefully
 	function toDisplayString(value: any, isNumeric = false): string {
@@ -81,7 +84,7 @@
 		<Checkbox
 			checked={isSelected}
 			onCheckedChange={onToggleSelect}
-			aria-label={`Select ${device.bmk || device.id}`}
+			aria-label={$t('field_device.table.select_aria', { label: device.bmk || device.id })}
 		/>
 	</Table.Cell>
 	<!-- Expand button for BACnet Objects -->
@@ -91,7 +94,7 @@
 			size="sm"
 			class="h-6 w-6 p-0"
 			onclick={onToggleExpansion}
-			title="Expand BACnet objects"
+			title={$t('field_device.table.bacnet_expand')}
 		>
 			{#if isExpanded}
 				<ChevronDown class="h-4 w-4" />
@@ -170,9 +173,15 @@
 	<!-- Specification indicator -->
 	<Table.Cell class="text-center">
 		{#if device.specification}
-			<span class="inline-block h-2 w-2 rounded-full bg-green-500" title="Has specification"></span>
+			<span
+				class="inline-block h-2 w-2 rounded-full bg-green-500"
+				title={$t('field_device.table.spec_available')}
+			></span>
 		{:else}
-			<span class="inline-block h-2 w-2 rounded-full bg-gray-300" title="No specification"></span>
+			<span
+				class="inline-block h-2 w-2 rounded-full bg-gray-300"
+				title={$t('field_device.table.spec_missing')}
+			></span>
 		{/if}
 	</Table.Cell>
 	<!-- Specification columns (shown when toggled) -->
@@ -286,7 +295,7 @@
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_acdc')}
 				error={editing.getFieldError(device.id, 'electrical_connection_acdc')}
 				maxlength={2}
-				placeholder="AC/DC"
+				placeholder={$t('field_device.table.acdc_placeholder')}
 				onSave={(v) => {
 					editing.queueSpecEdit(device.id, 'electrical_connection_acdc', v === '' ? null : v);
 				}}
@@ -299,7 +308,7 @@
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_amperage')}
 				error={editing.getFieldError(device.id, 'electrical_connection_amperage')}
 				type="number"
-				placeholder="A"
+				placeholder={$t('field_device.table.amperage_placeholder')}
 				onSave={(v) => {
 					editing.queueSpecEdit(
 						device.id,
@@ -316,7 +325,7 @@
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_power')}
 				error={editing.getFieldError(device.id, 'electrical_connection_power')}
 				type="number"
-				placeholder="W"
+				placeholder={$t('field_device.table.power_placeholder')}
 				onSave={(v) => {
 					editing.queueSpecEdit(
 						device.id,
@@ -333,7 +342,7 @@
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_rotation')}
 				error={editing.getFieldError(device.id, 'electrical_connection_rotation')}
 				type="number"
-				placeholder="RPM"
+				placeholder={$t('field_device.table.rotation_placeholder')}
 				onSave={(v) => {
 					editing.queueSpecEdit(
 						device.id,
@@ -361,11 +370,11 @@
 							device.bmk?.trim() || (device.apparat_nr ? String(device.apparat_nr) : device.id)
 						)}
 				>
-					Copy
+					{$t('facility.copy')}
 				</DropdownMenu.Item>
 				<DropdownMenu.Separator />
 				<DropdownMenu.Item variant="destructive" onclick={() => onDelete(device)}>
-					Delete
+					{$t('common.delete')}
 				</DropdownMenu.Item>
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>

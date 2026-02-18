@@ -128,7 +128,7 @@
 								size="icon-xs"
 								onclick={toogleShowPassword}
 								aria-pressed={showPassword}
-								aria-label={showPassword ? 'Hide password' : 'Show password'}
+								aria-label={showPassword ? $t('auth.hide_password') : $t('auth.show_password')}
 								disabled={isLoading}
 							>
 								{#if showPassword}

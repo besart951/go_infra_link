@@ -16,6 +16,7 @@
 	import Building2 from '@lucide/svelte/icons/building-2';
 	import FolderKanban from '@lucide/svelte/icons/folder-kanban';
 	import Settings from '@lucide/svelte/icons/settings';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface Props {
 		permission?: Permission | null;
@@ -37,6 +38,8 @@
 		isSubmitting = false,
 		error = null
 	}: Props = $props();
+
+	const t = createTranslator();
 
 	// Parse existing permission to determine initial state
 	const parsed = $derived(permission ? parsePermissionName(permission.name) : null);
@@ -73,8 +76,10 @@
 	});
 
 	const isEditMode = $derived(!!permission);
-	const title = $derived(isEditMode ? 'Edit Permission' : 'Create Permission');
-	const submitText = $derived(isEditMode ? 'Update' : 'Create');
+	const title = $derived(
+		isEditMode ? $t('roles.permission_form.title_edit') : $t('roles.permission_form.title_create')
+	);
+	const submitText = $derived(isEditMode ? $t('common.update') : $t('common.create'));
 
 	// Get resources based on category
 	const availableResources = $derived.by(() => {
@@ -168,23 +173,23 @@
 	const categoryConfig = [
 		{
 			id: 'general' as const,
-			label: 'General',
+			label: 'roles.categories.general',
 			icon: Settings,
-			description: 'User, Team, Project, Phase...',
+			description: 'roles.permission_form.category_general_desc',
 			example: 'user.create'
 		},
 		{
 			id: 'facility' as const,
-			label: 'Facility',
+			label: 'roles.categories.facility',
 			icon: Building2,
-			description: 'Building, Systempart, Apparat...',
+			description: 'roles.permission_form.category_facility_desc',
 			example: 'building.read'
 		},
 		{
 			id: 'project' as const,
-			label: 'Project Resources',
+			label: 'roles.categories.project',
 			icon: FolderKanban,
-			description: 'Control Cabinet, SPS Controller...',
+			description: 'roles.permission_form.category_project_desc',
 			example: 'project.controlcabinet.create'
 		}
 	];
@@ -194,7 +199,9 @@
 	<div>
 		<h3 class="text-lg font-semibold">{title}</h3>
 		<p class="text-sm text-muted-foreground">
-			{isEditMode ? 'Update permission details' : 'Create a new permission for role assignment'}
+			{isEditMode
+				? $t('roles.permission_form.subtitle_edit')
+				: $t('roles.permission_form.subtitle_create')}
 		</p>
 	</div>
 
@@ -209,7 +216,7 @@
 	<!-- Category Selection -->
 	{#if !isEditMode}
 		<div class="space-y-2">
-			<Label>Permission Category</Label>
+			<Label>{$t('roles.permission_form.category_label')}</Label>
 			<div class="grid grid-cols-3 gap-2">
 				{#each categoryConfig as cat}
 					<button
@@ -225,8 +232,8 @@
 						<cat.icon
 							class={cn('h-5 w-5', category === cat.id ? 'text-primary' : 'text-muted-foreground')}
 						/>
-						<span class="text-sm font-medium">{cat.label}</span>
-						<span class="text-xs text-muted-foreground">{cat.description}</span>
+						<span class="text-sm font-medium">{$t(cat.label)}</span>
+						<span class="text-xs text-muted-foreground">{$t(cat.description)}</span>
 						<code class="mt-1 rounded bg-muted px-1.5 py-0.5 text-xs">{cat.example}</code>
 					</button>
 				{/each}
@@ -237,11 +244,11 @@
 	<!-- Resource Selection (for General and Facility) -->
 	{#if category !== 'project'}
 		<div class="space-y-2">
-			<Label for="resource">Resource</Label>
+			<Label for="resource">{$t('roles.permission_form.resource_label')}</Label>
 			<Input
 				type="text"
 				id="resource"
-				placeholder="Enter or select resource..."
+				placeholder={$t('roles.permission_form.resource_placeholder')}
 				value={resource}
 				oninput={handleCustomResource}
 				disabled={isEditMode}
@@ -270,14 +277,14 @@
 	<!-- Sub-Resource Selection (for Project category) -->
 	{#if category === 'project'}
 		<div class="space-y-2">
-			<Label for="subResource">Project Resource</Label>
+			<Label for="subResource">{$t('roles.permission_form.project_resource_label')}</Label>
 			<p class="text-xs text-muted-foreground">
-				Select which project resource this permission applies to
+				{$t('roles.permission_form.project_resource_help')}
 			</p>
 			<Input
 				type="text"
 				id="subResource"
-				placeholder="Enter or select project resource..."
+				placeholder={$t('roles.permission_form.project_resource_placeholder')}
 				value={subResource}
 				oninput={handleCustomSubResource}
 				disabled={isEditMode}
@@ -305,11 +312,11 @@
 
 	<!-- Action Selection -->
 	<div class="space-y-2">
-		<Label for="action">Action</Label>
+		<Label for="action">{$t('roles.permission_form.action_label')}</Label>
 		<Input
 			type="text"
 			id="action"
-			placeholder="Enter or select action..."
+			placeholder={$t('roles.permission_form.action_placeholder')}
 			value={action}
 			oninput={handleCustomAction}
 			disabled={isEditMode}
@@ -335,17 +342,21 @@
 	<!-- Permission Name Preview -->
 	{#if permissionName}
 		<div class="space-y-2">
-			<Label>Permission Name</Label>
+			<Label>{$t('roles.permission_form.permission_name_label')}</Label>
 			<div class="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
 				<code class="flex-1 font-mono text-sm">{permissionName}</code>
 				{#if category === 'project'}
 					<span class="rounded bg-blue-500/10 px-2 py-0.5 text-xs text-blue-600"
-						>Project Resource</span
+						>{$t('roles.permission_form.project_badge')}</span
 					>
 				{:else if category === 'facility'}
-					<span class="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600">Facility</span>
+					<span class="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600">
+						{$t('roles.categories.facility')}
+					</span>
 				{:else}
-					<span class="rounded bg-green-500/10 px-2 py-0.5 text-xs text-green-600">General</span>
+					<span class="rounded bg-green-500/10 px-2 py-0.5 text-xs text-green-600">
+						{$t('roles.categories.general')}
+					</span>
 				{/if}
 			</div>
 		</div>
@@ -353,11 +364,11 @@
 
 	<!-- Description -->
 	<div class="space-y-2">
-		<Label for="description">Description</Label>
+		<Label for="description">{$t('roles.permission_form.description_label')}</Label>
 		<Textarea
 			id="description"
 			bind:value={description}
-			placeholder="Describe what this permission allows..."
+			placeholder={$t('roles.permission_form.description_placeholder')}
 			rows={3}
 		/>
 	</div>
@@ -365,7 +376,7 @@
 	<!-- Actions -->
 	<div class="flex justify-end gap-3 pt-4">
 		<Button type="button" variant="outline" onclick={onCancel} disabled={isSubmitting}>
-			Cancel
+			{$t('common.cancel')}
 		</Button>
 		<Button type="submit" disabled={isSubmitting || !isValid}>
 			{#if isSubmitting}

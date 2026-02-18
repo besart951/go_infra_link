@@ -49,6 +49,15 @@ export interface CreateUserRequest {
 	role?: UserRole;
 }
 
+export interface UpdateUserRequest {
+	first_name?: string;
+	last_name?: string;
+	email?: string;
+	password?: string;
+	is_active?: boolean;
+	role?: UserRole;
+}
+
 export interface AllowedRolesResponse {
 	roles: UserRole[];
 }
@@ -138,5 +147,25 @@ export async function enableUser(userId: string): Promise<void> {
 export async function deleteUser(userId: string): Promise<void> {
 	return api<void>(`/users/${userId}`, {
 		method: 'DELETE'
+	});
+}
+
+/**
+ * Update current user profile fields
+ */
+export async function updateCurrentUser(userId: string, data: UpdateUserRequest): Promise<User> {
+	return api<User>(`/users/${userId}`, {
+		method: 'PUT',
+		body: JSON.stringify(data)
+	});
+}
+
+/**
+ * Update current user password
+ */
+export async function updateCurrentUserPassword(userId: string, password: string): Promise<User> {
+	return api<User>(`/users/${userId}`, {
+		method: 'PUT',
+		body: JSON.stringify({ password })
 	});
 }

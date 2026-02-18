@@ -8,7 +8,11 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
 	import { Trash2, AlertCircle } from '@lucide/svelte';
-	import type { FieldDeviceRowData, FieldDeviceRowError } from '$lib/domain/facility/fieldDeviceMultiCreate.js';
+	import type {
+		FieldDeviceRowData,
+		FieldDeviceRowError
+	} from '$lib/domain/facility/fieldDeviceMultiCreate.js';
+	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface Props {
 		index: number;
@@ -34,12 +38,14 @@
 		onRemove
 	}: Props = $props();
 
+	const t = createTranslator();
+
 	const hasApparatNrError = $derived(error?.field === 'apparat_nr');
 </script>
 
 <div class="rounded-lg border p-4">
 	<div class="mb-3 flex items-center justify-between">
-		<h4 class="font-medium">Field Device #{index + 1}</h4>
+		<h4 class="font-medium">{$t('field_device.row.title', { index: index + 1 })}</h4>
 		<Button variant="ghost" size="sm" onclick={onRemove} {disabled}>
 			<Trash2 class="size-4 text-destructive" />
 		</Button>
@@ -48,12 +54,12 @@
 	<div class="grid gap-4 md:grid-cols-3">
 		<!-- BMK -->
 		<div class="space-y-2">
-			<Label for={`bmk-${index}`}>BMK</Label>
+			<Label for={`bmk-${index}`}>{$t('field_device.row.bmk')}</Label>
 			<Input
 				id={`bmk-${index}`}
 				value={row.bmk}
 				oninput={(e) => onBmkChange((e.target as HTMLInputElement).value)}
-				placeholder="BMK identifier (optional)"
+				placeholder={$t('field_device.row.bmk_placeholder')}
 				maxlength={10}
 				{disabled}
 			/>
@@ -61,12 +67,12 @@
 
 		<!-- Description -->
 		<div class="space-y-2">
-			<Label for={`description-${index}`}>Description</Label>
+			<Label for={`description-${index}`}>{$t('field_device.row.description')}</Label>
 			<Input
 				id={`description-${index}`}
 				value={row.description}
 				oninput={(e) => onDescriptionChange((e.target as HTMLInputElement).value)}
-				placeholder="Description (optional)"
+				placeholder={$t('field_device.row.description_placeholder')}
 				maxlength={250}
 				{disabled}
 			/>
@@ -74,7 +80,7 @@
 
 		<!-- Apparat Nr -->
 		<div class="space-y-2">
-			<Label for={`apparat-nr-${index}`}>Apparat Nr *</Label>
+			<Label for={`apparat-nr-${index}`}>{$t('field_device.row.apparat_nr')}</Label>
 			<Input
 				id={`apparat-nr-${index}`}
 				type="number"
