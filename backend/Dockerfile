@@ -21,6 +21,8 @@ FROM alpine:3.20
 RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 COPY --from=builder /app/server /app/server
+COPY --from=builder /src/translations /app/translations
+
 RUN adduser -D -u 1000 appuser && chown -R 1000:1000 /app
 ENV GIN_MODE=release
 EXPOSE 8080
