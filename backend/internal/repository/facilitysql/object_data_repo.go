@@ -113,6 +113,7 @@ func (r *objectDataRepo) Create(entity *domainFacility.ObjectData) error {
 	})
 }
 
+func (r *objectDataRepo) Update(entity *domainFacility.ObjectData) error {
 	// Mirror BaseRepository.Update behavior (Save) and sync Apparats association.
 	entity.GetBase().TouchForUpdate(time.Now().UTC())
 	return r.db.Transaction(func(tx *gorm.DB) error {
