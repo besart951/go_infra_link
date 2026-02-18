@@ -283,6 +283,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		facility.DELETE("/object-data/:id", handlers.FacilityObjectDataHandler.DeleteObjectData)
 
 		facility.GET("/sps-controller-system-types", handlers.FacilitySPSControllerSystemTypeHandler.ListSPSControllerSystemTypes)
+		facility.POST("/sps-controller-system-types/:id/copy", handlers.FacilitySPSControllerSystemTypeHandler.CopySPSControllerSystemType)
 
 		facility.POST("/exports/field-devices", handlers.FacilityExportHandler.CreateFieldDeviceExport)
 		facility.GET("/exports/jobs/:jobId", handlers.FacilityExportHandler.GetExportStatus)

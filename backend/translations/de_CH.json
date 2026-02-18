@@ -374,6 +374,7 @@
     "bacnet_object_not_found": "BACnet-Objekt nicht gefunden.",
     "control_cabinet_not_found": "Schaltschrank nicht gefunden.",
     "sps_controller_not_found": "SPS-Regler nicht gefunden.",
+    "sps_controller_system_type_not_found": "SPS-Regler-Systemtyp nicht gefunden.",
     "notification_class_not_found": "Benachrichtigungsklasse nicht gefunden.",
     "state_text_not_found": "Statustext nicht gefunden.",
     "object_data_not_found": "Objektdaten nicht gefunden.",

@@ -35,5 +35,12 @@ export const spsControllerSystemTypeRepository: SPSControllerSystemTypeRepositor
 
     async get(id: string, signal?: AbortSignal): Promise<SPSControllerSystemType> {
         return api<SPSControllerSystemType>(`/facility/sps-controller-system-types/${id}`, { signal });
+    },
+
+    async copy(id: string, signal?: AbortSignal): Promise<SPSControllerSystemType> {
+        return api<SPSControllerSystemType>(`/facility/sps-controller-system-types/${id}/copy`, {
+            method: 'POST',
+            signal
+        });
     }
 };

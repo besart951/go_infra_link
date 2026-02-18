@@ -91,10 +91,16 @@ func NewServices(repos Repositories) *Services {
 			repos.Specifications,
 			repos.BacnetObjects,
 		),
-		StateText:               NewStateTextService(repos.StateTexts),
-		NotificationClass:       NewNotificationClassService(repos.NotificationClasses),
-		AlarmDefinition:         NewAlarmDefinitionService(repos.AlarmDefinitions),
-		ObjectData:              NewObjectDataService(repos.ObjectData),
-		SPSControllerSystemType: NewSPSControllerSystemTypeService(repos.SPSControllerSystemTypes),
+		StateText:         NewStateTextService(repos.StateTexts),
+		NotificationClass: NewNotificationClassService(repos.NotificationClasses),
+		AlarmDefinition:   NewAlarmDefinitionService(repos.AlarmDefinitions),
+		ObjectData:        NewObjectDataService(repos.ObjectData),
+		SPSControllerSystemType: NewSPSControllerSystemTypeService(
+			repos.SPSControllerSystemTypes,
+			repos.SystemTypes,
+			repos.FieldDevices,
+			repos.Specifications,
+			repos.BacnetObjects,
+		),
 	}
 }

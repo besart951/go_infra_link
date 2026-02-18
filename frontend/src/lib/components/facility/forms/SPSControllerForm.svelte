@@ -42,7 +42,8 @@
 	let vlan = $state('');
 	let control_cabinet_id = $state('');
 	let system_type_id = $state('');
-	let systemTypes: SPSControllerSystemTypeInput[] = $state([]);
+	type SPSControllerSystemTypeEntry = SPSControllerSystemTypeInput & { id?: string };
+	let systemTypes: SPSControllerSystemTypeEntry[] = $state([]);
 	let systemTypeLabels: Record<string, string> = $state({});
 	let systemTypeDetails: Record<string, SystemType> = $state({});
 	let systemTypeDetailsLoading = $state(false);
@@ -237,6 +238,7 @@
 				}
 			});
 			systemTypes = items.map((item: SPSControllerSystemType) => ({
+				id: item.id,
 				system_type_id: item.system_type_id,
 				number: item.number ?? undefined,
 				document_name: item.document_name ?? undefined
@@ -391,6 +393,36 @@
 		});
 	}
 
+	async function copySystemType(index: number) {
+		const entry = systemTypes[index];
+		if (!entry?.id) return;
+		try {
+			const copied = await spsControllerSystemTypeRepository.copy(entry.id);
+			const systemTypeId = copied.system_type_id;
+			if (!systemTypeDetails[systemTypeId]) {
+				const details = await ensureSystemTypeDetails(systemTypeId);
+				if (details) {
+					systemTypeLabels = {
+						...systemTypeLabels,
+						[systemTypeId]: buildSystemTypeLabel(details.name, details.number_min, details.number_max)
+					};
+				}
+			}
+			systemTypes = [
+				...systemTypes,
+				{
+					id: copied.id,
+					system_type_id: systemTypeId,
+					number: copied.number ?? undefined,
+					document_name: copied.document_name ?? undefined
+				}
+			];
+		} catch (e) {
+			console.error(e);
+			error = getErrorMessage(e);
+		}
+	}
+
 	function getNextAvailableSystemTypeNumber(
 		systemTypeId: string,
 		min: number,
@@ -471,7 +503,11 @@
 					gateway: gateway || undefined,
 					vlan: vlan || undefined,
 					control_cabinet_id,
-					system_types: systemTypes
+					system_types: systemTypes.map(({ system_type_id, number, document_name }) => ({
+						system_type_id,
+						number,
+						document_name
+					}))
 				});
 				onSuccess?.(res);
 			} else {
@@ -483,7 +519,11 @@
 					gateway: gateway || undefined,
 					vlan: vlan || undefined,
 					control_cabinet_id,
-					system_types: systemTypes
+					system_types: systemTypes.map(({ system_type_id, number, document_name }) => ({
+						system_type_id,
+						number,
+						document_name
+					}))
 				});
 				onSuccess?.(res);
 			}
@@ -698,7 +738,12 @@
 									maxlength={250}
 								/>
 							</div>
-							<div class="flex items-end justify-end md:col-span-1">
+							<div class="flex items-end justify-end gap-2 md:col-span-1">
+								{#if st.id}
+									<Button type="button" variant="ghost" onclick={() => copySystemType(index)}>
+										{$t('common.copy')}
+									</Button>
+								{/if}
 								<Button type="button" variant="ghost" onclick={() => removeSystemType(index)}>
 									{$t('common.remove')}
 								</Button>

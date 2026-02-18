@@ -144,6 +144,7 @@ type ObjectDataService interface {
 type SPSControllerSystemTypeService interface {
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
 	ListBySPSControllerID(spsControllerID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
+	CopyByID(id uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
 }
 
 type ExportService interface {
