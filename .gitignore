@@ -40,10 +40,6 @@ go.work.sum
 !.env.example
 .env.local
 
-# Local data (sqlite, exports, etc.)
-backend/data/
-!backend/data/.gitkeep
-
 # Bruno
 bruno/.env
 

@@ -1,0 +1,603 @@
+{
+"system_types": [
+	{
+		"id" : 1,
+		"number_min" : 1111,
+		"number_max" : 1399,
+		"name" : "Lüftungs- und Klimaanlagen (gem. Reihenfolge SK)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 2,
+		"number_min" : 1411,
+		"number_max" : 1499,
+		"name" : "Klimaanlagen FEV",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 3,
+		"number_min" : 1501,
+		"number_max" : 1699,
+		"name" : "Reserve (Lüftung)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 4,
+		"number_min" : 1711,
+		"number_max" : 1799,
+		"name" : "Torluftschleier",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 5,
+		"number_min" : 1811,
+		"number_max" : 1899,
+		"name" : "ULK (Umluftkühlgeräte am Kaltwassernetz)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 6,
+		"number_min" : 1911,
+		"number_max" : 1999,
+		"name" : "Diverse Lüftung (inkl. Überspannungsableiter 51-59)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 7,
+		"number_min" : 2111,
+		"number_max" : 2299,
+		"name" : "Raumautomation \/ Zonenregulierung",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 8,
+		"number_min" : 2300,
+		"number_max" : 2999,
+		"name" : "Reserve (Raumautomation)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 9,
+		"number_min" : 3111,
+		"number_max" : 3199,
+		"name" : "Heizzentrale",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 10,
+		"number_min" : 3211,
+		"number_max" : 3299,
+		"name" : "Hilfsbetriebe Heizzentrale",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 11,
+		"number_min" : 3311,
+		"number_max" : 3399,
+		"name" : "Fernleitung (inkl. Pumpstation)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 12,
+		"number_min" : 3411,
+		"number_max" : 3499,
+		"name" : "Wärmeübergabestation",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 13,
+		"number_min" : 3511,
+		"number_max" : 3599,
+		"name" : "Wärmeerzeugung Sekundär \/ Heizungsunterstation",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 14,
+		"number_min" : 3611,
+		"number_max" : 3699,
+		"name" : "Heizgruppen (Radiatoren, Change-Over, etc.)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 15,
+		"number_min" : 3711,
+		"number_max" : 3799,
+		"name" : "Reserve (Heizung 1)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 16,
+		"number_min" : 3811,
+		"number_max" : 3899,
+		"name" : "Reserve (Heizung 2)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 17,
+		"number_min" : 3911,
+		"number_max" : 3999,
+		"name" : "Diverse Heizung",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 18,
+		"number_min" : 4111,
+		"number_max" : 4199,
+		"name" : "Klimakälte-Anlagen (Bereich 1)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 19,
+		"number_min" : 4211,
+		"number_max" : 4299,
+		"name" : "Klimakälte-Anlagen (Bereich 2)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 20,
+		"number_min" : 4311,
+		"number_max" : 4399,
+		"name" : "Mieter-Klimakälte-Anlagen",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 21,
+		"number_min" : 4411,
+		"number_max" : 4499,
+		"name" : "Wärmepumpen (Kälte)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 22,
+		"number_min" : 4511,
+		"number_max" : 4599,
+		"name" : "Gewerbekälte-Anlagen",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 23,
+		"number_min" : 4611,
+		"number_max" : 4699,
+		"name" : "Reserve (Kälte 1)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 24,
+		"number_min" : 4711,
+		"number_max" : 4799,
+		"name" : "Reserve (Kälte 2)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 25,
+		"number_min" : 4811,
+		"number_max" : 4899,
+		"name" : "Klimageräte (mit Kältekompressor)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 26,
+		"number_min" : 4911,
+		"number_max" : 4999,
+		"name" : "Diverse Kälte (inkl. Überspannungsableiter 51-59)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 27,
+		"number_min" : 5111,
+		"number_max" : 5199,
+		"name" : "Druckluftanlagen",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 28,
+		"number_min" : 5211,
+		"number_max" : 5299,
+		"name" : "Grundwasser \/ Rein-Abwasseranlagen \/ Filterbrunnen",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 29,
+		"number_min" : 5311,
+		"number_max" : 5399,
+		"name" : "Tankanlagen (Sanitär)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 30,
+		"number_min" : 5411,
+		"number_max" : 5499,
+		"name" : "Abwasseranlagen (Hebeanlagen, Abscheider, etc.)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 31,
+		"number_min" : 5511,
+		"number_max" : 5599,
+		"name" : "Wasseraufbereitung",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 32,
+		"number_min" : 5611,
+		"number_max" : 5699,
+		"name" : "Löschanlagen (CO2, Inergen)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 33,
+		"number_min" : 5711,
+		"number_max" : 5799,
+		"name" : "Warmwasseranlage",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 34,
+		"number_min" : 5811,
+		"number_max" : 5819,
+		"name" : "Sprinkleranlagen",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 35,
+		"number_min" : 5821,
+		"number_max" : 5899,
+		"name" : "Kaltwasseranlage (Trink-, Grau-, Grundwasser)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 36,
+		"number_min" : 5911,
+		"number_max" : 5949,
+		"name" : "Diverse Sanitär (z.B. Invaliden WC)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 37,
+		"number_min" : 5951,
+		"number_max" : 5999,
+		"name" : "Dysonmischer",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 38,
+		"number_min" : 6111,
+		"number_max" : 6199,
+		"name" : "Mittelspannungsanlagen \/ Trafostationen \/ NLS",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 39,
+		"number_min" : 6211,
+		"number_max" : 6299,
+		"name" : "Notstromanlagen (inkl. TS\/NSHV)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 40,
+		"number_min" : 6311,
+		"number_max" : 6379,
+		"name" : "Niederspannungs-Hauptverteilung",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 41,
+		"number_min" : 6381,
+		"number_max" : 6389,
+		"name" : "Aktivfilter \/ Hauptverteilung",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 42,
+		"number_min" : 6411,
+		"number_max" : 6499,
+		"name" : "Etagenverteilung",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 43,
+		"number_min" : 6511,
+		"number_max" : 6599,
+		"name" : "Unterverteilung (inkl. Mieter\/Partner 6500.xx)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 44,
+		"number_min" : 6611,
+		"number_max" : 6699,
+		"name" : "Elektroheizungen",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 45,
+		"number_min" : 6711,
+		"number_max" : 6799,
+		"name" : "Umrichteranlagen (400Hz, USV, Notlicht)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 46,
+		"number_min" : 6811,
+		"number_max" : 6899,
+		"name" : "Umrichterverteilung \/ Notlicht-Unterstationen",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 47,
+		"number_min" : 6911,
+		"number_max" : 6999,
+		"name" : "Diverse Starkstrom (PV, Überspannungsableiter)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 48,
+		"number_min" : 7111,
+		"number_max" : 7199,
+		"name" : "Telefonanlagen",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 49,
+		"number_min" : 7211,
+		"number_max" : 7299,
+		"name" : "Fluginfosystem (PIS) \/ Signalanlagen",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 50,
+		"number_min" : 7311,
+		"number_max" : 7399,
+		"name" : "Personensuchanlage (PSA) \/ Funkanlage",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 51,
+		"number_min" : 7411,
+		"number_max" : 7499,
+		"name" : "Uhrenanlagen \/ Gemeinschaftsantennenanlage (GAA)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 52,
+		"number_min" : 7511,
+		"number_max" : 7599,
+		"name" : "Rohrpost",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 53,
+		"number_min" : 7611,
+		"number_max" : 7699,
+		"name" : "Lautsprecheranlagen (ELA)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 54,
+		"number_min" : 7711,
+		"number_max" : 7799,
+		"name" : "Brandmeldeanlagen (BMA)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 55,
+		"number_min" : 7811,
+		"number_max" : 7899,
+		"name" : "Schwachstromnetz (SS\/LWL, Gegensprechanl., Video)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 56,
+		"number_min" : 7911,
+		"number_max" : 7999,
+		"name" : "Diverse Elektronik (Prüfgeräte, ELO-Komponenten)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 57,
+		"number_min" : 8111,
+		"number_max" : 8199,
+		"name" : "Aufzüge \/ Fassadenaufzüge",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 58,
+		"number_min" : 8200,
+		"number_max" : 8299,
+		"name" : "Reserve (Mechanik 1)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 59,
+		"number_min" : 8311,
+		"number_max" : 8399,
+		"name" : "Fluggastbrücken",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 60,
+		"number_min" : 8411,
+		"number_max" : 8499,
+		"name" : "Fahrtreppen \/ Fahrsteige",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 61,
+		"number_min" : 8511,
+		"number_max" : 8599,
+		"name" : "Gepäck- und Frachtförderanlagen",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 62,
+		"number_min" : 8611,
+		"number_max" : 8699,
+		"name" : "Entrauchungsanlagen (mechanisch)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 63,
+		"number_min" : 8711,
+		"number_max" : 8799,
+		"name" : "Automatische Türen + Tore",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 64,
+		"number_min" : 8811,
+		"number_max" : 8899,
+		"name" : "Sonnenstoren",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 65,
+		"number_min" : 8911,
+		"number_max" : 8999,
+		"name" : "Diverse Mechanik (Hebebühnen, Rampen, ÜSA)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 66,
+		"number_min" : 9000,
+		"number_max" : 9099,
+		"name" : "Virtuelle Server Gebäudetechnik",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 67,
+		"number_min" : 9111,
+		"number_max" : 9199,
+		"name" : "Diverse Systeme (Einbruchmeldeanlagen, etc.)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 68,
+		"number_min" : 9211,
+		"number_max" : 9299,
+		"name" : "Reserve (Spezial\/Fremd 1)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 69,
+		"number_min" : 9311,
+		"number_max" : 9399,
+		"name" : "Evakuations- und Sicherheitsanlagen (Zuko, TST)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 70,
+		"number_min" : 9411,
+		"number_max" : 9499,
+		"name" : "Leitsystem FEV",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 71,
+		"number_min" : 9511,
+		"number_max" : 9599,
+		"name" : "Energieerfassungsanlagen (EMS, M-Bus, etc.)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 72,
+		"number_min" : 9611,
+		"number_max" : 9699,
+		"name" : "Parkingsysteme (UZ, EPPÜ, PLS, etc.)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 73,
+		"number_min" : 9711,
+		"number_max" : 9799,
+		"name" : "OPC Clients GMS\/GLS",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 74,
+		"number_min" : 9911,
+		"number_max" : 9999,
+		"name" : "GMS\/GLS (Gebäudemanagementsystem)",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	},
+	{
+		"id" : 75,
+		"number_min" : 9951,
+		"number_max" : 9959,
+		"name" : "MBS Gateway Comli",
+		"created_at" : "2026-02-15T17:56:45.000Z",
+		"updated_at" : "2026-02-15T17:56:45.000Z"
+	}
+]}
