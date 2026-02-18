@@ -24,7 +24,7 @@ func NewPhasePermissionRepository(db *gorm.DB) domainProject.PhasePermissionRepo
 
 func (r *phasePermissionRepo) GetByPhaseAndRole(phaseID uuid.UUID, role domainUser.Role) (*domainProject.PhasePermission, error) {
 	var perm domainProject.PhasePermission
-	err := r.db.Where("phase_id = ? AND role = ? AND deleted_at IS NULL", phaseID, role).First(&perm).Error
+	err := r.db.Where("phase_id = ? AND role = ?", phaseID, role).First(&perm).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, domain.ErrNotFound
@@ -36,7 +36,7 @@ func (r *phasePermissionRepo) GetByPhaseAndRole(phaseID uuid.UUID, role domainUs
 
 func (r *phasePermissionRepo) ListByPhase(phaseID uuid.UUID) ([]domainProject.PhasePermission, error) {
 	var perms []domainProject.PhasePermission
-	err := r.db.Where("phase_id = ? AND deleted_at IS NULL", phaseID).Find(&perms).Error
+	err := r.db.Where("phase_id = ?", phaseID).Find(&perms).Error
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (r *phasePermissionRepo) ListByPhase(phaseID uuid.UUID) ([]domainProject.Ph
 }
 
 func (r *phasePermissionRepo) DeleteByPhaseAndRole(phaseID uuid.UUID, role domainUser.Role) error {
-	return r.db.Where("phase_id = ? AND role = ? AND deleted_at IS NULL", phaseID, role).Delete(&domainProject.PhasePermission{}).Error
+	return r.db.Where("phase_id = ? AND role = ?", phaseID, role).Delete(&domainProject.PhasePermission{}).Error
 }
 
 func (r *phasePermissionRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainProject.PhasePermission], error) {

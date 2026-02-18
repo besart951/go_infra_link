@@ -38,7 +38,6 @@ func (r *spsControllerRepo) GetPaginatedListByControlCabinetID(controlCabinetID 
 	offset := (page - 1) * limit
 
 	query := r.db.Model(&domainFacility.SPSController{}).
-		Where("deleted_at IS NULL").
 		Where("control_cabinet_id = ?", controlCabinetID)
 
 	if strings.TrimSpace(params.Search) != "" {
@@ -67,7 +66,6 @@ func (r *spsControllerRepo) GetPaginatedListByControlCabinetID(controlCabinetID 
 func (r *spsControllerRepo) GetIDsByControlCabinetID(controlCabinetID uuid.UUID) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
 	err := r.db.Model(&domainFacility.SPSController{}).
-		Where("deleted_at IS NULL").
 		Where("control_cabinet_id = ?", controlCabinetID).
 		Pluck("id", &ids).Error
 	if err != nil {
@@ -82,7 +80,6 @@ func (r *spsControllerRepo) GetIDsByControlCabinetIDs(controlCabinetIDs []uuid.U
 	}
 	var ids []uuid.UUID
 	err := r.db.Model(&domainFacility.SPSController{}).
-		Where("deleted_at IS NULL").
 		Where("control_cabinet_id IN ?", controlCabinetIDs).
 		Pluck("id", &ids).Error
 	if err != nil {
@@ -94,7 +91,6 @@ func (r *spsControllerRepo) GetIDsByControlCabinetIDs(controlCabinetIDs []uuid.U
 func (r *spsControllerRepo) ListGADevicesByControlCabinetID(controlCabinetID uuid.UUID) ([]string, error) {
 	var devices []string
 	err := r.db.Model(&domainFacility.SPSController{}).
-		Where("deleted_at IS NULL").
 		Where("control_cabinet_id = ?", controlCabinetID).
 		Where("ga_device IS NOT NULL").
 		Where("TRIM(ga_device) <> ''").
@@ -107,7 +103,6 @@ func (r *spsControllerRepo) ListGADevicesByControlCabinetID(controlCabinetID uui
 
 func (r *spsControllerRepo) ExistsGADevice(controlCabinetID uuid.UUID, gaDevice string, excludeID *uuid.UUID) (bool, error) {
 	query := r.db.Model(&domainFacility.SPSController{}).
-		Where("deleted_at IS NULL").
 		Where("control_cabinet_id = ?", controlCabinetID).
 		Where("UPPER(ga_device) = ?", strings.ToUpper(strings.TrimSpace(gaDevice)))
 
@@ -124,7 +119,6 @@ func (r *spsControllerRepo) ExistsGADevice(controlCabinetID uuid.UUID, gaDevice 
 
 func (r *spsControllerRepo) ExistsIPAddressVlan(ipAddress string, vlan string, excludeID *uuid.UUID) (bool, error) {
 	query := r.db.Model(&domainFacility.SPSController{}).
-		Where("deleted_at IS NULL").
 		Where("ip_address = ?", strings.TrimSpace(ipAddress)).
 		Where("vlan = ?", strings.TrimSpace(vlan))
 
@@ -145,11 +139,19 @@ func (r *spsControllerRepo) GetByIdsForExport(ids []uuid.UUID) ([]domainFacility
 	}
 	var items []domainFacility.SPSController
 	err := r.db.
-		Where("sps_controllers.deleted_at IS NULL").
 		Where("sps_controllers.id IN ?", ids).
 		Preload("ControlCabinet").
 		Preload("ControlCabinet.Building").
 		Preload("SPSControllerSystemTypes").
 		Find(&items).Error
 	return items, err
+}
+
+func (r *spsControllerRepo) DeleteByIds(ids []uuid.UUID) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	return r.db.
+		Where("id IN ?", ids).
+		Delete(&domainFacility.SPSController{}).Error
 }

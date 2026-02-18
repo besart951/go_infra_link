@@ -318,7 +318,6 @@ func seedPhases(database *gorm.DB, seedDir string) error {
 	var existing []domainProject.Phase
 	if err := database.Model(&domainProject.Phase{}).
 		Select("id", "name").
-		Where("deleted_at IS NULL").
 		Find(&existing).Error; err != nil {
 		return err
 	}
@@ -373,7 +372,6 @@ func seedBuildings(database *gorm.DB, seedDir string) error {
 	var existing []domainFacility.Building
 	if err := database.Model(&domainFacility.Building{}).
 		Select("id", "iws_code", "building_group").
-		Where("deleted_at IS NULL").
 		Find(&existing).Error; err != nil {
 		return err
 	}
@@ -429,7 +427,6 @@ func seedSystemTypes(database *gorm.DB, seedDir string) error {
 	var existing []domainFacility.SystemType
 	if err := database.Model(&domainFacility.SystemType{}).
 		Select("id", "name").
-		Where("deleted_at IS NULL").
 		Find(&existing).Error; err != nil {
 		return err
 	}
@@ -488,7 +485,6 @@ func seedSystemParts(database *gorm.DB, seedDir string) (map[int]uuid.UUID, erro
 	var existing []domainFacility.SystemPart
 	if err := database.Model(&domainFacility.SystemPart{}).
 		Select("id", "short_name", "name").
-		Where("deleted_at IS NULL").
 		Find(&existing).Error; err != nil {
 		return nil, err
 	}
@@ -559,7 +555,6 @@ func seedApparats(database *gorm.DB, seedDir string) (map[int]uuid.UUID, error) 
 	var existing []domainFacility.Apparat
 	if err := database.Model(&domainFacility.Apparat{}).
 		Select("id", "short_name", "name").
-		Where("deleted_at IS NULL").
 		Find(&existing).Error; err != nil {
 		return nil, err
 	}
@@ -668,7 +663,6 @@ func seedNotificationClasses(database *gorm.DB, seedDir string) error {
 	var existing []domainFacility.NotificationClass
 	if err := database.Model(&domainFacility.NotificationClass{}).
 		Select("id", "nc").
-		Where("deleted_at IS NULL").
 		Find(&existing).Error; err != nil {
 		return err
 	}
@@ -733,7 +727,6 @@ func seedStateTexts(database *gorm.DB, seedDir string) error {
 	var existing []domainFacility.StateText
 	if err := database.Model(&domainFacility.StateText{}).
 		Select("id", "ref_number").
-		Where("deleted_at IS NULL").
 		Find(&existing).Error; err != nil {
 		return err
 	}

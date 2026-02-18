@@ -32,7 +32,7 @@ func (r *rolePermissionRepo) GetPaginatedList(params domain.PaginationParams) (*
 
 func (r *rolePermissionRepo) ListByRole(role domainUser.Role) ([]domainUser.RolePermission, error) {
 	var perms []domainUser.RolePermission
-	err := r.db.Where("deleted_at IS NULL").Where("role = ?", role).Find(&perms).Error
+	err := r.db.Where("role = ?", role).Find(&perms).Error
 	return perms, err
 }
 
@@ -41,13 +41,13 @@ func (r *rolePermissionRepo) ListByRoles(roles []domainUser.Role) ([]domainUser.
 		return []domainUser.RolePermission{}, nil
 	}
 	var perms []domainUser.RolePermission
-	err := r.db.Where("deleted_at IS NULL").Where("role IN ?", roles).Find(&perms).Error
+	err := r.db.Where("role IN ?", roles).Find(&perms).Error
 	return perms, err
 }
 
 func (r *rolePermissionRepo) ReplaceRolePermissions(role domainUser.Role, permissions []string) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Unscoped().Where("role = ?", role).Delete(&domainUser.RolePermission{}).Error; err != nil {
+		if err := tx.Where("role = ?", role).Delete(&domainUser.RolePermission{}).Error; err != nil {
 			return err
 		}
 
@@ -72,7 +72,7 @@ func (r *rolePermissionRepo) ReplaceRolePermissions(role domainUser.Role, permis
 }
 
 func (r *rolePermissionRepo) AddPermissionToRole(role domainUser.Role, permission string) (*domainUser.RolePermission, error) {
-	if err := r.db.Unscoped().
+	if err := r.db.
 		Where("role = ? AND permission = ?", role, permission).
 		Delete(&domainUser.RolePermission{}).Error; err != nil {
 		return nil, err
@@ -93,13 +93,13 @@ func (r *rolePermissionRepo) AddPermissionToRole(role domainUser.Role, permissio
 }
 
 func (r *rolePermissionRepo) RemovePermissionFromRole(role domainUser.Role, permission string) error {
-	return r.db.Unscoped().
+	return r.db.
 		Where("role = ? AND permission = ?", role, permission).
 		Delete(&domainUser.RolePermission{}).Error
 }
 
 func (r *rolePermissionRepo) DeleteByPermissionName(permission string) error {
-	return r.db.Unscoped().
+	return r.db.
 		Where("permission = ?", permission).
 		Delete(&domainUser.RolePermission{}).Error
 }

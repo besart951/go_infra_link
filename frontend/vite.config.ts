@@ -21,7 +21,10 @@ type ProxyResLike = {
 };
 
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit(), inspect()],
+	plugins: [tailwindcss(), sveltekit(), inspect({
+      build: true,
+      outputDir: '.vite-inspect'
+    })],
 	server: {
 		proxy: {
 			'/api': {

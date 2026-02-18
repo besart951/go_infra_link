@@ -2,7 +2,6 @@ package facility_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -218,7 +217,7 @@ func (r *fakeSpsControllerSystemTypeRepo) GetIDsBySPSControllerIDs(ids []uuid.UU
 	return out, nil
 }
 
-func (r *fakeSpsControllerSystemTypeRepo) SoftDeleteBySPSControllerIDs(ids []uuid.UUID) error {
+func (r *fakeSpsControllerSystemTypeRepo) DeleteBySPSControllerIDs(ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -228,10 +227,7 @@ func (r *fakeSpsControllerSystemTypeRepo) SoftDeleteBySPSControllerIDs(ids []uui
 	}
 	for id, item := range r.items {
 		if _, ok := idSet[item.SPSControllerID]; ok {
-			clone := *item
-			now := time.Now().UTC()
-			clone.DeletedAt = &now
-			r.items[id] = &clone
+			delete(r.items, id)
 		}
 	}
 	return nil

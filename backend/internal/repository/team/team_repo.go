@@ -31,7 +31,7 @@ func NewTeamRepository(db *gorm.DB) domainTeam.TeamRepository {
 func (r *teamRepo) Update(entity *domainTeam.Team) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
 	return r.db.Model(&domainTeam.Team{}).
-		Where("deleted_at IS NULL AND id = ?", entity.ID).
+		Where("id = ?", entity.ID).
 		Updates(map[string]any{
 			"updated_at":  entity.UpdatedAt,
 			"name":        entity.Name,

@@ -24,7 +24,7 @@ func (r *objectDataRepo) getPaginatedListFiltered(projectID *uuid.UUID, apparatI
 	if projectID == nil {
 		query = query.Where("project_id IS NULL")
 	} else {
-		query = query.Where("deleted_at IS NULL").Where("project_id = ?", *projectID)
+		query = query.Where("project_id = ?", *projectID)
 	}
 
 	if apparatID != nil {
@@ -113,7 +113,6 @@ func (r *objectDataRepo) Create(entity *domainFacility.ObjectData) error {
 	})
 }
 
-func (r *objectDataRepo) Update(entity *domainFacility.ObjectData) error {
 	// Mirror BaseRepository.Update behavior (Save) and sync Apparats association.
 	entity.GetBase().TouchForUpdate(time.Now().UTC())
 	return r.db.Transaction(func(tx *gorm.DB) error {
@@ -178,7 +177,7 @@ func (r *objectDataRepo) ExistsByDescription(projectID *uuid.UUID, description s
 		return false, nil
 	}
 
-	query := r.db.Model(&domainFacility.ObjectData{}).Where("deleted_at IS NULL")
+	query := r.db.Model(&domainFacility.ObjectData{})
 	if projectID == nil {
 		query = query.Where("project_id IS NULL")
 	} else {
@@ -199,13 +198,13 @@ func (r *objectDataRepo) ExistsByDescription(projectID *uuid.UUID, description s
 
 func (r *objectDataRepo) GetTemplates() ([]*domainFacility.ObjectData, error) {
 	var items []*domainFacility.ObjectData
-	err := r.db.Where("deleted_at IS NULL").Where("is_active = ? AND project_id IS NULL", true).Preload("BacnetObjects").Preload("Apparats").Find(&items).Error
+	err := r.db.Where("is_active = ? AND project_id IS NULL", true).Preload("BacnetObjects").Preload("Apparats").Find(&items).Error
 	return items, err
 }
 
 func (r *objectDataRepo) GetForProject(projectID uuid.UUID) ([]*domainFacility.ObjectData, error) {
 	var items []*domainFacility.ObjectData
-	err := r.db.Where("deleted_at IS NULL").Where("is_active = ? AND project_id = ?", true, projectID).Preload("BacnetObjects").Preload("Apparats").Find(&items).Error
+	err := r.db.Where("is_active = ? AND project_id = ?", true, projectID).Preload("BacnetObjects").Preload("Apparats").Find(&items).Error
 	return items, err
 }
 

@@ -25,7 +25,7 @@ func (r *refreshTokenRepo) Create(token *domainAuth.RefreshToken) error {
 
 func (r *refreshTokenRepo) GetByTokenHash(tokenHash string) (*domainAuth.RefreshToken, error) {
 	var token domainAuth.RefreshToken
-	err := r.db.Where("deleted_at IS NULL").Where("token_hash = ?", tokenHash).First(&token).Error
+	err := r.db.Where("token_hash = ?", tokenHash).First(&token).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -37,13 +37,12 @@ func (r *refreshTokenRepo) GetByTokenHash(tokenHash string) (*domainAuth.Refresh
 
 func (r *refreshTokenRepo) RevokeByTokenHash(tokenHash string, revokedAt time.Time) error {
 	return r.db.Model(&domainAuth.RefreshToken{}).
-		Where("deleted_at IS NULL AND token_hash = ?", tokenHash).
+		Where("token_hash = ?", tokenHash).
 		Updates(map[string]any{"revoked_at": revokedAt, "updated_at": time.Now().UTC()}).Error
 }
 
 func (r *refreshTokenRepo) DeleteExpired(before time.Time) error {
-	now := time.Now().UTC()
-	return r.db.Model(&domainAuth.RefreshToken{}).
-		Where("deleted_at IS NULL AND expires_at <= ?", before).
-		Updates(map[string]any{"deleted_at": now, "updated_at": now}).Error
+	return r.db.
+		Where("expires_at <= ?", before).
+		Delete(&domainAuth.RefreshToken{}).Error
 }

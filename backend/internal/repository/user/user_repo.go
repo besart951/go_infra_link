@@ -31,7 +31,7 @@ func NewUserRepository(db *gorm.DB) domainUser.UserRepository {
 
 func (r *userRepo) GetByEmail(email string) (*domainUser.User, error) {
 	var user domainUser.User
-	err := r.db.Where("deleted_at IS NULL").Where("email = ?", email).First(&user).Error
+	err := r.db.Where("email = ?", email).First(&user).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, domain.ErrNotFound
@@ -62,7 +62,7 @@ func (r *userRepo) Update(entity *domainUser.User) error {
 	}
 
 	return r.db.Model(&domainUser.User{}).
-		Where("deleted_at IS NULL AND id = ?", entity.ID).
+		Where("id = ?", entity.ID).
 		Updates(updates).Error
 }
 
@@ -70,7 +70,7 @@ func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.Pag
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainUser.User{}).Where("deleted_at IS NULL")
+	query := r.db.Model(&domainUser.User{})
 	if strings.TrimSpace(params.Search) != "" {
 		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
 		query = query.Where("LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ? OR LOWER(email) LIKE ?", pattern, pattern, pattern)

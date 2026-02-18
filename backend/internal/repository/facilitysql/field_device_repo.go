@@ -56,37 +56,37 @@ func applyFieldDeviceSorting(query *gorm.DB, params domain.PaginationParams) *go
 		query = query.Joins("LEFT JOIN system_parts system_parts_sort ON system_parts_sort.id = field_devices.system_part_id")
 		return query.Order("system_parts_sort.name " + order)
 	case "spec_supplier":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
 		return query.Order("specs_sort.specification_supplier " + order)
 	case "spec_brand":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
 		return query.Order("specs_sort.specification_brand " + order)
 	case "spec_type":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
 		return query.Order("specs_sort.specification_type " + order)
 	case "spec_motor_valve":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
 		return query.Order("specs_sort.additional_info_motor_valve " + order)
 	case "spec_size":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
 		return query.Order("specs_sort.additional_info_size " + order)
 	case "spec_install_loc":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
 		return query.Order("specs_sort.additional_information_installation_location " + order)
 	case "spec_ph":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
 		return query.Order("specs_sort.electrical_connection_ph " + order)
 	case "spec_acdc":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
 		return query.Order("specs_sort.electrical_connection_acdc " + order)
 	case "spec_amperage":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
 		return query.Order("specs_sort.electrical_connection_amperage " + order)
 	case "spec_power":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
 		return query.Order("specs_sort.electrical_connection_power " + order)
 	case "spec_rotation":
-		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id AND specs_sort.deleted_at IS NULL")
+		query = query.Joins("LEFT JOIN specifications specs_sort ON specs_sort.id = field_devices.specification_id")
 		return query.Order("specs_sort.electrical_connection_rotation " + order)
 	case "created_at":
 		return query.Order("field_devices.created_at " + order)
@@ -101,7 +101,7 @@ func (r *fieldDeviceRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.FieldDevi
 		return []*domainFacility.FieldDevice{}, nil
 	}
 	var items []*domainFacility.FieldDevice
-	err := r.db.Where("deleted_at IS NULL").Where("id IN ?", ids).Preload("Specification").Find(&items).Error
+	err := r.db.Where("id IN ?", ids).Preload("Specification").Find(&items).Error
 	return items, err
 }
 
@@ -109,7 +109,7 @@ func (r *fieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*dom
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainFacility.FieldDevice{}).Where("deleted_at IS NULL")
+	query := r.db.Model(&domainFacility.FieldDevice{})
 
 	// Apply search
 	if strings.TrimSpace(params.Search) != "" {
@@ -149,7 +149,6 @@ func (r *fieldDeviceRepo) GetIDsBySPSControllerSystemTypeIDs(ids []uuid.UUID) ([
 	}
 	var out []uuid.UUID
 	err := r.db.Model(&domainFacility.FieldDevice{}).
-		Where("deleted_at IS NULL").
 		Where("sps_controller_system_type_id IN ?", ids).
 		Pluck("id", &out).Error
 	if err != nil {
@@ -160,7 +159,6 @@ func (r *fieldDeviceRepo) GetIDsBySPSControllerSystemTypeIDs(ids []uuid.UUID) ([
 
 func (r *fieldDeviceRepo) ExistsApparatNrConflict(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID, apparatNr int, excludeIDs []uuid.UUID) (bool, error) {
 	db := r.db.Model(&domainFacility.FieldDevice{}).
-		Where("deleted_at IS NULL").
 		Where("sps_controller_system_type_id = ?", spsControllerSystemTypeID).
 		Where("apparat_id = ?", apparatID).
 		Where("apparat_nr = ?", apparatNr)
@@ -181,7 +179,6 @@ func (r *fieldDeviceRepo) ExistsApparatNrConflict(spsControllerSystemTypeID uuid
 
 func (r *fieldDeviceRepo) GetUsedApparatNumbers(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID) ([]int, error) {
 	query := r.db.Model(&domainFacility.FieldDevice{}).
-		Where("deleted_at IS NULL").
 		Where("sps_controller_system_type_id = ?", spsControllerSystemTypeID).
 		Where("apparat_id = ?", apparatID)
 
@@ -201,7 +198,7 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 1000)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainFacility.FieldDevice{}).Where("field_devices.deleted_at IS NULL")
+	query := r.db.Model(&domainFacility.FieldDevice{})
 
 	// Apply filters by joining through the hierarchy
 	if filters.SPSControllerSystemTypeID != nil {
@@ -230,10 +227,10 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 	}
 
 	if filters.ProjectID != nil {
-		query = query.Joins("JOIN project_field_devices pfd ON pfd.field_device_id = field_devices.id AND pfd.deleted_at IS NULL").
+		query = query.Joins("JOIN project_field_devices pfd ON pfd.field_device_id = field_devices.id").
 			Where("pfd.project_id = ?", *filters.ProjectID)
 	} else if len(filters.ProjectIDs) > 0 {
-		query = query.Joins("JOIN project_field_devices pfd ON pfd.field_device_id = field_devices.id AND pfd.deleted_at IS NULL").
+		query = query.Joins("JOIN project_field_devices pfd ON pfd.field_device_id = field_devices.id").
 			Where("pfd.project_id IN ?", filters.ProjectIDs)
 	}
 

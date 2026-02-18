@@ -35,7 +35,6 @@ func (r *systemTypeRepo) GetPaginatedList(params domain.PaginationParams) (*doma
 
 func (r *systemTypeRepo) ExistsName(name string, excludeID *uuid.UUID) (bool, error) {
 	query := r.db.Model(&domainFacility.SystemType{}).
-		Where("deleted_at IS NULL").
 		Where("LOWER(name) = ?", strings.ToLower(strings.TrimSpace(name)))
 
 	if excludeID != nil {
@@ -51,7 +50,6 @@ func (r *systemTypeRepo) ExistsName(name string, excludeID *uuid.UUID) (bool, er
 
 func (r *systemTypeRepo) ExistsOverlappingRange(numberMin, numberMax int, excludeID *uuid.UUID) (bool, error) {
 	query := r.db.Model(&domainFacility.SystemType{}).
-		Where("deleted_at IS NULL").
 		Where("number_min <= ?", numberMax).
 		Where("number_max >= ?", numberMin)
 

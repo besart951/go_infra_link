@@ -144,11 +144,10 @@ func (s *FieldDeviceService) UpdateWithBacnetObjects(fieldDevice *domainFacility
 
 func (s *FieldDeviceService) DeleteByID(id uuid.UUID) error {
 	ids := []uuid.UUID{id}
-	// Soft-delete dependents as well (because field_devices are soft-deleted)
-	if err := s.bacnetObjectRepo.SoftDeleteByFieldDeviceIDs(ids); err != nil {
+	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(ids); err != nil {
 		return err
 	}
-	if err := s.specificationRepo.SoftDeleteByFieldDeviceIDs(ids); err != nil {
+	if err := s.specificationRepo.DeleteByFieldDeviceIDs(ids); err != nil {
 		return err
 	}
 	return s.repo.DeleteByIds(ids)
@@ -580,7 +579,7 @@ func (s *FieldDeviceService) replaceBacnetObjects(fieldDeviceID uuid.UUID, bacne
 		return ve
 	}
 
-	if err := s.bacnetObjectRepo.HardDeleteByFieldDeviceIDs([]uuid.UUID{fieldDeviceID}); err != nil {
+	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs([]uuid.UUID{fieldDeviceID}); err != nil {
 		return err
 	}
 
@@ -726,7 +725,7 @@ func (s *FieldDeviceService) replaceBacnetObjectsFromObjectData(fieldDeviceID uu
 		return domain.ErrNotFound
 	}
 
-	if err := s.bacnetObjectRepo.HardDeleteByFieldDeviceIDs([]uuid.UUID{fieldDeviceID}); err != nil {
+	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs([]uuid.UUID{fieldDeviceID}); err != nil {
 		return err
 	}
 

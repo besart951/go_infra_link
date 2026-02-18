@@ -2,7 +2,6 @@ package facilitysql
 
 import (
 	"strings"
-	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -42,16 +41,15 @@ func (r *specificationRepo) GetByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) ([]*
 		return []*domainFacility.Specification{}, nil
 	}
 	var items []*domainFacility.Specification
-	err := r.db.Where("deleted_at IS NULL").Where("field_device_id IN ?", fieldDeviceIDs).Find(&items).Error
+	err := r.db.Where("field_device_id IN ?", fieldDeviceIDs).Find(&items).Error
 	return items, err
 }
 
-func (r *specificationRepo) SoftDeleteByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error {
+func (r *specificationRepo) DeleteByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error {
 	if len(fieldDeviceIDs) == 0 {
 		return nil
 	}
-	now := time.Now().UTC()
-	return r.db.Model(&domainFacility.Specification{}).
+	return r.db.
 		Where("field_device_id IN ?", fieldDeviceIDs).
-		Updates(map[string]any{"deleted_at": now, "updated_at": now}).Error
+		Delete(&domainFacility.Specification{}).Error
 }

@@ -35,7 +35,6 @@ func (r *projectSPSControllerRepo) GetPaginatedListByProjectID(projectID uuid.UU
 	offset := (page - 1) * limit
 
 	query := r.db.Model(&project.ProjectSPSController{}).
-		Where("deleted_at IS NULL").
 		Where("project_id = ?", projectID)
 
 	var total int64
@@ -59,20 +58,20 @@ func (r *projectSPSControllerRepo) GetPaginatedListByProjectID(projectID uuid.UU
 // GetByProjectID retrieves all SPS controllers associated with a project
 func (r *projectSPSControllerRepo) GetByProjectID(projectID uuid.UUID) ([]*project.ProjectSPSController, error) {
 	var items []*project.ProjectSPSController
-	err := r.db.Where("deleted_at IS NULL").Where("project_id = ?", projectID).Find(&items).Error
+	err := r.db.Where("project_id = ?", projectID).Find(&items).Error
 	return items, err
 }
 
 // GetBySPSControllerID retrieves all projects associated with an SPS controller
 func (r *projectSPSControllerRepo) GetBySPSControllerID(spsControllerID uuid.UUID) ([]*project.ProjectSPSController, error) {
 	var items []*project.ProjectSPSController
-	err := r.db.Where("deleted_at IS NULL").Where("sps_controller_id = ?", spsControllerID).Find(&items).Error
+	err := r.db.Where("sps_controller_id = ?", spsControllerID).Find(&items).Error
 	return items, err
 }
 
 // DeleteByProjectAndSPSController deletes a specific association
 func (r *projectSPSControllerRepo) DeleteByProjectAndSPSController(projectID, spsControllerID uuid.UUID) error {
-	return r.db.Model(&project.ProjectSPSController{}).
+	return r.db.
 		Where("project_id = ? AND sps_controller_id = ?", projectID, spsControllerID).
-		Update("deleted_at", gorm.Expr("CURRENT_TIMESTAMP")).Error
+		Delete(&project.ProjectSPSController{}).Error
 }

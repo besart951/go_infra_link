@@ -19,7 +19,7 @@ func NewTeamMemberRepository(db *gorm.DB) domainTeam.TeamMemberRepository {
 
 func (r *memberRepo) GetUserRole(teamID, userID uuid.UUID) (*domainTeam.MemberRole, error) {
 	var member domainTeam.TeamMember
-	err := r.db.Where("deleted_at IS NULL").Where("team_id = ? AND user_id = ?", teamID, userID).First(&member).Error
+	err := r.db.Where("team_id = ? AND user_id = ?", teamID, userID).First(&member).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -43,7 +43,6 @@ func (r *memberRepo) Upsert(member *domainTeam.TeamMember) error {
 		Where("team_id = ? AND user_id = ?", member.TeamID, member.UserID).
 		Updates(map[string]any{
 			"updated_at": now,
-			"deleted_at": nil,
 			"role":       member.Role,
 		})
 	if result.Error != nil {
@@ -57,17 +56,16 @@ func (r *memberRepo) Upsert(member *domainTeam.TeamMember) error {
 }
 
 func (r *memberRepo) Delete(teamID, userID uuid.UUID) error {
-	now := time.Now().UTC()
-	return r.db.Model(&domainTeam.TeamMember{}).
-		Where("deleted_at IS NULL AND team_id = ? AND user_id = ?", teamID, userID).
-		Updates(map[string]any{"deleted_at": now, "updated_at": now}).Error
+	return r.db.
+		Where("team_id = ? AND user_id = ?", teamID, userID).
+		Delete(&domainTeam.TeamMember{}).Error
 }
 
 func (r *memberRepo) ListByTeam(teamID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainTeam.TeamMember], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 20)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainTeam.TeamMember{}).Where("deleted_at IS NULL AND team_id = ?", teamID)
+	query := r.db.Model(&domainTeam.TeamMember{}).Where("team_id = ?", teamID)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {

@@ -35,7 +35,6 @@ func (r *projectFieldDeviceRepo) GetPaginatedListByProjectID(projectID uuid.UUID
 	offset := (page - 1) * limit
 
 	query := r.db.Model(&project.ProjectFieldDevice{}).
-		Where("deleted_at IS NULL").
 		Where("project_id = ?", projectID)
 
 	var total int64
@@ -59,20 +58,20 @@ func (r *projectFieldDeviceRepo) GetPaginatedListByProjectID(projectID uuid.UUID
 // GetByProjectID retrieves all field devices associated with a project
 func (r *projectFieldDeviceRepo) GetByProjectID(projectID uuid.UUID) ([]*project.ProjectFieldDevice, error) {
 	var items []*project.ProjectFieldDevice
-	err := r.db.Where("deleted_at IS NULL").Where("project_id = ?", projectID).Find(&items).Error
+	err := r.db.Where("project_id = ?", projectID).Find(&items).Error
 	return items, err
 }
 
 // GetByFieldDeviceID retrieves all projects associated with a field device
 func (r *projectFieldDeviceRepo) GetByFieldDeviceID(fieldDeviceID uuid.UUID) ([]*project.ProjectFieldDevice, error) {
 	var items []*project.ProjectFieldDevice
-	err := r.db.Where("deleted_at IS NULL").Where("field_device_id = ?", fieldDeviceID).Find(&items).Error
+	err := r.db.Where("field_device_id = ?", fieldDeviceID).Find(&items).Error
 	return items, err
 }
 
 // DeleteByProjectAndFieldDevice deletes a specific association
 func (r *projectFieldDeviceRepo) DeleteByProjectAndFieldDevice(projectID, fieldDeviceID uuid.UUID) error {
-	return r.db.Model(&project.ProjectFieldDevice{}).
+	return r.db.
 		Where("project_id = ? AND field_device_id = ?", projectID, fieldDeviceID).
-		Update("deleted_at", gorm.Expr("CURRENT_TIMESTAMP")).Error
+		Delete(&project.ProjectFieldDevice{}).Error
 }

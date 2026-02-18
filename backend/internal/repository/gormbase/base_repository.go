@@ -21,7 +21,7 @@ type Entity interface {
 // SearchCallback is a function type for custom search logic
 type SearchCallback[T any] func(query *gorm.DB, search string) *gorm.DB
 
-// BaseRepository provides common CRUD operations for entities with soft delete support
+// BaseRepository provides common CRUD operations for entities with hard delete support
 type BaseRepository[T Entity] struct {
 	db             *gorm.DB
 	searchCallback SearchCallback[T]
@@ -35,13 +35,13 @@ func NewBaseRepository[T Entity](db *gorm.DB, searchCallback SearchCallback[T]) 
 	}
 }
 
-// GetByIds retrieves entities by their IDs (only non-deleted)
+// GetByIds retrieves entities by their IDs
 func (r *BaseRepository[T]) GetByIds(ids []uuid.UUID) ([]T, error) {
 	if len(ids) == 0 {
 		return []T{}, nil
 	}
 	var items []T
-	err := r.db.Where("deleted_at IS NULL").Where("id IN ?", ids).Find(&items).Error
+	err := r.db.Where("id IN ?", ids).Find(&items).Error
 	return items, err
 }
 
@@ -60,16 +60,13 @@ func (r *BaseRepository[T]) Update(entity T) error {
 	return r.db.Save(entity).Error
 }
 
-// DeleteByIds soft deletes entities by their IDs
+// DeleteByIds hard deletes entities by their IDs
 func (r *BaseRepository[T]) DeleteByIds(ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	now := time.Now().UTC()
 	var model T
-	return r.db.Model(&model).
-		Where("id IN ?", ids).
-		Updates(map[string]any{"deleted_at": now, "updated_at": now}).Error
+	return r.db.Where("id IN ?", ids).Delete(&model).Error
 }
 
 // GetPaginatedList retrieves a paginated list of entities with search support
@@ -78,7 +75,7 @@ func (r *BaseRepository[T]) GetPaginatedList(params domain.PaginationParams, def
 	offset := (page - 1) * limit
 
 	var model T
-	query := r.db.Model(&model).Where("deleted_at IS NULL")
+	query := r.db.Model(&model)
 
 	// Apply custom search if callback is provided and search term is not empty
 	if r.searchCallback != nil && params.Search != "" {

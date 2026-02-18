@@ -249,7 +249,7 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 		return err
 	}
 
-	if err := s.spsControllerSystemTyper.SoftDeleteBySPSControllerIDs([]uuid.UUID{spsController.ID}); err != nil {
+	if err := s.spsControllerSystemTyper.DeleteBySPSControllerIDs([]uuid.UUID{spsController.ID}); err != nil {
 		return err
 	}
 	for _, st := range systemTypes {
@@ -285,17 +285,17 @@ func (s *SPSControllerService) DeleteByID(id uuid.UUID) error {
 	}
 
 	// Delete in correct order (bottom-up)
-	if err := s.bacnetObjectRepo.SoftDeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
 		return err
 	}
-	if err := s.specificationRepo.SoftDeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+	if err := s.specificationRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
 		return err
 	}
 	if err := s.fieldDeviceRepo.DeleteByIds(fieldDeviceIDs); err != nil {
 		return err
 	}
 
-	if err := s.spsControllerSystemTyper.SoftDeleteBySPSControllerIDs([]uuid.UUID{id}); err != nil {
+	if err := s.spsControllerSystemTyper.DeleteBySPSControllerIDs([]uuid.UUID{id}); err != nil {
 		return err
 	}
 
@@ -430,10 +430,9 @@ func (s *SPSControllerService) ensureGADeviceAssigned(spsController *domainFacil
 	}
 	spsController.GADevice = &next
 
-	if excludeID != nil {
-		if err := s.ensureUnique(spsController, excludeID); err != nil {
-			return err
-		}
+	// Always ensure uniqueness, not just when updating
+	if err := s.ensureUnique(spsController, excludeID); err != nil {
+		return err
 	}
 	return nil
 }

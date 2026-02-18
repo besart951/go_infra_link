@@ -33,7 +33,7 @@ func NewProjectRepository(db *gorm.DB) domainProject.ProjectRepository {
 func (r *projectRepo) Update(entity *domainProject.Project) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
 	return r.db.Model(&domainProject.Project{}).
-		Where("deleted_at IS NULL AND id = ?", entity.ID).
+		Where("id = ?", entity.ID).
 		Updates(map[string]any{
 			"updated_at":  entity.UpdatedAt,
 			"name":        entity.Name,

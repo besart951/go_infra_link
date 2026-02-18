@@ -2,7 +2,6 @@ package facilitysql
 
 import (
 	"strings"
-	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -42,25 +41,15 @@ func (r *bacnetObjectRepo) GetByFieldDeviceIDs(ids []uuid.UUID) ([]*domainFacili
 		return []*domainFacility.BacnetObject{}, nil
 	}
 	var items []*domainFacility.BacnetObject
-	err := r.db.Where("deleted_at IS NULL").Where("field_device_id IN ?", ids).Find(&items).Error
+	err := r.db.Where("field_device_id IN ?", ids).Find(&items).Error
 	return items, err
 }
 
-func (r *bacnetObjectRepo) SoftDeleteByFieldDeviceIDs(ids []uuid.UUID) error {
+func (r *bacnetObjectRepo) DeleteByFieldDeviceIDs(ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	now := time.Now().UTC()
-	return r.db.Model(&domainFacility.BacnetObject{}).
-		Where("field_device_id IN ?", ids).
-		Updates(map[string]any{"deleted_at": now, "updated_at": now}).Error
-}
-
-func (r *bacnetObjectRepo) HardDeleteByFieldDeviceIDs(ids []uuid.UUID) error {
-	if len(ids) == 0 {
-		return nil
-	}
-	return r.db.Unscoped().
+	return r.db.
 		Where("field_device_id IN ?", ids).
 		Delete(&domainFacility.BacnetObject{}).Error
 }

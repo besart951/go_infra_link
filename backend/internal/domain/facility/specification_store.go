@@ -11,5 +11,5 @@ type SpecificationStore interface {
 	SpecificationRepository
 
 	GetByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) ([]*Specification, error)
-	SoftDeleteByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error
+	DeleteByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error
 }

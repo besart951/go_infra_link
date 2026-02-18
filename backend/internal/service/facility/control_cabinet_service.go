@@ -202,15 +202,15 @@ func (s *ControlCabinetService) DeleteByID(id uuid.UUID) error {
 		return err
 	}
 
-	// Delete dependents in safe order (soft-delete everywhere)
-	if err := s.spsControllerSystemRepo.SoftDeleteBySPSControllerIDs(spsControllerIDs); err != nil {
+	// Delete dependents in safe order
+	if err := s.spsControllerSystemRepo.DeleteBySPSControllerIDs(spsControllerIDs); err != nil {
 		return err
 	}
 
-	if err := s.bacnetObjectRepo.SoftDeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
 		return err
 	}
-	if err := s.specificationRepo.SoftDeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+	if err := s.specificationRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
 		return err
 	}
 	if err := s.fieldDeviceRepo.DeleteByIds(fieldDeviceIDs); err != nil {

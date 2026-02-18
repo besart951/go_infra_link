@@ -43,7 +43,7 @@ func (r *permissionRepo) GetPaginatedList(params domain.PaginationParams) (*doma
 
 func (r *permissionRepo) GetByName(name string) (*domainUser.Permission, error) {
 	var perm domainUser.Permission
-	err := r.db.Where("deleted_at IS NULL").Where("name = ?", name).First(&perm).Error
+	err := r.db.Where("name = ?", name).First(&perm).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, domain.ErrNotFound
@@ -55,7 +55,7 @@ func (r *permissionRepo) GetByName(name string) (*domainUser.Permission, error) 
 
 func (r *permissionRepo) ListAll() ([]domainUser.Permission, error) {
 	var perms []domainUser.Permission
-	err := r.db.Where("deleted_at IS NULL").Order("name ASC").Find(&perms).Error
+	err := r.db.Order("name ASC").Find(&perms).Error
 	return perms, err
 }
 
@@ -64,6 +64,6 @@ func (r *permissionRepo) ListByNames(names []string) ([]domainUser.Permission, e
 		return []domainUser.Permission{}, nil
 	}
 	var perms []domainUser.Permission
-	err := r.db.Where("deleted_at IS NULL").Where("name IN ?", names).Find(&perms).Error
+	err := r.db.Where("name IN ?", names).Find(&perms).Error
 	return perms, err
 }

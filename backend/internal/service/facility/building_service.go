@@ -116,17 +116,17 @@ func (s *BuildingService) DeleteByID(id uuid.UUID) error {
 	}
 
 	// Delete in correct order (bottom-up)
-	if err := s.bacnetObjectRepo.SoftDeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
 		return err
 	}
-	if err := s.specificationRepo.SoftDeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+	if err := s.specificationRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
 		return err
 	}
 	if err := s.fieldDeviceRepo.DeleteByIds(fieldDeviceIDs); err != nil {
 		return err
 	}
 
-	if err := s.spsControllerSystemTypeRepo.SoftDeleteBySPSControllerIDs(spsControllerIDs); err != nil {
+	if err := s.spsControllerSystemTypeRepo.DeleteBySPSControllerIDs(spsControllerIDs); err != nil {
 		return err
 	}
 

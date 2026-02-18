@@ -2,7 +2,6 @@ package facilitysql
 
 import (
 	"strings"
-	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -37,7 +36,6 @@ func (r *spsControllerSystemTypeRepo) GetByIds(ids []uuid.UUID) ([]*domainFacili
 	}
 	var items []*domainFacility.SPSControllerSystemType
 	err := r.db.
-		Where("sps_controller_system_types.deleted_at IS NULL").
 		Where("id IN ?", ids).
 		Preload("SPSController").
 		Preload("SystemType").
@@ -49,8 +47,7 @@ func (r *spsControllerSystemTypeRepo) GetPaginatedList(params domain.PaginationP
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainFacility.SPSControllerSystemType{}).
-		Where("sps_controller_system_types.deleted_at IS NULL")
+	query := r.db.Model(&domainFacility.SPSControllerSystemType{})
 
 	if strings.TrimSpace(params.Search) != "" {
 		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
@@ -84,7 +81,6 @@ func (r *spsControllerSystemTypeRepo) GetPaginatedListBySPSControllerID(spsContr
 	offset := (page - 1) * limit
 
 	query := r.db.Model(&domainFacility.SPSControllerSystemType{}).
-		Where("sps_controller_system_types.deleted_at IS NULL").
 		Where("sps_controller_id = ?", spsControllerID)
 
 	if strings.TrimSpace(params.Search) != "" {
@@ -120,7 +116,6 @@ func (r *spsControllerSystemTypeRepo) GetIDsBySPSControllerIDs(ids []uuid.UUID) 
 	}
 	var out []uuid.UUID
 	err := r.db.Model(&domainFacility.SPSControllerSystemType{}).
-		Where("deleted_at IS NULL").
 		Where("sps_controller_id IN ?", ids).
 		Pluck("id", &out).Error
 	if err != nil {
@@ -129,12 +124,11 @@ func (r *spsControllerSystemTypeRepo) GetIDsBySPSControllerIDs(ids []uuid.UUID) 
 	return out, nil
 }
 
-func (r *spsControllerSystemTypeRepo) SoftDeleteBySPSControllerIDs(ids []uuid.UUID) error {
+func (r *spsControllerSystemTypeRepo) DeleteBySPSControllerIDs(ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	now := time.Now().UTC()
-	return r.db.Model(&domainFacility.SPSControllerSystemType{}).
+	return r.db.
 		Where("sps_controller_id IN ?", ids).
-		Updates(map[string]any{"deleted_at": now, "updated_at": now}).Error
+		Delete(&domainFacility.SPSControllerSystemType{}).Error
 }

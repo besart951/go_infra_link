@@ -25,7 +25,7 @@ func (r *passwordResetRepo) Create(token *domainAuth.PasswordResetToken) error {
 
 func (r *passwordResetRepo) GetByTokenHash(tokenHash string) (*domainAuth.PasswordResetToken, error) {
 	var token domainAuth.PasswordResetToken
-	err := r.db.Where("deleted_at IS NULL").Where("token_hash = ?", tokenHash).First(&token).Error
+	err := r.db.Where("token_hash = ?", tokenHash).First(&token).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -38,7 +38,7 @@ func (r *passwordResetRepo) GetByTokenHash(tokenHash string) (*domainAuth.Passwo
 func (r *passwordResetRepo) MarkUsedByTokenHash(tokenHash string, usedAt time.Time) (bool, error) {
 	now := time.Now().UTC()
 	result := r.db.Model(&domainAuth.PasswordResetToken{}).
-		Where("deleted_at IS NULL AND token_hash = ? AND used_at IS NULL AND expires_at > ?", tokenHash, usedAt).
+		Where("token_hash = ? AND used_at IS NULL AND expires_at > ?", tokenHash, usedAt).
 		Updates(map[string]any{"used_at": usedAt, "updated_at": now})
 	if result.Error != nil {
 		return false, result.Error

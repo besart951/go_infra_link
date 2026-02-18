@@ -35,7 +35,6 @@ func (r *projectControlCabinetRepo) GetPaginatedListByProjectID(projectID uuid.U
 	offset := (page - 1) * limit
 
 	query := r.db.Model(&project.ProjectControlCabinet{}).
-		Where("deleted_at IS NULL").
 		Where("project_id = ?", projectID)
 
 	var total int64
@@ -59,20 +58,20 @@ func (r *projectControlCabinetRepo) GetPaginatedListByProjectID(projectID uuid.U
 // GetByProjectID retrieves all control cabinets associated with a project
 func (r *projectControlCabinetRepo) GetByProjectID(projectID uuid.UUID) ([]*project.ProjectControlCabinet, error) {
 	var items []*project.ProjectControlCabinet
-	err := r.db.Where("deleted_at IS NULL").Where("project_id = ?", projectID).Find(&items).Error
+	err := r.db.Where("project_id = ?", projectID).Find(&items).Error
 	return items, err
 }
 
 // GetByControlCabinetID retrieves all projects associated with a control cabinet
 func (r *projectControlCabinetRepo) GetByControlCabinetID(controlCabinetID uuid.UUID) ([]*project.ProjectControlCabinet, error) {
 	var items []*project.ProjectControlCabinet
-	err := r.db.Where("deleted_at IS NULL").Where("control_cabinet_id = ?", controlCabinetID).Find(&items).Error
+	err := r.db.Where("control_cabinet_id = ?", controlCabinetID).Find(&items).Error
 	return items, err
 }
 
 // DeleteByProjectAndControlCabinet deletes a specific association
 func (r *projectControlCabinetRepo) DeleteByProjectAndControlCabinet(projectID, controlCabinetID uuid.UUID) error {
-	return r.db.Model(&project.ProjectControlCabinet{}).
+	return r.db.
 		Where("project_id = ? AND control_cabinet_id = ?", projectID, controlCabinetID).
-		Update("deleted_at", gorm.Expr("CURRENT_TIMESTAMP")).Error
+		Delete(&project.ProjectControlCabinet{}).Error
 }

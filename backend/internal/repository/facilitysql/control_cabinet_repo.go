@@ -38,7 +38,6 @@ func (r *controlCabinetRepo) GetPaginatedListByBuildingID(buildingID uuid.UUID, 
 	offset := (page - 1) * limit
 
 	query := r.db.Model(&domainFacility.ControlCabinet{}).
-		Where("deleted_at IS NULL").
 		Where("building_id = ?", buildingID)
 
 	if strings.TrimSpace(params.Search) != "" {
@@ -66,7 +65,6 @@ func (r *controlCabinetRepo) GetPaginatedListByBuildingID(buildingID uuid.UUID, 
 
 func (r *controlCabinetRepo) ExistsControlCabinetNr(buildingID uuid.UUID, controlCabinetNr string, excludeID *uuid.UUID) (bool, error) {
 	query := r.db.Model(&domainFacility.ControlCabinet{}).
-		Where("deleted_at IS NULL").
 		Where("building_id = ?", buildingID).
 		Where("LOWER(control_cabinet_nr) = ?", strings.ToLower(strings.TrimSpace(controlCabinetNr)))
 
@@ -84,11 +82,19 @@ func (r *controlCabinetRepo) ExistsControlCabinetNr(buildingID uuid.UUID, contro
 func (r *controlCabinetRepo) GetIDsByBuildingID(buildingID uuid.UUID) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
 	err := r.db.Model(&domainFacility.ControlCabinet{}).
-		Where("deleted_at IS NULL").
 		Where("building_id = ?", buildingID).
 		Pluck("id", &ids).Error
 	if err != nil {
 		return nil, err
 	}
 	return ids, nil
+}
+
+func (r *controlCabinetRepo) DeleteByIds(ids []uuid.UUID) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	return r.db.
+		Where("id IN ?", ids).
+		Delete(&domainFacility.ControlCabinet{}).Error
 }

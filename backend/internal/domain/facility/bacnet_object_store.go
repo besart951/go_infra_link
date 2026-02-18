@@ -8,6 +8,5 @@ type BacnetObjectStore interface {
 	BacnetObjectRepository
 
 	GetByFieldDeviceIDs(ids []uuid.UUID) ([]*BacnetObject, error)
-	SoftDeleteByFieldDeviceIDs(ids []uuid.UUID) error
-	HardDeleteByFieldDeviceIDs(ids []uuid.UUID) error
+	DeleteByFieldDeviceIDs(ids []uuid.UUID) error
 }

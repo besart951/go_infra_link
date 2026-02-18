@@ -39,7 +39,6 @@ func (r *buildingRepo) GetPaginatedList(params domain.PaginationParams) (*domain
 
 func (r *buildingRepo) ExistsIWSCodeGroup(iwsCode string, buildingGroup int, excludeID *uuid.UUID) (bool, error) {
 	query := r.db.Model(&domainFacility.Building{}).
-		Where("deleted_at IS NULL").
 		Where("LOWER(iws_code) = ?", strings.ToLower(strings.TrimSpace(iwsCode))).
 		Where("building_group = ?", buildingGroup)
 
