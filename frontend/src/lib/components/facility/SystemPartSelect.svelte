@@ -3,9 +3,13 @@
 	import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
 	import type { SystemPart } from '$lib/domain/facility/index.js';
 
-	export let value: string = '';
-	export let width: string = 'w-[250px]';
-	export let onValueChange: ((value: string) => void) | undefined = undefined;
+	type Props = {
+		value?: string;
+		width?: string;
+		onValueChange?: (value: string) => void;
+	};
+
+	let { value = $bindable(''), width = 'w-[250px]', onValueChange }: Props = $props();
 
 	async function fetcher(search: string): Promise<SystemPart[]> {
 		const res = await systemPartRepository.list({

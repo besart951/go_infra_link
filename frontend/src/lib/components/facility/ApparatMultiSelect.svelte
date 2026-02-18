@@ -3,10 +3,14 @@
 	import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
 	import type { Apparat } from '$lib/domain/facility/index.js';
 
-	export let value: string[] = [];
-	export let width: string = 'w-full';
-	export let disabled: boolean = false;
-	export let id: string | undefined = undefined;
+	type Props = {
+		value?: string[];
+		width?: string;
+		disabled?: boolean;
+		id?: string;
+	};
+
+	let { value = $bindable([]), width = 'w-full', disabled = false, id }: Props = $props();
 
 	type ApparatOption = Apparat & { label: string };
 

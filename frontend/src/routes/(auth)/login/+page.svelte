@@ -15,11 +15,11 @@
 	import { dev } from '$app/environment';
 	import { createTranslator } from '$lib/i18n/translator';
 
-	let showPassword = false;
-	let email = dev ? 'besart_morina@hotmail.com' : '';
-	let password = dev ? 'password' : '';
-	let error: string | null = null;
-	let isLoading = false;
+	let showPassword = $state(false);
+	let email = $state(dev ? 'besart_morina@hotmail.com' : '');
+	let password = $state(dev ? 'password' : '');
+	let error = $state<string | null>(null);
+	let isLoading = $state(false);
 	const t = createTranslator();
 
 	const toogleShowPassword = () => {
@@ -43,7 +43,7 @@
 			case 'login_failed':
 				return $t('auth.login_failed');
 			default:
-				if (errCode) return errCode; 
+				if (errCode) return errCode;
 				return null;
 		}
 	};
@@ -65,7 +65,7 @@
 				method: 'POST',
 				body: JSON.stringify({ email, password })
 			});
-			
+
 			await invalidateAll();
 			await goto('/');
 		} catch (err: any) {

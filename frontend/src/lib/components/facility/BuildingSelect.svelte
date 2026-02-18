@@ -5,8 +5,12 @@
 
 	type BuildingOption = Building & { display_name: string };
 
-	export let value: string = '';
-	export let width: string = 'w-[250px]';
+	type Props = {
+		value?: string;
+		width?: string;
+	};
+
+	let { value = $bindable(''), width = 'w-[250px]' }: Props = $props();
 
 	function toOption(item: Building): BuildingOption {
 		return {

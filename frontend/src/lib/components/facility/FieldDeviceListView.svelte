@@ -26,10 +26,9 @@
 		projectId?: string;
 	}
 
-	const props: Props = $props();
+	let { projectId }: Props = $props();
 
 	// Create a store instance scoped to this component (optionally project-scoped).
-	const projectId = props.projectId;
 	const store = createFieldDeviceStore(300, projectId);
 
 	// Editing composable
@@ -67,8 +66,12 @@
 
 	onMount(() => {
 		store.load();
-		apparatRepository.list({ pagination: { page: 1, pageSize: 1000 }, search: { text: '' } }).then((res) => (allApparats = res.items));
-		systemPartRepository.list({ pagination: { page: 1, pageSize: 1000 }, search: { text: '' } }).then((res) => (allSystemParts = res.items));
+		apparatRepository
+			.list({ pagination: { page: 1, pageSize: 1000 }, search: { text: '' } })
+			.then((res) => (allApparats = res.items));
+		systemPartRepository
+			.list({ pagination: { page: 1, pageSize: 1000 }, search: { text: '' } })
+			.then((res) => (allSystemParts = res.items));
 	});
 
 	// Filter callbacks

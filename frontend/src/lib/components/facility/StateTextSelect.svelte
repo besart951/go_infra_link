@@ -3,8 +3,12 @@
 	import { stateTextRepository } from '$lib/infrastructure/api/stateTextRepository.js';
 	import type { StateText } from '$lib/domain/facility/index.js';
 
-	export let value: string = '';
-	export let width: string = 'w-[250px]';
+	type Props = {
+		value?: string;
+		width?: string;
+	};
+
+	let { value = $bindable(''), width = 'w-[250px]' }: Props = $props();
 
 	async function fetcher(search: string): Promise<StateText[]> {
 		const res = await stateTextRepository.list({

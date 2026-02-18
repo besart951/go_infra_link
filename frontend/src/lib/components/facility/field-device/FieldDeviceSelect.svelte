@@ -3,8 +3,12 @@
 	import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 	import type { FieldDevice } from '$lib/domain/facility/index.js';
 
-	export let value: string = '';
-	export let width: string = 'w-[250px]';
+	type Props = {
+		value?: string;
+		width?: string;
+	};
+
+	let { value = $bindable(''), width = 'w-[250px]' }: Props = $props();
 
 	type FieldDeviceItem = FieldDevice & { display_name: string };
 

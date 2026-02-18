@@ -4,8 +4,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { cn } from '$lib/utils.js';
-	import Check from 'lucide-svelte/icons/check';
-	import ChevronsUpDown from 'lucide-svelte/icons/chevrons-up-down';
+	import { Check, ChevronsUpDown } from '@lucide/svelte';
 
 	interface StaticComboboxProps<T> {
 		items: T[];

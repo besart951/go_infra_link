@@ -3,8 +3,7 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { cn } from '$lib/utils.js';
-	import Check from 'lucide-svelte/icons/check';
-	import ChevronsUpDown from 'lucide-svelte/icons/chevrons-up-down';
+	import {Check, ChevronsUpDown} from '@lucide/svelte';
 
 	interface AsyncComboboxProps<T> {
 		value?: string;

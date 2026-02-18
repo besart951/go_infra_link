@@ -3,8 +3,12 @@
 	import { getProject, listProjects } from '$lib/infrastructure/api/project.adapter.js';
 	import type { Project } from '$lib/domain/project/index.js';
 
-	export let value: string = '';
-	export let width: string = 'w-[250px]';
+	type Props = {
+		value?: string;
+		width?: string;
+	};
+
+	let { value = $bindable(''), width = 'w-[250px]' }: Props = $props();
 
 	async function fetcher(search: string): Promise<Project[]> {
 		const res = await listProjects({ search, limit: 20 });

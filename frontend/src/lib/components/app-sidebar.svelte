@@ -9,9 +9,7 @@
 	import { createTranslator } from '$lib/i18n/translator';
 
 	// Icons
-	import UsersIcon from '@lucide/svelte/icons/users';
-	import Building2Icon from '@lucide/svelte/icons/building-2';
-	import FolderKanbanIcon from '@lucide/svelte/icons/folder-kanban';
+	import {UsersIcon, Building2Icon, FolderKanbanIcon} from '@lucide/svelte';
 
 	const t = createTranslator();
 

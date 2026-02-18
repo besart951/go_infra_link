@@ -3,8 +3,12 @@
 	import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsControllerSystemTypeRepository.js';
 	import type { SPSControllerSystemType } from '$lib/domain/facility/index.js';
 
-	export let value: string = '';
-	export let width: string = 'w-[250px]';
+	type Props = {
+		value?: string;
+		width?: string;
+	};
+
+	let { value = $bindable(''), width = 'w-[250px]' }: Props = $props();
 
 	async function fetcher(search: string): Promise<SPSControllerSystemType[]> {
 		const res = await spsControllerSystemTypeRepository.list({

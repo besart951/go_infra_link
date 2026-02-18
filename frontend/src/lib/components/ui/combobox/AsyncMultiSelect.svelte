@@ -4,9 +4,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { cn } from '$lib/utils.js';
-	import Check from 'lucide-svelte/icons/check';
-	import ChevronsUpDown from 'lucide-svelte/icons/chevrons-up-down';
-	import X from 'lucide-svelte/icons/x';
+	import { Check, ChevronsUpDown, X } from '@lucide/svelte';
 
 	interface AsyncMultiSelectProps<T> {
 		value?: string[];
