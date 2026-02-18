@@ -89,6 +89,11 @@ func (s *ControlCabinetService) CopyByID(id uuid.UUID) (*domainFacility.ControlC
 		return nil, err
 	}
 
+	// Copy all SPS Controllers with their system types, field devices, specifications, and BACnet objects
+	if err := s.copySPSControllersForControlCabinet(id, copyEntity.ID); err != nil {
+		return nil, err
+	}
+
 	return copyEntity, nil
 }
 
@@ -267,4 +272,314 @@ func (s *ControlCabinetService) nextAvailableControlCabinetNr(buildingID uuid.UU
 	}
 
 	return "", domain.ErrConflict
+}
+
+// copySPSControllersForControlCabinet copies all SPS controllers from the original control cabinet to the new one
+// including all system types, field devices, specifications, and BACnet objects
+func (s *ControlCabinetService) copySPSControllersForControlCabinet(originalControlCabinetID, newControlCabinetID uuid.UUID) error {
+	// Get all SPS controllers for the original control cabinet
+	originalSPSControllers, err := s.listSPSControllersByControlCabinetID(originalControlCabinetID)
+	if err != nil {
+		return err
+	}
+
+	// Copy each SPS controller
+	for _, originalSPS := range originalSPSControllers {
+		// Determine next device name
+		nextDeviceName, err := s.nextAvailableDeviceName(newControlCabinetID, originalSPS.DeviceName)
+		if err != nil {
+			return err
+		}
+
+		// Create copy of SPS controller
+		spsCopy := &domainFacility.SPSController{
+			ControlCabinetID:  newControlCabinetID,
+			GADevice:          nil, // Will be assigned automatically
+			DeviceName:        nextDeviceName,
+			DeviceDescription: originalSPS.DeviceDescription,
+			DeviceLocation:    originalSPS.DeviceLocation,
+			IPAddress:         nil, // Clear IP address to avoid conflicts
+			Subnet:            originalSPS.Subnet,
+			Gateway:           originalSPS.Gateway,
+			Vlan:              originalSPS.Vlan,
+		}
+
+		if err := s.spsControllerRepo.Create(spsCopy); err != nil {
+			return err
+		}
+
+		// Copy system types
+		newSystemTypeMap, err := s.copySPSControllerSystemTypes(originalSPS.ID, spsCopy.ID)
+		if err != nil {
+			return err
+		}
+
+		// Copy field devices with specifications and BACnet objects
+		if err := s.copyFieldDevicesForSPSController(originalSPS.ID, newSystemTypeMap); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// listSPSControllersByControlCabinetID lists all SPS controllers for a control cabinet
+func (s *ControlCabinetService) listSPSControllersByControlCabinetID(controlCabinetID uuid.UUID) ([]domainFacility.SPSController, error) {
+	items := make([]domainFacility.SPSController, 0)
+	page := 1
+
+	for {
+		result, err := s.spsControllerRepo.GetPaginatedListByControlCabinetID(controlCabinetID, domain.PaginationParams{Page: page, Limit: 500})
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, result.Items...)
+		if page >= result.TotalPages || len(result.Items) == 0 {
+			break
+		}
+		page++
+	}
+
+	return items, nil
+}
+
+// nextAvailableDeviceName finds the next available device name based on the original name
+func (s *ControlCabinetService) nextAvailableDeviceName(controlCabinetID uuid.UUID, baseName string) (string, error) {
+	base := strings.TrimSpace(baseName)
+	for i := 1; i <= 9999; i++ {
+		candidate := nextIncrementedValue(base, i, 100)
+		taken, err := s.deviceNameExistsInControlCabinet(controlCabinetID, candidate, nil)
+		if err != nil {
+			return "", err
+		}
+		if !taken {
+			return candidate, nil
+		}
+	}
+
+	return "", domain.ErrConflict
+}
+
+// deviceNameExistsInControlCabinet checks if a device name exists in a control cabinet
+func (s *ControlCabinetService) deviceNameExistsInControlCabinet(controlCabinetID uuid.UUID, deviceName string, excludeID *uuid.UUID) (bool, error) {
+	page := 1
+	for {
+		result, err := s.spsControllerRepo.GetPaginatedListByControlCabinetID(controlCabinetID, domain.PaginationParams{
+			Page:  page,
+			Limit: 500,
+		})
+		if err != nil {
+			return false, err
+		}
+
+		for i := range result.Items {
+			item := result.Items[i]
+			if excludeID != nil && item.ID == *excludeID {
+				continue
+			}
+			if strings.EqualFold(strings.TrimSpace(item.DeviceName), strings.TrimSpace(deviceName)) {
+				return true, nil
+			}
+		}
+
+		if page >= result.TotalPages || len(result.Items) == 0 {
+			break
+		}
+		page++
+	}
+
+	return false, nil
+}
+
+// copySPSControllerSystemTypes copies all system types from the original SPS controller to the new one
+// Returns a map of original system type ID to new system type ID
+func (s *ControlCabinetService) copySPSControllerSystemTypes(originalSPSControllerID, newSPSControllerID uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {
+	// Get all system types for the original SPS controller
+	originalSystemTypes, err := s.listSystemTypesBySPSControllerID(originalSPSControllerID)
+	if err != nil {
+		return nil, err
+	}
+
+	newSystemTypeMap := make(map[uuid.UUID]uuid.UUID, len(originalSystemTypes))
+	if len(originalSystemTypes) == 0 {
+		return newSystemTypeMap, nil
+	}
+
+	// Copy each system type
+	for _, originalST := range originalSystemTypes {
+		newST := &domainFacility.SPSControllerSystemType{
+			Number:          originalST.Number,
+			DocumentName:    originalST.DocumentName,
+			SPSControllerID: newSPSControllerID,
+			SystemTypeID:    originalST.SystemTypeID,
+		}
+
+		if err := s.spsControllerSystemRepo.Create(newST); err != nil {
+			return nil, err
+		}
+
+		newSystemTypeMap[originalST.ID] = newST.ID
+	}
+
+	return newSystemTypeMap, nil
+}
+
+// listSystemTypesBySPSControllerID lists all system types for an SPS controller
+func (s *ControlCabinetService) listSystemTypesBySPSControllerID(spsControllerID uuid.UUID) ([]domainFacility.SPSControllerSystemType, error) {
+	items := make([]domainFacility.SPSControllerSystemType, 0)
+	page := 1
+
+	for {
+		result, err := s.spsControllerSystemRepo.GetPaginatedListBySPSControllerID(spsControllerID, domain.PaginationParams{Page: page, Limit: 500})
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, result.Items...)
+		if page >= result.TotalPages || len(result.Items) == 0 {
+			break
+		}
+		page++
+	}
+
+	return items, nil
+}
+
+// copyFieldDevicesForSPSController copies all field devices from the original SPS controller to the new one
+// using the system type map to link field devices to the correct new system types
+func (s *ControlCabinetService) copyFieldDevicesForSPSController(originalSPSControllerID uuid.UUID, newSystemTypeMap map[uuid.UUID]uuid.UUID) error {
+	// Get all field devices for the original SPS controller
+	originalFieldDevices, err := s.listFieldDevicesBySPSControllerID(originalSPSControllerID)
+	if err != nil {
+		return err
+	}
+
+	// Copy each field device
+	for _, originalFD := range originalFieldDevices {
+		newSystemTypeID, ok := newSystemTypeMap[originalFD.SPSControllerSystemTypeID]
+		if !ok {
+			continue
+		}
+
+		fieldDeviceCopy := &domainFacility.FieldDevice{
+			BMK:                       originalFD.BMK,
+			Description:               originalFD.Description,
+			ApparatNr:                 originalFD.ApparatNr,
+			SPSControllerSystemTypeID: newSystemTypeID,
+			SystemPartID:              originalFD.SystemPartID,
+			ApparatID:                 originalFD.ApparatID,
+		}
+
+		if err := s.fieldDeviceRepo.Create(fieldDeviceCopy); err != nil {
+			return err
+		}
+
+		// Copy specification if exists
+		if err := s.copySpecificationForFieldDevice(originalFD.ID, fieldDeviceCopy.ID); err != nil {
+			return err
+		}
+
+		// Copy BACnet objects if exist
+		if err := s.copyBacnetObjectsForFieldDevice(originalFD.ID, fieldDeviceCopy.ID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// listFieldDevicesBySPSControllerID lists all field devices for an SPS controller
+func (s *ControlCabinetService) listFieldDevicesBySPSControllerID(spsControllerID uuid.UUID) ([]domainFacility.FieldDevice, error) {
+	items := make([]domainFacility.FieldDevice, 0)
+	page := 1
+	filters := domainFacility.FieldDeviceFilterParams{SPSControllerID: &spsControllerID}
+
+	for {
+		result, err := s.fieldDeviceRepo.GetPaginatedListWithFilters(domain.PaginationParams{Page: page, Limit: 500}, filters)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, result.Items...)
+		if page >= result.TotalPages || len(result.Items) == 0 {
+			break
+		}
+		page++
+	}
+
+	return items, nil
+}
+
+// copySpecificationForFieldDevice copies the specification from the original field device to the new field device
+func (s *ControlCabinetService) copySpecificationForFieldDevice(originalFieldDeviceID, newFieldDeviceID uuid.UUID) error {
+	// Get specifications for original field device
+	specs, err := s.specificationRepo.GetByFieldDeviceIDs([]uuid.UUID{originalFieldDeviceID})
+	if err != nil {
+		return err
+	}
+
+	// If no specification exists, nothing to copy
+	if len(specs) == 0 {
+		return nil
+	}
+
+	// Copy the specification
+	originalSpec := specs[0]
+	newSpec := &domainFacility.Specification{
+		FieldDeviceID:                             &newFieldDeviceID,
+		SpecificationSupplier:                     originalSpec.SpecificationSupplier,
+		SpecificationBrand:                        originalSpec.SpecificationBrand,
+		SpecificationType:                         originalSpec.SpecificationType,
+		AdditionalInfoMotorValve:                  originalSpec.AdditionalInfoMotorValve,
+		AdditionalInfoSize:                        originalSpec.AdditionalInfoSize,
+		AdditionalInformationInstallationLocation: originalSpec.AdditionalInformationInstallationLocation,
+		ElectricalConnectionPH:                    originalSpec.ElectricalConnectionPH,
+		ElectricalConnectionACDC:                  originalSpec.ElectricalConnectionACDC,
+		ElectricalConnectionAmperage:              originalSpec.ElectricalConnectionAmperage,
+		ElectricalConnectionPower:                 originalSpec.ElectricalConnectionPower,
+		ElectricalConnectionRotation:              originalSpec.ElectricalConnectionRotation,
+	}
+
+	return s.specificationRepo.Create(newSpec)
+}
+
+// copyBacnetObjectsForFieldDevice copies all BACnet objects from the original field device to the new field device
+func (s *ControlCabinetService) copyBacnetObjectsForFieldDevice(originalFieldDeviceID, newFieldDeviceID uuid.UUID) error {
+	// Get BACnet objects for original field device
+	bacnetObjects, err := s.bacnetObjectRepo.GetByFieldDeviceIDs([]uuid.UUID{originalFieldDeviceID})
+	if err != nil {
+		return err
+	}
+
+	// If no BACnet objects exist, nothing to copy
+	if len(bacnetObjects) == 0 {
+		return nil
+	}
+
+	// Copy each BACnet object
+	for _, originalObj := range bacnetObjects {
+		newObj := &domainFacility.BacnetObject{
+			TextFix:             originalObj.TextFix,
+			Description:         originalObj.Description,
+			GMSVisible:          originalObj.GMSVisible,
+			Optional:            originalObj.Optional,
+			TextIndividual:      originalObj.TextIndividual,
+			SoftwareType:        originalObj.SoftwareType,
+			SoftwareNumber:      originalObj.SoftwareNumber,
+			HardwareType:        originalObj.HardwareType,
+			HardwareQuantity:    originalObj.HardwareQuantity,
+			FieldDeviceID:       &newFieldDeviceID,
+			SoftwareReferenceID: originalObj.SoftwareReferenceID,
+			StateTextID:         originalObj.StateTextID,
+			NotificationClassID: originalObj.NotificationClassID,
+			AlarmDefinitionID:   originalObj.AlarmDefinitionID,
+		}
+
+		if err := s.bacnetObjectRepo.Create(newObj); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
