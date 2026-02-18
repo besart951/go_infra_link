@@ -64,6 +64,34 @@ func (s *ControlCabinetService) GetByIDs(ids []uuid.UUID) ([]domainFacility.Cont
 	return items, nil
 }
 
+func (s *ControlCabinetService) CopyByID(id uuid.UUID) (*domainFacility.ControlCabinet, error) {
+	original, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	baseNr := ""
+	if original.ControlCabinetNr != nil {
+		baseNr = strings.TrimSpace(*original.ControlCabinetNr)
+	}
+
+	nextNr, err := s.nextAvailableControlCabinetNr(original.BuildingID, baseNr)
+	if err != nil {
+		return nil, err
+	}
+
+	copyEntity := &domainFacility.ControlCabinet{
+		BuildingID:       original.BuildingID,
+		ControlCabinetNr: &nextNr,
+	}
+
+	if err := s.Create(copyEntity); err != nil {
+		return nil, err
+	}
+
+	return copyEntity, nil
+}
+
 func (s *ControlCabinetService) GetDeleteImpact(id uuid.UUID) (*domainFacility.ControlCabinetDeleteImpact, error) {
 	// Ensure cabinet exists
 	if _, err := s.GetByID(id); err != nil {
@@ -224,4 +252,19 @@ func (s *ControlCabinetService) ensureUnique(controlCabinet *domainFacility.Cont
 		return domain.NewValidationError().Add("controlcabinet.control_cabinet_nr", "control_cabinet_nr must be unique within the building")
 	}
 	return nil
+}
+
+func (s *ControlCabinetService) nextAvailableControlCabinetNr(buildingID uuid.UUID, base string) (string, error) {
+	for i := 1; i <= 9999; i++ {
+		candidate := nextIncrementedValue(base, i, 11)
+		exists, err := s.repo.ExistsControlCabinetNr(buildingID, candidate, nil)
+		if err != nil {
+			return "", err
+		}
+		if !exists {
+			return candidate, nil
+		}
+	}
+
+	return "", domain.ErrConflict
 }

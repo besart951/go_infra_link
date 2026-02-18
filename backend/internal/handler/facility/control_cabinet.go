@@ -109,6 +109,39 @@ func (h *ControlCabinetHandler) GetControlCabinetsByIDs(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.ControlCabinetBulkResponse{Items: toControlCabinetResponses(items)})
 }
 
+// CopyControlCabinet godoc
+// @Summary Copy a control cabinet
+// @Tags facility-control-cabinets
+// @Produce json
+// @Param id path string true "Control Cabinet ID"
+// @Success 201 {object} dto.ControlCabinetResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/control-cabinets/{id}/copy [post]
+func (h *ControlCabinetHandler) CopyControlCabinet(c *gin.Context) {
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	copyEntity, err := h.service.CopyByID(id)
+	if err != nil {
+		if respondLocalizedNotFoundIf(c, err, "facility.control_cabinet_not_found") {
+			return
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			respondLocalizedError(c, http.StatusConflict, "conflict", "facility.update_failed")
+			return
+		}
+		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		return
+	}
+
+	c.JSON(http.StatusCreated, toControlCabinetResponse(*copyEntity))
+}
+
 // GetControlCabinetDeleteImpact godoc
 // @Summary Preview delete impact for a control cabinet
 // @Tags facility-control-cabinets

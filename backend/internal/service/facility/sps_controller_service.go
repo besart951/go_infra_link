@@ -99,6 +99,98 @@ func (s *SPSControllerService) GetByIDs(ids []uuid.UUID) ([]domainFacility.SPSCo
 	return items, nil
 }
 
+func (s *SPSControllerService) CopyByID(id uuid.UUID) (*domainFacility.SPSController, error) {
+	original, err := s.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	nextDeviceName, err := s.nextAvailableDeviceName(original.ControlCabinetID, original.DeviceName)
+	if err != nil {
+		return nil, err
+	}
+
+	copyEntity := &domainFacility.SPSController{
+		ControlCabinetID:  original.ControlCabinetID,
+		GADevice:          nil,
+		DeviceName:        nextDeviceName,
+		DeviceDescription: original.DeviceDescription,
+		DeviceLocation:    original.DeviceLocation,
+		IPAddress:         nil,
+		Subnet:            original.Subnet,
+		Gateway:           original.Gateway,
+		Vlan:              original.Vlan,
+	}
+
+	if err := s.Create(copyEntity); err != nil {
+		return nil, err
+	}
+
+	originalSystemTypes, err := s.listSystemTypesBySPSControllerID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	newSystemTypeMap := make(map[uuid.UUID]uuid.UUID, len(originalSystemTypes))
+	if len(originalSystemTypes) > 0 {
+		systemTypesToCreate := make([]domainFacility.SPSControllerSystemType, 0, len(originalSystemTypes))
+		for _, item := range originalSystemTypes {
+			systemTypesToCreate = append(systemTypesToCreate, domainFacility.SPSControllerSystemType{
+				Number:       item.Number,
+				DocumentName: item.DocumentName,
+				SystemTypeID: item.SystemTypeID,
+			})
+		}
+
+		systemTypeMap, err := s.loadSystemTypes(systemTypesToCreate)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.assignSystemTypeNumbers(systemTypesToCreate, systemTypeMap); err != nil {
+			return nil, err
+		}
+
+		for idx, item := range systemTypesToCreate {
+			newSystemType := &domainFacility.SPSControllerSystemType{
+				Number:          item.Number,
+				DocumentName:    item.DocumentName,
+				SPSControllerID: copyEntity.ID,
+				SystemTypeID:    item.SystemTypeID,
+			}
+			if err := s.spsControllerSystemTyper.Create(newSystemType); err != nil {
+				return nil, err
+			}
+			newSystemTypeMap[originalSystemTypes[idx].ID] = newSystemType.ID
+		}
+	}
+
+	originalFieldDevices, err := s.listFieldDevicesBySPSControllerID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, originalFieldDevice := range originalFieldDevices {
+		newSystemTypeID, ok := newSystemTypeMap[originalFieldDevice.SPSControllerSystemTypeID]
+		if !ok {
+			continue
+		}
+
+		fieldDeviceCopy := &domainFacility.FieldDevice{
+			BMK:                       originalFieldDevice.BMK,
+			Description:               originalFieldDevice.Description,
+			ApparatNr:                 originalFieldDevice.ApparatNr,
+			SPSControllerSystemTypeID: newSystemTypeID,
+			SystemPartID:              originalFieldDevice.SystemPartID,
+			ApparatID:                 originalFieldDevice.ApparatID,
+		}
+		if err := s.fieldDeviceRepo.Create(fieldDeviceCopy); err != nil {
+			return nil, err
+		}
+	}
+
+	return copyEntity, nil
+}
+
 func (s *SPSControllerService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSController], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
 	return s.repo.GetPaginatedList(domain.PaginationParams{
@@ -483,6 +575,92 @@ func (s *SPSControllerService) ensureUnique(spsController *domainFacility.SPSCon
 		return ve
 	}
 	return nil
+}
+
+func (s *SPSControllerService) nextAvailableDeviceName(controlCabinetID uuid.UUID, base string) (string, error) {
+	for i := 1; i <= 9999; i++ {
+		candidate := nextIncrementedValue(base, i, 100)
+		taken, err := s.deviceNameExistsInControlCabinet(controlCabinetID, candidate, nil)
+		if err != nil {
+			return "", err
+		}
+		if !taken {
+			return candidate, nil
+		}
+	}
+
+	return "", domain.ErrConflict
+}
+
+func (s *SPSControllerService) deviceNameExistsInControlCabinet(controlCabinetID uuid.UUID, deviceName string, excludeID *uuid.UUID) (bool, error) {
+	page := 1
+	for {
+		result, err := s.repo.GetPaginatedListByControlCabinetID(controlCabinetID, domain.PaginationParams{
+			Page:  page,
+			Limit: 500,
+		})
+		if err != nil {
+			return false, err
+		}
+
+		for i := range result.Items {
+			item := result.Items[i]
+			if excludeID != nil && item.ID == *excludeID {
+				continue
+			}
+			if strings.EqualFold(strings.TrimSpace(item.DeviceName), strings.TrimSpace(deviceName)) {
+				return true, nil
+			}
+		}
+
+		if page >= result.TotalPages || len(result.Items) == 0 {
+			break
+		}
+		page++
+	}
+
+	return false, nil
+}
+
+func (s *SPSControllerService) listSystemTypesBySPSControllerID(spsControllerID uuid.UUID) ([]domainFacility.SPSControllerSystemType, error) {
+	items := make([]domainFacility.SPSControllerSystemType, 0)
+	page := 1
+
+	for {
+		result, err := s.spsControllerSystemTyper.GetPaginatedListBySPSControllerID(spsControllerID, domain.PaginationParams{Page: page, Limit: 500})
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, result.Items...)
+		if page >= result.TotalPages || len(result.Items) == 0 {
+			break
+		}
+		page++
+	}
+
+	return items, nil
+}
+
+func (s *SPSControllerService) listFieldDevicesBySPSControllerID(spsControllerID uuid.UUID) ([]domainFacility.FieldDevice, error) {
+	items := make([]domainFacility.FieldDevice, 0)
+	page := 1
+	filters := domainFacility.FieldDeviceFilterParams{SPSControllerID: &spsControllerID}
+
+	for {
+		result, err := s.fieldDeviceRepo.GetPaginatedListWithFilters(domain.PaginationParams{Page: page, Limit: 500}, filters)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, result.Items...)
+		if page >= result.TotalPages || len(result.Items) == 0 {
+			break
+		}
+		page++
+	}
+
+	return items, nil
 }
 
 func isValidGADevice(value string) bool {

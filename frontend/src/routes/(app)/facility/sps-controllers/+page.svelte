@@ -96,7 +96,20 @@
 			addToast($t('facility.sps_controller_deleted'), 'success');
 			spsControllersStore.reload();
 		} catch (err) {
-			addToast(err instanceof Error ? err.message : $t('facility.delete_sps_controller_failed'), 'error');
+			addToast(
+				err instanceof Error ? err.message : $t('facility.delete_sps_controller_failed'),
+				'error'
+			);
+		}
+	}
+
+	async function handleDuplicate(item: SPSController) {
+		try {
+			await manageSPSController.copy(item.id);
+			addToast($t('facility.sps_controller_copied'), 'success');
+			spsControllersStore.reload();
+		} catch (err) {
+			addToast(err instanceof Error ? err.message : $t('facility.copy_failed'), 'error');
 		}
 	}
 
@@ -191,15 +204,20 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(controller.device_name ?? controller.id)}>
-						{$t('facility.copy')}
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={() => goto(`/facility/sps-controllers/${controller.id}`)}>
-						{$t('facility.view')}
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={() => handleEdit(controller)}>{$t('common.edit')}</DropdownMenu.Item>
-					<DropdownMenu.Separator />
-					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(controller)}>
-						{$t('common.delete')}
+							{$t('facility.copy')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleDuplicate(controller)}>
+							{$t('facility.duplicate')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => goto(`/facility/sps-controllers/${controller.id}`)}>
+							{$t('facility.view')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleEdit(controller)}
+							>{$t('common.edit')}</DropdownMenu.Item
+						>
+						<DropdownMenu.Separator />
+						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(controller)}>
+							{$t('common.delete')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

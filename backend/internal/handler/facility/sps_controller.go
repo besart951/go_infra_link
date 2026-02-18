@@ -110,6 +110,39 @@ func (h *SPSControllerHandler) GetSPSControllersByIDs(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.SPSControllerBulkResponse{Items: toSPSControllerResponses(items)})
 }
 
+// CopySPSController godoc
+// @Summary Copy an SPS controller
+// @Tags facility-sps-controllers
+// @Produce json
+// @Param id path string true "SPS Controller ID"
+// @Success 201 {object} dto.SPSControllerResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/facility/sps-controllers/{id}/copy [post]
+func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	copyEntity, err := h.service.CopyByID(id)
+	if err != nil {
+		if respondLocalizedNotFoundIf(c, err, "facility.sps_controller_not_found") {
+			return
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			respondLocalizedError(c, http.StatusConflict, "conflict", "facility.update_failed")
+			return
+		}
+		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		return
+	}
+
+	c.JSON(http.StatusCreated, toSPSControllerResponse(*copyEntity))
+}
+
 // ListSPSControllers godoc
 // @Summary List SPS controllers with pagination
 // @Tags facility-sps-controllers

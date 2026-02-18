@@ -127,6 +127,16 @@
 		}
 	}
 
+	async function handleDuplicate(item: ControlCabinet) {
+		try {
+			await manageControlCabinet.copy(item.id);
+			addToast($t('facility.control_cabinet_copied'), 'success');
+			controlCabinetsStore.reload();
+		} catch (err) {
+			addToast(err instanceof Error ? err.message : $t('facility.copy_failed'), 'error');
+		}
+	}
+
 	async function handleCopy(value: string) {
 		try {
 			await navigator.clipboard.writeText(value);
@@ -207,6 +217,9 @@
 					<DropdownMenu.Content align="end" class="w-40">
 						<DropdownMenu.Item onclick={() => handleCopy(cabinet.control_cabinet_nr ?? cabinet.id)}>
 							{$t('facility.copy')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Item onclick={() => handleDuplicate(cabinet)}>
+							{$t('facility.duplicate')}
 						</DropdownMenu.Item>
 						<DropdownMenu.Item onclick={() => goto(`/facility/control-cabinets/${cabinet.id}`)}>
 							{$t('facility.view')}

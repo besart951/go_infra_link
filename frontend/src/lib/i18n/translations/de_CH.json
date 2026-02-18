@@ -411,6 +411,8 @@
       "update_failed": "Ein unerwarteter Fehler ist aufgetreten"
     },
     "copy": "Kopieren",
+    "duplicate": "Duplizieren",
+    "copy_failed": "Kopieren fehlgeschlagen",
     "view": "Anzeigen",
     "control_cabinets": "Schaltschränke",
     "control_cabinets_title": "Schaltschränke",
@@ -419,6 +421,7 @@
     "search_control_cabinets": "Schaltschränke suchen...",
     "no_control_cabinets_found": "Keine Schaltschränke gefunden. Erstellen Sie Ihren ersten Schaltschrank, um zu beginnen.",
     "control_cabinet_deleted": "Schaltschrank gelöscht",
+    "control_cabinet_copied": "Schaltschrank kopiert",
     "delete_control_cabinet_confirm": "Schaltschrank löschen",
     "delete_control_cabinet_message": "Dadurch werden auch {count} SPS-Regler gelöscht. Fortfahren?",
     "confirm_cascading_delete": "Kaskadierende Löschung bestätigen",
@@ -464,6 +467,7 @@
     "new_sps_controller": "Neuer SPS-Regler",
     "search_sps_controllers": "SPS-Regler suchen...",
     "no_sps_controllers_found": "Keine SPS-Regler gefunden. Erstellen Sie Ihren ersten SPS-Regler, um zu beginnen.",
+    "sps_controller_copied": "SPS-Regler kopiert",
     "selects": {
       "apparat": "Apparat auswählen...",
       "building": "Gebäude auswählen...",
