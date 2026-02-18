@@ -19,7 +19,7 @@
 	const sidebar = useSidebar();
 
 	const logout = async () => {
-		await goto('/api/auth/logout');
+		await goto('/logout');
 	};
 
 	onMount(() => {

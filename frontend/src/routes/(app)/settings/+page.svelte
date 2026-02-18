@@ -59,7 +59,7 @@
 					class="h-auto justify-start gap-3 px-4 py-3"
 					onclick={() => setThemePreference(opt.value)}
 				>
-					<svelte:component this={opt.icon} />
+					<opt.icon />
 					<span class="flex flex-col items-start gap-0.5 text-left">
 						<span class="leading-tight">{opt.label}</span>
 						<span

@@ -12,7 +12,7 @@
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import { alarmDefinitionsStore } from '$lib/stores/list/entityStores.js';
 	import type { AlarmDefinition } from '$lib/domain/facility/index.js';
-	import AlarmDefinitionForm from '$lib/components/facility/AlarmDefinitionForm.svelte';
+	import AlarmDefinitionForm from '$lib/components/facility/forms/AlarmDefinitionForm.svelte';
 	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { alarmDefinitionRepository } from '$lib/infrastructure/api/alarmDefinitionRepository.js';
 	const manageAlarmDefinition = new ManageEntityUseCase(alarmDefinitionRepository);

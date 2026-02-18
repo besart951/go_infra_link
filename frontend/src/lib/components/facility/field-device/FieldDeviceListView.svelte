@@ -34,14 +34,13 @@
 		projectId?: string;
 	}
 
-	const props: Props = $props();
+	const { projectId }: Props = $props();
 
 	// Create a store instance scoped to this component (optionally project-scoped).
-	const projectId = props.projectId;
-	const store = createFieldDeviceStore(300, projectId);
+	const store = createFieldDeviceStore(300, () => projectId);
 
 	// Editing composable
-	const editing = useFieldDeviceEditing(projectId);
+	const editing = useFieldDeviceEditing(() => projectId);
 
 	// Browser warning for unsaved changes
 	useUnsavedChangesWarning(() => editing.hasUnsavedChanges);

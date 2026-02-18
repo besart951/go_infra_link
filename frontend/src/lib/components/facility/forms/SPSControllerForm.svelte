@@ -2,8 +2,8 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import ControlCabinetSelect from './ControlCabinetSelect.svelte';
-	import SystemTypeSelect from './SystemTypeSelect.svelte';
+	import ControlCabinetSelect from '../selects/ControlCabinetSelect.svelte';
+	import SystemTypeSelect from '../selects/SystemTypeSelect.svelte';
 	import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
 	import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
 	import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';

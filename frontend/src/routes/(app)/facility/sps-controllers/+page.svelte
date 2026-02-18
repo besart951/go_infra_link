@@ -9,7 +9,7 @@
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { spsControllersStore } from '$lib/stores/list/entityStores.js';
 	import type { SPSController } from '$lib/domain/facility/index.js';
-	import SPSControllerForm from '$lib/components/facility/SPSControllerForm.svelte';
+	import SPSControllerForm from '$lib/components/facility/forms/SPSControllerForm.svelte';
 	import { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';

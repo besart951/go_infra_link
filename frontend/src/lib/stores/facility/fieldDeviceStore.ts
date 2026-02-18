@@ -30,6 +30,8 @@ export interface FieldDeviceListState {
 	error: string | null;
 }
 
+type ProjectIdInput = string | undefined | (() => string | undefined);
+
 /**
  * Backend response format
  */
@@ -45,7 +47,7 @@ interface BackendListResponse {
  * @param pageSize - Number of items per page
  * @param projectId - Optional project ID to scope field devices to a project
  */
-export function createFieldDeviceStore(pageSize = 300, projectId?: string) {
+export function createFieldDeviceStore(pageSize = 300, projectId?: ProjectIdInput) {
 	const initialState: FieldDeviceListState = {
 		items: [],
 		total: 0,
@@ -107,7 +109,8 @@ export function createFieldDeviceStore(pageSize = 300, projectId?: string) {
 				searchParams.set('sps_controller_system_type_id', state.filters.spsControllerSystemTypeId);
 			}
 
-			const effectiveProjectId = projectId ?? state.filters.projectId;
+			const resolvedProjectId = typeof projectId === 'function' ? projectId() : projectId;
+			const effectiveProjectId = resolvedProjectId ?? state.filters.projectId;
 			if (effectiveProjectId) {
 				searchParams.set('project_id', effectiveProjectId);
 			}

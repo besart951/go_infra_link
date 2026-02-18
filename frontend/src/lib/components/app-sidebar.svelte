@@ -9,7 +9,7 @@
 	import { createTranslator } from '$lib/i18n/translator';
 
 	// Icons
-	import {UsersIcon, Building2Icon, FolderKanbanIcon} from '@lucide/svelte';
+	import {UsersIcon, Building2Icon, FolderKanbanIcon, SheetIcon} from '@lucide/svelte';
 
 	const t = createTranslator();
 
@@ -76,6 +76,12 @@
 				{ title: $t('navigation.projects'), url: '/projects' },
 				{ title: $t('phase.phases'), url: '/projects/phases' }
 			]
+		},
+		{
+			title: $t('navigation.excel_importer'),
+			url: '/excel',
+			icon: SheetIcon	,
+			isActive: $page.url.pathname.startsWith('/excel')
 		}
 	]);
 

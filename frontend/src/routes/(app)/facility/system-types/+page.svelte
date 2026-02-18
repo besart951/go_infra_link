@@ -12,7 +12,7 @@
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import { systemTypesStore } from '$lib/stores/list/entityStores.js';
 	import type { SystemType } from '$lib/domain/facility/index.js';
-	import SystemTypeForm from '$lib/components/facility/SystemTypeForm.svelte';
+	import SystemTypeForm from '$lib/components/facility/forms/SystemTypeForm.svelte';
 	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
 	const manageSystemType = new ManageEntityUseCase(systemTypeRepository);

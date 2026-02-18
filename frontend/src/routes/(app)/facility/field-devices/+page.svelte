@@ -1,5 +1,5 @@
 <script lang="ts">
-	import FieldDeviceListView from '$lib/components/facility/FieldDeviceListView.svelte';
+	import FieldDeviceListView from '$lib/components/facility/field-device/FieldDeviceListView.svelte';
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();

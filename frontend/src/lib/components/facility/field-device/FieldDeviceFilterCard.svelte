@@ -2,10 +2,10 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { X } from '@lucide/svelte';
-	import BuildingSelect from '../BuildingSelect.svelte';
-	import ControlCabinetSelect from '../ControlCabinetSelect.svelte';
-	import SPSControllerSelect from '../SPSControllerSelect.svelte';
-	import SPSControllerSystemTypeSelect from '../SPSControllerSystemTypeSelect.svelte';
+	import BuildingSelect from '../selects/BuildingSelect.svelte';
+	import ControlCabinetSelect from '../selects/ControlCabinetSelect.svelte';
+	import SPSControllerSelect from '../selects/SPSControllerSelect.svelte';
+	import SPSControllerSystemTypeSelect from '../selects/SPSControllerSystemTypeSelect.svelte';
 	import ProjectSelect from '$lib/components/project/ProjectSelect.svelte';
 	import type { FieldDeviceFilters } from '$lib/stores/facility/fieldDeviceStore.js';
 

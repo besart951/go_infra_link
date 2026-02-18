@@ -12,7 +12,7 @@
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import { apparatsStore } from '$lib/stores/list/entityStores.js';
 	import type { Apparat } from '$lib/domain/facility/index.js';
-	import ApparatForm from '$lib/components/facility/ApparatForm.svelte';
+	import ApparatForm from '$lib/components/facility/forms/ApparatForm.svelte';
 	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
 	const manageApparat = new ManageEntityUseCase(apparatRepository);

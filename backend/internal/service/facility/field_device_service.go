@@ -554,6 +554,9 @@ func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.
 	if fieldDevice.ApparatID == uuid.Nil {
 		ve = ve.Add("fielddevice.apparat_id", "apparat_id is required")
 	}
+	if fieldDevice.SystemPartID == uuid.Nil {
+		ve = ve.Add("fielddevice.system_part_id", "system_part_id is required")
+	}
 	if len(ve.Fields) > 0 {
 		return ve
 	}
@@ -974,17 +977,6 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 		if a.ApparatNr != b.ApparatNr {
 			return false
 		}
-
-		// System Part Logic (matching Repo implementation)
-		// If A has no part (Nil), it effectively matches ANY B (wildcard behavior in validation).
-		if a.SystemPartID == uuid.Nil {
-			return true
-		}
-		// If A has a part, it only matches if B has the SAME part.
-		// (A with part X does not conflict with B with part Nil in the SQL query).
-		if b.SystemPartID == uuid.Nil {
-			return false
-		}
 		return a.SystemPartID == b.SystemPartID
 	}
 
@@ -1029,7 +1021,7 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 				baseUpdateSuccess = false
 				if ve, ok := domain.AsValidationError(err); ok {
 					for field, msg := range ve.Fields {
-						phaseErrors["fielddevice."+field] = msg
+						phaseErrors[field] = msg
 					}
 				} else {
 					phaseErrors["fielddevice"] = err.Error()
@@ -1058,7 +1050,7 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 					}
 					if isApparatNrConflict(proposed, otherProposed) {
 						baseUpdateSuccess = false
-						phaseErrors["fielddevice.apparat_nr"] = fmt.Sprintf("apparatnummer ist bereits vergeben")
+						phaseErrors["fielddevice.apparat_nr"] = "apparatnummer ist bereits vergeben"
 						break
 					}
 				}
@@ -1069,7 +1061,7 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 						baseUpdateSuccess = false
 						if ve, ok := domain.AsValidationError(err); ok {
 							for field, msg := range ve.Fields {
-								phaseErrors["fielddevice."+field] = msg
+								phaseErrors[field] = msg
 							}
 						} else {
 							phaseErrors["fielddevice.apparat_nr"] = err.Error()

@@ -511,7 +511,8 @@
     "settings": "Einstellungen",
     "account": "Konto",
     "logout": "Abmelden",
-    "help": "Hilfe"
+    "help": "Hilfe",
+    "excel_importer": "Excel-Importer"
   },
   "pages": {
     "facility_management_title": "Anlagenverwaltung",

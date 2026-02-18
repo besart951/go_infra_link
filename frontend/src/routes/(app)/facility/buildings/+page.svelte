@@ -12,7 +12,7 @@
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import { buildingsStore } from '$lib/stores/list/entityStores.js';
 	import type { Building } from '$lib/domain/facility/index.js';
-	import BuildingForm from '$lib/components/facility/BuildingForm.svelte';
+	import BuildingForm from '$lib/components/facility/forms/BuildingForm.svelte';
 	import { ManageBuildingUseCase } from '$lib/application/useCases/facility/manageBuildingUseCase.js';
 	import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
 	const manageBuilding = new ManageBuildingUseCase(buildingRepository);

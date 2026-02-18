@@ -27,7 +27,7 @@
 	import type { User } from '$lib/domain/user/index.js';
 	import type { ObjectData } from '$lib/domain/facility/index.js';
 	import { ArrowLeft, Pencil } from '@lucide/svelte';
-	import ObjectDataForm from '$lib/components/facility/ObjectDataForm.svelte';
+	import ObjectDataForm from '$lib/components/facility/forms/ObjectDataForm.svelte';
 
 	const projectId = $derived($page.params.id ?? '');
 
@@ -210,10 +210,12 @@
 					limit: 100,
 					search: objectDataSearch.trim() || undefined
 				}),
-				objectDataRepository.list({
-					pagination: { page: 1, pageSize: 100 },
-					search: { text: objectDataSearch.trim() }
-				}).then((res) => ({ items: res.items }))
+				objectDataRepository
+					.list({
+						pagination: { page: 1, pageSize: 100 },
+						search: { text: objectDataSearch.trim() }
+					})
+					.then((res) => ({ items: res.items }))
 			]);
 			const projectItems = projectRes.items ?? [];
 			const templateItems = templateRes.items ?? [];

@@ -12,7 +12,7 @@
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import { notificationClassesStore } from '$lib/stores/list/entityStores.js';
 	import type { NotificationClass } from '$lib/domain/facility/index.js';
-	import NotificationClassForm from '$lib/components/facility/NotificationClassForm.svelte';
+	import NotificationClassForm from '$lib/components/facility/forms/NotificationClassForm.svelte';
 	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { notificationClassRepository } from '$lib/infrastructure/api/notificationClassRepository.js';
 	const manageNotificationClass = new ManageEntityUseCase(notificationClassRepository);

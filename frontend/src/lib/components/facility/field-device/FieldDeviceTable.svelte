@@ -5,7 +5,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { ArrowDown, ArrowUp, Settings2 } from '@lucide/svelte';
 	import FieldDeviceTableRow from './FieldDeviceTableRow.svelte';
-	import BacnetObjectsEditor from '../BacnetObjectsEditor.svelte';
+	import BacnetObjectsEditor from '../bacnet/BacnetObjectsEditor.svelte';
 	import type { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
 	import type { FieldDevice, Apparat, SystemPart } from '$lib/domain/facility/index.js';
 
@@ -392,17 +392,6 @@
 							class="bg-purple-50/50 hover:bg-purple-50/70 dark:bg-purple-950/20 dark:hover:bg-purple-950/30"
 						>
 							<Table.Cell colspan={columnCount} class="p-0">
-								<div class="border-l-4 border-l-purple-500 py-4 pr-4 pl-14">
-									<div class="mb-3 flex items-center gap-2">
-										<span
-											class="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900 dark:text-purple-300"
-										>
-											BACnet Objects
-										</span>
-										<span class="text-xs text-muted-foreground">
-											{device.bacnet_objects?.length || 0} object(s)
-										</span>
-									</div>
 									<BacnetObjectsEditor
 										bacnetObjects={device.bacnet_objects ?? []}
 										pendingEdits={editing.getBacnetPendingEdits(device.id) ?? new Map()}
@@ -412,7 +401,6 @@
 											editing.queueBacnetEdit(device.id, objectId, field, value);
 										}}
 									/>
-								</div>
 							</Table.Cell>
 						</Table.Row>
 					{/if}

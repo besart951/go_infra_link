@@ -10,9 +10,9 @@
 	import { addToast } from '$lib/components/toast.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';
-	import ControlCabinetForm from '$lib/components/facility/ControlCabinetForm.svelte';
-	import SPSControllerForm from '$lib/components/facility/SPSControllerForm.svelte';
-	import FieldDeviceListView from '$lib/components/facility/FieldDeviceListView.svelte';
+	import ControlCabinetForm from '$lib/components/facility/forms/ControlCabinetForm.svelte';
+	import SPSControllerForm from '$lib/components/facility/forms/SPSControllerForm.svelte';
+	import FieldDeviceListView from '$lib/components/facility/field-device/FieldDeviceListView.svelte';
 	import {
 		getProject,
 		listProjectControlCabinets,

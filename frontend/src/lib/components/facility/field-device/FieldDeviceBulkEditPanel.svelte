@@ -5,8 +5,8 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { ChevronDown, ChevronRight, CopyCheck, Eraser } from '@lucide/svelte';
 	import { addToast } from '$lib/components/toast.svelte';
-	import TableApparatSelect from '../TableApparatSelect.svelte';
-	import TableSystemPartSelect from '../TableSystemPartSelect.svelte';
+	import TableApparatSelect from '../table-selects/TableApparatSelect.svelte';
+	import TableSystemPartSelect from '../table-selects/TableSystemPartSelect.svelte';
 	import type { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
 	import type {
 		Apparat,

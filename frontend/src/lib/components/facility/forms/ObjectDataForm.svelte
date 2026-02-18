@@ -9,8 +9,8 @@
 	import type { ObjectData, BacnetObjectInput } from '$lib/domain/facility/index.js';
 
 	import { Plus } from '@lucide/svelte';
-	import BacnetObjectRow from './BacnetObjectRow.svelte';
-	import ApparatMultiSelect from './ApparatMultiSelect.svelte';
+	import BacnetObjectRow from '../bacnet/BacnetObjectRow.svelte';
+	import ApparatMultiSelect from '../selects/ApparatMultiSelect.svelte';
 
 	interface Props {
 		initialData?: ObjectData;

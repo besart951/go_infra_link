@@ -15,7 +15,7 @@
 	import { ManageObjectDataUseCase } from '$lib/application/useCases/facility/manageObjectDataUseCase.js';
 	import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
 	const manageObjectData = new ManageObjectDataUseCase(objectDataRepository);
-	import ObjectDataForm from '$lib/components/facility/ObjectDataForm.svelte';
+	import ObjectDataForm from '$lib/components/facility/forms/ObjectDataForm.svelte';
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();

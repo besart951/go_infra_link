@@ -6,8 +6,8 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { ChevronDown, ChevronRight } from '@lucide/svelte';
 	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
-	import TableApparatSelect from '../TableApparatSelect.svelte';
-	import TableSystemPartSelect from '../TableSystemPartSelect.svelte';
+	import TableApparatSelect from '../table-selects/TableApparatSelect.svelte';
+	import TableSystemPartSelect from '../table-selects/TableSystemPartSelect.svelte';
 	import type { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
 	import type { FieldDevice, Apparat, SystemPart } from '$lib/domain/facility/index.js';
 

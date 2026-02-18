@@ -9,7 +9,7 @@
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { controlCabinetsStore } from '$lib/stores/list/entityStores.js';
 	import type { ControlCabinet } from '$lib/domain/facility/index.js';
-	import ControlCabinetForm from '$lib/components/facility/ControlCabinetForm.svelte';
+	import ControlCabinetForm from '$lib/components/facility/forms/ControlCabinetForm.svelte';
 	import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
 	import { addToast } from '$lib/components/toast.svelte';
 	import { confirm } from '$lib/stores/confirm-dialog.js';

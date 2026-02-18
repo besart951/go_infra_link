@@ -8,7 +8,7 @@
 	import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
 	const manageApparat = new ManageEntityUseCase(apparatRepository);
 	import { useFormState } from '$lib/hooks/useFormState.svelte.js';
-	import SystemPartMultiSelect from './SystemPartMultiSelect.svelte';
+	import SystemPartMultiSelect from '../selects/SystemPartMultiSelect.svelte';
 
 	interface ApparatFormProps {
 		initialData?: Apparat;

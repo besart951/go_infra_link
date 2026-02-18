@@ -37,8 +37,13 @@ interface PersistedEditingState {
 
 const STORAGE_KEY_PREFIX = 'fielddevice-editing';
 
-export function useFieldDeviceEditing(projectId?: string) {
-	const storageKey = projectId ? `${STORAGE_KEY_PREFIX}-${projectId}` : STORAGE_KEY_PREFIX;
+type ProjectIdInput = string | undefined | (() => string | undefined);
+
+export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
+	const resolvedProjectId = typeof projectId === 'function' ? projectId() : projectId;
+	const storageKey = resolvedProjectId
+		? `${STORAGE_KEY_PREFIX}-${resolvedProjectId}`
+		: STORAGE_KEY_PREFIX;
 
 	// Load persisted state on initialization
 	const persistedState = loadPersistedState(storageKey);

@@ -12,7 +12,7 @@
 	import { confirm } from '$lib/stores/confirm-dialog.js';
 	import { systemPartsStore } from '$lib/stores/list/entityStores.js';
 	import type { SystemPart } from '$lib/domain/facility/index.js';
-	import SystemPartForm from '$lib/components/facility/SystemPartForm.svelte';
+	import SystemPartForm from '$lib/components/facility/forms/SystemPartForm.svelte';
 	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
 	const manageSystemPart = new ManageEntityUseCase(systemPartRepository);
