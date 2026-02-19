@@ -69,12 +69,11 @@ function buildHardwareLabel(prefix: string, value: ExcelValue | undefined): stri
 	if (value === null || value === undefined || value === '') return '';
 
 	const numeric = Number(value);
-	if (!Number.isNaN(numeric) && Number.isFinite(numeric)) {
+	if (!Number.isNaN(numeric) && Number.isFinite(numeric) && numeric !== 0) {
 		const normalized = Math.trunc(numeric);
 		return `${prefix}${String(normalized).padStart(2, '0')}`;
 	}
 
-	if (value === true) return prefix;
 	const text = toCellString(value).trim();
 	if (text.length === 0) return '';
 
@@ -83,7 +82,7 @@ function buildHardwareLabel(prefix: string, value: ExcelValue | undefined): stri
 		return `${prefix}${digits[0].padStart(2, '0')}`;
 	}
 
-	return prefix;
+	return '';
 }
 
 function mapHardwareLabel(row: ExcelRow): string {
@@ -91,10 +90,14 @@ function mapHardwareLabel(row: ExcelRow): string {
 	const aq = row[42];
 	const ar = row[43];
 	const as = row[44];
-	if (ap) return buildHardwareLabel('DO', ap);
-	if (aq) return buildHardwareLabel('AO', aq);
-	if (ar) return buildHardwareLabel('DI', ar);
-	if (as) return buildHardwareLabel('AI', as);
+	const apLabel = buildHardwareLabel('DO', ap);
+	if (apLabel.length > 0) return apLabel;
+	const aqLabel = buildHardwareLabel('AO', aq);
+	if (aqLabel.length > 0) return aqLabel;
+	const arLabel = buildHardwareLabel('DI', ar);
+	if (arLabel.length > 0) return arLabel;
+	const asLabel = buildHardwareLabel('AI', as);
+	if (asLabel.length > 0) return asLabel;
 	return '';
 }
 
@@ -109,7 +112,7 @@ function createBacnetObject(row: ExcelRow, prefix: string, isOptional: boolean):
 		is_optional: isOptional,
 		text_individual: toCellString(row[17]).trim(),
 		software_type: alValue.substring(0, 2),
-		software_number: alValue.slice(-2),
+		software_number: alValue.slice(2),
 		hardware_label: mapHardwareLabel(row),
 		software_reference_label: toCellString(row[38]).trim(),
 		state_text_label: toCellString(row[40]).trim(),

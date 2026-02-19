@@ -36,8 +36,8 @@ type BacnetObjectInput struct {
 	SoftwareType   string `json:"software_type" binding:"required"`
 	SoftwareNumber int    `json:"software_number" binding:"required,min=0,max=65535"`
 
-	HardwareType     string `json:"hardware_type" binding:"required"`
-	HardwareQuantity int    `json:"hardware_quantity" binding:"required,min=1,max=255"`
+	HardwareType     string `json:"hardware_type" binding:"omitempty"`
+	HardwareQuantity int    `json:"hardware_quantity" binding:"omitempty,min=0,max=255"`
 
 	SoftwareReferenceID *uuid.UUID `json:"software_reference_id"`
 	StateTextID         *uuid.UUID `json:"state_text_id"`

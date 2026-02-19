@@ -3,6 +3,7 @@ package facility
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -113,22 +114,25 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 
 func validateObjectDataBacnetInputs(inputs []dto.BacnetObjectInput) error {
 	ve := domain.NewValidationError()
-	seen := make(map[string]struct{}, len(inputs))
+	seenSoftware := make(map[string]struct{}, len(inputs))
 
 	for i := range inputs {
 		input := inputs[i]
 		textFix := strings.TrimSpace(input.TextFix)
 		if textFix == "" {
 			ve = ve.Add("objectdata.bacnetobject.textfix", "textfix is required")
-		} else {
-			if _, exists := seen[textFix]; exists {
-				ve = ve.Add("objectdata.bacnetobject.textfix", "textfix must be unique within the object data")
-			} else {
-				seen[textFix] = struct{}{}
-			}
 		}
-		if strings.TrimSpace(input.SoftwareType) == "" {
+
+		softwareType := strings.ToLower(strings.TrimSpace(input.SoftwareType))
+		if softwareType == "" {
 			ve = ve.Add("objectdata.bacnetobject.software_type", "software_type is required")
+		} else {
+			softwareKey := softwareType + ":" + strconv.Itoa(input.SoftwareNumber)
+			if _, exists := seenSoftware[softwareKey]; exists {
+				ve = ve.Add("objectdata.bacnetobject.software", "software_type + software_number must be unique within the object data")
+			} else {
+				seenSoftware[softwareKey] = struct{}{}
+			}
 		}
 	}
 

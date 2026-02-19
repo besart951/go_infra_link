@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -49,6 +50,29 @@ func (s *BacnetObjectService) ensureTextFixUniqueForObjectData(objectDataID uuid
 		}
 		if it.TextFix == textFix {
 			return domain.NewValidationError().Add("objectdata.bacnetobject.textfix", "textfix must be unique within the object data")
+		}
+	}
+	return nil
+}
+
+func (s *BacnetObjectService) ensureSoftwareUniqueForObjectData(objectDataID uuid.UUID, softwareType domainFacility.BacnetSoftwareType, softwareNumber uint16, excludeID *uuid.UUID) error {
+	ids, err := s.objectDataRepo.GetBacnetObjectIDs(objectDataID)
+	if err != nil {
+		return err
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	items, err := s.repo.GetByIds(ids)
+	if err != nil {
+		return err
+	}
+	for _, it := range items {
+		if excludeID != nil && it.ID == *excludeID {
+			continue
+		}
+		if strings.EqualFold(string(it.SoftwareType), string(softwareType)) && it.SoftwareNumber == softwareNumber {
+			return domain.NewValidationError().Add("objectdata.bacnetobject.software", "software_type + software_number must be unique within the object data")
 		}
 	}
 	return nil
@@ -129,7 +153,7 @@ func (s *BacnetObjectService) CreateWithParent(bacnetObject *domainFacility.Bacn
 		return domain.ErrNotFound
 	}
 
-	if err := s.ensureTextFixUniqueForObjectData(*objectDataID, bacnetObject.TextFix, nil); err != nil {
+	if err := s.ensureSoftwareUniqueForObjectData(*objectDataID, bacnetObject.SoftwareType, bacnetObject.SoftwareNumber, nil); err != nil {
 		return err
 	}
 
@@ -163,7 +187,7 @@ func (s *BacnetObjectService) Update(bacnetObject *domainFacility.BacnetObject, 
 	}
 
 	if objectDataID != nil {
-		if err := s.ensureTextFixUniqueForObjectData(*objectDataID, bacnetObject.TextFix, &bacnetObject.ID); err != nil {
+		if err := s.ensureSoftwareUniqueForObjectData(*objectDataID, bacnetObject.SoftwareType, bacnetObject.SoftwareNumber, &bacnetObject.ID); err != nil {
 			return err
 		}
 	}
@@ -203,10 +227,11 @@ func (s *BacnetObjectService) ReplaceForObjectData(objectDataID uuid.UUID, input
 		if err := s.validateRequiredFields(bo, "objectdata.bacnetobject"); err != nil {
 			return err
 		}
-		if _, exists := seen[bo.TextFix]; exists {
-			return domain.NewValidationError().Add("objectdata.bacnetobject.textfix", "textfix must be unique within the object data")
+		softwareKey := strings.ToLower(strings.TrimSpace(string(bo.SoftwareType))) + ":" + strconv.FormatUint(uint64(bo.SoftwareNumber), 10)
+		if _, exists := seen[softwareKey]; exists {
+			return domain.NewValidationError().Add("objectdata.bacnetobject.software", "software_type + software_number must be unique within the object data")
 		}
-		seen[bo.TextFix] = struct{}{}
+		seen[softwareKey] = struct{}{}
 	}
 
 	if err := s.objectDataBacnetStore.DeleteByObjectDataID(objectDataID); err != nil {

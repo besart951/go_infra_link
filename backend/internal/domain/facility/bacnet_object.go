@@ -73,6 +73,7 @@ const (
 type BacnetHardwareType string
 
 const (
+	BacnetHardwareTypeEMPTY BacnetHardwareType = ""
 	BacnetHardwareTypeDO BacnetHardwareType = "do"
 	BacnetHardwareTypeAO BacnetHardwareType = "ao"
 	BacnetHardwareTypeDI BacnetHardwareType = "di"
