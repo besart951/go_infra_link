@@ -23,10 +23,7 @@ Das Modell unten ist normalisiert, versionierbar und deckt die genannten Alarmf�
   - `id UUID PK`
   - `code VARCHAR(80) UNIQUE NOT NULL`
   - `name VARCHAR(120) NOT NULL`
-  - `description TEXT NULL`
-  - `version INT NOT NULL DEFAULT 1`
-  - `is_active BOOLEAN NOT NULL DEFAULT TRUE`
-  - `created_at`, `updated_at`, `deleted_at`
+  - `created_at`, `updated_at`,
 
 #### `alarm_fields`
 
@@ -38,8 +35,7 @@ Das Modell unten ist normalisiert, versionierbar und deckt die genannten Alarmf�
   - `data_type VARCHAR(30) NOT NULL`
     - Werte: `number`, `integer`, `boolean`, `string`, `enum`, `duration`, `state_map`, `json`
   - `default_unit_code VARCHAR(30) NULL`
-  - `description TEXT NULL`
-  - `created_at`, `updated_at`, `deleted_at`
+  - `created_at`, `updated_at`,
 
 #### `units`
 
@@ -64,7 +60,7 @@ Das Modell unten ist normalisiert, versionierbar und deckt die genannten Alarmf�
   - `validation_json JSONB NULL` (min/max, regex, enum options, step, precision)
   - `default_unit_id UUID FK -> units(id) NULL`
   - `ui_group VARCHAR(80) NULL` (z. B. `limits`, `monitoring`, `pid`, `runtime`)
-  - `created_at`, `updated_at`, `deleted_at`
+  - `created_at`, `updated_at`,
 - Constraints:
   - `UNIQUE(alarm_type_id, alarm_field_id)`
 
@@ -78,9 +74,7 @@ Das Modell unten ist normalisiert, versionierbar und deckt die genannten Alarmf�
 - Neu:
   - `alarm_type_id UUID FK -> alarm_types(id) NOT NULL`
   - `is_active BOOLEAN NOT NULL DEFAULT TRUE`
-  - `version INT NOT NULL DEFAULT 1`
   - `scope VARCHAR(30) NOT NULL DEFAULT 'template'`
-  - `UNIQUE(name, version, deleted_at)`
 
 `bacnet_objects.alarm_definition_id` bleibt bestehen, aber **nullable** (ein `BacnetObject` kann ohne Alarm arbeiten).
 
@@ -122,7 +116,7 @@ So bleibt das `BacnetObject` gültig, auch wenn eine Definition entfernt wurde.
   - `value_json JSONB NULL` (für State-Mapping/komplexe Strukturen)
   - `unit_id UUID FK -> units(id) NULL`
   - `source VARCHAR(20) NOT NULL DEFAULT 'user'` (`default`, `user`, `import`)
-  - `created_at`, `updated_at`, `deleted_at`
+  - `created_at`, `updated_at`,
 - Constraints:
   - `UNIQUE(bacnet_object_id, alarm_type_field_id)`
   - Check: genau ein Value-Feld belegt (oder explizit `NULL` erlaubt für „noch offen“)
@@ -191,7 +185,6 @@ Einheiten aus Liste (`°C`, `%`, `Pa`, `K`, `Lux`, `U/min`, `m`, `kW`, `m3/h`, `
 3. **Hard Constraints**:
    - Unique auf `(bacnet_object_id, alarm_type_field_id)`
    - Unique auf `(alarm_type_id, alarm_field_id)`
-4. **Soft Delete** wie bestehendes Domain-Pattern (`deleted_at`).
 5. **Validation zentral im Backend** (nicht nur Frontend).
 6. **Template/Instance-Trennung**: Definitionen enthalten Struktur, Values enthalten Instanzdaten.
 7. **Delete-Semantik klar trennen**:
@@ -263,11 +256,6 @@ Alle Komponenten folgen den bestehenden Mustern des Projekts (Svelte 5 Runes, `M
 │  Name *                │  Alarmtyp *                            │
 │  [________________]    │  [Combobox: z. B. Grenzwert (high/low)]│
 ├────────────────────────┴────────────────────────────────────────┤
-│  Notiz / Bemerkung (Textarea, 3 Zeilen)                         │
-│  [______________________________________________________________]│
-├─────────────────────────────────────────────────────────────────┤
-│  ☑ Aktiv    Version: [1.0]    Scope: template (readonly)        │
-├─────────────────────────────────────────────────────────────────┤
 │  ── Felder des Typs (Vorschau, nicht editierbar) ───────────────│
 │  Gruppe: limits                                                  │
 │   • high_limit     Zahl    °C    [Pflicht]                       │
@@ -303,8 +291,6 @@ Alle Komponenten folgen den bestehenden Mustern des Projekts (Svelte 5 Runes, `M
 let name = $state('');
 let alarm_note = $state('');
 let alarm_type_id = $state('');
-let version = $state('1.0');
-let is_active = $state(true);
 let typeFields = $state<AlarmTypeField[]>([]);        // geladen nach Typ-Wahl
 let overrides = $state<FieldOverrideDraft[]>([]);     // sparse, nur geänderte
 ```
@@ -501,7 +487,6 @@ Wenn du mir die Implementierung beauftragen möchtest, kannst du folgende Vorlag
 >    - `alarm_type_id`-Feld mit `AsyncCombobox` (Endpoint: `GET /alarm-types`).
 >    - Felder-Vorschau-Sektion nach Typ-Auswahl (Endpoint: `GET /alarm-types/{id}/fields`).
 >    - Optionale Feld-Override-Accordion-Sektion.
->    - `is_active`- und `version`-Felder ergänzen.
 >
 > 2. **BacnetObjectRow erweitern** (`BacnetObjectRow.svelte`):
 >    - Neuen Alarm-Abschnitt am unteren Rand mit `AlarmDefinitionSelect.svelte`.
