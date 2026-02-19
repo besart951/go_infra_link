@@ -43,3 +43,18 @@ type FieldDeviceRepository = domain.Repository[FieldDevice]
 type BacnetObjectRepository = domain.Repository[BacnetObject]
 
 type ObjectDataHistoryRepository = domain.AppendOnlyRepository[ObjectDataHistory]
+
+type UnitRepository = domain.Repository[Unit]
+type AlarmFieldRepository = domain.Repository[AlarmField]
+type AlarmTypeRepository interface {
+	domain.Repository[AlarmType]
+	GetWithFields(id uuid.UUID) (*AlarmType, error)
+	ListWithFields(params domain.PaginationParams) (*domain.PaginatedList[AlarmType], error)
+}
+type AlarmTypeFieldRepository = domain.Repository[AlarmTypeField]
+type AlarmDefinitionFieldOverrideRepository = domain.Repository[AlarmDefinitionFieldOverride]
+type BacnetObjectAlarmValueRepository interface {
+	domain.Repository[BacnetObjectAlarmValue]
+	GetByBacnetObjectID(bacnetObjectID uuid.UUID) ([]BacnetObjectAlarmValue, error)
+	ReplaceForBacnetObject(bacnetObjectID uuid.UUID, values []BacnetObjectAlarmValue) error
+}

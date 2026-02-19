@@ -37,6 +37,8 @@ type Handlers struct {
 	FacilityAlarmDefinitionHandler         *facilityhandler.AlarmDefinitionHandler
 	FacilityObjectDataHandler              *facilityhandler.ObjectDataHandler
 	FacilitySPSControllerSystemTypeHandler *facilityhandler.SPSControllerSystemTypeHandler
+	FacilityAlarmTypeHandler               *facilityhandler.AlarmTypeHandler
+	FacilityBacnetAlarmHandler             *facilityhandler.BacnetAlarmHandler
 }
 
 // RegisterRoutes registers all API routes
@@ -284,6 +286,14 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 
 		facility.GET("/sps-controller-system-types", handlers.FacilitySPSControllerSystemTypeHandler.ListSPSControllerSystemTypes)
 		facility.POST("/sps-controller-system-types/:id/copy", handlers.FacilitySPSControllerSystemTypeHandler.CopySPSControllerSystemType)
+
+		facility.GET("/alarm-types", handlers.FacilityAlarmTypeHandler.ListAlarmTypes)
+		facility.GET("/alarm-types/:id", handlers.FacilityAlarmTypeHandler.GetAlarmType)
+		facility.GET("/alarm-types/:id/fields", handlers.FacilityAlarmTypeHandler.GetAlarmTypeFields)
+
+		facility.GET("/bacnet-objects/:id/alarm-schema", handlers.FacilityBacnetAlarmHandler.GetAlarmSchema)
+		facility.GET("/bacnet-objects/:id/alarm-values", handlers.FacilityBacnetAlarmHandler.GetAlarmValues)
+		facility.PUT("/bacnet-objects/:id/alarm-values", handlers.FacilityBacnetAlarmHandler.PutAlarmValues)
 
 		facility.POST("/exports/field-devices", handlers.FacilityExportHandler.CreateFieldDeviceExport)
 		facility.GET("/exports/jobs/:jobId", handlers.FacilityExportHandler.GetExportStatus)

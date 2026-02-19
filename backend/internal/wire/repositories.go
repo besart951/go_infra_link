@@ -51,6 +51,12 @@ type Repositories struct {
 	FacilityStateTexts          domainFacility.StateTextRepository
 	FacilityNotificationClasses domainFacility.NotificationClassRepository
 	FacilityAlarmDefinitions    domainFacility.AlarmDefinitionRepository
+
+	FacilityUnits                   domainFacility.UnitRepository
+	FacilityAlarmFields             domainFacility.AlarmFieldRepository
+	FacilityAlarmTypes              domainFacility.AlarmTypeRepository
+	FacilityAlarmTypeFields         domainFacility.AlarmTypeFieldRepository
+	FacilityBacnetObjectAlarmValues domainFacility.BacnetObjectAlarmValueRepository
 }
 
 // NewRepositories creates all repository instances from the database connection.
@@ -95,5 +101,11 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 		FacilityStateTexts:               facilityrepo.NewStateTextRepository(gormDB),
 		FacilityNotificationClasses:      facilityrepo.NewNotificationClassRepository(gormDB),
 		FacilityAlarmDefinitions:         facilityrepo.NewAlarmDefinitionRepository(gormDB),
+
+		FacilityUnits:                   facilityrepo.NewUnitRepository(gormDB),
+		FacilityAlarmFields:             facilityrepo.NewAlarmFieldRepository(gormDB),
+		FacilityAlarmTypes:              facilityrepo.NewAlarmTypeRepository(gormDB),
+		FacilityAlarmTypeFields:         facilityrepo.NewAlarmTypeFieldRepository(gormDB),
+		FacilityBacnetObjectAlarmValues: facilityrepo.NewBacnetObjectAlarmValueRepository(gormDB),
 	}, nil
 }

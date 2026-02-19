@@ -19,6 +19,8 @@ type Repositories struct {
 	StateTexts               domainFacility.StateTextRepository
 	NotificationClasses      domainFacility.NotificationClassRepository
 	AlarmDefinitions         domainFacility.AlarmDefinitionRepository
+	AlarmTypes               domainFacility.AlarmTypeRepository
+	BacnetObjectAlarmValues  domainFacility.BacnetObjectAlarmValueRepository
 }
 
 // Services bundles all facility services.
@@ -36,6 +38,8 @@ type Services struct {
 	AlarmDefinition         *AlarmDefinitionService
 	ObjectData              *ObjectDataService
 	SPSControllerSystemType *SPSControllerSystemTypeService
+	AlarmType               *AlarmTypeService
+	BacnetAlarmValue        *BacnetAlarmValueService
 }
 
 // NewServices creates facility services using a factory-style constructor.
@@ -101,6 +105,13 @@ func NewServices(repos Repositories) *Services {
 			repos.FieldDevices,
 			repos.Specifications,
 			repos.BacnetObjects,
+		),
+		AlarmType: NewAlarmTypeService(repos.AlarmTypes),
+		BacnetAlarmValue: NewBacnetAlarmValueService(
+			repos.BacnetObjectAlarmValues,
+			repos.AlarmTypes,
+			repos.BacnetObjects,
+			repos.AlarmDefinitions,
 		),
 	}
 }

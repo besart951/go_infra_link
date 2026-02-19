@@ -550,8 +550,9 @@ func applyNotificationClassUpdate(target *domainFacility.NotificationClass, req 
 
 func toAlarmDefinitionModel(req dto.CreateAlarmDefinitionRequest) *domainFacility.AlarmDefinition {
 	return &domainFacility.AlarmDefinition{
-		Name:      req.Name,
-		AlarmNote: req.AlarmNote,
+		Name:        req.Name,
+		AlarmNote:   req.AlarmNote,
+		AlarmTypeID: req.AlarmTypeID,
 	}
 }
 
@@ -561,6 +562,9 @@ func applyAlarmDefinitionUpdate(target *domainFacility.AlarmDefinition, req dto.
 	}
 	if req.AlarmNote != nil {
 		target.AlarmNote = req.AlarmNote
+	}
+	if req.AlarmTypeID != nil {
+		target.AlarmTypeID = req.AlarmTypeID
 	}
 }
 

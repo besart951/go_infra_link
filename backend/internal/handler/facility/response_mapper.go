@@ -455,11 +455,14 @@ func toNotificationClassListResponse(list *domain.PaginatedList[domainFacility.N
 
 func toAlarmDefinitionResponse(alarmDefinition domainFacility.AlarmDefinition) dto.AlarmDefinitionResponse {
 	return dto.AlarmDefinitionResponse{
-		ID:        alarmDefinition.ID,
-		Name:      alarmDefinition.Name,
-		AlarmNote: alarmDefinition.AlarmNote,
-		CreatedAt: alarmDefinition.CreatedAt,
-		UpdatedAt: alarmDefinition.UpdatedAt,
+		ID:          alarmDefinition.ID,
+		Name:        alarmDefinition.Name,
+		AlarmNote:   alarmDefinition.AlarmNote,
+		AlarmTypeID: alarmDefinition.AlarmTypeID,
+		IsActive:    alarmDefinition.IsActive,
+		Scope:       alarmDefinition.Scope,
+		CreatedAt:   alarmDefinition.CreatedAt,
+		UpdatedAt:   alarmDefinition.UpdatedAt,
 	}
 }
 
@@ -553,4 +556,102 @@ func toSPSControllerSystemTypeListResponse(list *domain.PaginatedList[domainFaci
 		Page:       list.Page,
 		TotalPages: list.TotalPages,
 	}
+}
+
+func toUnitResponse(unit domainFacility.Unit) dto.UnitResponse {
+	return dto.UnitResponse{
+		ID:     unit.ID,
+		Code:   unit.Code,
+		Symbol: unit.Symbol,
+		Name:   unit.Name,
+	}
+}
+
+func toAlarmFieldResponse(field domainFacility.AlarmField) dto.AlarmFieldResponse {
+	return dto.AlarmFieldResponse{
+		ID:              field.ID,
+		Key:             field.Key,
+		Label:           field.Label,
+		DataType:        field.DataType,
+		DefaultUnitCode: field.DefaultUnitCode,
+	}
+}
+
+func toAlarmTypeFieldResponse(atf domainFacility.AlarmTypeField) dto.AlarmTypeFieldResponse {
+	r := dto.AlarmTypeFieldResponse{
+		ID:               atf.ID,
+		AlarmTypeID:      atf.AlarmTypeID,
+		AlarmFieldID:     atf.AlarmFieldID,
+		DisplayOrder:     atf.DisplayOrder,
+		IsRequired:       atf.IsRequired,
+		IsUserEditable:   atf.IsUserEditable,
+		DefaultValueJSON: atf.DefaultValueJSON,
+		ValidationJSON:   atf.ValidationJSON,
+		DefaultUnitID:    atf.DefaultUnitID,
+		UIGroup:          atf.UIGroup,
+		CreatedAt:        atf.CreatedAt,
+		UpdatedAt:        atf.UpdatedAt,
+	}
+	if atf.AlarmField != nil {
+		af := toAlarmFieldResponse(*atf.AlarmField)
+		r.AlarmField = &af
+	}
+	if atf.DefaultUnit != nil {
+		u := toUnitResponse(*atf.DefaultUnit)
+		r.DefaultUnit = &u
+	}
+	return r
+}
+
+func toAlarmTypeResponse(at domainFacility.AlarmType) dto.AlarmTypeResponse {
+	fields := make([]dto.AlarmTypeFieldResponse, len(at.Fields))
+	for i, f := range at.Fields {
+		fields[i] = toAlarmTypeFieldResponse(f)
+	}
+	return dto.AlarmTypeResponse{
+		ID:        at.ID,
+		Code:      at.Code,
+		Name:      at.Name,
+		Fields:    fields,
+		CreatedAt: at.CreatedAt,
+		UpdatedAt: at.UpdatedAt,
+	}
+}
+
+func toAlarmTypeListResponse(list *domain.PaginatedList[domainFacility.AlarmType]) dto.AlarmTypeListResponse {
+	items := make([]dto.AlarmTypeResponse, len(list.Items))
+	for i, item := range list.Items {
+		items[i] = toAlarmTypeResponse(item)
+	}
+	return dto.AlarmTypeListResponse{
+		Items:      items,
+		Total:      list.Total,
+		Page:       list.Page,
+		TotalPages: list.TotalPages,
+	}
+}
+
+func toAlarmValueResponse(v domainFacility.BacnetObjectAlarmValue) dto.AlarmValueResponse {
+	return dto.AlarmValueResponse{
+		ID:               v.ID,
+		BacnetObjectID:   v.BacnetObjectID,
+		AlarmTypeFieldID: v.AlarmTypeFieldID,
+		ValueNumber:      v.ValueNumber,
+		ValueInteger:     v.ValueInteger,
+		ValueBoolean:     v.ValueBoolean,
+		ValueString:      v.ValueString,
+		ValueJSON:        v.ValueJSON,
+		UnitID:           v.UnitID,
+		Source:           v.Source,
+		CreatedAt:        v.CreatedAt,
+		UpdatedAt:        v.UpdatedAt,
+	}
+}
+
+func toAlarmValuesResponse(values []domainFacility.BacnetObjectAlarmValue) dto.AlarmValuesResponse {
+	items := make([]dto.AlarmValueResponse, len(values))
+	for i, v := range values {
+		items[i] = toAlarmValueResponse(v)
+	}
+	return dto.AlarmValuesResponse{Items: items}
 }

@@ -65,6 +65,8 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 		StateTexts:               repos.FacilityStateTexts,
 		NotificationClasses:      repos.FacilityNotificationClasses,
 		AlarmDefinitions:         repos.FacilityAlarmDefinitions,
+		AlarmTypes:               repos.FacilityAlarmTypes,
+		BacnetObjectAlarmValues:  repos.FacilityBacnetObjectAlarmValues,
 	})
 
 	jobStore := exportinfra.NewMemoryJobStore()

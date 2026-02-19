@@ -16,6 +16,8 @@ type ServiceDeps struct {
 	ObjectData              ObjectDataService
 	SPSControllerSystemType SPSControllerSystemTypeService
 	Export                  ExportService
+	AlarmType               AlarmTypeService
+	BacnetAlarm             BacnetAlarmValueService
 }
 
 // Handlers groups all facility HTTP handlers.
@@ -35,6 +37,8 @@ type Handlers struct {
 	SPSControllerSystemType *SPSControllerSystemTypeHandler
 	Export                  *ExportHandler
 	Validation              *ValidationHandler
+	AlarmType               *AlarmTypeHandler
+	BacnetAlarm             *BacnetAlarmHandler
 }
 
 // NewHandlers creates facility handlers using service dependencies.
@@ -55,5 +59,7 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 		SPSControllerSystemType: NewSPSControllerSystemTypeHandler(deps.SPSControllerSystemType),
 		Export:                  NewExportHandler(deps.Export),
 		Validation:              NewValidationHandler(deps.Building, deps.ControlCabinet, deps.SPSController),
+		AlarmType:               NewAlarmTypeHandler(deps.AlarmType),
+		BacnetAlarm:             NewBacnetAlarmHandler(deps.BacnetAlarm),
 	}
 }

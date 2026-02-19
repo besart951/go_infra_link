@@ -137,21 +137,26 @@ type NotificationClassListResponse struct {
 // Facility DTOs - AlarmDefinition
 
 type CreateAlarmDefinitionRequest struct {
-	Name      string  `json:"name" binding:"required"`
-	AlarmNote *string `json:"alarm_note"`
+	Name        string     `json:"name" binding:"required"`
+	AlarmNote   *string    `json:"alarm_note"`
+	AlarmTypeID *uuid.UUID `json:"alarm_type_id"`
 }
 
 type UpdateAlarmDefinitionRequest struct {
-	Name      *string `json:"name"`
-	AlarmNote *string `json:"alarm_note"`
+	Name        *string    `json:"name"`
+	AlarmNote   *string    `json:"alarm_note"`
+	AlarmTypeID *uuid.UUID `json:"alarm_type_id"`
 }
 
 type AlarmDefinitionResponse struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	AlarmNote *string   `json:"alarm_note"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          uuid.UUID  `json:"id"`
+	Name        string     `json:"name"`
+	AlarmNote   *string    `json:"alarm_note"`
+	AlarmTypeID *uuid.UUID `json:"alarm_type_id,omitempty"`
+	IsActive    bool       `json:"is_active"`
+	Scope       string     `json:"scope"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 type AlarmDefinitionListResponse struct {
