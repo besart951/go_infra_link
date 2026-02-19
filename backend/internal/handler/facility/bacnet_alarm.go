@@ -100,6 +100,8 @@ func (h *BacnetAlarmHandler) PutAlarmValues(c *gin.Context) {
 	c.JSON(http.StatusOK, toAlarmValuesResponse(updated))
 }
 
+// toAlarmValueModels converts DTO alarm value inputs to domain models,
+// setting the bacnetObjectID on each and defaulting source to "user" if empty.
 func toAlarmValueModels(bacnetObjectID uuid.UUID, inputs []dto.AlarmValueInput) []domainFacility.BacnetObjectAlarmValue {
 	values := make([]domainFacility.BacnetObjectAlarmValue, len(inputs))
 	for i, inp := range inputs {

@@ -51,8 +51,9 @@
 			}
 			values = newValues;
 		} catch (e) {
-			// no alarm configured or fetch error
+			console.error('Failed to load alarm schema/values:', e);
 			schema = [];
+			saveError = $t('common.error');
 		} finally {
 			loading = false;
 		}
