@@ -200,6 +200,20 @@ func (r *fakeSpsControllerSystemTypeRepo) GetPaginatedListBySPSControllerID(
 	}, nil
 }
 
+func (r *fakeSpsControllerSystemTypeRepo) ListBySPSControllerID(
+	spsControllerID uuid.UUID,
+) ([]*domainFacility.SPSControllerSystemType, error) {
+	out := make([]*domainFacility.SPSControllerSystemType, 0)
+	for _, item := range r.items {
+		if item.SPSControllerID != spsControllerID {
+			continue
+		}
+		clone := *item
+		out = append(out, &clone)
+	}
+	return out, nil
+}
+
 func (r *fakeSpsControllerSystemTypeRepo) GetIDsBySPSControllerIDs(ids []uuid.UUID) ([]uuid.UUID, error) {
 	if len(ids) == 0 {
 		return []uuid.UUID{}, nil
