@@ -32,6 +32,18 @@
 	let error = $state('');
 	let fieldErrors = $state<Record<string, string>>({});
 
+	type BacnetRowErrors = Partial<
+		Record<
+			| 'text_fix'
+			| 'description'
+			| 'software_type'
+			| 'software_number'
+			| 'hardware_type'
+			| 'hardware_quantity',
+			string
+		>
+	>;
+
 	$effect(() => {
 		if (initialData) {
 			description = initialData.description ?? '';
@@ -59,37 +71,87 @@
 	});
 
 	const fieldError = (name: string) => getFieldError(fieldErrors, name, ['objectdata']);
-	const bacnetFieldError = (name: string) =>
-		getFieldError(fieldErrors, `bacnetobject.${name}`, ['objectdata']) ??
-		getFieldError(fieldErrors, `bacnetobject.${name.replace('_', '')}`, ['objectdata']) ??
-		fieldErrors[`objectdata.bacnetobject.${name}`] ??
-		fieldErrors[`objectdata.bacnetobject.${name.replace('_', '')}`];
+
+	function getBacnetIndexedFieldError(index: number, name: string): string | undefined {
+		const baseCandidates = [
+			`bacnetobjects[${index}].${name}`,
+			`bacnet_objects[${index}].${name}`,
+			`bacnetobjects.${index}.${name}`,
+			`bacnet_objects.${index}.${name}`,
+			`objectdata.bacnetobjects[${index}].${name}`,
+			`objectdata.bacnet_objects[${index}].${name}`,
+			`objectdata.bacnetobjects.${index}.${name}`,
+			`objectdata.bacnet_objects.${index}.${name}`,
+			`error.bacnetobjects[${index}].${name}`,
+			`errors.bacnetobjects[${index}].${name}`
+		];
+
+		for (const key of baseCandidates) {
+			if (fieldErrors[key]) {
+				return fieldErrors[key];
+			}
+		}
+
+		if (name === 'text_fix') {
+			return (
+				fieldErrors['objectdata.bacnetobject.textfix'] ??
+				fieldErrors['objectdata.bacnetobject.text_fix'] ??
+				fieldErrors['bacnetobject.textfix'] ??
+				fieldErrors['bacnetobject.text_fix']
+			);
+		}
+
+		if (name === 'software_type') {
+			return fieldErrors['objectdata.bacnetobject.software_type'] ?? fieldErrors['bacnetobject.software_type'];
+		}
+
+		if (name === 'software_number') {
+			return (
+				fieldErrors['objectdata.bacnetobject.software_number'] ??
+				fieldErrors['bacnetobject.software_number'] ??
+				fieldErrors['objectdata.bacnetobject.software'] ??
+				fieldErrors['bacnetobject.software']
+			);
+		}
+
+		return undefined;
+	}
+
+	function getBacnetRowErrors(index: number): BacnetRowErrors {
+		return {
+			text_fix: getBacnetIndexedFieldError(index, 'text_fix'),
+			software_type: getBacnetIndexedFieldError(index, 'software_type'),
+			software_number: getBacnetIndexedFieldError(index, 'software_number'),
+			hardware_type: getBacnetIndexedFieldError(index, 'hardware_type'),
+			hardware_quantity: getBacnetIndexedFieldError(index, 'hardware_quantity')
+		};
+	}
 
 	function validateBacnetObjects(): boolean {
 		const nextFieldErrors: Record<string, string> = {};
 		const seenSoftware = new Set<string>();
 
-		for (const obj of bacnetObjects) {
+		for (const [index, obj] of bacnetObjects.entries()) {
 			if (!obj.text_fix?.trim()) {
-				nextFieldErrors['objectdata.bacnetobject.textfix'] = 'textfix is required';
+				nextFieldErrors[`bacnetobjects[${index}].text_fix`] = 'textfix is required';
 			}
 
 			const softwareType = obj.software_type?.trim().toLowerCase() ?? '';
 			if (!softwareType) {
-				nextFieldErrors['objectdata.bacnetobject.software_type'] = 'software_type is required';
+				nextFieldErrors[`bacnetobjects[${index}].software_type`] = 'software_type is required';
 				continue;
 			}
 
 			const softwareNumber = Number(obj.software_number);
 			if (!Number.isFinite(softwareNumber) || softwareNumber < 0 || softwareNumber > 65535) {
-				nextFieldErrors['objectdata.bacnetobject.software_number'] =
+				nextFieldErrors[`bacnetobjects[${index}].software_number`] =
 					'software_number must be between 0 and 65535';
 				continue;
 			}
 
 			const softwareKey = `${softwareType}:${softwareNumber}`;
 			if (seenSoftware.has(softwareKey)) {
-				nextFieldErrors['objectdata.bacnetobject.software'] =
+				nextFieldErrors[`bacnetobjects[${index}].software_number`] =
 					'software_type + software_number must be unique within the object data';
 			} else {
 				seenSoftware.add(softwareKey);
@@ -240,6 +302,7 @@
 		{:else}
 			<div class="space-y-3">
 				{#each bacnetObjects as obj, index (index)}
+					{@const rowErrors = getBacnetRowErrors(index)}
 					<BacnetObjectRow
 						{index}
 						bind:textFix={obj.text_fix}
@@ -251,12 +314,7 @@
 						bind:softwareNumber={obj.software_number}
 						bind:hardwareType={obj.hardware_type}
 						bind:hardwareQuantity={obj.hardware_quantity}
-						textFixError={bacnetFieldError('text_fix')}
-						softwareError={
-							bacnetFieldError('software') ??
-							bacnetFieldError('software_type') ??
-							bacnetFieldError('software_number')
-						}
+						errors={rowErrors}
 						onRemove={() => removeBacnetObject(index)}
 						onUpdate={(field, value) => updateBacnetObject(index, field, value)}
 					/>

@@ -566,6 +566,8 @@ func (s *FieldDeviceService) replaceBacnetObjects(fieldDeviceID uuid.UUID, bacne
 	ve := domain.NewValidationError()
 	seen := make(map[string]int, len(bacnetObjects))
 	for i, obj := range bacnetObjects {
+		obj.TextFix = normalizeBacnetTextFix(obj.TextFix)
+		bacnetObjects[i].TextFix = obj.TextFix
 		if obj.TextFix == "" {
 			ve = ve.Add(fmt.Sprintf("bacnet_objects.%d.text_fix", i), "text_fix is required")
 			continue
@@ -596,7 +598,7 @@ func (s *FieldDeviceService) replaceBacnetObjects(fieldDeviceID uuid.UUID, bacne
 
 func applyBacnetObjectPatch(target *domainFacility.BacnetObject, patch domainFacility.BacnetObjectPatch) {
 	if patch.TextFix != nil {
-		target.TextFix = *patch.TextFix
+		target.TextFix = normalizeBacnetTextFix(*patch.TextFix)
 	}
 	if patch.Description != nil {
 		target.Description = patch.Description

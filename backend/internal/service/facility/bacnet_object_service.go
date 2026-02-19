@@ -123,6 +123,8 @@ func (s *BacnetObjectService) CreateWithParent(bacnetObject *domainFacility.Bacn
 		return domain.ErrInvalidArgument
 	}
 
+	bacnetObject.TextFix = normalizeBacnetTextFix(bacnetObject.TextFix)
+
 	if fieldDeviceID != nil {
 		if err := s.validateRequiredFields(bacnetObject, "fielddevice.bacnetobject"); err != nil {
 			return err
@@ -167,6 +169,8 @@ func (s *BacnetObjectService) CreateWithParent(bacnetObject *domainFacility.Bacn
 // Update updates a bacnet object. If objectDataID is provided, it will also attach
 // the bacnet object to that object data (template) after validating the object data.
 func (s *BacnetObjectService) Update(bacnetObject *domainFacility.BacnetObject, objectDataID *uuid.UUID) error {
+	bacnetObject.TextFix = normalizeBacnetTextFix(bacnetObject.TextFix)
+
 	if bacnetObject.FieldDeviceID != nil {
 		if err := s.validateRequiredFields(bacnetObject, "fielddevice.bacnetobject"); err != nil {
 			return err
@@ -224,6 +228,7 @@ func (s *BacnetObjectService) ReplaceForObjectData(objectDataID uuid.UUID, input
 	seen := map[string]struct{}{}
 	for i := range inputs {
 		bo := &inputs[i]
+		bo.TextFix = normalizeBacnetTextFix(bo.TextFix)
 		if err := s.validateRequiredFields(bo, "objectdata.bacnetobject"); err != nil {
 			return err
 		}

@@ -20,7 +20,7 @@
 	function toOption(apparat: Apparat): ApparatOption {
 		return {
 			...apparat,
-			label: `${apparat.short_name} — ${apparat.name}`
+			label: `${apparat.short_name} - ${apparat.name}`
 		};
 	}
 

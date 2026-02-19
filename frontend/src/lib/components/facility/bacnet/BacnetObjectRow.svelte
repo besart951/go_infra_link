@@ -7,6 +7,18 @@
 	import { BACNET_SOFTWARE_TYPES, BACNET_HARDWARE_TYPES } from '$lib/domain/facility/index.js';
 	import { createTranslator } from '$lib/i18n/translator.js';
 
+	type BacnetRowErrors = Partial<
+		Record<
+			| 'text_fix'
+			| 'description'
+			| 'software_type'
+			| 'software_number'
+			| 'hardware_type'
+			| 'hardware_quantity',
+			string
+		>
+	>;
+
 	interface Props {
 		index: number;
 		textFix: string;
@@ -18,8 +30,7 @@
 		softwareNumber: number;
 		hardwareType: string;
 		hardwareQuantity: number;
-		textFixError?: string;
-		softwareError?: string;
+		errors?: BacnetRowErrors;
 		onRemove: () => void;
 		onUpdate: (field: string, value: any) => void;
 	}
@@ -35,8 +46,7 @@
 		softwareNumber = $bindable(1),
 		hardwareType = $bindable('ai'),
 		hardwareQuantity = $bindable(1),
-		textFixError,
-		softwareError,
+		errors = {},
 		onRemove,
 		onUpdate
 	}: Props = $props();
@@ -110,8 +120,8 @@
 			placeholder={$t('field_device.bacnet.row.text_fix_placeholder')}
 			class="h-8 text-sm"
 		/>
-		{#if textFixError}
-			<p class="text-xs text-red-500">{textFixError}</p>
+		{#if errors.text_fix}
+			<p class="text-xs text-red-500">{errors.text_fix}</p>
 		{/if}
 	</div>
 
@@ -150,6 +160,9 @@
 						<option value={type.value}>{type.label}</option>
 					{/each}
 				</select>
+				{#if errors.software_type}
+					<p class="text-xs text-red-500">{errors.software_type}</p>
+				{/if}
 			</div>
 			<div class="space-y-1">
 				<Label for="software_number_{index}" class="text-xs text-muted-foreground">
@@ -166,11 +179,11 @@
 					placeholder={$t('field_device.bacnet.row.software_number_placeholder')}
 					class="h-8 text-sm"
 				/>
+				{#if errors.software_number}
+					<p class="text-xs text-red-500">{errors.software_number}</p>
+				{/if}
 			</div>
 		</div>
-		{#if softwareError}
-			<p class="text-xs text-red-500">{softwareError}</p>
-		{/if}
 	</div>
 
 	<!-- Hardware Group: Type + Quantity -->
@@ -192,6 +205,9 @@
 						<option value={type.value}>{type.label}</option>
 					{/each}
 				</select>
+				{#if errors.hardware_type}
+					<p class="text-xs text-red-500">{errors.hardware_type}</p>
+				{/if}
 			</div>
 			<div class="space-y-1">
 				<Label for="hardware_quantity_{index}" class="text-xs text-muted-foreground">
@@ -207,6 +223,9 @@
 					placeholder={$t('field_device.bacnet.row.hardware_quantity_placeholder')}
 					class="h-8 text-sm"
 				/>
+				{#if errors.hardware_quantity}
+					<p class="text-xs text-red-500">{errors.hardware_quantity}</p>
+				{/if}
 			</div>
 		</div>
 	</div>
