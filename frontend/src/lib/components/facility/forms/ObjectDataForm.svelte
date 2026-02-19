@@ -65,6 +65,46 @@
 		fieldErrors[`objectdata.bacnetobject.${name}`] ??
 		fieldErrors[`objectdata.bacnetobject.${name.replace('_', '')}`];
 
+	function validateBacnetObjects(): boolean {
+		const nextFieldErrors: Record<string, string> = {};
+		const seenSoftware = new Set<string>();
+
+		for (const obj of bacnetObjects) {
+			if (!obj.text_fix?.trim()) {
+				nextFieldErrors['objectdata.bacnetobject.textfix'] = 'textfix is required';
+			}
+
+			const softwareType = obj.software_type?.trim().toLowerCase() ?? '';
+			if (!softwareType) {
+				nextFieldErrors['objectdata.bacnetobject.software_type'] = 'software_type is required';
+				continue;
+			}
+
+			const softwareNumber = Number(obj.software_number);
+			if (!Number.isFinite(softwareNumber) || softwareNumber < 0 || softwareNumber > 65535) {
+				nextFieldErrors['objectdata.bacnetobject.software_number'] =
+					'software_number must be between 0 and 65535';
+				continue;
+			}
+
+			const softwareKey = `${softwareType}:${softwareNumber}`;
+			if (seenSoftware.has(softwareKey)) {
+				nextFieldErrors['objectdata.bacnetobject.software'] =
+					'software_type + software_number must be unique within the object data';
+			} else {
+				seenSoftware.add(softwareKey);
+			}
+		}
+
+		if (Object.keys(nextFieldErrors).length > 0) {
+			fieldErrors = nextFieldErrors;
+			error = '';
+			return false;
+		}
+
+		return true;
+	}
+
 	function addBacnetObject() {
 		bacnetObjects = [
 			...bacnetObjects,
@@ -100,6 +140,11 @@
 		loading = true;
 		error = '';
 		fieldErrors = {};
+
+		if (!validateBacnetObjects()) {
+			loading = false;
+			return;
+		}
 
 		try {
 			if (initialData) {
@@ -207,6 +252,11 @@
 						bind:hardwareType={obj.hardware_type}
 						bind:hardwareQuantity={obj.hardware_quantity}
 						textFixError={bacnetFieldError('text_fix')}
+						softwareError={
+							bacnetFieldError('software') ??
+							bacnetFieldError('software_type') ??
+							bacnetFieldError('software_number')
+						}
 						onRemove={() => removeBacnetObject(index)}
 						onUpdate={(field, value) => updateBacnetObject(index, field, value)}
 					/>

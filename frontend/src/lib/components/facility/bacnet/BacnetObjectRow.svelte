@@ -19,6 +19,7 @@
 		hardwareType: string;
 		hardwareQuantity: number;
 		textFixError?: string;
+		softwareError?: string;
 		onRemove: () => void;
 		onUpdate: (field: string, value: any) => void;
 	}
@@ -35,6 +36,7 @@
 		hardwareType = $bindable('ai'),
 		hardwareQuantity = $bindable(1),
 		textFixError,
+		softwareError,
 		onRemove,
 		onUpdate
 	}: Props = $props();
@@ -166,6 +168,9 @@
 				/>
 			</div>
 		</div>
+		{#if softwareError}
+			<p class="text-xs text-red-500">{softwareError}</p>
+		{/if}
 	</div>
 
 	<!-- Hardware Group: Type + Quantity -->
@@ -180,7 +185,6 @@
 					id="hardware_type_{index}"
 					bind:value={hardwareType}
 					onchange={() => onUpdate('hardware_type', hardwareType)}
-					required
 					class="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					<option value="">{$t('field_device.bacnet.row.select')}</option>
@@ -198,8 +202,7 @@
 					type="number"
 					bind:value={hardwareQuantity}
 					onchange={() => onUpdate('hardware_quantity', hardwareQuantity)}
-					required
-					min={1}
+					min={0}
 					max={255}
 					placeholder={$t('field_device.bacnet.row.hardware_quantity_placeholder')}
 					class="h-8 text-sm"
