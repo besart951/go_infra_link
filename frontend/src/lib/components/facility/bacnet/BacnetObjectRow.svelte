@@ -6,6 +6,7 @@
 	import { Trash2 } from '@lucide/svelte';
 	import { BACNET_SOFTWARE_TYPES, BACNET_HARDWARE_TYPES } from '$lib/domain/facility/index.js';
 	import { createTranslator } from '$lib/i18n/translator.js';
+	import AlarmDefinitionSelect from '$lib/components/facility/selects/AlarmDefinitionSelect.svelte';
 
 	type BacnetRowErrors = Partial<
 		Record<
@@ -30,6 +31,7 @@
 		softwareNumber: number;
 		hardwareType: string;
 		hardwareQuantity: number;
+		alarmDefinitionId?: string;
 		errors?: BacnetRowErrors;
 		onRemove: () => void;
 		onUpdate: (field: string, value: any) => void;
@@ -46,6 +48,7 @@
 		softwareNumber = $bindable(1),
 		hardwareType = $bindable('ai'),
 		hardwareQuantity = $bindable(1),
+		alarmDefinitionId = $bindable(''),
 		errors = {},
 		onRemove,
 		onUpdate
@@ -56,6 +59,7 @@
 	let textIndividualEnabled = $state(!!textIndividual);
 	let prevGmsVisible = $state<boolean | null>(null);
 	let prevOptional = $state<boolean | null>(null);
+	let prevAlarmDefinitionId = $state<string | null>(null);
 
 	$effect(() => {
 		if (prevGmsVisible === null) {
@@ -76,6 +80,18 @@
 		if (optional !== prevOptional) {
 			prevOptional = optional;
 			onUpdate('optional', optional);
+		}
+	});
+
+	$effect(() => {
+		if (prevAlarmDefinitionId === null) {
+			prevAlarmDefinitionId = alarmDefinitionId ?? '';
+			return;
+		}
+		const current = alarmDefinitionId ?? '';
+		if (current !== prevAlarmDefinitionId) {
+			prevAlarmDefinitionId = current;
+			onUpdate('alarm_definition_id', current || null);
 		}
 	});
 
@@ -249,6 +265,27 @@
 			<Label for="text_individual_{index}" class="cursor-pointer text-xs">
 				{$t('field_device.bacnet.row.text_individual')}
 			</Label>
+		</div>
+	</div>
+
+	<!-- Alarm Definition Section -->
+	<div class="col-span-12 space-y-1 border-t pt-2 md:col-span-12">
+		<Label class="text-xs">{$t('field_device.bacnet.row.alarm_definition')}</Label>
+		<div class="flex items-center gap-2">
+			<AlarmDefinitionSelect bind:value={alarmDefinitionId} width="w-full" />
+			{#if alarmDefinitionId}
+				<Button
+					variant="ghost"
+					size="sm"
+					onclick={() => {
+						alarmDefinitionId = '';
+					}}
+					class="h-8 w-8 shrink-0 p-0"
+					title={$t('field_device.bacnet.row.alarm_definition_remove')}
+				>
+					✕
+				</Button>
+			{/if}
 		</div>
 	</div>
 </div>

@@ -135,6 +135,9 @@ export interface AlarmDefinition {
 	id: string;
 	name: string;
 	alarm_note?: string;
+	alarm_type_id?: string;
+	is_active?: boolean;
+	scope?: string;
 	created_at: string;
 	updated_at: string;
 }
@@ -142,11 +145,13 @@ export interface AlarmDefinition {
 export interface CreateAlarmDefinitionRequest {
 	name: string;
 	alarm_note?: string;
+	alarm_type_id?: string;
 }
 
 export interface UpdateAlarmDefinitionRequest {
 	name?: string;
 	alarm_note?: string;
+	alarm_type_id?: string;
 }
 
 export interface AlarmDefinitionListParams {
