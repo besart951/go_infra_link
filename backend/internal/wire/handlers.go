@@ -25,6 +25,8 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18n
 		ObjectData:              services.Facility.ObjectData,
 		SPSControllerSystemType: services.Facility.SPSControllerSystemType,
 		Export:                  services.Export,
+		AlarmType:               services.Facility.AlarmType,
+		BacnetAlarm:             services.Facility.BacnetAlarmValue,
 	})
 
 	return &handler.Handlers{
@@ -65,6 +67,8 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18n
 		FacilityObjectDataHandler:              facilityHandlers.ObjectData,
 		FacilitySPSControllerSystemTypeHandler: facilityHandlers.SPSControllerSystemType,
 		FacilityExportHandler:                  facilityHandlers.Export,
+		FacilityAlarmTypeHandler:               facilityHandlers.AlarmType,
+		FacilityBacnetAlarmHandler:             facilityHandlers.BacnetAlarm,
 	}
 }
 

@@ -11,3 +11,4 @@ export * from './sps-sys-type.js';
 export * from './bacnet-object.js';
 export * from './fieldDeviceMultiCreate.js';
 export * from './field-device-export.js';
+export * from './alarm-type.js';

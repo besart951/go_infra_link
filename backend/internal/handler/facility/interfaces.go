@@ -151,3 +151,18 @@ type ExportService interface {
 	Create(ctx context.Context, req domainExport.Request) (domainExport.Job, error)
 	Get(ctx context.Context, id uuid.UUID) (domainExport.Job, error)
 }
+
+type AlarmTypeService interface {
+	Create(alarmType *domainFacility.AlarmType) error
+	GetByID(id uuid.UUID) (*domainFacility.AlarmType, error)
+	GetWithFields(id uuid.UUID) (*domainFacility.AlarmType, error)
+	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.AlarmType], error)
+	Update(alarmType *domainFacility.AlarmType) error
+	DeleteByID(id uuid.UUID) error
+}
+
+type BacnetAlarmValueService interface {
+	GetSchema(bacnetObjectID uuid.UUID) (*domainFacility.AlarmType, error)
+	GetValues(bacnetObjectID uuid.UUID) ([]domainFacility.BacnetObjectAlarmValue, error)
+	PutValues(bacnetObjectID uuid.UUID, values []domainFacility.BacnetObjectAlarmValue) error
+}

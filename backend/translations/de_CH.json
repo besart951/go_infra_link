@@ -379,6 +379,8 @@
     "state_text_not_found": "Statustext nicht gefunden.",
     "object_data_not_found": "Objektdaten nicht gefunden.",
     "alarm_definition_not_found": "Alarmdefinition nicht gefunden.",
+    "alarm_type_not_found": "Alarmtyp nicht gefunden.",
+    "alarm_types": "Alarmtypen",
     "creation_failed": "Eintrag konnte nicht erstellt werden.",
     "creation_aborted": "Erstellung abgebrochen.",
     "update_failed": "Eintrag konnte nicht aktualisiert werden.",

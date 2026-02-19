@@ -103,6 +103,12 @@ func autoMigrate(db *gorm.DB) error {
 		&facility.AlarmDefinition{},
 		&facility.BacnetObject{},
 		&facility.ObjectData{},
+		&facility.Unit{},
+		&facility.AlarmField{},
+		&facility.AlarmType{},
+		&facility.AlarmTypeField{},
+		&facility.AlarmDefinitionFieldOverride{},
+		&facility.BacnetObjectAlarmValue{},
 	); err != nil {
 		return err
 	}
@@ -150,5 +156,11 @@ func GetModels() []interface{} {
 		&facility.AlarmDefinition{},
 		&facility.BacnetObject{},
 		&facility.ObjectData{},
+		&facility.Unit{},
+		&facility.AlarmField{},
+		&facility.AlarmType{},
+		&facility.AlarmTypeField{},
+		&facility.AlarmDefinitionFieldOverride{},
+		&facility.BacnetObjectAlarmValue{},
 	}
 }
