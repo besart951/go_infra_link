@@ -16,18 +16,12 @@
 	let errorMessage = $state<string | null>(null);
 	let preparedSession = $state<ExcelReadSession | null>(null);
 
-	function formatFileSize(sizeInBytes: number): string {
-		if (sizeInBytes < 1024) return `${sizeInBytes} B`;
-		if (sizeInBytes < 1024 * 1024) return `${(sizeInBytes / 1024).toFixed(1)} KB`;
-		return `${(sizeInBytes / (1024 * 1024)).toFixed(1)} MB`;
-	}
-
 	async function startReadSession(file: File): Promise<void> {
 		isReading = true;
 		errorMessage = null;
 		preparedSession = null;
 		progressPercent = 0;
-		progressMessage = 'Preparing read session...';
+		progressMessage = 'Preparing scanner...';
 
 		try {
 			const session = await readSessionUseCase.execute(file, (progress) => {
@@ -37,8 +31,8 @@
 
 			preparedSession = session;
 			progressPercent = 100;
-			progressMessage = 'Read session prepared.';
-			addToast('Excel file loaded and read session prepared.', 'success');
+			progressMessage = 'Scanner result ready.';
+			addToast('Excel file loaded and ObjectData/BACnet result prepared.', 'success');
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Failed to read Excel file.';
 			if (message === 'Read session cancelled.') {
@@ -77,7 +71,7 @@
 	<div>
 		<h1 class="text-2xl font-semibold tracking-tight">Excel Importer</h1>
 		<p class="text-sm text-muted-foreground">
-			Drop an Excel file to read it in the browser and prepare a read session.
+			Drop an Excel file to scan ObjectData and BACnet objects directly in the browser.
 		</p>
 	</div>
 
@@ -99,6 +93,6 @@
 	{/if}
 
 	{#if preparedSession}
-		<ExcelSessionSummary session={preparedSession} {formatFileSize} />
+		<ExcelSessionSummary session={preparedSession} />
 	{/if}
 </div>
