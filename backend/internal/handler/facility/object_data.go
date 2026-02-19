@@ -134,6 +134,10 @@ func validateObjectDataBacnetInputs(inputs []dto.BacnetObjectInput) error {
 				seenSoftware[softwareKey] = struct{}{}
 			}
 		}
+
+		if input.AlarmDefinitionID != nil && input.AlarmTypeID != nil {
+			ve = ve.Add("objectdata.bacnetobject.alarm", "alarm_definition_id and alarm_type_id are mutually exclusive")
+		}
 	}
 
 	if len(ve.Fields) > 0 {

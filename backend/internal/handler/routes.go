@@ -38,6 +38,9 @@ type Handlers struct {
 	FacilityObjectDataHandler              *facilityhandler.ObjectDataHandler
 	FacilitySPSControllerSystemTypeHandler *facilityhandler.SPSControllerSystemTypeHandler
 	FacilityAlarmTypeHandler               *facilityhandler.AlarmTypeHandler
+	FacilityUnitHandler                    *facilityhandler.UnitHandler
+	FacilityAlarmFieldHandler              *facilityhandler.AlarmFieldHandler
+	FacilityAlarmTypeFieldHandler          *facilityhandler.AlarmTypeFieldHandler
 	FacilityBacnetAlarmHandler             *facilityhandler.BacnetAlarmHandler
 }
 
@@ -288,8 +291,27 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		facility.POST("/sps-controller-system-types/:id/copy", handlers.FacilitySPSControllerSystemTypeHandler.CopySPSControllerSystemType)
 
 		facility.GET("/alarm-types", handlers.FacilityAlarmTypeHandler.ListAlarmTypes)
+		facility.POST("/alarm-types", handlers.FacilityAlarmTypeHandler.CreateAlarmType)
 		facility.GET("/alarm-types/:id", handlers.FacilityAlarmTypeHandler.GetAlarmType)
+		facility.PUT("/alarm-types/:id", handlers.FacilityAlarmTypeHandler.UpdateAlarmType)
+		facility.DELETE("/alarm-types/:id", handlers.FacilityAlarmTypeHandler.DeleteAlarmType)
 		facility.GET("/alarm-types/:id/fields", handlers.FacilityAlarmTypeHandler.GetAlarmTypeFields)
+		facility.POST("/alarm-types/:id/fields", handlers.FacilityAlarmTypeFieldHandler.CreateAlarmTypeField)
+
+		facility.PUT("/alarm-type-fields/:id", handlers.FacilityAlarmTypeFieldHandler.UpdateAlarmTypeField)
+		facility.DELETE("/alarm-type-fields/:id", handlers.FacilityAlarmTypeFieldHandler.DeleteAlarmTypeField)
+
+		facility.GET("/alarm-units", handlers.FacilityUnitHandler.ListUnits)
+		facility.GET("/alarm-units/:id", handlers.FacilityUnitHandler.GetUnit)
+		facility.POST("/alarm-units", handlers.FacilityUnitHandler.CreateUnit)
+		facility.PUT("/alarm-units/:id", handlers.FacilityUnitHandler.UpdateUnit)
+		facility.DELETE("/alarm-units/:id", handlers.FacilityUnitHandler.DeleteUnit)
+
+		facility.GET("/alarm-fields", handlers.FacilityAlarmFieldHandler.ListAlarmFields)
+		facility.GET("/alarm-fields/:id", handlers.FacilityAlarmFieldHandler.GetAlarmField)
+		facility.POST("/alarm-fields", handlers.FacilityAlarmFieldHandler.CreateAlarmField)
+		facility.PUT("/alarm-fields/:id", handlers.FacilityAlarmFieldHandler.UpdateAlarmField)
+		facility.DELETE("/alarm-fields/:id", handlers.FacilityAlarmFieldHandler.DeleteAlarmField)
 
 		facility.GET("/bacnet-objects/:id/alarm-schema", handlers.FacilityBacnetAlarmHandler.GetAlarmSchema)
 		facility.GET("/bacnet-objects/:id/alarm-values", handlers.FacilityBacnetAlarmHandler.GetAlarmValues)

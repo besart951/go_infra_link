@@ -24,7 +24,7 @@
 	}
 
 	let {
-		value = $bindable(''),
+		value = $bindable(),
 		fetcher,
 		fetchById,
 		labelKey,

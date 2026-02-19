@@ -514,6 +514,7 @@
     "object_data": "Objektdaten",
     "state_texts": "Statustextgruppen",
     "alarm_definitions": "Alarmdefinitionen",
+    "alarm_catalog": "Alarmkatalog",
     "notification_classes": "Benachrichtigungsklassen",
     "settings": "Einstellungen",
     "account": "Konto",

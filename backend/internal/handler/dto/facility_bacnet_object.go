@@ -43,6 +43,7 @@ type BacnetObjectInput struct {
 	StateTextID         *uuid.UUID `json:"state_text_id"`
 	NotificationClassID *uuid.UUID `json:"notification_class_id"`
 	AlarmDefinitionID   *uuid.UUID `json:"alarm_definition_id"`
+	AlarmTypeID         *uuid.UUID `json:"alarm_type_id"`
 }
 
 // BacnetObjectPatchInput is used for partial updates.
@@ -64,6 +65,7 @@ type BacnetObjectPatchInput struct {
 	StateTextID         *uuid.UUID `json:"state_text_id"`
 	NotificationClassID *uuid.UUID `json:"notification_class_id"`
 	AlarmDefinitionID   *uuid.UUID `json:"alarm_definition_id"`
+	AlarmTypeID         *uuid.UUID `json:"alarm_type_id"`
 }
 
 // BacnetObjectBulkPatchInput is used for bulk patch updates under field devices.
@@ -93,6 +95,7 @@ type BacnetObjectResponse struct {
 	StateTextID         *uuid.UUID `json:"state_text_id"`
 	NotificationClassID *uuid.UUID `json:"notification_class_id"`
 	AlarmDefinitionID   *uuid.UUID `json:"alarm_definition_id"`
+	AlarmTypeID         *uuid.UUID `json:"alarm_type_id,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

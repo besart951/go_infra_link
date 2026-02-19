@@ -30,6 +30,7 @@ func toBacnetObjectModel(req dto.CreateBacnetObjectRequest) *domainFacility.Bacn
 		StateTextID:         req.StateTextID,
 		NotificationClassID: req.NotificationClassID,
 		AlarmDefinitionID:   req.AlarmDefinitionID,
+		AlarmTypeID:         req.AlarmTypeID,
 	}
 }
 
@@ -73,6 +74,9 @@ func applyBacnetObjectPatch(target *domainFacility.BacnetObject, req dto.BacnetO
 	if req.AlarmDefinitionID != nil {
 		target.AlarmDefinitionID = req.AlarmDefinitionID
 	}
+	if req.AlarmTypeID != nil {
+		target.AlarmTypeID = req.AlarmTypeID
+	}
 }
 
 func toBacnetObjectPatches(inputs []dto.BacnetObjectBulkPatchInput) []domainFacility.BacnetObjectPatch {
@@ -89,6 +93,7 @@ func toBacnetObjectPatches(inputs []dto.BacnetObjectBulkPatchInput) []domainFaci
 			StateTextID:         input.StateTextID,
 			NotificationClassID: input.NotificationClassID,
 			AlarmDefinitionID:   input.AlarmDefinitionID,
+			AlarmTypeID:         input.AlarmTypeID,
 		}
 		if input.SoftwareType != nil {
 			st := domainFacility.BacnetSoftwareType(*input.SoftwareType)
@@ -222,6 +227,7 @@ func toFieldDeviceBacnetObjects(inputs []dto.BacnetObjectInput) []domainFacility
 			StateTextID:         bo.StateTextID,
 			NotificationClassID: bo.NotificationClassID,
 			AlarmDefinitionID:   bo.AlarmDefinitionID,
+			AlarmTypeID:         bo.AlarmTypeID,
 		})
 	}
 	return items
@@ -581,5 +587,87 @@ func applyControlCabinetUpdate(target *domainFacility.ControlCabinet, req dto.Up
 	}
 	if req.ControlCabinetNr != nil {
 		target.ControlCabinetNr = req.ControlCabinetNr
+	}
+}
+
+func toUnitModel(req dto.CreateUnitRequest) *domainFacility.Unit {
+	return &domainFacility.Unit{
+		Code:   req.Code,
+		Symbol: req.Symbol,
+		Name:   req.Name,
+	}
+}
+
+func applyUnitUpdate(target *domainFacility.Unit, req dto.UpdateUnitRequest) {
+	if req.Code != nil {
+		target.Code = *req.Code
+	}
+	if req.Symbol != nil {
+		target.Symbol = *req.Symbol
+	}
+	if req.Name != nil {
+		target.Name = *req.Name
+	}
+}
+
+func toAlarmFieldModel(req dto.CreateAlarmFieldRequest) *domainFacility.AlarmField {
+	return &domainFacility.AlarmField{
+		Key:             req.Key,
+		Label:           req.Label,
+		DataType:        req.DataType,
+		DefaultUnitCode: req.DefaultUnitCode,
+	}
+}
+
+func applyAlarmFieldUpdate(target *domainFacility.AlarmField, req dto.UpdateAlarmFieldRequest) {
+	if req.Key != nil {
+		target.Key = *req.Key
+	}
+	if req.Label != nil {
+		target.Label = *req.Label
+	}
+	if req.DataType != nil {
+		target.DataType = *req.DataType
+	}
+	if req.DefaultUnitCode != nil {
+		target.DefaultUnitCode = req.DefaultUnitCode
+	}
+}
+
+func toAlarmTypeFieldModel(alarmTypeID uuid.UUID, req dto.CreateAlarmTypeFieldRequest) *domainFacility.AlarmTypeField {
+	return &domainFacility.AlarmTypeField{
+		AlarmTypeID:      alarmTypeID,
+		AlarmFieldID:     req.AlarmFieldID,
+		DisplayOrder:     req.DisplayOrder,
+		IsRequired:       req.IsRequired,
+		IsUserEditable:   req.IsUserEditable,
+		DefaultValueJSON: req.DefaultValueJSON,
+		ValidationJSON:   req.ValidationJSON,
+		DefaultUnitID:    req.DefaultUnitID,
+		UIGroup:          req.UIGroup,
+	}
+}
+
+func applyAlarmTypeFieldUpdate(target *domainFacility.AlarmTypeField, req dto.UpdateAlarmTypeFieldRequest) {
+	if req.DisplayOrder != nil {
+		target.DisplayOrder = *req.DisplayOrder
+	}
+	if req.IsRequired != nil {
+		target.IsRequired = *req.IsRequired
+	}
+	if req.IsUserEditable != nil {
+		target.IsUserEditable = *req.IsUserEditable
+	}
+	if req.DefaultValueJSON != nil {
+		target.DefaultValueJSON = req.DefaultValueJSON
+	}
+	if req.ValidationJSON != nil {
+		target.ValidationJSON = req.ValidationJSON
+	}
+	if req.DefaultUnitID != nil {
+		target.DefaultUnitID = req.DefaultUnitID
+	}
+	if req.UIGroup != nil {
+		target.UIGroup = req.UIGroup
 	}
 }

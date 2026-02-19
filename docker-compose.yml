@@ -55,6 +55,54 @@ services:
       retries: 5
     restart: unless-stopped
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    env_file:
+      - .env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@local.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_REPLACE_SERVERS_ON_STARTUP: "True"
+      PGADMIN_SERVER_JSON_FILE: /tmp/servers.json
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cat > /tmp/pgpass <<EOF
+        postgres:5432:${POSTGRES_DB:-go_infra_link}:${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}
+        EOF
+        chmod 600 /tmp/pgpass
+
+        cat > /tmp/servers.json <<EOF
+        {
+          "Servers": {
+            "1": {
+              "Name": "${PGADMIN_SERVER_NAME:-go_infra_link}",
+              "Group": "Servers",
+              "Host": "postgres",
+              "Port": 5432,
+              "MaintenanceDB": "${POSTGRES_DB:-go_infra_link}",
+              "Username": "${POSTGRES_USER:-postgres}",
+              "PassFile": "/tmp/pgpass",
+              "SSLMode": "prefer"
+            }
+          }
+        }
+        EOF
+
+        exec /entrypoint.sh
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   frontend_node_modules:
+  pgadmin_data:

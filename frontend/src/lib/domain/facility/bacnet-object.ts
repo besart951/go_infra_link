@@ -19,6 +19,7 @@ export interface BacnetObject {
 	state_text_id?: string;
 	notification_class_id?: string;
 	alarm_definition_id?: string;
+	alarm_type_id?: string;
 	created_at: string;
 	updated_at: string;
 }
@@ -38,6 +39,7 @@ export interface CreateBacnetObjectRequest {
 	state_text_id?: string;
 	notification_class_id?: string;
 	alarm_definition_id?: string;
+	alarm_type_id?: string;
 }
 
 export interface UpdateBacnetObjectRequest {
@@ -55,6 +57,7 @@ export interface UpdateBacnetObjectRequest {
 	state_text_id?: string;
 	notification_class_id?: string;
 	alarm_definition_id?: string;
+	alarm_type_id?: string;
 }
 
 // BACnet Software Types

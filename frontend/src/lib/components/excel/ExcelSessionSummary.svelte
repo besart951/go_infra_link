@@ -12,6 +12,7 @@
 		updateBacnetObject
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
+	import { alarmTypeRepository } from '$lib/infrastructure/api/alarmTypeRepository.js';
 
 	interface Props {
 		session: ExcelReadSession;
@@ -20,7 +21,13 @@
 	interface PreparedObjectData {
 		objectDataId: string;
 		request: CreateObjectDataRequest;
-		plannedAlarmDefinitions: Array<{ bacnetSoftwareId: string; name: string }>;
+		plannedAlarmDefinitions: Array<{
+			bacnetIndex: number;
+			bacnetSoftwareId: string;
+			name: string;
+			alarmTypeId?: string;
+			alarmTypeCode?: string;
+		}>;
 		plannedSoftwareReferenceLinks: Array<{ fromSoftwareId: string; toSoftwareId: string }>;
 		issues: {
 			missingApparatLabels: string[];
@@ -113,6 +120,29 @@
 
 	function toSoftwareId(softwareType: string, softwareNumber: number | string): string {
 		return `${String(softwareType || '').trim().toUpperCase()}${String(softwareNumber ?? '').trim()}`;
+	}
+
+	function inferAlarmTypeCodeFromLabel(label: string): string {
+		const normalized = normalizeLookupKey(label);
+		if (!normalized) return 'custom_value';
+
+		if (normalized.includes('cov')) return 'cov_logging';
+		if (normalized.includes('pid')) return 'pid_control';
+		if (normalized.includes('position')) return 'position_control';
+		if (normalized.includes('state') || normalized.includes('zustand')) return 'state_mapping';
+		if (normalized.includes('priority') || normalized.includes('prioritat')) return 'priority_write';
+		if (normalized.includes('io') || normalized.includes('ruckmeldung')) return 'io_monitoring';
+		if (normalized.includes('limit') || normalized.includes('grenz')) return 'limit_high_low';
+		if (
+			normalized.includes('active') ||
+			normalized.includes('inactive') ||
+			normalized.includes('aktiv') ||
+			normalized.includes('inaktiv') ||
+			normalized.includes('alarm')
+		)
+			return 'active_inactive';
+
+		return 'custom_value';
 	}
 
 	function parseHardwareLabel(label: string): { type: string; quantity: number } {
@@ -226,10 +256,18 @@
 		activePrepareFilter = 'all';
 
 		try {
-			const [apparats, stateTexts, notificationClasses] = await Promise.all([
+			const [apparats, stateTexts, notificationClasses, alarmTypes] = await Promise.all([
 				fetchAllPages((page, limit) => listApparats({ page, limit })),
 				fetchAllPages((page, limit) => listStateTexts({ page, limit })),
-				fetchAllPages((page, limit) => listNotificationClasses({ page, limit }))
+				fetchAllPages((page, limit) => listNotificationClasses({ page, limit })),
+				fetchAllPages(async (page, limit) => {
+					const res = await alarmTypeRepository.list({ page, pageSize: limit });
+					return {
+						items: res.items,
+						page: res.page,
+						total_pages: res.totalPages
+					};
+				})
 			]);
 
 			const apparatMap = new Map<string, string>();
@@ -252,6 +290,13 @@
 				notificationClassMap.set(notificationClass.nc, notificationClass.id);
 			});
 
+			const alarmTypeByCode = new Map<string, string>();
+			alarmTypes.forEach((alarmType) => {
+				if (alarmType.code) {
+					alarmTypeByCode.set(alarmType.code, alarmType.id);
+				}
+			});
+
 			const preparedItems: PreparedObjectData[] = [];
 			let totalBacnetObjects = 0;
 			let missingHardware = 0;
@@ -266,7 +311,7 @@
 			for (const objectData of session.objectDataExcel) {
 				const apparatIds = new Set<string>();
 				const softwareIdMap = new Map<string, string>();
-				const plannedAlarmDefinitions: Array<{ bacnetSoftwareId: string; name: string }> = [];
+				const plannedAlarmDefinitions: PreparedObjectData['plannedAlarmDefinitions'] = [];
 				const plannedSoftwareLinks: Array<{ fromSoftwareId: string; toSoftwareId: string }> = [];
 				objectData.bacnet_objects.forEach((bacnetObject) => {
 					const softwareKey = buildSoftwareKey(
@@ -288,7 +333,7 @@
 				let localMissingHardware = 0;
 				let localMissingSoftwareNumbers = 0;
 
-				for (const bacnetObject of objectData.bacnet_objects) {
+				for (const [bacnetIndex, bacnetObject] of objectData.bacnet_objects.entries()) {
 					const apparatLabelRaw = (bacnetObject.apparat_label || '').trim();
 					const apparatLabel = normalizeLookupKey(apparatLabelRaw);
 					if (isMeaningfulLabel(apparatLabelRaw)) {
@@ -344,9 +389,13 @@
 
 					const alarmLabelRaw = (bacnetObject.alarm_definition_label || '').trim();
 					if (isMeaningfulLabel(alarmLabelRaw) && fromSoftwareId.length > 0) {
+						const inferredAlarmTypeCode = inferAlarmTypeCodeFromLabel(alarmLabelRaw);
 						plannedAlarmDefinitions.push({
+							bacnetIndex,
 							bacnetSoftwareId: fromSoftwareId,
-							name: alarmLabelRaw
+							name: alarmLabelRaw,
+							alarmTypeCode: inferredAlarmTypeCode,
+							alarmTypeId: alarmTypeByCode.get(inferredAlarmTypeCode)
 						});
 					}
 
@@ -457,17 +506,19 @@
 
 		for (const item of preparedPayloads) {
 			try {
-				const alarmIdBySoftwareId = new Map<string, string>();
+				const alarmIdByBacnetIndex = new Map<number, string>();
 				for (const alarmPlan of item.plannedAlarmDefinitions) {
-					const createdAlarm = await createAlarmDefinition({ name: alarmPlan.name });
-					alarmIdBySoftwareId.set(alarmPlan.bacnetSoftwareId, createdAlarm.id);
+					const createdAlarm = await createAlarmDefinition({
+						name: alarmPlan.name,
+						alarm_type_id: alarmPlan.alarmTypeId
+					});
+					alarmIdByBacnetIndex.set(alarmPlan.bacnetIndex, createdAlarm.id);
 				}
 
-				const withAlarmIds = (item.request.bacnet_objects ?? []).map((bacnet) => {
-					const softwareId = toSoftwareId(bacnet.software_type, bacnet.software_number);
+				const withAlarmIds = (item.request.bacnet_objects ?? []).map((bacnet, bacnetIndex) => {
 					return {
 						...bacnet,
-						alarm_definition_id: alarmIdBySoftwareId.get(softwareId)
+						alarm_definition_id: alarmIdByBacnetIndex.get(bacnetIndex)
 					};
 				});
 
@@ -710,7 +761,7 @@
 									<strong class="text-foreground">Planned alarm definition creates:</strong>
 									<p>
 										{preparedItem.plannedAlarmDefinitions
-											.map((entry) => `${entry.bacnetSoftwareId} -> ${entry.name}`)
+											.map((entry) => `${entry.bacnetSoftwareId} -> ${entry.name}${entry.alarmTypeCode ? ` [${entry.alarmTypeCode}]` : ''}`)
 											.join(' | ')}
 									</p>
 								</div>

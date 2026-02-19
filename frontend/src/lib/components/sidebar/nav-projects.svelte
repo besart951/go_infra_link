@@ -29,6 +29,12 @@
 	} = $props();
 
 	const sidebar = useSidebar();
+
+	function closeMobileSidebar() {
+		if (sidebar.isMobile) {
+			sidebar.setOpenMobile(false);
+		}
+	}
 </script>
 
 <Sidebar.Group class="group-data-[collapsible=icon]:hidden">
@@ -38,7 +44,7 @@
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton>
 					{#snippet child({ props })}
-						<a href={item.url} {...props}>
+						<a href={item.url} onclick={closeMobileSidebar} {...props}>
 							{#if item.icon}
 								<item.icon />
 							{:else}

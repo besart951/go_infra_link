@@ -10,11 +10,45 @@ export interface Unit {
 	name: string;
 }
 
+export interface CreateUnitRequest {
+	code: string;
+	symbol: string;
+	name: string;
+}
+
+export interface UpdateUnitRequest {
+	code?: string;
+	symbol?: string;
+	name?: string;
+}
+
 export interface AlarmField {
 	id: string;
 	key: string;
 	label: string;
-	data_type: 'number' | 'integer' | 'boolean' | 'string' | 'enum' | 'duration' | 'state_map' | 'json';
+	data_type:
+		| 'number'
+		| 'integer'
+		| 'boolean'
+		| 'string'
+		| 'enum'
+		| 'duration'
+		| 'state_map'
+		| 'json';
+	default_unit_code?: string;
+}
+
+export interface CreateAlarmFieldRequest {
+	key: string;
+	label: string;
+	data_type: AlarmField['data_type'];
+	default_unit_code?: string;
+}
+
+export interface UpdateAlarmFieldRequest {
+	key?: string;
+	label?: string;
+	data_type?: AlarmField['data_type'];
 	default_unit_code?: string;
 }
 
@@ -42,6 +76,36 @@ export interface AlarmType {
 	fields?: AlarmTypeField[];
 	created_at: string;
 	updated_at: string;
+}
+
+export interface CreateAlarmTypeRequest {
+	code: string;
+	name: string;
+}
+
+export interface UpdateAlarmTypeRequest {
+	name?: string;
+}
+
+export interface CreateAlarmTypeFieldRequest {
+	alarm_field_id: string;
+	display_order?: number;
+	is_required?: boolean;
+	is_user_editable?: boolean;
+	default_value_json?: string;
+	validation_json?: string;
+	default_unit_id?: string;
+	ui_group?: string;
+}
+
+export interface UpdateAlarmTypeFieldRequest {
+	display_order?: number;
+	is_required?: boolean;
+	is_user_editable?: boolean;
+	default_value_json?: string;
+	validation_json?: string;
+	default_unit_id?: string;
+	ui_group?: string;
 }
 
 export interface AlarmTypeListResponse {

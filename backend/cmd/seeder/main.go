@@ -274,6 +274,56 @@ type phaseSeed struct {
 	Name string `json:"name"`
 }
 
+type alarmUnitSeedFile struct {
+	AlarmUnits []alarmUnitSeed `json:"alarm_units"`
+}
+
+type alarmUnitSeed struct {
+	ID     int    `json:"id"`
+	Code   string `json:"code"`
+	Symbol string `json:"symbol"`
+	Name   string `json:"name"`
+}
+
+type alarmFieldSeedFile struct {
+	AlarmFields []alarmFieldSeed `json:"alarm_fields"`
+}
+
+type alarmFieldSeed struct {
+	ID              int     `json:"id"`
+	Key             string  `json:"key"`
+	Label           string  `json:"label"`
+	DataType        string  `json:"data_type"`
+	DefaultUnitCode *string `json:"default_unit_code"`
+}
+
+type alarmTypeSeedFile struct {
+	AlarmTypes []alarmTypeSeed `json:"alarm_types"`
+}
+
+type alarmTypeSeed struct {
+	ID   int    `json:"id"`
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
+type alarmTypeFieldSeedFile struct {
+	AlarmTypeFields []alarmTypeFieldSeed `json:"alarm_type_fields"`
+}
+
+type alarmTypeFieldSeed struct {
+	ID               int     `json:"id"`
+	AlarmTypeCode    string  `json:"alarm_type_code"`
+	AlarmFieldKey    string  `json:"alarm_field_key"`
+	DisplayOrder     int     `json:"display_order"`
+	IsRequired       bool    `json:"is_required"`
+	IsUserEditable   bool    `json:"is_user_editable"`
+	DefaultValueJSON *string `json:"default_value_json"`
+	ValidationJSON   *string `json:"validation_json"`
+	DefaultUnitCode  *string `json:"default_unit_code"`
+	UIGroup          *string `json:"ui_group"`
+}
+
 type systemPartApparatLink struct {
 	SystemPartID uuid.UUID `gorm:"column:system_part_id"`
 	ApparatID    uuid.UUID `gorm:"column:apparat_id"`
@@ -302,6 +352,17 @@ func readSeedFile(path string, dest any) error {
 
 func normalizeKey(value string) string {
 	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func strPtr(v string) *string {
+	return &v
+}
+
+func boolJSONPtr(v bool) *string {
+	if v {
+		return strPtr("true")
+	}
+	return strPtr("false")
 }
 
 func seedPhases(database *gorm.DB, seedDir string) error {
@@ -783,6 +844,164 @@ func seedStateTexts(database *gorm.DB, seedDir string) error {
 	return nil
 }
 
+func seedAlarmCatalog(database *gorm.DB) error {
+	log.Println("Seeding alarm catalog (units, fields, types, mappings)...")
+	seedDir := filepath.Join("data", "seed")
+
+	unitsPath, err := findSeedFile(seedDir, "alarm_units")
+	if err != nil {
+		return err
+	}
+	fieldsPath, err := findSeedFile(seedDir, "alarm_fields")
+	if err != nil {
+		return err
+	}
+	typesPath, err := findSeedFile(seedDir, "alarm_types")
+	if err != nil {
+		return err
+	}
+	typeFieldsPath, err := findSeedFile(seedDir, "alarm_type_fields")
+	if err != nil {
+		return err
+	}
+
+	var unitsPayload alarmUnitSeedFile
+	if err := readSeedFile(unitsPath, &unitsPayload); err != nil {
+		return err
+	}
+	var fieldsPayload alarmFieldSeedFile
+	if err := readSeedFile(fieldsPath, &fieldsPayload); err != nil {
+		return err
+	}
+	var typesPayload alarmTypeSeedFile
+	if err := readSeedFile(typesPath, &typesPayload); err != nil {
+		return err
+	}
+	var typeFieldsPayload alarmTypeFieldSeedFile
+	if err := readSeedFile(typeFieldsPath, &typeFieldsPayload); err != nil {
+		return err
+	}
+
+	now := time.Now().UTC()
+
+	unitByCode := make(map[string]domainFacility.Unit, len(unitsPayload.AlarmUnits))
+	unitsToCreate := make([]*domainFacility.Unit, 0, len(unitsPayload.AlarmUnits))
+	for _, seed := range unitsPayload.AlarmUnits {
+		unit := domainFacility.Unit{
+			Code:   strings.TrimSpace(seed.Code),
+			Symbol: strings.TrimSpace(seed.Symbol),
+			Name:   strings.TrimSpace(seed.Name),
+		}
+		if unit.Code == "" || unit.Symbol == "" || unit.Name == "" {
+			continue
+		}
+		if err := unit.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		unitByCode[normalizeKey(unit.Code)] = unit
+		unitsToCreate = append(unitsToCreate, &unit)
+	}
+	if len(unitsToCreate) > 0 {
+		if err := database.CreateInBatches(unitsToCreate, 100).Error; err != nil {
+			return err
+		}
+	}
+
+	fieldByKey := make(map[string]domainFacility.AlarmField, len(fieldsPayload.AlarmFields))
+	fieldsToCreate := make([]*domainFacility.AlarmField, 0, len(fieldsPayload.AlarmFields))
+	for _, seed := range fieldsPayload.AlarmFields {
+		field := domainFacility.AlarmField{
+			Key:             strings.TrimSpace(seed.Key),
+			Label:           strings.TrimSpace(seed.Label),
+			DataType:        strings.TrimSpace(seed.DataType),
+			DefaultUnitCode: seed.DefaultUnitCode,
+		}
+		if field.Key == "" || field.Label == "" || field.DataType == "" {
+			continue
+		}
+		if err := field.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		fieldByKey[normalizeKey(field.Key)] = field
+		fieldsToCreate = append(fieldsToCreate, &field)
+	}
+	if len(fieldsToCreate) > 0 {
+		if err := database.CreateInBatches(fieldsToCreate, 100).Error; err != nil {
+			return err
+		}
+	}
+
+	typeByCode := make(map[string]domainFacility.AlarmType, len(typesPayload.AlarmTypes))
+	typesToCreate := make([]*domainFacility.AlarmType, 0, len(typesPayload.AlarmTypes))
+	for _, seed := range typesPayload.AlarmTypes {
+		typ := domainFacility.AlarmType{Code: strings.TrimSpace(seed.Code), Name: strings.TrimSpace(seed.Name)}
+		if typ.Code == "" || typ.Name == "" {
+			continue
+		}
+		if err := typ.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		typeByCode[normalizeKey(typ.Code)] = typ
+		typesToCreate = append(typesToCreate, &typ)
+	}
+	if len(typesToCreate) > 0 {
+		if err := database.CreateInBatches(typesToCreate, 100).Error; err != nil {
+			return err
+		}
+	}
+
+	typeFieldsToCreate := make([]*domainFacility.AlarmTypeField, 0, len(typeFieldsPayload.AlarmTypeFields))
+	skipped := 0
+	for _, seed := range typeFieldsPayload.AlarmTypeFields {
+		typeItem, okType := typeByCode[normalizeKey(seed.AlarmTypeCode)]
+		fieldItem, okField := fieldByKey[normalizeKey(seed.AlarmFieldKey)]
+		if !okType || !okField {
+			skipped++
+			continue
+		}
+
+		var defaultUnitID *uuid.UUID
+		if seed.DefaultUnitCode != nil {
+			if unitItem, ok := unitByCode[normalizeKey(*seed.DefaultUnitCode)]; ok {
+				unitID := unitItem.ID
+				defaultUnitID = &unitID
+			}
+		}
+
+		typeField := domainFacility.AlarmTypeField{
+			AlarmTypeID:      typeItem.ID,
+			AlarmFieldID:     fieldItem.ID,
+			DisplayOrder:     seed.DisplayOrder,
+			IsRequired:       seed.IsRequired,
+			IsUserEditable:   seed.IsUserEditable,
+			DefaultValueJSON: seed.DefaultValueJSON,
+			ValidationJSON:   seed.ValidationJSON,
+			DefaultUnitID:    defaultUnitID,
+			UIGroup:          seed.UIGroup,
+		}
+		if err := typeField.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		typeFieldsToCreate = append(typeFieldsToCreate, &typeField)
+	}
+	if len(typeFieldsToCreate) > 0 {
+		if err := database.CreateInBatches(typeFieldsToCreate, 200).Error; err != nil {
+			return err
+		}
+	}
+
+	log.Printf(
+		"Seeded alarm catalog from JSON: units=%d, fields=%d, types=%d, mappings=%d (skipped=%d)",
+		len(unitsToCreate),
+		len(fieldsToCreate),
+		len(typesToCreate),
+		len(typeFieldsToCreate),
+		skipped,
+	)
+
+	return nil
+}
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -816,6 +1035,9 @@ func main() {
 	}
 	if err := seedStateTexts(database, seedDir); err != nil {
 		log.Fatalf("Failed to seed state texts: %v", err)
+	}
+	if err := seedAlarmCatalog(database); err != nil {
+		log.Fatalf("Failed to seed alarm catalog: %v", err)
 	}
 
 	systemPartIDs, err := seedSystemParts(database, seedDir)

@@ -14,6 +14,13 @@
 	}
 
 	let { items }: { items: NavItem[] } = $props();
+	const sidebar = Sidebar.useSidebar();
+
+	function closeMobileSidebar() {
+		if (sidebar.isMobile) {
+			sidebar.setOpenMobile(false);
+		}
+	}
 </script>
 
 <Sidebar.Group>
@@ -40,7 +47,7 @@
 							<Sidebar.MenuSub>
 								{#each item.items as subItem (subItem.title)}
 									<Sidebar.MenuSubItem>
-										<Sidebar.MenuSubButton href={subItem.url}>
+										<Sidebar.MenuSubButton href={subItem.url} onclick={closeMobileSidebar}>
 											<span>{subItem.title}</span>
 										</Sidebar.MenuSubButton>
 									</Sidebar.MenuSubItem>
@@ -53,7 +60,7 @@
 				<Sidebar.MenuItem>
 					<Sidebar.MenuButton isActive={item.isActive} tooltipContent={item.title}>
 						{#snippet child({ props })}
-							<a href={item.url} {...props}>
+							<a href={item.url} onclick={closeMobileSidebar} {...props}>
 								{#if item.icon}
 									<item.icon />
 								{/if}

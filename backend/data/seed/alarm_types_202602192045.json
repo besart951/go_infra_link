@@ -1,0 +1,15 @@
+{
+  "alarm_types": [
+    { "id": 1, "code": "active_inactive", "name": "Alarm Aktiv/Inaktiv" },
+    { "id": 2, "code": "priority_write", "name": "Schreibpriorität" },
+    { "id": 3, "code": "io_monitoring", "name": "I/O-Überwachung" },
+    { "id": 4, "code": "cov_logging", "name": "COV-Protokollierung" },
+    { "id": 5, "code": "elapsed_active_time", "name": "Verstrichene Aktivzeit" },
+    { "id": 6, "code": "limit_high_low", "name": "Grenzwert Hoch/Tief" },
+    { "id": 7, "code": "io_monitoring_limit", "name": "I/O-Überwachung mit Grenzwert" },
+    { "id": 8, "code": "pid_control", "name": "PID-Regelung" },
+    { "id": 9, "code": "state_mapping", "name": "Zustandszuordnung" },
+    { "id": 10, "code": "position_control", "name": "Positionskontrolle" },
+    { "id": 11, "code": "custom_value", "name": "Individueller Wert" }
+  ]
+}

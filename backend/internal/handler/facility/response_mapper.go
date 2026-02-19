@@ -352,6 +352,11 @@ func toMultiCreateFieldDeviceResponse(result *domainFacility.FieldDeviceMultiCre
 }
 
 func toBacnetObjectResponse(obj domainFacility.BacnetObject) dto.BacnetObjectResponse {
+	alarmTypeID := obj.AlarmTypeID
+	if alarmTypeID == nil && obj.AlarmDefinition != nil {
+		alarmTypeID = obj.AlarmDefinition.AlarmTypeID
+	}
+
 	return dto.BacnetObjectResponse{
 		ID:                  obj.ID.String(),
 		TextFix:             obj.TextFix,
@@ -368,6 +373,7 @@ func toBacnetObjectResponse(obj domainFacility.BacnetObject) dto.BacnetObjectRes
 		StateTextID:         obj.StateTextID,
 		NotificationClassID: obj.NotificationClassID,
 		AlarmDefinitionID:   obj.AlarmDefinitionID,
+		AlarmTypeID:         alarmTypeID,
 		CreatedAt:           obj.CreatedAt,
 		UpdatedAt:           obj.UpdatedAt,
 	}
@@ -624,6 +630,32 @@ func toAlarmTypeListResponse(list *domain.PaginatedList[domainFacility.AlarmType
 		items[i] = toAlarmTypeResponse(item)
 	}
 	return dto.AlarmTypeListResponse{
+		Items:      items,
+		Total:      list.Total,
+		Page:       list.Page,
+		TotalPages: list.TotalPages,
+	}
+}
+
+func toUnitListResponse(list *domain.PaginatedList[domainFacility.Unit]) dto.UnitListResponse {
+	items := make([]dto.UnitResponse, len(list.Items))
+	for i, item := range list.Items {
+		items[i] = toUnitResponse(item)
+	}
+	return dto.UnitListResponse{
+		Items:      items,
+		Total:      list.Total,
+		Page:       list.Page,
+		TotalPages: list.TotalPages,
+	}
+}
+
+func toAlarmFieldListResponse(list *domain.PaginatedList[domainFacility.AlarmField]) dto.AlarmFieldListResponse {
+	items := make([]dto.AlarmFieldResponse, len(list.Items))
+	for i, item := range list.Items {
+		items[i] = toAlarmFieldResponse(item)
+	}
+	return dto.AlarmFieldListResponse{
 		Items:      items,
 		Total:      list.Total,
 		Page:       list.Page,

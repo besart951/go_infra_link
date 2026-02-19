@@ -26,6 +26,9 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18n
 		SPSControllerSystemType: services.Facility.SPSControllerSystemType,
 		Export:                  services.Export,
 		AlarmType:               services.Facility.AlarmType,
+		Unit:                    services.Facility.Unit,
+		AlarmField:              services.Facility.AlarmField,
+		AlarmTypeField:          services.Facility.AlarmTypeField,
 		BacnetAlarm:             services.Facility.BacnetAlarmValue,
 	})
 
@@ -68,6 +71,9 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18n
 		FacilitySPSControllerSystemTypeHandler: facilityHandlers.SPSControllerSystemType,
 		FacilityExportHandler:                  facilityHandlers.Export,
 		FacilityAlarmTypeHandler:               facilityHandlers.AlarmType,
+		FacilityUnitHandler:                    facilityHandlers.Unit,
+		FacilityAlarmFieldHandler:              facilityHandlers.AlarmField,
+		FacilityAlarmTypeFieldHandler:          facilityHandlers.AlarmTypeField,
 		FacilityBacnetAlarmHandler:             facilityHandlers.BacnetAlarm,
 	}
 }

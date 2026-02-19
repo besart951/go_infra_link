@@ -1,0 +1,24 @@
+{
+  "alarm_units": [
+    { "id": 1, "code": "C", "symbol": "°C", "name": "Grad Celsius" },
+    { "id": 2, "code": "PERCENT", "symbol": "%", "name": "Prozent" },
+    { "id": 3, "code": "PA", "symbol": "Pa", "name": "Pascal" },
+    { "id": 4, "code": "K", "symbol": "K", "name": "Kelvin" },
+    { "id": 5, "code": "LUX", "symbol": "Lux", "name": "Lux" },
+    { "id": 6, "code": "RPM", "symbol": "U/min", "name": "Umdrehungen pro Minute" },
+    { "id": 7, "code": "M", "symbol": "m", "name": "Meter" },
+    { "id": 8, "code": "KW", "symbol": "kW", "name": "Kilowatt" },
+    { "id": 9, "code": "M3_H", "symbol": "m3/h", "name": "Kubikmeter pro Stunde" },
+    { "id": 10, "code": "KWH", "symbol": "kWh", "name": "Kilowattstunde" },
+    { "id": 11, "code": "G_KG", "symbol": "g/kg", "name": "Gramm pro Kilogramm" },
+    { "id": 12, "code": "HPA", "symbol": "hPa", "name": "Hektopascal" },
+    { "id": 13, "code": "J", "symbol": "J", "name": "Joule" },
+    { "id": 14, "code": "M_S", "symbol": "m/s", "name": "Meter pro Sekunde" },
+    { "id": 15, "code": "V", "symbol": "V", "name": "Volt" },
+    { "id": 16, "code": "H", "symbol": "h", "name": "Stunde" },
+    { "id": 17, "code": "MIN", "symbol": "min", "name": "Minute" },
+    { "id": 18, "code": "S", "symbol": "s", "name": "Sekunde" },
+    { "id": 19, "code": "REF_PERCENT", "symbol": "% ref", "name": "Prozent Referenz" },
+    { "id": 20, "code": "DEG", "symbol": "°", "name": "Grad" }
+  ]
+}

@@ -6,7 +6,9 @@
 	import { Trash2 } from '@lucide/svelte';
 	import { BACNET_SOFTWARE_TYPES, BACNET_HARDWARE_TYPES } from '$lib/domain/facility/index.js';
 	import { createTranslator } from '$lib/i18n/translator.js';
-	import AlarmDefinitionSelect from '$lib/components/facility/selects/AlarmDefinitionSelect.svelte';
+	import AlarmTypeSelect from '$lib/components/facility/selects/AlarmTypeSelect.svelte';
+	import { alarmTypeRepository } from '$lib/infrastructure/api/alarmTypeRepository.js';
+	import type { AlarmTypeField } from '$lib/domain/facility/index.js';
 
 	type BacnetRowErrors = Partial<
 		Record<
@@ -31,7 +33,7 @@
 		softwareNumber: number;
 		hardwareType: string;
 		hardwareQuantity: number;
-		alarmDefinitionId?: string;
+		alarmTypeId?: string;
 		errors?: BacnetRowErrors;
 		onRemove: () => void;
 		onUpdate: (field: string, value: any) => void;
@@ -48,7 +50,7 @@
 		softwareNumber = $bindable(1),
 		hardwareType = $bindable('ai'),
 		hardwareQuantity = $bindable(1),
-		alarmDefinitionId = $bindable(''),
+		alarmTypeId = $bindable(),
 		errors = {},
 		onRemove,
 		onUpdate
@@ -59,7 +61,11 @@
 	let textIndividualEnabled = $state(!!textIndividual);
 	let prevGmsVisible = $state<boolean | null>(null);
 	let prevOptional = $state<boolean | null>(null);
-	let prevAlarmDefinitionId = $state<string | null>(null);
+	let prevAlarmTypeId = $state<string | null>(null);
+	let alarmTypeFields = $state<AlarmTypeField[]>([]);
+	let alarmTypeFieldsLoading = $state(false);
+	let alarmTypeFieldsError = $state('');
+	const requiredAlarmTypeFields = $derived(alarmTypeFields.filter((field) => field.is_required));
 
 	$effect(() => {
 		if (prevGmsVisible === null) {
@@ -84,15 +90,43 @@
 	});
 
 	$effect(() => {
-		if (prevAlarmDefinitionId === null) {
-			prevAlarmDefinitionId = alarmDefinitionId ?? '';
+		if (prevAlarmTypeId === null) {
+			prevAlarmTypeId = alarmTypeId ?? '';
 			return;
 		}
-		const current = alarmDefinitionId ?? '';
-		if (current !== prevAlarmDefinitionId) {
-			prevAlarmDefinitionId = current;
-			onUpdate('alarm_definition_id', current || null);
+		const current = alarmTypeId ?? '';
+		if (current !== prevAlarmTypeId) {
+			prevAlarmTypeId = current;
+			onUpdate('alarm_type_id', current || null);
 		}
+	});
+
+	$effect(() => {
+		const selectedAlarmTypeId = alarmTypeId?.trim() ?? '';
+		if (!selectedAlarmTypeId) {
+			alarmTypeFields = [];
+			alarmTypeFieldsError = '';
+			alarmTypeFieldsLoading = false;
+			return;
+		}
+
+		alarmTypeFieldsLoading = true;
+		alarmTypeFieldsError = '';
+
+		void alarmTypeRepository
+			.getWithFields(selectedAlarmTypeId)
+			.then((alarmType) => {
+				alarmTypeFields = [...(alarmType.fields ?? [])].sort(
+					(a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)
+				);
+			})
+			.catch(() => {
+				alarmTypeFields = [];
+				alarmTypeFieldsError = 'Felder konnten nicht geladen werden';
+			})
+			.finally(() => {
+				alarmTypeFieldsLoading = false;
+			});
 	});
 
 	$effect(() => {
@@ -268,24 +302,49 @@
 		</div>
 	</div>
 
-	<!-- Alarm Definition Section -->
+	<!-- Alarm Type Section -->
 	<div class="col-span-12 space-y-1 border-t pt-2 md:col-span-12">
-		<Label class="text-xs">{$t('field_device.bacnet.row.alarm_definition')}</Label>
-		<div class="flex items-center gap-2">
-			<AlarmDefinitionSelect bind:value={alarmDefinitionId} width="w-full" />
-			{#if alarmDefinitionId}
-				<Button
-					variant="ghost"
-					size="sm"
-					onclick={() => {
-						alarmDefinitionId = '';
-					}}
-					class="h-8 w-8 shrink-0 p-0"
-					title={$t('field_device.bacnet.row.alarm_definition_remove')}
-				>
-					✕
-				</Button>
+		<Label class="text-xs">Alarmtyp</Label>
+		<div class="space-y-2">
+			<AlarmTypeSelect bind:value={alarmTypeId} width="w-full" />
+			{#if alarmTypeId}
+				<div class="flex justify-end">
+					<Button
+						variant="ghost"
+						size="sm"
+						onclick={() => {
+							alarmTypeId = '';
+						}}
+						class="h-7 px-2 text-xs"
+						title="Alarmtyp entfernen"
+					>
+						Alarmtyp entfernen
+					</Button>
+				</div>
 			{/if}
 		</div>
+
+		{#if alarmTypeFieldsLoading}
+			<p class="text-xs text-muted-foreground">Alarmfelder werden geladen…</p>
+		{:else if alarmTypeFieldsError}
+			<p class="text-xs text-red-500">{alarmTypeFieldsError}</p>
+		{:else if requiredAlarmTypeFields.length > 0}
+			<div class="rounded-md border bg-muted/30 p-2">
+				<p class="mb-1 text-xs font-medium text-muted-foreground">Pflichtfelder</p>
+				<div class="space-y-1">
+					{#each requiredAlarmTypeFields as field (field.id)}
+						<div class="flex items-center justify-between gap-2 text-xs">
+							<span class="truncate">
+								{field.alarm_field?.label ?? field.alarm_field_id}
+								({field.alarm_field?.data_type ?? 'unknown'})
+							</span>
+							<span class="shrink-0 text-muted-foreground">Pflicht</span>
+						</div>
+					{/each}
+				</div>
+			</div>
+		{:else if alarmTypeId}
+			<p class="text-xs text-muted-foreground">Keine Pflichtfelder vorhanden</p>
+		{/if}
 	</div>
 </div>

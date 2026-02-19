@@ -18,7 +18,10 @@ type SystemPartRepository = domain.Repository[SystemPart]
 type SpecificationRepository = domain.Repository[Specification]
 type StateTextRepository = domain.Repository[StateText]
 type NotificationClassRepository = domain.Repository[NotificationClass]
-type AlarmDefinitionRepository = domain.Repository[AlarmDefinition]
+type AlarmDefinitionRepository interface {
+	domain.Repository[AlarmDefinition]
+	FindOrCreateTemplateByAlarmTypeID(alarmTypeID uuid.UUID) (*AlarmDefinition, error)
+}
 type ApparatRepository = domain.Repository[Apparat]
 type ObjectDataRepository = domain.Repository[ObjectData]
 type ControlCabinetRepository interface {

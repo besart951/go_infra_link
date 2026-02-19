@@ -59,7 +59,8 @@
 				software_type: obj.software_type ?? 'ai',
 				software_number: obj.software_number ?? 1,
 				hardware_type: obj.hardware_type ?? 'ai',
-				hardware_quantity: obj.hardware_quantity ?? 1
+				hardware_quantity: obj.hardware_quantity ?? 1,
+				alarm_type_id: obj.alarm_type_id ?? ''
 			}));
 		} else {
 			description = '';
@@ -179,7 +180,8 @@
 				software_type: 'ai',
 				software_number: 1,
 				hardware_type: 'ai',
-				hardware_quantity: 1
+				hardware_quantity: 1,
+				alarm_type_id: ''
 			}
 		];
 	}
@@ -314,6 +316,7 @@
 						bind:softwareNumber={obj.software_number}
 						bind:hardwareType={obj.hardware_type}
 						bind:hardwareQuantity={obj.hardware_quantity}
+						bind:alarmTypeId={obj.alarm_type_id}
 						errors={rowErrors}
 						onRemove={() => removeBacnetObject(index)}
 						onUpdate={(field, value) => updateBacnetObject(index, field, value)}

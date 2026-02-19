@@ -1,0 +1,29 @@
+{
+  "alarm_fields": [
+    { "id": 1, "key": "alarm_state", "label": "Alarmzustand", "data_type": "enum" },
+    { "id": 2, "key": "priority_for_writing", "label": "Schreibpriorität", "data_type": "integer" },
+    { "id": 3, "key": "nc_reference", "label": "NC-Referenz", "data_type": "integer" },
+    { "id": 4, "key": "feedback_value", "label": "Rückmeldewert", "data_type": "string" },
+    { "id": 5, "key": "logging_type", "label": "Protokolltyp", "data_type": "enum" },
+    { "id": 6, "key": "buffer_size", "label": "Puffergröße", "data_type": "integer" },
+    { "id": 7, "key": "elapsed_active_time", "label": "Verstrichene Aktivzeit", "data_type": "duration", "default_unit_code": "H" },
+    { "id": 8, "key": "high_limit", "label": "Oberer Grenzwert", "data_type": "number" },
+    { "id": 9, "key": "low_limit", "label": "Unterer Grenzwert", "data_type": "number" },
+    { "id": 10, "key": "prealarm_high", "label": "Voralarm oben", "data_type": "number" },
+    { "id": 11, "key": "prealarm_low", "label": "Voralarm unten", "data_type": "number" },
+    { "id": 12, "key": "alarm_delay", "label": "Alarmverzögerung", "data_type": "duration", "default_unit_code": "MIN" },
+    { "id": 13, "key": "state_map_json", "label": "Zustandszuordnung", "data_type": "state_map" },
+    { "id": 14, "key": "position_mode", "label": "Positionsmodus", "data_type": "enum" },
+    { "id": 15, "key": "custom_label", "label": "Individueller Label", "data_type": "string" },
+    { "id": 16, "key": "custom_value", "label": "Individueller Wert", "data_type": "json" },
+    { "id": 17, "key": "controlled_variable_value", "label": "Regelgröße", "data_type": "number" },
+    { "id": 18, "key": "present_value", "label": "Istwert", "data_type": "number" },
+    { "id": 19, "key": "setpoint", "label": "Sollwert", "data_type": "number" },
+    { "id": 20, "key": "proportional_constant", "label": "Proportionalanteil", "data_type": "number" },
+    { "id": 21, "key": "integral_constant", "label": "Integralanteil", "data_type": "number" },
+    { "id": 22, "key": "maximum_output", "label": "Maximalausgang", "data_type": "number", "default_unit_code": "PERCENT" },
+    { "id": 23, "key": "minimum_output", "label": "Minimalausgang", "data_type": "number", "default_unit_code": "PERCENT" },
+    { "id": 24, "key": "error_limit", "label": "Fehlergrenze", "data_type": "number" },
+    { "id": 25, "key": "time_delay", "label": "Zeitverzögerung", "data_type": "duration", "default_unit_code": "S" }
+  ]
+}

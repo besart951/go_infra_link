@@ -161,6 +161,29 @@ type AlarmTypeService interface {
 	DeleteByID(id uuid.UUID) error
 }
 
+type UnitService interface {
+	Create(unit *domainFacility.Unit) error
+	GetByID(id uuid.UUID) (*domainFacility.Unit, error)
+	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.Unit], error)
+	Update(unit *domainFacility.Unit) error
+	DeleteByID(id uuid.UUID) error
+}
+
+type AlarmFieldService interface {
+	Create(field *domainFacility.AlarmField) error
+	GetByID(id uuid.UUID) (*domainFacility.AlarmField, error)
+	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.AlarmField], error)
+	Update(field *domainFacility.AlarmField) error
+	DeleteByID(id uuid.UUID) error
+}
+
+type AlarmTypeFieldService interface {
+	Create(item *domainFacility.AlarmTypeField) error
+	GetByID(id uuid.UUID) (*domainFacility.AlarmTypeField, error)
+	Update(item *domainFacility.AlarmTypeField) error
+	DeleteByID(id uuid.UUID) error
+}
+
 type BacnetAlarmValueService interface {
 	GetSchema(bacnetObjectID uuid.UUID) (*domainFacility.AlarmType, error)
 	GetValues(bacnetObjectID uuid.UUID) ([]domainFacility.BacnetObjectAlarmValue, error)

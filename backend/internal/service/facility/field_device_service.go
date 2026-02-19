@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -21,6 +22,9 @@ type FieldDeviceService struct {
 	specificationRepo           domainFacility.SpecificationStore
 	bacnetObjectRepo            domainFacility.BacnetObjectStore
 	objectDataRepo              domainFacility.ObjectDataStore
+	alarmDefinitionRepo         domainFacility.AlarmDefinitionRepository
+	alarmTypeRepo               domainFacility.AlarmTypeRepository
+	bacnetAlarmValueRepo        domainFacility.BacnetObjectAlarmValueRepository
 }
 
 func NewFieldDeviceService(
@@ -35,6 +39,9 @@ func NewFieldDeviceService(
 	specificationRepo domainFacility.SpecificationStore,
 	bacnetObjectRepo domainFacility.BacnetObjectStore,
 	objectDataRepo domainFacility.ObjectDataStore,
+	alarmDefinitionRepo domainFacility.AlarmDefinitionRepository,
+	alarmTypeRepo domainFacility.AlarmTypeRepository,
+	bacnetAlarmValueRepo domainFacility.BacnetObjectAlarmValueRepository,
 ) *FieldDeviceService {
 	return &FieldDeviceService{
 		repo:                        repo,
@@ -48,6 +55,9 @@ func NewFieldDeviceService(
 		specificationRepo:           specificationRepo,
 		bacnetObjectRepo:            bacnetObjectRepo,
 		objectDataRepo:              objectDataRepo,
+		alarmDefinitionRepo:         alarmDefinitionRepo,
+		alarmTypeRepo:               alarmTypeRepo,
+		bacnetAlarmValueRepo:        bacnetAlarmValueRepo,
 	}
 }
 
@@ -562,6 +572,151 @@ func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.
 	return nil
 }
 
+func (s *FieldDeviceService) initializeAlarmValuesForBacnetObject(bacnetObject *domainFacility.BacnetObject) error {
+	if bacnetObject == nil || bacnetObject.AlarmDefinitionID == nil {
+		return nil
+	}
+
+	defs, err := s.alarmDefinitionRepo.GetByIds([]uuid.UUID{*bacnetObject.AlarmDefinitionID})
+	if err != nil || len(defs) == 0 {
+		return err
+	}
+	def := defs[0]
+	if def.AlarmTypeID == nil {
+		return nil
+	}
+
+	alarmType, err := s.alarmTypeRepo.GetWithFields(*def.AlarmTypeID)
+	if err != nil || alarmType == nil {
+		return err
+	}
+
+	values := make([]domainFacility.BacnetObjectAlarmValue, 0, len(alarmType.Fields))
+	for _, field := range alarmType.Fields {
+		value := domainFacility.BacnetObjectAlarmValue{
+			BacnetObjectID:   bacnetObject.ID,
+			AlarmTypeFieldID: field.ID,
+			UnitID:           field.DefaultUnitID,
+			Source:           domainFacility.AlarmValueSourceDefault,
+		}
+
+		if field.DefaultValueJSON != nil && field.AlarmField != nil {
+			applyAlarmDefaultValue(&value, field.AlarmField.DataType, *field.DefaultValueJSON)
+		}
+
+		values = append(values, value)
+	}
+
+	if len(values) == 0 {
+		return nil
+	}
+
+	return s.bacnetAlarmValueRepo.ReplaceForBacnetObject(bacnetObject.ID, values)
+}
+
+func applyAlarmDefaultValue(value *domainFacility.BacnetObjectAlarmValue, dataType string, defaultValueJSON string) {
+	if value == nil {
+		return
+	}
+
+	var decoded any
+	if err := json.Unmarshal([]byte(defaultValueJSON), &decoded); err != nil {
+		value.ValueString = &defaultValueJSON
+		return
+	}
+
+	switch strings.ToLower(strings.TrimSpace(dataType)) {
+	case "number", "duration":
+		if n, ok := toFloat64(decoded); ok {
+			value.ValueNumber = &n
+		}
+	case "integer":
+		if n, ok := toInt64(decoded); ok {
+			value.ValueInteger = &n
+		}
+	case "boolean":
+		if b, ok := decoded.(bool); ok {
+			value.ValueBoolean = &b
+		}
+	case "string", "enum":
+		if s, ok := decoded.(string); ok {
+			value.ValueString = &s
+		}
+	case "state_map", "json":
+		if b, err := json.Marshal(decoded); err == nil {
+			raw := string(b)
+			value.ValueJSON = &raw
+		}
+	default:
+		if b, err := json.Marshal(decoded); err == nil {
+			raw := string(b)
+			value.ValueJSON = &raw
+		}
+	}
+}
+
+func toFloat64(value any) (float64, bool) {
+	switch v := value.(type) {
+	case float64:
+		return v, true
+	case float32:
+		return float64(v), true
+	case int:
+		return float64(v), true
+	case int8:
+		return float64(v), true
+	case int16:
+		return float64(v), true
+	case int32:
+		return float64(v), true
+	case int64:
+		return float64(v), true
+	case uint:
+		return float64(v), true
+	case uint8:
+		return float64(v), true
+	case uint16:
+		return float64(v), true
+	case uint32:
+		return float64(v), true
+	case uint64:
+		return float64(v), true
+	default:
+		return 0, false
+	}
+}
+
+func toInt64(value any) (int64, bool) {
+	switch v := value.(type) {
+	case int:
+		return int64(v), true
+	case int8:
+		return int64(v), true
+	case int16:
+		return int64(v), true
+	case int32:
+		return int64(v), true
+	case int64:
+		return v, true
+	case uint:
+		return int64(v), true
+	case uint8:
+		return int64(v), true
+	case uint16:
+		return int64(v), true
+	case uint32:
+		return int64(v), true
+	case uint64:
+		return int64(v), true
+	case float64:
+		return int64(v), true
+	case float32:
+		return int64(v), true
+	default:
+		return 0, false
+	}
+}
+
 func (s *FieldDeviceService) replaceBacnetObjects(fieldDeviceID uuid.UUID, bacnetObjects []domainFacility.BacnetObject) error {
 	ve := domain.NewValidationError()
 	seen := make(map[string]int, len(bacnetObjects))
@@ -590,6 +745,9 @@ func (s *FieldDeviceService) replaceBacnetObjects(fieldDeviceID uuid.UUID, bacne
 		id := fieldDeviceID
 		obj.FieldDeviceID = &id
 		if err := s.bacnetObjectRepo.Create(&obj); err != nil {
+			return err
+		}
+		if err := s.initializeAlarmValuesForBacnetObject(&obj); err != nil {
 			return err
 		}
 	}
@@ -774,6 +932,9 @@ func (s *FieldDeviceService) replaceBacnetObjectsFromObjectData(fieldDeviceID uu
 	oldToNew := make(map[uuid.UUID]uuid.UUID, len(templates))
 	for tid, clone := range templateToClone {
 		if err := s.bacnetObjectRepo.Create(clone); err != nil {
+			return err
+		}
+		if err := s.initializeAlarmValuesForBacnetObject(clone); err != nil {
 			return err
 		}
 		oldToNew[tid] = clone.ID

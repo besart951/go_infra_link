@@ -9,7 +9,7 @@
 		width?: string;
 	};
 
-	let { value = $bindable(''), width = 'w-[300px]' }: Props = $props();
+	let { value = $bindable(), width = 'w-[300px]' }: Props = $props();
 
 	const t = createTranslator();
 

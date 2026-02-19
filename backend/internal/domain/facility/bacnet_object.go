@@ -29,6 +29,7 @@ type BacnetObject struct {
 	NotificationClass   *NotificationClass `gorm:"foreignKey:NotificationClassID"`
 	AlarmDefinitionID   *uuid.UUID         `gorm:"type:uuid;index"`
 	AlarmDefinition     *AlarmDefinition   `gorm:"foreignKey:AlarmDefinitionID"`
+	AlarmTypeID         *uuid.UUID         `gorm:"-:all"`
 }
 
 // BacnetObjectPatch represents a partial update for a bacnet object.
@@ -48,6 +49,7 @@ type BacnetObjectPatch struct {
 	StateTextID         *uuid.UUID
 	NotificationClassID *uuid.UUID
 	AlarmDefinitionID   *uuid.UUID
+	AlarmTypeID         *uuid.UUID
 }
 
 type BacnetSoftwareType string
@@ -74,8 +76,8 @@ type BacnetHardwareType string
 
 const (
 	BacnetHardwareTypeEMPTY BacnetHardwareType = ""
-	BacnetHardwareTypeDO BacnetHardwareType = "do"
-	BacnetHardwareTypeAO BacnetHardwareType = "ao"
-	BacnetHardwareTypeDI BacnetHardwareType = "di"
-	BacnetHardwareTypeAI BacnetHardwareType = "ai"
+	BacnetHardwareTypeDO    BacnetHardwareType = "do"
+	BacnetHardwareTypeAO    BacnetHardwareType = "ao"
+	BacnetHardwareTypeDI    BacnetHardwareType = "di"
+	BacnetHardwareTypeAI    BacnetHardwareType = "ai"
 )

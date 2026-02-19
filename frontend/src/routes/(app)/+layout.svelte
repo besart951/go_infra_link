@@ -43,6 +43,8 @@
 		if (pathname.startsWith('/facility/state-texts')) return t('navigation.state_texts');
 		if (pathname.startsWith('/facility/alarm-definitions'))
 			return t('navigation.alarm_definitions');
+		if (pathname.startsWith('/facility/alarm-catalog'))
+			return t('navigation.alarm_catalog');
 		if (pathname.startsWith('/facility/notification-classes'))
 			return t('navigation.notification_classes');
 		if (pathname.startsWith('/facility')) return t('navigation.facility');

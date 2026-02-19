@@ -17,6 +17,9 @@ type ServiceDeps struct {
 	SPSControllerSystemType SPSControllerSystemTypeService
 	Export                  ExportService
 	AlarmType               AlarmTypeService
+	Unit                    UnitService
+	AlarmField              AlarmFieldService
+	AlarmTypeField          AlarmTypeFieldService
 	BacnetAlarm             BacnetAlarmValueService
 }
 
@@ -38,6 +41,9 @@ type Handlers struct {
 	Export                  *ExportHandler
 	Validation              *ValidationHandler
 	AlarmType               *AlarmTypeHandler
+	Unit                    *UnitHandler
+	AlarmField              *AlarmFieldHandler
+	AlarmTypeField          *AlarmTypeFieldHandler
 	BacnetAlarm             *BacnetAlarmHandler
 }
 
@@ -60,6 +66,9 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 		Export:                  NewExportHandler(deps.Export),
 		Validation:              NewValidationHandler(deps.Building, deps.ControlCabinet, deps.SPSController),
 		AlarmType:               NewAlarmTypeHandler(deps.AlarmType),
+		Unit:                    NewUnitHandler(deps.Unit),
+		AlarmField:              NewAlarmFieldHandler(deps.AlarmField),
+		AlarmTypeField:          NewAlarmTypeFieldHandler(deps.AlarmTypeField),
 		BacnetAlarm:             NewBacnetAlarmHandler(deps.BacnetAlarm),
 	}
 }

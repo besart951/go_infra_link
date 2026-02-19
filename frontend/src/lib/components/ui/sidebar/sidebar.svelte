@@ -36,6 +36,7 @@
 {:else if sidebar.isMobile}
 	<Sheet.Root bind:open={() => sidebar.openMobile, (v) => sidebar.setOpenMobile(v)} {...restProps}>
 		<Sheet.Content
+			onInteractOutside={() => sidebar.setOpenMobile(false)}
 			data-sidebar="sidebar"
 			data-slot="sidebar"
 			data-mobile="true"

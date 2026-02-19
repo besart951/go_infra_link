@@ -16,6 +16,13 @@ type objectDataRepo struct {
 	db *gorm.DB
 }
 
+func (r *objectDataRepo) withObjectDataPreloads(query *gorm.DB) *gorm.DB {
+	return query.
+		Preload("BacnetObjects").
+		Preload("BacnetObjects.AlarmDefinition").
+		Preload("Apparats")
+}
+
 func (r *objectDataRepo) getPaginatedListFiltered(projectID *uuid.UUID, apparatID *uuid.UUID, systemPartID *uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
@@ -53,10 +60,8 @@ func (r *objectDataRepo) getPaginatedListFiltered(projectID *uuid.UUID, apparatI
 	}
 
 	var items []domainFacility.ObjectData
-	if err := query.
+	if err := r.withObjectDataPreloads(query).
 		Order("created_at DESC").
-		Preload("BacnetObjects").
-		Preload("Apparats").
 		Limit(limit).
 		Offset(offset).
 		Find(&items).Error; err != nil {
@@ -86,10 +91,18 @@ func NewObjectDataRepository(db *gorm.DB) domainFacility.ObjectDataStore {
 
 func (r *objectDataRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.ObjectData, error) {
 	var items []*domainFacility.ObjectData
-	if err := r.db.Where("id IN ?", ids).Preload("BacnetObjects").Preload("Apparats").Find(&items).Error; err != nil {
+	if err := r.withObjectDataPreloads(r.db.Where("id IN ?", ids)).Find(&items).Error; err != nil {
 		return nil, err
 	}
 	return items, nil
+}
+
+func (r *objectDataRepo) GetByID(id uuid.UUID) (*domainFacility.ObjectData, error) {
+	var item domainFacility.ObjectData
+	if err := r.withObjectDataPreloads(r.db.Where("id = ?", id)).First(&item).Error; err != nil {
+		return nil, err
+	}
+	return &item, nil
 }
 
 func (r *objectDataRepo) Create(entity *domainFacility.ObjectData) error {
@@ -145,10 +158,8 @@ func (r *objectDataRepo) GetPaginatedList(params domain.PaginationParams) (*doma
 	}
 
 	var items []domainFacility.ObjectData
-	if err := query.
+	if err := r.withObjectDataPreloads(query).
 		Order("created_at DESC").
-		Preload("BacnetObjects").
-		Preload("Apparats").
 		Limit(limit).
 		Offset(offset).
 		Find(&items).Error; err != nil {
@@ -199,13 +210,13 @@ func (r *objectDataRepo) ExistsByDescription(projectID *uuid.UUID, description s
 
 func (r *objectDataRepo) GetTemplates() ([]*domainFacility.ObjectData, error) {
 	var items []*domainFacility.ObjectData
-	err := r.db.Where("is_active = ? AND project_id IS NULL", true).Preload("BacnetObjects").Preload("Apparats").Find(&items).Error
+	err := r.withObjectDataPreloads(r.db.Where("is_active = ? AND project_id IS NULL", true)).Find(&items).Error
 	return items, err
 }
 
 func (r *objectDataRepo) GetForProject(projectID uuid.UUID) ([]*domainFacility.ObjectData, error) {
 	var items []*domainFacility.ObjectData
-	err := r.db.Where("is_active = ? AND project_id = ?", true, projectID).Preload("BacnetObjects").Preload("Apparats").Find(&items).Error
+	err := r.withObjectDataPreloads(r.db.Where("is_active = ? AND project_id = ?", true, projectID)).Find(&items).Error
 	return items, err
 }
 

@@ -64,6 +64,7 @@
 				{ title: $t('navigation.object_data'), url: '/facility/object-data' },
 				{ title: $t('navigation.state_texts'), url: '/facility/state-texts' },
 				{ title: $t('navigation.alarm_definitions'), url: '/facility/alarm-definitions' },
+				{ title: $t('navigation.alarm_catalog'), url: '/facility/alarm-catalog' },
 				{ title: $t('navigation.notification_classes'), url: '/facility/notification-classes' }
 			]
 		},

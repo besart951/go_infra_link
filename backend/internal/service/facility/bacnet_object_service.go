@@ -14,6 +14,30 @@ type BacnetObjectService struct {
 	fieldDeviceRepo       domainFacility.FieldDeviceStore
 	objectDataRepo        domainFacility.ObjectDataStore
 	objectDataBacnetStore domainFacility.ObjectDataBacnetObjectStore
+	alarmDefinitionRepo   domainFacility.AlarmDefinitionRepository
+	alarmTypeRepo         domainFacility.AlarmTypeRepository
+}
+
+func (s *BacnetObjectService) resolveAlarmBindingForTemplate(bacnetObject *domainFacility.BacnetObject) error {
+	if bacnetObject == nil {
+		return nil
+	}
+
+	if bacnetObject.AlarmTypeID == nil {
+		return nil
+	}
+
+	if _, err := domain.GetByID(s.alarmTypeRepo, *bacnetObject.AlarmTypeID); err != nil {
+		return err
+	}
+
+	definition, err := s.alarmDefinitionRepo.FindOrCreateTemplateByAlarmTypeID(*bacnetObject.AlarmTypeID)
+	if err != nil {
+		return err
+	}
+
+	bacnetObject.AlarmDefinitionID = &definition.ID
+	return nil
 }
 
 func (s *BacnetObjectService) ensureTextFixUniqueForFieldDevice(fieldDeviceID uuid.UUID, textFix string, excludeID *uuid.UUID) error {
@@ -99,12 +123,16 @@ func NewBacnetObjectService(
 	fieldDeviceRepo domainFacility.FieldDeviceStore,
 	objectDataRepo domainFacility.ObjectDataStore,
 	objectDataBacnetStore domainFacility.ObjectDataBacnetObjectStore,
+	alarmDefinitionRepo domainFacility.AlarmDefinitionRepository,
+	alarmTypeRepo domainFacility.AlarmTypeRepository,
 ) *BacnetObjectService {
 	return &BacnetObjectService{
 		repo:                  repo,
 		fieldDeviceRepo:       fieldDeviceRepo,
 		objectDataRepo:        objectDataRepo,
 		objectDataBacnetStore: objectDataBacnetStore,
+		alarmDefinitionRepo:   alarmDefinitionRepo,
+		alarmTypeRepo:         alarmTypeRepo,
 	}
 }
 
@@ -158,6 +186,9 @@ func (s *BacnetObjectService) CreateWithParent(bacnetObject *domainFacility.Bacn
 	if err := s.ensureSoftwareUniqueForObjectData(*objectDataID, bacnetObject.SoftwareType, bacnetObject.SoftwareNumber, nil); err != nil {
 		return err
 	}
+	if err := s.resolveAlarmBindingForTemplate(bacnetObject); err != nil {
+		return err
+	}
 
 	bacnetObject.FieldDeviceID = nil
 	if err := s.repo.Create(bacnetObject); err != nil {
@@ -192,6 +223,9 @@ func (s *BacnetObjectService) Update(bacnetObject *domainFacility.BacnetObject, 
 
 	if objectDataID != nil {
 		if err := s.ensureSoftwareUniqueForObjectData(*objectDataID, bacnetObject.SoftwareType, bacnetObject.SoftwareNumber, &bacnetObject.ID); err != nil {
+			return err
+		}
+		if err := s.resolveAlarmBindingForTemplate(bacnetObject); err != nil {
 			return err
 		}
 	}
@@ -230,6 +264,9 @@ func (s *BacnetObjectService) ReplaceForObjectData(objectDataID uuid.UUID, input
 		bo := &inputs[i]
 		bo.TextFix = normalizeBacnetTextFix(bo.TextFix)
 		if err := s.validateRequiredFields(bo, "objectdata.bacnetobject"); err != nil {
+			return err
+		}
+		if err := s.resolveAlarmBindingForTemplate(bo); err != nil {
 			return err
 		}
 		softwareKey := strings.ToLower(strings.TrimSpace(string(bo.SoftwareType))) + ":" + strconv.FormatUint(uint64(bo.SoftwareNumber), 10)

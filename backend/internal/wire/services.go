@@ -65,7 +65,10 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 		StateTexts:               repos.FacilityStateTexts,
 		NotificationClasses:      repos.FacilityNotificationClasses,
 		AlarmDefinitions:         repos.FacilityAlarmDefinitions,
+		Units:                    repos.FacilityUnits,
+		AlarmFields:              repos.FacilityAlarmFields,
 		AlarmTypes:               repos.FacilityAlarmTypes,
+		AlarmTypeFields:          repos.FacilityAlarmTypeFields,
 		BacnetObjectAlarmValues:  repos.FacilityBacnetObjectAlarmValues,
 	})
 

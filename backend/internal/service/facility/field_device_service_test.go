@@ -466,6 +466,9 @@ func TestFieldDeviceService_BulkUpdate_AllowsSwapApparatNr(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		nil,
+		nil,
+		nil,
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
@@ -539,6 +542,9 @@ func TestFieldDeviceService_BulkUpdate_DetectsApparatNrConflict(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		nil,
+		nil,
+		nil,
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
@@ -604,6 +610,9 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_Succeeds(t *testi
 		nil,
 		apparatRepo,
 		systemPartRepo,
+		nil,
+		nil,
+		nil,
 		nil,
 		nil,
 		nil,
@@ -673,6 +682,9 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_Conflict(t *testi
 		nil,
 		apparatRepo,
 		systemPartRepo,
+		nil,
+		nil,
+		nil,
 		nil,
 		nil,
 		nil,
@@ -747,6 +759,9 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_DifferentSystemPa
 		nil,
 		apparatRepo,
 		systemPartRepo,
+		nil,
+		nil,
+		nil,
 		nil,
 		nil,
 		nil,

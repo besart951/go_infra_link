@@ -19,7 +19,10 @@ type Repositories struct {
 	StateTexts               domainFacility.StateTextRepository
 	NotificationClasses      domainFacility.NotificationClassRepository
 	AlarmDefinitions         domainFacility.AlarmDefinitionRepository
+	Units                    domainFacility.UnitRepository
+	AlarmFields              domainFacility.AlarmFieldRepository
 	AlarmTypes               domainFacility.AlarmTypeRepository
+	AlarmTypeFields          domainFacility.AlarmTypeFieldRepository
 	BacnetObjectAlarmValues  domainFacility.BacnetObjectAlarmValueRepository
 }
 
@@ -39,6 +42,9 @@ type Services struct {
 	ObjectData              *ObjectDataService
 	SPSControllerSystemType *SPSControllerSystemTypeService
 	AlarmType               *AlarmTypeService
+	Unit                    *UnitService
+	AlarmField              *AlarmFieldService
+	AlarmTypeField          *AlarmTypeFieldService
 	BacnetAlarmValue        *BacnetAlarmValueService
 }
 
@@ -78,12 +84,17 @@ func NewServices(repos Repositories) *Services {
 			repos.Specifications,
 			repos.BacnetObjects,
 			repos.ObjectData,
+			repos.AlarmDefinitions,
+			repos.AlarmTypes,
+			repos.BacnetObjectAlarmValues,
 		),
 		BacnetObject: NewBacnetObjectService(
 			repos.BacnetObjects,
 			repos.FieldDevices,
 			repos.ObjectData,
 			repos.ObjectDataBacnetObjects,
+			repos.AlarmDefinitions,
+			repos.AlarmTypes,
 		),
 		SPSController: NewSPSControllerService(
 			repos.SPSControllers,
@@ -99,6 +110,9 @@ func NewServices(repos Repositories) *Services {
 		NotificationClass: NewNotificationClassService(repos.NotificationClasses),
 		AlarmDefinition:   NewAlarmDefinitionService(repos.AlarmDefinitions),
 		ObjectData:        NewObjectDataService(repos.ObjectData),
+		Unit:              NewUnitService(repos.Units),
+		AlarmField:        NewAlarmFieldService(repos.AlarmFields),
+		AlarmTypeField:    NewAlarmTypeFieldService(repos.AlarmTypeFields),
 		SPSControllerSystemType: NewSPSControllerSystemTypeService(
 			repos.SPSControllerSystemTypes,
 			repos.SystemTypes,
