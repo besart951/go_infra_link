@@ -5,7 +5,6 @@
 	import type { CreateObjectDataRequest } from '$lib/domain/facility/object-data.js';
 	import type { CreateBacnetObjectRequest } from '$lib/domain/facility/bacnet-object.js';
 	import {
-		createAlarmDefinition,
 		listApparats,
 		listStateTexts,
 		listNotificationClasses,
@@ -13,6 +12,7 @@
 	} from '$lib/infrastructure/api/facility.adapter.js';
 	import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
 	import { alarmTypeRepository } from '$lib/infrastructure/api/alarmTypeRepository.js';
+	import { ApiException } from '$lib/api/client.js';
 
 	interface Props {
 		session: ExcelReadSession;
@@ -113,7 +113,9 @@
 
 	function buildSoftwareKey(softwareType: string, softwareNumber: string): string {
 		const normalizedType = normalizePart(softwareType);
-		const normalizedNumber = normalizePart(softwareNumber);
+		const numberRaw = normalizePart(softwareNumber);
+		const parsedNumber = Number.parseInt(numberRaw, 10);
+		const normalizedNumber = Number.isFinite(parsedNumber) ? String(parsedNumber) : numberRaw;
 		if (normalizedType.length === 0 || normalizedNumber.length === 0) return '';
 		return `${normalizedType}${normalizedNumber}`;
 	}
@@ -122,17 +124,55 @@
 		return `${String(softwareType || '').trim().toUpperCase()}${String(softwareNumber ?? '').trim()}`;
 	}
 
-	function inferAlarmTypeCodeFromLabel(label: string): string {
+	function inferAlarmTypeCodeFromLabel(label: string): string | undefined {
 		const normalized = normalizeLookupKey(label);
-		if (!normalized) return 'custom_value';
+		if (!normalized) return undefined;
+
+		const hasDigit = /\d/.test(normalized);
+		const looksLikeUnitOrValueOnly =
+			hasDigit ||
+			['c', 'k', 'pa', 'hpa', 'kw', 'kwh', 'm', 'ms', 's', 'h', 'j', 'lux', 'umin', 'm3h', 'gkg', 'ref'].includes(
+				normalized
+			);
+
+		if (looksLikeUnitOrValueOnly) {
+			return undefined;
+		}
 
 		if (normalized.includes('cov')) return 'cov_logging';
+		if (normalized.includes('loggingtype')) return 'cov_logging';
+		if (normalized.includes('elapsedactive')) return 'elapsed_active_time';
+		if (normalized.includes('elapsedaktiv')) return 'elapsed_active_time';
 		if (normalized.includes('pid')) return 'pid_control';
+		if (normalized.includes('controlledvariable')) return 'pid_control';
 		if (normalized.includes('position')) return 'position_control';
+		if (normalized.includes('positionskontrolle')) return 'position_control';
+		if (normalized.includes('vnom') || normalized.includes('vmax') || normalized.includes('pnom') || normalized.includes('pmax'))
+			return 'position_control';
+		if (normalized.includes('motstop')) return 'position_control';
 		if (normalized.includes('state') || normalized.includes('zustand')) return 'state_mapping';
+		if (normalized.includes('state1')) return 'state_mapping';
 		if (normalized.includes('priority') || normalized.includes('prioritat')) return 'priority_write';
-		if (normalized.includes('io') || normalized.includes('ruckmeldung')) return 'io_monitoring';
+		if (normalized.includes('priorityforwrit')) return 'priority_write';
+
+		const hasIoMonitoringHint =
+			normalized.includes('io') ||
+			normalized.includes('uberwach') ||
+			normalized.includes('ueberwach') ||
+			normalized.includes('ruckmeldung');
+		const hasLimitHint =
+			normalized.includes('limit') ||
+			normalized.includes('grenz') ||
+			normalized.includes('high') ||
+			normalized.includes('low') ||
+			normalized.includes('voralarm') ||
+			normalized.includes('differenz');
+
+		if (hasIoMonitoringHint && hasLimitHint) return 'io_monitoring_limit';
+		if (hasIoMonitoringHint) return 'io_monitoring';
 		if (normalized.includes('limit') || normalized.includes('grenz')) return 'limit_high_low';
+		if (normalized.includes('high') || normalized.includes('low') || normalized.includes('voralarm')) return 'limit_high_low';
+		if (normalized.includes('alarmstate')) return 'active_inactive';
 		if (
 			normalized.includes('active') ||
 			normalized.includes('inactive') ||
@@ -142,7 +182,40 @@
 		)
 			return 'active_inactive';
 
-		return 'custom_value';
+		if (normalized.includes('individuell') || normalized.includes('custom')) return 'custom_value';
+
+		return undefined;
+	}
+
+	function resolveAlarmTypeFromLabel(
+		label: string,
+		alarmTypeByCode: Map<string, string>,
+		alarmTypeByLookupKey: Map<string, { id: string; code: string }>
+	): { id?: string; code?: string } {
+		const normalizedLabel = normalizeLookupKey(label);
+		if (!normalizedLabel) return {};
+
+		const directMatch = alarmTypeByLookupKey.get(normalizedLabel);
+		if (directMatch) {
+			return {
+				id: directMatch.id,
+				code: directMatch.code
+			};
+		}
+
+		const inferredCode = inferAlarmTypeCodeFromLabel(label);
+		if (!inferredCode) {
+			return {};
+		}
+		const inferredId = alarmTypeByCode.get(inferredCode);
+		if (!inferredId) {
+			return {};
+		}
+
+		return {
+			id: inferredId,
+			code: inferredCode
+		};
 	}
 
 	function parseHardwareLabel(label: string): { type: string; quantity: number } {
@@ -151,6 +224,23 @@
 		const match = normalized.match(/^([A-Za-z]+)(\d+)$/);
 		if (!match) return { type: '', quantity: 0 };
 		return { type: match[1].toLowerCase(), quantity: Number.parseInt(match[2], 10) };
+	}
+
+	function formatCreateError(error: unknown): string {
+		if (error instanceof ApiException) {
+			if (error.details && typeof error.details === 'object') {
+				const fieldEntries = Object.entries(error.details as Record<string, unknown>).filter(
+					([, value]) => typeof value === 'string'
+				) as Array<[string, string]>;
+				if (fieldEntries.length > 0) {
+					return fieldEntries.map(([field, msg]) => `${field}: ${msg}`).join(', ');
+				}
+			}
+			return error.message || `HTTP ${error.status}`;
+		}
+
+		if (error instanceof Error) return error.message;
+		return 'Unknown error';
 	}
 
 	function hasIssueDetails(item: PreparedObjectData): boolean {
@@ -291,9 +381,20 @@
 			});
 
 			const alarmTypeByCode = new Map<string, string>();
+			const alarmTypeByLookupKey = new Map<string, { id: string; code: string }>();
 			alarmTypes.forEach((alarmType) => {
 				if (alarmType.code) {
 					alarmTypeByCode.set(alarmType.code, alarmType.id);
+					alarmTypeByLookupKey.set(normalizeLookupKey(alarmType.code), {
+						id: alarmType.id,
+						code: alarmType.code
+					});
+				}
+				if (alarmType.name) {
+					alarmTypeByLookupKey.set(normalizeLookupKey(alarmType.name), {
+						id: alarmType.id,
+						code: alarmType.code
+					});
 				}
 			});
 
@@ -388,14 +489,20 @@
 					const fromSoftwareId = softwareKey.toUpperCase();
 
 					const alarmLabelRaw = (bacnetObject.alarm_definition_label || '').trim();
+					const resolvedAlarmType = isMeaningfulLabel(alarmLabelRaw)
+						? resolveAlarmTypeFromLabel(
+								alarmLabelRaw,
+								alarmTypeByCode,
+								alarmTypeByLookupKey
+							)
+						: {};
 					if (isMeaningfulLabel(alarmLabelRaw) && fromSoftwareId.length > 0) {
-						const inferredAlarmTypeCode = inferAlarmTypeCodeFromLabel(alarmLabelRaw);
 						plannedAlarmDefinitions.push({
 							bacnetIndex,
 							bacnetSoftwareId: fromSoftwareId,
 							name: alarmLabelRaw,
-							alarmTypeCode: inferredAlarmTypeCode,
-							alarmTypeId: alarmTypeByCode.get(inferredAlarmTypeCode)
+							alarmTypeCode: resolvedAlarmType.code,
+							alarmTypeId: resolvedAlarmType.id
 						});
 					}
 
@@ -427,7 +534,7 @@
 						software_reference_id: undefined,
 						state_text_id: stateTextId,
 						notification_class_id: notificationClassId,
-						alarm_definition_id: undefined
+						alarm_type_id: resolvedAlarmType.id
 					};
 
 					bacnetRequests.push(bacnetRequest);
@@ -506,25 +613,8 @@
 
 		for (const item of preparedPayloads) {
 			try {
-				const alarmIdByBacnetIndex = new Map<number, string>();
-				for (const alarmPlan of item.plannedAlarmDefinitions) {
-					const createdAlarm = await createAlarmDefinition({
-						name: alarmPlan.name,
-						alarm_type_id: alarmPlan.alarmTypeId
-					});
-					alarmIdByBacnetIndex.set(alarmPlan.bacnetIndex, createdAlarm.id);
-				}
-
-				const withAlarmIds = (item.request.bacnet_objects ?? []).map((bacnet, bacnetIndex) => {
-					return {
-						...bacnet,
-						alarm_definition_id: alarmIdByBacnetIndex.get(bacnetIndex)
-					};
-				});
-
 				const createdObjectData = await objectDataRepository.create({
-					...item.request,
-					bacnet_objects: withAlarmIds
+					...item.request
 				});
 
 				const createdBacnetObjects = await objectDataRepository.getBacnetObjects(createdObjectData.id);
@@ -555,7 +645,7 @@
 			} catch (error) {
 				failed.push({
 					objectDataId: item.objectDataId,
-					reason: error instanceof Error ? error.message : 'Unknown error'
+					reason: formatCreateError(error)
 				});
 			}
 		}
@@ -714,7 +804,7 @@
 				onclick={() => setPrepareFilter('plannedAlarmDefinitions')}
 				class={`ml-3 cursor-pointer ${isFilterActive('plannedAlarmDefinitions') ? 'font-semibold text-foreground underline' : ''}`}
 			>
-				Planned alarm creates: {preparedSummary.plannedAlarmDefinitionCreates}
+				Planned alarm type assignments: {preparedSummary.plannedAlarmDefinitionCreates}
 			</button>
 			<button
 				type="button"
@@ -758,7 +848,7 @@
 							{/if}
 							{#if preparedItem.plannedAlarmDefinitions.length > 0}
 								<div>
-									<strong class="text-foreground">Planned alarm definition creates:</strong>
+									<strong class="text-foreground">Planned alarm type assignments:</strong>
 									<p>
 										{preparedItem.plannedAlarmDefinitions
 											.map((entry) => `${entry.bacnetSoftwareId} -> ${entry.name}${entry.alarmTypeCode ? ` [${entry.alarmTypeCode}]` : ''}`)
