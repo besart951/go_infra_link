@@ -103,7 +103,10 @@
 		}
 
 		if (name === 'software_type') {
-			return fieldErrors['objectdata.bacnetobject.software_type'] ?? fieldErrors['bacnetobject.software_type'];
+			return (
+				fieldErrors['objectdata.bacnetobject.software_type'] ??
+				fieldErrors['bacnetobject.software_type']
+			);
 		}
 
 		if (name === 'software_number') {
@@ -199,6 +202,21 @@
 		});
 	}
 
+	function normalizeOptionalUuid(value: string | undefined): string | undefined {
+		const normalized = value?.trim();
+		return normalized ? normalized : undefined;
+	}
+
+	function buildBacnetPayload(): BacnetObjectInput[] {
+		return bacnetObjects.map((obj) => ({
+			...obj,
+			software_reference_id: normalizeOptionalUuid(obj.software_reference_id),
+			state_text_id: normalizeOptionalUuid(obj.state_text_id),
+			notification_class_id: normalizeOptionalUuid(obj.notification_class_id),
+			alarm_type_id: normalizeOptionalUuid(obj.alarm_type_id)
+		}));
+	}
+
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
 		loading = true;
@@ -211,13 +229,15 @@
 		}
 
 		try {
+			const bacnetPayload = buildBacnetPayload();
+
 			if (initialData) {
 				const res = await manageObjectData.update(initialData.id, {
 					description,
 					version,
 					is_active,
 					apparat_ids,
-					bacnet_objects: bacnetObjects
+					bacnet_objects: bacnetPayload
 				});
 				onSuccess?.(res);
 			} else {
@@ -226,7 +246,7 @@
 					version,
 					is_active,
 					apparat_ids,
-					bacnet_objects: bacnetObjects
+					bacnet_objects: bacnetPayload
 				});
 				onSuccess?.(res);
 			}

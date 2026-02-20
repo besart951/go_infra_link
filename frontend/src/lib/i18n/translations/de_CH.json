@@ -1197,6 +1197,13 @@
 			"actions": {
 				"creating": "Erstelle...",
 				"create": "Erstelle {count} Feldgerät(e)"
+			},
+			"object_data_preview": {
+				"title": "BACnet-Objekte der Objektdaten",
+				"count": "{count} Objekt(e)",
+				"loading": "BACnet-Objekte werden geladen...",
+				"empty": "Für diese Objektdaten sind keine BACnet-Objekte hinterlegt.",
+				"load_failed": "BACnet-Vorschau der Objektdaten konnte nicht geladen werden."
 			}
 		},
 		"row": {
@@ -1301,6 +1308,9 @@
 			"empty": "Keine BACnet-Objekte für dieses Feldgerät konfiguriert.",
 			"table": {
 				"text_fix": "Text Fix",
+				"alarms": "Alarme",
+				"show_alarms": "Alarme anzeigen",
+				"no_alarms": "Kein Alarm konfiguriert",
 				"description": "Beschreibung",
 				"software": "SW",
 				"hardware": "HW",
@@ -1329,6 +1339,7 @@
 				"alarm_definition": "Alarm-Definition",
 				"alarm_definition_remove": "Alarm-Definition entfernen",
 				"alarm_type": "Alarmtyp",
+				"no_alarm_type": "Kein Alarmtyp",
 				"alarm_type_remove": "Alarmtyp entfernen",
 				"alarm_type_fields_loading": "Alarmfelder werden geladen…",
 				"alarm_type_fields_load_failed": "Alarmfelder konnten nicht geladen werden",

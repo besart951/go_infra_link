@@ -1,17 +1,11 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
-	import FieldDevicePreselection from './FieldDevicePreselection.svelte';
-	import FieldDeviceRow from './FieldDeviceRow.svelte';
-	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Alert from '$lib/components/ui/alert/index.js';
-	import { Separator } from '$lib/components/ui/separator/index.js';
-	import { Plus, AlertCircle } from '@lucide/svelte';
+	import { AlertCircle } from '@lucide/svelte';
+	import MultiCreateSelectionSection from './multi-create/MultiCreateSelectionSection.svelte';
+	import MultiCreateRowsSection from './multi-create/MultiCreateRowsSection.svelte';
 	import { addToast } from '$lib/components/toast.svelte';
 	import { ApiException } from '$lib/api/client.js';
-	import { createTranslator } from '$lib/i18n/translator.js';
 	import { t as translate } from '$lib/i18n/index.js';
 
 	// Domain imports
@@ -32,12 +26,15 @@
 
 	// Application layer imports
 	import { ManageFieldDeviceUseCase } from '$lib/application/useCases/facility/manageFieldDeviceUseCase.js';
+	import { ManageObjectDataUseCase } from '$lib/application/useCases/facility/manageObjectDataUseCase.js';
 	import { ListSPSControllersUseCase } from '$lib/application/useCases/facility/listSPSControllersUseCase.js';
 	import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
+	import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
 	import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
 
 	import type {
 		FieldDevice,
+		ObjectData,
 		SPSControllerSystemType,
 		CreateFieldDeviceRequest
 	} from '$lib/domain/facility/index.js';
@@ -45,9 +42,8 @@
 
 	// Use case instances
 	const manageUseCase = new ManageFieldDeviceUseCase(fieldDeviceRepository);
+	const manageObjectDataUseCase = new ManageObjectDataUseCase(objectDataRepository);
 	const spsUseCase = new ListSPSControllersUseCase(spsControllerRepository);
-
-	const t = createTranslator();
 
 	// ─────────────────────────────────────────────────────────────────────────────
 	// Props
@@ -88,6 +84,9 @@
 	// Available apparat numbers from backend
 	let availableNumbers = $state<number[]>([]);
 	let loadingAvailableNumbers = $state(false);
+	let selectedObjectData = $state<ObjectData | null>(null);
+	let loadingObjectDataPreview = $state(false);
+	let objectDataPreviewError = $state('');
 
 	// Form state
 	let submitting = $state(false);
@@ -95,7 +94,8 @@
 
 	// Internal tracking
 	let selectionKey = $state('');
-	let abortController: AbortController | null = null;
+	let availableNumbersAbortController: AbortController | null = null;
+	let objectDataPreviewAbortController: AbortController | null = null;
 
 	// ─────────────────────────────────────────────────────────────────────────────
 	// Derived State
@@ -126,7 +126,8 @@
 	});
 
 	onDestroy(() => {
-		abortController?.abort();
+		availableNumbersAbortController?.abort();
+		objectDataPreviewAbortController?.abort();
 		if (rows.length > 0 || selection.spsControllerSystemTypeId) {
 			savePersistedState(selection, rows);
 		}
@@ -164,6 +165,20 @@
 		}
 	});
 
+	$effect(() => {
+		const objectDataId = selection.objectDataId?.trim() ?? '';
+
+		if (!objectDataId) {
+			objectDataPreviewAbortController?.abort();
+			selectedObjectData = null;
+			loadingObjectDataPreview = false;
+			objectDataPreviewError = '';
+			return;
+		}
+
+		fetchSelectedObjectDataPreview(objectDataId);
+	});
+
 	// ─────────────────────────────────────────────────────────────────────────────
 	// API Functions
 	// ─────────────────────────────────────────────────────────────────────────────
@@ -175,11 +190,11 @@
 		}
 
 		// Abort previous request
-		abortController?.abort();
+		availableNumbersAbortController?.abort();
 
 		loadingAvailableNumbers = true;
 		const controller = new AbortController();
-		abortController = controller;
+		availableNumbersAbortController = controller;
 
 		try {
 			const response = await manageUseCase.getAvailableApparatNumbers(
@@ -208,8 +223,34 @@
 			addToast(msg, 'error');
 			availableNumbers = [];
 		} finally {
-			if (abortController === controller) {
+			if (availableNumbersAbortController === controller) {
 				loadingAvailableNumbers = false;
+			}
+		}
+	}
+
+	async function fetchSelectedObjectDataPreview(objectDataId: string) {
+		objectDataPreviewAbortController?.abort();
+		const controller = new AbortController();
+		objectDataPreviewAbortController = controller;
+
+		loadingObjectDataPreview = true;
+		objectDataPreviewError = '';
+
+		try {
+			const objectData = await manageObjectDataUseCase.get(objectDataId, controller.signal);
+			if (!controller.signal.aborted) {
+				selectedObjectData = objectData;
+			}
+		} catch (err) {
+			if (err instanceof DOMException && err.name === 'AbortError') return;
+			if (!controller.signal.aborted) {
+				selectedObjectData = null;
+				objectDataPreviewError = translate('field_device.multi_create.object_data_preview.load_failed');
+			}
+		} finally {
+			if (objectDataPreviewAbortController === controller) {
+				loadingObjectDataPreview = false;
 			}
 		}
 	}
@@ -389,7 +430,8 @@
 
 	function handleSpsSystemTypeChange(value: string) {
 		if (value !== selection.spsControllerSystemTypeId) {
-			abortController?.abort();
+			availableNumbersAbortController?.abort();
+			objectDataPreviewAbortController?.abort();
 			selection = {
 				spsControllerSystemTypeId: value,
 				objectDataId: '',
@@ -399,6 +441,9 @@
 			preselectionValue = { objectDataId: '', apparatId: '', systemPartId: '' };
 			rows = [];
 			availableNumbers = [];
+			selectedObjectData = null;
+			loadingObjectDataPreview = false;
+			objectDataPreviewError = '';
 			rowErrors = new Map();
 		}
 	}
@@ -437,7 +482,9 @@
 		const number = item.number ?? '';
 		const documentName = item.document_name ?? '';
 		const sysTypePart = number || documentName ? `${number}_${documentName}` : '';
-		return deviceName && sysTypePart ? `${deviceName}_${sysTypePart}` : (deviceName || sysTypePart || '');
+		return deviceName && sysTypePart
+			? `${deviceName}_${sysTypePart}`
+			: deviceName || sysTypePart || '';
 	}
 </script>
 
@@ -450,158 +497,42 @@
 		</Alert.Root>
 	{/if}
 
-	<!-- Selection Flow Card -->
-	<Card.Root class="p-6">
-		<h3 class="mb-4 text-lg font-semibold">{$t('field_device.multi_create.selection.title')}</h3>
-		<p class="mb-4 text-sm text-muted-foreground">
-			{$t('field_device.multi_create.selection.description')}
-		</p>
-
-		<div class="grid gap-4 md:grid-cols-2">
-			<!-- SPS Controller System Type -->
-			<div class="space-y-2">
-				<Label for="sps-system-type"
-					>{$t('field_device.multi_create.selection.sps_system_type')}</Label
-				>
-				<AsyncCombobox
-					id="sps-system-type"
-					placeholder={$t('field_device.multi_create.selection.sps_system_type_placeholder')}
-					searchPlaceholder={$t('field_device.multi_create.selection.sps_system_type_search')}
-					emptyText={$t('field_device.multi_create.selection.sps_system_type_empty')}
-					fetcher={fetchSpsControllerSystemTypes}
-					fetchById={fetchSpsControllerSystemTypeById}
-					labelKey="system_type_name"
-					labelFormatter={formatSpsControllerSystemTypeLabel}
-					width="w-full"
-					value={selection.spsControllerSystemTypeId}
-					onValueChange={handleSpsSystemTypeChange}
-					clearable
-					clearText={$t('field_device.multi_create.selection.sps_system_type_clear')}
-					disabled={submitting}
-				/>
-			</div>
-		</div>
-
-		<div class="mt-4">
-			<FieldDevicePreselection
-				value={preselectionValue}
-				onChange={handlePreselectionChange}
-				{projectId}
-				disabled={!selection.spsControllerSystemTypeId || submitting}
-				className="grid grid-cols-1 gap-4 md:grid-cols-3"
-			/>
-		</div>
-
-		<!-- Configuration Status -->
-		{#if canFetchAvailableNumbers(selection)}
-			<div class="mt-4">
-				<Alert.Root>
-					<Alert.Description>
-						<div class="text-sm">
-							<p class="font-medium">
-								{$t('field_device.multi_create.status.title')}
-							</p>
-							<ul class="mt-2 space-y-1 text-muted-foreground">
-								<li>
-									• {$t('field_device.multi_create.status.available', {
-										count: availableNumbers.length
-									})}
-									{#if loadingAvailableNumbers}
-										{$t('field_device.multi_create.status.loading_suffix')}
-									{/if}
-								</li>
-								{#if availableNumbers.length === 0 && !loadingAvailableNumbers}
-									<li class="text-destructive">
-										• {$t('field_device.multi_create.status.none_available')}
-									</li>
-								{/if}
-							</ul>
-						</div>
-					</Alert.Description>
-				</Alert.Root>
-			</div>
-		{/if}
-	</Card.Root>
+	<MultiCreateSelectionSection
+		{projectId}
+		{selection}
+		{preselectionValue}
+		{submitting}
+		availableNumbersCount={availableNumbers.length}
+		{loadingAvailableNumbers}
+		showStatus={canFetchAvailableNumbers(selection)}
+		{selectedObjectData}
+		{loadingObjectDataPreview}
+		{objectDataPreviewError}
+		onSpsSystemTypeChange={handleSpsSystemTypeChange}
+		onPreselectionChange={handlePreselectionChange}
+		{fetchSpsControllerSystemTypes}
+		{fetchSpsControllerSystemTypeById}
+		{formatSpsControllerSystemTypeLabel}
+	/>
 
 	<!-- Field Device Rows -->
 	{#if showRowsSection}
-		<Card.Root class="p-6">
-			<div class="mb-4 flex items-center justify-between">
-				<div>
-					<h3 class="text-lg font-semibold">{$t('field_device.multi_create.rows.title')}</h3>
-					<p class="text-sm text-muted-foreground">
-						{$t('field_device.multi_create.rows.description')}
-					</p>
-				</div>
-				<Button onclick={addRow} disabled={!canAddRow} size="sm">
-					<Plus class="mr-2 size-4" />
-					{$t('field_device.multi_create.rows.add')}
-				</Button>
-			</div>
-
-			<!-- Empty State -->
-			{#if rows.length === 0}
-				<Alert.Root>
-					<AlertCircle class="size-4" />
-					<Alert.Description>
-						{#if availableNumbers.length === 0 && !loadingAvailableNumbers}
-							{$t('field_device.multi_create.rows.none_available')}
-						{:else if loadingAvailableNumbers}
-							{$t('field_device.multi_create.rows.loading_numbers')}
-						{:else}
-							{$t('field_device.multi_create.rows.empty_prompt')}
-						{/if}
-					</Alert.Description>
-				</Alert.Root>
-			{/if}
-
-			<!-- Rows -->
-			{#if rows.length > 0}
-				<div class="space-y-4">
-					{#each rows as row, index (row.id)}
-						<FieldDeviceRow
-							{index}
-							{row}
-							error={rowErrors.get(index) ?? null}
-							placeholder={getPlaceholderForRow(index)}
-							disabled={submitting}
-							onBmkChange={(v) => handleRowBmkChange(index, v)}
-							onDescriptionChange={(v) => handleRowDescriptionChange(index, v)}
-							onApparatNrChange={(v) => handleRowApparatNrChange(index, v)}
-							onRemove={() => removeRow(index)}
-						/>
-					{/each}
-				</div>
-
-				<Separator class="my-4" />
-
-				<!-- Summary & Actions -->
-				<div class="flex items-center justify-between">
-					<p class="text-sm text-muted-foreground">
-						{$t('field_device.multi_create.rows.summary', { count: rows.length })}
-						{#if hasValidationErrors}
-							<span class="text-destructive">
-								{$t('field_device.multi_create.rows.errors', { count: rowErrors.size })}
-							</span>
-						{/if}
-					</p>
-					<div class="flex gap-2">
-						{#if onCancel}
-							<Button variant="outline" onclick={onCancel} disabled={submitting}>
-								{$t('common.cancel')}
-							</Button>
-						{/if}
-						<Button
-							onclick={handleSubmit}
-							disabled={submitting || rows.length === 0 || hasValidationErrors}
-						>
-							{submitting
-								? $t('field_device.multi_create.actions.creating')
-								: $t('field_device.multi_create.actions.create', { count: rows.length })}
-						</Button>
-					</div>
-				</div>
-			{/if}
-		</Card.Root>
+		<MultiCreateRowsSection
+			{rows}
+			{rowErrors}
+			availableNumbersCount={availableNumbers.length}
+			{loadingAvailableNumbers}
+			{canAddRow}
+			{hasValidationErrors}
+			{submitting}
+			{onCancel}
+			onAddRow={addRow}
+			onSubmit={handleSubmit}
+			onRowBmkChange={handleRowBmkChange}
+			onRowDescriptionChange={handleRowDescriptionChange}
+			onRowApparatNrChange={handleRowApparatNrChange}
+			onRowRemove={removeRow}
+			{getPlaceholderForRow}
+		/>
 	{/if}
 </div>

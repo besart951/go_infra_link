@@ -8,6 +8,8 @@
 		EditableSelectCell,
 		EditableBooleanCell
 	} from '$lib/components/ui/editable-cell/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Popover from '$lib/components/ui/popover/index.js';
 	import BacnetAlarmValuesEditor from './BacnetAlarmValuesEditor.svelte';
 	import {
 		BACNET_SOFTWARE_TYPES,
@@ -16,6 +18,7 @@
 	import type { BacnetObject } from '$lib/domain/facility/bacnet-object.js';
 	import type { BacnetObjectInput } from '$lib/domain/facility/field-device.js';
 	import { createTranslator } from '$lib/i18n/translator.js';
+	import { BellRing } from '@lucide/svelte';
 
 	interface Props {
 		bacnetObjects: BacnetObject[];
@@ -79,6 +82,12 @@
 	function getFieldError(objectId: string, field: string): string | undefined {
 		return fieldErrors.get(objectId)?.[field] || clientErrors.get(objectId)?.[field];
 	}
+
+	function hasAlarmType(obj: BacnetObject): boolean {
+		const pendingAlarmTypeId = getPendingTextValue(obj.id, 'alarm_type_id', obj.alarm_type_id || '');
+		const alarmTypeId = pendingAlarmTypeId ?? obj.alarm_type_id ?? '';
+		return alarmTypeId.trim().length > 0;
+	}
 </script>
 
 {#if bacnetObjects.length > 0}
@@ -87,6 +96,7 @@
 			<thead>
 				<tr class="border-b text-left text-xs text-muted-foreground">
 					<th class="pr-2 pb-2">{$t('field_device.bacnet.table.text_fix')}</th>
+					<th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.alarms')}</th>
 					<th class="pr-2 pb-2">{$t('field_device.bacnet.table.description')}</th>
 					<th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.software')}</th>
 					<th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.hardware')}</th>
@@ -110,6 +120,33 @@
 								{disabled}
 								onSave={(v) => onEdit(obj.id, 'text_fix', v)}
 							/>
+						</td>
+						<td class="py-1 pr-1 text-center align-top">
+							<Popover.Root>
+								<Popover.Trigger>
+									{#snippet child({ props })}
+										<Button
+											variant="ghost"
+											size="icon"
+											class="h-7 w-7"
+											disabled={!hasAlarmType(obj)}
+											title={hasAlarmType(obj)
+												? $t('field_device.bacnet.table.show_alarms')
+												: $t('field_device.bacnet.table.no_alarms')}
+											{...props}
+										>
+											<BellRing class="h-4 w-4" />
+										</Button>
+									{/snippet}
+								</Popover.Trigger>
+								<Popover.Content class="w-[28rem] p-3" align="start" side="right">
+									{#if hasAlarmType(obj)}
+										<BacnetAlarmValuesEditor bacnetObjectId={obj.id} />
+									{:else}
+										<p class="text-xs text-muted-foreground">{$t('field_device.bacnet.table.no_alarms')}</p>
+									{/if}
+								</Popover.Content>
+							</Popover.Root>
 						</td>
 						<td class="max-w-sm py-1 pr-1">
 							<EditableCell
@@ -232,15 +269,6 @@
 							{/if}
 						</td>
 					</tr>
-					{#if obj.alarm_type_id}
-					<tr class="border-b border-purple-100 last:border-0 dark:border-purple-900">
-						<td colspan="7" class="pb-3 pt-1 pr-0">
-							<div class="rounded-md border border-purple-100 bg-background/80 p-2 dark:border-purple-900">
-								<BacnetAlarmValuesEditor bacnetObjectId={obj.id} />
-							</div>
-						</td>
-					</tr>
-					{/if}
 				{/each}
 			</tbody>
 		</table>

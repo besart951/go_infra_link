@@ -34,6 +34,7 @@
 		hardwareType: string;
 		hardwareQuantity: number;
 		alarmTypeId?: string;
+		readOnly?: boolean;
 		errors?: BacnetRowErrors;
 		onRemove: () => void;
 		onUpdate: (field: string, value: any) => void;
@@ -51,6 +52,7 @@
 		hardwareType = $bindable('ai'),
 		hardwareQuantity = $bindable(1),
 		alarmTypeId = $bindable(),
+		readOnly = false,
 		errors = {},
 		onRemove,
 		onUpdate
@@ -68,6 +70,7 @@
 	const requiredAlarmTypeFields = $derived(alarmTypeFields.filter((field) => field.is_required));
 
 	$effect(() => {
+		if (readOnly) return;
 		if (prevGmsVisible === null) {
 			prevGmsVisible = gmsVisible;
 			return;
@@ -79,6 +82,7 @@
 	});
 
 	$effect(() => {
+		if (readOnly) return;
 		if (prevOptional === null) {
 			prevOptional = optional;
 			return;
@@ -90,6 +94,7 @@
 	});
 
 	$effect(() => {
+		if (readOnly) return;
 		if (prevAlarmTypeId === null) {
 			prevAlarmTypeId = alarmTypeId ?? '';
 			return;
@@ -130,6 +135,7 @@
 	});
 
 	$effect(() => {
+		if (readOnly) return;
 		const value = textIndividualEnabled ? $t('field_device.bacnet.row.text_individual_value') : '';
 		if (textIndividual !== value) {
 			textIndividual = value;
@@ -153,9 +159,11 @@
 		<h4 class="text-sm font-semibold text-muted-foreground">
 			{$t('field_device.bacnet.row.title', { index: index + 1 })}
 		</h4>
-		<Button variant="ghost" size="sm" onclick={onRemove} class="h-7 w-7 p-0">
-			<Trash2 class="size-4 text-destructive" />
-		</Button>
+		{#if !readOnly}
+			<Button variant="ghost" size="sm" onclick={onRemove} class="h-7 w-7 p-0">
+				<Trash2 class="size-4 text-destructive" />
+			</Button>
+		{/if}
 	</div>
 
 	<!-- Text Fix -->
@@ -169,6 +177,7 @@
 			maxlength={250}
 			placeholder={$t('field_device.bacnet.row.text_fix_placeholder')}
 			class="h-8 text-sm"
+			disabled={readOnly}
 		/>
 		{#if errors.text_fix}
 			<p class="text-xs text-red-500">{errors.text_fix}</p>
@@ -187,6 +196,7 @@
 			maxlength={250}
 			placeholder={$t('field_device.bacnet.row.description_placeholder')}
 			class="h-8 text-sm"
+			disabled={readOnly}
 		/>
 	</div>
 
@@ -203,6 +213,7 @@
 					bind:value={softwareType}
 					onchange={() => onUpdate('software_type', softwareType)}
 					required
+					disabled={readOnly}
 					class="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					<option value="">{$t('field_device.bacnet.row.select')}</option>
@@ -228,6 +239,7 @@
 					max={65535}
 					placeholder={$t('field_device.bacnet.row.software_number_placeholder')}
 					class="h-8 text-sm"
+					disabled={readOnly}
 				/>
 				{#if errors.software_number}
 					<p class="text-xs text-red-500">{errors.software_number}</p>
@@ -248,6 +260,7 @@
 					id="hardware_type_{index}"
 					bind:value={hardwareType}
 					onchange={() => onUpdate('hardware_type', hardwareType)}
+					disabled={readOnly}
 					class="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					<option value="">{$t('field_device.bacnet.row.select')}</option>
@@ -272,6 +285,7 @@
 					max={255}
 					placeholder={$t('field_device.bacnet.row.hardware_quantity_placeholder')}
 					class="h-8 text-sm"
+					disabled={readOnly}
 				/>
 				{#if errors.hardware_quantity}
 					<p class="text-xs text-red-500">{errors.hardware_quantity}</p>
@@ -283,19 +297,19 @@
 	<!-- Checkboxes -->
 	<div class="col-span-12 flex flex-wrap items-center gap-4 md:col-span-6">
 		<div class="flex items-center gap-2">
-			<Checkbox id="gms_visible_{index}" bind:checked={gmsVisible} />
+			<Checkbox id="gms_visible_{index}" bind:checked={gmsVisible} disabled={readOnly} />
 			<Label for="gms_visible_{index}" class="cursor-pointer text-xs">
 				{$t('field_device.bacnet.row.gms_visible')}
 			</Label>
 		</div>
 		<div class="flex items-center gap-2">
-			<Checkbox id="optional_{index}" bind:checked={optional} />
+			<Checkbox id="optional_{index}" bind:checked={optional} disabled={readOnly} />
 			<Label for="optional_{index}" class="cursor-pointer text-xs">
 				{$t('field_device.bacnet.row.optional')}
 			</Label>
 		</div>
 		<div class="flex items-center gap-2">
-			<Checkbox id="text_individual_{index}" bind:checked={textIndividualEnabled} />
+			<Checkbox id="text_individual_{index}" bind:checked={textIndividualEnabled} disabled={readOnly} />
 			<Label for="text_individual_{index}" class="cursor-pointer text-xs">
 				{$t('field_device.bacnet.row.text_individual')}
 			</Label>
@@ -306,8 +320,12 @@
 	<div class="col-span-12 space-y-1 border-t pt-2 md:col-span-12">
 		<Label class="text-xs">{$t('field_device.bacnet.row.alarm_type')}</Label>
 		<div class="space-y-2">
-			<AlarmTypeSelect bind:value={alarmTypeId} width="w-full" />
-			{#if alarmTypeId}
+			{#if readOnly}
+				<Input value={alarmTypeId || ''} disabled placeholder={$t('field_device.bacnet.row.no_alarm_type')} class="h-8 text-sm" />
+			{:else}
+				<AlarmTypeSelect bind:value={alarmTypeId} width="w-full" />
+			{/if}
+			{#if alarmTypeId && !readOnly}
 				<div class="flex justify-end">
 					<Button
 						variant="ghost"
