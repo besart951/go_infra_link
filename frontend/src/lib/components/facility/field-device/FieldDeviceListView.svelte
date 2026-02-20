@@ -107,23 +107,14 @@
 				await Promise.all(
 					createdDevices.map((device) => projectRepository.addFieldDevice(projectId!, device.id))
 				);
-				addToast(
-					translate('field_device.toasts.created_and_linked', {
-						count: createdDevices.length
-					}),
-					'success'
-				);
+				// Toast ist bereits durch FieldDeviceMultiCreateForm gesendet, daher nur Link-Fehler hier berücksichtigen
 			} catch (err) {
 				const message =
 					err instanceof Error ? err.message : translate('field_device.toasts.partial_link_failed');
 				addToast(translate('field_device.toasts.link_failed', { message }), 'error');
 			}
-		} else {
-			addToast(
-				translate('field_device.toasts.created', { count: createdDevices.length }),
-				'success'
-			);
 		}
+		// Toast nicht doppelt senden: FieldDeviceMultiCreateForm handle das bereits
 
 		store.reload();
 	}

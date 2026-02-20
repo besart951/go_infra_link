@@ -122,7 +122,7 @@
 			})
 			.catch(() => {
 				alarmTypeFields = [];
-				alarmTypeFieldsError = 'Felder konnten nicht geladen werden';
+				alarmTypeFieldsError = $t('field_device.bacnet.row.alarm_type_fields_load_failed');
 			})
 			.finally(() => {
 				alarmTypeFieldsLoading = false;
@@ -304,7 +304,7 @@
 
 	<!-- Alarm Type Section -->
 	<div class="col-span-12 space-y-1 border-t pt-2 md:col-span-12">
-		<Label class="text-xs">Alarmtyp</Label>
+		<Label class="text-xs">{$t('field_device.bacnet.row.alarm_type')}</Label>
 		<div class="space-y-2">
 			<AlarmTypeSelect bind:value={alarmTypeId} width="w-full" />
 			{#if alarmTypeId}
@@ -316,21 +316,25 @@
 							alarmTypeId = '';
 						}}
 						class="h-7 px-2 text-xs"
-						title="Alarmtyp entfernen"
+						title={$t('field_device.bacnet.row.alarm_type_remove')}
 					>
-						Alarmtyp entfernen
+						{$t('field_device.bacnet.row.alarm_type_remove')}
 					</Button>
 				</div>
 			{/if}
 		</div>
 
 		{#if alarmTypeFieldsLoading}
-			<p class="text-xs text-muted-foreground">Alarmfelder werden geladen…</p>
+			<p class="text-xs text-muted-foreground">
+				{$t('field_device.bacnet.row.alarm_type_fields_loading')}
+			</p>
 		{:else if alarmTypeFieldsError}
 			<p class="text-xs text-red-500">{alarmTypeFieldsError}</p>
 		{:else if requiredAlarmTypeFields.length > 0}
 			<div class="rounded-md border bg-muted/30 p-2">
-				<p class="mb-1 text-xs font-medium text-muted-foreground">Pflichtfelder</p>
+				<p class="mb-1 text-xs font-medium text-muted-foreground">
+					{$t('field_device.bacnet.row.required_fields')}
+				</p>
 				<div class="space-y-1">
 					{#each requiredAlarmTypeFields as field (field.id)}
 						<div class="flex items-center justify-between gap-2 text-xs">
@@ -338,13 +342,15 @@
 								{field.alarm_field?.label ?? field.alarm_field_id}
 								({field.alarm_field?.data_type ?? 'unknown'})
 							</span>
-							<span class="shrink-0 text-muted-foreground">Pflicht</span>
+							<span class="shrink-0 text-muted-foreground">{$t('common.required')}</span>
 						</div>
 					{/each}
 				</div>
 			</div>
 		{:else if alarmTypeId}
-			<p class="text-xs text-muted-foreground">Keine Pflichtfelder vorhanden</p>
+			<p class="text-xs text-muted-foreground">
+				{$t('field_device.bacnet.row.no_required_fields')}
+			</p>
 		{/if}
 	</div>
 </div>

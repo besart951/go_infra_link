@@ -8,6 +8,7 @@
 		EditableSelectCell,
 		EditableBooleanCell
 	} from '$lib/components/ui/editable-cell/index.js';
+	import BacnetAlarmValuesEditor from './BacnetAlarmValuesEditor.svelte';
 	import {
 		BACNET_SOFTWARE_TYPES,
 		BACNET_HARDWARE_TYPES
@@ -70,7 +71,7 @@
 	function hasTextIndividual(obj: BacnetObject): boolean {
 		const edits = pendingEdits.get(obj.id);
 		if (edits && 'text_individual' in edits) {
-			return !!edits.text_individual;
+			return true;
 		}
 		return !!obj.text_individual;
 	}
@@ -205,22 +206,41 @@
 						</td>
 						<td class="py-1">
 							{#if hasTextIndividual(obj)}
+								{@const pendingTextIndividual = getPendingTextValue(
+									obj.id,
+									'text_individual',
+									obj.text_individual || ''
+								)}
+								{@const hasExistingTextIndividual =
+									(pendingTextIndividual ?? obj.text_individual ?? '').trim().length > 0}
 								<EditableCell
 									value={obj.text_individual || ''}
-									pendingValue={getPendingTextValue(
-										obj.id,
-										'text_individual',
-										obj.text_individual || ''
-									)}
+									pendingValue={pendingTextIndividual}
 									maxlength={250}
 									isDirty={isDirty(obj.id, 'text_individual')}
 									error={getFieldError(obj.id, 'text_individual')}
 									{disabled}
-									onSave={(v) => onEdit(obj.id, 'text_individual', v || undefined)}
+									onSave={(v) => {
+										const normalized = v.trim();
+										onEdit(
+											obj.id,
+											'text_individual',
+											normalized === '' ? (hasExistingTextIndividual ? '' : undefined) : normalized
+										);
+									}}
 								/>
 							{/if}
 						</td>
 					</tr>
+					{#if obj.alarm_type_id}
+					<tr class="border-b border-purple-100 last:border-0 dark:border-purple-900">
+						<td colspan="7" class="pb-3 pt-1 pr-0">
+							<div class="rounded-md border border-purple-100 bg-background/80 p-2 dark:border-purple-900">
+								<BacnetAlarmValuesEditor bacnetObjectId={obj.id} />
+							</div>
+						</td>
+					</tr>
+					{/if}
 				{/each}
 			</tbody>
 		</table>

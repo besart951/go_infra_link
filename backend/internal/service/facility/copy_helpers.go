@@ -75,7 +75,7 @@ func copyBacnetObjectsForFieldDevice(
 			SoftwareReferenceID: originalObj.SoftwareReferenceID,
 			StateTextID:         originalObj.StateTextID,
 			NotificationClassID: originalObj.NotificationClassID,
-			AlarmDefinitionID:   originalObj.AlarmDefinitionID,
+			AlarmTypeID:         originalObj.AlarmTypeID,
 		}
 
 		if err := bacnetObjectRepo.Create(newObj); err != nil {

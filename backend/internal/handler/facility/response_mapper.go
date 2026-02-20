@@ -352,11 +352,6 @@ func toMultiCreateFieldDeviceResponse(result *domainFacility.FieldDeviceMultiCre
 }
 
 func toBacnetObjectResponse(obj domainFacility.BacnetObject) dto.BacnetObjectResponse {
-	alarmTypeID := obj.AlarmTypeID
-	if alarmTypeID == nil && obj.AlarmDefinition != nil {
-		alarmTypeID = obj.AlarmDefinition.AlarmTypeID
-	}
-
 	return dto.BacnetObjectResponse{
 		ID:                  obj.ID.String(),
 		TextFix:             obj.TextFix,
@@ -373,7 +368,7 @@ func toBacnetObjectResponse(obj domainFacility.BacnetObject) dto.BacnetObjectRes
 		StateTextID:         obj.StateTextID,
 		NotificationClassID: obj.NotificationClassID,
 		AlarmDefinitionID:   obj.AlarmDefinitionID,
-		AlarmTypeID:         alarmTypeID,
+		AlarmTypeID:         obj.AlarmTypeID,
 		CreatedAt:           obj.CreatedAt,
 		UpdatedAt:           obj.UpdatedAt,
 	}
@@ -465,7 +460,6 @@ func toAlarmDefinitionResponse(alarmDefinition domainFacility.AlarmDefinition) d
 		Name:        alarmDefinition.Name,
 		AlarmNote:   alarmDefinition.AlarmNote,
 		AlarmTypeID: alarmDefinition.AlarmTypeID,
-		IsActive:    alarmDefinition.IsActive,
 		Scope:       alarmDefinition.Scope,
 		CreatedAt:   alarmDefinition.CreatedAt,
 		UpdatedAt:   alarmDefinition.UpdatedAt,

@@ -39,7 +39,6 @@ func (r *alarmDefinitionRepo) FindOrCreateTemplateByAlarmTypeID(alarmTypeID uuid
 	err := r.db.
 		Where("alarm_type_id = ?", alarmTypeID).
 		Where("scope = ?", "template").
-		Where("is_active = ?", true).
 		Order("created_at ASC").
 		First(&existing).Error
 	if err == nil {
@@ -50,9 +49,8 @@ func (r *alarmDefinitionRepo) FindOrCreateTemplateByAlarmTypeID(alarmTypeID uuid
 	}
 
 	created := &domainFacility.AlarmDefinition{
-		Name:        fmt.Sprintf("AUTO_TEMPLATE_%s", strings.ToUpper(alarmTypeID.String()[:8])),
+		Name:        r.resolveTemplateName(alarmTypeID),
 		AlarmTypeID: &alarmTypeID,
-		IsActive:    true,
 		Scope:       "template",
 	}
 
@@ -61,4 +59,19 @@ func (r *alarmDefinitionRepo) FindOrCreateTemplateByAlarmTypeID(alarmTypeID uuid
 	}
 
 	return created, nil
+}
+
+func (r *alarmDefinitionRepo) resolveTemplateName(alarmTypeID uuid.UUID) string {
+	var alarmType domainFacility.AlarmType
+	if err := r.db.First(&alarmType, "id = ?", alarmTypeID).Error; err == nil {
+		name := strings.TrimSpace(alarmType.Name)
+		if name != "" {
+			return name
+		}
+		code := strings.TrimSpace(alarmType.Code)
+		if code != "" {
+			return code
+		}
+	}
+	return fmt.Sprintf("AUTO_TEMPLATE_%s", strings.ToUpper(alarmTypeID.String()[:8]))
 }

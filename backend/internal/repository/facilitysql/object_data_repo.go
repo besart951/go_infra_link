@@ -19,7 +19,7 @@ type objectDataRepo struct {
 func (r *objectDataRepo) withObjectDataPreloads(query *gorm.DB) *gorm.DB {
 	return query.
 		Preload("BacnetObjects").
-		Preload("BacnetObjects.AlarmDefinition").
+		Preload("BacnetObjects.AlarmType").
 		Preload("Apparats")
 }
 

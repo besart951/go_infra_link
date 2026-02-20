@@ -87,7 +87,7 @@ func (s *Service) Create(project *domainProject.Project) error {
 				HardwareQuantity:    bo.HardwareQuantity,
 				StateTextID:         bo.StateTextID,
 				NotificationClassID: bo.NotificationClassID,
-				AlarmDefinitionID:   bo.AlarmDefinitionID,
+				AlarmTypeID:         bo.AlarmTypeID,
 				// FieldDeviceID is NULL for ObjectData templates
 			}
 			if err := s.bacnetObjectRepo.Create(newBO); err != nil {

@@ -467,6 +467,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 		// Validate individual edited fields
 		for (const [objectId, edits] of deviceEdits) {
 			const objErrors = errors.get(objectId) || {};
+			const currentObject = device.bacnet_objects.find((obj) => obj.id === objectId);
 
 			if ('text_fix' in edits && !edits.text_fix) {
 				objErrors['text_fix'] = translate('field_device.bacnet.validation.text_fix_required');
@@ -495,6 +496,12 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 			}
 			if ('text_individual' in edits) {
 				const val = edits.text_individual as string | undefined;
+				const hasExistingText = !!currentObject?.text_individual?.trim();
+				if (hasExistingText && (!val || val.trim().length === 0)) {
+					objErrors['text_individual'] = translate(
+						'field_device.bacnet.validation.text_individual_required'
+					);
+				}
 				if (val && val.length > 250) {
 					objErrors['text_individual'] = translate(
 						'field_device.bacnet.validation.text_individual_max'
@@ -576,8 +583,8 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 				patch.notification_class_id = edits.notification_class_id as string | undefined;
 				hasChanges = true;
 			}
-			if ('alarm_definition_id' in edits) {
-				patch.alarm_definition_id = edits.alarm_definition_id as string | undefined;
+			if ('alarm_type_id' in edits) {
+				patch.alarm_type_id = edits.alarm_type_id as string | undefined;
 				hasChanges = true;
 			}
 

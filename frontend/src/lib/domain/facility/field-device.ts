@@ -43,7 +43,6 @@ export interface BacnetObjectInput {
 	software_reference_id?: string;
 	state_text_id?: string;
 	notification_class_id?: string;
-	alarm_definition_id?: string;
 	alarm_type_id?: string;
 }
 
@@ -61,7 +60,6 @@ export interface BacnetObjectPatchInput {
 	software_reference_id?: string;
 	state_text_id?: string;
 	notification_class_id?: string;
-	alarm_definition_id?: string;
 	alarm_type_id?: string;
 }
 

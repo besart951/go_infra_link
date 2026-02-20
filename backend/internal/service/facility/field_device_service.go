@@ -22,7 +22,6 @@ type FieldDeviceService struct {
 	specificationRepo           domainFacility.SpecificationStore
 	bacnetObjectRepo            domainFacility.BacnetObjectStore
 	objectDataRepo              domainFacility.ObjectDataStore
-	alarmDefinitionRepo         domainFacility.AlarmDefinitionRepository
 	alarmTypeRepo               domainFacility.AlarmTypeRepository
 	bacnetAlarmValueRepo        domainFacility.BacnetObjectAlarmValueRepository
 }
@@ -39,7 +38,6 @@ func NewFieldDeviceService(
 	specificationRepo domainFacility.SpecificationStore,
 	bacnetObjectRepo domainFacility.BacnetObjectStore,
 	objectDataRepo domainFacility.ObjectDataStore,
-	alarmDefinitionRepo domainFacility.AlarmDefinitionRepository,
 	alarmTypeRepo domainFacility.AlarmTypeRepository,
 	bacnetAlarmValueRepo domainFacility.BacnetObjectAlarmValueRepository,
 ) *FieldDeviceService {
@@ -55,7 +53,6 @@ func NewFieldDeviceService(
 		specificationRepo:           specificationRepo,
 		bacnetObjectRepo:            bacnetObjectRepo,
 		objectDataRepo:              objectDataRepo,
-		alarmDefinitionRepo:         alarmDefinitionRepo,
 		alarmTypeRepo:               alarmTypeRepo,
 		bacnetAlarmValueRepo:        bacnetAlarmValueRepo,
 	}
@@ -573,20 +570,11 @@ func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.
 }
 
 func (s *FieldDeviceService) initializeAlarmValuesForBacnetObject(bacnetObject *domainFacility.BacnetObject) error {
-	if bacnetObject == nil || bacnetObject.AlarmDefinitionID == nil {
+	if bacnetObject == nil || bacnetObject.AlarmTypeID == nil {
 		return nil
 	}
 
-	defs, err := s.alarmDefinitionRepo.GetByIds([]uuid.UUID{*bacnetObject.AlarmDefinitionID})
-	if err != nil || len(defs) == 0 {
-		return err
-	}
-	def := defs[0]
-	if def.AlarmTypeID == nil {
-		return nil
-	}
-
-	alarmType, err := s.alarmTypeRepo.GetWithFields(*def.AlarmTypeID)
+	alarmType, err := s.alarmTypeRepo.GetWithFields(*bacnetObject.AlarmTypeID)
 	if err != nil || alarmType == nil {
 		return err
 	}
@@ -791,8 +779,8 @@ func applyBacnetObjectPatch(target *domainFacility.BacnetObject, patch domainFac
 	if patch.NotificationClassID != nil {
 		target.NotificationClassID = patch.NotificationClassID
 	}
-	if patch.AlarmDefinitionID != nil {
-		target.AlarmDefinitionID = patch.AlarmDefinitionID
+	if patch.AlarmTypeID != nil {
+		target.AlarmTypeID = patch.AlarmTypeID
 	}
 }
 
@@ -922,7 +910,7 @@ func (s *FieldDeviceService) replaceBacnetObjectsFromObjectData(fieldDeviceID uu
 			SoftwareReferenceID: nil,
 			StateTextID:         t.StateTextID,
 			NotificationClassID: t.NotificationClassID,
-			AlarmDefinitionID:   t.AlarmDefinitionID,
+			AlarmTypeID:         t.AlarmTypeID,
 		}
 		templateToClone[t.ID] = clone
 		templateRef[t.ID] = t.SoftwareReferenceID

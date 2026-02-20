@@ -56,6 +56,7 @@ func mapperBacnetObjectResponses(objs []domainFacility.BacnetObject) []dto.Bacne
 			StateTextID:         obj.StateTextID,
 			NotificationClassID: obj.NotificationClassID,
 			AlarmDefinitionID:   obj.AlarmDefinitionID,
+			AlarmTypeID:         obj.AlarmTypeID,
 			CreatedAt:           obj.CreatedAt,
 			UpdatedAt:           obj.UpdatedAt,
 		}

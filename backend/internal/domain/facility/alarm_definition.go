@@ -7,10 +7,9 @@ import (
 
 type AlarmDefinition struct {
 	domain.Base
-	Name        string     `gorm:"not null"`
+	Name        string `gorm:"not null"`
 	AlarmNote   *string
 	AlarmTypeID *uuid.UUID `gorm:"type:uuid;index"`
 	AlarmType   *AlarmType `gorm:"foreignKey:AlarmTypeID"`
-	IsActive    bool       `gorm:"not null;default:true"`
 	Scope       string     `gorm:"not null;default:'template';size:30"`
 }

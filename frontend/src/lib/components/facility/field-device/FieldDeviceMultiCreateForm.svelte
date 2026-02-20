@@ -1,18 +1,4 @@
 <script lang="ts">
-	/**
-	 * Multi-Create Field Device Form (Refactored)
-	 *
-	 * Architecture: Hexagonal / Clean Architecture
-	 * - Domain logic in $lib/domain/facility/fieldDeviceMultiCreate.ts
-	 * - UI components are thin wrappers around domain logic
-	 * - Clear separation of concerns
-	 *
-	 * Features:
-	 * - Selection flow: SPS Controller System Type → Object Data → Apparat → System Part
-	 * - Dynamic row generation
-	 * - Real-time validation with swap detection
-	 * - State persistence
-	 */
 	import { onMount, onDestroy } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';

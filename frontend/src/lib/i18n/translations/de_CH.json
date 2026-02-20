@@ -1153,6 +1153,8 @@
 			"clear": "Filter löschen"
 		},
 		"multi_create": {
+			"title": "Mehrfacherstellung",
+			"description": "Mehrere Feldgeräte in einem Schritt erstellen.",
 			"errors": {
 				"fetch_numbers_status": "Verfügbare Nummern konnten nicht geladen werden ({status}): {message}",
 				"fetch_numbers_failed": "Verfügbare Nummern konnten nicht geladen werden: {message}",
@@ -1325,7 +1327,13 @@
 				"text_individual": "Text individuell",
 				"text_individual_value": "Text Individuell",
 				"alarm_definition": "Alarm-Definition",
-				"alarm_definition_remove": "Alarm-Definition entfernen"
+				"alarm_definition_remove": "Alarm-Definition entfernen",
+				"alarm_type": "Alarmtyp",
+				"alarm_type_remove": "Alarmtyp entfernen",
+				"alarm_type_fields_loading": "Alarmfelder werden geladen…",
+				"alarm_type_fields_load_failed": "Alarmfelder konnten nicht geladen werden",
+				"required_fields": "Pflichtfelder",
+				"no_required_fields": "Keine Pflichtfelder vorhanden"
 			},
 			"validation": {
 				"text_fix_unique": "text_fix muss innerhalb des Feldgeräts eindeutig sein.",
@@ -1334,6 +1342,7 @@
 				"hardware_quantity_range": "Muss zwischen 1 und 255 liegen.",
 				"software_type": "Ungültiger Softwaretyp.",
 				"hardware_type": "Ungültiger Hardwaretyp.",
+				"text_individual_required": "Text individuell darf nicht leer sein.",
 				"text_individual_max": "Darf maximal 250 Zeichen haben."
 			},
 			"alarm_editor": {

@@ -11,7 +11,7 @@
         "created_at": "2026-02-19T22:38:40.969611Z",
         "id": "019c780e-2d49-7953-ac08-4cce6c500ccc",
         "is_active": true,
-        "name": "AUTO_TEMPLATE_019C780C",
+        "name": "Alarm Aktiv/Inaktiv",
         "scope": "template",
         "updated_at": "2026-02-19T22:38:40.969611Z"
       },
@@ -21,7 +21,7 @@
         "created_at": "2026-02-19T22:38:41.739299Z",
         "id": "019c780e-304b-7492-b330-06a2280e4bca",
         "is_active": true,
-        "name": "AUTO_TEMPLATE_019C780C",
+        "name": "I/O-Überwachung",
         "scope": "template",
         "updated_at": "2026-02-19T22:38:41.739299Z"
       },
@@ -31,7 +31,7 @@
         "created_at": "2026-02-19T22:38:41.80748Z",
         "id": "019c780e-308f-7754-b5e7-d642d21ee28d",
         "is_active": true,
-        "name": "AUTO_TEMPLATE_019C780C",
+        "name": "Verstrichene Aktivzeit",
         "scope": "template",
         "updated_at": "2026-02-19T22:38:41.80748Z"
       },
@@ -41,7 +41,7 @@
         "created_at": "2026-02-19T22:38:42.278519Z",
         "id": "019c780e-3266-77ee-9bd5-89a4d16d8516",
         "is_active": true,
-        "name": "AUTO_TEMPLATE_019C780C",
+        "name": "Grenzwert Hoch/Tief",
         "scope": "template",
         "updated_at": "2026-02-19T22:38:42.278519Z"
       },
@@ -51,7 +51,7 @@
         "created_at": "2026-02-19T22:38:46.767334Z",
         "id": "019c780e-43ef-7519-9bad-78e0eb7888cd",
         "is_active": true,
-        "name": "AUTO_TEMPLATE_019C780C",
+        "name": "PID-Regelung",
         "scope": "template",
         "updated_at": "2026-02-19T22:38:46.767334Z"
       },
@@ -61,7 +61,7 @@
         "created_at": "2026-02-19T22:38:51.798745Z",
         "id": "019c780e-5796-7b61-8f74-0c341473e267",
         "is_active": true,
-        "name": "AUTO_TEMPLATE_019C780C",
+        "name": "Positionskontrolle",
         "scope": "template",
         "updated_at": "2026-02-19T22:38:51.798745Z"
       },
@@ -71,7 +71,7 @@
         "created_at": "2026-02-19T22:38:52.613133Z",
         "id": "019c780e-5ac5-7209-9ce1-5d397cb6111c",
         "is_active": true,
-        "name": "AUTO_TEMPLATE_019C780C",
+        "name": "Zustandszuordnung",
         "scope": "template",
         "updated_at": "2026-02-19T22:38:52.613133Z"
       }

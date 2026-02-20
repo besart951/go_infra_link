@@ -157,9 +157,11 @@
 				aria-expanded={open}
 				{disabled}
 				aria-disabled={disabled}
-				class={cn('justify-between', width)}
+				class={cn('justify-between gap-2 min-w-0', width)}
 			>
-				{selectedLabel || (value ? value : placeholder)}
+				<span class="min-w-0 flex-1 truncate text-left">
+					{selectedLabel || (value ? value : placeholder)}
+				</span>
 				<ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
 			</Button>
 		{/snippet}

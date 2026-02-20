@@ -153,7 +153,6 @@ type AlarmDefinitionResponse struct {
 	Name        string     `json:"name"`
 	AlarmNote   *string    `json:"alarm_note"`
 	AlarmTypeID *uuid.UUID `json:"alarm_type_id,omitempty"`
-	IsActive    bool       `json:"is_active"`
 	Scope       string     `json:"scope"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`

@@ -9,20 +9,17 @@ type BacnetAlarmValueService struct {
 	valueRepo     domainFacility.BacnetObjectAlarmValueRepository
 	alarmTypeRepo domainFacility.AlarmTypeRepository
 	bacnetRepo    domainFacility.BacnetObjectRepository
-	alarmDefRepo  domainFacility.AlarmDefinitionRepository
 }
 
 func NewBacnetAlarmValueService(
 	valueRepo domainFacility.BacnetObjectAlarmValueRepository,
 	alarmTypeRepo domainFacility.AlarmTypeRepository,
 	bacnetRepo domainFacility.BacnetObjectRepository,
-	alarmDefRepo domainFacility.AlarmDefinitionRepository,
 ) *BacnetAlarmValueService {
 	return &BacnetAlarmValueService{
 		valueRepo:     valueRepo,
 		alarmTypeRepo: alarmTypeRepo,
 		bacnetRepo:    bacnetRepo,
-		alarmDefRepo:  alarmDefRepo,
 	}
 }
 
@@ -33,20 +30,11 @@ func (s *BacnetAlarmValueService) GetSchema(bacnetObjectID uuid.UUID) (*domainFa
 		return nil, err
 	}
 	bo := bacnetObjs[0]
-	if bo.AlarmDefinitionID == nil {
+	if bo.AlarmTypeID == nil {
 		return nil, nil
 	}
 
-	alarmDefSlice, err := s.alarmDefRepo.GetByIds([]uuid.UUID{*bo.AlarmDefinitionID})
-	if err != nil || len(alarmDefSlice) == 0 {
-		return nil, err
-	}
-	alarmDef := alarmDefSlice[0]
-	if alarmDef.AlarmTypeID == nil {
-		return nil, nil
-	}
-
-	return s.alarmTypeRepo.GetWithFields(*alarmDef.AlarmTypeID)
+	return s.alarmTypeRepo.GetWithFields(*bo.AlarmTypeID)
 }
 
 // GetValues returns the stored alarm values for a BacnetObject

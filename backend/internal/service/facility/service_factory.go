@@ -84,7 +84,6 @@ func NewServices(repos Repositories) *Services {
 			repos.Specifications,
 			repos.BacnetObjects,
 			repos.ObjectData,
-			repos.AlarmDefinitions,
 			repos.AlarmTypes,
 			repos.BacnetObjectAlarmValues,
 		),
@@ -125,7 +124,6 @@ func NewServices(repos Repositories) *Services {
 			repos.BacnetObjectAlarmValues,
 			repos.AlarmTypes,
 			repos.BacnetObjects,
-			repos.AlarmDefinitions,
 		),
 	}
 }

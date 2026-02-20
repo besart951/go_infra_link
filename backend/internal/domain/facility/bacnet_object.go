@@ -27,9 +27,9 @@ type BacnetObject struct {
 	StateText           *StateText         `gorm:"foreignKey:StateTextID"`
 	NotificationClassID *uuid.UUID         `gorm:"type:uuid;index"`
 	NotificationClass   *NotificationClass `gorm:"foreignKey:NotificationClassID"`
-	AlarmDefinitionID   *uuid.UUID         `gorm:"type:uuid;index"`
-	AlarmDefinition     *AlarmDefinition   `gorm:"foreignKey:AlarmDefinitionID"`
-	AlarmTypeID         *uuid.UUID         `gorm:"-:all"`
+	AlarmTypeID         *uuid.UUID         `gorm:"type:uuid;index"`
+	AlarmType           *AlarmType         `gorm:"foreignKey:AlarmTypeID"`
+	AlarmDefinitionID   *uuid.UUID         `gorm:"-:all"`
 }
 
 // BacnetObjectPatch represents a partial update for a bacnet object.
@@ -48,8 +48,8 @@ type BacnetObjectPatch struct {
 	SoftwareReferenceID *uuid.UUID
 	StateTextID         *uuid.UUID
 	NotificationClassID *uuid.UUID
-	AlarmDefinitionID   *uuid.UUID
 	AlarmTypeID         *uuid.UUID
+	AlarmDefinitionID   *uuid.UUID
 }
 
 type BacnetSoftwareType string

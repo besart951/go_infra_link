@@ -363,7 +363,7 @@ func bacnetLine(ctrl domainExport.Controller, device domainFacility.FieldDevice,
 
 	row = append(row,
 		address,
-		alarmName(bo.AlarmDefinition),
+		alarmName(bo.AlarmType),
 		firstStateText(bo.StateText),
 	)
 
@@ -480,11 +480,11 @@ func notificationNC(nc *domainFacility.NotificationClass) any {
 	return nc.Nc
 }
 
-func alarmName(ad *domainFacility.AlarmDefinition) string {
-	if ad == nil {
+func alarmName(alarmType *domainFacility.AlarmType) string {
+	if alarmType == nil {
 		return ""
 	}
-	return ad.Name
+	return alarmType.Name
 }
 
 // ---------------------------------------------------------------------------

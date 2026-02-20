@@ -264,7 +264,7 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 		Preload("BacnetObjects").
 		Preload("BacnetObjects.StateText").
 		Preload("BacnetObjects.NotificationClass").
-		Preload("BacnetObjects.AlarmDefinition").
+		Preload("BacnetObjects.AlarmType").
 		Limit(limit).
 		Offset(offset).
 		Find(&items).Error; err != nil {

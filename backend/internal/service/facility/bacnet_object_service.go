@@ -23,20 +23,31 @@ func (s *BacnetObjectService) resolveAlarmBindingForTemplate(bacnetObject *domai
 		return nil
 	}
 
-	if bacnetObject.AlarmTypeID == nil {
+	if bacnetObject.AlarmTypeID != nil {
+		if _, err := domain.GetByID(s.alarmTypeRepo, *bacnetObject.AlarmTypeID); err != nil {
+			return err
+		}
+		bacnetObject.AlarmDefinitionID = nil
 		return nil
 	}
 
-	if _, err := domain.GetByID(s.alarmTypeRepo, *bacnetObject.AlarmTypeID); err != nil {
-		return err
+	if bacnetObject.AlarmDefinitionID == nil {
+		return nil
 	}
 
-	definition, err := s.alarmDefinitionRepo.FindOrCreateTemplateByAlarmTypeID(*bacnetObject.AlarmTypeID)
+	defs, err := s.alarmDefinitionRepo.GetByIds([]uuid.UUID{*bacnetObject.AlarmDefinitionID})
 	if err != nil {
 		return err
 	}
+	if len(defs) == 0 || defs[0].AlarmTypeID == nil {
+		return domain.NewValidationError().Add("objectdata.bacnetobject.alarm_type_id", "alarm_type_id is required")
+	}
 
-	bacnetObject.AlarmDefinitionID = &definition.ID
+	bacnetObject.AlarmTypeID = defs[0].AlarmTypeID
+	bacnetObject.AlarmDefinitionID = nil
+	if _, err := domain.GetByID(s.alarmTypeRepo, *bacnetObject.AlarmTypeID); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -171,6 +182,9 @@ func (s *BacnetObjectService) CreateWithParent(bacnetObject *domainFacility.Bacn
 		if err := s.ensureTextFixUniqueForFieldDevice(*fieldDeviceID, bacnetObject.TextFix, nil); err != nil {
 			return err
 		}
+		if err := s.resolveAlarmBindingForTemplate(bacnetObject); err != nil {
+			return err
+		}
 		bacnetObject.FieldDeviceID = fieldDeviceID
 		return s.repo.Create(bacnetObject)
 	}
@@ -225,9 +239,10 @@ func (s *BacnetObjectService) Update(bacnetObject *domainFacility.BacnetObject, 
 		if err := s.ensureSoftwareUniqueForObjectData(*objectDataID, bacnetObject.SoftwareType, bacnetObject.SoftwareNumber, &bacnetObject.ID); err != nil {
 			return err
 		}
-		if err := s.resolveAlarmBindingForTemplate(bacnetObject); err != nil {
-			return err
-		}
+	}
+
+	if err := s.resolveAlarmBindingForTemplate(bacnetObject); err != nil {
+		return err
 	}
 
 	if err := s.repo.Update(bacnetObject); err != nil {
