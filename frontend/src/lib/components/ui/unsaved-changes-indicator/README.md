@@ -66,7 +66,7 @@ const editing = useFieldDeviceEditing(projectId);
 **Features**:
 
 - ✅ Native Browser beforeunload Warning
-- ✅ Funktioniert bei: Tab schließen, Browser schließen, Seite neu laden
+- ✅ Funktioniert bei: Tab schliessen, Browser schliessen, Seite neu laden
 - ✅ Opt-in/opt-out Support
 - ✅ Custom Nachrichten (legacy Browser)
 

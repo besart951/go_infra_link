@@ -128,7 +128,7 @@
         "default_unit_code": null,
         "id": "019c780c-f861-7a04-b2ff-3651336bf8a3",
         "key": "buffer_size",
-        "label": "Puffergröße",
+        "label": "Puffergrösse",
         "updated_at": "2026-02-19T22:37:21.886181Z"
       },
       {
@@ -227,7 +227,7 @@
         "default_unit_code": null,
         "id": "019c780c-f861-7a0f-914a-d09630db3fcf",
         "key": "controlled_variable_value",
-        "label": "Regelgröße",
+        "label": "Regelgrösse",
         "updated_at": "2026-02-19T22:37:21.886181Z"
       },
       {

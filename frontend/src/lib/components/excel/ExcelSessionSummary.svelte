@@ -95,7 +95,6 @@
 			.toLowerCase()
 			.normalize('NFKD')
 			.replace(/[\u0300-\u036f]/g, '')
-			.replace(/ß/g, 'ss')
 			.replace(/ae/g, 'a')
 			.replace(/oe/g, 'o')
 			.replace(/ue/g, 'u')

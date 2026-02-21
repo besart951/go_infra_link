@@ -84,7 +84,11 @@
 	}
 
 	function hasAlarmType(obj: BacnetObject): boolean {
-		const pendingAlarmTypeId = getPendingTextValue(obj.id, 'alarm_type_id', obj.alarm_type_id || '');
+		const pendingAlarmTypeId = getPendingTextValue(
+			obj.id,
+			'alarm_type_id',
+			obj.alarm_type_id || ''
+		);
 		const alarmTypeId = pendingAlarmTypeId ?? obj.alarm_type_id ?? '';
 		return alarmTypeId.trim().length > 0;
 	}
@@ -139,11 +143,17 @@
 										</Button>
 									{/snippet}
 								</Popover.Trigger>
-								<Popover.Content class="w-[28rem] p-3" align="start" side="right">
+								<Popover.Content
+									class="max-h-[70vh] w-[24rem] overflow-y-auto p-2"
+									align="start"
+									side="right"
+								>
 									{#if hasAlarmType(obj)}
 										<BacnetAlarmValuesEditor bacnetObjectId={obj.id} />
 									{:else}
-										<p class="text-xs text-muted-foreground">{$t('field_device.bacnet.table.no_alarms')}</p>
+										<p class="text-xs text-muted-foreground">
+											{$t('field_device.bacnet.table.no_alarms')}
+										</p>
 									{/if}
 								</Popover.Content>
 							</Popover.Root>

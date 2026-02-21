@@ -479,7 +479,7 @@ src/lib/
 
 Wenn du mir die Implementierung beauftragen möchtest, kannst du folgende Vorlage verwenden:
 
-> **Auftrag: Alarm-Frontend implementieren (gemäß ALARM_MODEL_CONCEPT.md)**
+> **Auftrag: Alarm-Frontend implementieren (gemäss ALARM_MODEL_CONCEPT.md)**
 >
 > Bitte implementiere die drei Screens laut Konzept-Abschnitt „Frontend-UI-Konzept":
 >

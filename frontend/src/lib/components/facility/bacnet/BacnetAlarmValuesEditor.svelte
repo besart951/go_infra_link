@@ -119,12 +119,12 @@
 		{$t('field_device.bacnet.alarm_editor.no_alarm')}
 	</div>
 {:else}
-	<div class="space-y-4 p-3">
+	<div class="space-y-2 p-2">
 		<!-- Completeness badge -->
-		<div class="flex items-center gap-2 text-sm">
+		<div class="flex items-center gap-1.5 text-xs">
 			<span class="font-medium">{$t('field_device.bacnet.alarm_editor.title')}</span>
 			<span
-				class={`ml-auto rounded-full px-2 py-0.5 text-xs font-medium ${requiredFilled === requiredTotal ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}
+				class={`ml-auto rounded-full px-1.5 py-0.5 text-[11px] font-medium ${requiredFilled === requiredTotal ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}
 			>
 				{$t('field_device.bacnet.alarm_editor.completeness', {
 					filled: requiredFilled,
@@ -138,13 +138,13 @@
 
 		<!-- Fields grouped by ui_group -->
 		{#each Object.entries(groupedFields) as [group, fields]}
-			<fieldset class="rounded-md border p-3">
+			<fieldset class="rounded-md border p-2">
 				<legend class="px-1 text-xs font-semibold text-muted-foreground">{group}</legend>
-				<div class="space-y-3">
+				<div class="space-y-2">
 					{#each fields as field}
 						{@const dataType = field.alarm_field?.data_type ?? 'string'}
 						{@const label = field.alarm_field?.label ?? field.alarm_field?.key ?? field.id}
-						<div class="space-y-1">
+						<div class="space-y-0.5">
 							<Label class="text-xs">
 								{label}{#if field.is_required}<span class="text-destructive"> *</span>{/if}
 							</Label>
@@ -157,10 +157,14 @@
 										const v = parseFloat((e.target as HTMLInputElement).value);
 										values = {
 											...values,
-											[field.id]: { ...values[field.id], alarm_type_field_id: field.id, value_number: isNaN(v) ? undefined : v }
+											[field.id]: {
+												...values[field.id],
+												alarm_type_field_id: field.id,
+												value_number: isNaN(v) ? undefined : v
+											}
 										};
 									}}
-									class="h-8 text-sm"
+									class="h-7 text-xs"
 								/>
 							{:else if dataType === 'integer'}
 								<Input
@@ -171,10 +175,14 @@
 										const v = parseInt((e.target as HTMLInputElement).value, 10);
 										values = {
 											...values,
-											[field.id]: { ...values[field.id], alarm_type_field_id: field.id, value_integer: isNaN(v) ? undefined : v }
+											[field.id]: {
+												...values[field.id],
+												alarm_type_field_id: field.id,
+												value_integer: isNaN(v) ? undefined : v
+											}
 										};
 									}}
-									class="h-8 text-sm"
+									class="h-7 text-xs"
 								/>
 							{:else if dataType === 'boolean'}
 								<Checkbox
@@ -182,7 +190,11 @@
 									onCheckedChange={(checked) => {
 										values = {
 											...values,
-											[field.id]: { ...values[field.id], alarm_type_field_id: field.id, value_boolean: !!checked }
+											[field.id]: {
+												...values[field.id],
+												alarm_type_field_id: field.id,
+												value_boolean: !!checked
+											}
 										};
 									}}
 								/>
@@ -192,11 +204,15 @@
 									oninput={(e) => {
 										values = {
 											...values,
-											[field.id]: { ...values[field.id], alarm_type_field_id: field.id, value_json: (e.target as HTMLTextAreaElement).value }
+											[field.id]: {
+												...values[field.id],
+												alarm_type_field_id: field.id,
+												value_json: (e.target as HTMLTextAreaElement).value
+											}
 										};
 									}}
-									rows={3}
-									class="text-sm font-mono"
+									rows={2}
+									class="font-mono text-xs"
 								/>
 							{:else}
 								<Input
@@ -205,10 +221,14 @@
 									oninput={(e) => {
 										values = {
 											...values,
-											[field.id]: { ...values[field.id], alarm_type_field_id: field.id, value_string: (e.target as HTMLInputElement).value }
+											[field.id]: {
+												...values[field.id],
+												alarm_type_field_id: field.id,
+												value_string: (e.target as HTMLInputElement).value
+											}
 										};
 									}}
-									class="h-8 text-sm"
+									class="h-7 text-xs"
 								/>
 							{/if}
 						</div>
@@ -218,11 +238,11 @@
 		{/each}
 
 		{#if saveError}
-			<p class="text-sm text-red-500">{saveError}</p>
+			<p class="text-xs text-red-500">{saveError}</p>
 		{/if}
 
 		<div class="flex justify-end">
-			<Button onclick={handleSave} disabled={saving}>
+			<Button onclick={handleSave} disabled={saving} size="sm" class="h-9 px-3 text-xs">
 				{$t('field_device.bacnet.alarm_editor.save')}
 			</Button>
 		</div>
