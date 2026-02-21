@@ -61,17 +61,6 @@
 </script>
 
 <Card.Root>
-	<Card.Header>
-		<Card.Title>{$t('field_device.filters.title')}</Card.Title>
-		<Card.Description>
-			{$t('field_device.filters.description')}
-			{#if showProjectFilter}
-				{$t('field_device.filters.description_project')}
-			{:else}
-				{$t('field_device.filters.description_end')}
-			{/if}
-		</Card.Description>
-	</Card.Header>
 	<Card.Content>
 		<div class={gridClass}>
 			<div class="flex flex-col gap-2">
@@ -107,7 +96,7 @@
 				</div>
 			{/if}
 		</div>
-		<div class="mt-4 flex gap-2">
+		<div class="mt-4 flex gap-2 justify-end">
 			<Button onclick={applyFilters}>{$t('field_device.filters.apply')}</Button>
 			{#if hasActiveFilters}
 				<Button variant="outline" onclick={clearFilters}>

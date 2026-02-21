@@ -1280,6 +1280,7 @@
 			"clear": "Auswahl löschen",
 			"delete": "Löschen",
 			"bulk_edit": "Sammelbearbeitung",
+			"table": "Tabelle",
 			"refresh": "Aktualisieren"
 		},
 		"save_bar": {

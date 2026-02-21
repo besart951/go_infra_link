@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { FileSpreadsheet, ListPlus } from '@lucide/svelte';
+	import { ListPlus } from '@lucide/svelte';
 	import { createFieldDeviceStore } from '$lib/stores/facility/fieldDeviceStore.js';
 	import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
 	import { addToast } from '$lib/components/toast.svelte';
@@ -57,6 +57,7 @@
 	let showMultiCreateForm = $state(false);
 	let showBulkEditPanel = $state(false);
 	let showExportPanel = $state(false);
+	let showFilterPanel = $state(true);
 	let searchInput = $state('');
 
 	// Selection state
@@ -68,6 +69,15 @@
 	);
 	const someSelected = $derived($store.items.some((d) => selectedIds.has(d.id)) && !allSelected);
 	const selectedCount = $derived(selectedIds.size);
+	const hasActiveFilters = $derived(
+		Boolean(
+			$store.filters.buildingId ||
+				$store.filters.controlCabinetId ||
+				$store.filters.spsControllerId ||
+				$store.filters.spsControllerSystemTypeId ||
+				$store.filters.projectId
+		)
+	);
 
 	// Auto-hide bulk edit panel when nothing is selected
 	$effect(() => {
@@ -262,10 +272,6 @@
 <div class="flex flex-col gap-6">
 	<!-- Action Buttons -->
 	<div class="flex justify-end gap-2">
-		<Button variant="outline" onclick={() => (showExportPanel = !showExportPanel)}>
-			<FileSpreadsheet class="mr-2 size-4" />
-			{showExportPanel ? $t('field_device.actions.hide_export') : $t('field_device.actions.export')}
-		</Button>
 		{#if !showMultiCreateForm}
 			<Button variant="outline" onclick={() => (showMultiCreateForm = true)}>
 				<ListPlus class="mr-2 size-4" />
@@ -273,10 +279,6 @@
 			</Button>
 		{/if}
 	</div>
-
-	{#if showExportPanel}
-		<FieldDeviceExportPanel {projectId} />
-	{/if}
 
 	<!-- Multi-Create Form -->
 	{#if showMultiCreateForm}
@@ -297,13 +299,6 @@
 		</Card.Root>
 	{/if}
 
-	<!-- Filter Card -->
-	<FieldDeviceFilterCard
-		onApplyFilters={handleApplyFilters}
-		onClearFilters={handleClearFilters}
-		showProjectFilter={!projectId}
-	/>
-
 	<!-- Data Table with Expandable Rows and Selection -->
 	<div class="flex flex-col gap-4">
 		<!-- Search Bar and Selection Actions -->
@@ -312,12 +307,29 @@
 			{selectedCount}
 			loading={$store.loading}
 			{showBulkEditPanel}
+			{showExportPanel}
+			{showFilterPanel}
+			{hasActiveFilters}
 			onSearch={handleSearch}
 			onClearSelection={clearSelection}
 			onBulkDelete={handleBulkDelete}
 			onToggleBulkEdit={toggleBulkEdit}
+			onToggleExport={() => (showExportPanel = !showExportPanel)}
+			onToggleFilterPanel={() => (showFilterPanel = !showFilterPanel)}
 			onRefresh={() => store.reload()}
 		/>
+
+		<div class:hidden={!showFilterPanel}>
+			<FieldDeviceFilterCard
+				onApplyFilters={handleApplyFilters}
+				onClearFilters={handleClearFilters}
+				showProjectFilter={!projectId}
+			/>
+		</div>
+
+		{#if showExportPanel}
+			<FieldDeviceExportPanel {projectId} />
+		{/if}
 
 		<!-- Bulk Edit Panel -->
 		{#if showBulkEditPanel && selectedCount > 0}

@@ -220,26 +220,12 @@
 		if (!projectId) return;
 		objectDataLoading = true;
 		try {
-			const [projectRes, templateRes] = await Promise.all([
-				listProjectObjectData(projectId, {
-					page: 1,
-					limit: 100,
-					search: objectDataSearch.trim() || undefined
-				}),
-				objectDataRepository
-					.list({
-						pagination: { page: 1, pageSize: 100 },
-						search: { text: objectDataSearch.trim() }
-					})
-					.then((res) => ({ items: res.items }))
-			]);
-			const projectItems = projectRes.items ?? [];
-			const templateItems = templateRes.items ?? [];
-			const projectIds = new Set(projectItems.map((obj) => obj.id));
-			projectObjectData = [
-				...projectItems,
-				...templateItems.filter((obj) => !projectIds.has(obj.id))
-			];
+			const projectRes = await listProjectObjectData(projectId, {
+				page: 1,
+				limit: 100,
+				search: objectDataSearch.trim() || undefined
+			});
+			projectObjectData = projectRes.items ?? [];
 		} catch (err) {
 			addToast(
 				err instanceof Error ? err.message : translate('projects.object_data.load_failed'),

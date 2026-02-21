@@ -1,6 +1,8 @@
 <script lang="ts">
 	import * as Sheet from '$lib/components/ui/sheet/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import XIcon from '@lucide/svelte/icons/x';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { SIDEBAR_WIDTH_MOBILE } from './constants.js';
 	import { useSidebar } from './context.svelte.js';
@@ -49,6 +51,17 @@
 				<Sheet.Description>Displays the mobile sidebar.</Sheet.Description>
 			</Sheet.Header>
 			<div class="flex h-full w-full flex-col">
+				<div class="flex items-center justify-end p-2">
+					<Button
+						variant="ghost"
+						size="icon"
+						type="button"
+						onclick={() => sidebar.setOpenMobile(false)}
+					>
+						<XIcon class="size-4" />
+						<span class="sr-only">Close sidebar</span>
+					</Button>
+				</div>
 				{@render children?.()}
 			</div>
 		</Sheet.Content>
