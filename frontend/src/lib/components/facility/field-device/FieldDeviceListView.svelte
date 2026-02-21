@@ -72,10 +72,10 @@
 	const hasActiveFilters = $derived(
 		Boolean(
 			$store.filters.buildingId ||
-				$store.filters.controlCabinetId ||
-				$store.filters.spsControllerId ||
-				$store.filters.spsControllerSystemTypeId ||
-				$store.filters.projectId
+			$store.filters.controlCabinetId ||
+			$store.filters.spsControllerId ||
+			$store.filters.spsControllerSystemTypeId ||
+			$store.filters.projectId
 		)
 	);
 
