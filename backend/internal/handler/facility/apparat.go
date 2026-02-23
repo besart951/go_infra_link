@@ -155,7 +155,7 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 		if objectDataIDStr != "" {
 			objectDataID, err := parseUUIDString(objectDataIDStr)
 			if err != nil {
-			respondLocalizedError(c, http.StatusBadRequest, "invalid_object_data_id", "facility.invalid_object_data_id")
+				respondLocalizedError(c, http.StatusBadRequest, "invalid_object_data_id", "facility.invalid_object_data_id")
 				return
 			}
 
@@ -173,7 +173,7 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 		if systemPartIDStr != "" {
 			systemPartID, err := parseUUIDString(systemPartIDStr)
 			if err != nil {
-			respondLocalizedError(c, http.StatusBadRequest, "invalid_system_part_id", "facility.invalid_system_part_id")
+				respondLocalizedError(c, http.StatusBadRequest, "invalid_system_part_id", "facility.invalid_system_part_id")
 				return
 			}
 

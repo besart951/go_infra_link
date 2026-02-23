@@ -37,26 +37,28 @@ func extractLocale(acceptLanguage, defaultLocale string) string {
 	// Parse Accept-Language header (e.g., "de-CH,de;q=0.9,en;q=0.8")
 	// format: language[-region][;q=quality]
 	parts := strings.Split(acceptLanguage, ",")
+	part := strings.TrimSpace(parts[0])
 
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-
-		// Extract language-region part (before quality parameter)
-		langPart := part
-		if idx := strings.Index(part, ";"); idx != -1 {
-			langPart = part[:idx]
-		}
-
-		langPart = strings.TrimSpace(langPart)
-
-		// Convert "de-CH" to "de_CH", "de-ch" to "de_ch"
-		locale := normalizeLanguageTag(langPart)
-
-		// For now, we support all locales and let translator handle fallback
-		return locale
+	if part == "" {
+		return defaultLocale
 	}
 
-	return defaultLocale
+	// Extract language-region part (before quality parameter)
+	langPart := part
+	if idx := strings.Index(part, ";"); idx != -1 {
+		langPart = part[:idx]
+	}
+
+	langPart = strings.TrimSpace(langPart)
+
+	// Convert "de-CH" to "de_CH", "de-ch" to "de_ch"
+	locale := normalizeLanguageTag(langPart)
+
+	// For now, we support all locales and let translator handle fallback
+	if locale == "" {
+		return defaultLocale
+	}
+	return locale
 }
 
 // normalizeLanguageTag converts language tags from RFC format to our internal format.

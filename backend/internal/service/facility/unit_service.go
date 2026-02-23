@@ -19,13 +19,13 @@ func NewUnitService(repo domainFacility.UnitRepository) *UnitService {
 func (s *UnitService) Create(unit *domainFacility.Unit) error {
 	ve := domain.NewValidationError()
 	if strings.TrimSpace(unit.Code) == "" {
-		ve.Add("code", "required")
+		ve = ve.Add("code", "required")
 	}
 	if strings.TrimSpace(unit.Symbol) == "" {
-		ve.Add("symbol", "required")
+		ve = ve.Add("symbol", "required")
 	}
 	if strings.TrimSpace(unit.Name) == "" {
-		ve.Add("name", "required")
+		ve = ve.Add("name", "required")
 	}
 	if len(ve.Fields) > 0 {
 		return ve
@@ -49,13 +49,13 @@ func (s *UnitService) GetByID(id uuid.UUID) (*domainFacility.Unit, error) {
 func (s *UnitService) Update(unit *domainFacility.Unit) error {
 	ve := domain.NewValidationError()
 	if strings.TrimSpace(unit.Code) == "" {
-		ve.Add("code", "required")
+		ve = ve.Add("code", "required")
 	}
 	if strings.TrimSpace(unit.Symbol) == "" {
-		ve.Add("symbol", "required")
+		ve = ve.Add("symbol", "required")
 	}
 	if strings.TrimSpace(unit.Name) == "" {
-		ve.Add("name", "required")
+		ve = ve.Add("name", "required")
 	}
 	if len(ve.Fields) > 0 {
 		return ve

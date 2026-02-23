@@ -104,20 +104,6 @@ func toSpecificationResponse(specification domainFacility.Specification) dto.Spe
 	}
 }
 
-func toSpecificationListResponse(list *domain.PaginatedList[domainFacility.Specification]) dto.SpecificationListResponse {
-	items := make([]dto.SpecificationResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toSpecificationResponse(item)
-	}
-
-	return dto.SpecificationListResponse{
-		Items:      items,
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
-}
-
 func toApparatResponse(apparat domainFacility.Apparat) dto.ApparatResponse {
 	systemParts := make([]dto.SystemPartResponse, 0)
 	if apparat.SystemParts != nil {

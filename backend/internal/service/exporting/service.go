@@ -97,7 +97,9 @@ func (s *Service) Create(ctx context.Context, req domainExport.Request) (domainE
 	}
 
 	if err := s.process(ctx, job.ID); err != nil {
-		_ = s.failJob(ctx, job.ID, err)
+		if failErr := s.failJob(ctx, job.ID, err); failErr != nil {
+			return domainExport.Job{}, failErr
+		}
 	}
 
 	return s.jobs.Get(ctx, job.ID)
@@ -115,7 +117,9 @@ func (s *Service) worker() {
 	for jobID := range s.queue {
 		ctx := context.Background()
 		if err := s.process(ctx, jobID); err != nil {
-			_ = s.failJob(ctx, jobID, err)
+			if failErr := s.failJob(ctx, jobID, err); failErr != nil {
+				s.deleteRequest(jobID)
+			}
 		}
 	}
 }

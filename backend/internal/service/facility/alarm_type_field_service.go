@@ -39,13 +39,13 @@ func (s *AlarmTypeFieldService) DeleteByID(id uuid.UUID) error {
 func validateAlarmTypeField(item *domainFacility.AlarmTypeField) error {
 	ve := domain.NewValidationError()
 	if item.AlarmTypeID == uuid.Nil {
-		ve.Add("alarm_type_id", "required")
+		ve = ve.Add("alarm_type_id", "required")
 	}
 	if item.AlarmFieldID == uuid.Nil {
-		ve.Add("alarm_field_id", "required")
+		ve = ve.Add("alarm_field_id", "required")
 	}
 	if item.DisplayOrder < 0 {
-		ve.Add("display_order", "invalid")
+		ve = ve.Add("display_order", "invalid")
 	}
 	if len(ve.Fields) > 0 {
 		return ve

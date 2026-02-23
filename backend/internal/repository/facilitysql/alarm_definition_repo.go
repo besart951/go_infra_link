@@ -1,6 +1,7 @@
 package facilitysql
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -44,7 +45,7 @@ func (r *alarmDefinitionRepo) FindOrCreateTemplateByAlarmTypeID(alarmTypeID uuid
 	if err == nil {
 		return &existing, nil
 	}
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 

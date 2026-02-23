@@ -79,7 +79,7 @@ func (s *Service) Login(email, password string, userAgent, ip *string) (*domainA
 	if err := s.passwordHasher.Compare(usr.Password, password); err != nil {
 		usr.FailedLoginAttempts++
 		if err := s.userRepo.Update(usr); err != nil {
-			// best-effort: do not block login on audit update failures
+			consumeBestEffortError(err)
 		}
 		s.auditLoginAttempt(&usr.ID, &email, ip, userAgent, false, strPtr("invalid_credentials"))
 		return nil, domainAuth.ErrInvalidCredentials
@@ -91,7 +91,7 @@ func (s *Service) Login(email, password string, userAgent, ip *string) (*domainA
 	usr.LockedUntil = nil
 	usr.LastLoginAt = &now
 	if err := s.userRepo.Update(usr); err != nil {
-		// best-effort: do not block login on audit update failures
+		consumeBestEffortError(err)
 	}
 	s.auditLoginAttempt(&usr.ID, &email, ip, userAgent, true, nil)
 
@@ -322,10 +322,12 @@ func (s *Service) auditLoginAttempt(userID *uuid.UUID, email, ip, userAgent *str
 		FailureReason: failureReason,
 	}
 	if err := s.loginAttemptRepo.Create(attempt); err != nil {
-		// best-effort: do not block login on audit insert failures
+		consumeBestEffortError(err)
 	}
 }
 
 func strPtr(s string) *string {
 	return &s
 }
+
+func consumeBestEffortError(_ error) {}

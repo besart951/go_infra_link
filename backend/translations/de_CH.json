@@ -358,7 +358,6 @@
     "sps_controller": "SPS-Regler",
     "notification_class": "Benachrichtigungsklasse",
     "state_text": "Statustextgruppe",
-    "object_data": "Objektdaten",
     "alarm_definition": "Alarmdefinition",
     "no_items": "Keine Einträge gefunden.",
     "created_at": "Erstellt am",

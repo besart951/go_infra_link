@@ -67,29 +67,6 @@ func (s *BacnetObjectService) ensureTextFixUniqueForFieldDevice(fieldDeviceID uu
 	return nil
 }
 
-func (s *BacnetObjectService) ensureTextFixUniqueForObjectData(objectDataID uuid.UUID, textFix string, excludeID *uuid.UUID) error {
-	ids, err := s.objectDataRepo.GetBacnetObjectIDs(objectDataID)
-	if err != nil {
-		return err
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	items, err := s.repo.GetByIds(ids)
-	if err != nil {
-		return err
-	}
-	for _, it := range items {
-		if excludeID != nil && it.ID == *excludeID {
-			continue
-		}
-		if it.TextFix == textFix {
-			return domain.NewValidationError().Add("objectdata.bacnetobject.textfix", "textfix must be unique within the object data")
-		}
-	}
-	return nil
-}
-
 func (s *BacnetObjectService) ensureSoftwareUniqueForObjectData(objectDataID uuid.UUID, softwareType domainFacility.BacnetSoftwareType, softwareNumber uint16, excludeID *uuid.UUID) error {
 	ids, err := s.objectDataRepo.GetBacnetObjectIDs(objectDataID)
 	if err != nil {

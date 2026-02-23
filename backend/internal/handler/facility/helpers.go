@@ -93,10 +93,6 @@ func respondInvalidReference(c *gin.Context) {
 	respondLocalizedError(c, http.StatusBadRequest, "invalid_reference", "facility.invalid_reference")
 }
 
-func respondConflict(c *gin.Context, message string) {
-	respondError(c, http.StatusConflict, "conflict", message)
-}
-
 func respondLocalizedConflict(c *gin.Context, translationKey string) {
 	respondLocalizedError(c, http.StatusConflict, "conflict", translationKey)
 }
@@ -107,14 +103,6 @@ func respondInvalidArgument(c *gin.Context, message string) {
 
 func respondLocalizedInvalidArgument(c *gin.Context, translationKey string) {
 	respondLocalizedError(c, http.StatusBadRequest, "validation_error", translationKey)
-}
-
-func respondNotFoundIf(c *gin.Context, err error, message string) bool {
-	if errors.Is(err, domain.ErrNotFound) {
-		respondNotFound(c, message)
-		return true
-	}
-	return false
 }
 
 func respondLocalizedNotFoundIf(c *gin.Context, err error, translationKey string) bool {

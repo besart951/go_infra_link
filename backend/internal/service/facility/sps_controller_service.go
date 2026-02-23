@@ -659,51 +659,6 @@ func (s *SPSControllerService) ensureUnique(spsController *domainFacility.SPSCon
 	return nil
 }
 
-func (s *SPSControllerService) nextAvailableDeviceName(controlCabinetID uuid.UUID, base string) (string, error) {
-	for i := 1; i <= 9999; i++ {
-		candidate := nextIncrementedValue(base, i, 100)
-		taken, err := s.deviceNameExistsInControlCabinet(controlCabinetID, candidate, nil)
-		if err != nil {
-			return "", err
-		}
-		if !taken {
-			return candidate, nil
-		}
-	}
-
-	return "", domain.ErrConflict
-}
-
-func (s *SPSControllerService) deviceNameExistsInControlCabinet(controlCabinetID uuid.UUID, deviceName string, excludeID *uuid.UUID) (bool, error) {
-	page := 1
-	for {
-		result, err := s.repo.GetPaginatedListByControlCabinetID(controlCabinetID, domain.PaginationParams{
-			Page:  page,
-			Limit: 500,
-		})
-		if err != nil {
-			return false, err
-		}
-
-		for i := range result.Items {
-			item := result.Items[i]
-			if excludeID != nil && item.ID == *excludeID {
-				continue
-			}
-			if strings.EqualFold(strings.TrimSpace(item.DeviceName), strings.TrimSpace(deviceName)) {
-				return true, nil
-			}
-		}
-
-		if page >= result.TotalPages || len(result.Items) == 0 {
-			break
-		}
-		page++
-	}
-
-	return false, nil
-}
-
 func (s *SPSControllerService) listSystemTypesBySPSControllerID(spsControllerID uuid.UUID) ([]domainFacility.SPSControllerSystemType, error) {
 	items := make([]domainFacility.SPSControllerSystemType, 0)
 	page := 1

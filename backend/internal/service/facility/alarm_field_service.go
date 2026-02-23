@@ -61,16 +61,16 @@ func (s *AlarmFieldService) DeleteByID(id uuid.UUID) error {
 func validateAlarmField(field *domainFacility.AlarmField) error {
 	ve := domain.NewValidationError()
 	if strings.TrimSpace(field.Key) == "" {
-		ve.Add("key", "required")
+		ve = ve.Add("key", "required")
 	}
 	if strings.TrimSpace(field.Label) == "" {
-		ve.Add("label", "required")
+		ve = ve.Add("label", "required")
 	}
 	if strings.TrimSpace(field.DataType) == "" {
-		ve.Add("data_type", "required")
+		ve = ve.Add("data_type", "required")
 	} else {
 		if _, ok := alarmFieldDataTypes[field.DataType]; !ok {
-			ve.Add("data_type", "invalid")
+			ve = ve.Add("data_type", "invalid")
 		}
 	}
 	if len(ve.Fields) > 0 {
