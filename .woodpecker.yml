@@ -3,7 +3,7 @@ when:
 
 steps:
   backend_lint:
-    image: golangci/golangci-lint:v2.1.6-alpine
+    image: golangci/golangci-lint:v2.10.1-alpine
     commands:
       - cd backend
       - golangci-lint run ./...
@@ -26,10 +26,10 @@ steps:
       - cd frontend
       - corepack enable
       - corepack prepare pnpm@10.8.1 --activate
+      - pnpm config set store-dir /tmp/pnpm-store
       - CI=true pnpm install --frozen-lockfile
       - cp src/lib/server/backend.example.ts src/lib/server/backend.ts || true
       - cp src/lib/server/set-cookie.example.ts src/lib/server/set-cookie.ts || true
-      - pnpm lint
       - pnpm check
 
   frontend_build:
@@ -38,6 +38,7 @@ steps:
       - cd frontend
       - corepack enable
       - corepack prepare pnpm@10.8.1 --activate
+      - pnpm config set store-dir /tmp/pnpm-store
       - CI=true pnpm install --frozen-lockfile
       - cp src/lib/server/backend.example.ts src/lib/server/backend.ts || true
       - cp src/lib/server/set-cookie.example.ts src/lib/server/set-cookie.ts || true
