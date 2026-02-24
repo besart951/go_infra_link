@@ -4,42 +4,35 @@ when:
 steps:
   backend_lint:
     image: golangci/golangci-lint:v2.10.1-alpine
+    environment:
+      GOMODCACHE: /woodpecker/src/.cache/go-mod
+      GOCACHE: /woodpecker/src/.cache/go-build
     commands:
       - cd backend
       - golangci-lint run ./...
 
-  backend_test:
+  backend_test_build:
     image: golang:1.25-alpine
+    depends_on:
+      - backend_lint
+    environment:
+      GOMODCACHE: /woodpecker/src/.cache/go-mod
+      GOCACHE: /woodpecker/src/.cache/go-build
     commands:
       - cd backend
       - go test ./...
-
-  backend_build:
-    image: golang:1.25-alpine
-    commands:
-      - cd backend
       - go build ./cmd/app
 
-  frontend_check:
+  frontend_ci:
     image: node:22-alpine
+    environment:
+      PNPM_STORE_DIR: /woodpecker/src/.cache/pnpm
     commands:
       - cd frontend
       - corepack enable
       - corepack prepare pnpm@10.8.1 --activate
-      - pnpm config set store-dir /tmp/pnpm-store
       - CI=true pnpm install --frozen-lockfile
       - cp src/lib/server/backend.example.ts src/lib/server/backend.ts || true
       - cp src/lib/server/set-cookie.example.ts src/lib/server/set-cookie.ts || true
       - pnpm check
-
-  frontend_build:
-    image: node:22-alpine
-    commands:
-      - cd frontend
-      - corepack enable
-      - corepack prepare pnpm@10.8.1 --activate
-      - pnpm config set store-dir /tmp/pnpm-store
-      - CI=true pnpm install --frozen-lockfile
-      - cp src/lib/server/backend.example.ts src/lib/server/backend.ts || true
-      - cp src/lib/server/set-cookie.example.ts src/lib/server/set-cookie.ts || true
       - pnpm build
