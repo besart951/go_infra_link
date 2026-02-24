@@ -2,11 +2,35 @@ when:
   - event: [push, pull_request]
 
 steps:
+  backend_lint:
+    image: golangci/golangci-lint:v2.1.6-alpine
+    commands:
+      - cd backend
+      - golangci-lint run ./...
+
   backend_test:
     image: golang:1.25-alpine
     commands:
       - cd backend
       - go test ./...
+
+  backend_build:
+    image: golang:1.25-alpine
+    commands:
+      - cd backend
+      - go build ./cmd/app
+
+  frontend_check:
+    image: node:22-alpine
+    commands:
+      - cd frontend
+      - corepack enable
+      - corepack prepare pnpm@10.8.1 --activate
+      - CI=true pnpm install --frozen-lockfile
+      - cp src/lib/server/backend.example.ts src/lib/server/backend.ts || true
+      - cp src/lib/server/set-cookie.example.ts src/lib/server/set-cookie.ts || true
+      - pnpm lint
+      - pnpm check
 
   frontend_build:
     image: node:22-alpine
@@ -14,7 +38,7 @@ steps:
       - cd frontend
       - corepack enable
       - corepack prepare pnpm@10.8.1 --activate
-      - pnpm install --frozen-lockfile
+      - CI=true pnpm install --frozen-lockfile
       - cp src/lib/server/backend.example.ts src/lib/server/backend.ts || true
       - cp src/lib/server/set-cookie.example.ts src/lib/server/set-cookie.ts || true
       - pnpm build
