@@ -1,0 +1,20 @@
+when:
+  - event: [push, pull_request]
+
+steps:
+  backend_test:
+    image: golang:1.25-alpine
+    commands:
+      - cd backend
+      - go test ./...
+
+  frontend_build:
+    image: node:22-alpine
+    commands:
+      - cd frontend
+      - corepack enable
+      - corepack prepare pnpm@10.8.1 --activate
+      - pnpm install --frozen-lockfile
+      - cp src/lib/server/backend.example.ts src/lib/server/backend.ts || true
+      - cp src/lib/server/set-cookie.example.ts src/lib/server/set-cookie.ts || true
+      - pnpm build
