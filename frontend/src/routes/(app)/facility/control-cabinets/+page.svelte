@@ -18,6 +18,7 @@
 	import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
 	const manageControlCabinet = new ManageControlCabinetUseCase(controlCabinetRepository);
 	import type { Building } from '$lib/domain/facility/index.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();
@@ -169,7 +170,7 @@
 			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.control_cabinets_title')}</h1>
 			<p class="text-sm text-muted-foreground">{$t('facility.control_cabinets_desc')}</p>
 		</div>
-		{#if !showForm}
+		{#if !showForm && canPerform('create', 'controlcabinet')}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
 				{$t('facility.new_control_cabinet')}
@@ -218,19 +219,25 @@
 						<DropdownMenu.Item onclick={() => handleCopy(cabinet.control_cabinet_nr ?? cabinet.id)}>
 							{$t('facility.copy')}
 						</DropdownMenu.Item>
+						{#if canPerform('create', 'controlcabinet')}
 						<DropdownMenu.Item onclick={() => handleDuplicate(cabinet)}>
 							{$t('facility.duplicate')}
 						</DropdownMenu.Item>
+						{/if}
 						<DropdownMenu.Item onclick={() => goto(`/facility/control-cabinets/${cabinet.id}`)}>
 							{$t('facility.view')}
 						</DropdownMenu.Item>
+						{#if canPerform('update', 'controlcabinet')}
 						<DropdownMenu.Item onclick={() => handleEdit(cabinet)}
 							>{$t('common.edit')}</DropdownMenu.Item
 						>
+						{/if}
+						{#if canPerform('delete', 'controlcabinet')}
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(cabinet)}>
 							{$t('common.delete')}
 						</DropdownMenu.Item>
+						{/if}
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			</Table.Cell>

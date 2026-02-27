@@ -29,6 +29,7 @@
 		PermissionMatrix,
 		RolePermissionEditor
 	} from '$lib/components/roles/index.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	import { auth, hasMinRole } from '$lib/stores/auth.svelte.js';
 	import { Plus, RefreshCw, Grid3X3, LayoutGrid, Shield, Users } from '@lucide/svelte';
 
@@ -54,8 +55,8 @@
 	let permissionError = $state<string | null>(null);
 	let roleError = $state<string | null>(null);
 
-	// Check if user can manage roles (admin_fzag or higher)
-	const canManageRoles = $derived(hasMinRole('admin_fzag'));
+	// Check if user can manage roles and permissions
+	const canManageRoles = $derived(canPerform('update', 'role') || canPerform('update', 'permission'));
 
 	// Stats
 	const totalPermissions = $derived(permissions.length);

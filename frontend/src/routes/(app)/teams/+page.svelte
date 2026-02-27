@@ -13,6 +13,7 @@
 	import PaginatedList from '$lib/components/list/PaginatedList.svelte';
 	import { teamsStore } from '$lib/stores/list/entityStores.js';
 	import type { Team } from '$lib/domain/entities/team.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	import { createTranslator } from '$lib/i18n/translator';
 
 	const t = createTranslator();
@@ -108,10 +109,12 @@
 			<h1 class="text-3xl font-bold tracking-tight">{$t('navigation.teams')}</h1>
 			<p class="mt-1 text-muted-foreground">{$t('pages.teams_desc')}</p>
 		</div>
+		{#if canPerform('create', 'team')}
 		<Button variant="outline" onclick={() => (createOpen = !createOpen)}>
 			<Plus class="mr-2 h-4 w-4" />
 			{$t('pages.create_team')}
 		</Button>
+		{/if}
 	</div>
 
 	{#if createOpen}
@@ -173,6 +176,7 @@
 			<Table.Cell class="text-right">
 				<div class="flex items-center justify-end gap-2">
 					<Button variant="outline" onclick={() => goto(`/teams/${team.id}`)}>{$t('common.manage')}</Button>
+					{#if canPerform('delete', 'team')}
 					<Button
 						variant="outline"
 						size="icon"
@@ -180,6 +184,7 @@
 					>
 						<Trash2 class="h-4 w-4 text-destructive" />
 					</Button>
+					{/if}
 				</div>
 			</Table.Cell>
 		{/snippet}

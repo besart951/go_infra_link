@@ -28,6 +28,8 @@
 	import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
 	import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
 
+	import { canPerform } from '$lib/utils/permissions.js';
+
 	const t = createTranslator();
 
 	const manageFieldDeviceUseCase = new ManageFieldDeviceUseCase(fieldDeviceRepository);
@@ -192,6 +194,7 @@
 	// Bulk delete
 	async function handleBulkDelete() {
 		if (selectedIds.size === 0) return;
+		if (!canPerform('delete', 'fielddevice')) return;
 		if (!confirm(translate('field_device.confirm.bulk_delete', { count: selectedIds.size })))
 			return;
 
@@ -231,6 +234,7 @@
 	}
 
 	async function handleDelete(device: FieldDevice) {
+		if (!canPerform('delete', 'fielddevice')) return;
 		if (
 			!confirm(
 				translate('field_device.confirm.delete', {
@@ -272,7 +276,7 @@
 <div class="flex flex-col gap-6">
 	<!-- Action Buttons -->
 	<div class="flex justify-end gap-2">
-		{#if !showMultiCreateForm}
+		{#if !showMultiCreateForm && canPerform('create', 'fielddevice')}
 			<Button variant="outline" onclick={() => (showMultiCreateForm = true)}>
 				<ListPlus class="mr-2 size-4" />
 				{$t('field_device.actions.multi_create')}

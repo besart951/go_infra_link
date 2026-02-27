@@ -12,6 +12,7 @@
 	import { projectListStore } from '$lib/stores/projects/projectListStore.js';
 	import { createProject } from '$lib/infrastructure/api/project.adapter.js';
 	import type { CreateProjectRequest, Project, ProjectStatus } from '$lib/domain/project/index.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	import { createTranslator } from '$lib/i18n/translator';
 
 	import { useOptimisticUpdate } from '$lib/hooks/useOptimisticUpdate.svelte.js';
@@ -170,10 +171,12 @@
 				{$t('pages.projects_desc')}
 			</p>
 		</div>
+		{#if canPerform('create', 'project')}
 		<Button onclick={() => (createOpen = !createOpen)}>
 			<Plus class="mr-2 size-4" />
 			{$t('common.create')}
 		</Button>
+		{/if}
 	</div>
 
 	{#if createOpen}

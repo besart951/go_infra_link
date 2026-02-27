@@ -19,6 +19,7 @@
 		CreateAlarmTypeFieldRequest,
 		Unit
 	} from '$lib/domain/facility/index.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 
 	let units = $state<Unit[]>([]);
 	let fields = $state<AlarmField[]>([]);
@@ -223,9 +224,11 @@
 					</div>
 				</div>
 				<div class="flex justify-end">
+					{#if canPerform('create', 'alarmtype')}
 					<Button onclick={createUnit} disabled={!unitForm.code || !unitForm.symbol || !unitForm.name}>
 						Einheit erstellen
 					</Button>
+					{/if}
 				</div>
 				<div class="overflow-hidden rounded-md border">
 					<div class="max-h-72 overflow-auto">
@@ -252,6 +255,7 @@
 											<Table.Cell>{u.symbol}</Table.Cell>
 											<Table.Cell>{u.name}</Table.Cell>
 											<Table.Cell class="text-right">
+												{#if canPerform('delete', 'alarmtype')}
 												<Button
 													size="icon-sm"
 													variant="ghost"
@@ -262,6 +266,7 @@
 												>
 													<Trash2 class="size-4" />
 												</Button>
+												{/if}
 											</Table.Cell>
 										</Table.Row>
 									{/each}
@@ -307,9 +312,11 @@
 					</div>
 				</div>
 				<div class="flex justify-end">
+					{#if canPerform('create', 'alarmtype')}
 					<Button onclick={createField} disabled={!fieldForm.key || !fieldForm.label}>
 						Alarmfeld erstellen
 					</Button>
+					{/if}
 				</div>
 				<div class="overflow-hidden rounded-md border">
 					<div class="max-h-72 overflow-auto">
@@ -338,6 +345,7 @@
 											<Table.Cell>{f.data_type}</Table.Cell>
 											<Table.Cell>{f.default_unit_code ?? '-'}</Table.Cell>
 											<Table.Cell class="text-right">
+												{#if canPerform('delete', 'alarmtype')}
 												<Button
 													size="icon-sm"
 													variant="ghost"
@@ -348,6 +356,7 @@
 												>
 													<Trash2 class="size-4" />
 												</Button>
+												{/if}
 											</Table.Cell>
 										</Table.Row>
 									{/each}
@@ -378,9 +387,11 @@
 					</div>
 				</div>
 				<div class="flex justify-end">
+					{#if canPerform('create', 'alarmtype')}
 					<Button onclick={createType} disabled={!typeForm.code || !typeForm.name}>
 						Alarmtyp erstellen
 					</Button>
+					{/if}
 				</div>
 				<div class="overflow-hidden rounded-md border">
 					<div class="max-h-72 overflow-auto">
@@ -405,6 +416,7 @@
 											<Table.Cell class="font-medium">{t.code}</Table.Cell>
 											<Table.Cell>{t.name}</Table.Cell>
 											<Table.Cell class="text-right">
+												{#if canPerform('delete', 'alarmtype')}
 												<Button
 													size="icon-sm"
 													variant="ghost"
@@ -415,6 +427,7 @@
 												>
 													<Trash2 class="size-4" />
 												</Button>
+												{/if}
 											</Table.Cell>
 										</Table.Row>
 									{/each}
@@ -488,9 +501,11 @@
 				</div>
 
 				<div class="flex justify-end">
+					{#if canPerform('update', 'alarmtype')}
 					<Button onclick={createMapping} disabled={!selectedTypeId || !mapForm.alarm_field_id}>
 						Zuordnung erstellen
 					</Button>
+					{/if}
 				</div>
 
 				<div class="overflow-hidden rounded-md border">
@@ -526,6 +541,7 @@
 											<Table.Cell>{tf.is_required ? 'Ja' : 'Nein'}</Table.Cell>
 											<Table.Cell>{tf.display_order}</Table.Cell>
 											<Table.Cell class="text-right">
+												{#if canPerform('update', 'alarmtype')}
 												<Button
 													size="icon-sm"
 													variant="ghost"
@@ -536,6 +552,7 @@
 												>
 													<Trash2 class="size-4" />
 												</Button>
+												{/if}
 											</Table.Cell>
 										</Table.Row>
 									{/each}

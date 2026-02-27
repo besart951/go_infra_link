@@ -15,6 +15,7 @@
 	import NotificationClassForm from '$lib/components/facility/forms/NotificationClassForm.svelte';
 	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { notificationClassRepository } from '$lib/infrastructure/api/notificationClassRepository.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	const manageNotificationClass = new ManageEntityUseCase(notificationClassRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
@@ -87,7 +88,7 @@
 			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.notification_classes_title')}</h1>
 			<p class="text-sm text-muted-foreground">{$t('facility.notification_classes_desc')}</p>
 		</div>
-		{#if !showForm}
+		{#if !showForm && canPerform('create', 'notificationclass')}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
 				{$t('facility.new_notification_class')}
@@ -139,11 +140,15 @@
 					<DropdownMenu.Item onclick={() => goto(`/facility/notification-classes/${item.id}`)}>
 						{$t('facility.view')}
 					</DropdownMenu.Item>
+					{#if canPerform('update', 'notificationclass')}
 					<DropdownMenu.Item onclick={() => handleEdit(item)}>{$t('common.edit')}</DropdownMenu.Item>
+					{/if}
+					{#if canPerform('delete', 'notificationclass')}
 					<DropdownMenu.Separator />
 					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
 						{$t('common.delete')}
-						</DropdownMenu.Item>
+					</DropdownMenu.Item>
+					{/if}
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			</Table.Cell>

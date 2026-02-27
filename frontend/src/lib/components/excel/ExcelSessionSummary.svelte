@@ -127,33 +127,26 @@
 		const normalized = normalizeLookupKey(label);
 		if (!normalized) return undefined;
 
-		const hasDigit = /\d/.test(normalized);
-		const looksLikeUnitOrValueOnly =
-			hasDigit ||
-			['c', 'k', 'pa', 'hpa', 'kw', 'kwh', 'm', 'ms', 's', 'h', 'j', 'lux', 'umin', 'm3h', 'gkg', 'ref'].includes(
-				normalized
-			);
-
-		if (looksLikeUnitOrValueOnly) {
-			return undefined;
+		// 1. Exact or highly specific matches first
+		// active_inactive
+		if (
+			normalized.includes('alarmactive') ||
+			normalized.includes('alarminactive') ||
+			normalized.includes('alarmaktiv') ||
+			normalized.includes('alarminaktiv') ||
+			normalized.includes('elapsedactivetimealarm') ||
+			(normalized.includes('alarm') && normalized.includes('state')) ||
+			(normalized.includes('state') && (normalized.includes('auf') || normalized.includes('zu')))
+		) {
+			return 'active_inactive';
 		}
 
-		if (normalized.includes('cov')) return 'cov_logging';
-		if (normalized.includes('loggingtype')) return 'cov_logging';
-		if (normalized.includes('elapsedactive')) return 'elapsed_active_time';
-		if (normalized.includes('elapsedaktiv')) return 'elapsed_active_time';
-		if (normalized.includes('pid')) return 'pid_control';
-		if (normalized.includes('controlledvariable')) return 'pid_control';
-		if (normalized.includes('position')) return 'position_control';
-		if (normalized.includes('positionskontrolle')) return 'position_control';
-		if (normalized.includes('vnom') || normalized.includes('vmax') || normalized.includes('pnom') || normalized.includes('pmax'))
-			return 'position_control';
-		if (normalized.includes('motstop')) return 'position_control';
-		if (normalized.includes('state') || normalized.includes('zustand')) return 'state_mapping';
-		if (normalized.includes('state1')) return 'state_mapping';
-		if (normalized.includes('priority') || normalized.includes('prioritat')) return 'priority_write';
-		if (normalized.includes('priorityforwrit')) return 'priority_write';
+		// priority_write
+		if (normalized.includes('priorityforwrit') || normalized.includes('priorityforwriting')) {
+			return 'priority_write';
+		}
 
+		// io_monitoring_limit and io_monitoring
 		const hasIoMonitoringHint =
 			normalized.includes('io') ||
 			normalized.includes('uberwach') ||
@@ -164,24 +157,104 @@
 			normalized.includes('grenz') ||
 			normalized.includes('high') ||
 			normalized.includes('low') ||
-			normalized.includes('voralarm') ||
-			normalized.includes('differenz');
-
+			normalized.includes('voralarm');
+			
 		if (hasIoMonitoringHint && hasLimitHint) return 'io_monitoring_limit';
 		if (hasIoMonitoringHint) return 'io_monitoring';
-		if (normalized.includes('limit') || normalized.includes('grenz')) return 'limit_high_low';
-		if (normalized.includes('high') || normalized.includes('low') || normalized.includes('voralarm')) return 'limit_high_low';
-		if (normalized.includes('alarmstate')) return 'active_inactive';
-		if (
-			normalized.includes('active') ||
-			normalized.includes('inactive') ||
-			normalized.includes('aktiv') ||
-			normalized.includes('inaktiv') ||
-			normalized.includes('alarm')
-		)
-			return 'active_inactive';
 
-		if (normalized.includes('individuell') || normalized.includes('custom')) return 'custom_value';
+		// cov_logging
+		if (normalized.includes('loggingtypecov') || normalized.includes('cov')) {
+			return 'cov_logging';
+		}
+
+		// elapsed_active_time
+		if (
+			normalized.includes('elapsedactivetime') ||
+			normalized.includes('elapsedaktiv')
+		) {
+			return 'elapsed_active_time';
+		}
+
+		// pid_control
+		if (
+			normalized.includes('controlledvariable') ||
+			normalized.includes('presentvalue') ||
+			normalized.includes('setpoint') ||
+			normalized.includes('proportionalconstant') ||
+			normalized.includes('integralconstant') ||
+			normalized.includes('maximumoutput') ||
+			normalized.includes('minimumoutput') ||
+			normalized.includes('errorlimit') ||
+			normalized.includes('timedelay') ||
+			normalized.includes('pid')
+		) {
+			return 'pid_control';
+		}
+
+		// limit_high_low
+		if (
+			hasLimitHint || 
+			normalized.includes('differenz') ||
+			normalized.includes('diff') ||
+			normalized.includes('alarmbei')
+		) {
+			return 'limit_high_low';
+		}
+
+		// position_control
+		if (
+			normalized.includes('position') ||
+			normalized.includes('positionskontrolle') ||
+			normalized.includes('flusskontrolle') ||
+			normalized.includes('leistungsregelung') ||
+			normalized.includes('motstop') ||
+			normalized.includes('vnom') || 
+			normalized.includes('vmax') || 
+			normalized.includes('pnom') || 
+			normalized.includes('pmax')
+		) {
+			return 'position_control';
+		}
+
+		// state_mapping
+		if (
+			normalized.includes('state1') ||
+			normalized.includes('state') ||
+			normalized.includes('zustandszuordnung') ||
+			normalized.includes('storungsundserviceinformationen') ||
+			/^\d+=/.test(label.replace(/\s+/g, '')) || // matches "0=DG0"
+			normalized.includes('0dg0') // mapped normalized version
+		) {
+			// Don't override clear active_inactive states from above
+			return 'state_mapping';
+		}
+
+		// custom_value
+		if (
+			normalized.includes('individuell') || 
+			normalized.includes('custom')
+		) {
+			return 'custom_value';
+		}
+
+		// active_inactive (fallback for simple "Alarm")
+		if (normalized.includes('alarmstate') || normalized.includes('alarm')) {
+			return 'active_inactive';
+		}
+
+		// Check if it's purely a setting, unit, or range that should map to undefined
+		const purelyUnitOrRangePattern = /^(\d+[kcpamhjsluxv]*|\d+-\d+%?|\d+°c|\d+\.\.\.\d+lux|%?|°c.*?|min\.?|%ref)$/i;
+		const unitsOnly = ['c', 'k', 'pa', 'hpa', 'kw', 'kwh', 'm', 'ms', 's', 'h', 'j', 'lux', 'umin', 'm3h', 'gkg', 'ref'];
+		
+		if (unitsOnly.includes(normalized) || purelyUnitOrRangePattern.test(label.trim().toLowerCase())) {
+			return undefined;
+		}
+		
+		// Unmapped things or strings only containing numbers are not alarm definitions
+		const hasOnlyDigitsOrUnits = /^[\d\s\WcKkPAMhjsLuxv]+$/.test(label.toLowerCase());
+		if (hasOnlyDigitsOrUnits) {
+		    return undefined;
+		}
 
 		return undefined;
 	}

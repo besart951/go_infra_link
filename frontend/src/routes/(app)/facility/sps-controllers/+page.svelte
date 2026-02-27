@@ -16,6 +16,7 @@
 	import { ManageSPSControllerUseCase } from '$lib/application/useCases/facility/manageSPSControllerUseCase.js';
 	import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
 	import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	const manageSPSController = new ManageSPSControllerUseCase(spsControllerRepository);
 	import type { ControlCabinet } from '$lib/domain/facility/index.js';
 	import { createTranslator } from '$lib/i18n/translator';
@@ -145,7 +146,7 @@
 				{$t('facility.sps_controllers_desc')}
 			</p>
 		</div>
-		{#if !showForm}
+		{#if !showForm && canPerform('create', 'spscontroller')}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
 				{$t('facility.new_sps_controller')}
@@ -206,19 +207,25 @@
 						<DropdownMenu.Item onclick={() => handleCopy(controller.device_name ?? controller.id)}>
 							{$t('facility.copy')}
 						</DropdownMenu.Item>
+						{#if canPerform('create', 'spscontroller')}
 						<DropdownMenu.Item onclick={() => handleDuplicate(controller)}>
 							{$t('facility.duplicate')}
 						</DropdownMenu.Item>
+						{/if}
 						<DropdownMenu.Item onclick={() => goto(`/facility/sps-controllers/${controller.id}`)}>
 							{$t('facility.view')}
 						</DropdownMenu.Item>
+						{#if canPerform('update', 'spscontroller')}
 						<DropdownMenu.Item onclick={() => handleEdit(controller)}
 							>{$t('common.edit')}</DropdownMenu.Item
 						>
+						{/if}
+						{#if canPerform('delete', 'spscontroller')}
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(controller)}>
 							{$t('common.delete')}
 						</DropdownMenu.Item>
+						{/if}
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			</Table.Cell>

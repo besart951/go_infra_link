@@ -15,6 +15,7 @@
 	import SystemTypeForm from '$lib/components/facility/forms/SystemTypeForm.svelte';
 	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	const manageSystemType = new ManageEntityUseCase(systemTypeRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
@@ -91,7 +92,7 @@
 			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.system_types_title')}</h1>
 			<p class="text-sm text-muted-foreground">{$t('facility.system_types_desc')}</p>
 		</div>
-		{#if !showForm}
+		{#if !showForm && canPerform('create', 'systemtype')}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
 				{$t('facility.new_system_type')}
@@ -137,11 +138,15 @@
 					<DropdownMenu.Item onclick={() => goto(`/facility/system-types/${item.id}`)}>
 						{$t('facility.view')}
 					</DropdownMenu.Item>
+					{#if canPerform('update', 'systemtype')}
 					<DropdownMenu.Item onclick={() => handleEdit(item)}>{$t('common.edit')}</DropdownMenu.Item>
+					{/if}
+					{#if canPerform('delete', 'systemtype')}
 					<DropdownMenu.Separator />
 					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
 						{$t('common.delete')}
-						</DropdownMenu.Item>
+					</DropdownMenu.Item>
+					{/if}
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			</Table.Cell>

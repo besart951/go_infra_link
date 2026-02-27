@@ -15,6 +15,7 @@
 	import ApparatForm from '$lib/components/facility/forms/ApparatForm.svelte';
 	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	const manageApparat = new ManageEntityUseCase(apparatRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
@@ -90,7 +91,7 @@
 			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.apparats_title')}</h1>
 			<p class="text-sm text-muted-foreground">{$t('facility.apparats_desc')}</p>
 		</div>
-		{#if !showForm}
+		{#if !showForm && canPerform('create', 'apparat')}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
 				{$t('facility.new_apparat')}
@@ -136,13 +137,17 @@
 						<DropdownMenu.Item onclick={() => goto(`/facility/apparats/${item.id}`)}>
 							{$t('facility.view')}
 						</DropdownMenu.Item>
+						{#if canPerform('update', 'apparat')}
 						<DropdownMenu.Item onclick={() => handleEdit(item)}
 							>{$t('common.edit')}</DropdownMenu.Item
 						>
+						{/if}
+						{#if canPerform('delete', 'apparat')}
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
 							{$t('common.delete')}
 						</DropdownMenu.Item>
+						{/if}
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			</Table.Cell>

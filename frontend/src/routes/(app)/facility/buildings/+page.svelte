@@ -15,6 +15,7 @@
 	import BuildingForm from '$lib/components/facility/forms/BuildingForm.svelte';
 	import { ManageBuildingUseCase } from '$lib/application/useCases/facility/manageBuildingUseCase.js';
 	import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	const manageBuilding = new ManageBuildingUseCase(buildingRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
@@ -87,7 +88,7 @@
 			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.buildings_title')}</h1>
 			<p class="text-sm text-muted-foreground">{$t('facility.buildings_desc')}</p>
 		</div>
-		{#if !showForm}
+		{#if !showForm && canPerform('create', 'building')}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
 				{$t('facility.new_building')}
@@ -135,11 +136,15 @@
 					<DropdownMenu.Item onclick={() => goto(`/facility/buildings/${building.id}`)}>
 						{$t('facility.view')}
 					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={() => handleEdit(building)}>{$t('common.edit')}</DropdownMenu.Item>
-					<DropdownMenu.Separator />
-					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(building)}>
-						{$t('common.delete')}
-						</DropdownMenu.Item>
+					{#if canPerform('update', 'building')}
+						<DropdownMenu.Item onclick={() => handleEdit(building)}>{$t('common.edit')}</DropdownMenu.Item>
+					{/if}
+					{#if canPerform('delete', 'building')}
+						<DropdownMenu.Separator />
+						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(building)}>
+							{$t('common.delete')}
+							</DropdownMenu.Item>
+					{/if}
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			</Table.Cell>

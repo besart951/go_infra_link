@@ -8,6 +8,7 @@
 	import BacnetObjectsEditor from '../bacnet/BacnetObjectsEditor.svelte';
 	import type { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
 	import type { FieldDevice, Apparat, SystemPart } from '$lib/domain/facility/index.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface Props {
@@ -414,6 +415,7 @@
 									pendingEdits={editing.getBacnetPendingEdits(device.id) ?? new Map()}
 									fieldErrors={editing.getBacnetFieldErrors(device.id) ?? new Map()}
 									clientErrors={editing.getBacnetClientErrors(device.id) ?? new Map()}
+									disabled={!canPerform('update', 'fielddevice')}
 									onEdit={(objectId, field, value) => {
 										editing.queueBacnetEdit(device.id, objectId, field, value);
 									}}

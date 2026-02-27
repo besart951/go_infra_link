@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
+	import { canPerform } from '$lib/utils/permissions.js';
 	import ExcelUploadDropzone from '$lib/components/excel/ExcelUploadDropzone.svelte';
 	import ExcelReadProgressCard from '$lib/components/excel/ExcelReadProgressCard.svelte';
 	import ExcelSessionSummary from '$lib/components/excel/ExcelSessionSummary.svelte';
@@ -75,6 +76,7 @@
 		</p>
 	</div>
 
+	{#if canPerform('create', 'objectdata')}
 	<ExcelUploadDropzone disabled={isReading} onFileSelected={handleFileSelected} />
 
 	<ExcelReadProgressCard
@@ -83,6 +85,11 @@
 		{isReading}
 		onCancel={cancelReadSession}
 	/>
+	{:else}
+	<div class="rounded-lg border bg-muted p-4 text-center text-sm text-muted-foreground">
+		You do not have permission to import Excel data.
+	</div>
+	{/if}
 
 	{#if errorMessage}
 		<div

@@ -10,6 +10,7 @@
 	import TableSystemPartSelect from '../table-selects/TableSystemPartSelect.svelte';
 	import type { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
 	import type { FieldDevice, Apparat, SystemPart } from '$lib/domain/facility/index.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	import { createTranslator } from '$lib/i18n/translator.js';
 
 	interface Props {
@@ -121,13 +122,13 @@
 	<Table.Cell class="font-medium">
 		{formatSPSControllerSystemType(device)}
 	</Table.Cell>
-	<!-- BMK -->
 	<Table.Cell class="p-1">
 		<EditableCell
 			value={device.bmk ?? ''}
 			pendingValue={editing.getPendingValue(device.id, 'bmk')}
 			type="text"
 			maxlength={10}
+			disabled={!canPerform('update', 'fielddevice')}
 			isDirty={editing.isFieldDirty(device.id, 'bmk')}
 			error={editing.getFieldError(device.id, 'bmk')}
 			onSave={(v) => {
@@ -142,6 +143,7 @@
 			pendingValue={editing.getPendingValue(device.id, 'description')}
 			type="text"
 			maxlength={250}
+			disabled={!canPerform('update', 'fielddevice')}
 			isDirty={editing.isFieldDirty(device.id, 'description')}
 			error={editing.getFieldError(device.id, 'description')}
 			onSave={(v) => {
@@ -156,6 +158,7 @@
 			pendingValue={editing.getPendingValue(device.id, 'text_fix')}
 			type="text"
 			maxlength={250}
+			disabled={!canPerform('update', 'fielddevice')}
 			isDirty={editing.isFieldDirty(device.id, 'text_fix')}
 			error={editing.getFieldError(device.id, 'text_fix')}
 			onSave={(v) => {
@@ -171,6 +174,7 @@
 			type="number"
 			min={1}
 			max={99}
+			disabled={!canPerform('update', 'fielddevice')}
 			isDirty={editing.isFieldDirty(device.id, 'apparat_nr')}
 			error={editing.getFieldError(device.id, 'apparat_nr')}
 			onSave={(v) => {
@@ -184,6 +188,7 @@
 			items={allApparats}
 			value={device.apparat_id}
 			width="w-full"
+			disabled={!canPerform('update', 'fielddevice')}
 			error={editing.getFieldError(device.id, 'apparat_id')}
 			onValueChange={(newVal) => handleApparatChange(newVal)}
 		/>
@@ -194,6 +199,7 @@
 			items={allSystemParts}
 			value={device.system_part_id || ''}
 			width="w-full"
+			disabled={!canPerform('update', 'fielddevice')}
 			error={editing.getFieldError(device.id, 'system_part_id')}
 			onValueChange={(newVal) => handleSystemPartChange(newVal)}
 		/>
@@ -218,6 +224,7 @@
 			<EditableCell
 				value={toDisplayString(device.specification?.specification_supplier)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'specification_supplier')}
+				disabled={!canPerform('update', 'fielddevice')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'specification_supplier')}
 				error={editing.getFieldError(device.id, 'specification_supplier')}
 				maxlength={250}
@@ -230,6 +237,7 @@
 			<EditableCell
 				value={toDisplayString(device.specification?.specification_brand)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'specification_brand')}
+				disabled={!canPerform('update', 'fielddevice')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'specification_brand')}
 				error={editing.getFieldError(device.id, 'specification_brand')}
 				maxlength={250}
@@ -242,6 +250,7 @@
 			<EditableCell
 				value={toDisplayString(device.specification?.specification_type)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'specification_type')}
+				disabled={!canPerform('update', 'fielddevice')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'specification_type')}
 				error={editing.getFieldError(device.id, 'specification_type')}
 				maxlength={250}
@@ -254,6 +263,7 @@
 			<EditableCell
 				value={toDisplayString(device.specification?.additional_info_motor_valve)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'additional_info_motor_valve')}
+				disabled={!canPerform('update', 'fielddevice')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'additional_info_motor_valve')}
 				error={editing.getFieldError(device.id, 'additional_info_motor_valve')}
 				maxlength={250}
@@ -266,6 +276,7 @@
 			<EditableCell
 				value={toDisplayString(device.specification?.additional_info_size, true)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'additional_info_size')}
+				disabled={!canPerform('update', 'fielddevice')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'additional_info_size')}
 				error={editing.getFieldError(device.id, 'additional_info_size')}
 				type="number"
@@ -285,6 +296,7 @@
 					device.id,
 					'additional_information_installation_location'
 				)}
+				disabled={!canPerform('update', 'fielddevice')}
 				isDirty={editing.isSpecFieldDirty(
 					device.id,
 					'additional_information_installation_location'
@@ -304,6 +316,7 @@
 			<EditableCell
 				value={toDisplayString(device.specification?.electrical_connection_ph, true)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'electrical_connection_ph')}
+				disabled={!canPerform('update', 'fielddevice')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_ph')}
 				error={editing.getFieldError(device.id, 'electrical_connection_ph')}
 				type="number"
@@ -320,6 +333,7 @@
 			<EditableCell
 				value={toDisplayString(device.specification?.electrical_connection_acdc)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'electrical_connection_acdc')}
+				disabled={!canPerform('update', 'fielddevice')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_acdc')}
 				error={editing.getFieldError(device.id, 'electrical_connection_acdc')}
 				maxlength={2}
@@ -333,6 +347,7 @@
 			<EditableCell
 				value={toDisplayString(device.specification?.electrical_connection_amperage, true)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'electrical_connection_amperage')}
+				disabled={!canPerform('update', 'fielddevice')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_amperage')}
 				error={editing.getFieldError(device.id, 'electrical_connection_amperage')}
 				type="number"
@@ -350,6 +365,7 @@
 			<EditableCell
 				value={toDisplayString(device.specification?.electrical_connection_power, true)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'electrical_connection_power')}
+				disabled={!canPerform('update', 'fielddevice')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_power')}
 				error={editing.getFieldError(device.id, 'electrical_connection_power')}
 				type="number"
@@ -367,6 +383,7 @@
 			<EditableCell
 				value={toDisplayString(device.specification?.electrical_connection_rotation, true)}
 				pendingValue={editing.getPendingSpecValue(device.id, 'electrical_connection_rotation')}
+				disabled={!canPerform('update', 'fielddevice')}
 				isDirty={editing.isSpecFieldDirty(device.id, 'electrical_connection_rotation')}
 				error={editing.getFieldError(device.id, 'electrical_connection_rotation')}
 				type="number"
@@ -400,10 +417,12 @@
 				>
 					{$t('facility.copy')}
 				</DropdownMenu.Item>
+				{#if canPerform('delete', 'fielddevice')}
 				<DropdownMenu.Separator />
 				<DropdownMenu.Item variant="destructive" onclick={() => onDelete(device)}>
 					{$t('common.delete')}
 				</DropdownMenu.Item>
+				{/if}
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>
 	</Table.Cell>

@@ -18,7 +18,7 @@
 	import type { Team } from '$lib/domain/entities/team.js';
 	import type { User } from '$lib/domain/entities/user.js';
 	import { getAllowedRolesForCreation } from '$lib/stores/auth.svelte.js';
-	import { getRoleLabel } from '$lib/utils/permissions.js';
+	import { getRoleLabel, canPerform } from '$lib/utils/permissions.js';
 	import {
 		MoreVertical,
 		UserMinus,
@@ -174,10 +174,12 @@
 			<h1 class="text-3xl font-bold tracking-tight">{$t('pages.user_management')}</h1>
 			<p class="mt-1 text-muted-foreground">{$t('pages.user_management_desc')}</p>
 		</div>
+		{#if canPerform('create', 'user')}
 		<Button onclick={() => (createDialogOpen = true)}>
 			<UserPlus class="mr-2 h-4 w-4" />
 			{$t('common.create_user')}
 		</Button>
+		{/if}
 	</div>
 
 	<!-- Team Filter -->
@@ -331,6 +333,7 @@
 							{/snippet}
 						</DropdownMenu.Trigger>
 						<DropdownMenu.Content align="end" class="w-56">
+							{#if canPerform('update', 'user')}
 							<DropdownMenu.Label>{$t('common.change_role')}</DropdownMenu.Label>
 							<DropdownMenu.Separator />
 							{#each getAllowedRolesForCreation() as role (role)}
@@ -356,6 +359,9 @@
 									{$t('actions.enable_user')}
 								{/if}
 							</DropdownMenu.Item>
+							{/if}
+
+							{#if canPerform('delete', 'user')}
 							<DropdownMenu.Separator />
 							<DropdownMenu.Item
 								class="text-destructive"
@@ -365,6 +371,7 @@
 								<Trash2 class="mr-2 h-4 w-4" />
 								{$t('actions.delete_user')}
 							</DropdownMenu.Item>
+							{/if}
 						</DropdownMenu.Content>
 					</DropdownMenu.Root>
 				</Table.Cell>

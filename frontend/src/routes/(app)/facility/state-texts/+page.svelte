@@ -15,6 +15,7 @@
 	import StateTextForm from '$lib/components/facility/forms/StateTextForm.svelte';
 	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { stateTextRepository } from '$lib/infrastructure/api/stateTextRepository.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	const manageStateText = new ManageEntityUseCase(stateTextRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
@@ -93,7 +94,7 @@
 			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.state_texts_title')}</h1>
 			<p class="text-sm text-muted-foreground">{$t('facility.state_texts_desc')}</p>
 		</div>
-		{#if !showForm}
+		{#if !showForm && canPerform('create', 'statetext')}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
 				{$t('facility.new_state_text')}
@@ -137,13 +138,17 @@
 						<DropdownMenu.Item onclick={() => goto(`/facility/state-texts/${item.id}`)}>
 							{$t('facility.view')}
 						</DropdownMenu.Item>
+						{#if canPerform('update', 'statetext')}
 						<DropdownMenu.Item onclick={() => handleEdit(item)}
 							>{$t('common.edit')}</DropdownMenu.Item
 						>
+						{/if}
+						{#if canPerform('delete', 'statetext')}
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
 							{$t('common.delete')}
 						</DropdownMenu.Item>
+						{/if}
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			</Table.Cell>

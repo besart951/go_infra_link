@@ -5,6 +5,7 @@
 	import { createTranslator } from '$lib/i18n/translator.js';
 	import * as ButtonGroup from '$lib/components/ui/button-group/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 
 	interface Props {
 		searchInput: string;
@@ -80,6 +81,7 @@
 						<Tooltip.Content>{$t('field_device.search.clear')}</Tooltip.Content>
 					</Tooltip.Root>
 
+					{#if canPerform('delete', 'fielddevice')}
 					<Tooltip.Root>
 						<Tooltip.Trigger
 							class={buttonVariants({ variant: 'destructive', size: 'icon-sm' })}
@@ -89,7 +91,9 @@
 						</Tooltip.Trigger>
 						<Tooltip.Content>{$t('field_device.search.delete')}</Tooltip.Content>
 					</Tooltip.Root>
+					{/if}
 
+					{#if canPerform('update', 'fielddevice')}
 					<Tooltip.Root>
 						<Tooltip.Trigger
 							class={buttonVariants({
@@ -102,6 +106,7 @@
 						</Tooltip.Trigger>
 						<Tooltip.Content>{$t('field_device.search.bulk_edit')}</Tooltip.Content>
 					</Tooltip.Root>
+					{/if}
 				{/if}
 
 				<Tooltip.Root>

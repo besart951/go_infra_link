@@ -15,6 +15,7 @@
 	import SystemPartForm from '$lib/components/facility/forms/SystemPartForm.svelte';
 	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	const manageSystemPart = new ManageEntityUseCase(systemPartRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
@@ -93,7 +94,7 @@
 			<h1 class="text-2xl font-semibold tracking-tight">{$t('facility.system_parts_title')}</h1>
 			<p class="text-sm text-muted-foreground">{$t('facility.system_parts_desc')}</p>
 		</div>
-		{#if !showForm}
+		{#if !showForm && canPerform('create', 'systempart')}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
 				{$t('facility.new_system_part')}
@@ -139,13 +140,17 @@
 						<DropdownMenu.Item onclick={() => goto(`/facility/system-parts/${item.id}`)}>
 							{$t('facility.view')}
 						</DropdownMenu.Item>
+						{#if canPerform('update', 'systempart')}
 						<DropdownMenu.Item onclick={() => handleEdit(item)}
 							>{$t('common.edit')}</DropdownMenu.Item
 						>
+						{/if}
+						{#if canPerform('delete', 'systempart')}
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
 							{$t('common.delete')}
 						</DropdownMenu.Item>
+						{/if}
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			</Table.Cell>

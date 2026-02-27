@@ -15,6 +15,7 @@
 	import AlarmDefinitionForm from '$lib/components/facility/forms/AlarmDefinitionForm.svelte';
 	import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
 	import { alarmDefinitionRepository } from '$lib/infrastructure/api/alarmDefinitionRepository.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	const manageAlarmDefinition = new ManageEntityUseCase(alarmDefinitionRepository);
 	import { createTranslator } from '$lib/i18n/translator';
 
@@ -92,7 +93,7 @@
 			</h1>
 			<p class="text-sm text-muted-foreground">{$t('facility.alarm_definitions_desc')}</p>
 		</div>
-		{#if !showForm}
+		{#if !showForm && canPerform('create', 'alarmdefinition')}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
 				{$t('facility.new_alarm_definition')}
@@ -140,13 +141,17 @@
 						<DropdownMenu.Item onclick={() => goto(`/facility/alarm-definitions/${item.id}`)}>
 							{$t('facility.view')}
 						</DropdownMenu.Item>
+						{#if canPerform('update', 'alarmdefinition')}
 						<DropdownMenu.Item onclick={() => handleEdit(item)}
 							>{$t('common.edit')}</DropdownMenu.Item
 						>
+						{/if}
+						{#if canPerform('delete', 'alarmdefinition')}
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
 							{$t('common.delete')}
 						</DropdownMenu.Item>
+						{/if}
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			</Table.Cell>

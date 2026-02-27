@@ -14,6 +14,7 @@
 	import type { ObjectData } from '$lib/domain/facility/index.js';
 	import { ManageObjectDataUseCase } from '$lib/application/useCases/facility/manageObjectDataUseCase.js';
 	import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	const manageObjectData = new ManageObjectDataUseCase(objectDataRepository);
 	import ObjectDataForm from '$lib/components/facility/forms/ObjectDataForm.svelte';
 	import { createTranslator } from '$lib/i18n/translator';
@@ -94,7 +95,7 @@
 				{$t('facility.object_data_desc')}
 			</p>
 		</div>
-		{#if !showForm}
+		{#if !showForm && canPerform('create', 'objectdata')}
 			<Button onclick={handleCreate}>
 				<Plus class="mr-2 size-4" />
 				{$t('facility.new_object_data')}
@@ -150,11 +151,15 @@
 					<DropdownMenu.Item onclick={() => goto(`/facility/object-data/${item.id}`)}>
 						{$t('facility.view')}
 					</DropdownMenu.Item>
+					{#if canPerform('update', 'objectdata')}
 					<DropdownMenu.Item onclick={() => handleEdit(item)}>{$t('common.edit')}</DropdownMenu.Item>
+					{/if}
+					{#if canPerform('delete', 'objectdata')}
 					<DropdownMenu.Separator />
 					<DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
 						{$t('common.delete')}
-						</DropdownMenu.Item>
+					</DropdownMenu.Item>
+					{/if}
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			</Table.Cell>
