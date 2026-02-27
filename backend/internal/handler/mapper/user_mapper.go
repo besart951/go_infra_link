@@ -51,6 +51,7 @@ func ToUserResponse(usr *user.User) dto.UserResponse {
 		Email:               usr.Email,
 		IsActive:            usr.IsActive,
 		Role:                string(usr.Role),
+		RoleDisplayName:     user.RoleDisplayName(usr.Role),
 		CreatedAt:           usr.CreatedAt,
 		UpdatedAt:           usr.UpdatedAt,
 		LastLoginAt:         usr.LastLoginAt,

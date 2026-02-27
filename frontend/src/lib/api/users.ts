@@ -16,6 +16,7 @@ export interface User {
 	email: string;
 	is_active: boolean;
 	role: UserRole;
+	role_display_name: string;
 	permissions?: string[];
 	created_at: string;
 	updated_at: string;
@@ -58,8 +59,13 @@ export interface UpdateUserRequest {
 	role?: UserRole;
 }
 
+export interface AllowedRole {
+	role: UserRole;
+	display_name: string;
+}
+
 export interface AllowedRolesResponse {
-	roles: UserRole[];
+	roles: AllowedRole[];
 }
 
 /**

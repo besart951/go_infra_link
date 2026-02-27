@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/besart951/go_infra_link/backend/internal/handler/mapper"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
@@ -200,12 +201,15 @@ func (h *UserHandler) GetAllowedRoles(c *gin.Context) {
 	}
 
 	allowedRoles := h.roleService.GetAllowedRoles(role)
-	roleStrings := make([]string, len(allowedRoles))
+	roleObjects := make([]dto.AllowedRole, len(allowedRoles))
 	for i, r := range allowedRoles {
-		roleStrings[i] = string(r)
+		roleObjects[i] = dto.AllowedRole{
+			Role:        string(r),
+			DisplayName: domainUser.RoleDisplayName(r),
+		}
 	}
 
 	c.JSON(http.StatusOK, dto.AllowedRolesResponse{
-		Roles: roleStrings,
+		Roles: roleObjects,
 	})
 }

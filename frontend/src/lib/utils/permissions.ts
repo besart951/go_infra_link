@@ -28,23 +28,3 @@ export function canManageUsers(): boolean {
 export function getFilteredRoles(roles: UserRole[]): UserRole[] {
 	return roles.filter((role) => canManageRole(role));
 }
-
-/**
- * Role display names for UI
- */
-export const ROLE_LABELS: Record<UserRole, string> = {
-	superadmin: 'Super Administrator',
-	admin_fzag: 'FZAG Administrator',
-	fzag: 'FZAG',
-	admin_planer: 'Planner Administrator',
-	planer: 'Planner',
-	admin_entrepreneur: 'Entrepreneur Administrator',
-	entrepreneur: 'Entrepreneur'
-};
-
-/**
- * Get display name for a role
- */
-export function getRoleLabel(role: UserRole): string {
-	return ROLE_LABELS[role] || role;
-}

@@ -15,6 +15,7 @@ export interface User {
 		| 'planer'
 		| 'admin_entrepreneur'
 		| 'entrepreneur';
+	role_display_name?: string;
 	created_at: string;
 	updated_at: string;
 	last_login_at?: string | null;

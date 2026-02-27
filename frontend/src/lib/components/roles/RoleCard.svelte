@@ -5,7 +5,6 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import RoleBadge from '$lib/components/role-badge.svelte';
-	import { getRoleLabel } from '$lib/utils/permissions.js';
 	import { Settings2, Shield, Users, ChevronRight } from '@lucide/svelte';
 
 	interface Props {
@@ -25,7 +24,7 @@
 		<div class="flex items-start justify-between">
 			<div class="space-y-1">
 				<div class="flex items-center gap-2">
-					<RoleBadge role={role.name} />
+					<RoleBadge role={role.name} label={role.display_name} />
 					<Badge variant="outline" class="text-xs">Level {role.level}</Badge>
 				</div>
 				<p class="text-sm text-muted-foreground">{role.description}</p>
@@ -84,11 +83,11 @@
 					<span class="text-xs text-muted-foreground">No roles</span>
 				{:else if canManageCount <= 3}
 					{#each role.can_manage as managedRole}
-						<Badge variant="secondary" class="text-xs">{getRoleLabel(managedRole)}</Badge>
+						<Badge variant="secondary" class="text-xs">{managedRole}</Badge>
 					{/each}
 				{:else}
 					{#each role.can_manage.slice(0, 2) as managedRole}
-						<Badge variant="secondary" class="text-xs">{getRoleLabel(managedRole)}</Badge>
+						<Badge variant="secondary" class="text-xs">{managedRole}</Badge>
 					{/each}
 					<Badge variant="secondary" class="text-xs">
 						+{canManageCount - 2} more

@@ -1,15 +1,15 @@
 <script lang="ts">
 	import type { UserRole } from '$lib/api/users.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { getRoleLabel } from '$lib/utils/permissions.js';
 	import { ShieldCheck, UserCircle } from '@lucide/svelte';
 
 	interface Props {
 		role: UserRole;
+		label?: string;
 		showIcon?: boolean;
 	}
 
-	let { role, showIcon = true }: Props = $props();
+	let { role, label, showIcon = true }: Props = $props();
 
 	const ADMIN_ROLES: UserRole[] = ['superadmin', 'admin_fzag', 'admin_planer', 'admin_entrepreneur'];
 
@@ -32,5 +32,5 @@
 			<UserCircle class="mr-1 h-3 w-3" />
 		{/if}
 	{/if}
-	{getRoleLabel(role)}
+	{label || role}
 </Badge>

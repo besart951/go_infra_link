@@ -18,7 +18,7 @@
 	import type { Team } from '$lib/domain/entities/team.js';
 	import type { User } from '$lib/domain/entities/user.js';
 	import { getAllowedRolesForCreation } from '$lib/stores/auth.svelte.js';
-	import { getRoleLabel, canPerform } from '$lib/utils/permissions.js';
+	import { canPerform } from '$lib/utils/permissions.js';
 	import {
 		MoreVertical,
 		UserMinus,
@@ -266,7 +266,7 @@
 					{/if}
 				</Table.Cell>
 				<Table.Cell>
-					<RoleBadge role={user.role} />
+					<RoleBadge role={user.role} label={user.role_display_name ?? ''} />
 				</Table.Cell>
 				<Table.Cell>
 					<div class="flex items-center gap-2">
@@ -336,13 +336,13 @@
 							{#if canPerform('update', 'user')}
 							<DropdownMenu.Label>{$t('common.change_role')}</DropdownMenu.Label>
 							<DropdownMenu.Separator />
-							{#each getAllowedRolesForCreation() as role (role)}
+							{#each getAllowedRolesForCreation() as roleObj (roleObj.role)}
 								<DropdownMenu.Item
-									disabled={user.role === role}
-									onclick={() => handleRoleChange(user.id, role)}
+									disabled={user.role === roleObj.role}
+									onclick={() => handleRoleChange(user.id, roleObj.role)}
 								>
-									{getRoleLabel(role)}
-									{#if user.role === role}
+									{roleObj.display_name}
+									{#if user.role === roleObj.role}
 										<DropdownMenu.Shortcut>{$t('common.current')}</DropdownMenu.Shortcut>
 									{/if}
 								</DropdownMenu.Item>

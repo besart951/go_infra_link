@@ -2,7 +2,6 @@
 	import type { UserRole } from '$lib/api/users.js';
 	import { createUser } from '$lib/api/users.js';
 	import { getAllowedRolesForCreation } from '$lib/stores/auth.svelte';
-	import { getRoleLabel } from '$lib/utils/permissions.js';
 	import { getErrorMessage, getFieldErrors } from '$lib/api/client.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -29,7 +28,7 @@
 	let email = $state('');
 	let password = $state('');
 	let isActive = $state(true);
-	let selectedRole = $state<UserRole | ''>('');
+	let selectedRole = $state<import('$lib/api/users.js').AllowedRole | null>(null);
 	let openCombobox = $state(false);
 
 	let isSubmitting = $state(false);
@@ -57,7 +56,7 @@
 				email,
 				password,
 				is_active: isActive,
-				role: selectedRole
+				role: selectedRole.role
 			});
 
 			firstName = '';
@@ -65,7 +64,7 @@
 			email = '';
 			password = '';
 			isActive = true;
-			selectedRole = '';
+			selectedRole = null;
 
 			if (onSuccess) onSuccess();
 		} catch (err) {
@@ -161,7 +160,7 @@
 							fieldErrors.role && 'border-destructive'
 						)}
 					>
-						{selectedRole ? getRoleLabel(selectedRole) : $t('users.form.select_role_placeholder')}
+						{selectedRole ? selectedRole.display_name : $t('users.form.select_role_placeholder')}
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							width="24"
@@ -185,16 +184,16 @@
 					<Command.Input placeholder={$t('users.form.search_roles_placeholder')} />
 					<Command.Empty>{$t('users.form.no_role_found')}</Command.Empty>
 					<Command.List>
-						{#each allowedRoles as role (role)}
+						{#each allowedRoles as roleObj (roleObj.role)}
 							<Command.Item
-								value={role}
+								value={roleObj.role}
 								onSelect={() => {
-									selectedRole = role;
+									selectedRole = roleObj;
 									openCombobox = false;
 								}}
 							>
-								<Check class={cn('mr-2 h-4 w-4', selectedRole !== role && 'text-transparent')} />
-								{getRoleLabel(role)}
+								<Check class={cn('mr-2 h-4 w-4', selectedRole?.role !== roleObj.role && 'text-transparent')} />
+								{roleObj.display_name}
 							</Command.Item>
 						{/each}
 					</Command.List>

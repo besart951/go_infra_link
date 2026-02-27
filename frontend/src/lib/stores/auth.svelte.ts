@@ -22,7 +22,7 @@ export const ROLE_LEVELS: Record<UserRole, number> = {
 
 interface AuthState {
 	user: User | null;
-	allowedRoles: UserRole[];
+	allowedRoles: import('$lib/api/users.js').AllowedRole[];
 	isLoading: boolean;
 	error: string | null;
 }
@@ -114,7 +114,7 @@ export function isAuthenticated(): boolean {
 /**
  * Get allowed roles for creating new users
  */
-export function getAllowedRolesForCreation(): UserRole[] {
+export function getAllowedRolesForCreation(): import('$lib/api/users.js').AllowedRole[] {
 	return authState.allowedRoles;
 }
 

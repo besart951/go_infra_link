@@ -34,6 +34,7 @@ type UserResponse struct {
 	Email               string     `json:"email"`
 	IsActive            bool       `json:"is_active"`
 	Role                string     `json:"role"`
+	RoleDisplayName     string     `json:"role_display_name"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
 	LastLoginAt         *time.Time `json:"last_login_at,omitempty"`
@@ -49,8 +50,13 @@ type UserListResponse struct {
 	TotalPages int            `json:"total_pages"`
 }
 
+type AllowedRole struct {
+	Role        string `json:"role"`
+	DisplayName string `json:"display_name"`
+}
+
 type AllowedRolesResponse struct {
-	Roles []string `json:"roles"`
+	Roles []AllowedRole `json:"roles"`
 }
 
 type AddUserToTeamRequest struct {
