@@ -14,6 +14,7 @@ export interface FieldDevice {
 	id: string;
 	bmk?: string;
 	description?: string;
+	text_fix?: string;
 	apparat_nr: string;
 	sps_controller_system_type_id: string;
 	system_part_id?: string;
@@ -66,6 +67,7 @@ export interface BacnetObjectPatchInput {
 export interface CreateFieldDeviceRequest {
 	bmk?: string;
 	description?: string;
+	text_fix?: string;
 	apparat_nr: number;
 	sps_controller_system_type_id: string;
 	system_part_id: string;
@@ -77,6 +79,7 @@ export interface CreateFieldDeviceRequest {
 export interface UpdateFieldDeviceRequest {
 	bmk?: string;
 	description?: string;
+	text_fix?: string;
 	apparat_nr?: number;
 	sps_controller_system_type_id?: string;
 	system_part_id?: string;
@@ -168,6 +171,7 @@ export interface BulkUpdateFieldDeviceItem {
 	id: string;
 	bmk?: string;
 	description?: string;
+	text_fix?: string;
 	apparat_nr?: number;
 	apparat_id?: string;
 	system_part_id?: string;

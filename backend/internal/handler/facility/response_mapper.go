@@ -214,6 +214,7 @@ func toFieldDeviceResponse(fieldDevice domainFacility.FieldDevice) dto.FieldDevi
 		ID:                        fieldDevice.ID,
 		BMK:                       fieldDevice.BMK,
 		Description:               fieldDevice.Description,
+		TextFix:                   fieldDevice.TextFix,
 		ApparatNr:                 &fieldDevice.ApparatNr,
 		SPSControllerSystemTypeID: fieldDevice.SPSControllerSystemTypeID,
 		SystemPartID:              systemPartID,

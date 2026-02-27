@@ -11,6 +11,7 @@ import (
 type CreateFieldDeviceRequest struct {
 	BMK                       *string             `json:"bmk" binding:"omitempty,max=10"`
 	Description               *string             `json:"description" binding:"omitempty,max=250"`
+	TextFix                   *string             `json:"text_fix" binding:"omitempty,max=250"`
 	ApparatNr                 *int                `json:"apparat_nr" binding:"required,min=1,max=99"`
 	SPSControllerSystemTypeID uuid.UUID           `json:"sps_controller_system_type_id" binding:"required"`
 	SystemPartID              uuid.UUID           `json:"system_part_id" binding:"required"`
@@ -22,6 +23,7 @@ type CreateFieldDeviceRequest struct {
 type UpdateFieldDeviceRequest struct {
 	BMK                       *string              `json:"bmk" binding:"omitempty,max=10"`
 	Description               *string              `json:"description" binding:"omitempty,max=250"`
+	TextFix                   *string              `json:"text_fix" binding:"omitempty,max=250"`
 	ApparatNr                 *int                 `json:"apparat_nr" binding:"omitempty,min=1,max=99"`
 	SPSControllerSystemTypeID uuid.UUID            `json:"sps_controller_system_type_id"`
 	SystemPartID              uuid.UUID            `json:"system_part_id" binding:"required"`
@@ -34,6 +36,7 @@ type FieldDeviceResponse struct {
 	ID                        uuid.UUID  `json:"id"`
 	BMK                       *string    `json:"bmk"`
 	Description               *string    `json:"description"`
+	TextFix                   *string    `json:"text_fix"`
 	ApparatNr                 *int       `json:"apparat_nr"`
 	SPSControllerSystemTypeID uuid.UUID  `json:"sps_controller_system_type_id"`
 	SystemPartID              *uuid.UUID `json:"system_part_id"`
@@ -113,6 +116,7 @@ type BulkUpdateFieldDeviceItem struct {
 	ID            uuid.UUID                     `json:"id" binding:"required"`
 	BMK           *string                       `json:"bmk" binding:"omitempty,max=10"`
 	Description   *string                       `json:"description" binding:"omitempty,max=250"`
+	TextFix       *string                       `json:"text_fix" binding:"omitempty,max=250"`
 	ApparatNr     *int                          `json:"apparat_nr" binding:"omitempty,min=1,max=99"`
 	ApparatID     *uuid.UUID                    `json:"apparat_id"`
 	SystemPartID  *uuid.UUID                    `json:"system_part_id"`

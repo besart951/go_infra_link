@@ -25,6 +25,7 @@
 		onSubmit: () => void;
 		onRowBmkChange: (index: number, value: string) => void;
 		onRowDescriptionChange: (index: number, value: string) => void;
+		onRowTextFixChange: (index: number, value: string) => void;
 		onRowApparatNrChange: (index: number, value: string) => void;
 		onRowRemove: (index: number) => void;
 		getPlaceholderForRow: (index: number) => string;
@@ -43,6 +44,7 @@
 		onSubmit,
 		onRowBmkChange,
 		onRowDescriptionChange,
+		onRowTextFixChange,
 		onRowApparatNrChange,
 		onRowRemove,
 		getPlaceholderForRow
@@ -91,6 +93,7 @@
 					disabled={submitting}
 					onBmkChange={(value) => onRowBmkChange(index, value)}
 					onDescriptionChange={(value) => onRowDescriptionChange(index, value)}
+					onTextFixChange={(value) => onRowTextFixChange(index, value)}
 					onApparatNrChange={(value) => onRowApparatNrChange(index, value)}
 					onRemove={() => onRowRemove(index)}
 				/>

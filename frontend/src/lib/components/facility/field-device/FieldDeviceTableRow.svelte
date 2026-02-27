@@ -149,6 +149,20 @@
 			}}
 		/>
 	</Table.Cell>
+	<!-- TextFix -->
+	<Table.Cell class="p-1">
+		<EditableCell
+			value={device.text_fix ?? ''}
+			pendingValue={editing.getPendingValue(device.id, 'text_fix')}
+			type="text"
+			maxlength={250}
+			isDirty={editing.isFieldDirty(device.id, 'text_fix')}
+			error={editing.getFieldError(device.id, 'text_fix')}
+			onSave={(v) => {
+				editing.queueEdit(device.id, 'text_fix', v || undefined);
+			}}
+		/>
+	</Table.Cell>
 	<!-- Apparat Nr -->
 	<Table.Cell class="p-1">
 		<EditableCell

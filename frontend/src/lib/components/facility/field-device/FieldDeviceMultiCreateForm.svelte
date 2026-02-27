@@ -277,6 +277,7 @@
 			const fieldDevices: CreateFieldDeviceRequest[] = rows.map((row) => ({
 				bmk: row.bmk || undefined,
 				description: row.description || undefined,
+				text_fix: row.textFix || undefined,
 				apparat_nr: row.apparatNr!,
 				sps_controller_system_type_id: selection.spsControllerSystemTypeId,
 				system_part_id: selection.systemPartId,
@@ -396,6 +397,11 @@
 
 	function handleRowDescriptionChange(index: number, value: string) {
 		rows[index].description = value;
+		rows = [...rows];
+	}
+
+	function handleRowTextFixChange(index: number, value: string) {
+		rows[index].textFix = value;
 		rows = [...rows];
 	}
 
@@ -530,6 +536,7 @@
 			onSubmit={handleSubmit}
 			onRowBmkChange={handleRowBmkChange}
 			onRowDescriptionChange={handleRowDescriptionChange}
+			onRowTextFixChange={handleRowTextFixChange}
 			onRowApparatNrChange={handleRowApparatNrChange}
 			onRowRemove={removeRow}
 			{getPlaceholderForRow}

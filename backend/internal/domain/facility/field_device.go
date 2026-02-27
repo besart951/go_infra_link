@@ -10,6 +10,7 @@ type FieldDevice struct {
 	BMK                       *string
 	Description               *string
 	ApparatNr                 int
+	TextFix                   *string
 	SPSControllerSystemTypeID uuid.UUID               `gorm:"type:uuid;not null;index"`
 	SPSControllerSystemType   SPSControllerSystemType `gorm:"foreignKey:SPSControllerSystemTypeID"`
 	SystemPartID              uuid.UUID               `gorm:"type:uuid;index"`
@@ -70,6 +71,7 @@ type BulkFieldDeviceUpdate struct {
 	ID            uuid.UUID
 	BMK           *string
 	Description   *string
+	TextFix       *string
 	ApparatNr     *int
 	ApparatID     *uuid.UUID
 	SystemPartID  *uuid.UUID

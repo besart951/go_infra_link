@@ -22,6 +22,7 @@
 		disabled?: boolean;
 		onBmkChange: (value: string) => void;
 		onDescriptionChange: (value: string) => void;
+		onTextFixChange: (value: string) => void;
 		onApparatNrChange: (value: string) => void;
 		onRemove: () => void;
 	}
@@ -34,6 +35,7 @@
 		disabled = false,
 		onBmkChange,
 		onDescriptionChange,
+		onTextFixChange,
 		onApparatNrChange,
 		onRemove
 	}: Props = $props();
@@ -51,7 +53,7 @@
 		</Button>
 	</div>
 
-	<div class="grid gap-4 md:grid-cols-3">
+	<div class="grid gap-4 md:grid-cols-4">
 		<!-- BMK -->
 		<div class="space-y-2">
 			<Label for={`bmk-${index}`}>{$t('field_device.row.bmk')}</Label>
@@ -73,6 +75,19 @@
 				value={row.description}
 				oninput={(e) => onDescriptionChange((e.target as HTMLInputElement).value)}
 				placeholder={$t('field_device.row.description_placeholder')}
+				maxlength={250}
+				{disabled}
+			/>
+		</div>
+
+		<!-- TextFix -->
+		<div class="space-y-2">
+			<Label for={`text-fix-${index}`}>{$t('field_device.row.text_fix')}</Label>
+			<Input
+				id={`text-fix-${index}`}
+				value={row.textFix ?? ''}
+				oninput={(e) => onTextFixChange((e.target as HTMLInputElement).value)}
+				placeholder={$t('field_device.row.text_fix_placeholder')}
 				maxlength={250}
 				{disabled}
 			/>

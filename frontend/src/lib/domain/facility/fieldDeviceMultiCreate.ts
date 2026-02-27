@@ -10,6 +10,7 @@ export interface FieldDeviceRowData {
 	id: string;
 	bmk: string;
 	description: string;
+	textFix: string | null;
 	apparatNr: number | null;
 }
 
@@ -18,7 +19,7 @@ export interface FieldDeviceRowData {
  */
 export interface FieldDeviceRowError {
 	message: string;
-	field: 'bmk' | 'description' | 'apparat_nr' | '';
+	field: 'bmk' | 'description' | 'apparat_nr' | 'text_fix' | '';
 }
 
 /**
@@ -75,6 +76,7 @@ export function createNewRow(
 		id: crypto.randomUUID(),
 		bmk: '',
 		description: '',
+		textFix: null,
 		apparatNr: nextAvailable
 	};
 }
@@ -191,6 +193,7 @@ export function loadPersistedState(): PersistedState | null {
 							id: typeof row?.id === 'string' ? row.id : crypto.randomUUID(),
 							bmk: typeof row?.bmk === 'string' ? row.bmk : '',
 							description: typeof row?.description === 'string' ? row.description : '',
+							textFix: typeof row?.textFix === 'string' ? row.textFix : null,
 							apparatNr: typeof row?.apparatNr === 'number' ? row.apparatNr : null
 						};
 					})

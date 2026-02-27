@@ -53,7 +53,7 @@
 
 	const t = createTranslator();
 
-	const baseColumnCount = 10;
+	const baseColumnCount = 11;
 	const specColumnCount = 11;
 	const columnCount = $derived(
 		showSpecifications ? baseColumnCount + specColumnCount : baseColumnCount
@@ -132,6 +132,20 @@
 						{#if sortState('description') === 'asc'}
 							<ArrowUp class="h-3 w-3" />
 						{:else if sortState('description') === 'desc'}
+							<ArrowDown class="h-3 w-3" />
+						{/if}
+					</button>
+				</Table.Head>
+				<Table.Head>
+					<button
+						type="button"
+						class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+						onclick={() => onSort('text_fix')}
+					>
+						<span>{$t('field_device.table.text_fix')}</span>
+						{#if sortState('text_fix') === 'asc'}
+							<ArrowUp class="h-3 w-3" />
+						{:else if sortState('text_fix') === 'desc'}
 							<ArrowDown class="h-3 w-3" />
 						{/if}
 					</button>

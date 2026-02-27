@@ -86,7 +86,7 @@
 		<!-- Device Fields -->
 		<div class="mb-4">
 			<h4 class="mb-2 text-sm font-medium">{$t('field_device.bulk_edit.device_fields')}</h4>
-			<div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+			<div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
 				<div class="flex flex-col gap-1">
 					<Label class="text-xs">{$t('field_device.bulk_edit.bmk')}</Label>
 					<Input
@@ -110,6 +110,19 @@
 						oninput={(e: Event) => {
 							const v = (e.target as HTMLInputElement).value;
 							bulkEditValues = { ...bulkEditValues, description: v || undefined };
+						}}
+					/>
+				</div>
+				<div class="flex flex-col gap-1">
+					<Label class="text-xs">{$t('field_device.bulk_edit.text_fix')}</Label>
+					<Input
+						type="text"
+						placeholder={$t('field_device.bulk_edit.text_fix_placeholder')}
+						maxlength={250}
+						value={bulkEditValues.text_fix ?? ''}
+						oninput={(e: Event) => {
+							const v = (e.target as HTMLInputElement).value;
+							bulkEditValues = { ...bulkEditValues, text_fix: v || undefined };
 						}}
 					/>
 				</div>
