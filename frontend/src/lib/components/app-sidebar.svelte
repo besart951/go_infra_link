@@ -9,7 +9,7 @@
 	import { createTranslator } from '$lib/i18n/translator';
 
 	// Icons
-	import {UsersIcon, Building2Icon, FolderKanbanIcon, SheetIcon} from '@lucide/svelte';
+	import { UsersIcon, Building2Icon, FolderKanbanIcon, SheetIcon } from '@lucide/svelte';
 
 	const t = createTranslator();
 
@@ -46,10 +46,18 @@
 					$page.url.pathname.startsWith('/auth') ||
 					$page.url.pathname.startsWith('/teams'),
 				items: [
-					{ title: $t('navigation.all_users'), url: '/users', hasAccess: canPerform('read', 'user') },
+					{
+						title: $t('navigation.all_users'),
+						url: '/users',
+						hasAccess: canPerform('read', 'user')
+					},
 					{ title: $t('navigation.teams'), url: '/teams', hasAccess: canPerform('read', 'team') },
-					{ title: $t('navigation.roles_permissions'), url: '/users/roles', hasAccess: canPerform('read', 'role') }
-				].filter(item => item.hasAccess)
+					{
+						title: $t('navigation.roles_permissions'),
+						url: '/users/roles',
+						hasAccess: canPerform('read', 'role')
+					}
+				].filter((item) => item.hasAccess)
 			},
 			{
 				title: $t('navigation.facility'),
@@ -57,19 +65,68 @@
 				icon: Building2Icon,
 				isActive: $page.url.pathname.startsWith('/facility'),
 				items: [
-					{ title: $t('navigation.buildings'), url: '/facility/buildings', hasAccess: canPerform('read', 'building') },
-					{ title: $t('navigation.control_cabinets'), url: '/facility/control-cabinets', hasAccess: canPerform('read', 'controlcabinet') },
-					{ title: $t('navigation.sps_controllers'), url: '/facility/sps-controllers', hasAccess: canPerform('read', 'spscontroller') },
-					{ title: $t('navigation.field_devices'), url: '/facility/field-devices', hasAccess: canPerform('read', 'fielddevice'), dividerAfter: true },
-					{ title: $t('navigation.system_types'), url: '/facility/system-types', hasAccess: canPerform('read', 'systemtype') },
-					{ title: $t('navigation.system_parts'), url: '/facility/system-parts', hasAccess: canPerform('read', 'systempart') },
-					{ title: $t('navigation.apparats'), url: '/facility/apparats', hasAccess: canPerform('read', 'apparat') },
-					{ title: $t('navigation.object_data'), url: '/facility/object-data', hasAccess: canPerform('read', 'objectdata') },
-					{ title: $t('navigation.state_texts'), url: '/facility/state-texts', hasAccess: canPerform('read', 'statetext') },
-					{ title: $t('navigation.alarm_definitions'), url: '/facility/alarm-definitions', hasAccess: canPerform('read', 'alarmdefinition') },
-					{ title: $t('navigation.alarm_catalog'), url: '/facility/alarm-catalog', hasAccess: canPerform('read', 'alarmtype') },
-					{ title: $t('navigation.notification_classes'), url: '/facility/notification-classes', hasAccess: canPerform('read', 'notificationclass') }
-				].filter(item => item.hasAccess)
+					{
+						title: $t('navigation.buildings'),
+						url: '/facility/buildings',
+						hasAccess: canPerform('read', 'building')
+					},
+					{
+						title: $t('navigation.control_cabinets'),
+						url: '/facility/control-cabinets',
+						hasAccess: canPerform('read', 'controlcabinet')
+					},
+					{
+						title: $t('navigation.sps_controllers'),
+						url: '/facility/sps-controllers',
+						hasAccess: canPerform('read', 'spscontroller')
+					},
+					{
+						title: $t('navigation.field_devices'),
+						url: '/facility/field-devices',
+						hasAccess: canPerform('read', 'fielddevice'),
+						dividerAfter: true
+					},
+					{
+						title: $t('navigation.system_types'),
+						url: '/facility/system-types',
+						hasAccess: canPerform('read', 'systemtype')
+					},
+					{
+						title: $t('navigation.system_parts'),
+						url: '/facility/system-parts',
+						hasAccess: canPerform('read', 'systempart')
+					},
+					{
+						title: $t('navigation.apparats'),
+						url: '/facility/apparats',
+						hasAccess: canPerform('read', 'apparat')
+					},
+					{
+						title: $t('navigation.object_data'),
+						url: '/facility/object-data',
+						hasAccess: canPerform('read', 'objectdata')
+					},
+					{
+						title: $t('navigation.state_texts'),
+						url: '/facility/state-texts',
+						hasAccess: canPerform('read', 'statetext')
+					},
+					{
+						title: $t('navigation.alarm_definitions'),
+						url: '/facility/alarm-definitions',
+						hasAccess: canPerform('read', 'alarmdefinition')
+					},
+					{
+						title: $t('navigation.alarm_catalog'),
+						url: '/facility/alarm-catalog',
+						hasAccess: canPerform('read', 'alarmtype')
+					},
+					{
+						title: $t('navigation.notification_classes'),
+						url: '/facility/notification-classes',
+						hasAccess: canPerform('read', 'notificationclass')
+					}
+				].filter((item) => item.hasAccess)
 			},
 			{
 				title: $t('navigation.projects'),
@@ -77,9 +134,17 @@
 				icon: FolderKanbanIcon,
 				isActive: $page.url.pathname.startsWith('/projects'),
 				items: [
-					{ title: $t('navigation.projects'), url: '/projects', hasAccess: canPerform('read', 'project') },
-					{ title: $t('phase.phases'), url: '/projects/phases', hasAccess: canPerform('read', 'phase') }
-				].filter(item => item.hasAccess)
+					{
+						title: $t('navigation.projects'),
+						url: '/projects',
+						hasAccess: canPerform('read', 'project')
+					},
+					{
+						title: $t('phase.phases'),
+						url: '/projects/phases',
+						hasAccess: canPerform('read', 'phase')
+					}
+				].filter((item) => item.hasAccess)
 			},
 			{
 				title: $t('navigation.excel_importer'),
@@ -90,7 +155,7 @@
 			}
 		];
 
-		return items.filter(group => {
+		return items.filter((group) => {
 			if (group.items !== undefined) {
 				return group.items.length > 0;
 			}

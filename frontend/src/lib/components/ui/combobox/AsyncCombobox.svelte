@@ -3,7 +3,7 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { cn } from '$lib/utils.js';
-	import {Check, ChevronsUpDown} from '@lucide/svelte';
+	import { Check, ChevronsUpDown } from '@lucide/svelte';
 
 	interface AsyncComboboxProps<T> {
 		value?: string;
@@ -185,7 +185,7 @@
 				aria-expanded={open}
 				{disabled}
 				aria-disabled={disabled}
-				class={cn('justify-between gap-2 min-w-0', width)}
+				class={cn('min-w-0 justify-between gap-2', width)}
 			>
 				<span class="min-w-0 flex-1 truncate text-left">
 					{selectedLabel || (value ? value : placeholder)}

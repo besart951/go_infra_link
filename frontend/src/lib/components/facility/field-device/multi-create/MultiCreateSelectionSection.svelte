@@ -51,7 +51,6 @@
 </script>
 
 <Card.Root class="p-6">
-
 	<div class="grid gap-4 md:grid-cols-2">
 		<div class="space-y-2">
 			<Label for="sps-system-type"
