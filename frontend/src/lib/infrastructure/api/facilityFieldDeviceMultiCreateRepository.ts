@@ -6,22 +6,30 @@ import type {
 } from '$lib/domain/facility/field-device.js';
 import type { SPSControllerSystemType } from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
+import {
+	getAvailableApparatNumbers as getAvailableApparatNumbersApi,
+	getFieldDeviceOptions,
+	getFieldDeviceOptionsForProject
+} from '$lib/infrastructure/api/facility.adapter.js';
 import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsControllerSystemTypeRepository.js';
 
 export const facilityFieldDeviceMultiCreateRepository: FieldDeviceMultiCreateRepository = {
 	async getFieldDeviceOptions(signal) {
-		return api<FieldDeviceOptions>('/facility/field-devices/options', { signal });
+		return getFieldDeviceOptions({ signal });
 	},
 
 	async getFieldDeviceOptionsForProject(projectId, signal) {
-		return api<FieldDeviceOptions>(`/projects/${projectId}/field-device-options`, { signal });
+		return getFieldDeviceOptionsForProject(projectId, { signal });
 	},
 
 	async listSpsControllerSystemTypes(params, signal) {
-		const res = await spsControllerSystemTypeRepository.list({
-			pagination: { page: 1, pageSize: params.limit ?? 50 },
-			search: { text: params.search ?? '' }
-		}, signal);
+		const res = await spsControllerSystemTypeRepository.list(
+			{
+				pagination: { page: 1, pageSize: params.limit ?? 50 },
+				search: { text: params.search ?? '' }
+			},
+			signal
+		);
 		return res.items;
 	},
 
@@ -30,16 +38,9 @@ export const facilityFieldDeviceMultiCreateRepository: FieldDeviceMultiCreateRep
 	},
 
 	async getAvailableApparatNumbers(spsControllerSystemTypeId, apparatId, systemPartId, signal) {
-		const searchParams = new URLSearchParams();
-		searchParams.set('sps_controller_system_type_id', spsControllerSystemTypeId);
-		searchParams.set('apparat_id', apparatId);
-		if (systemPartId) {
-			searchParams.set('system_part_id', systemPartId);
-		}
-		return api<AvailableApparatNumbersResponse>(
-			`/facility/field-devices/available-apparat-nr?${searchParams.toString()}`,
-			{ signal }
-		);
+		return getAvailableApparatNumbersApi(spsControllerSystemTypeId, apparatId, systemPartId, {
+			signal
+		});
 	},
 
 	async multiCreateFieldDevices(fieldDevices, signal) {

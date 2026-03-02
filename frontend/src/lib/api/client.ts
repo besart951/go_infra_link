@@ -163,6 +163,11 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
 
 		return response.json() as Promise<T>;
 	} catch (err) {
+		// Preserve abort semantics so callers can silently ignore cancellations
+		if (err instanceof DOMException && err.name === 'AbortError') {
+			throw err;
+		}
+
 		// Re-throw ApiException as-is
 		if (err instanceof ApiException) throw err;
 
