@@ -246,7 +246,9 @@
 			if (err instanceof DOMException && err.name === 'AbortError') return;
 			if (!controller.signal.aborted) {
 				selectedObjectData = null;
-				objectDataPreviewError = translate('field_device.multi_create.object_data_preview.load_failed');
+				objectDataPreviewError = translate(
+					'field_device.multi_create.object_data_preview.load_failed'
+				);
 			}
 		} finally {
 			if (objectDataPreviewAbortController === controller) {
