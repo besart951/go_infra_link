@@ -8,6 +8,7 @@ type ServiceDeps struct {
 	Apparat                 ApparatService
 	ControlCabinet          ControlCabinetService
 	FieldDevice             FieldDeviceService
+	ProjectAccess           ProjectAccessService
 	BacnetObject            BacnetObjectService
 	SPSController           SPSControllerService
 	StateText               StateTextService
@@ -55,7 +56,7 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 		SystemPart:              NewSystemPartHandler(deps.SystemPart, deps.Apparat, deps.ObjectData),
 		Apparat:                 NewApparatHandler(deps.Apparat, deps.SystemPart, deps.ObjectData),
 		ControlCabinet:          NewControlCabinetHandler(deps.ControlCabinet),
-		FieldDevice:             NewFieldDeviceHandler(deps.FieldDevice),
+		FieldDevice:             NewFieldDeviceHandler(deps.FieldDevice, deps.ProjectAccess),
 		BacnetObject:            NewBacnetObjectHandler(deps.BacnetObject),
 		SPSController:           NewSPSControllerHandler(deps.SPSController),
 		StateText:               NewStateTextHandler(deps.StateText),

@@ -15,7 +15,8 @@ import (
 type ProjectService interface {
 	Create(project *project.Project) error
 	GetByID(id uuid.UUID) (*project.Project, error)
-	List(page, limit int, search string) (*domain.PaginatedList[project.Project], error)
+	List(requesterID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[project.Project], error)
+	CanAccessProject(requesterID, projectID uuid.UUID) (bool, error)
 	InviteUser(projectID, userID uuid.UUID) error
 	ListUsers(projectID uuid.UUID) ([]user.User, error)
 	RemoveUser(projectID, userID uuid.UUID) error

@@ -10,7 +10,7 @@
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		icon?: any;
 		isActive?: boolean;
-		items?: { title: string; url: string }[];
+		items?: { title: string; url: string; dividerAfter?: boolean }[];
 	}
 
 	let { items }: { items: NavItem[] } = $props();
@@ -45,12 +45,17 @@
 						</Collapsible.Trigger>
 						<Collapsible.Content>
 							<Sidebar.MenuSub>
-								{#each item.items as subItem (subItem.title)}
+								{#each item.items as subItem, index (subItem.title)}
 									<Sidebar.MenuSubItem>
 										<Sidebar.MenuSubButton href={subItem.url} onclick={closeMobileSidebar}>
 											<span>{subItem.title}</span>
 										</Sidebar.MenuSubButton>
 									</Sidebar.MenuSubItem>
+									{#if subItem.dividerAfter && index < item.items.length - 1}
+										<Sidebar.MenuSubItem>
+											<Sidebar.Separator class="my-1" />
+										</Sidebar.MenuSubItem>
+									{/if}
 								{/each}
 							</Sidebar.MenuSub>
 						</Collapsible.Content>

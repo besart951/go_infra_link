@@ -41,6 +41,10 @@ func (r *bacnetObjectAlarmValueRepo) GetByBacnetObjectID(bacnetObjectID uuid.UUI
 	return values, err
 }
 
+func (r *bacnetObjectAlarmValueRepo) BulkCreate(values []*domainFacility.BacnetObjectAlarmValue, batchSize int) error {
+	return r.BaseRepository.BulkCreate(values, batchSize)
+}
+
 func (r *bacnetObjectAlarmValueRepo) ReplaceForBacnetObject(bacnetObjectID uuid.UUID, values []domainFacility.BacnetObjectAlarmValue) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("bacnet_object_id = ?", bacnetObjectID).Delete(&domainFacility.BacnetObjectAlarmValue{}).Error; err != nil {

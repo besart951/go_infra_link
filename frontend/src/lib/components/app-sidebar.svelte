@@ -60,7 +60,7 @@
 					{ title: $t('navigation.buildings'), url: '/facility/buildings', hasAccess: canPerform('read', 'building') },
 					{ title: $t('navigation.control_cabinets'), url: '/facility/control-cabinets', hasAccess: canPerform('read', 'controlcabinet') },
 					{ title: $t('navigation.sps_controllers'), url: '/facility/sps-controllers', hasAccess: canPerform('read', 'spscontroller') },
-					{ title: $t('navigation.field_devices'), url: '/facility/field-devices', hasAccess: canPerform('read', 'fielddevice') },
+					{ title: $t('navigation.field_devices'), url: '/facility/field-devices', hasAccess: canPerform('read', 'fielddevice'), dividerAfter: true },
 					{ title: $t('navigation.system_types'), url: '/facility/system-types', hasAccess: canPerform('read', 'systemtype') },
 					{ title: $t('navigation.system_parts'), url: '/facility/system-parts', hasAccess: canPerform('read', 'systempart') },
 					{ title: $t('navigation.apparats'), url: '/facility/apparats', hasAccess: canPerform('read', 'apparat') },

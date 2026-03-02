@@ -51,10 +51,6 @@
 </script>
 
 <Card.Root class="p-6">
-	<h3 class="mb-4 text-lg font-semibold">{$t('field_device.multi_create.selection.title')}</h3>
-	<p class="mb-4 text-sm text-muted-foreground">
-		{$t('field_device.multi_create.selection.description')}
-	</p>
 
 	<div class="grid gap-4 md:grid-cols-2">
 		<div class="space-y-2">

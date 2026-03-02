@@ -23,6 +23,8 @@
 	import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
 	import { createTranslator } from '$lib/i18n/translator.js';
 	import { t as translate } from '$lib/i18n/index.js';
+	import CopyIcon from '@lucide/svelte/icons/copy';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 
 	interface Props {
 		initialData?: SPSController;
@@ -374,8 +376,20 @@
 		return Object.fromEntries(entries);
 	}
 
-	function removeSystemType(index: number) {
-		systemTypes = systemTypes.filter((_, i) => i !== index);
+	async function removeSystemType(index: number) {
+		const entry = systemTypes[index];
+		if (!entry) return;
+		if (!entry.id) {
+			systemTypes = systemTypes.filter((_, i) => i !== index);
+			return;
+		}
+		try {
+			await spsControllerSystemTypeRepository.delete(entry.id);
+			systemTypes = systemTypes.filter((_, i) => i !== index);
+		} catch (e) {
+			console.error(e);
+			error = getErrorMessage(e);
+		}
 	}
 
 	function updateSystemTypeField(
@@ -404,7 +418,11 @@
 				if (details) {
 					systemTypeLabels = {
 						...systemTypeLabels,
-						[systemTypeId]: buildSystemTypeLabel(details.name, details.number_min, details.number_max)
+						[systemTypeId]: buildSystemTypeLabel(
+							details.name,
+							details.number_min,
+							details.number_max
+						)
 					};
 				}
 			}
@@ -723,30 +741,53 @@
 										updateSystemTypeField(index, 'number', (e.target as HTMLInputElement).value)}
 								/>
 							</div>
-							<div class="md:col-span-4">
+							<div class="md:col-span-5">
 								<Label class="text-xs"
 									>{$t('facility.forms.sps_controller.system_type_document')}</Label
 								>
-								<Input
-									value={st.document_name ?? ''}
-									oninput={(e) =>
-										updateSystemTypeField(
-											index,
-											'document_name',
-											(e.target as HTMLInputElement).value
-										)}
-									maxlength={250}
-								/>
-							</div>
-							<div class="flex items-end justify-end gap-2 md:col-span-1">
-								{#if st.id}
-									<Button type="button" variant="ghost" onclick={() => copySystemType(index)}>
-										{$t('common.copy')}
-									</Button>
-								{/if}
-								<Button type="button" variant="ghost" onclick={() => removeSystemType(index)}>
-									{$t('common.remove')}
-								</Button>
+								<div class="relative">
+									<Input
+										value={st.document_name ?? ''}
+										oninput={(e) =>
+											updateSystemTypeField(
+												index,
+												'document_name',
+												(e.target as HTMLInputElement).value
+											)}
+										maxlength={250}
+										class="pr-16"
+									/>
+									<div
+										class="pointer-events-none absolute top-1/2 right-2 flex -translate-y-1/2 gap-1"
+									>
+										{#if st.id}
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon"
+												onclick={() => copySystemType(index)}
+												aria-label={$t('common.copy')}
+												title={$t('common.copy')}
+												class="pointer-events-auto h-7 w-7"
+											>
+												<CopyIcon class="h-4 w-4" />
+												<span class="sr-only">{$t('common.copy')}</span>
+											</Button>
+										{/if}
+										<Button
+											type="button"
+											variant="ghost"
+											size="icon"
+											onclick={() => removeSystemType(index)}
+											aria-label={$t('common.remove')}
+											title={$t('common.remove')}
+											class="pointer-events-auto h-7 w-7 text-muted-foreground hover:text-red-500"
+										>
+											<Trash2Icon class="h-4 w-4" />
+											<span class="sr-only">{$t('common.remove')}</span>
+										</Button>
+									</div>
+								</div>
 							</div>
 						</div>
 					{/each}

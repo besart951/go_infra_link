@@ -17,6 +17,7 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18n
 		Apparat:                 services.Facility.Apparat,
 		ControlCabinet:          services.Facility.ControlCabinet,
 		FieldDevice:             services.Facility.FieldDevice,
+		ProjectAccess:           services.Project,
 		BacnetObject:            services.Facility.BacnetObject,
 		SPSController:           services.Facility.SPSController,
 		StateText:               services.Facility.StateText,

@@ -288,7 +288,9 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		facility.DELETE("/object-data/:id", handlers.FacilityObjectDataHandler.DeleteObjectData)
 
 		facility.GET("/sps-controller-system-types", handlers.FacilitySPSControllerSystemTypeHandler.ListSPSControllerSystemTypes)
+		facility.GET("/sps-controller-system-types/:id", handlers.FacilitySPSControllerSystemTypeHandler.GetSPSControllerSystemType)
 		facility.POST("/sps-controller-system-types/:id/copy", handlers.FacilitySPSControllerSystemTypeHandler.CopySPSControllerSystemType)
+		facility.DELETE("/sps-controller-system-types/:id", handlers.FacilitySPSControllerSystemTypeHandler.DeleteSPSControllerSystemType)
 
 		facility.GET("/alarm-types", handlers.FacilityAlarmTypeHandler.ListAlarmTypes)
 		facility.POST("/alarm-types", handlers.FacilityAlarmTypeHandler.CreateAlarmType)

@@ -204,33 +204,8 @@ func (s *SPSControllerService) CopyByID(id uuid.UUID) (*domainFacility.SPSContro
 	}
 
 	// Copy field devices along with their specifications and BACnet objects
-	for _, originalFieldDevice := range originalFieldDevices {
-		newSystemTypeID, ok := newSystemTypeMap[originalFieldDevice.SPSControllerSystemTypeID]
-		if !ok {
-			continue
-		}
-
-		fieldDeviceCopy := &domainFacility.FieldDevice{
-			BMK:                       originalFieldDevice.BMK,
-			Description:               originalFieldDevice.Description,
-			ApparatNr:                 originalFieldDevice.ApparatNr,
-			SPSControllerSystemTypeID: newSystemTypeID,
-			SystemPartID:              originalFieldDevice.SystemPartID,
-			ApparatID:                 originalFieldDevice.ApparatID,
-		}
-		if err := s.fieldDeviceRepo.Create(fieldDeviceCopy); err != nil {
-			return nil, err
-		}
-
-		// Copy specification if exists
-		if err := copySpecificationForFieldDevice(s.specificationRepo, originalFieldDevice.ID, fieldDeviceCopy.ID); err != nil {
-			return nil, err
-		}
-
-		// Copy BACnet objects if exist
-		if err := copyBacnetObjectsForFieldDevice(s.bacnetObjectRepo, originalFieldDevice.ID, fieldDeviceCopy.ID); err != nil {
-			return nil, err
-		}
+	if err := copyFieldDevicesWithChildren(s.fieldDeviceRepo, s.specificationRepo, s.bacnetObjectRepo, originalFieldDevices, newSystemTypeMap); err != nil {
+		return nil, err
 	}
 
 	return copyEntity, nil

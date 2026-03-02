@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import { createTranslator } from '$lib/i18n/translator';
 	import { useSidebar } from '$lib/components/ui/sidebar/context.svelte.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
@@ -28,6 +29,7 @@
 		onCreate?: () => void;
 	} = $props();
 
+	const t = createTranslator();
 	const sidebar = useSidebar();
 
 	function closeMobileSidebar() {
@@ -38,7 +40,7 @@
 </script>
 
 <Sidebar.Group class="group-data-[collapsible=icon]:hidden">
-	<Sidebar.GroupLabel>Projects</Sidebar.GroupLabel>
+	<Sidebar.GroupLabel>{$t('navigation.projects')}</Sidebar.GroupLabel>
 	<Sidebar.Menu>
 		{#each projects as item (item.id)}
 			<Sidebar.MenuItem>
@@ -59,7 +61,7 @@
 						{#snippet child({ props })}
 							<Sidebar.MenuAction showOnHover {...props}>
 								<EllipsisIcon />
-								<span class="sr-only">More</span>
+								<span class="sr-only">{$t('navigation.more')}</span>
 							</Sidebar.MenuAction>
 						{/snippet}
 					</DropdownMenu.Trigger>
@@ -70,11 +72,11 @@
 					>
 						<DropdownMenu.Item onclick={() => onViewProject?.(item.id)}>
 							<FolderIcon class="text-muted-foreground" />
-							<span>View Project</span>
+							<span>{$t('navigation.view_project')}</span>
 						</DropdownMenu.Item>
 						<DropdownMenu.Item onclick={() => onShareProject?.(item.id)}>
 							<ForwardIcon class="text-muted-foreground" />
-							<span>Share Project</span>
+							<span>{$t('navigation.share_project')}</span>
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
@@ -84,7 +86,7 @@
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton class="text-sidebar-foreground/70" onclick={onCreate}>
 					<PlusIcon class="text-sidebar-foreground/70" />
-					<span>New Project</span>
+					<span>{$t('navigation.new_project')}</span>
 				</Sidebar.MenuButton>
 			</Sidebar.MenuItem>
 		{/if}

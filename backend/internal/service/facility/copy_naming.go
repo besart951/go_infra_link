@@ -11,9 +11,12 @@ func nextIncrementedValue(base string, increment int, maxLen int) string {
 		increment = 1
 	}
 
-	prefix, currentNumber := splitTrailingNumber(trimmedBase)
+	prefix, currentNumber, width := splitTrailingNumber(trimmedBase)
 	nextNumber := currentNumber + increment
 	suffix := strconv.Itoa(nextNumber)
+	if width > len(suffix) {
+		suffix = strings.Repeat("0", width-len(suffix)) + suffix
+	}
 
 	if prefix == "" {
 		if maxLen > 0 && len(suffix) > maxLen {
@@ -38,9 +41,9 @@ func nextIncrementedValue(base string, increment int, maxLen int) string {
 	return prefix + suffix
 }
 
-func splitTrailingNumber(value string) (prefix string, number int) {
+func splitTrailingNumber(value string) (prefix string, number int, width int) {
 	if value == "" {
-		return "", 0
+		return "", 0, 0
 	}
 
 	end := len(value)
@@ -54,13 +57,13 @@ func splitTrailingNumber(value string) (prefix string, number int) {
 	}
 
 	if start == end {
-		return value, 0
+		return value, 0, 0
 	}
 
 	parsed, err := strconv.Atoi(value[start:end])
 	if err != nil {
-		return value, 0
+		return value, 0, 0
 	}
 
-	return value[:start], parsed
+	return value[:start], parsed, end - start
 }

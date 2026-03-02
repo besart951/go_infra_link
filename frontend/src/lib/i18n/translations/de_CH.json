@@ -827,7 +827,11 @@
 		"account": "Konto",
 		"logout": "Abmelden",
 		"help": "Hilfe",
-		"excel_importer": "Excel-Importer"
+		"excel_importer": "Excel-Importer",
+		"more": "Mehr",
+		"view_project": "Projekt anzeigen",
+		"share_project": "Projekt teilen",
+		"new_project": "Neues Projekt"
 	},
 	"roles": {
 		"page": {
@@ -1173,8 +1177,8 @@
 			},
 			"next_available": "Nächste: {value}",
 			"selection": {
-				"title": "Auswahl",
-				"description": "Wählen Sie die Konfigurationsparameter für die Feldgeräte, die Sie erstellen möchten.",
+				"title": "",
+				"description": "",
 				"sps_system_type": "SPS-Regler-Systemtyp *",
 				"sps_system_type_placeholder": "SPS-Regler-Systemtyp auswählen...",
 				"sps_system_type_search": "SPS-Systemtypen suchen...",

@@ -10,6 +10,7 @@ type SPSControllerSystemTypeService struct {
 	repo              domainFacility.SPSControllerSystemTypeStore
 	systemTypeRepo    domainFacility.SystemTypeRepository
 	fieldDeviceRepo   domainFacility.FieldDeviceStore
+	fieldDeviceSvc    *FieldDeviceService
 	specificationRepo domainFacility.SpecificationStore
 	bacnetObjectRepo  domainFacility.BacnetObjectStore
 }
@@ -18,6 +19,7 @@ func NewSPSControllerSystemTypeService(
 	repo domainFacility.SPSControllerSystemTypeStore,
 	systemTypeRepo domainFacility.SystemTypeRepository,
 	fieldDeviceRepo domainFacility.FieldDeviceStore,
+	fieldDeviceSvc *FieldDeviceService,
 	specificationRepo domainFacility.SpecificationStore,
 	bacnetObjectRepo domainFacility.BacnetObjectStore,
 ) *SPSControllerSystemTypeService {
@@ -25,6 +27,7 @@ func NewSPSControllerSystemTypeService(
 		repo:              repo,
 		systemTypeRepo:    systemTypeRepo,
 		fieldDeviceRepo:   fieldDeviceRepo,
+		fieldDeviceSvc:    fieldDeviceSvc,
 		specificationRepo: specificationRepo,
 		bacnetObjectRepo:  bacnetObjectRepo,
 	}
@@ -44,6 +47,10 @@ func (s *SPSControllerSystemTypeService) ListBySPSControllerID(spsControllerID u
 		Limit:  limit,
 		Search: search,
 	})
+}
+
+func (s *SPSControllerSystemTypeService) GetByID(id uuid.UUID) (*domainFacility.SPSControllerSystemType, error) {
+	return domain.GetByID(s.repo, id)
 }
 
 func (s *SPSControllerSystemTypeService) CopyByID(id uuid.UUID) (*domainFacility.SPSControllerSystemType, error) {
@@ -91,6 +98,22 @@ func (s *SPSControllerSystemTypeService) CopyByID(id uuid.UUID) (*domainFacility
 	}
 
 	return domain.GetByID(s.repo, copyEntity.ID)
+}
+
+func (s *SPSControllerSystemTypeService) DeleteByID(id uuid.UUID) error {
+	if _, err := domain.GetByID(s.repo, id); err != nil {
+		return err
+	}
+
+	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs([]uuid.UUID{id})
+	if err != nil {
+		return err
+	}
+	if err := s.fieldDeviceSvc.DeleteByIDs(fieldDeviceIDs); err != nil {
+		return err
+	}
+
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
 func (s *SPSControllerSystemTypeService) copyFieldDevicesForSystemType(originalSystemTypeID, newSystemTypeID uuid.UUID) error {

@@ -36,6 +36,10 @@ func (r *bacnetObjectRepo) GetPaginatedList(params domain.PaginationParams) (*do
 	return gormbase.DerefPaginatedList(result), nil
 }
 
+func (r *bacnetObjectRepo) BulkCreate(entities []*domainFacility.BacnetObject, batchSize int) error {
+	return r.BaseRepository.BulkCreate(entities, batchSize)
+}
+
 func (r *bacnetObjectRepo) GetByFieldDeviceIDs(ids []uuid.UUID) ([]*domainFacility.BacnetObject, error) {
 	if len(ids) == 0 {
 		return []*domainFacility.BacnetObject{}, nil

@@ -21,6 +21,31 @@ func NewProjectHandler(service ProjectService) *ProjectHandler {
 	return &ProjectHandler{service: service}
 }
 
+func (h *ProjectHandler) ensureProjectAccess(c *gin.Context, projectID uuid.UUID) bool {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return false
+	}
+
+	hasAccess, err := h.service.CanAccessProject(userID, projectID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
+			return false
+		}
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
+		return false
+	}
+
+	if !hasAccess {
+		handlerutil.RespondLocalizedError(c, http.StatusForbidden, "forbidden", "errors.forbidden")
+		return false
+	}
+
+	return true
+}
+
 // CreateProject godoc
 // @Summary Create a new project
 // @Tags projects
@@ -70,6 +95,10 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 		return
 	}
 
+	if !h.ensureProjectAccess(c, id) {
+		return
+	}
+
 	proj, err := h.service.GetByID(id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
@@ -100,7 +129,13 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(query.Page, query.Limit, query.Search)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return
+	}
+
+	result, err := h.service.List(userID, query.Page, query.Limit, query.Search)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
 		return
@@ -131,6 +166,10 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 	id, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
+		return
+	}
+
+	if !h.ensureProjectAccess(c, id) {
 		return
 	}
 
@@ -174,6 +213,10 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 		return
 	}
 
+	if !h.ensureProjectAccess(c, id) {
+		return
+	}
+
 	if err := h.service.DeleteByID(id); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "project.deletion_failed")
 		return
@@ -197,6 +240,10 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 func (h *ProjectHandler) InviteProjectUser(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
+		return
+	}
+
+	if !h.ensureProjectAccess(c, projectID) {
 		return
 	}
 
@@ -233,6 +280,10 @@ func (h *ProjectHandler) ListProjectUsers(c *gin.Context) {
 		return
 	}
 
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
 	users, err := h.service.ListUsers(projectID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
@@ -262,6 +313,11 @@ func (h *ProjectHandler) RemoveProjectUser(c *gin.Context) {
 	if !ok {
 		return
 	}
+
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
 	userID, ok := handlerutil.ParseUUIDParam(c, "userId")
 	if !ok {
 		return
@@ -294,6 +350,10 @@ func (h *ProjectHandler) RemoveProjectUser(c *gin.Context) {
 func (h *ProjectHandler) CreateProjectControlCabinet(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
+		return
+	}
+
+	if !h.ensureProjectAccess(c, projectID) {
 		return
 	}
 
@@ -338,6 +398,11 @@ func (h *ProjectHandler) UpdateProjectControlCabinet(c *gin.Context) {
 	if !ok {
 		return
 	}
+
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
 	linkID, ok := handlerutil.ParseUUIDParam(c, "linkId")
 	if !ok {
 		return
@@ -386,6 +451,11 @@ func (h *ProjectHandler) DeleteProjectControlCabinet(c *gin.Context) {
 	if !ok {
 		return
 	}
+
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
 	linkID, ok := handlerutil.ParseUUIDParam(c, "linkId")
 	if !ok {
 		return
@@ -430,6 +500,10 @@ func (h *ProjectHandler) CreateProjectSPSController(c *gin.Context) {
 		return
 	}
 
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
 	if _, err := h.service.GetByID(projectID); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
@@ -471,6 +545,11 @@ func (h *ProjectHandler) UpdateProjectSPSController(c *gin.Context) {
 	if !ok {
 		return
 	}
+
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
 	linkID, ok := handlerutil.ParseUUIDParam(c, "linkId")
 	if !ok {
 		return
@@ -519,6 +598,11 @@ func (h *ProjectHandler) DeleteProjectSPSController(c *gin.Context) {
 	if !ok {
 		return
 	}
+
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
 	linkID, ok := handlerutil.ParseUUIDParam(c, "linkId")
 	if !ok {
 		return
@@ -563,6 +647,10 @@ func (h *ProjectHandler) CreateProjectFieldDevice(c *gin.Context) {
 		return
 	}
 
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
 	if _, err := h.service.GetByID(projectID); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
@@ -604,6 +692,11 @@ func (h *ProjectHandler) UpdateProjectFieldDevice(c *gin.Context) {
 	if !ok {
 		return
 	}
+
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
 	linkID, ok := handlerutil.ParseUUIDParam(c, "linkId")
 	if !ok {
 		return
@@ -652,6 +745,11 @@ func (h *ProjectHandler) DeleteProjectFieldDevice(c *gin.Context) {
 	if !ok {
 		return
 	}
+
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
 	linkID, ok := handlerutil.ParseUUIDParam(c, "linkId")
 	if !ok {
 		return
@@ -693,6 +791,10 @@ func (h *ProjectHandler) DeleteProjectFieldDevice(c *gin.Context) {
 func (h *ProjectHandler) ListProjectControlCabinets(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
+		return
+	}
+
+	if !h.ensureProjectAccess(c, projectID) {
 		return
 	}
 
@@ -744,6 +846,10 @@ func (h *ProjectHandler) ListProjectSPSControllers(c *gin.Context) {
 		return
 	}
 
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
 	if _, err := h.service.GetByID(projectID); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
@@ -789,6 +895,10 @@ func (h *ProjectHandler) ListProjectSPSControllers(c *gin.Context) {
 func (h *ProjectHandler) ListProjectFieldDevices(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
+		return
+	}
+
+	if !h.ensureProjectAccess(c, projectID) {
 		return
 	}
 
@@ -840,6 +950,10 @@ func (h *ProjectHandler) ListProjectFieldDevices(c *gin.Context) {
 func (h *ProjectHandler) ListProjectObjectData(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
+		return
+	}
+
+	if !h.ensureProjectAccess(c, projectID) {
 		return
 	}
 
@@ -916,6 +1030,10 @@ func (h *ProjectHandler) AddProjectObjectData(c *gin.Context) {
 		return
 	}
 
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
 	var req dto.CreateProjectObjectDataRequest
 	if !handlerutil.BindJSON(c, &req) {
 		return
@@ -955,6 +1073,11 @@ func (h *ProjectHandler) RemoveProjectObjectData(c *gin.Context) {
 	if !ok {
 		return
 	}
+
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
 	objectDataID, ok := handlerutil.ParseUUIDParam(c, "objectDataId")
 	if !ok {
 		return

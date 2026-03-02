@@ -12,6 +12,7 @@
 		labelKey: keyof T;
 		idKey?: keyof T;
 		labelFormatter?: (item: T) => string;
+		refreshKey?: string | number;
 		id?: string;
 		disabled?: boolean;
 		clearable?: boolean;
@@ -30,6 +31,7 @@
 		labelKey,
 		idKey = 'id' as keyof T,
 		labelFormatter,
+		refreshKey,
 		id,
 		disabled = false,
 		clearable = false,
@@ -51,6 +53,7 @@
 	let selectedRequestId = $state(0);
 	let selectedValue = $state<string | undefined>(undefined);
 	let selectedLabel = $state<string | undefined>(undefined);
+	let selectedLoadFailedId = $state<string | undefined>(undefined);
 
 	// Derived state
 	const selectedItem = $derived(items.find((i) => String(i[idKey]) === value));
@@ -78,9 +81,15 @@
 			if (item) {
 				selectedLabel = getItemLabel(item);
 				selectedValue = id;
+				selectedLoadFailedId = undefined;
+			} else {
+				selectedLoadFailedId = id;
 			}
 		} catch (error) {
 			console.error('Failed to fetch selected item:', error);
+			if (requestId === selectedRequestId) {
+				selectedLoadFailedId = id;
+			}
 		} finally {
 			if (requestId === selectedRequestId) {
 				selectedLoading = false;
@@ -120,6 +129,18 @@
 	});
 
 	$effect(() => {
+		if (initialized && refreshKey !== undefined) {
+			loadItems(search);
+		}
+	});
+
+	$effect(() => {
+		if (refreshKey !== undefined) {
+			selectedLoadFailedId = undefined;
+		}
+	});
+
+	$effect(() => {
 		if (selectedItem) {
 			selectedLabel = getItemLabel(selectedItem);
 			selectedValue = value;
@@ -133,7 +154,14 @@
 	});
 
 	$effect(() => {
-		if (value && !selectedLabel && !selectedItem && fetchById && !selectedLoading) {
+		if (
+			value &&
+			!selectedLabel &&
+			!selectedItem &&
+			fetchById &&
+			!selectedLoading &&
+			value !== selectedLoadFailedId
+		) {
 			loadSelected(value);
 		}
 	});

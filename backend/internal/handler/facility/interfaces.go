@@ -75,6 +75,10 @@ type FieldDeviceService interface {
 	BulkDelete(ids []uuid.UUID) *domainFacility.BulkOperationResult
 }
 
+type ProjectAccessService interface {
+	CanAccessProject(requesterID, projectID uuid.UUID) (bool, error)
+}
+
 type ControlCabinetService interface {
 	Create(controlCabinet *domainFacility.ControlCabinet) error
 	GetByID(id uuid.UUID) (*domainFacility.ControlCabinet, error)
@@ -144,7 +148,9 @@ type ObjectDataService interface {
 type SPSControllerSystemTypeService interface {
 	List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
 	ListBySPSControllerID(spsControllerID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
+	GetByID(id uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
 	CopyByID(id uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
+	DeleteByID(id uuid.UUID) error
 }
 
 type ExportService interface {

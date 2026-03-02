@@ -202,11 +202,7 @@ func (s *ControlCabinetService) DeleteByID(id uuid.UUID) error {
 		return err
 	}
 
-	// Delete dependents in safe order
-	if err := s.spsControllerSystemRepo.DeleteBySPSControllerIDs(spsControllerIDs); err != nil {
-		return err
-	}
-
+	// Delete dependents in safe order (children before parents)
 	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
 		return err
 	}
@@ -214,6 +210,9 @@ func (s *ControlCabinetService) DeleteByID(id uuid.UUID) error {
 		return err
 	}
 	if err := s.fieldDeviceRepo.DeleteByIds(fieldDeviceIDs); err != nil {
+		return err
+	}
+	if err := s.spsControllerSystemRepo.DeleteBySPSControllerIDs(spsControllerIDs); err != nil {
 		return err
 	}
 
@@ -277,6 +276,22 @@ func (s *ControlCabinetService) nextAvailableControlCabinetNr(buildingID uuid.UU
 // copySPSControllersForControlCabinet copies all SPS controllers from the original control cabinet to the new one
 // including all system types, field devices, specifications, and BACnet objects
 func (s *ControlCabinetService) copySPSControllersForControlCabinet(originalControlCabinetID, newControlCabinetID uuid.UUID) error {
+	newControlCabinet, err := domain.GetByID(s.repo, newControlCabinetID)
+	if err != nil {
+		return err
+	}
+
+	building, err := domain.GetByID(s.buildingRepo, newControlCabinet.BuildingID)
+	if err != nil {
+		return err
+	}
+
+	newCabinetNr := ""
+	if newControlCabinet.ControlCabinetNr != nil {
+		newCabinetNr = strings.TrimSpace(*newControlCabinet.ControlCabinetNr)
+	}
+	buildingIWSCode := strings.TrimSpace(building.IWSCode)
+
 	// Get all SPS controllers for the original control cabinet
 	originalSPSControllers, err := s.listSPSControllersByControlCabinetID(originalControlCabinetID)
 	if err != nil {
@@ -285,17 +300,32 @@ func (s *ControlCabinetService) copySPSControllersForControlCabinet(originalCont
 
 	// Copy each SPS controller
 	for _, originalSPS := range originalSPSControllers {
-		// Determine next device name
-		nextDeviceName, err := s.nextAvailableDeviceName(newControlCabinetID, originalSPS.DeviceName)
-		if err != nil {
-			return err
+		gaDevice := ""
+		if originalSPS.GADevice != nil {
+			gaDevice = strings.ToUpper(strings.TrimSpace(*originalSPS.GADevice))
+		}
+		if gaDevice == "" {
+			nextGADevice, err := s.nextAvailableGADevice(newControlCabinetID)
+			if err != nil {
+				return err
+			}
+			gaDevice = nextGADevice
+		}
+		var gaDevicePtr *string
+		if gaDevice != "" {
+			gaDevicePtr = &gaDevice
+		}
+
+		deviceName := strings.TrimSpace(originalSPS.DeviceName)
+		if buildingIWSCode != "" && newCabinetNr != "" && gaDevice != "" {
+			deviceName = strings.ToUpper(buildingIWSCode + "_" + newCabinetNr + "_" + gaDevice)
 		}
 
 		// Create copy of SPS controller
 		spsCopy := &domainFacility.SPSController{
 			ControlCabinetID:  newControlCabinetID,
-			GADevice:          nil, // Will be assigned automatically
-			DeviceName:        nextDeviceName,
+			GADevice:          gaDevicePtr,
+			DeviceName:        deviceName,
 			DeviceDescription: originalSPS.DeviceDescription,
 			DeviceLocation:    originalSPS.DeviceLocation,
 			IPAddress:         nil, // Clear IP address to avoid conflicts
@@ -321,6 +351,26 @@ func (s *ControlCabinetService) copySPSControllersForControlCabinet(originalCont
 	}
 
 	return nil
+}
+
+func (s *ControlCabinetService) nextAvailableGADevice(controlCabinetID uuid.UUID) (string, error) {
+	devices, err := s.spsControllerRepo.ListGADevicesByControlCabinetID(controlCabinetID)
+	if err != nil {
+		return "", err
+	}
+
+	used := make(map[string]struct{}, len(devices))
+	for _, device := range devices {
+		normalized := strings.ToUpper(strings.TrimSpace(device))
+		if isValidGADevice(normalized) {
+			used[normalized] = struct{}{}
+		}
+	}
+
+	if next, ok := findLowestAvailableGADevice(used); ok {
+		return next, nil
+	}
+	return "", domain.ErrConflict
 }
 
 // listSPSControllersByControlCabinetID lists all SPS controllers for a control cabinet
@@ -455,38 +505,7 @@ func (s *ControlCabinetService) copyFieldDevicesForSPSController(originalSPSCont
 		return err
 	}
 
-	// Copy each field device
-	for _, originalFD := range originalFieldDevices {
-		newSystemTypeID, ok := newSystemTypeMap[originalFD.SPSControllerSystemTypeID]
-		if !ok {
-			continue
-		}
-
-		fieldDeviceCopy := &domainFacility.FieldDevice{
-			BMK:                       originalFD.BMK,
-			Description:               originalFD.Description,
-			ApparatNr:                 originalFD.ApparatNr,
-			SPSControllerSystemTypeID: newSystemTypeID,
-			SystemPartID:              originalFD.SystemPartID,
-			ApparatID:                 originalFD.ApparatID,
-		}
-
-		if err := s.fieldDeviceRepo.Create(fieldDeviceCopy); err != nil {
-			return err
-		}
-
-		// Copy specification if exists
-		if err := copySpecificationForFieldDevice(s.specificationRepo, originalFD.ID, fieldDeviceCopy.ID); err != nil {
-			return err
-		}
-
-		// Copy BACnet objects if exist
-		if err := copyBacnetObjectsForFieldDevice(s.bacnetObjectRepo, originalFD.ID, fieldDeviceCopy.ID); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return copyFieldDevicesWithChildren(s.fieldDeviceRepo, s.specificationRepo, s.bacnetObjectRepo, originalFieldDevices, newSystemTypeMap)
 }
 
 // listFieldDevicesBySPSControllerID lists all field devices for an SPS controller

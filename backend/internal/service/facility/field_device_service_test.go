@@ -30,6 +30,15 @@ func (r *fakeFieldDeviceStore) Create(entity *domainFacility.FieldDevice) error 
 	return nil
 }
 
+func (r *fakeFieldDeviceStore) BulkCreate(entities []*domainFacility.FieldDevice, batchSize int) error {
+	for _, entity := range entities {
+		if err := r.Create(entity); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *fakeFieldDeviceStore) Update(entity *domainFacility.FieldDevice) error {
 	clone := *entity
 	r.items[entity.ID] = &clone

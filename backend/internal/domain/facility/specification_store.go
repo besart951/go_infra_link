@@ -10,6 +10,9 @@ import "github.com/google/uuid"
 type SpecificationStore interface {
 	SpecificationRepository
 
+	// BulkCreate creates multiple specifications in batches.
+	BulkCreate(entities []*Specification, batchSize int) error
+
 	GetByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) ([]*Specification, error)
 	DeleteByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error
 }

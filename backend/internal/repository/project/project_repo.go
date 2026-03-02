@@ -53,10 +53,57 @@ func (r *projectRepo) GetPaginatedList(params domain.PaginationParams) (*domain.
 	return gormbase.DerefPaginatedList(result), nil
 }
 
+func (r *projectRepo) GetPaginatedListForUser(params domain.PaginationParams, userID uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
+	offset := (page - 1) * limit
+
+	query := r.db.Model(&domainProject.Project{}).
+		Joins("LEFT JOIN project_users pu ON pu.project_id = projects.id").
+		Where("pu.user_id = ? OR projects.creator_id = ?", userID, userID)
+
+	if params.Search != "" {
+		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
+		query = query.Where("LOWER(projects.name) LIKE ? OR LOWER(projects.description) LIKE ?", pattern, pattern)
+	}
+
+	var total int64
+	if err := query.Distinct("projects.id").Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	var items []domainProject.Project
+	if err := query.
+		Distinct("projects.*").
+		Order("projects.created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+
+	return &domain.PaginatedList[domainProject.Project]{
+		Items:      items,
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
+	}, nil
+}
+
 func (r *projectRepo) AddUser(projectID, userID uuid.UUID) error {
 	project := &domainProject.Project{Base: domain.Base{ID: projectID}}
 	user := &domainUser.User{Base: domain.Base{ID: userID}}
 	return r.db.Model(project).Association("Users").Append(user)
+}
+
+func (r *projectRepo) HasUser(projectID, userID uuid.UUID) (bool, error) {
+	var count int64
+	err := r.db.Table("project_users").
+		Where("project_id = ? AND user_id = ?", projectID, userID).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func (r *projectRepo) RemoveUser(projectID, userID uuid.UUID) error {

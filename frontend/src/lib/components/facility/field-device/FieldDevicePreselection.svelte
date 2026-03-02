@@ -114,50 +114,19 @@
 		};
 	});
 
-	function getAllowedForSelection(selection: FieldDevicePreselection) {
-		if (!options) {
-			return { objectDatas: [], apparats: [], systemParts: [] };
-		}
-
-		const filteredOptions = getFilteredFieldDevicePreselectionOptions(options, selection);
-		return {
-			objectDatas: filterByProject(filteredOptions.objectDatas),
-			apparats: filteredOptions.apparats,
-			systemParts: filteredOptions.systemParts
-		};
-	}
-
 	function normalizeSelection(next: FieldDevicePreselection): FieldDevicePreselection {
 		if (!options) return next;
 
-		let current = next;
-		for (let i = 0; i < 3; i += 1) {
-			const allowed = getAllowedForSelection(current);
-			const normalized: FieldDevicePreselection = {
-				objectDataId:
-					current.objectDataId && allowed.objectDatas.some((od) => od.id === current.objectDataId)
-						? current.objectDataId
-						: '',
-				apparatId:
-					current.apparatId && allowed.apparats.some((a) => a.id === current.apparatId)
-						? current.apparatId
-						: '',
-				systemPartId:
-					current.systemPartId && allowed.systemParts.some((sp) => sp.id === current.systemPartId)
-						? current.systemPartId
-						: ''
-			};
+		const objectDataIds = new Set((options.object_datas ?? []).map((od) => od.id));
+		const apparatIds = new Set((options.apparats ?? []).map((a) => a.id));
+		const systemPartIds = new Set((options.system_parts ?? []).map((sp) => sp.id));
 
-			if (
-				normalized.objectDataId === current.objectDataId &&
-				normalized.apparatId === current.apparatId &&
-				normalized.systemPartId === current.systemPartId
-			) {
-				return normalized;
-			}
-			current = normalized;
-		}
-		return current;
+		return {
+			objectDataId: next.objectDataId && objectDataIds.has(next.objectDataId) ? next.objectDataId : '',
+			apparatId: next.apparatId && apparatIds.has(next.apparatId) ? next.apparatId : '',
+			systemPartId:
+				next.systemPartId && systemPartIds.has(next.systemPartId) ? next.systemPartId : ''
+		};
 	}
 
 	function applyChange(partial: Partial<FieldDevicePreselection>) {
@@ -204,6 +173,10 @@
 		}))
 	);
 
+	const objectDataRefreshKey = $derived.by(
+		() => `${value.apparatId}|${value.systemPartId}|${objectDataItems.length}`
+	);
+
 	const apparatItems = $derived.by((): ApparatItem[] =>
 		searchFilteredApparats.map((a) => ({
 			id: a.id,
@@ -212,12 +185,20 @@
 		}))
 	);
 
+	const apparatRefreshKey = $derived.by(
+		() => `${value.objectDataId}|${value.systemPartId}|${apparatItems.length}`
+	);
+
 	const systemPartItems = $derived.by((): SystemPartItem[] =>
 		searchFilteredSystemParts.map((sp) => ({
 			id: sp.id,
 			label: `${sp.short_name} - ${sp.name}`,
 			raw: sp
 		}))
+	);
+
+	const systemPartRefreshKey = $derived.by(
+		() => `${value.objectDataId}|${value.apparatId}|${systemPartItems.length}`
 	);
 
 	async function fetchOptions(isUserRetry: boolean) {
@@ -313,6 +294,7 @@
 				}}
 				fetchById={async (id: string) => allObjectDataItems.find((i) => i.id === id) ?? null}
 				labelKey="label"
+				refreshKey={objectDataRefreshKey}
 				width="w-full"
 				value={value.objectDataId}
 				onValueChange={handleObjectDataChange}
@@ -340,6 +322,7 @@
 				}}
 				fetchById={async (id: string) => allApparatItems.find((i) => i.id === id) ?? null}
 				labelKey="label"
+				refreshKey={apparatRefreshKey}
 				width="w-full"
 				value={value.apparatId}
 				onValueChange={handleApparatChange}
@@ -367,6 +350,7 @@
 				}}
 				fetchById={async (id: string) => allSystemPartItems.find((i) => i.id === id) ?? null}
 				labelKey="label"
+				refreshKey={systemPartRefreshKey}
 				width="w-full"
 				value={value.systemPartId}
 				onValueChange={handleSystemPartChange}

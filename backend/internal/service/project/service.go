@@ -47,6 +47,12 @@ func (s *Service) Create(project *domainProject.Project) error {
 		return err
 	}
 
+	if project.CreatorID != uuid.Nil {
+		if err := s.repo.AddUser(project.ID, project.CreatorID); err != nil {
+			return err
+		}
+	}
+
 	// Copy ObjectData templates
 	templates, err := s.objectDataRepo.GetTemplates()
 	if err != nil {
@@ -299,6 +305,29 @@ func (s *Service) RemoveObjectData(projectID, objectDataID uuid.UUID) (*domainFa
 	}
 	return obj, nil
 }
+
+func (s *Service) CanAccessProject(requesterID, projectID uuid.UUID) (bool, error) {
+	project, err := domain.GetByID(s.repo, projectID)
+	if err != nil {
+		return false, err
+	}
+
+	if project.CreatorID == requesterID {
+		return true, nil
+	}
+
+	users, err := s.userRepo.GetByIds([]uuid.UUID{requesterID})
+	if err != nil {
+		return false, err
+	}
+
+	if len(users) > 0 && domainUser.IsAdmin(users[0].Role) {
+		return true, nil
+	}
+
+	return s.repo.HasUser(projectID, requesterID)
+}
+
 func (s *Service) GetByIds(ids []uuid.UUID) ([]*domainProject.Project, error) {
 	return s.repo.GetByIds(ids)
 }
@@ -315,13 +344,25 @@ func (s *Service) DeleteByID(id uuid.UUID) error {
 	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
-func (s *Service) List(page, limit int, search string) (*domain.PaginatedList[domainProject.Project], error) {
+func (s *Service) List(requesterID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainProject.Project], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
-	return s.repo.GetPaginatedList(domain.PaginationParams{
+
+	users, err := s.userRepo.GetByIds([]uuid.UUID{requesterID})
+	if err != nil {
+		return nil, err
+	}
+
+	params := domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,
 		Search: search,
-	})
+	}
+
+	if len(users) > 0 && domainUser.IsAdmin(users[0].Role) {
+		return s.repo.GetPaginatedList(params)
+	}
+
+	return s.repo.GetPaginatedListForUser(params, requesterID)
 }
 
 func (s *Service) ListControlCabinets(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error) {

@@ -50,6 +50,22 @@ type Services struct {
 
 // NewServices creates facility services using a factory-style constructor.
 func NewServices(repos Repositories) *Services {
+	fieldDeviceService := NewFieldDeviceService(
+		repos.FieldDevices,
+		repos.SPSControllerSystemTypes,
+		repos.SPSControllers,
+		repos.ControlCabinets,
+		repos.SystemTypes,
+		repos.Buildings,
+		repos.Apparats,
+		repos.SystemParts,
+		repos.Specifications,
+		repos.BacnetObjects,
+		repos.ObjectData,
+		repos.AlarmTypes,
+		repos.BacnetObjectAlarmValues,
+	)
+
 	return &Services{
 		Building: NewBuildingService(
 			repos.Buildings,
@@ -72,21 +88,7 @@ func NewServices(repos Repositories) *Services {
 			repos.BacnetObjects,
 			repos.Specifications,
 		),
-		FieldDevice: NewFieldDeviceService(
-			repos.FieldDevices,
-			repos.SPSControllerSystemTypes,
-			repos.SPSControllers,
-			repos.ControlCabinets,
-			repos.SystemTypes,
-			repos.Buildings,
-			repos.Apparats,
-			repos.SystemParts,
-			repos.Specifications,
-			repos.BacnetObjects,
-			repos.ObjectData,
-			repos.AlarmTypes,
-			repos.BacnetObjectAlarmValues,
-		),
+		FieldDevice: fieldDeviceService,
 		BacnetObject: NewBacnetObjectService(
 			repos.BacnetObjects,
 			repos.FieldDevices,
@@ -116,6 +118,7 @@ func NewServices(repos Repositories) *Services {
 			repos.SPSControllerSystemTypes,
 			repos.SystemTypes,
 			repos.FieldDevices,
+			fieldDeviceService,
 			repos.Specifications,
 			repos.BacnetObjects,
 		),

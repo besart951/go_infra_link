@@ -289,8 +289,10 @@
 
 			// Map backend errors to rows
 			const newErrors = new Map<number, FieldDeviceRowError>();
+			const failedIndices = new Set<number>();
 			response.results.forEach((result) => {
 				if (!result.success && result.index < rows.length) {
+					failedIndices.add(result.index);
 					newErrors.set(result.index, {
 						message: result.error,
 						field: (result.error_field as FieldDeviceRowError['field']) || ''
@@ -300,6 +302,27 @@
 			rowErrors = newErrors;
 
 			if (response.failure_count > 0) {
+				if (failedIndices.size > 0) {
+					const indexMap = new Map<number, number>();
+					const failedRows: FieldDeviceRowData[] = [];
+					rows.forEach((row, idx) => {
+						if (failedIndices.has(idx)) {
+							indexMap.set(idx, failedRows.length);
+							failedRows.push(row);
+						}
+					});
+
+					const remappedErrors = new Map<number, FieldDeviceRowError>();
+					newErrors.forEach((error, idx) => {
+						const nextIndex = indexMap.get(idx);
+						if (nextIndex !== undefined) {
+							remappedErrors.set(nextIndex, error);
+						}
+					});
+
+					rows = failedRows;
+					rowErrors = remappedErrors;
+				}
 				addToast(
 					translate('field_device.multi_create.toasts.partial_created', {
 						success: response.success_count,
@@ -478,8 +501,14 @@
 	): Promise<SPSControllerSystemType | null> {
 		try {
 			return await spsUseCase.getSystemType(id);
-		} catch {
-			return null;
+		} catch (err) {
+			if (err instanceof ApiException && err.status === 404) {
+				if (selection.spsControllerSystemTypeId === id) {
+					handleSpsSystemTypeChange('');
+				}
+				return null;
+			}
+			throw err;
 		}
 	}
 

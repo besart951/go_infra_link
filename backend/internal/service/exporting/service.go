@@ -180,7 +180,8 @@ func (s *Service) process(ctx context.Context, jobID uuid.UUID) error {
 	}
 
 	outputType := domainExport.OutputTypeExcel
-	if total > s.cfg.SingleFileDeviceLimit {
+	cabinetCount := uniqueControlCabinetCount(controllers)
+	if cabinetCount > 1 || total > s.cfg.SingleFileDeviceLimit {
 		outputType = domainExport.OutputTypeZip
 	}
 
@@ -250,4 +251,12 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func uniqueControlCabinetCount(controllers []domainExport.Controller) int {
+	unique := make(map[uuid.UUID]struct{}, len(controllers))
+	for _, controller := range controllers {
+		unique[controller.ControlCabinetID] = struct{}{}
+	}
+	return len(unique)
 }

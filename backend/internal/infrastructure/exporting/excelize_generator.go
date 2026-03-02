@@ -205,6 +205,8 @@ func (g *ExcelizeGenerator) GenerateZipByCabinet(ctx context.Context, outputPath
 		byCabinet[controller.ControlCabinetID] = append(byCabinet[controller.ControlCabinetID], controller)
 	}
 
+	usedEntryNames := map[string]struct{}{}
+
 	for cabinetID, cabinetControllers := range byCabinet {
 		select {
 		case <-ctx.Done():
@@ -224,7 +226,8 @@ func (g *ExcelizeGenerator) GenerateZipByCabinet(ctx context.Context, outputPath
 			return err
 		}
 
-		entryName := fmt.Sprintf("control-cabinet-%s.xlsx", cabinetID.String())
+		entryName := safeCabinetFileName(cabinetControllers[0], cabinetID)
+		entryName = ensureUniqueZipEntryName(entryName, usedEntryNames)
 		entry, err := zw.Create(entryName)
 		if err != nil {
 			_ = os.Remove(tmpPath)
@@ -302,7 +305,7 @@ func firstLine(ctrl domainExport.Controller, device domainFacility.FieldDevice) 
 
 	row := []any{
 		buildBacnetObjectName(ctrl, device, ""),
-		buildDescription(device, ""),
+		buildFieldDeviceDescription(device),
 		"",
 		"",
 		strPtr(device.BMK),
@@ -548,6 +551,60 @@ func sortedControllers(controllers []domainExport.Controller) []domainExport.Con
 		return out[i].ControlCabinetID.String() < out[j].ControlCabinetID.String()
 	})
 	return out
+}
+
+func buildFieldDeviceDescription(device domainFacility.FieldDevice) string {
+	parts := filterEmpty([]string{
+		strings.TrimSpace(device.SystemPart.Name),
+		strings.TrimSpace(device.Apparat.Name),
+		strings.TrimSpace(strPtr(device.TextFix)),
+	})
+	return strings.Join(parts, " ")
+}
+
+func safeCabinetFileName(ctrl domainExport.Controller, cabinetID uuid.UUID) string {
+	name := strings.Join(filterEmpty([]string{
+		strings.TrimSpace(ctrl.IWSCode),
+		fmt.Sprintf("%d", ctrl.BuildingGroup),
+		strings.TrimSpace(ctrl.ControlCabinetNr),
+	}), "_")
+
+	if name == "" {
+		name = "cabinet-" + ctrl.ControlCabinetID.String()[:8]
+	}
+
+	invalid := []string{"\\", "/", "*", "?", ":", "[", "]", "<", ">", "|", "\""}
+	for _, ch := range invalid {
+		name = strings.ReplaceAll(name, ch, "-")
+	}
+
+	name = strings.TrimSpace(name)
+	if name == "" {
+		name = "cabinet-" + cabinetID.String()[:8]
+	}
+
+	if len(name) > 120 {
+		name = name[:120]
+	}
+
+	return name + ".xlsx"
+}
+
+func ensureUniqueZipEntryName(base string, used map[string]struct{}) string {
+	if _, exists := used[base]; !exists {
+		used[base] = struct{}{}
+		return base
+	}
+
+	for i := 2; ; i++ {
+		ext := filepath.Ext(base)
+		nameOnly := strings.TrimSuffix(base, ext)
+		candidate := fmt.Sprintf("%s-%d%s", nameOnly, i, ext)
+		if _, exists := used[candidate]; !exists {
+			used[candidate] = struct{}{}
+			return candidate
+		}
+	}
 }
 
 func safeSheetName(ga string, id uuid.UUID) string {

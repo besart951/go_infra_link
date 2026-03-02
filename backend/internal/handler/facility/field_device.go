@@ -7,15 +7,17 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/gin-gonic/gin"
 )
 
 type FieldDeviceHandler struct {
-	service FieldDeviceService
+	service       FieldDeviceService
+	projectAccess ProjectAccessService
 }
 
-func NewFieldDeviceHandler(service FieldDeviceService) *FieldDeviceHandler {
-	return &FieldDeviceHandler{service: service}
+func NewFieldDeviceHandler(service FieldDeviceService, projectAccess ProjectAccessService) *FieldDeviceHandler {
+	return &FieldDeviceHandler{service: service, projectAccess: projectAccess}
 }
 
 // MultiCreateFieldDevices godoc
@@ -220,6 +222,27 @@ func (h *FieldDeviceHandler) GetFieldDeviceOptions(c *gin.Context) {
 func (h *FieldDeviceHandler) GetFieldDeviceOptionsForProject(c *gin.Context) {
 	projectID, ok := parseUUIDParam(c, "id")
 	if !ok {
+		return
+	}
+
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return
+	}
+
+	hasAccess, err := h.projectAccess.CanAccessProject(userID, projectID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			respondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
+			return
+		}
+		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
+		return
+	}
+
+	if !hasAccess {
+		respondLocalizedError(c, http.StatusForbidden, "forbidden", "errors.forbidden")
 		return
 	}
 

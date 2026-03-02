@@ -13,13 +13,23 @@
 
 	const t = createTranslator();
 	const bacnetObjects = $derived(objectData?.bacnet_objects ?? []);
+	let isExpanded = $state(false);
+	let lastObjectDataId = $state<string | null>(null);
+
+	$effect(() => {
+		const currentId = objectData?.id ?? null;
+		if (currentId !== lastObjectDataId) {
+			isExpanded = false;
+			lastObjectDataId = currentId;
+		}
+	});
 
 	function noop() {}
 </script>
 
 {#if objectData}
 	<div class="mt-4">
-		<details class="rounded-md border bg-muted/20" open>
+		<details class="rounded-md border bg-muted/20" bind:open={isExpanded}>
 			<summary class="cursor-pointer list-none px-4 py-3 text-sm font-medium">
 				<div class="flex items-center justify-between gap-3">
 					<span>{$t('field_device.multi_create.object_data_preview.title')}</span>
