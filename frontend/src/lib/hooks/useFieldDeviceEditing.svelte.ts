@@ -189,6 +189,10 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 				update.description = changes.description;
 				hasChanges = true;
 			}
+			if ('text_fix' in changes) {
+				update.text_fix = changes.text_fix;
+				hasChanges = true;
+			}
 			if ('apparat_nr' in changes) {
 				update.apparat_nr = changes.apparat_nr;
 				hasChanges = true;
@@ -234,6 +238,9 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 			}
 			if ('description' in changes) {
 				updated = { ...updated, description: changes.description };
+			}
+			if ('text_fix' in changes) {
+				updated = { ...updated, text_fix: changes.text_fix as string | undefined };
 			}
 			if ('apparat_nr' in changes && changes.apparat_nr !== undefined) {
 				updated = { ...updated, apparat_nr: String(changes.apparat_nr) };
@@ -347,6 +354,59 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 		return null;
 	}
 
+	function getFirstFieldValidationToast(
+		fields: Record<string, string> | undefined,
+		fallback = 'Fix validation errors before saving.'
+	): string {
+		if (!fields) return fallback;
+		const first = Object.entries(fields)[0];
+		if (!first) return fallback;
+		return `error.${first[0]}: ${first[1]}`;
+	}
+
+	function getFirstEditValidationToast(
+		errors: Map<string, EditErrorInfo>,
+		fallback = 'Fix validation errors before saving.'
+	): string {
+		for (const info of errors.values()) {
+			if (!info?.fields) continue;
+			const first = Object.entries(info.fields)[0];
+			if (first) {
+				return `error.${first[0]}: ${first[1]}`;
+			}
+		}
+		return fallback;
+	}
+
+	function getFirstBacnetClientValidationToast(
+		deviceId?: string,
+		fallback = 'Fix validation errors before saving.'
+	): string {
+		if (deviceId) {
+			const deviceErrors = bacnetClientErrors.get(deviceId);
+			if (deviceErrors) {
+				for (const [objectId, fieldErrors] of deviceErrors.entries()) {
+					const first = Object.entries(fieldErrors)[0];
+					if (first) {
+						return `error.bacnet_objects.${objectId}.${first[0]}: ${first[1]}`;
+					}
+				}
+			}
+			return fallback;
+		}
+
+		for (const deviceErrors of bacnetClientErrors.values()) {
+			for (const [objectId, fieldErrors] of deviceErrors.entries()) {
+				const first = Object.entries(fieldErrors)[0];
+				if (first) {
+					return `error.bacnet_objects.${objectId}.${first[0]}: ${first[1]}`;
+				}
+			}
+		}
+
+		return fallback;
+	}
+
 	function isFieldDirty(deviceId: string, field: keyof UpdateFieldDeviceRequest): boolean {
 		const edit = pendingEdits.get(deviceId);
 		return edit ? field in edit : false;
@@ -388,8 +448,21 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 		if (errorInfo.fields && Object.keys(errorInfo.fields).length > 0) {
 			if (errorInfo.fields[field]) return errorInfo.fields[field];
 			if (errorInfo.fields[`fielddevice.${field}`]) return errorInfo.fields[`fielddevice.${field}`];
-			if (errorInfo.fields[`specification.${field}`])
+			if (errorInfo.fields[`specification.${field}`]) {
 				return errorInfo.fields[`specification.${field}`];
+			}
+			if (errorInfo.fields[`data.fielddevice.${field}`]) {
+				return errorInfo.fields[`data.fielddevice.${field}`];
+			}
+			if (errorInfo.fields[`error.fielddevice.${field}`]) {
+				return errorInfo.fields[`error.fielddevice.${field}`];
+			}
+			if (errorInfo.fields[`data.specification.${field}`]) {
+				return errorInfo.fields[`data.specification.${field}`];
+			}
+			if (errorInfo.fields[`error.specification.${field}`]) {
+				return errorInfo.fields[`error.specification.${field}`];
+			}
 			return undefined;
 		}
 
@@ -610,7 +683,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 			}
 		}
 		if (hasClientErrors) {
-			addToast('Fix validation errors before saving.', 'error');
+			addToast(getFirstBacnetClientValidationToast(), 'error');
 			return;
 		}
 
@@ -635,7 +708,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 
 		if (updates.length === 0) {
 			editErrors = nextErrors;
-			addToast('Fix validation errors before saving.', 'error');
+			addToast(getFirstEditValidationToast(nextErrors), 'error');
 			return;
 		}
 
@@ -662,7 +735,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 					if (r.fields) {
 						const objErrors = new Map<string, Record<string, string>>();
 						for (const [fieldPath, msg] of Object.entries(r.fields)) {
-							const match = fieldPath.match(/^bacnet_objects\.([0-9a-f-]+)\.(.+)$/i);
+							const match = fieldPath.match(/(?:^|\.)bacnet_objects\.([0-9a-f-]+)\.(.+)$/i);
 							if (match) {
 								const objId = match[1];
 								const field = match[2];
@@ -732,6 +805,9 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 						}
 						if ('description' in changes && !failedFields.has('description')) {
 							updated = { ...updated, description: changes.description };
+						}
+						if ('text_fix' in changes && !failedFields.has('text_fix')) {
+							updated = { ...updated, text_fix: changes.text_fix as string | undefined };
 						}
 						if (
 							'apparat_nr' in changes &&
@@ -865,6 +941,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 					if (entireFieldDeviceFailed) {
 						if ('bmk' in changes) onlyFailedFields.bmk = changes.bmk;
 						if ('description' in changes) onlyFailedFields.description = changes.description;
+						if ('text_fix' in changes) onlyFailedFields.text_fix = changes.text_fix;
 						if ('apparat_nr' in changes) onlyFailedFields.apparat_nr = changes.apparat_nr;
 						if ('apparat_id' in changes) onlyFailedFields.apparat_id = changes.apparat_id;
 						if ('system_part_id' in changes)
@@ -876,6 +953,9 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 						}
 						if ('description' in changes && failedFields.has('description')) {
 							onlyFailedFields.description = changes.description;
+						}
+						if ('text_fix' in changes && failedFields.has('text_fix')) {
+							onlyFailedFields.text_fix = changes.text_fix;
 						}
 						if ('apparat_nr' in changes && failedFields.has('apparat_nr')) {
 							onlyFailedFields.apparat_nr = changes.apparat_nr;
@@ -977,7 +1057,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 		const clientError = validatePendingEdits(device.id);
 		if (clientError) {
 			setEditError(device.id, clientError);
-			addToast('Fix validation errors before saving.', 'error');
+			addToast(getFirstFieldValidationToast(clientError.fields), 'error');
 			return;
 		}
 		setEditError(device.id);
@@ -1001,7 +1081,13 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 			}
 
 			setEditError(device.id, { message: item?.error, fields: item?.fields });
-			addToast(item?.error || 'Update failed. Check highlighted fields.', 'error');
+			addToast(
+				getFirstFieldValidationToast(
+					item?.fields,
+					item?.error || 'Update failed. Check highlighted fields.'
+				),
+				'error'
+			);
 		} catch (error: unknown) {
 			const err = error as Error;
 			addToast(`Update failed: ${err.message}`, 'error');
@@ -1016,14 +1102,14 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 		if (!update) return;
 
 		if (!validateBacnetEdits([device], device.id)) {
-			addToast('Fix validation errors before saving.', 'error');
+			addToast(getFirstBacnetClientValidationToast(device.id), 'error');
 			return;
 		}
 
 		const clientError = validatePendingEdits(device.id);
 		if (clientError) {
 			setEditError(device.id, clientError);
-			addToast('Fix validation errors before saving.', 'error');
+			addToast(getFirstFieldValidationToast(clientError.fields), 'error');
 			return;
 		}
 		setEditError(device.id);
@@ -1061,7 +1147,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 
 			const objErrors = new Map<string, Record<string, string>>();
 			for (const [fieldPath, msg] of Object.entries(errorFields)) {
-				const match = fieldPath.match(/^bacnet_objects\.([0-9a-f-]+)\.(.+)$/i);
+				const match = fieldPath.match(/(?:^|\.)bacnet_objects\.([0-9a-f-]+)\.(.+)$/i);
 				if (!match) continue;
 				const objId = match[1];
 				const field = match[2];
@@ -1075,7 +1161,13 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 				bacnetFieldErrors = nextBacnetErrors;
 			}
 
-			addToast(item?.error || 'Update failed. Check highlighted fields.', 'error');
+			addToast(
+				getFirstFieldValidationToast(
+					item?.fields,
+					item?.error || 'Update failed. Check highlighted fields.'
+				),
+				'error'
+			);
 		} catch (error: unknown) {
 			const err = error as Error;
 			addToast(`Update failed: ${err.message}`, 'error');

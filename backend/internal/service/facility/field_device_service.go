@@ -1104,6 +1104,9 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 		if update.Description != nil {
 			clone.Description = update.Description
 		}
+		if update.TextFix != nil {
+			clone.TextFix = update.TextFix
+		}
 		if update.ApparatNr != nil {
 			clone.ApparatNr = *update.ApparatNr
 		}
@@ -1156,7 +1159,7 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 			continue
 		}
 
-		hasBaseFieldUpdates := update.BMK != nil || update.Description != nil || update.ApparatNr != nil || update.ApparatID != nil || update.SystemPartID != nil
+		hasBaseFieldUpdates := update.BMK != nil || update.Description != nil || update.TextFix != nil || update.ApparatNr != nil || update.ApparatID != nil || update.SystemPartID != nil
 		phaseErrors := make(map[string]string)
 		phaseSuccesses := 0
 		totalPhases := 0

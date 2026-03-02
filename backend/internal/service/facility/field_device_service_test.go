@@ -400,6 +400,10 @@ func intPtr(value int) *int {
 	return &value
 }
 
+func stringPtr(value string) *string {
+	return &value
+}
+
 func newFieldDevice(
 	id uuid.UUID,
 	spsControllerSystemTypeID uuid.UUID,
@@ -775,5 +779,81 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_DifferentSystemPa
 	}
 	if fieldDeviceRepo.items[fd1ID].ApparatNr != 2 {
 		t.Fatalf("expected apparat_nr to update to 2, got %d", fieldDeviceRepo.items[fd1ID].ApparatNr)
+	}
+}
+
+func TestFieldDeviceService_BulkUpdate_TextFixOnly_Succeeds(t *testing.T) {
+	fd1ID := uuid.New()
+	fd2ID := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+	spsSystemTypeID := uuid.New()
+	systemTypeID := uuid.New()
+
+	fieldDeviceRepo := &fakeFieldDeviceStore{
+		items: map[uuid.UUID]*domainFacility.FieldDevice{
+			fd1ID: newFieldDevice(fd1ID, spsSystemTypeID, apparatID, systemPartID, 1),
+			fd2ID: newFieldDevice(fd2ID, spsSystemTypeID, apparatID, systemPartID, 2),
+		},
+	}
+	spsSystemTypeRepo := &fakeSpsControllerSystemTypeRepo{
+		items: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+			spsSystemTypeID: {
+				Base:         domain.Base{ID: spsSystemTypeID},
+				SystemTypeID: systemTypeID,
+			},
+		},
+	}
+	systemTypeRepo := &fakeSystemTypeRepo{
+		items: map[uuid.UUID]*domainFacility.SystemType{
+			systemTypeID: {Base: domain.Base{ID: systemTypeID}},
+		},
+	}
+	apparatRepo := &fakeApparatRepo{
+		items: map[uuid.UUID]*domainFacility.Apparat{
+			apparatID: {Base: domain.Base{ID: apparatID}},
+		},
+	}
+	systemPartRepo := &fakeSystemPartRepo{
+		items: map[uuid.UUID]*domainFacility.SystemPart{
+			systemPartID: {Base: domain.Base{ID: systemPartID}},
+		},
+	}
+
+	svc := facility.NewFieldDeviceService(
+		fieldDeviceRepo,
+		spsSystemTypeRepo,
+		nil,
+		nil,
+		systemTypeRepo,
+		nil,
+		apparatRepo,
+		systemPartRepo,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	updates := []domainFacility.BulkFieldDeviceUpdate{
+		{ID: fd1ID, TextFix: stringPtr("klj")},
+		{ID: fd2ID, TextFix: stringPtr("kj")},
+	}
+
+	result := svc.BulkUpdate(updates)
+
+	if result.FailureCount != 0 {
+		t.Fatalf("expected 0 failures, got %d (results=%+v)", result.FailureCount, result.Results)
+	}
+	if result.SuccessCount != 2 {
+		t.Fatalf("expected 2 successes, got %d", result.SuccessCount)
+	}
+
+	if fieldDeviceRepo.items[fd1ID].TextFix == nil || *fieldDeviceRepo.items[fd1ID].TextFix != "klj" {
+		t.Fatalf("expected fd1 text_fix=klj, got %+v", fieldDeviceRepo.items[fd1ID].TextFix)
+	}
+	if fieldDeviceRepo.items[fd2ID].TextFix == nil || *fieldDeviceRepo.items[fd2ID].TextFix != "kj" {
+		t.Fatalf("expected fd2 text_fix=kj, got %+v", fieldDeviceRepo.items[fd2ID].TextFix)
 	}
 }
