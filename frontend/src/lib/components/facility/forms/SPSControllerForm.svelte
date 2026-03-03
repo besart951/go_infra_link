@@ -521,7 +521,8 @@
 					gateway: gateway || undefined,
 					vlan: vlan || undefined,
 					control_cabinet_id,
-					system_types: systemTypes.map(({ system_type_id, number, document_name }) => ({
+					system_types: systemTypes.map(({ id, system_type_id, number, document_name }) => ({
+						id,
 						system_type_id,
 						number,
 						document_name
@@ -537,7 +538,8 @@
 					gateway: gateway || undefined,
 					vlan: vlan || undefined,
 					control_cabinet_id,
-					system_types: systemTypes.map(({ system_type_id, number, document_name }) => ({
+					system_types: systemTypes.map(({ id, system_type_id, number, document_name }) => ({
+						id,
 						system_type_id,
 						number,
 						document_name

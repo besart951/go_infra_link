@@ -581,39 +581,6 @@ func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.
 	return nil
 }
 
-func (s *FieldDeviceService) initializeAlarmValuesForBacnetObject(bacnetObject *domainFacility.BacnetObject) error {
-	if bacnetObject == nil || bacnetObject.AlarmTypeID == nil {
-		return nil
-	}
-
-	alarmType, err := s.alarmTypeRepo.GetWithFields(*bacnetObject.AlarmTypeID)
-	if err != nil || alarmType == nil {
-		return err
-	}
-
-	values := make([]domainFacility.BacnetObjectAlarmValue, 0, len(alarmType.Fields))
-	for _, field := range alarmType.Fields {
-		value := domainFacility.BacnetObjectAlarmValue{
-			BacnetObjectID:   bacnetObject.ID,
-			AlarmTypeFieldID: field.ID,
-			UnitID:           field.DefaultUnitID,
-			Source:           domainFacility.AlarmValueSourceDefault,
-		}
-
-		if field.DefaultValueJSON != nil && field.AlarmField != nil {
-			applyAlarmDefaultValue(&value, field.AlarmField.DataType, *field.DefaultValueJSON)
-		}
-
-		values = append(values, value)
-	}
-
-	if len(values) == 0 {
-		return nil
-	}
-
-	return s.bacnetAlarmValueRepo.ReplaceForBacnetObject(bacnetObject.ID, values)
-}
-
 func (s *FieldDeviceService) buildAlarmValuesForBacnetObjects(bacnetObjects []*domainFacility.BacnetObject) ([]*domainFacility.BacnetObjectAlarmValue, error) {
 	if len(bacnetObjects) == 0 {
 		return nil, nil

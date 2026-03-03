@@ -35,6 +35,7 @@ type UpdateSPSControllerRequest struct {
 }
 
 type SPSControllerSystemTypeInput struct {
+	ID           uuid.UUID `json:"id" binding:"omitempty"`
 	SystemTypeID uuid.UUID `json:"system_type_id" binding:"required"`
 	Number       *int      `json:"number"`
 	DocumentName *string   `json:"document_name" binding:"omitempty,max=250"`

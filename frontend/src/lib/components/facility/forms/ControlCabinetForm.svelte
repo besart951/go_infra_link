@@ -113,6 +113,16 @@
 
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		<div class="space-y-2">
+			<Label>{$t('facility.forms.control_cabinet.building_label')}</Label>
+			<div class="block">
+				<BuildingSelect bind:value={building_id} width="w-full" />
+			</div>
+			{#if combinedFieldError('building_id')}
+				<p class="text-sm text-red-500">{combinedFieldError('building_id')}</p>
+			{/if}
+		</div>
+
+		<div class="space-y-2">
 			<Label for="control_cabinet_nr">{$t('facility.forms.control_cabinet.number_label')}</Label>
 			<Input
 				id="control_cabinet_nr"
@@ -123,16 +133,6 @@
 			/>
 			{#if combinedFieldError('control_cabinet_nr')}
 				<p class="text-sm text-red-500">{combinedFieldError('control_cabinet_nr')}</p>
-			{/if}
-		</div>
-
-		<div class="space-y-2">
-			<Label>{$t('facility.forms.control_cabinet.building_label')}</Label>
-			<div class="block">
-				<BuildingSelect bind:value={building_id} width="w-full" />
-			</div>
-			{#if combinedFieldError('building_id')}
-				<p class="text-sm text-red-500">{combinedFieldError('building_id')}</p>
 			{/if}
 		</div>
 	</div>

@@ -394,54 +394,6 @@ func (s *ControlCabinetService) listSPSControllersByControlCabinetID(controlCabi
 	return items, nil
 }
 
-// nextAvailableDeviceName finds the next available device name based on the original name
-func (s *ControlCabinetService) nextAvailableDeviceName(controlCabinetID uuid.UUID, baseName string) (string, error) {
-	base := strings.TrimSpace(baseName)
-	for i := 1; i <= 9999; i++ {
-		candidate := nextIncrementedValue(base, i, 100)
-		taken, err := s.deviceNameExistsInControlCabinet(controlCabinetID, candidate, nil)
-		if err != nil {
-			return "", err
-		}
-		if !taken {
-			return candidate, nil
-		}
-	}
-
-	return "", domain.ErrConflict
-}
-
-// deviceNameExistsInControlCabinet checks if a device name exists in a control cabinet
-func (s *ControlCabinetService) deviceNameExistsInControlCabinet(controlCabinetID uuid.UUID, deviceName string, excludeID *uuid.UUID) (bool, error) {
-	page := 1
-	for {
-		result, err := s.spsControllerRepo.GetPaginatedListByControlCabinetID(controlCabinetID, domain.PaginationParams{
-			Page:  page,
-			Limit: 500,
-		})
-		if err != nil {
-			return false, err
-		}
-
-		for i := range result.Items {
-			item := result.Items[i]
-			if excludeID != nil && item.ID == *excludeID {
-				continue
-			}
-			if strings.EqualFold(strings.TrimSpace(item.DeviceName), strings.TrimSpace(deviceName)) {
-				return true, nil
-			}
-		}
-
-		if page >= result.TotalPages || len(result.Items) == 0 {
-			break
-		}
-		page++
-	}
-
-	return false, nil
-}
-
 // copySPSControllerSystemTypes copies all system types from the original SPS controller to the new one
 // Returns a map of original system type ID to new system type ID
 func (s *ControlCabinetService) copySPSControllerSystemTypes(originalSPSControllerID, newSPSControllerID uuid.UUID) (map[uuid.UUID]uuid.UUID, error) {

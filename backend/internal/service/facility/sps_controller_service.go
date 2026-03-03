@@ -263,21 +263,52 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 		return err
 	}
 
+	existingByID := make(map[uuid.UUID]*domainFacility.SPSControllerSystemType, len(existing))
 	existingBySystemType := make(map[uuid.UUID]*domainFacility.SPSControllerSystemType, len(existing))
 	for _, item := range existing {
-		existingBySystemType[item.SystemTypeID] = item
+		existingByID[item.ID] = item
+		if _, ok := existingBySystemType[item.SystemTypeID]; !ok {
+			existingBySystemType[item.SystemTypeID] = item
+		}
 	}
 
+	incomingIDs := make(map[uuid.UUID]struct{}, len(systemTypes))
 	incomingSystemTypeIDs := make(map[uuid.UUID]struct{}, len(systemTypes))
+	hasIncomingIDs := false
 	for _, st := range systemTypes {
+		if st.ID != uuid.Nil {
+			hasIncomingIDs = true
+			break
+		}
+	}
+
+	for _, st := range systemTypes {
+		if st.ID != uuid.Nil {
+			incomingIDs[st.ID] = struct{}{}
+		}
 		incomingSystemTypeIDs[st.SystemTypeID] = struct{}{}
-		if existingItem, ok := existingBySystemType[st.SystemTypeID]; ok {
-			existingItem.Number = st.Number
-			existingItem.DocumentName = st.DocumentName
-			if err := s.spsControllerSystemTyper.Update(existingItem); err != nil {
-				return err
+
+		if st.ID != uuid.Nil {
+			if existingItem, ok := existingByID[st.ID]; ok {
+				existingItem.SystemTypeID = st.SystemTypeID
+				existingItem.Number = st.Number
+				existingItem.DocumentName = st.DocumentName
+				if err := s.spsControllerSystemTyper.Update(existingItem); err != nil {
+					return err
+				}
+				continue
 			}
-			continue
+		}
+
+		if !hasIncomingIDs {
+			if existingItem, ok := existingBySystemType[st.SystemTypeID]; ok {
+				existingItem.Number = st.Number
+				existingItem.DocumentName = st.DocumentName
+				if err := s.spsControllerSystemTyper.Update(existingItem); err != nil {
+					return err
+				}
+				continue
+			}
 		}
 
 		entity := &domainFacility.SPSControllerSystemType{
@@ -292,9 +323,17 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 	}
 
 	var deleteIDs []uuid.UUID
-	for _, item := range existing {
-		if _, ok := incomingSystemTypeIDs[item.SystemTypeID]; !ok {
-			deleteIDs = append(deleteIDs, item.ID)
+	if hasIncomingIDs {
+		for _, item := range existing {
+			if _, ok := incomingIDs[item.ID]; !ok {
+				deleteIDs = append(deleteIDs, item.ID)
+			}
+		}
+	} else {
+		for _, item := range existing {
+			if _, ok := incomingSystemTypeIDs[item.SystemTypeID]; !ok {
+				deleteIDs = append(deleteIDs, item.ID)
+			}
 		}
 	}
 

@@ -21,6 +21,7 @@ export interface SPSController {
 }
 
 export interface SPSControllerSystemTypeInput {
+	id?: string;
 	system_type_id: string;
 	number?: number;
 	document_name?: string;

@@ -163,11 +163,15 @@ func applySPSControllerUpdate(target *domainFacility.SPSController, req dto.Upda
 func toSPSControllerSystemTypes(inputs []dto.SPSControllerSystemTypeInput) []domainFacility.SPSControllerSystemType {
 	items := make([]domainFacility.SPSControllerSystemType, 0, len(inputs))
 	for _, item := range inputs {
-		items = append(items, domainFacility.SPSControllerSystemType{
+		mapped := domainFacility.SPSControllerSystemType{
 			SystemTypeID: item.SystemTypeID,
 			Number:       item.Number,
 			DocumentName: item.DocumentName,
-		})
+		}
+		if item.ID != uuid.Nil {
+			mapped.ID = item.ID
+		}
+		items = append(items, mapped)
 	}
 	return items
 }

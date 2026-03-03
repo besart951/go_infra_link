@@ -59,7 +59,7 @@
 	let showMultiCreateForm = $state(false);
 	let showBulkEditPanel = $state(false);
 	let showExportPanel = $state(false);
-	let showFilterPanel = $state(true);
+	let showFilterPanel = $state(false);
 	let searchInput = $state('');
 
 	// Selection state
