@@ -24,7 +24,7 @@ RUN cp src/lib/server/set-cookie.example.ts src/lib/server/set-cookie.ts || true
 RUN pnpm build
 
 # Serve Stage
-FROM caddy:2.11.x
+FROM caddy:2.11
 
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /app/build /usr/share/caddy
