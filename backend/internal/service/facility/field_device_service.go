@@ -363,8 +363,8 @@ func (s *FieldDeviceService) ListAvailableApparatNumbers(spsControllerSystemType
 // GetFieldDeviceOptions returns all metadata needed for creating/editing field devices.
 // This implements the "Single-Fetch Metadata Strategy" to avoid multiple API calls.
 func (s *FieldDeviceService) GetFieldDeviceOptions() (*domainFacility.FieldDeviceOptions, error) {
-	// Fetch all active object datas (templates) with their apparats
-	objectDatas, err := s.objectDataRepo.GetTemplates()
+	// Fetch all active object datas (templates) with their apparats only
+	objectDatas, err := s.objectDataRepo.GetTemplatesLite()
 	if err != nil {
 		return nil, err
 	}
@@ -453,8 +453,8 @@ func (s *FieldDeviceService) GetFieldDeviceOptions() (*domainFacility.FieldDevic
 // GetFieldDeviceOptionsForProject returns all metadata needed for creating/editing field devices within a project.
 // This fetches object data that belongs to the specified project (project_id = projectID AND is_active = true).
 func (s *FieldDeviceService) GetFieldDeviceOptionsForProject(projectID uuid.UUID) (*domainFacility.FieldDeviceOptions, error) {
-	// Fetch object datas for the project with their apparats
-	objectDatas, err := s.objectDataRepo.GetForProject(projectID)
+	// Fetch object datas for the project with their apparats only
+	objectDatas, err := s.objectDataRepo.GetForProjectLite(projectID)
 	if err != nil {
 		return nil, err
 	}

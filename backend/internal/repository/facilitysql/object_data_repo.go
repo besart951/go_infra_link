@@ -19,8 +19,11 @@ type objectDataRepo struct {
 func (r *objectDataRepo) withObjectDataPreloads(query *gorm.DB) *gorm.DB {
 	return query.
 		Preload("BacnetObjects").
-		Preload("BacnetObjects.AlarmType").
 		Preload("Apparats")
+}
+
+func (r *objectDataRepo) withObjectDataLitePreloads(query *gorm.DB) *gorm.DB {
+	return query.Preload("Apparats")
 }
 
 func (r *objectDataRepo) getPaginatedListFiltered(projectID *uuid.UUID, apparatID *uuid.UUID, systemPartID *uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
@@ -214,9 +217,21 @@ func (r *objectDataRepo) GetTemplates() ([]*domainFacility.ObjectData, error) {
 	return items, err
 }
 
+func (r *objectDataRepo) GetTemplatesLite() ([]*domainFacility.ObjectData, error) {
+	var items []*domainFacility.ObjectData
+	err := r.withObjectDataLitePreloads(r.db.Where("is_active = ? AND project_id IS NULL", true)).Find(&items).Error
+	return items, err
+}
+
 func (r *objectDataRepo) GetForProject(projectID uuid.UUID) ([]*domainFacility.ObjectData, error) {
 	var items []*domainFacility.ObjectData
 	err := r.withObjectDataPreloads(r.db.Where("is_active = ? AND project_id = ?", true, projectID)).Find(&items).Error
+	return items, err
+}
+
+func (r *objectDataRepo) GetForProjectLite(projectID uuid.UUID) ([]*domainFacility.ObjectData, error) {
+	var items []*domainFacility.ObjectData
+	err := r.withObjectDataLitePreloads(r.db.Where("is_active = ? AND project_id = ?", true, projectID)).Find(&items).Error
 	return items, err
 }
 

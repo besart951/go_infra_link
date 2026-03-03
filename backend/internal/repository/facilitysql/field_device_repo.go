@@ -199,6 +199,7 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 	offset := (page - 1) * limit
 
 	query := r.db.Model(&domainFacility.FieldDevice{})
+	hasPotentialDuplicateRows := false
 
 	// Apply filters by joining through the hierarchy
 	if filters.SPSControllerSystemTypeID != nil {
@@ -229,9 +230,11 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 	if filters.ProjectID != nil {
 		query = query.Joins("JOIN project_field_devices pfd ON pfd.field_device_id = field_devices.id").
 			Where("pfd.project_id = ?", *filters.ProjectID)
+		hasPotentialDuplicateRows = true
 	} else if len(filters.ProjectIDs) > 0 {
 		query = query.Joins("JOIN project_field_devices pfd ON pfd.field_device_id = field_devices.id").
 			Where("pfd.project_id IN ?", filters.ProjectIDs)
+		hasPotentialDuplicateRows = true
 	}
 
 	// Apply search
@@ -242,16 +245,22 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 
 	// Count total (count before DISTINCT to get accurate total)
 	var total int64
-	if err := query.Count(&total).Error; err != nil {
+	totalQuery := query.Session(&gorm.Session{})
+	if hasPotentialDuplicateRows {
+		totalQuery = totalQuery.Distinct("field_devices.id")
+	}
+	if err := totalQuery.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
 	var items []domainFacility.FieldDevice
-
-	distinctIDs := query.Select("DISTINCT field_devices.id")
-	orderedQuery := r.db.
-		Model(&domainFacility.FieldDevice{}).
-		Joins("JOIN (?) ids ON ids.id = field_devices.id", distinctIDs)
+	orderedQuery := query.Session(&gorm.Session{})
+	if hasPotentialDuplicateRows {
+		distinctIDs := query.Session(&gorm.Session{}).Select("DISTINCT field_devices.id")
+		orderedQuery = r.db.
+			Model(&domainFacility.FieldDevice{}).
+			Joins("JOIN (?) ids ON ids.id = field_devices.id", distinctIDs)
+	}
 	orderedQuery = applyFieldDeviceSorting(orderedQuery, params)
 
 	if err := orderedQuery.

@@ -36,7 +36,8 @@
 		FieldDevice,
 		ObjectData,
 		SPSControllerSystemType,
-		CreateFieldDeviceRequest
+		CreateFieldDeviceRequest,
+		MultiCreateFieldDeviceResponse
 	} from '$lib/domain/facility/index.js';
 	import type { FieldDevicePreselection as PreselectionType } from '$lib/domain/facility/preselectionFilter.js';
 
@@ -287,44 +288,46 @@
 				object_data_id: selection.objectDataId || undefined
 			}));
 
-			const response = await manageUseCase.multiCreate({ field_devices: fieldDevices });
+			const rawResponse = await manageUseCase.multiCreate({ field_devices: fieldDevices });
+			const response = normalizeMultiCreateResponse(rawResponse);
 
-			// Map backend errors to rows
-			const newErrors = new Map<number, FieldDeviceRowError>();
-			const failedIndices = new Set<number>();
+			const successfulIndices = new Set<number>();
+			const backendErrors = new Map<number, FieldDeviceRowError>();
 			response.results.forEach((result) => {
-				if (!result.success && result.index < rows.length) {
-					failedIndices.add(result.index);
-					newErrors.set(result.index, {
-						message: result.error,
-						field: (result.error_field as FieldDeviceRowError['field']) || ''
-					});
+				if (result.index < 0 || result.index >= rows.length) return;
+
+				if (result.success) {
+					successfulIndices.add(result.index);
+					return;
+				}
+
+				backendErrors.set(result.index, {
+					message: result.error,
+					field: (result.error_field as FieldDeviceRowError['field']) || ''
+				});
+			});
+
+			const indexMap = new Map<number, number>();
+			const remainingRows: FieldDeviceRowData[] = [];
+			rows.forEach((row, idx) => {
+				if (!successfulIndices.has(idx)) {
+					indexMap.set(idx, remainingRows.length);
+					remainingRows.push(row);
 				}
 			});
-			rowErrors = newErrors;
+
+			const remappedErrors = new Map<number, FieldDeviceRowError>();
+			backendErrors.forEach((error, idx) => {
+				const nextIndex = indexMap.get(idx);
+				if (nextIndex !== undefined) {
+					remappedErrors.set(nextIndex, error);
+				}
+			});
+
+			rows = remainingRows;
+			rowErrors = remappedErrors;
 
 			if (response.failure_count > 0) {
-				if (failedIndices.size > 0) {
-					const indexMap = new Map<number, number>();
-					const failedRows: FieldDeviceRowData[] = [];
-					rows.forEach((row, idx) => {
-						if (failedIndices.has(idx)) {
-							indexMap.set(idx, failedRows.length);
-							failedRows.push(row);
-						}
-					});
-
-					const remappedErrors = new Map<number, FieldDeviceRowError>();
-					newErrors.forEach((error, idx) => {
-						const nextIndex = indexMap.get(idx);
-						if (nextIndex !== undefined) {
-							remappedErrors.set(nextIndex, error);
-						}
-					});
-
-					rows = failedRows;
-					rowErrors = remappedErrors;
-				}
 				addToast(
 					translate('field_device.multi_create.toasts.partial_created', {
 						success: response.success_count,
@@ -361,6 +364,16 @@
 		} finally {
 			submitting = false;
 		}
+	}
+
+	function normalizeMultiCreateResponse(
+		response: MultiCreateFieldDeviceResponse | { preview?: MultiCreateFieldDeviceResponse }
+	): MultiCreateFieldDeviceResponse {
+		if ('preview' in response && response.preview) {
+			return response.preview;
+		}
+
+		return response;
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────────
@@ -539,9 +552,6 @@
 		{selection}
 		{preselectionValue}
 		{submitting}
-		availableNumbersCount={availableNumbers.length}
-		{loadingAvailableNumbers}
-		showStatus={canFetchAvailableNumbers(selection)}
 		{selectedObjectData}
 		{loadingObjectDataPreview}
 		{objectDataPreviewError}

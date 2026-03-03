@@ -4,7 +4,6 @@
 	import FieldDevicePreselection from '../FieldDevicePreselection.svelte';
 	import ObjectDataBacnetPreview from './ObjectDataBacnetPreview.svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Alert from '$lib/components/ui/alert/index.js';
 	import { createTranslator } from '$lib/i18n/translator.js';
 
 	import type { ObjectData, SPSControllerSystemType } from '$lib/domain/facility/index.js';
@@ -16,9 +15,6 @@
 		selection: MultiCreateSelection;
 		preselectionValue: PreselectionType;
 		submitting: boolean;
-		availableNumbersCount: number;
-		loadingAvailableNumbers: boolean;
-		showStatus: boolean;
 		selectedObjectData: ObjectData | null;
 		loadingObjectDataPreview: boolean;
 		objectDataPreviewError?: string;
@@ -34,9 +30,6 @@
 		selection,
 		preselectionValue,
 		submitting,
-		availableNumbersCount,
-		loadingAvailableNumbers,
-		showStatus,
 		selectedObjectData,
 		loadingObjectDataPreview,
 		objectDataPreviewError,
@@ -90,31 +83,4 @@
 		loading={loadingObjectDataPreview}
 		error={objectDataPreviewError}
 	/>
-
-	{#if showStatus}
-		<div class="mt-4">
-			<Alert.Root>
-				<Alert.Description>
-					<div class="text-sm">
-						<p class="font-medium">{$t('field_device.multi_create.status.title')}</p>
-						<ul class="mt-2 space-y-1 text-muted-foreground">
-							<li>
-								• {$t('field_device.multi_create.status.available', {
-									count: availableNumbersCount
-								})}
-								{#if loadingAvailableNumbers}
-									{$t('field_device.multi_create.status.loading_suffix')}
-								{/if}
-							</li>
-							{#if availableNumbersCount === 0 && !loadingAvailableNumbers}
-								<li class="text-destructive">
-									• {$t('field_device.multi_create.status.none_available')}
-								</li>
-							{/if}
-						</ul>
-					</div>
-				</Alert.Description>
-			</Alert.Root>
-		</div>
-	{/if}
 </Card.Root>

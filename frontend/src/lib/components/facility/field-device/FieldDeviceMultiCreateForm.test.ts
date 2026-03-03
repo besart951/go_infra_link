@@ -129,4 +129,50 @@ describe('FieldDeviceMultiCreateForm', () => {
 			);
 		});
 	});
+
+	it('clears successful rows when backend wraps results in preview', async () => {
+		mockMultiCreate.mockResolvedValueOnce({
+			preview: {
+				results: [
+					{
+						index: 0,
+						success: true,
+						error: '',
+						error_field: '',
+						field_device: {
+							id: 'fd-created-preview-1',
+							apparat_nr: '11',
+							sps_controller_system_type_id: 'sps-1',
+							system_part_id: 'sp-1',
+							apparat_id: 'app-1',
+							created_at: '2026-01-01T00:00:00Z',
+							updated_at: '2026-01-01T00:00:00Z'
+						}
+					}
+				],
+				total_requests: 1,
+				success_count: 1,
+				failure_count: 0
+			}
+		});
+
+		render(FieldDeviceMultiCreateForm, {});
+
+		await fireEvent.click(screen.getByTestId('set-selection'));
+		await fireEvent.click(screen.getByTestId('set-preselection'));
+
+		await waitFor(() => {
+			expect(mockGetAvailableNumbers).toHaveBeenCalled();
+		});
+
+		await fireEvent.click(screen.getByTestId('add-row'));
+		expect(screen.getByTestId('rows-count')).toHaveTextContent('1');
+
+		await fireEvent.click(screen.getByTestId('set-row-values'));
+		await fireEvent.click(screen.getByTestId('submit-multi-create'));
+
+		await waitFor(() => {
+			expect(screen.getByTestId('rows-count')).toHaveTextContent('0');
+		});
+	});
 });

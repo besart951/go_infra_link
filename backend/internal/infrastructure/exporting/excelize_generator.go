@@ -110,13 +110,8 @@ func (g *ExcelizeGenerator) GenerateWorkbook(ctx context.Context, outputPath str
 	}
 
 	defaultSheet := f.GetSheetName(0)
-	if defaultSheet != "" {
-		if err := f.DeleteSheet(defaultSheet); err != nil {
-			return err
-		}
-	}
 
-	for _, controller := range sortedControllers(controllers) {
+	for idx, controller := range sortedControllers(controllers) {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -124,8 +119,14 @@ func (g *ExcelizeGenerator) GenerateWorkbook(ctx context.Context, outputPath str
 		}
 
 		sheetName := safeSheetName(controller.GADevice, controller.ID)
-		if _, err = f.NewSheet(sheetName); err != nil {
-			return err
+		if idx == 0 && defaultSheet != "" {
+			if err := f.SetSheetName(defaultSheet, sheetName); err != nil {
+				return err
+			}
+		} else {
+			if _, err = f.NewSheet(sheetName); err != nil {
+				return err
+			}
 		}
 		stream, err := f.NewStreamWriter(sheetName)
 		if err != nil {

@@ -10,7 +10,6 @@ import (
 type FieldDeviceStore interface {
 	FieldDeviceRepository
 
-
 	// GetIDsBySPSControllerSystemTypeIDs returns IDs of non-deleted field devices
 	// that belong to the given SPS controller system type IDs.
 	GetIDsBySPSControllerSystemTypeIDs(ids []uuid.UUID) ([]uuid.UUID, error)
