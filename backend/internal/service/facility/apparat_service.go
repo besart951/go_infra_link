@@ -9,11 +9,15 @@ import (
 )
 
 type ApparatService struct {
-	repo domainFacility.ApparatRepository
+	baseService[domainFacility.Apparat]
+	extRepo domainFacility.ApparatRepository
 }
 
 func NewApparatService(repo domainFacility.ApparatRepository) *ApparatService {
-	return &ApparatService{repo: repo}
+	return &ApparatService{
+		baseService: newBase[domainFacility.Apparat](repo, 10),
+		extRepo:     repo,
+	}
 }
 
 func (s *ApparatService) Create(apparat *domainFacility.Apparat) error {
@@ -26,21 +30,8 @@ func (s *ApparatService) Create(apparat *domainFacility.Apparat) error {
 	return s.repo.Create(apparat)
 }
 
-func (s *ApparatService) GetByID(id uuid.UUID) (*domainFacility.Apparat, error) {
-	return domain.GetByID(s.repo, id)
-}
-
 func (s *ApparatService) GetByIDs(ids []uuid.UUID) ([]*domainFacility.Apparat, error) {
-	return s.repo.GetByIds(ids)
-}
-
-func (s *ApparatService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.Apparat], error) {
-	page, limit = domain.NormalizePagination(page, limit, 10)
-	return s.repo.GetPaginatedList(domain.PaginationParams{
-		Page:   page,
-		Limit:  limit,
-		Search: search,
-	})
+	return s.extRepo.GetByIds(ids)
 }
 
 func (s *ApparatService) Update(apparat *domainFacility.Apparat) error {
@@ -53,24 +44,12 @@ func (s *ApparatService) Update(apparat *domainFacility.Apparat) error {
 	return s.repo.Update(apparat)
 }
 
-func (s *ApparatService) DeleteByID(id uuid.UUID) error {
-	return s.repo.DeleteByIds([]uuid.UUID{id})
-}
-
 func (s *ApparatService) GetSystemPartIDs(id uuid.UUID) ([]uuid.UUID, error) {
 	apparat, err := s.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
-
-	// Get the IDs from the loaded system parts
-	systemPartIDs := make([]uuid.UUID, 0, len(apparat.SystemParts))
-	for _, systemPart := range apparat.SystemParts {
-		if systemPart != nil {
-			systemPartIDs = append(systemPartIDs, systemPart.ID)
-		}
-	}
-	return systemPartIDs, nil
+	return extractIDs(apparat.SystemParts, func(sp *domainFacility.SystemPart) uuid.UUID { return sp.ID }), nil
 }
 
 func (s *ApparatService) validateRequiredFields(apparat *domainFacility.Apparat) error {
@@ -92,7 +71,6 @@ func (s *ApparatService) validateRequiredFields(apparat *domainFacility.Apparat)
 
 func (s *ApparatService) ensureUnique(apparat *domainFacility.Apparat, excludeID *uuid.UUID) error {
 	ve := domain.NewValidationError()
-
 	if strings.TrimSpace(apparat.ShortName) != "" {
 		items, err := s.repo.GetPaginatedList(domain.PaginationParams{Page: 1, Limit: 1000, Search: apparat.ShortName})
 		if err != nil {
@@ -109,7 +87,6 @@ func (s *ApparatService) ensureUnique(apparat *domainFacility.Apparat, excludeID
 			}
 		}
 	}
-
 	if strings.TrimSpace(apparat.Name) != "" {
 		items, err := s.repo.GetPaginatedList(domain.PaginationParams{Page: 1, Limit: 1000, Search: apparat.Name})
 		if err != nil {
@@ -126,7 +103,6 @@ func (s *ApparatService) ensureUnique(apparat *domainFacility.Apparat, excludeID
 			}
 		}
 	}
-
 	if len(ve.Fields) > 0 {
 		return ve
 	}

@@ -1,18 +1,24 @@
 package facility
 
 import (
-	"net/http"
-
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
 )
 
 type SystemTypeHandler struct {
-	service SystemTypeService
+	crud crudHandler[domainFacility.SystemType, dto.CreateSystemTypeRequest, dto.UpdateSystemTypeRequest]
 }
 
-func NewSystemTypeHandler(service SystemTypeService) *SystemTypeHandler {
-	return &SystemTypeHandler{service: service}
+func NewSystemTypeHandler(svc SystemTypeService) *SystemTypeHandler {
+	return &SystemTypeHandler{crud: newCRUD(
+		svc,
+		toSystemTypeModel,
+		applySystemTypeUpdate,
+		respFn(toSystemTypeResponse),
+		listRespFn(toSystemTypeListResponse),
+		"facility.system_type_not_found",
+	)}
 }
 
 // CreateSystemType godoc
@@ -26,20 +32,7 @@ func NewSystemTypeHandler(service SystemTypeService) *SystemTypeHandler {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/system-types [post]
-func (h *SystemTypeHandler) CreateSystemType(c *gin.Context) {
-	var req dto.CreateSystemTypeRequest
-	if !bindJSON(c, &req) {
-		return
-	}
-
-	systemType := toSystemTypeModel(req)
-
-	if err := h.service.Create(systemType); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
-		return
-	}
-
-	c.JSON(http.StatusCreated, toSystemTypeResponse(*systemType))
-}
+func (h *SystemTypeHandler) CreateSystemType(c *gin.Context) { h.crud.handleCreate(c) }
 
 // GetSystemType godoc
 // @Summary Get a system type by ID
@@ -51,23 +44,7 @@ func (h *SystemTypeHandler) CreateSystemType(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/system-types/{id} [get]
-func (h *SystemTypeHandler) GetSystemType(c *gin.Context) {
-	id, ok := parseUUIDParam(c, "id")
-	if !ok {
-		return
-	}
-
-	systemType, err := h.service.GetByID(id)
-	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.system_type_not_found") {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, toSystemTypeResponse(*systemType))
-}
+func (h *SystemTypeHandler) GetSystemType(c *gin.Context) { h.crud.handleGetByID(c) }
 
 // ListSystemTypes godoc
 // @Summary List system types with pagination
@@ -80,20 +57,7 @@ func (h *SystemTypeHandler) GetSystemType(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/system-types [get]
-func (h *SystemTypeHandler) ListSystemTypes(c *gin.Context) {
-	query, ok := parsePaginationQuery(c)
-	if !ok {
-		return
-	}
-
-	result, err := h.service.List(query.Page, query.Limit, query.Search)
-	if err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, toSystemTypeListResponse(result))
-}
+func (h *SystemTypeHandler) ListSystemTypes(c *gin.Context) { h.crud.handleList(c) }
 
 // UpdateSystemType godoc
 // @Summary Update a system type
@@ -108,34 +72,7 @@ func (h *SystemTypeHandler) ListSystemTypes(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/system-types/{id} [put]
-func (h *SystemTypeHandler) UpdateSystemType(c *gin.Context) {
-	id, ok := parseUUIDParam(c, "id")
-	if !ok {
-		return
-	}
-
-	var req dto.UpdateSystemTypeRequest
-	if !bindJSON(c, &req) {
-		return
-	}
-
-	systemType, err := h.service.GetByID(id)
-	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.system_type_not_found") {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-		return
-	}
-
-	applySystemTypeUpdate(systemType, req)
-
-	if err := h.service.Update(systemType); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
-		return
-	}
-
-	c.JSON(http.StatusOK, toSystemTypeResponse(*systemType))
-}
+func (h *SystemTypeHandler) UpdateSystemType(c *gin.Context) { h.crud.handleUpdate(c) }
 
 // DeleteSystemType godoc
 // @Summary Delete a system type
@@ -146,16 +83,4 @@ func (h *SystemTypeHandler) UpdateSystemType(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/system-types/{id} [delete]
-func (h *SystemTypeHandler) DeleteSystemType(c *gin.Context) {
-	id, ok := parseUUIDParam(c, "id")
-	if !ok {
-		return
-	}
-
-	if err := h.service.DeleteByID(id); err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
-		return
-	}
-
-	c.Status(http.StatusNoContent)
-}
+func (h *SystemTypeHandler) DeleteSystemType(c *gin.Context) { h.crud.handleDelete(c) }

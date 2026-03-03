@@ -1,6 +1,60 @@
 package facility
 
-import domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+import (
+	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	"github.com/google/uuid"
+)
+
+// baseService provides GetByID, List, and DeleteByID for services whose
+// repository satisfies domain.Repository[T].
+// Embed this in a concrete service struct to avoid repeating these three methods.
+type baseService[T any] struct {
+	repo         domain.Repository[T]
+	defaultLimit int
+}
+
+func newBase[T any](repo domain.Repository[T], defaultLimit int) baseService[T] {
+	return baseService[T]{repo: repo, defaultLimit: defaultLimit}
+}
+
+func (s *baseService[T]) GetByID(id uuid.UUID) (*T, error) {
+	return domain.GetByID(s.repo, id)
+}
+
+func (s *baseService[T]) List(page, limit int, search string) (*domain.PaginatedList[T], error) {
+	page, limit = domain.NormalizePagination(page, limit, s.defaultLimit)
+	return s.repo.GetPaginatedList(domain.PaginationParams{
+		Page:   page,
+		Limit:  limit,
+		Search: search,
+	})
+}
+
+func (s *baseService[T]) DeleteByID(id uuid.UUID) error {
+	return s.repo.DeleteByIds([]uuid.UUID{id})
+}
+
+
+// derefSlice converts []*T to []T by dereferencing each element.
+func derefSlice[T any](ptrs []*T) []T {
+	items := make([]T, len(ptrs))
+	for i, p := range ptrs {
+		items[i] = *p
+	}
+	return items
+}
+
+// extractIDs extracts UUIDs from a nil-safe slice of entity pointers.
+func extractIDs[T any](items []*T, id func(*T) uuid.UUID) []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(items))
+	for _, item := range items {
+		if item != nil {
+			ids = append(ids, id(item))
+		}
+	}
+	return ids
+}
 
 // Repositories groups facility repositories for service construction.
 type Repositories struct {

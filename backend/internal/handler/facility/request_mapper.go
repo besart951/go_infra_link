@@ -646,3 +646,13 @@ func applyAlarmTypeFieldUpdate(target *domainFacility.AlarmTypeField, req dto.Up
 		target.UIGroup = req.UIGroup
 	}
 }
+
+func toAlarmTypeModel(req dto.CreateAlarmTypeRequest) *domainFacility.AlarmType {
+	return &domainFacility.AlarmType{Code: req.Code, Name: req.Name}
+}
+
+func applyAlarmTypeUpdate(target *domainFacility.AlarmType, req dto.UpdateAlarmTypeRequest) {
+	if req.Name != nil {
+		target.Name = *req.Name
+	}
+}

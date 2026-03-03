@@ -412,13 +412,7 @@ func (s *FieldDeviceService) GetFieldDeviceOptions() (*domainFacility.FieldDevic
 	// Build relationship maps
 	apparatToSystemPart := make(map[uuid.UUID][]uuid.UUID)
 	for id, apparat := range apparatSet {
-		systemPartIDs := make([]uuid.UUID, 0, len(apparat.SystemParts))
-		for _, sp := range apparat.SystemParts {
-			if sp != nil {
-				systemPartIDs = append(systemPartIDs, sp.ID)
-			}
-		}
-		apparatToSystemPart[id] = systemPartIDs
+		apparatToSystemPart[id] = extractIDs(apparat.SystemParts, func(sp *domainFacility.SystemPart) uuid.UUID { return sp.ID })
 	}
 
 	objectDataToApparat := make(map[uuid.UUID][]uuid.UUID)
@@ -426,13 +420,7 @@ func (s *FieldDeviceService) GetFieldDeviceOptions() (*domainFacility.FieldDevic
 		if od == nil {
 			continue
 		}
-		apparatIDs := make([]uuid.UUID, 0, len(od.Apparats))
-		for _, app := range od.Apparats {
-			if app != nil {
-				apparatIDs = append(apparatIDs, app.ID)
-			}
-		}
-		objectDataToApparat[od.ID] = apparatIDs
+		objectDataToApparat[od.ID] = extractIDs(od.Apparats, func(a *domainFacility.Apparat) uuid.UUID { return a.ID })
 	}
 
 	// Convert maps to slices
@@ -514,13 +502,7 @@ func (s *FieldDeviceService) GetFieldDeviceOptionsForProject(projectID uuid.UUID
 	// Build relationship maps
 	apparatToSystemPart := make(map[uuid.UUID][]uuid.UUID)
 	for id, apparat := range apparatSet {
-		systemPartIDs := make([]uuid.UUID, 0, len(apparat.SystemParts))
-		for _, sp := range apparat.SystemParts {
-			if sp != nil {
-				systemPartIDs = append(systemPartIDs, sp.ID)
-			}
-		}
-		apparatToSystemPart[id] = systemPartIDs
+		apparatToSystemPart[id] = extractIDs(apparat.SystemParts, func(sp *domainFacility.SystemPart) uuid.UUID { return sp.ID })
 	}
 
 	objectDataToApparat := make(map[uuid.UUID][]uuid.UUID)
@@ -528,13 +510,7 @@ func (s *FieldDeviceService) GetFieldDeviceOptionsForProject(projectID uuid.UUID
 		if od == nil {
 			continue
 		}
-		apparatIDs := make([]uuid.UUID, 0, len(od.Apparats))
-		for _, app := range od.Apparats {
-			if app != nil {
-				apparatIDs = append(apparatIDs, app.ID)
-			}
-		}
-		objectDataToApparat[od.ID] = apparatIDs
+		objectDataToApparat[od.ID] = extractIDs(od.Apparats, func(a *domainFacility.Apparat) uuid.UUID { return a.ID })
 	}
 
 	// Convert maps to slices

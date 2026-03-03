@@ -116,3 +116,7 @@ func respondLocalizedNotFoundIf(c *gin.Context, err error, translationKey string
 func parseUUIDString(s string) (uuid.UUID, error) {
 	return uuid.Parse(s)
 }
+
+func containsIgnoreCase(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}

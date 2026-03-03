@@ -2,7 +2,6 @@ package facility
 
 import (
 	"net/http"
-	"strings"
 
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
@@ -348,15 +347,3 @@ func (h *ApparatHandler) getApparatsForObjectData(objectDataID uuid.UUID) ([]uui
 	return h.objectDataService.GetApparatIDs(objectDataID)
 }
 
-func containsIgnoreCase(s, substr string) bool {
-	return len(s) >= len(substr) &&
-		(s == substr ||
-			len(substr) == 0 ||
-			(len(s) > 0 && len(substr) > 0 &&
-				toLower(s) == toLower(substr) ||
-				strings.Contains(toLower(s), toLower(substr))))
-}
-
-func toLower(s string) string {
-	return strings.ToLower(s)
-}

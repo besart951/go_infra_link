@@ -95,11 +95,7 @@ func (s *SPSControllerService) GetByIDs(ids []uuid.UUID) ([]domainFacility.SPSCo
 	if err != nil {
 		return nil, err
 	}
-	items := make([]domainFacility.SPSController, len(spsControllers))
-	for i, item := range spsControllers {
-		items[i] = *item
-	}
-	return items, nil
+	return derefSlice(spsControllers), nil
 }
 
 func (s *SPSControllerService) CopyByID(id uuid.UUID) (*domainFacility.SPSController, error) {

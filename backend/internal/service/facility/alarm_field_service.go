@@ -5,7 +5,6 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
-	"github.com/google/uuid"
 )
 
 var alarmFieldDataTypes = map[string]struct{}{
@@ -20,11 +19,11 @@ var alarmFieldDataTypes = map[string]struct{}{
 }
 
 type AlarmFieldService struct {
-	repo domainFacility.AlarmFieldRepository
+	baseService[domainFacility.AlarmField]
 }
 
 func NewAlarmFieldService(repo domainFacility.AlarmFieldRepository) *AlarmFieldService {
-	return &AlarmFieldService{repo: repo}
+	return &AlarmFieldService{baseService: newBase[domainFacility.AlarmField](repo, 20)}
 }
 
 func (s *AlarmFieldService) Create(field *domainFacility.AlarmField) error {
@@ -34,28 +33,11 @@ func (s *AlarmFieldService) Create(field *domainFacility.AlarmField) error {
 	return s.repo.Create(field)
 }
 
-func (s *AlarmFieldService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.AlarmField], error) {
-	page, limit = domain.NormalizePagination(page, limit, 20)
-	return s.repo.GetPaginatedList(domain.PaginationParams{
-		Page:   page,
-		Limit:  limit,
-		Search: search,
-	})
-}
-
-func (s *AlarmFieldService) GetByID(id uuid.UUID) (*domainFacility.AlarmField, error) {
-	return domain.GetByID(s.repo, id)
-}
-
 func (s *AlarmFieldService) Update(field *domainFacility.AlarmField) error {
 	if err := validateAlarmField(field); err != nil {
 		return err
 	}
 	return s.repo.Update(field)
-}
-
-func (s *AlarmFieldService) DeleteByID(id uuid.UUID) error {
-	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
 func validateAlarmField(field *domainFacility.AlarmField) error {

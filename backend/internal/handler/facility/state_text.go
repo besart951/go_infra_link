@@ -1,18 +1,25 @@
 package facility
 
 import (
-	"net/http"
-
+	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
 )
 
 type StateTextHandler struct {
-	service StateTextService
+	crud crudHandler[domainFacility.StateText, dto.CreateStateTextRequest, dto.UpdateStateTextRequest]
 }
 
-func NewStateTextHandler(service StateTextService) *StateTextHandler {
-	return &StateTextHandler{service: service}
+func NewStateTextHandler(svc StateTextService) *StateTextHandler {
+	return &StateTextHandler{crud: newCRUD(
+		svc,
+		toStateTextModel,
+		applyStateTextUpdate,
+		respFn(toStateTextResponse),
+		listRespFn(toStateTextListResponse),
+		"facility.state_text_not_found",
+	)}
 }
 
 // CreateStateText godoc
@@ -25,48 +32,19 @@ func NewStateTextHandler(service StateTextService) *StateTextHandler {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/state-texts [post]
-func (h *StateTextHandler) CreateStateText(c *gin.Context) {
-	var req dto.CreateStateTextRequest
-	if !bindJSON(c, &req) {
-		return
-	}
-
-	stateText := toStateTextModel(req)
-
-	if err := h.service.Create(stateText); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
-		return
-	}
-
-	c.JSON(http.StatusCreated, toStateTextResponse(*stateText))
-}
+func (h *StateTextHandler) CreateStateText(c *gin.Context) { h.crud.handleCreate(c) }
 
 // GetStateText godoc
 // @Summary Get a state text by ID
 // @Tags facility-state-texts
 // @Produce json
 // @Param id path string true "State Text ID"
-// @Success 200 {object} StateTextResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Success 200 {object} dto.StateTextResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/state-texts/{id} [get]
-func (h *StateTextHandler) GetStateText(c *gin.Context) {
-	id, ok := parseUUIDParam(c, "id")
-	if !ok {
-		return
-	}
-
-	stateText, err := h.service.GetByID(id)
-	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.state_text_not_found") {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, toStateTextResponse(*stateText))
-}
+func (h *StateTextHandler) GetStateText(c *gin.Context) { h.crud.handleGetByID(c) }
 
 // ListStateTexts godoc
 // @Summary List state texts with pagination
@@ -75,24 +53,11 @@ func (h *StateTextHandler) GetStateText(c *gin.Context) {
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
-// @Success 200 {object} StateTextListResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Success 200 {object} dto.StateTextListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/state-texts [get]
-func (h *StateTextHandler) ListStateTexts(c *gin.Context) {
-	query, ok := parsePaginationQuery(c)
-	if !ok {
-		return
-	}
-
-	result, err := h.service.List(query.Page, query.Limit, query.Search)
-	if err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, toStateTextListResponse(result))
-}
+func (h *StateTextHandler) ListStateTexts(c *gin.Context) { h.crud.handleList(c) }
 
 // UpdateStateText godoc
 // @Summary Update a state text
@@ -106,34 +71,7 @@ func (h *StateTextHandler) ListStateTexts(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/state-texts/{id} [put]
-func (h *StateTextHandler) UpdateStateText(c *gin.Context) {
-	id, ok := parseUUIDParam(c, "id")
-	if !ok {
-		return
-	}
-
-	var req dto.UpdateStateTextRequest
-	if !bindJSON(c, &req) {
-		return
-	}
-
-	stateText, err := h.service.GetByID(id)
-	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.state_text_not_found") {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-		return
-	}
-
-	applyStateTextUpdate(stateText, req)
-
-	if err := h.service.Update(stateText); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
-		return
-	}
-
-	c.JSON(http.StatusOK, toStateTextResponse(*stateText))
-}
+func (h *StateTextHandler) UpdateStateText(c *gin.Context) { h.crud.handleUpdate(c) }
 
 // DeleteStateText godoc
 // @Summary Delete a state text
@@ -144,16 +82,7 @@ func (h *StateTextHandler) UpdateStateText(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/state-texts/{id} [delete]
-func (h *StateTextHandler) DeleteStateText(c *gin.Context) {
-	id, ok := parseUUIDParam(c, "id")
-	if !ok {
-		return
-	}
+func (h *StateTextHandler) DeleteStateText(c *gin.Context) { h.crud.handleDelete(c) }
 
-	if err := h.service.DeleteByID(id); err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
-		return
-	}
-
-	c.Status(http.StatusNoContent)
-}
+// ensure domain and dto imports are used (via type parameters above)
+var _ = (*domain.PaginatedList[domainFacility.StateText])(nil)

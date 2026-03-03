@@ -57,11 +57,7 @@ func (s *ControlCabinetService) GetByIDs(ids []uuid.UUID) ([]domainFacility.Cont
 	if err != nil {
 		return nil, err
 	}
-	items := make([]domainFacility.ControlCabinet, len(controlCabinets))
-	for i, item := range controlCabinets {
-		items[i] = *item
-	}
-	return items, nil
+	return derefSlice(controlCabinets), nil
 }
 
 func (s *ControlCabinetService) CopyByID(id uuid.UUID) (*domainFacility.ControlCabinet, error) {

@@ -54,11 +54,7 @@ func (s *BuildingService) GetByIDs(ids []uuid.UUID) ([]domainFacility.Building, 
 	if err != nil {
 		return nil, err
 	}
-	items := make([]domainFacility.Building, len(buildings))
-	for i, item := range buildings {
-		items[i] = *item
-	}
-	return items, nil
+	return derefSlice(buildings), nil
 }
 
 func (s *BuildingService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.Building], error) {

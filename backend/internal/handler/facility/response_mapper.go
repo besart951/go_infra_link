@@ -7,6 +7,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// mapItems converts a slice using fn. Eliminates repeated for-loops in list mappers.
+func mapItems[T, R any](items []T, fn func(T) R) []R {
+	result := make([]R, len(items))
+	for i, item := range items {
+		result[i] = fn(item)
+	}
+	return result
+}
+
 func toBuildingResponse(building domainFacility.Building) dto.BuildingResponse {
 	return dto.BuildingResponse{
 		ID:            building.ID,
@@ -18,20 +27,11 @@ func toBuildingResponse(building domainFacility.Building) dto.BuildingResponse {
 }
 
 func toBuildingResponses(buildings []domainFacility.Building) []dto.BuildingResponse {
-	items := make([]dto.BuildingResponse, len(buildings))
-	for i, item := range buildings {
-		items[i] = toBuildingResponse(item)
-	}
-	return items
+	return mapItems(buildings, toBuildingResponse)
 }
 
 func toBuildingListResponse(list *domain.PaginatedList[domainFacility.Building]) dto.BuildingListResponse {
-	return dto.BuildingListResponse{
-		Items:      toBuildingResponses(list.Items),
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.BuildingListResponse{Items: mapItems(list.Items, toBuildingResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toSystemTypeResponse(systemType domainFacility.SystemType) dto.SystemTypeResponse {
@@ -46,17 +46,7 @@ func toSystemTypeResponse(systemType domainFacility.SystemType) dto.SystemTypeRe
 }
 
 func toSystemTypeListResponse(list *domain.PaginatedList[domainFacility.SystemType]) dto.SystemTypeListResponse {
-	items := make([]dto.SystemTypeResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toSystemTypeResponse(item)
-	}
-
-	return dto.SystemTypeListResponse{
-		Items:      items,
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.SystemTypeListResponse{Items: mapItems(list.Items, toSystemTypeResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toSystemPartResponse(systemPart domainFacility.SystemPart) dto.SystemPartResponse {
@@ -71,17 +61,7 @@ func toSystemPartResponse(systemPart domainFacility.SystemPart) dto.SystemPartRe
 }
 
 func toSystemPartListResponse(list *domain.PaginatedList[domainFacility.SystemPart]) dto.SystemPartListResponse {
-	items := make([]dto.SystemPartResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toSystemPartResponse(item)
-	}
-
-	return dto.SystemPartListResponse{
-		Items:      items,
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.SystemPartListResponse{Items: mapItems(list.Items, toSystemPartResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toSpecificationResponse(specification domainFacility.Specification) dto.SpecificationResponse {
@@ -127,20 +107,11 @@ func toApparatResponse(apparat domainFacility.Apparat) dto.ApparatResponse {
 }
 
 func toApparatResponses(apparats []domainFacility.Apparat) []dto.ApparatResponse {
-	items := make([]dto.ApparatResponse, len(apparats))
-	for i, item := range apparats {
-		items[i] = toApparatResponse(item)
-	}
-	return items
+	return mapItems(apparats, toApparatResponse)
 }
 
 func toApparatListResponse(list *domain.PaginatedList[domainFacility.Apparat]) dto.ApparatListResponse {
-	return dto.ApparatListResponse{
-		Items:      toApparatResponses(list.Items),
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.ApparatListResponse{Items: mapItems(list.Items, toApparatResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toControlCabinetResponse(controlCabinet domainFacility.ControlCabinet) dto.ControlCabinetResponse {
@@ -154,20 +125,11 @@ func toControlCabinetResponse(controlCabinet domainFacility.ControlCabinet) dto.
 }
 
 func toControlCabinetResponses(items []domainFacility.ControlCabinet) []dto.ControlCabinetResponse {
-	responses := make([]dto.ControlCabinetResponse, len(items))
-	for i, item := range items {
-		responses[i] = toControlCabinetResponse(item)
-	}
-	return responses
+	return mapItems(items, toControlCabinetResponse)
 }
 
 func toControlCabinetListResponse(list *domain.PaginatedList[domainFacility.ControlCabinet]) dto.ControlCabinetListResponse {
-	return dto.ControlCabinetListResponse{
-		Items:      toControlCabinetResponses(list.Items),
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.ControlCabinetListResponse{Items: mapItems(list.Items, toControlCabinetResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toSPSControllerResponse(controller domainFacility.SPSController) dto.SPSControllerResponse {
@@ -188,20 +150,11 @@ func toSPSControllerResponse(controller domainFacility.SPSController) dto.SPSCon
 }
 
 func toSPSControllerResponses(items []domainFacility.SPSController) []dto.SPSControllerResponse {
-	responses := make([]dto.SPSControllerResponse, len(items))
-	for i, item := range items {
-		responses[i] = toSPSControllerResponse(item)
-	}
-	return responses
+	return mapItems(items, toSPSControllerResponse)
 }
 
 func toSPSControllerListResponse(list *domain.PaginatedList[domainFacility.SPSController]) dto.SPSControllerListResponse {
-	return dto.SPSControllerListResponse{
-		Items:      toSPSControllerResponses(list.Items),
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.SPSControllerListResponse{Items: mapItems(list.Items, toSPSControllerResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toFieldDeviceResponse(fieldDevice domainFacility.FieldDevice) dto.FieldDeviceResponse {
@@ -254,17 +207,7 @@ func toFieldDeviceResponse(fieldDevice domainFacility.FieldDevice) dto.FieldDevi
 }
 
 func toFieldDeviceListResponse(list *domain.PaginatedList[domainFacility.FieldDevice]) dto.FieldDeviceListResponse {
-	items := make([]dto.FieldDeviceResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toFieldDeviceResponse(item)
-	}
-
-	return dto.FieldDeviceListResponse{
-		Items:      items,
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.FieldDeviceListResponse{Items: mapItems(list.Items, toFieldDeviceResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toFieldDeviceOptionsResponse(options *domainFacility.FieldDeviceOptions) dto.FieldDeviceOptionsResponse {
@@ -362,11 +305,7 @@ func toBacnetObjectResponse(obj domainFacility.BacnetObject) dto.BacnetObjectRes
 }
 
 func toBacnetObjectResponses(objs []domainFacility.BacnetObject) []dto.BacnetObjectResponse {
-	items := make([]dto.BacnetObjectResponse, len(objs))
-	for i, obj := range objs {
-		items[i] = toBacnetObjectResponse(obj)
-	}
-	return items
+	return mapItems(objs, toBacnetObjectResponse)
 }
 
 func toStateTextResponse(stateText domainFacility.StateText) dto.StateTextResponse {
@@ -395,17 +334,7 @@ func toStateTextResponse(stateText domainFacility.StateText) dto.StateTextRespon
 }
 
 func toStateTextListResponse(list *domain.PaginatedList[domainFacility.StateText]) dto.StateTextListResponse {
-	items := make([]dto.StateTextResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toStateTextResponse(item)
-	}
-
-	return dto.StateTextListResponse{
-		Items:      items,
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.StateTextListResponse{Items: mapItems(list.Items, toStateTextResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toNotificationClassResponse(notificationClass domainFacility.NotificationClass) dto.NotificationClassResponse {
@@ -428,17 +357,7 @@ func toNotificationClassResponse(notificationClass domainFacility.NotificationCl
 }
 
 func toNotificationClassListResponse(list *domain.PaginatedList[domainFacility.NotificationClass]) dto.NotificationClassListResponse {
-	items := make([]dto.NotificationClassResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toNotificationClassResponse(item)
-	}
-
-	return dto.NotificationClassListResponse{
-		Items:      items,
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.NotificationClassListResponse{Items: mapItems(list.Items, toNotificationClassResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toAlarmDefinitionResponse(alarmDefinition domainFacility.AlarmDefinition) dto.AlarmDefinitionResponse {
@@ -454,17 +373,7 @@ func toAlarmDefinitionResponse(alarmDefinition domainFacility.AlarmDefinition) d
 }
 
 func toAlarmDefinitionListResponse(list *domain.PaginatedList[domainFacility.AlarmDefinition]) dto.AlarmDefinitionListResponse {
-	items := make([]dto.AlarmDefinitionResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toAlarmDefinitionResponse(item)
-	}
-
-	return dto.AlarmDefinitionListResponse{
-		Items:      items,
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.AlarmDefinitionListResponse{Items: mapItems(list.Items, toAlarmDefinitionResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toObjectDataResponse(obj domainFacility.ObjectData) dto.ObjectDataResponse {
@@ -504,17 +413,7 @@ func toObjectDataResponse(obj domainFacility.ObjectData) dto.ObjectDataResponse 
 }
 
 func toObjectDataListResponse(list *domain.PaginatedList[domainFacility.ObjectData]) dto.ObjectDataListResponse {
-	items := make([]dto.ObjectDataResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toObjectDataResponse(item)
-	}
-
-	return dto.ObjectDataListResponse{
-		Items:      items,
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.ObjectDataListResponse{Items: mapItems(list.Items, toObjectDataResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toSPSControllerSystemTypeResponse(item domainFacility.SPSControllerSystemType) dto.SPSControllerSystemTypeResponse {
@@ -532,17 +431,7 @@ func toSPSControllerSystemTypeResponse(item domainFacility.SPSControllerSystemTy
 }
 
 func toSPSControllerSystemTypeListResponse(list *domain.PaginatedList[domainFacility.SPSControllerSystemType]) dto.SPSControllerSystemTypeListResponse {
-	items := make([]dto.SPSControllerSystemTypeResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toSPSControllerSystemTypeResponse(item)
-	}
-
-	return dto.SPSControllerSystemTypeListResponse{
-		Items:      items,
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.SPSControllerSystemTypeListResponse{Items: mapItems(list.Items, toSPSControllerSystemTypeResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toUnitResponse(unit domainFacility.Unit) dto.UnitResponse {
@@ -591,57 +480,26 @@ func toAlarmTypeFieldResponse(atf domainFacility.AlarmTypeField) dto.AlarmTypeFi
 }
 
 func toAlarmTypeResponse(at domainFacility.AlarmType) dto.AlarmTypeResponse {
-	fields := make([]dto.AlarmTypeFieldResponse, len(at.Fields))
-	for i, f := range at.Fields {
-		fields[i] = toAlarmTypeFieldResponse(f)
-	}
 	return dto.AlarmTypeResponse{
 		ID:        at.ID,
 		Code:      at.Code,
 		Name:      at.Name,
-		Fields:    fields,
+		Fields:    mapItems(at.Fields, toAlarmTypeFieldResponse),
 		CreatedAt: at.CreatedAt,
 		UpdatedAt: at.UpdatedAt,
 	}
 }
 
 func toAlarmTypeListResponse(list *domain.PaginatedList[domainFacility.AlarmType]) dto.AlarmTypeListResponse {
-	items := make([]dto.AlarmTypeResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toAlarmTypeResponse(item)
-	}
-	return dto.AlarmTypeListResponse{
-		Items:      items,
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.AlarmTypeListResponse{Items: mapItems(list.Items, toAlarmTypeResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toUnitListResponse(list *domain.PaginatedList[domainFacility.Unit]) dto.UnitListResponse {
-	items := make([]dto.UnitResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toUnitResponse(item)
-	}
-	return dto.UnitListResponse{
-		Items:      items,
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.UnitListResponse{Items: mapItems(list.Items, toUnitResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toAlarmFieldListResponse(list *domain.PaginatedList[domainFacility.AlarmField]) dto.AlarmFieldListResponse {
-	items := make([]dto.AlarmFieldResponse, len(list.Items))
-	for i, item := range list.Items {
-		items[i] = toAlarmFieldResponse(item)
-	}
-	return dto.AlarmFieldListResponse{
-		Items:      items,
-		Total:      list.Total,
-		Page:       list.Page,
-		TotalPages: list.TotalPages,
-	}
+	return dto.AlarmFieldListResponse{Items: mapItems(list.Items, toAlarmFieldResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
 func toAlarmValueResponse(v domainFacility.BacnetObjectAlarmValue) dto.AlarmValueResponse {
@@ -662,9 +520,5 @@ func toAlarmValueResponse(v domainFacility.BacnetObjectAlarmValue) dto.AlarmValu
 }
 
 func toAlarmValuesResponse(values []domainFacility.BacnetObjectAlarmValue) dto.AlarmValuesResponse {
-	items := make([]dto.AlarmValueResponse, len(values))
-	for i, v := range values {
-		items[i] = toAlarmValueResponse(v)
-	}
-	return dto.AlarmValuesResponse{Items: items}
+	return dto.AlarmValuesResponse{Items: mapItems(values, toAlarmValueResponse)}
 }

@@ -1,18 +1,24 @@
 package facility
 
 import (
-	"net/http"
-
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/gin-gonic/gin"
 )
 
 type AlarmDefinitionHandler struct {
-	service AlarmDefinitionService
+	crud crudHandler[domainFacility.AlarmDefinition, dto.CreateAlarmDefinitionRequest, dto.UpdateAlarmDefinitionRequest]
 }
 
-func NewAlarmDefinitionHandler(service AlarmDefinitionService) *AlarmDefinitionHandler {
-	return &AlarmDefinitionHandler{service: service}
+func NewAlarmDefinitionHandler(svc AlarmDefinitionService) *AlarmDefinitionHandler {
+	return &AlarmDefinitionHandler{crud: newCRUD(
+		svc,
+		toAlarmDefinitionModel,
+		applyAlarmDefinitionUpdate,
+		respFn(toAlarmDefinitionResponse),
+		listRespFn(toAlarmDefinitionListResponse),
+		"facility.alarm_definition_not_found",
+	)}
 }
 
 // CreateAlarmDefinition godoc
@@ -25,48 +31,19 @@ func NewAlarmDefinitionHandler(service AlarmDefinitionService) *AlarmDefinitionH
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/alarm-definitions [post]
-func (h *AlarmDefinitionHandler) CreateAlarmDefinition(c *gin.Context) {
-	var req dto.CreateAlarmDefinitionRequest
-	if !bindJSON(c, &req) {
-		return
-	}
-
-	alarmDef := toAlarmDefinitionModel(req)
-
-	if err := h.service.Create(alarmDef); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
-		return
-	}
-
-	c.JSON(http.StatusCreated, toAlarmDefinitionResponse(*alarmDef))
-}
+func (h *AlarmDefinitionHandler) CreateAlarmDefinition(c *gin.Context) { h.crud.handleCreate(c) }
 
 // GetAlarmDefinition godoc
 // @Summary Get an alarm definition by ID
 // @Tags facility-alarm-definitions
 // @Produce json
 // @Param id path string true "Alarm Definition ID"
-// @Success 200 {object} AlarmDefinitionResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Success 200 {object} dto.AlarmDefinitionResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/alarm-definitions/{id} [get]
-func (h *AlarmDefinitionHandler) GetAlarmDefinition(c *gin.Context) {
-	id, ok := parseUUIDParam(c, "id")
-	if !ok {
-		return
-	}
-
-	alarmDef, err := h.service.GetByID(id)
-	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.alarm_definition_not_found") {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, toAlarmDefinitionResponse(*alarmDef))
-}
+func (h *AlarmDefinitionHandler) GetAlarmDefinition(c *gin.Context) { h.crud.handleGetByID(c) }
 
 // ListAlarmDefinitions godoc
 // @Summary List alarm definitions with pagination
@@ -75,24 +52,11 @@ func (h *AlarmDefinitionHandler) GetAlarmDefinition(c *gin.Context) {
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
-// @Success 200 {object} AlarmDefinitionListResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Success 200 {object} dto.AlarmDefinitionListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/alarm-definitions [get]
-func (h *AlarmDefinitionHandler) ListAlarmDefinitions(c *gin.Context) {
-	query, ok := parsePaginationQuery(c)
-	if !ok {
-		return
-	}
-
-	result, err := h.service.List(query.Page, query.Limit, query.Search)
-	if err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, toAlarmDefinitionListResponse(result))
-}
+func (h *AlarmDefinitionHandler) ListAlarmDefinitions(c *gin.Context) { h.crud.handleList(c) }
 
 // UpdateAlarmDefinition godoc
 // @Summary Update an alarm definition
@@ -106,34 +70,7 @@ func (h *AlarmDefinitionHandler) ListAlarmDefinitions(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/alarm-definitions/{id} [put]
-func (h *AlarmDefinitionHandler) UpdateAlarmDefinition(c *gin.Context) {
-	id, ok := parseUUIDParam(c, "id")
-	if !ok {
-		return
-	}
-
-	var req dto.UpdateAlarmDefinitionRequest
-	if !bindJSON(c, &req) {
-		return
-	}
-
-	alarmDef, err := h.service.GetByID(id)
-	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.alarm_definition_not_found") {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-		return
-	}
-
-	applyAlarmDefinitionUpdate(alarmDef, req)
-
-	if err := h.service.Update(alarmDef); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
-		return
-	}
-
-	c.JSON(http.StatusOK, toAlarmDefinitionResponse(*alarmDef))
-}
+func (h *AlarmDefinitionHandler) UpdateAlarmDefinition(c *gin.Context) { h.crud.handleUpdate(c) }
 
 // DeleteAlarmDefinition godoc
 // @Summary Delete an alarm definition
@@ -144,16 +81,4 @@ func (h *AlarmDefinitionHandler) UpdateAlarmDefinition(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/alarm-definitions/{id} [delete]
-func (h *AlarmDefinitionHandler) DeleteAlarmDefinition(c *gin.Context) {
-	id, ok := parseUUIDParam(c, "id")
-	if !ok {
-		return
-	}
-
-	if err := h.service.DeleteByID(id); err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
-		return
-	}
-
-	c.Status(http.StatusNoContent)
-}
+func (h *AlarmDefinitionHandler) DeleteAlarmDefinition(c *gin.Context) { h.crud.handleDelete(c) }

@@ -7,11 +7,11 @@ import (
 )
 
 type AlarmTypeFieldService struct {
-	repo domainFacility.AlarmTypeFieldRepository
+	baseService[domainFacility.AlarmTypeField]
 }
 
 func NewAlarmTypeFieldService(repo domainFacility.AlarmTypeFieldRepository) *AlarmTypeFieldService {
-	return &AlarmTypeFieldService{repo: repo}
+	return &AlarmTypeFieldService{baseService: newBase[domainFacility.AlarmTypeField](repo, 20)}
 }
 
 func (s *AlarmTypeFieldService) Create(item *domainFacility.AlarmTypeField) error {
@@ -21,19 +21,11 @@ func (s *AlarmTypeFieldService) Create(item *domainFacility.AlarmTypeField) erro
 	return s.repo.Create(item)
 }
 
-func (s *AlarmTypeFieldService) GetByID(id uuid.UUID) (*domainFacility.AlarmTypeField, error) {
-	return domain.GetByID(s.repo, id)
-}
-
 func (s *AlarmTypeFieldService) Update(item *domainFacility.AlarmTypeField) error {
 	if err := validateAlarmTypeField(item); err != nil {
 		return err
 	}
 	return s.repo.Update(item)
-}
-
-func (s *AlarmTypeFieldService) DeleteByID(id uuid.UUID) error {
-	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
 func validateAlarmTypeField(item *domainFacility.AlarmTypeField) error {

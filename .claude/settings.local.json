@@ -21,7 +21,8 @@
       "Bash(golangci-lint run:*)",
       "Bash(go vet:*)",
       "Bash(cat:*)",
-      "Bash(git -C \"C:/Users/besart.morina/Documents/schrott/go_infra_link\" status --short)"
+      "Bash(git -C \"C:/Users/besart.morina/Documents/schrott/go_infra_link\" status --short)",
+      "Bash"
     ]
   }
 }
