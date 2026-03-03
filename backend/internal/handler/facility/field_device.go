@@ -480,15 +480,15 @@ func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
 		}
 
 		updates[i] = domainFacility.BulkFieldDeviceUpdate{
-			ID:            item.ID,
-			BMK:           item.BMK,
-			Description:   item.Description,
-			TextFix:       item.TextFix,
-			ApparatNr:     item.ApparatNr,
-			ApparatID:     item.ApparatID,
-			SystemPartID:  item.SystemPartID,
-			Specification: spec,
-			BacnetObjects: bacnetObjs,
+			ID:              item.ID,
+			BMK:             item.BMK,
+			Description:     item.Description,
+			TextIndividuell: item.TextIndividuell,
+			ApparatNr:       item.ApparatNr,
+			ApparatID:       item.ApparatID,
+			SystemPartID:    item.SystemPartID,
+			Specification:   spec,
+			BacnetObjects:   bacnetObjs,
 		}
 	}
 

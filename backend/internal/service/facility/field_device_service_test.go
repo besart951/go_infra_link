@@ -791,7 +791,7 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_DifferentSystemPa
 	}
 }
 
-func TestFieldDeviceService_BulkUpdate_TextFixOnly_Succeeds(t *testing.T) {
+func TestFieldDeviceService_BulkUpdate_TextIndividuellOnly_Succeeds(t *testing.T) {
 	fd1ID := uuid.New()
 	fd2ID := uuid.New()
 	apparatID := uuid.New()
@@ -846,8 +846,8 @@ func TestFieldDeviceService_BulkUpdate_TextFixOnly_Succeeds(t *testing.T) {
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
-		{ID: fd1ID, TextFix: stringPtr("klj")},
-		{ID: fd2ID, TextFix: stringPtr("kj")},
+		{ID: fd1ID, TextIndividuell: stringPtr("klj")},
+		{ID: fd2ID, TextIndividuell: stringPtr("kj")},
 	}
 
 	result := svc.BulkUpdate(updates)
@@ -859,10 +859,10 @@ func TestFieldDeviceService_BulkUpdate_TextFixOnly_Succeeds(t *testing.T) {
 		t.Fatalf("expected 2 successes, got %d", result.SuccessCount)
 	}
 
-	if fieldDeviceRepo.items[fd1ID].TextFix == nil || *fieldDeviceRepo.items[fd1ID].TextFix != "klj" {
-		t.Fatalf("expected fd1 text_fix=klj, got %+v", fieldDeviceRepo.items[fd1ID].TextFix)
+	if fieldDeviceRepo.items[fd1ID].TextIndividuell == nil || *fieldDeviceRepo.items[fd1ID].TextIndividuell != "klj" {
+		t.Fatalf("expected fd1 text_fix=klj, got %+v", fieldDeviceRepo.items[fd1ID].TextIndividuell)
 	}
-	if fieldDeviceRepo.items[fd2ID].TextFix == nil || *fieldDeviceRepo.items[fd2ID].TextFix != "kj" {
-		t.Fatalf("expected fd2 text_fix=kj, got %+v", fieldDeviceRepo.items[fd2ID].TextFix)
+	if fieldDeviceRepo.items[fd2ID].TextIndividuell == nil || *fieldDeviceRepo.items[fd2ID].TextIndividuell != "kj" {
+		t.Fatalf("expected fd2 text_fix=kj, got %+v", fieldDeviceRepo.items[fd2ID].TextIndividuell)
 	}
 }

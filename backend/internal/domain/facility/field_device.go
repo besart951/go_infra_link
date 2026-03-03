@@ -10,7 +10,7 @@ type FieldDevice struct {
 	BMK                       *string
 	Description               *string
 	ApparatNr                 int
-	TextFix                   *string
+	TextIndividuell           *string
 	SPSControllerSystemTypeID uuid.UUID               `gorm:"type:uuid;not null;index"`
 	SPSControllerSystemType   SPSControllerSystemType `gorm:"foreignKey:SPSControllerSystemTypeID"`
 	SystemPartID              uuid.UUID               `gorm:"type:uuid;index"`
@@ -68,15 +68,15 @@ type FieldDeviceMultiCreateResult struct {
 
 // BulkFieldDeviceUpdate represents a single field device update in a bulk operation
 type BulkFieldDeviceUpdate struct {
-	ID            uuid.UUID
-	BMK           *string
-	Description   *string
-	TextFix       *string
-	ApparatNr     *int
-	ApparatID     *uuid.UUID
-	SystemPartID  *uuid.UUID
-	Specification *Specification
-	BacnetObjects *[]BacnetObjectPatch
+	ID              uuid.UUID
+	BMK             *string
+	Description     *string
+	TextIndividuell *string
+	ApparatNr       *int
+	ApparatID       *uuid.UUID
+	SystemPartID    *uuid.UUID
+	Specification   *Specification
+	BacnetObjects   *[]BacnetObjectPatch
 }
 
 // BulkOperationResultItem represents the result of a single item in a bulk operation

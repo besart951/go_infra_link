@@ -558,7 +558,7 @@ func buildFieldDeviceDescription(device domainFacility.FieldDevice) string {
 	parts := filterEmpty([]string{
 		strings.TrimSpace(device.SystemPart.Name),
 		strings.TrimSpace(device.Apparat.Name),
-		strings.TrimSpace(strPtr(device.TextFix)),
+		strings.TrimSpace(strPtr(device.TextIndividuell)),
 	})
 	return strings.Join(parts, " ")
 }

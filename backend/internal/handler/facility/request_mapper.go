@@ -186,7 +186,7 @@ func toFieldDeviceModel(req dto.CreateFieldDeviceRequest) *domainFacility.FieldD
 	return &domainFacility.FieldDevice{
 		BMK:                       req.BMK,
 		Description:               req.Description,
-		TextFix:                   req.TextFix,
+		TextIndividuell:           req.TextIndividuell,
 		ApparatNr:                 apparatNr,
 		SPSControllerSystemTypeID: req.SPSControllerSystemTypeID,
 		SystemPartID:              systemPartID,
@@ -201,8 +201,8 @@ func applyFieldDeviceUpdate(target *domainFacility.FieldDevice, req dto.UpdateFi
 	if req.Description != nil {
 		target.Description = req.Description
 	}
-	if req.TextFix != nil {
-		target.TextFix = req.TextFix
+	if req.TextIndividuell != nil {
+		target.TextIndividuell = req.TextIndividuell
 	}
 	if req.ApparatNr != nil {
 		target.ApparatNr = *req.ApparatNr
