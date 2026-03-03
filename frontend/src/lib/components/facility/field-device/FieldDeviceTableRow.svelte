@@ -55,14 +55,14 @@
 	function formatSPSControllerSystemType(dev: FieldDevice): string {
 		const sysType = dev.sps_controller_system_type;
 		if (!sysType) return '-';
-		
+
 		const deviceName = sysType.sps_controller_name ?? '';
 		const number =
 			sysType.number === null || sysType.number === undefined
 				? ''
 				: String(sysType.number).padStart(4, '0');
 		const docName = sysType.document_name ?? '';
-		
+
 		// Build the system type part
 		let sysTypePart = '';
 		if (number && docName) {
@@ -72,7 +72,7 @@
 		} else if (docName) {
 			sysTypePart = docName;
 		}
-		
+
 		// Combine device name with system type part
 		if (deviceName && sysTypePart) return `${deviceName}_${sysTypePart}`;
 		if (deviceName) return deviceName;
@@ -89,6 +89,11 @@
 		if (!newSystemPartId || newSystemPartId === device.system_part_id) return;
 		editing.queueEdit(device.id, 'system_part_id', newSystemPartId);
 	}
+
+	const hasBacnetErrors = $derived(
+		editing.getBacnetFieldErrors(device.id).size > 0 ||
+			editing.getBacnetClientErrors(device.id).size > 0
+	);
 </script>
 
 <Table.Row
@@ -107,7 +112,12 @@
 		<Button
 			variant="ghost"
 			size="sm"
-			class="h-6 w-6 p-0"
+			class={[
+				'h-6 w-6 p-0',
+				hasBacnetErrors ? 'text-destructive ring-1 ring-destructive/40 hover:text-destructive' : ''
+			]
+				.filter(Boolean)
+				.join(' ')}
 			onclick={onToggleExpansion}
 			title={$t('field_device.table.bacnet_expand')}
 		>
@@ -418,10 +428,10 @@
 					{$t('facility.copy')}
 				</DropdownMenu.Item>
 				{#if canPerform('delete', 'fielddevice')}
-				<DropdownMenu.Separator />
-				<DropdownMenu.Item variant="destructive" onclick={() => onDelete(device)}>
-					{$t('common.delete')}
-				</DropdownMenu.Item>
+					<DropdownMenu.Separator />
+					<DropdownMenu.Item variant="destructive" onclick={() => onDelete(device)}>
+						{$t('common.delete')}
+					</DropdownMenu.Item>
 				{/if}
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>

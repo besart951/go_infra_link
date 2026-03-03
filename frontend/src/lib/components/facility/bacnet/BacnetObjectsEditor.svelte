@@ -8,15 +8,19 @@
 		EditableSelectCell,
 		EditableBooleanCell
 	} from '$lib/components/ui/editable-cell/index.js';
+	import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import BacnetAlarmValuesEditor from './BacnetAlarmValuesEditor.svelte';
+	import { stateTextRepository } from '$lib/infrastructure/api/stateTextRepository.js';
+	import { notificationClassRepository } from '$lib/infrastructure/api/notificationClassRepository.js';
 	import {
 		BACNET_SOFTWARE_TYPES,
 		BACNET_HARDWARE_TYPES
 	} from '$lib/domain/facility/bacnet-object.js';
 	import type { BacnetObject } from '$lib/domain/facility/bacnet-object.js';
 	import type { BacnetObjectInput } from '$lib/domain/facility/field-device.js';
+	import type { StateText, NotificationClass } from '$lib/domain/facility/index.js';
 	import { createTranslator } from '$lib/i18n/translator.js';
 	import { BellRing } from '@lucide/svelte';
 
@@ -71,6 +75,15 @@
 		return (edits as Record<string, unknown>)[field] as boolean;
 	}
 
+	function getPendingIdValue(objectId: string, field: string, originalValue?: string): string {
+		const edits = pendingEdits.get(objectId);
+		if (!edits || !(field in edits)) {
+			return originalValue ?? '';
+		}
+		const value = (edits as Record<string, unknown>)[field];
+		return typeof value === 'string' ? value : '';
+	}
+
 	function hasTextIndividual(obj: BacnetObject): boolean {
 		const edits = pendingEdits.get(obj.id);
 		if (edits && 'text_individual' in edits) {
@@ -92,6 +105,58 @@
 		const alarmTypeId = pendingAlarmTypeId ?? obj.alarm_type_id ?? '';
 		return alarmTypeId.trim().length > 0;
 	}
+
+	async function fetchStateTexts(search: string): Promise<StateText[]> {
+		const res = await stateTextRepository.list({
+			pagination: { page: 1, pageSize: 20 },
+			search: { text: search }
+		});
+		return res.items;
+	}
+
+	async function fetchStateTextById(id: string): Promise<StateText> {
+		return stateTextRepository.get(id);
+	}
+
+	function formatStateTextLabel(item: StateText): string {
+		return String(item.ref_number);
+	}
+
+	function formatStateTextTooltip(item: StateText): string {
+		const lines: string[] = [`#${item.ref_number}`];
+		for (let index = 1; index <= 16; index++) {
+			const key = `state_text${index}` as keyof StateText;
+			const value = item[key];
+			if (typeof value === 'string' && value.trim()) {
+				lines.push(`${index}. ${value.trim()}`);
+			}
+		}
+		return lines.join('\n');
+	}
+
+	async function fetchNotificationClasses(search: string): Promise<NotificationClass[]> {
+		const res = await notificationClassRepository.list({
+			pagination: { page: 1, pageSize: 20 },
+			search: { text: search }
+		});
+		return res.items;
+	}
+
+	async function fetchNotificationClassById(id: string): Promise<NotificationClass> {
+		return notificationClassRepository.get(id);
+	}
+
+	function formatNotificationClassLabel(item: NotificationClass): string {
+		return `NC ${item.nc} - ${item.object_description}`;
+	}
+
+	const sortedBacnetObjects = $derived(
+		[...bacnetObjects].sort((a, b) => {
+			const softwareTypeCompare = a.software_type.localeCompare(b.software_type);
+			if (softwareTypeCompare !== 0) return softwareTypeCompare;
+			return a.software_number - b.software_number;
+		})
+	);
 </script>
 
 {#if bacnetObjects.length > 0}
@@ -101,6 +166,8 @@
 				<tr class="border-b text-left text-xs text-muted-foreground">
 					<th class="pr-2 pb-2">{$t('field_device.bacnet.table.text_fix')}</th>
 					<th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.alarms')}</th>
+					<th class="pr-2 pb-2">{$t('field_device.bacnet.table.state_text')}</th>
+					<th class="pr-2 pb-2">{$t('field_device.bacnet.table.notification_class')}</th>
 					<th class="pr-2 pb-2">{$t('field_device.bacnet.table.description')}</th>
 					<th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.software')}</th>
 					<th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.hardware')}</th>
@@ -112,7 +179,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each bacnetObjects as obj, index (obj.id)}
+				{#each sortedBacnetObjects as obj (obj.id)}
 					<tr class="border-b border-purple-100 last:border-0 dark:border-purple-900">
 						<td class="py-1 pr-1">
 							<EditableCell
@@ -157,6 +224,56 @@
 									{/if}
 								</Popover.Content>
 							</Popover.Root>
+						</td>
+						<td class="py-1 pr-1 align-top">
+							<div class={isDirty(obj.id, 'state_text_id') ? 'rounded-md ring-1 ring-ring' : ''}>
+								<AsyncCombobox
+									value={getPendingIdValue(obj.id, 'state_text_id', obj.state_text_id)}
+									fetcher={fetchStateTexts}
+									fetchById={fetchStateTextById}
+									labelKey="ref_number"
+									labelFormatter={formatStateTextLabel}
+									itemTitleFormatter={formatStateTextTooltip}
+									placeholder={$t('field_device.bacnet.row.select')}
+									searchPlaceholder={$t('common.search')}
+									width="w-[90px]"
+									{disabled}
+									onValueChange={(value) => onEdit(obj.id, 'state_text_id', value || undefined)}
+								/>
+							</div>
+							{#if getFieldError(obj.id, 'state_text_id')}
+								<p class="mt-1 text-xs text-red-500">{getFieldError(obj.id, 'state_text_id')}</p>
+							{/if}
+						</td>
+						<td class="py-1 pr-1 align-top">
+							<div
+								class={isDirty(obj.id, 'notification_class_id')
+									? 'rounded-md ring-1 ring-ring'
+									: ''}
+							>
+								<AsyncCombobox
+									value={getPendingIdValue(
+										obj.id,
+										'notification_class_id',
+										obj.notification_class_id
+									)}
+									fetcher={fetchNotificationClasses}
+									fetchById={fetchNotificationClassById}
+									labelKey="nc"
+									labelFormatter={formatNotificationClassLabel}
+									placeholder={$t('field_device.bacnet.row.select')}
+									searchPlaceholder={$t('common.search')}
+									width="w-[220px]"
+									{disabled}
+									onValueChange={(value) =>
+										onEdit(obj.id, 'notification_class_id', value || undefined)}
+								/>
+							</div>
+							{#if getFieldError(obj.id, 'notification_class_id')}
+								<p class="mt-1 text-xs text-red-500">
+									{getFieldError(obj.id, 'notification_class_id')}
+								</p>
+							{/if}
 						</td>
 						<td class="max-w-sm py-1 pr-1">
 							<EditableCell

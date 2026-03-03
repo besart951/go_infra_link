@@ -1319,6 +1319,8 @@
 			"table": {
 				"text_fix": "Text Fix",
 				"alarms": "Alarme",
+				"state_text": "Statustext",
+				"notification_class": "Benachrichtigungsklasse",
 				"show_alarms": "Alarme anzeigen",
 				"no_alarms": "Kein Alarm konfiguriert",
 				"description": "Beschreibung",
@@ -1359,6 +1361,7 @@
 			"validation": {
 				"text_fix_unique": "text_fix muss innerhalb des Feldgeräts eindeutig sein.",
 				"text_fix_required": "text_fix ist erforderlich.",
+				"software_unique": "software_type + software_number muss innerhalb des Feldgeräts eindeutig sein.",
 				"software_number_range": "Muss zwischen 0 und 65535 liegen.",
 				"hardware_quantity_range": "Muss zwischen 1 und 255 liegen.",
 				"software_type": "Ungültiger Softwaretyp.",

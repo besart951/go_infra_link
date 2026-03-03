@@ -388,7 +388,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 				for (const [objectId, fieldErrors] of deviceErrors.entries()) {
 					const first = Object.entries(fieldErrors)[0];
 					if (first) {
-						return `error.bacnet_objects.${objectId}.${first[0]}: ${first[1]}`;
+						return first[1];
 					}
 				}
 			}
@@ -396,10 +396,10 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 		}
 
 		for (const deviceErrors of bacnetClientErrors.values()) {
-			for (const [objectId, fieldErrors] of deviceErrors.entries()) {
+			for (const fieldErrors of deviceErrors.values()) {
 				const first = Object.entries(fieldErrors)[0];
 				if (first) {
-					return `error.bacnet_objects.${objectId}.${first[0]}: ${first[1]}`;
+					return first[1];
 				}
 			}
 		}
@@ -535,6 +535,49 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 				}
 				textFixMap.set(effectiveTextFix, obj.id);
 			}
+		}
+
+		// Collect effective software_type + software_number values for uniqueness check
+		const softwareCombinationMap = new Map<string, string>();
+		for (const obj of device.bacnet_objects) {
+			const edits = deviceEdits.get(obj.id);
+			const effectiveSoftwareTypeRaw =
+				edits && 'software_type' in edits
+					? (edits.software_type as string | undefined)
+					: obj.software_type;
+			const effectiveSoftwareType = effectiveSoftwareTypeRaw?.trim().toLowerCase() ?? '';
+
+			const effectiveSoftwareNumberRaw =
+				edits && 'software_number' in edits
+					? (edits.software_number as number | undefined)
+					: obj.software_number;
+			const effectiveSoftwareNumber = Number(effectiveSoftwareNumberRaw);
+
+			if (!validSoftwareTypes.has(effectiveSoftwareType)) continue;
+			if (
+				!Number.isFinite(effectiveSoftwareNumber) ||
+				effectiveSoftwareNumber < 0 ||
+				effectiveSoftwareNumber > 65535
+			) {
+				continue;
+			}
+
+			const softwareKey = `${effectiveSoftwareType}:${effectiveSoftwareNumber}`;
+			const existingObjectId = softwareCombinationMap.get(softwareKey);
+			if (existingObjectId && existingObjectId !== obj.id) {
+				const existingErrors = errors.get(existingObjectId) || {};
+				existingErrors['software_number'] = translate(
+					'field_device.bacnet.validation.software_unique'
+				);
+				errors.set(existingObjectId, existingErrors);
+
+				const objErrors = errors.get(obj.id) || {};
+				objErrors['software_number'] = translate('field_device.bacnet.validation.software_unique');
+				errors.set(obj.id, objErrors);
+				continue;
+			}
+
+			softwareCombinationMap.set(softwareKey, obj.id);
 		}
 
 		// Validate individual edited fields

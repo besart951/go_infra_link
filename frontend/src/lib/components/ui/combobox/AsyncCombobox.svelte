@@ -21,6 +21,10 @@
 		searchPlaceholder?: string;
 		emptyText?: string;
 		width?: string;
+		popupWidth?: string;
+		triggerTitle?: string;
+		itemTitleFormatter?: (item: T) => string | undefined;
+		selectedTitleFormatter?: (item: T) => string | undefined;
 		onValueChange?: (value: string) => void;
 	}
 
@@ -40,6 +44,10 @@
 		searchPlaceholder = 'Search...',
 		emptyText = 'No results found.',
 		width = 'w-[200px]',
+		popupWidth = 'w-[240px]',
+		triggerTitle,
+		itemTitleFormatter,
+		selectedTitleFormatter,
 		onValueChange
 	}: AsyncComboboxProps<T> = $props();
 
@@ -53,6 +61,7 @@
 	let selectedRequestId = $state(0);
 	let selectedValue = $state<string | undefined>(undefined);
 	let selectedLabel = $state<string | undefined>(undefined);
+	let selectedData = $state<T | undefined>(undefined);
 	let selectedLoadFailedId = $state<string | undefined>(undefined);
 
 	// Derived state
@@ -62,10 +71,25 @@
 		return labelFormatter ? labelFormatter(item) : String(item[labelKey] ?? '');
 	}
 
+	function getSelectedTitle(): string | undefined {
+		if (selectedData) {
+			const formatter = selectedTitleFormatter ?? itemTitleFormatter;
+			const formattedTitle = formatter?.(selectedData)?.trim();
+			if (formattedTitle) return formattedTitle;
+		}
+		return triggerTitle;
+	}
+
+	function getItemTitle(item: T): string | undefined {
+		const title = itemTitleFormatter?.(item)?.trim();
+		return title || undefined;
+	}
+
 	function clearSelection() {
 		value = '';
 		selectedLabel = undefined;
 		selectedValue = undefined;
+		selectedData = undefined;
 		onValueChange?.('');
 		open = false;
 	}
@@ -81,9 +105,11 @@
 			if (item) {
 				selectedLabel = getItemLabel(item);
 				selectedValue = id;
+				selectedData = item;
 				selectedLoadFailedId = undefined;
 			} else {
 				selectedLoadFailedId = id;
+				selectedData = undefined;
 			}
 		} catch (error) {
 			console.error('Failed to fetch selected item:', error);
@@ -144,6 +170,7 @@
 		if (selectedItem) {
 			selectedLabel = getItemLabel(selectedItem);
 			selectedValue = value;
+			selectedData = selectedItem;
 		}
 	});
 
@@ -170,13 +197,29 @@
 		if (!value) {
 			selectedLabel = undefined;
 			selectedValue = undefined;
+			selectedData = undefined;
 		}
 	});
+
+	function selectItem(item: T) {
+		const next = String(item[idKey] ?? '');
+		if (!next || next === 'undefined' || next === 'null') {
+			console.warn('AsyncCombobox: selected item has no valid id', item);
+			return;
+		}
+		value = next;
+		selectedLabel = getItemLabel(item);
+		selectedValue = value;
+		selectedData = item;
+		onValueChange?.(value);
+		open = false;
+	}
 </script>
 
 <Popover.Root bind:open>
 	<Popover.Trigger>
 		{#snippet child({ props })}
+			{@const selectedTitle = getSelectedTitle()}
 			<Button
 				{...props}
 				{id}
@@ -185,6 +228,7 @@
 				aria-expanded={open}
 				{disabled}
 				aria-disabled={disabled}
+				title={selectedTitle}
 				class={cn('min-w-0 justify-between gap-2', width)}
 			>
 				<span class="min-w-0 flex-1 truncate text-left">
@@ -194,7 +238,7 @@
 			</Button>
 		{/snippet}
 	</Popover.Trigger>
-	<Popover.Content class={cn('p-0', width)}>
+	<Popover.Content class={cn('p-0', popupWidth)}>
 		<Command.Root shouldFilter={false}>
 			<Command.Input placeholder={searchPlaceholder} bind:value={search} />
 			<Command.List>
@@ -211,20 +255,11 @@
 						</Command.Item>
 					{/if}
 					{#each items as item (String(item[idKey]))}
+						{@const itemTitle = getItemTitle(item)}
 						<Command.Item
 							value={String(item[idKey])}
-							onSelect={() => {
-								const next = String(item[idKey] ?? '');
-								if (!next || next === 'undefined' || next === 'null') {
-									console.warn('AsyncCombobox: selected item has no valid id', item);
-									return;
-								}
-								value = next;
-								selectedLabel = getItemLabel(item);
-								selectedValue = value;
-								onValueChange?.(value);
-								open = false;
-							}}
+							title={itemTitle}
+							onSelect={() => selectItem(item)}
 						>
 							<Check
 								class={cn(
