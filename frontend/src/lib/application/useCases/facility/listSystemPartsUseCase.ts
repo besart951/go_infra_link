@@ -3,9 +3,9 @@ import type { SystemPartRepository } from '$lib/domain/ports/facility/systemPart
 import type { ListParams, PaginatedResponse } from '$lib/domain/ports/listRepository.js';
 
 export class ListSystemPartsUseCase {
-    constructor(private repository: SystemPartRepository) { }
+  constructor(private repository: SystemPartRepository) {}
 
-    async execute(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<SystemPart>> {
-        return this.repository.list(params, signal);
-    }
+  async execute(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<SystemPart>> {
+    return this.repository.list(params, signal);
+  }
 }

@@ -21,8 +21,8 @@ func NewAlarmFieldHandler(svc AlarmFieldService) *AlarmFieldHandler {
 	)}
 }
 
-func (h *AlarmFieldHandler) CreateAlarmField(c *gin.Context)  { h.crud.handleCreate(c) }
-func (h *AlarmFieldHandler) GetAlarmField(c *gin.Context)     { h.crud.handleGetByID(c) }
-func (h *AlarmFieldHandler) ListAlarmFields(c *gin.Context)   { h.crud.handleList(c) }
-func (h *AlarmFieldHandler) UpdateAlarmField(c *gin.Context)  { h.crud.handleUpdate(c) }
-func (h *AlarmFieldHandler) DeleteAlarmField(c *gin.Context)  { h.crud.handleDelete(c) }
+func (h *AlarmFieldHandler) CreateAlarmField(c *gin.Context) { h.crud.handleCreate(c) }
+func (h *AlarmFieldHandler) GetAlarmField(c *gin.Context)    { h.crud.handleGetByID(c) }
+func (h *AlarmFieldHandler) ListAlarmFields(c *gin.Context)  { h.crud.handleList(c) }
+func (h *AlarmFieldHandler) UpdateAlarmField(c *gin.Context) { h.crud.handleUpdate(c) }
+func (h *AlarmFieldHandler) DeleteAlarmField(c *gin.Context) { h.crud.handleDelete(c) }

@@ -4,143 +4,143 @@
  */
 
 export interface Unit {
-	id: string;
-	code: string;
-	symbol: string;
-	name: string;
+  id: string;
+  code: string;
+  symbol: string;
+  name: string;
 }
 
 export interface CreateUnitRequest {
-	code: string;
-	symbol: string;
-	name: string;
+  code: string;
+  symbol: string;
+  name: string;
 }
 
 export interface UpdateUnitRequest {
-	code?: string;
-	symbol?: string;
-	name?: string;
+  code?: string;
+  symbol?: string;
+  name?: string;
 }
 
 export interface AlarmField {
-	id: string;
-	key: string;
-	label: string;
-	data_type:
-		| 'number'
-		| 'integer'
-		| 'boolean'
-		| 'string'
-		| 'enum'
-		| 'duration'
-		| 'state_map'
-		| 'json';
-	default_unit_code?: string;
+  id: string;
+  key: string;
+  label: string;
+  data_type:
+    | 'number'
+    | 'integer'
+    | 'boolean'
+    | 'string'
+    | 'enum'
+    | 'duration'
+    | 'state_map'
+    | 'json';
+  default_unit_code?: string;
 }
 
 export interface CreateAlarmFieldRequest {
-	key: string;
-	label: string;
-	data_type: AlarmField['data_type'];
-	default_unit_code?: string;
+  key: string;
+  label: string;
+  data_type: AlarmField['data_type'];
+  default_unit_code?: string;
 }
 
 export interface UpdateAlarmFieldRequest {
-	key?: string;
-	label?: string;
-	data_type?: AlarmField['data_type'];
-	default_unit_code?: string;
+  key?: string;
+  label?: string;
+  data_type?: AlarmField['data_type'];
+  default_unit_code?: string;
 }
 
 export interface AlarmTypeField {
-	id: string;
-	alarm_type_id: string;
-	alarm_field_id: string;
-	alarm_field?: AlarmField;
-	display_order: number;
-	is_required: boolean;
-	is_user_editable: boolean;
-	default_value_json?: string;
-	validation_json?: string;
-	default_unit_id?: string;
-	default_unit?: Unit;
-	ui_group?: string;
-	created_at: string;
-	updated_at: string;
+  id: string;
+  alarm_type_id: string;
+  alarm_field_id: string;
+  alarm_field?: AlarmField;
+  display_order: number;
+  is_required: boolean;
+  is_user_editable: boolean;
+  default_value_json?: string;
+  validation_json?: string;
+  default_unit_id?: string;
+  default_unit?: Unit;
+  ui_group?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AlarmType {
-	id: string;
-	code: string;
-	name: string;
-	fields?: AlarmTypeField[];
-	created_at: string;
-	updated_at: string;
+  id: string;
+  code: string;
+  name: string;
+  fields?: AlarmTypeField[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CreateAlarmTypeRequest {
-	code: string;
-	name: string;
+  code: string;
+  name: string;
 }
 
 export interface UpdateAlarmTypeRequest {
-	name?: string;
+  name?: string;
 }
 
 export interface CreateAlarmTypeFieldRequest {
-	alarm_field_id: string;
-	display_order?: number;
-	is_required?: boolean;
-	is_user_editable?: boolean;
-	default_value_json?: string;
-	validation_json?: string;
-	default_unit_id?: string;
-	ui_group?: string;
+  alarm_field_id: string;
+  display_order?: number;
+  is_required?: boolean;
+  is_user_editable?: boolean;
+  default_value_json?: string;
+  validation_json?: string;
+  default_unit_id?: string;
+  ui_group?: string;
 }
 
 export interface UpdateAlarmTypeFieldRequest {
-	display_order?: number;
-	is_required?: boolean;
-	is_user_editable?: boolean;
-	default_value_json?: string;
-	validation_json?: string;
-	default_unit_id?: string;
-	ui_group?: string;
+  display_order?: number;
+  is_required?: boolean;
+  is_user_editable?: boolean;
+  default_value_json?: string;
+  validation_json?: string;
+  default_unit_id?: string;
+  ui_group?: string;
 }
 
 export interface AlarmTypeListResponse {
-	items: AlarmType[];
-	total: number;
-	page: number;
-	total_pages: number;
+  items: AlarmType[];
+  total: number;
+  page: number;
+  total_pages: number;
 }
 
 export interface AlarmValueDraft {
-	alarm_type_field_id: string;
-	value_number?: number;
-	value_integer?: number;
-	value_boolean?: boolean;
-	value_string?: string;
-	value_json?: string;
-	unit_id?: string;
-	source?: string;
+  alarm_type_field_id: string;
+  value_number?: number;
+  value_integer?: number;
+  value_boolean?: boolean;
+  value_string?: string;
+  value_json?: string;
+  unit_id?: string;
+  source?: string;
 }
 
 export interface AlarmValue {
-	id: string;
-	bacnet_object_id: string;
-	alarm_type_field_id: string;
-	value_number?: number;
-	value_integer?: number;
-	value_boolean?: boolean;
-	value_string?: string;
-	value_json?: string;
-	unit_id?: string;
-	source: string;
-	created_at: string;
-	updated_at: string;
+  id: string;
+  bacnet_object_id: string;
+  alarm_type_field_id: string;
+  value_number?: number;
+  value_integer?: number;
+  value_boolean?: boolean;
+  value_string?: string;
+  value_json?: string;
+  unit_id?: string;
+  source: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AlarmValuesResponse {
-	items: AlarmValue[];
+  items: AlarmValue[];
 }

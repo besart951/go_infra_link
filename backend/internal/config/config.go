@@ -62,7 +62,19 @@ func Load() (Config, error) {
 	devAuthEnabled := getEnvBool("DEV_AUTH_ENABLED", false)
 
 	dbType := normalizeDBType(getEnvFirst("postgres", "DB_TYPE", "DB_DRIVER"))
-	dbDsnFallback := "host=localhost user=postgres password=postgres dbname=go_infra_link port=5432 sslmode=disable"
+	pgHost := getEnv("POSTGRES_HOST", "localhost")
+	pgPort := getEnv("POSTGRES_PORT", "5432")
+	pgUser := getEnv("POSTGRES_USER", "postgres")
+	pgPassword := getEnv("POSTGRES_PASSWORD", "postgres")
+	pgDatabase := getEnv("POSTGRES_DB", "go_infra_link")
+	dbDsnFallback := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+		pgHost,
+		pgUser,
+		pgPassword,
+		pgDatabase,
+		pgPort,
+	)
 	dbDsn := getEnvFirst(dbDsnFallback, "DATABASE_URL", "DB_DSN")
 
 	return Config{

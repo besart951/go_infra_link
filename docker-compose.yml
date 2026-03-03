@@ -10,7 +10,7 @@ services:
       - .env
     environment:
       - HTTP_ADDR=:${BACKEND_PORT:-8080}
-      - DATABASE_URL=host=postgres user=${POSTGRES_USER:-postgres} password=${POSTGRES_PASSWORD:-postgres} dbname=${POSTGRES_DB:-go_infra_link} port=5432 sslmode=disable
+      - DATABASE_URL=host=${POSTGRES_SERVICE_HOST:-postgres} user=${POSTGRES_USER:-postgres} password=${POSTGRES_PASSWORD:-postgres} dbname=${POSTGRES_DB:-go_infra_link} port=${POSTGRES_CONTAINER_PORT:-5432} sslmode=disable
     volumes:
       - ./backend:/src
     depends_on:
@@ -24,12 +24,14 @@ services:
       dockerfile: Dockerfile
       target: dev
     ports:
-      - "${FRONTEND_PORT:-5173}:5173"
+      - "${FRONTEND_PORT:-5173}:${FRONTEND_INTERNAL_PORT:-5173}"
     env_file:
       - .env
     environment:
       - NODE_ENV=${APP_ENV:-development}
       - BACKEND_URL=http://backend:${BACKEND_PORT:-8080}
+      - BACKEND_PORT=${BACKEND_PORT:-8080}
+      - FRONTEND_INTERNAL_PORT=${FRONTEND_INTERNAL_PORT:-5173}
       - CI=true
     volumes:
       - ./frontend:/app
@@ -46,10 +48,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-go_infra_link}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    command: ["postgres", "-p", "${POSTGRES_CONTAINER_PORT:-5432}"]
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5432}:${POSTGRES_CONTAINER_PORT:-5432}"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -p ${POSTGRES_CONTAINER_PORT:-5432}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -75,7 +78,7 @@ services:
       - -c
       - |
         cat > /tmp/pgpass <<EOF
-        postgres:5432:${POSTGRES_DB:-go_infra_link}:${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}
+        postgres:${POSTGRES_CONTAINER_PORT:-5432}:${POSTGRES_DB:-go_infra_link}:${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}
         EOF
         chmod 600 /tmp/pgpass
 
@@ -86,7 +89,7 @@ services:
               "Name": "${PGADMIN_SERVER_NAME:-go_infra_link}",
               "Group": "Servers",
               "Host": "postgres",
-              "Port": 5432,
+              "Port": ${POSTGRES_CONTAINER_PORT:-5432},
               "MaintenanceDB": "${POSTGRES_DB:-go_infra_link}",
               "Username": "${POSTGRES_USER:-postgres}",
               "PassFile": "/tmp/pgpass",

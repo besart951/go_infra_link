@@ -35,7 +35,6 @@ func (s *baseService[T]) DeleteByID(id uuid.UUID) error {
 	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
-
 // derefSlice converts []*T to []T by dereferencing each element.
 func derefSlice[T any](ptrs []*T) []T {
 	items := make([]T, len(ptrs))

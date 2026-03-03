@@ -6,17 +6,17 @@ import Head from './table-head.svelte';
 import Cell from './table-cell.svelte';
 
 export {
-	Root,
-	Header,
-	Body,
-	Row,
-	Head,
-	Cell,
-	//
-	Root as Table,
-	Header as TableHeader,
-	Body as TableBody,
-	Row as TableRow,
-	Head as TableHead,
-	Cell as TableCell
+  Root,
+  Header,
+  Body,
+  Row,
+  Head,
+  Cell,
+  //
+  Root as Table,
+  Header as TableHeader,
+  Body as TableBody,
+  Row as TableRow,
+  Head as TableHead,
+  Cell as TableCell
 };

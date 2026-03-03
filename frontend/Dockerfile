@@ -1,5 +1,5 @@
 # Base Stage
-FROM node:22-alpine AS base
+FROM node:25-alpine AS base
 WORKDIR /app
 # Enable pnpm
 RUN npm install -g pnpm
@@ -9,7 +9,7 @@ RUN pnpm install --frozen-lockfile
 # Development Stage
 FROM base AS dev
 ENV CI=true
-CMD ["/bin/sh", "-c", "pnpm install && pnpm dev --host"]
+CMD ["/bin/sh", "-c", "pnpm install && pnpm dev --host --port ${FRONTEND_INTERNAL_PORT:-5173}"]
 
 # Frontend Build Stage
 FROM base AS builder
@@ -24,7 +24,7 @@ RUN cp src/lib/server/set-cookie.example.ts src/lib/server/set-cookie.ts || true
 RUN pnpm build
 
 # Serve Stage
-FROM caddy:alpine
+FROM caddy:2.11.x
 
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /app/build /usr/share/caddy

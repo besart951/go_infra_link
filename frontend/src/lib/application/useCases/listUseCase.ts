@@ -1,21 +1,21 @@
 import type {
-	ListRepository,
-	PaginatedResponse,
-	ListParams
+  ListRepository,
+  PaginatedResponse,
+  ListParams
 } from '$lib/domain/ports/listRepository.js';
 
 /**
  * List state representing the current state of a list
  */
 export interface ListState<T> {
-	items: T[];
-	total: number;
-	page: number;
-	pageSize: number;
-	totalPages: number;
-	searchText: string;
-	loading: boolean;
-	error: string | null;
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  searchText: string;
+  loading: boolean;
+  error: string | null;
 }
 
 /**
@@ -23,42 +23,42 @@ export interface ListState<T> {
  * This is framework-agnostic and can be used with any UI library
  */
 export class ListUseCase<T> {
-	constructor(private repository: ListRepository<T>) { }
+  constructor(private repository: ListRepository<T>) {}
 
-	/**
-	 * Execute the list operation
-	 */
-	async execute(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<T>> {
-		return this.repository.list(params, signal);
-	}
+  /**
+   * Execute the list operation
+   */
+  async execute(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<T>> {
+    return this.repository.list(params, signal);
+  }
 
-	/**
-	 * Get a single item by ID
-	 */
-	async get(id: string, signal?: AbortSignal): Promise<T | null> {
-		if (!this.repository.get) {
-			throw new Error('get not implemented for this repository');
-		}
-		try {
-			return await this.repository.get(id, signal);
-		} catch (error) {
-			return null;
-		}
-	}
+  /**
+   * Get a single item by ID
+   */
+  async get(id: string, signal?: AbortSignal): Promise<T | null> {
+    if (!this.repository.get) {
+      throw new Error('get not implemented for this repository');
+    }
+    try {
+      return await this.repository.get(id, signal);
+    } catch (error) {
+      return null;
+    }
+  }
 
-	/**
-	 * Create initial empty state
-	 */
-	createInitialState(pageSize = 10): ListState<T> {
-		return {
-			items: [],
-			total: 0,
-			page: 1,
-			pageSize,
-			totalPages: 0,
-			searchText: '',
-			loading: false,
-			error: null
-		};
-	}
+  /**
+   * Create initial empty state
+   */
+  createInitialState(pageSize = 10): ListState<T> {
+    return {
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize,
+      totalPages: 0,
+      searchText: '',
+      loading: false,
+      error: null
+    };
+  }
 }

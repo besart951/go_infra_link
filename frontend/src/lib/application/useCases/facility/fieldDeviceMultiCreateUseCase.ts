@@ -1,13 +1,13 @@
 import type {
-	AvailableApparatNumbersResponse,
-	CreateFieldDeviceRequest,
-	FieldDeviceOptions,
-	MultiCreateFieldDeviceResponse,
-	SPSControllerSystemType
+  AvailableApparatNumbersResponse,
+  CreateFieldDeviceRequest,
+  FieldDeviceOptions,
+  MultiCreateFieldDeviceResponse,
+  SPSControllerSystemType
 } from '$lib/domain/facility/index.js';
 import type {
-	FieldDeviceMultiCreateRepository,
-	SPSControllerSystemTypeSearchParams
+  FieldDeviceMultiCreateRepository,
+  SPSControllerSystemTypeSearchParams
 } from '$lib/domain/ports/facility/fieldDeviceMultiCreateRepository.js';
 
 /**
@@ -16,45 +16,45 @@ import type {
  * Framework-agnostic: safe to use from Svelte components, stores, etc.
  */
 export class FieldDeviceMultiCreateUseCase {
-	constructor(private repository: FieldDeviceMultiCreateRepository) {}
+  constructor(private repository: FieldDeviceMultiCreateRepository) {}
 
-	getOptions(signal?: AbortSignal): Promise<FieldDeviceOptions> {
-		return this.repository.getFieldDeviceOptions(signal);
-	}
+  getOptions(signal?: AbortSignal): Promise<FieldDeviceOptions> {
+    return this.repository.getFieldDeviceOptions(signal);
+  }
 
-	getOptionsForProject(projectId: string, signal?: AbortSignal): Promise<FieldDeviceOptions> {
-		return this.repository.getFieldDeviceOptionsForProject(projectId, signal);
-	}
+  getOptionsForProject(projectId: string, signal?: AbortSignal): Promise<FieldDeviceOptions> {
+    return this.repository.getFieldDeviceOptionsForProject(projectId, signal);
+  }
 
-	searchSpsControllerSystemTypes(
-		params: SPSControllerSystemTypeSearchParams,
-		signal?: AbortSignal
-	): Promise<SPSControllerSystemType[]> {
-		return this.repository.listSpsControllerSystemTypes(params, signal);
-	}
+  searchSpsControllerSystemTypes(
+    params: SPSControllerSystemTypeSearchParams,
+    signal?: AbortSignal
+  ): Promise<SPSControllerSystemType[]> {
+    return this.repository.listSpsControllerSystemTypes(params, signal);
+  }
 
-	getSpsControllerSystemType(id: string, signal?: AbortSignal): Promise<SPSControllerSystemType> {
-		return this.repository.getSpsControllerSystemType(id, signal);
-	}
+  getSpsControllerSystemType(id: string, signal?: AbortSignal): Promise<SPSControllerSystemType> {
+    return this.repository.getSpsControllerSystemType(id, signal);
+  }
 
-	getAvailableApparatNumbers(
-		spsControllerSystemTypeId: string,
-		apparatId: string,
-		systemPartId?: string,
-		signal?: AbortSignal
-	): Promise<AvailableApparatNumbersResponse> {
-		return this.repository.getAvailableApparatNumbers(
-			spsControllerSystemTypeId,
-			apparatId,
-			systemPartId,
-			signal
-		);
-	}
+  getAvailableApparatNumbers(
+    spsControllerSystemTypeId: string,
+    apparatId: string,
+    systemPartId?: string,
+    signal?: AbortSignal
+  ): Promise<AvailableApparatNumbersResponse> {
+    return this.repository.getAvailableApparatNumbers(
+      spsControllerSystemTypeId,
+      apparatId,
+      systemPartId,
+      signal
+    );
+  }
 
-	multiCreate(
-		fieldDevices: CreateFieldDeviceRequest[],
-		signal?: AbortSignal
-	): Promise<MultiCreateFieldDeviceResponse> {
-		return this.repository.multiCreateFieldDevices(fieldDevices, signal);
-	}
+  multiCreate(
+    fieldDevices: CreateFieldDeviceRequest[],
+    signal?: AbortSignal
+  ): Promise<MultiCreateFieldDeviceResponse> {
+    return this.repository.multiCreateFieldDevices(fieldDevices, signal);
+  }
 }

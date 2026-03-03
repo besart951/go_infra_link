@@ -4,11 +4,11 @@
  */
 
 export function getSetCookieValues(headers: Headers): string[] {
-	const setCookies: string[] = [];
-	headers.forEach((value, key) => {
-		if (key.toLowerCase() === 'set-cookie') {
-			setCookies.push(value);
-		}
-	});
-	return setCookies;
+  const setCookies: string[] = [];
+  headers.forEach((value, key) => {
+    if (key.toLowerCase() === 'set-cookie') {
+      setCookies.push(value);
+    }
+  });
+  return setCookies;
 }

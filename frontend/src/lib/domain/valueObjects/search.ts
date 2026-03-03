@@ -2,19 +2,19 @@
  * Value object representing search parameters
  */
 export interface SearchQuery {
-	text: string;
+  text: string;
 }
 
 /**
  * Factory function to create empty search query
  */
 export function createSearchQuery(text = ''): SearchQuery {
-	return { text };
+  return { text };
 }
 
 /**
  * Check if search query is empty
  */
 export function isSearchEmpty(query: SearchQuery): boolean {
-	return query.text.trim().length === 0;
+  return query.text.trim().length === 0;
 }

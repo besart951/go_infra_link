@@ -8,155 +8,155 @@ import UseFieldDeviceEditingHarness from './__tests__/UseFieldDeviceEditingHarne
 const mockBulkUpdate = vi.fn();
 
 vi.mock('$lib/infrastructure/api/fieldDeviceRepository.js', () => ({
-	fieldDeviceRepository: {
-		bulkUpdate: (...args: unknown[]) => mockBulkUpdate(...args)
-	}
+  fieldDeviceRepository: {
+    bulkUpdate: (...args: unknown[]) => mockBulkUpdate(...args)
+  }
 }));
 
 vi.mock('$lib/components/toast.svelte', () => ({
-	addToast: vi.fn()
+  addToast: vi.fn()
 }));
 
 vi.mock('$lib/i18n/index.js', () => ({
-	t: (key: string) => key
+  t: (key: string) => key
 }));
 
 describe('useFieldDeviceEditing', () => {
-	async function createEditing() {
-		let editingApi: ReturnType<typeof useFieldDeviceEditing> | undefined;
-		render(UseFieldDeviceEditingHarness, {
-			onReady: (editing) => {
-				editingApi = editing;
-			}
-		});
+  async function createEditing() {
+    let editingApi: ReturnType<typeof useFieldDeviceEditing> | undefined;
+    render(UseFieldDeviceEditingHarness, {
+      onReady: (editing) => {
+        editingApi = editing;
+      }
+    });
 
-		await waitFor(() => {
-			expect(editingApi).toBeDefined();
-		});
+    await waitFor(() => {
+      expect(editingApi).toBeDefined();
+    });
 
-		return editingApi!;
-	}
+    return editingApi!;
+  }
 
-	beforeEach(() => {
-		vi.clearAllMocks();
-		sessionStorage.clear();
-		mockBulkUpdate.mockResolvedValue({
-			results: [{ id: 'fd-1', success: true }],
-			total_count: 1,
-			success_count: 1,
-			failure_count: 0
-		});
-	});
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionStorage.clear();
+    mockBulkUpdate.mockResolvedValue({
+      results: [{ id: 'fd-1', success: true }],
+      total_count: 1,
+      success_count: 1,
+      failure_count: 0
+    });
+  });
 
-	it('submits update API with complete payload for base, specification, and bacnet edits', async () => {
-		const device = buildFieldDevice();
-		const editing = await createEditing();
+  it('submits update API with complete payload for base, specification, and bacnet edits', async () => {
+    const device = buildFieldDevice();
+    const editing = await createEditing();
 
-		editing.queueEdit(device.id, 'bmk', 'FD-UPDATED');
-		editing.queueEdit(device.id, 'description', 'Updated description');
-		editing.queueSpecEdit(device.id, 'specification_brand', 'Brand X');
-		editing.queueSpecEdit(device.id, 'electrical_connection_power', 7.5);
-		editing.queueBacnetEdit(device.id, 'bo-1', 'text_fix', 'TF-UPDATED');
-		editing.queueBacnetEdit(device.id, 'bo-1', 'alarm_type_id', 'alarm-9');
+    editing.queueEdit(device.id, 'bmk', 'FD-UPDATED');
+    editing.queueEdit(device.id, 'description', 'Updated description');
+    editing.queueSpecEdit(device.id, 'specification_brand', 'Brand X');
+    editing.queueSpecEdit(device.id, 'electrical_connection_power', 7.5);
+    editing.queueBacnetEdit(device.id, 'bo-1', 'text_fix', 'TF-UPDATED');
+    editing.queueBacnetEdit(device.id, 'bo-1', 'alarm_type_id', 'alarm-9');
 
-		await editing.saveAllPendingEdits([device]);
+    await editing.saveAllPendingEdits([device]);
 
-		expect(mockBulkUpdate).toHaveBeenCalledWith({
-			updates: [
-				{
-					id: 'fd-1',
-					bmk: 'FD-UPDATED',
-					description: 'Updated description',
-					specification: {
-						specification_brand: 'Brand X',
-						electrical_connection_power: 7.5
-					},
-					bacnet_objects: [
-						{
-							id: 'bo-1',
-							text_fix: 'TF-UPDATED',
-							alarm_type_id: 'alarm-9'
-						}
-					]
-				}
-			]
-		});
-	});
+    expect(mockBulkUpdate).toHaveBeenCalledWith({
+      updates: [
+        {
+          id: 'fd-1',
+          bmk: 'FD-UPDATED',
+          description: 'Updated description',
+          specification: {
+            specification_brand: 'Brand X',
+            electrical_connection_power: 7.5
+          },
+          bacnet_objects: [
+            {
+              id: 'bo-1',
+              text_fix: 'TF-UPDATED',
+              alarm_type_id: 'alarm-9'
+            }
+          ]
+        }
+      ]
+    });
+  });
 
-	it('updates specification independently without including bacnet patches', async () => {
-		const device = buildFieldDevice();
-		const editing = await createEditing();
-		const onSuccess = vi.fn();
+  it('updates specification independently without including bacnet patches', async () => {
+    const device = buildFieldDevice();
+    const editing = await createEditing();
+    const onSuccess = vi.fn();
 
-		editing.queueSpecEdit(device.id, 'specification_supplier', 'Supplier B');
+    editing.queueSpecEdit(device.id, 'specification_supplier', 'Supplier B');
 
-		await editing.saveAllPendingEdits([device], onSuccess);
+    await editing.saveAllPendingEdits([device], onSuccess);
 
-		expect(mockBulkUpdate).toHaveBeenCalledWith({
-			updates: [
-				{
-					id: 'fd-1',
-					specification: {
-						specification_supplier: 'Supplier B'
-					}
-				}
-			]
-		});
+    expect(mockBulkUpdate).toHaveBeenCalledWith({
+      updates: [
+        {
+          id: 'fd-1',
+          specification: {
+            specification_supplier: 'Supplier B'
+          }
+        }
+      ]
+    });
 
-		const updated = onSuccess.mock.calls[0][0][0];
-		expect(updated.specification.specification_supplier).toBe('Supplier B');
-		expect(updated.bacnet_objects[0].text_fix).toBe(device.bacnet_objects?.[0].text_fix);
-	});
+    const updated = onSuccess.mock.calls[0][0][0];
+    expect(updated.specification.specification_supplier).toBe('Supplier B');
+    expect(updated.bacnet_objects[0].text_fix).toBe(device.bacnet_objects?.[0].text_fix);
+  });
 
-	it('updates bacnet objects independently without including specification payload', async () => {
-		const device = buildFieldDevice();
-		const editing = await createEditing();
+  it('updates bacnet objects independently without including specification payload', async () => {
+    const device = buildFieldDevice();
+    const editing = await createEditing();
 
-		editing.queueBacnetEdit(device.id, 'bo-1', 'software_number', 42);
+    editing.queueBacnetEdit(device.id, 'bo-1', 'software_number', 42);
 
-		await editing.saveAllPendingEdits([device]);
+    await editing.saveAllPendingEdits([device]);
 
-		expect(mockBulkUpdate).toHaveBeenCalledWith({
-			updates: [
-				{
-					id: 'fd-1',
-					bacnet_objects: [
-						{
-							id: 'bo-1',
-							software_number: 42
-						}
-					]
-				}
-			]
-		});
-	});
+    expect(mockBulkUpdate).toHaveBeenCalledWith({
+      updates: [
+        {
+          id: 'fd-1',
+          bacnet_objects: [
+            {
+              id: 'bo-1',
+              software_number: 42
+            }
+          ]
+        }
+      ]
+    });
+  });
 
-	it('updates alarm mapping independently and preserves sibling bacnet data', async () => {
-		const device = buildFieldDevice();
-		const editing = await createEditing();
-		const onSuccess = vi.fn();
+  it('updates alarm mapping independently and preserves sibling bacnet data', async () => {
+    const device = buildFieldDevice();
+    const editing = await createEditing();
+    const onSuccess = vi.fn();
 
-		editing.queueBacnetEdit(device.id, 'bo-1', 'alarm_type_id', 'alarm-2');
+    editing.queueBacnetEdit(device.id, 'bo-1', 'alarm_type_id', 'alarm-2');
 
-		await editing.saveAllPendingEdits([device], onSuccess);
+    await editing.saveAllPendingEdits([device], onSuccess);
 
-		expect(mockBulkUpdate).toHaveBeenCalledWith({
-			updates: [
-				{
-					id: 'fd-1',
-					bacnet_objects: [
-						{
-							id: 'bo-1',
-							alarm_type_id: 'alarm-2'
-						}
-					]
-				}
-			]
-		});
+    expect(mockBulkUpdate).toHaveBeenCalledWith({
+      updates: [
+        {
+          id: 'fd-1',
+          bacnet_objects: [
+            {
+              id: 'bo-1',
+              alarm_type_id: 'alarm-2'
+            }
+          ]
+        }
+      ]
+    });
 
-		const updated = onSuccess.mock.calls[0][0][0];
-		expect(updated.bacnet_objects[0].alarm_type_id).toBe('alarm-2');
-		expect(updated.bacnet_objects[0].software_type).toBe(device.bacnet_objects?.[0].software_type);
-		expect(updated.bacnet_objects[0].text_fix).toBe(device.bacnet_objects?.[0].text_fix);
-	});
+    const updated = onSuccess.mock.calls[0][0][0];
+    expect(updated.bacnet_objects[0].alarm_type_id).toBe('alarm-2');
+    expect(updated.bacnet_objects[0].software_type).toBe(device.bacnet_objects?.[0].software_type);
+    expect(updated.bacnet_objects[0].text_fix).toBe(device.bacnet_objects?.[0].text_fix);
+  });
 });

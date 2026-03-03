@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { useFieldDeviceEditing } from '../useFieldDeviceEditing.svelte.js';
+  import { useFieldDeviceEditing } from '../useFieldDeviceEditing.svelte.js';
 
-	interface Props {
-		onReady: (editing: ReturnType<typeof useFieldDeviceEditing>) => void;
-	}
+  interface Props {
+    onReady: (editing: ReturnType<typeof useFieldDeviceEditing>) => void;
+  }
 
-	let { onReady }: Props = $props();
-	const editing = useFieldDeviceEditing();
+  let { onReady }: Props = $props();
+  const editing = useFieldDeviceEditing();
 
-	$effect(() => {
-		onReady(editing);
-	});
+  $effect(() => {
+    onReady(editing);
+  });
 </script>

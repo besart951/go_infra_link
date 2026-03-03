@@ -346,4 +346,3 @@ func (h *ApparatHandler) DeleteApparat(c *gin.Context) {
 func (h *ApparatHandler) getApparatsForObjectData(objectDataID uuid.UUID) ([]uuid.UUID, error) {
 	return h.objectDataService.GetApparatIDs(objectDataID)
 }
-

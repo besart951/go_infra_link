@@ -6,67 +6,67 @@
 import type { Pagination } from '../utils/index.ts';
 
 export interface SPSController {
-	id: string;
-	control_cabinet_id: string;
-	ga_device?: string;
-	device_name: string;
-	device_description?: string;
-	device_location?: string;
-	ip_address?: string;
-	subnet?: string;
-	gateway?: string;
-	vlan?: string;
-	created_at: string;
-	updated_at: string;
+  id: string;
+  control_cabinet_id: string;
+  ga_device?: string;
+  device_name: string;
+  device_description?: string;
+  device_location?: string;
+  ip_address?: string;
+  subnet?: string;
+  gateway?: string;
+  vlan?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface SPSControllerSystemTypeInput {
-	id?: string;
-	system_type_id: string;
-	number?: number;
-	document_name?: string;
+  id?: string;
+  system_type_id: string;
+  number?: number;
+  document_name?: string;
 }
 
 export interface CreateSPSControllerRequest {
-	ga_device: string;
-	device_name: string;
-	ip_address?: string;
-	subnet?: string;
-	gateway?: string;
-	vlan?: string;
-	control_cabinet_id: string;
-	system_types?: SPSControllerSystemTypeInput[];
+  ga_device: string;
+  device_name: string;
+  ip_address?: string;
+  subnet?: string;
+  gateway?: string;
+  vlan?: string;
+  control_cabinet_id: string;
+  system_types?: SPSControllerSystemTypeInput[];
 }
 
 export interface UpdateSPSControllerRequest {
-	id: string;
-	ga_device?: string;
-	device_name?: string;
-	ip_address?: string;
-	subnet?: string;
-	gateway?: string;
-	vlan?: string;
-	control_cabinet_id?: string;
-	system_types?: SPSControllerSystemTypeInput[];
+  id: string;
+  ga_device?: string;
+  device_name?: string;
+  ip_address?: string;
+  subnet?: string;
+  gateway?: string;
+  vlan?: string;
+  control_cabinet_id?: string;
+  system_types?: SPSControllerSystemTypeInput[];
 }
 
 export interface SPSControllerListParams {
-	page?: number;
-	limit?: number;
-	search?: string;
-	control_cabinet_id?: string;
+  page?: number;
+  limit?: number;
+  search?: string;
+  control_cabinet_id?: string;
 }
 
 export interface SPSControllerListResponse extends Pagination<SPSController> {}
 
 export interface SPSControllerBulkRequest {
-	ids: string[];
+  ids: string[];
 }
 
 export interface SPSControllerBulkResponse {
-	items: SPSController[];
+  items: SPSController[];
 }
 
 export interface NextGADeviceResponse {
-	ga_device: string;
+  ga_device: string;
 }

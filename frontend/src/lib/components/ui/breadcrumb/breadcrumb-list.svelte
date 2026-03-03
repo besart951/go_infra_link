@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { cn, type WithElementRef } from '$lib/utils.js';
-	import type { HTMLOlAttributes } from 'svelte/elements';
+  import { cn, type WithElementRef } from '$lib/utils.js';
+  import type { HTMLOlAttributes } from 'svelte/elements';
 
-	let {
-		ref = $bindable(null),
-		class: className,
-		children,
-		...rest
-	}: WithElementRef<HTMLOlAttributes, HTMLOListElement> = $props();
+  let {
+    ref = $bindable(null),
+    class: className,
+    children,
+    ...rest
+  }: WithElementRef<HTMLOlAttributes, HTMLOListElement> = $props();
 </script>
 
 <ol
-	bind:this={ref}
-	class={cn('flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground', className)}
-	{...rest}
+  bind:this={ref}
+  class={cn('flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground', className)}
+  {...rest}
 >
-	{@render children?.()}
+  {@render children?.()}
 </ol>

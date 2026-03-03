@@ -9,62 +9,62 @@ import type { UserRole } from '../user/index.js';
  * Permission represents a specific action that can be performed on a resource
  */
 export interface Permission {
-	id: string;
-	name: string;
-	description: string;
-	resource: string; // e.g., "user", "team", "project"
-	action: string; // e.g., "create", "read", "update", "delete"
-	created_at: string;
-	updated_at: string;
+  id: string;
+  name: string;
+  description: string;
+  resource: string; // e.g., "user", "team", "project"
+  action: string; // e.g., "create", "read", "update", "delete"
+  created_at: string;
+  updated_at: string;
 }
 
 /**
  * Role with its associated permissions and hierarchy info
  */
 export interface Role {
-	id: string;
-	name: UserRole;
-	display_name: string;
-	description: string;
-	level: number;
-	permissions: string[]; // List of permission names like "user.create"
-	can_manage: UserRole[]; // Roles this role can manage
-	created_at: string;
-	updated_at: string;
+  id: string;
+  name: UserRole;
+  display_name: string;
+  description: string;
+  level: number;
+  permissions: string[]; // List of permission names like "user.create"
+  can_manage: UserRole[]; // Roles this role can manage
+  created_at: string;
+  updated_at: string;
 }
 
 /**
  * Request to create a new custom permission
  */
 export interface CreatePermissionRequest {
-	name: string;
-	description: string;
-	resource: string;
-	action: string;
+  name: string;
+  description: string;
+  resource: string;
+  action: string;
 }
 
 /**
  * Request to update a permission
  */
 export interface UpdatePermissionRequest {
-	description?: string;
+  description?: string;
 }
 
 /**
  * Request to update role permissions
  */
 export interface UpdateRolePermissionsRequest {
-	permissions: string[];
+  permissions: string[];
 }
 
 /**
  * Role permission assignment
  */
 export interface RolePermission {
-	id: string;
-	role: UserRole;
-	permission: string;
-	created_at: string;
+  id: string;
+  role: UserRole;
+  permission: string;
+  created_at: string;
 }
 
 /**
@@ -77,20 +77,20 @@ export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
  * Facility resources (direct: resource.action)
  */
 export const FACILITY_RESOURCES = [
-	'building',
-	'controlcabinet',
-	'spscontroller',
-	'spscontrollersystemtype',
-	'fielddevice',
-	'bacnetobject',
-	'systempart',
-	'systemtype',
-	'specification',
-	'apparat',
-	'notificationclass',
-	'statetext',
-	'objectdata',
-	'alarmdefinition'
+  'building',
+  'controlcabinet',
+  'spscontroller',
+  'spscontrollersystemtype',
+  'fielddevice',
+  'bacnetobject',
+  'systempart',
+  'systemtype',
+  'specification',
+  'apparat',
+  'notificationclass',
+  'statetext',
+  'objectdata',
+  'alarmdefinition'
 ] as const;
 export type FacilityResource = (typeof FACILITY_RESOURCES)[number];
 
@@ -98,12 +98,12 @@ export type FacilityResource = (typeof FACILITY_RESOURCES)[number];
  * Project sub-resources (nested: project.subresource.action)
  */
 export const PROJECT_SUB_RESOURCES = [
-	'controlcabinet',
-	'spscontroller',
-	'spscontrollersystemtype',
-	'fielddevice',
-	'bacnetobject',
-	'systemtype'
+  'controlcabinet',
+  'spscontroller',
+  'spscontrollersystemtype',
+  'fielddevice',
+  'bacnetobject',
+  'systemtype'
 ] as const;
 export type ProjectSubResource = (typeof PROJECT_SUB_RESOURCES)[number];
 
@@ -111,12 +111,12 @@ export type ProjectSubResource = (typeof PROJECT_SUB_RESOURCES)[number];
  * General resources
  */
 export const GENERAL_RESOURCES = [
-	'user',
-	'team',
-	'project',
-	'phase',
-	'role',
-	'permission'
+  'user',
+  'team',
+  'project',
+  'phase',
+  'role',
+  'permission'
 ] as const;
 export type GeneralResource = (typeof GENERAL_RESOURCES)[number];
 
@@ -136,14 +136,14 @@ export type PermissionCategory = 'general' | 'facility' | 'project';
  * Supports both simple (resource.action) and nested (project.subresource.action)
  */
 export function createPermissionName(
-	resource: string,
-	action: string,
-	subResource?: string
+  resource: string,
+  action: string,
+  subResource?: string
 ): string {
-	if (subResource) {
-		return `${resource}.${subResource}.${action}`;
-	}
-	return `${resource}.${action}`;
+  if (subResource) {
+    return `${resource}.${subResource}.${action}`;
+  }
+  return `${resource}.${action}`;
 }
 
 /**
@@ -151,34 +151,34 @@ export function createPermissionName(
  * Handles both "resource.action" and "project.subresource.action"
  */
 export function parsePermissionName(permissionName: string): {
-	resource: string;
-	action: string;
-	subResource?: string;
-	category: PermissionCategory;
+  resource: string;
+  action: string;
+  subResource?: string;
+  category: PermissionCategory;
 } {
-	const parts = permissionName.split('.');
+  const parts = permissionName.split('.');
 
-	if (parts.length === 3 && parts[0] === 'project') {
-		// project.subresource.action format
-		return {
-			resource: parts[0],
-			subResource: parts[1],
-			action: parts[2],
-			category: 'project'
-		};
-	}
+  if (parts.length === 3 && parts[0] === 'project') {
+    // project.subresource.action format
+    return {
+      resource: parts[0],
+      subResource: parts[1],
+      action: parts[2],
+      category: 'project'
+    };
+  }
 
-	if (parts.length >= 2) {
-		const resource = parts[0];
-		const action = parts[parts.length - 1];
+  if (parts.length >= 2) {
+    const resource = parts[0];
+    const action = parts[parts.length - 1];
 
-		// Check if it's a facility resource
-		if (FACILITY_RESOURCES.includes(resource as FacilityResource)) {
-			return { resource, action, category: 'facility' };
-		}
+    // Check if it's a facility resource
+    if (FACILITY_RESOURCES.includes(resource as FacilityResource)) {
+      return { resource, action, category: 'facility' };
+    }
 
-		return { resource, action, category: 'general' };
-	}
+    return { resource, action, category: 'general' };
+  }
 
-	return { resource: parts[0] || '', action: '', category: 'general' };
+  return { resource: parts[0] || '', action: '', category: 'general' };
 }

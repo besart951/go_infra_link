@@ -1,20 +1,20 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-	import { cn } from '$lib/utils.js';
+  import type { Snippet } from 'svelte';
+  import { cn } from '$lib/utils.js';
 
-	let {
-		class: className,
-		children,
-		...restProps
-	} = $props<{
-		class?: string;
-		children?: Snippet;
-		[key: string]: any;
-	}>();
+  let {
+    class: className,
+    children,
+    ...restProps
+  } = $props<{
+    class?: string;
+    children?: Snippet;
+    [key: string]: any;
+  }>();
 </script>
 
 <div class="relative w-full overflow-auto">
-	<table class={cn('w-full caption-bottom text-sm', className)} {...restProps}>
-		{@render children?.()}
-	</table>
+  <table class={cn('w-full caption-bottom text-sm', className)} {...restProps}>
+    {@render children?.()}
+  </table>
 </div>

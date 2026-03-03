@@ -11,91 +11,91 @@ import type { SPSControllerSystemType } from './sps-sys-type.js';
 import type { SystemPart } from './system.js';
 
 export interface FieldDevice {
-	id: string;
-	bmk?: string;
-	description?: string;
-	text_fix?: string;
-	apparat_nr: string;
-	sps_controller_system_type_id: string;
-	system_part_id?: string;
-	specification_id?: string;
-	apparat_id: string;
-	created_at: string;
-	updated_at: string;
+  id: string;
+  bmk?: string;
+  description?: string;
+  text_fix?: string;
+  apparat_nr: string;
+  sps_controller_system_type_id: string;
+  system_part_id?: string;
+  specification_id?: string;
+  apparat_id: string;
+  created_at: string;
+  updated_at: string;
 
-	// Embedded related entities for display
-	sps_controller_system_type?: SPSControllerSystemType;
-	apparat?: Apparat;
-	system_part?: SystemPart;
-	specification?: Specification;
-	bacnet_objects?: BacnetObject[];
+  // Embedded related entities for display
+  sps_controller_system_type?: SPSControllerSystemType;
+  apparat?: Apparat;
+  system_part?: SystemPart;
+  specification?: Specification;
+  bacnet_objects?: BacnetObject[];
 }
 
 export interface BacnetObjectInput {
-	text_fix: string;
-	description?: string;
-	gms_visible: boolean;
-	optional: boolean;
-	text_individual?: string;
-	software_type: string;
-	software_number: number;
-	hardware_type: string;
-	hardware_quantity: number;
-	software_reference_id?: string;
-	state_text_id?: string;
-	notification_class_id?: string;
-	alarm_type_id?: string;
+  text_fix: string;
+  description?: string;
+  gms_visible: boolean;
+  optional: boolean;
+  text_individual?: string;
+  software_type: string;
+  software_number: number;
+  hardware_type: string;
+  hardware_quantity: number;
+  software_reference_id?: string;
+  state_text_id?: string;
+  notification_class_id?: string;
+  alarm_type_id?: string;
 }
 
 export interface BacnetObjectPatchInput {
-	id: string;
-	text_fix?: string;
-	description?: string;
-	gms_visible?: boolean;
-	optional?: boolean;
-	text_individual?: string;
-	software_type?: string;
-	software_number?: number;
-	hardware_type?: string;
-	hardware_quantity?: number;
-	software_reference_id?: string;
-	state_text_id?: string;
-	notification_class_id?: string;
-	alarm_type_id?: string;
+  id: string;
+  text_fix?: string;
+  description?: string;
+  gms_visible?: boolean;
+  optional?: boolean;
+  text_individual?: string;
+  software_type?: string;
+  software_number?: number;
+  hardware_type?: string;
+  hardware_quantity?: number;
+  software_reference_id?: string;
+  state_text_id?: string;
+  notification_class_id?: string;
+  alarm_type_id?: string;
 }
 
 export interface CreateFieldDeviceRequest {
-	bmk?: string;
-	description?: string;
-	text_fix?: string;
-	apparat_nr: number;
-	sps_controller_system_type_id: string;
-	system_part_id: string;
-	apparat_id: string;
-	object_data_id?: string;
-	bacnet_objects?: BacnetObjectInput[];
+  bmk?: string;
+  description?: string;
+  text_fix?: string;
+  apparat_nr: number;
+  sps_controller_system_type_id: string;
+  system_part_id: string;
+  apparat_id: string;
+  object_data_id?: string;
+  bacnet_objects?: BacnetObjectInput[];
 }
 
 export interface UpdateFieldDeviceRequest {
-	bmk?: string;
-	description?: string;
-	text_fix?: string;
-	apparat_nr?: number;
-	sps_controller_system_type_id?: string;
-	system_part_id?: string;
-	apparat_id?: string;
-	object_data_id?: string;
-	specification?: SpecificationInput;
-	bacnet_objects?: BacnetObjectInput[];
+  bmk?: string;
+  description?: string;
+  text_fix?: string;
+  apparat_nr?: number;
+  sps_controller_system_type_id?: string;
+  system_part_id?: string;
+  apparat_id?: string;
+  object_data_id?: string;
+  specification?: SpecificationInput;
+  bacnet_objects?: BacnetObjectInput[];
 }
 
 export interface FieldDeviceListParams {
-	page?: number;
-	limit?: number;
-	search?: string;
-	sps_controller_system_type_id?: string;
-	order_by?: string;
-	order?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+  search?: string;
+  sps_controller_system_type_id?: string;
+  order_by?: string;
+  order?: 'asc' | 'desc';
 }
 
 export interface FieldDeviceListResponse extends Pagination<FieldDevice> {}
@@ -105,120 +105,120 @@ export interface FieldDeviceListResponse extends Pagination<FieldDevice> {}
  * Contains all metadata needed for creating/editing field devices with relationships
  */
 export interface FieldDeviceOptions {
-	apparats: import('./apparat.js').Apparat[];
-	system_parts: import('./system.js').SystemPart[];
-	object_datas: import('./object-data.js').ObjectData[];
-	apparat_to_system_part: Record<string, string[]>; // apparat_id -> [system_part_ids]
-	object_data_to_apparat: Record<string, string[]>; // object_data_id -> [apparat_ids]
+  apparats: import('./apparat.js').Apparat[];
+  system_parts: import('./system.js').SystemPart[];
+  object_datas: import('./object-data.js').ObjectData[];
+  apparat_to_system_part: Record<string, string[]>; // apparat_id -> [system_part_ids]
+  object_data_to_apparat: Record<string, string[]>; // object_data_id -> [apparat_ids]
 }
 
 /**
  * Available apparat numbers response
  */
 export interface AvailableApparatNumbersResponse {
-	available: number[];
+  available: number[];
 }
 
 /**
  * Multi-create field device request
  */
 export interface MultiCreateFieldDeviceRequest {
-	field_devices: CreateFieldDeviceRequest[];
+  field_devices: CreateFieldDeviceRequest[];
 }
 
 /**
  * Result for a single field device creation in multi-create
  */
 export interface FieldDeviceCreateResult {
-	index: number; // Index in the original request array
-	success: boolean; // Whether the creation succeeded
-	field_device?: FieldDevice; // The created field device (null if failed)
-	error: string; // Error message if failed (empty if succeeded)
-	error_field: string; // Specific field that caused the error (if applicable)
+  index: number; // Index in the original request array
+  success: boolean; // Whether the creation succeeded
+  field_device?: FieldDevice; // The created field device (null if failed)
+  error: string; // Error message if failed (empty if succeeded)
+  error_field: string; // Specific field that caused the error (if applicable)
 }
 
 /**
  * Multi-create field device response
  */
 export interface MultiCreateFieldDeviceResponse {
-	results: FieldDeviceCreateResult[];
-	total_requests: number;
-	success_count: number;
-	failure_count: number;
+  results: FieldDeviceCreateResult[];
+  total_requests: number;
+  success_count: number;
+  failure_count: number;
 }
 
 /**
  * Specification input for bulk update
  */
 export interface SpecificationInput {
-	specification_supplier?: string;
-	specification_brand?: string;
-	specification_type?: string;
-	additional_info_motor_valve?: string;
-	additional_info_size?: number;
-	additional_information_installation_location?: string;
-	electrical_connection_ph?: number;
-	electrical_connection_acdc?: string;
-	electrical_connection_amperage?: number;
-	electrical_connection_power?: number;
-	electrical_connection_rotation?: number;
+  specification_supplier?: string;
+  specification_brand?: string;
+  specification_type?: string;
+  additional_info_motor_valve?: string;
+  additional_info_size?: number;
+  additional_information_installation_location?: string;
+  electrical_connection_ph?: number;
+  electrical_connection_acdc?: string;
+  electrical_connection_amperage?: number;
+  electrical_connection_power?: number;
+  electrical_connection_rotation?: number;
 }
 
 /**
  * Bulk update field device item
  */
 export interface BulkUpdateFieldDeviceItem {
-	id: string;
-	bmk?: string;
-	description?: string;
-	text_fix?: string;
-	apparat_nr?: number;
-	apparat_id?: string;
-	system_part_id?: string;
-	specification?: SpecificationInput;
-	bacnet_objects?: BacnetObjectPatchInput[];
+  id: string;
+  bmk?: string;
+  description?: string;
+  text_fix?: string;
+  apparat_nr?: number;
+  apparat_id?: string;
+  system_part_id?: string;
+  specification?: SpecificationInput;
+  bacnet_objects?: BacnetObjectPatchInput[];
 }
 
 /**
  * Bulk update field device request
  */
 export interface BulkUpdateFieldDeviceRequest {
-	updates: BulkUpdateFieldDeviceItem[];
+  updates: BulkUpdateFieldDeviceItem[];
 }
 
 /**
  * Bulk operation result item
  */
 export interface BulkOperationResultItem {
-	id: string;
-	success: boolean;
-	error?: string;
-	fields?: Record<string, string>;
+  id: string;
+  success: boolean;
+  error?: string;
+  fields?: Record<string, string>;
 }
 
 /**
  * Bulk update field device response
  */
 export interface BulkUpdateFieldDeviceResponse {
-	results: BulkOperationResultItem[];
-	total_count: number;
-	success_count: number;
-	failure_count: number;
+  results: BulkOperationResultItem[];
+  total_count: number;
+  success_count: number;
+  failure_count: number;
 }
 
 /**
  * Bulk delete field device request
  */
 export interface BulkDeleteFieldDeviceRequest {
-	ids: string[];
+  ids: string[];
 }
 
 /**
  * Bulk delete field device response
  */
 export interface BulkDeleteFieldDeviceResponse {
-	results: BulkOperationResultItem[];
-	total_count: number;
-	success_count: number;
-	failure_count: number;
+  results: BulkOperationResultItem[];
+  total_count: number;
+  success_count: number;
+  failure_count: number;
 }

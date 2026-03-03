@@ -17,7 +17,7 @@ The frontend uses a Svelte store-based translation system for German (Switzerlan
 ```svelte
 <script lang="ts">
   import { createTranslator } from '$lib/i18n/translator';
-  
+
   const t = createTranslator();
 </script>
 
@@ -80,6 +80,7 @@ errors.server_error    → "Serverfehler. Bitte versuchen Sie es später erneut.
 3. Use the key in your component with `$t('section.key')`
 
 Example:
+
 ```json
 {
   "facility": {
@@ -89,6 +90,7 @@ Example:
 ```
 
 Then in a component:
+
 ```svelte
 <p>{$t('facility.my_new_message')}</p>
 ```
@@ -96,6 +98,7 @@ Then in a component:
 ## Current Translation Coverage
 
 ✅ **Completed:**
+
 - Authentication (login, signup, password reset)
 - Common UI elements
 - Error messages
@@ -104,6 +107,7 @@ Then in a component:
 - Project management
 
 ⏳ **To Be Translated:**
+
 - Component-specific messages
 - Dialog/modal content
 - Validation messages
@@ -120,12 +124,14 @@ Then in a component:
 ## Fallback Behavior
 
 If a translation key is not found, the key itself is returned:
+
 - Missing key: `$t('unknown.key')` → `'unknown.key'`
 - This makes it easy to spot untranslated content during development
 
 ## Future Enhancements
 
 When adding new locale support (e.g., English):
+
 1. Create `src/lib/i18n/translations/en_US.json`
 2. Update the `translations` object in `src/lib/i18n/index.ts`
 3. Add locale option to `Locale` type

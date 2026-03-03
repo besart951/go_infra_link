@@ -6,5 +6,6 @@
 import { env } from '$env/dynamic/private';
 
 export function getBackendUrl(): string {
-	return env.BACKEND_URL || 'http://localhost:8080';
+  const backendPort = env.BACKEND_PORT ?? '8080';
+  return env.BACKEND_URL ?? `http://localhost:${backendPort}`;
 }

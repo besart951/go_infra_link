@@ -7,6 +7,37 @@ param(
 $ErrorActionPreference = 'Stop'
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
+function Import-DotEnv {
+    param([string]$Path)
+
+    if (-not (Test-Path $Path)) {
+        return
+    }
+
+    Get-Content $Path | ForEach-Object {
+        $line = $_.Trim()
+        if (-not $line -or $line.StartsWith('#')) {
+            return
+        }
+
+        $eq = $line.IndexOf('=')
+        if ($eq -lt 1) {
+            return
+        }
+
+        $key = $line.Substring(0, $eq).Trim()
+        $raw = $line.Substring($eq + 1).Trim()
+        $hash = $raw.IndexOf(' #')
+        $value = if ($hash -ge 0) { $raw.Substring(0, $hash).Trim() } else { $raw }
+
+        if ($key) {
+            [Environment]::SetEnvironmentVariable($key, $value, 'Process')
+        }
+    }
+}
+
+Import-DotEnv (Join-Path $RepoRoot '.env')
+
 function Write-Step {
     param([string]$Message)
     Write-Host "[dev] $Message" -ForegroundColor Cyan

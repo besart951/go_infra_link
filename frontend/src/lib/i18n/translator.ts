@@ -13,14 +13,12 @@ export type TranslationParams = Record<string, string | number | boolean | null 
  * </script>
  * <div>{$t('auth.login')}</div>
  */
-export function createTranslator(): Readable<
-	(key: string, params?: TranslationParams) => string
-> {
-	return {
-		subscribe(fn) {
-			return i18n.subscribe(() => {
-				fn((key: string, params?: TranslationParams) => i18n.getTranslation(key, params));
-			});
-		}
-	};
+export function createTranslator(): Readable<(key: string, params?: TranslationParams) => string> {
+  return {
+    subscribe(fn) {
+      return i18n.subscribe(() => {
+        fn((key: string, params?: TranslationParams) => i18n.getTranslation(key, params));
+      });
+    }
+  };
 }

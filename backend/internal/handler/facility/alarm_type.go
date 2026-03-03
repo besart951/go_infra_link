@@ -37,10 +37,10 @@ func NewAlarmTypeHandler(svc AlarmTypeService) *AlarmTypeHandler {
 // @Router /api/v1/facility/alarm-types [get]
 func (h *AlarmTypeHandler) ListAlarmTypes(c *gin.Context) { h.crud.handleList(c) }
 
-func (h *AlarmTypeHandler) CreateAlarmType(c *gin.Context)  { h.crud.handleCreate(c) }
-func (h *AlarmTypeHandler) GetAlarmType(c *gin.Context)     { h.crud.handleGetByID(c) }
-func (h *AlarmTypeHandler) UpdateAlarmType(c *gin.Context)  { h.crud.handleUpdate(c) }
-func (h *AlarmTypeHandler) DeleteAlarmType(c *gin.Context)  { h.crud.handleDelete(c) }
+func (h *AlarmTypeHandler) CreateAlarmType(c *gin.Context) { h.crud.handleCreate(c) }
+func (h *AlarmTypeHandler) GetAlarmType(c *gin.Context)    { h.crud.handleGetByID(c) }
+func (h *AlarmTypeHandler) UpdateAlarmType(c *gin.Context) { h.crud.handleUpdate(c) }
+func (h *AlarmTypeHandler) DeleteAlarmType(c *gin.Context) { h.crud.handleDelete(c) }
 
 // GetAlarmTypeFields godoc
 // @Summary Get fields for an alarm type

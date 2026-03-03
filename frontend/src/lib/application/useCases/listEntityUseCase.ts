@@ -6,20 +6,20 @@ import type { ListParams, PaginatedResponse } from '$lib/domain/ports/listReposi
  * Replaces per-entity ListXxxUseCase boilerplate.
  */
 export class ListEntityUseCase<T, C = unknown, U = unknown> {
-	constructor(private repository: CrudRepository<T, C, U>) {}
+  constructor(private repository: CrudRepository<T, C, U>) {}
 
-	async execute(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<T>> {
-		return this.repository.list(params, signal);
-	}
+  async execute(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<T>> {
+    return this.repository.list(params, signal);
+  }
 
-	async get(id: string, signal?: AbortSignal): Promise<T> {
-		return this.repository.get(id, signal);
-	}
+  async get(id: string, signal?: AbortSignal): Promise<T> {
+    return this.repository.get(id, signal);
+  }
 
-	async getBulk(ids: string[], signal?: AbortSignal): Promise<T[]> {
-		if (!this.repository.getBulk) {
-			throw new Error('getBulk not implemented for this repository');
-		}
-		return this.repository.getBulk(ids, signal);
-	}
+  async getBulk(ids: string[], signal?: AbortSignal): Promise<T[]> {
+    if (!this.repository.getBulk) {
+      throw new Error('getBulk not implemented for this repository');
+    }
+    return this.repository.getBulk(ids, signal);
+  }
 }

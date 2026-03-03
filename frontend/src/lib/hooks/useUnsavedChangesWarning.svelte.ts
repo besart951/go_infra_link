@@ -11,16 +11,16 @@
  */
 
 export interface UnsavedChangesWarningOptions {
-	/**
-	 * Custom message for the warning dialog
-	 * Note: Most modern browsers ignore custom messages and show a generic warning
-	 */
-	message?: string;
+  /**
+   * Custom message for the warning dialog
+   * Note: Most modern browsers ignore custom messages and show a generic warning
+   */
+  message?: string;
 
-	/**
-	 * Enable/disable the warning system
-	 */
-	enabled?: boolean;
+  /**
+   * Enable/disable the warning system
+   */
+  enabled?: boolean;
 }
 
 /**
@@ -36,44 +36,44 @@ export interface UnsavedChangesWarningOptions {
  * ```
  */
 export function useUnsavedChangesWarning(
-	hasUnsavedChanges: () => boolean,
-	options: UnsavedChangesWarningOptions = {}
+  hasUnsavedChanges: () => boolean,
+  options: UnsavedChangesWarningOptions = {}
 ) {
-	const { message = 'You have unsaved changes. Are you sure you want to leave?', enabled = true } =
-		options;
+  const { message = 'You have unsaved changes. Are you sure you want to leave?', enabled = true } =
+    options;
 
-	if (!enabled) return;
+  if (!enabled) return;
 
-	// Only run in browser environment
-	if (typeof window === 'undefined') return;
+  // Only run in browser environment
+  if (typeof window === 'undefined') return;
 
-	/**
-	 * BeforeUnload event handler
-	 * Triggered when user tries to leave the page
-	 */
-	function handleBeforeUnload(event: BeforeUnloadEvent): string | undefined {
-		// Check if there are unsaved changes
-		if (!hasUnsavedChanges()) return undefined;
+  /**
+   * BeforeUnload event handler
+   * Triggered when user tries to leave the page
+   */
+  function handleBeforeUnload(event: BeforeUnloadEvent): string | undefined {
+    // Check if there are unsaved changes
+    if (!hasUnsavedChanges()) return undefined;
 
-		// Prevent default to show confirmation dialog
-		event.preventDefault();
+    // Prevent default to show confirmation dialog
+    event.preventDefault();
 
-		// Set returnValue for older browsers
-		event.returnValue = message;
+    // Set returnValue for older browsers
+    event.returnValue = message;
 
-		// Return message (modern browsers ignore this but it's required for some)
-		return message;
-	}
+    // Return message (modern browsers ignore this but it's required for some)
+    return message;
+  }
 
-	// Register event listener
-	$effect(() => {
-		window.addEventListener('beforeunload', handleBeforeUnload);
+  // Register event listener
+  $effect(() => {
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
-		// Cleanup on component unmount
-		return () => {
-			window.removeEventListener('beforeunload', handleBeforeUnload);
-		};
-	});
+    // Cleanup on component unmount
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  });
 }
 
 /**
@@ -81,7 +81,7 @@ export function useUnsavedChangesWarning(
  * Useful for testing or custom navigation flows
  */
 export function confirmLeaveWithUnsavedChanges(
-	customMessage = 'You have unsaved changes. Do you want to leave without saving?'
+  customMessage = 'You have unsaved changes. Do you want to leave without saving?'
 ): boolean {
-	return confirm(customMessage);
+  return confirm(customMessage);
 }

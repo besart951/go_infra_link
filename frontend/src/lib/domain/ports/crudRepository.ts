@@ -9,10 +9,10 @@ import type { ListRepository, ListParams, PaginatedResponse } from './listReposi
  * @typeParam U - Update request type
  */
 export interface CrudRepository<T, C, U> extends ListRepository<T> {
-	list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<T>>;
-	get(id: string, signal?: AbortSignal): Promise<T>;
-	getBulk?(ids: string[], signal?: AbortSignal): Promise<T[]>;
-	create(data: C, signal?: AbortSignal): Promise<T>;
-	update(id: string, data: U, signal?: AbortSignal): Promise<T>;
-	delete(id: string, signal?: AbortSignal): Promise<void>;
+  list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<T>>;
+  get(id: string, signal?: AbortSignal): Promise<T>;
+  getBulk?(ids: string[], signal?: AbortSignal): Promise<T[]>;
+  create(data: C, signal?: AbortSignal): Promise<T>;
+  update(id: string, data: U, signal?: AbortSignal): Promise<T>;
+  delete(id: string, signal?: AbortSignal): Promise<void>;
 }
