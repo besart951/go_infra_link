@@ -6,6 +6,7 @@
   import { Input } from '$lib/components/ui/input/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
+  import * as Collapsible from '$lib/components/ui/collapsible/index.js';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import { addToast } from '$lib/components/toast.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
@@ -32,7 +33,7 @@
     ProjectSPSControllerLink
   } from '$lib/domain/project/index.js';
   import type { Building, ControlCabinet, SPSController } from '$lib/domain/facility/index.js';
-  import { ArrowLeft, Plus, Pencil } from '@lucide/svelte';
+  import { ArrowLeft, Plus, Pencil, ChevronDown } from '@lucide/svelte';
 
   const t = createTranslator();
 
@@ -46,6 +47,7 @@
   let controlCabinetOptions = $state<ControlCabinet[]>([]);
   let controlCabinetLoading = $state(false);
   let showControlCabinetForm = $state(false);
+  let controlCabinetOpen = $state(true);
   let controlCabinetSearch = $state('');
   let buildingMap = $state(new Map<string, string>());
   const buildingRequests = new Set<string>();
@@ -54,6 +56,7 @@
   let spsControllerOptions = $state<SPSController[]>([]);
   let spsControllerLoading = $state(false);
   let showSpsControllerForm = $state(false);
+  let spsControllerOpen = $state(true);
   let editingSpsController: SPSController | undefined = $state(undefined);
   let spsControllerSearchText = $state('');
   let spsControllerPage = $state(1);
@@ -401,172 +404,207 @@
   {:else}
     <div class="grid gap-6">
       <div class="rounded-lg border bg-background p-6">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="text-lg font-semibold">Control Cabinets</h2>
-            <p class="text-sm text-muted-foreground">
-              {$t('projects.control_cabinets.description')}
-            </p>
-          </div>
-          <div class="flex items-center gap-2">
-            <Input
-              class="w-64"
-              placeholder={$t('projects.control_cabinets.search_placeholder')}
-              bind:value={controlCabinetSearch}
-            />
-            <Button variant="outline" onclick={loadControlCabinets} disabled={controlCabinetLoading}
-              >{$t('common.refresh')}</Button
+        <Collapsible.Root bind:open={controlCabinetOpen} class="group/collapsible">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-semibold">Control Cabinets</h2>
+              <p class="text-sm text-muted-foreground">
+                {$t('projects.control_cabinets.description')}
+              </p>
+            </div>
+            <Collapsible.Trigger
+              class="inline-flex items-center gap-2 text-sm text-muted-foreground"
             >
-            {#if !showControlCabinetForm}
-              <Button onclick={() => (showControlCabinetForm = true)}>
-                <Plus class="mr-2 size-4" />
-                {$t('projects.control_cabinets.new')}
-              </Button>
-            {/if}
+              {$t('common.actions')}
+              <ChevronDown
+                class="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180"
+              />
+            </Collapsible.Trigger>
           </div>
-        </div>
 
-        {#if showControlCabinetForm}
-          <ControlCabinetForm
-            onSuccess={handleControlCabinetCreated}
-            onCancel={() => (showControlCabinetForm = false)}
-          />
-        {/if}
-
-        <div class="mt-6 rounded-lg border bg-background">
-          <Table.Root>
-            <Table.Header>
-              <Table.Row>
-                <Table.Head>{$t('projects.control_cabinets.table.control_cabinet')}</Table.Head>
-                <Table.Head>{$t('projects.control_cabinets.table.building')}</Table.Head>
-                <Table.Head class="w-32"></Table.Head>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {#if controlCabinetLoading}
-                {#each Array(4) as _}
-                  <Table.Row>
-                    <Table.Cell><Skeleton class="h-4 w-60" /></Table.Cell>
-                    <Table.Cell><Skeleton class="h-4 w-40" /></Table.Cell>
-                    <Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
-                  </Table.Row>
-                {/each}
-              {:else if filteredControlCabinetLinks.length === 0}
-                <Table.Row>
-                  <Table.Cell colspan={3} class="h-20 text-center text-sm text-muted-foreground">
-                    {$t('projects.control_cabinets.empty')}
-                  </Table.Cell>
-                </Table.Row>
-              {:else}
-                {#each filteredControlCabinetLinks as link (link.id)}
-                  <Table.Row>
-                    <Table.Cell class="font-medium">
-                      {controlCabinetLabel(link.control_cabinet_id)}
-                    </Table.Cell>
-                    <Table.Cell>
-                      {getBuildingLabel(
-                        controlCabinetOptions.find((c) => c.id === link.control_cabinet_id)
-                          ?.building_id
-                      )}
-                    </Table.Cell>
-                    <Table.Cell class="text-right">
-                      <Button variant="outline" onclick={() => removeControlCabinet(link.id)}>
-                        {$t('common.remove')}
-                      </Button>
-                    </Table.Cell>
-                  </Table.Row>
-                {/each}
+          <Collapsible.Content class="mt-4">
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              <Input
+                class="w-64"
+                placeholder={$t('projects.control_cabinets.search_placeholder')}
+                bind:value={controlCabinetSearch}
+              />
+              <Button
+                variant="outline"
+                onclick={loadControlCabinets}
+                disabled={controlCabinetLoading}>{$t('common.refresh')}</Button
+              >
+              {#if !showControlCabinetForm}
+                <Button onclick={() => (showControlCabinetForm = true)}>
+                  <Plus class="mr-2 size-4" />
+                  {$t('projects.control_cabinets.new')}
+                </Button>
               {/if}
-            </Table.Body>
-          </Table.Root>
-        </div>
+            </div>
+
+            {#if showControlCabinetForm}
+              <ControlCabinetForm
+                onSuccess={handleControlCabinetCreated}
+                onCancel={() => (showControlCabinetForm = false)}
+              />
+            {/if}
+
+            <div class="mt-6 rounded-lg border bg-background">
+              <Table.Root>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.Head>{$t('projects.control_cabinets.table.control_cabinet')}</Table.Head>
+                    <Table.Head>{$t('projects.control_cabinets.table.building')}</Table.Head>
+                    <Table.Head class="w-32"></Table.Head>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {#if controlCabinetLoading}
+                    {#each Array(4) as _}
+                      <Table.Row>
+                        <Table.Cell><Skeleton class="h-4 w-60" /></Table.Cell>
+                        <Table.Cell><Skeleton class="h-4 w-40" /></Table.Cell>
+                        <Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
+                      </Table.Row>
+                    {/each}
+                  {:else if filteredControlCabinetLinks.length === 0}
+                    <Table.Row>
+                      <Table.Cell
+                        colspan={3}
+                        class="h-20 text-center text-sm text-muted-foreground"
+                      >
+                        {$t('projects.control_cabinets.empty')}
+                      </Table.Cell>
+                    </Table.Row>
+                  {:else}
+                    {#each filteredControlCabinetLinks as link (link.id)}
+                      <Table.Row>
+                        <Table.Cell class="font-medium">
+                          {controlCabinetLabel(link.control_cabinet_id)}
+                        </Table.Cell>
+                        <Table.Cell>
+                          {getBuildingLabel(
+                            controlCabinetOptions.find((c) => c.id === link.control_cabinet_id)
+                              ?.building_id
+                          )}
+                        </Table.Cell>
+                        <Table.Cell class="text-right">
+                          <Button variant="outline" onclick={() => removeControlCabinet(link.id)}>
+                            {$t('common.remove')}
+                          </Button>
+                        </Table.Cell>
+                      </Table.Row>
+                    {/each}
+                  {/if}
+                </Table.Body>
+              </Table.Root>
+            </div>
+          </Collapsible.Content>
+        </Collapsible.Root>
       </div>
 
       <div class="rounded-lg border bg-background p-6">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="text-lg font-semibold">SPS Controllers</h2>
-            <p class="text-sm text-muted-foreground">
-              {$t('projects.sps_controllers.description')}
-            </p>
+        <Collapsible.Root bind:open={spsControllerOpen} class="group/collapsible">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-semibold">SPS Controllers</h2>
+              <p class="text-sm text-muted-foreground">
+                {$t('projects.sps_controllers.description')}
+              </p>
+            </div>
+            <Collapsible.Trigger
+              class="inline-flex items-center gap-2 text-sm text-muted-foreground"
+            >
+              {$t('common.actions')}
+              <ChevronDown
+                class="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180"
+              />
+            </Collapsible.Trigger>
           </div>
-          <div class="flex items-center gap-2">
-            {#if !showSpsControllerForm}
-              <Button onclick={handleSpsControllerCreate}>
-                <Plus class="mr-2 size-4" />
-                {$t('projects.sps_controllers.new')}
-              </Button>
-            {/if}
-          </div>
-        </div>
 
-        {#if showSpsControllerForm}
-          <SPSControllerForm
-            initialData={editingSpsController}
-            onSuccess={handleSpsControllerSuccess}
-            onCancel={handleSpsControllerCancel}
-          />
-        {/if}
-
-        <PaginatedList
-          state={spsControllerListState}
-          columns={[
-            { key: 'device_name', label: $t('projects.sps_controllers.columns.device_name') },
-            { key: 'ga_device', label: $t('projects.sps_controllers.columns.ga_device') },
-            { key: 'ip_address', label: $t('projects.sps_controllers.columns.ip_address') },
-            { key: 'cabinet', label: $t('projects.sps_controllers.columns.cabinet') },
-            { key: 'created', label: $t('projects.sps_controllers.columns.created') },
-            { key: 'actions', label: $t('common.actions'), width: 'w-[120px]' }
-          ]}
-          searchPlaceholder={$t('projects.sps_controllers.search_placeholder')}
-          emptyMessage={$t('projects.sps_controllers.empty')}
-          onSearch={handleSpsControllerSearch}
-          onPageChange={handleSpsControllerPageChange}
-          onReload={loadSpsControllers}
-        >
-          {#snippet rowSnippet(controller: SPSController)}
-            <Table.Cell class="font-medium">
-              <a href="/facility/sps-controllers/{controller.id}" class="hover:underline">
-                {controller.device_name}
-              </a>
-            </Table.Cell>
-            <Table.Cell>{controller.ga_device ?? '-'}</Table.Cell>
-            <Table.Cell>
-              {#if controller.ip_address}
-                <code class="rounded bg-muted px-1.5 py-0.5 text-sm">
-                  {controller.ip_address}
-                </code>
-              {:else}
-                -
+          <Collapsible.Content class="mt-4">
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              {#if !showSpsControllerForm}
+                <Button onclick={handleSpsControllerCreate}>
+                  <Plus class="mr-2 size-4" />
+                  {$t('projects.sps_controllers.new')}
+                </Button>
               {/if}
-            </Table.Cell>
-            <Table.Cell>{controlCabinetLabel(controller.control_cabinet_id)}</Table.Cell>
-            <Table.Cell>
-              {new Date(controller.created_at).toLocaleDateString()}
-            </Table.Cell>
-            <Table.Cell>
-              <div class="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onclick={() => handleSpsControllerEdit(controller)}
-                >
-                  <Pencil class="size-4" />
-                </Button>
-                <Button variant="ghost" size="sm" href="/facility/sps-controllers/{controller.id}">
-                  {$t('common.view')}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onclick={() => handleDeleteSpsController(controller)}
-                >
-                  {$t('common.delete')}
-                </Button>
-              </div>
-            </Table.Cell>
-          {/snippet}
-        </PaginatedList>
+            </div>
+
+            {#if showSpsControllerForm}
+              <SPSControllerForm
+                initialData={editingSpsController}
+                onSuccess={handleSpsControllerSuccess}
+                onCancel={handleSpsControllerCancel}
+              />
+            {/if}
+
+            <PaginatedList
+              state={spsControllerListState}
+              columns={[
+                { key: 'device_name', label: $t('projects.sps_controllers.columns.device_name') },
+                { key: 'ga_device', label: $t('projects.sps_controllers.columns.ga_device') },
+                { key: 'ip_address', label: $t('projects.sps_controllers.columns.ip_address') },
+                { key: 'cabinet', label: $t('projects.sps_controllers.columns.cabinet') },
+                { key: 'created', label: $t('projects.sps_controllers.columns.created') },
+                { key: 'actions', label: $t('common.actions'), width: 'w-[120px]' }
+              ]}
+              searchPlaceholder={$t('projects.sps_controllers.search_placeholder')}
+              emptyMessage={$t('projects.sps_controllers.empty')}
+              onSearch={handleSpsControllerSearch}
+              onPageChange={handleSpsControllerPageChange}
+              onReload={loadSpsControllers}
+            >
+              {#snippet rowSnippet(controller: SPSController)}
+                <Table.Cell class="font-medium">
+                  <a href="/facility/sps-controllers/{controller.id}" class="hover:underline">
+                    {controller.device_name}
+                  </a>
+                </Table.Cell>
+                <Table.Cell>{controller.ga_device ?? '-'}</Table.Cell>
+                <Table.Cell>
+                  {#if controller.ip_address}
+                    <code class="rounded bg-muted px-1.5 py-0.5 text-sm">
+                      {controller.ip_address}
+                    </code>
+                  {:else}
+                    -
+                  {/if}
+                </Table.Cell>
+                <Table.Cell>{controlCabinetLabel(controller.control_cabinet_id)}</Table.Cell>
+                <Table.Cell>
+                  {new Date(controller.created_at).toLocaleDateString()}
+                </Table.Cell>
+                <Table.Cell>
+                  <div class="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onclick={() => handleSpsControllerEdit(controller)}
+                    >
+                      <Pencil class="size-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      href="/facility/sps-controllers/{controller.id}"
+                    >
+                      {$t('common.view')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onclick={() => handleDeleteSpsController(controller)}
+                    >
+                      {$t('common.delete')}
+                    </Button>
+                  </div>
+                </Table.Cell>
+              {/snippet}
+            </PaginatedList>
+          </Collapsible.Content>
+        </Collapsible.Root>
       </div>
 
       <div class="rounded-lg border bg-background p-6">
