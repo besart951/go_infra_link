@@ -5,6 +5,8 @@
 		"dev": "vite dev",
 		"build": "vite build && npm run prepack",
 		"preview": "vite preview",
+		"test": "vitest run --config vitest.config.ts",
+		"test:watch": "vitest --config vitest.config.ts",
 		"prepare": "svelte-kit sync || echo ''",
 		"prepack": "svelte-kit sync && svelte-package && publint",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -33,6 +35,8 @@
 		"svelte": "^5.0.0"
 	},
 	"devDependencies": {
+		"@testing-library/jest-dom": "^6.8.0",
+		"@testing-library/svelte": "^5.2.8",
 		"@internationalized/date": "^3.11.0",
 		"@lucide/svelte": "^0.561.0",
 		"@sveltejs/adapter-auto": "^7.0.1",
@@ -43,6 +47,7 @@
 		"@tailwindcss/vite": "^4.1.18",
 		"bits-ui": "^2.15.7",
 		"clsx": "^2.1.1",
+		"jsdom": "^26.0.0",
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.4.1",
 		"prettier-plugin-tailwindcss": "^0.7.2",
@@ -56,6 +61,8 @@
 		"typescript": "^5.9.3",
 		"vite": "^7.3.1",
 		"vite-plugin-inspect": "^11.3.3"
+		,
+		"vitest": "^3.2.4"
 	},
 	"keywords": [
 		"svelte"
