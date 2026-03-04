@@ -14,11 +14,12 @@
 
   interface Props {
     initialData?: ControlCabinet;
+    projectId?: string;
     onSuccess?: (cabinet: ControlCabinet) => void;
     onCancel?: () => void;
   }
 
-  let { initialData, onSuccess, onCancel }: Props = $props();
+  let { initialData, projectId, onSuccess, onCancel }: Props = $props();
 
   const t = createTranslator();
 
@@ -76,13 +77,15 @@
         const res = await manageControlCabinet.update(initialData.id, {
           id: initialData.id,
           control_cabinet_nr,
-          building_id
+          building_id,
+          project_id: projectId || undefined
         });
         onSuccess?.(res);
       } else {
         const res = await manageControlCabinet.create({
           control_cabinet_nr,
-          building_id
+          building_id,
+          project_id: projectId || undefined
         });
         onSuccess?.(res);
       }
@@ -148,3 +151,4 @@
     </Button>
   </div>
 </form>
+

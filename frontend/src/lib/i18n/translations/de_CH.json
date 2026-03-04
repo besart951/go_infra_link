@@ -21,6 +21,8 @@
 		"save_changes": "Änderungen speichern",
 		"saving": "Speichern...",
 		"delete": "Löschen",
+		"copy": "Kopieren",
+		"view": "Anzeigen",
 		"edit": "Bearbeiten",
 		"create": "Erstellen",
 		"update": "Aktualisieren",
@@ -259,7 +261,10 @@
 			"table": {
 				"control_cabinet": "Schaltschrank",
 				"building": "Gebäude"
-			}
+			},
+			"updated": "Schaltschrank aktualisiert",
+			"duplicated": "Schaltschrank inklusive Projektzuordnung dupliziert",
+			"duplicate_failed": "Schaltschrank konnte nicht projektbezogen dupliziert werden"
 		},
 		"sps_controllers": {
 			"description": "SPS-Regler erstellen und zuweisen.",
@@ -426,6 +431,25 @@
 		"cascading_delete_message": "Dadurch werden auch {systemTypes} Systemtyp-Verknüpfung(en), {fieldDevices} Feldgerät(e) und {bacnetObjects} BACnet-Objekt(e) gelöscht.",
 		"delete_everything": "Alles löschen",
 		"delete_control_cabinet_failed": "Schaltschrank löschen fehlgeschlagen",
+		"control_cabinet_detail": {
+			"title": "Schaltschrank",
+			"subtitle": "Übersicht, SPS-Regler und Systemtypen verwalten.",
+			"edit_cabinet": "Schaltschrank bearbeiten",
+			"delete_cabinet": "Schaltschrank löschen",
+			"overview_title": "Übersicht",
+			"overview_desc": "Stammdaten und Zeitinformationen für diesen Schaltschrank.",
+			"cabinet_number": "Schaltschrank-Nr.",
+			"created_at": "Erstellt am",
+			"updated_at": "Aktualisiert am",
+			"sps_title": "Zugehörige SPS-Regler",
+			"sps_desc": "Alle SPS-Regler in diesem Schaltschrank mit ihren Systemtypen.",
+			"create_sps": "SPS-Regler erstellen",
+			"no_read_permission": "Sie haben keine Berechtigung, SPS-Regler zu sehen.",
+			"no_sps": "Noch keine SPS-Regler vorhanden.",
+			"system_types": "SPS-Systemtypen",
+			"no_system_types": "Keine Systemtypen zugeordnet.",
+			"number": "Nummer"
+		},
 		"cabinet_type": "Schranktyp",
 		"cabinet_location": "Standort",
 		"field_devices": "Feldgeräte",

@@ -72,6 +72,9 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 		AlarmTypes:               repos.FacilityAlarmTypes,
 		AlarmTypeFields:          repos.FacilityAlarmTypeFields,
 		BacnetObjectAlarmValues:  repos.FacilityBacnetObjectAlarmValues,
+		ProjectControlCabinets:   repos.ProjectControlCabinets,
+		ProjectSPSControllers:    repos.ProjectSPSControllers,
+		ProjectFieldDevices:      repos.ProjectFieldDevices,
 	})
 
 	jobStore := exportinfra.NewMemoryJobStore()
@@ -104,6 +107,11 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 			repos.User,
 			repos.FacilityObjectData,
 			repos.FacilityBacnetObjects,
+			repos.FacilitySpecifications,
+			repos.FacilityControlCabinet,
+			repos.FacilitySPSControllers,
+			repos.FacilitySPSControllerSystemTypes,
+			repos.FacilityFieldDevices,
 		),
 		Dashboard:       dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
 		Phase:           phaseservice.NewPhaseService(repos.Phase),

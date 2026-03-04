@@ -1,27 +1,19 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { Button } from '$lib/components/ui/button/index.js';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-  import * as Table from '$lib/components/ui/table/index.js';
-  import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
-  import { Plus } from '@lucide/svelte';
-  import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import { controlCabinetsStore } from '$lib/stores/list/entityStores.js';
-  import type { ControlCabinet } from '$lib/domain/facility/index.js';
-  import ControlCabinetForm from '$lib/components/facility/forms/ControlCabinetForm.svelte';
+  import type { Building, ControlCabinet } from '$lib/domain/facility/index.js';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+  import ControlCabinetList from '$lib/components/facility/control-cabinets/ControlCabinetList.svelte';
   import { addToast } from '$lib/components/toast.svelte';
   import { confirm } from '$lib/stores/confirm-dialog.js';
   import { ManageControlCabinetUseCase } from '$lib/application/useCases/facility/manageControlCabinetUseCase.js';
   import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
   import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
-  const manageControlCabinet = new ManageControlCabinetUseCase(controlCabinetRepository);
-  import type { Building } from '$lib/domain/facility/index.js';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
+  const manageControlCabinet = new ManageControlCabinetUseCase(controlCabinetRepository);
 
   let showForm = $state(false);
   let editingItem: ControlCabinet | undefined = $state(undefined);
@@ -165,82 +157,34 @@
 <ConfirmDialog />
 
 <div class="flex flex-col gap-6">
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-2xl font-semibold tracking-tight">{$t('facility.control_cabinets_title')}</h1>
-      <p class="text-sm text-muted-foreground">{$t('facility.control_cabinets_desc')}</p>
-    </div>
-    {#if !showForm && canPerform('create', 'controlcabinet')}
-      <Button onclick={handleCreate}>
-        <Plus class="mr-2 size-4" />
-        {$t('facility.new_control_cabinet')}
-      </Button>
-    {/if}
+  <div>
+    <h1 class="text-2xl font-semibold tracking-tight">{$t('facility.control_cabinets_title')}</h1>
+    <p class="text-sm text-muted-foreground">{$t('facility.control_cabinets_desc')}</p>
   </div>
 
-  {#if showForm}
-    <ControlCabinetForm
-      initialData={editingItem}
-      onSuccess={handleSuccess}
-      onCancel={handleCancel}
-    />
-  {/if}
-
-  <PaginatedList
+  <ControlCabinetList
     state={$controlCabinetsStore}
-    columns={[
-      { key: 'building', label: $t('facility.building') },
-      { key: 'cabinet_nr', label: 'Cabinet Nr' },
-      { key: 'actions', label: '', width: 'w-[100px]' }
-    ]}
+    {showForm}
+    {editingItem}
     searchPlaceholder={$t('facility.search_control_cabinets')}
     emptyMessage={$t('facility.no_control_cabinets_found')}
+    cabinetColumnLabel={$t('facility.forms.control_cabinet.number_label')}
+    buildingColumnLabel={$t('facility.building')}
+    newLabel={$t('facility.new_control_cabinet')}
+    canCreate={canPerform('create', 'controlcabinet')}
+    canDuplicate={canPerform('create', 'controlcabinet')}
+    canUpdate={canPerform('update', 'controlcabinet')}
+    canDelete={canPerform('delete', 'controlcabinet')}
+    getBuildingLabel={getBuildingLabel}
+    onCreate={handleCreate}
     onSearch={(text) => controlCabinetsStore.search(text)}
     onPageChange={(page) => controlCabinetsStore.goToPage(page)}
     onReload={() => controlCabinetsStore.reload()}
-  >
-    {#snippet rowSnippet(cabinet: ControlCabinet)}
-      <Table.Cell class="font-medium">
-        <a href="/facility/control-cabinets/{cabinet.id}" class="hover:underline">
-          {cabinet.control_cabinet_nr ?? $t('common.not_available')}
-        </a>
-      </Table.Cell>
-      <Table.Cell>{getBuildingLabel(cabinet.building_id)}</Table.Cell>
-      <Table.Cell class="text-right">
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger>
-            {#snippet child({ props })}
-              <Button variant="ghost" size="icon" {...props}>
-                <EllipsisIcon class="size-4" />
-              </Button>
-            {/snippet}
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content align="end" class="w-40">
-            <DropdownMenu.Item onclick={() => handleCopy(cabinet.control_cabinet_nr ?? cabinet.id)}>
-              {$t('facility.copy')}
-            </DropdownMenu.Item>
-            {#if canPerform('create', 'controlcabinet')}
-              <DropdownMenu.Item onclick={() => handleDuplicate(cabinet)}>
-                {$t('facility.duplicate')}
-              </DropdownMenu.Item>
-            {/if}
-            <DropdownMenu.Item onclick={() => goto(`/facility/control-cabinets/${cabinet.id}`)}>
-              {$t('facility.view')}
-            </DropdownMenu.Item>
-            {#if canPerform('update', 'controlcabinet')}
-              <DropdownMenu.Item onclick={() => handleEdit(cabinet)}
-                >{$t('common.edit')}</DropdownMenu.Item
-              >
-            {/if}
-            {#if canPerform('delete', 'controlcabinet')}
-              <DropdownMenu.Separator />
-              <DropdownMenu.Item variant="destructive" onclick={() => handleDelete(cabinet)}>
-                {$t('common.delete')}
-              </DropdownMenu.Item>
-            {/if}
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
-      </Table.Cell>
-    {/snippet}
-  </PaginatedList>
+    onFormSuccess={handleSuccess}
+    onFormCancel={handleCancel}
+    onEdit={handleEdit}
+    onDelete={handleDelete}
+    onDuplicate={handleDuplicate}
+    onCopy={handleCopy}
+  />
 </div>

@@ -5,17 +5,21 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
 type ControlCabinetService struct {
-	repo                    domainFacility.ControlCabinetRepository
-	buildingRepo            domainFacility.BuildingRepository
-	spsControllerRepo       domainFacility.SPSControllerRepository
-	spsControllerSystemRepo domainFacility.SPSControllerSystemTypeStore
-	fieldDeviceRepo         domainFacility.FieldDeviceStore
-	bacnetObjectRepo        domainFacility.BacnetObjectStore
-	specificationRepo       domainFacility.SpecificationStore
+	repo                      domainFacility.ControlCabinetRepository
+	buildingRepo              domainFacility.BuildingRepository
+	spsControllerRepo         domainFacility.SPSControllerRepository
+	spsControllerSystemRepo   domainFacility.SPSControllerSystemTypeStore
+	fieldDeviceRepo           domainFacility.FieldDeviceStore
+	bacnetObjectRepo          domainFacility.BacnetObjectStore
+	specificationRepo         domainFacility.SpecificationStore
+	projectControlCabinetRepo domainProject.ProjectControlCabinetRepository
+	projectSPSControllerRepo  domainProject.ProjectSPSControllerRepository
+	projectFieldDeviceRepo    domainProject.ProjectFieldDeviceRepository
 }
 
 func NewControlCabinetService(
@@ -26,15 +30,21 @@ func NewControlCabinetService(
 	fieldDeviceRepo domainFacility.FieldDeviceStore,
 	bacnetObjectRepo domainFacility.BacnetObjectStore,
 	specificationRepo domainFacility.SpecificationStore,
+	projectControlCabinetRepo domainProject.ProjectControlCabinetRepository,
+	projectSPSControllerRepo domainProject.ProjectSPSControllerRepository,
+	projectFieldDeviceRepo domainProject.ProjectFieldDeviceRepository,
 ) *ControlCabinetService {
 	return &ControlCabinetService{
-		repo:                    repo,
-		buildingRepo:            buildingRepo,
-		spsControllerRepo:       spsControllerRepo,
-		spsControllerSystemRepo: spsControllerSystemRepo,
-		fieldDeviceRepo:         fieldDeviceRepo,
-		bacnetObjectRepo:        bacnetObjectRepo,
-		specificationRepo:       specificationRepo,
+		repo:                      repo,
+		buildingRepo:              buildingRepo,
+		spsControllerRepo:         spsControllerRepo,
+		spsControllerSystemRepo:   spsControllerSystemRepo,
+		fieldDeviceRepo:           fieldDeviceRepo,
+		bacnetObjectRepo:          bacnetObjectRepo,
+		specificationRepo:         specificationRepo,
+		projectControlCabinetRepo: projectControlCabinetRepo,
+		projectSPSControllerRepo:  projectSPSControllerRepo,
+		projectFieldDeviceRepo:    projectFieldDeviceRepo,
 	}
 }
 
@@ -178,11 +188,6 @@ func (s *ControlCabinetService) DeleteByID(id uuid.UUID) error {
 		return err
 	}
 
-	// Nothing references this cabinet => delete directly
-	if impact.SPSControllersCount == 0 {
-		return s.repo.DeleteByIds([]uuid.UUID{id})
-	}
-
 	spsControllerIDs, err := s.spsControllerRepo.GetIDsByControlCabinetID(id)
 	if err != nil {
 		return err
@@ -196,6 +201,21 @@ func (s *ControlCabinetService) DeleteByID(id uuid.UUID) error {
 	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(spsControllerSystemTypeIDs)
 	if err != nil {
 		return err
+	}
+
+	if err := s.deleteProjectControlCabinetLinksByControlCabinetIDs([]uuid.UUID{id}); err != nil {
+		return err
+	}
+	if err := s.deleteProjectSPSControllerLinksBySPSControllerIDs(spsControllerIDs); err != nil {
+		return err
+	}
+	if err := s.deleteProjectFieldDeviceLinksByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+		return err
+	}
+
+	// Nothing references this cabinet => delete directly
+	if impact.SPSControllersCount == 0 {
+		return s.repo.DeleteByIds([]uuid.UUID{id})
 	}
 
 	// Delete dependents in safe order (children before parents)
@@ -219,6 +239,50 @@ func (s *ControlCabinetService) DeleteByID(id uuid.UUID) error {
 	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
+func (s *ControlCabinetService) deleteProjectControlCabinetLinksByControlCabinetIDs(controlCabinetIDs []uuid.UUID) error {
+	if s.projectControlCabinetRepo == nil {
+		return nil
+	}
+
+	linkIDs, err := collectProjectControlCabinetLinkIDsByControlCabinetIDs(s.projectControlCabinetRepo, controlCabinetIDs)
+	if err != nil {
+		return err
+	}
+	if len(linkIDs) == 0 {
+		return nil
+	}
+	return s.projectControlCabinetRepo.DeleteByIds(linkIDs)
+}
+
+func (s *ControlCabinetService) deleteProjectSPSControllerLinksBySPSControllerIDs(spsControllerIDs []uuid.UUID) error {
+	if s.projectSPSControllerRepo == nil {
+		return nil
+	}
+
+	linkIDs, err := collectProjectSPSControllerLinkIDsBySPSControllerIDs(s.projectSPSControllerRepo, spsControllerIDs)
+	if err != nil {
+		return err
+	}
+	if len(linkIDs) == 0 {
+		return nil
+	}
+	return s.projectSPSControllerRepo.DeleteByIds(linkIDs)
+}
+
+func (s *ControlCabinetService) deleteProjectFieldDeviceLinksByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error {
+	if s.projectFieldDeviceRepo == nil {
+		return nil
+	}
+
+	linkIDs, err := collectProjectFieldDeviceLinkIDsByFieldDeviceIDs(s.projectFieldDeviceRepo, fieldDeviceIDs)
+	if err != nil {
+		return err
+	}
+	if len(linkIDs) == 0 {
+		return nil
+	}
+	return s.projectFieldDeviceRepo.DeleteByIds(linkIDs)
+}
 func (s *ControlCabinetService) ensureBuildingExists(buildingID uuid.UUID) error {
 	_, err := domain.GetByID(s.buildingRepo, buildingID)
 	return err

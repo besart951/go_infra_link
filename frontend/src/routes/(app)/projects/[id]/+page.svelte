@@ -3,7 +3,6 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { Button } from '$lib/components/ui/button/index.js';
-  import { Input } from '$lib/components/ui/input/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import * as Collapsible from '$lib/components/ui/collapsible/index.js';
@@ -13,7 +12,7 @@
   import { confirm } from '$lib/stores/confirm-dialog.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { t as translate } from '$lib/i18n/index.js';
-  import ControlCabinetForm from '$lib/components/facility/forms/ControlCabinetForm.svelte';
+  import ControlCabinetList from '$lib/components/facility/control-cabinets/ControlCabinetList.svelte';
   import SPSControllerForm from '$lib/components/facility/forms/SPSControllerForm.svelte';
   import FieldDeviceListView from '$lib/components/facility/field-device/FieldDeviceListView.svelte';
   import {
@@ -34,6 +33,7 @@
   } from '$lib/domain/project/index.js';
   import type { Building, ControlCabinet, SPSController } from '$lib/domain/facility/index.js';
   import { ArrowLeft, Plus, Pencil, ChevronDown } from '@lucide/svelte';
+  import { canPerform } from '$lib/utils/permissions.js';
 
   const t = createTranslator();
 
@@ -47,8 +47,11 @@
   let controlCabinetOptions = $state<ControlCabinet[]>([]);
   let controlCabinetLoading = $state(false);
   let showControlCabinetForm = $state(false);
+  let editingControlCabinet: ControlCabinet | undefined = $state(undefined);
   let controlCabinetOpen = $state(true);
   let controlCabinetSearch = $state('');
+  let controlCabinetPage = $state(1);
+  const controlCabinetPageSize = 10;
   let buildingMap = $state(new Map<string, string>());
   const buildingRequests = new Set<string>();
 
@@ -62,31 +65,46 @@
   let spsControllerPage = $state(1);
   const spsControllerPageSize = 10;
 
-  const filteredControlCabinetLinks = $derived(
-    controlCabinetSearch.trim()
-      ? controlCabinetLinks.filter((link) =>
-          controlCabinetLabel(link.control_cabinet_id)
-            .toLowerCase()
-            .includes(controlCabinetSearch.trim().toLowerCase())
-        )
-      : controlCabinetLinks
+  const controlCabinetLinkMap = $derived.by(
+    () => new Map(controlCabinetLinks.map((link) => [link.control_cabinet_id, link]))
   );
 
-  function uniqueIds(ids: string[]): string[] {
-    return Array.from(new Set(ids.filter(Boolean)));
-  }
+  const linkedControlCabinets = $derived.by(() =>
+    controlCabinetOptions.filter((cabinet) => controlCabinetLinkMap.has(cabinet.id))
+  );
 
-  async function fetchControlCabinetsByIds(ids: string[]): Promise<ControlCabinet[]> {
-    const unique = uniqueIds(ids);
-    if (unique.length === 0) return [];
-    return controlCabinetRepository.getBulk(unique);
-  }
+  const filteredControlCabinets = $derived.by(() => {
+    const query = controlCabinetSearch.trim().toLowerCase();
+    if (!query) return linkedControlCabinets;
+    return linkedControlCabinets.filter((cabinet) =>
+      [cabinet.control_cabinet_nr, getBuildingLabel(cabinet.building_id)]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(query))
+    );
+  });
 
-  async function fetchSpsControllersByIds(ids: string[]): Promise<SPSController[]> {
-    const unique = uniqueIds(ids);
-    if (unique.length === 0) return [];
-    return spsControllerRepository.getBulk(unique);
-  }
+  const controlCabinetTotalPages = $derived.by(() =>
+    filteredControlCabinets.length === 0
+      ? 0
+      : Math.ceil(filteredControlCabinets.length / controlCabinetPageSize)
+  );
+
+  const controlCabinetPageItems = $derived.by(() => {
+    const start = (controlCabinetPage - 1) * controlCabinetPageSize;
+    return filteredControlCabinets.slice(start, start + controlCabinetPageSize);
+  });
+
+  const controlCabinetListState = $derived.by(() => ({
+    items: controlCabinetPageItems,
+    total: filteredControlCabinets.length,
+    page:
+      controlCabinetTotalPages === 0 ? 1 : Math.min(controlCabinetPage, controlCabinetTotalPages),
+    pageSize: controlCabinetPageSize,
+    totalPages: controlCabinetTotalPages,
+    searchText: controlCabinetSearch,
+    loading: controlCabinetLoading,
+    error: null
+  }));
 
   const spsControllerLinkMap = $derived.by(
     () => new Map(spsControllerLinks.map((link) => [link.sps_controller_id, link]))
@@ -133,6 +151,22 @@
     error: null
   }));
 
+  function uniqueIds(ids: string[]): string[] {
+    return Array.from(new Set(ids.filter(Boolean)));
+  }
+
+  async function fetchControlCabinetsByIds(ids: string[]): Promise<ControlCabinet[]> {
+    const unique = uniqueIds(ids);
+    if (unique.length === 0) return [];
+    return controlCabinetRepository.getBulk(unique);
+  }
+
+  async function fetchSpsControllersByIds(ids: string[]): Promise<SPSController[]> {
+    const unique = uniqueIds(ids);
+    if (unique.length === 0) return [];
+    return spsControllerRepository.getBulk(unique);
+  }
+
   function formatBuildingLabel(building: Building): string {
     return `${building.iws_code}-${building.building_group}`;
   }
@@ -178,6 +212,16 @@
   }
 
   $effect(() => {
+    if (controlCabinetTotalPages === 0) {
+      controlCabinetPage = 1;
+      return;
+    }
+    if (controlCabinetPage > controlCabinetTotalPages) {
+      controlCabinetPage = controlCabinetTotalPages;
+    }
+  });
+
+  $effect(() => {
     if (spsControllerTotalPages === 0) {
       spsControllerPage = 1;
       return;
@@ -206,10 +250,9 @@
     if (!projectId) return;
     controlCabinetLoading = true;
     try {
-      const linksRes = await listProjectControlCabinets(projectId, { page: 1, limit: 100 });
+      const linksRes = await listProjectControlCabinets(projectId, { page: 1, limit: 200 });
       controlCabinetLinks = linksRes.items;
 
-      // Hydrate labels by fetching the exact linked cabinets (avoid global list limits).
       const cabinetIds = linksRes.items.map((l) => l.control_cabinet_id);
       controlCabinetOptions = await fetchControlCabinetsByIds(cabinetIds);
       await ensureBuildingLabels(controlCabinetOptions);
@@ -227,15 +270,12 @@
     if (!projectId) return;
     spsControllerLoading = true;
     try {
-      const linksRes = await listProjectSPSControllers(projectId, { page: 1, limit: 100 });
+      const linksRes = await listProjectSPSControllers(projectId, { page: 1, limit: 200 });
       spsControllerLinks = linksRes.items;
 
-      // Hydrate linked SPS controllers by ID (avoid global list limits so newly created
-      // controllers always appear).
       const controllerIds = linksRes.items.map((l) => l.sps_controller_id);
       spsControllerOptions = await fetchSpsControllersByIds(controllerIds);
 
-      // Ensure control cabinet labels are available for the cabinet column.
       const cabinetIds = spsControllerOptions.map((c) => c.control_cabinet_id);
       const existing = new Set(controlCabinetOptions.map((c) => c.id));
       const missing = uniqueIds(cabinetIds).filter((id) => !existing.has(id));
@@ -254,12 +294,41 @@
     }
   }
 
+  function handleControlCabinetCreate() {
+    editingControlCabinet = undefined;
+    showControlCabinetForm = true;
+  }
+
+  function handleControlCabinetEdit(item: ControlCabinet) {
+    editingControlCabinet = item;
+    showControlCabinetForm = true;
+  }
+
+  function handleControlCabinetCancel() {
+    showControlCabinetForm = false;
+    editingControlCabinet = undefined;
+  }
+
+  function handleControlCabinetSearch(text: string) {
+    controlCabinetSearch = text;
+    controlCabinetPage = 1;
+  }
+
+  function handleControlCabinetPageChange(page: number) {
+    controlCabinetPage = page;
+  }
+
   async function handleControlCabinetCreated(item: ControlCabinet) {
     if (!projectId) return;
     try {
-      await addProjectControlCabinet(projectId, item.id);
-      addToast(translate('projects.control_cabinets.created'), 'success');
+      if (editingControlCabinet) {
+        addToast(translate('projects.control_cabinets.updated'), 'success');
+      } else {
+        await addProjectControlCabinet(projectId, item.id);
+        addToast(translate('projects.control_cabinets.created'), 'success');
+      }
       showControlCabinetForm = false;
+      editingControlCabinet = undefined;
       await loadControlCabinets();
     } catch (err) {
       addToast(
@@ -269,7 +338,7 @@
     }
   }
 
-  async function removeControlCabinet(linkId: string) {
+  async function removeControlCabinetByLink(linkId: string) {
     if (!projectId) return;
     const ok = await confirm({
       title: translate('projects.control_cabinets.remove_title'),
@@ -288,6 +357,34 @@
         err instanceof Error ? err.message : translate('projects.control_cabinets.remove_failed'),
         'error'
       );
+    }
+  }
+
+  async function handleControlCabinetRemove(item: ControlCabinet) {
+    const link = controlCabinetLinkMap.get(item.id);
+    if (!link) return;
+    await removeControlCabinetByLink(link.id);
+  }
+
+  async function handleDuplicateControlCabinet(item: ControlCabinet) {
+    if (!projectId) return;
+    try {
+      const copiedCabinet = await controlCabinetRepository.copy(item.id);
+      await addProjectControlCabinet(projectId, copiedCabinet.id);
+      addToast(translate('projects.control_cabinets.duplicated'), 'success');
+      await Promise.all([loadControlCabinets(), loadSpsControllers()]);
+    } catch (err) {
+      addToast(
+        err instanceof Error ? err.message : translate('projects.control_cabinets.duplicate_failed'),
+        'error'
+      );
+    }
+  }
+  async function handleControlCabinetCopy(value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
     }
   }
 
@@ -423,82 +520,32 @@
           </div>
 
           <Collapsible.Content class="mt-4">
-            <div class="flex flex-wrap items-center justify-end gap-2">
-              <Input
-                class="w-64"
-                placeholder={$t('projects.control_cabinets.search_placeholder')}
-                bind:value={controlCabinetSearch}
-              />
-              <Button
-                variant="outline"
-                onclick={loadControlCabinets}
-                disabled={controlCabinetLoading}>{$t('common.refresh')}</Button
-              >
-              {#if !showControlCabinetForm}
-                <Button onclick={() => (showControlCabinetForm = true)}>
-                  <Plus class="mr-2 size-4" />
-                  {$t('projects.control_cabinets.new')}
-                </Button>
-              {/if}
-            </div>
-
-            {#if showControlCabinetForm}
-              <ControlCabinetForm
-                onSuccess={handleControlCabinetCreated}
-                onCancel={() => (showControlCabinetForm = false)}
-              />
-            {/if}
-
-            <div class="mt-6 rounded-lg border bg-background">
-              <Table.Root>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.Head>{$t('projects.control_cabinets.table.control_cabinet')}</Table.Head>
-                    <Table.Head>{$t('projects.control_cabinets.table.building')}</Table.Head>
-                    <Table.Head class="w-32"></Table.Head>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {#if controlCabinetLoading}
-                    {#each Array(4) as _}
-                      <Table.Row>
-                        <Table.Cell><Skeleton class="h-4 w-60" /></Table.Cell>
-                        <Table.Cell><Skeleton class="h-4 w-40" /></Table.Cell>
-                        <Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
-                      </Table.Row>
-                    {/each}
-                  {:else if filteredControlCabinetLinks.length === 0}
-                    <Table.Row>
-                      <Table.Cell
-                        colspan={3}
-                        class="h-20 text-center text-sm text-muted-foreground"
-                      >
-                        {$t('projects.control_cabinets.empty')}
-                      </Table.Cell>
-                    </Table.Row>
-                  {:else}
-                    {#each filteredControlCabinetLinks as link (link.id)}
-                      <Table.Row>
-                        <Table.Cell class="font-medium">
-                          {controlCabinetLabel(link.control_cabinet_id)}
-                        </Table.Cell>
-                        <Table.Cell>
-                          {getBuildingLabel(
-                            controlCabinetOptions.find((c) => c.id === link.control_cabinet_id)
-                              ?.building_id
-                          )}
-                        </Table.Cell>
-                        <Table.Cell class="text-right">
-                          <Button variant="outline" onclick={() => removeControlCabinet(link.id)}>
-                            {$t('common.remove')}
-                          </Button>
-                        </Table.Cell>
-                      </Table.Row>
-                    {/each}
-                  {/if}
-                </Table.Body>
-              </Table.Root>
-            </div>
+            <ControlCabinetList
+              state={controlCabinetListState}
+              showForm={showControlCabinetForm}
+              editingItem={editingControlCabinet}
+              projectId={projectId}
+              searchPlaceholder={$t('projects.control_cabinets.search_placeholder')}
+              emptyMessage={$t('projects.control_cabinets.empty')}
+              cabinetColumnLabel={$t('projects.control_cabinets.table.control_cabinet')}
+              buildingColumnLabel={$t('projects.control_cabinets.table.building')}
+              newLabel={$t('projects.control_cabinets.new')}
+              canCreate={canPerform('create', 'controlcabinet')}
+              canDuplicate={canPerform('create', 'controlcabinet')}
+              canUpdate={canPerform('update', 'controlcabinet')}
+              canDelete={canPerform('delete', 'controlcabinet')}
+              getBuildingLabel={getBuildingLabel}
+              onCreate={handleControlCabinetCreate}
+              onSearch={handleControlCabinetSearch}
+              onPageChange={handleControlCabinetPageChange}
+              onReload={loadControlCabinets}
+              onFormSuccess={handleControlCabinetCreated}
+              onFormCancel={handleControlCabinetCancel}
+              onEdit={handleControlCabinetEdit}
+              onDelete={handleControlCabinetRemove}
+              onDuplicate={handleDuplicateControlCabinet}
+              onCopy={handleControlCabinetCopy}
+            />
           </Collapsible.Content>
         </Collapsible.Root>
       </div>
@@ -619,5 +666,3 @@
     </div>
   {/if}
 </div>
-
-<ConfirmDialog />

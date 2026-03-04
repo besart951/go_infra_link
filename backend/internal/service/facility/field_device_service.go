@@ -7,6 +7,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
@@ -24,6 +25,7 @@ type FieldDeviceService struct {
 	objectDataRepo              domainFacility.ObjectDataStore
 	alarmTypeRepo               domainFacility.AlarmTypeRepository
 	bacnetAlarmValueRepo        domainFacility.BacnetObjectAlarmValueRepository
+	projectFieldDeviceRepo      domainProject.ProjectFieldDeviceRepository
 }
 
 func NewFieldDeviceService(
@@ -40,7 +42,13 @@ func NewFieldDeviceService(
 	objectDataRepo domainFacility.ObjectDataStore,
 	alarmTypeRepo domainFacility.AlarmTypeRepository,
 	bacnetAlarmValueRepo domainFacility.BacnetObjectAlarmValueRepository,
+	projectFieldDeviceRepo ...domainProject.ProjectFieldDeviceRepository,
 ) *FieldDeviceService {
+	var projectFieldDeviceLinkRepo domainProject.ProjectFieldDeviceRepository
+	if len(projectFieldDeviceRepo) > 0 {
+		projectFieldDeviceLinkRepo = projectFieldDeviceRepo[0]
+	}
+
 	return &FieldDeviceService{
 		repo:                        repo,
 		spsControllerSystemTypeRepo: spsControllerSystemTypeRepo,
@@ -55,6 +63,7 @@ func NewFieldDeviceService(
 		objectDataRepo:              objectDataRepo,
 		alarmTypeRepo:               alarmTypeRepo,
 		bacnetAlarmValueRepo:        bacnetAlarmValueRepo,
+		projectFieldDeviceRepo:      projectFieldDeviceLinkRepo,
 	}
 }
 
@@ -81,10 +90,17 @@ func (s *FieldDeviceService) CreateWithBacnetObjects(fieldDevice *domainFacility
 	}
 
 	if objectDataID != nil {
-		return s.replaceBacnetObjectsFromObjectData(fieldDevice.ID, *objectDataID)
+		if err := s.replaceBacnetObjectsFromObjectData(fieldDevice.ID, *objectDataID); err != nil {
+			_ = s.DeleteByID(fieldDevice.ID)
+			return err
+		}
+		return nil
 	}
 	if len(bacnetObjects) > 0 {
-		return s.replaceBacnetObjects(fieldDevice.ID, bacnetObjects)
+		if err := s.replaceBacnetObjects(fieldDevice.ID, bacnetObjects); err != nil {
+			_ = s.DeleteByID(fieldDevice.ID)
+			return err
+		}
 	}
 	return nil
 }
@@ -151,6 +167,9 @@ func (s *FieldDeviceService) UpdateWithBacnetObjects(fieldDevice *domainFacility
 
 func (s *FieldDeviceService) DeleteByID(id uuid.UUID) error {
 	ids := []uuid.UUID{id}
+	if err := s.deleteProjectLinksByFieldDeviceIDs(ids); err != nil {
+		return err
+	}
 	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(ids); err != nil {
 		return err
 	}
@@ -172,6 +191,20 @@ func (s *FieldDeviceService) DeleteByIDs(ids []uuid.UUID) error {
 	return nil
 }
 
+func (s *FieldDeviceService) deleteProjectLinksByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error {
+	if s.projectFieldDeviceRepo == nil {
+		return nil
+	}
+
+	linkIDs, err := collectProjectFieldDeviceLinkIDsByFieldDeviceIDs(s.projectFieldDeviceRepo, fieldDeviceIDs)
+	if err != nil {
+		return err
+	}
+	if len(linkIDs) == 0 {
+		return nil
+	}
+	return s.projectFieldDeviceRepo.DeleteByIds(linkIDs)
+}
 func (s *FieldDeviceService) CreateSpecification(fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error {
 	// Ensure field device exists (and not deleted)
 	fieldDevice, err := domain.GetByID(s.repo, fieldDeviceID)
@@ -719,7 +752,6 @@ func toInt64(value any) (int64, bool) {
 
 func (s *FieldDeviceService) replaceBacnetObjects(fieldDeviceID uuid.UUID, bacnetObjects []domainFacility.BacnetObject) error {
 	ve := domain.NewValidationError()
-	seen := make(map[string]int, len(bacnetObjects))
 	for i, obj := range bacnetObjects {
 		obj.TextFix = normalizeBacnetTextFix(obj.TextFix)
 		bacnetObjects[i].TextFix = obj.TextFix
@@ -727,10 +759,6 @@ func (s *FieldDeviceService) replaceBacnetObjects(fieldDeviceID uuid.UUID, bacne
 			ve = ve.Add(fmt.Sprintf("bacnet_objects.%d.text_fix", i), "text_fix is required")
 			continue
 		}
-		if prevIdx, ok := seen[obj.TextFix]; ok {
-			ve = ve.Add(fmt.Sprintf("bacnet_objects.%d.text_fix", i), fmt.Sprintf("text_fix must be unique within the field device (duplicate of row %d)", prevIdx))
-		}
-		seen[obj.TextFix] = i
 	}
 	if len(ve.Fields) > 0 {
 		return ve
@@ -839,33 +867,6 @@ func (s *FieldDeviceService) patchBacnetObjects(fieldDeviceID uuid.UUID, patches
 		updatedMap[patch.ID] = &clone
 	}
 
-	seen := make(map[string]uuid.UUID, len(existingItems))
-	for _, item := range existingItems {
-		candidate := item
-		if updated, ok := updatedMap[item.ID]; ok {
-			candidate = updated
-		}
-		if candidate.TextFix == "" {
-			continue
-		}
-		if prevID, ok := seen[candidate.TextFix]; ok {
-			if _, ok := patchedIDs[candidate.ID]; ok {
-				ve = ve.Add(
-					fmt.Sprintf("bacnet_objects.%s.text_fix", candidate.ID),
-					fmt.Sprintf("text_fix must be unique within the field device (duplicate of %s)", prevID),
-				)
-			}
-			if _, ok := patchedIDs[prevID]; ok {
-				ve = ve.Add(
-					fmt.Sprintf("bacnet_objects.%s.text_fix", prevID),
-					fmt.Sprintf("text_fix must be unique within the field device (duplicate of %s)", candidate.ID),
-				)
-			}
-			continue
-		}
-		seen[candidate.TextFix] = candidate.ID
-	}
-
 	if len(ve.Fields) > 0 {
 		return ve
 	}
@@ -888,16 +889,12 @@ func (s *FieldDeviceService) replaceBacnetObjectsFromObjectData(fieldDeviceID uu
 		return domain.ErrNotFound
 	}
 
-	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs([]uuid.UUID{fieldDeviceID}); err != nil {
-		return err
-	}
-
 	ids, err := s.objectDataRepo.GetBacnetObjectIDs(objectDataID)
 	if err != nil {
 		return err
 	}
 	if len(ids) == 0 {
-		return nil
+		return s.bacnetObjectRepo.DeleteByFieldDeviceIDs([]uuid.UUID{fieldDeviceID})
 	}
 
 	templates, err := s.bacnetObjectRepo.GetByIds(ids)
@@ -910,9 +907,16 @@ func (s *FieldDeviceService) replaceBacnetObjectsFromObjectData(fieldDeviceID uu
 
 	templateToClone := make(map[uuid.UUID]*domainFacility.BacnetObject, len(templates))
 	templateRef := make(map[uuid.UUID]*uuid.UUID, len(templates))
+	clones := make([]*domainFacility.BacnetObject, 0, len(templates))
+
 	for _, t := range templates {
+		textFix := normalizeBacnetTextFix(t.TextFix)
+		if textFix == "" {
+			return domain.NewValidationError().Add("bacnet_objects.text_fix", "text_fix is required")
+		}
+
 		clone := &domainFacility.BacnetObject{
-			TextFix:             t.TextFix,
+			TextFix:             textFix,
 			Description:         t.Description,
 			GMSVisible:          t.GMSVisible,
 			Optional:            t.Optional,
@@ -929,13 +933,14 @@ func (s *FieldDeviceService) replaceBacnetObjectsFromObjectData(fieldDeviceID uu
 		}
 		templateToClone[t.ID] = clone
 		templateRef[t.ID] = t.SoftwareReferenceID
+		clones = append(clones, clone)
+	}
+
+	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs([]uuid.UUID{fieldDeviceID}); err != nil {
+		return err
 	}
 
 	// First pass: create clones without software references.
-	clones := make([]*domainFacility.BacnetObject, 0, len(templateToClone))
-	for _, clone := range templateToClone {
-		clones = append(clones, clone)
-	}
 	if err := s.bacnetObjectRepo.BulkCreate(clones, 200); err != nil {
 		return err
 	}
@@ -1169,12 +1174,18 @@ func (s *FieldDeviceService) MultiCreate(items []domainFacility.FieldDeviceCreat
 		createResult := &result.Results[work.index]
 		if work.item.ObjectDataID != nil {
 			if err := s.replaceBacnetObjectsFromObjectData(work.item.FieldDevice.ID, *work.item.ObjectDataID); err != nil {
+				if cleanupErr := s.DeleteByID(work.item.FieldDevice.ID); cleanupErr != nil {
+					err = fmt.Errorf("%w; cleanup failed: %v", err, cleanupErr)
+				}
 				setCreateError(createResult, err, "fielddevice")
 				result.FailureCount++
 				continue
 			}
 		} else if len(work.item.BacnetObjects) > 0 {
 			if err := s.replaceBacnetObjects(work.item.FieldDevice.ID, work.item.BacnetObjects); err != nil {
+				if cleanupErr := s.DeleteByID(work.item.FieldDevice.ID); cleanupErr != nil {
+					err = fmt.Errorf("%w; cleanup failed: %v", err, cleanupErr)
+				}
 				setCreateError(createResult, err, "fielddevice")
 				result.FailureCount++
 				continue

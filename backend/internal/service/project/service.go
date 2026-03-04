@@ -1,11 +1,14 @@
 package project
 
 import (
+	"errors"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type Service struct {
@@ -16,6 +19,11 @@ type Service struct {
 	userRepo                  domainUser.UserRepository
 	objectDataRepo            domainFacility.ObjectDataStore
 	bacnetObjectRepo          domainFacility.BacnetObjectStore
+	specificationRepo         domainFacility.SpecificationStore
+	controlCabinetRepo        domainFacility.ControlCabinetRepository
+	spsControllerRepo         domainFacility.SPSControllerRepository
+	spsControllerSystemRepo   domainFacility.SPSControllerSystemTypeStore
+	fieldDeviceRepo           domainFacility.FieldDeviceStore
 }
 
 func New(
@@ -26,6 +34,11 @@ func New(
 	userRepo domainUser.UserRepository,
 	objectDataRepo domainFacility.ObjectDataStore,
 	bacnetObjectRepo domainFacility.BacnetObjectStore,
+	specificationRepo domainFacility.SpecificationStore,
+	controlCabinetRepo domainFacility.ControlCabinetRepository,
+	spsControllerRepo domainFacility.SPSControllerRepository,
+	spsControllerSystemRepo domainFacility.SPSControllerSystemTypeStore,
+	fieldDeviceRepo domainFacility.FieldDeviceStore,
 ) *Service {
 	return &Service{
 		repo:                      repo,
@@ -35,9 +48,13 @@ func New(
 		userRepo:                  userRepo,
 		objectDataRepo:            objectDataRepo,
 		bacnetObjectRepo:          bacnetObjectRepo,
+		specificationRepo:         specificationRepo,
+		controlCabinetRepo:        controlCabinetRepo,
+		spsControllerRepo:         spsControllerRepo,
+		spsControllerSystemRepo:   spsControllerSystemRepo,
+		fieldDeviceRepo:           fieldDeviceRepo,
 	}
 }
-
 func (s *Service) Create(project *domainProject.Project) error {
 	if project.Status == "" {
 		project.Status = domainProject.StatusPlanned
@@ -137,9 +154,13 @@ func (s *Service) CreateControlCabinet(projectID, controlCabinetID uuid.UUID) (*
 	if err := s.projectControlCabinetRepo.Create(entity); err != nil {
 		return nil, err
 	}
+
+	if err := s.linkDescendantsForControlCabinet(projectID, controlCabinetID); err != nil {
+		return nil, err
+	}
+
 	return entity, nil
 }
-
 func (s *Service) UpdateControlCabinet(linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
 	entity, err := domain.GetByID(s.projectControlCabinetRepo, linkID)
 	if err != nil {
@@ -152,6 +173,11 @@ func (s *Service) UpdateControlCabinet(linkID, projectID, controlCabinetID uuid.
 	if err := s.projectControlCabinetRepo.Update(entity); err != nil {
 		return nil, err
 	}
+
+	if err := s.linkDescendantsForControlCabinet(projectID, controlCabinetID); err != nil {
+		return nil, err
+	}
+
 	return entity, nil
 }
 
@@ -163,7 +189,36 @@ func (s *Service) DeleteControlCabinet(linkID, projectID uuid.UUID) error {
 	if entity.ProjectID != projectID {
 		return domain.ErrNotFound
 	}
-	return s.projectControlCabinetRepo.DeleteByIds([]uuid.UUID{linkID})
+
+	controlCabinetID := entity.ControlCabinetID
+	spsControllerIDs, _, fieldDeviceIDs, err := s.collectDescendantIDsForControlCabinet(controlCabinetID)
+	if err != nil {
+		return err
+	}
+
+	if err := s.deleteProjectControlCabinetLinksByControlCabinetIDs([]uuid.UUID{controlCabinetID}); err != nil {
+		return err
+	}
+	if err := s.deleteProjectSPSControllerLinksBySPSControllerIDs(spsControllerIDs); err != nil {
+		return err
+	}
+	if err := s.deleteProjectFieldDeviceLinksByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+		return err
+	}
+
+	if err := s.deleteFieldDevicesWithChildren(fieldDeviceIDs); err != nil {
+		return err
+	}
+	if len(spsControllerIDs) > 0 {
+		if err := s.spsControllerSystemRepo.DeleteBySPSControllerIDs(spsControllerIDs); err != nil {
+			return err
+		}
+		if err := s.spsControllerRepo.DeleteByIds(spsControllerIDs); err != nil {
+			return err
+		}
+	}
+
+	return s.controlCabinetRepo.DeleteByIds([]uuid.UUID{controlCabinetID})
 }
 
 func (s *Service) CreateSPSController(projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
@@ -200,7 +255,27 @@ func (s *Service) DeleteSPSController(linkID, projectID uuid.UUID) error {
 	if entity.ProjectID != projectID {
 		return domain.ErrNotFound
 	}
-	return s.projectSPSControllerRepo.DeleteByIds([]uuid.UUID{linkID})
+
+	spsControllerID := entity.SPSControllerID
+	_, fieldDeviceIDs, err := s.collectDescendantIDsForSPSControllers([]uuid.UUID{spsControllerID})
+	if err != nil {
+		return err
+	}
+
+	if err := s.deleteProjectSPSControllerLinksBySPSControllerIDs([]uuid.UUID{spsControllerID}); err != nil {
+		return err
+	}
+	if err := s.deleteProjectFieldDeviceLinksByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+		return err
+	}
+
+	if err := s.deleteFieldDevicesWithChildren(fieldDeviceIDs); err != nil {
+		return err
+	}
+	if err := s.spsControllerSystemRepo.DeleteBySPSControllerIDs([]uuid.UUID{spsControllerID}); err != nil {
+		return err
+	}
+	return s.spsControllerRepo.DeleteByIds([]uuid.UUID{spsControllerID})
 }
 
 func (s *Service) CreateFieldDevice(projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
@@ -264,7 +339,12 @@ func (s *Service) DeleteFieldDevice(linkID, projectID uuid.UUID) error {
 	if entity.ProjectID != projectID {
 		return domain.ErrNotFound
 	}
-	return s.projectFieldDeviceRepo.DeleteByIds([]uuid.UUID{linkID})
+
+	fieldDeviceID := entity.FieldDeviceID
+	if err := s.deleteProjectFieldDeviceLinksByFieldDeviceIDs([]uuid.UUID{fieldDeviceID}); err != nil {
+		return err
+	}
+	return s.deleteFieldDevicesWithChildren([]uuid.UUID{fieldDeviceID})
 }
 
 func (s *Service) AddObjectData(projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error) {
@@ -422,4 +502,328 @@ func (s *Service) MultiCreateFieldDevices(projectID uuid.UUID, fieldDeviceIDs []
 	}
 
 	return successIDs, errors
+}
+
+func (s *Service) collectDescendantIDsForControlCabinet(controlCabinetID uuid.UUID) ([]uuid.UUID, []uuid.UUID, []uuid.UUID, error) {
+	spsControllerIDs, err := s.spsControllerRepo.GetIDsByControlCabinetID(controlCabinetID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	systemTypeIDs, fieldDeviceIDs, err := s.collectDescendantIDsForSPSControllers(spsControllerIDs)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return spsControllerIDs, systemTypeIDs, fieldDeviceIDs, nil
+}
+
+func (s *Service) collectDescendantIDsForSPSControllers(spsControllerIDs []uuid.UUID) ([]uuid.UUID, []uuid.UUID, error) {
+	if len(spsControllerIDs) == 0 {
+		return nil, nil, nil
+	}
+
+	systemTypeIDs, err := s.spsControllerSystemRepo.GetIDsBySPSControllerIDs(spsControllerIDs)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(systemTypeIDs) == 0 {
+		return nil, nil, nil
+	}
+
+	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(systemTypeIDs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return systemTypeIDs, fieldDeviceIDs, nil
+}
+
+func (s *Service) deleteFieldDevicesWithChildren(fieldDeviceIDs []uuid.UUID) error {
+	if len(fieldDeviceIDs) == 0 {
+		return nil
+	}
+
+	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+		return err
+	}
+	if err := s.specificationRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+		return err
+	}
+	return s.fieldDeviceRepo.DeleteByIds(fieldDeviceIDs)
+}
+
+func (s *Service) deleteProjectControlCabinetLinksByControlCabinetIDs(controlCabinetIDs []uuid.UUID) error {
+	if len(controlCabinetIDs) == 0 {
+		return nil
+	}
+
+	idSet := toUUIDSet(controlCabinetIDs)
+	linkIDs, err := s.collectProjectControlCabinetLinkIDs(idSet)
+	if err != nil {
+		return err
+	}
+	if len(linkIDs) == 0 {
+		return nil
+	}
+	return s.projectControlCabinetRepo.DeleteByIds(linkIDs)
+}
+
+func (s *Service) deleteProjectSPSControllerLinksBySPSControllerIDs(spsControllerIDs []uuid.UUID) error {
+	if len(spsControllerIDs) == 0 {
+		return nil
+	}
+
+	idSet := toUUIDSet(spsControllerIDs)
+	linkIDs, err := s.collectProjectSPSControllerLinkIDs(idSet)
+	if err != nil {
+		return err
+	}
+	if len(linkIDs) == 0 {
+		return nil
+	}
+	return s.projectSPSControllerRepo.DeleteByIds(linkIDs)
+}
+
+func (s *Service) deleteProjectFieldDeviceLinksByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error {
+	if len(fieldDeviceIDs) == 0 {
+		return nil
+	}
+
+	idSet := toUUIDSet(fieldDeviceIDs)
+	linkIDs, err := s.collectProjectFieldDeviceLinkIDs(idSet)
+	if err != nil {
+		return err
+	}
+	if len(linkIDs) == 0 {
+		return nil
+	}
+	return s.projectFieldDeviceRepo.DeleteByIds(linkIDs)
+}
+
+func (s *Service) collectProjectControlCabinetLinkIDs(controlCabinetIDSet map[uuid.UUID]struct{}) ([]uuid.UUID, error) {
+	result := make([]uuid.UUID, 0)
+	page := 1
+
+	for {
+		items, err := s.projectControlCabinetRepo.GetPaginatedList(domain.PaginationParams{
+			Page:  page,
+			Limit: 500,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		for _, item := range items.Items {
+			if _, ok := controlCabinetIDSet[item.ControlCabinetID]; ok {
+				result = append(result, item.ID)
+			}
+		}
+
+		if page >= items.TotalPages || len(items.Items) == 0 {
+			break
+		}
+		page++
+	}
+
+	return result, nil
+}
+
+func (s *Service) collectProjectSPSControllerLinkIDs(spsControllerIDSet map[uuid.UUID]struct{}) ([]uuid.UUID, error) {
+	result := make([]uuid.UUID, 0)
+	page := 1
+
+	for {
+		items, err := s.projectSPSControllerRepo.GetPaginatedList(domain.PaginationParams{
+			Page:  page,
+			Limit: 500,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		for _, item := range items.Items {
+			if _, ok := spsControllerIDSet[item.SPSControllerID]; ok {
+				result = append(result, item.ID)
+			}
+		}
+
+		if page >= items.TotalPages || len(items.Items) == 0 {
+			break
+		}
+		page++
+	}
+
+	return result, nil
+}
+
+func (s *Service) collectProjectFieldDeviceLinkIDs(fieldDeviceIDSet map[uuid.UUID]struct{}) ([]uuid.UUID, error) {
+	result := make([]uuid.UUID, 0)
+	page := 1
+
+	for {
+		items, err := s.projectFieldDeviceRepo.GetPaginatedList(domain.PaginationParams{
+			Page:  page,
+			Limit: 500,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		for _, item := range items.Items {
+			if _, ok := fieldDeviceIDSet[item.FieldDeviceID]; ok {
+				result = append(result, item.ID)
+			}
+		}
+
+		if page >= items.TotalPages || len(items.Items) == 0 {
+			break
+		}
+		page++
+	}
+
+	return result, nil
+}
+
+func toUUIDSet(ids []uuid.UUID) map[uuid.UUID]struct{} {
+	result := make(map[uuid.UUID]struct{}, len(ids))
+	for _, id := range ids {
+		result[id] = struct{}{}
+	}
+	return result
+}
+func (s *Service) linkDescendantsForControlCabinet(projectID, controlCabinetID uuid.UUID) error {
+	spsControllerIDs, err := s.spsControllerRepo.GetIDsByControlCabinetID(controlCabinetID)
+	if err != nil {
+		return err
+	}
+	if len(spsControllerIDs) == 0 {
+		return nil
+	}
+
+	existingSPS, err := s.listProjectSPSControllerIDSet(projectID)
+	if err != nil {
+		return err
+	}
+	for _, spsID := range spsControllerIDs {
+		if _, ok := existingSPS[spsID]; ok {
+			continue
+		}
+		if err := s.createProjectSPSControllerLink(projectID, spsID); err != nil {
+			return err
+		}
+		existingSPS[spsID] = struct{}{}
+	}
+
+	systemTypeIDs, err := s.spsControllerSystemRepo.GetIDsBySPSControllerIDs(spsControllerIDs)
+	if err != nil {
+		return err
+	}
+	if len(systemTypeIDs) == 0 {
+		return nil
+	}
+
+	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(systemTypeIDs)
+	if err != nil {
+		return err
+	}
+	if len(fieldDeviceIDs) == 0 {
+		return nil
+	}
+
+	existingFieldDevices, err := s.listProjectFieldDeviceIDSet(projectID)
+	if err != nil {
+		return err
+	}
+	for _, fieldDeviceID := range fieldDeviceIDs {
+		if _, ok := existingFieldDevices[fieldDeviceID]; ok {
+			continue
+		}
+		if err := s.createProjectFieldDeviceLink(projectID, fieldDeviceID); err != nil {
+			return err
+		}
+		existingFieldDevices[fieldDeviceID] = struct{}{}
+	}
+
+	return nil
+}
+
+func (s *Service) listProjectSPSControllerIDSet(projectID uuid.UUID) (map[uuid.UUID]struct{}, error) {
+	result := make(map[uuid.UUID]struct{})
+	page := 1
+
+	for {
+		items, err := s.projectSPSControllerRepo.GetPaginatedListByProjectID(projectID, domain.PaginationParams{
+			Page:  page,
+			Limit: 500,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		for _, item := range items.Items {
+			result[item.SPSControllerID] = struct{}{}
+		}
+
+		if page >= items.TotalPages || len(items.Items) == 0 {
+			break
+		}
+		page++
+	}
+
+	return result, nil
+}
+
+func (s *Service) listProjectFieldDeviceIDSet(projectID uuid.UUID) (map[uuid.UUID]struct{}, error) {
+	result := make(map[uuid.UUID]struct{})
+	page := 1
+
+	for {
+		items, err := s.projectFieldDeviceRepo.GetPaginatedListByProjectID(projectID, domain.PaginationParams{
+			Page:  page,
+			Limit: 500,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		for _, item := range items.Items {
+			result[item.FieldDeviceID] = struct{}{}
+		}
+
+		if page >= items.TotalPages || len(items.Items) == 0 {
+			break
+		}
+		page++
+	}
+
+	return result, nil
+}
+
+func (s *Service) createProjectSPSControllerLink(projectID, spsControllerID uuid.UUID) error {
+	entity := &domainProject.ProjectSPSController{
+		ProjectID:       projectID,
+		SPSControllerID: spsControllerID,
+	}
+	if err := s.projectSPSControllerRepo.Create(entity); err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *Service) createProjectFieldDeviceLink(projectID, fieldDeviceID uuid.UUID) error {
+	entity := &domainProject.ProjectFieldDevice{
+		ProjectID:     projectID,
+		FieldDeviceID: fieldDeviceID,
+	}
+	if err := s.projectFieldDeviceRepo.Create(entity); err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }

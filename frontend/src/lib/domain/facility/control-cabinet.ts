@@ -16,12 +16,14 @@ export interface ControlCabinet {
 export interface CreateControlCabinetRequest {
   control_cabinet_nr: string;
   building_id: string;
+  project_id?: string;
 }
 
 export interface UpdateControlCabinetRequest {
   id: string;
   control_cabinet_nr?: string;
   building_id?: string;
+  project_id?: string;
 }
 
 export interface ControlCabinetListParams {
@@ -49,3 +51,4 @@ export interface ControlCabinetDeleteImpact {
   bacnet_objects_count: number;
   specifications_count: number;
 }
+

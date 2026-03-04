@@ -3,6 +3,7 @@ package facility
 import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
@@ -77,6 +78,9 @@ type Repositories struct {
 	AlarmTypes               domainFacility.AlarmTypeRepository
 	AlarmTypeFields          domainFacility.AlarmTypeFieldRepository
 	BacnetObjectAlarmValues  domainFacility.BacnetObjectAlarmValueRepository
+	ProjectControlCabinets   domainProject.ProjectControlCabinetRepository
+	ProjectSPSControllers    domainProject.ProjectSPSControllerRepository
+	ProjectFieldDevices      domainProject.ProjectFieldDeviceRepository
 }
 
 // Services bundles all facility services.
@@ -117,6 +121,7 @@ func NewServices(repos Repositories) *Services {
 		repos.ObjectData,
 		repos.AlarmTypes,
 		repos.BacnetObjectAlarmValues,
+		repos.ProjectFieldDevices,
 	)
 
 	return &Services{
@@ -140,6 +145,9 @@ func NewServices(repos Repositories) *Services {
 			repos.FieldDevices,
 			repos.BacnetObjects,
 			repos.Specifications,
+			repos.ProjectControlCabinets,
+			repos.ProjectSPSControllers,
+			repos.ProjectFieldDevices,
 		),
 		FieldDevice: fieldDeviceService,
 		BacnetObject: NewBacnetObjectService(
@@ -159,6 +167,8 @@ func NewServices(repos Repositories) *Services {
 			repos.FieldDevices,
 			repos.Specifications,
 			repos.BacnetObjects,
+			repos.ProjectSPSControllers,
+			repos.ProjectFieldDevices,
 		),
 		StateText:         NewStateTextService(repos.StateTexts),
 		NotificationClass: NewNotificationClassService(repos.NotificationClasses),

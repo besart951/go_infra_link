@@ -28,11 +28,12 @@
 
   interface Props {
     initialData?: SPSController;
+    fixedControlCabinetId?: string;
     onSuccess?: (controller: SPSController) => void;
     onCancel?: () => void;
   }
 
-  let { initialData, onSuccess, onCancel }: Props = $props();
+  let { initialData, fixedControlCabinetId, onSuccess, onCancel }: Props = $props();
 
   const t = createTranslator();
 
@@ -92,6 +93,12 @@
     control_cabinet_id = initialData.control_cabinet_id;
     gaDeviceTouched = false;
     nextGADevice = null;
+  });
+
+  $effect(() => {
+    if (!fixedControlCabinetId) return;
+    if (control_cabinet_id === fixedControlCabinetId) return;
+    control_cabinet_id = fixedControlCabinetId;
   });
 
   $effect(() => {
@@ -568,9 +575,13 @@
 
   <div class="space-y-2">
     <Label>{$t('facility.forms.sps_controller.control_cabinet_label')}</Label>
-    <div class="block">
-      <ControlCabinetSelect bind:value={control_cabinet_id} width="w-full" />
-    </div>
+    {#if fixedControlCabinetId}
+      <Input value={fixedControlCabinetId} readonly disabled />
+    {:else}
+      <div class="block">
+        <ControlCabinetSelect bind:value={control_cabinet_id} width="w-full" />
+      </div>
+    {/if}
     {#if combinedFieldError('control_cabinet_id')}
       <p class="text-sm text-red-500">{combinedFieldError('control_cabinet_id')}</p>
     {:else if !control_cabinet_id}
@@ -812,3 +823,4 @@
     </Button>
   </div>
 </form>
+

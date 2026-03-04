@@ -116,6 +116,9 @@ func autoMigrate(db *gorm.DB) error {
 	if err := ensureObjectDataApparatsCascade(db); err != nil {
 		return err
 	}
+	if err := ensureBacnetObjectTextFixIndexNonUnique(db); err != nil {
+		return err
+	}
 
 	// Cleanup legacy phases.project_id column (phases are independent)
 	if db.Migrator().HasColumn(&project.Phase{}, "project_id") {
@@ -208,6 +211,42 @@ func ensureObjectDataApparatsCascade(db *gorm.DB) error {
 				"ADD CONSTRAINT " + constraintName + " " +
 				"FOREIGN KEY (object_data_id) REFERENCES object_data(id) " +
 				"ON UPDATE CASCADE ON DELETE CASCADE",
+		).Error
+	}
+
+	return nil
+}
+
+func ensureBacnetObjectTextFixIndexNonUnique(db *gorm.DB) error {
+	const indexName = "idx_field_device_textfix"
+
+	switch db.Dialector.Name() {
+	case "postgres":
+		if err := db.Exec("DROP INDEX IF EXISTS " + indexName).Error; err != nil {
+			return err
+		}
+		return db.Exec(
+			"CREATE INDEX IF NOT EXISTS " + indexName + " ON bacnet_objects (field_device_id, text_fix)",
+		).Error
+
+	case "mysql", "mariadb":
+		var exists int64
+		if err := db.Raw(
+			"SELECT COUNT(*) FROM information_schema.STATISTICS "+
+				"WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?",
+			"bacnet_objects", indexName,
+		).Scan(&exists).Error; err != nil {
+			return err
+		}
+
+		if exists > 0 {
+			if err := db.Exec("ALTER TABLE bacnet_objects DROP INDEX " + indexName).Error; err != nil {
+				return err
+			}
+		}
+
+		return db.Exec(
+			"CREATE INDEX " + indexName + " ON bacnet_objects (field_device_id, text_fix)",
 		).Error
 	}
 
