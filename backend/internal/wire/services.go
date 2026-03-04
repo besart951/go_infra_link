@@ -9,6 +9,7 @@ import (
 	exportinfra "github.com/besart951/go_infra_link/backend/internal/infrastructure/exporting"
 	adminservice "github.com/besart951/go_infra_link/backend/internal/service/admin"
 	authservice "github.com/besart951/go_infra_link/backend/internal/service/auth"
+	dashboardservice "github.com/besart951/go_infra_link/backend/internal/service/dashboard"
 	exportservice "github.com/besart951/go_infra_link/backend/internal/service/exporting"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
@@ -22,6 +23,7 @@ import (
 // Services holds all service instances.
 type Services struct {
 	Project         *projectservice.Service
+	Dashboard       *dashboardservice.Service
 	Phase           *phaseservice.Service
 	PhasePermission *phaseservice.PermissionService
 	User            *userservice.Service
@@ -103,6 +105,7 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 			repos.FacilityObjectData,
 			repos.FacilityBacnetObjects,
 		),
+		Dashboard:       dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
 		Phase:           phaseservice.NewPhaseService(repos.Phase),
 		PhasePermission: phaseservice.NewPhasePermissionService(repos.PhasePermission),
 		User:            userservice.New(repos.User, passwordService),

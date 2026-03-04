@@ -1379,6 +1379,27 @@
 			}
 		}
 	},
+	"dashboard": {
+		"last_project_title": "Letztes Projekt",
+		"last_project_desc": "Zuletzt aktualisiertes Projekt, an dem Sie gearbeitet haben",
+		"phase_label": "Phase",
+		"updated_label": "Aktualisiert",
+		"open_project": "Projekt öffnen",
+		"no_project": "Noch keine Projektaktivität gefunden.",
+		"online_title": "Wer ist online",
+		"online_desc": "Benutzer mit Aktivität in den letzten 15 Minuten",
+		"online_badge": "Online",
+		"no_online": "Aktuell ist niemand online.",
+		"no_recent_login": "Keine aktuelle Anmeldung",
+		"last_login_prefix": "Letzte Anmeldung",
+		"team_title": "Ihr Team",
+		"team_desc": "Hauptteam und Mitgliedschaften",
+		"your_role": "Ihre Rolle",
+		"members_count": "{count} Mitglieder",
+		"other_memberships": "Weitere Mitgliedschaften",
+		"no_team": "Keine Teamzugehörigkeit gefunden.",
+		"unavailable": "Dashboard-Daten sind derzeit nicht verfügbar."
+	},
 	"messages": {
 		"search_users": "Benutzer nach Name oder E-Mail suchen...",
 		"no_users_found": "Keine Benutzer gefunden.",

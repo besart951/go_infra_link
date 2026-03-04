@@ -9,6 +9,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/besart951/go_infra_link/backend/internal/domain/team"
 	"github.com/besart951/go_infra_link/backend/internal/domain/user"
+	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/google/uuid"
 )
 
@@ -57,6 +58,10 @@ type TeamService interface {
 	AddMember(teamID, userID uuid.UUID, role team.MemberRole) error
 	RemoveMember(teamID, userID uuid.UUID) error
 	ListMembers(teamID uuid.UUID, page, limit int) (*domain.PaginatedList[team.TeamMember], error)
+}
+
+type DashboardService interface {
+	GetUserDashboard(userID uuid.UUID) (*dto.DashboardResponse, error)
 }
 
 type AdminService interface {

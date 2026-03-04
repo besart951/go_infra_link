@@ -35,6 +35,7 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18n
 
 	return &handler.Handlers{
 		ProjectHandler:         handler.NewProjectHandler(services.Project),
+		DashboardHandler:       handler.NewDashboardHandler(services.Dashboard),
 		PhaseHandler:           handler.NewPhaseHandler(services.Phase),
 		PhasePermissionHandler: handler.NewPhasePermissionHandler(services.PhasePermission),
 		UserHandler:            handler.NewUserHandler(services.User, services.RBAC),

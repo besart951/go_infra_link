@@ -11,6 +11,7 @@ import (
 
 type Handlers struct {
 	ProjectHandler         *ProjectHandler
+	DashboardHandler       *DashboardHandler
 	UserHandler            *UserHandler
 	AuthHandler            *AuthHandler
 	TeamHandler            *TeamHandler
@@ -72,6 +73,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 	protectedV1.Use(middleware.AuthGuard(tokenValidator))
 	protectedV1.Use(middleware.AccountStatusGuard(userStatusSvc))
 	protectedV1.Use(middleware.CSRFMiddleware())
+	protectedV1.GET("/dashboard", handlers.DashboardHandler.GetDashboard)
 
 	// Project routes
 	projects := protectedV1.Group("/projects")

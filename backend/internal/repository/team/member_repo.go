@@ -84,3 +84,27 @@ func (r *memberRepo) ListByTeam(teamID uuid.UUID, params domain.PaginationParams
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
 }
+
+func (r *memberRepo) ListByUser(userID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainTeam.TeamMember], error) {
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 20)
+	offset := (page - 1) * limit
+
+	query := r.db.Model(&domainTeam.TeamMember{}).Where("user_id = ?", userID)
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	var items []domainTeam.TeamMember
+	if err := query.Order("joined_at DESC").Limit(limit).Offset(offset).Find(&items).Error; err != nil {
+		return nil, err
+	}
+
+	return &domain.PaginatedList[domainTeam.TeamMember]{
+		Items:      items,
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
+	}, nil
+}

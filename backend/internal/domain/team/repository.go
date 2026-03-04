@@ -15,6 +15,7 @@ type TeamRepository = domain.Repository[Team]
 type TeamMemberRepository interface {
 	GetUserRole(teamID, userID uuid.UUID) (*MemberRole, error)
 	ListByTeam(teamID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[TeamMember], error)
+	ListByUser(userID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[TeamMember], error)
 	Upsert(member *TeamMember) error
 	Delete(teamID, userID uuid.UUID) error
 }
