@@ -6,10 +6,10 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
-	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/besart951/go_infra_link/backend/internal/handler/mapper"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
+	"github.com/besart951/go_infra_link/backend/internal/modules/user/domain"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )

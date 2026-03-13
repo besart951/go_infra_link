@@ -1,0 +1,14 @@
+.git
+.claude
+.cache
+.pnpm-store
+node_modules
+apps/*/node_modules
+packages/*/node_modules
+apps/web-main/.svelte-kit
+apps/web-main/.vite-inspect
+apps/web-main/build
+backend/bin
+backend/tmp
+*.log
+dist

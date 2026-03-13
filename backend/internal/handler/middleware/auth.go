@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
+	domainAuth "github.com/besart951/go_infra_link/backend/internal/modules/auth/domain"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"

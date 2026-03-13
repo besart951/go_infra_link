@@ -8,11 +8,11 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/besart951/go_infra_link/backend/internal/config"
-	"github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	"github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
-	"github.com/besart951/go_infra_link/backend/internal/domain/team"
-	"github.com/besart951/go_infra_link/backend/internal/domain/user"
+	"github.com/besart951/go_infra_link/backend/internal/modules/auth/domain"
+	"github.com/besart951/go_infra_link/backend/internal/modules/team/domain"
+	"github.com/besart951/go_infra_link/backend/internal/modules/user/domain"
 )
 
 // Connect establishes a database connection based on configuration

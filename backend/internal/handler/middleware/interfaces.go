@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
-	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	domainTeam "github.com/besart951/go_infra_link/backend/internal/modules/team/domain"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/modules/user/domain"
 	"github.com/google/uuid"
 )
 

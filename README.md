@@ -1,78 +1,85 @@
 # go_infra_link
 
-Full-stack infrastructure link project with Go backend and future frontend.
+Full-stack project with:
+
+- Go backend in [`backend/`](./backend)
+- Svelte web app in [`apps/web-main/`](./apps/web-main)
+- Docker Compose for local development
 
 ## Quick Start
 
-### Backend
+### Run the full stack with Docker Compose
 
 ```bash
-cd backend
-go run ./cmd/server
+cp .env.example .env
+docker compose up --build
 ```
 
-## Development
+Local endpoints:
 
-### Prerequisites
+- Web app: `http://localhost:5173`
+- Backend API: `http://localhost:8080`
+- Swagger UI: `http://localhost:8080/swagger/index.html`
+- pgAdmin: `http://localhost:5050`
 
-- Go 1.25.6 or higher
-- Docker (optional, for containerized deployment)
+### Seed data
 
-### Running with Docker
+In another terminal:
 
 ```bash
-docker build -t go_infra_link .
-docker run -p 8080:8080 go_infra_link
+docker compose exec api go run ./cmd/seeder
 ```
 
-### Using Make
+## Environment Setup
+
+The root `.env` is the shared local development config for Compose.
+
+Start from:
 
 ```bash
-# Build backend
-make build
-
-# Run backend
-make run
-
-# Run tests
-make test
-
-# Clean build artifacts
-make clean
+cp .env.example .env
 ```
+
+Important values:
+
+- `BACKEND_PORT`
+- `FRONTEND_PORT`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_DB`
+- `JWT_SECRET`
+- `SEED_USER_*`
+
+## Current State
+
+The repository already has the main pieces for Docker-based local development:
+
+- `docker-compose.yml` starts `api`, `web-main`, `postgres`, and `pgAdmin`
+- backend config loads environment variables from the repo root
+- the web app uses the API container through `BACKEND_URL=http://api:8080`
+- shared frontend packages now live under `packages/ui-svelte`, `packages/theme`, and `packages/i18n`
+- backend feature modules now live under `backend/internal/modules`
+
+There are also some structural issues that should be cleaned up before expanding to a second app:
+
+- this README previously described an outdated backend-only flow
+- the current web app still contains app-specific code that can be extracted further
+- a shared TypeScript API/client package is still missing
+- backend HTTP handlers are still centralized and can be grouped by module later
+
+## Recommended Next Step
+
+Before adding the second website, align the repo around a monorepo structure with shared packages. The proposed direction is documented in [`docs/PROJECT_STRUCTURE.md`](./docs/PROJECT_STRUCTURE.md).
 
 ## Swagger
 
-### Generate Swagger docs
-
-From the backend folder:
+To regenerate Swagger docs:
 
 ```bash
 cd backend
 swag init -g ./cmd/app/main.go -o ./docs
 ```
 
-### View Swagger UI
-
-Start the backend and open:
-
-```
-http://localhost:8080/swagger/index.html
-```
-
-## Architecture
-
-This project follows **Clean/Hexagonal Architecture** principles:
-
-- **Backend**: Go service with layered architecture (domain, application, infrastructure)
-- **Frontend**: Separate frontend application (to be implemented)
-
 ## License
 
 See [LICENSE](LICENSE) for details.
-
-CSRF-Token
-Invoke-RestMethod -Method POST -Uri "http://localhost:8080/api/v1/auth/login" -ContentType "application/json" -Body '{"email":"besart_morina@hotmail.com","password":"password"}' -SessionVariable s | Select-Object -ExpandProperty csrf_token
-
-
-docker compose exec backend go run ./cmd/seeder

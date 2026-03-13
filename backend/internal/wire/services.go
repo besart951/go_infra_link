@@ -4,20 +4,20 @@ import (
 	"path/filepath"
 	"time"
 
-	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
-	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	exportinfra "github.com/besart951/go_infra_link/backend/internal/infrastructure/exporting"
+	domainAuth "github.com/besart951/go_infra_link/backend/internal/modules/auth/domain"
+	authservice "github.com/besart951/go_infra_link/backend/internal/modules/auth/service"
+	rbacservice "github.com/besart951/go_infra_link/backend/internal/modules/rbac/service"
+	teamservice "github.com/besart951/go_infra_link/backend/internal/modules/team/service"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/modules/user/domain"
+	userservice "github.com/besart951/go_infra_link/backend/internal/modules/user/service"
 	adminservice "github.com/besart951/go_infra_link/backend/internal/service/admin"
-	authservice "github.com/besart951/go_infra_link/backend/internal/service/auth"
 	dashboardservice "github.com/besart951/go_infra_link/backend/internal/service/dashboard"
 	exportservice "github.com/besart951/go_infra_link/backend/internal/service/exporting"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
 	phaseservice "github.com/besart951/go_infra_link/backend/internal/service/phase"
 	projectservice "github.com/besart951/go_infra_link/backend/internal/service/project"
-	rbacservice "github.com/besart951/go_infra_link/backend/internal/service/rbac"
-	teamservice "github.com/besart951/go_infra_link/backend/internal/service/team"
-	userservice "github.com/besart951/go_infra_link/backend/internal/service/user"
 )
 
 // Services holds all service instances.

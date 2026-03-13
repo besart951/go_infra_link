@@ -6,7 +6,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
-	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/modules/user/domain"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/google/uuid"
 	"gorm.io/gorm"

@@ -3,7 +3,7 @@ package dto
 import (
 	"time"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain/user"
+	"github.com/besart951/go_infra_link/backend/internal/modules/user/domain"
 )
 
 type RoleResponse struct {

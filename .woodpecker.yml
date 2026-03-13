@@ -28,11 +28,8 @@ steps:
     environment:
       PNPM_STORE_DIR: /woodpecker/src/.cache/pnpm
     commands:
-      - cd frontend
       - corepack enable
       - corepack prepare pnpm@10.8.1 --activate
       - CI=true pnpm install --frozen-lockfile
-      - cp src/lib/server/backend.example.ts src/lib/server/backend.ts || true
-      - cp src/lib/server/set-cookie.example.ts src/lib/server/set-cookie.ts || true
-      - pnpm check
-      - pnpm build
+      - pnpm --dir apps/web-main check
+      - pnpm --dir apps/web-main build

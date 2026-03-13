@@ -49,8 +49,25 @@ backend/app
 /backend/main
 
 # Local pnpm store
-frontend/.pnpm-store/
+apps/*/.pnpm-store/
+.pnpm-store/
+node_modules/
+apps/*/node_modules/
+packages/*/node_modules/
+
+# Local build/test cache
+.cache/
+
+# Frontend app build outputs
+apps/*/.svelte-kit/
+apps/*/build/
+apps/*/dist/
+apps/*/coverage/
+apps/*/.output/
+apps/*/.vercel/
+apps/*/.netlify/
+apps/*/.wrangler/
+apps/*/.vite-inspect
 
 # Accidental connection string files
 backend/host=postgres*
-

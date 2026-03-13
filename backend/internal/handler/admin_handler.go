@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
+	"github.com/besart951/go_infra_link/backend/internal/modules/user/domain"
 	"github.com/gin-gonic/gin"
 )
 

@@ -3,17 +3,17 @@
 package wire
 
 import (
-	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
-	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
-	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
-	authrepo "github.com/besart951/go_infra_link/backend/internal/repository/auth"
+	domainAuth "github.com/besart951/go_infra_link/backend/internal/modules/auth/domain"
+	authrepo "github.com/besart951/go_infra_link/backend/internal/modules/auth/repository"
+	domainTeam "github.com/besart951/go_infra_link/backend/internal/modules/team/domain"
+	teamrepo "github.com/besart951/go_infra_link/backend/internal/modules/team/repository"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/modules/user/domain"
+	userrepo "github.com/besart951/go_infra_link/backend/internal/modules/user/repository"
 	facilityrepo "github.com/besart951/go_infra_link/backend/internal/repository/facilitysql"
 	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
 	projectsqlrepo "github.com/besart951/go_infra_link/backend/internal/repository/projectsql"
-	teamrepo "github.com/besart951/go_infra_link/backend/internal/repository/team"
-	userrepo "github.com/besart951/go_infra_link/backend/internal/repository/user"
 	"gorm.io/gorm"
 )
 

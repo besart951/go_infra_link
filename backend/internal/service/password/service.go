@@ -3,7 +3,7 @@ package password
 import (
 	"errors"
 
-	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/modules/user/domain"
 	"golang.org/x/crypto/bcrypt"
 )
 

@@ -1,8 +1,8 @@
 package mapper
 
 import (
-	"github.com/besart951/go_infra_link/backend/internal/domain/team"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	"github.com/besart951/go_infra_link/backend/internal/modules/team/domain"
 )
 
 // ToTeamModel converts a CreateTeamRequest to a Team domain model

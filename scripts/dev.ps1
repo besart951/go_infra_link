@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('start', 'postgres', 'pgadmin', 'backend', 'frontend', 'seed', 'reset-db', 'reseed', 'stop', 'help')]
+    [ValidateSet('start', 'postgres', 'pgadmin', 'api', 'backend', 'web-main', 'frontend', 'seed', 'reset-db', 'reseed', 'stop', 'help')]
     [string]$Action = 'start',
     [switch]$Force
 )
@@ -54,14 +54,14 @@ function Start-Postgres {
     }
 }
 
-function Start-Backend {
-    Write-Step 'Starting backend in a new terminal...'
+function Start-Api {
+    Write-Step 'Starting API in a new terminal...'
     Start-Process pwsh -ArgumentList '-NoExit', '-Command', "Set-Location '$RepoRoot/backend'; go run .\cmd\app\"
 }
 
-function Start-Frontend {
-    Write-Step 'Starting frontend in a new terminal...'
-    Start-Process pwsh -ArgumentList '-NoExit', '-Command', "Set-Location '$RepoRoot/frontend'; pnpm dev"
+function Start-WebMain {
+    Write-Step 'Starting web-main in a new terminal...'
+    Start-Process pwsh -ArgumentList '-NoExit', '-Command', "Set-Location '$RepoRoot/apps/web-main'; pnpm dev"
 }
 
 function Run-Seed {
@@ -113,12 +113,14 @@ Usage:
   ./scripts/dev.ps1 <action> [-Force]
 
 Actions:
-  start      Start postgres+pgAdmin, then backend and frontend in new terminals
+  start      Start postgres+pgAdmin, then api and web-main in new terminals
   postgres   Start only postgres + pgAdmin
   pgadmin    Start only pgAdmin
-  backend    Start only backend (new terminal)
-  frontend   Start only frontend (new terminal)
-  seed       Run backend seeder once
+  api        Start only api (new terminal)
+  backend    Alias for api
+  web-main   Start only the main web app (new terminal)
+  frontend   Alias for web-main
+  seed       Run api seeder once
   reset-db   Drop & recreate public schema (deletes all data)
   reseed     reset-db + seed
   stop       Stop docker compose services
@@ -134,8 +136,8 @@ Examples:
 switch ($Action) {
     'start' {
         Start-Postgres
-        Start-Backend
-        Start-Frontend
+        Start-Api
+        Start-WebMain
     }
     'postgres' {
         Start-Postgres
@@ -150,11 +152,17 @@ switch ($Action) {
             Pop-Location
         }
     }
+    'api' {
+        Start-Api
+    }
     'backend' {
-        Start-Backend
+        Start-Api
+    }
+    'web-main' {
+        Start-WebMain
     }
     'frontend' {
-        Start-Frontend
+        Start-WebMain
     }
     'seed' {
         Run-Seed

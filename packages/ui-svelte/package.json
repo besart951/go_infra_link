@@ -1,0 +1,16 @@
+{
+  "name": "@go-infra-link/ui-svelte",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@internationalized/date": "^3.11.0",
+    "@lucide/svelte": "^0.561.0",
+    "@sveltejs/kit": "^2.52.0",
+    "bits-ui": "^2.15.7",
+    "clsx": "^2.1.1",
+    "svelte": "^5.51.3",
+    "tailwind-merge": "^3.4.1",
+    "tailwind-variants": "^3.2.2"
+  }
+}

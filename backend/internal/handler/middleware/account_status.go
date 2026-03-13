@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/modules/user/domain"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )

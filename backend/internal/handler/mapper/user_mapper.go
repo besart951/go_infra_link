@@ -1,8 +1,8 @@
 package mapper
 
 import (
-	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	"github.com/besart951/go_infra_link/backend/internal/modules/user/domain"
 )
 
 // ToUserModel converts a CreateUserRequest to a User domain model

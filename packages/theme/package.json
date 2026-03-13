@@ -1,0 +1,10 @@
+{
+  "name": "@go-infra-link/theme",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@sveltejs/kit": "^2.52.0",
+    "svelte": "^5.51.3"
+  }
+}

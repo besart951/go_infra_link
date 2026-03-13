@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
-	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
-	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
+	domainAuth "github.com/besart951/go_infra_link/backend/internal/modules/auth/domain"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/modules/user/domain"
 	"github.com/gin-gonic/gin"
 )
 
