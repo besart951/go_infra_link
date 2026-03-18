@@ -507,7 +507,9 @@
       });
     } catch (err) {
       addToast(
-        err instanceof Error ? err.message : translate('projects.control_cabinets.duplicate_failed'),
+        err instanceof Error
+          ? err.message
+          : translate('projects.control_cabinets.duplicate_failed'),
         'error'
       );
     }
@@ -669,7 +671,7 @@
               state={controlCabinetListState}
               showForm={showControlCabinetForm}
               editingItem={editingControlCabinet}
-              projectId={projectId}
+              {projectId}
               searchPlaceholder={$t('projects.control_cabinets.search_placeholder')}
               emptyMessage={$t('projects.control_cabinets.empty')}
               cabinetColumnLabel={$t('projects.control_cabinets.table.control_cabinet')}
@@ -679,7 +681,7 @@
               canDuplicate={canPerform('create', 'controlcabinet')}
               canUpdate={canPerform('update', 'controlcabinet')}
               canDelete={canPerform('delete', 'controlcabinet')}
-              getBuildingLabel={getBuildingLabel}
+              {getBuildingLabel}
               onCreate={handleControlCabinetCreate}
               onSearch={handleControlCabinetSearch}
               onPageChange={handleControlCabinetPageChange}
@@ -727,7 +729,7 @@
             {#if showSpsControllerForm}
               <SPSControllerForm
                 initialData={editingSpsController}
-                controlCabinetRefreshKey={controlCabinetRefreshKey}
+                {controlCabinetRefreshKey}
                 onSuccess={handleSpsControllerSuccess}
                 onCancel={handleSpsControllerCancel}
               />
@@ -810,7 +812,7 @@
         <FieldDeviceListView
           {projectId}
           refreshKey={fieldDeviceRefreshKey}
-          systemTypeRefreshKey={systemTypeRefreshKey}
+          {systemTypeRefreshKey}
         />
       </div>
     </div>
