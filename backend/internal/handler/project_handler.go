@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
@@ -15,10 +16,86 @@ import (
 
 type ProjectHandler struct {
 	service ProjectService
+	events  *ProjectEventHub
 }
 
-func NewProjectHandler(service ProjectService) *ProjectHandler {
-	return &ProjectHandler{service: service}
+func NewProjectHandler(service ProjectService, events *ProjectEventHub) *ProjectHandler {
+	if events == nil {
+		events = NewProjectEventHub()
+	}
+	return &ProjectHandler{service: service, events: events}
+}
+
+func (h *ProjectHandler) notifyProjectChange(c *gin.Context, projectID uuid.UUID, eventType string) {
+	if h.events == nil {
+		return
+	}
+
+	var actorID *uuid.UUID
+	if userID, ok := middleware.GetUserID(c); ok {
+		actorID = &userID
+	}
+
+	h.events.Publish(projectID, eventType, actorID)
+}
+
+func (h *ProjectHandler) StreamProjectEvents(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "stream_unsupported", "project.fetch_failed")
+		return
+	}
+
+	events, unsubscribe := h.events.Subscribe(projectID)
+	defer unsubscribe()
+
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no")
+	c.Status(http.StatusOK)
+
+	readyPayload := map[string]any{
+		"type":       "ready",
+		"project_id": projectID,
+		"at":         time.Now().UTC(),
+	}
+	if msg, err := formatSSE(projectEventName, readyPayload); err == nil {
+		_, _ = c.Writer.WriteString(msg)
+		flusher.Flush()
+	}
+
+	heartbeat := time.NewTicker(25 * time.Second)
+	defer heartbeat.Stop()
+
+	for {
+		select {
+		case <-c.Request.Context().Done():
+			return
+		case <-heartbeat.C:
+			_, _ = c.Writer.WriteString(": ping\n\n")
+			flusher.Flush()
+		case event, ok := <-events:
+			if !ok {
+				return
+			}
+			msg, err := formatSSE(projectEventName, event)
+			if err != nil {
+				continue
+			}
+			_, _ = c.Writer.WriteString(msg)
+			flusher.Flush()
+		}
+	}
 }
 
 func (h *ProjectHandler) ensureProjectAccess(c *gin.Context, projectID uuid.UUID) bool {
@@ -195,6 +272,8 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 		return
 	}
 
+	h.notifyProjectChange(c, id, "project.updated")
+
 	c.JSON(http.StatusOK, mapper.ToProjectResponse(proj))
 }
 
@@ -221,6 +300,8 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "project.deletion_failed")
 		return
 	}
+
+	h.notifyProjectChange(c, id, "project.deleted")
 
 	c.Status(http.StatusNoContent)
 }
@@ -377,6 +458,8 @@ func (h *ProjectHandler) CreateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
+	h.notifyProjectChange(c, projectID, "project.control_cabinet.created")
+
 	c.JSON(http.StatusCreated, mapper.ToProjectControlCabinetResponse(*created))
 }
 
@@ -432,6 +515,8 @@ func (h *ProjectHandler) UpdateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
+	h.notifyProjectChange(c, projectID, "project.control_cabinet.updated")
+
 	c.JSON(http.StatusOK, mapper.ToProjectControlCabinetResponse(*updated))
 }
 
@@ -479,6 +564,8 @@ func (h *ProjectHandler) DeleteProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
+	h.notifyProjectChange(c, projectID, "project.control_cabinet.deleted")
+
 	c.Status(http.StatusNoContent)
 }
 
@@ -523,6 +610,8 @@ func (h *ProjectHandler) CreateProjectSPSController(c *gin.Context) {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
 		return
 	}
+
+	h.notifyProjectChange(c, projectID, "project.sps_controller.created")
 
 	c.JSON(http.StatusCreated, mapper.ToProjectSPSControllerResponse(*created))
 }
@@ -579,6 +668,8 @@ func (h *ProjectHandler) UpdateProjectSPSController(c *gin.Context) {
 		return
 	}
 
+	h.notifyProjectChange(c, projectID, "project.sps_controller.updated")
+
 	c.JSON(http.StatusOK, mapper.ToProjectSPSControllerResponse(*updated))
 }
 
@@ -626,6 +717,8 @@ func (h *ProjectHandler) DeleteProjectSPSController(c *gin.Context) {
 		return
 	}
 
+	h.notifyProjectChange(c, projectID, "project.sps_controller.deleted")
+
 	c.Status(http.StatusNoContent)
 }
 
@@ -670,6 +763,8 @@ func (h *ProjectHandler) CreateProjectFieldDevice(c *gin.Context) {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
 		return
 	}
+
+	h.notifyProjectChange(c, projectID, "project.field_device.created")
 
 	c.JSON(http.StatusCreated, mapper.ToProjectFieldDeviceResponse(*created))
 }
@@ -726,6 +821,8 @@ func (h *ProjectHandler) UpdateProjectFieldDevice(c *gin.Context) {
 		return
 	}
 
+	h.notifyProjectChange(c, projectID, "project.field_device.updated")
+
 	c.JSON(http.StatusOK, mapper.ToProjectFieldDeviceResponse(*updated))
 }
 
@@ -772,6 +869,8 @@ func (h *ProjectHandler) DeleteProjectFieldDevice(c *gin.Context) {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "project.deletion_failed")
 		return
 	}
+
+	h.notifyProjectChange(c, projectID, "project.field_device.deleted")
 
 	c.Status(http.StatusNoContent)
 }
@@ -1054,6 +1153,8 @@ func (h *ProjectHandler) AddProjectObjectData(c *gin.Context) {
 		}
 	}
 
+	h.notifyProjectChange(c, projectID, "project.object_data.created")
+
 	c.JSON(http.StatusCreated, mapper.ToObjectDataResponse(*obj))
 }
 
@@ -1092,6 +1193,8 @@ func (h *ProjectHandler) RemoveProjectObjectData(c *gin.Context) {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "project.update_failed")
 		return
 	}
+
+	h.notifyProjectChange(c, projectID, "project.object_data.deleted")
 
 	c.JSON(http.StatusOK, mapper.ToObjectDataResponse(*obj))
 }

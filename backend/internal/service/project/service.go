@@ -156,6 +156,8 @@ func (s *Service) CreateControlCabinet(projectID, controlCabinetID uuid.UUID) (*
 	}
 
 	if err := s.linkDescendantsForControlCabinet(projectID, controlCabinetID); err != nil {
+		// Best-effort compensation to avoid leaving a partially linked cabinet.
+		_ = s.projectControlCabinetRepo.DeleteByIds([]uuid.UUID{entity.ID})
 		return nil, err
 	}
 
@@ -169,12 +171,15 @@ func (s *Service) UpdateControlCabinet(linkID, projectID, controlCabinetID uuid.
 	if entity.ProjectID != projectID {
 		return nil, domain.ErrNotFound
 	}
+	previousControlCabinetID := entity.ControlCabinetID
 	entity.ControlCabinetID = controlCabinetID
 	if err := s.projectControlCabinetRepo.Update(entity); err != nil {
 		return nil, err
 	}
 
 	if err := s.linkDescendantsForControlCabinet(projectID, controlCabinetID); err != nil {
+		entity.ControlCabinetID = previousControlCabinetID
+		_ = s.projectControlCabinetRepo.Update(entity)
 		return nil, err
 	}
 

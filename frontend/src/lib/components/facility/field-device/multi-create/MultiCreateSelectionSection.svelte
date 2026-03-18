@@ -12,6 +12,7 @@
 
   type Props = {
     projectId?: string;
+    systemTypeRefreshKey?: string | number;
     selection: MultiCreateSelection;
     preselectionValue: PreselectionType;
     submitting: boolean;
@@ -27,6 +28,7 @@
 
   let {
     projectId,
+    systemTypeRefreshKey,
     selection,
     preselectionValue,
     submitting,
@@ -51,6 +53,7 @@
       >
       <AsyncCombobox
         id="sps-system-type"
+        refreshKey={systemTypeRefreshKey}
         placeholder={$t('field_device.multi_create.selection.sps_system_type_placeholder')}
         searchPlaceholder={$t('field_device.multi_create.selection.sps_system_type_search')}
         emptyText={$t('field_device.multi_create.selection.sps_system_type_empty')}

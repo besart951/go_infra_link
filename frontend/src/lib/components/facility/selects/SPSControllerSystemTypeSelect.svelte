@@ -7,9 +7,10 @@
   type Props = {
     value?: string;
     width?: string;
+    refreshKey?: string | number;
   };
 
-  let { value = $bindable(''), width = 'w-[250px]' }: Props = $props();
+  let { value = $bindable(''), width = 'w-[250px]', refreshKey }: Props = $props();
 
   const t = createTranslator();
 
@@ -36,6 +37,7 @@
   bind:value
   {fetcher}
   {fetchById}
+  {refreshKey}
   labelKey="document_name"
   labelFormatter={formatLabel}
   placeholder={$t('facility.selects.sps_controller_system_type')}

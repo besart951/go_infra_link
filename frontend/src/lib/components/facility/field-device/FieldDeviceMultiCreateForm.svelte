@@ -51,11 +51,12 @@
   // ─────────────────────────────────────────────────────────────────────────────
   interface Props {
     projectId?: string;
+    systemTypeRefreshKey?: string | number;
     onSuccess?: (createdDevices: FieldDevice[]) => void;
     onCancel?: () => void;
   }
 
-  let { projectId, onSuccess, onCancel }: Props = $props();
+  let { projectId, systemTypeRefreshKey, onSuccess, onCancel }: Props = $props();
 
   // ─────────────────────────────────────────────────────────────────────────────
   // State
@@ -570,6 +571,7 @@
 
   <MultiCreateSelectionSection
     {projectId}
+    {systemTypeRefreshKey}
     {selection}
     {preselectionValue}
     {submitting}

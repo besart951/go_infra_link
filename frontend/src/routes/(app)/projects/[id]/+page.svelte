@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { Button } from '$lib/components/ui/button/index.js';
@@ -64,6 +64,12 @@
   let spsControllerSearchText = $state('');
   let spsControllerPage = $state(1);
   const spsControllerPageSize = 10;
+  let controlCabinetRefreshKey = $state(0);
+  let fieldDeviceRefreshKey = $state(0);
+  let systemTypeRefreshKey = $state(0);
+  let projectEventsSource: EventSource | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingSseRefresh = $state(false);
 
   const controlCabinetLinkMap = $derived.by(
     () => new Map(controlCabinetLinks.map((link) => [link.control_cabinet_id, link]))
@@ -211,6 +217,117 @@
     return item?.control_cabinet_nr || item?.id || id;
   }
 
+  function bumpControlCabinetRefresh() {
+    controlCabinetRefreshKey += 1;
+  }
+
+  function bumpFieldDeviceRefresh() {
+    fieldDeviceRefreshKey += 1;
+  }
+
+  function bumpSystemTypeRefresh() {
+    systemTypeRefreshKey += 1;
+  }
+
+  function bumpProjectFacilityRefresh() {
+    bumpControlCabinetRefresh();
+    bumpFieldDeviceRefresh();
+    bumpSystemTypeRefresh();
+  }
+
+  function clearProjectEventsConnection() {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    if (projectEventsSource) {
+      projectEventsSource.close();
+      projectEventsSource = null;
+    }
+  }
+
+  function queueProjectRefreshFromEvent() {
+    if (pendingSseRefresh) return;
+    pendingSseRefresh = true;
+
+    setTimeout(async () => {
+      pendingSseRefresh = false;
+      await refreshProjectFacilityData({
+        controlCabinets: true,
+        spsControllers: true,
+        fieldDevices: true,
+        systemTypes: true
+      });
+    }, 200);
+  }
+
+  function connectProjectEvents() {
+    if (!projectId) return;
+
+    clearProjectEventsConnection();
+
+    const source = new EventSource(`/api/v1/projects/${projectId}/events`);
+    projectEventsSource = source;
+
+    source.addEventListener('project.change', (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent<string>).data) as { type?: string };
+        if (payload.type === 'ready') return;
+      } catch {
+        // Ignore parse issues and still trigger refresh.
+      }
+      queueProjectRefreshFromEvent();
+    });
+
+    source.onerror = () => {
+      source.close();
+      if (projectEventsSource === source) {
+        projectEventsSource = null;
+      }
+      if (!reconnectTimer) {
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          connectProjectEvents();
+        }, 3000);
+      }
+    };
+  }
+
+  async function refreshProjectFacilityData(options?: {
+    controlCabinets?: boolean;
+    spsControllers?: boolean;
+    fieldDevices?: boolean;
+    systemTypes?: boolean;
+  }) {
+    const {
+      controlCabinets = false,
+      spsControllers = false,
+      fieldDevices = false,
+      systemTypes = false
+    } = options ?? {};
+
+    const tasks: Promise<void>[] = [];
+
+    if (controlCabinets) {
+      tasks.push(loadControlCabinets());
+    }
+    if (spsControllers) {
+      tasks.push(loadSpsControllers());
+    }
+
+    await Promise.all(tasks);
+
+    if (controlCabinets) {
+      bumpControlCabinetRefresh();
+    }
+    if (fieldDevices) {
+      bumpFieldDeviceRefresh();
+    }
+    if (systemTypes) {
+      bumpSystemTypeRefresh();
+    }
+  }
+
   $effect(() => {
     if (controlCabinetTotalPages === 0) {
       controlCabinetPage = 1;
@@ -329,7 +446,12 @@
       }
       showControlCabinetForm = false;
       editingControlCabinet = undefined;
-      await loadControlCabinets();
+      await refreshProjectFacilityData({
+        controlCabinets: true,
+        spsControllers: true,
+        fieldDevices: true,
+        systemTypes: true
+      });
     } catch (err) {
       addToast(
         err instanceof Error ? err.message : translate('projects.control_cabinets.link_failed'),
@@ -351,7 +473,12 @@
     try {
       await removeProjectControlCabinet(projectId, linkId);
       addToast(translate('projects.control_cabinets.removed'), 'success');
-      await loadControlCabinets();
+      await refreshProjectFacilityData({
+        controlCabinets: true,
+        spsControllers: true,
+        fieldDevices: true,
+        systemTypes: true
+      });
     } catch (err) {
       addToast(
         err instanceof Error ? err.message : translate('projects.control_cabinets.remove_failed'),
@@ -372,7 +499,12 @@
       const copiedCabinet = await controlCabinetRepository.copy(item.id);
       await addProjectControlCabinet(projectId, copiedCabinet.id);
       addToast(translate('projects.control_cabinets.duplicated'), 'success');
-      await Promise.all([loadControlCabinets(), loadSpsControllers()]);
+      await refreshProjectFacilityData({
+        controlCabinets: true,
+        spsControllers: true,
+        fieldDevices: true,
+        systemTypes: true
+      });
     } catch (err) {
       addToast(
         err instanceof Error ? err.message : translate('projects.control_cabinets.duplicate_failed'),
@@ -423,7 +555,11 @@
       }
       showSpsControllerForm = false;
       editingSpsController = undefined;
-      await loadSpsControllers();
+      await refreshProjectFacilityData({
+        spsControllers: true,
+        fieldDevices: true,
+        systemTypes: true
+      });
     } catch (err) {
       addToast(
         err instanceof Error ? err.message : translate('projects.sps_controllers.save_failed'),
@@ -444,7 +580,11 @@
     try {
       await spsControllerRepository.delete(item.id);
       addToast(translate('projects.sps_controllers.deleted'), 'success');
-      await loadSpsControllers();
+      await refreshProjectFacilityData({
+        spsControllers: true,
+        fieldDevices: true,
+        systemTypes: true
+      });
     } catch (err) {
       addToast(
         err instanceof Error ? err.message : translate('projects.sps_controllers.delete_failed'),
@@ -457,6 +597,11 @@
     loadProject();
     loadControlCabinets();
     loadSpsControllers();
+    connectProjectEvents();
+  });
+
+  onDestroy(() => {
+    clearProjectEventsConnection();
   });
 </script>
 
@@ -582,6 +727,7 @@
             {#if showSpsControllerForm}
               <SPSControllerForm
                 initialData={editingSpsController}
+                controlCabinetRefreshKey={controlCabinetRefreshKey}
                 onSuccess={handleSpsControllerSuccess}
                 onCancel={handleSpsControllerCancel}
               />
@@ -661,7 +807,11 @@
             {$t('projects.field_devices.description')}
           </p>
         </div>
-        <FieldDeviceListView {projectId} />
+        <FieldDeviceListView
+          {projectId}
+          refreshKey={fieldDeviceRefreshKey}
+          systemTypeRefreshKey={systemTypeRefreshKey}
+        />
       </div>
     </div>
   {/if}

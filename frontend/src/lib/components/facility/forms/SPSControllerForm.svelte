@@ -29,11 +29,13 @@
   interface Props {
     initialData?: SPSController;
     fixedControlCabinetId?: string;
+    controlCabinetRefreshKey?: string | number;
     onSuccess?: (controller: SPSController) => void;
     onCancel?: () => void;
   }
 
-  let { initialData, fixedControlCabinetId, onSuccess, onCancel }: Props = $props();
+  let { initialData, fixedControlCabinetId, controlCabinetRefreshKey, onSuccess, onCancel }: Props =
+    $props();
 
   const t = createTranslator();
 
@@ -579,7 +581,11 @@
       <Input value={fixedControlCabinetId} readonly disabled />
     {:else}
       <div class="block">
-        <ControlCabinetSelect bind:value={control_cabinet_id} width="w-full" />
+        <ControlCabinetSelect
+          bind:value={control_cabinet_id}
+          width="w-full"
+          refreshKey={controlCabinetRefreshKey}
+        />
       </div>
     {/if}
     {#if combinedFieldError('control_cabinet_id')}

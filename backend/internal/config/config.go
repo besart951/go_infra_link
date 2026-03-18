@@ -80,7 +80,7 @@ func Load() (Config, error) {
 	return Config{
 		AppEnv:            appEnv,
 		LogLevel:          logLevel,
-		HTTPAddr:          getEnv("HTTP_ADDR", ":8080"),
+		HTTPAddr:          resolveHTTPAddr(),
 		JWTSecret:         jwtSecret,
 		AccessTokenTTL:    accessTokenTTL,
 		RefreshTokenTTL:   refreshTokenTTL,
@@ -181,6 +181,19 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func resolveHTTPAddr() string {
+	if addr := getEnv("HTTP_ADDR", ""); addr != "" {
+		return addr
+	}
+	if port := getEnv("BACKEND_PORT", ""); port != "" {
+		if strings.HasPrefix(port, ":") {
+			return port
+		}
+		return ":" + port
+	}
+	return ":8080"
 }
 
 func normalizeDBType(dbType string) string {

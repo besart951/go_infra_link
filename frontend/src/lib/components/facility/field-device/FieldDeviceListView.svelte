@@ -38,9 +38,11 @@
 
   interface Props {
     projectId?: string;
+    refreshKey?: string | number;
+    systemTypeRefreshKey?: string | number;
   }
 
-  const { projectId }: Props = $props();
+  const { projectId, refreshKey, systemTypeRefreshKey }: Props = $props();
 
   // Create a store instance scoped to this component (optionally project-scoped).
   const store = createFieldDeviceStore(300, () => projectId);
@@ -86,6 +88,11 @@
     if (selectedCount === 0) {
       showBulkEditPanel = false;
     }
+  });
+
+  $effect(() => {
+    if (refreshKey === undefined) return;
+    store.reload();
   });
 
   onMount(() => {
@@ -296,6 +303,7 @@
       <Card.Content>
         <FieldDeviceMultiCreateForm
           {projectId}
+          {systemTypeRefreshKey}
           onSuccess={handleMultiCreateSuccess}
           onCancel={() => (showMultiCreateForm = false)}
         />

@@ -156,6 +156,11 @@
 
   $effect(() => {
     if (initialized && refreshKey !== undefined) {
+      if (value) {
+        selectedLabel = undefined;
+        selectedValue = undefined;
+        selectedData = undefined;
+      }
       loadItems(search);
     }
   });

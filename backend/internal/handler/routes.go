@@ -81,6 +81,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		projects.POST("", handlers.ProjectHandler.CreateProject)
 		projects.GET("", handlers.ProjectHandler.ListProjects)
 		projects.GET("/:id", handlers.ProjectHandler.GetProject)
+		projects.GET("/:id/events", handlers.ProjectHandler.StreamProjectEvents)
 		projects.GET("/:id/field-device-options", handlers.FacilityFieldDeviceHandler.GetFieldDeviceOptionsForProject)
 		projects.POST("/:id/users", handlers.ProjectHandler.InviteProjectUser)
 		projects.POST("/:id/control-cabinets", handlers.ProjectHandler.CreateProjectControlCabinet)

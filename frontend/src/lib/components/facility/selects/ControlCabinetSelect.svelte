@@ -8,9 +8,10 @@
   type Props = {
     value?: string;
     width?: string;
+    refreshKey?: string | number;
   };
 
-  let { value = $bindable(''), width = 'w-[250px]' }: Props = $props();
+  let { value = $bindable(''), width = 'w-[250px]', refreshKey }: Props = $props();
 
   const t = createTranslator();
   let buildingLabels = $state(new Map<string, string>());
@@ -64,6 +65,7 @@
   bind:value
   {fetcher}
   {fetchById}
+  {refreshKey}
   labelKey="control_cabinet_nr"
   labelFormatter={formatControlCabinetLabel}
   placeholder={$t('facility.selects.control_cabinet')}
