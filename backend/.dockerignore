@@ -1,0 +1,6 @@
+.git
+.gitignore
+app
+tmp
+*.log
+coverage.out

@@ -36,3 +36,36 @@ steps:
       - cp src/lib/server/set-cookie.example.ts src/lib/server/set-cookie.ts || true
       - pnpm check
       - pnpm build
+
+  build_backend_image:
+    image: docker:28-cli-alpine3.22
+    depends_on:
+      - backend_test_build
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    commands:
+      - docker build --target runtime -t local/go-infra-backend:stable ./backend
+
+  build_frontend_image:
+    image: docker:28-cli-alpine3.22
+    depends_on:
+      - frontend_ci
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    commands:
+      - docker build --target runtime -t local/go-infra-frontend:stable ./frontend
+
+  deploy_local:
+    image: docker:28-cli-alpine3.22
+    depends_on:
+      - build_backend_image
+      - build_frontend_image
+    when:
+      branch: main
+      event: push
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/t8/server-setup:/srv/server-setup
+    commands:
+      - apk add --no-cache bash docker-cli-compose
+      - /srv/server-setup/scripts/deploy-go-infra-local.sh
