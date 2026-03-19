@@ -13,6 +13,7 @@ type SPSControllerSystemTypeService struct {
 	fieldDeviceSvc    *FieldDeviceService
 	specificationRepo domainFacility.SpecificationStore
 	bacnetObjectRepo  domainFacility.BacnetObjectStore
+	hierarchyCopier   *HierarchyCopier
 }
 
 func NewSPSControllerSystemTypeService(
@@ -22,6 +23,7 @@ func NewSPSControllerSystemTypeService(
 	fieldDeviceSvc *FieldDeviceService,
 	specificationRepo domainFacility.SpecificationStore,
 	bacnetObjectRepo domainFacility.BacnetObjectStore,
+	hierarchyCopier *HierarchyCopier,
 ) *SPSControllerSystemTypeService {
 	return &SPSControllerSystemTypeService{
 		repo:              repo,
@@ -30,6 +32,7 @@ func NewSPSControllerSystemTypeService(
 		fieldDeviceSvc:    fieldDeviceSvc,
 		specificationRepo: specificationRepo,
 		bacnetObjectRepo:  bacnetObjectRepo,
+		hierarchyCopier:   hierarchyCopier,
 	}
 }
 
@@ -54,50 +57,7 @@ func (s *SPSControllerSystemTypeService) GetByID(id uuid.UUID) (*domainFacility.
 }
 
 func (s *SPSControllerSystemTypeService) CopyByID(id uuid.UUID) (*domainFacility.SPSControllerSystemType, error) {
-	original, err := domain.GetByID(s.repo, id)
-	if err != nil {
-		return nil, err
-	}
-
-	systemType, err := domain.GetByID(s.systemTypeRepo, original.SystemTypeID)
-	if err != nil {
-		return nil, err
-	}
-
-	existing, err := s.repo.ListBySPSControllerID(original.SPSControllerID)
-	if err != nil {
-		return nil, err
-	}
-
-	usedNumbers := make(map[int]struct{}, len(existing))
-	for _, item := range existing {
-		if item.SystemTypeID != original.SystemTypeID || item.Number == nil {
-			continue
-		}
-		usedNumbers[*item.Number] = struct{}{}
-	}
-
-	nextNumber, ok := findLowestAvailableNumber(systemType.NumberMin, systemType.NumberMax, usedNumbers)
-	if !ok {
-		return nil, domain.NewValidationError().Add("spscontroller.system_types", "no available number in the system type range")
-	}
-
-	copyNumber := nextNumber
-	copyEntity := &domainFacility.SPSControllerSystemType{
-		Number:          &copyNumber,
-		DocumentName:    original.DocumentName,
-		SPSControllerID: original.SPSControllerID,
-		SystemTypeID:    original.SystemTypeID,
-	}
-	if err := s.repo.Create(copyEntity); err != nil {
-		return nil, err
-	}
-
-	if err := s.copyFieldDevicesForSystemType(original.ID, copyEntity.ID); err != nil {
-		return nil, err
-	}
-
-	return domain.GetByID(s.repo, copyEntity.ID)
+	return s.hierarchyCopier.CopySPSControllerSystemTypeByID(id)
 }
 
 func (s *SPSControllerSystemTypeService) DeleteByID(id uuid.UUID) error {

@@ -434,6 +434,18 @@ func toSPSControllerSystemTypeListResponse(list *domain.PaginatedList[domainFaci
 	return dto.SPSControllerSystemTypeListResponse{Items: mapItems(list.Items, toSPSControllerSystemTypeResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
+func ToControlCabinetResponse(controlCabinet domainFacility.ControlCabinet) dto.ControlCabinetResponse {
+	return toControlCabinetResponse(controlCabinet)
+}
+
+func ToSPSControllerResponse(controller domainFacility.SPSController) dto.SPSControllerResponse {
+	return toSPSControllerResponse(controller)
+}
+
+func ToSPSControllerSystemTypeResponse(item domainFacility.SPSControllerSystemType) dto.SPSControllerSystemTypeResponse {
+	return toSPSControllerSystemTypeResponse(item)
+}
+
 func toUnitResponse(unit domainFacility.Unit) dto.UnitResponse {
 	return dto.UnitResponse{
 		ID:     unit.ID,

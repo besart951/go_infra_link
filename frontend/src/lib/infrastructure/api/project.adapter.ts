@@ -15,7 +15,12 @@ import type {
   ProjectSPSControllerListResponse,
   ProjectFieldDeviceListResponse
 } from '$lib/domain/project/index.js';
-import type { ObjectDataListParams } from '$lib/domain/facility/index.js';
+import type {
+  ControlCabinet,
+  ObjectDataListParams,
+  SPSController,
+  SPSControllerSystemType
+} from '$lib/domain/facility/index.js';
 
 /**
  * List projects with optional filters
@@ -214,6 +219,17 @@ export async function removeProjectControlCabinet(
   });
 }
 
+export async function copyProjectControlCabinet(
+  projectId: string,
+  controlCabinetId: string,
+  options?: RequestInit
+): Promise<ControlCabinet> {
+  return api<ControlCabinet>(`/projects/${projectId}/control-cabinets/${controlCabinetId}/copy`, {
+    ...options,
+    method: 'POST'
+  });
+}
+
 // ============================================================================
 // PROJECT SPS CONTROLLERS
 // ==========================================================================
@@ -254,6 +270,31 @@ export async function removeProjectSPSController(
     ...options,
     method: 'DELETE'
   });
+}
+
+export async function copyProjectSPSController(
+  projectId: string,
+  spsControllerId: string,
+  options?: RequestInit
+): Promise<SPSController> {
+  return api<SPSController>(`/projects/${projectId}/sps-controllers/${spsControllerId}/copy`, {
+    ...options,
+    method: 'POST'
+  });
+}
+
+export async function copyProjectSPSControllerSystemType(
+  projectId: string,
+  systemTypeId: string,
+  options?: RequestInit
+): Promise<SPSControllerSystemType> {
+  return api<SPSControllerSystemType>(
+    `/projects/${projectId}/sps-controller-system-types/${systemTypeId}/copy`,
+    {
+      ...options,
+      method: 'POST'
+    }
+  );
 }
 
 // ============================================================================

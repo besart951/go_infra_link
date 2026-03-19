@@ -7,6 +7,7 @@ import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -24,6 +25,7 @@ type Service struct {
 	spsControllerRepo         domainFacility.SPSControllerRepository
 	spsControllerSystemRepo   domainFacility.SPSControllerSystemTypeStore
 	fieldDeviceRepo           domainFacility.FieldDeviceStore
+	hierarchyCopier           *facilityservice.HierarchyCopier
 }
 
 func New(
@@ -39,6 +41,7 @@ func New(
 	spsControllerRepo domainFacility.SPSControllerRepository,
 	spsControllerSystemRepo domainFacility.SPSControllerSystemTypeStore,
 	fieldDeviceRepo domainFacility.FieldDeviceStore,
+	hierarchyCopier *facilityservice.HierarchyCopier,
 ) *Service {
 	return &Service{
 		repo:                      repo,
@@ -53,6 +56,7 @@ func New(
 		spsControllerRepo:         spsControllerRepo,
 		spsControllerSystemRepo:   spsControllerSystemRepo,
 		fieldDeviceRepo:           fieldDeviceRepo,
+		hierarchyCopier:           hierarchyCopier,
 	}
 }
 func (s *Service) Create(project *domainProject.Project) error {
@@ -156,12 +160,25 @@ func (s *Service) CreateControlCabinet(projectID, controlCabinetID uuid.UUID) (*
 	}
 
 	if err := s.linkDescendantsForControlCabinet(projectID, controlCabinetID); err != nil {
-		// Best-effort compensation to avoid leaving a partially linked cabinet.
-		_ = s.projectControlCabinetRepo.DeleteByIds([]uuid.UUID{entity.ID})
+		_ = s.cleanupProjectLinksForControlCabinetHierarchy(controlCabinetID)
 		return nil, err
 	}
 
 	return entity, nil
+}
+
+func (s *Service) CopyControlCabinet(projectID, controlCabinetID uuid.UUID) (*domainFacility.ControlCabinet, error) {
+	copyEntity, err := s.hierarchyCopier.CopyControlCabinetByID(controlCabinetID)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := s.CreateControlCabinet(projectID, copyEntity.ID); err != nil {
+		_ = s.rollbackCopiedControlCabinet(copyEntity.ID)
+		return nil, err
+	}
+
+	return copyEntity, nil
 }
 func (s *Service) UpdateControlCabinet(linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
 	entity, err := domain.GetByID(s.projectControlCabinetRepo, linkID)
@@ -178,6 +195,7 @@ func (s *Service) UpdateControlCabinet(linkID, projectID, controlCabinetID uuid.
 	}
 
 	if err := s.linkDescendantsForControlCabinet(projectID, controlCabinetID); err != nil {
+		_ = s.cleanupProjectLinksForControlCabinetHierarchy(controlCabinetID)
 		entity.ControlCabinetID = previousControlCabinetID
 		_ = s.projectControlCabinetRepo.Update(entity)
 		return nil, err
@@ -234,7 +252,42 @@ func (s *Service) CreateSPSController(projectID, spsControllerID uuid.UUID) (*do
 	if err := s.projectSPSControllerRepo.Create(entity); err != nil {
 		return nil, err
 	}
+
+	if err := s.linkDescendantsForSPSControllers(projectID, []uuid.UUID{spsControllerID}); err != nil {
+		_ = s.cleanupProjectLinksForSPSControllers([]uuid.UUID{spsControllerID})
+		return nil, err
+	}
+
 	return entity, nil
+}
+
+func (s *Service) CopySPSController(projectID, spsControllerID uuid.UUID) (*domainFacility.SPSController, error) {
+	copyEntity, err := s.hierarchyCopier.CopySPSControllerByID(spsControllerID)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := s.CreateSPSController(projectID, copyEntity.ID); err != nil {
+		_ = s.rollbackCopiedSPSController(copyEntity.ID)
+		return nil, err
+	}
+
+	return copyEntity, nil
+}
+
+func (s *Service) CopySPSControllerSystemType(projectID, systemTypeID uuid.UUID) (*domainFacility.SPSControllerSystemType, error) {
+	copyEntity, err := s.hierarchyCopier.CopySPSControllerSystemTypeByID(systemTypeID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.linkFieldDevicesForSystemTypes(projectID, []uuid.UUID{copyEntity.ID}); err != nil {
+		_ = s.cleanupProjectLinksForSystemTypes([]uuid.UUID{copyEntity.ID})
+		_ = s.rollbackCopiedSPSControllerSystemType(copyEntity.ID)
+		return nil, err
+	}
+
+	return copyEntity, nil
 }
 
 func (s *Service) UpdateSPSController(linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
@@ -245,10 +298,19 @@ func (s *Service) UpdateSPSController(linkID, projectID, spsControllerID uuid.UU
 	if entity.ProjectID != projectID {
 		return nil, domain.ErrNotFound
 	}
+	previousSPSControllerID := entity.SPSControllerID
 	entity.SPSControllerID = spsControllerID
 	if err := s.projectSPSControllerRepo.Update(entity); err != nil {
 		return nil, err
 	}
+
+	if err := s.linkDescendantsForSPSControllers(projectID, []uuid.UUID{spsControllerID}); err != nil {
+		_ = s.cleanupProjectLinksForSPSControllers([]uuid.UUID{spsControllerID})
+		entity.SPSControllerID = previousSPSControllerID
+		_ = s.projectSPSControllerRepo.Update(entity)
+		return nil, err
+	}
+
 	return entity, nil
 }
 
@@ -697,11 +759,16 @@ func toUUIDSet(ids []uuid.UUID) map[uuid.UUID]struct{} {
 	}
 	return result
 }
+
 func (s *Service) linkDescendantsForControlCabinet(projectID, controlCabinetID uuid.UUID) error {
 	spsControllerIDs, err := s.spsControllerRepo.GetIDsByControlCabinetID(controlCabinetID)
 	if err != nil {
 		return err
 	}
+	return s.linkDescendantsForSPSControllers(projectID, spsControllerIDs)
+}
+
+func (s *Service) linkDescendantsForSPSControllers(projectID uuid.UUID, spsControllerIDs []uuid.UUID) error {
 	if len(spsControllerIDs) == 0 {
 		return nil
 	}
@@ -724,6 +791,10 @@ func (s *Service) linkDescendantsForControlCabinet(projectID, controlCabinetID u
 	if err != nil {
 		return err
 	}
+	return s.linkFieldDevicesForSystemTypes(projectID, systemTypeIDs)
+}
+
+func (s *Service) linkFieldDevicesForSystemTypes(projectID uuid.UUID, systemTypeIDs []uuid.UUID) error {
 	if len(systemTypeIDs) == 0 {
 		return nil
 	}
@@ -751,6 +822,91 @@ func (s *Service) linkDescendantsForControlCabinet(projectID, controlCabinetID u
 	}
 
 	return nil
+}
+
+func (s *Service) cleanupProjectLinksForControlCabinetHierarchy(controlCabinetID uuid.UUID) error {
+	spsControllerIDs, _, fieldDeviceIDs, err := s.collectDescendantIDsForControlCabinet(controlCabinetID)
+	if err != nil {
+		return err
+	}
+	if err := s.deleteProjectFieldDeviceLinksByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+		return err
+	}
+	if err := s.deleteProjectSPSControllerLinksBySPSControllerIDs(spsControllerIDs); err != nil {
+		return err
+	}
+	return s.deleteProjectControlCabinetLinksByControlCabinetIDs([]uuid.UUID{controlCabinetID})
+}
+
+func (s *Service) cleanupProjectLinksForSPSControllers(spsControllerIDs []uuid.UUID) error {
+	if len(spsControllerIDs) == 0 {
+		return nil
+	}
+
+	_, fieldDeviceIDs, err := s.collectDescendantIDsForSPSControllers(spsControllerIDs)
+	if err != nil {
+		return err
+	}
+	if err := s.deleteProjectFieldDeviceLinksByFieldDeviceIDs(fieldDeviceIDs); err != nil {
+		return err
+	}
+	return s.deleteProjectSPSControllerLinksBySPSControllerIDs(spsControllerIDs)
+}
+
+func (s *Service) cleanupProjectLinksForSystemTypes(systemTypeIDs []uuid.UUID) error {
+	if len(systemTypeIDs) == 0 {
+		return nil
+	}
+
+	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(systemTypeIDs)
+	if err != nil {
+		return err
+	}
+	return s.deleteProjectFieldDeviceLinksByFieldDeviceIDs(fieldDeviceIDs)
+}
+
+func (s *Service) rollbackCopiedControlCabinet(controlCabinetID uuid.UUID) error {
+	spsControllerIDs, _, fieldDeviceIDs, err := s.collectDescendantIDsForControlCabinet(controlCabinetID)
+	if err != nil {
+		return err
+	}
+	if err := s.deleteFieldDevicesWithChildren(fieldDeviceIDs); err != nil {
+		return err
+	}
+	if len(spsControllerIDs) > 0 {
+		if err := s.spsControllerSystemRepo.DeleteBySPSControllerIDs(spsControllerIDs); err != nil {
+			return err
+		}
+		if err := s.spsControllerRepo.DeleteByIds(spsControllerIDs); err != nil {
+			return err
+		}
+	}
+	return s.controlCabinetRepo.DeleteByIds([]uuid.UUID{controlCabinetID})
+}
+
+func (s *Service) rollbackCopiedSPSController(spsControllerID uuid.UUID) error {
+	_, fieldDeviceIDs, err := s.collectDescendantIDsForSPSControllers([]uuid.UUID{spsControllerID})
+	if err != nil {
+		return err
+	}
+	if err := s.deleteFieldDevicesWithChildren(fieldDeviceIDs); err != nil {
+		return err
+	}
+	if err := s.spsControllerSystemRepo.DeleteBySPSControllerIDs([]uuid.UUID{spsControllerID}); err != nil {
+		return err
+	}
+	return s.spsControllerRepo.DeleteByIds([]uuid.UUID{spsControllerID})
+}
+
+func (s *Service) rollbackCopiedSPSControllerSystemType(systemTypeID uuid.UUID) error {
+	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs([]uuid.UUID{systemTypeID})
+	if err != nil {
+		return err
+	}
+	if err := s.deleteFieldDevicesWithChildren(fieldDeviceIDs); err != nil {
+		return err
+	}
+	return s.spsControllerSystemRepo.DeleteByIds([]uuid.UUID{systemTypeID})
 }
 
 func (s *Service) listProjectSPSControllerIDSet(projectID uuid.UUID) (map[uuid.UUID]struct{}, error) {

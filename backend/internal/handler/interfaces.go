@@ -22,9 +22,12 @@ type ProjectService interface {
 	ListUsers(projectID uuid.UUID) ([]user.User, error)
 	RemoveUser(projectID, userID uuid.UUID) error
 	CreateControlCabinet(projectID, controlCabinetID uuid.UUID) (*project.ProjectControlCabinet, error)
+	CopyControlCabinet(projectID, controlCabinetID uuid.UUID) (*domainFacility.ControlCabinet, error)
 	UpdateControlCabinet(linkID, projectID, controlCabinetID uuid.UUID) (*project.ProjectControlCabinet, error)
 	DeleteControlCabinet(linkID, projectID uuid.UUID) error
 	CreateSPSController(projectID, spsControllerID uuid.UUID) (*project.ProjectSPSController, error)
+	CopySPSController(projectID, spsControllerID uuid.UUID) (*domainFacility.SPSController, error)
+	CopySPSControllerSystemType(projectID, systemTypeID uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
 	UpdateSPSController(linkID, projectID, spsControllerID uuid.UUID) (*project.ProjectSPSController, error)
 	DeleteSPSController(linkID, projectID uuid.UUID) error
 	CreateFieldDevice(projectID, fieldDeviceID uuid.UUID) (*project.ProjectFieldDevice, error)

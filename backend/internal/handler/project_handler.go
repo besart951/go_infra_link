@@ -7,6 +7,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	facilityhandler "github.com/besart951/go_infra_link/backend/internal/handler/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/mapper"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
@@ -463,6 +464,42 @@ func (h *ProjectHandler) CreateProjectControlCabinet(c *gin.Context) {
 	c.JSON(http.StatusCreated, mapper.ToProjectControlCabinetResponse(*created))
 }
 
+func (h *ProjectHandler) CopyProjectControlCabinet(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
+	controlCabinetID, ok := handlerutil.ParseUUIDParam(c, "controlCabinetId")
+	if !ok {
+		return
+	}
+
+	copyEntity, err := h.service.CopyControlCabinet(projectID, controlCabinetID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "facility.control_cabinet_not_found")
+			return
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			handlerutil.RespondLocalizedError(c, http.StatusConflict, "conflict", "project.creation_failed")
+			return
+		}
+		if ve, ok := domain.AsValidationError(err); ok {
+			handlerutil.RespondValidationError(c, ve.Fields)
+			return
+		}
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
+		return
+	}
+
+	h.notifyProjectChange(c, projectID, "project.control_cabinet.copied")
+	c.JSON(http.StatusCreated, facilityhandler.ToControlCabinetResponse(*copyEntity))
+}
+
 // UpdateProjectControlCabinet godoc
 // @Summary Update project control cabinet link
 // @Tags projects
@@ -614,6 +651,74 @@ func (h *ProjectHandler) CreateProjectSPSController(c *gin.Context) {
 	h.notifyProjectChange(c, projectID, "project.sps_controller.created")
 
 	c.JSON(http.StatusCreated, mapper.ToProjectSPSControllerResponse(*created))
+}
+
+func (h *ProjectHandler) CopyProjectSPSController(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
+	spsControllerID, ok := handlerutil.ParseUUIDParam(c, "spsControllerId")
+	if !ok {
+		return
+	}
+
+	copyEntity, err := h.service.CopySPSController(projectID, spsControllerID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "facility.sps_controller_not_found")
+			return
+		}
+		if errors.Is(err, domain.ErrConflict) {
+			handlerutil.RespondLocalizedError(c, http.StatusConflict, "conflict", "project.creation_failed")
+			return
+		}
+		if ve, ok := domain.AsValidationError(err); ok {
+			handlerutil.RespondValidationError(c, ve.Fields)
+			return
+		}
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
+		return
+	}
+
+	h.notifyProjectChange(c, projectID, "project.sps_controller.copied")
+	c.JSON(http.StatusCreated, facilityhandler.ToSPSControllerResponse(*copyEntity))
+}
+
+func (h *ProjectHandler) CopyProjectSPSControllerSystemType(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	if !h.ensureProjectAccess(c, projectID) {
+		return
+	}
+
+	systemTypeID, ok := handlerutil.ParseUUIDParam(c, "systemTypeId")
+	if !ok {
+		return
+	}
+
+	copyEntity, err := h.service.CopySPSControllerSystemType(projectID, systemTypeID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "facility.sps_controller_system_type_not_found")
+			return
+		}
+		if ve, ok := domain.AsValidationError(err); ok {
+			handlerutil.RespondValidationError(c, ve.Fields)
+			return
+		}
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
+		return
+	}
+
+	h.notifyProjectChange(c, projectID, "project.sps_controller_system_type.copied")
+	c.JSON(http.StatusCreated, facilityhandler.ToSPSControllerSystemTypeResponse(*copyEntity))
 }
 
 // UpdateProjectSPSController godoc

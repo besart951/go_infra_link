@@ -8,6 +8,7 @@
   import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
   import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
   import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsControllerSystemTypeRepository.js';
+  import { copyProjectSPSControllerSystemType } from '$lib/infrastructure/api/project.adapter.js';
   import { ManageSPSControllerUseCase } from '$lib/application/useCases/facility/manageSPSControllerUseCase.js';
   import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
   const manageSPSController = new ManageSPSControllerUseCase(spsControllerRepository);
@@ -28,14 +29,21 @@
 
   interface Props {
     initialData?: SPSController;
+    projectId?: string;
     fixedControlCabinetId?: string;
     controlCabinetRefreshKey?: string | number;
     onSuccess?: (controller: SPSController) => void;
     onCancel?: () => void;
   }
 
-  let { initialData, fixedControlCabinetId, controlCabinetRefreshKey, onSuccess, onCancel }: Props =
-    $props();
+  let {
+    initialData,
+    projectId,
+    fixedControlCabinetId,
+    controlCabinetRefreshKey,
+    onSuccess,
+    onCancel
+  }: Props = $props();
 
   const t = createTranslator();
 
@@ -420,7 +428,9 @@
     const entry = systemTypes[index];
     if (!entry?.id) return;
     try {
-      const copied = await spsControllerSystemTypeRepository.copy(entry.id);
+      const copied = projectId
+        ? await copyProjectSPSControllerSystemType(projectId, entry.id)
+        : await spsControllerSystemTypeRepository.copy(entry.id);
       const systemTypeId = copied.system_type_id;
       if (!systemTypeDetails[systemTypeId]) {
         const details = await ensureSystemTypeDetails(systemTypeId);

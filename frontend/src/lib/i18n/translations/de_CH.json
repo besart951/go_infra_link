@@ -280,6 +280,8 @@
 			},
 			"created": "SPS-Regler erstellt",
 			"updated": "SPS-Regler aktualisiert",
+			"duplicated": "SPS-Regler inklusive Projektzuordnung dupliziert",
+			"duplicate_failed": "SPS-Regler konnte nicht projektbezogen dupliziert werden",
 			"save_failed": "SPS-Regler konnte nicht gespeichert werden",
 			"delete_title": "SPS-Regler löschen",
 			"delete_message": "{name} löschen?",

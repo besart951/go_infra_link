@@ -19,9 +19,11 @@
     getProject,
     listProjectControlCabinets,
     addProjectControlCabinet,
+    copyProjectControlCabinet,
     removeProjectControlCabinet,
     listProjectSPSControllers,
-    addProjectSPSController
+    addProjectSPSController,
+    copyProjectSPSController
   } from '$lib/infrastructure/api/project.adapter.js';
   import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
   import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
@@ -496,8 +498,7 @@
   async function handleDuplicateControlCabinet(item: ControlCabinet) {
     if (!projectId) return;
     try {
-      const copiedCabinet = await controlCabinetRepository.copy(item.id);
-      await addProjectControlCabinet(projectId, copiedCabinet.id);
+      await copyProjectControlCabinet(projectId, item.id);
       addToast(translate('projects.control_cabinets.duplicated'), 'success');
       await refreshProjectFacilityData({
         controlCabinets: true,
@@ -507,9 +508,25 @@
       });
     } catch (err) {
       addToast(
-        err instanceof Error
-          ? err.message
-          : translate('projects.control_cabinets.duplicate_failed'),
+        err instanceof Error ? err.message : translate('projects.control_cabinets.duplicate_failed'),
+        'error'
+      );
+    }
+  }
+
+  async function handleDuplicateSpsController(item: SPSController) {
+    if (!projectId) return;
+    try {
+      await copyProjectSPSController(projectId, item.id);
+      addToast(translate('projects.sps_controllers.duplicated'), 'success');
+      await refreshProjectFacilityData({
+        spsControllers: true,
+        fieldDevices: true,
+        systemTypes: true
+      });
+    } catch (err) {
+      addToast(
+        err instanceof Error ? err.message : translate('projects.sps_controllers.duplicate_failed'),
         'error'
       );
     }
@@ -729,6 +746,7 @@
             {#if showSpsControllerForm}
               <SPSControllerForm
                 initialData={editingSpsController}
+                {projectId}
                 {controlCabinetRefreshKey}
                 onSuccess={handleSpsControllerSuccess}
                 onCancel={handleSpsControllerCancel}
@@ -743,7 +761,7 @@
                 { key: 'ip_address', label: $t('projects.sps_controllers.columns.ip_address') },
                 { key: 'cabinet', label: $t('projects.sps_controllers.columns.cabinet') },
                 { key: 'created', label: $t('projects.sps_controllers.columns.created') },
-                { key: 'actions', label: $t('common.actions'), width: 'w-[120px]' }
+                { key: 'actions', label: $t('common.actions'), width: 'w-[170px]' }
               ]}
               searchPlaceholder={$t('projects.sps_controllers.search_placeholder')}
               emptyMessage={$t('projects.sps_controllers.empty')}
@@ -779,6 +797,13 @@
                       onclick={() => handleSpsControllerEdit(controller)}
                     >
                       <Pencil class="size-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onclick={() => handleDuplicateSpsController(controller)}
+                    >
+                      {$t('facility.duplicate')}
                     </Button>
                     <Button
                       variant="ghost"

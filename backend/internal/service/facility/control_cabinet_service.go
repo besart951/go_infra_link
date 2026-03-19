@@ -20,6 +20,7 @@ type ControlCabinetService struct {
 	projectControlCabinetRepo domainProject.ProjectControlCabinetRepository
 	projectSPSControllerRepo  domainProject.ProjectSPSControllerRepository
 	projectFieldDeviceRepo    domainProject.ProjectFieldDeviceRepository
+	hierarchyCopier           *HierarchyCopier
 }
 
 func NewControlCabinetService(
@@ -33,6 +34,7 @@ func NewControlCabinetService(
 	projectControlCabinetRepo domainProject.ProjectControlCabinetRepository,
 	projectSPSControllerRepo domainProject.ProjectSPSControllerRepository,
 	projectFieldDeviceRepo domainProject.ProjectFieldDeviceRepository,
+	hierarchyCopier *HierarchyCopier,
 ) *ControlCabinetService {
 	return &ControlCabinetService{
 		repo:                      repo,
@@ -45,6 +47,7 @@ func NewControlCabinetService(
 		projectControlCabinetRepo: projectControlCabinetRepo,
 		projectSPSControllerRepo:  projectSPSControllerRepo,
 		projectFieldDeviceRepo:    projectFieldDeviceRepo,
+		hierarchyCopier:           hierarchyCopier,
 	}
 }
 
@@ -71,36 +74,7 @@ func (s *ControlCabinetService) GetByIDs(ids []uuid.UUID) ([]domainFacility.Cont
 }
 
 func (s *ControlCabinetService) CopyByID(id uuid.UUID) (*domainFacility.ControlCabinet, error) {
-	original, err := s.GetByID(id)
-	if err != nil {
-		return nil, err
-	}
-
-	baseNr := ""
-	if original.ControlCabinetNr != nil {
-		baseNr = strings.TrimSpace(*original.ControlCabinetNr)
-	}
-
-	nextNr, err := s.nextAvailableControlCabinetNr(original.BuildingID, baseNr)
-	if err != nil {
-		return nil, err
-	}
-
-	copyEntity := &domainFacility.ControlCabinet{
-		BuildingID:       original.BuildingID,
-		ControlCabinetNr: &nextNr,
-	}
-
-	if err := s.Create(copyEntity); err != nil {
-		return nil, err
-	}
-
-	// Copy all SPS Controllers with their system types, field devices, specifications, and BACnet objects
-	if err := s.copySPSControllersForControlCabinet(id, copyEntity.ID); err != nil {
-		return nil, err
-	}
-
-	return copyEntity, nil
+	return s.hierarchyCopier.CopyControlCabinetByID(id)
 }
 
 func (s *ControlCabinetService) GetDeleteImpact(id uuid.UUID) (*domainFacility.ControlCabinetDeleteImpact, error) {

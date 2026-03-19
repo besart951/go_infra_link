@@ -85,6 +85,7 @@ type Repositories struct {
 
 // Services bundles all facility services.
 type Services struct {
+	HierarchyCopier         *HierarchyCopier
 	Building                *BuildingService
 	SystemType              *SystemTypeService
 	SystemPart              *SystemPartService
@@ -107,6 +108,17 @@ type Services struct {
 
 // NewServices creates facility services using a factory-style constructor.
 func NewServices(repos Repositories) *Services {
+	hierarchyCopier := NewHierarchyCopier(
+		repos.ControlCabinets,
+		repos.Buildings,
+		repos.SPSControllers,
+		repos.SystemTypes,
+		repos.SPSControllerSystemTypes,
+		repos.FieldDevices,
+		repos.Specifications,
+		repos.BacnetObjects,
+	)
+
 	fieldDeviceService := NewFieldDeviceService(
 		repos.FieldDevices,
 		repos.SPSControllerSystemTypes,
@@ -125,6 +137,7 @@ func NewServices(repos Repositories) *Services {
 	)
 
 	return &Services{
+		HierarchyCopier: hierarchyCopier,
 		Building: NewBuildingService(
 			repos.Buildings,
 			repos.ControlCabinets,
@@ -148,6 +161,7 @@ func NewServices(repos Repositories) *Services {
 			repos.ProjectControlCabinets,
 			repos.ProjectSPSControllers,
 			repos.ProjectFieldDevices,
+			hierarchyCopier,
 		),
 		FieldDevice: fieldDeviceService,
 		BacnetObject: NewBacnetObjectService(
@@ -169,6 +183,7 @@ func NewServices(repos Repositories) *Services {
 			repos.BacnetObjects,
 			repos.ProjectSPSControllers,
 			repos.ProjectFieldDevices,
+			hierarchyCopier,
 		),
 		StateText:         NewStateTextService(repos.StateTexts),
 		NotificationClass: NewNotificationClassService(repos.NotificationClasses),
@@ -184,6 +199,7 @@ func NewServices(repos Repositories) *Services {
 			fieldDeviceService,
 			repos.Specifications,
 			repos.BacnetObjects,
+			hierarchyCopier,
 		),
 		AlarmType: NewAlarmTypeService(repos.AlarmTypes),
 		BacnetAlarmValue: NewBacnetAlarmValueService(

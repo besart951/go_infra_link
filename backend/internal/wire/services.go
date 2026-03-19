@@ -112,6 +112,7 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 			repos.FacilitySPSControllers,
 			repos.FacilitySPSControllerSystemTypes,
 			repos.FacilityFieldDevices,
+			facilityServices.HierarchyCopier,
 		),
 		Dashboard:       dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
 		Phase:           phaseservice.NewPhaseService(repos.Phase),

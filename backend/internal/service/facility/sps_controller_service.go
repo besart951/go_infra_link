@@ -22,6 +22,7 @@ type SPSControllerService struct {
 	bacnetObjectRepo         domainFacility.BacnetObjectStore
 	projectSPSControllerRepo domainProject.ProjectSPSControllerRepository
 	projectFieldDeviceRepo   domainProject.ProjectFieldDeviceRepository
+	hierarchyCopier          *HierarchyCopier
 }
 
 func NewSPSControllerService(
@@ -35,6 +36,7 @@ func NewSPSControllerService(
 	bacnetObjectRepo domainFacility.BacnetObjectStore,
 	projectSPSControllerRepo domainProject.ProjectSPSControllerRepository,
 	projectFieldDeviceRepo domainProject.ProjectFieldDeviceRepository,
+	hierarchyCopier *HierarchyCopier,
 ) *SPSControllerService {
 	return &SPSControllerService{
 		repo:                     repo,
@@ -47,6 +49,7 @@ func NewSPSControllerService(
 		bacnetObjectRepo:         bacnetObjectRepo,
 		projectSPSControllerRepo: projectSPSControllerRepo,
 		projectFieldDeviceRepo:   projectFieldDeviceRepo,
+		hierarchyCopier:          hierarchyCopier,
 	}
 }
 
@@ -106,112 +109,7 @@ func (s *SPSControllerService) GetByIDs(ids []uuid.UUID) ([]domainFacility.SPSCo
 }
 
 func (s *SPSControllerService) CopyByID(id uuid.UUID) (*domainFacility.SPSController, error) {
-	original, err := s.GetByID(id)
-	if err != nil {
-		return nil, err
-	}
-
-	// Load control cabinet to get building ID
-	controlCabinet, err := domain.GetByID(s.controlCabinetRepo, original.ControlCabinetID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Load building
-	building, err := domain.GetByID(s.buildingRepo, controlCabinet.BuildingID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get next available GA Device
-	nextGADevice, err := s.nextAvailableGADevice(original.ControlCabinetID)
-	if err != nil {
-		return nil, err
-	}
-	if nextGADevice == "" {
-		return nil, domain.NewValidationError().Add("spscontroller.ga_device", "no available ga_device for control cabinet")
-	}
-
-	// Generate device name using the same logic as frontend: {iwsCode}_{cabinetNr}_{gaDevice}
-	iwsCode := strings.TrimSpace(building.IWSCode)
-	cabinetNr := ""
-	if controlCabinet.ControlCabinetNr != nil {
-		cabinetNr = strings.TrimSpace(*controlCabinet.ControlCabinetNr)
-	}
-
-	var deviceName string
-	if iwsCode != "" && cabinetNr != "" {
-		deviceName = strings.ToUpper(iwsCode + "_" + cabinetNr + "_" + nextGADevice)
-	} else {
-		// Fallback if building or cabinet number is missing
-		deviceName = nextGADevice
-	}
-
-	copyEntity := &domainFacility.SPSController{
-		ControlCabinetID:  original.ControlCabinetID,
-		GADevice:          &nextGADevice,
-		DeviceName:        deviceName,
-		DeviceDescription: original.DeviceDescription,
-		DeviceLocation:    original.DeviceLocation,
-		IPAddress:         nil,
-		Subnet:            original.Subnet,
-		Gateway:           original.Gateway,
-		Vlan:              original.Vlan,
-	}
-
-	if err := s.Create(copyEntity); err != nil {
-		return nil, err
-	}
-
-	originalSystemTypes, err := s.listSystemTypesBySPSControllerID(id)
-	if err != nil {
-		return nil, err
-	}
-
-	newSystemTypeMap := make(map[uuid.UUID]uuid.UUID, len(originalSystemTypes))
-	if len(originalSystemTypes) > 0 {
-		systemTypesToCreate := make([]domainFacility.SPSControllerSystemType, 0, len(originalSystemTypes))
-		for _, item := range originalSystemTypes {
-			systemTypesToCreate = append(systemTypesToCreate, domainFacility.SPSControllerSystemType{
-				Number:       item.Number,
-				DocumentName: item.DocumentName,
-				SystemTypeID: item.SystemTypeID,
-			})
-		}
-
-		systemTypeMap, err := s.loadSystemTypes(systemTypesToCreate)
-		if err != nil {
-			return nil, err
-		}
-		if err := s.assignSystemTypeNumbers(systemTypesToCreate, systemTypeMap); err != nil {
-			return nil, err
-		}
-
-		for idx, item := range systemTypesToCreate {
-			newSystemType := &domainFacility.SPSControllerSystemType{
-				Number:          item.Number,
-				DocumentName:    item.DocumentName,
-				SPSControllerID: copyEntity.ID,
-				SystemTypeID:    item.SystemTypeID,
-			}
-			if err := s.spsControllerSystemTyper.Create(newSystemType); err != nil {
-				return nil, err
-			}
-			newSystemTypeMap[originalSystemTypes[idx].ID] = newSystemType.ID
-		}
-	}
-
-	originalFieldDevices, err := s.listFieldDevicesBySPSControllerID(id)
-	if err != nil {
-		return nil, err
-	}
-
-	// Copy field devices along with their specifications and BACnet objects
-	if err := copyFieldDevicesWithChildren(s.fieldDeviceRepo, s.specificationRepo, s.bacnetObjectRepo, originalFieldDevices, newSystemTypeMap); err != nil {
-		return nil, err
-	}
-
-	return copyEntity, nil
+	return s.hierarchyCopier.CopySPSControllerByID(id)
 }
 
 func (s *SPSControllerService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSController], error) {
@@ -433,93 +331,11 @@ func (s *SPSControllerService) ensureControlCabinetExists(controlCabinetID uuid.
 }
 
 func (s *SPSControllerService) loadSystemTypes(systemTypes []domainFacility.SPSControllerSystemType) (map[uuid.UUID]domainFacility.SystemType, error) {
-	if len(systemTypes) == 0 {
-		return map[uuid.UUID]domainFacility.SystemType{}, nil
-	}
-
-	unique := make(map[uuid.UUID]struct{}, len(systemTypes))
-	ids := make([]uuid.UUID, 0, len(systemTypes))
-	for _, st := range systemTypes {
-		if st.SystemTypeID == uuid.Nil {
-			return nil, domain.ErrNotFound
-		}
-		if _, ok := unique[st.SystemTypeID]; ok {
-			continue
-		}
-		unique[st.SystemTypeID] = struct{}{}
-		ids = append(ids, st.SystemTypeID)
-	}
-
-	found, err := s.systemTypeRepo.GetByIds(ids)
-	if err != nil {
-		return nil, err
-	}
-	if len(found) != len(ids) {
-		return nil, domain.ErrNotFound
-	}
-
-	mapOut := make(map[uuid.UUID]domainFacility.SystemType, len(found))
-	for _, item := range found {
-		mapOut[item.ID] = *item
-	}
-	return mapOut, nil
+	return loadSystemTypeDefinitions(s.systemTypeRepo, systemTypes)
 }
 
 func (s *SPSControllerService) assignSystemTypeNumbers(systemTypes []domainFacility.SPSControllerSystemType, systemTypeMap map[uuid.UUID]domainFacility.SystemType) error {
-	if len(systemTypes) == 0 {
-		return nil
-	}
-
-	ve := domain.NewValidationError()
-	usedNumbers := make(map[uuid.UUID]map[int]struct{}, len(systemTypes))
-
-	for _, st := range systemTypes {
-		systemType, ok := systemTypeMap[st.SystemTypeID]
-		if !ok {
-			return domain.ErrNotFound
-		}
-		if st.Number == nil {
-			continue
-		}
-		number := *st.Number
-		if number < systemType.NumberMin || number > systemType.NumberMax {
-			ve = ve.Add("spscontroller.system_types", "number must be within the system type range")
-			continue
-		}
-		if usedNumbers[st.SystemTypeID] == nil {
-			usedNumbers[st.SystemTypeID] = map[int]struct{}{}
-		}
-		if _, exists := usedNumbers[st.SystemTypeID][number]; exists {
-			ve = ve.Add("spscontroller.system_types", "number must be unique per system type")
-			continue
-		}
-		usedNumbers[st.SystemTypeID][number] = struct{}{}
-	}
-
-	if len(ve.Fields) > 0 {
-		return ve
-	}
-
-	for i := range systemTypes {
-		if systemTypes[i].Number != nil {
-			continue
-		}
-		systemType, ok := systemTypeMap[systemTypes[i].SystemTypeID]
-		if !ok {
-			return domain.ErrNotFound
-		}
-		if usedNumbers[systemTypes[i].SystemTypeID] == nil {
-			usedNumbers[systemTypes[i].SystemTypeID] = map[int]struct{}{}
-		}
-		next, ok := findLowestAvailableNumber(systemType.NumberMin, systemType.NumberMax, usedNumbers[systemTypes[i].SystemTypeID])
-		if !ok {
-			return domain.NewValidationError().Add("spscontroller.system_types", "no available number in the system type range")
-		}
-		systemTypes[i].Number = &next
-		usedNumbers[systemTypes[i].SystemTypeID][next] = struct{}{}
-	}
-
-	return nil
+	return assignSystemTypeNumbers(systemTypes, systemTypeMap)
 }
 
 func findLowestAvailableNumber(min, max int, used map[int]struct{}) (int, bool) {
