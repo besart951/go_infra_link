@@ -142,7 +142,7 @@
       isDirty={editing.isFieldDirty(device.id, 'bmk')}
       error={editing.getFieldError(device.id, 'bmk')}
       onSave={(v) => {
-        editing.queueEdit(device.id, 'bmk', v || undefined);
+        editing.queueEdit(device.id, 'bmk', v === '' ? null : v);
       }}
     />
   </Table.Cell>
@@ -157,7 +157,7 @@
       isDirty={editing.isFieldDirty(device.id, 'description')}
       error={editing.getFieldError(device.id, 'description')}
       onSave={(v) => {
-        editing.queueEdit(device.id, 'description', v || undefined);
+        editing.queueEdit(device.id, 'description', v === '' ? null : v);
       }}
     />
   </Table.Cell>
@@ -172,7 +172,7 @@
       isDirty={editing.isFieldDirty(device.id, 'text_fix')}
       error={editing.getFieldError(device.id, 'text_fix')}
       onSave={(v) => {
-        editing.queueEdit(device.id, 'text_fix', v || undefined);
+        editing.queueEdit(device.id, 'text_fix', v === '' ? null : v);
       }}
     />
   </Table.Cell>

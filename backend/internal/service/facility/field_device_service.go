@@ -221,6 +221,16 @@ func (s *FieldDeviceService) CreateSpecification(fieldDeviceID uuid.UUID, specif
 		return domain.ErrConflict
 	}
 
+	specification.SpecificationSupplier = normalizeOptionalString(specification.SpecificationSupplier)
+	specification.SpecificationBrand = normalizeOptionalString(specification.SpecificationBrand)
+	specification.SpecificationType = normalizeOptionalString(specification.SpecificationType)
+	specification.AdditionalInfoMotorValve = normalizeOptionalString(specification.AdditionalInfoMotorValve)
+	specification.AdditionalInformationInstallationLocation = normalizeOptionalString(specification.AdditionalInformationInstallationLocation)
+	specification.ElectricalConnectionACDC = normalizeOptionalString(specification.ElectricalConnectionACDC)
+	if err := s.validateSpecification(specification); err != nil {
+		return err
+	}
+
 	id := fieldDeviceID
 	specification.FieldDeviceID = &id
 	if err := s.specificationRepo.Create(specification); err != nil {
@@ -248,28 +258,28 @@ func (s *FieldDeviceService) UpdateSpecification(fieldDeviceID uuid.UUID, patch 
 	spec := specs[0]
 
 	if patch.SpecificationSupplier != nil {
-		spec.SpecificationSupplier = patch.SpecificationSupplier
+		spec.SpecificationSupplier = normalizeOptionalString(patch.SpecificationSupplier)
 	}
 	if patch.SpecificationBrand != nil {
-		spec.SpecificationBrand = patch.SpecificationBrand
+		spec.SpecificationBrand = normalizeOptionalString(patch.SpecificationBrand)
 	}
 	if patch.SpecificationType != nil {
-		spec.SpecificationType = patch.SpecificationType
+		spec.SpecificationType = normalizeOptionalString(patch.SpecificationType)
 	}
 	if patch.AdditionalInfoMotorValve != nil {
-		spec.AdditionalInfoMotorValve = patch.AdditionalInfoMotorValve
+		spec.AdditionalInfoMotorValve = normalizeOptionalString(patch.AdditionalInfoMotorValve)
 	}
 	if patch.AdditionalInfoSize != nil {
 		spec.AdditionalInfoSize = patch.AdditionalInfoSize
 	}
 	if patch.AdditionalInformationInstallationLocation != nil {
-		spec.AdditionalInformationInstallationLocation = patch.AdditionalInformationInstallationLocation
+		spec.AdditionalInformationInstallationLocation = normalizeOptionalString(patch.AdditionalInformationInstallationLocation)
 	}
 	if patch.ElectricalConnectionPH != nil {
 		spec.ElectricalConnectionPH = patch.ElectricalConnectionPH
 	}
 	if patch.ElectricalConnectionACDC != nil {
-		spec.ElectricalConnectionACDC = patch.ElectricalConnectionACDC
+		spec.ElectricalConnectionACDC = normalizeOptionalString(patch.ElectricalConnectionACDC)
 	}
 	if patch.ElectricalConnectionAmperage != nil {
 		spec.ElectricalConnectionAmperage = patch.ElectricalConnectionAmperage
@@ -280,11 +290,90 @@ func (s *FieldDeviceService) UpdateSpecification(fieldDeviceID uuid.UUID, patch 
 	if patch.ElectricalConnectionRotation != nil {
 		spec.ElectricalConnectionRotation = patch.ElectricalConnectionRotation
 	}
+	if err := s.validateSpecification(spec); err != nil {
+		return nil, err
+	}
 
 	if err := s.specificationRepo.Update(spec); err != nil {
 		return nil, err
 	}
 	return spec, nil
+}
+
+func (s *FieldDeviceService) ApplySpecificationPatch(fieldDeviceID uuid.UUID, patch *domainFacility.SpecificationPatch) error {
+	if patch == nil || !patch.HasChanges() {
+		return nil
+	}
+
+	if _, err := domain.GetByID(s.repo, fieldDeviceID); err != nil {
+		return err
+	}
+
+	specs, err := s.specificationRepo.GetByFieldDeviceIDs([]uuid.UUID{fieldDeviceID})
+	if err != nil {
+		return err
+	}
+
+	if len(specs) == 0 {
+		if !patch.HasNonNilValues() {
+			return nil
+		}
+
+		spec := &domainFacility.Specification{
+			SpecificationSupplier:                     normalizeOptionalString(patch.SpecificationSupplier),
+			SpecificationBrand:                        normalizeOptionalString(patch.SpecificationBrand),
+			SpecificationType:                         normalizeOptionalString(patch.SpecificationType),
+			AdditionalInfoMotorValve:                  normalizeOptionalString(patch.AdditionalInfoMotorValve),
+			AdditionalInfoSize:                        patch.AdditionalInfoSize,
+			AdditionalInformationInstallationLocation: normalizeOptionalString(patch.AdditionalInformationInstallationLocation),
+			ElectricalConnectionPH:                    patch.ElectricalConnectionPH,
+			ElectricalConnectionACDC:                  normalizeOptionalString(patch.ElectricalConnectionACDC),
+			ElectricalConnectionAmperage:              patch.ElectricalConnectionAmperage,
+			ElectricalConnectionPower:                 patch.ElectricalConnectionPower,
+			ElectricalConnectionRotation:              patch.ElectricalConnectionRotation,
+		}
+		return s.CreateSpecification(fieldDeviceID, spec)
+	}
+
+	spec := specs[0]
+	if patch.HasSpecificationSupplier {
+		spec.SpecificationSupplier = normalizeOptionalString(patch.SpecificationSupplier)
+	}
+	if patch.HasSpecificationBrand {
+		spec.SpecificationBrand = normalizeOptionalString(patch.SpecificationBrand)
+	}
+	if patch.HasSpecificationType {
+		spec.SpecificationType = normalizeOptionalString(patch.SpecificationType)
+	}
+	if patch.HasAdditionalInfoMotorValve {
+		spec.AdditionalInfoMotorValve = normalizeOptionalString(patch.AdditionalInfoMotorValve)
+	}
+	if patch.HasAdditionalInfoSize {
+		spec.AdditionalInfoSize = patch.AdditionalInfoSize
+	}
+	if patch.HasAdditionalInformationInstallationLocation {
+		spec.AdditionalInformationInstallationLocation = normalizeOptionalString(patch.AdditionalInformationInstallationLocation)
+	}
+	if patch.HasElectricalConnectionPH {
+		spec.ElectricalConnectionPH = patch.ElectricalConnectionPH
+	}
+	if patch.HasElectricalConnectionACDC {
+		spec.ElectricalConnectionACDC = normalizeOptionalString(patch.ElectricalConnectionACDC)
+	}
+	if patch.HasElectricalConnectionAmperage {
+		spec.ElectricalConnectionAmperage = patch.ElectricalConnectionAmperage
+	}
+	if patch.HasElectricalConnectionPower {
+		spec.ElectricalConnectionPower = patch.ElectricalConnectionPower
+	}
+	if patch.HasElectricalConnectionRotation {
+		spec.ElectricalConnectionRotation = patch.ElectricalConnectionRotation
+	}
+
+	if err := s.validateSpecification(spec); err != nil {
+		return err
+	}
+	return s.specificationRepo.Update(spec)
 }
 
 func (s *FieldDeviceService) ListBacnetObjects(fieldDeviceID uuid.UUID) ([]domainFacility.BacnetObject, error) {
@@ -584,6 +673,56 @@ func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.
 	if fieldDevice.SystemPartID == uuid.Nil {
 		ve = ve.Add("fielddevice.system_part_id", "system_part_id is required")
 	}
+	if fieldDevice.BMK != nil && len(*fieldDevice.BMK) > 10 {
+		ve = ve.Add("fielddevice.bmk", "bmk must be at most 10 characters")
+	}
+	if fieldDevice.Description != nil && len(*fieldDevice.Description) > 250 {
+		ve = ve.Add("fielddevice.description", "description must be at most 250 characters")
+	}
+	if fieldDevice.TextIndividuell != nil && len(*fieldDevice.TextIndividuell) > 250 {
+		ve = ve.Add("fielddevice.text_fix", "text_fix must be at most 250 characters")
+	}
+	if len(ve.Fields) > 0 {
+		return ve
+	}
+	return nil
+}
+
+func normalizeOptionalString(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	if *value == "" {
+		return nil
+	}
+	return value
+}
+
+func (s *FieldDeviceService) validateSpecification(spec *domainFacility.Specification) error {
+	if spec == nil {
+		return nil
+	}
+
+	ve := domain.NewValidationError()
+	checkMax := func(field string, value *string) {
+		if value != nil && len(*value) > 250 {
+			ve = ve.Add(field, "must be at most 250 characters")
+		}
+	}
+
+	checkMax("specification.specification_supplier", spec.SpecificationSupplier)
+	checkMax("specification.specification_brand", spec.SpecificationBrand)
+	checkMax("specification.specification_type", spec.SpecificationType)
+	checkMax("specification.additional_info_motor_valve", spec.AdditionalInfoMotorValve)
+	checkMax(
+		"specification.additional_information_installation_location",
+		spec.AdditionalInformationInstallationLocation,
+	)
+
+	if spec.ElectricalConnectionACDC != nil && *spec.ElectricalConnectionACDC != "" && len(*spec.ElectricalConnectionACDC) != 2 {
+		ve = ve.Add("specification.electrical_connection_acdc", "electrical_connection_acdc must be exactly 2 characters")
+	}
+
 	if len(ve.Fields) > 0 {
 		return ve
 	}
@@ -1246,14 +1385,14 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 
 		// Shallow copy existing item to apply updates
 		clone := *existing
-		if update.BMK != nil {
-			clone.BMK = update.BMK
+		if update.HasBMKUpdate() {
+			clone.BMK = normalizeOptionalString(update.BMK)
 		}
-		if update.Description != nil {
-			clone.Description = update.Description
+		if update.HasDescriptionUpdate() {
+			clone.Description = normalizeOptionalString(update.Description)
 		}
-		if update.TextIndividuell != nil {
-			clone.TextIndividuell = update.TextIndividuell
+		if update.HasTextIndividuellUpdate() {
+			clone.TextIndividuell = normalizeOptionalString(update.TextIndividuell)
 		}
 		if update.ApparatNr != nil {
 			clone.ApparatNr = *update.ApparatNr
@@ -1307,7 +1446,7 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 			continue
 		}
 
-		hasBaseFieldUpdates := update.BMK != nil || update.Description != nil || update.TextIndividuell != nil || update.ApparatNr != nil || update.ApparatID != nil || update.SystemPartID != nil
+		hasBaseFieldUpdates := update.HasBMKUpdate() || update.HasDescriptionUpdate() || update.HasTextIndividuellUpdate() || update.ApparatNr != nil || update.ApparatID != nil || update.SystemPartID != nil
 		phaseErrors := make(map[string]string)
 		phaseSuccesses := 0
 		totalPhases := 0
@@ -1382,25 +1521,12 @@ func (s *FieldDeviceService) BulkUpdate(updates []domainFacility.BulkFieldDevice
 		}
 
 		// PHASE 2: Handle specification update/create (independent of Phase 1)
-		if update.Specification != nil {
+		if update.Specification != nil && update.Specification.HasChanges() {
 			totalPhases++
-			specs, err := s.specificationRepo.GetByFieldDeviceIDs([]uuid.UUID{proposed.ID})
-			if err != nil {
-				phaseErrors["specification"] = "failed to fetch specification: " + err.Error()
+			if err := s.ApplySpecificationPatch(proposed.ID, update.Specification); err != nil {
+				phaseErrors["specification"] = "failed to update specification: " + err.Error()
 			} else {
-				if len(specs) > 0 {
-					if _, err := s.UpdateSpecification(proposed.ID, update.Specification); err != nil {
-						phaseErrors["specification"] = "failed to update specification: " + err.Error()
-					} else {
-						phaseSuccesses++
-					}
-				} else {
-					if err := s.CreateSpecification(proposed.ID, update.Specification); err != nil {
-						phaseErrors["specification"] = "failed to create specification: " + err.Error()
-					} else {
-						phaseSuccesses++
-					}
-				}
+				phaseSuccesses++
 			}
 		}
 

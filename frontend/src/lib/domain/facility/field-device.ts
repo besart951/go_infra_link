@@ -77,9 +77,9 @@ export interface CreateFieldDeviceRequest {
 }
 
 export interface UpdateFieldDeviceRequest {
-  bmk?: string;
-  description?: string;
-  text_fix?: string;
+  bmk?: string | null;
+  description?: string | null;
+  text_fix?: string | null;
   apparat_nr?: number;
   sps_controller_system_type_id?: string;
   system_part_id?: string;
@@ -151,17 +151,17 @@ export interface MultiCreateFieldDeviceResponse {
  * Specification input for bulk update
  */
 export interface SpecificationInput {
-  specification_supplier?: string;
-  specification_brand?: string;
-  specification_type?: string;
-  additional_info_motor_valve?: string;
-  additional_info_size?: number;
-  additional_information_installation_location?: string;
-  electrical_connection_ph?: number;
-  electrical_connection_acdc?: string;
-  electrical_connection_amperage?: number;
-  electrical_connection_power?: number;
-  electrical_connection_rotation?: number;
+  specification_supplier?: string | null;
+  specification_brand?: string | null;
+  specification_type?: string | null;
+  additional_info_motor_valve?: string | null;
+  additional_info_size?: number | null;
+  additional_information_installation_location?: string | null;
+  electrical_connection_ph?: number | null;
+  electrical_connection_acdc?: string | null;
+  electrical_connection_amperage?: number | null;
+  electrical_connection_power?: number | null;
+  electrical_connection_rotation?: number | null;
 }
 
 /**
@@ -169,9 +169,9 @@ export interface SpecificationInput {
  */
 export interface BulkUpdateFieldDeviceItem {
   id: string;
-  bmk?: string;
-  description?: string;
-  text_fix?: string;
+  bmk?: string | null;
+  description?: string | null;
+  text_fix?: string | null;
   apparat_nr?: number;
   apparat_id?: string;
   system_part_id?: string;

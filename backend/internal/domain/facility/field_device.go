@@ -68,15 +68,89 @@ type FieldDeviceMultiCreateResult struct {
 
 // BulkFieldDeviceUpdate represents a single field device update in a bulk operation
 type BulkFieldDeviceUpdate struct {
-	ID              uuid.UUID
-	BMK             *string
-	Description     *string
-	TextIndividuell *string
-	ApparatNr       *int
-	ApparatID       *uuid.UUID
-	SystemPartID    *uuid.UUID
-	Specification   *Specification
-	BacnetObjects   *[]BacnetObjectPatch
+	ID                 uuid.UUID
+	BMK                *string
+	HasBMK             bool
+	Description        *string
+	HasDescription     bool
+	TextIndividuell    *string
+	HasTextIndividuell bool
+	ApparatNr          *int
+	ApparatID          *uuid.UUID
+	SystemPartID       *uuid.UUID
+	Specification      *SpecificationPatch
+	BacnetObjects      *[]BacnetObjectPatch
+}
+
+func (u BulkFieldDeviceUpdate) HasBMKUpdate() bool {
+	return u.HasBMK || u.BMK != nil
+}
+
+func (u BulkFieldDeviceUpdate) HasDescriptionUpdate() bool {
+	return u.HasDescription || u.Description != nil
+}
+
+func (u BulkFieldDeviceUpdate) HasTextIndividuellUpdate() bool {
+	return u.HasTextIndividuell || u.TextIndividuell != nil
+}
+
+type SpecificationPatch struct {
+	SpecificationSupplier                        *string
+	HasSpecificationSupplier                     bool
+	SpecificationBrand                           *string
+	HasSpecificationBrand                        bool
+	SpecificationType                            *string
+	HasSpecificationType                         bool
+	AdditionalInfoMotorValve                     *string
+	HasAdditionalInfoMotorValve                  bool
+	AdditionalInfoSize                           *int
+	HasAdditionalInfoSize                        bool
+	AdditionalInformationInstallationLocation    *string
+	HasAdditionalInformationInstallationLocation bool
+	ElectricalConnectionPH                       *int
+	HasElectricalConnectionPH                    bool
+	ElectricalConnectionACDC                     *string
+	HasElectricalConnectionACDC                  bool
+	ElectricalConnectionAmperage                 *float64
+	HasElectricalConnectionAmperage              bool
+	ElectricalConnectionPower                    *float64
+	HasElectricalConnectionPower                 bool
+	ElectricalConnectionRotation                 *int
+	HasElectricalConnectionRotation              bool
+}
+
+func (p *SpecificationPatch) HasChanges() bool {
+	if p == nil {
+		return false
+	}
+	return p.HasSpecificationSupplier ||
+		p.HasSpecificationBrand ||
+		p.HasSpecificationType ||
+		p.HasAdditionalInfoMotorValve ||
+		p.HasAdditionalInfoSize ||
+		p.HasAdditionalInformationInstallationLocation ||
+		p.HasElectricalConnectionPH ||
+		p.HasElectricalConnectionACDC ||
+		p.HasElectricalConnectionAmperage ||
+		p.HasElectricalConnectionPower ||
+		p.HasElectricalConnectionRotation
+}
+
+func (p *SpecificationPatch) HasNonNilValues() bool {
+	if p == nil {
+		return false
+	}
+	return p.SpecificationSupplier != nil ||
+		p.SpecificationBrand != nil ||
+		p.SpecificationType != nil ||
+		p.AdditionalInfoMotorValve != nil ||
+		p.AdditionalInfoSize != nil ||
+		p.AdditionalInformationInstallationLocation != nil ||
+		p.ElectricalConnectionPH != nil ||
+		p.ElectricalConnectionACDC != nil ||
+		p.ElectricalConnectionAmperage != nil ||
+		p.ElectricalConnectionPower != nil ||
+		p.ElectricalConnectionRotation != nil
 }
 
 // BulkOperationResultItem represents the result of a single item in a bulk operation

@@ -98,25 +98,25 @@ type MultiCreateFieldDeviceResponse struct {
 
 // SpecificationInput is used for nested create/update under FieldDevice bulk operations
 type SpecificationInput struct {
-	SpecificationSupplier                     *string  `json:"specification_supplier" binding:"omitempty,max=250"`
-	SpecificationBrand                        *string  `json:"specification_brand" binding:"omitempty,max=250"`
-	SpecificationType                         *string  `json:"specification_type" binding:"omitempty,max=250"`
-	AdditionalInfoMotorValve                  *string  `json:"additional_info_motor_valve" binding:"omitempty,max=250"`
-	AdditionalInfoSize                        *int     `json:"additional_info_size"`
-	AdditionalInformationInstallationLocation *string  `json:"additional_information_installation_location" binding:"omitempty,max=250"`
-	ElectricalConnectionPH                    *int     `json:"electrical_connection_ph"`
-	ElectricalConnectionACDC                  *string  `json:"electrical_connection_acdc" binding:"omitempty,len=2"`
-	ElectricalConnectionAmperage              *float64 `json:"electrical_connection_amperage"`
-	ElectricalConnectionPower                 *float64 `json:"electrical_connection_power"`
-	ElectricalConnectionRotation              *int     `json:"electrical_connection_rotation"`
+	SpecificationSupplier                     OptionalString  `json:"specification_supplier"`
+	SpecificationBrand                        OptionalString  `json:"specification_brand"`
+	SpecificationType                         OptionalString  `json:"specification_type"`
+	AdditionalInfoMotorValve                  OptionalString  `json:"additional_info_motor_valve"`
+	AdditionalInfoSize                        OptionalInt     `json:"additional_info_size"`
+	AdditionalInformationInstallationLocation OptionalString  `json:"additional_information_installation_location"`
+	ElectricalConnectionPH                    OptionalInt     `json:"electrical_connection_ph"`
+	ElectricalConnectionACDC                  OptionalString  `json:"electrical_connection_acdc"`
+	ElectricalConnectionAmperage              OptionalFloat64 `json:"electrical_connection_amperage"`
+	ElectricalConnectionPower                 OptionalFloat64 `json:"electrical_connection_power"`
+	ElectricalConnectionRotation              OptionalInt     `json:"electrical_connection_rotation"`
 }
 
 // BulkUpdateFieldDeviceItem represents a single field device update in a bulk operation
 type BulkUpdateFieldDeviceItem struct {
 	ID              uuid.UUID                     `json:"id" binding:"required"`
-	BMK             *string                       `json:"bmk" binding:"omitempty,max=10"`
-	Description     *string                       `json:"description" binding:"omitempty,max=250"`
-	TextIndividuell *string                       `json:"text_fix" binding:"omitempty,max=250"`
+	BMK             OptionalString                `json:"bmk"`
+	Description     OptionalString                `json:"description"`
+	TextIndividuell OptionalString                `json:"text_fix"`
 	ApparatNr       *int                          `json:"apparat_nr" binding:"omitempty,min=1,max=99"`
 	ApparatID       *uuid.UUID                    `json:"apparat_id"`
 	SystemPartID    *uuid.UUID                    `json:"system_part_id"`

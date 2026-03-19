@@ -144,6 +144,102 @@ func (r *fakeFieldDeviceStore) GetUsedApparatNumbers(
 	return out, nil
 }
 
+type fakeSpecificationStore struct {
+	items map[uuid.UUID]*domainFacility.Specification
+}
+
+func (r *fakeSpecificationStore) GetByIds(ids []uuid.UUID) ([]*domainFacility.Specification, error) {
+	out := make([]*domainFacility.Specification, 0, len(ids))
+	for _, id := range ids {
+		if item, ok := r.items[id]; ok {
+			clone := *item
+			out = append(out, &clone)
+		}
+	}
+	return out, nil
+}
+
+func (r *fakeSpecificationStore) Create(entity *domainFacility.Specification) error {
+	clone := *entity
+	if clone.ID == uuid.Nil {
+		clone.ID = uuid.New()
+	}
+	r.items[clone.ID] = &clone
+	entity.ID = clone.ID
+	return nil
+}
+
+func (r *fakeSpecificationStore) BulkCreate(entities []*domainFacility.Specification, batchSize int) error {
+	for _, entity := range entities {
+		if err := r.Create(entity); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *fakeSpecificationStore) Update(entity *domainFacility.Specification) error {
+	clone := *entity
+	r.items[entity.ID] = &clone
+	return nil
+}
+
+func (r *fakeSpecificationStore) DeleteByIds(ids []uuid.UUID) error {
+	for _, id := range ids {
+		delete(r.items, id)
+	}
+	return nil
+}
+
+func (r *fakeSpecificationStore) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Specification], error) {
+	items := make([]domainFacility.Specification, 0, len(r.items))
+	for _, item := range r.items {
+		items = append(items, *item)
+	}
+	return &domain.PaginatedList[domainFacility.Specification]{
+		Items:      items,
+		Total:      int64(len(items)),
+		Page:       1,
+		TotalPages: 1,
+	}, nil
+}
+
+func (r *fakeSpecificationStore) GetByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) ([]*domainFacility.Specification, error) {
+	set := make(map[uuid.UUID]struct{}, len(fieldDeviceIDs))
+	for _, id := range fieldDeviceIDs {
+		set[id] = struct{}{}
+	}
+
+	out := make([]*domainFacility.Specification, 0)
+	for _, item := range r.items {
+		if item.FieldDeviceID == nil {
+			continue
+		}
+		if _, ok := set[*item.FieldDeviceID]; !ok {
+			continue
+		}
+		clone := *item
+		out = append(out, &clone)
+	}
+	return out, nil
+}
+
+func (r *fakeSpecificationStore) DeleteByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error {
+	set := make(map[uuid.UUID]struct{}, len(fieldDeviceIDs))
+	for _, id := range fieldDeviceIDs {
+		set[id] = struct{}{}
+	}
+	for id, item := range r.items {
+		if item.FieldDeviceID == nil {
+			continue
+		}
+		if _, ok := set[*item.FieldDeviceID]; ok {
+			delete(r.items, id)
+		}
+	}
+	return nil
+}
+
 type fakeSpsControllerSystemTypeRepo struct {
 	items map[uuid.UUID]*domainFacility.SPSControllerSystemType
 }
@@ -864,5 +960,247 @@ func TestFieldDeviceService_BulkUpdate_TextIndividuellOnly_Succeeds(t *testing.T
 	}
 	if fieldDeviceRepo.items[fd2ID].TextIndividuell == nil || *fieldDeviceRepo.items[fd2ID].TextIndividuell != "kj" {
 		t.Fatalf("expected fd2 text_fix=kj, got %+v", fieldDeviceRepo.items[fd2ID].TextIndividuell)
+	}
+}
+
+func TestFieldDeviceService_BulkUpdate_AllowsClearingOptionalTextFields(t *testing.T) {
+	fdID := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+	spsSystemTypeID := uuid.New()
+	systemTypeID := uuid.New()
+
+	device := newFieldDevice(fdID, spsSystemTypeID, apparatID, systemPartID, 1)
+	device.BMK = stringPtr("BMK-1")
+	device.Description = stringPtr("Description")
+	device.TextIndividuell = stringPtr("TextFix")
+
+	fieldDeviceRepo := &fakeFieldDeviceStore{
+		items: map[uuid.UUID]*domainFacility.FieldDevice{
+			fdID: device,
+		},
+	}
+	spsSystemTypeRepo := &fakeSpsControllerSystemTypeRepo{
+		items: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+			spsSystemTypeID: {
+				Base:         domain.Base{ID: spsSystemTypeID},
+				SystemTypeID: systemTypeID,
+			},
+		},
+	}
+	systemTypeRepo := &fakeSystemTypeRepo{
+		items: map[uuid.UUID]*domainFacility.SystemType{
+			systemTypeID: {Base: domain.Base{ID: systemTypeID}},
+		},
+	}
+	apparatRepo := &fakeApparatRepo{
+		items: map[uuid.UUID]*domainFacility.Apparat{
+			apparatID: {Base: domain.Base{ID: apparatID}},
+		},
+	}
+	systemPartRepo := &fakeSystemPartRepo{
+		items: map[uuid.UUID]*domainFacility.SystemPart{
+			systemPartID: {Base: domain.Base{ID: systemPartID}},
+		},
+	}
+
+	svc := facility.NewFieldDeviceService(
+		fieldDeviceRepo,
+		spsSystemTypeRepo,
+		nil,
+		nil,
+		systemTypeRepo,
+		nil,
+		apparatRepo,
+		systemPartRepo,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	result := svc.BulkUpdate([]domainFacility.BulkFieldDeviceUpdate{
+		{
+			ID:                 fdID,
+			HasBMK:             true,
+			HasDescription:     true,
+			HasTextIndividuell: true,
+		},
+	})
+
+	if result.FailureCount != 0 {
+		t.Fatalf("expected 0 failures, got %d (results=%+v)", result.FailureCount, result.Results)
+	}
+
+	updated := fieldDeviceRepo.items[fdID]
+	if updated.BMK != nil {
+		t.Fatalf("expected bmk to be cleared, got %+v", updated.BMK)
+	}
+	if updated.Description != nil {
+		t.Fatalf("expected description to be cleared, got %+v", updated.Description)
+	}
+	if updated.TextIndividuell != nil {
+		t.Fatalf("expected text_fix to be cleared, got %+v", updated.TextIndividuell)
+	}
+}
+
+func TestFieldDeviceService_BulkUpdate_ClearsExistingSpecificationFields(t *testing.T) {
+	fdID := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+	spsSystemTypeID := uuid.New()
+	systemTypeID := uuid.New()
+	specID := uuid.New()
+
+	device := newFieldDevice(fdID, spsSystemTypeID, apparatID, systemPartID, 1)
+	device.SpecificationID = &specID
+
+	specStore := &fakeSpecificationStore{
+		items: map[uuid.UUID]*domainFacility.Specification{
+			specID: {
+				Base:                  domain.Base{ID: specID},
+				FieldDeviceID:         &fdID,
+				SpecificationSupplier: stringPtr("Supplier"),
+				AdditionalInfoSize:    intPtr(12),
+			},
+		},
+	}
+
+	fieldDeviceRepo := &fakeFieldDeviceStore{
+		items: map[uuid.UUID]*domainFacility.FieldDevice{
+			fdID: device,
+		},
+	}
+	spsSystemTypeRepo := &fakeSpsControllerSystemTypeRepo{
+		items: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+			spsSystemTypeID: {
+				Base:         domain.Base{ID: spsSystemTypeID},
+				SystemTypeID: systemTypeID,
+			},
+		},
+	}
+	systemTypeRepo := &fakeSystemTypeRepo{
+		items: map[uuid.UUID]*domainFacility.SystemType{
+			systemTypeID: {Base: domain.Base{ID: systemTypeID}},
+		},
+	}
+	apparatRepo := &fakeApparatRepo{
+		items: map[uuid.UUID]*domainFacility.Apparat{
+			apparatID: {Base: domain.Base{ID: apparatID}},
+		},
+	}
+	systemPartRepo := &fakeSystemPartRepo{
+		items: map[uuid.UUID]*domainFacility.SystemPart{
+			systemPartID: {Base: domain.Base{ID: systemPartID}},
+		},
+	}
+
+	svc := facility.NewFieldDeviceService(
+		fieldDeviceRepo,
+		spsSystemTypeRepo,
+		nil,
+		nil,
+		systemTypeRepo,
+		nil,
+		apparatRepo,
+		systemPartRepo,
+		specStore,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	result := svc.BulkUpdate([]domainFacility.BulkFieldDeviceUpdate{
+		{
+			ID: fdID,
+			Specification: &domainFacility.SpecificationPatch{
+				HasSpecificationSupplier: true,
+				HasAdditionalInfoSize:    true,
+			},
+		},
+	})
+
+	if result.FailureCount != 0 {
+		t.Fatalf("expected 0 failures, got %d (results=%+v)", result.FailureCount, result.Results)
+	}
+
+	updatedSpec := specStore.items[specID]
+	if updatedSpec.SpecificationSupplier != nil {
+		t.Fatalf("expected specification_supplier to be cleared, got %+v", updatedSpec.SpecificationSupplier)
+	}
+	if updatedSpec.AdditionalInfoSize != nil {
+		t.Fatalf("expected additional_info_size to be cleared, got %+v", updatedSpec.AdditionalInfoSize)
+	}
+}
+
+func TestFieldDeviceService_BulkUpdate_ClearOnlyPatchDoesNotCreateEmptySpecification(t *testing.T) {
+	fdID := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+	spsSystemTypeID := uuid.New()
+	systemTypeID := uuid.New()
+
+	fieldDeviceRepo := &fakeFieldDeviceStore{
+		items: map[uuid.UUID]*domainFacility.FieldDevice{
+			fdID: newFieldDevice(fdID, spsSystemTypeID, apparatID, systemPartID, 1),
+		},
+	}
+	spsSystemTypeRepo := &fakeSpsControllerSystemTypeRepo{
+		items: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+			spsSystemTypeID: {
+				Base:         domain.Base{ID: spsSystemTypeID},
+				SystemTypeID: systemTypeID,
+			},
+		},
+	}
+	systemTypeRepo := &fakeSystemTypeRepo{
+		items: map[uuid.UUID]*domainFacility.SystemType{
+			systemTypeID: {Base: domain.Base{ID: systemTypeID}},
+		},
+	}
+	apparatRepo := &fakeApparatRepo{
+		items: map[uuid.UUID]*domainFacility.Apparat{
+			apparatID: {Base: domain.Base{ID: apparatID}},
+		},
+	}
+	systemPartRepo := &fakeSystemPartRepo{
+		items: map[uuid.UUID]*domainFacility.SystemPart{
+			systemPartID: {Base: domain.Base{ID: systemPartID}},
+		},
+	}
+	specStore := &fakeSpecificationStore{items: map[uuid.UUID]*domainFacility.Specification{}}
+
+	svc := facility.NewFieldDeviceService(
+		fieldDeviceRepo,
+		spsSystemTypeRepo,
+		nil,
+		nil,
+		systemTypeRepo,
+		nil,
+		apparatRepo,
+		systemPartRepo,
+		specStore,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	result := svc.BulkUpdate([]domainFacility.BulkFieldDeviceUpdate{
+		{
+			ID: fdID,
+			Specification: &domainFacility.SpecificationPatch{
+				HasSpecificationSupplier: true,
+			},
+		},
+	})
+
+	if result.FailureCount != 0 {
+		t.Fatalf("expected 0 failures, got %d (results=%+v)", result.FailureCount, result.Results)
+	}
+	if len(specStore.items) != 0 {
+		t.Fatalf("expected no specification to be created, got %d item(s)", len(specStore.items))
 	}
 }

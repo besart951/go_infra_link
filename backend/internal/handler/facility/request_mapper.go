@@ -273,25 +273,40 @@ func toFieldDeviceSpecificationPatch(req dto.UpdateFieldDeviceSpecificationReque
 	}
 }
 
-// toSpecificationFromInput converts a SpecificationInput DTO to a domain Specification.
+// toSpecificationPatchFromInput converts a SpecificationInput DTO to a domain patch.
 // Used for bulk update operations with nested specification data.
-func toSpecificationFromInput(input *dto.SpecificationInput) *domainFacility.Specification {
+func toSpecificationPatchFromInput(input *dto.SpecificationInput) *domainFacility.SpecificationPatch {
 	if input == nil {
 		return nil
 	}
-	return &domainFacility.Specification{
-		SpecificationSupplier:                     input.SpecificationSupplier,
-		SpecificationBrand:                        input.SpecificationBrand,
-		SpecificationType:                         input.SpecificationType,
-		AdditionalInfoMotorValve:                  input.AdditionalInfoMotorValve,
-		AdditionalInfoSize:                        input.AdditionalInfoSize,
-		AdditionalInformationInstallationLocation: input.AdditionalInformationInstallationLocation,
-		ElectricalConnectionPH:                    input.ElectricalConnectionPH,
-		ElectricalConnectionACDC:                  input.ElectricalConnectionACDC,
-		ElectricalConnectionAmperage:              input.ElectricalConnectionAmperage,
-		ElectricalConnectionPower:                 input.ElectricalConnectionPower,
-		ElectricalConnectionRotation:              input.ElectricalConnectionRotation,
+	patch := &domainFacility.SpecificationPatch{
+		SpecificationSupplier:                        input.SpecificationSupplier.Value,
+		HasSpecificationSupplier:                     input.SpecificationSupplier.Set,
+		SpecificationBrand:                           input.SpecificationBrand.Value,
+		HasSpecificationBrand:                        input.SpecificationBrand.Set,
+		SpecificationType:                            input.SpecificationType.Value,
+		HasSpecificationType:                         input.SpecificationType.Set,
+		AdditionalInfoMotorValve:                     input.AdditionalInfoMotorValve.Value,
+		HasAdditionalInfoMotorValve:                  input.AdditionalInfoMotorValve.Set,
+		AdditionalInfoSize:                           input.AdditionalInfoSize.Value,
+		HasAdditionalInfoSize:                        input.AdditionalInfoSize.Set,
+		AdditionalInformationInstallationLocation:    input.AdditionalInformationInstallationLocation.Value,
+		HasAdditionalInformationInstallationLocation: input.AdditionalInformationInstallationLocation.Set,
+		ElectricalConnectionPH:                       input.ElectricalConnectionPH.Value,
+		HasElectricalConnectionPH:                    input.ElectricalConnectionPH.Set,
+		ElectricalConnectionACDC:                     input.ElectricalConnectionACDC.Value,
+		HasElectricalConnectionACDC:                  input.ElectricalConnectionACDC.Set,
+		ElectricalConnectionAmperage:                 input.ElectricalConnectionAmperage.Value,
+		HasElectricalConnectionAmperage:              input.ElectricalConnectionAmperage.Set,
+		ElectricalConnectionPower:                    input.ElectricalConnectionPower.Value,
+		HasElectricalConnectionPower:                 input.ElectricalConnectionPower.Set,
+		ElectricalConnectionRotation:                 input.ElectricalConnectionRotation.Value,
+		HasElectricalConnectionRotation:              input.ElectricalConnectionRotation.Set,
 	}
+	if !patch.HasChanges() {
+		return nil
+	}
+	return patch
 }
 
 func toBuildingModel(req dto.CreateBuildingRequest) *domainFacility.Building {

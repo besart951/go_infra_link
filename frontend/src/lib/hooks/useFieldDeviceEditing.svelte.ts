@@ -155,18 +155,29 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
     spec: SpecificationInput | undefined
   ): SpecificationInput | undefined {
     if (!spec) return undefined;
-    // Include all fields - preserve null values for deletion support
-    // Only filter out empty strings, convert them to null for server-side deletion
     const patch: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(spec)) {
-      if (value === '') {
-        // Empty string means user wants to delete this field
-        patch[key] = null;
-      } else if (value !== undefined) {
+      if (value !== undefined) {
         patch[key] = value;
       }
     }
     return Object.keys(patch).length > 0 ? (patch as SpecificationInput) : undefined;
+  }
+
+  function toDisplayOptionalValue<T>(value: T | null | undefined): T | undefined {
+    return value === null ? undefined : value;
+  }
+
+  function normalizeSpecificationForDisplay(
+    spec: SpecificationInput | undefined
+  ): Partial<SpecificationInput> | undefined {
+    if (!spec) return undefined;
+
+    const normalized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(spec)) {
+      normalized[key] = value === null ? undefined : value;
+    }
+    return normalized;
   }
 
   function buildUpdateForDevice(
@@ -178,6 +189,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
     const bacnetEdits = pendingBacnetEdits.get(deviceId);
     const includeBacnet = options.includeBacnet && bacnetEdits && bacnetEdits.size > 0;
     const update: BulkUpdateFieldDeviceItem = { id: deviceId };
+    const device = storeItems.find((item) => item.id === deviceId);
     let hasChanges = false;
 
     if (changes) {
@@ -208,13 +220,16 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 
       const spec = buildSpecificationPatch(changes.specification);
       if (spec) {
-        update.specification = spec;
-        hasChanges = true;
+        const hasPersistedSpecification = Boolean(device?.specification);
+        const hasNonNullSpecValue = Object.values(spec).some((value) => value !== null);
+        if (hasPersistedSpecification || hasNonNullSpecValue) {
+          update.specification = spec;
+          hasChanges = true;
+        }
       }
     }
 
     if (includeBacnet) {
-      const device = storeItems.find((d) => d.id === deviceId);
       if (device) {
         update.bacnet_objects = buildBacnetObjectsPayload(device, bacnetEdits);
         hasChanges = true;
@@ -234,13 +249,13 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 
     if (changes) {
       if ('bmk' in changes) {
-        updated = { ...updated, bmk: changes.bmk };
+        updated = { ...updated, bmk: toDisplayOptionalValue(changes.bmk) };
       }
       if ('description' in changes) {
-        updated = { ...updated, description: changes.description };
+        updated = { ...updated, description: toDisplayOptionalValue(changes.description) };
       }
       if ('text_fix' in changes) {
-        updated = { ...updated, text_fix: changes.text_fix as string | undefined };
+        updated = { ...updated, text_fix: toDisplayOptionalValue(changes.text_fix) };
       }
       if ('apparat_nr' in changes && changes.apparat_nr !== undefined) {
         updated = { ...updated, apparat_nr: String(changes.apparat_nr) };
@@ -254,11 +269,15 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 
       const specPatch = buildSpecificationPatch(changes.specification);
       if (specPatch) {
+        const displaySpecPatch = normalizeSpecificationForDisplay(specPatch);
+        if (!displaySpecPatch) {
+          return updated;
+        }
         if (updated.specification) {
           // Update existing specification
           updated = {
             ...updated,
-            specification: { ...updated.specification, ...specPatch }
+            specification: { ...updated.specification, ...displaySpecPatch }
           };
         } else {
           // Create new specification optimistically
@@ -280,7 +299,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
               electrical_connection_amperage: undefined,
               electrical_connection_power: undefined,
               electrical_connection_rotation: undefined,
-              ...specPatch
+              ...displaySpecPatch
             }
           };
         }
@@ -426,6 +445,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
     const edit = pendingEdits.get(deviceId);
     if (!edit || !(field in edit)) return undefined;
     const val = edit[field];
+    if (val === null) return '';
     return val !== undefined ? String(val) : undefined;
   }
 
@@ -438,6 +458,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
     const spec = edit.specification;
     if (!spec || !(field in spec)) return undefined;
     const val = spec[field];
+    if (val === null) return '';
     return val !== undefined ? String(val) : undefined;
   }
 
@@ -751,6 +772,10 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 
     if (updates.length === 0) {
       editErrors = nextErrors;
+      if (nextErrors.size === 0) {
+        pendingEdits = new Map();
+        return;
+      }
       addToast(getFirstEditValidationToast(nextErrors), 'error');
       return;
     }
@@ -844,13 +869,13 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
           // Apply successful top-level fields (only if not all fielddevice fields failed)
           if (!entireFieldDeviceFailed) {
             if ('bmk' in changes && !failedFields.has('bmk')) {
-              updated = { ...updated, bmk: changes.bmk };
+              updated = { ...updated, bmk: toDisplayOptionalValue(changes.bmk) };
             }
             if ('description' in changes && !failedFields.has('description')) {
-              updated = { ...updated, description: changes.description };
+              updated = { ...updated, description: toDisplayOptionalValue(changes.description) };
             }
             if ('text_fix' in changes && !failedFields.has('text_fix')) {
-              updated = { ...updated, text_fix: changes.text_fix as string | undefined };
+              updated = { ...updated, text_fix: toDisplayOptionalValue(changes.text_fix) };
             }
             if (
               'apparat_nr' in changes &&
@@ -881,11 +906,17 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
               }
             }
             if (Object.keys(successfulSpecPatch).length > 0) {
+              const displaySuccessfulSpecPatch = normalizeSpecificationForDisplay(
+                successfulSpecPatch as SpecificationInput
+              );
               if (updated.specification) {
                 // Update existing specification
                 updated = {
                   ...updated,
-                  specification: { ...updated.specification, ...successfulSpecPatch }
+                  specification: {
+                    ...updated.specification,
+                    ...(displaySuccessfulSpecPatch ?? {})
+                  }
                 };
               } else {
                 // Create new specification (was created on backend, apply optimistically)
@@ -907,7 +938,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
                     electrical_connection_amperage: undefined,
                     electrical_connection_power: undefined,
                     electrical_connection_rotation: undefined,
-                    ...successfulSpecPatch
+                    ...(displaySuccessfulSpecPatch ?? {})
                   }
                 };
               }
@@ -1095,7 +1126,13 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
     onSuccess?: (updated: FieldDevice) => void
   ): Promise<void> {
     const update = buildUpdateForDevice(device.id, [device], { includeBacnet: false });
-    if (!update) return;
+    if (!update) {
+      const remaining = new Map(pendingEdits);
+      remaining.delete(device.id);
+      pendingEdits = remaining;
+      setEditError(device.id);
+      return;
+    }
 
     const clientError = validatePendingEdits(device.id);
     if (clientError) {
@@ -1142,7 +1179,12 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
     onSuccess?: (updated: FieldDevice) => void
   ): Promise<void> {
     const update = buildUpdateForDevice(device.id, [device], { includeBacnet: true });
-    if (!update) return;
+    if (!update) {
+      const remaining = new Map(pendingEdits);
+      remaining.delete(device.id);
+      pendingEdits = remaining;
+      return;
+    }
 
     if (!validateBacnetEdits([device], device.id)) {
       addToast(getFirstBacnetClientValidationToast(device.id), 'error');

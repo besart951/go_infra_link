@@ -468,9 +468,9 @@ func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
 	// Convert DTOs to domain models
 	updates := make([]domainFacility.BulkFieldDeviceUpdate, len(req.Updates))
 	for i, item := range req.Updates {
-		var spec *domainFacility.Specification
+		var spec *domainFacility.SpecificationPatch
 		if item.Specification != nil {
-			spec = toSpecificationFromInput(item.Specification)
+			spec = toSpecificationPatchFromInput(item.Specification)
 		}
 
 		var bacnetObjs *[]domainFacility.BacnetObjectPatch
@@ -480,15 +480,18 @@ func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
 		}
 
 		updates[i] = domainFacility.BulkFieldDeviceUpdate{
-			ID:              item.ID,
-			BMK:             item.BMK,
-			Description:     item.Description,
-			TextIndividuell: item.TextIndividuell,
-			ApparatNr:       item.ApparatNr,
-			ApparatID:       item.ApparatID,
-			SystemPartID:    item.SystemPartID,
-			Specification:   spec,
-			BacnetObjects:   bacnetObjs,
+			ID:                 item.ID,
+			BMK:                item.BMK.Value,
+			HasBMK:             item.BMK.Set,
+			Description:        item.Description.Value,
+			HasDescription:     item.Description.Set,
+			TextIndividuell:    item.TextIndividuell.Value,
+			HasTextIndividuell: item.TextIndividuell.Set,
+			ApparatNr:          item.ApparatNr,
+			ApparatID:          item.ApparatID,
+			SystemPartID:       item.SystemPartID,
+			Specification:      spec,
+			BacnetObjects:      bacnetObjs,
 		}
 	}
 
