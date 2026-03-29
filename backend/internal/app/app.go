@@ -86,13 +86,7 @@ func Run() error {
 	// Initialize i18n (translations)
 	translator, i18nLoader := initializeTranslator(log)
 
-	handlers := wire.NewHandlers(services, cookieSettings, i18nLoader, wire.DevAuthConfig{
-		Enabled:         cfg.DevAuthEnabled,
-		Email:           cfg.DevAuthEmail,
-		Password:        cfg.DevAuthPassword,
-		AccessTokenTTL:  cfg.AccessTokenTTL,
-		RefreshTokenTTL: cfg.RefreshTokenTTL,
-	})
+	handlers := wire.NewHandlers(services, cookieSettings, i18nLoader, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
 	// Setup Gin router
 	if config.IsProduction(cfg.AppEnv) {

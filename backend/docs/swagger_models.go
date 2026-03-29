@@ -9,13 +9,8 @@ var (
 	_ = dto.LoginRequest{}
 	_ = dto.AuthUserResponse{}
 	_ = dto.AuthResponse{}
-	_ = dto.PasswordResetConfirmRequest{}
 
-	_ = dto.AdminPasswordResetResponse{}
-	_ = dto.AdminLockUserRequest{}
 	_ = dto.AdminSetUserRoleRequest{}
-	_ = dto.LoginAttemptResponse{}
-	_ = dto.LoginAttemptListResponse{}
 
 	_ = dto.CreateUserRequest{}
 	_ = dto.UpdateUserRequest{}

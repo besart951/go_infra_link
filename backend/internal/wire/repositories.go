@@ -21,7 +21,6 @@ import (
 type Repositories struct {
 	Project                domainProject.ProjectRepository
 	Phase                  domainProject.PhaseRepository
-	PhasePermission        domainProject.PhasePermissionRepository
 	ProjectControlCabinets domainProject.ProjectControlCabinetRepository
 	ProjectSPSControllers  domainProject.ProjectSPSControllerRepository
 	ProjectFieldDevices    domainProject.ProjectFieldDeviceRepository
@@ -30,8 +29,6 @@ type Repositories struct {
 	Permissions            domainUser.PermissionRepository
 	RolePermissions        domainUser.RolePermissionRepository
 	RefreshToken           domainAuth.RefreshTokenRepository
-	LoginAttempt           domainAuth.LoginAttemptRepository
-	PasswordReset          domainAuth.PasswordResetTokenRepository
 	Team                   domainTeam.TeamRepository
 	TeamMember             domainTeam.TeamMemberRepository
 
@@ -72,7 +69,6 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 	return &Repositories{
 		Project:                projectrepo.NewProjectRepository(gormDB),
 		Phase:                  projectrepo.NewPhaseRepository(gormDB),
-		PhasePermission:        projectrepo.NewPhasePermissionRepository(gormDB),
 		ProjectControlCabinets: projectsqlrepo.NewProjectControlCabinetRepository(gormDB),
 		ProjectSPSControllers:  projectsqlrepo.NewProjectSPSControllerRepository(gormDB),
 		ProjectFieldDevices:    projectsqlrepo.NewProjectFieldDeviceRepository(gormDB),
@@ -81,8 +77,6 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 		Permissions:            permissionRepo,
 		RolePermissions:        rolePermissionRepo,
 		RefreshToken:           authrepo.NewRefreshTokenRepository(gormDB),
-		LoginAttempt:           authrepo.NewLoginAttemptRepository(gormDB),
-		PasswordReset:          authrepo.NewPasswordResetTokenRepository(gormDB),
 		Team:                   teamrepo.NewTeamRepository(gormDB),
 		TeamMember:             teamrepo.NewTeamMemberRepository(gormDB),
 

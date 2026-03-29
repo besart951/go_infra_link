@@ -33,8 +33,3 @@ type AuthResponse struct {
 	RefreshTokenExpiresAt time.Time        `json:"refresh_token_expires_at"`
 	CsrfToken             string           `json:"csrf_token"`
 }
-
-type PasswordResetConfirmRequest struct {
-	Token       string `json:"token" binding:"required"`
-	NewPassword string `json:"new_password" binding:"required,min=8"`
-}

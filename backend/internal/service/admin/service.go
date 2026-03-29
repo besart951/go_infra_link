@@ -45,33 +45,6 @@ func (s *Service) EnableUser(userID uuid.UUID) error {
 	return s.userRepo.Update(u)
 }
 
-func (s *Service) LockUserUntil(userID uuid.UUID, until time.Time) error {
-	users, err := s.userRepo.GetByIds([]uuid.UUID{userID})
-	if err != nil {
-		return err
-	}
-	if len(users) == 0 {
-		return domain.ErrNotFound
-	}
-	u := users[0]
-	u.LockedUntil = &until
-	return s.userRepo.Update(u)
-}
-
-func (s *Service) UnlockUser(userID uuid.UUID) error {
-	users, err := s.userRepo.GetByIds([]uuid.UUID{userID})
-	if err != nil {
-		return err
-	}
-	if len(users) == 0 {
-		return domain.ErrNotFound
-	}
-	u := users[0]
-	u.LockedUntil = nil
-	u.FailedLoginAttempts = 0
-	return s.userRepo.Update(u)
-}
-
 func (s *Service) SetUserRole(userID uuid.UUID, role domainUser.Role) error {
 	users, err := s.userRepo.GetByIds([]uuid.UUID{userID})
 	if err != nil {

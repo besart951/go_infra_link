@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"time"
-
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -70,8 +68,6 @@ type DashboardService interface {
 type AdminService interface {
 	DisableUser(userID uuid.UUID) error
 	EnableUser(userID uuid.UUID) error
-	LockUserUntil(userID uuid.UUID, until time.Time) error
-	UnlockUser(userID uuid.UUID) error
 	SetUserRole(userID uuid.UUID, role user.Role) error
 }
 
@@ -79,9 +75,6 @@ type AuthService interface {
 	Login(email, password string, userAgent, ip *string) (*domainAuth.LoginResult, error)
 	Refresh(refreshToken string, userAgent, ip *string) (*domainAuth.LoginResult, error)
 	Logout(refreshToken string) error
-	CreatePasswordResetToken(adminID, userID uuid.UUID) (string, time.Time, error)
-	ConfirmPasswordReset(token, newPassword string) error
-	ListLoginAttempts(page, limit int, search string) (*domain.PaginatedList[domainAuth.LoginAttempt], error)
 }
 
 // RoleQueryService provides role-based queries for the handler layer.

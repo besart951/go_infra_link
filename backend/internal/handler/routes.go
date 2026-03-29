@@ -10,17 +10,16 @@ import (
 )
 
 type Handlers struct {
-	ProjectHandler         *ProjectHandler
-	DashboardHandler       *DashboardHandler
-	UserHandler            *UserHandler
-	AuthHandler            *AuthHandler
-	TeamHandler            *TeamHandler
-	AdminHandler           *AdminHandler
-	RoleHandler            *RoleHandler
-	PermissionHandler      *PermissionHandler
-	PhaseHandler           *PhaseHandler
-	PhasePermissionHandler *PhasePermissionHandler
-	I18nHandler            *I18nHandler
+	ProjectHandler    *ProjectHandler
+	DashboardHandler  *DashboardHandler
+	UserHandler       *UserHandler
+	AuthHandler       *AuthHandler
+	TeamHandler       *TeamHandler
+	AdminHandler      *AdminHandler
+	RoleHandler       *RoleHandler
+	PermissionHandler *PermissionHandler
+	PhaseHandler      *PhaseHandler
+	I18nHandler       *I18nHandler
 
 	FacilityBuildingHandler       *facilityhandler.BuildingHandler
 	FacilitySystemTypeHandler     *facilityhandler.SystemTypeHandler
@@ -56,8 +55,6 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 	publicAuth := publicV1.Group("/auth")
 	{
 		publicAuth.POST("/login", handlers.AuthHandler.Login)
-		publicAuth.POST("/dev-login", handlers.AuthHandler.DevLogin)
-		publicAuth.POST("/password-reset/confirm", handlers.AuthHandler.ConfirmPasswordReset)
 	}
 
 	// CSRF-protected auth endpoints (no access token required)
@@ -119,17 +116,6 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 		phases.DELETE("/:id", middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG), handlers.PhaseHandler.DeletePhase)
 	}
 
-	// Phase Permission routes - Only admins can manage permissions
-	phasePermissions := protectedV1.Group("/phase-permissions")
-	phasePermissions.Use(middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG))
-	{
-		phasePermissions.POST("", handlers.PhasePermissionHandler.CreatePhasePermission)
-		phasePermissions.GET("", handlers.PhasePermissionHandler.ListPhasePermissions)
-		phasePermissions.GET("/:id", handlers.PhasePermissionHandler.GetPhasePermission)
-		phasePermissions.PUT("/:id", handlers.PhasePermissionHandler.UpdatePhasePermission)
-		phasePermissions.DELETE("/:id", handlers.PhasePermissionHandler.DeletePhasePermission)
-	}
-
 	// User routes
 	users := protectedV1.Group("/users")
 	{
@@ -186,14 +172,9 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 	admin := protectedV1.Group("/admin")
 	admin.Use(middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG))
 	{
-		admin.POST("/users/:id/password-reset", handlers.AdminHandler.ResetUserPassword)
 		admin.POST("/users/:id/disable", handlers.AdminHandler.DisableUser)
 		admin.POST("/users/:id/enable", handlers.AdminHandler.EnableUser)
-		admin.POST("/users/:id/lock", handlers.AdminHandler.LockUser)
-		admin.POST("/users/:id/unlock", handlers.AdminHandler.UnlockUser)
 		admin.POST("/users/:id/role", handlers.AdminHandler.SetUserRole)
-
-		admin.GET("/login-attempts", handlers.AdminHandler.ListLoginAttempts)
 	}
 
 	// Auth routes (protected)

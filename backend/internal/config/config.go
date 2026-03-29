@@ -24,9 +24,6 @@ type Config struct {
 	SeedUserLastName  string
 	SeedUserEmail     string
 	SeedUserPassword  string
-	DevAuthEnabled    bool
-	DevAuthEmail      string
-	DevAuthPassword   string
 	DBType            string
 	DBDsn             string
 	DBMaxOpenConns    int
@@ -59,8 +56,6 @@ func Load() (Config, error) {
 	cookieSecure := getEnvBool("COOKIE_SECURE", false)
 
 	seedUserEnabled := getEnvBool("SEED_USER_ENABLED", !IsProduction(appEnv))
-	devAuthEnabled := getEnvBool("DEV_AUTH_ENABLED", false)
-
 	dbType := normalizeDBType(getEnvFirst("postgres", "DB_TYPE", "DB_DRIVER"))
 	pgHost := getEnv("POSTGRES_HOST", "localhost")
 	pgPort := getEnv("POSTGRES_PORT", "5432")
@@ -91,9 +86,6 @@ func Load() (Config, error) {
 		SeedUserLastName:  getEnv("SEED_USER_LAST_NAME", "Morina"),
 		SeedUserEmail:     getEnv("SEED_USER_EMAIL", "besart_morina@hotmail.com"),
 		SeedUserPassword:  getEnv("SEED_USER_PASSWORD", "password"),
-		DevAuthEnabled:    devAuthEnabled,
-		DevAuthEmail:      getEnv("DEV_AUTH_EMAIL", ""),
-		DevAuthPassword:   getEnv("DEV_AUTH_PASSWORD", ""),
 		DBType:            dbType,
 		DBDsn:             dbDsn,
 		DBMaxOpenConns:    maxOpen,

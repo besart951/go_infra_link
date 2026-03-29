@@ -72,8 +72,6 @@ func autoMigrate(db *gorm.DB) error {
 
 		// Auth domain
 		&auth.RefreshToken{},
-		&auth.PasswordResetToken{},
-		&auth.LoginAttempt{},
 
 		// Team domain
 		&team.Team{},
@@ -82,7 +80,6 @@ func autoMigrate(db *gorm.DB) error {
 
 		// Project domain
 		&project.Phase{},
-		&project.PhasePermission{},
 		&project.Project{},
 		&project.ProjectFieldDevice{},
 		&project.ProjectControlCabinet{},
@@ -262,12 +259,9 @@ func GetModels() []interface{} {
 		&user.Permission{},
 		&user.RolePermission{},
 		&auth.RefreshToken{},
-		&auth.PasswordResetToken{},
-		&auth.LoginAttempt{},
 		&team.Team{},
 		&team.TeamMember{},
 		&project.Phase{},
-		&project.PhasePermission{},
 		&project.Project{},
 		&project.ProjectFieldDevice{},
 		&project.ProjectControlCabinet{},

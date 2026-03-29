@@ -35,25 +35,6 @@ type Phase struct {
 	Name string `gorm:"not null"`
 }
 
-type PermissionType string
-
-const (
-	PermissionEdit           PermissionType = "edit"
-	PermissionSuggestChanges PermissionType = "suggest_changes"
-	PermissionView           PermissionType = "view"
-	PermissionDelete         PermissionType = "delete"
-	PermissionManageUsers    PermissionType = "manage_users"
-)
-
-// PhasePermission defines what a specific role can do in a specific phase
-type PhasePermission struct {
-	domain.Base
-	PhaseID    uuid.UUID      `json:"phase_id" gorm:"type:uuid;not null;index:idx_phase_role,unique"`
-	Phase      *Phase         `gorm:"foreignKey:PhaseID"`
-	Role       user.Role      `json:"role" gorm:"type:varchar(50);not null;index:idx_phase_role,unique"`
-	Permission PermissionType `json:"permission" gorm:"type:varchar(50);not null"`
-}
-
 type ProjectRepository interface {
 	domain.Repository[Project]
 	GetPaginatedListForUser(params domain.PaginationParams, userID uuid.UUID) (*domain.PaginatedList[Project], error)
@@ -64,10 +45,3 @@ type ProjectRepository interface {
 }
 
 type PhaseRepository = domain.Repository[Phase]
-
-type PhasePermissionRepository interface {
-	domain.Repository[PhasePermission]
-	GetByPhaseAndRole(phaseID uuid.UUID, role user.Role) (*PhasePermission, error)
-	ListByPhase(phaseID uuid.UUID) ([]PhasePermission, error)
-	DeleteByPhaseAndRole(phaseID uuid.UUID, role user.Role) error
-}

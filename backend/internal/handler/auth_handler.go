@@ -28,12 +28,9 @@ type AuthHandler struct {
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
 	cookieSettings  CookieSettings
-	devAuthEnabled  bool
-	devAuthEmail    string
-	devAuthPassword string
 }
 
-func NewAuthHandler(service AuthService, userService UserService, permissionSvc PermissionQueryService, accessTokenTTL, refreshTokenTTL time.Duration, cookieSettings CookieSettings, devAuthEnabled bool, devAuthEmail, devAuthPassword string) *AuthHandler {
+func NewAuthHandler(service AuthService, userService UserService, permissionSvc PermissionQueryService, accessTokenTTL, refreshTokenTTL time.Duration, cookieSettings CookieSettings) *AuthHandler {
 	return &AuthHandler{
 		service:         service,
 		userService:     userService,
@@ -41,9 +38,6 @@ func NewAuthHandler(service AuthService, userService UserService, permissionSvc 
 		accessTokenTTL:  accessTokenTTL,
 		refreshTokenTTL: refreshTokenTTL,
 		cookieSettings:  cookieSettings,
-		devAuthEnabled:  devAuthEnabled,
-		devAuthEmail:    devAuthEmail,
-		devAuthPassword: devAuthPassword,
 	}
 }
 
@@ -65,23 +59,6 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	h.handleLogin(c, req.Email, req.Password)
-}
-
-// DevLogin godoc
-// @Summary Dev login (no credentials)
-// @Tags auth
-// @Produce json
-// @Success 200 {object} dto.AuthResponse
-// @Failure 404 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
-// @Router /api/v1/auth/dev-login [post]
-func (h *AuthHandler) DevLogin(c *gin.Context) {
-	if !h.devAuthEnabled || h.devAuthEmail == "" || h.devAuthPassword == "" {
-		handlerutil.RespondLocalizedNotFound(c)
-		return
-	}
-
-	h.handleLogin(c, h.devAuthEmail, h.devAuthPassword)
 }
 
 // Refresh godoc
@@ -144,8 +121,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// handleLogin is a helper method to handle common login logic
-// This eliminates duplicate code between Login and DevLogin handlers
+// handleLogin is a helper method to handle login logic.
 func (h *AuthHandler) handleLogin(c *gin.Context, email, password string) {
 	userAgent := c.GetHeader("User-Agent")
 	ip := c.ClientIP()
@@ -251,44 +227,6 @@ func (h *AuthHandler) getRolePermissions(role domainUser.Role) []string {
 		return []string{}
 	}
 	return permissions
-}
-
-// ConfirmPasswordReset godoc
-// @Summary Confirm password reset
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param payload body dto.PasswordResetConfirmRequest true "Password reset confirmation"
-// @Success 204
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
-// @Router /api/v1/auth/password-reset/confirm [post]
-func (h *AuthHandler) ConfirmPasswordReset(c *gin.Context) {
-	var req dto.PasswordResetConfirmRequest
-	if !handlerutil.BindJSON(c, &req) {
-		return
-	}
-
-	if err := h.service.ConfirmPasswordReset(req.Token, req.NewPassword); err != nil {
-		h.handlePasswordResetError(c, err)
-		return
-	}
-
-	c.Status(http.StatusNoContent)
-}
-
-// handlePasswordResetError centralizes error handling for password reset operations
-func (h *AuthHandler) handlePasswordResetError(c *gin.Context, err error) {
-	switch err {
-	case domainAuth.ErrPasswordResetTokenInvalid:
-		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "password_reset_token_invalid", "auth.password_reset_token_invalid")
-	case domainAuth.ErrPasswordResetTokenExpired:
-		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "password_reset_token_expired", "auth.password_reset_token_expired")
-	case domainAuth.ErrPasswordResetTokenUsed:
-		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "password_reset_token_used", "auth.password_reset_token_used")
-	default:
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "reset_failed", "auth.reset_failed")
-	}
 }
 
 func (h *AuthHandler) setAuthCookies(c *gin.Context, result *domainAuth.LoginResult) {

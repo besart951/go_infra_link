@@ -9,7 +9,7 @@ import (
 )
 
 // NewHandlers creates all HTTP handler instances from services.
-func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18nLoader *i18n.Loader, devAuthCfg DevAuthConfig) *handler.Handlers {
+func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18nLoader *i18n.Loader, accessTokenTTL, refreshTokenTTL time.Duration) *handler.Handlers {
 	projectEvents := handler.NewProjectEventHub()
 
 	facilityHandlers := facilityhandler.NewHandlers(facilityhandler.ServiceDeps{
@@ -36,26 +36,22 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18n
 	})
 
 	return &handler.Handlers{
-		ProjectHandler:         handler.NewProjectHandler(services.Project, projectEvents),
-		DashboardHandler:       handler.NewDashboardHandler(services.Dashboard),
-		PhaseHandler:           handler.NewPhaseHandler(services.Phase),
-		PhasePermissionHandler: handler.NewPhasePermissionHandler(services.PhasePermission),
-		UserHandler:            handler.NewUserHandler(services.User, services.RBAC),
-		TeamHandler:            handler.NewTeamHandler(services.Team),
-		AdminHandler:           handler.NewAdminHandler(services.Admin, services.Auth),
-		RoleHandler:            handler.NewRoleHandler(services.RBAC),
-		PermissionHandler:      handler.NewPermissionHandler(services.RBAC),
-		I18nHandler:            handler.NewI18nHandler(i18nLoader),
+		ProjectHandler:    handler.NewProjectHandler(services.Project, projectEvents),
+		DashboardHandler:  handler.NewDashboardHandler(services.Dashboard),
+		PhaseHandler:      handler.NewPhaseHandler(services.Phase),
+		UserHandler:       handler.NewUserHandler(services.User, services.RBAC),
+		TeamHandler:       handler.NewTeamHandler(services.Team),
+		AdminHandler:      handler.NewAdminHandler(services.Admin),
+		RoleHandler:       handler.NewRoleHandler(services.RBAC),
+		PermissionHandler: handler.NewPermissionHandler(services.RBAC),
+		I18nHandler:       handler.NewI18nHandler(i18nLoader),
 		AuthHandler: handler.NewAuthHandler(
 			services.Auth,
 			services.User,
 			services.RBAC,
-			devAuthCfg.AccessTokenTTL,
-			devAuthCfg.RefreshTokenTTL,
+			accessTokenTTL,
+			refreshTokenTTL,
 			cookieSettings,
-			devAuthCfg.Enabled,
-			devAuthCfg.Email,
-			devAuthCfg.Password,
 		),
 
 		FacilityBuildingHandler:       facilityHandlers.Building,
@@ -80,13 +76,4 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18n
 		FacilityAlarmTypeFieldHandler:          facilityHandlers.AlarmTypeField,
 		FacilityBacnetAlarmHandler:             facilityHandlers.BacnetAlarm,
 	}
-}
-
-// DevAuthConfig holds development authentication bypass configuration.
-type DevAuthConfig struct {
-	Enabled         bool
-	Email           string
-	Password        string
-	AccessTokenTTL  time.Duration
-	RefreshTokenTTL time.Duration
 }
