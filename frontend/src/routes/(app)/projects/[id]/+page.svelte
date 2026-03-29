@@ -34,8 +34,9 @@
     ProjectSPSControllerLink
   } from '$lib/domain/project/index.js';
   import type { Building, ControlCabinet, SPSController } from '$lib/domain/facility/index.js';
-  import { ArrowLeft, Plus, Pencil, ChevronDown } from '@lucide/svelte';
+  import { ArrowLeft, Plus, Pencil, ChevronDown, Settings } from '@lucide/svelte';
   import { canPerform } from '$lib/utils/permissions.js';
+  import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 
   const t = createTranslator();
 
@@ -508,7 +509,9 @@
       });
     } catch (err) {
       addToast(
-        err instanceof Error ? err.message : translate('projects.control_cabinets.duplicate_failed'),
+        err instanceof Error
+          ? err.message
+          : translate('projects.control_cabinets.duplicate_failed'),
         'error'
       );
     }
@@ -637,9 +640,17 @@
       <p class="mt-1 text-muted-foreground">{$t('projects.detail.description')}</p>
     </div>
     <div class="ml-auto">
-      <Button variant="outline" href={`/projects/${projectId}/settings`}>
-        {$t('projects.detail.settings')}
-      </Button>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          <Button variant="ghost" href={`/projects/${projectId}/settings`} size="icon">
+            <Settings />
+          </Button>
+        </Tooltip.Trigger>
+
+        <Tooltip.Content>
+          {$t('projects.detail.settings')}
+        </Tooltip.Content>
+      </Tooltip.Root>
     </div>
   </div>
 
@@ -666,24 +677,16 @@
     <div class="grid gap-6">
       <div class="rounded-lg border bg-background p-6">
         <Collapsible.Root bind:open={controlCabinetOpen} class="group/collapsible">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <h2 class="text-lg font-semibold">Control Cabinets</h2>
-              <p class="text-sm text-muted-foreground">
-                {$t('projects.control_cabinets.description')}
-              </p>
-            </div>
-            <Collapsible.Trigger
-              class="inline-flex items-center gap-2 text-sm text-muted-foreground"
-            >
-              {$t('common.actions')}
+          <div class="flex items-center gap-3">
+            <Collapsible.Trigger class="rounded px-2 py-1 hover:bg-accent">
               <ChevronDown
                 class="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180"
               />
             </Collapsible.Trigger>
+            <h2 class="text-lg font-semibold">{$t('projects.control_cabinets.title')}</h2>
           </div>
 
-          <Collapsible.Content class="mt-4">
+          <Collapsible.Content class="mt-">
             <ControlCabinetList
               state={controlCabinetListState}
               showForm={showControlCabinetForm}
@@ -716,25 +719,16 @@
 
       <div class="rounded-lg border bg-background p-6">
         <Collapsible.Root bind:open={spsControllerOpen} class="group/collapsible">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <h2 class="text-lg font-semibold">SPS Controllers</h2>
-              <p class="text-sm text-muted-foreground">
-                {$t('projects.sps_controllers.description')}
-              </p>
-            </div>
-            <Collapsible.Trigger
-              class="inline-flex items-center gap-2 text-sm text-muted-foreground"
-            >
-              {$t('common.actions')}
+          <div class="flex items-center gap-3">
+            <Collapsible.Trigger class="rounded px-2 py-1 hover:bg-accent">
               <ChevronDown
                 class="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180"
               />
             </Collapsible.Trigger>
+            <h2 class="text-lg font-semibold">{$t('projects.sps_controllers.title')}</h2>
           </div>
-
           <Collapsible.Content class="mt-4">
-            <div class="flex flex-wrap items-center justify-end gap-2">
+            <div class="flex flex-wrap items-center justify-end gap-2 mb-4">
               {#if !showSpsControllerForm}
                 <Button onclick={handleSpsControllerCreate}>
                   <Plus class="mr-2 size-4" />
@@ -830,9 +824,6 @@
       <div class="rounded-lg border bg-background p-6">
         <div class="mb-4">
           <h2 class="text-lg font-semibold">{$t('projects.field_devices.title')}</h2>
-          <p class="text-sm text-muted-foreground">
-            {$t('projects.field_devices.description')}
-          </p>
         </div>
         <FieldDeviceListView
           {projectId}

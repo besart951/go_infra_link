@@ -284,9 +284,9 @@
   <!-- Action Buttons -->
   <div class="flex justify-end gap-2">
     {#if !showMultiCreateForm && canPerform('create', 'fielddevice')}
-      <Button variant="outline" onclick={() => (showMultiCreateForm = true)}>
-        <ListPlus class="mr-2 size-4" />
-        {$t('field_device.actions.multi_create')}
+      <Button  onclick={() => (showMultiCreateForm = true)}>
+        <ListPlus class="size-4" />
+        {$t('field_device.actions.create')}
       </Button>
     {/if}
   </div>
