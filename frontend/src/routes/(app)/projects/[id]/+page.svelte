@@ -6,6 +6,7 @@
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import * as Collapsible from '$lib/components/ui/collapsible/index.js';
+  import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import { addToast } from '$lib/components/toast.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
@@ -34,7 +35,8 @@
     ProjectSPSControllerLink
   } from '$lib/domain/project/index.js';
   import type { Building, ControlCabinet, SPSController } from '$lib/domain/facility/index.js';
-  import { ArrowLeft, Plus, Pencil, ChevronDown, Settings } from '@lucide/svelte';
+  import { ArrowLeft, Plus, ChevronDown, Settings } from '@lucide/svelte';
+  import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
   import { canPerform } from '$lib/utils/permissions.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 
@@ -761,7 +763,7 @@
                 { key: 'ip_address', label: $t('projects.sps_controllers.columns.ip_address') },
                 { key: 'cabinet', label: $t('projects.sps_controllers.columns.cabinet') },
                 { key: 'created', label: $t('projects.sps_controllers.columns.created') },
-                { key: 'actions', label: $t('common.actions'), width: 'w-[170px]' }
+                { key: 'actions', label: '', width: 'w-[100px]' }
               ]}
               searchPlaceholder={$t('projects.sps_controllers.search_placeholder')}
               emptyMessage={$t('projects.sps_controllers.empty')}
@@ -789,37 +791,44 @@
                 <Table.Cell>
                   {new Date(controller.created_at).toLocaleDateString()}
                 </Table.Cell>
-                <Table.Cell>
-                  <div class="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onclick={() => handleSpsControllerEdit(controller)}
-                    >
-                      <Pencil class="size-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onclick={() => handleDuplicateSpsController(controller)}
-                    >
-                      {$t('facility.duplicate')}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      href="/facility/sps-controllers/{controller.id}"
-                    >
-                      {$t('common.view')}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onclick={() => handleDeleteSpsController(controller)}
-                    >
-                      {$t('common.delete')}
-                    </Button>
-                  </div>
+                <Table.Cell class="text-right">
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger>
+                      {#snippet child({ props })}
+                        <Button variant="ghost" size="icon" {...props}>
+                          <EllipsisIcon class="size-4" />
+                        </Button>
+                      {/snippet}
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content align="end" class="w-44">
+                      {#if canPerform('create', 'spscontroller')}
+                        <DropdownMenu.Item onclick={() => handleDuplicateSpsController(controller)}>
+                          {$t('facility.duplicate')}
+                        </DropdownMenu.Item>
+                      {/if}
+                      {#if canPerform('read', 'spscontroller')}
+                        <DropdownMenu.Item
+                          onclick={() => goto(`/facility/sps-controllers/${controller.id}`)}
+                        >
+                          {$t('common.view')}
+                        </DropdownMenu.Item>
+                      {/if}
+                      {#if canPerform('update', 'spscontroller')}
+                        <DropdownMenu.Item onclick={() => handleSpsControllerEdit(controller)}>
+                          {$t('common.edit')}
+                        </DropdownMenu.Item>
+                      {/if}
+                      {#if canPerform('delete', 'spscontroller')}
+                        <DropdownMenu.Separator />
+                        <DropdownMenu.Item
+                          variant="destructive"
+                          onclick={() => handleDeleteSpsController(controller)}
+                        >
+                          {$t('common.delete')}
+                        </DropdownMenu.Item>
+                      {/if}
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Root>
                 </Table.Cell>
               {/snippet}
             </PaginatedList>
