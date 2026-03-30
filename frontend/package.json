@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
-    "build:package": "vite build && pnpm run prepack",
+    "build": "svelte-kit sync && vite build",
+    "build:package": "svelte-kit sync && vite build && pnpm run prepack",
     "preview": "vite preview",
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
