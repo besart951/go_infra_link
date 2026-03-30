@@ -79,7 +79,9 @@
   );
 
   const linkedControlCabinets = $derived.by(() =>
-    controlCabinetOptions.filter((cabinet) => controlCabinetLinkMap.has(cabinet.id))
+    mergeControlCabinetOptions(
+      controlCabinetOptions.filter((cabinet) => controlCabinetLinkMap.has(cabinet.id))
+    )
   );
 
   const filteredControlCabinets = $derived.by(() => {
@@ -174,6 +176,10 @@
     const unique = uniqueIds(ids);
     if (unique.length === 0) return [];
     return spsControllerRepository.getBulk(unique);
+  }
+
+  function mergeControlCabinetOptions(items: ControlCabinet[]): ControlCabinet[] {
+    return Array.from(new Map(items.map((item) => [item.id, item])).values());
   }
 
   function formatBuildingLabel(building: Building): string {
@@ -374,7 +380,7 @@
       controlCabinetLinks = linksRes.items;
 
       const cabinetIds = linksRes.items.map((l) => l.control_cabinet_id);
-      controlCabinetOptions = await fetchControlCabinetsByIds(cabinetIds);
+      controlCabinetOptions = mergeControlCabinetOptions(await fetchControlCabinetsByIds(cabinetIds));
       await ensureBuildingLabels(controlCabinetOptions);
     } catch (err) {
       addToast(
@@ -401,7 +407,7 @@
       const missing = uniqueIds(cabinetIds).filter((id) => !existing.has(id));
       if (missing.length > 0) {
         const fetched = await fetchControlCabinetsByIds(missing);
-        controlCabinetOptions = [...controlCabinetOptions, ...fetched];
+        controlCabinetOptions = mergeControlCabinetOptions([...controlCabinetOptions, ...fetched]);
         await ensureBuildingLabels(fetched);
       }
     } catch (err) {

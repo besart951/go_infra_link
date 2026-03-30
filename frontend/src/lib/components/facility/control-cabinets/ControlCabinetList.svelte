@@ -92,7 +92,6 @@
 
 <div class="flex flex-col gap-4">
   <div class="flex flex-wrap items-center justify-end gap-2">
-    <Button variant="outline" onclick={onReload} disabled={state.loading}>{$t('common.refresh')}</Button>
     {#if !showForm && canCreate}
       <Button onclick={onCreate}>
         <PlusIcon class="mr-2 size-4" />
