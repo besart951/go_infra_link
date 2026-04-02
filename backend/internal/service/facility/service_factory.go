@@ -3,7 +3,6 @@ package facility
 import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
-	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
@@ -78,9 +77,6 @@ type Repositories struct {
 	AlarmTypes               domainFacility.AlarmTypeRepository
 	AlarmTypeFields          domainFacility.AlarmTypeFieldRepository
 	BacnetObjectAlarmValues  domainFacility.BacnetObjectAlarmValueRepository
-	ProjectControlCabinets   domainProject.ProjectControlCabinetRepository
-	ProjectSPSControllers    domainProject.ProjectSPSControllerRepository
-	ProjectFieldDevices      domainProject.ProjectFieldDeviceRepository
 }
 
 // Services bundles all facility services.
@@ -122,10 +118,7 @@ func NewServices(repos Repositories) *Services {
 	fieldDeviceService := NewFieldDeviceService(
 		repos.FieldDevices,
 		repos.SPSControllerSystemTypes,
-		repos.SPSControllers,
-		repos.ControlCabinets,
 		repos.SystemTypes,
-		repos.Buildings,
 		repos.Apparats,
 		repos.SystemParts,
 		repos.Specifications,
@@ -133,23 +126,14 @@ func NewServices(repos Repositories) *Services {
 		repos.ObjectData,
 		repos.AlarmTypes,
 		repos.BacnetObjectAlarmValues,
-		repos.ProjectFieldDevices,
 	)
 
 	return &Services{
 		HierarchyCopier: hierarchyCopier,
-		Building: NewBuildingService(
-			repos.Buildings,
-			repos.ControlCabinets,
-			repos.SPSControllers,
-			repos.SPSControllerSystemTypes,
-			repos.FieldDevices,
-			repos.Specifications,
-			repos.BacnetObjects,
-		),
-		SystemType: NewSystemTypeService(repos.SystemTypes),
-		SystemPart: NewSystemPartService(repos.SystemParts),
-		Apparat:    NewApparatService(repos.Apparats),
+		Building:        NewBuildingService(repos.Buildings),
+		SystemType:      NewSystemTypeService(repos.SystemTypes),
+		SystemPart:      NewSystemPartService(repos.SystemParts),
+		Apparat:         NewApparatService(repos.Apparats),
 		ControlCabinet: NewControlCabinetService(
 			repos.ControlCabinets,
 			repos.Buildings,
@@ -158,9 +142,6 @@ func NewServices(repos Repositories) *Services {
 			repos.FieldDevices,
 			repos.BacnetObjects,
 			repos.Specifications,
-			repos.ProjectControlCabinets,
-			repos.ProjectSPSControllers,
-			repos.ProjectFieldDevices,
 			hierarchyCopier,
 		),
 		FieldDevice: fieldDeviceService,
@@ -175,14 +156,9 @@ func NewServices(repos Repositories) *Services {
 		SPSController: NewSPSControllerService(
 			repos.SPSControllers,
 			repos.ControlCabinets,
-			repos.Buildings,
 			repos.SystemTypes,
 			repos.SPSControllerSystemTypes,
 			repos.FieldDevices,
-			repos.Specifications,
-			repos.BacnetObjects,
-			repos.ProjectSPSControllers,
-			repos.ProjectFieldDevices,
 			hierarchyCopier,
 		),
 		StateText:         NewStateTextService(repos.StateTexts),
@@ -194,9 +170,7 @@ func NewServices(repos Repositories) *Services {
 		AlarmTypeField:    NewAlarmTypeFieldService(repos.AlarmTypeFields),
 		SPSControllerSystemType: NewSPSControllerSystemTypeService(
 			repos.SPSControllerSystemTypes,
-			repos.SystemTypes,
 			repos.FieldDevices,
-			fieldDeviceService,
 			repos.Specifications,
 			repos.BacnetObjects,
 			hierarchyCopier,

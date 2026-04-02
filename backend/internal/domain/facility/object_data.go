@@ -12,6 +12,6 @@ type ObjectData struct {
 	IsActive      bool            `gorm:"default:true"`
 	ProjectID     *uuid.UUID      `gorm:"type:uuid;index;uniqueIndex:idx_object_data_project_description"`
 	Project       *ProjectRef     `gorm:"foreignKey:ProjectID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	BacnetObjects []*BacnetObject `gorm:"many2many:object_data_bacnet_objects;"`
+	BacnetObjects []*BacnetObject `gorm:"many2many:object_data_bacnet_objects;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Apparats      []*Apparat      `gorm:"many2many:object_data_apparats;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }

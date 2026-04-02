@@ -7,17 +7,13 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
-	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
 type FieldDeviceService struct {
 	repo                        domainFacility.FieldDeviceStore
 	spsControllerSystemTypeRepo domainFacility.SPSControllerSystemTypeStore
-	spsControllerRepo           domainFacility.SPSControllerRepository
-	controlCabinetRepo          domainFacility.ControlCabinetRepository
 	systemTypeRepo              domainFacility.SystemTypeRepository
-	buildingRepo                domainFacility.BuildingRepository
 	apparatRepo                 domainFacility.ApparatRepository
 	systemPartRepo              domainFacility.SystemPartRepository
 	specificationRepo           domainFacility.SpecificationStore
@@ -25,16 +21,12 @@ type FieldDeviceService struct {
 	objectDataRepo              domainFacility.ObjectDataStore
 	alarmTypeRepo               domainFacility.AlarmTypeRepository
 	bacnetAlarmValueRepo        domainFacility.BacnetObjectAlarmValueRepository
-	projectFieldDeviceRepo      domainProject.ProjectFieldDeviceRepository
 }
 
 func NewFieldDeviceService(
 	repo domainFacility.FieldDeviceStore,
 	spsControllerSystemTypeRepo domainFacility.SPSControllerSystemTypeStore,
-	spsControllerRepo domainFacility.SPSControllerRepository,
-	controlCabinetRepo domainFacility.ControlCabinetRepository,
 	systemTypeRepo domainFacility.SystemTypeRepository,
-	buildingRepo domainFacility.BuildingRepository,
 	apparatRepo domainFacility.ApparatRepository,
 	systemPartRepo domainFacility.SystemPartRepository,
 	specificationRepo domainFacility.SpecificationStore,
@@ -42,20 +34,11 @@ func NewFieldDeviceService(
 	objectDataRepo domainFacility.ObjectDataStore,
 	alarmTypeRepo domainFacility.AlarmTypeRepository,
 	bacnetAlarmValueRepo domainFacility.BacnetObjectAlarmValueRepository,
-	projectFieldDeviceRepo ...domainProject.ProjectFieldDeviceRepository,
 ) *FieldDeviceService {
-	var projectFieldDeviceLinkRepo domainProject.ProjectFieldDeviceRepository
-	if len(projectFieldDeviceRepo) > 0 {
-		projectFieldDeviceLinkRepo = projectFieldDeviceRepo[0]
-	}
-
 	return &FieldDeviceService{
 		repo:                        repo,
 		spsControllerSystemTypeRepo: spsControllerSystemTypeRepo,
-		spsControllerRepo:           spsControllerRepo,
-		controlCabinetRepo:          controlCabinetRepo,
 		systemTypeRepo:              systemTypeRepo,
-		buildingRepo:                buildingRepo,
 		apparatRepo:                 apparatRepo,
 		systemPartRepo:              systemPartRepo,
 		specificationRepo:           specificationRepo,
@@ -63,7 +46,6 @@ func NewFieldDeviceService(
 		objectDataRepo:              objectDataRepo,
 		alarmTypeRepo:               alarmTypeRepo,
 		bacnetAlarmValueRepo:        bacnetAlarmValueRepo,
-		projectFieldDeviceRepo:      projectFieldDeviceLinkRepo,
 	}
 }
 
@@ -166,44 +148,14 @@ func (s *FieldDeviceService) UpdateWithBacnetObjects(fieldDevice *domainFacility
 }
 
 func (s *FieldDeviceService) DeleteByID(id uuid.UUID) error {
-	ids := []uuid.UUID{id}
-	if err := s.deleteProjectLinksByFieldDeviceIDs(ids); err != nil {
-		return err
-	}
-	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(ids); err != nil {
-		return err
-	}
-	if err := s.specificationRepo.DeleteByFieldDeviceIDs(ids); err != nil {
-		return err
-	}
-	return s.repo.DeleteByIds(ids)
+	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
 func (s *FieldDeviceService) DeleteByIDs(ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	for _, id := range ids {
-		if err := s.DeleteByID(id); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *FieldDeviceService) deleteProjectLinksByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error {
-	if s.projectFieldDeviceRepo == nil {
-		return nil
-	}
-
-	linkIDs, err := collectProjectFieldDeviceLinkIDsByFieldDeviceIDs(s.projectFieldDeviceRepo, fieldDeviceIDs)
-	if err != nil {
-		return err
-	}
-	if len(linkIDs) == 0 {
-		return nil
-	}
-	return s.projectFieldDeviceRepo.DeleteByIds(linkIDs)
+	return s.repo.DeleteByIds(ids)
 }
 func (s *FieldDeviceService) CreateSpecification(fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error {
 	// Ensure field device exists (and not deleted)

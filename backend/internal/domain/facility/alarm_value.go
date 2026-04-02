@@ -23,7 +23,7 @@ type AlarmDefinitionFieldOverride struct {
 type BacnetObjectAlarmValue struct {
 	domain.Base
 	BacnetObjectID   uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_bacnet_alarm_value"`
-	BacnetObject     *BacnetObject   `gorm:"foreignKey:BacnetObjectID"`
+	BacnetObject     *BacnetObject   `gorm:"foreignKey:BacnetObjectID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	AlarmTypeFieldID uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex:idx_bacnet_alarm_value"`
 	AlarmTypeField   *AlarmTypeField `gorm:"foreignKey:AlarmTypeFieldID"`
 	ValueNumber      *float64        `gorm:"type:numeric(18,6)"`

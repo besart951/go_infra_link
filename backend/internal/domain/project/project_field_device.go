@@ -11,7 +11,7 @@ type ProjectFieldDevice struct {
 	ProjectID     uuid.UUID            `gorm:"type:uuid;not null;uniqueIndex:idx_project_field_device_unique"`
 	Project       Project              `gorm:"foreignKey:ProjectID;references:ID"`
 	FieldDeviceID uuid.UUID            `gorm:"type:uuid;not null;uniqueIndex:idx_project_field_device_unique"`
-	FieldDevice   facility.FieldDevice `gorm:"foreignKey:FieldDeviceID;references:ID"`
+	FieldDevice   facility.FieldDevice `gorm:"foreignKey:FieldDeviceID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 func (ProjectFieldDevice) TableName() string {

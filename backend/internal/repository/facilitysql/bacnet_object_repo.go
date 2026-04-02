@@ -53,33 +53,12 @@ func (r *bacnetObjectRepo) DeleteByFieldDeviceIDs(ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-
-	var bacnetObjectIDs []uuid.UUID
-	if err := r.db.Model(&domainFacility.BacnetObject{}).
-		Where("field_device_id IN ?", ids).
-		Pluck("id", &bacnetObjectIDs).Error; err != nil {
-		return err
-	}
-
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		if len(bacnetObjectIDs) > 0 {
-			if err := tx.Where("bacnet_object_id IN ?", bacnetObjectIDs).Delete(&domainFacility.BacnetObjectAlarmValue{}).Error; err != nil {
-				return err
-			}
-		}
-		return tx.Where("field_device_id IN ?", ids).Delete(&domainFacility.BacnetObject{}).Error
-	})
+	return r.db.Where("field_device_id IN ?", ids).Delete(&domainFacility.BacnetObject{}).Error
 }
 
 func (r *bacnetObjectRepo) DeleteByIds(ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("bacnet_object_id IN ?", ids).Delete(&domainFacility.BacnetObjectAlarmValue{}).Error; err != nil {
-			return err
-		}
-		return tx.Where("id IN ?", ids).Delete(&domainFacility.BacnetObject{}).Error
-	})
+	return r.db.Where("id IN ?", ids).Delete(&domainFacility.BacnetObject{}).Error
 }

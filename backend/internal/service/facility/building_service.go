@@ -9,32 +9,12 @@ import (
 )
 
 type BuildingService struct {
-	repo                        domainFacility.BuildingRepository
-	controlCabinetRepo          domainFacility.ControlCabinetRepository
-	spsControllerRepo           domainFacility.SPSControllerRepository
-	spsControllerSystemTypeRepo domainFacility.SPSControllerSystemTypeStore
-	fieldDeviceRepo             domainFacility.FieldDeviceStore
-	specificationRepo           domainFacility.SpecificationStore
-	bacnetObjectRepo            domainFacility.BacnetObjectStore
+	repo domainFacility.BuildingRepository
 }
 
-func NewBuildingService(
-	repo domainFacility.BuildingRepository,
-	controlCabinetRepo domainFacility.ControlCabinetRepository,
-	spsControllerRepo domainFacility.SPSControllerRepository,
-	spsControllerSystemTypeRepo domainFacility.SPSControllerSystemTypeStore,
-	fieldDeviceRepo domainFacility.FieldDeviceStore,
-	specificationRepo domainFacility.SpecificationStore,
-	bacnetObjectRepo domainFacility.BacnetObjectStore,
-) *BuildingService {
+func NewBuildingService(repo domainFacility.BuildingRepository) *BuildingService {
 	return &BuildingService{
-		repo:                        repo,
-		controlCabinetRepo:          controlCabinetRepo,
-		spsControllerRepo:           spsControllerRepo,
-		spsControllerSystemTypeRepo: spsControllerSystemTypeRepo,
-		fieldDeviceRepo:             fieldDeviceRepo,
-		specificationRepo:           specificationRepo,
-		bacnetObjectRepo:            bacnetObjectRepo,
+		repo: repo,
 	}
 }
 
@@ -84,56 +64,6 @@ func (s *BuildingService) Validate(building *domainFacility.Building, excludeID 
 }
 
 func (s *BuildingService) DeleteByID(id uuid.UUID) error {
-	// Cascade delete: Building → ControlCabinets → SPSControllers → SPSControllerSystemTypes → FieldDevices
-	controlCabinetIDs, err := s.controlCabinetRepo.GetIDsByBuildingID(id)
-	if err != nil {
-		return err
-	}
-
-	if len(controlCabinetIDs) == 0 {
-		// No children, delete directly
-		return s.repo.DeleteByIds([]uuid.UUID{id})
-	}
-
-	// Collect all dependent IDs
-	spsControllerIDs, err := s.spsControllerRepo.GetIDsByControlCabinetIDs(controlCabinetIDs)
-	if err != nil {
-		return err
-	}
-
-	spsControllerSystemTypeIDs, err := s.spsControllerSystemTypeRepo.GetIDsBySPSControllerIDs(spsControllerIDs)
-	if err != nil {
-		return err
-	}
-
-	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(spsControllerSystemTypeIDs)
-	if err != nil {
-		return err
-	}
-
-	// Delete in correct order (bottom-up)
-	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
-		return err
-	}
-	if err := s.specificationRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
-		return err
-	}
-	if err := s.fieldDeviceRepo.DeleteByIds(fieldDeviceIDs); err != nil {
-		return err
-	}
-
-	if err := s.spsControllerSystemTypeRepo.DeleteBySPSControllerIDs(spsControllerIDs); err != nil {
-		return err
-	}
-
-	if err := s.spsControllerRepo.DeleteByIds(spsControllerIDs); err != nil {
-		return err
-	}
-
-	if err := s.controlCabinetRepo.DeleteByIds(controlCabinetIDs); err != nil {
-		return err
-	}
-
 	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 

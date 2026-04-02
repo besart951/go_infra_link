@@ -1,7 +1,8 @@
-package db
+  package db
 
 import (
 	"fmt"
+	"strings"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
@@ -110,6 +111,12 @@ func autoMigrate(db *gorm.DB) error {
 		return err
 	}
 
+	if err := cleanupFacilityDeleteOrphans(db); err != nil {
+		return err
+	}
+	if err := ensureFacilityDeleteCascades(db); err != nil {
+		return err
+	}
 	if err := ensureObjectDataApparatsCascade(db); err != nil {
 		return err
 	}
@@ -125,6 +132,283 @@ func autoMigrate(db *gorm.DB) error {
 	}
 
 	return nil
+}
+
+type foreignKeySpec struct {
+	childTable     string
+	childColumn    string
+	parentTable    string
+	parentColumn   string
+	constraintName string
+	onDelete       string
+}
+
+func cleanupFacilityDeleteOrphans(db *gorm.DB) error {
+	queries := []string{
+		`UPDATE field_devices
+		SET specification_id = NULL
+		WHERE specification_id IS NOT NULL
+		  AND NOT EXISTS (
+			SELECT 1
+			FROM specifications
+			WHERE specifications.id = field_devices.specification_id
+		  )`,
+		`DELETE FROM specifications
+		WHERE field_device_id IS NOT NULL
+		  AND NOT EXISTS (
+			SELECT 1
+			FROM field_devices
+			WHERE field_devices.id = specifications.field_device_id
+		  )`,
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		for _, query := range queries {
+			if err := tx.Exec(query).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func ensureFacilityDeleteCascades(db *gorm.DB) error {
+	specs := []foreignKeySpec{
+		{
+			childTable:     "control_cabinets",
+			childColumn:    "building_id",
+			parentTable:    "buildings",
+			parentColumn:   "id",
+			constraintName: "fk_control_cabinets_building",
+			onDelete:       "CASCADE",
+		},
+		{
+			childTable:     "sps_controllers",
+			childColumn:    "control_cabinet_id",
+			parentTable:    "control_cabinets",
+			parentColumn:   "id",
+			constraintName: "fk_sps_controllers_control_cabinet",
+			onDelete:       "CASCADE",
+		},
+		{
+			childTable:     "sps_controller_system_types",
+			childColumn:    "sps_controller_id",
+			parentTable:    "sps_controllers",
+			parentColumn:   "id",
+			constraintName: "fk_sps_controller_system_types_sps_controller",
+			onDelete:       "CASCADE",
+		},
+		{
+			childTable:     "field_devices",
+			childColumn:    "sps_controller_system_type_id",
+			parentTable:    "sps_controller_system_types",
+			parentColumn:   "id",
+			constraintName: "fk_field_devices_sps_controller_system_type",
+			onDelete:       "CASCADE",
+		},
+		{
+			childTable:     "specifications",
+			childColumn:    "field_device_id",
+			parentTable:    "field_devices",
+			parentColumn:   "id",
+			constraintName: "fk_specifications_field_device",
+			onDelete:       "CASCADE",
+		},
+		{
+			childTable:     "field_devices",
+			childColumn:    "specification_id",
+			parentTable:    "specifications",
+			parentColumn:   "id",
+			constraintName: "fk_field_devices_specification",
+			onDelete:       "SET NULL",
+		},
+		{
+			childTable:     "bacnet_objects",
+			childColumn:    "field_device_id",
+			parentTable:    "field_devices",
+			parentColumn:   "id",
+			constraintName: "fk_bacnet_objects_field_device",
+			onDelete:       "CASCADE",
+		},
+		{
+			childTable:     "bacnet_object_alarm_values",
+			childColumn:    "bacnet_object_id",
+			parentTable:    "bacnet_objects",
+			parentColumn:   "id",
+			constraintName: "fk_bacnet_object_alarm_values_bacnet_object",
+			onDelete:       "CASCADE",
+		},
+		{
+			childTable:     "project_control_cabinets",
+			childColumn:    "control_cabinet_id",
+			parentTable:    "control_cabinets",
+			parentColumn:   "id",
+			constraintName: "fk_project_control_cabinets_control_cabinet",
+			onDelete:       "CASCADE",
+		},
+		{
+			childTable:     "project_sps_controllers",
+			childColumn:    "sps_controller_id",
+			parentTable:    "sps_controllers",
+			parentColumn:   "id",
+			constraintName: "fk_project_sps_controllers_sps_controller",
+			onDelete:       "CASCADE",
+		},
+		{
+			childTable:     "project_field_devices",
+			childColumn:    "field_device_id",
+			parentTable:    "field_devices",
+			parentColumn:   "id",
+			constraintName: "fk_project_field_devices_field_device",
+			onDelete:       "CASCADE",
+		},
+		{
+			childTable:     "object_data_bacnet_objects",
+			childColumn:    "object_data_id",
+			parentTable:    "object_data",
+			parentColumn:   "id",
+			constraintName: "fk_object_data_bacnet_objects_object_data",
+			onDelete:       "CASCADE",
+		},
+		{
+			childTable:     "object_data_bacnet_objects",
+			childColumn:    "bacnet_object_id",
+			parentTable:    "bacnet_objects",
+			parentColumn:   "id",
+			constraintName: "fk_object_data_bacnet_objects_bacnet_object",
+			onDelete:       "CASCADE",
+		},
+	}
+
+	for _, spec := range specs {
+		if err := ensureForeignKey(db, spec); err != nil {
+			return fmt.Errorf("ensure %s: %w", spec.constraintName, err)
+		}
+	}
+
+	return nil
+}
+
+func ensureForeignKey(db *gorm.DB, spec foreignKeySpec) error {
+	switch db.Dialector.Name() {
+	case "postgres":
+		type existingForeignKey struct {
+			ConstraintName string
+			Definition     string
+		}
+
+		var existing []existingForeignKey
+		if err := db.Raw(
+			`SELECT
+				tc.constraint_name AS constraint_name,
+				pg_get_constraintdef(c.oid) AS definition
+			FROM information_schema.table_constraints tc
+			JOIN information_schema.key_column_usage kcu
+			  ON tc.constraint_name = kcu.constraint_name
+			 AND tc.table_schema = kcu.table_schema
+			JOIN information_schema.constraint_column_usage ccu
+			  ON ccu.constraint_name = tc.constraint_name
+			 AND ccu.table_schema = tc.table_schema
+			JOIN pg_constraint c
+			  ON c.conname = tc.constraint_name
+			JOIN pg_namespace n
+			  ON n.oid = c.connamespace
+			 AND n.nspname = tc.table_schema
+			WHERE tc.constraint_type = 'FOREIGN KEY'
+			  AND tc.table_schema = current_schema()
+			  AND tc.table_name = ?
+			  AND kcu.column_name = ?
+			  AND ccu.table_name = ?
+			  AND ccu.column_name = ?`,
+			spec.childTable,
+			spec.childColumn,
+			spec.parentTable,
+			spec.parentColumn,
+		).Scan(&existing).Error; err != nil {
+			return err
+		}
+
+		for _, fk := range existing {
+			definition := normalizeRule(fk.Definition)
+			if strings.Contains(definition, "ON UPDATE CASCADE") &&
+				strings.Contains(definition, "ON DELETE "+spec.onDelete) {
+				return nil
+			}
+		}
+
+		for _, fk := range existing {
+			if err := db.Exec(
+				"ALTER TABLE " + spec.childTable + " DROP CONSTRAINT " + fk.ConstraintName,
+			).Error; err != nil {
+				return err
+			}
+		}
+
+		return db.Exec(
+			"ALTER TABLE " + spec.childTable +
+				" ADD CONSTRAINT " + spec.constraintName +
+				" FOREIGN KEY (" + spec.childColumn + ") REFERENCES " + spec.parentTable + "(" + spec.parentColumn + ")" +
+				" ON UPDATE CASCADE ON DELETE " + spec.onDelete,
+		).Error
+
+	case "mysql", "mariadb":
+		type existingForeignKey struct {
+			ConstraintName string
+			UpdateRule     string
+			DeleteRule     string
+		}
+
+		var existing []existingForeignKey
+		if err := db.Raw(
+			`SELECT
+				kcu.CONSTRAINT_NAME AS constraint_name,
+				COALESCE(rc.UPDATE_RULE, '') AS update_rule,
+				COALESCE(rc.DELETE_RULE, '') AS delete_rule
+			FROM information_schema.KEY_COLUMN_USAGE kcu
+			LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS rc
+			  ON rc.CONSTRAINT_SCHEMA = kcu.CONSTRAINT_SCHEMA
+			 AND rc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
+			WHERE kcu.TABLE_SCHEMA = DATABASE()
+			  AND kcu.TABLE_NAME = ?
+			  AND kcu.COLUMN_NAME = ?
+			  AND kcu.REFERENCED_TABLE_NAME = ?
+			  AND kcu.REFERENCED_COLUMN_NAME = ?`,
+			spec.childTable,
+			spec.childColumn,
+			spec.parentTable,
+			spec.parentColumn,
+		).Scan(&existing).Error; err != nil {
+			return err
+		}
+
+		for _, fk := range existing {
+			if normalizeRule(fk.UpdateRule) == "CASCADE" &&
+				normalizeRule(fk.DeleteRule) == spec.onDelete {
+				return nil
+			}
+		}
+
+		for _, fk := range existing {
+			if err := db.Exec(
+				"ALTER TABLE " + spec.childTable + " DROP FOREIGN KEY " + fk.ConstraintName,
+			).Error; err != nil {
+				return err
+			}
+		}
+
+		return db.Exec(
+			"ALTER TABLE " + spec.childTable +
+				" ADD CONSTRAINT " + spec.constraintName +
+				" FOREIGN KEY (" + spec.childColumn + ") REFERENCES " + spec.parentTable + "(" + spec.parentColumn + ")" +
+				" ON UPDATE CASCADE ON DELETE " + spec.onDelete,
+		).Error
+	}
+
+	return nil
+}
+
+func normalizeRule(value string) string {
+	return strings.ToUpper(strings.TrimSpace(value))
 }
 
 func ensureObjectDataApparatsCascade(db *gorm.DB) error {

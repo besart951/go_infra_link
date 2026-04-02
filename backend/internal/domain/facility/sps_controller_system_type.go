@@ -10,7 +10,7 @@ type SPSControllerSystemType struct {
 	Number          *int
 	DocumentName    *string
 	SPSControllerID uuid.UUID     `gorm:"type:uuid;not null;index"`
-	SPSController   SPSController `gorm:"foreignKey:SPSControllerID"`
+	SPSController   SPSController `gorm:"foreignKey:SPSControllerID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	SystemTypeID    uuid.UUID     `gorm:"type:uuid;not null;index"`
 	SystemType      SystemType    `gorm:"foreignKey:SystemTypeID"`
 

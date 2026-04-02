@@ -8,7 +8,7 @@ import (
 type SPSController struct {
 	domain.Base
 	ControlCabinetID  uuid.UUID      `gorm:"type:uuid;not null;index;uniqueIndex:idx_cabinet_devicename;uniqueIndex:idx_cabinet_ga_device"`
-	ControlCabinet    ControlCabinet `gorm:"foreignKey:ControlCabinetID"`
+	ControlCabinet    ControlCabinet `gorm:"foreignKey:ControlCabinetID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	GADevice          *string        `gorm:"uniqueIndex:idx_cabinet_ga_device"`
 	DeviceName        string         `gorm:"not null;uniqueIndex:idx_cabinet_devicename"`
 	DeviceDescription *string

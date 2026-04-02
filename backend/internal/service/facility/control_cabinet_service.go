@@ -5,22 +5,18 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
-	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
 type ControlCabinetService struct {
-	repo                      domainFacility.ControlCabinetRepository
-	buildingRepo              domainFacility.BuildingRepository
-	spsControllerRepo         domainFacility.SPSControllerRepository
-	spsControllerSystemRepo   domainFacility.SPSControllerSystemTypeStore
-	fieldDeviceRepo           domainFacility.FieldDeviceStore
-	bacnetObjectRepo          domainFacility.BacnetObjectStore
-	specificationRepo         domainFacility.SpecificationStore
-	projectControlCabinetRepo domainProject.ProjectControlCabinetRepository
-	projectSPSControllerRepo  domainProject.ProjectSPSControllerRepository
-	projectFieldDeviceRepo    domainProject.ProjectFieldDeviceRepository
-	hierarchyCopier           *HierarchyCopier
+	repo                    domainFacility.ControlCabinetRepository
+	buildingRepo            domainFacility.BuildingRepository
+	spsControllerRepo       domainFacility.SPSControllerRepository
+	spsControllerSystemRepo domainFacility.SPSControllerSystemTypeStore
+	fieldDeviceRepo         domainFacility.FieldDeviceStore
+	bacnetObjectRepo        domainFacility.BacnetObjectStore
+	specificationRepo       domainFacility.SpecificationStore
+	hierarchyCopier         *HierarchyCopier
 }
 
 func NewControlCabinetService(
@@ -31,23 +27,17 @@ func NewControlCabinetService(
 	fieldDeviceRepo domainFacility.FieldDeviceStore,
 	bacnetObjectRepo domainFacility.BacnetObjectStore,
 	specificationRepo domainFacility.SpecificationStore,
-	projectControlCabinetRepo domainProject.ProjectControlCabinetRepository,
-	projectSPSControllerRepo domainProject.ProjectSPSControllerRepository,
-	projectFieldDeviceRepo domainProject.ProjectFieldDeviceRepository,
 	hierarchyCopier *HierarchyCopier,
 ) *ControlCabinetService {
 	return &ControlCabinetService{
-		repo:                      repo,
-		buildingRepo:              buildingRepo,
-		spsControllerRepo:         spsControllerRepo,
-		spsControllerSystemRepo:   spsControllerSystemRepo,
-		fieldDeviceRepo:           fieldDeviceRepo,
-		bacnetObjectRepo:          bacnetObjectRepo,
-		specificationRepo:         specificationRepo,
-		projectControlCabinetRepo: projectControlCabinetRepo,
-		projectSPSControllerRepo:  projectSPSControllerRepo,
-		projectFieldDeviceRepo:    projectFieldDeviceRepo,
-		hierarchyCopier:           hierarchyCopier,
+		repo:                    repo,
+		buildingRepo:            buildingRepo,
+		spsControllerRepo:       spsControllerRepo,
+		spsControllerSystemRepo: spsControllerSystemRepo,
+		fieldDeviceRepo:         fieldDeviceRepo,
+		bacnetObjectRepo:        bacnetObjectRepo,
+		specificationRepo:       specificationRepo,
+		hierarchyCopier:         hierarchyCopier,
 	}
 }
 
@@ -157,106 +147,9 @@ func (s *ControlCabinetService) Validate(controlCabinet *domainFacility.ControlC
 }
 
 func (s *ControlCabinetService) DeleteByID(id uuid.UUID) error {
-	impact, err := s.GetDeleteImpact(id)
-	if err != nil {
-		return err
-	}
-
-	spsControllerIDs, err := s.spsControllerRepo.GetIDsByControlCabinetID(id)
-	if err != nil {
-		return err
-	}
-
-	spsControllerSystemTypeIDs, err := s.spsControllerSystemRepo.GetIDsBySPSControllerIDs(spsControllerIDs)
-	if err != nil {
-		return err
-	}
-
-	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(spsControllerSystemTypeIDs)
-	if err != nil {
-		return err
-	}
-
-	if err := s.deleteProjectControlCabinetLinksByControlCabinetIDs([]uuid.UUID{id}); err != nil {
-		return err
-	}
-	if err := s.deleteProjectSPSControllerLinksBySPSControllerIDs(spsControllerIDs); err != nil {
-		return err
-	}
-	if err := s.deleteProjectFieldDeviceLinksByFieldDeviceIDs(fieldDeviceIDs); err != nil {
-		return err
-	}
-
-	// Nothing references this cabinet => delete directly
-	if impact.SPSControllersCount == 0 {
-		return s.repo.DeleteByIds([]uuid.UUID{id})
-	}
-
-	// Delete dependents in safe order (children before parents)
-	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
-		return err
-	}
-	if err := s.specificationRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
-		return err
-	}
-	if err := s.fieldDeviceRepo.DeleteByIds(fieldDeviceIDs); err != nil {
-		return err
-	}
-	if err := s.spsControllerSystemRepo.DeleteBySPSControllerIDs(spsControllerIDs); err != nil {
-		return err
-	}
-
-	if err := s.spsControllerRepo.DeleteByIds(spsControllerIDs); err != nil {
-		return err
-	}
-
 	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 
-func (s *ControlCabinetService) deleteProjectControlCabinetLinksByControlCabinetIDs(controlCabinetIDs []uuid.UUID) error {
-	if s.projectControlCabinetRepo == nil {
-		return nil
-	}
-
-	linkIDs, err := collectProjectControlCabinetLinkIDsByControlCabinetIDs(s.projectControlCabinetRepo, controlCabinetIDs)
-	if err != nil {
-		return err
-	}
-	if len(linkIDs) == 0 {
-		return nil
-	}
-	return s.projectControlCabinetRepo.DeleteByIds(linkIDs)
-}
-
-func (s *ControlCabinetService) deleteProjectSPSControllerLinksBySPSControllerIDs(spsControllerIDs []uuid.UUID) error {
-	if s.projectSPSControllerRepo == nil {
-		return nil
-	}
-
-	linkIDs, err := collectProjectSPSControllerLinkIDsBySPSControllerIDs(s.projectSPSControllerRepo, spsControllerIDs)
-	if err != nil {
-		return err
-	}
-	if len(linkIDs) == 0 {
-		return nil
-	}
-	return s.projectSPSControllerRepo.DeleteByIds(linkIDs)
-}
-
-func (s *ControlCabinetService) deleteProjectFieldDeviceLinksByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error {
-	if s.projectFieldDeviceRepo == nil {
-		return nil
-	}
-
-	linkIDs, err := collectProjectFieldDeviceLinkIDsByFieldDeviceIDs(s.projectFieldDeviceRepo, fieldDeviceIDs)
-	if err != nil {
-		return err
-	}
-	if len(linkIDs) == 0 {
-		return nil
-	}
-	return s.projectFieldDeviceRepo.DeleteByIds(linkIDs)
-}
 func (s *ControlCabinetService) ensureBuildingExists(buildingID uuid.UUID) error {
 	_, err := domain.GetByID(s.buildingRepo, buildingID)
 	return err

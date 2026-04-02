@@ -10,7 +10,9 @@ import (
 )
 
 type fakeFieldDeviceStore struct {
-	items map[uuid.UUID]*domainFacility.FieldDevice
+	items          map[uuid.UUID]*domainFacility.FieldDevice
+	deleteCalls    int
+	deletedBatches [][]uuid.UUID
 }
 
 func (r *fakeFieldDeviceStore) GetByIds(ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {
@@ -46,6 +48,9 @@ func (r *fakeFieldDeviceStore) Update(entity *domainFacility.FieldDevice) error 
 }
 
 func (r *fakeFieldDeviceStore) DeleteByIds(ids []uuid.UUID) error {
+	r.deleteCalls++
+	batch := append([]uuid.UUID(nil), ids...)
+	r.deletedBatches = append(r.deletedBatches, batch)
 	for _, id := range ids {
 		delete(r.items, id)
 	}
@@ -509,6 +514,47 @@ func stringPtr(value string) *string {
 	return &value
 }
 
+func TestFieldDeviceService_DeleteByIDs_UsesSingleRepositoryDelete(t *testing.T) {
+	fdID1 := uuid.New()
+	fdID2 := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+	spsSystemTypeID := uuid.New()
+
+	fieldDeviceRepo := &fakeFieldDeviceStore{
+		items: map[uuid.UUID]*domainFacility.FieldDevice{
+			fdID1: newFieldDevice(fdID1, spsSystemTypeID, apparatID, systemPartID, 1),
+			fdID2: newFieldDevice(fdID2, spsSystemTypeID, apparatID, systemPartID, 2),
+		},
+	}
+
+	svc := facility.NewFieldDeviceService(
+		fieldDeviceRepo,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	if err := svc.DeleteByIDs([]uuid.UUID{fdID1, fdID2}); err != nil {
+		t.Fatalf("expected delete to succeed, got %v", err)
+	}
+	if fieldDeviceRepo.deleteCalls != 1 {
+		t.Fatalf("expected one repository delete call, got %d", fieldDeviceRepo.deleteCalls)
+	}
+	if len(fieldDeviceRepo.deletedBatches) != 1 || len(fieldDeviceRepo.deletedBatches[0]) != 2 {
+		t.Fatalf("expected one delete batch with 2 ids, got %+v", fieldDeviceRepo.deletedBatches)
+	}
+	if len(fieldDeviceRepo.items) != 0 {
+		t.Fatalf("expected all field devices to be deleted, got %d remaining", len(fieldDeviceRepo.items))
+	}
+}
+
 func newFieldDevice(
 	id uuid.UUID,
 	spsControllerSystemTypeID uuid.UUID,
@@ -566,10 +612,7 @@ func TestFieldDeviceService_BulkUpdate_AllowsSwapApparatNr(t *testing.T) {
 	svc := facility.NewFieldDeviceService(
 		fieldDeviceRepo,
 		spsSystemTypeRepo,
-		nil,
-		nil,
 		systemTypeRepo,
-		nil,
 		apparatRepo,
 		systemPartRepo,
 		nil,
@@ -641,10 +684,7 @@ func TestFieldDeviceService_BulkUpdate_DetectsApparatNrConflict(t *testing.T) {
 	svc := facility.NewFieldDeviceService(
 		fieldDeviceRepo,
 		spsSystemTypeRepo,
-		nil,
-		nil,
 		systemTypeRepo,
-		nil,
 		apparatRepo,
 		systemPartRepo,
 		nil,
@@ -711,10 +751,7 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_Succeeds(t *testi
 	svc := facility.NewFieldDeviceService(
 		fieldDeviceRepo,
 		spsSystemTypeRepo,
-		nil,
-		nil,
 		systemTypeRepo,
-		nil,
 		apparatRepo,
 		systemPartRepo,
 		nil,
@@ -782,10 +819,7 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_Conflict(t *testi
 	svc := facility.NewFieldDeviceService(
 		fieldDeviceRepo,
 		spsSystemTypeRepo,
-		nil,
-		nil,
 		systemTypeRepo,
-		nil,
 		apparatRepo,
 		systemPartRepo,
 		nil,
@@ -858,10 +892,7 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_DifferentSystemPa
 	svc := facility.NewFieldDeviceService(
 		fieldDeviceRepo,
 		spsSystemTypeRepo,
-		nil,
-		nil,
 		systemTypeRepo,
-		nil,
 		apparatRepo,
 		systemPartRepo,
 		nil,
@@ -928,10 +959,7 @@ func TestFieldDeviceService_BulkUpdate_TextIndividuellOnly_Succeeds(t *testing.T
 	svc := facility.NewFieldDeviceService(
 		fieldDeviceRepo,
 		spsSystemTypeRepo,
-		nil,
-		nil,
 		systemTypeRepo,
-		nil,
 		apparatRepo,
 		systemPartRepo,
 		nil,
@@ -1007,10 +1035,7 @@ func TestFieldDeviceService_BulkUpdate_AllowsClearingOptionalTextFields(t *testi
 	svc := facility.NewFieldDeviceService(
 		fieldDeviceRepo,
 		spsSystemTypeRepo,
-		nil,
-		nil,
 		systemTypeRepo,
-		nil,
 		apparatRepo,
 		systemPartRepo,
 		nil,
@@ -1099,10 +1124,7 @@ func TestFieldDeviceService_BulkUpdate_ClearsExistingSpecificationFields(t *test
 	svc := facility.NewFieldDeviceService(
 		fieldDeviceRepo,
 		spsSystemTypeRepo,
-		nil,
-		nil,
 		systemTypeRepo,
-		nil,
 		apparatRepo,
 		systemPartRepo,
 		specStore,
@@ -1175,10 +1197,7 @@ func TestFieldDeviceService_BulkUpdate_ClearOnlyPatchDoesNotCreateEmptySpecifica
 	svc := facility.NewFieldDeviceService(
 		fieldDeviceRepo,
 		spsSystemTypeRepo,
-		nil,
-		nil,
 		systemTypeRepo,
-		nil,
 		apparatRepo,
 		systemPartRepo,
 		specStore,

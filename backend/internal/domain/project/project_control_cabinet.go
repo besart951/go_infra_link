@@ -11,7 +11,7 @@ type ProjectControlCabinet struct {
 	ProjectID        uuid.UUID               `gorm:"type:uuid;not null;uniqueIndex:idx_project_control_cabinet_unique"`
 	Project          Project                 `gorm:"foreignKey:ProjectID;references:ID"`
 	ControlCabinetID uuid.UUID               `gorm:"type:uuid;not null;uniqueIndex:idx_project_control_cabinet_unique"`
-	ControlCabinet   facility.ControlCabinet `gorm:"foreignKey:ControlCabinetID;references:ID"`
+	ControlCabinet   facility.ControlCabinet `gorm:"foreignKey:ControlCabinetID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 func (ProjectControlCabinet) TableName() string {

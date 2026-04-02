@@ -8,9 +8,7 @@ import (
 
 type SPSControllerSystemTypeService struct {
 	repo              domainFacility.SPSControllerSystemTypeStore
-	systemTypeRepo    domainFacility.SystemTypeRepository
 	fieldDeviceRepo   domainFacility.FieldDeviceStore
-	fieldDeviceSvc    *FieldDeviceService
 	specificationRepo domainFacility.SpecificationStore
 	bacnetObjectRepo  domainFacility.BacnetObjectStore
 	hierarchyCopier   *HierarchyCopier
@@ -18,18 +16,14 @@ type SPSControllerSystemTypeService struct {
 
 func NewSPSControllerSystemTypeService(
 	repo domainFacility.SPSControllerSystemTypeStore,
-	systemTypeRepo domainFacility.SystemTypeRepository,
 	fieldDeviceRepo domainFacility.FieldDeviceStore,
-	fieldDeviceSvc *FieldDeviceService,
 	specificationRepo domainFacility.SpecificationStore,
 	bacnetObjectRepo domainFacility.BacnetObjectStore,
 	hierarchyCopier *HierarchyCopier,
 ) *SPSControllerSystemTypeService {
 	return &SPSControllerSystemTypeService{
 		repo:              repo,
-		systemTypeRepo:    systemTypeRepo,
 		fieldDeviceRepo:   fieldDeviceRepo,
-		fieldDeviceSvc:    fieldDeviceSvc,
 		specificationRepo: specificationRepo,
 		bacnetObjectRepo:  bacnetObjectRepo,
 		hierarchyCopier:   hierarchyCopier,
@@ -61,18 +55,6 @@ func (s *SPSControllerSystemTypeService) CopyByID(id uuid.UUID) (*domainFacility
 }
 
 func (s *SPSControllerSystemTypeService) DeleteByID(id uuid.UUID) error {
-	if _, err := domain.GetByID(s.repo, id); err != nil {
-		return err
-	}
-
-	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs([]uuid.UUID{id})
-	if err != nil {
-		return err
-	}
-	if err := s.fieldDeviceSvc.DeleteByIDs(fieldDeviceIDs); err != nil {
-		return err
-	}
-
 	return s.repo.DeleteByIds([]uuid.UUID{id})
 }
 

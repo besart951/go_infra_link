@@ -7,48 +7,32 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
-	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
 type SPSControllerService struct {
 	repo                     domainFacility.SPSControllerRepository
 	controlCabinetRepo       domainFacility.ControlCabinetRepository
-	buildingRepo             domainFacility.BuildingRepository
 	systemTypeRepo           domainFacility.SystemTypeRepository
 	spsControllerSystemTyper domainFacility.SPSControllerSystemTypeStore
 	fieldDeviceRepo          domainFacility.FieldDeviceStore
-	specificationRepo        domainFacility.SpecificationStore
-	bacnetObjectRepo         domainFacility.BacnetObjectStore
-	projectSPSControllerRepo domainProject.ProjectSPSControllerRepository
-	projectFieldDeviceRepo   domainProject.ProjectFieldDeviceRepository
 	hierarchyCopier          *HierarchyCopier
 }
 
 func NewSPSControllerService(
 	repo domainFacility.SPSControllerRepository,
 	controlCabinetRepo domainFacility.ControlCabinetRepository,
-	buildingRepo domainFacility.BuildingRepository,
 	systemTypeRepo domainFacility.SystemTypeRepository,
 	spsControllerSystemTypeStore domainFacility.SPSControllerSystemTypeStore,
 	fieldDeviceRepo domainFacility.FieldDeviceStore,
-	specificationRepo domainFacility.SpecificationStore,
-	bacnetObjectRepo domainFacility.BacnetObjectStore,
-	projectSPSControllerRepo domainProject.ProjectSPSControllerRepository,
-	projectFieldDeviceRepo domainProject.ProjectFieldDeviceRepository,
 	hierarchyCopier *HierarchyCopier,
 ) *SPSControllerService {
 	return &SPSControllerService{
 		repo:                     repo,
 		controlCabinetRepo:       controlCabinetRepo,
-		buildingRepo:             buildingRepo,
 		systemTypeRepo:           systemTypeRepo,
 		spsControllerSystemTyper: spsControllerSystemTypeStore,
 		fieldDeviceRepo:          fieldDeviceRepo,
-		specificationRepo:        specificationRepo,
-		bacnetObjectRepo:         bacnetObjectRepo,
-		projectSPSControllerRepo: projectSPSControllerRepo,
-		projectFieldDeviceRepo:   projectFieldDeviceRepo,
 		hierarchyCopier:          hierarchyCopier,
 	}
 }
@@ -255,75 +239,7 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 }
 
 func (s *SPSControllerService) DeleteByID(id uuid.UUID) error {
-	if err := s.deleteProjectSPSControllerLinksBySPSControllerIDs([]uuid.UUID{id}); err != nil {
-		return err
-	}
-
-	// Cascade delete: SPSController → SPSControllerSystemTypes → FieldDevices
-	spsControllerSystemTypeIDs, err := s.spsControllerSystemTyper.GetIDsBySPSControllerIDs([]uuid.UUID{id})
-	if err != nil {
-		return err
-	}
-
-	if len(spsControllerSystemTypeIDs) == 0 {
-		// No children, delete directly
-		return s.repo.DeleteByIds([]uuid.UUID{id})
-	}
-
-	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(spsControllerSystemTypeIDs)
-	if err != nil {
-		return err
-	}
-	if err := s.deleteProjectFieldDeviceLinksByFieldDeviceIDs(fieldDeviceIDs); err != nil {
-		return err
-	}
-
-	// Delete in correct order (bottom-up)
-	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
-		return err
-	}
-	if err := s.specificationRepo.DeleteByFieldDeviceIDs(fieldDeviceIDs); err != nil {
-		return err
-	}
-	if err := s.fieldDeviceRepo.DeleteByIds(fieldDeviceIDs); err != nil {
-		return err
-	}
-
-	if err := s.spsControllerSystemTyper.DeleteBySPSControllerIDs([]uuid.UUID{id}); err != nil {
-		return err
-	}
-
 	return s.repo.DeleteByIds([]uuid.UUID{id})
-}
-
-func (s *SPSControllerService) deleteProjectSPSControllerLinksBySPSControllerIDs(spsControllerIDs []uuid.UUID) error {
-	if s.projectSPSControllerRepo == nil {
-		return nil
-	}
-
-	linkIDs, err := collectProjectSPSControllerLinkIDsBySPSControllerIDs(s.projectSPSControllerRepo, spsControllerIDs)
-	if err != nil {
-		return err
-	}
-	if len(linkIDs) == 0 {
-		return nil
-	}
-	return s.projectSPSControllerRepo.DeleteByIds(linkIDs)
-}
-
-func (s *SPSControllerService) deleteProjectFieldDeviceLinksByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error {
-	if s.projectFieldDeviceRepo == nil {
-		return nil
-	}
-
-	linkIDs, err := collectProjectFieldDeviceLinkIDsByFieldDeviceIDs(s.projectFieldDeviceRepo, fieldDeviceIDs)
-	if err != nil {
-		return err
-	}
-	if len(linkIDs) == 0 {
-		return nil
-	}
-	return s.projectFieldDeviceRepo.DeleteByIds(linkIDs)
 }
 func (s *SPSControllerService) ensureControlCabinetExists(controlCabinetID uuid.UUID) error {
 	_, err := domain.GetByID(s.controlCabinetRepo, controlCabinetID)

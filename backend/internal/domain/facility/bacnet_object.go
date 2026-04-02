@@ -20,7 +20,7 @@ type BacnetObject struct {
 	HardwareQuantity uint8
 
 	FieldDeviceID       *uuid.UUID         `gorm:"type:uuid;index;index:idx_field_device_textfix"`
-	FieldDevice         *FieldDevice       `gorm:"foreignKey:FieldDeviceID"`
+	FieldDevice         *FieldDevice       `gorm:"foreignKey:FieldDeviceID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	SoftwareReferenceID *uuid.UUID         `gorm:"type:uuid;index"`
 	SoftwareReference   *BacnetObject      `gorm:"foreignKey:SoftwareReferenceID"`
 	StateTextID         *uuid.UUID         `gorm:"type:uuid;index"`

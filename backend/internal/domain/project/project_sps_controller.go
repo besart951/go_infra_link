@@ -11,7 +11,7 @@ type ProjectSPSController struct {
 	ProjectID       uuid.UUID              `gorm:"type:uuid;not null;uniqueIndex:idx_project_sps_controller_unique"`
 	Project         Project                `gorm:"foreignKey:ProjectID;references:ID"`
 	SPSControllerID uuid.UUID              `gorm:"type:uuid;not null;uniqueIndex:idx_project_sps_controller_unique"`
-	SPSController   facility.SPSController `gorm:"foreignKey:SPSControllerID;references:ID"`
+	SPSController   facility.SPSController `gorm:"foreignKey:SPSControllerID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 func (ProjectSPSController) TableName() string {
