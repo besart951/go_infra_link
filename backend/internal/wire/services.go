@@ -1,6 +1,7 @@
 package wire
 
 import (
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -46,7 +47,7 @@ type ServiceConfig struct {
 }
 
 // NewServices creates all service instances from repositories and configuration.
-func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
+func NewServices(repos *Repositories, cfg ServiceConfig) (*Services, error) {
 	passwordService := passwordsvc.New()
 	jwtService := authservice.NewJWTService(cfg.JWTSecret, cfg.Issuer)
 	rbacSvc := rbacservice.New(repos.User, repos.TeamMember, repos.Permissions, repos.RolePermissions)
@@ -76,7 +77,7 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 	jobStore := exportinfra.NewMemoryJobStore()
 	fileStore, err := exportinfra.NewLocalFileStore(filepath.Join("data", "exports"))
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("export file store: %w", err)
 	}
 	dataProvider := exportinfra.NewDataProvider(repos.FacilityFieldDevices, repos.FacilitySPSControllers, repos.FacilityControlCabinet)
 	excelGenerator := exportinfra.NewExcelizeGenerator()
@@ -130,5 +131,5 @@ func NewServices(repos *Repositories, cfg ServiceConfig) *Services {
 		),
 		Export:   exportSvc,
 		Facility: facilityServices,
-	}
+	}, nil
 }

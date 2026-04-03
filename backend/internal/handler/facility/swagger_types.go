@@ -13,5 +13,6 @@ type (
 	StateTextListResponse               = dto.StateTextListResponse
 	ObjectDataResponse                  = dto.ObjectDataResponse
 	ObjectDataListResponse              = dto.ObjectDataListResponse
+	SPSControllerSystemTypeResponse     = dto.SPSControllerSystemTypeResponse
 	SPSControllerSystemTypeListResponse = dto.SPSControllerSystemTypeListResponse
 )

@@ -170,9 +170,6 @@ func NewServices(repos Repositories) *Services {
 		AlarmTypeField:    NewAlarmTypeFieldService(repos.AlarmTypeFields),
 		SPSControllerSystemType: NewSPSControllerSystemTypeService(
 			repos.SPSControllerSystemTypes,
-			repos.FieldDevices,
-			repos.Specifications,
-			repos.BacnetObjects,
 			hierarchyCopier,
 		),
 		AlarmType: NewAlarmTypeService(repos.AlarmTypes),

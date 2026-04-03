@@ -444,47 +444,6 @@ func (s *SPSControllerService) ensureUnique(spsController *domainFacility.SPSCon
 	return nil
 }
 
-func (s *SPSControllerService) listSystemTypesBySPSControllerID(spsControllerID uuid.UUID) ([]domainFacility.SPSControllerSystemType, error) {
-	items := make([]domainFacility.SPSControllerSystemType, 0)
-	page := 1
-
-	for {
-		result, err := s.spsControllerSystemTyper.GetPaginatedListBySPSControllerID(spsControllerID, domain.PaginationParams{Page: page, Limit: 500})
-		if err != nil {
-			return nil, err
-		}
-
-		items = append(items, result.Items...)
-		if page >= result.TotalPages || len(result.Items) == 0 {
-			break
-		}
-		page++
-	}
-
-	return items, nil
-}
-
-func (s *SPSControllerService) listFieldDevicesBySPSControllerID(spsControllerID uuid.UUID) ([]domainFacility.FieldDevice, error) {
-	items := make([]domainFacility.FieldDevice, 0)
-	page := 1
-	filters := domainFacility.FieldDeviceFilterParams{SPSControllerID: &spsControllerID}
-
-	for {
-		result, err := s.fieldDeviceRepo.GetPaginatedListWithFilters(domain.PaginationParams{Page: page, Limit: 500}, filters)
-		if err != nil {
-			return nil, err
-		}
-
-		items = append(items, result.Items...)
-		if page >= result.TotalPages || len(result.Items) == 0 {
-			break
-		}
-		page++
-	}
-
-	return items, nil
-}
-
 func isValidGADevice(value string) bool {
 	trimmed := strings.TrimSpace(value)
 	if len(trimmed) != 3 {

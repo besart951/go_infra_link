@@ -20,7 +20,7 @@ func Setup(env string, level string) *slog.Logger {
 		Level: parsedLevel,
 	}
 
-	if env == "prod" {
+	if isProductionEnv(env) {
 		// JSON für Log-Aggregatoren (Datadog, ELK, CloudWatch)
 		handler = slog.NewJSONHandler(os.Stdout, opts)
 	} else {
@@ -34,6 +34,15 @@ func Setup(env string, level string) *slog.Logger {
 	slog.SetDefault(logger)
 
 	return logger
+}
+
+func isProductionEnv(env string) bool {
+	switch strings.ToLower(strings.TrimSpace(env)) {
+	case "prod", "production":
+		return true
+	default:
+		return false
+	}
 }
 
 func parseLevel(level string) slog.Level {

@@ -1,4 +1,21 @@
 services:
+  backend-bootstrap:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=host=${POSTGRES_SERVICE_HOST:-postgres} user=${POSTGRES_USER:-postgres} password=${POSTGRES_PASSWORD:-postgres} dbname=${POSTGRES_DB:-go_infra_link} port=${POSTGRES_CONTAINER_PORT:-5432} sslmode=disable
+    volumes:
+      - ./backend:/src
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["go", "run", "./cmd/db-bootstrap"]
+    restart: "no"
+
   backend:
     build:
       context: ./backend
@@ -14,6 +31,8 @@ services:
     volumes:
       - ./backend:/src
     depends_on:
+      backend-bootstrap:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     restart: unless-stopped

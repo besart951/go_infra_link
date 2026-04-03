@@ -8,7 +8,8 @@ Full-stack infrastructure link project with Go backend and future frontend.
 
 ```bash
 cd backend
-go run ./cmd/server
+go run ./cmd/db-bootstrap
+go run ./cmd/app
 ```
 
 ## Development
@@ -21,24 +22,14 @@ go run ./cmd/server
 ### Running with Docker
 
 ```bash
-docker build -t go_infra_link .
-docker run -p 8080:8080 go_infra_link
+docker compose up --build
 ```
 
-### Using Make
+### Running Tests
 
 ```bash
-# Build backend
-make build
-
-# Run backend
-make run
-
-# Run tests
-make test
-
-# Clean build artifacts
-make clean
+cd backend
+go test ./...
 ```
 
 ## Swagger
@@ -54,7 +45,7 @@ swag init -g ./cmd/app/main.go -o ./docs
 
 ### View Swagger UI
 
-Start the backend and open:
+If `SWAGGER_ENABLED=true`, start the backend and open:
 
 ```
 http://localhost:8080/swagger/index.html
@@ -67,12 +58,20 @@ This project follows **Clean/Hexagonal Architecture** principles:
 - **Backend**: Go service with layered architecture (domain, application, infrastructure)
 - **Frontend**: Separate frontend application (to be implemented)
 
+## Utility Commands
+
+Get a CSRF token from a local login:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:8080/api/v1/auth/login" -ContentType "application/json" -Body '{"email":"besart_morina@hotmail.com","password":"password"}' -SessionVariable s | Select-Object -ExpandProperty csrf_token
+```
+
+Seed snapshot data into the database:
+
+```bash
+docker compose exec backend go run ./cmd/seeder
+```
+
 ## License
 
 See [LICENSE](LICENSE) for details.
-
-CSRF-Token
-Invoke-RestMethod -Method POST -Uri "http://localhost:8080/api/v1/auth/login" -ContentType "application/json" -Body '{"email":"besart_morina@hotmail.com","password":"password"}' -SessionVariable s | Select-Object -ExpandProperty csrf_token
-
-
-docker compose exec backend go run ./cmd/seeder

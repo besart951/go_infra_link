@@ -6,47 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// copySpecificationForFieldDevice copies the specification from the original field device to the new field device.
-func copySpecificationForFieldDevice(
-	specificationRepo domainFacility.SpecificationStore,
-	originalFieldDeviceID,
-	newFieldDeviceID uuid.UUID,
-) error {
-	specs, err := specificationRepo.GetByFieldDeviceIDs([]uuid.UUID{originalFieldDeviceID})
-	if err != nil {
-		return err
-	}
-	if len(specs) == 0 {
-		return nil
-	}
-
-	originalSpec := specs[0]
-	newSpec := cloneSpecificationForCopy(*originalSpec, newFieldDeviceID)
-	return specificationRepo.Create(newSpec)
-}
-
-// copyBacnetObjectsForFieldDevice copies all BACnet objects from the original field device
-// to the new field device and rewires in-device software references to the copied objects.
-func copyBacnetObjectsForFieldDevice(
-	bacnetObjectRepo domainFacility.BacnetObjectStore,
-	originalFieldDeviceID,
-	newFieldDeviceID uuid.UUID,
-) error {
-	bacnetObjects, err := bacnetObjectRepo.GetByFieldDeviceIDs([]uuid.UUID{originalFieldDeviceID})
-	if err != nil {
-		return err
-	}
-	if len(bacnetObjects) == 0 {
-		return nil
-	}
-
-	return copyBacnetObjectsWithFieldDeviceMap(
-		bacnetObjectRepo,
-		bacnetObjects,
-		map[uuid.UUID]uuid.UUID{originalFieldDeviceID: newFieldDeviceID},
-	)
-}
-
 // copyFieldDevicesWithChildren bulk-copies field devices along with specifications and BACnet objects.
 // It uses the system type map to link each copied field device to the new system type ID.
 func copyFieldDevicesWithChildren(

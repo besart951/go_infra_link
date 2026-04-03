@@ -1,6 +1,7 @@
-  package db
+package db
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -16,8 +17,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 )
 
-// Connect establishes a database connection based on configuration
-// and runs AutoMigrate for all models
+// Connect establishes a database connection and verifies reachability.
 func Connect(cfg config.Config) (*gorm.DB, error) {
 	var dialector gorm.Dialector
 
@@ -54,16 +54,42 @@ func Connect(cfg config.Config) (*gorm.DB, error) {
 		sqlDB.SetConnMaxLifetime(cfg.DBConnMaxLifetime)
 	}
 
-	// Run AutoMigrate for all models
-	if err := autoMigrate(db); err != nil {
-		return nil, fmt.Errorf("auto migration failed: %w", err)
+	if cfg.DBConnectTimeout > 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), cfg.DBConnectTimeout)
+		defer cancel()
+		if err := sqlDB.PingContext(ctx); err != nil {
+			return nil, fmt.Errorf("failed to ping database: %w", err)
+		}
+	} else {
+		if err := sqlDB.Ping(); err != nil {
+			return nil, fmt.Errorf("failed to ping database: %w", err)
+		}
 	}
 
 	return db, nil
 }
 
-// autoMigrate runs GORM's AutoMigrate for all domain models
-func autoMigrate(db *gorm.DB) error {
+// Bootstrap prepares the database schema explicitly.
+// Use this from a dedicated bootstrap or migration command, not normal app startup.
+func Bootstrap(cfg config.Config) error {
+	db, err := Connect(cfg)
+	if err != nil {
+		return err
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get database instance: %w", err)
+	}
+	defer func() {
+		_ = sqlDB.Close()
+	}()
+
+	return bootstrapSchema(db)
+}
+
+// bootstrapSchema creates or upgrades schema objects and applies legacy one-off fixes.
+func bootstrapSchema(db *gorm.DB) error {
 	if err := db.AutoMigrate(
 		// User domain
 		&user.User{},
@@ -532,43 +558,4 @@ func ensureBacnetObjectTextFixIndexNonUnique(db *gorm.DB) error {
 	}
 
 	return nil
-}
-
-// GetModels returns a list of all domain models for reference
-func GetModels() []interface{} {
-	return []interface{}{
-		&user.User{},
-		&user.BusinessDetails{},
-		&user.UserTeam{},
-		&user.Permission{},
-		&user.RolePermission{},
-		&auth.RefreshToken{},
-		&team.Team{},
-		&team.TeamMember{},
-		&project.Phase{},
-		&project.Project{},
-		&project.ProjectFieldDevice{},
-		&project.ProjectControlCabinet{},
-		&project.ProjectSPSController{},
-		&facility.Building{},
-		&facility.ControlCabinet{},
-		&facility.SPSController{},
-		&facility.SystemType{},
-		&facility.SPSControllerSystemType{},
-		&facility.SystemPart{},
-		&facility.Apparat{},
-		&facility.Specification{},
-		&facility.FieldDevice{},
-		&facility.StateText{},
-		&facility.NotificationClass{},
-		&facility.AlarmDefinition{},
-		&facility.BacnetObject{},
-		&facility.ObjectData{},
-		&facility.Unit{},
-		&facility.AlarmField{},
-		&facility.AlarmType{},
-		&facility.AlarmTypeField{},
-		&facility.AlarmDefinitionFieldOverride{},
-		&facility.BacnetObjectAlarmValue{},
-	}
 }

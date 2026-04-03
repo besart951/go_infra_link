@@ -14,6 +14,7 @@ type Config struct {
 	AppEnv            string
 	LogLevel          string
 	HTTPAddr          string
+	SwaggerEnabled    bool
 	JWTSecret         string
 	AccessTokenTTL    time.Duration
 	RefreshTokenTTL   time.Duration
@@ -54,8 +55,33 @@ func Load() (Config, error) {
 	accessTokenTTL := getEnvDuration("ACCESS_TOKEN_TTL", 15*time.Minute)
 	refreshTokenTTL := getEnvDuration("REFRESH_TOKEN_TTL", 720*time.Hour)
 	cookieSecure := getEnvBool("COOKIE_SECURE", false)
+	swaggerEnabled := getEnvBool("SWAGGER_ENABLED", !IsProduction(appEnv))
 
 	seedUserEnabled := getEnvBool("SEED_USER_ENABLED", !IsProduction(appEnv))
+	seedUserFirstNameDefault := "Besart"
+	seedUserLastNameDefault := "Morina"
+	seedUserEmailDefault := "besart_morina@hotmail.com"
+	seedUserPasswordDefault := "password"
+	if IsProduction(appEnv) {
+		seedUserFirstNameDefault = ""
+		seedUserLastNameDefault = ""
+		seedUserEmailDefault = ""
+		seedUserPasswordDefault = ""
+	}
+	seedUserFirstName := getEnv("SEED_USER_FIRST_NAME", seedUserFirstNameDefault)
+	seedUserLastName := getEnv("SEED_USER_LAST_NAME", seedUserLastNameDefault)
+	seedUserEmail := getEnv("SEED_USER_EMAIL", seedUserEmailDefault)
+	seedUserPassword := getEnv("SEED_USER_PASSWORD", seedUserPasswordDefault)
+	if IsProduction(appEnv) && seedUserEnabled {
+		switch {
+		case strings.TrimSpace(seedUserEmail) == "":
+			return Config{}, fmt.Errorf("SEED_USER_EMAIL is required when SEED_USER_ENABLED=true in production")
+		case strings.TrimSpace(seedUserPassword) == "":
+			return Config{}, fmt.Errorf("SEED_USER_PASSWORD is required when SEED_USER_ENABLED=true in production")
+		case seedUserPassword == "password":
+			return Config{}, fmt.Errorf("SEED_USER_PASSWORD must not use the default development password in production")
+		}
+	}
 	dbType := normalizeDBType(getEnvFirst("postgres", "DB_TYPE", "DB_DRIVER"))
 	pgHost := getEnv("POSTGRES_HOST", "localhost")
 	pgPort := getEnv("POSTGRES_PORT", "5432")
@@ -76,16 +102,17 @@ func Load() (Config, error) {
 		AppEnv:            appEnv,
 		LogLevel:          logLevel,
 		HTTPAddr:          resolveHTTPAddr(),
+		SwaggerEnabled:    swaggerEnabled,
 		JWTSecret:         jwtSecret,
 		AccessTokenTTL:    accessTokenTTL,
 		RefreshTokenTTL:   refreshTokenTTL,
 		CookieDomain:      getEnv("COOKIE_DOMAIN", ""),
 		CookieSecure:      cookieSecure,
 		SeedUserEnabled:   seedUserEnabled,
-		SeedUserFirstName: getEnv("SEED_USER_FIRST_NAME", "Besart"),
-		SeedUserLastName:  getEnv("SEED_USER_LAST_NAME", "Morina"),
-		SeedUserEmail:     getEnv("SEED_USER_EMAIL", "besart_morina@hotmail.com"),
-		SeedUserPassword:  getEnv("SEED_USER_PASSWORD", "password"),
+		SeedUserFirstName: seedUserFirstName,
+		SeedUserLastName:  seedUserLastName,
+		SeedUserEmail:     seedUserEmail,
+		SeedUserPassword:  seedUserPassword,
 		DBType:            dbType,
 		DBDsn:             dbDsn,
 		DBMaxOpenConns:    maxOpen,
