@@ -9,6 +9,7 @@ import {
   BACNET_SOFTWARE_TYPES,
   BACNET_HARDWARE_TYPES
 } from '$lib/domain/facility/bacnet-object.js';
+import { localizeErrorText, localizeFieldErrorMap } from '$lib/api/client.js';
 import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 import { addToast } from '$lib/components/toast.svelte';
 import { sessionStorage } from '$lib/services/sessionStorageService.js';
@@ -17,6 +18,7 @@ import type {
   FieldDevice,
   UpdateFieldDeviceRequest,
   BulkUpdateFieldDeviceItem,
+  Specification,
   SpecificationInput,
   BacnetObjectInput,
   BacnetObjectPatchInput
@@ -170,14 +172,14 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 
   function normalizeSpecificationForDisplay(
     spec: SpecificationInput | undefined
-  ): Partial<SpecificationInput> | undefined {
+  ): Partial<Specification> | undefined {
     if (!spec) return undefined;
 
     const normalized: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(spec)) {
-      normalized[key] = value === null ? undefined : value;
+      normalized[key] = toDisplayOptionalValue(value);
     }
-    return normalized;
+    return normalized as Partial<Specification>;
   }
 
   function buildUpdateForDevice(
@@ -375,23 +377,23 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 
   function getFirstFieldValidationToast(
     fields: Record<string, string> | undefined,
-    fallback = 'Fix validation errors before saving.'
+    fallback = translate('field_device.editing.toasts.fix_validation')
   ): string {
     if (!fields) return fallback;
     const first = Object.entries(fields)[0];
     if (!first) return fallback;
-    return `error.${first[0]}: ${first[1]}`;
+    return localizeErrorText(first[1], first[0]);
   }
 
   function getFirstEditValidationToast(
     errors: Map<string, EditErrorInfo>,
-    fallback = 'Fix validation errors before saving.'
+    fallback = translate('field_device.editing.toasts.fix_validation')
   ): string {
     for (const info of errors.values()) {
       if (!info?.fields) continue;
       const first = Object.entries(info.fields)[0];
       if (first) {
-        return `error.${first[0]}: ${first[1]}`;
+        return localizeErrorText(first[1], first[0]);
       }
     }
     return fallback;
@@ -399,7 +401,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 
   function getFirstBacnetClientValidationToast(
     deviceId?: string,
-    fallback = 'Fix validation errors before saving.'
+    fallback = translate('field_device.editing.toasts.fix_validation')
   ): string {
     if (deviceId) {
       const deviceErrors = bacnetClientErrors.get(deviceId);
@@ -488,6 +490,18 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
     }
 
     return undefined;
+  }
+
+  function localizeEditErrorInfo(info?: EditErrorInfo): EditErrorInfo | undefined {
+    if (!info) return undefined;
+    const localized = {
+      message: info.message ? localizeErrorText(info.message) : info.message,
+      fields: info.fields ? localizeFieldErrorMap(info.fields) : info.fields
+    };
+    if (!localized.message && (!localized.fields || Object.keys(localized.fields).length === 0)) {
+      return undefined;
+    }
+    return localized;
   }
 
   // BACnet edit queuing
@@ -797,12 +811,16 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
           successIds.add(r.id);
         } else {
           if (r.error) {
-            newErrors.set(r.id, { message: r.error, fields: r.fields });
+            newErrors.set(
+              r.id,
+              localizeEditErrorInfo({ message: r.error, fields: r.fields }) ?? {}
+            );
           }
           // Parse field-level errors for BACnet objects
           if (r.fields) {
+            const localizedFields = localizeFieldErrorMap(r.fields);
             const objErrors = new Map<string, Record<string, string>>();
-            for (const [fieldPath, msg] of Object.entries(r.fields)) {
+            for (const [fieldPath, msg] of Object.entries(localizedFields)) {
               const match = fieldPath.match(/(?:^|\.)bacnet_objects\.([0-9a-f-]+)\.(.+)$/i);
               if (match) {
                 const objId = match[1];
@@ -1101,23 +1119,38 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
       if (totalSuccessful > 0) {
         if (partialSuccessIds.size > 0) {
           addToast(
-            `Updated ${successIds.size} device(s) completely, ${partialSuccessIds.size} device(s) partially. Check errors for failed fields.`,
+            translate('field_device.editing.toasts.partial_success', {
+              complete: successIds.size,
+              partial: partialSuccessIds.size
+            }),
             'warning'
           );
         } else {
-          addToast(`Updated ${result.success_count} field device(s)`, 'success');
+          addToast(
+            translate('field_device.editing.toasts.success', {
+              count: result.success_count
+            }),
+            'success'
+          );
         }
         onSuccess?.(optimisticUpdates);
       }
       if (result.failure_count > 0 && partialSuccessIds.size === 0) {
         addToast(
-          `Failed to update ${result.failure_count} device(s). Check highlighted fields.`,
+          translate('field_device.editing.toasts.partial_failure', {
+            count: result.failure_count
+          }),
           'error'
         );
       }
     } catch (error: unknown) {
       const err = error as Error;
-      addToast(`Bulk update failed: ${err.message}`, 'error');
+      addToast(
+        translate('field_device.editing.toasts.bulk_update_failed', {
+          message: localizeErrorText(err.message)
+        }),
+        'error'
+      );
     }
   }
 
@@ -1160,17 +1193,24 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
         return;
       }
 
-      setEditError(device.id, { message: item?.error, fields: item?.fields });
+      setEditError(device.id, localizeEditErrorInfo({ message: item?.error, fields: item?.fields }));
       addToast(
         getFirstFieldValidationToast(
-          item?.fields,
-          item?.error || 'Update failed. Check highlighted fields.'
+          item?.fields ? localizeFieldErrorMap(item.fields) : undefined,
+          localizeErrorText(
+            item?.error || translate('field_device.editing.toasts.update_failed_check_fields')
+          )
         ),
         'error'
       );
     } catch (error: unknown) {
       const err = error as Error;
-      addToast(`Update failed: ${err.message}`, 'error');
+      addToast(
+        translate('field_device.editing.toasts.update_failed', {
+          message: localizeErrorText(err.message)
+        }),
+        'error'
+      );
     }
   }
 
@@ -1225,9 +1265,12 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
         return;
       }
 
-      const errorFields = item?.fields ?? {};
+      const errorFields = item?.fields ? localizeFieldErrorMap(item.fields) : {};
       const nextErrors = new Map(editErrors);
-      nextErrors.set(device.id, { message: item?.error, fields: errorFields });
+      nextErrors.set(device.id, {
+        message: item?.error ? localizeErrorText(item.error) : item?.error,
+        fields: errorFields
+      });
       editErrors = nextErrors;
 
       const objErrors = new Map<string, Record<string, string>>();
@@ -1248,14 +1291,21 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 
       addToast(
         getFirstFieldValidationToast(
-          item?.fields,
-          item?.error || 'Update failed. Check highlighted fields.'
+          errorFields,
+          localizeErrorText(
+            item?.error || translate('field_device.editing.toasts.update_failed_check_fields')
+          )
         ),
         'error'
       );
     } catch (error: unknown) {
       const err = error as Error;
-      addToast(`Update failed: ${err.message}`, 'error');
+      addToast(
+        translate('field_device.editing.toasts.update_failed', {
+          message: localizeErrorText(err.message)
+        }),
+        'error'
+      );
     }
   }
 

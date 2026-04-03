@@ -3,7 +3,7 @@ package facility
 import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
-	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/google/uuid"
 )
 
@@ -210,7 +210,7 @@ func toFieldDeviceListResponse(list *domain.PaginatedList[domainFacility.FieldDe
 	return dto.FieldDeviceListResponse{Items: mapItems(list.Items, toFieldDeviceResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
-func toFieldDeviceOptionsResponse(options *domainFacility.FieldDeviceOptions) dto.FieldDeviceOptionsResponse {
+func ToFieldDeviceOptionsResponse(options *domainFacility.FieldDeviceOptions) dto.FieldDeviceOptionsResponse {
 	// Convert Apparats
 	apparats := make([]dto.ApparatResponse, len(options.Apparats))
 	for i, app := range options.Apparats {

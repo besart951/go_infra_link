@@ -32,6 +32,7 @@
     if (pathname.startsWith('/users')) return t('navigation.users');
     if (pathname.startsWith('/teams')) return t('navigation.teams');
     if (pathname.startsWith('/account')) return t('navigation.account');
+    if (pathname.startsWith('/admin/notifications')) return t('notifications.page.title');
     if (pathname.startsWith('/facility/buildings')) return t('navigation.buildings');
     if (pathname.startsWith('/facility/control-cabinets')) return t('navigation.control_cabinets');
     if (pathname.startsWith('/facility/sps-controllers')) return t('navigation.sps_controllers');

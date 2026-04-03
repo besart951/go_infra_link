@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store';
 import { api } from '$lib/api/client.js';
 import type { FieldDevice } from '$lib/domain/facility/index.js';
+import { t } from '$lib/i18n/index.js';
 
 /**
  * Field device filter parameters
@@ -136,7 +137,7 @@ export function createFieldDeviceStore(pageSize = 300, projectId?: ProjectIdInpu
       store.update((s) => ({
         ...s,
         loading: false,
-        error: error.message || 'Failed to load field devices'
+        error: error.message || t('facility.fetch_failed')
       }));
     }
   }

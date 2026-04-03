@@ -40,7 +40,7 @@ export class ExcelWorkerReaderAdapter implements ExcelReaderPort {
 
         if (response.type === 'cancelled') {
           this.disposeWorker();
-          reject(new Error('Read session cancelled.'));
+          reject(new Error('Lesevorgang abgebrochen.'));
           return;
         }
 
@@ -50,7 +50,7 @@ export class ExcelWorkerReaderAdapter implements ExcelReaderPort {
 
       worker.onerror = (event) => {
         this.disposeWorker();
-        reject(new Error(event.message || 'Excel worker failed.'));
+        reject(new Error(event.message || 'Excel-Worker fehlgeschlagen.'));
       };
 
       const request: ExcelReaderWorkerRequest = {
@@ -70,7 +70,7 @@ export class ExcelWorkerReaderAdapter implements ExcelReaderPort {
     if (!this.worker) return;
     const reject = this.rejectCurrent;
     this.rejectCurrent = null;
-    reject?.(new Error('Read session cancelled.'));
+    reject?.(new Error('Lesevorgang abgebrochen.'));
 
     const cancelRequest: ExcelReaderWorkerRequest = { type: 'cancel' };
     this.worker.postMessage(cancelRequest);

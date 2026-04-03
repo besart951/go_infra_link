@@ -13,7 +13,7 @@
 
   let isReading = $state(false);
   let progressPercent = $state(0);
-  let progressMessage = $state('Waiting for file...');
+  let progressMessage = $state('Warten auf Datei...');
   let errorMessage = $state<string | null>(null);
   let preparedSession = $state<ExcelReadSession | null>(null);
 
@@ -22,7 +22,7 @@
     errorMessage = null;
     preparedSession = null;
     progressPercent = 0;
-    progressMessage = 'Preparing scanner...';
+    progressMessage = 'Scanner wird vorbereitet...';
 
     try {
       const session = await readSessionUseCase.execute(file, (progress) => {
@@ -32,12 +32,12 @@
 
       preparedSession = session;
       progressPercent = 100;
-      progressMessage = 'Scanner result ready.';
-      addToast('Excel file loaded and ObjectData/BACnet result prepared.', 'success');
+      progressMessage = 'Scanner-Ergebnis bereit.';
+      addToast('Excel-Datei geladen und Objekt-/BACnet-Daten vorbereitet.', 'success');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to read Excel file.';
-      if (message === 'Read session cancelled.') {
-        progressMessage = 'Read cancelled.';
+      const message = error instanceof Error ? error.message : 'Excel-Datei konnte nicht gelesen werden.';
+      if (message === 'Lesevorgang abgebrochen.') {
+        progressMessage = 'Lesevorgang abgebrochen.';
         return;
       }
 
@@ -55,7 +55,7 @@
   function cancelReadSession(): void {
     readSessionUseCase.cancel();
     isReading = false;
-    progressMessage = 'Read cancelled.';
+    progressMessage = 'Lesevorgang abgebrochen.';
     progressPercent = 0;
   }
 
@@ -65,14 +65,14 @@
 </script>
 
 <svelte:head>
-  <title>Excel Importer | Infra Link</title>
+  <title>Excel-Import | Infra Link</title>
 </svelte:head>
 
 <div class="flex flex-col gap-6">
   <div>
-    <h1 class="text-2xl font-semibold tracking-tight">Excel Importer</h1>
+    <h1 class="text-2xl font-semibold tracking-tight">Excel-Import</h1>
     <p class="text-sm text-muted-foreground">
-      Drop an Excel file to scan ObjectData and BACnet objects directly in the browser.
+      Laden Sie eine Excel-Datei hoch, um Objektdaten und BACnet-Objekte direkt im Browser zu prüfen.
     </p>
   </div>
 
@@ -87,7 +87,7 @@
     />
   {:else}
     <div class="rounded-lg border bg-muted p-4 text-center text-sm text-muted-foreground">
-      You do not have permission to import Excel data.
+      Sie haben keine Berechtigung, Excel-Daten zu importieren.
     </div>
   {/if}
 

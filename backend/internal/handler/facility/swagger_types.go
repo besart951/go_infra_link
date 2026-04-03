@@ -1,6 +1,6 @@
 package facility
 
-import "github.com/besart951/go_infra_link/backend/internal/handler/dto"
+import dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 
 // Type aliases for swagger annotations in this package.
 type (

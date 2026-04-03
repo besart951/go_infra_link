@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
-	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )

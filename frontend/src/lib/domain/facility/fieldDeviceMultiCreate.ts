@@ -108,26 +108,26 @@ export function validateApparatNr(
   // Check if value is required
   if (apparatNr === null) {
     if (requireValue) {
-      return { message: 'Apparat number is required', field: 'apparat_nr' };
+      return { message: 'Apparatnummer ist erforderlich.', field: 'apparat_nr' };
     }
     return null;
   }
 
   // Check range
   if (apparatNr < 1 || apparatNr > 99) {
-    return { message: 'Apparat number must be between 1 and 99', field: 'apparat_nr' };
+    return { message: 'Apparatnummer muss zwischen 1 und 99 liegen.', field: 'apparat_nr' };
   }
 
   // Check if available (not used by existing field devices in DB)
   if (!availableNumbers.includes(apparatNr)) {
-    return { message: 'This apparat number is already used', field: 'apparat_nr' };
+    return { message: 'Diese Apparatnummer ist bereits vergeben.', field: 'apparat_nr' };
   }
 
   // Check for duplicates within the form (excluding current row)
   const duplicateIndex = allRows.findIndex((r, i) => i !== rowIndex && r.apparatNr === apparatNr);
   if (duplicateIndex !== -1) {
     return {
-      message: `Duplicate: also used in row #${duplicateIndex + 1}`,
+      message: `Doppelt: auch in Zeile ${duplicateIndex + 1} verwendet.`,
       field: 'apparat_nr'
     };
   }

@@ -4,6 +4,7 @@ import type { PaginationMetadata } from '$lib/domain/valueObjects/pagination.js'
 import type { Project, ProjectStatus, ProjectListParams } from '$lib/domain/project/index.js';
 import { listProjects } from '$lib/infrastructure/api/project.adapter.js';
 import { ApiException } from '$lib/api/client.js';
+import { t } from '$lib/i18n/index.js';
 
 /**
  * Project status filter options
@@ -128,7 +129,7 @@ export function createProjectListStore(options: ProjectListStoreOptions = {}) {
         return;
       }
 
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load projects';
+      const errorMessage = error instanceof Error ? error.message : t('project.fetch_failed');
       store.update((s: ProjectListState) => ({
         ...s,
         loading: false,

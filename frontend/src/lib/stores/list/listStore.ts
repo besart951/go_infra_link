@@ -5,6 +5,7 @@ import type { ListRepository } from '$lib/domain/ports/listRepository.js';
 import { createPagination } from '$lib/domain/valueObjects/pagination.js';
 import { createSearchQuery } from '$lib/domain/valueObjects/search.js';
 import { ApiException } from '$lib/api/client.js';
+import { t } from '$lib/i18n/index.js';
 
 /**
  * Cache entry with timestamp
@@ -113,7 +114,7 @@ export function createListStore<T>(repository: ListRepository<T>, options: ListS
         return;
       }
 
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load data';
+      const errorMessage = error instanceof Error ? error.message : t('errors.load_failed');
       store.update((s) => ({
         ...s,
         loading: false,

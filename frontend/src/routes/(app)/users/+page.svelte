@@ -83,7 +83,7 @@
       }
       teamByUserId = map;
     } catch (err) {
-      teamsError = err instanceof Error ? err.message : 'Failed to load teams';
+      teamsError = err instanceof Error ? err.message : $t('team.fetch_failed');
     } finally {
       teamsLoading = false;
     }

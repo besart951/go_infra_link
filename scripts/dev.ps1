@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('start', 'postgres', 'pgadmin', 'backend', 'frontend', 'seed', 'reset-db', 'reseed', 'stop', 'help')]
+    [ValidateSet('start', 'postgres', 'pgadmin', 'backend', 'frontend', 'bootstrap', 'seed', 'reset-db', 'reseed', 'stop', 'help')]
     [string]$Action = 'start',
     [switch]$Force
 )
@@ -48,6 +48,39 @@ function Start-Postgres {
     Push-Location $RepoRoot
     try {
         docker compose up -d postgres pgadmin
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+function Wait-ForPostgres {
+    param([int]$Attempts = 30, [int]$DelaySeconds = 2)
+
+    Write-Step 'Waiting for postgres to become ready...'
+    Push-Location $RepoRoot
+    try {
+        for ($i = 1; $i -le $Attempts; $i++) {
+            docker compose exec -T postgres sh -lc 'pg_isready -U "${POSTGRES_USER:-postgres}" -p "${POSTGRES_CONTAINER_PORT:-5432}"' *> $null
+            if ($LASTEXITCODE -eq 0) {
+                return
+            }
+
+            Start-Sleep -Seconds $DelaySeconds
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    throw 'PostgreSQL did not become ready in time.'
+}
+
+function Run-DbBootstrap {
+    Write-Step 'Running database bootstrap...'
+    Push-Location (Join-Path $RepoRoot 'backend')
+    try {
+        go run .\cmd\db-bootstrap\
     }
     finally {
         Pop-Location
@@ -113,13 +146,14 @@ Usage:
   ./scripts/dev.ps1 <action> [-Force]
 
 Actions:
-  start      Start postgres+pgAdmin, then backend and frontend in new terminals
+  start      Start postgres+pgAdmin, run db bootstrap, then backend and frontend in new terminals
   postgres   Start only postgres + pgAdmin
   pgadmin    Start only pgAdmin
-  backend    Start only backend (new terminal)
+  backend    Run db bootstrap, then start only backend (new terminal)
   frontend   Start only frontend (new terminal)
-  seed       Run backend seeder once
-  reset-db   Drop & recreate public schema (deletes all data)
+  bootstrap  Run backend db bootstrap once
+  seed       Run db bootstrap, then backend seeder once
+  reset-db   Drop & recreate public schema, then run db bootstrap
   reseed     reset-db + seed
   stop       Stop docker compose services
   help       Show this help
@@ -134,6 +168,8 @@ Examples:
 switch ($Action) {
     'start' {
         Start-Postgres
+        Wait-ForPostgres
+        Run-DbBootstrap
         Start-Backend
         Start-Frontend
     }
@@ -151,19 +187,26 @@ switch ($Action) {
         }
     }
     'backend' {
+        Run-DbBootstrap
         Start-Backend
     }
     'frontend' {
         Start-Frontend
     }
+    'bootstrap' {
+        Run-DbBootstrap
+    }
     'seed' {
+        Run-DbBootstrap
         Run-Seed
     }
     'reset-db' {
         Reset-Database
+        Run-DbBootstrap
     }
     'reseed' {
         Reset-Database
+        Run-DbBootstrap
         Run-Seed
     }
     'stop' {

@@ -12,6 +12,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	"github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	"github.com/besart951/go_infra_link/backend/internal/domain/notification"
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/besart951/go_infra_link/backend/internal/domain/team"
 	"github.com/besart951/go_infra_link/backend/internal/domain/user"
@@ -99,6 +100,7 @@ func bootstrapSchema(db *gorm.DB) error {
 
 		// Auth domain
 		&auth.RefreshToken{},
+		&notification.SMTPSettings{},
 
 		// Team domain
 		&team.Team{},

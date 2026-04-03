@@ -8,7 +8,6 @@ import (
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
-	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
 	"github.com/google/uuid"
 )
 
@@ -40,11 +39,11 @@ func New(
 	}
 }
 
-func (s *Service) GetUserDashboard(userID uuid.UUID) (*dto.DashboardResponse, error) {
+func (s *Service) GetUserDashboard(userID uuid.UUID) (*DashboardResponse, error) {
 	now := s.now().UTC()
-	response := &dto.DashboardResponse{
-		Teams:       make([]dto.DashboardTeamSummaryResponse, 0),
-		OnlineUsers: make([]dto.DashboardUserPresenceResponse, 0),
+	response := &DashboardResponse{
+		Teams:       make([]DashboardTeamSummaryResponse, 0),
+		OnlineUsers: make([]DashboardUserPresenceResponse, 0),
 	}
 
 	projects, err := s.projectRepo.GetPaginatedListForUser(domain.PaginationParams{Page: 1, Limit: 1}, userID)
@@ -62,7 +61,7 @@ func (s *Service) GetUserDashboard(userID uuid.UUID) (*dto.DashboardResponse, er
 			phaseName = phase.Name
 		}
 
-		response.LastProject = &dto.DashboardProjectResponse{
+		response.LastProject = &DashboardProjectResponse{
 			ID:        lastProject.ID,
 			Name:      lastProject.Name,
 			Status:    lastProject.Status,
@@ -105,7 +104,7 @@ func (s *Service) GetUserDashboard(userID uuid.UUID) (*dto.DashboardResponse, er
 		if t, ok := teamsByID[member.TeamID]; ok {
 			name = t.Name
 		}
-		response.Teams = append(response.Teams, dto.DashboardTeamSummaryResponse{
+		response.Teams = append(response.Teams, DashboardTeamSummaryResponse{
 			ID:       member.TeamID,
 			Name:     name,
 			Role:     string(member.Role),
@@ -137,10 +136,10 @@ func (s *Service) GetUserDashboard(userID uuid.UUID) (*dto.DashboardResponse, er
 			teamName = t.Name
 		}
 
-		teamMembers := make([]dto.DashboardTeamMemberResponse, 0, len(memberUsers))
+		teamMembers := make([]DashboardTeamMemberResponse, 0, len(memberUsers))
 		for _, usr := range memberUsers {
 			presenceUsers[usr.ID] = *usr
-			teamMembers = append(teamMembers, dto.DashboardTeamMemberResponse{
+			teamMembers = append(teamMembers, DashboardTeamMemberResponse{
 				UserID:      usr.ID,
 				FirstName:   usr.FirstName,
 				LastName:    usr.LastName,
@@ -158,7 +157,7 @@ func (s *Service) GetUserDashboard(userID uuid.UUID) (*dto.DashboardResponse, er
 			return teamMembers[i].FirstName+teamMembers[i].LastName < teamMembers[j].FirstName+teamMembers[j].LastName
 		})
 
-		response.PrimaryTeam = &dto.DashboardTeamResponse{
+		response.PrimaryTeam = &DashboardTeamResponse{
 			ID:      primaryMembership.TeamID,
 			Name:    teamName,
 			Role:    string(primaryMembership.Role),
@@ -171,13 +170,13 @@ func (s *Service) GetUserDashboard(userID uuid.UUID) (*dto.DashboardResponse, er
 	return response, nil
 }
 
-func buildOnlineUsers(users map[uuid.UUID]domainUser.User, now time.Time) []dto.DashboardUserPresenceResponse {
-	online := make([]dto.DashboardUserPresenceResponse, 0)
+func buildOnlineUsers(users map[uuid.UUID]domainUser.User, now time.Time) []DashboardUserPresenceResponse {
+	online := make([]DashboardUserPresenceResponse, 0)
 	for _, usr := range users {
 		if !isUserOnline(usr, now) {
 			continue
 		}
-		online = append(online, dto.DashboardUserPresenceResponse{
+		online = append(online, DashboardUserPresenceResponse{
 			ID:          usr.ID,
 			FirstName:   usr.FirstName,
 			LastName:    usr.LastName,

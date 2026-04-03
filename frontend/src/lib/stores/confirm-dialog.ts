@@ -18,8 +18,8 @@ export const confirmDialogState = writable<ConfirmDialogState>({
   open: false,
   title: '',
   message: '',
-  confirmText: 'Confirm',
-  cancelText: 'Cancel',
+  confirmText: 'Bestätigen',
+  cancelText: 'Abbrechen',
   variant: 'default'
 });
 
@@ -32,8 +32,8 @@ export function confirm(options: ConfirmDialogOptions): Promise<boolean> {
     confirmDialogState.set({
       ...options,
       open: true,
-      confirmText: options.confirmText || 'Confirm',
-      cancelText: options.cancelText || 'Cancel',
+      confirmText: options.confirmText || 'Bestätigen',
+      cancelText: options.cancelText || 'Abbrechen',
       variant: options.variant || 'default',
       onConfirm: () => {
         closeDialog();

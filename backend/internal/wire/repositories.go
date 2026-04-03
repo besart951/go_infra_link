@@ -5,11 +5,13 @@ package wire
 import (
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainNotification "github.com/besart951/go_infra_link/backend/internal/domain/notification"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	authrepo "github.com/besart951/go_infra_link/backend/internal/repository/auth"
 	facilityrepo "github.com/besart951/go_infra_link/backend/internal/repository/facilitysql"
+	notificationrepo "github.com/besart951/go_infra_link/backend/internal/repository/notification"
 	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
 	projectsqlrepo "github.com/besart951/go_infra_link/backend/internal/repository/projectsql"
 	teamrepo "github.com/besart951/go_infra_link/backend/internal/repository/team"
@@ -19,18 +21,19 @@ import (
 
 // Repositories holds all repository instances.
 type Repositories struct {
-	Project                domainProject.ProjectRepository
-	Phase                  domainProject.PhaseRepository
-	ProjectControlCabinets domainProject.ProjectControlCabinetRepository
-	ProjectSPSControllers  domainProject.ProjectSPSControllerRepository
-	ProjectFieldDevices    domainProject.ProjectFieldDeviceRepository
-	User                   domainUser.UserRepository
-	UserEmail              domainUser.UserEmailRepository
-	Permissions            domainUser.PermissionRepository
-	RolePermissions        domainUser.RolePermissionRepository
-	RefreshToken           domainAuth.RefreshTokenRepository
-	Team                   domainTeam.TeamRepository
-	TeamMember             domainTeam.TeamMemberRepository
+	Project                  domainProject.ProjectRepository
+	Phase                    domainProject.PhaseRepository
+	ProjectControlCabinets   domainProject.ProjectControlCabinetRepository
+	ProjectSPSControllers    domainProject.ProjectSPSControllerRepository
+	ProjectFieldDevices      domainProject.ProjectFieldDeviceRepository
+	User                     domainUser.UserRepository
+	UserEmail                domainUser.UserEmailRepository
+	Permissions              domainUser.PermissionRepository
+	RolePermissions          domainUser.RolePermissionRepository
+	RefreshToken             domainAuth.RefreshTokenRepository
+	NotificationSMTPSettings domainNotification.SMTPSettingsRepository
+	Team                     domainTeam.TeamRepository
+	TeamMember               domainTeam.TeamMemberRepository
 
 	FacilityBuildings                domainFacility.BuildingRepository
 	FacilitySystemTypes              domainFacility.SystemTypeRepository
@@ -67,18 +70,19 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 	}
 
 	return &Repositories{
-		Project:                projectrepo.NewProjectRepository(gormDB),
-		Phase:                  projectrepo.NewPhaseRepository(gormDB),
-		ProjectControlCabinets: projectsqlrepo.NewProjectControlCabinetRepository(gormDB),
-		ProjectSPSControllers:  projectsqlrepo.NewProjectSPSControllerRepository(gormDB),
-		ProjectFieldDevices:    projectsqlrepo.NewProjectFieldDeviceRepository(gormDB),
-		User:                   userRepo,
-		UserEmail:              userEmailRepo,
-		Permissions:            permissionRepo,
-		RolePermissions:        rolePermissionRepo,
-		RefreshToken:           authrepo.NewRefreshTokenRepository(gormDB),
-		Team:                   teamrepo.NewTeamRepository(gormDB),
-		TeamMember:             teamrepo.NewTeamMemberRepository(gormDB),
+		Project:                  projectrepo.NewProjectRepository(gormDB),
+		Phase:                    projectrepo.NewPhaseRepository(gormDB),
+		ProjectControlCabinets:   projectsqlrepo.NewProjectControlCabinetRepository(gormDB),
+		ProjectSPSControllers:    projectsqlrepo.NewProjectSPSControllerRepository(gormDB),
+		ProjectFieldDevices:      projectsqlrepo.NewProjectFieldDeviceRepository(gormDB),
+		User:                     userRepo,
+		UserEmail:                userEmailRepo,
+		Permissions:              permissionRepo,
+		RolePermissions:          rolePermissionRepo,
+		RefreshToken:             authrepo.NewRefreshTokenRepository(gormDB),
+		NotificationSMTPSettings: notificationrepo.NewSMTPSettingsRepository(gormDB),
+		Team:                     teamrepo.NewTeamRepository(gormDB),
+		TeamMember:               teamrepo.NewTeamMemberRepository(gormDB),
 
 		FacilityBuildings:                facilityrepo.NewBuildingRepository(gormDB),
 		FacilitySystemTypes:              facilityrepo.NewSystemTypeRepository(gormDB),

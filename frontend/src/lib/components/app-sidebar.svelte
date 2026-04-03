@@ -9,7 +9,13 @@
   import { createTranslator } from '$lib/i18n/translator';
 
   // Icons
-  import { UsersIcon, Building2Icon, FolderKanbanIcon, SheetIcon } from '@lucide/svelte';
+  import {
+    UsersIcon,
+    Building2Icon,
+    FolderKanbanIcon,
+    SheetIcon,
+    BellRingIcon
+  } from '@lucide/svelte';
 
   const t = createTranslator();
 
@@ -152,6 +158,13 @@
         icon: SheetIcon,
         isActive: $page.url.pathname.startsWith('/excel'),
         hasAccess: canPerform('read', 'objectdata')
+      },
+      {
+        title: $t('navigation.notifications'),
+        url: '/admin/notifications/smtp',
+        icon: BellRingIcon,
+        isActive: $page.url.pathname.startsWith('/admin/notifications'),
+        hasAccess: user.role === 'superadmin'
       }
     ];
 

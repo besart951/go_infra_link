@@ -20,14 +20,14 @@ export class StartExcelReadSessionUseCase {
 
   private validateFile(file: File): void {
     if (!file) {
-      throw new Error('No file selected.');
+      throw new Error('Keine Datei ausgewählt.');
     }
 
     const fileName = file.name.toLowerCase();
     const supported = SUPPORTED_EXCEL_EXTENSIONS.some((ext) => fileName.endsWith(ext));
 
     if (!supported) {
-      throw new Error('Only Excel files (.xlsx, .xls, .xlsm, .xlsb) are supported.');
+      throw new Error('Es werden nur Excel-Dateien (.xlsx, .xls, .xlsm, .xlsb) unterstützt.');
     }
   }
 }

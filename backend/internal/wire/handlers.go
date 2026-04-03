@@ -4,14 +4,19 @@ import (
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/handler"
+	authhandler "github.com/besart951/go_infra_link/backend/internal/handler/auth"
+	dashboardhandler "github.com/besart951/go_infra_link/backend/internal/handler/dashboard"
 	facilityhandler "github.com/besart951/go_infra_link/backend/internal/handler/facility"
+	i18nhandler "github.com/besart951/go_infra_link/backend/internal/handler/i18n"
+	notificationhandler "github.com/besart951/go_infra_link/backend/internal/handler/notification"
+	projecthandler "github.com/besart951/go_infra_link/backend/internal/handler/project"
+	teamhandler "github.com/besart951/go_infra_link/backend/internal/handler/team"
+	userhandler "github.com/besart951/go_infra_link/backend/internal/handler/user"
 	"github.com/besart951/go_infra_link/backend/pkg/i18n"
 )
 
 // NewHandlers creates all HTTP handler instances from services.
-func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18nLoader *i18n.Loader, accessTokenTTL, refreshTokenTTL time.Duration) *handler.Handlers {
-	projectEvents := handler.NewProjectEventHub()
-
+func NewHandlers(services *Services, cookieSettings authhandler.CookieSettings, i18nLoader *i18n.Loader, accessTokenTTL, refreshTokenTTL time.Duration) *handler.Handlers {
 	facilityHandlers := facilityhandler.NewHandlers(facilityhandler.ServiceDeps{
 		Building:                services.Facility.Building,
 		SystemType:              services.Facility.SystemType,
@@ -19,7 +24,6 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18n
 		Apparat:                 services.Facility.Apparat,
 		ControlCabinet:          services.Facility.ControlCabinet,
 		FieldDevice:             services.Facility.FieldDevice,
-		ProjectAccess:           services.Project,
 		BacnetObject:            services.Facility.BacnetObject,
 		SPSController:           services.Facility.SPSController,
 		StateText:               services.Facility.StateText,
@@ -35,17 +39,11 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18n
 		BacnetAlarm:             services.Facility.BacnetAlarmValue,
 	})
 
+	projectHandlers := projecthandler.NewHandlers(services.Project, services.Phase, services.Facility.FieldDevice)
+	userHandlers := userhandler.NewHandlers(services.User, services.Admin, services.RBAC, services.RBAC, services.RBAC)
+
 	return &handler.Handlers{
-		ProjectHandler:    handler.NewProjectHandler(services.Project, projectEvents),
-		DashboardHandler:  handler.NewDashboardHandler(services.Dashboard),
-		PhaseHandler:      handler.NewPhaseHandler(services.Phase),
-		UserHandler:       handler.NewUserHandler(services.User, services.RBAC),
-		TeamHandler:       handler.NewTeamHandler(services.Team),
-		AdminHandler:      handler.NewAdminHandler(services.Admin),
-		RoleHandler:       handler.NewRoleHandler(services.RBAC),
-		PermissionHandler: handler.NewPermissionHandler(services.RBAC),
-		I18nHandler:       handler.NewI18nHandler(i18nLoader),
-		AuthHandler: handler.NewAuthHandler(
+		Auth: authhandler.NewAuthHandler(
 			services.Auth,
 			services.User,
 			services.RBAC,
@@ -53,27 +51,12 @@ func NewHandlers(services *Services, cookieSettings handler.CookieSettings, i18n
 			refreshTokenTTL,
 			cookieSettings,
 		),
-
-		FacilityBuildingHandler:       facilityHandlers.Building,
-		FacilitySystemTypeHandler:     facilityHandlers.SystemType,
-		FacilitySystemPartHandler:     facilityHandlers.SystemPart,
-		FacilityApparatHandler:        facilityHandlers.Apparat,
-		FacilityControlCabinetHandler: facilityHandlers.ControlCabinet,
-		FacilityFieldDeviceHandler:    facilityHandlers.FieldDevice,
-		FacilityBacnetObjectHandler:   facilityHandlers.BacnetObject,
-		FacilitySPSControllerHandler:  facilityHandlers.SPSController,
-		FacilityValidationHandler:     facilityHandlers.Validation,
-
-		FacilityStateTextHandler:               facilityHandlers.StateText,
-		FacilityNotificationClassHandler:       facilityHandlers.NotificationClass,
-		FacilityAlarmDefinitionHandler:         facilityHandlers.AlarmDefinition,
-		FacilityObjectDataHandler:              facilityHandlers.ObjectData,
-		FacilitySPSControllerSystemTypeHandler: facilityHandlers.SPSControllerSystemType,
-		FacilityExportHandler:                  facilityHandlers.Export,
-		FacilityAlarmTypeHandler:               facilityHandlers.AlarmType,
-		FacilityUnitHandler:                    facilityHandlers.Unit,
-		FacilityAlarmFieldHandler:              facilityHandlers.AlarmField,
-		FacilityAlarmTypeFieldHandler:          facilityHandlers.AlarmTypeField,
-		FacilityBacnetAlarmHandler:             facilityHandlers.BacnetAlarm,
+		Dashboard:    dashboardhandler.NewDashboardHandler(services.Dashboard),
+		I18n:         i18nhandler.NewI18nHandler(i18nLoader),
+		Notification: notificationhandler.NewNotificationSettingsHandler(services.Notification),
+		Project:      projectHandlers,
+		Team:         teamhandler.NewTeamHandler(services.Team),
+		User:         userHandlers,
+		Facility:     facilityHandlers,
 	}
 }

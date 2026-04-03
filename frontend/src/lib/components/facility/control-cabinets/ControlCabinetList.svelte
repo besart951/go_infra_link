@@ -112,8 +112,8 @@
   <PaginatedList
     {state}
     columns={[
-      { key: 'cabinet_nr', label: cabinetColumnLabel },
       { key: 'building', label: buildingColumnLabel },
+      { key: 'cabinet_nr', label: cabinetColumnLabel },
       { key: 'actions', label: '', width: 'w-[100px]' }
     ]}
     {searchPlaceholder}
@@ -169,4 +169,3 @@
     {/snippet}
   </PaginatedList>
 </div>
-

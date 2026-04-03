@@ -150,7 +150,7 @@ async function mapWithConcurrency<T, R>(
   const runners = Array.from({ length: runnerCount }, async () => {
     while (true) {
       if (cancelled) {
-        throw new Error('Read session cancelled.');
+        throw new Error('Lesevorgang abgebrochen.');
       }
 
       const current = nextIndex;
@@ -250,7 +250,7 @@ async function scanSectors(
     sectorIndex += 1, start += SECTOR_SIZE
   ) {
     if (cancelled) {
-      throw new Error('Read session cancelled.');
+      throw new Error('Lesevorgang abgebrochen.');
     }
 
     const sectorRows = rows
@@ -300,7 +300,7 @@ async function handleRead(payload: Extract<ExcelReaderWorkerRequest, { type: 're
         percent: 5,
         currentSheet: 1,
         totalSheets: 1,
-        message: 'Loading workbook...'
+        message: 'Arbeitsmappe wird geladen...'
       }
     });
 
@@ -308,7 +308,7 @@ async function handleRead(payload: Extract<ExcelReaderWorkerRequest, { type: 're
     const sheet = workbook.Sheets[TARGET_SHEET_NAME];
 
     if (!sheet) {
-      throw new Error(`Sheet "${TARGET_SHEET_NAME}" was not found.`);
+      throw new Error(`Das Arbeitsblatt "${TARGET_SHEET_NAME}" wurde nicht gefunden.`);
     }
 
     postMessageToClient({
@@ -317,7 +317,7 @@ async function handleRead(payload: Extract<ExcelReaderWorkerRequest, { type: 're
         percent: 12,
         currentSheet: 1,
         totalSheets: 1,
-        message: `Reading sheet "${TARGET_SHEET_NAME}"...`
+        message: `Arbeitsblatt "${TARGET_SHEET_NAME}" wird gelesen...`
       }
     });
 
@@ -328,7 +328,7 @@ async function handleRead(payload: Extract<ExcelReaderWorkerRequest, { type: 're
     });
 
     if (rows.length <= START_ROW_INDEX) {
-      throw new Error('No scanner data found in the target sheet.');
+      throw new Error('Im Ziel-Arbeitsblatt wurden keine Scanner-Daten gefunden.');
     }
 
     const basePrefix = assembleBasePrefix(rows);
@@ -356,11 +356,11 @@ async function handleRead(payload: Extract<ExcelReaderWorkerRequest, { type: 're
         percent: 100,
         currentSheet: 1,
         totalSheets: 1,
-        message: 'Read session prepared.'
+        message: 'Lesevorgang vorbereitet.'
       }
     });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Read session cancelled.') {
+    if (error instanceof Error && error.message === 'Lesevorgang abgebrochen.') {
       postMessageToClient({ type: 'cancelled' });
       return;
     }
@@ -368,7 +368,7 @@ async function handleRead(payload: Extract<ExcelReaderWorkerRequest, { type: 're
     postMessageToClient({
       type: 'error',
       payload: {
-        message: error instanceof Error ? error.message : 'Failed to read Excel file.'
+        message: error instanceof Error ? error.message : 'Excel-Datei konnte nicht gelesen werden.'
       }
     });
   }

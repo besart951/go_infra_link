@@ -5,7 +5,7 @@
   import MultiCreateSelectionSection from './multi-create/MultiCreateSelectionSection.svelte';
   import MultiCreateRowsSection from './multi-create/MultiCreateRowsSection.svelte';
   import { addToast } from '$lib/components/toast.svelte';
-  import { ApiException } from '$lib/api/client.js';
+  import { ApiException, localizeErrorText } from '$lib/api/client.js';
   import { t as translate } from '$lib/i18n/index.js';
 
   // Domain imports
@@ -303,7 +303,7 @@
         }
 
         backendErrors.set(result.index, {
-          message: result.error,
+          message: localizeErrorText(result.error, result.error_field),
           field: (result.error_field as FieldDeviceRowError['field']) || ''
         });
       });

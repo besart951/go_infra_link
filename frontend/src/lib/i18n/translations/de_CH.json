@@ -76,7 +76,8 @@
     "created": "Erstellt am {date}",
     "modified": "Geändert am {date}",
     "id": "ID",
-    "not_available": "—"
+    "not_available": "—",
+    "operation_completed": "Vorgang erfolgreich abgeschlossen."
   },
   "actions": {
     "disable_user": "Benutzer deaktivieren",
@@ -122,7 +123,8 @@
     "password_reset_success": "Ihr Passwort wurde erfolgreich zurückgesetzt.",
     "email_already_registered": "Diese E-Mail-Adresse ist bereits registriert.",
     "weak_password": "Das Passwort ist zu schwach. Es muss mindestens 8 Zeichen lang sein und Gross- und Kleinbuchstaben sowie Zahlen enthalten.",
-    "session_expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
+    "session_expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+    "load_failed": "Authentifizierungsdaten konnten nicht geladen werden."
   },
   "validation": {
     "required": "{field} ist erforderlich.",
@@ -138,6 +140,18 @@
     "date_invalid": "{field} muss ein gültiges Datum sein.",
     "range": "{field} muss zwischen {min} und {max} liegen.",
     "must_match": "{field1} und {field2} müssen übereinstimmen.",
+    "invalid": "{field} ist ungültig.",
+    "min_generic": "{field} muss mindestens {min} sein.",
+    "max_generic": "{field} darf höchstens {max} sein.",
+    "exact_length": "{field} muss genau {length} Zeichen lang sein.",
+    "one_of": "{field} muss einer der folgenden Werte sein: {options}.",
+    "valid_ipv4": "{field} muss eine gültige IPv4-Adresse sein.",
+    "valid_ipv4_subnet": "{field} muss eine gültige IPv4-Subnetzmaske sein.",
+    "number_between": "{field} muss eine Zahl zwischen {min} und {max} sein.",
+    "exact_uppercase_letters": "{field} muss genau {count} Grossbuchstaben (A-Z) enthalten.",
+    "unique_within": "{field} muss innerhalb von {scope} eindeutig sein.",
+    "unique_per": "{field} muss pro {scope} eindeutig sein.",
+    "required_when_plain_auth": "{field} ist erforderlich, wenn die SMTP-Authentifizierung mit Benutzername und Passwort aktiv ist.",
     "until_must_be_future": "Das Datum muss in der Zukunft liegen.",
     "phase_id_required": "Die Phase-ID ist erforderlich.",
     "invalid_uuid_format": "Das UUID-Format ist ungültig."
@@ -235,6 +249,9 @@
   },
   "projects": {
     "redirect": "Weiterleitung zu Projekten...",
+    "page": {
+      "creating": "Projekt wird erstellt..."
+    },
     "detail": {
       "description": "Projektressourcen und Zuweisungen verwalten.",
       "settings": "Einstellungen"
@@ -587,12 +604,14 @@
     "deleted": "Der Eintrag wurde erfolgreich gelöscht.",
     "created": "Der Eintrag wurde erfolgreich erstellt.",
     "updated": "Der Eintrag wurde erfolgreich aktualisiert.",
+    "building_load_failed": "Gebäude konnte nicht geladen werden.",
     "building_not_found": "Gebäude nicht gefunden.",
     "system_type_not_found": "Systemtyp nicht gefunden.",
     "system_part_not_found": "Systemteil nicht gefunden.",
     "apparat_not_found": "Apparat nicht gefunden.",
     "field_device_not_found": "Feldgerät nicht gefunden.",
     "bacnet_object_not_found": "BACnet-Objekt nicht gefunden.",
+    "control_cabinet_load_failed": "Schaltschrankdetails konnten nicht geladen werden.",
     "control_cabinet_not_found": "Schaltschrank nicht gefunden.",
     "sps_controller_not_found": "SPS-Regler nicht gefunden.",
     "notification_class_not_found": "Benachrichtigungsklasse nicht gefunden.",
@@ -816,8 +835,11 @@
     "not_found": "Nicht gefunden.",
     "server_error": "Serverfehler. Bitte versuchen Sie es später erneut.",
     "network_error": "Netzwerkfehler. Bitte überprüfen Sie Ihre Internetverbindung.",
+    "network_request_failed": "Netzwerkanfrage fehlgeschlagen. Das Backend ist möglicherweise nicht verfügbar.",
     "validation_error": "Validierungsfehler. Bitte überprüfen Sie Ihre Eingaben.",
     "unknown_error": "Ein unbekannter Fehler ist aufgetreten.",
+    "unexpected_error": "Ein unerwarteter Fehler ist aufgetreten.",
+    "load_failed": "Daten konnten nicht geladen werden.",
     "change_role_failed": "Rollenänderung fehlgeschlagen",
     "toggle_user_status_failed": "Benutzerstatuswechsel fehlgeschlagen",
     "delete_user_failed": "Benutzer löschen fehlgeschlagen",
@@ -853,6 +875,7 @@
     "notification_classes": "Benachrichtigungsklassen",
     "settings": "Einstellungen",
     "account": "Konto",
+    "notifications": "Benachrichtigungen",
     "logout": "Abmelden",
     "help": "Hilfe",
     "excel_importer": "Excel-Importer",
@@ -975,6 +998,119 @@
       "permission_updated": "Berechtigung erfolgreich aktualisiert",
       "permission_deleted": "Berechtigung erfolgreich gelöscht",
       "role_permissions_updated": "Berechtigungen aktualisiert für {role}"
+    }
+  },
+  "notifications": {
+    "page": {
+      "title": "SMTP & Benachrichtigungen",
+      "description": "Konfigurieren Sie den SMTP-Versand, aktivieren Sie den Benachrichtigungsdienst und pruefen Sie die Zustellung mit Test-E-Mails."
+    },
+    "hero": {
+      "scope": "Nur fuer Superadmin sichtbar",
+      "service_status": "Dienststatus",
+      "delivery_channel": "SMTP-Ziel",
+      "last_sync": "Letzte Synchronisation"
+    },
+    "status": {
+      "enabled": "Benachrichtigungen aktiv",
+      "disabled": "Benachrichtigungen pausiert",
+      "not_configured": "Noch nicht konfiguriert",
+      "loading": "Lade Konfiguration",
+      "synced": "Mit Backend synchron",
+      "unsaved": "Ungespeicherte Aenderungen"
+    },
+    "providers": {
+      "smtp": "SMTP"
+    },
+    "security": {
+      "none": "Ohne Transportverschluesselung",
+      "starttls": "STARTTLS",
+      "tls": "TLS / SMTPS"
+    },
+    "security_descriptions": {
+      "none": "Verbindet unverschluesselt. Nur in abgeschotteten Netzen sinnvoll.",
+      "starttls": "Beginnt unverschluesselt und hebt die Verbindung per STARTTLS auf TLS an.",
+      "tls": "Verwendet vom ersten Paket an eine TLS-geschuetzte Verbindung."
+    },
+    "auth": {
+      "none": "Keine SMTP-Anmeldung",
+      "plain": "Benutzername + Passwort"
+    },
+    "auth_descriptions": {
+      "none": "Fuer Relays, die dem Absendernetz ohne Login vertrauen.",
+      "plain": "Standard fuer die meisten SMTP-Provider und Mailserver."
+    },
+    "overview": {
+      "title": "Aktuelle SMTP-Lage",
+      "description": "Zeigt den zuletzt gespeicherten Serverzustand und die Versandbereitschaft.",
+      "empty_title": "Es ist noch keine SMTP-Konfiguration gespeichert.",
+      "empty_description": "Speichern Sie unten Host, Authentifizierung und Absenderdaten, um E-Mail-Benachrichtigungen zu aktivieren.",
+      "provider": "Provider",
+      "host": "Host",
+      "port": "Port",
+      "sender": "Absender",
+      "reply_to": "Antwortadresse",
+      "transport": "Transport",
+      "authentication": "Authentifizierung",
+      "password_set": "Passwort hinterlegt",
+      "password_missing": "Kein Passwort gespeichert",
+      "updated_at": "Zuletzt aktualisiert",
+      "service_disabled": "Der Dienst ist gespeichert, aber derzeit deaktiviert. Ereignisse senden keine E-Mails, bis Sie ihn aktivieren.",
+      "service_enabled": "Die Konfiguration ist bereit fuer produktive Benachrichtigungen."
+    },
+    "form": {
+      "title": "SMTP einrichten",
+      "description": "Pflegen Sie Server, Senderidentitaet und Sicherheitsmodus an einer Stelle.",
+      "enable_title": "Benachrichtigungsdienst aktivieren",
+      "enable_description": "Wenn deaktiviert, bleibt die Konfiguration gespeichert, aber produktive Benachrichtigungen werden nicht versendet.",
+      "host": "SMTP-Host",
+      "host_placeholder": "smtp.example.com",
+      "port": "Port",
+      "username": "Benutzername",
+      "username_placeholder": "mailer@example.com",
+      "password": "Passwort",
+      "password_placeholder": "Nur eingeben, wenn Sie das Passwort setzen oder aendern moechten",
+      "from_email": "Absender-E-Mail",
+      "from_email_placeholder": "no-reply@example.com",
+      "from_name": "Absendername",
+      "from_name_placeholder": "Infra Link",
+      "reply_to": "Reply-To",
+      "reply_to_placeholder": "support@example.com",
+      "transport_title": "Transportsicherheit",
+      "transport_description": "Waehlen Sie, wie sich der Backend-Dienst mit dem Mailserver verbindet.",
+      "auth_title": "SMTP-Authentifizierung",
+      "auth_description": "Legt fest, ob der Server einen Login erwartet.",
+      "allow_insecure_title": "Unsichere TLS-Zertifikate akzeptieren",
+      "allow_insecure_description": "Nur fuer Testsysteme oder interne Zertifikate ohne saubere Vertrauenskette verwenden.",
+      "password_required": "Ein Passwort ist erforderlich, solange die Authentifizierung auf Benutzername + Passwort steht.",
+      "password_kept": "Ein Passwort ist bereits gespeichert. Lassen Sie das Feld leer, um es unveraendert zu behalten.",
+      "save": "SMTP speichern",
+      "reset": "Zuruecksetzen"
+    },
+    "test": {
+      "title": "Test-E-Mail senden",
+      "description": "Pruefen Sie direkt aus der Admin-Oberflaeche, ob der Mailserver erreichbar ist.",
+      "to": "Empfaenger",
+      "to_placeholder": "admin@example.com",
+      "subject": "Betreff",
+      "subject_placeholder": "SMTP-Konfigurationstest",
+      "body": "Nachricht",
+      "body_placeholder": "Dies ist eine Test-E-Mail aus Infra Link.",
+      "send": "Test senden",
+      "missing_config": "Speichern Sie zuerst eine SMTP-Konfiguration, bevor Sie eine Test-E-Mail senden.",
+      "disabled_hint": "Auch bei deaktiviertem Dienst wird die Test-E-Mail mit der gespeicherten Konfiguration versendet."
+    },
+    "validation": {
+      "host_required": "Host ist erforderlich.",
+      "port_range": "Port muss zwischen 1 und 65535 liegen.",
+      "email_invalid": "Bitte geben Sie eine gueltige E-Mail-Adresse ein.",
+      "username_required": "Benutzername ist erforderlich, wenn SMTP-Authentifizierung aktiv ist.",
+      "password_required": "Passwort ist erforderlich, wenn noch kein Passwort gespeichert ist."
+    },
+    "toasts": {
+      "saved": "SMTP-Konfiguration gespeichert.",
+      "test_sent": "Test-E-Mail wurde versendet.",
+      "refreshed": "SMTP-Konfiguration aktualisiert."
     }
   },
   "users": {
@@ -1234,6 +1370,12 @@
         "creating": "Erstelle...",
         "create": "Erstelle {count} Feldgerät(e)"
       },
+      "validation": {
+        "field_device_required": "Feldgerät ist erforderlich.",
+        "parents_not_found": "Mindestens eine übergeordnete Entität (SPS-Regler, Apparat oder Systemteil) wurde nicht gefunden.",
+        "apparat_nr_required": "Apparatnummer ist erforderlich.",
+        "apparat_nr_used": "Diese Apparatnummer ist bereits vergeben."
+      },
       "object_data_preview": {
         "title": "BACnet-Objekte der Objektdaten",
         "count": "{count} Objekt(e)",
@@ -1326,6 +1468,17 @@
       "save_all": "Alles speichern",
       "discard": "Verwerfen",
       "notice": "Änderungen werden lokal gespeichert und bleiben beim Navigieren erhalten"
+    },
+    "editing": {
+      "toasts": {
+        "fix_validation": "Bitte beheben Sie die Validierungsfehler vor dem Speichern.",
+        "partial_success": "{complete} Feldgerät(e) vollständig und {partial} Feldgerät(e) teilweise aktualisiert. Bitte prüfen Sie die fehlgeschlagenen Felder.",
+        "success": "{count} Feldgerät(e) aktualisiert.",
+        "partial_failure": "{count} Feldgerät(e) konnten nicht vollständig aktualisiert werden. Bitte prüfen Sie die markierten Felder.",
+        "bulk_update_failed": "Sammelaktualisierung fehlgeschlagen: {message}",
+        "update_failed_check_fields": "Aktualisierung fehlgeschlagen. Bitte prüfen Sie die markierten Felder.",
+        "update_failed": "Aktualisierung fehlgeschlagen: {message}"
+      }
     },
     "table_select": {
       "apparat": "Apparat auswählen...",

@@ -8,6 +8,7 @@
  */
 
 import { getCurrentUser, getAllowedRoles, type User, type UserRole } from '$lib/api/users.js';
+import { t } from '$lib/i18n/index.js';
 
 // Role hierarchy levels (higher = more privileged)
 export const ROLE_LEVELS: Record<UserRole, number> = {
@@ -48,7 +49,7 @@ export async function loadAuth(): Promise<void> {
     authState.user = user;
     authState.allowedRoles = allowedRolesResponse.roles;
   } catch (error) {
-    authState.error = error instanceof Error ? error.message : 'Failed to load auth';
+    authState.error = error instanceof Error ? error.message : t('auth.load_failed');
     authState.user = null;
     authState.allowedRoles = [];
   } finally {

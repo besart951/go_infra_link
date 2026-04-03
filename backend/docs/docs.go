@@ -15,6 +15,125 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/admin/notifications/smtp": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Get SMTP notification settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SMTPSettingsResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Create or update SMTP notification settings",
+                "parameters": [
+                    {
+                        "description": "SMTP settings",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UpsertSMTPSettingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SMTPSettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/notifications/smtp/test": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Send an SMTP test email",
+                "parameters": [
+                    {
+                        "description": "Test email payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SendSMTPTestEmailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/users/{id}/disable": {
             "post": {
                 "tags": [
@@ -37,13 +156,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -71,13 +190,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -106,7 +225,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AdminSetUserRoleRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.AdminSetUserRoleRequest"
                         }
                     }
                 ],
@@ -117,13 +236,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -148,7 +267,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.LoginRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.LoginRequest"
                         }
                     }
                 ],
@@ -156,25 +275,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AuthResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.AuthResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.ErrorResponse"
                         }
                     }
                 }
@@ -206,19 +325,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AuthUserResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.AuthUserResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.ErrorResponse"
                         }
                     }
                 }
@@ -237,19 +356,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AuthResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.AuthResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.ErrorResponse"
                         }
                     }
                 }
@@ -290,19 +409,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmDefinitionListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -325,7 +444,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateAlarmDefinitionRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmDefinitionRequest"
                         }
                     }
                 ],
@@ -333,19 +452,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmDefinitionResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -373,25 +492,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmDefinitionResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -421,7 +540,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateAlarmDefinitionRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmDefinitionRequest"
                         }
                     }
                 ],
@@ -429,25 +548,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmDefinitionResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -476,13 +595,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -590,19 +709,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -625,7 +744,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateApparatRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateApparatRequest"
                         }
                     }
                 ],
@@ -633,19 +752,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -670,7 +789,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatBulkRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatBulkRequest"
                         }
                     }
                 ],
@@ -678,19 +797,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatBulkResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatBulkResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -718,25 +837,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -766,7 +885,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateApparatRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateApparatRequest"
                         }
                     }
                 ],
@@ -774,25 +893,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -821,13 +940,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -852,7 +971,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateBacnetObjectRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateBacnetObjectRequest"
                         }
                     }
                 ],
@@ -860,25 +979,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -910,7 +1029,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateBacnetObjectRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBacnetObjectRequest"
                         }
                     }
                 ],
@@ -918,31 +1037,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -970,7 +1089,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmTypeResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse"
                         }
                     }
                 }
@@ -998,7 +1117,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmValuesResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmValuesResponse"
                         }
                     }
                 }
@@ -1028,7 +1147,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PutAlarmValuesRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.PutAlarmValuesRequest"
                         }
                     }
                 ],
@@ -1036,7 +1155,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmValuesResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmValuesResponse"
                         }
                     }
                 }
@@ -1077,19 +1196,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1112,7 +1231,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateBuildingRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateBuildingRequest"
                         }
                     }
                 ],
@@ -1120,19 +1239,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1157,7 +1276,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingBulkRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingBulkRequest"
                         }
                     }
                 ],
@@ -1165,19 +1284,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingBulkResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingBulkResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1202,7 +1321,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ValidateBuildingRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ValidateBuildingRequest"
                         }
                     }
                 ],
@@ -1213,13 +1332,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1247,25 +1366,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1295,7 +1414,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateBuildingRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest"
                         }
                     }
                 ],
@@ -1303,25 +1422,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1350,13 +1469,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1403,19 +1522,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1438,7 +1557,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateControlCabinetRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateControlCabinetRequest"
                         }
                     }
                 ],
@@ -1446,19 +1565,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1483,7 +1602,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetBulkRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetBulkRequest"
                         }
                     }
                 ],
@@ -1491,19 +1610,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetBulkResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetBulkResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1528,7 +1647,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ValidateControlCabinetRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ValidateControlCabinetRequest"
                         }
                     }
                 ],
@@ -1539,13 +1658,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1573,25 +1692,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1621,7 +1740,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateControlCabinetRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest"
                         }
                     }
                 ],
@@ -1629,25 +1748,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1676,13 +1795,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1710,31 +1829,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1762,25 +1881,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetDeleteImpactResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetDeleteImpactResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1863,19 +1982,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1916,19 +2035,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AvailableApparatNumbersResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AvailableApparatNumbersResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1953,7 +2072,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkDeleteFieldDeviceRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceRequest"
                         }
                     }
                 ],
@@ -1961,19 +2080,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkDeleteFieldDeviceResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1999,7 +2118,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkUpdateFieldDeviceRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkUpdateFieldDeviceRequest"
                         }
                     }
                 ],
@@ -2007,19 +2126,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkUpdateFieldDeviceResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkUpdateFieldDeviceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2045,7 +2164,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.MultiCreateFieldDeviceRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.MultiCreateFieldDeviceRequest"
                         }
                     }
                 ],
@@ -2053,19 +2172,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.MultiCreateFieldDeviceResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.MultiCreateFieldDeviceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2085,13 +2204,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceOptionsResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceOptionsResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2119,25 +2238,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2167,7 +2286,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateFieldDeviceRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest"
                         }
                     }
                 ],
@@ -2175,25 +2294,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2222,13 +2341,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2258,26 +2377,26 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse"
+                                "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2309,7 +2428,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateFieldDeviceSpecificationRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceSpecificationRequest"
                         }
                     }
                 ],
@@ -2317,25 +2436,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SpecificationResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2365,7 +2484,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateFieldDeviceSpecificationRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateFieldDeviceSpecificationRequest"
                         }
                     }
                 ],
@@ -2373,31 +2492,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SpecificationResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2438,19 +2557,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.NotificationClassListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2473,7 +2592,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateNotificationClassRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateNotificationClassRequest"
                         }
                     }
                 ],
@@ -2481,19 +2600,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.NotificationClassResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2521,25 +2640,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.NotificationClassResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2569,7 +2688,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateNotificationClassRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateNotificationClassRequest"
                         }
                     }
                 ],
@@ -2577,25 +2696,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.NotificationClassResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2624,13 +2743,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2718,7 +2837,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateObjectDataRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateObjectDataRequest"
                         }
                     }
                 ],
@@ -2726,19 +2845,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ObjectDataResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2814,7 +2933,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateObjectDataRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateObjectDataRequest"
                         }
                     }
                 ],
@@ -2822,25 +2941,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ObjectDataResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2869,13 +2988,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -2905,26 +3024,26 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse"
+                                "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3163,19 +3282,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3198,7 +3317,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSPSControllerRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateSPSControllerRequest"
                         }
                     }
                 ],
@@ -3206,19 +3325,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3243,7 +3362,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerBulkRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerBulkRequest"
                         }
                     }
                 ],
@@ -3251,19 +3370,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerBulkResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerBulkResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3297,31 +3416,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.NextAvailableGADeviceResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.NextAvailableGADeviceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3346,7 +3465,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ValidateSPSControllerRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ValidateSPSControllerRequest"
                         }
                     }
                 ],
@@ -3357,13 +3476,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3391,25 +3510,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3439,7 +3558,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSPSControllerRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest"
                         }
                     }
                 ],
@@ -3447,25 +3566,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3494,13 +3613,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3528,31 +3647,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3593,19 +3712,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.StateTextListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3628,7 +3747,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateStateTextRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateStateTextRequest"
                         }
                     }
                 ],
@@ -3636,19 +3755,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.StateTextResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3676,25 +3795,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.StateTextResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3724,7 +3843,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateStateTextRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateStateTextRequest"
                         }
                     }
                 ],
@@ -3732,25 +3851,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.StateTextResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3779,13 +3898,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3838,19 +3957,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3873,7 +3992,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSystemPartRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateSystemPartRequest"
                         }
                     }
                 ],
@@ -3881,19 +4000,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3921,25 +4040,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -3969,7 +4088,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSystemPartRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSystemPartRequest"
                         }
                     }
                 ],
@@ -3977,25 +4096,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -4024,13 +4143,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -4071,19 +4190,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemTypeListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -4107,7 +4226,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSystemTypeRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateSystemTypeRequest"
                         }
                     }
                 ],
@@ -4115,19 +4234,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemTypeResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -4155,25 +4274,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemTypeResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -4204,7 +4323,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSystemTypeRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSystemTypeRequest"
                         }
                     }
                 ],
@@ -4212,25 +4331,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemTypeResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -4259,13 +4378,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -4300,19 +4419,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/internal_handler_i18n.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/internal_handler_i18n.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/internal_handler_i18n.ErrorResponse"
                         }
                     }
                 }
@@ -4333,14 +4452,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PermissionResponse"
+                                "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.PermissionResponse"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -4363,7 +4482,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreatePermissionRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.CreatePermissionRequest"
                         }
                     }
                 ],
@@ -4371,19 +4490,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PermissionResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.PermissionResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -4415,7 +4534,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdatePermissionRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UpdatePermissionRequest"
                         }
                     }
                 ],
@@ -4423,25 +4542,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PermissionResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.PermissionResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -4470,19 +4589,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -4523,19 +4642,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.PhaseListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -4558,7 +4677,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreatePhaseRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreatePhaseRequest"
                         }
                     }
                 ],
@@ -4566,19 +4685,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.PhaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -4606,25 +4725,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.PhaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -4654,7 +4773,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdatePhaseRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdatePhaseRequest"
                         }
                     }
                 ],
@@ -4662,25 +4781,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.PhaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -4709,13 +4828,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -4756,19 +4875,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -4791,7 +4910,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreateProjectRequest"
                         }
                     }
                 ],
@@ -4799,19 +4918,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -4839,25 +4958,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -4887,7 +5006,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateProjectRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectRequest"
                         }
                     }
                 ],
@@ -4895,25 +5014,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -4942,13 +5061,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -4990,25 +5109,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectControlCabinetListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectControlCabinetListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5038,7 +5157,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectControlCabinetRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreateProjectControlCabinetRequest"
                         }
                     }
                 ],
@@ -5046,25 +5165,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectControlCabinetResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectControlCabinetResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5103,7 +5222,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateProjectControlCabinetRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectControlCabinetRequest"
                         }
                     }
                 ],
@@ -5111,25 +5230,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectControlCabinetResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectControlCabinetResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5165,19 +5284,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5206,19 +5325,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceOptionsResponse"
+                            "$ref": "#/definitions/internal_handler_project.FieldDeviceOptionsResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/internal_handler_project.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/internal_handler_project.ErrorResponse"
                         }
                     }
                 }
@@ -5260,25 +5385,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectFieldDeviceListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectFieldDeviceListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5308,7 +5433,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectFieldDeviceRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreateProjectFieldDeviceRequest"
                         }
                     }
                 ],
@@ -5316,25 +5441,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectFieldDeviceResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectFieldDeviceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5373,7 +5498,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateProjectFieldDeviceRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectFieldDeviceRequest"
                         }
                     }
                 ],
@@ -5381,25 +5506,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectFieldDeviceResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectFieldDeviceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5435,19 +5560,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5507,25 +5632,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ObjectDataListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5555,7 +5680,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectObjectDataRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreateProjectObjectDataRequest"
                         }
                     }
                 ],
@@ -5563,31 +5688,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ObjectDataResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5622,25 +5747,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ObjectDataResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5682,25 +5807,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectSPSControllerListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectSPSControllerListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5730,7 +5855,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectSPSControllerRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreateProjectSPSControllerRequest"
                         }
                     }
                 ],
@@ -5738,25 +5863,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectSPSControllerResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectSPSControllerResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5795,7 +5920,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateProjectSPSControllerRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectSPSControllerRequest"
                         }
                     }
                 ],
@@ -5803,25 +5928,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectSPSControllerResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectSPSControllerResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5857,19 +5982,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5897,25 +6022,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectUserListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectUserListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5945,7 +6070,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectUserRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreateProjectUserRequest"
                         }
                     }
                 ],
@@ -5953,25 +6078,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectUserResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectUserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -6009,19 +6134,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -6042,14 +6167,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.RoleResponse"
+                                "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RoleResponse"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -6081,7 +6206,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateRolePermissionsRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UpdateRolePermissionsRequest"
                         }
                     }
                 ],
@@ -6089,25 +6214,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.RoleResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RoleResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -6137,7 +6262,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AddRolePermissionRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.AddRolePermissionRequest"
                         }
                     }
                 ],
@@ -6145,25 +6270,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.RolePermissionResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RolePermissionResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -6201,13 +6326,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -6248,19 +6373,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.TeamListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     }
                 }
@@ -6283,7 +6408,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateTeamRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.CreateTeamRequest"
                         }
                     }
                 ],
@@ -6291,19 +6416,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.TeamResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     }
                 }
@@ -6331,25 +6456,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.TeamResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     }
                 }
@@ -6379,7 +6504,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateTeamRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.UpdateTeamRequest"
                         }
                     }
                 ],
@@ -6387,25 +6512,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.TeamResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     }
                 }
@@ -6431,13 +6556,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     }
                 }
@@ -6479,19 +6604,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamMemberListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.TeamMemberListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     }
                 }
@@ -6518,7 +6643,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AddTeamMemberRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.AddTeamMemberRequest"
                         }
                     }
                 ],
@@ -6529,13 +6654,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     }
                 }
@@ -6570,13 +6695,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse"
                         }
                     }
                 }
@@ -6617,19 +6742,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UserListResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -6652,7 +6777,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateUserRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.CreateUserRequest"
                         }
                     }
                 ],
@@ -6660,19 +6785,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UserResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -6691,19 +6816,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AllowedRolesResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.AllowedRolesResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -6731,25 +6856,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UserResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -6779,7 +6904,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateUserRequest"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UpdateUserRequest"
                         }
                     }
                 ],
@@ -6787,25 +6912,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UserResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -6834,13 +6959,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     }
                 }
@@ -6882,378 +7007,7 @@ const docTemplate = `{
                 "RoleEnterpreneur"
             ]
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AddRolePermissionRequest": {
-            "type": "object",
-            "required": [
-                "permission"
-            ],
-            "properties": {
-                "permission": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AddTeamMemberRequest": {
-            "type": "object",
-            "required": [
-                "role",
-                "user_id"
-            ],
-            "properties": {
-                "role": {
-                    "type": "string",
-                    "enum": [
-                        "member",
-                        "manager",
-                        "owner"
-                    ]
-                },
-                "user_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AdminSetUserRoleRequest": {
-            "type": "object",
-            "required": [
-                "role"
-            ],
-            "properties": {
-                "role": {
-                    "type": "string",
-                    "enum": [
-                        "superadmin",
-                        "admin_fzag",
-                        "fzag",
-                        "admin_planer",
-                        "planer",
-                        "admin_entrepreneur",
-                        "entrepreneur"
-                    ]
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionListResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionResponse"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmDefinitionResponse": {
-            "type": "object",
-            "properties": {
-                "alarm_note": {
-                    "type": "string"
-                },
-                "alarm_type_id": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "scope": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmFieldResponse": {
-            "type": "object",
-            "properties": {
-                "data_type": {
-                    "type": "string"
-                },
-                "default_unit_code": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "key": {
-                    "type": "string"
-                },
-                "label": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmTypeFieldResponse": {
-            "type": "object",
-            "properties": {
-                "alarm_field": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmFieldResponse"
-                },
-                "alarm_field_id": {
-                    "type": "string"
-                },
-                "alarm_type_id": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "default_unit": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UnitResponse"
-                },
-                "default_unit_id": {
-                    "type": "string"
-                },
-                "default_value_json": {
-                    "type": "string"
-                },
-                "display_order": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "is_required": {
-                    "type": "boolean"
-                },
-                "is_user_editable": {
-                    "type": "boolean"
-                },
-                "ui_group": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "validation_json": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmTypeResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "fields": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmTypeFieldResponse"
-                    }
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmValueInput": {
-            "type": "object",
-            "required": [
-                "alarm_type_field_id"
-            ],
-            "properties": {
-                "alarm_type_field_id": {
-                    "type": "string"
-                },
-                "source": {
-                    "type": "string"
-                },
-                "unit_id": {
-                    "type": "string"
-                },
-                "value_boolean": {
-                    "type": "boolean"
-                },
-                "value_integer": {
-                    "type": "integer"
-                },
-                "value_json": {
-                    "type": "string"
-                },
-                "value_number": {
-                    "type": "number"
-                },
-                "value_string": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmValueResponse": {
-            "type": "object",
-            "properties": {
-                "alarm_type_field_id": {
-                    "type": "string"
-                },
-                "bacnet_object_id": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "source": {
-                    "type": "string"
-                },
-                "unit_id": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "value_boolean": {
-                    "type": "boolean"
-                },
-                "value_integer": {
-                    "type": "integer"
-                },
-                "value_json": {
-                    "type": "string"
-                },
-                "value_number": {
-                    "type": "number"
-                },
-                "value_string": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmValuesResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmValueResponse"
-                    }
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AllowedRole": {
-            "type": "object",
-            "properties": {
-                "display_name": {
-                    "type": "string"
-                },
-                "role": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AllowedRolesResponse": {
-            "type": "object",
-            "properties": {
-                "roles": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AllowedRole"
-                    }
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatBulkRequest": {
-            "type": "object",
-            "required": [
-                "ids"
-            ],
-            "properties": {
-                "ids": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatBulkResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
-                    }
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatListResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "short_name": {
-                    "type": "string"
-                },
-                "system_parts": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse"
-                    }
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AuthResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.AuthResponse": {
             "type": "object",
             "properties": {
                 "access_token_expires_at": {
@@ -7266,11 +7020,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AuthUserResponse"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.AuthUserResponse"
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AuthUserResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.AuthUserResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -7317,7 +7071,338 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.AvailableApparatNumbersResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.LoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmDefinitionListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmDefinitionResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmDefinitionResponse": {
+            "type": "object",
+            "properties": {
+                "alarm_note": {
+                    "type": "string"
+                },
+                "alarm_type_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "scope": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse": {
+            "type": "object",
+            "properties": {
+                "data_type": {
+                    "type": "string"
+                },
+                "default_unit_code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeFieldResponse": {
+            "type": "object",
+            "properties": {
+                "alarm_field": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmFieldResponse"
+                },
+                "alarm_field_id": {
+                    "type": "string"
+                },
+                "alarm_type_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "default_unit": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse"
+                },
+                "default_unit_id": {
+                    "type": "string"
+                },
+                "default_value_json": {
+                    "type": "string"
+                },
+                "display_order": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_required": {
+                    "type": "boolean"
+                },
+                "is_user_editable": {
+                    "type": "boolean"
+                },
+                "ui_group": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "validation_json": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "fields": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmTypeFieldResponse"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmValueInput": {
+            "type": "object",
+            "required": [
+                "alarm_type_field_id"
+            ],
+            "properties": {
+                "alarm_type_field_id": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "string"
+                },
+                "value_boolean": {
+                    "type": "boolean"
+                },
+                "value_integer": {
+                    "type": "integer"
+                },
+                "value_json": {
+                    "type": "string"
+                },
+                "value_number": {
+                    "type": "number"
+                },
+                "value_string": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmValueResponse": {
+            "type": "object",
+            "properties": {
+                "alarm_type_field_id": {
+                    "type": "string"
+                },
+                "bacnet_object_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "value_boolean": {
+                    "type": "boolean"
+                },
+                "value_integer": {
+                    "type": "integer"
+                },
+                "value_json": {
+                    "type": "string"
+                },
+                "value_number": {
+                    "type": "number"
+                },
+                "value_string": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmValuesResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmValueResponse"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatBulkRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatBulkResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "system_parts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartResponse"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AvailableApparatNumbersResponse": {
             "type": "object",
             "properties": {
                 "available": {
@@ -7328,7 +7413,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectBulkPatchInput": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectBulkPatchInput": {
             "type": "object",
             "required": [
                 "id"
@@ -7387,7 +7472,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectInput": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectInput": {
             "type": "object",
             "required": [
                 "software_number",
@@ -7445,7 +7530,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse": {
             "type": "object",
             "properties": {
                 "alarm_definition_id": {
@@ -7504,7 +7589,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingBulkRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingBulkRequest": {
             "type": "object",
             "required": [
                 "ids"
@@ -7519,24 +7604,24 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingBulkResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingBulkResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingResponse"
                     }
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingListResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingResponse"
                     }
                 },
                 "page": {
@@ -7550,7 +7635,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BuildingResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingResponse": {
             "type": "object",
             "properties": {
                 "building_group": {
@@ -7570,7 +7655,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkDeleteFieldDeviceRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceRequest": {
             "type": "object",
             "required": [
                 "ids"
@@ -7585,7 +7670,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkDeleteFieldDeviceResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceResponse": {
             "type": "object",
             "properties": {
                 "failure_count": {
@@ -7594,7 +7679,7 @@ const docTemplate = `{
                 "results": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkOperationResultItem"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkOperationResultItem"
                     }
                 },
                 "success_count": {
@@ -7605,7 +7690,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkOperationResultItem": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkOperationResultItem": {
             "type": "object",
             "properties": {
                 "error": {
@@ -7625,7 +7710,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkUpdateFieldDeviceItem": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkUpdateFieldDeviceItem": {
             "type": "object",
             "required": [
                 "id"
@@ -7642,30 +7727,30 @@ const docTemplate = `{
                 "bacnet_objects": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectBulkPatchInput"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectBulkPatchInput"
                     }
                 },
                 "bmk": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalString"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 },
                 "description": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalString"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 },
                 "id": {
                     "type": "string"
                 },
                 "specification": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationInput"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SpecificationInput"
                 },
                 "system_part_id": {
                     "type": "string"
                 },
                 "text_fix": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalString"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkUpdateFieldDeviceRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkUpdateFieldDeviceRequest": {
             "type": "object",
             "required": [
                 "updates"
@@ -7675,12 +7760,12 @@ const docTemplate = `{
                     "type": "array",
                     "minItems": 1,
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkUpdateFieldDeviceItem"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkUpdateFieldDeviceItem"
                     }
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkUpdateFieldDeviceResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkUpdateFieldDeviceResponse": {
             "type": "object",
             "properties": {
                 "failure_count": {
@@ -7689,7 +7774,7 @@ const docTemplate = `{
                 "results": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BulkOperationResultItem"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkOperationResultItem"
                     }
                 },
                 "success_count": {
@@ -7700,7 +7785,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetBulkRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetBulkRequest": {
             "type": "object",
             "required": [
                 "ids"
@@ -7715,18 +7800,18 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetBulkResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetBulkResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"
                     }
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetDeleteImpactResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetDeleteImpactResponse": {
             "type": "object",
             "properties": {
                 "bacnet_objects_count": {
@@ -7749,13 +7834,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetListResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"
                     }
                 },
                 "page": {
@@ -7769,7 +7854,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ControlCabinetResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse": {
             "type": "object",
             "properties": {
                 "building_id": {
@@ -7789,7 +7874,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateAlarmDefinitionRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmDefinitionRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -7806,7 +7891,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateApparatRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateApparatRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -7834,7 +7919,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateBacnetObjectRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateBacnetObjectRequest": {
             "type": "object",
             "required": [
                 "software_number",
@@ -7898,7 +7983,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateBuildingRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateBuildingRequest": {
             "type": "object",
             "required": [
                 "building_group",
@@ -7913,7 +7998,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateControlCabinetRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateControlCabinetRequest": {
             "type": "object",
             "required": [
                 "building_id",
@@ -7929,7 +8014,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateFieldDeviceRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateFieldDeviceRequest": {
             "type": "object",
             "required": [
                 "apparat_id",
@@ -7949,7 +8034,7 @@ const docTemplate = `{
                 "bacnet_objects": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectInput"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectInput"
                     }
                 },
                 "bmk": {
@@ -7975,7 +8060,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateFieldDeviceSpecificationRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateFieldDeviceSpecificationRequest": {
             "type": "object",
             "properties": {
                 "additional_info_motor_valve": {
@@ -8018,7 +8103,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateNotificationClassRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateNotificationClassRequest": {
             "type": "object",
             "required": [
                 "event_category",
@@ -8063,7 +8148,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateObjectDataRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateObjectDataRequest": {
             "type": "object",
             "required": [
                 "description",
@@ -8079,7 +8164,7 @@ const docTemplate = `{
                 "bacnet_objects": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectInput"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectInput"
                     }
                 },
                 "description": {
@@ -8098,128 +8183,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreatePermissionRequest": {
-            "type": "object",
-            "required": [
-                "action",
-                "name",
-                "resource"
-            ],
-            "properties": {
-                "action": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "resource": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreatePhaseRequest": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectControlCabinetRequest": {
-            "type": "object",
-            "required": [
-                "control_cabinet_id"
-            ],
-            "properties": {
-                "control_cabinet_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectFieldDeviceRequest": {
-            "type": "object",
-            "required": [
-                "field_device_id"
-            ],
-            "properties": {
-                "field_device_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectObjectDataRequest": {
-            "type": "object",
-            "required": [
-                "object_data_id"
-            ],
-            "properties": {
-                "object_data_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectRequest": {
-            "type": "object",
-            "required": [
-                "name",
-                "phase_id"
-            ],
-            "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1
-                },
-                "phase_id": {
-                    "type": "string"
-                },
-                "start_date": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SwissDateTime"
-                },
-                "status": {
-                    "type": "string",
-                    "enum": [
-                        "planned",
-                        "ongoing",
-                        "completed"
-                    ]
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectSPSControllerRequest": {
-            "type": "object",
-            "required": [
-                "sps_controller_id"
-            ],
-            "properties": {
-                "sps_controller_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateProjectUserRequest": {
-            "type": "object",
-            "required": [
-                "user_id"
-            ],
-            "properties": {
-                "user_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSPSControllerRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateSPSControllerRequest": {
             "type": "object",
             "required": [
                 "control_cabinet_id",
@@ -8260,7 +8224,7 @@ const docTemplate = `{
                 "system_types": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeInput"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeInput"
                     }
                 },
                 "vlan": {
@@ -8269,7 +8233,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateStateTextRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateStateTextRequest": {
             "type": "object",
             "required": [
                 "ref_number"
@@ -8328,7 +8292,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSystemPartRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateSystemPartRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -8350,7 +8314,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateSystemTypeRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateSystemTypeRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -8370,69 +8334,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateTeamRequest": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 150,
-                    "minLength": 1
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateUserRequest": {
-            "type": "object",
-            "required": [
-                "email",
-                "first_name",
-                "last_name",
-                "password"
-            ],
-            "properties": {
-                "created_by_id": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "first_name": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 1
-                },
-                "is_active": {
-                    "type": "boolean"
-                },
-                "last_name": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 1
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 8
-                },
-                "role": {
-                    "type": "string",
-                    "enum": [
-                        "superadmin",
-                        "admin_fzag",
-                        "fzag",
-                        "admin_planer",
-                        "planer",
-                        "admin_entrepreneur",
-                        "entrepreneur"
-                    ]
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ErrorResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {
@@ -8449,7 +8351,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceCreateResultResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceCreateResultResponse": {
             "type": "object",
             "properties": {
                 "error": {
@@ -8464,7 +8366,7 @@ const docTemplate = `{
                     "description": "The created field device (null if failed)",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"
                         }
                     ]
                 },
@@ -8478,13 +8380,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceListResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"
                     }
                 },
                 "page": {
@@ -8498,7 +8400,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceOptionsResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceOptionsResponse": {
             "type": "object",
             "properties": {
                 "apparat_to_system_part": {
@@ -8514,7 +8416,7 @@ const docTemplate = `{
                 "apparats": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse"
                     }
                 },
                 "object_data_to_apparat": {
@@ -8530,22 +8432,22 @@ const docTemplate = `{
                 "object_datas": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ObjectDataResponse"
                     }
                 },
                 "system_parts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartResponse"
                     }
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse": {
             "type": "object",
             "properties": {
                 "apparat": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse"
                 },
                 "apparat_id": {
                     "type": "string"
@@ -8556,7 +8458,7 @@ const docTemplate = `{
                 "bacnet_objects": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse"
                     }
                 },
                 "bmk": {
@@ -8572,7 +8474,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "specification": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SpecificationResponse"
                 },
                 "specification_id": {
                     "type": "string"
@@ -8581,7 +8483,7 @@ const docTemplate = `{
                     "description": "Embedded related entities for display",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeResponse"
                         }
                     ]
                 },
@@ -8589,7 +8491,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "system_part": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartResponse"
                 },
                 "system_part_id": {
                     "type": "string"
@@ -8602,23 +8504,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.LoginRequest": {
-            "type": "object",
-            "required": [
-                "email",
-                "password"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 8
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.MultiCreateFieldDeviceRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.MultiCreateFieldDeviceRequest": {
             "type": "object",
             "required": [
                 "field_devices"
@@ -8628,12 +8514,12 @@ const docTemplate = `{
                     "type": "array",
                     "minItems": 1,
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.CreateFieldDeviceRequest"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateFieldDeviceRequest"
                     }
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.MultiCreateFieldDeviceResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.MultiCreateFieldDeviceResponse": {
             "type": "object",
             "properties": {
                 "failure_count": {
@@ -8642,7 +8528,7 @@ const docTemplate = `{
                 "results": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.FieldDeviceCreateResultResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceCreateResultResponse"
                     }
                 },
                 "success_count": {
@@ -8653,7 +8539,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.NextAvailableGADeviceResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.NextAvailableGADeviceResponse": {
             "type": "object",
             "properties": {
                 "ga_device": {
@@ -8661,13 +8547,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassListResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.NotificationClassListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.NotificationClassResponse"
                     }
                 },
                 "page": {
@@ -8681,7 +8567,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.NotificationClassResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.NotificationClassResponse": {
             "type": "object",
             "properties": {
                 "ack_required_error": {
@@ -8728,39 +8614,19 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataListResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ObjectDataResponse": {
             "type": "object",
             "properties": {
                 "apparats": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse"
                     }
                 },
                 "bacnet_objects": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse"
                     }
                 },
                 "created_at": {
@@ -8786,7 +8652,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalFloat64": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalFloat64": {
             "type": "object",
             "properties": {
                 "set": {
@@ -8797,7 +8663,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalInt": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalInt": {
             "type": "object",
             "properties": {
                 "set": {
@@ -8808,7 +8674,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalString": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString": {
             "type": "object",
             "properties": {
                 "set": {
@@ -8819,264 +8685,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.PermissionResponse": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "resource": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseListResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseResponse"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.PhaseResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectControlCabinetListResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectControlCabinetResponse"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectControlCabinetResponse": {
-            "type": "object",
-            "properties": {
-                "control_cabinet_id": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "project_id": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectFieldDeviceListResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectFieldDeviceResponse"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectFieldDeviceResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "field_device_id": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "project_id": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectListResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectResponse"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "creator_id": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "phase_id": {
-                    "type": "string"
-                },
-                "start_date": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_project.ProjectStatus"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectSPSControllerListResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectSPSControllerResponse"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectSPSControllerResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "project_id": {
-                    "type": "string"
-                },
-                "sps_controller_id": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectUserListResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UserResponse"
-                    }
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ProjectUserResponse": {
-            "type": "object",
-            "properties": {
-                "project_id": {
-                    "type": "string"
-                },
-                "user_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.PutAlarmValuesRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.PutAlarmValuesRequest": {
             "type": "object",
             "required": [
                 "values"
@@ -9085,70 +8694,12 @@ const docTemplate = `{
                 "values": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.AlarmValueInput"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmValueInput"
                     }
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.RolePermissionResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "permission": {
-                    "type": "string"
-                },
-                "role": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_user.Role"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.RoleResponse": {
-            "type": "object",
-            "properties": {
-                "can_manage": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_user.Role"
-                    }
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "display_name": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "level": {
-                    "type": "integer"
-                },
-                "name": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_user.Role"
-                },
-                "permissions": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerBulkRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerBulkRequest": {
             "type": "object",
             "required": [
                 "ids"
@@ -9163,24 +8714,24 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerBulkResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerBulkResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"
                     }
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerListResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"
                     }
                 },
                 "page": {
@@ -9194,7 +8745,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse": {
             "type": "object",
             "properties": {
                 "control_cabinet_id": {
@@ -9235,7 +8786,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeInput": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeInput": {
             "type": "object",
             "required": [
                 "system_type_id"
@@ -9256,7 +8807,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -9289,45 +8840,45 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationInput": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SpecificationInput": {
             "type": "object",
             "properties": {
                 "additional_info_motor_valve": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalString"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 },
                 "additional_info_size": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalInt"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalInt"
                 },
                 "additional_information_installation_location": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalString"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 },
                 "electrical_connection_acdc": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalString"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 },
                 "electrical_connection_amperage": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalFloat64"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalFloat64"
                 },
                 "electrical_connection_ph": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalInt"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalInt"
                 },
                 "electrical_connection_power": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalFloat64"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalFloat64"
                 },
                 "electrical_connection_rotation": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalInt"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalInt"
                 },
                 "specification_brand": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalString"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 },
                 "specification_supplier": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalString"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 },
                 "specification_type": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.OptionalString"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SpecificationResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SpecificationResponse": {
             "type": "object",
             "properties": {
                 "additional_info_motor_valve": {
@@ -9377,13 +8928,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextListResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.StateTextListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.StateTextResponse"
                     }
                 },
                 "page": {
@@ -9397,7 +8948,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.StateTextResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.StateTextResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -9463,21 +9014,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SwissDateTime": {
-            "type": "object",
-            "properties": {
-                "time.Time": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartListResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartResponse"
                     }
                 },
                 "page": {
@@ -9491,7 +9034,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemPartResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -9514,13 +9057,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeListResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemTypeListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemTypeResponse"
                     }
                 },
                 "page": {
@@ -9534,7 +9077,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.SystemTypeResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemTypeResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -9557,84 +9100,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamListResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamResponse"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamMemberListResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamMemberResponse"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "total_pages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamMemberResponse": {
-            "type": "object",
-            "properties": {
-                "joined_at": {
-                    "type": "string"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "team_id": {
-                    "type": "string"
-                },
-                "user_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.TeamResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UnitResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UnitResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -9651,7 +9117,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateAlarmDefinitionRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateAlarmDefinitionRequest": {
             "type": "object",
             "properties": {
                 "alarm_note": {
@@ -9665,7 +9131,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateApparatRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateApparatRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -9689,7 +9155,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateBacnetObjectRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBacnetObjectRequest": {
             "type": "object",
             "properties": {
                 "alarm_definition_id": {
@@ -9748,7 +9214,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateBuildingRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest": {
             "type": "object",
             "properties": {
                 "building_group": {
@@ -9759,7 +9225,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateControlCabinetRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest": {
             "type": "object",
             "properties": {
                 "building_id": {
@@ -9771,7 +9237,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateFieldDeviceRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest": {
             "type": "object",
             "required": [
                 "system_part_id"
@@ -9788,7 +9254,7 @@ const docTemplate = `{
                 "bacnet_objects": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectInput"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectInput"
                     }
                 },
                 "bmk": {
@@ -9814,7 +9280,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateFieldDeviceSpecificationRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceSpecificationRequest": {
             "type": "object",
             "properties": {
                 "additional_info_motor_valve": {
@@ -9857,7 +9323,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateNotificationClassRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateNotificationClassRequest": {
             "type": "object",
             "properties": {
                 "ack_required_error": {
@@ -9895,7 +9361,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateObjectDataRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateObjectDataRequest": {
             "type": "object",
             "properties": {
                 "apparat_ids": {
@@ -9907,7 +9373,7 @@ const docTemplate = `{
                 "bacnet_objects": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectInput"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectInput"
                     }
                 },
                 "description": {
@@ -9924,100 +9390,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdatePermissionRequest": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdatePhaseRequest": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateProjectControlCabinetRequest": {
-            "type": "object",
-            "required": [
-                "control_cabinet_id"
-            ],
-            "properties": {
-                "control_cabinet_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateProjectFieldDeviceRequest": {
-            "type": "object",
-            "required": [
-                "field_device_id"
-            ],
-            "properties": {
-                "field_device_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateProjectRequest": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1
-                },
-                "phase_id": {
-                    "type": "string"
-                },
-                "start_date": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SwissDateTime"
-                },
-                "status": {
-                    "enum": [
-                        "planned",
-                        "ongoing",
-                        "completed"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_project.ProjectStatus"
-                        }
-                    ]
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateProjectSPSControllerRequest": {
-            "type": "object",
-            "required": [
-                "sps_controller_id"
-            ],
-            "properties": {
-                "sps_controller_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateRolePermissionsRequest": {
-            "type": "object",
-            "properties": {
-                "permissions": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSPSControllerRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest": {
             "type": "object",
             "properties": {
                 "control_cabinet_id": {
@@ -10053,7 +9426,7 @@ const docTemplate = `{
                 "system_types": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeInput"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeInput"
                     }
                 },
                 "vlan": {
@@ -10062,7 +9435,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateStateTextRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateStateTextRequest": {
             "type": "object",
             "properties": {
                 "ref_number": {
@@ -10118,7 +9491,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSystemPartRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSystemPartRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -10136,7 +9509,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateSystemTypeRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSystemTypeRequest": {
             "type": "object",
             "properties": {
                 "name": {
@@ -10151,7 +9524,823 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateTeamRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ValidateBuildingRequest": {
+            "type": "object",
+            "properties": {
+                "building_group": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "iws_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ValidateControlCabinetRequest": {
+            "type": "object",
+            "properties": {
+                "building_id": {
+                    "type": "string"
+                },
+                "control_cabinet_nr": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ValidateSPSControllerRequest": {
+            "type": "object",
+            "properties": {
+                "control_cabinet_id": {
+                    "type": "string"
+                },
+                "device_name": {
+                    "type": "string"
+                },
+                "ga_device": {
+                    "type": "string"
+                },
+                "gateway": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ip_address": {
+                    "type": "string"
+                },
+                "subnet": {
+                    "type": "string"
+                },
+                "vlan": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SMTPSettingsResponse": {
+            "type": "object",
+            "properties": {
+                "allow_insecure_tls": {
+                    "type": "boolean"
+                },
+                "auth_mode": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "from_email": {
+                    "type": "string"
+                },
+                "from_name": {
+                    "type": "string"
+                },
+                "has_password": {
+                    "type": "boolean"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "reply_to": {
+                    "type": "string"
+                },
+                "security": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by_id": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SendSMTPTestEmailRequest": {
+            "type": "object",
+            "required": [
+                "to"
+            ],
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "subject": {
+                    "type": "string"
+                },
+                "to": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UpsertSMTPSettingsRequest": {
+            "type": "object",
+            "required": [
+                "allow_insecure_tls",
+                "auth_mode",
+                "enabled",
+                "from_email",
+                "host",
+                "port",
+                "security"
+            ],
+            "properties": {
+                "allow_insecure_tls": {
+                    "type": "boolean"
+                },
+                "auth_mode": {
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "plain"
+                    ]
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "from_email": {
+                    "type": "string"
+                },
+                "from_name": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer",
+                    "maximum": 65535,
+                    "minimum": 1
+                },
+                "reply_to": {
+                    "type": "string"
+                },
+                "security": {
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "starttls",
+                        "tls"
+                    ]
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreatePhaseRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreateProjectControlCabinetRequest": {
+            "type": "object",
+            "required": [
+                "control_cabinet_id"
+            ],
+            "properties": {
+                "control_cabinet_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreateProjectFieldDeviceRequest": {
+            "type": "object",
+            "required": [
+                "field_device_id"
+            ],
+            "properties": {
+                "field_device_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreateProjectObjectDataRequest": {
+            "type": "object",
+            "required": [
+                "object_data_id"
+            ],
+            "properties": {
+                "object_data_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreateProjectRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "phase_id"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "phase_id": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.SwissDateTime"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "planned",
+                        "ongoing",
+                        "completed"
+                    ]
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreateProjectSPSControllerRequest": {
+            "type": "object",
+            "required": [
+                "sps_controller_id"
+            ],
+            "properties": {
+                "sps_controller_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreateProjectUserRequest": {
+            "type": "object",
+            "required": [
+                "user_id"
+            ],
+            "properties": {
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ObjectDataListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ObjectDataResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ObjectDataResponse": {
+            "type": "object",
+            "properties": {
+                "apparats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse"
+                    }
+                },
+                "bacnet_objects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.PhaseListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.PhaseResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.PhaseResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectControlCabinetListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectControlCabinetResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectControlCabinetResponse": {
+            "type": "object",
+            "properties": {
+                "control_cabinet_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectFieldDeviceListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectFieldDeviceResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectFieldDeviceResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "field_device_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "creator_id": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phase_id": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_project.ProjectStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectSPSControllerListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectSPSControllerResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectSPSControllerResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "sps_controller_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectUserListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserResponse"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectUserResponse": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.SwissDateTime": {
+            "type": "object",
+            "properties": {
+                "time.Time": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdatePhaseRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectControlCabinetRequest": {
+            "type": "object",
+            "required": [
+                "control_cabinet_id"
+            ],
+            "properties": {
+                "control_cabinet_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectFieldDeviceRequest": {
+            "type": "object",
+            "required": [
+                "field_device_id"
+            ],
+            "properties": {
+                "field_device_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "phase_id": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.SwissDateTime"
+                },
+                "status": {
+                    "enum": [
+                        "planned",
+                        "ongoing",
+                        "completed"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_project.ProjectStatus"
+                        }
+                    ]
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectSPSControllerRequest": {
+            "type": "object",
+            "required": [
+                "sps_controller_id"
+            ],
+            "properties": {
+                "sps_controller_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_team.AddTeamMemberRequest": {
+            "type": "object",
+            "required": [
+                "role",
+                "user_id"
+            ],
+            "properties": {
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "member",
+                        "manager",
+                        "owner"
+                    ]
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_team.CreateTeamRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "minLength": 1
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_team.TeamListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.TeamResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_team.TeamMemberListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_team.TeamMemberResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_team.TeamMemberResponse": {
+            "type": "object",
+            "properties": {
+                "joined_at": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "team_id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_team.TeamResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_team.UpdateTeamRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -10164,7 +10353,248 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UpdateUserRequest": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.AddRolePermissionRequest": {
+            "type": "object",
+            "required": [
+                "permission"
+            ],
+            "properties": {
+                "permission": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.AdminSetUserRoleRequest": {
+            "type": "object",
+            "required": [
+                "role"
+            ],
+            "properties": {
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "superadmin",
+                        "admin_fzag",
+                        "fzag",
+                        "admin_planer",
+                        "planer",
+                        "admin_entrepreneur",
+                        "entrepreneur"
+                    ]
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.AllowedRole": {
+            "type": "object",
+            "properties": {
+                "display_name": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.AllowedRolesResponse": {
+            "type": "object",
+            "properties": {
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.AllowedRole"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.CreatePermissionRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "name",
+                "resource"
+            ],
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "resource": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.CreateUserRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "first_name",
+                "last_name",
+                "password"
+            ],
+            "properties": {
+                "created_by_id": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "last_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "superadmin",
+                        "admin_fzag",
+                        "fzag",
+                        "admin_planer",
+                        "planer",
+                        "admin_entrepreneur",
+                        "entrepreneur"
+                    ]
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.PermissionResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "resource": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RolePermissionResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "permission": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_user.Role"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RoleResponse": {
+            "type": "object",
+            "properties": {
+                "can_manage": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_user.Role"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "name": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_user.Role"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UpdatePermissionRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UpdateRolePermissionsRequest": {
+            "type": "object",
+            "properties": {
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UpdateUserRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -10201,13 +10631,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UserListResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.UserResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserResponse"
                     }
                 },
                 "page": {
@@ -10221,7 +10651,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.UserResponse": {
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -10265,80 +10695,6 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ValidateBuildingRequest": {
-            "type": "object",
-            "properties": {
-                "building_group": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "iws_code": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ValidateControlCabinetRequest": {
-            "type": "object",
-            "properties": {
-                "building_id": {
-                    "type": "string"
-                },
-                "control_cabinet_nr": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_besart951_go_infra_link_backend_internal_handler_dto.ValidateSPSControllerRequest": {
-            "type": "object",
-            "properties": {
-                "control_cabinet_id": {
-                    "type": "string"
-                },
-                "device_name": {
-                    "type": "string"
-                },
-                "ga_device": {
-                    "type": "string"
-                },
-                "gateway": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "ip_address": {
-                    "type": "string"
-                },
-                "subnet": {
-                    "type": "string"
-                },
-                "vlan": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_handler.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string"
-                },
-                "fields": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
         "internal_handler_facility.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -10362,7 +10718,7 @@ const docTemplate = `{
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ObjectDataResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ObjectDataResponse"
                     }
                 },
                 "page": {
@@ -10382,13 +10738,13 @@ const docTemplate = `{
                 "apparats": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.ApparatResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse"
                     }
                 },
                 "bacnet_objects": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.BacnetObjectResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse"
                     }
                 },
                 "created_at": {
@@ -10420,7 +10776,7 @@ const docTemplate = `{
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto.SPSControllerSystemTypeResponse"
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeResponse"
                     }
                 },
                 "page": {
@@ -10464,6 +10820,83 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_handler_i18n.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_project.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_project.FieldDeviceOptionsResponse": {
+            "type": "object",
+            "properties": {
+                "apparat_to_system_part": {
+                    "description": "apparat_id -\u003e [system_part_ids]",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "apparats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse"
+                    }
+                },
+                "object_data_to_apparat": {
+                    "description": "object_data_id -\u003e [apparat_ids]",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "object_datas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ObjectDataResponse"
+                    }
+                },
+                "system_parts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartResponse"
+                    }
                 }
             }
         }

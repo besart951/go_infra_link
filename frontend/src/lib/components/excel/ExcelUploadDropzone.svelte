@@ -61,7 +61,7 @@
   }`}
   role="button"
   tabindex="0"
-  aria-label="Drop Excel file or open file picker"
+  aria-label="Excel-Datei ablegen oder Dateiauswahl öffnen"
   ondrop={handleDrop}
   ondragover={handleDragOver}
   ondragenter={handleDragOver}
@@ -70,11 +70,11 @@
 >
   <div class="flex flex-col items-center justify-center gap-3 text-center">
     <FileSpreadsheet class="size-10 text-muted-foreground" />
-    <p class="text-sm font-medium">Drag & drop your Excel file here</p>
-    <p class="text-xs text-muted-foreground">Supported formats: .xlsx, .xls, .xlsm, .xlsb</p>
+    <p class="text-sm font-medium">Excel-Datei hier ablegen</p>
+    <p class="text-xs text-muted-foreground">Unterstützte Formate: .xlsx, .xls, .xlsm, .xlsb</p>
     <Button type="button" onclick={openFileDialog} {disabled}>
       <Upload class="mr-2 size-4" />
-      Choose file
+      Datei auswählen
     </Button>
     <input
       class="hidden"

@@ -16,7 +16,7 @@
 
 <div class="rounded-lg border bg-background p-4">
   <div class="mb-2 flex items-center justify-between text-sm">
-    <span class="font-medium">Read progress</span>
+    <span class="font-medium">Lesefortschritt</span>
     <span>{progressPercent}%</span>
   </div>
   <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -28,7 +28,7 @@
     <div class="mt-3">
       <Button type="button" variant="outline" onclick={onCancel}>
         <X class="mr-2 size-4" />
-        Cancel
+        Abbrechen
       </Button>
     </div>
   {/if}

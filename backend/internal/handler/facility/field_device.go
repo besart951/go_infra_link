@@ -6,18 +6,16 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
-	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
-	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/gin-gonic/gin"
 )
 
 type FieldDeviceHandler struct {
-	service       FieldDeviceService
-	projectAccess ProjectAccessService
+	service FieldDeviceService
 }
 
-func NewFieldDeviceHandler(service FieldDeviceService, projectAccess ProjectAccessService) *FieldDeviceHandler {
-	return &FieldDeviceHandler{service: service, projectAccess: projectAccess}
+func NewFieldDeviceHandler(service FieldDeviceService) *FieldDeviceHandler {
+	return &FieldDeviceHandler{service: service}
 }
 
 // MultiCreateFieldDevices godoc
@@ -206,53 +204,7 @@ func (h *FieldDeviceHandler) GetFieldDeviceOptions(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, toFieldDeviceOptionsResponse(options))
-}
-
-// GetFieldDeviceOptionsForProject godoc
-// @Summary Get all metadata needed for creating/editing field devices within a project
-// @Description Returns all apparats, system parts, object datas and their relationships for a specific project. This returns project-specific object data (object data where project_id = :id and is_active = true).
-// @Tags projects
-// @Produce json
-// @Param id path string true "Project ID"
-// @Success 200 {object} dto.FieldDeviceOptionsResponse
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
-// @Router /api/v1/projects/{id}/field-device-options [get]
-func (h *FieldDeviceHandler) GetFieldDeviceOptionsForProject(c *gin.Context) {
-	projectID, ok := parseUUIDParam(c, "id")
-	if !ok {
-		return
-	}
-
-	userID, ok := middleware.GetUserID(c)
-	if !ok {
-		respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
-		return
-	}
-
-	hasAccess, err := h.projectAccess.CanAccessProject(userID, projectID)
-	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
-		return
-	}
-
-	if !hasAccess {
-		respondLocalizedError(c, http.StatusForbidden, "forbidden", "errors.forbidden")
-		return
-	}
-
-	options, err := h.service.GetFieldDeviceOptionsForProject(projectID)
-	if err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-		return
-	}
-
-	c.JSON(http.StatusOK, toFieldDeviceOptionsResponse(options))
+	c.JSON(http.StatusOK, ToFieldDeviceOptionsResponse(options))
 }
 
 // UpdateFieldDevice godoc

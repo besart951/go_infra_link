@@ -75,7 +75,7 @@
       goto(`/projects/${project.id}`);
     },
     onError: (err) => {
-      addToast(err instanceof Error ? err.message : 'Failed to create project', 'error');
+      addToast(err instanceof Error ? err.message : $t('project.creation_failed'), 'error');
     }
   });
 
@@ -122,12 +122,12 @@
             start_date: todayInputValue(),
             phase_id: ''
           };
-          addToast('Creating project...', 'info', 2000);
+          addToast($t('projects.page.creating'), 'info', 2000);
         },
         // Server action
         async () => {
           const project = await createProject(payload);
-          addToast('Project created successfully', 'success');
+          addToast($t('project.project_created'), 'success');
           projectListStore.reload();
           return project;
         },

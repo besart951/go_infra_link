@@ -5,7 +5,12 @@
   import { ManageObjectDataUseCase } from '$lib/application/useCases/facility/manageObjectDataUseCase.js';
   import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
   const manageObjectData = new ManageObjectDataUseCase(objectDataRepository);
-  import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
+  import {
+    getErrorMessage,
+    getFieldError,
+    getFieldErrors,
+    localizeFieldErrorMap
+  } from '$lib/api/client.js';
   import type { ObjectData, BacnetObjectInput } from '$lib/domain/facility/index.js';
 
   import { Plus } from '@lucide/svelte';
@@ -163,7 +168,7 @@
     }
 
     if (Object.keys(nextFieldErrors).length > 0) {
-      fieldErrors = nextFieldErrors;
+      fieldErrors = localizeFieldErrorMap(nextFieldErrors);
       error = '';
       return false;
     }

@@ -1,110 +1,147 @@
 package docs
 
-import "github.com/besart951/go_infra_link/backend/internal/handler/dto"
+import (
+	authdto "github.com/besart951/go_infra_link/backend/internal/handler/dto/auth"
+	commondto "github.com/besart951/go_infra_link/backend/internal/handler/dto/common"
+	facilitydto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
+	notificationdto "github.com/besart951/go_infra_link/backend/internal/handler/dto/notification"
+	projectdto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
+	teamdto "github.com/besart951/go_infra_link/backend/internal/handler/dto/team"
+	userdto "github.com/besart951/go_infra_link/backend/internal/handler/dto/user"
+)
 
 var (
-	_ = dto.PaginationQuery{}
-	_ = dto.ErrorResponse{}
+	_ = commondto.PaginationQuery{}
+	_ = commondto.ErrorResponse{}
 
-	_ = dto.LoginRequest{}
-	_ = dto.AuthUserResponse{}
-	_ = dto.AuthResponse{}
+	_ = authdto.LoginRequest{}
+	_ = authdto.AuthUserResponse{}
+	_ = authdto.AuthResponse{}
 
-	_ = dto.AdminSetUserRoleRequest{}
+	_ = userdto.AdminSetUserRoleRequest{}
+	_ = userdto.CreateUserRequest{}
+	_ = userdto.UpdateUserRequest{}
+	_ = userdto.UserResponse{}
+	_ = userdto.UserListResponse{}
+	_ = userdto.CreatePermissionRequest{}
+	_ = userdto.UpdatePermissionRequest{}
+	_ = userdto.PermissionResponse{}
+	_ = userdto.UpdateRolePermissionsRequest{}
+	_ = userdto.AddRolePermissionRequest{}
+	_ = userdto.RoleResponse{}
+	_ = userdto.RolePermissionResponse{}
 
-	_ = dto.CreateUserRequest{}
-	_ = dto.UpdateUserRequest{}
-	_ = dto.UserResponse{}
-	_ = dto.UserListResponse{}
+	_ = teamdto.CreateTeamRequest{}
+	_ = teamdto.UpdateTeamRequest{}
+	_ = teamdto.TeamResponse{}
+	_ = teamdto.TeamListResponse{}
+	_ = teamdto.AddTeamMemberRequest{}
+	_ = teamdto.TeamMemberResponse{}
+	_ = teamdto.TeamMemberListResponse{}
 
-	_ = dto.CreateTeamRequest{}
-	_ = dto.UpdateTeamRequest{}
-	_ = dto.TeamResponse{}
-	_ = dto.TeamListResponse{}
-	_ = dto.AddTeamMemberRequest{}
-	_ = dto.TeamMemberResponse{}
-	_ = dto.TeamMemberListResponse{}
+	_ = projectdto.CreateProjectRequest{}
+	_ = projectdto.UpdateProjectRequest{}
+	_ = projectdto.ProjectResponse{}
+	_ = projectdto.ProjectListResponse{}
+	_ = projectdto.CreateProjectUserRequest{}
+	_ = projectdto.ProjectUserResponse{}
+	_ = projectdto.ProjectUserListResponse{}
+	_ = projectdto.CreateProjectControlCabinetRequest{}
+	_ = projectdto.UpdateProjectControlCabinetRequest{}
+	_ = projectdto.ProjectControlCabinetResponse{}
+	_ = projectdto.ProjectControlCabinetListResponse{}
+	_ = projectdto.CreateProjectSPSControllerRequest{}
+	_ = projectdto.UpdateProjectSPSControllerRequest{}
+	_ = projectdto.ProjectSPSControllerResponse{}
+	_ = projectdto.ProjectSPSControllerListResponse{}
+	_ = projectdto.CreateProjectFieldDeviceRequest{}
+	_ = projectdto.UpdateProjectFieldDeviceRequest{}
+	_ = projectdto.ProjectFieldDeviceResponse{}
+	_ = projectdto.ProjectFieldDeviceListResponse{}
+	_ = projectdto.CreateProjectObjectDataRequest{}
+	_ = projectdto.CreatePhaseRequest{}
+	_ = projectdto.UpdatePhaseRequest{}
+	_ = projectdto.PhaseResponse{}
+	_ = projectdto.PhaseListResponse{}
+	_ = projectdto.SwissDateTime{}
+	_ = projectdto.ObjectDataResponse{}
+	_ = projectdto.ObjectDataListResponse{}
+	_ = projectdto.FieldDeviceOptionsResponse{}
 
-	_ = dto.CreateProjectRequest{}
-	_ = dto.UpdateProjectRequest{}
-	_ = dto.ProjectResponse{}
-	_ = dto.ProjectListResponse{}
+	_ = facilitydto.CreateBuildingRequest{}
+	_ = facilitydto.UpdateBuildingRequest{}
+	_ = facilitydto.BuildingResponse{}
+	_ = facilitydto.BuildingListResponse{}
+	_ = facilitydto.CreateControlCabinetRequest{}
+	_ = facilitydto.UpdateControlCabinetRequest{}
+	_ = facilitydto.ControlCabinetResponse{}
+	_ = facilitydto.ControlCabinetListResponse{}
+	_ = facilitydto.ControlCabinetDeleteImpactResponse{}
+	_ = facilitydto.CreateSystemTypeRequest{}
+	_ = facilitydto.UpdateSystemTypeRequest{}
+	_ = facilitydto.SystemTypeResponse{}
+	_ = facilitydto.SystemTypeListResponse{}
+	_ = facilitydto.CreateSystemPartRequest{}
+	_ = facilitydto.UpdateSystemPartRequest{}
+	_ = facilitydto.SystemPartResponse{}
+	_ = facilitydto.SystemPartListResponse{}
+	_ = facilitydto.CreateApparatRequest{}
+	_ = facilitydto.UpdateApparatRequest{}
+	_ = facilitydto.ApparatResponse{}
+	_ = facilitydto.ApparatListResponse{}
+	_ = facilitydto.CreateFieldDeviceRequest{}
+	_ = facilitydto.UpdateFieldDeviceRequest{}
+	_ = facilitydto.FieldDeviceResponse{}
+	_ = facilitydto.FieldDeviceListResponse{}
+	_ = facilitydto.AvailableApparatNumbersResponse{}
+	_ = facilitydto.FieldDeviceOptionsResponse{}
+	_ = facilitydto.MultiCreateFieldDeviceRequest{}
+	_ = facilitydto.MultiCreateFieldDeviceResponse{}
+	_ = facilitydto.BulkUpdateFieldDeviceRequest{}
+	_ = facilitydto.BulkUpdateFieldDeviceResponse{}
+	_ = facilitydto.BulkDeleteFieldDeviceRequest{}
+	_ = facilitydto.BulkDeleteFieldDeviceResponse{}
+	_ = facilitydto.CreateSpecificationRequest{}
+	_ = facilitydto.UpdateSpecificationRequest{}
+	_ = facilitydto.CreateFieldDeviceSpecificationRequest{}
+	_ = facilitydto.UpdateFieldDeviceSpecificationRequest{}
+	_ = facilitydto.SpecificationResponse{}
+	_ = facilitydto.SpecificationListResponse{}
+	_ = facilitydto.CreateBacnetObjectRequest{}
+	_ = facilitydto.UpdateBacnetObjectRequest{}
+	_ = facilitydto.BacnetObjectInput{}
+	_ = facilitydto.BacnetObjectResponse{}
+	_ = facilitydto.ObjectDataResponse{}
+	_ = facilitydto.ObjectDataListResponse{}
+	_ = facilitydto.SPSControllerSystemTypeInput{}
+	_ = facilitydto.SPSControllerResponse{}
+	_ = facilitydto.SPSControllerListResponse{}
+	_ = facilitydto.SPSControllerSystemTypeResponse{}
+	_ = facilitydto.SPSControllerSystemTypeListResponse{}
+	_ = facilitydto.StateTextResponse{}
+	_ = facilitydto.StateTextListResponse{}
+	_ = facilitydto.NotificationClassResponse{}
+	_ = facilitydto.NotificationClassListResponse{}
+	_ = facilitydto.AlarmDefinitionResponse{}
+	_ = facilitydto.AlarmDefinitionListResponse{}
+	_ = facilitydto.AlarmTypeResponse{}
+	_ = facilitydto.AlarmTypeListResponse{}
+	_ = facilitydto.AlarmValueInput{}
+	_ = facilitydto.AlarmValueResponse{}
+	_ = facilitydto.AlarmValuesResponse{}
+	_ = facilitydto.UnitResponse{}
+	_ = facilitydto.UnitListResponse{}
+	_ = facilitydto.AlarmFieldResponse{}
+	_ = facilitydto.AlarmFieldListResponse{}
+	_ = facilitydto.AlarmTypeFieldResponse{}
+	_ = facilitydto.PutAlarmValuesRequest{}
+	_ = facilitydto.ValidateBuildingRequest{}
+	_ = facilitydto.ValidateControlCabinetRequest{}
+	_ = facilitydto.ValidateSPSControllerRequest{}
+	_ = facilitydto.CreateFieldDeviceExportRequest{}
+	_ = facilitydto.FieldDeviceExportJobResponse{}
 
-	_ = dto.CreateProjectUserRequest{}
-	_ = dto.ProjectUserResponse{}
-	_ = dto.ProjectUserListResponse{}
-	_ = dto.CreateProjectControlCabinetRequest{}
-	_ = dto.UpdateProjectControlCabinetRequest{}
-	_ = dto.ProjectControlCabinetResponse{}
-	_ = dto.ProjectControlCabinetListResponse{}
-	_ = dto.CreateProjectSPSControllerRequest{}
-	_ = dto.UpdateProjectSPSControllerRequest{}
-	_ = dto.ProjectSPSControllerResponse{}
-	_ = dto.ProjectSPSControllerListResponse{}
-	_ = dto.CreateProjectFieldDeviceRequest{}
-	_ = dto.UpdateProjectFieldDeviceRequest{}
-	_ = dto.ProjectFieldDeviceResponse{}
-	_ = dto.ProjectFieldDeviceListResponse{}
-	_ = dto.CreateProjectObjectDataRequest{}
-
-	_ = dto.CreateBuildingRequest{}
-	_ = dto.UpdateBuildingRequest{}
-	_ = dto.BuildingResponse{}
-	_ = dto.BuildingListResponse{}
-
-	_ = dto.CreateControlCabinetRequest{}
-	_ = dto.UpdateControlCabinetRequest{}
-	_ = dto.ControlCabinetResponse{}
-	_ = dto.ControlCabinetListResponse{}
-
-	_ = dto.CreateSystemTypeRequest{}
-	_ = dto.UpdateSystemTypeRequest{}
-	_ = dto.SystemTypeResponse{}
-	_ = dto.SystemTypeListResponse{}
-
-	_ = dto.CreateSystemPartRequest{}
-	_ = dto.UpdateSystemPartRequest{}
-	_ = dto.SystemPartResponse{}
-	_ = dto.SystemPartListResponse{}
-
-	_ = dto.CreateApparatRequest{}
-	_ = dto.UpdateApparatRequest{}
-	_ = dto.ApparatResponse{}
-	_ = dto.ApparatListResponse{}
-
-	_ = dto.CreateFieldDeviceRequest{}
-	_ = dto.UpdateFieldDeviceRequest{}
-	_ = dto.FieldDeviceResponse{}
-	_ = dto.FieldDeviceListResponse{}
-
-	_ = dto.CreateSpecificationRequest{}
-	_ = dto.UpdateSpecificationRequest{}
-	_ = dto.CreateFieldDeviceSpecificationRequest{}
-	_ = dto.UpdateFieldDeviceSpecificationRequest{}
-	_ = dto.SpecificationResponse{}
-	_ = dto.SpecificationListResponse{}
-
-	_ = dto.CreateBacnetObjectRequest{}
-	_ = dto.UpdateBacnetObjectRequest{}
-	_ = dto.BacnetObjectInput{}
-	_ = dto.BacnetObjectResponse{}
-
-	_ = dto.ObjectDataResponse{}
-	_ = dto.ObjectDataListResponse{}
-
-	_ = dto.SPSControllerSystemTypeInput{}
-	_ = dto.SPSControllerResponse{}
-	_ = dto.SPSControllerListResponse{}
-	_ = dto.SPSControllerSystemTypeResponse{}
-	_ = dto.SPSControllerSystemTypeListResponse{}
-
-	_ = dto.StateTextResponse{}
-	_ = dto.StateTextListResponse{}
-	_ = dto.NotificationClassResponse{}
-	_ = dto.NotificationClassListResponse{}
-	_ = dto.AlarmDefinitionResponse{}
-	_ = dto.AlarmDefinitionListResponse{}
-	_ = dto.ApparatResponse{}
-	_ = dto.ApparatListResponse{}
-	_ = dto.BacnetObjectResponse{}
+	_ = notificationdto.UpsertSMTPSettingsRequest{}
+	_ = notificationdto.SendSMTPTestEmailRequest{}
+	_ = notificationdto.SMTPSettingsResponse{}
 )

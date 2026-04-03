@@ -64,7 +64,6 @@ type FieldDeviceService interface {
 	ListWithFilters(params domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error)
 	ListAvailableApparatNumbers(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID) ([]int, error)
 	GetFieldDeviceOptions() (*domainFacility.FieldDeviceOptions, error)
-	GetFieldDeviceOptionsForProject(projectID uuid.UUID) (*domainFacility.FieldDeviceOptions, error)
 	Update(fieldDevice *domainFacility.FieldDevice) error
 	UpdateWithBacnetObjects(fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects *[]domainFacility.BacnetObject) error
 	DeleteByID(id uuid.UUID) error
@@ -73,10 +72,6 @@ type FieldDeviceService interface {
 	UpdateSpecification(fieldDeviceID uuid.UUID, patch *domainFacility.Specification) (*domainFacility.Specification, error)
 	BulkUpdate(updates []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult
 	BulkDelete(ids []uuid.UUID) *domainFacility.BulkOperationResult
-}
-
-type ProjectAccessService interface {
-	CanAccessProject(requesterID, projectID uuid.UUID) (bool, error)
 }
 
 type ControlCabinetService interface {

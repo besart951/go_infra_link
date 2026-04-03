@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
 	"github.com/besart951/go_infra_link/backend/internal/handler"
+	authhandler "github.com/besart951/go_infra_link/backend/internal/handler/auth"
 	"github.com/besart951/go_infra_link/backend/internal/wire"
 	"github.com/besart951/go_infra_link/backend/pkg/i18n"
 	applogger "github.com/besart951/go_infra_link/backend/pkg/logger"
@@ -102,13 +103,13 @@ func logDatabaseConfig(cfg config.Config, log applogger.Logger) {
 	log.Info("Database config", "type", cfg.DBType, "dsn", formatDSNForLog(cfg.DBType, cfg.DBDsn))
 }
 
-func cookieSettingsFromConfig(cfg config.Config) handler.CookieSettings {
+func cookieSettingsFromConfig(cfg config.Config) authhandler.CookieSettings {
 	cookieSecure := cfg.CookieSecure
 	if config.IsProduction(cfg.AppEnv) {
 		cookieSecure = true
 	}
 
-	return handler.CookieSettings{
+	return authhandler.CookieSettings{
 		Domain:   cfg.CookieDomain,
 		Secure:   cookieSecure,
 		SameSite: http.SameSiteStrictMode,

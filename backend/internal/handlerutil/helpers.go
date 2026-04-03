@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/common"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"

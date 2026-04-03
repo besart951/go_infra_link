@@ -13,6 +13,7 @@ import (
 	dashboardservice "github.com/besart951/go_infra_link/backend/internal/service/dashboard"
 	exportservice "github.com/besart951/go_infra_link/backend/internal/service/exporting"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
+	notificationservice "github.com/besart951/go_infra_link/backend/internal/service/notification"
 	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
 	phaseservice "github.com/besart951/go_infra_link/backend/internal/service/phase"
 	projectservice "github.com/besart951/go_infra_link/backend/internal/service/project"
@@ -23,17 +24,18 @@ import (
 
 // Services holds all service instances.
 type Services struct {
-	Project   *projectservice.Service
-	Dashboard *dashboardservice.Service
-	Phase     *phaseservice.Service
-	User      *userservice.Service
-	Auth      *authservice.Service
-	JWT       domainAuth.TokenService
-	RBAC      *rbacservice.Service
-	Team      *teamservice.Service
-	Admin     *adminservice.Service
-	Password  domainUser.PasswordHasher
-	Export    *exportservice.Service
+	Project      *projectservice.Service
+	Dashboard    *dashboardservice.Service
+	Phase        *phaseservice.Service
+	User         *userservice.Service
+	Auth         *authservice.Service
+	JWT          domainAuth.TokenService
+	RBAC         *rbacservice.Service
+	Team         *teamservice.Service
+	Admin        *adminservice.Service
+	Notification *notificationservice.Service
+	Password     domainUser.PasswordHasher
+	Export       *exportservice.Service
 
 	Facility *facilityservice.Services
 }
@@ -94,6 +96,15 @@ func NewServices(repos *Repositories, cfg ServiceConfig) (*Services, error) {
 			PageSize:              1000,
 		},
 	)
+	secretCipher, err := notificationservice.NewAESCipher(cfg.JWTSecret)
+	if err != nil {
+		return nil, fmt.Errorf("notification secret cipher: %w", err)
+	}
+	notificationSvc := notificationservice.New(
+		repos.NotificationSMTPSettings,
+		secretCipher,
+		notificationservice.NewSMTPStrategy(),
+	)
 
 	return &Services{
 		Project: projectservice.New(
@@ -111,14 +122,15 @@ func NewServices(repos *Repositories, cfg ServiceConfig) (*Services, error) {
 			repos.FacilityFieldDevices,
 			facilityServices.HierarchyCopier,
 		),
-		Dashboard: dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
-		Phase:     phaseservice.NewPhaseService(repos.Phase),
-		User:      userservice.New(repos.User, passwordService),
-		Password:  passwordService,
-		JWT:       jwtService,
-		RBAC:      rbacSvc,
-		Team:      teamservice.New(repos.Team, repos.TeamMember),
-		Admin:     adminservice.New(repos.User),
+		Dashboard:    dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
+		Phase:        phaseservice.NewPhaseService(repos.Phase),
+		User:         userservice.New(repos.User, passwordService),
+		Password:     passwordService,
+		JWT:          jwtService,
+		RBAC:         rbacSvc,
+		Team:         teamservice.New(repos.Team, repos.TeamMember),
+		Admin:        adminservice.New(repos.User),
+		Notification: notificationSvc,
 		Auth: authservice.NewService(
 			jwtService,
 			repos.User,

@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import { api } from '$lib/api/client.js';
 import type { Building } from '$lib/domain/facility/index.js';
+import { t } from '$lib/i18n/index.js';
 
 export const load: PageLoad = async ({ params, fetch }) => {
   try {
@@ -12,8 +13,8 @@ export const load: PageLoad = async ({ params, fetch }) => {
   } catch (e: any) {
     console.error('Failed to load building:', e);
     if (e.status === 404) {
-      error(404, 'Building not found');
+      error(404, t('facility.building_not_found'));
     }
-    error(e.status || 500, 'Failed to load building');
+    error(e.status || 500, t('facility.building_load_failed'));
   }
 };

@@ -11,6 +11,7 @@
 
 import { getErrorMessage, getFieldErrors } from '$lib/api/client.js';
 import { addToast } from '$lib/components/toast.svelte';
+import { t } from '$lib/i18n/index.js';
 
 export interface FormState {
   loading: boolean;
@@ -84,7 +85,7 @@ export function useFormState<T = unknown>(options: UseFormStateOptions<T> = {}) 
 
       // Show success toast if enabled
       if (showSuccessToast) {
-        addToast(successMessage || 'Operation completed successfully', 'success');
+        addToast(successMessage || t('common.operation_completed'), 'success');
       }
 
       onSuccess?.(result);

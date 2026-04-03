@@ -7,6 +7,8 @@
  * - Credentials (cookies)
  */
 
+import { t } from '$lib/i18n/index.js';
+
 export interface ApiError {
   error: string;
   message?: string;
@@ -40,6 +42,233 @@ export class HandledApiException extends ApiException {
   }
 }
 
+const FIELD_LABEL_KEYS: Record<string, string> = {
+  apparat: 'facility.apparat',
+  apparat_id: 'facility.apparat',
+  apparat_nr: 'field_device.table.apparat_nr',
+  bacnet_objects: 'facility.bacnet_object',
+  bacnetobject: 'facility.bacnet_object',
+  bmk: 'field_device.table.bmk',
+  building_group: 'facility.building_group',
+  building_id: 'facility.building',
+  controlcabinet: 'facility.control_cabinet',
+  control_cabinet_id: 'facility.control_cabinet',
+  control_cabinet_nr: 'facility.forms.control_cabinet.number_label',
+  description: 'common.description',
+  device_name: 'facility.device_name',
+  fielddevice: 'facility.field_device',
+  from_email: 'notifications.form.from_email',
+  ga_device: 'facility.ga_device',
+  gateway: 'facility.forms.sps_controller.gateway_label',
+  host: 'notifications.form.host',
+  ip_address: 'facility.ip_address',
+  iws_code: 'facility.iws_code',
+  name: 'common.name',
+  objectdata: 'facility.object_data',
+  object_data_id: 'facility.object_data',
+  password: 'notifications.form.password',
+  phase_id: 'projects.settings.phase',
+  port: 'notifications.form.port',
+  reply_to: 'notifications.form.reply_to',
+  spscontroller: 'facility.sps_controller',
+  specification: 'facility.specifications',
+  subnet: 'facility.forms.sps_controller.subnet_label',
+  system_part: 'facility.system_part',
+  system_part_id: 'facility.system_part',
+  system_types: 'facility.forms.sps_controller.system_types_title',
+  text_fix: 'field_device.table.text_fix',
+  to: 'notifications.test.to',
+  username: 'notifications.form.username',
+  vlan: 'facility.forms.sps_controller.vlan_label'
+};
+
+const SCOPE_LABEL_KEYS: Record<string, string> = {
+  building: 'facility.building',
+  control_cabinet: 'facility.control_cabinet',
+  'control cabinet': 'facility.control_cabinet',
+  ip_address: 'facility.ip_address',
+  vlan: 'facility.forms.sps_controller.vlan_label'
+};
+
+const DIRECT_MESSAGE_KEYS: Record<string, string> = {
+  'Bad Request': 'errors.bad_request',
+  Conflict: 'errors.conflict',
+  Forbidden: 'errors.forbidden',
+  'Internal Server Error': 'errors.internal_server_error',
+  'Not Found': 'errors.not_found',
+  'Unknown error': 'errors.unknown_error',
+  Unauthorized: 'errors.unauthorized',
+  authorization_failed: 'errors.unauthorized',
+  'field device is required': 'field_device.multi_create.validation.field_device_required',
+  'no available ga_device for control cabinet': 'facility.no_available_ga_device',
+  'object_data_id and bacnet_objects are mutually exclusive': 'facility.mutually_exclusive_error',
+  'one or more parent entities (SPS controller, apparat, system part) not found':
+    'field_device.multi_create.validation.parents_not_found',
+  'apparat_nr is required': 'field_device.multi_create.validation.apparat_nr_required',
+  'apparat_nr must be between 1 and 99': 'field_device.validation.apparat_nr_range',
+  'apparatnummer ist bereits vergeben': 'field_device.multi_create.validation.apparat_nr_used',
+  referenced_entity_in_use: 'facility.referenced_entity_in_use',
+  validation_error: 'errors.validation_error'
+};
+
+function translateIfExists(key: string, params?: Record<string, string | number>): string | null {
+  const translated = t(key, params);
+  return translated !== key ? translated : null;
+}
+
+function extractFieldSegment(fieldPath?: string): string | undefined {
+  if (!fieldPath) return undefined;
+  const segments = fieldPath.split('.').filter(Boolean);
+  return segments.length > 0 ? segments[segments.length - 1] : fieldPath;
+}
+
+function humanizeFieldName(field?: string): string {
+  if (!field) return '';
+  return field.replaceAll('_', ' ');
+}
+
+function getFieldLabel(fieldPath?: string): string {
+  const field = extractFieldSegment(fieldPath);
+  if (!field) return '';
+  const translationKey = FIELD_LABEL_KEYS[field];
+  if (translationKey) {
+    return t(translationKey);
+  }
+  return humanizeFieldName(field);
+}
+
+function getScopeLabel(scope: string): string {
+  const normalized = scope.trim().toLowerCase();
+  const translationKey = SCOPE_LABEL_KEYS[normalized];
+  if (translationKey) {
+    return t(translationKey);
+  }
+  return humanizeFieldName(normalized);
+}
+
+export function localizeErrorText(message: string, fieldPath?: string): string {
+  const trimmed = message.trim();
+  if (!trimmed) return trimmed;
+
+  const translatedByKey = translateIfExists(trimmed);
+  if (translatedByKey) {
+    return translatedByKey;
+  }
+
+  const translatedByErrorKey = translateIfExists(`errors.${trimmed}`);
+  if (translatedByErrorKey) {
+    return translatedByErrorKey;
+  }
+
+  const directTranslationKey = DIRECT_MESSAGE_KEYS[trimmed];
+  if (directTranslationKey) {
+    return t(directTranslationKey);
+  }
+
+  if (trimmed === 'is required') {
+    return t('validation.required', { field: getFieldLabel(fieldPath) });
+  }
+
+  if (trimmed === 'must be a valid email') {
+    return t('validation.email_invalid', { field: getFieldLabel(fieldPath) });
+  }
+
+  if (trimmed === 'invalid') {
+    return t('validation.invalid', { field: getFieldLabel(fieldPath) });
+  }
+
+  let match = trimmed.match(/^([a-z0-9_.-]+) is required$/i);
+  if (match) {
+    return t('validation.required', { field: getFieldLabel(match[1]) });
+  }
+
+  match = trimmed.match(/^([a-z0-9_.-]+) is required when auth_mode is plain$/i);
+  if (match) {
+    return t('validation.required_when_plain_auth', { field: getFieldLabel(match[1]) });
+  }
+
+  match = trimmed.match(/^max (\d+)$/i);
+  if (match) {
+    return t('validation.max_generic', { field: getFieldLabel(fieldPath), max: match[1] });
+  }
+
+  match = trimmed.match(/^min (\d+)$/i);
+  if (match) {
+    return t('validation.min_generic', { field: getFieldLabel(fieldPath), min: match[1] });
+  }
+
+  match = trimmed.match(/^length (\d+)$/i);
+  if (match) {
+    return t('validation.exact_length', { field: getFieldLabel(fieldPath), length: match[1] });
+  }
+
+  match = trimmed.match(/^must be one of: (.+)$/i);
+  if (match) {
+    return t('validation.one_of', { field: getFieldLabel(fieldPath), options: match[1] });
+  }
+
+  match = trimmed.match(/^([a-z0-9_.-]+) must be (\d+) characters or less$/i);
+  if (match) {
+    return t('validation.max_length', { field: getFieldLabel(match[1]), max: match[2] });
+  }
+
+  match = trimmed.match(/^([a-z0-9_.-]+) must be a valid IPv4 address$/i);
+  if (match) {
+    return t('validation.valid_ipv4', { field: getFieldLabel(match[1]) });
+  }
+
+  match = trimmed.match(/^([a-z0-9_.-]+) must be a valid IPv4 subnet mask$/i);
+  if (match) {
+    return t('validation.valid_ipv4_subnet', { field: getFieldLabel(match[1]) });
+  }
+
+  match = trimmed.match(/^([a-z0-9_.-]+) must be a number between (\d+) and (\d+)$/i);
+  if (match) {
+    return t('validation.number_between', {
+      field: getFieldLabel(match[1]),
+      min: match[2],
+      max: match[3]
+    });
+  }
+
+  match = trimmed.match(/^([a-z0-9_.-]+) must be between (\d+) and (\d+)$/i);
+  if (match) {
+    return t('validation.range', { field: getFieldLabel(match[1]), min: match[2], max: match[3] });
+  }
+
+  match = trimmed.match(/^([a-z0-9_.-]+) must be exactly (\d+) uppercase letters \(A-Z\)$/i);
+  if (match) {
+    return t('validation.exact_uppercase_letters', {
+      field: getFieldLabel(match[1]),
+      count: match[2]
+    });
+  }
+
+  match = trimmed.match(/^([a-z0-9_.-]+) must be unique within the (.+)$/i);
+  if (match) {
+    return t('validation.unique_within', {
+      field: getFieldLabel(match[1]),
+      scope: getScopeLabel(match[2])
+    });
+  }
+
+  match = trimmed.match(/^([a-z0-9_.-]+) must be unique per (.+)$/i);
+  if (match) {
+    return t('validation.unique_per', {
+      field: getFieldLabel(match[1]),
+      scope: getScopeLabel(match[2])
+    });
+  }
+
+  return trimmed;
+}
+
+export function localizeFieldErrorMap(errors: Record<string, string>): FieldErrorMap {
+  return Object.fromEntries(
+    Object.entries(errors).map(([field, value]) => [field, localizeErrorText(value, field)])
+  );
+}
+
 /**
  * Extract CSRF token from cookies
  */
@@ -63,8 +292,8 @@ async function parseError(response: Response): Promise<ApiError> {
     };
   } catch {
     return {
-      error: 'network_error',
-      message: response.statusText || 'Unknown error',
+      error: 'unknown_error',
+      message: response.statusText || 'unknown_error',
       status: response.status
     };
   }
@@ -129,13 +358,18 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
       if (response.status === 401 && typeof window !== 'undefined') {
         const { goto } = await import('$app/navigation');
         goto('/login');
-        throw new HandledApiException(401, error.error, error.message || 'Unauthorized');
+        throw new HandledApiException(
+          401,
+          error.error,
+          localizeErrorText(error.message || 'Unauthorized'),
+          error.details
+        );
       }
 
       // Central handling: authorization errors should be surfaced via toast,
       // not rendered inline in table/list UIs.
       if (error.error === 'authorization_failed') {
-        const message = error.message || 'You are not authorized to perform this action.';
+        const message = localizeErrorText(error.message || 'authorization_failed');
         if (typeof window !== 'undefined') {
           try {
             const { addToast } = await import('$lib/components/toast.svelte');
@@ -151,7 +385,7 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
       throw new ApiException(
         response.status,
         error.error,
-        error.message || `HTTP ${response.status}`,
+        localizeErrorText(error.message || `HTTP ${response.status}`),
         error.details
       );
     }
@@ -176,7 +410,7 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
       throw new ApiException(
         0,
         'network_error',
-        'Network request failed. Backend may be unavailable.',
+        t('errors.network_request_failed'),
         err.message
       );
     }
@@ -185,7 +419,7 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
     throw new ApiException(
       500,
       'unknown_error',
-      'An unexpected error occurred',
+      t('errors.unexpected_error'),
       err instanceof Error ? err.message : String(err)
     );
   }
@@ -196,19 +430,28 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
  */
 export function getErrorMessage(err: unknown): string {
   if (err instanceof ApiException) {
-    if (err.message) return err.message;
-    if (err.details && typeof err.details === 'object') {
-      const entries = Object.entries(err.details as Record<string, string>);
-      if (entries.length > 0) {
-        return entries.map(([key, value]) => `${key} ${value}`).join(', ');
+    const localizedDetails = getFieldErrors(err);
+    if (Object.keys(localizedDetails).length > 0 && err.error === 'validation_error') {
+      const first = Object.entries(localizedDetails)[0];
+      if (first) {
+        return first[1];
       }
     }
-    return err.error;
+
+    if (err.message) return localizeErrorText(err.message);
+
+    if (err.details && typeof err.details === 'object') {
+      const entries = Object.entries(localizedDetails);
+      if (entries.length > 0) {
+        return entries.map(([, value]) => value).join(', ');
+      }
+    }
+    return localizeErrorText(err.error);
   }
   if (err instanceof Error) {
-    return err.message;
+    return localizeErrorText(err.message);
   }
-  return 'An unknown error occurred';
+  return t('errors.unknown_error');
 }
 
 /**
@@ -220,7 +463,7 @@ export function getFieldErrors(err: unknown): FieldErrorMap {
   const entries = Object.entries(err.details as Record<string, unknown>)
     .filter(([, value]) => typeof value === 'string')
     .map(([key, value]) => [key, value as string]);
-  return Object.fromEntries(entries);
+  return localizeFieldErrorMap(Object.fromEntries(entries));
 }
 
 /**

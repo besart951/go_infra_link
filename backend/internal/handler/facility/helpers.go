@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
-	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
