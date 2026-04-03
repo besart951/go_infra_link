@@ -43,6 +43,9 @@ go.work.sum
 # Bruno
 bruno/.env
 
+# Generated backend exports
+backend/data/exports/
+
 server
 backend/server
 backend/app

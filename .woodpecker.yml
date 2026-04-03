@@ -12,7 +12,7 @@ steps:
       - golangci-lint run ./...
 
   backend_test_build:
-    image: golang:1.25-alpine
+    image: golang:1.26-alpine
     depends_on:
       - backend_lint
     environment:
