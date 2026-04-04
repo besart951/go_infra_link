@@ -1,6 +1,6 @@
 # go_infra_link
 
-Full-stack infrastructure link project with Go backend and frontend.
+Full-stack infrastructure link project with Go backend and frontend. 
 
 ## Quick Start
 
