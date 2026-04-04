@@ -1,6 +1,7 @@
 package facilitysql
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -14,6 +15,20 @@ type apparatRepo struct {
 	*gormbase.BaseRepository[*domainFacility.Apparat]
 }
 
+func orderApparatsForFieldDeviceOptions(query *gorm.DB) *gorm.DB {
+	return query.
+		Order("LOWER(short_name) ASC").
+		Order("LOWER(name) ASC").
+		Order("id ASC")
+}
+
+func orderSystemPartsForFieldDeviceOptions(query *gorm.DB) *gorm.DB {
+	return query.
+		Order("LOWER(system_parts.short_name) ASC").
+		Order("LOWER(system_parts.name) ASC").
+		Order("system_parts.id ASC")
+}
+
 func NewApparatRepository(db *gorm.DB) domainFacility.ApparatRepository {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
 		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
@@ -24,15 +39,22 @@ func NewApparatRepository(db *gorm.DB) domainFacility.ApparatRepository {
 	return &apparatRepo{BaseRepository: baseRepo}
 }
 
-func (r *apparatRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Apparat, error) {
-	result, err := r.BaseRepository.GetByIds(ids)
+func (r *apparatRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.Apparat, error) {
+	if len(ids) == 0 {
+		return []*domainFacility.Apparat{}, nil
+	}
+
+	var result []*domainFacility.Apparat
+	err := orderApparatsForFieldDeviceOptions(
+		r.DB().WithContext(ctx).Where("id IN ?", ids),
+	).Find(&result).Error
 	if err != nil {
 		return nil, err
 	}
 
 	// Preload SystemParts for each apparat
 	for _, apparat := range result {
-		if err := r.DB().Model(apparat).Association("SystemParts").Find(&apparat.SystemParts); err != nil {
+		if err := r.loadSortedSystemParts(ctx, apparat); err != nil {
 			return nil, err
 		}
 	}
@@ -40,9 +62,9 @@ func (r *apparatRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Apparat, erro
 	return result, nil
 }
 
-func (r *apparatRepo) Update(entity *domainFacility.Apparat) error {
+func (r *apparatRepo) Update(ctx context.Context, entity *domainFacility.Apparat) error {
 	// Use GORM's Association API to replace SystemParts
-	return r.DB().Transaction(func(tx *gorm.DB) error {
+	return r.DB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Update the entity itself
 		if err := tx.Model(entity).Updates(entity).Error; err != nil {
 			return err
@@ -57,18 +79,33 @@ func (r *apparatRepo) Update(entity *domainFacility.Apparat) error {
 	})
 }
 
-func (r *apparatRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Apparat], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+func (r *apparatRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Apparat], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
 	if err != nil {
 		return nil, err
 	}
 
 	// Preload SystemParts for each apparat
 	for _, apparat := range result.Items {
-		if err := r.DB().Model(apparat).Association("SystemParts").Find(&apparat.SystemParts); err != nil {
+		if err := r.loadSortedSystemParts(ctx, apparat); err != nil {
 			return nil, err
 		}
 	}
 
 	return gormbase.DerefPaginatedList(result), nil
+}
+
+func (r *apparatRepo) loadSortedSystemParts(ctx context.Context, apparat *domainFacility.Apparat) error {
+	var systemParts []*domainFacility.SystemPart
+	err := orderSystemPartsForFieldDeviceOptions(
+		r.DB().WithContext(ctx).
+			Model(&domainFacility.SystemPart{}).
+			Joins("JOIN system_part_apparats ON system_part_apparats.system_part_id = system_parts.id").
+			Where("system_part_apparats.apparat_id = ?", apparat.ID),
+	).Find(&systemParts).Error
+	if err != nil {
+		return err
+	}
+	apparat.SystemParts = systemParts
+	return nil
 }

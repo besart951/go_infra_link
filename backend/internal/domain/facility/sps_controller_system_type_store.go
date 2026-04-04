@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"context"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/google/uuid"
 )
@@ -12,8 +14,9 @@ import (
 // relying on database FK errors.
 type SPSControllerSystemTypeStore interface {
 	SPSControllerSystemTypeRepository
-	GetPaginatedListBySPSControllerID(spsControllerID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[SPSControllerSystemType], error)
-	ListBySPSControllerID(spsControllerID uuid.UUID) ([]*SPSControllerSystemType, error)
-	GetIDsBySPSControllerIDs(ids []uuid.UUID) ([]uuid.UUID, error)
-	DeleteBySPSControllerIDs(ids []uuid.UUID) error
+	GetPaginatedListBySPSControllerID(ctx context.Context, spsControllerID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[SPSControllerSystemType], error)
+	GetPaginatedListByProjectID(ctx context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[SPSControllerSystemType], error)
+	ListBySPSControllerID(ctx context.Context, spsControllerID uuid.UUID) ([]*SPSControllerSystemType, error)
+	GetIDsBySPSControllerIDs(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error)
+	DeleteBySPSControllerIDs(ctx context.Context, ids []uuid.UUID) error
 }

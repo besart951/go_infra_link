@@ -53,7 +53,7 @@ func (h *AlarmTypeHandler) GetAlarmTypeFields(c *gin.Context) {
 	if !ok {
 		return
 	}
-	alarmType, err := h.service.GetWithFields(id)
+	alarmType, err := h.service.GetWithFields(c.Request.Context(), id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.alarm_type_not_found") {
 			return

@@ -1,6 +1,10 @@
 package facility
 
-import "github.com/google/uuid"
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
 
 // BacnetObjectStore extends the base repository with helper methods
 // used for FieldDevice hydration and bulk operations.
@@ -8,8 +12,8 @@ type BacnetObjectStore interface {
 	BacnetObjectRepository
 
 	// BulkCreate creates multiple BACnet objects in batches.
-	BulkCreate(entities []*BacnetObject, batchSize int) error
+	BulkCreate(ctx context.Context, entities []*BacnetObject, batchSize int) error
 
-	GetByFieldDeviceIDs(ids []uuid.UUID) ([]*BacnetObject, error)
-	DeleteByFieldDeviceIDs(ids []uuid.UUID) error
+	GetByFieldDeviceIDs(ctx context.Context, ids []uuid.UUID) ([]*BacnetObject, error)
+	DeleteByFieldDeviceIDs(ctx context.Context, ids []uuid.UUID) error
 }

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 )
 
 type UserStatusService interface {
-	GetByID(id uuid.UUID) (*domainUser.User, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*domainUser.User, error)
 }
 
 func AccountStatusGuard(userService UserStatusService) gin.HandlerFunc {
@@ -22,7 +23,8 @@ func AccountStatusGuard(userService UserStatusService) gin.HandlerFunc {
 			return
 		}
 
-		usr, err := userService.GetByID(userID)
+		ctx := c.Request.Context()
+		usr, err := userService.GetByID(ctx, userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 			c.Abort()

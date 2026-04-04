@@ -1,7 +1,6 @@
 package team
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -36,7 +35,7 @@ func (h *TeamHandler) CreateTeam(c *gin.Context) {
 	}
 
 	t := ToTeamModel(req)
-	if err := h.service.Create(t); err != nil {
+	if err := h.service.Create(c.Request.Context(), t); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "team.creation_failed")
 		return
 	}
@@ -61,7 +60,7 @@ func (h *TeamHandler) ListTeams(c *gin.Context) {
 		return
 	}
 
-	res, err := h.service.List(query.Page, query.Limit, query.Search)
+	res, err := h.service.List(c.Request.Context(), query.Page, query.Limit, query.Search)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "team.fetch_failed")
 		return
@@ -91,13 +90,14 @@ func (h *TeamHandler) GetTeam(c *gin.Context) {
 		return
 	}
 
-	t, err := h.service.GetByID(id)
+	t, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "team.team_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "team.fetch_failed")
+		handlerutil.RespondDomainError(
+			c,
+			err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "team.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "team.team_not_found")),
+		)
 		return
 	}
 
@@ -127,19 +127,21 @@ func (h *TeamHandler) UpdateTeam(c *gin.Context) {
 		return
 	}
 
-	t, err := h.service.GetByID(id)
+	ctx := c.Request.Context()
+	t, err := h.service.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "team.team_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "team.fetch_failed")
+		handlerutil.RespondDomainError(
+			c,
+			err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "team.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "team.team_not_found")),
+		)
 		return
 	}
 
 	ApplyTeamUpdate(t, req)
 
-	if err := h.service.Update(t); err != nil {
+	if err := h.service.Update(ctx, t); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "team.update_failed")
 		return
 	}
@@ -161,7 +163,7 @@ func (h *TeamHandler) DeleteTeam(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(id); err != nil {
+	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "team.deletion_failed")
 		return
 	}
@@ -190,7 +192,7 @@ func (h *TeamHandler) AddMember(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.AddMember(teamID, req.UserID, team.MemberRole(req.Role)); err != nil {
+	if err := h.service.AddMember(c.Request.Context(), teamID, req.UserID, team.MemberRole(req.Role)); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "team.update_failed")
 		return
 	}
@@ -218,7 +220,7 @@ func (h *TeamHandler) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.RemoveMember(teamID, userID); err != nil {
+	if err := h.service.RemoveMember(c.Request.Context(), teamID, userID); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "team.update_failed")
 		return
 	}
@@ -248,7 +250,7 @@ func (h *TeamHandler) ListMembers(c *gin.Context) {
 		return
 	}
 
-	res, err := h.service.ListMembers(teamID, query.Page, query.Limit)
+	res, err := h.service.ListMembers(c.Request.Context(), teamID, query.Page, query.Limit)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "team.fetch_failed")
 		return

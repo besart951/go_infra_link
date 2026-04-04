@@ -1,7 +1,6 @@
 package project
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -36,15 +35,6 @@ func (h *ProjectHandler) ListProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.service.GetByID(projectID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
-		return
-	}
-
 	var query dto.PaginationQuery
 	if !handlerutil.BindQuery(c, &query) {
 		return
@@ -74,7 +64,7 @@ func (h *ProjectHandler) ListProjectObjectData(c *gin.Context) {
 		systemPartID = &id
 	}
 
-	result, err := h.service.ListObjectData(projectID, query.Page, query.Limit, query.Search, apparatID, systemPartID)
+	result, err := h.service.ListObjectData(c.Request.Context(), projectID, query.Page, query.Limit, query.Search, apparatID, systemPartID)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
 		return
@@ -118,19 +108,14 @@ func (h *ProjectHandler) AddProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	obj, err := h.service.AddObjectData(projectID, req.ObjectDataID)
+	obj, err := h.service.AddObjectData(c.Request.Context(), projectID, req.ObjectDataID)
 	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrNotFound):
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_or_object_data_not_found")
-			return
-		case errors.Is(err, domain.ErrConflict):
-			handlerutil.RespondLocalizedError(c, http.StatusConflict, "conflict", "project.object_data_already_linked")
-			return
-		default:
-			handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "project.update_failed")
-			return
-		}
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_or_object_data_not_found")),
+			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "conflict", "project.object_data_already_linked")),
+		)
+		return
 	}
 
 	h.notifyProjectChange(c, projectID, "project.object_data.created")
@@ -164,13 +149,12 @@ func (h *ProjectHandler) RemoveProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	obj, err := h.service.RemoveObjectData(projectID, objectDataID)
+	obj, err := h.service.RemoveObjectData(c.Request.Context(), projectID, objectDataID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_or_object_data_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "project.update_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_or_object_data_not_found")),
+		)
 		return
 	}
 

@@ -20,6 +20,7 @@ import (
 	rbacservice "github.com/besart951/go_infra_link/backend/internal/service/rbac"
 	teamservice "github.com/besart951/go_infra_link/backend/internal/service/team"
 	userservice "github.com/besart951/go_infra_link/backend/internal/service/user"
+	"gorm.io/gorm"
 )
 
 // Services holds all service instances.
@@ -49,32 +50,11 @@ type ServiceConfig struct {
 }
 
 // NewServices creates all service instances from repositories and configuration.
-func NewServices(repos *Repositories, cfg ServiceConfig) (*Services, error) {
+func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Services, error) {
 	passwordService := passwordsvc.New()
 	jwtService := authservice.NewJWTService(cfg.JWTSecret, cfg.Issuer)
 	rbacSvc := rbacservice.New(repos.User, repos.TeamMember, repos.Permissions, repos.RolePermissions)
-	facilityServices := facilityservice.NewServices(facilityservice.Repositories{
-		Buildings:                repos.FacilityBuildings,
-		SystemTypes:              repos.FacilitySystemTypes,
-		SystemParts:              repos.FacilitySystemParts,
-		Specifications:           repos.FacilitySpecifications,
-		Apparats:                 repos.FacilityApparats,
-		ControlCabinets:          repos.FacilityControlCabinet,
-		FieldDevices:             repos.FacilityFieldDevices,
-		SPSControllers:           repos.FacilitySPSControllers,
-		SPSControllerSystemTypes: repos.FacilitySPSControllerSystemTypes,
-		BacnetObjects:            repos.FacilityBacnetObjects,
-		ObjectData:               repos.FacilityObjectData,
-		ObjectDataBacnetObjects:  repos.FacilityObjectDataBacnetObjects,
-		StateTexts:               repos.FacilityStateTexts,
-		NotificationClasses:      repos.FacilityNotificationClasses,
-		AlarmDefinitions:         repos.FacilityAlarmDefinitions,
-		Units:                    repos.FacilityUnits,
-		AlarmFields:              repos.FacilityAlarmFields,
-		AlarmTypes:               repos.FacilityAlarmTypes,
-		AlarmTypeFields:          repos.FacilityAlarmTypeFields,
-		BacnetObjectAlarmValues:  repos.FacilityBacnetObjectAlarmValues,
-	})
+	facilityServices := facilityservice.NewServices(buildFacilityRepositories(repos))
 
 	jobStore := exportinfra.NewMemoryJobStore()
 	fileStore, err := exportinfra.NewLocalFileStore(filepath.Join("data", "exports"))
@@ -107,21 +87,7 @@ func NewServices(repos *Repositories, cfg ServiceConfig) (*Services, error) {
 	)
 
 	return &Services{
-		Project: projectservice.New(
-			repos.Project,
-			repos.ProjectControlCabinets,
-			repos.ProjectSPSControllers,
-			repos.ProjectFieldDevices,
-			repos.User,
-			repos.FacilityObjectData,
-			repos.FacilityBacnetObjects,
-			repos.FacilitySpecifications,
-			repos.FacilityControlCabinet,
-			repos.FacilitySPSControllers,
-			repos.FacilitySPSControllerSystemTypes,
-			repos.FacilityFieldDevices,
-			facilityServices.HierarchyCopier,
-		),
+		Project:      buildProjectService(gormDB, repos, facilityServices),
 		Dashboard:    dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
 		Phase:        phaseservice.NewPhaseService(repos.Phase),
 		User:         userservice.New(repos.User, passwordService),
@@ -144,4 +110,79 @@ func NewServices(repos *Repositories, cfg ServiceConfig) (*Services, error) {
 		Export:   exportSvc,
 		Facility: facilityServices,
 	}, nil
+}
+
+func buildFacilityRepositories(repos *Repositories) facilityservice.Repositories {
+	return facilityservice.Repositories{
+		Buildings:                repos.FacilityBuildings,
+		SystemTypes:              repos.FacilitySystemTypes,
+		SystemParts:              repos.FacilitySystemParts,
+		Specifications:           repos.FacilitySpecifications,
+		Apparats:                 repos.FacilityApparats,
+		ControlCabinets:          repos.FacilityControlCabinet,
+		FieldDevices:             repos.FacilityFieldDevices,
+		SPSControllers:           repos.FacilitySPSControllers,
+		SPSControllerSystemTypes: repos.FacilitySPSControllerSystemTypes,
+		BacnetObjects:            repos.FacilityBacnetObjects,
+		ObjectData:               repos.FacilityObjectData,
+		ObjectDataBacnetObjects:  repos.FacilityObjectDataBacnetObjects,
+		StateTexts:               repos.FacilityStateTexts,
+		NotificationClasses:      repos.FacilityNotificationClasses,
+		AlarmDefinitions:         repos.FacilityAlarmDefinitions,
+		Units:                    repos.FacilityUnits,
+		AlarmFields:              repos.FacilityAlarmFields,
+		AlarmTypes:               repos.FacilityAlarmTypes,
+		AlarmTypeFields:          repos.FacilityAlarmTypeFields,
+		BacnetObjectAlarmValues:  repos.FacilityBacnetObjectAlarmValues,
+	}
+}
+
+func buildProjectService(gormDB *gorm.DB, repos *Repositories, facilityServices *facilityservice.Services) *projectservice.Service {
+	txRunner := projectservice.TxRunner(func(run func(tx *gorm.DB) error) error {
+		return gormDB.Transaction(run)
+	})
+
+	txFactory := func(tx *gorm.DB) (*projectservice.Service, error) {
+		txRepos, err := NewRepositories(tx)
+		if err != nil {
+			return nil, fmt.Errorf("transaction repositories: %w", err)
+		}
+
+		txFacilityServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
+		return projectservice.New(
+			txRepos.Project,
+			txRepos.ProjectControlCabinets,
+			txRepos.ProjectSPSControllers,
+			txRepos.ProjectFieldDevices,
+			txRepos.User,
+			txRepos.FacilityObjectData,
+			txRepos.FacilityBacnetObjects,
+			txRepos.FacilitySpecifications,
+			txRepos.FacilityControlCabinet,
+			txRepos.FacilitySPSControllers,
+			txRepos.FacilitySPSControllerSystemTypes,
+			txRepos.FacilityFieldDevices,
+			txFacilityServices.HierarchyCopier,
+			nil,
+			nil,
+		), nil
+	}
+
+	return projectservice.New(
+		repos.Project,
+		repos.ProjectControlCabinets,
+		repos.ProjectSPSControllers,
+		repos.ProjectFieldDevices,
+		repos.User,
+		repos.FacilityObjectData,
+		repos.FacilityBacnetObjects,
+		repos.FacilitySpecifications,
+		repos.FacilityControlCabinet,
+		repos.FacilitySPSControllers,
+		repos.FacilitySPSControllerSystemTypes,
+		repos.FacilityFieldDevices,
+		facilityServices.HierarchyCopier,
+		txRunner,
+		txFactory,
+	)
 }

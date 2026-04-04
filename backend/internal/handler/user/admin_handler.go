@@ -30,7 +30,7 @@ func (h *AdminHandler) DisableUser(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.adminService.DisableUser(userID); err != nil {
+	if err := h.adminService.DisableUser(c.Request.Context(), userID); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "admin.user_disabled")
 		return
 	}
@@ -50,7 +50,7 @@ func (h *AdminHandler) EnableUser(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.adminService.EnableUser(userID); err != nil {
+	if err := h.adminService.EnableUser(c.Request.Context(), userID); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "admin.user_enabled")
 		return
 	}
@@ -77,7 +77,7 @@ func (h *AdminHandler) SetUserRole(c *gin.Context) {
 		return
 	}
 
-	if err := h.adminService.SetUserRole(userID, user.Role(req.Role)); err != nil {
+	if err := h.adminService.SetUserRole(c.Request.Context(), userID, user.Role(req.Role)); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "admin.user_role_updated")
 		return
 	}

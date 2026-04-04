@@ -1,6 +1,8 @@
 package user
 
 import (
+	"context"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/google/uuid"
@@ -16,14 +18,14 @@ func New(repo domainUser.UserRepository, passwordSvc domainUser.PasswordHasher) 
 	return &Service{repo: repo, passwordSvc: passwordSvc}
 }
 
-func (s *Service) Create(user *domainUser.User) error {
+func (s *Service) Create(ctx context.Context, user *domainUser.User) error {
 	if user.Role == "" {
 		user.Role = domainUser.RoleEnterpreneur
 	}
-	return s.repo.Create(user)
+	return s.repo.Create(ctx, user)
 }
 
-func (s *Service) CreateWithPassword(user *domainUser.User, password string) error {
+func (s *Service) CreateWithPassword(ctx context.Context, user *domainUser.User, password string) error {
 	hashedPassword, err := s.passwordSvc.Hash(password)
 	if err != nil {
 		return domainUser.ErrPasswordHashingFailed
@@ -34,22 +36,22 @@ func (s *Service) CreateWithPassword(user *domainUser.User, password string) err
 	}
 
 	user.Password = hashedPassword
-	return s.repo.Create(user)
+	return s.repo.Create(ctx, user)
 }
 
-func (s *Service) GetByIds(ids []uuid.UUID) ([]*domainUser.User, error) {
-	return s.repo.GetByIds(ids)
+func (s *Service) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*domainUser.User, error) {
+	return s.repo.GetByIds(ctx, ids)
 }
 
-func (s *Service) GetByID(id uuid.UUID) (*domainUser.User, error) {
-	return domain.GetByID(s.repo, id)
+func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*domainUser.User, error) {
+	return domain.GetByID(ctx, s.repo, id)
 }
 
-func (s *Service) Update(user *domainUser.User) error {
-	return s.repo.Update(user)
+func (s *Service) Update(ctx context.Context, user *domainUser.User) error {
+	return s.repo.Update(ctx, user)
 }
 
-func (s *Service) UpdateWithPassword(user *domainUser.User, password *string) error {
+func (s *Service) UpdateWithPassword(ctx context.Context, user *domainUser.User, password *string) error {
 	if password != nil && *password != "" {
 		hashedPassword, err := s.passwordSvc.Hash(*password)
 		if err != nil {
@@ -58,14 +60,14 @@ func (s *Service) UpdateWithPassword(user *domainUser.User, password *string) er
 		user.Password = hashedPassword
 	}
 
-	return s.repo.Update(user)
+	return s.repo.Update(ctx, user)
 }
 
-func (s *Service) DeleteByID(id uuid.UUID) error {
-	return s.repo.DeleteByIds([]uuid.UUID{id})
+func (s *Service) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
 }
 
-func (s *Service) List(page, limit int, search, orderBy, order string) (*domain.PaginatedList[domainUser.User], error) {
+func (s *Service) List(ctx context.Context, page, limit int, search, orderBy, order string) (*domain.PaginatedList[domainUser.User], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
 
 	// Default ordering by last_login_at descending
@@ -74,7 +76,7 @@ func (s *Service) List(page, limit int, search, orderBy, order string) (*domain.
 		order = "desc"
 	}
 
-	return s.repo.GetPaginatedList(domain.PaginationParams{
+	return s.repo.GetPaginatedList(ctx, domain.PaginationParams{
 		Page:    page,
 		Limit:   limit,
 		Search:  search,

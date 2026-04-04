@@ -30,7 +30,7 @@ func (h *BacnetAlarmHandler) GetAlarmSchema(c *gin.Context) {
 		return
 	}
 
-	schema, err := h.service.GetSchema(id)
+	schema, err := h.service.GetSchema(c.Request.Context(), id)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
@@ -56,7 +56,7 @@ func (h *BacnetAlarmHandler) GetAlarmValues(c *gin.Context) {
 		return
 	}
 
-	values, err := h.service.GetValues(id)
+	values, err := h.service.GetValues(c.Request.Context(), id)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
@@ -85,13 +85,14 @@ func (h *BacnetAlarmHandler) PutAlarmValues(c *gin.Context) {
 		return
 	}
 
+	ctx := c.Request.Context()
 	values := toAlarmValueModels(id, req.Values)
 
-	if err := h.service.PutValues(id, values); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
+	if err := h.service.PutValues(ctx, id, values); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
 
-	updated, err := h.service.GetValues(id)
+	updated, err := h.service.GetValues(ctx, id)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return

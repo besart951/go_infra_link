@@ -48,7 +48,7 @@ func (h *FieldDeviceHandler) MultiCreateFieldDevices(c *gin.Context) {
 	}
 
 	// Create field devices
-	result := h.service.MultiCreate(items)
+	result := h.service.MultiCreate(c.Request.Context(), items)
 
 	c.JSON(http.StatusOK, toMultiCreateFieldDeviceResponse(result))
 }
@@ -69,7 +69,7 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 		return
 	}
 
-	fieldDevice, err := h.service.GetByID(id)
+	fieldDevice, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
 			return
@@ -136,7 +136,7 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 		Order:   query.Order,
 	}
 
-	result, err := h.service.ListWithFilters(params, filters)
+	result, err := h.service.ListWithFilters(c.Request.Context(), params, filters)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
@@ -180,7 +180,7 @@ func (h *FieldDeviceHandler) ListAvailableApparatNumbers(c *gin.Context) {
 		return
 	}
 
-	available, err := h.service.ListAvailableApparatNumbers(*spsControllerSystemTypeID, systemPartID, *apparatID)
+	available, err := h.service.ListAvailableApparatNumbers(c.Request.Context(), *spsControllerSystemTypeID, systemPartID, *apparatID)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
@@ -198,7 +198,7 @@ func (h *FieldDeviceHandler) ListAvailableApparatNumbers(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/field-devices/options [get]
 func (h *FieldDeviceHandler) GetFieldDeviceOptions(c *gin.Context) {
-	options, err := h.service.GetFieldDeviceOptions()
+	options, err := h.service.GetFieldDeviceOptions(c.Request.Context())
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
@@ -230,7 +230,9 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		return
 	}
 
-	fieldDevice, err := h.service.GetByID(id)
+	ctx := c.Request.Context()
+
+	fieldDevice, err := h.service.GetByID(ctx, id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
 			return
@@ -247,7 +249,7 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		bacnetObjects = &mapped
 	}
 
-	if err := h.service.UpdateWithBacnetObjects(fieldDevice, req.ObjectDataID, bacnetObjects); err != nil {
+	if err := h.service.UpdateWithBacnetObjects(ctx, fieldDevice, req.ObjectDataID, bacnetObjects); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {
 			respondValidationError(c, ve.Fields)
 			return
@@ -286,7 +288,7 @@ func (h *FieldDeviceHandler) DeleteFieldDevice(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(id); err != nil {
+	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}
@@ -310,7 +312,7 @@ func (h *FieldDeviceHandler) ListFieldDeviceBacnetObjects(c *gin.Context) {
 		return
 	}
 
-	objs, err := h.service.ListBacnetObjects(id)
+	objs, err := h.service.ListBacnetObjects(c.Request.Context(), id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
 			return
@@ -348,7 +350,7 @@ func (h *FieldDeviceHandler) CreateFieldDeviceSpecification(c *gin.Context) {
 
 	spec := toFieldDeviceSpecification(req)
 
-	if err := h.service.CreateSpecification(fieldDeviceID, spec); err != nil {
+	if err := h.service.CreateSpecification(c.Request.Context(), fieldDeviceID, spec); err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
 			return
 		}
@@ -388,7 +390,7 @@ func (h *FieldDeviceHandler) UpdateFieldDeviceSpecification(c *gin.Context) {
 
 	patch := toFieldDeviceSpecificationPatch(req)
 
-	spec, err := h.service.UpdateSpecification(fieldDeviceID, patch)
+	spec, err := h.service.UpdateSpecification(c.Request.Context(), fieldDeviceID, patch)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
 			return
@@ -447,7 +449,7 @@ func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
 		}
 	}
 
-	result := h.service.BulkUpdate(updates)
+	result := h.service.BulkUpdate(c.Request.Context(), updates)
 
 	c.JSON(http.StatusOK, toBulkOperationResponse(result))
 }
@@ -468,7 +470,7 @@ func (h *FieldDeviceHandler) BulkDeleteFieldDevices(c *gin.Context) {
 		return
 	}
 
-	result := h.service.BulkDelete(req.IDs)
+	result := h.service.BulkDelete(c.Request.Context(), req.IDs)
 
 	c.JSON(http.StatusOK, toBulkOperationResponse(result))
 }

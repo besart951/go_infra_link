@@ -37,7 +37,7 @@ func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func()
 		return nil, func() {}, fmt.Errorf("repositories: %w", err)
 	}
 
-	services, err := wire.NewServices(repos, wire.ServiceConfig{
+	services, err := wire.NewServices(gormDB, repos, wire.ServiceConfig{
 		JWTSecret:       cfg.JWTSecret,
 		Issuer:          config.DefaultIssuer,
 		AccessTokenTTL:  cfg.AccessTokenTTL,

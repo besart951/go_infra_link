@@ -1,6 +1,8 @@
 package project
 
 import (
+	"context"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
@@ -20,5 +22,5 @@ func (ProjectFieldDevice) TableName() string {
 
 type ProjectFieldDeviceRepository interface {
 	domain.Repository[ProjectFieldDevice]
-	GetPaginatedListByProjectID(projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ProjectFieldDevice], error)
+	GetPaginatedListByProjectID(ctx context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ProjectFieldDevice], error)
 }

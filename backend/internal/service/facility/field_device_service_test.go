@@ -1,6 +1,9 @@
 package facility_test
 
 import (
+	"context"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -15,7 +18,7 @@ type fakeFieldDeviceStore struct {
 	deletedBatches [][]uuid.UUID
 }
 
-func (r *fakeFieldDeviceStore) GetByIds(ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {
+func (r *fakeFieldDeviceStore) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {
 	out := make([]*domainFacility.FieldDevice, 0, len(ids))
 	for _, id := range ids {
 		if item, ok := r.items[id]; ok {
@@ -26,28 +29,28 @@ func (r *fakeFieldDeviceStore) GetByIds(ids []uuid.UUID) ([]*domainFacility.Fiel
 	return out, nil
 }
 
-func (r *fakeFieldDeviceStore) Create(entity *domainFacility.FieldDevice) error {
+func (r *fakeFieldDeviceStore) Create(_ context.Context, entity *domainFacility.FieldDevice) error {
 	clone := *entity
 	r.items[entity.ID] = &clone
 	return nil
 }
 
-func (r *fakeFieldDeviceStore) BulkCreate(entities []*domainFacility.FieldDevice, batchSize int) error {
+func (r *fakeFieldDeviceStore) BulkCreate(_ context.Context, entities []*domainFacility.FieldDevice, batchSize int) error {
 	for _, entity := range entities {
-		if err := r.Create(entity); err != nil {
+		if err := r.Create(context.Background(), entity); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *fakeFieldDeviceStore) Update(entity *domainFacility.FieldDevice) error {
+func (r *fakeFieldDeviceStore) Update(_ context.Context, entity *domainFacility.FieldDevice) error {
 	clone := *entity
 	r.items[entity.ID] = &clone
 	return nil
 }
 
-func (r *fakeFieldDeviceStore) DeleteByIds(ids []uuid.UUID) error {
+func (r *fakeFieldDeviceStore) DeleteByIds(_ context.Context, ids []uuid.UUID) error {
 	r.deleteCalls++
 	batch := append([]uuid.UUID(nil), ids...)
 	r.deletedBatches = append(r.deletedBatches, batch)
@@ -57,7 +60,7 @@ func (r *fakeFieldDeviceStore) DeleteByIds(ids []uuid.UUID) error {
 	return nil
 }
 
-func (r *fakeFieldDeviceStore) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
+func (r *fakeFieldDeviceStore) GetPaginatedList(_ context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
 	items := make([]domainFacility.FieldDevice, 0, len(r.items))
 	for _, item := range r.items {
 		items = append(items, *item)
@@ -71,6 +74,7 @@ func (r *fakeFieldDeviceStore) GetPaginatedList(params domain.PaginationParams) 
 }
 
 func (r *fakeFieldDeviceStore) GetPaginatedListWithFilters(
+	_ context.Context,
 	params domain.PaginationParams,
 	filters domainFacility.FieldDeviceFilterParams,
 ) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
@@ -82,7 +86,7 @@ func (r *fakeFieldDeviceStore) GetPaginatedListWithFilters(
 	}, nil
 }
 
-func (r *fakeFieldDeviceStore) GetIDsBySPSControllerSystemTypeIDs(ids []uuid.UUID) ([]uuid.UUID, error) {
+func (r *fakeFieldDeviceStore) GetIDsBySPSControllerSystemTypeIDs(_ context.Context, ids []uuid.UUID) ([]uuid.UUID, error) {
 	idSet := make(map[uuid.UUID]struct{}, len(ids))
 	for _, id := range ids {
 		idSet[id] = struct{}{}
@@ -97,6 +101,7 @@ func (r *fakeFieldDeviceStore) GetIDsBySPSControllerSystemTypeIDs(ids []uuid.UUI
 }
 
 func (r *fakeFieldDeviceStore) ExistsApparatNrConflict(
+	_ context.Context,
 	spsControllerSystemTypeID uuid.UUID,
 	systemPartID *uuid.UUID,
 	apparatID uuid.UUID,
@@ -129,6 +134,7 @@ func (r *fakeFieldDeviceStore) ExistsApparatNrConflict(
 }
 
 func (r *fakeFieldDeviceStore) GetUsedApparatNumbers(
+	_ context.Context,
 	spsControllerSystemTypeID uuid.UUID,
 	systemPartID *uuid.UUID,
 	apparatID uuid.UUID,
@@ -153,7 +159,7 @@ type fakeSpecificationStore struct {
 	items map[uuid.UUID]*domainFacility.Specification
 }
 
-func (r *fakeSpecificationStore) GetByIds(ids []uuid.UUID) ([]*domainFacility.Specification, error) {
+func (r *fakeSpecificationStore) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainFacility.Specification, error) {
 	out := make([]*domainFacility.Specification, 0, len(ids))
 	for _, id := range ids {
 		if item, ok := r.items[id]; ok {
@@ -164,7 +170,7 @@ func (r *fakeSpecificationStore) GetByIds(ids []uuid.UUID) ([]*domainFacility.Sp
 	return out, nil
 }
 
-func (r *fakeSpecificationStore) Create(entity *domainFacility.Specification) error {
+func (r *fakeSpecificationStore) Create(_ context.Context, entity *domainFacility.Specification) error {
 	clone := *entity
 	if clone.ID == uuid.Nil {
 		clone.ID = uuid.New()
@@ -174,29 +180,29 @@ func (r *fakeSpecificationStore) Create(entity *domainFacility.Specification) er
 	return nil
 }
 
-func (r *fakeSpecificationStore) BulkCreate(entities []*domainFacility.Specification, batchSize int) error {
+func (r *fakeSpecificationStore) BulkCreate(_ context.Context, entities []*domainFacility.Specification, batchSize int) error {
 	for _, entity := range entities {
-		if err := r.Create(entity); err != nil {
+		if err := r.Create(context.Background(), entity); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *fakeSpecificationStore) Update(entity *domainFacility.Specification) error {
+func (r *fakeSpecificationStore) Update(_ context.Context, entity *domainFacility.Specification) error {
 	clone := *entity
 	r.items[entity.ID] = &clone
 	return nil
 }
 
-func (r *fakeSpecificationStore) DeleteByIds(ids []uuid.UUID) error {
+func (r *fakeSpecificationStore) DeleteByIds(_ context.Context, ids []uuid.UUID) error {
 	for _, id := range ids {
 		delete(r.items, id)
 	}
 	return nil
 }
 
-func (r *fakeSpecificationStore) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Specification], error) {
+func (r *fakeSpecificationStore) GetPaginatedList(_ context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Specification], error) {
 	items := make([]domainFacility.Specification, 0, len(r.items))
 	for _, item := range r.items {
 		items = append(items, *item)
@@ -209,7 +215,7 @@ func (r *fakeSpecificationStore) GetPaginatedList(params domain.PaginationParams
 	}, nil
 }
 
-func (r *fakeSpecificationStore) GetByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) ([]*domainFacility.Specification, error) {
+func (r *fakeSpecificationStore) GetByFieldDeviceIDs(_ context.Context, fieldDeviceIDs []uuid.UUID) ([]*domainFacility.Specification, error) {
 	set := make(map[uuid.UUID]struct{}, len(fieldDeviceIDs))
 	for _, id := range fieldDeviceIDs {
 		set[id] = struct{}{}
@@ -229,7 +235,7 @@ func (r *fakeSpecificationStore) GetByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID)
 	return out, nil
 }
 
-func (r *fakeSpecificationStore) DeleteByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error {
+func (r *fakeSpecificationStore) DeleteByFieldDeviceIDs(_ context.Context, fieldDeviceIDs []uuid.UUID) error {
 	set := make(map[uuid.UUID]struct{}, len(fieldDeviceIDs))
 	for _, id := range fieldDeviceIDs {
 		set[id] = struct{}{}
@@ -249,7 +255,7 @@ type fakeSpsControllerSystemTypeRepo struct {
 	items map[uuid.UUID]*domainFacility.SPSControllerSystemType
 }
 
-func (r *fakeSpsControllerSystemTypeRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SPSControllerSystemType, error) {
+func (r *fakeSpsControllerSystemTypeRepo) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainFacility.SPSControllerSystemType, error) {
 	out := make([]*domainFacility.SPSControllerSystemType, 0, len(ids))
 	for _, id := range ids {
 		if item, ok := r.items[id]; ok {
@@ -260,26 +266,26 @@ func (r *fakeSpsControllerSystemTypeRepo) GetByIds(ids []uuid.UUID) ([]*domainFa
 	return out, nil
 }
 
-func (r *fakeSpsControllerSystemTypeRepo) Create(entity *domainFacility.SPSControllerSystemType) error {
+func (r *fakeSpsControllerSystemTypeRepo) Create(_ context.Context, entity *domainFacility.SPSControllerSystemType) error {
 	clone := *entity
 	r.items[entity.ID] = &clone
 	return nil
 }
 
-func (r *fakeSpsControllerSystemTypeRepo) Update(entity *domainFacility.SPSControllerSystemType) error {
+func (r *fakeSpsControllerSystemTypeRepo) Update(_ context.Context, entity *domainFacility.SPSControllerSystemType) error {
 	clone := *entity
 	r.items[entity.ID] = &clone
 	return nil
 }
 
-func (r *fakeSpsControllerSystemTypeRepo) DeleteByIds(ids []uuid.UUID) error {
+func (r *fakeSpsControllerSystemTypeRepo) DeleteByIds(_ context.Context, ids []uuid.UUID) error {
 	for _, id := range ids {
 		delete(r.items, id)
 	}
 	return nil
 }
 
-func (r *fakeSpsControllerSystemTypeRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
+func (r *fakeSpsControllerSystemTypeRepo) GetPaginatedList(_ context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
 	items := make([]domainFacility.SPSControllerSystemType, 0, len(r.items))
 	for _, item := range r.items {
 		items = append(items, *item)
@@ -293,6 +299,7 @@ func (r *fakeSpsControllerSystemTypeRepo) GetPaginatedList(params domain.Paginat
 }
 
 func (r *fakeSpsControllerSystemTypeRepo) GetPaginatedListBySPSControllerID(
+	_ context.Context,
 	spsControllerID uuid.UUID,
 	params domain.PaginationParams,
 ) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
@@ -310,7 +317,21 @@ func (r *fakeSpsControllerSystemTypeRepo) GetPaginatedListBySPSControllerID(
 	}, nil
 }
 
+func (r *fakeSpsControllerSystemTypeRepo) GetPaginatedListByProjectID(
+	_ context.Context,
+	projectID uuid.UUID,
+	params domain.PaginationParams,
+) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
+	return &domain.PaginatedList[domainFacility.SPSControllerSystemType]{
+		Items:      []domainFacility.SPSControllerSystemType{},
+		Total:      0,
+		Page:       1,
+		TotalPages: 1,
+	}, nil
+}
+
 func (r *fakeSpsControllerSystemTypeRepo) ListBySPSControllerID(
+	_ context.Context,
 	spsControllerID uuid.UUID,
 ) ([]*domainFacility.SPSControllerSystemType, error) {
 	out := make([]*domainFacility.SPSControllerSystemType, 0)
@@ -324,7 +345,7 @@ func (r *fakeSpsControllerSystemTypeRepo) ListBySPSControllerID(
 	return out, nil
 }
 
-func (r *fakeSpsControllerSystemTypeRepo) GetIDsBySPSControllerIDs(ids []uuid.UUID) ([]uuid.UUID, error) {
+func (r *fakeSpsControllerSystemTypeRepo) GetIDsBySPSControllerIDs(_ context.Context, ids []uuid.UUID) ([]uuid.UUID, error) {
 	if len(ids) == 0 {
 		return []uuid.UUID{}, nil
 	}
@@ -341,7 +362,7 @@ func (r *fakeSpsControllerSystemTypeRepo) GetIDsBySPSControllerIDs(ids []uuid.UU
 	return out, nil
 }
 
-func (r *fakeSpsControllerSystemTypeRepo) DeleteBySPSControllerIDs(ids []uuid.UUID) error {
+func (r *fakeSpsControllerSystemTypeRepo) DeleteBySPSControllerIDs(_ context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -361,7 +382,7 @@ type fakeSystemTypeRepo struct {
 	items map[uuid.UUID]*domainFacility.SystemType
 }
 
-func (r *fakeSystemTypeRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SystemType, error) {
+func (r *fakeSystemTypeRepo) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainFacility.SystemType, error) {
 	out := make([]*domainFacility.SystemType, 0, len(ids))
 	for _, id := range ids {
 		if item, ok := r.items[id]; ok {
@@ -372,26 +393,26 @@ func (r *fakeSystemTypeRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.System
 	return out, nil
 }
 
-func (r *fakeSystemTypeRepo) Create(entity *domainFacility.SystemType) error {
+func (r *fakeSystemTypeRepo) Create(_ context.Context, entity *domainFacility.SystemType) error {
 	clone := *entity
 	r.items[entity.ID] = &clone
 	return nil
 }
 
-func (r *fakeSystemTypeRepo) Update(entity *domainFacility.SystemType) error {
+func (r *fakeSystemTypeRepo) Update(_ context.Context, entity *domainFacility.SystemType) error {
 	clone := *entity
 	r.items[entity.ID] = &clone
 	return nil
 }
 
-func (r *fakeSystemTypeRepo) DeleteByIds(ids []uuid.UUID) error {
+func (r *fakeSystemTypeRepo) DeleteByIds(_ context.Context, ids []uuid.UUID) error {
 	for _, id := range ids {
 		delete(r.items, id)
 	}
 	return nil
 }
 
-func (r *fakeSystemTypeRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SystemType], error) {
+func (r *fakeSystemTypeRepo) GetPaginatedList(_ context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SystemType], error) {
 	items := make([]domainFacility.SystemType, 0, len(r.items))
 	for _, item := range r.items {
 		items = append(items, *item)
@@ -404,11 +425,11 @@ func (r *fakeSystemTypeRepo) GetPaginatedList(params domain.PaginationParams) (*
 	}, nil
 }
 
-func (r *fakeSystemTypeRepo) ExistsName(name string, excludeID *uuid.UUID) (bool, error) {
+func (r *fakeSystemTypeRepo) ExistsName(_ context.Context, name string, excludeID *uuid.UUID) (bool, error) {
 	return false, nil
 }
 
-func (r *fakeSystemTypeRepo) ExistsOverlappingRange(numberMin, numberMax int, excludeID *uuid.UUID) (bool, error) {
+func (r *fakeSystemTypeRepo) ExistsOverlappingRange(_ context.Context, numberMin, numberMax int, excludeID *uuid.UUID) (bool, error) {
 	return false, nil
 }
 
@@ -416,37 +437,44 @@ type fakeApparatRepo struct {
 	items map[uuid.UUID]*domainFacility.Apparat
 }
 
-func (r *fakeApparatRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.Apparat, error) {
+func (r *fakeApparatRepo) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainFacility.Apparat, error) {
 	out := make([]*domainFacility.Apparat, 0, len(ids))
 	for _, id := range ids {
 		if item, ok := r.items[id]; ok {
-			clone := *item
-			out = append(out, &clone)
+			out = append(out, cloneApparat(item))
 		}
 	}
+	sort.Slice(out, func(i, j int) bool {
+		leftShort := strings.ToLower(out[i].ShortName)
+		rightShort := strings.ToLower(out[j].ShortName)
+		if leftShort != rightShort {
+			return leftShort < rightShort
+		}
+		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
+	})
 	return out, nil
 }
 
-func (r *fakeApparatRepo) Create(entity *domainFacility.Apparat) error {
+func (r *fakeApparatRepo) Create(_ context.Context, entity *domainFacility.Apparat) error {
 	clone := *entity
 	r.items[entity.ID] = &clone
 	return nil
 }
 
-func (r *fakeApparatRepo) Update(entity *domainFacility.Apparat) error {
+func (r *fakeApparatRepo) Update(_ context.Context, entity *domainFacility.Apparat) error {
 	clone := *entity
 	r.items[entity.ID] = &clone
 	return nil
 }
 
-func (r *fakeApparatRepo) DeleteByIds(ids []uuid.UUID) error {
+func (r *fakeApparatRepo) DeleteByIds(_ context.Context, ids []uuid.UUID) error {
 	for _, id := range ids {
 		delete(r.items, id)
 	}
 	return nil
 }
 
-func (r *fakeApparatRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Apparat], error) {
+func (r *fakeApparatRepo) GetPaginatedList(_ context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Apparat], error) {
 	items := make([]domainFacility.Apparat, 0, len(r.items))
 	for _, item := range r.items {
 		items = append(items, *item)
@@ -463,7 +491,7 @@ type fakeSystemPartRepo struct {
 	items map[uuid.UUID]*domainFacility.SystemPart
 }
 
-func (r *fakeSystemPartRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SystemPart, error) {
+func (r *fakeSystemPartRepo) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainFacility.SystemPart, error) {
 	out := make([]*domainFacility.SystemPart, 0, len(ids))
 	for _, id := range ids {
 		if item, ok := r.items[id]; ok {
@@ -474,26 +502,26 @@ func (r *fakeSystemPartRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.System
 	return out, nil
 }
 
-func (r *fakeSystemPartRepo) Create(entity *domainFacility.SystemPart) error {
+func (r *fakeSystemPartRepo) Create(_ context.Context, entity *domainFacility.SystemPart) error {
 	clone := *entity
 	r.items[entity.ID] = &clone
 	return nil
 }
 
-func (r *fakeSystemPartRepo) Update(entity *domainFacility.SystemPart) error {
+func (r *fakeSystemPartRepo) Update(_ context.Context, entity *domainFacility.SystemPart) error {
 	clone := *entity
 	r.items[entity.ID] = &clone
 	return nil
 }
 
-func (r *fakeSystemPartRepo) DeleteByIds(ids []uuid.UUID) error {
+func (r *fakeSystemPartRepo) DeleteByIds(_ context.Context, ids []uuid.UUID) error {
 	for _, id := range ids {
 		delete(r.items, id)
 	}
 	return nil
 }
 
-func (r *fakeSystemPartRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SystemPart], error) {
+func (r *fakeSystemPartRepo) GetPaginatedList(_ context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SystemPart], error) {
 	items := make([]domainFacility.SystemPart, 0, len(r.items))
 	for _, item := range r.items {
 		items = append(items, *item)
@@ -512,6 +540,190 @@ func intPtr(value int) *int {
 
 func stringPtr(value string) *string {
 	return &value
+}
+
+type fakeObjectDataStore struct {
+	templates        []*domainFacility.ObjectData
+	projectTemplates map[uuid.UUID][]*domainFacility.ObjectData
+	items            map[uuid.UUID]*domainFacility.ObjectData
+}
+
+func (r *fakeObjectDataStore) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainFacility.ObjectData, error) {
+	out := make([]*domainFacility.ObjectData, 0, len(ids))
+	for _, id := range ids {
+		if item, ok := r.items[id]; ok {
+			out = append(out, cloneObjectData(item))
+		}
+	}
+	return out, nil
+}
+
+func (r *fakeObjectDataStore) Create(_ context.Context, entity *domainFacility.ObjectData) error {
+	if r.items == nil {
+		r.items = make(map[uuid.UUID]*domainFacility.ObjectData)
+	}
+	r.items[entity.ID] = cloneObjectData(entity)
+	return nil
+}
+
+func (r *fakeObjectDataStore) Update(_ context.Context, entity *domainFacility.ObjectData) error {
+	if r.items == nil {
+		r.items = make(map[uuid.UUID]*domainFacility.ObjectData)
+	}
+	r.items[entity.ID] = cloneObjectData(entity)
+	return nil
+}
+
+func (r *fakeObjectDataStore) DeleteByIds(_ context.Context, ids []uuid.UUID) error {
+	for _, id := range ids {
+		delete(r.items, id)
+	}
+	return nil
+}
+
+func (r *fakeObjectDataStore) GetPaginatedList(_ context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	items := make([]domainFacility.ObjectData, 0, len(r.items))
+	for _, item := range r.items {
+		items = append(items, *cloneObjectData(item))
+	}
+	return &domain.PaginatedList[domainFacility.ObjectData]{
+		Items:      items,
+		Total:      int64(len(items)),
+		Page:       1,
+		TotalPages: 1,
+	}, nil
+}
+
+func (r *fakeObjectDataStore) GetBacnetObjectIDs(_ context.Context, objectDataID uuid.UUID) ([]uuid.UUID, error) {
+	return []uuid.UUID{}, nil
+}
+
+func (r *fakeObjectDataStore) ExistsByDescription(_ context.Context, projectID *uuid.UUID, description string, excludeID *uuid.UUID) (bool, error) {
+	return false, nil
+}
+
+func (r *fakeObjectDataStore) GetTemplates(_ context.Context) ([]*domainFacility.ObjectData, error) {
+	return sortedObjectDataSlice(r.templates), nil
+}
+
+func (r *fakeObjectDataStore) GetTemplatesLite(_ context.Context) ([]*domainFacility.ObjectData, error) {
+	return sortedObjectDataSlice(r.templates), nil
+}
+
+func (r *fakeObjectDataStore) GetForProject(_ context.Context, projectID uuid.UUID) ([]*domainFacility.ObjectData, error) {
+	return sortedObjectDataSlice(r.projectTemplates[projectID]), nil
+}
+
+func (r *fakeObjectDataStore) GetForProjectLite(_ context.Context, projectID uuid.UUID) ([]*domainFacility.ObjectData, error) {
+	return sortedObjectDataSlice(r.projectTemplates[projectID]), nil
+}
+
+func (r *fakeObjectDataStore) GetPaginatedListForProject(_ context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	items := derefObjectDatas(sortedObjectDataSlice(r.projectTemplates[projectID]))
+	return &domain.PaginatedList[domainFacility.ObjectData]{
+		Items:      items,
+		Total:      int64(len(items)),
+		Page:       1,
+		TotalPages: 1,
+	}, nil
+}
+
+func (r *fakeObjectDataStore) GetPaginatedListByApparatID(_ context.Context, apparatID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	return &domain.PaginatedList[domainFacility.ObjectData]{Items: []domainFacility.ObjectData{}, Total: 0, Page: 1, TotalPages: 1}, nil
+}
+
+func (r *fakeObjectDataStore) GetPaginatedListBySystemPartID(_ context.Context, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	return &domain.PaginatedList[domainFacility.ObjectData]{Items: []domainFacility.ObjectData{}, Total: 0, Page: 1, TotalPages: 1}, nil
+}
+
+func (r *fakeObjectDataStore) GetPaginatedListByApparatAndSystemPartID(_ context.Context, apparatID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	return &domain.PaginatedList[domainFacility.ObjectData]{Items: []domainFacility.ObjectData{}, Total: 0, Page: 1, TotalPages: 1}, nil
+}
+
+func (r *fakeObjectDataStore) GetPaginatedListForProjectByApparatID(_ context.Context, projectID, apparatID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	return &domain.PaginatedList[domainFacility.ObjectData]{Items: []domainFacility.ObjectData{}, Total: 0, Page: 1, TotalPages: 1}, nil
+}
+
+func (r *fakeObjectDataStore) GetPaginatedListForProjectBySystemPartID(_ context.Context, projectID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	return &domain.PaginatedList[domainFacility.ObjectData]{Items: []domainFacility.ObjectData{}, Total: 0, Page: 1, TotalPages: 1}, nil
+}
+
+func (r *fakeObjectDataStore) GetPaginatedListForProjectByApparatAndSystemPartID(_ context.Context, projectID, apparatID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	return &domain.PaginatedList[domainFacility.ObjectData]{Items: []domainFacility.ObjectData{}, Total: 0, Page: 1, TotalPages: 1}, nil
+}
+
+func cloneApparat(item *domainFacility.Apparat) *domainFacility.Apparat {
+	clone := *item
+	if item.SystemParts != nil {
+		clone.SystemParts = make([]*domainFacility.SystemPart, 0, len(item.SystemParts))
+		for _, systemPart := range item.SystemParts {
+			if systemPart == nil {
+				continue
+			}
+			systemPartClone := *systemPart
+			clone.SystemParts = append(clone.SystemParts, &systemPartClone)
+		}
+		sort.Slice(clone.SystemParts, func(i, j int) bool {
+			leftShort := strings.ToLower(clone.SystemParts[i].ShortName)
+			rightShort := strings.ToLower(clone.SystemParts[j].ShortName)
+			if leftShort != rightShort {
+				return leftShort < rightShort
+			}
+			return strings.ToLower(clone.SystemParts[i].Name) < strings.ToLower(clone.SystemParts[j].Name)
+		})
+	}
+	return &clone
+}
+
+func cloneObjectData(item *domainFacility.ObjectData) *domainFacility.ObjectData {
+	clone := *item
+	if item.Apparats != nil {
+		clone.Apparats = make([]*domainFacility.Apparat, 0, len(item.Apparats))
+		for _, apparat := range item.Apparats {
+			if apparat == nil {
+				continue
+			}
+			clone.Apparats = append(clone.Apparats, cloneApparat(apparat))
+		}
+		sort.Slice(clone.Apparats, func(i, j int) bool {
+			leftShort := strings.ToLower(clone.Apparats[i].ShortName)
+			rightShort := strings.ToLower(clone.Apparats[j].ShortName)
+			if leftShort != rightShort {
+				return leftShort < rightShort
+			}
+			return strings.ToLower(clone.Apparats[i].Name) < strings.ToLower(clone.Apparats[j].Name)
+		})
+	}
+	return &clone
+}
+
+func sortedObjectDataSlice(items []*domainFacility.ObjectData) []*domainFacility.ObjectData {
+	out := make([]*domainFacility.ObjectData, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		out = append(out, cloneObjectData(item))
+	}
+	sort.Slice(out, func(i, j int) bool {
+		leftDescription := strings.ToLower(out[i].Description)
+		rightDescription := strings.ToLower(out[j].Description)
+		if leftDescription != rightDescription {
+			return leftDescription < rightDescription
+		}
+		return strings.ToLower(out[i].Version) < strings.ToLower(out[j].Version)
+	})
+	return out
+}
+
+func derefObjectDatas(items []*domainFacility.ObjectData) []domainFacility.ObjectData {
+	out := make([]domainFacility.ObjectData, 0, len(items))
+	for _, item := range items {
+		if item != nil {
+			out = append(out, *item)
+		}
+	}
+	return out
 }
 
 func TestFieldDeviceService_DeleteByIDs_UsesSingleRepositoryDelete(t *testing.T) {
@@ -541,7 +753,7 @@ func TestFieldDeviceService_DeleteByIDs_UsesSingleRepositoryDelete(t *testing.T)
 		nil,
 	)
 
-	if err := svc.DeleteByIDs([]uuid.UUID{fdID1, fdID2}); err != nil {
+	if err := svc.DeleteByIDs(context.Background(), []uuid.UUID{fdID1, fdID2}); err != nil {
 		t.Fatalf("expected delete to succeed, got %v", err)
 	}
 	if fieldDeviceRepo.deleteCalls != 1 {
@@ -552,6 +764,153 @@ func TestFieldDeviceService_DeleteByIDs_UsesSingleRepositoryDelete(t *testing.T)
 	}
 	if len(fieldDeviceRepo.items) != 0 {
 		t.Fatalf("expected all field devices to be deleted, got %d remaining", len(fieldDeviceRepo.items))
+	}
+}
+
+func TestFieldDeviceService_GetFieldDeviceOptions_PreservesRepositoryOrdering(t *testing.T) {
+	projectID := uuid.New()
+	objectDataZuluID := uuid.New()
+	objectDataAlphaV2ID := uuid.New()
+	objectDataAlphaV10ID := uuid.New()
+	apparatZuluID := uuid.New()
+	apparatAlphaID := uuid.New()
+	apparatBetaID := uuid.New()
+	systemPartZuluID := uuid.New()
+	systemPartAlphaID := uuid.New()
+	systemPartBetaID := uuid.New()
+
+	objectDataRepo := &fakeObjectDataStore{
+		templates: []*domainFacility.ObjectData{
+			{
+				Base:        domain.Base{ID: objectDataZuluID},
+				Description: "Zulu Object",
+				Version:     "2",
+				IsActive:    true,
+				Apparats: []*domainFacility.Apparat{
+					{Base: domain.Base{ID: apparatZuluID}, ShortName: "Zulu", Name: "Pump"},
+					{Base: domain.Base{ID: apparatAlphaID}, ShortName: "Alpha", Name: "Valve"},
+				},
+			},
+			{
+				Base:        domain.Base{ID: objectDataAlphaV10ID},
+				Description: "Alpha Object",
+				Version:     "10",
+				IsActive:    true,
+				Apparats: []*domainFacility.Apparat{
+					{Base: domain.Base{ID: apparatZuluID}, ShortName: "Zulu", Name: "Pump"},
+				},
+			},
+			{
+				Base:        domain.Base{ID: objectDataAlphaV2ID},
+				Description: "Alpha Object",
+				Version:     "2",
+				IsActive:    true,
+				Apparats: []*domainFacility.Apparat{
+					{Base: domain.Base{ID: apparatBetaID}, ShortName: "Beta", Name: "Damper"},
+					{Base: domain.Base{ID: apparatAlphaID}, ShortName: "Alpha", Name: "Valve"},
+				},
+			},
+		},
+		projectTemplates: map[uuid.UUID][]*domainFacility.ObjectData{
+			projectID: {
+				{
+					Base:        domain.Base{ID: objectDataZuluID},
+					Description: "Zulu Object",
+					Version:     "2",
+					IsActive:    true,
+					ProjectID:   &projectID,
+					Apparats: []*domainFacility.Apparat{
+						{Base: domain.Base{ID: apparatZuluID}, ShortName: "Zulu", Name: "Pump"},
+						{Base: domain.Base{ID: apparatAlphaID}, ShortName: "Alpha", Name: "Valve"},
+					},
+				},
+				{
+					Base:        domain.Base{ID: objectDataAlphaV2ID},
+					Description: "Alpha Object",
+					Version:     "2",
+					IsActive:    true,
+					ProjectID:   &projectID,
+					Apparats: []*domainFacility.Apparat{
+						{Base: domain.Base{ID: apparatBetaID}, ShortName: "Beta", Name: "Damper"},
+						{Base: domain.Base{ID: apparatAlphaID}, ShortName: "Alpha", Name: "Valve"},
+					},
+				},
+			},
+		},
+	}
+
+	apparatRepo := &fakeApparatRepo{
+		items: map[uuid.UUID]*domainFacility.Apparat{
+			apparatZuluID: {
+				Base:      domain.Base{ID: apparatZuluID},
+				ShortName: "Zulu",
+				Name:      "Pump",
+				SystemParts: []*domainFacility.SystemPart{
+					{Base: domain.Base{ID: systemPartZuluID}, ShortName: "Zulu", Name: "Zone"},
+					{Base: domain.Base{ID: systemPartAlphaID}, ShortName: "Alpha", Name: "Air"},
+				},
+			},
+			apparatAlphaID: {
+				Base:      domain.Base{ID: apparatAlphaID},
+				ShortName: "Alpha",
+				Name:      "Valve",
+				SystemParts: []*domainFacility.SystemPart{
+					{Base: domain.Base{ID: systemPartBetaID}, ShortName: "Beta", Name: "Heat"},
+					{Base: domain.Base{ID: systemPartAlphaID}, ShortName: "Alpha", Name: "Air"},
+				},
+			},
+			apparatBetaID: {
+				Base:      domain.Base{ID: apparatBetaID},
+				ShortName: "Beta",
+				Name:      "Damper",
+				SystemParts: []*domainFacility.SystemPart{
+					{Base: domain.Base{ID: systemPartBetaID}, ShortName: "Beta", Name: "Heat"},
+				},
+			},
+		},
+	}
+
+	svc := facility.NewFieldDeviceService(
+		nil,
+		nil,
+		nil,
+		apparatRepo,
+		nil,
+		nil,
+		nil,
+		objectDataRepo,
+		nil,
+		nil,
+	)
+
+	options, err := svc.GetFieldDeviceOptions(context.Background())
+	if err != nil {
+		t.Fatalf("expected options to load, got %v", err)
+	}
+
+	if got := []string{options.ObjectDatas[0].Description + ":" + options.ObjectDatas[0].Version, options.ObjectDatas[1].Description + ":" + options.ObjectDatas[1].Version, options.ObjectDatas[2].Description + ":" + options.ObjectDatas[2].Version}; got[0] != "Alpha Object:10" || got[1] != "Alpha Object:2" || got[2] != "Zulu Object:2" {
+		t.Fatalf("expected object datas in repository order, got %#v", got)
+	}
+
+	if got := []string{options.Apparats[0].ShortName, options.Apparats[1].ShortName, options.Apparats[2].ShortName}; got[0] != "Alpha" || got[1] != "Beta" || got[2] != "Zulu" {
+		t.Fatalf("expected apparats in repository order, got %#v", got)
+	}
+
+	if got := []string{options.SystemParts[0].ShortName, options.SystemParts[1].ShortName, options.SystemParts[2].ShortName}; got[0] != "Alpha" || got[1] != "Beta" || got[2] != "Zulu" {
+		t.Fatalf("expected system parts in repository order, got %#v", got)
+	}
+
+	projectOptions, err := svc.GetFieldDeviceOptionsForProject(context.Background(), projectID)
+	if err != nil {
+		t.Fatalf("expected project options to load, got %v", err)
+	}
+
+	if got := []string{projectOptions.ObjectDatas[0].Description + ":" + projectOptions.ObjectDatas[0].Version, projectOptions.ObjectDatas[1].Description + ":" + projectOptions.ObjectDatas[1].Version}; got[0] != "Alpha Object:2" || got[1] != "Zulu Object:2" {
+		t.Fatalf("expected project object datas in repository order, got %#v", got)
+	}
+
+	if got := []string{projectOptions.Apparats[0].ShortName, projectOptions.Apparats[1].ShortName, projectOptions.Apparats[2].ShortName}; got[0] != "Alpha" || got[1] != "Beta" || got[2] != "Zulu" {
+		t.Fatalf("expected project apparats in repository order, got %#v", got)
 	}
 }
 
@@ -626,7 +985,7 @@ func TestFieldDeviceService_BulkUpdate_AllowsSwapApparatNr(t *testing.T) {
 		{ID: fd1ID, ApparatNr: intPtr(2)},
 		{ID: fd2ID, ApparatNr: intPtr(1)},
 	}
-	result := svc.BulkUpdate(updates)
+	result := svc.BulkUpdate(context.Background(), updates)
 
 	if result.FailureCount != 0 {
 		t.Fatalf("expected 0 failures, got %d", result.FailureCount)
@@ -697,7 +1056,7 @@ func TestFieldDeviceService_BulkUpdate_DetectsApparatNrConflict(t *testing.T) {
 	updates := []domainFacility.BulkFieldDeviceUpdate{
 		{ID: fd1ID, ApparatNr: intPtr(3)},
 	}
-	result := svc.BulkUpdate(updates)
+	result := svc.BulkUpdate(context.Background(), updates)
 
 	if result.FailureCount != 1 {
 		t.Fatalf("expected 1 failure, got %d", result.FailureCount)
@@ -766,7 +1125,7 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_Succeeds(t *testi
 	}
 
 	// Act
-	result := svc.BulkUpdate(updates)
+	result := svc.BulkUpdate(context.Background(), updates)
 
 	// Assert
 	if result.FailureCount != 0 {
@@ -834,7 +1193,7 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_Conflict(t *testi
 	}
 
 	// Act
-	result := svc.BulkUpdate(updates)
+	result := svc.BulkUpdate(context.Background(), updates)
 
 	// Assert
 	if result.FailureCount != 1 {
@@ -907,7 +1266,7 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_DifferentSystemPa
 	}
 
 	// Act
-	result := svc.BulkUpdate(updates)
+	result := svc.BulkUpdate(context.Background(), updates)
 
 	// Assert
 	if result.FailureCount != 0 {
@@ -974,7 +1333,7 @@ func TestFieldDeviceService_BulkUpdate_TextIndividuellOnly_Succeeds(t *testing.T
 		{ID: fd2ID, TextIndividuell: stringPtr("kj")},
 	}
 
-	result := svc.BulkUpdate(updates)
+	result := svc.BulkUpdate(context.Background(), updates)
 
 	if result.FailureCount != 0 {
 		t.Fatalf("expected 0 failures, got %d (results=%+v)", result.FailureCount, result.Results)
@@ -1045,7 +1404,7 @@ func TestFieldDeviceService_BulkUpdate_AllowsClearingOptionalTextFields(t *testi
 		nil,
 	)
 
-	result := svc.BulkUpdate([]domainFacility.BulkFieldDeviceUpdate{
+	result := svc.BulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{
 		{
 			ID:                 fdID,
 			HasBMK:             true,
@@ -1134,7 +1493,7 @@ func TestFieldDeviceService_BulkUpdate_ClearsExistingSpecificationFields(t *test
 		nil,
 	)
 
-	result := svc.BulkUpdate([]domainFacility.BulkFieldDeviceUpdate{
+	result := svc.BulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{
 		{
 			ID: fdID,
 			Specification: &domainFacility.SpecificationPatch{
@@ -1207,7 +1566,7 @@ func TestFieldDeviceService_BulkUpdate_ClearOnlyPatchDoesNotCreateEmptySpecifica
 		nil,
 	)
 
-	result := svc.BulkUpdate([]domainFacility.BulkFieldDeviceUpdate{
+	result := svc.BulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{
 		{
 			ID: fdID,
 			Specification: &domainFacility.SpecificationPatch{

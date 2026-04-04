@@ -1,6 +1,7 @@
 package rbac
 
 import (
+	"context"
 	"errors"
 	"sort"
 
@@ -9,12 +10,12 @@ import (
 	"github.com/google/uuid"
 )
 
-func (s *Service) ListPermissions() ([]domainUser.Permission, error) {
-	return s.permissionRepo.ListAll()
+func (s *Service) ListPermissions(ctx context.Context) ([]domainUser.Permission, error) {
+	return s.permissionRepo.ListAll(ctx)
 }
 
-func (s *Service) GetPermissionByID(id uuid.UUID) (*domainUser.Permission, error) {
-	perms, err := s.permissionRepo.GetByIds([]uuid.UUID{id})
+func (s *Service) GetPermissionByID(ctx context.Context, id uuid.UUID) (*domainUser.Permission, error) {
+	perms, err := s.permissionRepo.GetByIds(ctx, []uuid.UUID{id})
 	if err != nil {
 		return nil, err
 	}
@@ -24,40 +25,40 @@ func (s *Service) GetPermissionByID(id uuid.UUID) (*domainUser.Permission, error
 	return perms[0], nil
 }
 
-func (s *Service) CreatePermission(permission *domainUser.Permission) error {
+func (s *Service) CreatePermission(ctx context.Context, permission *domainUser.Permission) error {
 	if permission == nil {
 		return errors.New("permission_required")
 	}
-	if err := s.permissionRepo.Create(permission); err != nil {
+	if err := s.permissionRepo.Create(ctx, permission); err != nil {
 		return err
 	}
 
 	// Auto-assign new permissions to superadmin by default.
-	_, err := s.rolePermissionRepo.AddPermissionToRole(domainUser.RoleSuperAdmin, permission.Name)
+	_, err := s.rolePermissionRepo.AddPermissionToRole(ctx, domainUser.RoleSuperAdmin, permission.Name)
 	return err
 }
 
-func (s *Service) UpdatePermission(permission *domainUser.Permission) error {
+func (s *Service) UpdatePermission(ctx context.Context, permission *domainUser.Permission) error {
 	if permission == nil {
 		return errors.New("permission_required")
 	}
-	return s.permissionRepo.Update(permission)
+	return s.permissionRepo.Update(ctx, permission)
 }
 
-func (s *Service) DeletePermission(id uuid.UUID) error {
-	perm, err := s.GetPermissionByID(id)
+func (s *Service) DeletePermission(ctx context.Context, id uuid.UUID) error {
+	perm, err := s.GetPermissionByID(ctx, id)
 	if err != nil {
 		return err
 	}
-	if err := s.permissionRepo.DeleteByIds([]uuid.UUID{id}); err != nil {
+	if err := s.permissionRepo.DeleteByIds(ctx, []uuid.UUID{id}); err != nil {
 		return err
 	}
-	return s.rolePermissionRepo.DeleteByPermissionName(perm.Name)
+	return s.rolePermissionRepo.DeleteByPermissionName(ctx, perm.Name)
 }
 
-func (s *Service) ListRolesWithPermissions() ([]domainUser.RoleInfo, error) {
+func (s *Service) ListRolesWithPermissions(ctx context.Context) ([]domainUser.RoleInfo, error) {
 	roles := domainUser.AllRoles()
-	rolePerms, err := s.rolePermissionRepo.ListByRoles(roles)
+	rolePerms, err := s.rolePermissionRepo.ListByRoles(ctx, roles)
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +90,8 @@ func (s *Service) ListRolesWithPermissions() ([]domainUser.RoleInfo, error) {
 	return result, nil
 }
 
-func (s *Service) GetRolePermissions(role domainUser.Role) ([]string, error) {
-	perms, err := s.rolePermissionRepo.ListByRole(role)
+func (s *Service) GetRolePermissions(ctx context.Context, role domainUser.Role) ([]string, error) {
+	perms, err := s.rolePermissionRepo.ListByRole(ctx, role)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +103,7 @@ func (s *Service) GetRolePermissions(role domainUser.Role) ([]string, error) {
 	return result, nil
 }
 
-func (s *Service) UpdateRolePermissions(role domainUser.Role, permissions []string) ([]string, error) {
+func (s *Service) UpdateRolePermissions(ctx context.Context, role domainUser.Role, permissions []string) ([]string, error) {
 	if !domainUser.IsValidRole(role) {
 		return nil, errors.New("invalid_role")
 	}
@@ -117,39 +118,39 @@ func (s *Service) UpdateRolePermissions(role domainUser.Role, permissions []stri
 		unique = append(unique, perm)
 	}
 
-	if err := s.validatePermissionsExist(unique); err != nil {
+	if err := s.validatePermissionsExist(ctx, unique); err != nil {
 		return nil, err
 	}
 
-	if err := s.rolePermissionRepo.ReplaceRolePermissions(role, unique); err != nil {
+	if err := s.rolePermissionRepo.ReplaceRolePermissions(ctx, role, unique); err != nil {
 		return nil, err
 	}
 
 	return unique, nil
 }
 
-func (s *Service) AddRolePermission(role domainUser.Role, permission string) (*domainUser.RolePermission, error) {
+func (s *Service) AddRolePermission(ctx context.Context, role domainUser.Role, permission string) (*domainUser.RolePermission, error) {
 	if !domainUser.IsValidRole(role) {
 		return nil, errors.New("invalid_role")
 	}
 
-	if err := s.validatePermissionsExist([]string{permission}); err != nil {
+	if err := s.validatePermissionsExist(ctx, []string{permission}); err != nil {
 		return nil, err
 	}
 
-	return s.rolePermissionRepo.AddPermissionToRole(role, permission)
+	return s.rolePermissionRepo.AddPermissionToRole(ctx, role, permission)
 }
 
-func (s *Service) RemoveRolePermission(role domainUser.Role, permission string) error {
+func (s *Service) RemoveRolePermission(ctx context.Context, role domainUser.Role, permission string) error {
 	if !domainUser.IsValidRole(role) {
 		return errors.New("invalid_role")
 	}
 
-	return s.rolePermissionRepo.RemovePermissionFromRole(role, permission)
+	return s.rolePermissionRepo.RemovePermissionFromRole(ctx, role, permission)
 }
 
-func (s *Service) HasPermission(role domainUser.Role, permission string) (bool, error) {
-	perms, err := s.rolePermissionRepo.ListByRole(role)
+func (s *Service) HasPermission(ctx context.Context, role domainUser.Role, permission string) (bool, error) {
+	perms, err := s.rolePermissionRepo.ListByRole(ctx, role)
 	if err != nil {
 		return false, err
 	}
@@ -161,12 +162,12 @@ func (s *Service) HasPermission(role domainUser.Role, permission string) (bool, 
 	return false, nil
 }
 
-func (s *Service) validatePermissionsExist(names []string) error {
+func (s *Service) validatePermissionsExist(ctx context.Context, names []string) error {
 	if len(names) == 0 {
 		return nil
 	}
 
-	perms, err := s.permissionRepo.ListByNames(names)
+	perms, err := s.permissionRepo.ListByNames(ctx, names)
 	if err != nil {
 		return err
 	}

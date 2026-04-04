@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -20,25 +21,25 @@ func NewSystemTypeService(repo domainFacility.SystemTypeRepository) *SystemTypeS
 	}
 }
 
-func (s *SystemTypeService) Create(systemType *domainFacility.SystemType) error {
-	if err := s.Validate(systemType, nil); err != nil {
+func (s *SystemTypeService) Create(ctx context.Context, systemType *domainFacility.SystemType) error {
+	if err := s.Validate(ctx, systemType, nil); err != nil {
 		return err
 	}
-	return s.extRepo.Create(systemType)
+	return s.extRepo.Create(ctx, systemType)
 }
 
-func (s *SystemTypeService) Update(systemType *domainFacility.SystemType) error {
-	if err := s.Validate(systemType, &systemType.ID); err != nil {
+func (s *SystemTypeService) Update(ctx context.Context, systemType *domainFacility.SystemType) error {
+	if err := s.Validate(ctx, systemType, &systemType.ID); err != nil {
 		return err
 	}
-	return s.extRepo.Update(systemType)
+	return s.extRepo.Update(ctx, systemType)
 }
 
-func (s *SystemTypeService) Validate(systemType *domainFacility.SystemType, excludeID *uuid.UUID) error {
+func (s *SystemTypeService) Validate(ctx context.Context, systemType *domainFacility.SystemType, excludeID *uuid.UUID) error {
 	if err := s.validateRequiredFields(systemType); err != nil {
 		return err
 	}
-	return s.ensureUnique(systemType, excludeID)
+	return s.ensureUnique(ctx, systemType, excludeID)
 }
 
 func (s *SystemTypeService) validateRequiredFields(systemType *domainFacility.SystemType) error {
@@ -58,10 +59,10 @@ func (s *SystemTypeService) validateRequiredFields(systemType *domainFacility.Sy
 	return nil
 }
 
-func (s *SystemTypeService) ensureUnique(systemType *domainFacility.SystemType, excludeID *uuid.UUID) error {
+func (s *SystemTypeService) ensureUnique(ctx context.Context, systemType *domainFacility.SystemType, excludeID *uuid.UUID) error {
 	name := strings.TrimSpace(systemType.Name)
 	if name != "" {
-		exists, err := s.extRepo.ExistsName(name, excludeID)
+		exists, err := s.extRepo.ExistsName(ctx, name, excludeID)
 		if err != nil {
 			return err
 		}
@@ -69,7 +70,7 @@ func (s *SystemTypeService) ensureUnique(systemType *domainFacility.SystemType, 
 			return domain.NewValidationError().Add("systemtype.name", "name must be unique")
 		}
 	}
-	exists, err := s.extRepo.ExistsOverlappingRange(systemType.NumberMin, systemType.NumberMax, excludeID)
+	exists, err := s.extRepo.ExistsOverlappingRange(ctx, systemType.NumberMin, systemType.NumberMax, excludeID)
 	if err != nil {
 		return err
 	}

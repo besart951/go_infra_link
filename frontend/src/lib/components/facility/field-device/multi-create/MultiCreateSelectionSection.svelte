@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Label } from '$lib/components/ui/label/index.js';
+  import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
   import FieldDevicePreselection from '../FieldDevicePreselection.svelte';
   import ObjectDataBacnetPreview from './ObjectDataBacnetPreview.svelte';
@@ -19,6 +20,8 @@
     selectedObjectData: ObjectData | null;
     loadingObjectDataPreview: boolean;
     objectDataPreviewError?: string;
+    projectOnly: boolean;
+    onProjectOnlyChange: (checked: boolean) => void;
     onSpsSystemTypeChange: (value: string) => void;
     onPreselectionChange: (value: PreselectionType) => void;
     fetchSpsControllerSystemTypes: (search: string) => Promise<SPSControllerSystemType[]>;
@@ -35,6 +38,8 @@
     selectedObjectData,
     loadingObjectDataPreview,
     objectDataPreviewError,
+    projectOnly,
+    onProjectOnlyChange,
     onSpsSystemTypeChange,
     onPreselectionChange,
     fetchSpsControllerSystemTypes,
@@ -43,6 +48,11 @@
   }: Props = $props();
 
   const t = createTranslator();
+
+  // Derive a refresh key that changes when projectOnly toggles, to force re-fetch
+  const comboboxRefreshKey = $derived(
+    `${systemTypeRefreshKey ?? ''}-${projectOnly}`
+  );
 </script>
 
 <Card.Root class="p-6">
@@ -51,9 +61,28 @@
       <Label for="sps-system-type"
         >{$t('field_device.multi_create.selection.sps_system_type')}</Label
       >
+      <div class="flex items-center gap-2">
+        {#if projectId}
+          <Checkbox
+            id="project-only-filter"
+            checked={projectOnly}
+            onCheckedChange={(checked) => {
+              if (typeof checked === 'boolean') {
+                onProjectOnlyChange(checked);
+                // Clear current selection when filter changes
+                onSpsSystemTypeChange('');
+              }
+            }}
+            disabled={submitting}
+          />
+          <Label for="project-only-filter" class="shrink-0 text-xs text-muted-foreground cursor-pointer">
+            {$t('field_device.multi_create.selection.project_only')}
+          </Label>
+        {/if}
+      </div>
       <AsyncCombobox
         id="sps-system-type"
-        refreshKey={systemTypeRefreshKey}
+        refreshKey={comboboxRefreshKey}
         placeholder={$t('field_device.multi_create.selection.sps_system_type_placeholder')}
         searchPlaceholder={$t('field_device.multi_create.selection.sps_system_type_search')}
         emptyText={$t('field_device.multi_create.selection.sps_system_type_empty')}

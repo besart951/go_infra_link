@@ -1,7 +1,6 @@
 package project
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -36,7 +35,7 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 	}
 	proj.CreatorID = creatorID
 
-	if err := h.service.Create(proj); err != nil {
+	if err := h.service.Create(c.Request.Context(), proj); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
 		return
 	}
@@ -64,13 +63,12 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 		return
 	}
 
-	proj, err := h.service.GetByID(id)
+	proj, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_not_found")),
+		)
 		return
 	}
 
@@ -100,7 +98,7 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(userID, query.Page, query.Limit, query.Search)
+	result, err := h.service.List(c.Request.Context(), userID, query.Page, query.Limit, query.Search)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
 		return
@@ -143,19 +141,20 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 		return
 	}
 
-	proj, err := h.service.GetByID(id)
+	ctx := c.Request.Context()
+
+	proj, err := h.service.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_not_found")),
+		)
 		return
 	}
 
 	ApplyProjectUpdate(proj, req)
 
-	if err := h.service.Update(proj); err != nil {
+	if err := h.service.Update(ctx, proj); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "project.update_failed")
 		return
 	}
@@ -184,7 +183,7 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(id); err != nil {
+	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "project.deletion_failed")
 		return
 	}

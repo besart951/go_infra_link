@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"context"
 	"strconv"
 	"strings"
 
@@ -18,13 +19,13 @@ type BacnetObjectService struct {
 	alarmTypeRepo         domainFacility.AlarmTypeRepository
 }
 
-func (s *BacnetObjectService) resolveAlarmBindingForTemplate(bacnetObject *domainFacility.BacnetObject) error {
+func (s *BacnetObjectService) resolveAlarmBindingForTemplate(ctx context.Context, bacnetObject *domainFacility.BacnetObject) error {
 	if bacnetObject == nil {
 		return nil
 	}
 
 	if bacnetObject.AlarmTypeID != nil {
-		if _, err := domain.GetByID(s.alarmTypeRepo, *bacnetObject.AlarmTypeID); err != nil {
+		if _, err := domain.GetByID(ctx, s.alarmTypeRepo, *bacnetObject.AlarmTypeID); err != nil {
 			return err
 		}
 		bacnetObject.AlarmDefinitionID = nil
@@ -35,7 +36,7 @@ func (s *BacnetObjectService) resolveAlarmBindingForTemplate(bacnetObject *domai
 		return nil
 	}
 
-	defs, err := s.alarmDefinitionRepo.GetByIds([]uuid.UUID{*bacnetObject.AlarmDefinitionID})
+	defs, err := s.alarmDefinitionRepo.GetByIds(ctx, []uuid.UUID{*bacnetObject.AlarmDefinitionID})
 	if err != nil {
 		return err
 	}
@@ -45,14 +46,14 @@ func (s *BacnetObjectService) resolveAlarmBindingForTemplate(bacnetObject *domai
 
 	bacnetObject.AlarmTypeID = defs[0].AlarmTypeID
 	bacnetObject.AlarmDefinitionID = nil
-	if _, err := domain.GetByID(s.alarmTypeRepo, *bacnetObject.AlarmTypeID); err != nil {
+	if _, err := domain.GetByID(ctx, s.alarmTypeRepo, *bacnetObject.AlarmTypeID); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *BacnetObjectService) ensureTextFixUniqueForFieldDevice(fieldDeviceID uuid.UUID, textFix string, excludeID *uuid.UUID) error {
-	items, err := s.repo.GetByFieldDeviceIDs([]uuid.UUID{fieldDeviceID})
+func (s *BacnetObjectService) ensureTextFixUniqueForFieldDevice(ctx context.Context, fieldDeviceID uuid.UUID, textFix string, excludeID *uuid.UUID) error {
+	items, err := s.repo.GetByFieldDeviceIDs(ctx, []uuid.UUID{fieldDeviceID})
 	if err != nil {
 		return err
 	}
@@ -67,15 +68,15 @@ func (s *BacnetObjectService) ensureTextFixUniqueForFieldDevice(fieldDeviceID uu
 	return nil
 }
 
-func (s *BacnetObjectService) ensureSoftwareUniqueForObjectData(objectDataID uuid.UUID, softwareType domainFacility.BacnetSoftwareType, softwareNumber uint16, excludeID *uuid.UUID) error {
-	ids, err := s.objectDataRepo.GetBacnetObjectIDs(objectDataID)
+func (s *BacnetObjectService) ensureSoftwareUniqueForObjectData(ctx context.Context, objectDataID uuid.UUID, softwareType domainFacility.BacnetSoftwareType, softwareNumber uint16, excludeID *uuid.UUID) error {
+	ids, err := s.objectDataRepo.GetBacnetObjectIDs(ctx, objectDataID)
 	if err != nil {
 		return err
 	}
 	if len(ids) == 0 {
 		return nil
 	}
-	items, err := s.repo.GetByIds(ids)
+	items, err := s.repo.GetByIds(ctx, ids)
 	if err != nil {
 		return err
 	}
@@ -124,17 +125,17 @@ func NewBacnetObjectService(
 	}
 }
 
-func (s *BacnetObjectService) GetByID(id uuid.UUID) (*domainFacility.BacnetObject, error) {
-	return domain.GetByID(s.repo, id)
+func (s *BacnetObjectService) GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.BacnetObject, error) {
+	return domain.GetByID(ctx, s.repo, id)
 }
 
-func (s *BacnetObjectService) GetByIDs(ids []uuid.UUID) ([]*domainFacility.BacnetObject, error) {
-	return s.repo.GetByIds(ids)
+func (s *BacnetObjectService) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.BacnetObject, error) {
+	return s.repo.GetByIds(ctx, ids)
 }
 
 // CreateWithParent creates a bacnet object either for a field device (fieldDeviceID)
 // or for an object data template (objectDataID). Exactly one must be provided.
-func (s *BacnetObjectService) CreateWithParent(bacnetObject *domainFacility.BacnetObject, fieldDeviceID *uuid.UUID, objectDataID *uuid.UUID) error {
+func (s *BacnetObjectService) CreateWithParent(ctx context.Context, bacnetObject *domainFacility.BacnetObject, fieldDeviceID *uuid.UUID, objectDataID *uuid.UUID) error {
 	if (fieldDeviceID == nil && objectDataID == nil) || (fieldDeviceID != nil && objectDataID != nil) {
 		return domain.ErrInvalidArgument
 	}
@@ -153,20 +154,20 @@ func (s *BacnetObjectService) CreateWithParent(bacnetObject *domainFacility.Bacn
 	}
 
 	if fieldDeviceID != nil {
-		if _, err := domain.GetByID(s.fieldDeviceRepo, *fieldDeviceID); err != nil {
+		if _, err := domain.GetByID(ctx, s.fieldDeviceRepo, *fieldDeviceID); err != nil {
 			return err
 		}
-		if err := s.ensureTextFixUniqueForFieldDevice(*fieldDeviceID, bacnetObject.TextFix, nil); err != nil {
+		if err := s.ensureTextFixUniqueForFieldDevice(ctx, *fieldDeviceID, bacnetObject.TextFix, nil); err != nil {
 			return err
 		}
-		if err := s.resolveAlarmBindingForTemplate(bacnetObject); err != nil {
+		if err := s.resolveAlarmBindingForTemplate(ctx, bacnetObject); err != nil {
 			return err
 		}
 		bacnetObject.FieldDeviceID = fieldDeviceID
-		return s.repo.Create(bacnetObject)
+		return s.repo.Create(ctx, bacnetObject)
 	}
 
-	od, err := domain.GetByID(s.objectDataRepo, *objectDataID)
+	od, err := domain.GetByID(ctx, s.objectDataRepo, *objectDataID)
 	if err != nil {
 		return err
 	}
@@ -174,23 +175,23 @@ func (s *BacnetObjectService) CreateWithParent(bacnetObject *domainFacility.Bacn
 		return domain.ErrNotFound
 	}
 
-	if err := s.ensureSoftwareUniqueForObjectData(*objectDataID, bacnetObject.SoftwareType, bacnetObject.SoftwareNumber, nil); err != nil {
+	if err := s.ensureSoftwareUniqueForObjectData(ctx, *objectDataID, bacnetObject.SoftwareType, bacnetObject.SoftwareNumber, nil); err != nil {
 		return err
 	}
-	if err := s.resolveAlarmBindingForTemplate(bacnetObject); err != nil {
+	if err := s.resolveAlarmBindingForTemplate(ctx, bacnetObject); err != nil {
 		return err
 	}
 
 	bacnetObject.FieldDeviceID = nil
-	if err := s.repo.Create(bacnetObject); err != nil {
+	if err := s.repo.Create(ctx, bacnetObject); err != nil {
 		return err
 	}
-	return s.objectDataBacnetStore.Add(*objectDataID, bacnetObject.ID)
+	return s.objectDataBacnetStore.Add(ctx, *objectDataID, bacnetObject.ID)
 }
 
 // Update updates a bacnet object. If objectDataID is provided, it will also attach
 // the bacnet object to that object data (template) after validating the object data.
-func (s *BacnetObjectService) Update(bacnetObject *domainFacility.BacnetObject, objectDataID *uuid.UUID) error {
+func (s *BacnetObjectService) Update(ctx context.Context, bacnetObject *domainFacility.BacnetObject, objectDataID *uuid.UUID) error {
 	bacnetObject.TextFix = normalizeBacnetTextFix(bacnetObject.TextFix)
 
 	if bacnetObject.FieldDeviceID != nil {
@@ -203,38 +204,38 @@ func (s *BacnetObjectService) Update(bacnetObject *domainFacility.BacnetObject, 
 		}
 	}
 
-	if _, err := domain.GetByID(s.repo, bacnetObject.ID); err != nil {
+	if _, err := domain.GetByID(ctx, s.repo, bacnetObject.ID); err != nil {
 		return err
 	}
 	if bacnetObject.FieldDeviceID != nil {
-		if err := s.ensureTextFixUniqueForFieldDevice(*bacnetObject.FieldDeviceID, bacnetObject.TextFix, &bacnetObject.ID); err != nil {
+		if err := s.ensureTextFixUniqueForFieldDevice(ctx, *bacnetObject.FieldDeviceID, bacnetObject.TextFix, &bacnetObject.ID); err != nil {
 			return err
 		}
 	}
 
 	if objectDataID != nil {
-		if err := s.ensureSoftwareUniqueForObjectData(*objectDataID, bacnetObject.SoftwareType, bacnetObject.SoftwareNumber, &bacnetObject.ID); err != nil {
+		if err := s.ensureSoftwareUniqueForObjectData(ctx, *objectDataID, bacnetObject.SoftwareType, bacnetObject.SoftwareNumber, &bacnetObject.ID); err != nil {
 			return err
 		}
 	}
 
-	if err := s.resolveAlarmBindingForTemplate(bacnetObject); err != nil {
+	if err := s.resolveAlarmBindingForTemplate(ctx, bacnetObject); err != nil {
 		return err
 	}
 
-	if err := s.repo.Update(bacnetObject); err != nil {
+	if err := s.repo.Update(ctx, bacnetObject); err != nil {
 		return err
 	}
 
 	if objectDataID != nil {
-		od, err := domain.GetByID(s.objectDataRepo, *objectDataID)
+		od, err := domain.GetByID(ctx, s.objectDataRepo, *objectDataID)
 		if err != nil {
 			return err
 		}
 		if !od.IsActive {
 			return domain.ErrNotFound
 		}
-		return s.objectDataBacnetStore.Add(*objectDataID, bacnetObject.ID)
+		return s.objectDataBacnetStore.Add(ctx, *objectDataID, bacnetObject.ID)
 	}
 
 	return nil
@@ -242,8 +243,8 @@ func (s *BacnetObjectService) Update(bacnetObject *domainFacility.BacnetObject, 
 
 // ReplaceForObjectData replaces all bacnet objects for an object data template.
 // Existing links are removed and the provided list is created and attached.
-func (s *BacnetObjectService) ReplaceForObjectData(objectDataID uuid.UUID, inputs []domainFacility.BacnetObject) error {
-	od, err := domain.GetByID(s.objectDataRepo, objectDataID)
+func (s *BacnetObjectService) ReplaceForObjectData(ctx context.Context, objectDataID uuid.UUID, inputs []domainFacility.BacnetObject) error {
+	od, err := domain.GetByID(ctx, s.objectDataRepo, objectDataID)
 	if err != nil {
 		return err
 	}
@@ -258,7 +259,7 @@ func (s *BacnetObjectService) ReplaceForObjectData(objectDataID uuid.UUID, input
 		if err := s.validateRequiredFields(bo, "objectdata.bacnetobject"); err != nil {
 			return err
 		}
-		if err := s.resolveAlarmBindingForTemplate(bo); err != nil {
+		if err := s.resolveAlarmBindingForTemplate(ctx, bo); err != nil {
 			return err
 		}
 		softwareKey := strings.ToLower(strings.TrimSpace(string(bo.SoftwareType))) + ":" + strconv.FormatUint(uint64(bo.SoftwareNumber), 10)
@@ -268,7 +269,7 @@ func (s *BacnetObjectService) ReplaceForObjectData(objectDataID uuid.UUID, input
 		seen[softwareKey] = struct{}{}
 	}
 
-	if err := s.objectDataBacnetStore.DeleteByObjectDataID(objectDataID); err != nil {
+	if err := s.objectDataBacnetStore.DeleteByObjectDataID(ctx, objectDataID); err != nil {
 		return err
 	}
 
@@ -279,10 +280,10 @@ func (s *BacnetObjectService) ReplaceForObjectData(objectDataID uuid.UUID, input
 	for i := range inputs {
 		bo := inputs[i]
 		bo.FieldDeviceID = nil
-		if err := s.repo.Create(&bo); err != nil {
+		if err := s.repo.Create(ctx, &bo); err != nil {
 			return err
 		}
-		if err := s.objectDataBacnetStore.Add(objectDataID, bo.ID); err != nil {
+		if err := s.objectDataBacnetStore.Add(ctx, objectDataID, bo.ID); err != nil {
 			return err
 		}
 	}

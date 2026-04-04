@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"context"
+
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
 )
@@ -17,14 +19,14 @@ func NewAlarmTypeService(repo domainFacility.AlarmTypeRepository) *AlarmTypeServ
 	}
 }
 
-func (s *AlarmTypeService) Create(at *domainFacility.AlarmType) error {
-	return s.extRepo.Create(at)
+func (s *AlarmTypeService) Create(ctx context.Context, at *domainFacility.AlarmType) error {
+	return s.extRepo.Create(ctx, at)
 }
 
-func (s *AlarmTypeService) Update(at *domainFacility.AlarmType) error {
-	return s.extRepo.Update(at)
+func (s *AlarmTypeService) Update(ctx context.Context, at *domainFacility.AlarmType) error {
+	return s.extRepo.Update(ctx, at)
 }
 
-func (s *AlarmTypeService) GetWithFields(id uuid.UUID) (*domainFacility.AlarmType, error) {
-	return s.extRepo.GetWithFields(id)
+func (s *AlarmTypeService) GetWithFields(ctx context.Context, id uuid.UUID) (*domainFacility.AlarmType, error) {
+	return s.extRepo.GetWithFields(ctx, id)
 }

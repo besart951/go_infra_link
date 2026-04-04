@@ -1,10 +1,8 @@
 package project
 
 import (
-	"errors"
 	"net/http"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
@@ -32,21 +30,12 @@ func (h *ProjectHandler) ListProjectControlCabinets(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.service.GetByID(projectID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
-		return
-	}
-
 	var query dto.PaginationQuery
 	if !handlerutil.BindQuery(c, &query) {
 		return
 	}
 
-	result, err := h.service.ListControlCabinets(projectID, query.Page, query.Limit)
+	result, err := h.service.ListControlCabinets(c.Request.Context(), projectID, query.Page, query.Limit)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
 		return
@@ -84,21 +73,12 @@ func (h *ProjectHandler) ListProjectSPSControllers(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.service.GetByID(projectID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
-		return
-	}
-
 	var query dto.PaginationQuery
 	if !handlerutil.BindQuery(c, &query) {
 		return
 	}
 
-	result, err := h.service.ListSPSControllers(projectID, query.Page, query.Limit)
+	result, err := h.service.ListSPSControllers(c.Request.Context(), projectID, query.Page, query.Limit)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
 		return
@@ -136,21 +116,12 @@ func (h *ProjectHandler) ListProjectFieldDevices(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.service.GetByID(projectID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
-		return
-	}
-
 	var query dto.PaginationQuery
 	if !handlerutil.BindQuery(c, &query) {
 		return
 	}
 
-	result, err := h.service.ListFieldDevices(projectID, query.Page, query.Limit)
+	result, err := h.service.ListFieldDevices(c.Request.Context(), projectID, query.Page, query.Limit)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
 		return

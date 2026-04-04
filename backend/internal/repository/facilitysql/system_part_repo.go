@@ -1,6 +1,7 @@
 package facilitysql
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -24,15 +25,15 @@ func NewSystemPartRepository(db *gorm.DB) domainFacility.SystemPartRepository {
 	return &systemPartRepo{BaseRepository: baseRepo}
 }
 
-func (r *systemPartRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SystemPart, error) {
-	result, err := r.BaseRepository.GetByIds(ids)
+func (r *systemPartRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.SystemPart, error) {
+	result, err := r.BaseRepository.GetByIds(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
 
 	// Preload Apparats for each system part (many2many)
 	for _, systemPart := range result {
-		if err := r.DB().Model(systemPart).Association("Apparats").Find(&systemPart.Apparats); err != nil {
+		if err := r.DB().WithContext(ctx).Model(systemPart).Association("Apparats").Find(&systemPart.Apparats); err != nil {
 			return nil, err
 		}
 	}
@@ -40,8 +41,8 @@ func (r *systemPartRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.SystemPart
 	return result, nil
 }
 
-func (r *systemPartRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SystemPart], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+func (r *systemPartRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SystemPart], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
 	if err != nil {
 		return nil, err
 	}

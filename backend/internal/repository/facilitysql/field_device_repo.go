@@ -1,6 +1,7 @@
 package facilitysql
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -95,21 +96,21 @@ func applyFieldDeviceSorting(query *gorm.DB, params domain.PaginationParams) *go
 	}
 }
 
-func (r *fieldDeviceRepo) GetByIds(ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {
+func (r *fieldDeviceRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.FieldDevice, error) {
 	// FieldDevice needs to preload Specification
 	if len(ids) == 0 {
 		return []*domainFacility.FieldDevice{}, nil
 	}
 	var items []*domainFacility.FieldDevice
-	err := r.db.Where("id IN ?", ids).Preload("Specification").Find(&items).Error
+	err := r.db.WithContext(ctx).Where("id IN ?", ids).Preload("Specification").Find(&items).Error
 	return items, err
 }
 
-func (r *fieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
+func (r *fieldDeviceRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainFacility.FieldDevice{})
+	query := r.db.WithContext(ctx).Model(&domainFacility.FieldDevice{})
 
 	// Apply search
 	if strings.TrimSpace(params.Search) != "" {
@@ -143,12 +144,12 @@ func (r *fieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*dom
 	}, nil
 }
 
-func (r *fieldDeviceRepo) GetIDsBySPSControllerSystemTypeIDs(ids []uuid.UUID) ([]uuid.UUID, error) {
+func (r *fieldDeviceRepo) GetIDsBySPSControllerSystemTypeIDs(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error) {
 	if len(ids) == 0 {
 		return []uuid.UUID{}, nil
 	}
 	var out []uuid.UUID
-	err := r.db.Model(&domainFacility.FieldDevice{}).
+	err := r.db.WithContext(ctx).Model(&domainFacility.FieldDevice{}).
 		Where("sps_controller_system_type_id IN ?", ids).
 		Pluck("id", &out).Error
 	if err != nil {
@@ -157,8 +158,8 @@ func (r *fieldDeviceRepo) GetIDsBySPSControllerSystemTypeIDs(ids []uuid.UUID) ([
 	return out, nil
 }
 
-func (r *fieldDeviceRepo) ExistsApparatNrConflict(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID, apparatNr int, excludeIDs []uuid.UUID) (bool, error) {
-	db := r.db.Model(&domainFacility.FieldDevice{}).
+func (r *fieldDeviceRepo) ExistsApparatNrConflict(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID, apparatNr int, excludeIDs []uuid.UUID) (bool, error) {
+	db := r.db.WithContext(ctx).Model(&domainFacility.FieldDevice{}).
 		Where("sps_controller_system_type_id = ?", spsControllerSystemTypeID).
 		Where("apparat_id = ?", apparatID).
 		Where("apparat_nr = ?", apparatNr)
@@ -177,8 +178,8 @@ func (r *fieldDeviceRepo) ExistsApparatNrConflict(spsControllerSystemTypeID uuid
 	return count > 0, err
 }
 
-func (r *fieldDeviceRepo) GetUsedApparatNumbers(spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID) ([]int, error) {
-	query := r.db.Model(&domainFacility.FieldDevice{}).
+func (r *fieldDeviceRepo) GetUsedApparatNumbers(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID) ([]int, error) {
+	query := r.db.WithContext(ctx).Model(&domainFacility.FieldDevice{}).
 		Where("sps_controller_system_type_id = ?", spsControllerSystemTypeID).
 		Where("apparat_id = ?", apparatID)
 
@@ -194,11 +195,11 @@ func (r *fieldDeviceRepo) GetUsedApparatNumbers(spsControllerSystemTypeID uuid.U
 	return nums, nil
 }
 
-func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
+func (r *fieldDeviceRepo) GetPaginatedListWithFilters(ctx context.Context, params domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 1000)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainFacility.FieldDevice{})
+	query := r.db.WithContext(ctx).Model(&domainFacility.FieldDevice{})
 	hasPotentialDuplicateRows := false
 
 	// Apply filters by joining through the hierarchy
@@ -257,7 +258,7 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(params domain.PaginationPa
 	orderedQuery := query.Session(&gorm.Session{})
 	if hasPotentialDuplicateRows {
 		distinctIDs := query.Session(&gorm.Session{}).Select("DISTINCT field_devices.id")
-		orderedQuery = r.db.
+		orderedQuery = r.db.WithContext(ctx).
 			Model(&domainFacility.FieldDevice{}).
 			Joins("JOIN (?) ids ON ids.id = field_devices.id", distinctIDs)
 	}

@@ -1,41 +1,43 @@
 package user
 
 import (
+	"context"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/google/uuid"
 )
 
 type UserService interface {
-	CreateWithPassword(user *domainUser.User, password string) error
-	UpdateWithPassword(user *domainUser.User, password *string) error
-	GetByID(id uuid.UUID) (*domainUser.User, error)
-	List(page, limit int, search, orderBy, order string) (*domain.PaginatedList[domainUser.User], error)
-	DeleteByID(id uuid.UUID) error
+	CreateWithPassword(ctx context.Context, user *domainUser.User, password string) error
+	UpdateWithPassword(ctx context.Context, user *domainUser.User, password *string) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domainUser.User, error)
+	List(ctx context.Context, page, limit int, search, orderBy, order string) (*domain.PaginatedList[domainUser.User], error)
+	DeleteByID(ctx context.Context, id uuid.UUID) error
 }
 
 type AdminService interface {
-	DisableUser(userID uuid.UUID) error
-	EnableUser(userID uuid.UUID) error
-	SetUserRole(userID uuid.UUID, role domainUser.Role) error
+	DisableUser(ctx context.Context, userID uuid.UUID) error
+	EnableUser(ctx context.Context, userID uuid.UUID) error
+	SetUserRole(ctx context.Context, userID uuid.UUID, role domainUser.Role) error
 }
 
 type RoleQueryService interface {
-	GetGlobalRole(userID uuid.UUID) (domainUser.Role, error)
+	GetGlobalRole(ctx context.Context, userID uuid.UUID) (domainUser.Role, error)
 	GetAllowedRoles(requesterRole domainUser.Role) []domainUser.Role
 }
 
 type PermissionService interface {
-	ListPermissions() ([]domainUser.Permission, error)
-	GetPermissionByID(id uuid.UUID) (*domainUser.Permission, error)
-	CreatePermission(permission *domainUser.Permission) error
-	UpdatePermission(permission *domainUser.Permission) error
-	DeletePermission(id uuid.UUID) error
+	ListPermissions(ctx context.Context) ([]domainUser.Permission, error)
+	GetPermissionByID(ctx context.Context, id uuid.UUID) (*domainUser.Permission, error)
+	CreatePermission(ctx context.Context, permission *domainUser.Permission) error
+	UpdatePermission(ctx context.Context, permission *domainUser.Permission) error
+	DeletePermission(ctx context.Context, id uuid.UUID) error
 }
 
 type RolePermissionService interface {
-	ListRolesWithPermissions() ([]domainUser.RoleInfo, error)
-	UpdateRolePermissions(role domainUser.Role, permissions []string) ([]string, error)
-	AddRolePermission(role domainUser.Role, permission string) (*domainUser.RolePermission, error)
-	RemoveRolePermission(role domainUser.Role, permission string) error
+	ListRolesWithPermissions(ctx context.Context) ([]domainUser.RoleInfo, error)
+	UpdateRolePermissions(ctx context.Context, role domainUser.Role, permissions []string) ([]string, error)
+	AddRolePermission(ctx context.Context, role domainUser.Role, permission string) (*domainUser.RolePermission, error)
+	RemoveRolePermission(ctx context.Context, role domainUser.Role, permission string) error
 }

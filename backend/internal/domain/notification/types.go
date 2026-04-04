@@ -1,6 +1,10 @@
 package notification
 
-import "github.com/google/uuid"
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
 
 type EmailMessage struct {
 	To       []string
@@ -36,6 +40,6 @@ type SendNotificationInput struct {
 }
 
 type SMTPSettingsRepository interface {
-	GetByProvider(provider Provider) (*SMTPSettings, error)
-	Save(settings *SMTPSettings) error
+	GetByProvider(ctx context.Context, provider Provider) (*SMTPSettings, error)
+	Save(ctx context.Context, settings *SMTPSettings) error
 }

@@ -1,6 +1,7 @@
 package facilitysql
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -27,17 +28,17 @@ func NewAlarmDefinitionRepository(db *gorm.DB) domainFacility.AlarmDefinitionRep
 	return &alarmDefinitionRepo{BaseRepository: baseRepo, db: db}
 }
 
-func (r *alarmDefinitionRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.AlarmDefinition], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+func (r *alarmDefinitionRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.AlarmDefinition], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
 	if err != nil {
 		return nil, err
 	}
 	return gormbase.DerefPaginatedList(result), nil
 }
 
-func (r *alarmDefinitionRepo) FindOrCreateTemplateByAlarmTypeID(alarmTypeID uuid.UUID) (*domainFacility.AlarmDefinition, error) {
+func (r *alarmDefinitionRepo) FindOrCreateTemplateByAlarmTypeID(ctx context.Context, alarmTypeID uuid.UUID) (*domainFacility.AlarmDefinition, error) {
 	var existing domainFacility.AlarmDefinition
-	err := r.db.
+	err := r.db.WithContext(ctx).
 		Where("alarm_type_id = ?", alarmTypeID).
 		Where("scope = ?", "template").
 		Order("created_at ASC").
@@ -50,21 +51,21 @@ func (r *alarmDefinitionRepo) FindOrCreateTemplateByAlarmTypeID(alarmTypeID uuid
 	}
 
 	created := &domainFacility.AlarmDefinition{
-		Name:        r.resolveTemplateName(alarmTypeID),
+		Name:        r.resolveTemplateName(ctx, alarmTypeID),
 		AlarmTypeID: &alarmTypeID,
 		Scope:       "template",
 	}
 
-	if err := r.BaseRepository.Create(created); err != nil {
+	if err := r.BaseRepository.Create(ctx, created); err != nil {
 		return nil, err
 	}
 
 	return created, nil
 }
 
-func (r *alarmDefinitionRepo) resolveTemplateName(alarmTypeID uuid.UUID) string {
+func (r *alarmDefinitionRepo) resolveTemplateName(ctx context.Context, alarmTypeID uuid.UUID) string {
 	var alarmType domainFacility.AlarmType
-	if err := r.db.First(&alarmType, "id = ?", alarmTypeID).Error; err == nil {
+	if err := r.db.WithContext(ctx).First(&alarmType, "id = ?", alarmTypeID).Error; err == nil {
 		name := strings.TrimSpace(alarmType.Name)
 		if name != "" {
 			return name

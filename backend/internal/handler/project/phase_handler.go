@@ -1,7 +1,6 @@
 package project
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -36,7 +35,7 @@ func (h *PhaseHandler) CreatePhase(c *gin.Context) {
 
 	phase := ToPhaseModel(req)
 
-	if err := h.service.Create(phase); err != nil {
+	if err := h.service.Create(c.Request.Context(), phase); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "phase.creation_failed")
 		return
 	}
@@ -60,13 +59,12 @@ func (h *PhaseHandler) GetPhase(c *gin.Context) {
 		return
 	}
 
-	phase, err := h.service.GetByID(id)
+	phase, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "phase.phase_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "phase.fetch_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "phase.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "phase.phase_not_found")),
+		)
 		return
 	}
 
@@ -90,7 +88,7 @@ func (h *PhaseHandler) ListPhases(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(query.Page, query.Limit, query.Search)
+	result, err := h.service.List(c.Request.Context(), query.Page, query.Limit, query.Search)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "phase.fetch_failed")
 		return
@@ -129,19 +127,20 @@ func (h *PhaseHandler) UpdatePhase(c *gin.Context) {
 		return
 	}
 
-	phase, err := h.service.GetByID(id)
+	ctx := c.Request.Context()
+
+	phase, err := h.service.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "phase.phase_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "phase.fetch_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "phase.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "phase.phase_not_found")),
+		)
 		return
 	}
 
 	ApplyPhaseUpdate(phase, req)
 
-	if err := h.service.Update(phase); err != nil {
+	if err := h.service.Update(ctx, phase); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "phase.update_failed")
 		return
 	}
@@ -164,7 +163,7 @@ func (h *PhaseHandler) DeletePhase(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(id); err != nil {
+	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "phase.deletion_failed")
 	}
 

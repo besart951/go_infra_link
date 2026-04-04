@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"context"
 	"net/http"
 
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -39,10 +40,12 @@ func (h *ApparatHandler) CreateApparat(c *gin.Context) {
 		return
 	}
 
+	ctx := c.Request.Context()
+
 	// Load system parts if IDs are provided
 	var systemParts []*domainFacility.SystemPart
 	if len(req.SystemPartIDs) > 0 {
-		loadedParts, err := h.systemPartService.GetByIDs(req.SystemPartIDs)
+		loadedParts, err := h.systemPartService.GetByIDs(ctx, req.SystemPartIDs)
 		if err != nil {
 			respondLocalizedError(c, http.StatusBadRequest, "invalid_system_parts", "facility.invalid_system_parts")
 			return
@@ -52,7 +55,7 @@ func (h *ApparatHandler) CreateApparat(c *gin.Context) {
 
 	apparat := toApparatModel(req, systemParts)
 
-	if err := h.service.Create(apparat); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
+	if err := h.service.Create(ctx, apparat); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
 		return
 	}
 
@@ -75,7 +78,7 @@ func (h *ApparatHandler) GetApparat(c *gin.Context) {
 		return
 	}
 
-	apparat, err := h.service.GetByID(id)
+	apparat, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.apparat_not_found") {
 			return
@@ -107,7 +110,7 @@ func (h *ApparatHandler) GetApparatsByIDs(c *gin.Context) {
 		return
 	}
 
-	apparats, err := h.service.GetByIDs(req.Ids)
+	apparats, err := h.service.GetByIDs(c.Request.Context(), req.Ids)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
@@ -143,6 +146,7 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 		return
 	}
 
+	ctx := c.Request.Context()
 	objectDataIDStr := c.Query("object_data_id")
 	systemPartIDStr := c.Query("system_part_id")
 
@@ -158,7 +162,7 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 				return
 			}
 
-			ids, err := h.getApparatsForObjectData(objectDataID)
+			ids, err := h.getApparatsForObjectData(ctx, objectDataID)
 			if err != nil {
 				if respondLocalizedNotFoundIf(c, err, "facility.apparat_not_found") {
 					return
@@ -176,7 +180,7 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 				return
 			}
 
-			ids, err := h.systemPartService.GetApparatIDs(systemPartID)
+			ids, err := h.systemPartService.GetApparatIDs(ctx, systemPartID)
 			if err != nil {
 				if respondLocalizedNotFoundIf(c, err, "facility.apparat_not_found") {
 					return
@@ -209,7 +213,7 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 			return
 		}
 
-		apparats, err := h.service.GetByIDs(finalIDs)
+		apparats, err := h.service.GetByIDs(ctx, finalIDs)
 		if err != nil {
 			respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 			return
@@ -253,7 +257,7 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(query.Page, query.Limit, query.Search)
+	result, err := h.service.List(ctx, query.Page, query.Limit, query.Search)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
@@ -285,7 +289,9 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 		return
 	}
 
-	apparat, err := h.service.GetByID(id)
+	ctx := c.Request.Context()
+
+	apparat, err := h.service.GetByID(ctx, id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.apparat_not_found") {
 			return
@@ -298,7 +304,7 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 	var systemParts *[]*domainFacility.SystemPart
 	if req.SystemPartIDs != nil {
 		if len(*req.SystemPartIDs) > 0 {
-			loadedParts, err := h.systemPartService.GetByIDs(*req.SystemPartIDs)
+			loadedParts, err := h.systemPartService.GetByIDs(ctx, *req.SystemPartIDs)
 			if err != nil {
 				respondLocalizedError(c, http.StatusBadRequest, "invalid_system_parts", "facility.invalid_system_parts")
 				return
@@ -313,7 +319,7 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 
 	applyApparatUpdate(apparat, req, systemParts)
 
-	if err := h.service.Update(apparat); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
+	if err := h.service.Update(ctx, apparat); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
 
@@ -335,7 +341,7 @@ func (h *ApparatHandler) DeleteApparat(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(id); err != nil {
+	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}
@@ -343,6 +349,6 @@ func (h *ApparatHandler) DeleteApparat(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *ApparatHandler) getApparatsForObjectData(objectDataID uuid.UUID) ([]uuid.UUID, error) {
-	return h.objectDataService.GetApparatIDs(objectDataID)
+func (h *ApparatHandler) getApparatsForObjectData(ctx context.Context, objectDataID uuid.UUID) ([]uuid.UUID, error) {
+	return h.objectDataService.GetApparatIDs(ctx, objectDataID)
 }

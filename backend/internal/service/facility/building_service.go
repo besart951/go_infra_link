@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -18,53 +19,53 @@ func NewBuildingService(repo domainFacility.BuildingRepository) *BuildingService
 	}
 }
 
-func (s *BuildingService) Create(building *domainFacility.Building) error {
-	if err := s.Validate(building, nil); err != nil {
+func (s *BuildingService) Create(ctx context.Context, building *domainFacility.Building) error {
+	if err := s.Validate(ctx, building, nil); err != nil {
 		return err
 	}
-	return s.repo.Create(building)
+	return s.repo.Create(ctx, building)
 }
 
-func (s *BuildingService) GetByID(id uuid.UUID) (*domainFacility.Building, error) {
-	return domain.GetByID(s.repo, id)
+func (s *BuildingService) GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.Building, error) {
+	return domain.GetByID(ctx, s.repo, id)
 }
 
-func (s *BuildingService) GetByIDs(ids []uuid.UUID) ([]domainFacility.Building, error) {
-	buildings, err := s.repo.GetByIds(ids)
+func (s *BuildingService) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]domainFacility.Building, error) {
+	buildings, err := s.repo.GetByIds(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
 	return derefSlice(buildings), nil
 }
 
-func (s *BuildingService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.Building], error) {
+func (s *BuildingService) List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.Building], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
-	return s.repo.GetPaginatedList(domain.PaginationParams{
+	return s.repo.GetPaginatedList(ctx, domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,
 		Search: search,
 	})
 }
 
-func (s *BuildingService) Update(building *domainFacility.Building) error {
-	if err := s.Validate(building, &building.ID); err != nil {
+func (s *BuildingService) Update(ctx context.Context, building *domainFacility.Building) error {
+	if err := s.Validate(ctx, building, &building.ID); err != nil {
 		return err
 	}
-	return s.repo.Update(building)
+	return s.repo.Update(ctx, building)
 }
 
-func (s *BuildingService) Validate(building *domainFacility.Building, excludeID *uuid.UUID) error {
+func (s *BuildingService) Validate(ctx context.Context, building *domainFacility.Building, excludeID *uuid.UUID) error {
 	if err := s.validateRequiredFields(building); err != nil {
 		return err
 	}
-	if err := s.ensureUnique(building, excludeID); err != nil {
+	if err := s.ensureUnique(ctx, building, excludeID); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *BuildingService) DeleteByID(id uuid.UUID) error {
-	return s.repo.DeleteByIds([]uuid.UUID{id})
+func (s *BuildingService) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
 }
 
 func (s *BuildingService) validateRequiredFields(building *domainFacility.Building) error {
@@ -83,11 +84,11 @@ func (s *BuildingService) validateRequiredFields(building *domainFacility.Buildi
 	return nil
 }
 
-func (s *BuildingService) ensureUnique(building *domainFacility.Building, excludeID *uuid.UUID) error {
+func (s *BuildingService) ensureUnique(ctx context.Context, building *domainFacility.Building, excludeID *uuid.UUID) error {
 	if strings.TrimSpace(building.IWSCode) == "" || building.BuildingGroup == 0 {
 		return nil
 	}
-	exists, err := s.repo.ExistsIWSCodeGroup(building.IWSCode, building.BuildingGroup, excludeID)
+	exists, err := s.repo.ExistsIWSCodeGroup(ctx, building.IWSCode, building.BuildingGroup, excludeID)
 	if err != nil {
 		return err
 	}

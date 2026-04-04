@@ -1,6 +1,7 @@
 package gormbase
 
 import (
+	"context"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -36,46 +37,46 @@ func NewBaseRepository[T Entity](db *gorm.DB, searchCallback SearchCallback[T]) 
 }
 
 // GetByIds retrieves entities by their IDs
-func (r *BaseRepository[T]) GetByIds(ids []uuid.UUID) ([]T, error) {
+func (r *BaseRepository[T]) GetByIds(ctx context.Context, ids []uuid.UUID) ([]T, error) {
 	if len(ids) == 0 {
 		return []T{}, nil
 	}
 	var items []T
-	err := r.db.Where("id IN ?", ids).Find(&items).Error
+	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&items).Error
 	return items, err
 }
 
 // Create creates a new entity
-func (r *BaseRepository[T]) Create(entity T) error {
+func (r *BaseRepository[T]) Create(ctx context.Context, entity T) error {
 	now := time.Now().UTC()
 	if err := entity.GetBase().InitForCreate(now); err != nil {
 		return err
 	}
-	return r.db.Create(entity).Error
+	return r.db.WithContext(ctx).Create(entity).Error
 }
 
 // Update updates an existing entity
-func (r *BaseRepository[T]) Update(entity T) error {
+func (r *BaseRepository[T]) Update(ctx context.Context, entity T) error {
 	entity.GetBase().TouchForUpdate(time.Now().UTC())
-	return r.db.Save(entity).Error
+	return r.db.WithContext(ctx).Save(entity).Error
 }
 
 // DeleteByIds hard deletes entities by their IDs
-func (r *BaseRepository[T]) DeleteByIds(ids []uuid.UUID) error {
+func (r *BaseRepository[T]) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
 	var model T
-	return r.db.Where("id IN ?", ids).Delete(&model).Error
+	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&model).Error
 }
 
 // GetPaginatedList retrieves a paginated list of entities with search support
-func (r *BaseRepository[T]) GetPaginatedList(params domain.PaginationParams, defaultLimit int) (*domain.PaginatedList[T], error) {
+func (r *BaseRepository[T]) GetPaginatedList(ctx context.Context, params domain.PaginationParams, defaultLimit int) (*domain.PaginatedList[T], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, defaultLimit)
 	offset := (page - 1) * limit
 
 	var model T
-	query := r.db.Model(&model)
+	query := r.db.WithContext(ctx).Model(&model)
 
 	// Apply custom search if callback is provided and search term is not empty
 	if r.searchCallback != nil && params.Search != "" {
@@ -103,7 +104,7 @@ func (r *BaseRepository[T]) GetPaginatedList(params domain.PaginationParams, def
 }
 
 // BulkCreate creates multiple entities in batches
-func (r *BaseRepository[T]) BulkCreate(entities []T, batchSize int) error {
+func (r *BaseRepository[T]) BulkCreate(ctx context.Context, entities []T, batchSize int) error {
 	if len(entities) == 0 {
 		return nil
 	}
@@ -119,11 +120,11 @@ func (r *BaseRepository[T]) BulkCreate(entities []T, batchSize int) error {
 		batchSize = DefaultBatchSize
 	}
 
-	return r.db.CreateInBatches(entities, batchSize).Error
+	return r.db.WithContext(ctx).CreateInBatches(entities, batchSize).Error
 }
 
 // BulkUpdate updates multiple entities with optional upsert support
-func (r *BaseRepository[T]) BulkUpdate(entities []T) error {
+func (r *BaseRepository[T]) BulkUpdate(ctx context.Context, entities []T) error {
 	if len(entities) == 0 {
 		return nil
 	}
@@ -134,7 +135,7 @@ func (r *BaseRepository[T]) BulkUpdate(entities []T) error {
 	}
 
 	// Use transaction for bulk updates
-	return r.db.Transaction(func(tx *gorm.DB) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, entity := range entities {
 			if err := tx.Save(entity).Error; err != nil {
 				return err

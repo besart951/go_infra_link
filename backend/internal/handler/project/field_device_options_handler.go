@@ -1,7 +1,6 @@
 package project
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -43,13 +42,12 @@ func (h *FieldDeviceOptionsHandler) GetFieldDeviceOptionsForProject(c *gin.Conte
 		return
 	}
 
-	hasAccess, err := h.projectService.CanAccessProject(userID, projectID)
+	hasAccess, err := h.projectService.CanAccessProject(c.Request.Context(), userID, projectID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_not_found")),
+		)
 		return
 	}
 	if !hasAccess {
@@ -57,7 +55,7 @@ func (h *FieldDeviceOptionsHandler) GetFieldDeviceOptionsForProject(c *gin.Conte
 		return
 	}
 
-	options, err := h.service.GetFieldDeviceOptionsForProject(projectID)
+	options, err := h.service.GetFieldDeviceOptionsForProject(c.Request.Context(), projectID)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return

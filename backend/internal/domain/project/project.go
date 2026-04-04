@@ -1,6 +1,7 @@
 package project
 
 import (
+	"context"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -37,11 +38,11 @@ type Phase struct {
 
 type ProjectRepository interface {
 	domain.Repository[Project]
-	GetPaginatedListForUser(params domain.PaginationParams, userID uuid.UUID) (*domain.PaginatedList[Project], error)
-	HasUser(projectID, userID uuid.UUID) (bool, error)
-	AddUser(projectID, userID uuid.UUID) error
-	RemoveUser(projectID, userID uuid.UUID) error
-	ListUsers(projectID uuid.UUID) ([]user.User, error)
+	GetPaginatedListForUser(ctx context.Context, params domain.PaginationParams, userID uuid.UUID) (*domain.PaginatedList[Project], error)
+	HasUser(ctx context.Context, projectID, userID uuid.UUID) (bool, error)
+	AddUser(ctx context.Context, projectID, userID uuid.UUID) error
+	RemoveUser(ctx context.Context, projectID, userID uuid.UUID) error
+	ListUsers(ctx context.Context, projectID uuid.UUID) ([]user.User, error)
 }
 
 type PhaseRepository = domain.Repository[Phase]

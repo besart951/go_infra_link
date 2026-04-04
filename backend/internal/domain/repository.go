@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 )
 
@@ -12,8 +14,8 @@ import (
 
 // GetByID is a convenience wrapper that fetches a single entity by ID
 // using any Reader implementation. Returns ErrNotFound when absent.
-func GetByID[T any](r Reader[T], id uuid.UUID) (*T, error) {
-	items, err := r.GetByIds([]uuid.UUID{id})
+func GetByID[T any](ctx context.Context, r Reader[T], id uuid.UUID) (*T, error) {
+	items, err := r.GetByIds(ctx, []uuid.UUID{id})
 	if err != nil {
 		return nil, err
 	}
@@ -24,29 +26,28 @@ func GetByID[T any](r Reader[T], id uuid.UUID) (*T, error) {
 }
 
 type Reader[T any] interface {
-	GetByIds(ids []uuid.UUID) ([]*T, error)
+	GetByIds(ctx context.Context, ids []uuid.UUID) ([]*T, error)
 }
 
 type Creator[T any] interface {
-	Create(entity *T) error
+	Create(ctx context.Context, entity *T) error
 }
 
 type Updater[T any] interface {
-	Update(entity *T) error
+	Update(ctx context.Context, entity *T) error
 }
 
 type Deleter[T any] interface {
-	DeleteByIds(ids []uuid.UUID) error
+	DeleteByIds(ctx context.Context, ids []uuid.UUID) error
 }
 
 type Paginator[T any] interface {
-	GetPaginatedList(params PaginationParams) (*PaginatedList[T], error)
+	GetPaginatedList(ctx context.Context, params PaginationParams) (*PaginatedList[T], error)
 }
 
 // Repository is the common CRUD + pagination contract.
 //
 // Keep method naming consistent with the current codebase.
-// (If you later want `GetPaginated`, we can rename and update call-sites.)
 
 type Repository[T any] interface {
 	Reader[T]

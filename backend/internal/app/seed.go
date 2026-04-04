@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 
 	"github.com/besart951/go_infra_link/backend/internal/config"
@@ -10,7 +11,7 @@ import (
 )
 
 type seedUserService interface {
-	CreateWithPassword(user *domainUser.User, password string) error
+	CreateWithPassword(ctx context.Context, user *domainUser.User, password string) error
 }
 
 func ensureSeedUser(cfg config.Config, log applogger.Logger, userService seedUserService, userEmailRepo domainUser.UserEmailRepository) error {
@@ -21,7 +22,7 @@ func ensureSeedUser(cfg config.Config, log applogger.Logger, userService seedUse
 		return nil
 	}
 
-	user, err := userEmailRepo.GetByEmail(cfg.SeedUserEmail)
+	user, err := userEmailRepo.GetByEmail(context.Background(), cfg.SeedUserEmail)
 	if err != nil {
 		if !errors.Is(err, domain.ErrNotFound) {
 			return err
@@ -35,7 +36,7 @@ func ensureSeedUser(cfg config.Config, log applogger.Logger, userService seedUse
 			Role:      domainUser.RoleSuperAdmin,
 		}
 
-		if err := userService.CreateWithPassword(user, cfg.SeedUserPassword); err != nil {
+		if err := userService.CreateWithPassword(context.Background(), user, cfg.SeedUserPassword); err != nil {
 			return err
 		}
 

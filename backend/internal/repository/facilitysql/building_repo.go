@@ -1,6 +1,7 @@
 package facilitysql
 
 import (
+	"context"
 	"strconv"
 	"strings"
 
@@ -29,16 +30,16 @@ func NewBuildingRepository(db *gorm.DB) domainFacility.BuildingRepository {
 	return &buildingRepo{BaseRepository: baseRepo, db: db}
 }
 
-func (r *buildingRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Building], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+func (r *buildingRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Building], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
 	if err != nil {
 		return nil, err
 	}
 	return gormbase.DerefPaginatedList(result), nil
 }
 
-func (r *buildingRepo) ExistsIWSCodeGroup(iwsCode string, buildingGroup int, excludeID *uuid.UUID) (bool, error) {
-	query := r.db.Model(&domainFacility.Building{}).
+func (r *buildingRepo) ExistsIWSCodeGroup(ctx context.Context, iwsCode string, buildingGroup int, excludeID *uuid.UUID) (bool, error) {
+	query := r.db.WithContext(ctx).Model(&domainFacility.Building{}).
 		Where("LOWER(iws_code) = ?", strings.ToLower(strings.TrimSpace(iwsCode))).
 		Where("building_group = ?", buildingGroup)
 

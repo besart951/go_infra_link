@@ -36,7 +36,7 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 
 	controlCabinet := toControlCabinetModel(req)
 
-	if err := h.service.Create(controlCabinet); err != nil {
+	if err := h.service.Create(c.Request.Context(), controlCabinet); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {
 			respondValidationError(c, ve.Fields)
 			return
@@ -68,7 +68,7 @@ func (h *ControlCabinetHandler) GetControlCabinet(c *gin.Context) {
 		return
 	}
 
-	controlCabinet, err := h.service.GetByID(id)
+	controlCabinet, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.control_cabinet_not_found") {
 			return
@@ -100,7 +100,7 @@ func (h *ControlCabinetHandler) GetControlCabinetsByIDs(c *gin.Context) {
 		return
 	}
 
-	items, err := h.service.GetByIDs(req.Ids)
+	items, err := h.service.GetByIDs(c.Request.Context(), req.Ids)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
@@ -126,7 +126,7 @@ func (h *ControlCabinetHandler) CopyControlCabinet(c *gin.Context) {
 		return
 	}
 
-	copyEntity, err := h.service.CopyByID(id)
+	copyEntity, err := h.service.CopyByID(c.Request.Context(), id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.control_cabinet_not_found") {
 			return
@@ -158,7 +158,7 @@ func (h *ControlCabinetHandler) GetControlCabinetDeleteImpact(c *gin.Context) {
 		return
 	}
 
-	impact, err := h.service.GetDeleteImpact(id)
+	impact, err := h.service.GetDeleteImpact(c.Request.Context(), id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.control_cabinet_not_found") {
 			return
@@ -200,12 +200,14 @@ func (h *ControlCabinetHandler) ListControlCabinets(c *gin.Context) {
 		return
 	}
 
+	ctx := c.Request.Context()
+
 	var result *domain.PaginatedList[domainFacility.ControlCabinet]
 	var err error
 	if buildingID != nil {
-		result, err = h.service.ListByBuildingID(*buildingID, query.Page, query.Limit, query.Search)
+		result, err = h.service.ListByBuildingID(ctx, *buildingID, query.Page, query.Limit, query.Search)
 	} else {
-		result, err = h.service.List(query.Page, query.Limit, query.Search)
+		result, err = h.service.List(ctx, query.Page, query.Limit, query.Search)
 	}
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
@@ -238,7 +240,9 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 		return
 	}
 
-	controlCabinet, err := h.service.GetByID(id)
+	ctx := c.Request.Context()
+
+	controlCabinet, err := h.service.GetByID(ctx, id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.control_cabinet_not_found") {
 			return
@@ -249,7 +253,7 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 
 	applyControlCabinetUpdate(controlCabinet, req)
 
-	if err := h.service.Update(controlCabinet); err != nil {
+	if err := h.service.Update(ctx, controlCabinet); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {
 			respondValidationError(c, ve.Fields)
 			return
@@ -280,7 +284,7 @@ func (h *ControlCabinetHandler) DeleteControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(id); err != nil {
+	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.control_cabinet_not_found") {
 			return
 		}

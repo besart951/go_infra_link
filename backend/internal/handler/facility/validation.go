@@ -47,7 +47,7 @@ func (h *ValidationHandler) ValidateBuilding(c *gin.Context) {
 		BuildingGroup: req.BuildingGroup,
 	}
 
-	if err := h.buildingService.Validate(building, req.ID); respondValidationOrError(c, err, "validation_failed") {
+	if err := h.buildingService.Validate(c.Request.Context(), building, req.ID); respondValidationOrError(c, err, "validation_failed") {
 		return
 	}
 
@@ -75,7 +75,7 @@ func (h *ValidationHandler) ValidateControlCabinet(c *gin.Context) {
 		ControlCabinetNr: req.ControlCabinetNr,
 	}
 
-	if err := h.controlCabinetService.Validate(cabinet, req.ID); respondValidationOrError(c, err, "validation_failed") {
+	if err := h.controlCabinetService.Validate(c.Request.Context(), cabinet, req.ID); respondValidationOrError(c, err, "validation_failed") {
 		return
 	}
 
@@ -108,7 +108,7 @@ func (h *ValidationHandler) ValidateSPSController(c *gin.Context) {
 		Vlan:             req.Vlan,
 	}
 
-	if err := h.spsControllerService.Validate(controller, req.ID); respondValidationOrError(c, err, "validation_failed") {
+	if err := h.spsControllerService.Validate(c.Request.Context(), controller, req.ID); respondValidationOrError(c, err, "validation_failed") {
 		return
 	}
 

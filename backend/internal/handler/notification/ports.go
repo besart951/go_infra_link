@@ -7,7 +7,7 @@ import (
 )
 
 type NotificationSettingsService interface {
-	GetSMTPSettings() (*domainNotification.SMTPSettings, error)
-	UpsertSMTPSettings(input domainNotification.UpsertSMTPSettingsInput) (*domainNotification.SMTPSettings, error)
+	GetSMTPSettings(ctx context.Context) (*domainNotification.SMTPSettings, error)
+	UpsertSMTPSettings(ctx context.Context, input domainNotification.UpsertSMTPSettingsInput) (*domainNotification.SMTPSettings, error)
 	SendTestEmail(ctx context.Context, input domainNotification.SendTestEmailInput) error
 }

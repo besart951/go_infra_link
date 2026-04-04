@@ -1,6 +1,7 @@
 package team
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -28,9 +29,9 @@ func NewTeamRepository(db *gorm.DB) domainTeam.TeamRepository {
 	}
 }
 
-func (r *teamRepo) Update(entity *domainTeam.Team) error {
+func (r *teamRepo) Update(ctx context.Context, entity *domainTeam.Team) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.Model(&domainTeam.Team{}).
+	return r.db.WithContext(ctx).Model(&domainTeam.Team{}).
 		Where("id = ?", entity.ID).
 		Updates(map[string]any{
 			"updated_at":  entity.UpdatedAt,
@@ -39,8 +40,8 @@ func (r *teamRepo) Update(entity *domainTeam.Team) error {
 		}).Error
 }
 
-func (r *teamRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainTeam.Team], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+func (r *teamRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainTeam.Team], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
 	if err != nil {
 		return nil, err
 	}

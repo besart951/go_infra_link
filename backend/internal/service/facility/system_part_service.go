@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -20,36 +21,36 @@ func NewSystemPartService(repo domainFacility.SystemPartRepository) *SystemPartS
 	}
 }
 
-func (s *SystemPartService) Create(systemPart *domainFacility.SystemPart) error {
+func (s *SystemPartService) Create(ctx context.Context, systemPart *domainFacility.SystemPart) error {
 	if err := s.validateRequiredFields(systemPart); err != nil {
 		return err
 	}
-	if err := s.ensureUnique(systemPart, nil); err != nil {
+	if err := s.ensureUnique(ctx, systemPart, nil); err != nil {
 		return err
 	}
-	return s.repo.Create(systemPart)
+	return s.repo.Create(ctx, systemPart)
 }
 
-func (s *SystemPartService) GetByIDs(ids []uuid.UUID) ([]*domainFacility.SystemPart, error) {
-	return s.extRepo.GetByIds(ids)
+func (s *SystemPartService) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.SystemPart, error) {
+	return s.extRepo.GetByIds(ctx, ids)
 }
 
-func (s *SystemPartService) GetApparatIDs(id uuid.UUID) ([]uuid.UUID, error) {
-	systemPart, err := s.GetByID(id)
+func (s *SystemPartService) GetApparatIDs(ctx context.Context, id uuid.UUID) ([]uuid.UUID, error) {
+	systemPart, err := s.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	return extractIDs(systemPart.Apparats, func(a *domainFacility.Apparat) uuid.UUID { return a.ID }), nil
 }
 
-func (s *SystemPartService) Update(systemPart *domainFacility.SystemPart) error {
+func (s *SystemPartService) Update(ctx context.Context, systemPart *domainFacility.SystemPart) error {
 	if err := s.validateRequiredFields(systemPart); err != nil {
 		return err
 	}
-	if err := s.ensureUnique(systemPart, &systemPart.ID); err != nil {
+	if err := s.ensureUnique(ctx, systemPart, &systemPart.ID); err != nil {
 		return err
 	}
-	return s.repo.Update(systemPart)
+	return s.repo.Update(ctx, systemPart)
 }
 
 func (s *SystemPartService) validateRequiredFields(systemPart *domainFacility.SystemPart) error {
@@ -69,10 +70,10 @@ func (s *SystemPartService) validateRequiredFields(systemPart *domainFacility.Sy
 	return nil
 }
 
-func (s *SystemPartService) ensureUnique(systemPart *domainFacility.SystemPart, excludeID *uuid.UUID) error {
+func (s *SystemPartService) ensureUnique(ctx context.Context, systemPart *domainFacility.SystemPart, excludeID *uuid.UUID) error {
 	ve := domain.NewValidationError()
 	if strings.TrimSpace(systemPart.ShortName) != "" {
-		items, err := s.repo.GetPaginatedList(domain.PaginationParams{Page: 1, Limit: 1000, Search: systemPart.ShortName})
+		items, err := s.repo.GetPaginatedList(ctx, domain.PaginationParams{Page: 1, Limit: 1000, Search: systemPart.ShortName})
 		if err != nil {
 			return err
 		}
@@ -88,7 +89,7 @@ func (s *SystemPartService) ensureUnique(systemPart *domainFacility.SystemPart, 
 		}
 	}
 	if strings.TrimSpace(systemPart.Name) != "" {
-		items, err := s.repo.GetPaginatedList(domain.PaginationParams{Page: 1, Limit: 1000, Search: systemPart.Name})
+		items, err := s.repo.GetPaginatedList(ctx, domain.PaginationParams{Page: 1, Limit: 1000, Search: systemPart.Name})
 		if err != nil {
 			return err
 		}

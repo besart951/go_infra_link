@@ -1,7 +1,6 @@
 package project
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -38,12 +37,11 @@ func (h *ProjectHandler) InviteProjectUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.InviteUser(projectID, req.UserID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_or_user_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "invite_failed", "project.user_invited_failed")
+	if err := h.service.InviteUser(c.Request.Context(), projectID, req.UserID); err != nil {
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "invite_failed", "project.user_invited_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_or_user_not_found")),
+		)
 		return
 	}
 
@@ -70,13 +68,12 @@ func (h *ProjectHandler) ListProjectUsers(c *gin.Context) {
 		return
 	}
 
-	users, err := h.service.ListUsers(projectID)
+	users, err := h.service.ListUsers(c.Request.Context(), projectID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_not_found")),
+		)
 		return
 	}
 
@@ -109,12 +106,11 @@ func (h *ProjectHandler) RemoveProjectUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.RemoveUser(projectID, userID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_or_user_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "remove_failed", "project.user_remove_failed")
+	if err := h.service.RemoveUser(c.Request.Context(), projectID, userID); err != nil {
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "remove_failed", "project.user_remove_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_or_user_not_found")),
+		)
 		return
 	}
 

@@ -1,6 +1,7 @@
 package team
 
 import (
+	"context"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -17,9 +18,9 @@ func NewTeamMemberRepository(db *gorm.DB) domainTeam.TeamMemberRepository {
 	return &memberRepo{db: db}
 }
 
-func (r *memberRepo) GetUserRole(teamID, userID uuid.UUID) (*domainTeam.MemberRole, error) {
+func (r *memberRepo) GetUserRole(ctx context.Context, teamID, userID uuid.UUID) (*domainTeam.MemberRole, error) {
 	var member domainTeam.TeamMember
-	err := r.db.Where("team_id = ? AND user_id = ?", teamID, userID).First(&member).Error
+	err := r.db.WithContext(ctx).Where("team_id = ? AND user_id = ?", teamID, userID).First(&member).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -30,7 +31,7 @@ func (r *memberRepo) GetUserRole(teamID, userID uuid.UUID) (*domainTeam.MemberRo
 	return &role, nil
 }
 
-func (r *memberRepo) Upsert(member *domainTeam.TeamMember) error {
+func (r *memberRepo) Upsert(ctx context.Context, member *domainTeam.TeamMember) error {
 	now := time.Now().UTC()
 	if err := member.Base.InitForCreate(now); err != nil {
 		return err
@@ -39,7 +40,7 @@ func (r *memberRepo) Upsert(member *domainTeam.TeamMember) error {
 		member.JoinedAt = now
 	}
 
-	result := r.db.Model(&domainTeam.TeamMember{}).
+	result := r.db.WithContext(ctx).Model(&domainTeam.TeamMember{}).
 		Where("team_id = ? AND user_id = ?", member.TeamID, member.UserID).
 		Updates(map[string]any{
 			"updated_at": now,
@@ -52,20 +53,20 @@ func (r *memberRepo) Upsert(member *domainTeam.TeamMember) error {
 		return nil
 	}
 
-	return r.db.Create(member).Error
+	return r.db.WithContext(ctx).Create(member).Error
 }
 
-func (r *memberRepo) Delete(teamID, userID uuid.UUID) error {
-	return r.db.
+func (r *memberRepo) Delete(ctx context.Context, teamID, userID uuid.UUID) error {
+	return r.db.WithContext(ctx).
 		Where("team_id = ? AND user_id = ?", teamID, userID).
 		Delete(&domainTeam.TeamMember{}).Error
 }
 
-func (r *memberRepo) ListByTeam(teamID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainTeam.TeamMember], error) {
+func (r *memberRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainTeam.TeamMember], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 20)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainTeam.TeamMember{}).Where("team_id = ?", teamID)
+	query := r.db.WithContext(ctx).Model(&domainTeam.TeamMember{}).Where("team_id = ?", teamID)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -85,11 +86,11 @@ func (r *memberRepo) ListByTeam(teamID uuid.UUID, params domain.PaginationParams
 	}, nil
 }
 
-func (r *memberRepo) ListByUser(userID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainTeam.TeamMember], error) {
+func (r *memberRepo) ListByUser(ctx context.Context, userID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainTeam.TeamMember], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 20)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainTeam.TeamMember{}).Where("user_id = ?", userID)
+	query := r.db.WithContext(ctx).Model(&domainTeam.TeamMember{}).Where("user_id = ?", userID)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {

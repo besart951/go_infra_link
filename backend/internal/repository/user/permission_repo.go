@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -33,17 +34,17 @@ func NewPermissionRepository(db *gorm.DB) domainUser.PermissionRepository {
 	}
 }
 
-func (r *permissionRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainUser.Permission], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 50)
+func (r *permissionRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainUser.Permission], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 50)
 	if err != nil {
 		return nil, err
 	}
 	return gormbase.DerefPaginatedList(result), nil
 }
 
-func (r *permissionRepo) GetByName(name string) (*domainUser.Permission, error) {
+func (r *permissionRepo) GetByName(ctx context.Context, name string) (*domainUser.Permission, error) {
 	var perm domainUser.Permission
-	err := r.db.Where("name = ?", name).First(&perm).Error
+	err := r.db.WithContext(ctx).Where("name = ?", name).First(&perm).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, domain.ErrNotFound
@@ -53,17 +54,17 @@ func (r *permissionRepo) GetByName(name string) (*domainUser.Permission, error) 
 	return &perm, nil
 }
 
-func (r *permissionRepo) ListAll() ([]domainUser.Permission, error) {
+func (r *permissionRepo) ListAll(ctx context.Context) ([]domainUser.Permission, error) {
 	var perms []domainUser.Permission
-	err := r.db.Order("name ASC").Find(&perms).Error
+	err := r.db.WithContext(ctx).Order("name ASC").Find(&perms).Error
 	return perms, err
 }
 
-func (r *permissionRepo) ListByNames(names []string) ([]domainUser.Permission, error) {
+func (r *permissionRepo) ListByNames(ctx context.Context, names []string) ([]domainUser.Permission, error) {
 	if len(names) == 0 {
 		return []domainUser.Permission{}, nil
 	}
 	var perms []domainUser.Permission
-	err := r.db.Where("name IN ?", names).Find(&perms).Error
+	err := r.db.WithContext(ctx).Where("name IN ?", names).Find(&perms).Error
 	return perms, err
 }

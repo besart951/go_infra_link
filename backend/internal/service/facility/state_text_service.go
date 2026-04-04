@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"context"
+
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 )
 
@@ -12,10 +14,10 @@ func NewStateTextService(repo domainFacility.StateTextRepository) *StateTextServ
 	return &StateTextService{baseService: newBase[domainFacility.StateText](repo, 10)}
 }
 
-func (s *StateTextService) Create(stateText *domainFacility.StateText) error {
-	return s.repo.Create(stateText)
+func (s *StateTextService) Create(ctx context.Context, stateText *domainFacility.StateText) error {
+	return s.repo.Create(ctx, stateText)
 }
 
-func (s *StateTextService) Update(stateText *domainFacility.StateText) error {
-	return s.repo.Update(stateText)
+func (s *StateTextService) Update(ctx context.Context, stateText *domainFacility.StateText) error {
+	return s.repo.Update(ctx, stateText)
 }

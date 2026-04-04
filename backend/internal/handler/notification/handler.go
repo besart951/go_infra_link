@@ -1,7 +1,6 @@
 package notification
 
 import (
-	"errors"
 	"net/http"
 
 	domain "github.com/besart951/go_infra_link/backend/internal/domain"
@@ -29,13 +28,15 @@ func NewNotificationSettingsHandler(service NotificationSettingsService) *Notifi
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/admin/notifications/smtp [get]
 func (h *NotificationSettingsHandler) GetSMTPSettings(c *gin.Context) {
-	settings, err := h.service.GetSMTPSettings()
+	settings, err := h.service.GetSMTPSettings(c.Request.Context())
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) || errors.Is(err, domainNotification.ErrProviderNotConfigured) {
-			handlerutil.RespondError(c, http.StatusNotFound, "not_found", "SMTP settings not configured")
-			return
-		}
-		handlerutil.RespondError(c, http.StatusInternalServerError, "fetch_failed", "Failed to load SMTP settings")
+		handlerutil.RespondDomainError(
+			c,
+			err,
+			handlerutil.PlainError(http.StatusInternalServerError, "fetch_failed", "Failed to load SMTP settings"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.PlainError(http.StatusNotFound, "not_found", "SMTP settings not configured")),
+			handlerutil.MapError(domainNotification.ErrProviderNotConfigured, handlerutil.PlainError(http.StatusNotFound, "not_found", "SMTP settings not configured")),
+		)
 		return
 	}
 
@@ -64,7 +65,7 @@ func (h *NotificationSettingsHandler) UpsertSMTPSettings(c *gin.Context) {
 		return
 	}
 
-	settings, err := h.service.UpsertSMTPSettings(domainNotification.UpsertSMTPSettingsInput{
+	settings, err := h.service.UpsertSMTPSettings(c.Request.Context(), domainNotification.UpsertSMTPSettingsInput{
 		ActorID:          userID,
 		Enabled:          *req.Enabled,
 		Host:             req.Host,
@@ -79,11 +80,11 @@ func (h *NotificationSettingsHandler) UpsertSMTPSettings(c *gin.Context) {
 		AllowInsecureTLS: *req.AllowInsecureTLS,
 	})
 	if err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			handlerutil.RespondValidationError(c, ve.Fields)
-			return
-		}
-		handlerutil.RespondError(c, http.StatusInternalServerError, "update_failed", "Failed to save SMTP settings")
+		handlerutil.RespondDomainError(
+			c,
+			err,
+			handlerutil.PlainError(http.StatusInternalServerError, "update_failed", "Failed to save SMTP settings"),
+		)
 		return
 	}
 
@@ -112,18 +113,14 @@ func (h *NotificationSettingsHandler) SendSMTPTestEmail(c *gin.Context) {
 		Body:    req.Body,
 	})
 	if err != nil {
-		switch {
-		case errors.Is(err, domainNotification.ErrProviderNotConfigured), errors.Is(err, domain.ErrNotFound):
-			handlerutil.RespondError(c, http.StatusNotFound, "not_found", "SMTP settings not configured")
-			return
-		default:
-			if ve, ok := domain.AsValidationError(err); ok {
-				handlerutil.RespondValidationError(c, ve.Fields)
-				return
-			}
-			handlerutil.RespondError(c, http.StatusInternalServerError, "smtp_test_failed", err.Error())
-			return
-		}
+		handlerutil.RespondDomainError(
+			c,
+			err,
+			handlerutil.PlainError(http.StatusInternalServerError, "smtp_test_failed", err.Error()),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.PlainError(http.StatusNotFound, "not_found", "SMTP settings not configured")),
+			handlerutil.MapError(domainNotification.ErrProviderNotConfigured, handlerutil.PlainError(http.StatusNotFound, "not_found", "SMTP settings not configured")),
+		)
+		return
 	}
 
 	c.Status(http.StatusNoContent)

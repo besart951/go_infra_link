@@ -1,6 +1,7 @@
 package project
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -30,9 +31,9 @@ func NewProjectRepository(db *gorm.DB) domainProject.ProjectRepository {
 	}
 }
 
-func (r *projectRepo) Update(entity *domainProject.Project) error {
+func (r *projectRepo) Update(ctx context.Context, entity *domainProject.Project) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.Model(&domainProject.Project{}).
+	return r.db.WithContext(ctx).Model(&domainProject.Project{}).
 		Where("id = ?", entity.ID).
 		Updates(map[string]any{
 			"updated_at":  entity.UpdatedAt,
@@ -45,19 +46,19 @@ func (r *projectRepo) Update(entity *domainProject.Project) error {
 		}).Error
 }
 
-func (r *projectRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainProject.Project], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+func (r *projectRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainProject.Project], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
 	if err != nil {
 		return nil, err
 	}
 	return gormbase.DerefPaginatedList(result), nil
 }
 
-func (r *projectRepo) GetPaginatedListForUser(params domain.PaginationParams, userID uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
+func (r *projectRepo) GetPaginatedListForUser(ctx context.Context, params domain.PaginationParams, userID uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainProject.Project{}).
+	query := r.db.WithContext(ctx).Model(&domainProject.Project{}).
 		Joins("LEFT JOIN project_users pu ON pu.project_id = projects.id").
 		Where("pu.user_id = ? OR projects.creator_id = ?", userID, userID)
 
@@ -89,15 +90,15 @@ func (r *projectRepo) GetPaginatedListForUser(params domain.PaginationParams, us
 	}, nil
 }
 
-func (r *projectRepo) AddUser(projectID, userID uuid.UUID) error {
+func (r *projectRepo) AddUser(ctx context.Context, projectID, userID uuid.UUID) error {
 	project := &domainProject.Project{Base: domain.Base{ID: projectID}}
 	user := &domainUser.User{Base: domain.Base{ID: userID}}
-	return r.db.Model(project).Association("Users").Append(user)
+	return r.db.WithContext(ctx).Model(project).Association("Users").Append(user)
 }
 
-func (r *projectRepo) HasUser(projectID, userID uuid.UUID) (bool, error) {
+func (r *projectRepo) HasUser(ctx context.Context, projectID, userID uuid.UUID) (bool, error) {
 	var count int64
-	err := r.db.Table("project_users").
+	err := r.db.WithContext(ctx).Table("project_users").
 		Where("project_id = ? AND user_id = ?", projectID, userID).
 		Count(&count).Error
 	if err != nil {
@@ -106,16 +107,16 @@ func (r *projectRepo) HasUser(projectID, userID uuid.UUID) (bool, error) {
 	return count > 0, nil
 }
 
-func (r *projectRepo) RemoveUser(projectID, userID uuid.UUID) error {
+func (r *projectRepo) RemoveUser(ctx context.Context, projectID, userID uuid.UUID) error {
 	project := &domainProject.Project{Base: domain.Base{ID: projectID}}
 	user := &domainUser.User{Base: domain.Base{ID: userID}}
-	return r.db.Model(project).Association("Users").Delete(user)
+	return r.db.WithContext(ctx).Model(project).Association("Users").Delete(user)
 }
 
-func (r *projectRepo) ListUsers(projectID uuid.UUID) ([]domainUser.User, error) {
+func (r *projectRepo) ListUsers(ctx context.Context, projectID uuid.UUID) ([]domainUser.User, error) {
 	project := &domainProject.Project{Base: domain.Base{ID: projectID}}
 	var users []domainUser.User
-	if err := r.db.Model(project).Association("Users").Find(&users); err != nil {
+	if err := r.db.WithContext(ctx).Model(project).Association("Users").Find(&users); err != nil {
 		return nil, err
 	}
 	return users, nil

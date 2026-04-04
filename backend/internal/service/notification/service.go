@@ -30,12 +30,12 @@ func New(repo domainNotification.SMTPSettingsRepository, cipher SecretCipher, st
 	}
 }
 
-func (s *Service) GetSMTPSettings() (*domainNotification.SMTPSettings, error) {
-	return s.repo.GetByProvider(domainNotification.ProviderSMTP)
+func (s *Service) GetSMTPSettings(ctx context.Context) (*domainNotification.SMTPSettings, error) {
+	return s.repo.GetByProvider(ctx, domainNotification.ProviderSMTP)
 }
 
-func (s *Service) UpsertSMTPSettings(input domainNotification.UpsertSMTPSettingsInput) (*domainNotification.SMTPSettings, error) {
-	existing, err := s.repo.GetByProvider(domainNotification.ProviderSMTP)
+func (s *Service) UpsertSMTPSettings(ctx context.Context, input domainNotification.UpsertSMTPSettingsInput) (*domainNotification.SMTPSettings, error) {
+	existing, err := s.repo.GetByProvider(ctx, domainNotification.ProviderSMTP)
 	if err != nil && !errors.Is(err, domain.ErrNotFound) {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (s *Service) UpsertSMTPSettings(input domainNotification.UpsertSMTPSettings
 		return nil, err
 	}
 
-	if err := s.repo.Save(settings); err != nil {
+	if err := s.repo.Save(ctx, settings); err != nil {
 		return nil, err
 	}
 	return settings, nil
@@ -89,7 +89,7 @@ func (s *Service) SendTestEmail(ctx context.Context, input domainNotification.Se
 		return domain.NewValidationError().Add("to", "must be a valid email")
 	}
 
-	settings, strategy, password, err := s.resolveSMTPStrategy(false)
+	settings, strategy, password, err := s.resolveSMTPStrategy(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func (s *Service) SendTestEmail(ctx context.Context, input domainNotification.Se
 }
 
 func (s *Service) SendNotification(ctx context.Context, input domainNotification.SendNotificationInput) error {
-	settings, strategy, password, err := s.resolveSMTPStrategy(true)
+	settings, strategy, password, err := s.resolveSMTPStrategy(ctx, true)
 	if err != nil {
 		return err
 	}
@@ -122,8 +122,8 @@ func (s *Service) SendNotification(ctx context.Context, input domainNotification
 	})
 }
 
-func (s *Service) resolveSMTPStrategy(requireEnabled bool) (*domainNotification.SMTPSettings, EmailStrategy, string, error) {
-	settings, err := s.repo.GetByProvider(domainNotification.ProviderSMTP)
+func (s *Service) resolveSMTPStrategy(ctx context.Context, requireEnabled bool) (*domainNotification.SMTPSettings, EmailStrategy, string, error) {
+	settings, err := s.repo.GetByProvider(ctx, domainNotification.ProviderSMTP)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return nil, nil, "", domainNotification.ErrProviderNotConfigured

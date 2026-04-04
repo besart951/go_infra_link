@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"context"
 	"sort"
 	"time"
 
@@ -39,14 +40,14 @@ func New(
 	}
 }
 
-func (s *Service) GetUserDashboard(userID uuid.UUID) (*DashboardResponse, error) {
+func (s *Service) GetUserDashboard(ctx context.Context, userID uuid.UUID) (*DashboardResponse, error) {
 	now := s.now().UTC()
 	response := &DashboardResponse{
 		Teams:       make([]DashboardTeamSummaryResponse, 0),
 		OnlineUsers: make([]DashboardUserPresenceResponse, 0),
 	}
 
-	projects, err := s.projectRepo.GetPaginatedListForUser(domain.PaginationParams{Page: 1, Limit: 1}, userID)
+	projects, err := s.projectRepo.GetPaginatedListForUser(ctx, domain.PaginationParams{Page: 1, Limit: 1}, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func (s *Service) GetUserDashboard(userID uuid.UUID) (*DashboardResponse, error)
 	if len(projects.Items) > 0 {
 		lastProject := projects.Items[0]
 		phaseName := "Unknown"
-		phase, err := domain.GetByID(s.phaseRepo, lastProject.PhaseID)
+		phase, err := domain.GetByID(ctx, s.phaseRepo, lastProject.PhaseID)
 		if err == nil {
 			phaseName = phase.Name
 		}
@@ -69,7 +70,7 @@ func (s *Service) GetUserDashboard(userID uuid.UUID) (*DashboardResponse, error)
 			UpdatedAt: lastProject.UpdatedAt,
 		}
 
-		projectUsers, err := s.projectRepo.ListUsers(lastProject.ID)
+		projectUsers, err := s.projectRepo.ListUsers(ctx, lastProject.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -78,7 +79,7 @@ func (s *Service) GetUserDashboard(userID uuid.UUID) (*DashboardResponse, error)
 		}
 	}
 
-	memberships, err := s.teamMemberRepo.ListByUser(userID, domain.PaginationParams{Page: 1, Limit: 20})
+	memberships, err := s.teamMemberRepo.ListByUser(ctx, userID, domain.PaginationParams{Page: 1, Limit: 20})
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +91,7 @@ func (s *Service) GetUserDashboard(userID uuid.UUID) (*DashboardResponse, error)
 
 	teamsByID := make(map[uuid.UUID]domainTeam.Team)
 	if len(teamIDs) > 0 {
-		teams, err := s.teamRepo.GetByIds(teamIDs)
+		teams, err := s.teamRepo.GetByIds(ctx, teamIDs)
 		if err != nil {
 			return nil, err
 		}
@@ -114,7 +115,7 @@ func (s *Service) GetUserDashboard(userID uuid.UUID) (*DashboardResponse, error)
 
 	if len(memberships.Items) > 0 {
 		primaryMembership := memberships.Items[0]
-		primaryMembers, err := s.teamMemberRepo.ListByTeam(primaryMembership.TeamID, domain.PaginationParams{Page: 1, Limit: 200})
+		primaryMembers, err := s.teamMemberRepo.ListByTeam(ctx, primaryMembership.TeamID, domain.PaginationParams{Page: 1, Limit: 200})
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +127,7 @@ func (s *Service) GetUserDashboard(userID uuid.UUID) (*DashboardResponse, error)
 			memberRoleByUser[member.UserID] = string(member.Role)
 		}
 
-		memberUsers, err := s.userRepo.GetByIds(memberUserIDs)
+		memberUsers, err := s.userRepo.GetByIds(ctx, memberUserIDs)
 		if err != nil {
 			return nil, err
 		}

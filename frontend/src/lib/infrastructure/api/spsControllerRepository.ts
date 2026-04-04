@@ -135,6 +135,7 @@ export const spsControllerRepository: SPSControllerRepository = {
     if (params?.limit) searchParams.set('limit', String(params.limit));
     if (params?.search) searchParams.set('search', params.search);
     if (params?.sps_controller_id) searchParams.set('sps_controller_id', params.sps_controller_id);
+    if (params?.project_id) searchParams.set('project_id', params.project_id);
 
     const query = searchParams.toString();
     return api<SPSControllerSystemTypeListResponse>(

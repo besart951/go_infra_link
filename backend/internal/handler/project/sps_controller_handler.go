@@ -1,7 +1,6 @@
 package project
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -33,21 +32,12 @@ func (h *ProjectHandler) CreateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.service.GetByID(projectID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
-		return
-	}
-
 	var req dto.CreateProjectSPSControllerRequest
 	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 
-	created, err := h.service.CreateSPSController(projectID, req.SPSControllerID)
+	created, err := h.service.CreateSPSController(c.Request.Context(), projectID, req.SPSControllerID)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
 		return
@@ -72,21 +62,13 @@ func (h *ProjectHandler) CopyProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	copyEntity, err := h.service.CopySPSController(projectID, spsControllerID)
+	copyEntity, err := h.service.CopySPSController(c.Request.Context(), projectID, spsControllerID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "facility.sps_controller_not_found")
-			return
-		}
-		if errors.Is(err, domain.ErrConflict) {
-			handlerutil.RespondLocalizedError(c, http.StatusConflict, "conflict", "project.creation_failed")
-			return
-		}
-		if ve, ok := domain.AsValidationError(err); ok {
-			handlerutil.RespondValidationError(c, ve.Fields)
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "facility.sps_controller_not_found")),
+			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "conflict", "project.creation_failed")),
+		)
 		return
 	}
 
@@ -108,17 +90,12 @@ func (h *ProjectHandler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 		return
 	}
 
-	copyEntity, err := h.service.CopySPSControllerSystemType(projectID, systemTypeID)
+	copyEntity, err := h.service.CopySPSControllerSystemType(c.Request.Context(), projectID, systemTypeID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "facility.sps_controller_system_type_not_found")
-			return
-		}
-		if ve, ok := domain.AsValidationError(err); ok {
-			handlerutil.RespondValidationError(c, ve.Fields)
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "facility.sps_controller_system_type_not_found")),
+		)
 		return
 	}
 
@@ -154,27 +131,17 @@ func (h *ProjectHandler) UpdateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.service.GetByID(projectID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
-		return
-	}
-
 	var req dto.UpdateProjectSPSControllerRequest
 	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 
-	updated, err := h.service.UpdateSPSController(linkID, projectID, req.SPSControllerID)
+	updated, err := h.service.UpdateSPSController(c.Request.Context(), linkID, projectID, req.SPSControllerID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.link_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "project.update_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.link_not_found")),
+		)
 		return
 	}
 
@@ -209,21 +176,11 @@ func (h *ProjectHandler) DeleteProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.service.GetByID(projectID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
-		return
-	}
-
-	if err := h.service.DeleteSPSController(linkID, projectID); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.link_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "project.deletion_failed")
+	if err := h.service.DeleteSPSController(c.Request.Context(), linkID, projectID); err != nil {
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "deletion_failed", "project.deletion_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.link_not_found")),
+		)
 		return
 	}
 

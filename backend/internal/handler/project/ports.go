@@ -1,6 +1,8 @@
 package project
 
 import (
+	"context"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
@@ -9,43 +11,43 @@ import (
 )
 
 type ProjectService interface {
-	Create(project *domainProject.Project) error
-	GetByID(id uuid.UUID) (*domainProject.Project, error)
-	List(requesterID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainProject.Project], error)
-	CanAccessProject(requesterID, projectID uuid.UUID) (bool, error)
-	InviteUser(projectID, userID uuid.UUID) error
-	ListUsers(projectID uuid.UUID) ([]domainUser.User, error)
-	RemoveUser(projectID, userID uuid.UUID) error
-	CreateControlCabinet(projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
-	CopyControlCabinet(projectID, controlCabinetID uuid.UUID) (*domainFacility.ControlCabinet, error)
-	UpdateControlCabinet(linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
-	DeleteControlCabinet(linkID, projectID uuid.UUID) error
-	CreateSPSController(projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error)
-	CopySPSController(projectID, spsControllerID uuid.UUID) (*domainFacility.SPSController, error)
-	CopySPSControllerSystemType(projectID, systemTypeID uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
-	UpdateSPSController(linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error)
-	DeleteSPSController(linkID, projectID uuid.UUID) error
-	CreateFieldDevice(projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error)
-	UpdateFieldDevice(linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error)
-	DeleteFieldDevice(linkID, projectID uuid.UUID) error
-	ListControlCabinets(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error)
-	ListSPSControllers(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectSPSController], error)
-	ListFieldDevices(projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectFieldDevice], error)
-	ListObjectData(projectID uuid.UUID, page, limit int, search string, apparatID, systemPartID *uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
-	AddObjectData(projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
-	RemoveObjectData(projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
-	Update(project *domainProject.Project) error
-	DeleteByID(id uuid.UUID) error
+	Create(ctx context.Context, project *domainProject.Project) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domainProject.Project, error)
+	List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainProject.Project], error)
+	CanAccessProject(ctx context.Context, requesterID, projectID uuid.UUID) (bool, error)
+	InviteUser(ctx context.Context, projectID, userID uuid.UUID) error
+	ListUsers(ctx context.Context, projectID uuid.UUID) ([]domainUser.User, error)
+	RemoveUser(ctx context.Context, projectID, userID uuid.UUID) error
+	CreateControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
+	CopyControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainFacility.ControlCabinet, error)
+	UpdateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
+	DeleteControlCabinet(ctx context.Context, linkID, projectID uuid.UUID) error
+	CreateSPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error)
+	CopySPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainFacility.SPSController, error)
+	CopySPSControllerSystemType(ctx context.Context, projectID, systemTypeID uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
+	UpdateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error)
+	DeleteSPSController(ctx context.Context, linkID, projectID uuid.UUID) error
+	CreateFieldDevice(ctx context.Context, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error)
+	UpdateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error)
+	DeleteFieldDevice(ctx context.Context, linkID, projectID uuid.UUID) error
+	ListControlCabinets(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error)
+	ListSPSControllers(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectSPSController], error)
+	ListFieldDevices(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectFieldDevice], error)
+	ListObjectData(ctx context.Context, projectID uuid.UUID, page, limit int, search string, apparatID, systemPartID *uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
+	AddObjectData(ctx context.Context, projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
+	RemoveObjectData(ctx context.Context, projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
+	Update(ctx context.Context, project *domainProject.Project) error
+	DeleteByID(ctx context.Context, id uuid.UUID) error
 }
 
 type PhaseService interface {
-	Create(phase *domainProject.Phase) error
-	GetByID(id uuid.UUID) (*domainProject.Phase, error)
-	List(page, limit int, search string) (*domain.PaginatedList[domainProject.Phase], error)
-	Update(phase *domainProject.Phase) error
-	DeleteByID(id uuid.UUID) error
+	Create(ctx context.Context, phase *domainProject.Phase) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domainProject.Phase, error)
+	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainProject.Phase], error)
+	Update(ctx context.Context, phase *domainProject.Phase) error
+	DeleteByID(ctx context.Context, id uuid.UUID) error
 }
 
 type FieldDeviceOptionsService interface {
-	GetFieldDeviceOptionsForProject(projectID uuid.UUID) (*domainFacility.FieldDeviceOptions, error)
+	GetFieldDeviceOptionsForProject(ctx context.Context, projectID uuid.UUID) (*domainFacility.FieldDeviceOptions, error)
 }

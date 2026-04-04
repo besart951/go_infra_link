@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"context"
+
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
 )
@@ -24,8 +26,8 @@ func NewBacnetAlarmValueService(
 }
 
 // GetSchema returns the alarm field schema for a BacnetObject
-func (s *BacnetAlarmValueService) GetSchema(bacnetObjectID uuid.UUID) (*domainFacility.AlarmType, error) {
-	bacnetObjs, err := s.bacnetRepo.GetByIds([]uuid.UUID{bacnetObjectID})
+func (s *BacnetAlarmValueService) GetSchema(ctx context.Context, bacnetObjectID uuid.UUID) (*domainFacility.AlarmType, error) {
+	bacnetObjs, err := s.bacnetRepo.GetByIds(ctx, []uuid.UUID{bacnetObjectID})
 	if err != nil || len(bacnetObjs) == 0 {
 		return nil, err
 	}
@@ -34,15 +36,15 @@ func (s *BacnetAlarmValueService) GetSchema(bacnetObjectID uuid.UUID) (*domainFa
 		return nil, nil
 	}
 
-	return s.alarmTypeRepo.GetWithFields(*bo.AlarmTypeID)
+	return s.alarmTypeRepo.GetWithFields(ctx, *bo.AlarmTypeID)
 }
 
 // GetValues returns the stored alarm values for a BacnetObject
-func (s *BacnetAlarmValueService) GetValues(bacnetObjectID uuid.UUID) ([]domainFacility.BacnetObjectAlarmValue, error) {
-	return s.valueRepo.GetByBacnetObjectID(bacnetObjectID)
+func (s *BacnetAlarmValueService) GetValues(ctx context.Context, bacnetObjectID uuid.UUID) ([]domainFacility.BacnetObjectAlarmValue, error) {
+	return s.valueRepo.GetByBacnetObjectID(ctx, bacnetObjectID)
 }
 
 // PutValues replaces all alarm values for a BacnetObject
-func (s *BacnetAlarmValueService) PutValues(bacnetObjectID uuid.UUID, values []domainFacility.BacnetObjectAlarmValue) error {
-	return s.valueRepo.ReplaceForBacnetObject(bacnetObjectID, values)
+func (s *BacnetAlarmValueService) PutValues(ctx context.Context, bacnetObjectID uuid.UUID, values []domainFacility.BacnetObjectAlarmValue) error {
+	return s.valueRepo.ReplaceForBacnetObject(ctx, bacnetObjectID, values)
 }

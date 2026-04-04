@@ -1,7 +1,6 @@
 package user
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -42,7 +41,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 
 	usr := ToUserModel(req)
 
-	if err := h.service.CreateWithPassword(usr, req.Password); err != nil {
+	if err := h.service.CreateWithPassword(c.Request.Context(), usr, req.Password); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "user.creation_failed")
 		return
 	}
@@ -66,13 +65,14 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	usr, err := h.service.GetByID(id)
+	usr, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "user.user_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "user.fetch_failed")
+		handlerutil.RespondDomainError(
+			c,
+			err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "user.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "user.user_not_found")),
+		)
 		return
 	}
 
@@ -96,7 +96,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(query.Page, query.Limit, query.Search, query.OrderBy, query.Order)
+	result, err := h.service.List(c.Request.Context(), query.Page, query.Limit, query.Search, query.OrderBy, query.Order)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "user.fetch_failed")
 		return
@@ -135,19 +135,22 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	usr, err := h.service.GetByID(id)
+	ctx := c.Request.Context()
+
+	usr, err := h.service.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "user.user_not_found")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "user.fetch_failed")
+		handlerutil.RespondDomainError(
+			c,
+			err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "user.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "user.user_not_found")),
+		)
 		return
 	}
 
 	ApplyUserUpdate(usr, req)
 
-	if err := h.service.UpdateWithPassword(usr, &req.Password); err != nil {
+	if err := h.service.UpdateWithPassword(ctx, usr, &req.Password); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "user.update_failed")
 		return
 	}
@@ -170,7 +173,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(id); err != nil {
+	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "user.deletion_failed")
 		return
 	}
@@ -193,7 +196,7 @@ func (h *UserHandler) GetAllowedRoles(c *gin.Context) {
 		return
 	}
 
-	role, err := h.roleService.GetGlobalRole(userID)
+	role, err := h.roleService.GetGlobalRole(c.Request.Context(), userID)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "user.fetch_failed")
 		return

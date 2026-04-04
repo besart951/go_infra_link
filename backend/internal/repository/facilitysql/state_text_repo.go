@@ -1,6 +1,7 @@
 package facilitysql
 
 import (
+	"context"
 	"strconv"
 	"strings"
 
@@ -29,8 +30,8 @@ func NewStateTextRepository(db *gorm.DB) domainFacility.StateTextRepository {
 	return &stateTextRepo{BaseRepository: baseRepo}
 }
 
-func (r *stateTextRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.StateText], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+func (r *stateTextRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.StateText], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
 	if err != nil {
 		return nil, err
 	}

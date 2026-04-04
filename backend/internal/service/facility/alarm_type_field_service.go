@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"context"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
@@ -14,18 +16,18 @@ func NewAlarmTypeFieldService(repo domainFacility.AlarmTypeFieldRepository) *Ala
 	return &AlarmTypeFieldService{baseService: newBase[domainFacility.AlarmTypeField](repo, 20)}
 }
 
-func (s *AlarmTypeFieldService) Create(item *domainFacility.AlarmTypeField) error {
+func (s *AlarmTypeFieldService) Create(ctx context.Context, item *domainFacility.AlarmTypeField) error {
 	if err := validateAlarmTypeField(item); err != nil {
 		return err
 	}
-	return s.repo.Create(item)
+	return s.repo.Create(ctx, item)
 }
 
-func (s *AlarmTypeFieldService) Update(item *domainFacility.AlarmTypeField) error {
+func (s *AlarmTypeFieldService) Update(ctx context.Context, item *domainFacility.AlarmTypeField) error {
 	if err := validateAlarmTypeField(item); err != nil {
 		return err
 	}
-	return s.repo.Update(item)
+	return s.repo.Update(ctx, item)
 }
 
 func validateAlarmTypeField(item *domainFacility.AlarmTypeField) error {

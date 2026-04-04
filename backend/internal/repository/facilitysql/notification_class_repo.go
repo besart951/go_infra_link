@@ -1,6 +1,7 @@
 package facilitysql
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -24,8 +25,8 @@ func NewNotificationClassRepository(db *gorm.DB) domainFacility.NotificationClas
 	return &notificationClassRepo{BaseRepository: baseRepo}
 }
 
-func (r *notificationClassRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.NotificationClass], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+func (r *notificationClassRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.NotificationClass], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
 	if err != nil {
 		return nil, err
 	}

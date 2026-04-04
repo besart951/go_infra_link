@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -47,10 +48,10 @@ func NewService(
 	}
 }
 
-func (s *Service) Login(email, password string, userAgent, ip *string) (*domainAuth.LoginResult, error) {
+func (s *Service) Login(ctx context.Context, email, password string, userAgent, ip *string) (*domainAuth.LoginResult, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 
-	usr, err := s.userEmailRepo.GetByEmail(email)
+	usr, err := s.userEmailRepo.GetByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return nil, domainAuth.ErrInvalidCredentials
@@ -67,7 +68,7 @@ func (s *Service) Login(email, password string, userAgent, ip *string) (*domainA
 
 	if err := s.passwordHasher.Compare(usr.Password, password); err != nil {
 		usr.FailedLoginAttempts++
-		if err := s.userRepo.Update(usr); err != nil {
+		if err := s.userRepo.Update(ctx, usr); err != nil {
 			consumeBestEffortError(err)
 		}
 		return nil, domainAuth.ErrInvalidCredentials
@@ -78,20 +79,20 @@ func (s *Service) Login(email, password string, userAgent, ip *string) (*domainA
 	usr.FailedLoginAttempts = 0
 	usr.LockedUntil = nil
 	usr.LastLoginAt = &now
-	if err := s.userRepo.Update(usr); err != nil {
+	if err := s.userRepo.Update(ctx, usr); err != nil {
 		consumeBestEffortError(err)
 	}
 
-	return s.issueTokens(usr, userAgent, ip)
+	return s.issueTokens(ctx, usr, userAgent, ip)
 }
 
-func (s *Service) Refresh(refreshToken string, userAgent, ip *string) (*domainAuth.LoginResult, error) {
+func (s *Service) Refresh(ctx context.Context, refreshToken string, userAgent, ip *string) (*domainAuth.LoginResult, error) {
 	if refreshToken == "" {
 		return nil, domainAuth.ErrInvalidToken
 	}
 
 	hash := hashToken(refreshToken)
-	rec, err := s.refreshTokenRepo.GetByTokenHash(hash)
+	rec, err := s.refreshTokenRepo.GetByTokenHash(ctx, hash)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +106,7 @@ func (s *Service) Refresh(refreshToken string, userAgent, ip *string) (*domainAu
 		return nil, domainAuth.ErrTokenExpired
 	}
 
-	users, err := s.userRepo.GetByIds([]uuid.UUID{rec.UserID})
+	users, err := s.userRepo.GetByIds(ctx, []uuid.UUID{rec.UserID})
 	if err != nil {
 		return nil, err
 	}
@@ -115,23 +116,23 @@ func (s *Service) Refresh(refreshToken string, userAgent, ip *string) (*domainAu
 	usr := users[0]
 
 	revokedAt := time.Now().UTC()
-	if err := s.refreshTokenRepo.RevokeByTokenHash(hash, revokedAt); err != nil {
+	if err := s.refreshTokenRepo.RevokeByTokenHash(ctx, hash, revokedAt); err != nil {
 		return nil, err
 	}
 
-	return s.issueTokens(usr, userAgent, ip)
+	return s.issueTokens(ctx, usr, userAgent, ip)
 }
 
-func (s *Service) Logout(refreshToken string) error {
+func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	if refreshToken == "" {
 		return nil
 	}
 
 	hash := hashToken(refreshToken)
-	return s.refreshTokenRepo.RevokeByTokenHash(hash, time.Now().UTC())
+	return s.refreshTokenRepo.RevokeByTokenHash(ctx, hash, time.Now().UTC())
 }
 
-func (s *Service) issueTokens(usr *domainUser.User, userAgent, ip *string) (*domainAuth.LoginResult, error) {
+func (s *Service) issueTokens(ctx context.Context, usr *domainUser.User, userAgent, ip *string) (*domainAuth.LoginResult, error) {
 	accessExpiry := time.Now().UTC().Add(s.accessTokenTTL)
 	accessToken, err := s.jwtService.CreateAccessToken(usr.ID, accessExpiry)
 	if err != nil {
@@ -152,7 +153,7 @@ func (s *Service) issueTokens(usr *domainUser.User, userAgent, ip *string) (*dom
 		UserAgent:   userAgent,
 	}
 
-	if err := s.refreshTokenRepo.Create(record); err != nil {
+	if err := s.refreshTokenRepo.Create(ctx, record); err != nil {
 		return nil, err
 	}
 

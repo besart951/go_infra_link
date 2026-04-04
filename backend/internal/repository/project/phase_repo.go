@@ -1,6 +1,7 @@
 package project
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -27,8 +28,8 @@ func NewPhaseRepository(db *gorm.DB) domainProject.PhaseRepository {
 	}
 }
 
-func (r *phaseRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainProject.Phase], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+func (r *phaseRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainProject.Phase], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
 	if err != nil {
 		return nil, err
 	}

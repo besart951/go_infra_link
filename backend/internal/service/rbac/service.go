@@ -1,6 +1,8 @@
 package rbac
 
 import (
+	"context"
+
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/google/uuid"
@@ -22,8 +24,8 @@ func New(userRepo domainUser.UserRepository, memberRepo domainTeam.TeamMemberRep
 	}
 }
 
-func (s *Service) GetGlobalRole(userID uuid.UUID) (domainUser.Role, error) {
-	users, err := s.userRepo.GetByIds([]uuid.UUID{userID})
+func (s *Service) GetGlobalRole(ctx context.Context, userID uuid.UUID) (domainUser.Role, error) {
+	users, err := s.userRepo.GetByIds(ctx, []uuid.UUID{userID})
 	if err != nil {
 		return "", err
 	}
@@ -33,8 +35,8 @@ func (s *Service) GetGlobalRole(userID uuid.UUID) (domainUser.Role, error) {
 	return users[0].Role, nil
 }
 
-func (s *Service) GetTeamRole(teamID, userID uuid.UUID) (*domainTeam.MemberRole, error) {
-	return s.memberRepo.GetUserRole(teamID, userID)
+func (s *Service) GetTeamRole(ctx context.Context, teamID, userID uuid.UUID) (*domainTeam.MemberRole, error) {
+	return s.memberRepo.GetUserRole(ctx, teamID, userID)
 }
 
 // GetRoleLevel returns the hierarchical level of a role (higher = more privileged)

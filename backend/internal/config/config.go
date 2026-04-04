@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -37,58 +38,121 @@ const DefaultIssuer = "go_infra_link"
 
 func Load() (Config, error) {
 	loadEnvFiles()
+	env := newEnvParser(os.LookupEnv)
+	appEnv := env.First("development", "APP_ENV", "ENV")
 
-	appEnv := getEnvFirst("development", "APP_ENV", "ENV")
-	logLevel := getEnvFirst("info", "APP_LOG_LEVEL", "LOG_LEVEL")
-	jwtSecret := getEnv("JWT_SECRET", "change-me")
+	cfg := Config{
+		AppEnv:            appEnv,
+		LogLevel:          env.First("info", "APP_LOG_LEVEL", "LOG_LEVEL"),
+		HTTPAddr:          resolveHTTPAddr(env),
+		SwaggerEnabled:    env.Bool("SWAGGER_ENABLED", !IsProduction(appEnv)),
+		JWTSecret:         env.String("JWT_SECRET", "change-me"),
+		AccessTokenTTL:    env.Duration("ACCESS_TOKEN_TTL", 15*time.Minute),
+		RefreshTokenTTL:   env.Duration("REFRESH_TOKEN_TTL", 720*time.Hour),
+		CookieDomain:      env.String("COOKIE_DOMAIN", ""),
+		CookieSecure:      env.Bool("COOKIE_SECURE", false),
+		DBType:            normalizeDBType(env.First("postgres", "DB_TYPE", "DB_DRIVER")),
+		DBMaxOpenConns:    env.Int("DB_MAX_OPEN_CONNS", 25),
+		DBMaxIdleConns:    env.Int("DB_MAX_IDLE_CONNS", 5),
+		DBConnMaxLifetime: env.Duration("DB_CONN_MAX_LIFETIME", time.Hour),
+		DBConnectTimeout:  env.Duration("DB_CONNECT_TIMEOUT", 5*time.Second),
+	}
 
-	if IsProduction(appEnv) {
-		if jwtSecret == "change-me" {
-			return Config{}, fmt.Errorf("missing JWT_SECRET in production environment")
+	applySeedUserConfig(&cfg, env)
+	cfg.DBDsn = resolveDatabaseDSN(env)
+
+	if err := validateConfig(cfg); err != nil {
+		return Config{}, err
+	}
+
+	return cfg, nil
+}
+
+type envParser struct {
+	lookup func(string) (string, bool)
+}
+
+func newEnvParser(lookup func(string) (string, bool)) envParser {
+	return envParser{lookup: lookup}
+}
+
+func (p envParser) String(key, fallback string) string {
+	if value, ok := p.lookup(key); ok && value != "" {
+		return value
+	}
+	return fallback
+}
+
+func (p envParser) First(fallback string, keys ...string) string {
+	for _, key := range keys {
+		if value, ok := p.lookup(key); ok && value != "" {
+			return value
 		}
 	}
+	return fallback
+}
 
-	maxOpen := getEnvInt("DB_MAX_OPEN_CONNS", 25)
-	maxIdle := getEnvInt("DB_MAX_IDLE_CONNS", 5)
-	connMaxLifetime := getEnvDuration("DB_CONN_MAX_LIFETIME", time.Hour)
-	connectTimeout := getEnvDuration("DB_CONNECT_TIMEOUT", 5*time.Second)
-	accessTokenTTL := getEnvDuration("ACCESS_TOKEN_TTL", 15*time.Minute)
-	refreshTokenTTL := getEnvDuration("REFRESH_TOKEN_TTL", 720*time.Hour)
-	cookieSecure := getEnvBool("COOKIE_SECURE", false)
-	swaggerEnabled := getEnvBool("SWAGGER_ENABLED", !IsProduction(appEnv))
+func (p envParser) Int(key string, fallback int) int {
+	value, ok := p.lookup(key)
+	if !ok || value == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+	return n
+}
 
-	seedUserEnabled := getEnvBool("SEED_USER_ENABLED", !IsProduction(appEnv))
-	seedUserFirstNameDefault := "Besart"
-	seedUserLastNameDefault := "Morina"
-	seedUserEmailDefault := "besart_morina@hotmail.com"
-	seedUserPasswordDefault := "password"
+func (p envParser) Bool(key string, fallback bool) bool {
+	value, ok := p.lookup(key)
+	if !ok || value == "" {
+		return fallback
+	}
+	b, err := strconv.ParseBool(value)
+	if err != nil {
+		return fallback
+	}
+	return b
+}
+
+func (p envParser) Duration(key string, fallback time.Duration) time.Duration {
+	value, ok := p.lookup(key)
+	if !ok || value == "" {
+		return fallback
+	}
+	d, err := time.ParseDuration(value)
+	if err != nil {
+		return fallback
+	}
+	return d
+}
+
+func applySeedUserConfig(cfg *Config, env envParser) {
+	firstNameDefault, lastNameDefault, emailDefault, passwordDefault := seedUserDefaults(cfg.AppEnv)
+	cfg.SeedUserEnabled = env.Bool("SEED_USER_ENABLED", !IsProduction(cfg.AppEnv))
+	cfg.SeedUserFirstName = env.String("SEED_USER_FIRST_NAME", firstNameDefault)
+	cfg.SeedUserLastName = env.String("SEED_USER_LAST_NAME", lastNameDefault)
+	cfg.SeedUserEmail = env.String("SEED_USER_EMAIL", emailDefault)
+	cfg.SeedUserPassword = env.String("SEED_USER_PASSWORD", passwordDefault)
+}
+
+func seedUserDefaults(appEnv string) (firstName, lastName, email, password string) {
 	if IsProduction(appEnv) {
-		seedUserFirstNameDefault = ""
-		seedUserLastNameDefault = ""
-		seedUserEmailDefault = ""
-		seedUserPasswordDefault = ""
+		return "", "", "", ""
 	}
-	seedUserFirstName := getEnv("SEED_USER_FIRST_NAME", seedUserFirstNameDefault)
-	seedUserLastName := getEnv("SEED_USER_LAST_NAME", seedUserLastNameDefault)
-	seedUserEmail := getEnv("SEED_USER_EMAIL", seedUserEmailDefault)
-	seedUserPassword := getEnv("SEED_USER_PASSWORD", seedUserPasswordDefault)
-	if IsProduction(appEnv) && seedUserEnabled {
-		switch {
-		case strings.TrimSpace(seedUserEmail) == "":
-			return Config{}, fmt.Errorf("SEED_USER_EMAIL is required when SEED_USER_ENABLED=true in production")
-		case strings.TrimSpace(seedUserPassword) == "":
-			return Config{}, fmt.Errorf("SEED_USER_PASSWORD is required when SEED_USER_ENABLED=true in production")
-		case seedUserPassword == "password":
-			return Config{}, fmt.Errorf("SEED_USER_PASSWORD must not use the default development password in production")
-		}
-	}
-	dbType := normalizeDBType(getEnvFirst("postgres", "DB_TYPE", "DB_DRIVER"))
-	pgHost := getEnv("POSTGRES_HOST", "localhost")
-	pgPort := getEnv("POSTGRES_PORT", "5432")
-	pgUser := getEnv("POSTGRES_USER", "postgres")
-	pgPassword := getEnv("POSTGRES_PASSWORD", "postgres")
-	pgDatabase := getEnv("POSTGRES_DB", "go_infra_link")
-	dbDsnFallback := fmt.Sprintf(
+
+	return "Besart", "Morina", "besart_morina@hotmail.com", "password"
+}
+
+func resolveDatabaseDSN(env envParser) string {
+	pgHost := env.String("POSTGRES_HOST", "localhost")
+	pgPort := env.String("POSTGRES_PORT", "5432")
+	pgUser := env.String("POSTGRES_USER", "postgres")
+	pgPassword := env.String("POSTGRES_PASSWORD", "postgres")
+	pgDatabase := env.String("POSTGRES_DB", "go_infra_link")
+
+	fallback := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
 		pgHost,
 		pgUser,
@@ -96,30 +160,28 @@ func Load() (Config, error) {
 		pgDatabase,
 		pgPort,
 	)
-	dbDsn := getEnvFirst(dbDsnFallback, "DATABASE_URL", "DB_DSN")
 
-	return Config{
-		AppEnv:            appEnv,
-		LogLevel:          logLevel,
-		HTTPAddr:          resolveHTTPAddr(),
-		SwaggerEnabled:    swaggerEnabled,
-		JWTSecret:         jwtSecret,
-		AccessTokenTTL:    accessTokenTTL,
-		RefreshTokenTTL:   refreshTokenTTL,
-		CookieDomain:      getEnv("COOKIE_DOMAIN", ""),
-		CookieSecure:      cookieSecure,
-		SeedUserEnabled:   seedUserEnabled,
-		SeedUserFirstName: seedUserFirstName,
-		SeedUserLastName:  seedUserLastName,
-		SeedUserEmail:     seedUserEmail,
-		SeedUserPassword:  seedUserPassword,
-		DBType:            dbType,
-		DBDsn:             dbDsn,
-		DBMaxOpenConns:    maxOpen,
-		DBMaxIdleConns:    maxIdle,
-		DBConnMaxLifetime: connMaxLifetime,
-		DBConnectTimeout:  connectTimeout,
-	}, nil
+	return env.First(fallback, "DATABASE_URL", "DB_DSN")
+}
+
+func validateConfig(cfg Config) error {
+	var errs []error
+	if IsProduction(cfg.AppEnv) && cfg.JWTSecret == "change-me" {
+		errs = append(errs, fmt.Errorf("missing JWT_SECRET in production environment"))
+	}
+
+	if IsProduction(cfg.AppEnv) && cfg.SeedUserEnabled {
+		switch {
+		case strings.TrimSpace(cfg.SeedUserEmail) == "":
+			errs = append(errs, fmt.Errorf("SEED_USER_EMAIL is required when SEED_USER_ENABLED=true in production"))
+		case strings.TrimSpace(cfg.SeedUserPassword) == "":
+			errs = append(errs, fmt.Errorf("SEED_USER_PASSWORD is required when SEED_USER_ENABLED=true in production"))
+		case cfg.SeedUserPassword == "password":
+			errs = append(errs, fmt.Errorf("SEED_USER_PASSWORD must not use the default development password in production"))
+		}
+	}
+
+	return errors.Join(errs...)
 }
 
 func loadEnvFiles() {
@@ -146,67 +208,15 @@ func discardErr(err error) {
 	_ = err
 }
 
-func getEnvInt(key string, fallback int) int {
-	v, ok := os.LookupEnv(key)
-	if !ok || v == "" {
-		return fallback
-	}
-	n, err := strconv.Atoi(v)
-	if err != nil {
-		return fallback
-	}
-	return n
-}
-
-func getEnvBool(key string, fallback bool) bool {
-	v, ok := os.LookupEnv(key)
-	if !ok || v == "" {
-		return fallback
-	}
-	b, err := strconv.ParseBool(v)
-	if err != nil {
-		return fallback
-	}
-	return b
-}
-
-func getEnvDuration(key string, fallback time.Duration) time.Duration {
-	v, ok := os.LookupEnv(key)
-	if !ok || v == "" {
-		return fallback
-	}
-	d, err := time.ParseDuration(v)
-	if err != nil {
-		return fallback
-	}
-	return d
-}
-
 func IsProduction(env string) bool {
 	return strings.EqualFold(env, "production") || strings.EqualFold(env, "prod")
 }
 
-func getEnvFirst(fallback string, keys ...string) string {
-	for _, key := range keys {
-		if v, ok := os.LookupEnv(key); ok && v != "" {
-			return v
-		}
-	}
-	return fallback
-}
-
-func getEnv(key, fallback string) string {
-	if v, ok := os.LookupEnv(key); ok && v != "" {
-		return v
-	}
-	return fallback
-}
-
-func resolveHTTPAddr() string {
-	if addr := getEnv("HTTP_ADDR", ""); addr != "" {
+func resolveHTTPAddr(env envParser) string {
+	if addr := env.String("HTTP_ADDR", ""); addr != "" {
 		return addr
 	}
-	if port := getEnv("BACKEND_PORT", ""); port != "" {
+	if port := env.String("BACKEND_PORT", ""); port != "" {
 		if strings.HasPrefix(port, ":") {
 			return port
 		}

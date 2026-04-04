@@ -15,7 +15,7 @@ type smtpSettingsRepoStub struct {
 	saveErr  error
 }
 
-func (r *smtpSettingsRepoStub) GetByProvider(provider domainNotification.Provider) (*domainNotification.SMTPSettings, error) {
+func (r *smtpSettingsRepoStub) GetByProvider(_ context.Context, provider domainNotification.Provider) (*domainNotification.SMTPSettings, error) {
 	if r.settings == nil || r.settings.Provider != provider {
 		return nil, domain.ErrNotFound
 	}
@@ -23,7 +23,7 @@ func (r *smtpSettingsRepoStub) GetByProvider(provider domainNotification.Provide
 	return &copy, nil
 }
 
-func (r *smtpSettingsRepoStub) Save(settings *domainNotification.SMTPSettings) error {
+func (r *smtpSettingsRepoStub) Save(_ context.Context, settings *domainNotification.SMTPSettings) error {
 	if r.saveErr != nil {
 		return r.saveErr
 	}
@@ -68,7 +68,7 @@ func TestUpsertSMTPSettingsPreservesExistingPassword(t *testing.T) {
 	service := New(repo, secretCipherStub{}, strategy)
 
 	actorID := uuid.Must(uuid.NewV7())
-	settings, err := service.UpsertSMTPSettings(domainNotification.UpsertSMTPSettingsInput{
+	settings, err := service.UpsertSMTPSettings(context.Background(), domainNotification.UpsertSMTPSettingsInput{
 		ActorID:          actorID,
 		Enabled:          true,
 		Host:             "smtp.example.com",

@@ -23,7 +23,7 @@ func (h *DashboardHandler) GetDashboard(c *gin.Context) {
 		return
 	}
 
-	dashboard, err := h.service.GetUserDashboard(userID)
+	dashboard, err := h.service.GetUserDashboard(c.Request.Context(), userID)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "errors.fetch_failed")
 		return

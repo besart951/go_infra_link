@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -16,9 +17,9 @@ func New(userRepo domainUser.UserRepository) *Service {
 	return &Service{userRepo: userRepo}
 }
 
-func (s *Service) DisableUser(userID uuid.UUID) error {
+func (s *Service) DisableUser(ctx context.Context, userID uuid.UUID) error {
 	now := time.Now().UTC()
-	users, err := s.userRepo.GetByIds([]uuid.UUID{userID})
+	users, err := s.userRepo.GetByIds(ctx, []uuid.UUID{userID})
 	if err != nil {
 		return err
 	}
@@ -28,11 +29,11 @@ func (s *Service) DisableUser(userID uuid.UUID) error {
 	u := users[0]
 	u.DisabledAt = &now
 	u.IsActive = false
-	return s.userRepo.Update(u)
+	return s.userRepo.Update(ctx, u)
 }
 
-func (s *Service) EnableUser(userID uuid.UUID) error {
-	users, err := s.userRepo.GetByIds([]uuid.UUID{userID})
+func (s *Service) EnableUser(ctx context.Context, userID uuid.UUID) error {
+	users, err := s.userRepo.GetByIds(ctx, []uuid.UUID{userID})
 	if err != nil {
 		return err
 	}
@@ -42,11 +43,11 @@ func (s *Service) EnableUser(userID uuid.UUID) error {
 	u := users[0]
 	u.DisabledAt = nil
 	u.IsActive = true
-	return s.userRepo.Update(u)
+	return s.userRepo.Update(ctx, u)
 }
 
-func (s *Service) SetUserRole(userID uuid.UUID, role domainUser.Role) error {
-	users, err := s.userRepo.GetByIds([]uuid.UUID{userID})
+func (s *Service) SetUserRole(ctx context.Context, userID uuid.UUID, role domainUser.Role) error {
+	users, err := s.userRepo.GetByIds(ctx, []uuid.UUID{userID})
 	if err != nil {
 		return err
 	}
@@ -55,5 +56,5 @@ func (s *Service) SetUserRole(userID uuid.UUID, role domainUser.Role) error {
 	}
 	u := users[0]
 	u.Role = role
-	return s.userRepo.Update(u)
+	return s.userRepo.Update(ctx, u)
 }

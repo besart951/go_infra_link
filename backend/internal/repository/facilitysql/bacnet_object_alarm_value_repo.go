@@ -1,6 +1,7 @@
 package facilitysql
 
 import (
+	"context"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -22,17 +23,17 @@ func NewBacnetObjectAlarmValueRepository(db *gorm.DB) domainFacility.BacnetObjec
 	}
 }
 
-func (r *bacnetObjectAlarmValueRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.BacnetObjectAlarmValue], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 50)
+func (r *bacnetObjectAlarmValueRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.BacnetObjectAlarmValue], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 50)
 	if err != nil {
 		return nil, err
 	}
 	return gormbase.DerefPaginatedList(result), nil
 }
 
-func (r *bacnetObjectAlarmValueRepo) GetByBacnetObjectID(bacnetObjectID uuid.UUID) ([]domainFacility.BacnetObjectAlarmValue, error) {
+func (r *bacnetObjectAlarmValueRepo) GetByBacnetObjectID(ctx context.Context, bacnetObjectID uuid.UUID) ([]domainFacility.BacnetObjectAlarmValue, error) {
 	var values []domainFacility.BacnetObjectAlarmValue
-	err := r.db.
+	err := r.db.WithContext(ctx).
 		Preload("AlarmTypeField").
 		Preload("AlarmTypeField.AlarmField").
 		Preload("Unit").
@@ -41,12 +42,12 @@ func (r *bacnetObjectAlarmValueRepo) GetByBacnetObjectID(bacnetObjectID uuid.UUI
 	return values, err
 }
 
-func (r *bacnetObjectAlarmValueRepo) BulkCreate(values []*domainFacility.BacnetObjectAlarmValue, batchSize int) error {
-	return r.BaseRepository.BulkCreate(values, batchSize)
+func (r *bacnetObjectAlarmValueRepo) BulkCreate(ctx context.Context, values []*domainFacility.BacnetObjectAlarmValue, batchSize int) error {
+	return r.BaseRepository.BulkCreate(ctx, values, batchSize)
 }
 
-func (r *bacnetObjectAlarmValueRepo) ReplaceForBacnetObject(bacnetObjectID uuid.UUID, values []domainFacility.BacnetObjectAlarmValue) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+func (r *bacnetObjectAlarmValueRepo) ReplaceForBacnetObject(ctx context.Context, bacnetObjectID uuid.UUID, values []domainFacility.BacnetObjectAlarmValue) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("bacnet_object_id = ?", bacnetObjectID).Delete(&domainFacility.BacnetObjectAlarmValue{}).Error; err != nil {
 			return err
 		}

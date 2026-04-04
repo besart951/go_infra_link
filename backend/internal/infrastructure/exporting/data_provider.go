@@ -32,8 +32,6 @@ func NewDataProvider(
 }
 
 func (p *DataProvider) ResolveControllers(ctx context.Context, req domainExport.Request) ([]domainExport.Controller, error) {
-	_ = ctx
-
 	controllerSet := map[uuid.UUID]struct{}{}
 
 	for _, id := range req.SPSControllerIDs {
@@ -42,7 +40,7 @@ func (p *DataProvider) ResolveControllers(ctx context.Context, req domainExport.
 
 	cabinetIDs := append([]uuid.UUID{}, req.ControlCabinetIDs...)
 	for _, buildingID := range req.BuildingIDs {
-		ids, err := p.controlCabinets.GetIDsByBuildingID(buildingID)
+		ids, err := p.controlCabinets.GetIDsByBuildingID(ctx, buildingID)
 		if err != nil {
 			return nil, err
 		}
@@ -50,7 +48,7 @@ func (p *DataProvider) ResolveControllers(ctx context.Context, req domainExport.
 	}
 
 	if len(cabinetIDs) > 0 {
-		ids, err := p.spsControllers.GetIDsByControlCabinetIDs(uniqueUUIDs(cabinetIDs))
+		ids, err := p.spsControllers.GetIDsByControlCabinetIDs(ctx, uniqueUUIDs(cabinetIDs))
 		if err != nil {
 			return nil, err
 		}
@@ -62,7 +60,7 @@ func (p *DataProvider) ResolveControllers(ctx context.Context, req domainExport.
 	if len(controllerSet) == 0 {
 		page := 1
 		for {
-			list, err := p.spsControllers.GetPaginatedList(domain.PaginationParams{Page: page, Limit: 1000})
+			list, err := p.spsControllers.GetPaginatedList(ctx, domain.PaginationParams{Page: page, Limit: 1000})
 			if err != nil {
 				return nil, err
 			}
@@ -81,7 +79,7 @@ func (p *DataProvider) ResolveControllers(ctx context.Context, req domainExport.
 		ids = append(ids, id)
 	}
 
-	controllers, err := p.spsControllers.GetByIdsForExport(ids)
+	controllers, err := p.spsControllers.GetByIdsForExport(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -95,8 +93,6 @@ func (p *DataProvider) ResolveControllers(ctx context.Context, req domainExport.
 }
 
 func (p *DataProvider) ListFieldDevicesByController(ctx context.Context, controllerID uuid.UUID, req domainExport.Request, page, limit int) ([]domainFacility.FieldDevice, int64, error) {
-	_ = ctx
-
 	params := domain.PaginationParams{Page: page, Limit: limit}
 	filters := domainFacility.FieldDeviceFilterParams{SPSControllerID: &controllerID}
 
@@ -104,7 +100,7 @@ func (p *DataProvider) ListFieldDevicesByController(ctx context.Context, control
 		filters.ProjectIDs = req.ProjectIDs
 	}
 
-	result, err := p.fieldDevices.GetPaginatedListWithFilters(params, filters)
+	result, err := p.fieldDevices.GetPaginatedListWithFilters(ctx, params, filters)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -29,9 +30,9 @@ func NewUserRepository(db *gorm.DB) domainUser.UserRepository {
 	}
 }
 
-func (r *userRepo) GetByEmail(email string) (*domainUser.User, error) {
+func (r *userRepo) GetByEmail(ctx context.Context, email string) (*domainUser.User, error) {
 	var user domainUser.User
-	err := r.db.Where("email = ?", email).First(&user).Error
+	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, domain.ErrNotFound
@@ -41,7 +42,7 @@ func (r *userRepo) GetByEmail(email string) (*domainUser.User, error) {
 	return &user, nil
 }
 
-func (r *userRepo) Update(entity *domainUser.User) error {
+func (r *userRepo) Update(ctx context.Context, entity *domainUser.User) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
 
 	updates := map[string]any{
@@ -61,16 +62,16 @@ func (r *userRepo) Update(entity *domainUser.User) error {
 		updates["password"] = entity.Password
 	}
 
-	return r.db.Model(&domainUser.User{}).
+	return r.db.WithContext(ctx).Model(&domainUser.User{}).
 		Where("id = ?", entity.ID).
 		Updates(updates).Error
 }
 
-func (r *userRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainUser.User], error) {
+func (r *userRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainUser.User], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainUser.User{})
+	query := r.db.WithContext(ctx).Model(&domainUser.User{})
 	if strings.TrimSpace(params.Search) != "" {
 		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
 		query = query.Where("LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ? OR LOWER(email) LIKE ?", pattern, pattern, pattern)

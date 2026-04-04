@@ -36,7 +36,7 @@ func (h *BacnetObjectHandler) CreateBacnetObject(c *gin.Context) {
 
 	obj := toBacnetObjectModel(req)
 
-	if err := h.service.CreateWithParent(obj, req.FieldDeviceID, req.ObjectDataID); err != nil {
+	if err := h.service.CreateWithParent(c.Request.Context(), obj, req.FieldDeviceID, req.ObjectDataID); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {
 			respondValidationError(c, ve.Fields)
 			return
@@ -88,7 +88,9 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 		return
 	}
 
-	existing, err := h.service.GetByID(id)
+	ctx := c.Request.Context()
+
+	existing, err := h.service.GetByID(ctx, id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.bacnet_object_not_found") {
 			return
@@ -102,7 +104,7 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 		existing.FieldDeviceID = req.FieldDeviceID
 	}
 
-	if err := h.service.Update(existing, req.ObjectDataID); err != nil {
+	if err := h.service.Update(ctx, existing, req.ObjectDataID); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {
 			respondValidationError(c, ve.Fields)
 			return

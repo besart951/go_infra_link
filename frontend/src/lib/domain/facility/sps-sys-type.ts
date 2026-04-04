@@ -17,6 +17,7 @@ export interface SPSControllerSystemTypeListParams {
   limit?: number;
   search?: string;
   sps_controller_id?: string;
+  project_id?: string;
 }
 
 export interface SPSControllerSystemTypeListResponse extends Pagination<SPSControllerSystemType> {

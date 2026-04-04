@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"context"
 	"net"
 	"strconv"
 	"strings"
@@ -37,21 +38,21 @@ func NewSPSControllerService(
 	}
 }
 
-func (s *SPSControllerService) Create(spsController *domainFacility.SPSController) error {
-	return s.CreateWithSystemTypes(spsController, nil)
+func (s *SPSControllerService) Create(ctx context.Context, spsController *domainFacility.SPSController) error {
+	return s.CreateWithSystemTypes(ctx, spsController, nil)
 }
 
-func (s *SPSControllerService) CreateWithSystemTypes(spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
-	if err := s.ensureControlCabinetExists(spsController.ControlCabinetID); err != nil {
+func (s *SPSControllerService) CreateWithSystemTypes(ctx context.Context, spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
+	if err := s.ensureControlCabinetExists(ctx, spsController.ControlCabinetID); err != nil {
 		return err
 	}
-	if err := s.ensureGADeviceAssigned(spsController, nil); err != nil {
+	if err := s.ensureGADeviceAssigned(ctx, spsController, nil); err != nil {
 		return err
 	}
-	if err := s.Validate(spsController, nil); err != nil {
+	if err := s.Validate(ctx, spsController, nil); err != nil {
 		return err
 	}
-	systemTypeMap, err := s.loadSystemTypes(systemTypes)
+	systemTypeMap, err := s.loadSystemTypes(ctx, systemTypes)
 	if err != nil {
 		return err
 	}
@@ -59,7 +60,7 @@ func (s *SPSControllerService) CreateWithSystemTypes(spsController *domainFacili
 		return err
 	}
 
-	if err := s.repo.Create(spsController); err != nil {
+	if err := s.repo.Create(ctx, spsController); err != nil {
 		return err
 	}
 	if len(systemTypes) == 0 {
@@ -73,65 +74,65 @@ func (s *SPSControllerService) CreateWithSystemTypes(spsController *domainFacili
 			SPSControllerID: spsController.ID,
 			SystemTypeID:    st.SystemTypeID,
 		}
-		if err := s.spsControllerSystemTyper.Create(entity); err != nil {
+		if err := s.spsControllerSystemTyper.Create(ctx, entity); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *SPSControllerService) GetByID(id uuid.UUID) (*domainFacility.SPSController, error) {
-	return domain.GetByID(s.repo, id)
+func (s *SPSControllerService) GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSController, error) {
+	return domain.GetByID(ctx, s.repo, id)
 }
 
-func (s *SPSControllerService) GetByIDs(ids []uuid.UUID) ([]domainFacility.SPSController, error) {
-	spsControllers, err := s.repo.GetByIds(ids)
+func (s *SPSControllerService) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]domainFacility.SPSController, error) {
+	spsControllers, err := s.repo.GetByIds(ctx, ids)
 	if err != nil {
 		return nil, err
 	}
 	return derefSlice(spsControllers), nil
 }
 
-func (s *SPSControllerService) CopyByID(id uuid.UUID) (*domainFacility.SPSController, error) {
-	return s.hierarchyCopier.CopySPSControllerByID(id)
+func (s *SPSControllerService) CopyByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSController, error) {
+	return s.hierarchyCopier.CopySPSControllerByID(ctx, id)
 }
 
-func (s *SPSControllerService) List(page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSController], error) {
+func (s *SPSControllerService) List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSController], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
-	return s.repo.GetPaginatedList(domain.PaginationParams{
+	return s.repo.GetPaginatedList(ctx, domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,
 		Search: search,
 	})
 }
 
-func (s *SPSControllerService) ListByControlCabinetID(controlCabinetID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSController], error) {
+func (s *SPSControllerService) ListByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSController], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
-	return s.repo.GetPaginatedListByControlCabinetID(controlCabinetID, domain.PaginationParams{
+	return s.repo.GetPaginatedListByControlCabinetID(ctx, controlCabinetID, domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,
 		Search: search,
 	})
 }
 
-func (s *SPSControllerService) Update(spsController *domainFacility.SPSController) error {
-	if err := s.Validate(spsController, &spsController.ID); err != nil {
+func (s *SPSControllerService) Update(ctx context.Context, spsController *domainFacility.SPSController) error {
+	if err := s.Validate(ctx, spsController, &spsController.ID); err != nil {
 		return err
 	}
-	if err := s.ensureControlCabinetExists(spsController.ControlCabinetID); err != nil {
+	if err := s.ensureControlCabinetExists(ctx, spsController.ControlCabinetID); err != nil {
 		return err
 	}
-	return s.repo.Update(spsController)
+	return s.repo.Update(ctx, spsController)
 }
 
-func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
-	if err := s.Validate(spsController, &spsController.ID); err != nil {
+func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
+	if err := s.Validate(ctx, spsController, &spsController.ID); err != nil {
 		return err
 	}
-	if err := s.ensureControlCabinetExists(spsController.ControlCabinetID); err != nil {
+	if err := s.ensureControlCabinetExists(ctx, spsController.ControlCabinetID); err != nil {
 		return err
 	}
-	systemTypeMap, err := s.loadSystemTypes(systemTypes)
+	systemTypeMap, err := s.loadSystemTypes(ctx, systemTypes)
 	if err != nil {
 		return err
 	}
@@ -139,11 +140,11 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 		return err
 	}
 
-	if err := s.repo.Update(spsController); err != nil {
+	if err := s.repo.Update(ctx, spsController); err != nil {
 		return err
 	}
 
-	existing, err := s.spsControllerSystemTyper.ListBySPSControllerID(spsController.ID)
+	existing, err := s.spsControllerSystemTyper.ListBySPSControllerID(ctx, spsController.ID)
 	if err != nil {
 		return err
 	}
@@ -178,7 +179,7 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 				existingItem.SystemTypeID = st.SystemTypeID
 				existingItem.Number = st.Number
 				existingItem.DocumentName = st.DocumentName
-				if err := s.spsControllerSystemTyper.Update(existingItem); err != nil {
+				if err := s.spsControllerSystemTyper.Update(ctx, existingItem); err != nil {
 					return err
 				}
 				continue
@@ -189,7 +190,7 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 			if existingItem, ok := existingBySystemType[st.SystemTypeID]; ok {
 				existingItem.Number = st.Number
 				existingItem.DocumentName = st.DocumentName
-				if err := s.spsControllerSystemTyper.Update(existingItem); err != nil {
+				if err := s.spsControllerSystemTyper.Update(ctx, existingItem); err != nil {
 					return err
 				}
 				continue
@@ -202,7 +203,7 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 			SPSControllerID: spsController.ID,
 			SystemTypeID:    st.SystemTypeID,
 		}
-		if err := s.spsControllerSystemTyper.Create(entity); err != nil {
+		if err := s.spsControllerSystemTyper.Create(ctx, entity); err != nil {
 			return err
 		}
 	}
@@ -223,14 +224,14 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 	}
 
 	if len(deleteIDs) > 0 {
-		fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(deleteIDs)
+		fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(ctx, deleteIDs)
 		if err != nil {
 			return err
 		}
 		if len(fieldDeviceIDs) > 0 {
 			return domain.NewValidationError().Add("spscontroller.system_types", "referenced_entity_in_use")
 		}
-		if err := s.spsControllerSystemTyper.DeleteByIds(deleteIDs); err != nil {
+		if err := s.spsControllerSystemTyper.DeleteByIds(ctx, deleteIDs); err != nil {
 			return err
 		}
 	}
@@ -238,16 +239,16 @@ func (s *SPSControllerService) UpdateWithSystemTypes(spsController *domainFacili
 	return nil
 }
 
-func (s *SPSControllerService) DeleteByID(id uuid.UUID) error {
-	return s.repo.DeleteByIds([]uuid.UUID{id})
+func (s *SPSControllerService) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
 }
-func (s *SPSControllerService) ensureControlCabinetExists(controlCabinetID uuid.UUID) error {
-	_, err := domain.GetByID(s.controlCabinetRepo, controlCabinetID)
+func (s *SPSControllerService) ensureControlCabinetExists(ctx context.Context, controlCabinetID uuid.UUID) error {
+	_, err := domain.GetByID(ctx, s.controlCabinetRepo, controlCabinetID)
 	return err
 }
 
-func (s *SPSControllerService) loadSystemTypes(systemTypes []domainFacility.SPSControllerSystemType) (map[uuid.UUID]domainFacility.SystemType, error) {
-	return loadSystemTypeDefinitions(s.systemTypeRepo, systemTypes)
+func (s *SPSControllerService) loadSystemTypes(ctx context.Context, systemTypes []domainFacility.SPSControllerSystemType) (map[uuid.UUID]domainFacility.SystemType, error) {
+	return loadSystemTypeDefinitions(ctx, s.systemTypeRepo, systemTypes)
 }
 
 func (s *SPSControllerService) assignSystemTypeNumbers(systemTypes []domainFacility.SPSControllerSystemType, systemTypeMap map[uuid.UUID]domainFacility.SystemType) error {
@@ -263,22 +264,22 @@ func findLowestAvailableNumber(min, max int, used map[int]struct{}) (int, bool) 
 	return 0, false
 }
 
-func (s *SPSControllerService) GetNextGADevice(controlCabinetID uuid.UUID) (string, error) {
+func (s *SPSControllerService) GetNextGADevice(ctx context.Context, controlCabinetID uuid.UUID) (string, error) {
 	if controlCabinetID == uuid.Nil {
 		return "", domain.ErrInvalidArgument
 	}
-	if err := s.ensureControlCabinetExists(controlCabinetID); err != nil {
+	if err := s.ensureControlCabinetExists(ctx, controlCabinetID); err != nil {
 		return "", err
 	}
-	return s.nextAvailableGADevice(controlCabinetID)
+	return s.nextAvailableGADevice(ctx, controlCabinetID)
 }
 
-func (s *SPSControllerService) ensureGADeviceAssigned(spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
+func (s *SPSControllerService) ensureGADeviceAssigned(ctx context.Context, spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
 	if spsController.GADevice != nil && strings.TrimSpace(*spsController.GADevice) != "" {
 		return nil
 	}
 
-	next, err := s.nextAvailableGADevice(spsController.ControlCabinetID)
+	next, err := s.nextAvailableGADevice(ctx, spsController.ControlCabinetID)
 	if err != nil {
 		return err
 	}
@@ -288,14 +289,14 @@ func (s *SPSControllerService) ensureGADeviceAssigned(spsController *domainFacil
 	spsController.GADevice = &next
 
 	// Always ensure uniqueness, not just when updating
-	if err := s.ensureUnique(spsController, excludeID); err != nil {
+	if err := s.ensureUnique(ctx, spsController, excludeID); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *SPSControllerService) nextAvailableGADevice(controlCabinetID uuid.UUID) (string, error) {
-	devices, err := s.repo.ListGADevicesByControlCabinetID(controlCabinetID)
+func (s *SPSControllerService) nextAvailableGADevice(ctx context.Context, controlCabinetID uuid.UUID) (string, error) {
+	devices, err := s.repo.ListGADevicesByControlCabinetID(ctx, controlCabinetID)
 	if err != nil {
 		return "", err
 	}
@@ -346,22 +347,22 @@ func (s *SPSControllerService) validateRequiredFields(spsController *domainFacil
 	return nil
 }
 
-func (s *SPSControllerService) Validate(spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
+func (s *SPSControllerService) Validate(ctx context.Context, spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
 	if err := s.validateRequiredFields(spsController); err != nil {
 		return err
 	}
-	if err := s.ensureUnique(spsController, excludeID); err != nil {
+	if err := s.ensureUnique(ctx, spsController, excludeID); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *SPSControllerService) NextAvailableGADevice(controlCabinetID uuid.UUID, excludeID *uuid.UUID) (string, error) {
-	if err := s.ensureControlCabinetExists(controlCabinetID); err != nil {
+func (s *SPSControllerService) NextAvailableGADevice(ctx context.Context, controlCabinetID uuid.UUID, excludeID *uuid.UUID) (string, error) {
+	if err := s.ensureControlCabinetExists(ctx, controlCabinetID); err != nil {
 		return "", err
 	}
 
-	items, err := s.repo.ListGADevicesByControlCabinetID(controlCabinetID)
+	items, err := s.repo.ListGADevicesByControlCabinetID(ctx, controlCabinetID)
 	if err != nil {
 		return "", err
 	}
@@ -375,7 +376,7 @@ func (s *SPSControllerService) NextAvailableGADevice(controlCabinetID uuid.UUID,
 	}
 
 	if excludeID != nil {
-		controller, err := domain.GetByID(s.repo, *excludeID)
+		controller, err := domain.GetByID(ctx, s.repo, *excludeID)
 		if err != nil {
 			return "", err
 		}
@@ -393,11 +394,11 @@ func (s *SPSControllerService) NextAvailableGADevice(controlCabinetID uuid.UUID,
 	return "", domain.ErrConflict
 }
 
-func (s *SPSControllerService) ensureUnique(spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
+func (s *SPSControllerService) ensureUnique(ctx context.Context, spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
 	ve := domain.NewValidationError()
 
 	if strings.TrimSpace(spsController.DeviceName) != "" {
-		items, err := s.repo.GetPaginatedList(domain.PaginationParams{Page: 1, Limit: 1000, Search: spsController.DeviceName})
+		items, err := s.repo.GetPaginatedList(ctx, domain.PaginationParams{Page: 1, Limit: 1000, Search: spsController.DeviceName})
 		if err != nil {
 			return err
 		}
@@ -414,7 +415,7 @@ func (s *SPSControllerService) ensureUnique(spsController *domainFacility.SPSCon
 	}
 
 	if spsController.GADevice != nil && strings.TrimSpace(*spsController.GADevice) != "" {
-		exists, err := s.repo.ExistsGADevice(spsController.ControlCabinetID, *spsController.GADevice, excludeID)
+		exists, err := s.repo.ExistsGADevice(ctx, spsController.ControlCabinetID, *spsController.GADevice, excludeID)
 		if err != nil {
 			return err
 		}
@@ -427,7 +428,7 @@ func (s *SPSControllerService) ensureUnique(spsController *domainFacility.SPSCon
 		ip := strings.TrimSpace(*spsController.IPAddress)
 		vlan := strings.TrimSpace(*spsController.Vlan)
 		if ip != "" && vlan != "" {
-			exists, err := s.repo.ExistsIPAddressVlan(ip, vlan, excludeID)
+			exists, err := s.repo.ExistsIPAddressVlan(ctx, ip, vlan, excludeID)
 			if err != nil {
 				return err
 			}

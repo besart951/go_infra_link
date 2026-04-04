@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -15,18 +16,18 @@ func NewUnitService(repo domainFacility.UnitRepository) *UnitService {
 	return &UnitService{baseService: newBase[domainFacility.Unit](repo, 20)}
 }
 
-func (s *UnitService) Create(unit *domainFacility.Unit) error {
+func (s *UnitService) Create(ctx context.Context, unit *domainFacility.Unit) error {
 	if err := validateUnit(unit); err != nil {
 		return err
 	}
-	return s.repo.Create(unit)
+	return s.repo.Create(ctx, unit)
 }
 
-func (s *UnitService) Update(unit *domainFacility.Unit) error {
+func (s *UnitService) Update(ctx context.Context, unit *domainFacility.Unit) error {
 	if err := validateUnit(unit); err != nil {
 		return err
 	}
-	return s.repo.Update(unit)
+	return s.repo.Update(ctx, unit)
 }
 
 func validateUnit(unit *domainFacility.Unit) error {

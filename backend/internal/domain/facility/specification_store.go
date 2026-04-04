@@ -1,6 +1,10 @@
 package facility
 
-import "github.com/google/uuid"
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
 
 // SpecificationStore extends the generic repository with access patterns
 // needed for the 1:1 (nullable) FieldDevice <-> Specification relationship.
@@ -11,8 +15,8 @@ type SpecificationStore interface {
 	SpecificationRepository
 
 	// BulkCreate creates multiple specifications in batches.
-	BulkCreate(entities []*Specification, batchSize int) error
+	BulkCreate(ctx context.Context, entities []*Specification, batchSize int) error
 
-	GetByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) ([]*Specification, error)
-	DeleteByFieldDeviceIDs(fieldDeviceIDs []uuid.UUID) error
+	GetByFieldDeviceIDs(ctx context.Context, fieldDeviceIDs []uuid.UUID) ([]*Specification, error)
+	DeleteByFieldDeviceIDs(ctx context.Context, fieldDeviceIDs []uuid.UUID) error
 }

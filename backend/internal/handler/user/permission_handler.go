@@ -27,7 +27,7 @@ func NewPermissionHandler(service PermissionService) *PermissionHandler {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/permissions [get]
 func (h *PermissionHandler) ListPermissions(c *gin.Context) {
-	perms, err := h.service.ListPermissions()
+	perms, err := h.service.ListPermissions(c.Request.Context())
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "permissions.fetch_failed")
 		return
@@ -72,7 +72,7 @@ func (h *PermissionHandler) CreatePermission(c *gin.Context) {
 		Action:      req.Action,
 	}
 
-	if err := h.service.CreatePermission(perm); err != nil {
+	if err := h.service.CreatePermission(c.Request.Context(), perm); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "permissions.creation_failed")
 		return
 	}
@@ -111,7 +111,8 @@ func (h *PermissionHandler) UpdatePermission(c *gin.Context) {
 		return
 	}
 
-	perm, err := h.service.GetPermissionByID(id)
+	ctx := c.Request.Context()
+	perm, err := h.service.GetPermissionByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "permissions.permission_not_found")
@@ -125,7 +126,7 @@ func (h *PermissionHandler) UpdatePermission(c *gin.Context) {
 		perm.Description = *req.Description
 	}
 
-	if err := h.service.UpdatePermission(perm); err != nil {
+	if err := h.service.UpdatePermission(ctx, perm); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "permissions.update_failed")
 		return
 	}
@@ -157,7 +158,7 @@ func (h *PermissionHandler) DeletePermission(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeletePermission(id); err != nil {
+	if err := h.service.DeletePermission(c.Request.Context(), id); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "permissions.permission_not_found")
 			return

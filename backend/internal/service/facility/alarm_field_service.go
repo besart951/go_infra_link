@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -26,18 +27,18 @@ func NewAlarmFieldService(repo domainFacility.AlarmFieldRepository) *AlarmFieldS
 	return &AlarmFieldService{baseService: newBase[domainFacility.AlarmField](repo, 20)}
 }
 
-func (s *AlarmFieldService) Create(field *domainFacility.AlarmField) error {
+func (s *AlarmFieldService) Create(ctx context.Context, field *domainFacility.AlarmField) error {
 	if err := validateAlarmField(field); err != nil {
 		return err
 	}
-	return s.repo.Create(field)
+	return s.repo.Create(ctx, field)
 }
 
-func (s *AlarmFieldService) Update(field *domainFacility.AlarmField) error {
+func (s *AlarmFieldService) Update(ctx context.Context, field *domainFacility.AlarmField) error {
 	if err := validateAlarmField(field); err != nil {
 		return err
 	}
-	return s.repo.Update(field)
+	return s.repo.Update(ctx, field)
 }
 
 func validateAlarmField(field *domainFacility.AlarmField) error {

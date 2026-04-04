@@ -1,6 +1,7 @@
 package facilitysql
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -25,19 +26,19 @@ func NewControlCabinetRepository(db *gorm.DB) domainFacility.ControlCabinetRepos
 	return &controlCabinetRepo{BaseRepository: baseRepo, db: db}
 }
 
-func (r *controlCabinetRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ControlCabinet], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+func (r *controlCabinetRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ControlCabinet], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
 	if err != nil {
 		return nil, err
 	}
 	return gormbase.DerefPaginatedList(result), nil
 }
 
-func (r *controlCabinetRepo) GetPaginatedListByBuildingID(buildingID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ControlCabinet], error) {
+func (r *controlCabinetRepo) GetPaginatedListByBuildingID(ctx context.Context, buildingID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ControlCabinet], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainFacility.ControlCabinet{}).
+	query := r.db.WithContext(ctx).Model(&domainFacility.ControlCabinet{}).
 		Where("building_id = ?", buildingID)
 
 	if strings.TrimSpace(params.Search) != "" {
@@ -63,8 +64,8 @@ func (r *controlCabinetRepo) GetPaginatedListByBuildingID(buildingID uuid.UUID, 
 	}, nil
 }
 
-func (r *controlCabinetRepo) ExistsControlCabinetNr(buildingID uuid.UUID, controlCabinetNr string, excludeID *uuid.UUID) (bool, error) {
-	query := r.db.Model(&domainFacility.ControlCabinet{}).
+func (r *controlCabinetRepo) ExistsControlCabinetNr(ctx context.Context, buildingID uuid.UUID, controlCabinetNr string, excludeID *uuid.UUID) (bool, error) {
+	query := r.db.WithContext(ctx).Model(&domainFacility.ControlCabinet{}).
 		Where("building_id = ?", buildingID).
 		Where("LOWER(control_cabinet_nr) = ?", strings.ToLower(strings.TrimSpace(controlCabinetNr)))
 
@@ -79,9 +80,9 @@ func (r *controlCabinetRepo) ExistsControlCabinetNr(buildingID uuid.UUID, contro
 	return count > 0, nil
 }
 
-func (r *controlCabinetRepo) GetIDsByBuildingID(buildingID uuid.UUID) ([]uuid.UUID, error) {
+func (r *controlCabinetRepo) GetIDsByBuildingID(ctx context.Context, buildingID uuid.UUID) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
-	err := r.db.Model(&domainFacility.ControlCabinet{}).
+	err := r.db.WithContext(ctx).Model(&domainFacility.ControlCabinet{}).
 		Where("building_id = ?", buildingID).
 		Pluck("id", &ids).Error
 	if err != nil {
@@ -90,11 +91,11 @@ func (r *controlCabinetRepo) GetIDsByBuildingID(buildingID uuid.UUID) ([]uuid.UU
 	return ids, nil
 }
 
-func (r *controlCabinetRepo) DeleteByIds(ids []uuid.UUID) error {
+func (r *controlCabinetRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	return r.db.
+	return r.db.WithContext(ctx).
 		Where("id IN ?", ids).
 		Delete(&domainFacility.ControlCabinet{}).Error
 }

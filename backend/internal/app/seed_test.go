@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"testing"
 
 	"github.com/besart951/go_infra_link/backend/internal/config"
@@ -18,7 +19,7 @@ type seedUserServiceStub struct {
 	createCalls int
 }
 
-func (s *seedUserServiceStub) CreateWithPassword(user *domainUser.User, password string) error {
+func (s *seedUserServiceStub) CreateWithPassword(_ context.Context, user *domainUser.User, password string) error {
 	s.createCalls++
 	return nil
 }
@@ -28,7 +29,7 @@ type userEmailRepoStub struct {
 	err  error
 }
 
-func (r userEmailRepoStub) GetByEmail(email string) (*domainUser.User, error) {
+func (r userEmailRepoStub) GetByEmail(_ context.Context, email string) (*domainUser.User, error) {
 	if r.err != nil {
 		return nil, r.err
 	}

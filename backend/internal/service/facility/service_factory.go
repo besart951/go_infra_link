@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"context"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
@@ -18,21 +20,21 @@ func newBase[T any](repo domain.Repository[T], defaultLimit int) baseService[T] 
 	return baseService[T]{repo: repo, defaultLimit: defaultLimit}
 }
 
-func (s *baseService[T]) GetByID(id uuid.UUID) (*T, error) {
-	return domain.GetByID(s.repo, id)
+func (s *baseService[T]) GetByID(ctx context.Context, id uuid.UUID) (*T, error) {
+	return domain.GetByID(ctx, s.repo, id)
 }
 
-func (s *baseService[T]) List(page, limit int, search string) (*domain.PaginatedList[T], error) {
+func (s *baseService[T]) List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[T], error) {
 	page, limit = domain.NormalizePagination(page, limit, s.defaultLimit)
-	return s.repo.GetPaginatedList(domain.PaginationParams{
+	return s.repo.GetPaginatedList(ctx, domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,
 		Search: search,
 	})
 }
 
-func (s *baseService[T]) DeleteByID(id uuid.UUID) error {
-	return s.repo.DeleteByIds([]uuid.UUID{id})
+func (s *baseService[T]) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
 }
 
 // derefSlice converts []*T to []T by dereferencing each element.

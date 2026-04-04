@@ -28,7 +28,7 @@ func NewRoleHandler(service RolePermissionService) *RoleHandler {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/roles [get]
 func (h *RoleHandler) ListRoles(c *gin.Context) {
-	roles, err := h.service.ListRolesWithPermissions()
+	roles, err := h.service.ListRolesWithPermissions(c.Request.Context())
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "roles.fetch_failed")
 		return
@@ -77,7 +77,7 @@ func (h *RoleHandler) UpdateRolePermissions(c *gin.Context) {
 		return
 	}
 
-	permissions, err := h.service.UpdateRolePermissions(roleParam, req.Permissions)
+	permissions, err := h.service.UpdateRolePermissions(c.Request.Context(), roleParam, req.Permissions)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "permission_not_found", "roles.permission_not_found")
@@ -128,7 +128,7 @@ func (h *RoleHandler) AddRolePermission(c *gin.Context) {
 		return
 	}
 
-	perm, err := h.service.AddRolePermission(roleParam, req.Permission)
+	perm, err := h.service.AddRolePermission(c.Request.Context(), roleParam, req.Permission)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "permission_not_found", "roles.permission_not_found")
@@ -170,7 +170,7 @@ func (h *RoleHandler) RemoveRolePermission(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.RemoveRolePermission(roleParam, permissionName); err != nil {
+	if err := h.service.RemoveRolePermission(c.Request.Context(), roleParam, permissionName); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "roles.permission_remove_failed")
 		return
 	}

@@ -1,6 +1,7 @@
 package notification
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -17,9 +18,9 @@ func NewSMTPSettingsRepository(db *gorm.DB) domainNotification.SMTPSettingsRepos
 	return &smtpSettingsRepo{db: db}
 }
 
-func (r *smtpSettingsRepo) GetByProvider(provider domainNotification.Provider) (*domainNotification.SMTPSettings, error) {
+func (r *smtpSettingsRepo) GetByProvider(ctx context.Context, provider domainNotification.Provider) (*domainNotification.SMTPSettings, error) {
 	var settings domainNotification.SMTPSettings
-	result := r.db.Where("provider = ?", provider).Limit(1).Find(&settings)
+	result := r.db.WithContext(ctx).Where("provider = ?", provider).Limit(1).Find(&settings)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -29,9 +30,9 @@ func (r *smtpSettingsRepo) GetByProvider(provider domainNotification.Provider) (
 	return &settings, nil
 }
 
-func (r *smtpSettingsRepo) Save(settings *domainNotification.SMTPSettings) error {
+func (r *smtpSettingsRepo) Save(ctx context.Context, settings *domainNotification.SMTPSettings) error {
 	now := time.Now().UTC()
-	existing, err := r.GetByProvider(settings.Provider)
+	existing, err := r.GetByProvider(ctx, settings.Provider)
 	if err != nil && !errors.Is(err, domain.ErrNotFound) {
 		return err
 	}
@@ -40,7 +41,7 @@ func (r *smtpSettingsRepo) Save(settings *domainNotification.SMTPSettings) error
 		if err := settings.GetBase().InitForCreate(now); err != nil {
 			return err
 		}
-		return r.db.Create(settings).Error
+		return r.db.WithContext(ctx).Create(settings).Error
 	}
 
 	settings.ID = existing.ID
@@ -63,7 +64,7 @@ func (r *smtpSettingsRepo) Save(settings *domainNotification.SMTPSettings) error
 		"updated_by_id":      settings.UpdatedByID,
 	}
 
-	return r.db.Model(&domainNotification.SMTPSettings{}).
+	return r.db.WithContext(ctx).Model(&domainNotification.SMTPSettings{}).
 		Where("id = ?", existing.ID).
 		Updates(updates).Error
 }

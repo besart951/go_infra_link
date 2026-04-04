@@ -1348,7 +1348,8 @@
         "sps_system_type_placeholder": "SPS-Regler-Systemtyp auswählen...",
         "sps_system_type_search": "SPS-Systemtypen suchen...",
         "sps_system_type_empty": "Keine SPS-Systemtypen gefunden.",
-        "sps_system_type_clear": "SPS-Regler-Systemtyp löschen"
+        "sps_system_type_clear": "SPS-Regler-Systemtyp löschen",
+        "project_only": "Nur projektspezifische Anlagen"
       },
       "status": {
         "title": "Konfiguration gewählt:",

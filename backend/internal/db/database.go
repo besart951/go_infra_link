@@ -86,11 +86,12 @@ func Bootstrap(cfg config.Config) error {
 		_ = sqlDB.Close()
 	}()
 
-	return bootstrapSchema(db)
+	return ApplyMigrations(db)
 }
 
-// bootstrapSchema creates or upgrades schema objects and applies legacy one-off fixes.
-func bootstrapSchema(db *gorm.DB) error {
+// autoMigrateCurrentSchema creates the current schema baseline.
+// Keep this limited to schema creation only; all repairs and follow-up changes belong in versioned migrations.
+func autoMigrateCurrentSchema(db *gorm.DB) error {
 	if err := db.AutoMigrate(
 		// User domain
 		&user.User{},
@@ -139,27 +140,14 @@ func bootstrapSchema(db *gorm.DB) error {
 		return err
 	}
 
-	if err := cleanupFacilityDeleteOrphans(db); err != nil {
-		return err
-	}
-	if err := ensureFacilityDeleteCascades(db); err != nil {
-		return err
-	}
-	if err := ensureObjectDataApparatsCascade(db); err != nil {
-		return err
-	}
-	if err := ensureBacnetObjectTextFixIndexNonUnique(db); err != nil {
-		return err
-	}
-
-	// Cleanup legacy phases.project_id column (phases are independent)
-	if db.Migrator().HasColumn(&project.Phase{}, "project_id") {
-		if err := db.Migrator().DropColumn(&project.Phase{}, "project_id"); err != nil {
-			return err
-		}
-	}
-
 	return nil
+}
+
+func dropLegacyPhaseProjectID(db *gorm.DB) error {
+	if !db.Migrator().HasColumn(&project.Phase{}, "project_id") {
+		return nil
+	}
+	return db.Migrator().DropColumn(&project.Phase{}, "project_id")
 }
 
 type foreignKeySpec struct {

@@ -1,6 +1,8 @@
 package projectsql
 
 import (
+	"context"
+
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
@@ -21,20 +23,19 @@ func NewProjectFieldDeviceRepository(db *gorm.DB) project.ProjectFieldDeviceRepo
 	}
 }
 
-func (r *projectFieldDeviceRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[project.ProjectFieldDevice], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+func (r *projectFieldDeviceRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[project.ProjectFieldDevice], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
 	if err != nil {
 		return nil, err
 	}
 	return gormbase.DerefPaginatedList(result), nil
 }
 
-// GetPaginatedListByProjectID retrieves field devices for a project with pagination
-func (r *projectFieldDeviceRepo) GetPaginatedListByProjectID(projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[project.ProjectFieldDevice], error) {
+func (r *projectFieldDeviceRepo) GetPaginatedListByProjectID(ctx context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[project.ProjectFieldDevice], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&project.ProjectFieldDevice{}).
+	query := r.db.WithContext(ctx).Model(&project.ProjectFieldDevice{}).
 		Where("project_id = ?", projectID)
 
 	var total int64
@@ -55,23 +56,20 @@ func (r *projectFieldDeviceRepo) GetPaginatedListByProjectID(projectID uuid.UUID
 	}, nil
 }
 
-// GetByProjectID retrieves all field devices associated with a project
-func (r *projectFieldDeviceRepo) GetByProjectID(projectID uuid.UUID) ([]*project.ProjectFieldDevice, error) {
+func (r *projectFieldDeviceRepo) GetByProjectID(ctx context.Context, projectID uuid.UUID) ([]*project.ProjectFieldDevice, error) {
 	var items []*project.ProjectFieldDevice
-	err := r.db.Where("project_id = ?", projectID).Find(&items).Error
+	err := r.db.WithContext(ctx).Where("project_id = ?", projectID).Find(&items).Error
 	return items, err
 }
 
-// GetByFieldDeviceID retrieves all projects associated with a field device
-func (r *projectFieldDeviceRepo) GetByFieldDeviceID(fieldDeviceID uuid.UUID) ([]*project.ProjectFieldDevice, error) {
+func (r *projectFieldDeviceRepo) GetByFieldDeviceID(ctx context.Context, fieldDeviceID uuid.UUID) ([]*project.ProjectFieldDevice, error) {
 	var items []*project.ProjectFieldDevice
-	err := r.db.Where("field_device_id = ?", fieldDeviceID).Find(&items).Error
+	err := r.db.WithContext(ctx).Where("field_device_id = ?", fieldDeviceID).Find(&items).Error
 	return items, err
 }
 
-// DeleteByProjectAndFieldDevice deletes a specific association
-func (r *projectFieldDeviceRepo) DeleteByProjectAndFieldDevice(projectID, fieldDeviceID uuid.UUID) error {
-	return r.db.
+func (r *projectFieldDeviceRepo) DeleteByProjectAndFieldDevice(ctx context.Context, projectID, fieldDeviceID uuid.UUID) error {
+	return r.db.WithContext(ctx).
 		Where("project_id = ? AND field_device_id = ?", projectID, fieldDeviceID).
 		Delete(&project.ProjectFieldDevice{}).Error
 }

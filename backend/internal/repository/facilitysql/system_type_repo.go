@@ -1,6 +1,7 @@
 package facilitysql
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -25,16 +26,16 @@ func NewSystemTypeRepository(db *gorm.DB) domainFacility.SystemTypeRepository {
 	return &systemTypeRepo{BaseRepository: baseRepo, db: db}
 }
 
-func (r *systemTypeRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SystemType], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+func (r *systemTypeRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SystemType], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
 	if err != nil {
 		return nil, err
 	}
 	return gormbase.DerefPaginatedList(result), nil
 }
 
-func (r *systemTypeRepo) ExistsName(name string, excludeID *uuid.UUID) (bool, error) {
-	query := r.db.Model(&domainFacility.SystemType{}).
+func (r *systemTypeRepo) ExistsName(ctx context.Context, name string, excludeID *uuid.UUID) (bool, error) {
+	query := r.db.WithContext(ctx).Model(&domainFacility.SystemType{}).
 		Where("LOWER(name) = ?", strings.ToLower(strings.TrimSpace(name)))
 
 	if excludeID != nil {
@@ -48,8 +49,8 @@ func (r *systemTypeRepo) ExistsName(name string, excludeID *uuid.UUID) (bool, er
 	return count > 0, nil
 }
 
-func (r *systemTypeRepo) ExistsOverlappingRange(numberMin, numberMax int, excludeID *uuid.UUID) (bool, error) {
-	query := r.db.Model(&domainFacility.SystemType{}).
+func (r *systemTypeRepo) ExistsOverlappingRange(ctx context.Context, numberMin, numberMax int, excludeID *uuid.UUID) (bool, error) {
+	query := r.db.WithContext(ctx).Model(&domainFacility.SystemType{}).
 		Where("number_min <= ?", numberMax).
 		Where("number_max >= ?", numberMin)
 

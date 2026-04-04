@@ -94,6 +94,9 @@
   let submitting = $state(false);
   let globalError = $state('');
 
+  // Project-specific filter for system types
+  let projectOnly = $state(!!projectId);
+
   // Internal tracking
   let selectionKey = $state('');
   let availableNumbersAbortController: AbortController | null = null;
@@ -529,7 +532,11 @@
   // ─────────────────────────────────────────────────────────────────────────────
 
   async function fetchSpsControllerSystemTypes(search: string): Promise<SPSControllerSystemType[]> {
-    const res = await spsUseCase.listSystemTypes({ search, limit: 50 });
+    const params: { search: string; limit: number; project_id?: string } = { search, limit: 50 };
+    if (projectOnly && projectId) {
+      params.project_id = projectId;
+    }
+    const res = await spsUseCase.listSystemTypes(params);
     return res.items || [];
   }
 
@@ -578,6 +585,8 @@
     {selectedObjectData}
     {loadingObjectDataPreview}
     {objectDataPreviewError}
+    {projectOnly}
+    onProjectOnlyChange={(checked) => { projectOnly = checked; }}
     onSpsSystemTypeChange={handleSpsSystemTypeChange}
     onPreselectionChange={handlePreselectionChange}
     {fetchSpsControllerSystemTypes}

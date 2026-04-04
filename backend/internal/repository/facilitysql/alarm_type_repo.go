@@ -1,6 +1,7 @@
 package facilitysql
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -24,8 +25,8 @@ func NewUnitRepository(db *gorm.DB) domainFacility.UnitRepository {
 	return &unitRepo{gormbase.NewBaseRepository[*domainFacility.Unit](db, search)}
 }
 
-func (r *unitRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Unit], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 50)
+func (r *unitRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Unit], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 50)
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +47,8 @@ func NewAlarmFieldRepository(db *gorm.DB) domainFacility.AlarmFieldRepository {
 	return &alarmFieldRepo{gormbase.NewBaseRepository[*domainFacility.AlarmField](db, search)}
 }
 
-func (r *alarmFieldRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.AlarmField], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 50)
+func (r *alarmFieldRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.AlarmField], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 50)
 	if err != nil {
 		return nil, err
 	}
@@ -72,17 +73,17 @@ func NewAlarmTypeRepository(db *gorm.DB) domainFacility.AlarmTypeRepository {
 	}
 }
 
-func (r *alarmTypeRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.AlarmType], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 20)
+func (r *alarmTypeRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.AlarmType], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 20)
 	if err != nil {
 		return nil, err
 	}
 	return gormbase.DerefPaginatedList(result), nil
 }
 
-func (r *alarmTypeRepo) GetWithFields(id uuid.UUID) (*domainFacility.AlarmType, error) {
+func (r *alarmTypeRepo) GetWithFields(ctx context.Context, id uuid.UUID) (*domainFacility.AlarmType, error) {
 	var at domainFacility.AlarmType
-	err := r.db.
+	err := r.db.WithContext(ctx).
 		Preload("Fields").
 		Preload("Fields.AlarmField").
 		Preload("Fields.DefaultUnit").
@@ -94,11 +95,11 @@ func (r *alarmTypeRepo) GetWithFields(id uuid.UUID) (*domainFacility.AlarmType, 
 	return &at, nil
 }
 
-func (r *alarmTypeRepo) ListWithFields(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.AlarmType], error) {
+func (r *alarmTypeRepo) ListWithFields(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.AlarmType], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 20)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainFacility.AlarmType{})
+	query := r.db.WithContext(ctx).Model(&domainFacility.AlarmType{})
 	if params.Search != "" {
 		p := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
 		query = query.Where("LOWER(name) LIKE ? OR LOWER(code) LIKE ?", p, p)
@@ -138,8 +139,8 @@ func NewAlarmTypeFieldRepository(db *gorm.DB) domainFacility.AlarmTypeFieldRepos
 	return &alarmTypeFieldRepo{gormbase.NewBaseRepository[*domainFacility.AlarmTypeField](db, nil)}
 }
 
-func (r *alarmTypeFieldRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.AlarmTypeField], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 50)
+func (r *alarmTypeFieldRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.AlarmTypeField], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 50)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -50,8 +51,9 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 		}
 	}
 
+	ctx := c.Request.Context()
 	obj := toObjectDataModel(req)
-	if err := h.ensureObjectDataDescriptionUnique(obj.ProjectID, obj.Description, nil); err != nil {
+	if err := h.ensureObjectDataDescriptionUnique(ctx, obj.ProjectID, obj.Description, nil); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {
 			respondValidationError(c, ve.Fields)
 			return
@@ -62,7 +64,7 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 
 	// Load apparats if IDs are provided
 	if len(req.ApparatIDs) > 0 {
-		apparats, err := h.apparatService.GetByIDs(req.ApparatIDs)
+		apparats, err := h.apparatService.GetByIDs(ctx, req.ApparatIDs)
 		if err != nil {
 			respondLocalizedError(c, http.StatusBadRequest, "invalid_apparats", "facility.invalid_apparat_id")
 			return
@@ -70,7 +72,7 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 		obj.Apparats = apparats
 	}
 
-	if err := h.service.Create(obj); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
+	if err := h.service.Create(ctx, obj); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
 		return
 	}
 
@@ -81,7 +83,7 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 				BacnetObjectInput: input,
 			}
 			bacnetObject := toBacnetObjectModel(createReq)
-			if err := h.bacnetService.CreateWithParent(bacnetObject, nil, &obj.ID); err != nil {
+			if err := h.bacnetService.CreateWithParent(ctx, bacnetObject, nil, &obj.ID); err != nil {
 				if ve, ok := domain.AsValidationError(err); ok {
 					respondValidationError(c, ve.Fields)
 					return
@@ -104,7 +106,7 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 		}
 	}
 
-	if created, err := h.service.GetByID(obj.ID); err == nil && created != nil {
+	if created, err := h.service.GetByID(ctx, obj.ID); err == nil && created != nil {
 		c.JSON(http.StatusCreated, toObjectDataResponse(*created))
 		return
 	}
@@ -146,8 +148,8 @@ func validateObjectDataBacnetInputs(inputs []dto.BacnetObjectInput) error {
 	return nil
 }
 
-func (h *ObjectDataHandler) ensureObjectDataDescriptionUnique(projectID *uuid.UUID, description string, excludeID *uuid.UUID) error {
-	exists, err := h.service.ExistsByDescription(projectID, description, excludeID)
+func (h *ObjectDataHandler) ensureObjectDataDescriptionUnique(ctx context.Context, projectID *uuid.UUID, description string, excludeID *uuid.UUID) error {
+	exists, err := h.service.ExistsByDescription(ctx, projectID, description, excludeID)
 	if err != nil {
 		return err
 	}
@@ -173,7 +175,7 @@ func (h *ObjectDataHandler) GetObjectData(c *gin.Context) {
 		return
 	}
 
-	obj, err := h.service.GetByID(id)
+	obj, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.object_data_not_found") {
 			return
@@ -204,6 +206,7 @@ func (h *ObjectDataHandler) ListObjectData(c *gin.Context) {
 		return
 	}
 
+	ctx := c.Request.Context()
 	apparatIDStr := c.Query("apparat_id")
 	systemPartIDStr := c.Query("system_part_id")
 
@@ -235,13 +238,13 @@ func (h *ObjectDataHandler) ListObjectData(c *gin.Context) {
 
 	switch {
 	case apparatID != nil && systemPartID != nil:
-		result, err = h.service.ListByApparatAndSystemPartID(query.Page, query.Limit, query.Search, *apparatID, *systemPartID)
+		result, err = h.service.ListByApparatAndSystemPartID(ctx, query.Page, query.Limit, query.Search, *apparatID, *systemPartID)
 	case apparatID != nil:
-		result, err = h.service.ListByApparatID(query.Page, query.Limit, query.Search, *apparatID)
+		result, err = h.service.ListByApparatID(ctx, query.Page, query.Limit, query.Search, *apparatID)
 	case systemPartID != nil:
-		result, err = h.service.ListBySystemPartID(query.Page, query.Limit, query.Search, *systemPartID)
+		result, err = h.service.ListBySystemPartID(ctx, query.Page, query.Limit, query.Search, *systemPartID)
 	default:
-		result, err = h.service.List(query.Page, query.Limit, query.Search)
+		result, err = h.service.List(ctx, query.Page, query.Limit, query.Search)
 	}
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
@@ -274,7 +277,9 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 		return
 	}
 
-	obj, err := h.service.GetByID(id)
+	ctx := c.Request.Context()
+
+	obj, err := h.service.GetByID(ctx, id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.object_data_not_found") {
 			return
@@ -284,7 +289,7 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 	}
 
 	applyObjectDataUpdate(obj, req)
-	if err := h.ensureObjectDataDescriptionUnique(obj.ProjectID, obj.Description, &obj.ID); err != nil {
+	if err := h.ensureObjectDataDescriptionUnique(ctx, obj.ProjectID, obj.Description, &obj.ID); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {
 			respondValidationError(c, ve.Fields)
 			return
@@ -296,7 +301,7 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 	// Load apparats if IDs are provided
 	if req.ApparatIDs != nil {
 		if len(*req.ApparatIDs) > 0 {
-			apparats, err := h.apparatService.GetByIDs(*req.ApparatIDs)
+			apparats, err := h.apparatService.GetByIDs(ctx, *req.ApparatIDs)
 			if err != nil {
 				respondLocalizedError(c, http.StatusBadRequest, "invalid_apparats", "facility.invalid_apparats")
 				return
@@ -308,13 +313,13 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 		}
 	}
 
-	if err := h.service.Update(obj); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
+	if err := h.service.Update(ctx, obj); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
 
 	if req.BacnetObjects != nil {
 		bacnetObjects := toFieldDeviceBacnetObjects(*req.BacnetObjects)
-		if err := h.bacnetService.ReplaceForObjectData(obj.ID, bacnetObjects); err != nil {
+		if err := h.bacnetService.ReplaceForObjectData(ctx, obj.ID, bacnetObjects); err != nil {
 			if ve, ok := domain.AsValidationError(err); ok {
 				respondValidationError(c, ve.Fields)
 				return
@@ -327,7 +332,7 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 		}
 	}
 
-	updated, err := h.service.GetByID(obj.ID)
+	updated, err := h.service.GetByID(ctx, obj.ID)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.object_data_not_found") {
 			return
@@ -354,7 +359,7 @@ func (h *ObjectDataHandler) DeleteObjectData(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(id); err != nil {
+	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}
@@ -378,7 +383,9 @@ func (h *ObjectDataHandler) GetObjectDataBacnetObjects(c *gin.Context) {
 		return
 	}
 
-	bacnetObjectIDs, err := h.service.GetBacnetObjectIDs(id)
+	ctx := c.Request.Context()
+
+	bacnetObjectIDs, err := h.service.GetBacnetObjectIDs(ctx, id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.object_data_not_found") {
 			return
@@ -392,7 +399,7 @@ func (h *ObjectDataHandler) GetObjectDataBacnetObjects(c *gin.Context) {
 		return
 	}
 
-	bacnetObjects, err := h.bacnetService.GetByIDs(bacnetObjectIDs)
+	bacnetObjects, err := h.bacnetService.GetByIDs(ctx, bacnetObjectIDs)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return

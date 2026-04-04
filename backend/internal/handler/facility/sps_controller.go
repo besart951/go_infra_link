@@ -37,7 +37,7 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 	spsController := toSPSControllerModel(req)
 	systemTypes := toSPSControllerSystemTypes(req.SystemTypes)
 
-	if err := h.service.CreateWithSystemTypes(spsController, systemTypes); err != nil {
+	if err := h.service.CreateWithSystemTypes(c.Request.Context(), spsController, systemTypes); err != nil {
 		if ve, ok := domain.AsValidationError(err); ok {
 			respondValidationError(c, ve.Fields)
 			return
@@ -69,7 +69,7 @@ func (h *SPSControllerHandler) GetSPSController(c *gin.Context) {
 		return
 	}
 
-	spsController, err := h.service.GetByID(id)
+	spsController, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.sps_controller_not_found") {
 			return
@@ -101,7 +101,7 @@ func (h *SPSControllerHandler) GetSPSControllersByIDs(c *gin.Context) {
 		return
 	}
 
-	items, err := h.service.GetByIDs(req.Ids)
+	items, err := h.service.GetByIDs(c.Request.Context(), req.Ids)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
@@ -127,7 +127,7 @@ func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 		return
 	}
 
-	copyEntity, err := h.service.CopyByID(id)
+	copyEntity, err := h.service.CopyByID(c.Request.Context(), id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.sps_controller_not_found") {
 			return
@@ -166,12 +166,14 @@ func (h *SPSControllerHandler) ListSPSControllers(c *gin.Context) {
 		return
 	}
 
+	ctx := c.Request.Context()
+
 	var result *domain.PaginatedList[domainFacility.SPSController]
 	var err error
 	if controlCabinetID != nil {
-		result, err = h.service.ListByControlCabinetID(*controlCabinetID, query.Page, query.Limit, query.Search)
+		result, err = h.service.ListByControlCabinetID(ctx, *controlCabinetID, query.Page, query.Limit, query.Search)
 	} else {
-		result, err = h.service.List(query.Page, query.Limit, query.Search)
+		result, err = h.service.List(ctx, query.Page, query.Limit, query.Search)
 	}
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
@@ -208,7 +210,7 @@ func (h *SPSControllerHandler) GetNextAvailableGADevice(c *gin.Context) {
 		return
 	}
 
-	gaDevice, err := h.service.NextAvailableGADevice(*controlCabinetID, excludeID)
+	gaDevice, err := h.service.NextAvailableGADevice(c.Request.Context(), *controlCabinetID, excludeID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			respondLocalizedNotFoundError(c, "facility.control_cabinet_not_found")
@@ -248,7 +250,9 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		return
 	}
 
-	spsController, err := h.service.GetByID(id)
+	ctx := c.Request.Context()
+
+	spsController, err := h.service.GetByID(ctx, id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.sps_controller_not_found") {
 			return
@@ -262,9 +266,9 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 	var updateErr error
 	if req.SystemTypes != nil {
 		systemTypes := toSPSControllerSystemTypes(*req.SystemTypes)
-		updateErr = h.service.UpdateWithSystemTypes(spsController, systemTypes)
+		updateErr = h.service.UpdateWithSystemTypes(ctx, spsController, systemTypes)
 	} else {
-		updateErr = h.service.Update(spsController)
+		updateErr = h.service.Update(ctx, spsController)
 	}
 	if updateErr != nil {
 		if ve, ok := domain.AsValidationError(updateErr); ok {
@@ -297,7 +301,7 @@ func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(id); err != nil {
+	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}

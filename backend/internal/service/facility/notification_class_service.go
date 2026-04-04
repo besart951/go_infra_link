@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"context"
+
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 )
 
@@ -12,10 +14,10 @@ func NewNotificationClassService(repo domainFacility.NotificationClassRepository
 	return &NotificationClassService{baseService: newBase[domainFacility.NotificationClass](repo, 10)}
 }
 
-func (s *NotificationClassService) Create(nc *domainFacility.NotificationClass) error {
-	return s.repo.Create(nc)
+func (s *NotificationClassService) Create(ctx context.Context, nc *domainFacility.NotificationClass) error {
+	return s.repo.Create(ctx, nc)
 }
 
-func (s *NotificationClassService) Update(nc *domainFacility.NotificationClass) error {
-	return s.repo.Update(nc)
+func (s *NotificationClassService) Update(ctx context.Context, nc *domainFacility.NotificationClass) error {
+	return s.repo.Update(ctx, nc)
 }

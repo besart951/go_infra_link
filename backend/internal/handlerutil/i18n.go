@@ -13,15 +13,14 @@ func RespondLocalizedError(c *gin.Context, status int, code string, keyOrMessage
 
 	message := keyOrMessage
 	if translator != nil {
-		// Try to translate the error code first
-		translated := translator.Get(locale, code)
-		if translated != code { // If translation exists (not the key itself)
-			message = translated
-		} else {
-			// Try the full message key path (e.g., "errors.not_found")
-			translated = translator.Get(locale, "errors."+code)
-			if translated != "errors."+code {
+		for _, key := range []string{keyOrMessage, code, "errors." + code} {
+			if key == "" {
+				continue
+			}
+			translated := translator.Get(locale, key)
+			if translated != key {
 				message = translated
+				break
 			}
 		}
 	}

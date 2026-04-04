@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"errors"
+	"context"
 	"net/http"
 	"strings"
 	"time"
@@ -73,7 +73,7 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	userAgent := c.GetHeader("User-Agent")
 	ip := c.ClientIP()
 
-	result, err := h.service.Refresh(refreshToken, &userAgent, &ip)
+	result, err := h.service.Refresh(c.Request.Context(), refreshToken, &userAgent, &ip)
 	if err != nil {
 		h.handleRefreshError(c, err)
 		return
@@ -81,17 +81,19 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 
 	h.setAuthCookies(c, result)
 
-	c.JSON(http.StatusOK, h.buildAuthResponse(result))
+	c.JSON(http.StatusOK, h.buildAuthResponse(c.Request.Context(), result))
 }
 
 // handleRefreshError centralizes error handling for refresh operations
 func (h *AuthHandler) handleRefreshError(c *gin.Context, err error) {
-	switch err {
-	case domainAuth.ErrInvalidToken, domainAuth.ErrTokenExpired, domainAuth.ErrTokenRevoked:
-		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
-	default:
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "refresh_failed", "auth.refresh_failed")
-	}
+	handlerutil.RespondDomainError(
+		c,
+		err,
+		handlerutil.LocalizedError(http.StatusInternalServerError, "refresh_failed", "auth.refresh_failed"),
+		handlerutil.MapError(domainAuth.ErrInvalidToken, handlerutil.LocalizedError(http.StatusUnauthorized, "unauthorized", "errors.unauthorized")),
+		handlerutil.MapError(domainAuth.ErrTokenExpired, handlerutil.LocalizedError(http.StatusUnauthorized, "unauthorized", "errors.unauthorized")),
+		handlerutil.MapError(domainAuth.ErrTokenRevoked, handlerutil.LocalizedError(http.StatusUnauthorized, "unauthorized", "errors.unauthorized")),
+	)
 }
 
 // Logout godoc
@@ -102,7 +104,7 @@ func (h *AuthHandler) handleRefreshError(c *gin.Context, err error) {
 func (h *AuthHandler) Logout(c *gin.Context) {
 	refreshToken, err := c.Cookie("refresh_token")
 	if err == nil && strings.TrimSpace(refreshToken) != "" {
-		if err := h.service.Logout(refreshToken); err != nil {
+		if err := h.service.Logout(c.Request.Context(), refreshToken); err != nil {
 			// Logout is intentionally best-effort and idempotent.
 			ginErr := c.Error(err)
 			if ginErr != nil {
@@ -117,10 +119,11 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 // handleLogin is a helper method to handle login logic.
 func (h *AuthHandler) handleLogin(c *gin.Context, email, password string) {
+	ctx := c.Request.Context()
 	userAgent := c.GetHeader("User-Agent")
 	ip := c.ClientIP()
 
-	result, err := h.service.Login(email, password, &userAgent, &ip)
+	result, err := h.service.Login(ctx, email, password, &userAgent, &ip)
 	if err != nil {
 		h.handleLoginError(c, err)
 		return
@@ -128,26 +131,24 @@ func (h *AuthHandler) handleLogin(c *gin.Context, email, password string) {
 
 	h.setAuthCookies(c, result)
 
-	c.JSON(http.StatusOK, h.buildAuthResponse(result))
+	c.JSON(http.StatusOK, h.buildAuthResponse(ctx, result))
 }
 
 // handleLoginError centralizes error handling for login operations
 func (h *AuthHandler) handleLoginError(c *gin.Context, err error) {
-	switch err {
-	case domainAuth.ErrInvalidCredentials:
-		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "invalid_credentials", "auth.invalid_credentials")
-	case domainAuth.ErrAccountDisabled:
-		handlerutil.RespondLocalizedError(c, http.StatusForbidden, "account_disabled", "auth.account_disabled")
-	case domainAuth.ErrAccountLocked:
-		handlerutil.RespondLocalizedError(c, http.StatusLocked, "account_locked", "auth.account_locked")
-	default:
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "login_failed", "auth.login_failed")
-	}
+	handlerutil.RespondDomainError(
+		c,
+		err,
+		handlerutil.LocalizedError(http.StatusInternalServerError, "login_failed", "auth.login_failed"),
+		handlerutil.MapError(domainAuth.ErrInvalidCredentials, handlerutil.LocalizedError(http.StatusUnauthorized, "invalid_credentials", "auth.invalid_credentials")),
+		handlerutil.MapError(domainAuth.ErrAccountDisabled, handlerutil.LocalizedError(http.StatusForbidden, "account_disabled", "auth.account_disabled")),
+		handlerutil.MapError(domainAuth.ErrAccountLocked, handlerutil.LocalizedError(http.StatusLocked, "account_locked", "auth.account_locked")),
+	)
 }
 
 // buildAuthResponse creates a consistent auth response
-func (h *AuthHandler) buildAuthResponse(result *domainAuth.LoginResult) dto.AuthResponse {
-	permissions := h.getRolePermissions(result.User.Role)
+func (h *AuthHandler) buildAuthResponse(ctx context.Context, result *domainAuth.LoginResult) dto.AuthResponse {
+	permissions := h.getRolePermissions(ctx, result.User.Role)
 	return dto.AuthResponse{
 		User: dto.AuthUserResponse{
 			ID:                  result.User.ID,
@@ -185,13 +186,14 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		return
 	}
 
-	usr, err := h.userService.GetByID(userID)
+	usr, err := h.userService.GetByID(c.Request.Context(), userID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
-			return
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "user.fetch_failed")
+		handlerutil.RespondDomainError(
+			c,
+			err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "user.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusUnauthorized, "unauthorized", "errors.unauthorized")),
+		)
 		return
 	}
 
@@ -202,7 +204,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		Email:               usr.Email,
 		IsActive:            usr.IsActive,
 		Role:                string(usr.Role),
-		Permissions:         h.getRolePermissions(usr.Role),
+		Permissions:         h.getRolePermissions(c.Request.Context(), usr.Role),
 		CreatedAt:           usr.CreatedAt,
 		UpdatedAt:           usr.UpdatedAt,
 		LastLoginAt:         usr.LastLoginAt,
@@ -212,11 +214,11 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	})
 }
 
-func (h *AuthHandler) getRolePermissions(role domainUser.Role) []string {
+func (h *AuthHandler) getRolePermissions(ctx context.Context, role domainUser.Role) []string {
 	if h.permissionSvc == nil {
 		return []string{}
 	}
-	permissions, err := h.permissionSvc.GetRolePermissions(role)
+	permissions, err := h.permissionSvc.GetRolePermissions(ctx, role)
 	if err != nil {
 		return []string{}
 	}

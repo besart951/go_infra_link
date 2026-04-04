@@ -33,7 +33,7 @@ func (h *BuildingHandler) CreateBuilding(c *gin.Context) {
 
 	building := toBuildingModel(req)
 
-	if err := h.service.Create(building); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
+	if err := h.service.Create(c.Request.Context(), building); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
 		return
 	}
 
@@ -56,7 +56,7 @@ func (h *BuildingHandler) GetBuilding(c *gin.Context) {
 		return
 	}
 
-	building, err := h.service.GetByID(id)
+	building, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.building_not_found") {
 			return
@@ -88,7 +88,7 @@ func (h *BuildingHandler) GetBuildingsByIDs(c *gin.Context) {
 		return
 	}
 
-	buildings, err := h.service.GetByIDs(req.Ids)
+	buildings, err := h.service.GetByIDs(c.Request.Context(), req.Ids)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
@@ -114,7 +114,7 @@ func (h *BuildingHandler) ListBuildings(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(query.Page, query.Limit, query.Search)
+	result, err := h.service.List(c.Request.Context(), query.Page, query.Limit, query.Search)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
@@ -146,7 +146,9 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 		return
 	}
 
-	building, err := h.service.GetByID(id)
+	ctx := c.Request.Context()
+
+	building, err := h.service.GetByID(ctx, id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.building_not_found") {
 			return
@@ -157,7 +159,7 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 
 	applyBuildingUpdate(building, req)
 
-	if err := h.service.Update(building); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
+	if err := h.service.Update(ctx, building); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
 
@@ -179,7 +181,7 @@ func (h *BuildingHandler) DeleteBuilding(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(id); err != nil {
+	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}

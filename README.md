@@ -1,6 +1,6 @@
 # go_infra_link
 
-Full-stack infrastructure link project with Go backend and future frontend.
+Full-stack infrastructure link project with Go backend and frontend.
 
 ## Quick Start
 
@@ -11,6 +11,8 @@ cd backend
 go run ./cmd/db-bootstrap
 go run ./cmd/app
 ```
+
+`db-bootstrap` applies the project's forward-only schema migrations and records them in `schema_migrations`.
 
 ## Development
 
@@ -56,7 +58,7 @@ http://localhost:8080/swagger/index.html
 This project follows **Clean/Hexagonal Architecture** principles:
 
 - **Backend**: Go service with layered architecture (domain, application, infrastructure)
-- **Frontend**: Separate frontend application (to be implemented)
+- **Frontend**: Separate frontend application
 
 ## Utility Commands
 

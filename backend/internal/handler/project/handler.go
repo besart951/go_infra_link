@@ -1,7 +1,6 @@
 package project
 
 import (
-	"errors"
 	"net/http"
 	"time"
 
@@ -103,13 +102,12 @@ func (h *ProjectHandler) ensureProjectAccess(c *gin.Context, projectID uuid.UUID
 		return false
 	}
 
-	hasAccess, err := h.service.CanAccessProject(userID, projectID)
+	hasAccess, err := h.service.CanAccessProject(c.Request.Context(), userID, projectID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "project.project_not_found")
-			return false
-		}
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_not_found")),
+		)
 		return false
 	}
 

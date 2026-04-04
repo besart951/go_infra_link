@@ -18,7 +18,8 @@ func RequireGlobalRole(authz AuthorizationChecker, min domainUser.Role) gin.Hand
 			return
 		}
 
-		role, err := authz.GetGlobalRole(userID)
+		ctx := c.Request.Context()
+		role, err := authz.GetGlobalRole(ctx, userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 			c.Abort()
@@ -45,7 +46,8 @@ func RequireTeamRole(authz AuthorizationChecker, teamIDParam string, min domainT
 			return
 		}
 
-		globalRole, err := authz.GetGlobalRole(userID)
+		ctx := c.Request.Context()
+		globalRole, err := authz.GetGlobalRole(ctx, userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 			c.Abort()
@@ -63,7 +65,7 @@ func RequireTeamRole(authz AuthorizationChecker, teamIDParam string, min domainT
 			return
 		}
 
-		role, err := authz.GetTeamRole(teamID, userID)
+		role, err := authz.GetTeamRole(ctx, teamID, userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 			c.Abort()

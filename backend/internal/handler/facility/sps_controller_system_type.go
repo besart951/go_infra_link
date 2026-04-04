@@ -25,6 +25,7 @@ func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService) *
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
 // @Param sps_controller_id query string false "SPS Controller ID"
+// @Param project_id query string false "Project ID (filter by project)"
 // @Success 200 {object} SPSControllerSystemTypeListResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -40,12 +41,21 @@ func (h *SPSControllerSystemTypeHandler) ListSPSControllerSystemTypes(c *gin.Con
 		return
 	}
 
+	projectID, ok := parseUUIDQueryParam(c, "project_id")
+	if !ok {
+		return
+	}
+
+	ctx := c.Request.Context()
+
 	var result *domain.PaginatedList[domainFacility.SPSControllerSystemType]
 	var err error
 	if spsControllerID != nil {
-		result, err = h.service.ListBySPSControllerID(*spsControllerID, query.Page, query.Limit, query.Search)
+		result, err = h.service.ListBySPSControllerID(ctx, *spsControllerID, query.Page, query.Limit, query.Search)
+	} else if projectID != nil {
+		result, err = h.service.ListByProjectID(ctx, *projectID, query.Page, query.Limit, query.Search)
 	} else {
-		result, err = h.service.List(query.Page, query.Limit, query.Search)
+		result, err = h.service.List(ctx, query.Page, query.Limit, query.Search)
 	}
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
@@ -71,7 +81,7 @@ func (h *SPSControllerSystemTypeHandler) GetSPSControllerSystemType(c *gin.Conte
 		return
 	}
 
-	item, err := h.service.GetByID(id)
+	item, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.sps_controller_system_type_not_found") {
 			return
@@ -99,7 +109,7 @@ func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Cont
 		return
 	}
 
-	copyEntity, err := h.service.CopyByID(id)
+	copyEntity, err := h.service.CopyByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			respondLocalizedNotFoundError(c, "facility.sps_controller_system_type_not_found")
@@ -132,7 +142,7 @@ func (h *SPSControllerSystemTypeHandler) DeleteSPSControllerSystemType(c *gin.Co
 		return
 	}
 
-	if err := h.service.DeleteByID(id); err != nil {
+	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.sps_controller_system_type_not_found") {
 			return
 		}

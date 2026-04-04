@@ -1,10 +1,13 @@
 package auth
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type RefreshTokenRepository interface {
-	Create(token *RefreshToken) error
-	GetByTokenHash(tokenHash string) (*RefreshToken, error)
-	RevokeByTokenHash(tokenHash string, revokedAt time.Time) error
-	DeleteExpired(before time.Time) error
+	Create(ctx context.Context, token *RefreshToken) error
+	GetByTokenHash(ctx context.Context, tokenHash string) (*RefreshToken, error)
+	RevokeByTokenHash(ctx context.Context, tokenHash string, revokedAt time.Time) error
+	DeleteExpired(ctx context.Context, before time.Time) error
 }

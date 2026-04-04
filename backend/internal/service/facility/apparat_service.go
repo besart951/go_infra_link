@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -20,32 +21,32 @@ func NewApparatService(repo domainFacility.ApparatRepository) *ApparatService {
 	}
 }
 
-func (s *ApparatService) Create(apparat *domainFacility.Apparat) error {
+func (s *ApparatService) Create(ctx context.Context, apparat *domainFacility.Apparat) error {
 	if err := s.validateRequiredFields(apparat); err != nil {
 		return err
 	}
-	if err := s.ensureUnique(apparat, nil); err != nil {
+	if err := s.ensureUnique(ctx, apparat, nil); err != nil {
 		return err
 	}
-	return s.repo.Create(apparat)
+	return s.repo.Create(ctx, apparat)
 }
 
-func (s *ApparatService) GetByIDs(ids []uuid.UUID) ([]*domainFacility.Apparat, error) {
-	return s.extRepo.GetByIds(ids)
+func (s *ApparatService) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.Apparat, error) {
+	return s.extRepo.GetByIds(ctx, ids)
 }
 
-func (s *ApparatService) Update(apparat *domainFacility.Apparat) error {
+func (s *ApparatService) Update(ctx context.Context, apparat *domainFacility.Apparat) error {
 	if err := s.validateRequiredFields(apparat); err != nil {
 		return err
 	}
-	if err := s.ensureUnique(apparat, &apparat.ID); err != nil {
+	if err := s.ensureUnique(ctx, apparat, &apparat.ID); err != nil {
 		return err
 	}
-	return s.repo.Update(apparat)
+	return s.repo.Update(ctx, apparat)
 }
 
-func (s *ApparatService) GetSystemPartIDs(id uuid.UUID) ([]uuid.UUID, error) {
-	apparat, err := s.GetByID(id)
+func (s *ApparatService) GetSystemPartIDs(ctx context.Context, id uuid.UUID) ([]uuid.UUID, error) {
+	apparat, err := s.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -69,10 +70,10 @@ func (s *ApparatService) validateRequiredFields(apparat *domainFacility.Apparat)
 	return nil
 }
 
-func (s *ApparatService) ensureUnique(apparat *domainFacility.Apparat, excludeID *uuid.UUID) error {
+func (s *ApparatService) ensureUnique(ctx context.Context, apparat *domainFacility.Apparat, excludeID *uuid.UUID) error {
 	ve := domain.NewValidationError()
 	if strings.TrimSpace(apparat.ShortName) != "" {
-		items, err := s.repo.GetPaginatedList(domain.PaginationParams{Page: 1, Limit: 1000, Search: apparat.ShortName})
+		items, err := s.repo.GetPaginatedList(ctx, domain.PaginationParams{Page: 1, Limit: 1000, Search: apparat.ShortName})
 		if err != nil {
 			return err
 		}
@@ -88,7 +89,7 @@ func (s *ApparatService) ensureUnique(apparat *domainFacility.Apparat, excludeID
 		}
 	}
 	if strings.TrimSpace(apparat.Name) != "" {
-		items, err := s.repo.GetPaginatedList(domain.PaginationParams{Page: 1, Limit: 1000, Search: apparat.Name})
+		items, err := s.repo.GetPaginatedList(ctx, domain.PaginationParams{Page: 1, Limit: 1000, Search: apparat.Name})
 		if err != nil {
 			return err
 		}

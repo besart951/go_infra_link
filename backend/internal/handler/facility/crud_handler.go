@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -11,11 +12,11 @@ import (
 // crudSvc is the minimal service interface required by crudHandler.
 // Any entity service that embeds baseService satisfies this automatically.
 type crudSvc[T any] interface {
-	Create(*T) error
-	GetByID(uuid.UUID) (*T, error)
-	List(int, int, string) (*domain.PaginatedList[T], error)
-	Update(*T) error
-	DeleteByID(uuid.UUID) error
+	Create(context.Context, *T) error
+	GetByID(context.Context, uuid.UUID) (*T, error)
+	List(context.Context, int, int, string) (*domain.PaginatedList[T], error)
+	Update(context.Context, *T) error
+	DeleteByID(context.Context, uuid.UUID) error
 }
 
 // crudHandler holds the generic logic for Create, GetByID, List, Update, Delete.
@@ -62,8 +63,9 @@ func (h *crudHandler[T, CreateReq, UpdateReq]) handleCreate(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
+	ctx := c.Request.Context()
 	item := h.fromCreate(req)
-	if err := h.svc.Create(item); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
+	if err := h.svc.Create(ctx, item); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
 		return
 	}
 	c.JSON(http.StatusCreated, h.toResp(*item))
@@ -74,7 +76,8 @@ func (h *crudHandler[T, CreateReq, UpdateReq]) handleGetByID(c *gin.Context) {
 	if !ok {
 		return
 	}
-	item, err := h.svc.GetByID(id)
+	ctx := c.Request.Context()
+	item, err := h.svc.GetByID(ctx, id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, h.notFoundKey) {
 			return
@@ -90,7 +93,8 @@ func (h *crudHandler[T, CreateReq, UpdateReq]) handleList(c *gin.Context) {
 	if !ok {
 		return
 	}
-	result, err := h.svc.List(query.Page, query.Limit, query.Search)
+	ctx := c.Request.Context()
+	result, err := h.svc.List(ctx, query.Page, query.Limit, query.Search)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
@@ -107,7 +111,8 @@ func (h *crudHandler[T, CreateReq, UpdateReq]) handleUpdate(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
-	item, err := h.svc.GetByID(id)
+	ctx := c.Request.Context()
+	item, err := h.svc.GetByID(ctx, id)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, h.notFoundKey) {
 			return
@@ -116,7 +121,7 @@ func (h *crudHandler[T, CreateReq, UpdateReq]) handleUpdate(c *gin.Context) {
 		return
 	}
 	h.applyUpdate(item, req)
-	if err := h.svc.Update(item); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
+	if err := h.svc.Update(ctx, item); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
 		return
 	}
 	c.JSON(http.StatusOK, h.toResp(*item))
@@ -127,7 +132,8 @@ func (h *crudHandler[T, CreateReq, UpdateReq]) handleDelete(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.svc.DeleteByID(id); err != nil {
+	ctx := c.Request.Context()
+	if err := h.svc.DeleteByID(ctx, id); err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
 		return
 	}

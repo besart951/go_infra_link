@@ -1,6 +1,7 @@
 package facilitysql
 
 import (
+	"context"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -25,19 +26,19 @@ func NewSPSControllerRepository(db *gorm.DB) domainFacility.SPSControllerReposit
 	return &spsControllerRepo{BaseRepository: baseRepo, db: db}
 }
 
-func (r *spsControllerRepo) GetPaginatedList(params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSController], error) {
-	result, err := r.BaseRepository.GetPaginatedList(params, 10)
+func (r *spsControllerRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSController], error) {
+	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
 	if err != nil {
 		return nil, err
 	}
 	return gormbase.DerefPaginatedList(result), nil
 }
 
-func (r *spsControllerRepo) GetPaginatedListByControlCabinetID(controlCabinetID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSController], error) {
+func (r *spsControllerRepo) GetPaginatedListByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSController], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domainFacility.SPSController{}).
+	query := r.db.WithContext(ctx).Model(&domainFacility.SPSController{}).
 		Where("control_cabinet_id = ?", controlCabinetID)
 
 	if strings.TrimSpace(params.Search) != "" {
@@ -63,9 +64,9 @@ func (r *spsControllerRepo) GetPaginatedListByControlCabinetID(controlCabinetID 
 	}, nil
 }
 
-func (r *spsControllerRepo) GetIDsByControlCabinetID(controlCabinetID uuid.UUID) ([]uuid.UUID, error) {
+func (r *spsControllerRepo) GetIDsByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
-	err := r.db.Model(&domainFacility.SPSController{}).
+	err := r.db.WithContext(ctx).Model(&domainFacility.SPSController{}).
 		Where("control_cabinet_id = ?", controlCabinetID).
 		Pluck("id", &ids).Error
 	if err != nil {
@@ -74,12 +75,12 @@ func (r *spsControllerRepo) GetIDsByControlCabinetID(controlCabinetID uuid.UUID)
 	return ids, nil
 }
 
-func (r *spsControllerRepo) GetIDsByControlCabinetIDs(controlCabinetIDs []uuid.UUID) ([]uuid.UUID, error) {
+func (r *spsControllerRepo) GetIDsByControlCabinetIDs(ctx context.Context, controlCabinetIDs []uuid.UUID) ([]uuid.UUID, error) {
 	if len(controlCabinetIDs) == 0 {
 		return []uuid.UUID{}, nil
 	}
 	var ids []uuid.UUID
-	err := r.db.Model(&domainFacility.SPSController{}).
+	err := r.db.WithContext(ctx).Model(&domainFacility.SPSController{}).
 		Where("control_cabinet_id IN ?", controlCabinetIDs).
 		Pluck("id", &ids).Error
 	if err != nil {
@@ -88,9 +89,9 @@ func (r *spsControllerRepo) GetIDsByControlCabinetIDs(controlCabinetIDs []uuid.U
 	return ids, nil
 }
 
-func (r *spsControllerRepo) ListGADevicesByControlCabinetID(controlCabinetID uuid.UUID) ([]string, error) {
+func (r *spsControllerRepo) ListGADevicesByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]string, error) {
 	var devices []string
-	err := r.db.Model(&domainFacility.SPSController{}).
+	err := r.db.WithContext(ctx).Model(&domainFacility.SPSController{}).
 		Where("control_cabinet_id = ?", controlCabinetID).
 		Where("ga_device IS NOT NULL").
 		Where("TRIM(ga_device) <> ''").
@@ -101,8 +102,8 @@ func (r *spsControllerRepo) ListGADevicesByControlCabinetID(controlCabinetID uui
 	return devices, nil
 }
 
-func (r *spsControllerRepo) ExistsGADevice(controlCabinetID uuid.UUID, gaDevice string, excludeID *uuid.UUID) (bool, error) {
-	query := r.db.Model(&domainFacility.SPSController{}).
+func (r *spsControllerRepo) ExistsGADevice(ctx context.Context, controlCabinetID uuid.UUID, gaDevice string, excludeID *uuid.UUID) (bool, error) {
+	query := r.db.WithContext(ctx).Model(&domainFacility.SPSController{}).
 		Where("control_cabinet_id = ?", controlCabinetID).
 		Where("UPPER(ga_device) = ?", strings.ToUpper(strings.TrimSpace(gaDevice)))
 
@@ -117,8 +118,8 @@ func (r *spsControllerRepo) ExistsGADevice(controlCabinetID uuid.UUID, gaDevice 
 	return count > 0, nil
 }
 
-func (r *spsControllerRepo) ExistsIPAddressVlan(ipAddress string, vlan string, excludeID *uuid.UUID) (bool, error) {
-	query := r.db.Model(&domainFacility.SPSController{}).
+func (r *spsControllerRepo) ExistsIPAddressVlan(ctx context.Context, ipAddress string, vlan string, excludeID *uuid.UUID) (bool, error) {
+	query := r.db.WithContext(ctx).Model(&domainFacility.SPSController{}).
 		Where("ip_address = ?", strings.TrimSpace(ipAddress)).
 		Where("vlan = ?", strings.TrimSpace(vlan))
 
@@ -133,12 +134,12 @@ func (r *spsControllerRepo) ExistsIPAddressVlan(ipAddress string, vlan string, e
 	return count > 0, nil
 }
 
-func (r *spsControllerRepo) GetByIdsForExport(ids []uuid.UUID) ([]domainFacility.SPSController, error) {
+func (r *spsControllerRepo) GetByIdsForExport(ctx context.Context, ids []uuid.UUID) ([]domainFacility.SPSController, error) {
 	if len(ids) == 0 {
 		return []domainFacility.SPSController{}, nil
 	}
 	var items []domainFacility.SPSController
-	err := r.db.
+	err := r.db.WithContext(ctx).
 		Where("sps_controllers.id IN ?", ids).
 		Preload("ControlCabinet").
 		Preload("ControlCabinet.Building").
@@ -147,11 +148,11 @@ func (r *spsControllerRepo) GetByIdsForExport(ids []uuid.UUID) ([]domainFacility
 	return items, err
 }
 
-func (r *spsControllerRepo) DeleteByIds(ids []uuid.UUID) error {
+func (r *spsControllerRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	return r.db.
+	return r.db.WithContext(ctx).
 		Where("id IN ?", ids).
 		Delete(&domainFacility.SPSController{}).Error
 }
