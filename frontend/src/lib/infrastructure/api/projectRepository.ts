@@ -18,7 +18,11 @@ import type {
   ProjectSPSControllerListResponse,
   ProjectFieldDeviceListResponse
 } from '$lib/domain/project/index.js';
-import type { ObjectDataListParams } from '$lib/domain/facility/index.js';
+import type {
+  ControlCabinet,
+  ObjectDataListParams,
+  SPSController
+} from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
 
 function buildQuery(params: Record<string, string | number | boolean | undefined>): string {
@@ -195,6 +199,17 @@ export const projectRepository: ProjectRepository = {
     });
   },
 
+  async copyControlCabinet(
+    projectId: string,
+    controlCabinetId: string,
+    signal?: AbortSignal
+  ): Promise<ControlCabinet> {
+    return api<ControlCabinet>(`/projects/${projectId}/control-cabinets/${controlCabinetId}/copy`, {
+      method: 'POST',
+      signal
+    });
+  },
+
   // ──────────────────────────────────────────────────────────────────────
   // SPS Controllers
   // ──────────────────────────────────────────────────────────────────────
@@ -229,6 +244,17 @@ export const projectRepository: ProjectRepository = {
   ): Promise<void> {
     return api<void>(`/projects/${projectId}/sps-controllers/${linkId}`, {
       method: 'DELETE',
+      signal
+    });
+  },
+
+  async copySPSController(
+    projectId: string,
+    spsControllerId: string,
+    signal?: AbortSignal
+  ): Promise<SPSController> {
+    return api<SPSController>(`/projects/${projectId}/sps-controllers/${spsControllerId}/copy`, {
+      method: 'POST',
       signal
     });
   },

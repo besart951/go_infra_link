@@ -7,64 +7,61 @@
   import { addToast } from '$lib/components/toast.svelte';
   import TableApparatSelect from '../table-selects/TableApparatSelect.svelte';
   import TableSystemPartSelect from '../table-selects/TableSystemPartSelect.svelte';
-  import type { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
   import type {
-    Apparat,
-    SystemPart,
     BulkUpdateFieldDeviceItem,
     SpecificationInput
   } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { t as translate } from '$lib/i18n/index.js';
-
-  interface Props {
-    selectedCount: number;
-    selectedIds: Set<string>;
-    allApparats: Apparat[];
-    allSystemParts: SystemPart[];
-    editing: ReturnType<typeof useFieldDeviceEditing>;
-  }
-
-  let { selectedCount, selectedIds, allApparats, allSystemParts, editing }: Props = $props();
+  import { useFieldDeviceState } from './state/context.svelte.js';
 
   const t = createTranslator();
+  const fieldDeviceState = useFieldDeviceState();
 
   let bulkEditValues = $state<Partial<BulkUpdateFieldDeviceItem>>({});
   let bulkSpecValues = $state<Partial<SpecificationInput>>({});
   let showBulkSpecFields = $state(false);
 
-  const hasBulkValues = $derived(
-    Object.values(bulkEditValues).some((v) => v !== undefined && v !== '') ||
-      Object.values(bulkSpecValues).some((v) => v !== undefined && v !== '')
+  const hasBulkValues = $derived.by(
+    () =>
+      Object.values(bulkEditValues).some((value) => value !== undefined && value !== '') ||
+      Object.values(bulkSpecValues).some((value) => value !== undefined && value !== '')
   );
 
   function applyBulkEdits() {
-    if (selectedIds.size === 0) return;
+    if (fieldDeviceState.selectedIds.size === 0) return;
 
     let appliedCount = 0;
-    for (const deviceId of selectedIds) {
+
+    for (const deviceId of fieldDeviceState.selectedIds) {
       for (const [field, value] of Object.entries(bulkEditValues)) {
-        if (value !== undefined && value !== '') {
-          editing.queueEdit(deviceId, field as keyof BulkUpdateFieldDeviceItem, value);
-          appliedCount++;
-        }
+        if (value === undefined || value === '') continue;
+        fieldDeviceState.editing.queueEdit(
+          deviceId,
+          field as keyof BulkUpdateFieldDeviceItem,
+          value
+        );
+        appliedCount++;
       }
+
       for (const [field, value] of Object.entries(bulkSpecValues)) {
-        if (value !== undefined && value !== '') {
-          editing.queueSpecEdit(deviceId, field as keyof SpecificationInput, value);
-          appliedCount++;
-        }
+        if (value === undefined || value === '') continue;
+        fieldDeviceState.editing.queueSpecEdit(deviceId, field as keyof SpecificationInput, value);
+        appliedCount++;
       }
     }
 
     if (appliedCount > 0) {
       addToast(
-        translate('field_device.bulk_edit.toasts.applied', { count: selectedIds.size }),
+        translate('field_device.bulk_edit.toasts.applied', {
+          count: fieldDeviceState.selectedIds.size
+        }),
         'success'
       );
-    } else {
-      addToast(translate('field_device.bulk_edit.toasts.no_fields'), 'error');
+      return;
     }
+
+    addToast(translate('field_device.bulk_edit.toasts.no_fields'), 'error');
   }
 
   function clearBulkEdit() {
@@ -76,14 +73,13 @@
 <Card.Root class="border-primary/30 bg-primary/5">
   <Card.Header class="pb-3">
     <Card.Title class="text-base">
-      {$t('field_device.bulk_edit.title', { count: selectedCount })}
+      {$t('field_device.bulk_edit.title', { count: fieldDeviceState.selectedCount })}
     </Card.Title>
     <Card.Description>
       {$t('field_device.bulk_edit.description')}
     </Card.Description>
   </Card.Header>
   <Card.Content>
-    <!-- Device Fields -->
     <div class="mb-4">
       <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <div class="flex flex-col gap-1">
@@ -93,9 +89,9 @@
             placeholder={$t('field_device.bulk_edit.bmk_placeholder')}
             maxlength={10}
             value={bulkEditValues.bmk ?? ''}
-            oninput={(e: Event) => {
-              const v = (e.target as HTMLInputElement).value;
-              bulkEditValues = { ...bulkEditValues, bmk: v || undefined };
+            oninput={(event: Event) => {
+              const value = (event.target as HTMLInputElement).value;
+              bulkEditValues = { ...bulkEditValues, bmk: value || undefined };
             }}
           />
         </div>
@@ -106,9 +102,9 @@
             placeholder={$t('field_device.bulk_edit.description_placeholder')}
             maxlength={250}
             value={bulkEditValues.description ?? ''}
-            oninput={(e: Event) => {
-              const v = (e.target as HTMLInputElement).value;
-              bulkEditValues = { ...bulkEditValues, description: v || undefined };
+            oninput={(event: Event) => {
+              const value = (event.target as HTMLInputElement).value;
+              bulkEditValues = { ...bulkEditValues, description: value || undefined };
             }}
           />
         </div>
@@ -119,9 +115,9 @@
             placeholder={$t('field_device.bulk_edit.text_fix_placeholder')}
             maxlength={250}
             value={bulkEditValues.text_fix ?? ''}
-            oninput={(e: Event) => {
-              const v = (e.target as HTMLInputElement).value;
-              bulkEditValues = { ...bulkEditValues, text_fix: v || undefined };
+            oninput={(event: Event) => {
+              const value = (event.target as HTMLInputElement).value;
+              bulkEditValues = { ...bulkEditValues, text_fix: value || undefined };
             }}
           />
         </div>
@@ -133,11 +129,11 @@
             min={1}
             max={99}
             value={bulkEditValues.apparat_nr?.toString() ?? ''}
-            oninput={(e: Event) => {
-              const v = (e.target as HTMLInputElement).value;
+            oninput={(event: Event) => {
+              const value = (event.target as HTMLInputElement).value;
               bulkEditValues = {
                 ...bulkEditValues,
-                apparat_nr: v ? parseInt(v) : undefined
+                apparat_nr: value ? parseInt(value, 10) : undefined
               };
             }}
           />
@@ -145,29 +141,28 @@
         <div class="flex flex-col gap-1">
           <Label class="text-xs">{$t('field_device.bulk_edit.apparat')}</Label>
           <TableApparatSelect
-            items={allApparats}
+            items={fieldDeviceState.allApparats}
             value={bulkEditValues.apparat_id ?? ''}
             width="w-full"
-            onValueChange={(v) => {
-              bulkEditValues = { ...bulkEditValues, apparat_id: v || undefined };
+            onValueChange={(value) => {
+              bulkEditValues = { ...bulkEditValues, apparat_id: value || undefined };
             }}
           />
         </div>
         <div class="flex flex-col gap-1">
           <Label class="text-xs">{$t('field_device.bulk_edit.system_part')}</Label>
           <TableSystemPartSelect
-            items={allSystemParts}
+            items={fieldDeviceState.allSystemParts}
             value={bulkEditValues.system_part_id ?? ''}
             width="w-full"
-            onValueChange={(v) => {
-              bulkEditValues = { ...bulkEditValues, system_part_id: v || undefined };
+            onValueChange={(value) => {
+              bulkEditValues = { ...bulkEditValues, system_part_id: value || undefined };
             }}
           />
         </div>
       </div>
     </div>
 
-    <!-- Specification Fields (collapsible) -->
     <div class="mb-4">
       <button
         type="button"
@@ -190,12 +185,9 @@
               placeholder={$t('field_device.bulk_edit.supplier_placeholder')}
               maxlength={250}
               value={bulkSpecValues.specification_supplier ?? ''}
-              oninput={(e: Event) => {
-                const v = (e.target as HTMLInputElement).value;
-                bulkSpecValues = {
-                  ...bulkSpecValues,
-                  specification_supplier: v || undefined
-                };
+              oninput={(event: Event) => {
+                const value = (event.target as HTMLInputElement).value;
+                bulkSpecValues = { ...bulkSpecValues, specification_supplier: value || undefined };
               }}
             />
           </div>
@@ -206,12 +198,9 @@
               placeholder={$t('field_device.bulk_edit.brand_placeholder')}
               maxlength={250}
               value={bulkSpecValues.specification_brand ?? ''}
-              oninput={(e: Event) => {
-                const v = (e.target as HTMLInputElement).value;
-                bulkSpecValues = {
-                  ...bulkSpecValues,
-                  specification_brand: v || undefined
-                };
+              oninput={(event: Event) => {
+                const value = (event.target as HTMLInputElement).value;
+                bulkSpecValues = { ...bulkSpecValues, specification_brand: value || undefined };
               }}
             />
           </div>
@@ -222,12 +211,9 @@
               placeholder={$t('field_device.bulk_edit.type_placeholder')}
               maxlength={250}
               value={bulkSpecValues.specification_type ?? ''}
-              oninput={(e: Event) => {
-                const v = (e.target as HTMLInputElement).value;
-                bulkSpecValues = {
-                  ...bulkSpecValues,
-                  specification_type: v || undefined
-                };
+              oninput={(event: Event) => {
+                const value = (event.target as HTMLInputElement).value;
+                bulkSpecValues = { ...bulkSpecValues, specification_type: value || undefined };
               }}
             />
           </div>
@@ -238,11 +224,11 @@
               placeholder={$t('field_device.bulk_edit.motor_valve_placeholder')}
               maxlength={250}
               value={bulkSpecValues.additional_info_motor_valve ?? ''}
-              oninput={(e: Event) => {
-                const v = (e.target as HTMLInputElement).value;
+              oninput={(event: Event) => {
+                const value = (event.target as HTMLInputElement).value;
                 bulkSpecValues = {
                   ...bulkSpecValues,
-                  additional_info_motor_valve: v || undefined
+                  additional_info_motor_valve: value || undefined
                 };
               }}
             />
@@ -253,11 +239,11 @@
               type="number"
               placeholder={$t('field_device.bulk_edit.size_placeholder')}
               value={bulkSpecValues.additional_info_size?.toString() ?? ''}
-              oninput={(e: Event) => {
-                const v = (e.target as HTMLInputElement).value;
+              oninput={(event: Event) => {
+                const value = (event.target as HTMLInputElement).value;
                 bulkSpecValues = {
                   ...bulkSpecValues,
-                  additional_info_size: v ? parseInt(v) : undefined
+                  additional_info_size: value ? parseInt(value, 10) : undefined
                 };
               }}
             />
@@ -269,11 +255,11 @@
               placeholder={$t('field_device.bulk_edit.install_location_placeholder')}
               maxlength={250}
               value={bulkSpecValues.additional_information_installation_location ?? ''}
-              oninput={(e: Event) => {
-                const v = (e.target as HTMLInputElement).value;
+              oninput={(event: Event) => {
+                const value = (event.target as HTMLInputElement).value;
                 bulkSpecValues = {
                   ...bulkSpecValues,
-                  additional_information_installation_location: v || undefined
+                  additional_information_installation_location: value || undefined
                 };
               }}
             />
@@ -284,11 +270,11 @@
               type="number"
               placeholder={$t('field_device.bulk_edit.ph_placeholder')}
               value={bulkSpecValues.electrical_connection_ph?.toString() ?? ''}
-              oninput={(e: Event) => {
-                const v = (e.target as HTMLInputElement).value;
+              oninput={(event: Event) => {
+                const value = (event.target as HTMLInputElement).value;
                 bulkSpecValues = {
                   ...bulkSpecValues,
-                  electrical_connection_ph: v ? parseInt(v) : undefined
+                  electrical_connection_ph: value ? parseInt(value, 10) : undefined
                 };
               }}
             />
@@ -300,11 +286,11 @@
               placeholder={$t('field_device.bulk_edit.acdc_placeholder')}
               maxlength={2}
               value={bulkSpecValues.electrical_connection_acdc ?? ''}
-              oninput={(e: Event) => {
-                const v = (e.target as HTMLInputElement).value;
+              oninput={(event: Event) => {
+                const value = (event.target as HTMLInputElement).value;
                 bulkSpecValues = {
                   ...bulkSpecValues,
-                  electrical_connection_acdc: v || undefined
+                  electrical_connection_acdc: value || undefined
                 };
               }}
             />
@@ -315,11 +301,11 @@
               type="number"
               placeholder={$t('field_device.bulk_edit.amperage_placeholder')}
               value={bulkSpecValues.electrical_connection_amperage?.toString() ?? ''}
-              oninput={(e: Event) => {
-                const v = (e.target as HTMLInputElement).value;
+              oninput={(event: Event) => {
+                const value = (event.target as HTMLInputElement).value;
                 bulkSpecValues = {
                   ...bulkSpecValues,
-                  electrical_connection_amperage: v ? parseFloat(v) : undefined
+                  electrical_connection_amperage: value ? parseFloat(value) : undefined
                 };
               }}
             />
@@ -330,11 +316,11 @@
               type="number"
               placeholder={$t('field_device.bulk_edit.power_placeholder')}
               value={bulkSpecValues.electrical_connection_power?.toString() ?? ''}
-              oninput={(e: Event) => {
-                const v = (e.target as HTMLInputElement).value;
+              oninput={(event: Event) => {
+                const value = (event.target as HTMLInputElement).value;
                 bulkSpecValues = {
                   ...bulkSpecValues,
-                  electrical_connection_power: v ? parseFloat(v) : undefined
+                  electrical_connection_power: value ? parseFloat(value) : undefined
                 };
               }}
             />
@@ -345,11 +331,11 @@
               type="number"
               placeholder={$t('field_device.bulk_edit.rotation_placeholder')}
               value={bulkSpecValues.electrical_connection_rotation?.toString() ?? ''}
-              oninput={(e: Event) => {
-                const v = (e.target as HTMLInputElement).value;
+              oninput={(event: Event) => {
+                const value = (event.target as HTMLInputElement).value;
                 bulkSpecValues = {
                   ...bulkSpecValues,
-                  electrical_connection_rotation: v ? parseInt(v) : undefined
+                  electrical_connection_rotation: value ? parseInt(value, 10) : undefined
                 };
               }}
             />
@@ -358,7 +344,6 @@
       {/if}
     </div>
 
-    <!-- Actions -->
     <div class="flex gap-2">
       <Button size="sm" onclick={applyBulkEdits} disabled={!hasBulkValues}>
         <CopyCheck class="mr-1 h-4 w-4" />

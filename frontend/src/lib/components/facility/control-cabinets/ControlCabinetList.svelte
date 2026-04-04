@@ -7,128 +7,88 @@
   import ControlCabinetForm from '$lib/components/facility/forms/ControlCabinetForm.svelte';
   import type { ControlCabinet } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
+  import { canPerform } from '$lib/utils/permissions.js';
   import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
   import PlusIcon from '@lucide/svelte/icons/plus';
-
-  type ListState = {
-    items: ControlCabinet[];
-    total: number;
-    page: number;
-    pageSize: number;
-    totalPages: number;
-    searchText: string;
-    loading: boolean;
-    error: string | null;
-  };
-
-  type Props = {
-    state: ListState;
-    showForm: boolean;
-    editingItem?: ControlCabinet;
-    projectId?: string;
-    searchPlaceholder: string;
-    emptyMessage: string;
-    cabinetColumnLabel: string;
-    buildingColumnLabel: string;
-    newLabel: string;
-    canCreate: boolean;
-    canDuplicate: boolean;
-    canUpdate: boolean;
-    canDelete: boolean;
-    canView?: boolean;
-    getBuildingLabel: (buildingId: string) => string;
-    onCreate: () => void;
-    onSearch: (text: string) => void;
-    onPageChange: (page: number) => void;
-    onReload: () => void;
-    onFormSuccess: (cabinet: ControlCabinet) => void;
-    onFormCancel: () => void;
-    onEdit: (cabinet: ControlCabinet) => void;
-    onDelete: (cabinet: ControlCabinet) => void | Promise<void>;
-    onDuplicate: (cabinet: ControlCabinet) => void | Promise<void>;
-    onCopy: (value: string) => void | Promise<void>;
-    onView?: (cabinet: ControlCabinet) => void | Promise<void>;
-  };
-
-  let {
-    state,
-    showForm,
-    editingItem = undefined,
-    projectId = undefined,
-    searchPlaceholder,
-    emptyMessage,
-    cabinetColumnLabel,
-    buildingColumnLabel,
-    newLabel,
-    canCreate,
-    canDuplicate,
-    canUpdate,
-    canDelete,
-    canView = true,
-    getBuildingLabel,
-    onCreate,
-    onSearch,
-    onPageChange,
-    onReload,
-    onFormSuccess,
-    onFormCancel,
-    onEdit,
-    onDelete,
-    onDuplicate,
-    onCopy,
-    onView
-  }: Props = $props();
+  import { useControlCabinetState } from './state/context.svelte.js';
 
   const t = createTranslator();
+  const state = useControlCabinetState();
 
-  async function handleView(cabinet: ControlCabinet) {
-    if (onView) {
-      await onView(cabinet);
-      return;
-    }
+  const columns = $derived.by(() => [
+    {
+      key: 'cabinet_nr',
+      label: state.isProjectContext
+        ? $t('projects.control_cabinets.table.control_cabinet')
+        : $t('facility.forms.control_cabinet.number_label')
+    },
+    {
+      key: 'building',
+      label: state.isProjectContext
+        ? $t('projects.control_cabinets.table.building')
+        : $t('facility.building')
+    },
+    { key: 'actions', label: '', width: 'w-[100px]' }
+  ]);
+
+  const searchPlaceholder = $derived.by(() =>
+    state.isProjectContext
+      ? $t('projects.control_cabinets.search_placeholder')
+      : $t('facility.search_control_cabinets')
+  );
+
+  const emptyMessage = $derived.by(() =>
+    state.isProjectContext
+      ? $t('projects.control_cabinets.empty')
+      : $t('facility.no_control_cabinets_found')
+  );
+
+  const newLabel = $derived.by(() =>
+    state.isProjectContext
+      ? $t('projects.control_cabinets.new')
+      : $t('facility.new_control_cabinet')
+  );
+
+  async function handleView(cabinet: ControlCabinet): Promise<void> {
     await goto(`/facility/control-cabinets/${cabinet.id}`);
   }
 </script>
 
 <div class="flex flex-col gap-4">
   <div class="flex flex-wrap items-center justify-end gap-2">
-    {#if !showForm && canCreate}
-      <Button onclick={onCreate}>
+    {#if !state.showForm && canPerform('create', 'controlcabinet')}
+      <Button onclick={() => state.openCreateForm()}>
         <PlusIcon class="mr-2 size-4" />
         {newLabel}
       </Button>
     {/if}
   </div>
 
-  {#if showForm}
+  {#if state.showForm}
     <ControlCabinetForm
-      initialData={editingItem}
-      {projectId}
-      onSuccess={onFormSuccess}
-      onCancel={onFormCancel}
+      initialData={state.editingItem}
+      projectId={state.projectId}
+      onSuccess={(cabinet) => void state.handleFormSuccess(cabinet)}
+      onCancel={() => state.cancelForm()}
     />
   {/if}
 
   <PaginatedList
     {state}
-    columns={[
-      { key: 'building', label: buildingColumnLabel },
-      { key: 'cabinet_nr', label: cabinetColumnLabel },
-      { key: 'actions', label: '', width: 'w-[100px]' }
-    ]}
+    {columns}
     {searchPlaceholder}
     {emptyMessage}
-    {onSearch}
-    {onPageChange}
-    {onReload}
+    onSearch={(text) => void state.search(text)}
+    onPageChange={(page) => void state.goToPage(page)}
+    onReload={() => void state.reload()}
   >
     {#snippet rowSnippet(cabinet: ControlCabinet)}
       <Table.Cell class="font-medium">
-        <button class="hover:underline" type="button" onclick={() => handleView(cabinet)}>
+        <button class="hover:underline" type="button" onclick={() => void handleView(cabinet)}>
           {cabinet.control_cabinet_nr ?? $t('common.not_available')}
         </button>
       </Table.Cell>
-      <Table.Cell>{getBuildingLabel(cabinet.building_id)}</Table.Cell>
+      <Table.Cell>{state.getBuildingLabel(cabinet.building_id)}</Table.Cell>
       <Table.Cell class="text-right">
         <DropdownMenu.Root>
           <DropdownMenu.Trigger>
@@ -139,27 +99,30 @@
             {/snippet}
           </DropdownMenu.Trigger>
           <DropdownMenu.Content align="end" class="w-44">
-            <DropdownMenu.Item onclick={() => onCopy(cabinet.control_cabinet_nr ?? cabinet.id)}>
+            <DropdownMenu.Item
+              onclick={() => void state.copyToClipboard(cabinet.control_cabinet_nr ?? cabinet.id)}
+            >
               {$t('common.copy')}
             </DropdownMenu.Item>
-            {#if canDuplicate}
-              <DropdownMenu.Item onclick={() => onDuplicate(cabinet)}>
+            {#if canPerform('create', 'controlcabinet')}
+              <DropdownMenu.Item onclick={() => void state.duplicateControlCabinet(cabinet)}>
                 {$t('facility.duplicate')}
               </DropdownMenu.Item>
             {/if}
-            {#if canView}
-              <DropdownMenu.Item onclick={() => handleView(cabinet)}>
-                {$t('common.view')}
-              </DropdownMenu.Item>
-            {/if}
-            {#if canUpdate}
-              <DropdownMenu.Item onclick={() => onEdit(cabinet)}>
+            <DropdownMenu.Item onclick={() => void handleView(cabinet)}>
+              {$t('common.view')}
+            </DropdownMenu.Item>
+            {#if canPerform('update', 'controlcabinet')}
+              <DropdownMenu.Item onclick={() => state.editControlCabinet(cabinet)}>
                 {$t('common.edit')}
               </DropdownMenu.Item>
             {/if}
-            {#if canDelete}
+            {#if canPerform('delete', 'controlcabinet')}
               <DropdownMenu.Separator />
-              <DropdownMenu.Item variant="destructive" onclick={() => onDelete(cabinet)}>
+              <DropdownMenu.Item
+                variant="destructive"
+                onclick={() => void state.deleteControlCabinet(cabinet)}
+              >
                 {$t('common.delete')}
               </DropdownMenu.Item>
             {/if}

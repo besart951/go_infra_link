@@ -1,17 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
   import ListPlusIcon from '@lucide/svelte/icons/list-plus';
-  import { createFieldDeviceStore } from '$lib/stores/facility/fieldDeviceStore.js';
-  import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
-  import { addToast } from '$lib/components/toast.svelte';
-  import { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
   import { useUnsavedChangesWarning } from '$lib/hooks/useUnsavedChangesWarning.svelte.js';
-  import type { FieldDevice, Apparat, SystemPart } from '$lib/domain/facility/index.js';
-  import type { FieldDeviceFilters } from '$lib/stores/facility/fieldDeviceStore.js';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import { t as translate } from '$lib/i18n/index.js';
   import FieldDeviceMultiCreateForm from './FieldDeviceMultiCreateForm.svelte';
   import FieldDeviceFilterCard from './FieldDeviceFilterCard.svelte';
   import FieldDeviceSearchBar from './FieldDeviceSearchBar.svelte';
@@ -20,282 +13,61 @@
   import FieldDevicePagination from './FieldDevicePagination.svelte';
   import FieldDeviceFloatingSaveBar from './FieldDeviceFloatingSaveBar.svelte';
   import FieldDeviceExportPanel from './FieldDeviceExportPanel.svelte';
-
-  // Use Cases
-  import { ManageFieldDeviceUseCase } from '$lib/application/useCases/facility/manageFieldDeviceUseCase.js';
-  import { ListEntityUseCase } from '$lib/application/useCases/listEntityUseCase.js';
-  import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
-  import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
-  import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
-
+  import { provideFieldDeviceState } from './state/context.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
 
   const t = createTranslator();
-
-  const manageFieldDeviceUseCase = new ManageFieldDeviceUseCase(fieldDeviceRepository);
-  const listApparatsUseCase = new ListEntityUseCase(apparatRepository);
-  const listSystemPartsUseCase = new ListEntityUseCase(systemPartRepository);
 
   interface Props {
     projectId?: string;
     refreshKey?: string | number;
     systemTypeRefreshKey?: string | number;
   }
+
   const { projectId, refreshKey, systemTypeRefreshKey }: Props = $props();
 
-  // Create a store instance scoped to this component (optionally project-scoped).
-  const store = createFieldDeviceStore(300, () => projectId);
+  const fieldDeviceState = provideFieldDeviceState({ projectId: () => projectId, pageSize: 300 });
 
-  // Editing composable
-  const editing = useFieldDeviceEditing(() => projectId);
+  useUnsavedChangesWarning(() => fieldDeviceState.editing.hasUnsavedChanges);
 
-  // Browser warning for unsaved changes
-  useUnsavedChangesWarning(() => editing.hasUnsavedChanges);
-
-  // Preloaded lookup data for table selects
-  let allApparats = $state<Apparat[]>([]);
-  let allSystemParts = $state<SystemPart[]>([]);
-
-  // UI toggles
-  let showMultiCreateForm = $state(false);
-  let showBulkEditPanel = $state(false);
-  let showExportPanel = $state(false);
-  let showFilterPanel = $state(false);
-  let searchInput = $state('');
-
-  // Selection state
-  let selectedIds = $state(new Set<string>());
-
-  // Derived states for selection
-  const allSelected = $derived(
-    $store.items.length > 0 && $store.items.every((d: FieldDevice) => selectedIds.has(d.id))
-  );
-  const someSelected = $derived(
-    $store.items.some((d: FieldDevice) => selectedIds.has(d.id)) && !allSelected
-  );
-  const selectedCount = $derived(selectedIds.size);
-  const hasActiveFilters = $derived(
-    Boolean(
-      $store.filters.buildingId ||
-      $store.filters.controlCabinetId ||
-      $store.filters.spsControllerId ||
-      $store.filters.spsControllerSystemTypeId ||
-      $store.filters.projectId
-    )
-  );
-
-  // Auto-hide bulk edit panel when nothing is selected
-  $effect(() => {
-    if (selectedCount === 0) {
-      showBulkEditPanel = false;
-    }
-  });
-
-  // Reload when parent signals a refresh
-  $effect(() => {
-    if (refreshKey !== undefined) {
-      store.reload();
-    }
-  });
+  let initialized = $state(false);
+  let lastRefreshKey: string | number | undefined = $state(undefined);
 
   onMount(() => {
-    store.load();
-    // Load lookups
-    listApparatsUseCase
-      .execute({ pagination: { page: 1, pageSize: 1000 }, search: { text: '' } })
-      .then((res) => (allApparats = res.items))
-      .catch(console.error);
-    listSystemPartsUseCase
-      .execute({ pagination: { page: 1, pageSize: 1000 }, search: { text: '' } })
-      .then((res) => (allSystemParts = res.items))
-      .catch(console.error);
+    initialized = true;
+    lastRefreshKey = refreshKey;
+    void fieldDeviceState.initialize();
   });
 
-  // Filter callbacks
-  function handleApplyFilters(filters: FieldDeviceFilters) {
-    store.setFilters(filters);
-  }
+  onDestroy(() => {
+    fieldDeviceState.dispose();
+  });
 
-  function handleClearFilters() {
-    store.clearAllFilters();
-  }
+  $effect(() => {
+    const nextRefreshKey = refreshKey;
 
-  // Multi-create
-  async function handleMultiCreateSuccess(createdDevices: FieldDevice[]) {
-    showMultiCreateForm = false;
-
-    if (projectId) {
-      try {
-        await Promise.all(
-          createdDevices.map((device) => projectRepository.addFieldDevice(projectId!, device.id))
-        );
-        // Toast ist bereits durch FieldDeviceMultiCreateForm gesendet, daher nur Link-Fehler hier berücksichtigen
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : translate('field_device.toasts.partial_link_failed');
-        addToast(translate('field_device.toasts.link_failed', { message }), 'error');
-      }
-    }
-    // Toast nicht doppelt senden: FieldDeviceMultiCreateForm handle das bereits
-
-    store.reload();
-  }
-
-  // Search
-  function handleSearch(value: string) {
-    searchInput = value;
-    store.search(value);
-  }
-
-  // Sorting
-  function handleSort(orderBy: string) {
-    const currentOrderBy = $store.orderBy;
-    const currentOrder = $store.order ?? 'asc';
-
-    if (currentOrderBy !== orderBy) {
-      store.setSort(orderBy, 'asc');
+    if (!initialized) return;
+    if (nextRefreshKey === undefined || nextRefreshKey === lastRefreshKey) {
+      lastRefreshKey = nextRefreshKey;
       return;
     }
 
-    if (currentOrder === 'asc') {
-      store.setSort(orderBy, 'desc');
-      return;
-    }
-
-    store.setSort(undefined, undefined);
-  }
-
-  // Pagination
-  function handlePrevious() {
-    if ($store.page > 1) {
-      store.goToPage($store.page - 1);
-    }
-  }
-
-  function handleNext() {
-    if ($store.page < $store.totalPages) {
-      store.goToPage($store.page + 1);
-    }
-  }
-
-  // Selection
-  function toggleSelectAll() {
-    if (allSelected) {
-      selectedIds = new Set();
-    } else {
-      selectedIds = new Set($store.items.map((device) => device.id));
-    }
-  }
-
-  function toggleSelect(id: string) {
-    const newSet = new Set(selectedIds);
-    if (newSet.has(id)) {
-      newSet.delete(id);
-    } else {
-      newSet.add(id);
-    }
-    selectedIds = newSet;
-  }
-
-  function clearSelection() {
-    selectedIds = new Set();
-  }
-
-  // Bulk delete
-  async function handleBulkDelete() {
-    if (selectedIds.size === 0) return;
-    if (!canPerform('delete', 'fielddevice')) return;
-    if (!confirm(translate('field_device.confirm.bulk_delete', { count: selectedIds.size })))
-      return;
-
-    try {
-      const result = await manageFieldDeviceUseCase.bulkDelete([...selectedIds]);
-      if (result.success_count > 0) {
-        addToast(
-          translate('field_device.toasts.bulk_deleted', { count: result.success_count }),
-          'success'
-        );
-      }
-      if (result.failure_count > 0) {
-        addToast(
-          translate('field_device.toasts.bulk_delete_failed', {
-            count: result.failure_count
-          }),
-          'error'
-        );
-      }
-      selectedIds = new Set();
-      store.reload();
-    } catch (error: unknown) {
-      const err = error as Error;
-      addToast(
-        translate('field_device.toasts.bulk_delete_failed_message', { message: err.message }),
-        'error'
-      );
-    }
-  }
-
-  async function handleCopy(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-    }
-  }
-
-  async function handleDelete(device: FieldDevice) {
-    if (!canPerform('delete', 'fielddevice')) return;
-    if (
-      !confirm(
-        translate('field_device.confirm.delete', {
-          label: device.bmk ?? device.id
-        })
-      )
-    )
-      return;
-    try {
-      await manageFieldDeviceUseCase.delete(device.id);
-      addToast(translate('field_device.toasts.deleted'), 'success');
-      const nextSelected = new Set(selectedIds);
-      nextSelected.delete(device.id);
-      selectedIds = nextSelected;
-      store.reload();
-    } catch (error: unknown) {
-      const err = error as Error;
-      addToast(translate('field_device.toasts.delete_failed', { message: err.message }), 'error');
-    }
-  }
-
-  // Bulk edit toggle
-  function toggleBulkEdit() {
-    showBulkEditPanel = !showBulkEditPanel;
-  }
-
-  // Save / discard
-  function handleSave() {
-    editing.saveAllPendingEdits($store.items, (updated) => {
-      updated.forEach((item) => store.updateItem(item));
-    });
-  }
-
-  function handleDiscard() {
-    editing.discardAllEdits();
-  }
+    lastRefreshKey = nextRefreshKey;
+    void fieldDeviceState.reload();
+  });
 </script>
 
 <div class="flex flex-col gap-6">
-  <!-- Action Buttons -->
   <div class="flex justify-end gap-2">
-    {#if !showMultiCreateForm && canPerform('create', 'fielddevice')}
-      <Button onclick={() => (showMultiCreateForm = true)}>
+    {#if !fieldDeviceState.showMultiCreateForm && canPerform('create', 'fielddevice')}
+      <Button onclick={() => fieldDeviceState.openMultiCreateForm()}>
         <ListPlusIcon class="size-4" />
         {$t('field_device.actions.multi_create')}
       </Button>
     {/if}
   </div>
 
-  <!-- Multi-Create Form -->
-  {#if showMultiCreateForm}
+  {#if fieldDeviceState.showMultiCreateForm}
     <Card.Root>
       <Card.Header>
         <Card.Title>{$t('field_device.multi_create.title')}</Card.Title>
@@ -307,97 +79,40 @@
         <FieldDeviceMultiCreateForm
           {projectId}
           {systemTypeRefreshKey}
-          onSuccess={handleMultiCreateSuccess}
-          onCancel={() => (showMultiCreateForm = false)}
+          onSuccess={(createdDevices) => fieldDeviceState.handleMultiCreateSuccess(createdDevices)}
+          onCancel={() => fieldDeviceState.closeMultiCreateForm()}
         />
       </Card.Content>
     </Card.Root>
   {/if}
 
-  <!-- Data Table with Expandable Rows and Selection -->
   <div class="flex flex-col gap-4">
-    <!-- Search Bar and Selection Actions -->
-    <FieldDeviceSearchBar
-      {searchInput}
-      {selectedCount}
-      loading={$store.loading}
-      {showBulkEditPanel}
-      {showExportPanel}
-      {showFilterPanel}
-      {hasActiveFilters}
-      onSearch={handleSearch}
-      onClearSelection={clearSelection}
-      onBulkDelete={handleBulkDelete}
-      onToggleBulkEdit={toggleBulkEdit}
-      onToggleExport={() => (showExportPanel = !showExportPanel)}
-      onToggleFilterPanel={() => (showFilterPanel = !showFilterPanel)}
-      onRefresh={() => store.reload()}
-    />
+    <FieldDeviceSearchBar />
 
-    <div class:hidden={!showFilterPanel}>
-      <FieldDeviceFilterCard
-        onApplyFilters={handleApplyFilters}
-        onClearFilters={handleClearFilters}
-        showProjectFilter={!projectId}
-      />
+    <div class:hidden={!fieldDeviceState.showFilterPanel}>
+      <FieldDeviceFilterCard showProjectFilter={!projectId} />
     </div>
 
-    {#if showExportPanel}
+    {#if fieldDeviceState.showExportPanel}
       <FieldDeviceExportPanel {projectId} />
     {/if}
 
-    <!-- Bulk Edit Panel -->
-    {#if showBulkEditPanel && selectedCount > 0}
-      <FieldDeviceBulkEditPanel
-        {selectedCount}
-        {selectedIds}
-        {allApparats}
-        {allSystemParts}
-        {editing}
-      />
+    {#if fieldDeviceState.showBulkEditPanel}
+      <FieldDeviceBulkEditPanel />
     {/if}
 
-    <!-- Error Message -->
-    {#if $store.error}
+    {#if fieldDeviceState.error}
       <div
         class="rounded-md border border-destructive/50 bg-destructive/15 px-4 py-3 text-destructive"
       >
         <p class="font-medium">{$t('common.error')}</p>
-        <p class="text-sm">{$store.error}</p>
+        <p class="text-sm">{fieldDeviceState.error}</p>
       </div>
     {/if}
 
-    <!-- Table -->
-    <FieldDeviceTable
-      items={$store.items}
-      loading={$store.loading}
-      sortBy={$store.orderBy}
-      sortOrder={$store.order}
-      {searchInput}
-      {allApparats}
-      {allSystemParts}
-      {selectedIds}
-      {editing}
-      {allSelected}
-      {someSelected}
-      onCopy={handleCopy}
-      onDelete={handleDelete}
-      onToggleSelect={toggleSelect}
-      onToggleSelectAll={toggleSelectAll}
-      onSort={handleSort}
-    />
-
-    <!-- Pagination -->
-    <FieldDevicePagination
-      page={$store.page}
-      totalPages={$store.totalPages}
-      total={$store.total}
-      loading={$store.loading}
-      onPrevious={handlePrevious}
-      onNext={handleNext}
-    />
+    <FieldDeviceTable />
+    <FieldDevicePagination />
   </div>
 
-  <!-- Floating Save Bar -->
-  <FieldDeviceFloatingSaveBar {editing} onSave={handleSave} onDiscard={handleDiscard} />
+  <FieldDeviceFloatingSaveBar />
 </div>

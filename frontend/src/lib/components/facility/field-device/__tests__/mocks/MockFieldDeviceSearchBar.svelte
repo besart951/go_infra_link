@@ -1,11 +1,10 @@
 <script lang="ts">
-  interface Props {
-    onBulkDelete: () => void;
-    onRefresh: () => void;
-  }
+  import { useFieldDeviceState } from '../../state/context.svelte.js';
 
-  let { onBulkDelete, onRefresh }: Props = $props();
+  const state = useFieldDeviceState();
 </script>
 
-<button data-testid="bulk-delete" onclick={onBulkDelete}>bulk delete</button>
-<button data-testid="refresh" onclick={onRefresh}>refresh</button>
+<button data-testid="bulk-delete" onclick={() => void state.bulkDeleteSelected()}
+  >bulk delete</button
+>
+<button data-testid="refresh" onclick={() => void state.reload()}>refresh</button>

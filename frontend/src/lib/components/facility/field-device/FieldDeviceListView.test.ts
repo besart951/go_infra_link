@@ -1,47 +1,27 @@
 /// <reference types="vitest" />
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { writable, type Writable } from 'svelte/store';
 import FieldDeviceListView from './FieldDeviceListView.svelte';
 import { buildFieldDevice } from '$lib/test/fieldDevice.fixtures.js';
 
 const mockDelete = vi.fn();
 const mockBulkDelete = vi.fn();
+const mockList = vi.fn();
 const mockAddToast = vi.fn();
-const mockLoad = vi.fn();
-const mockReload = vi.fn();
-const mockUpdateItem = vi.fn();
 
-type StoreState = {
-  items: ReturnType<typeof buildFieldDevice>[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-  searchText: string;
-  orderBy?: string;
-  order?: 'asc' | 'desc';
-  filters: Record<string, string>;
-  loading: boolean;
-  error: string | null;
-};
+let listItems: ReturnType<typeof buildFieldDevice>[] = [];
 
-let storeState: Writable<StoreState>;
-
-function resetStore(items: ReturnType<typeof buildFieldDevice>[]) {
-  storeState = writable({
-    items,
-    total: items.length,
-    page: 1,
-    pageSize: 300,
-    totalPages: 1,
-    searchText: '',
-    orderBy: undefined,
-    order: undefined,
-    filters: {},
-    loading: false,
-    error: null
-  });
+function resetDevices(items: ReturnType<typeof buildFieldDevice>[]) {
+  listItems = items;
+  mockList.mockImplementation(async () => ({
+    items: listItems,
+    metadata: {
+      total: listItems.length,
+      page: 1,
+      pageSize: 300,
+      totalPages: listItems.length > 0 ? 1 : 0
+    }
+  }));
 }
 
 vi.mock('$lib/i18n/index.js', () => ({
@@ -78,27 +58,13 @@ vi.mock('$lib/hooks/useFieldDeviceEditing.svelte.js', () => ({
   })
 }));
 
-vi.mock('$lib/stores/facility/fieldDeviceStore.js', () => ({
-  createFieldDeviceStore: () => ({
-    subscribe: storeState.subscribe,
-    load: mockLoad,
-    reload: mockReload,
-    search: vi.fn(),
-    setSort: vi.fn(),
-    goToPage: vi.fn(),
-    setFilters: vi.fn(),
-    clearAllFilters: vi.fn(),
-    updateItem: mockUpdateItem
-  })
-}));
-
 vi.mock('$lib/infrastructure/api/fieldDeviceRepository.js', () => ({
   fieldDeviceRepository: {
     delete: (...args: unknown[]) => mockDelete(...args),
     bulkDelete: (...args: unknown[]) => mockBulkDelete(...args),
     multiCreate: vi.fn(),
     bulkUpdate: vi.fn(),
-    list: vi.fn(),
+    list: (...args: unknown[]) => mockList(...args),
     get: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
@@ -166,7 +132,7 @@ vi.mock('./FieldDeviceExportPanel.svelte', async () => ({
 describe('FieldDeviceListView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetStore([]);
+    resetDevices([]);
     mockDelete.mockResolvedValue(undefined);
     mockBulkDelete.mockResolvedValue({
       results: [{ id: 'fd-1', success: true }],
@@ -181,35 +147,47 @@ describe('FieldDeviceListView', () => {
     render(FieldDeviceListView, {});
 
     expect(screen.getByTestId('table-count')).toHaveTextContent('0');
-    expect(mockLoad).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(mockList).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('renders populated state when existing devices are provided', async () => {
-    resetStore([buildFieldDevice()]);
+    resetDevices([buildFieldDevice()]);
     render(FieldDeviceListView, {});
 
-    expect(screen.getByTestId('table-count')).toHaveTextContent('1');
+    await waitFor(() => {
+      expect(screen.getByTestId('table-count')).toHaveTextContent('1');
+    });
   });
 
   it('calls delete API when single delete is confirmed', async () => {
     const device = buildFieldDevice();
-    resetStore([device]);
+    resetDevices([device]);
     render(FieldDeviceListView, {});
+
+    await waitFor(() => {
+      expect(screen.getByTestId(`delete-${device.id}`)).toBeInTheDocument();
+    });
 
     await fireEvent.click(screen.getByTestId(`delete-${device.id}`));
 
     await waitFor(() => {
       expect(window.confirm).toHaveBeenCalledTimes(1);
       expect(mockDelete).toHaveBeenCalledWith(device.id, undefined);
-      expect(mockReload).toHaveBeenCalled();
+      expect(mockList).toHaveBeenCalledTimes(2);
     });
   });
 
   it('does not call delete API when single delete confirmation is rejected', async () => {
     const device = buildFieldDevice();
-    resetStore([device]);
+    resetDevices([device]);
     vi.mocked(window.confirm).mockReturnValue(false);
     render(FieldDeviceListView, {});
+
+    await waitFor(() => {
+      expect(screen.getByTestId(`delete-${device.id}`)).toBeInTheDocument();
+    });
 
     await fireEvent.click(screen.getByTestId(`delete-${device.id}`));
 
@@ -218,8 +196,12 @@ describe('FieldDeviceListView', () => {
 
   it('calls bulk delete API when selection exists and confirmation is accepted', async () => {
     const device = buildFieldDevice();
-    resetStore([device]);
+    resetDevices([device]);
     render(FieldDeviceListView, {});
+
+    await waitFor(() => {
+      expect(screen.getByTestId(`select-${device.id}`)).toBeInTheDocument();
+    });
 
     await fireEvent.click(screen.getByTestId(`select-${device.id}`));
     await fireEvent.click(screen.getByTestId('bulk-delete'));
@@ -227,15 +209,19 @@ describe('FieldDeviceListView', () => {
     await waitFor(() => {
       expect(window.confirm).toHaveBeenCalledTimes(1);
       expect(mockBulkDelete).toHaveBeenCalledWith([device.id], undefined);
-      expect(mockReload).toHaveBeenCalled();
+      expect(mockList).toHaveBeenCalledTimes(2);
     });
   });
 
   it('does not call bulk delete API when confirmation is rejected', async () => {
     const device = buildFieldDevice();
-    resetStore([device]);
+    resetDevices([device]);
     vi.mocked(window.confirm).mockReturnValue(false);
     render(FieldDeviceListView, {});
+
+    await waitFor(() => {
+      expect(screen.getByTestId(`select-${device.id}`)).toBeInTheDocument();
+    });
 
     await fireEvent.click(screen.getByTestId(`select-${device.id}`));
     await fireEvent.click(screen.getByTestId('bulk-delete'));
@@ -252,7 +238,7 @@ describe('FieldDeviceListView', () => {
     await fireEvent.click(screen.getByTestId('multi-create-success'));
 
     await waitFor(() => {
-      expect(mockReload).toHaveBeenCalled();
+      expect(mockList).toHaveBeenCalledTimes(2);
     });
   });
 });

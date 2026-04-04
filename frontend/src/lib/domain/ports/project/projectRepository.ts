@@ -13,7 +13,11 @@ import type {
   ProjectSPSControllerListResponse,
   ProjectFieldDeviceListResponse
 } from '$lib/domain/project/index.js';
-import type { ObjectDataListParams } from '$lib/domain/facility/index.js';
+import type {
+  ControlCabinet,
+  ObjectDataListParams,
+  SPSController
+} from '$lib/domain/facility/index.js';
 
 export interface PaginationParams {
   page?: number;
@@ -53,6 +57,11 @@ export interface ProjectRepository extends ListRepository<Project> {
     signal?: AbortSignal
   ): Promise<void>;
   removeControlCabinet(projectId: string, linkId: string, signal?: AbortSignal): Promise<void>;
+  copyControlCabinet(
+    projectId: string,
+    controlCabinetId: string,
+    signal?: AbortSignal
+  ): Promise<ControlCabinet>;
 
   // Project SPS controller links
   listSPSControllers(
@@ -62,6 +71,11 @@ export interface ProjectRepository extends ListRepository<Project> {
   ): Promise<ProjectSPSControllerListResponse>;
   addSPSController(projectId: string, spsControllerId: string, signal?: AbortSignal): Promise<void>;
   removeSPSController(projectId: string, linkId: string, signal?: AbortSignal): Promise<void>;
+  copySPSController(
+    projectId: string,
+    spsControllerId: string,
+    signal?: AbortSignal
+  ): Promise<SPSController>;
 
   // Project field device links
   listFieldDevices(

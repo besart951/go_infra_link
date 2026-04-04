@@ -7,18 +7,18 @@
   import SPSControllerSelect from '../selects/SPSControllerSelect.svelte';
   import SPSControllerSystemTypeSelect from '../selects/SPSControllerSystemTypeSelect.svelte';
   import ProjectSelect from '$lib/components/project/ProjectSelect.svelte';
-  import type { FieldDeviceFilters } from '$lib/stores/facility/fieldDeviceStore.js';
   import { createTranslator } from '$lib/i18n/translator.js';
+  import type { FieldDeviceFilters } from './state/types.js';
+  import { useFieldDeviceState } from './state/context.svelte.js';
 
   interface Props {
-    onApplyFilters: (filters: FieldDeviceFilters) => void;
-    onClearFilters: () => void;
     showProjectFilter?: boolean;
   }
 
-  let { onApplyFilters, onClearFilters, showProjectFilter = false }: Props = $props();
+  let { showProjectFilter = false }: Props = $props();
 
   const t = createTranslator();
+  const fieldDeviceState = useFieldDeviceState();
 
   let buildingId = $state('');
   let controlCabinetId = $state('');
@@ -41,13 +41,15 @@
   );
 
   function applyFilters() {
-    onApplyFilters({
+    const filters: FieldDeviceFilters = {
       buildingId: buildingId || undefined,
       controlCabinetId: controlCabinetId || undefined,
       spsControllerId: spsControllerId || undefined,
       spsControllerSystemTypeId: spsControllerSystemTypeId || undefined,
       projectId: showProjectFilter && projectId ? projectId : undefined
-    });
+    };
+
+    void fieldDeviceState.applyFilters(filters);
   }
 
   function clearFilters() {
@@ -56,7 +58,7 @@
     spsControllerId = '';
     spsControllerSystemTypeId = '';
     projectId = '';
-    onClearFilters();
+    void fieldDeviceState.clearFilters();
   }
 </script>
 
