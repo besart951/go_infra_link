@@ -20,7 +20,12 @@
 
 <div class="flex flex-wrap items-start justify-between gap-4">
   <div class="flex items-start gap-3">
-    <Button variant="ghost" size="icon" href="/facility/control-cabinets" aria-label={$t('common.back')}>
+    <Button
+      variant="ghost"
+      size="icon"
+      href="/facility/control-cabinets"
+      aria-label={$t('common.back')}
+    >
       <ArrowLeftIcon class="size-4" />
     </Button>
     <div>

@@ -1,6 +1,6 @@
 # go_infra_link
 
-Full-stack infrastructure link project with Go backend and frontend. 
+Full-stack infrastructure link project with Go backend and SvelteKit frontend.
 
 ## Quick Start
 
@@ -26,6 +26,8 @@ go run ./cmd/app
 ```bash
 docker compose up --build
 ```
+
+The local frontend service uses Vite for developer ergonomics, but the production deployment model is a static SPA served by Caddy.
 
 ### Running Tests
 
@@ -58,7 +60,16 @@ http://localhost:8080/swagger/index.html
 This project follows **Clean/Hexagonal Architecture** principles:
 
 - **Backend**: Go service with layered architecture (domain, application, infrastructure)
-- **Frontend**: Separate frontend application
+- **Frontend**: Static SvelteKit SPA served by Caddy
+
+### Production deployment contract
+
+- The frontend is built with `@sveltejs/adapter-static`
+- The frontend container serves only static assets
+- The edge reverse proxy must keep `/api/*` on the same origin and forward it to the backend
+- Backend endpoints remain the only source of truth for auth, cookies, CSRF, and authorization
+
+Do not rely on SvelteKit server hooks or `+server.ts` routes in production unless the frontend is intentionally migrated to a server adapter such as `adapter-node`.
 
 ## Utility Commands
 

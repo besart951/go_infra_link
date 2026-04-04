@@ -243,10 +243,12 @@ describe('FieldDeviceListView', () => {
     expect(mockBulkDelete).not.toHaveBeenCalled();
   });
 
-  it('opens multi-create and reloads after create success callback', async () => {
+  it('opens multi-create and reloads after multi-create success callback', async () => {
     render(FieldDeviceListView, {});
 
-    await fireEvent.click(screen.getByText('field_device.actions.multi_create'));
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'field_device.actions.multi_create' })
+    );
     await fireEvent.click(screen.getByTestId('multi-create-success'));
 
     await waitFor(() => {

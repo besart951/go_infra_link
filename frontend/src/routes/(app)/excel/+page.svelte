@@ -35,7 +35,8 @@
       progressMessage = 'Scanner-Ergebnis bereit.';
       addToast('Excel-Datei geladen und Objekt-/BACnet-Daten vorbereitet.', 'success');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Excel-Datei konnte nicht gelesen werden.';
+      const message =
+        error instanceof Error ? error.message : 'Excel-Datei konnte nicht gelesen werden.';
       if (message === 'Lesevorgang abgebrochen.') {
         progressMessage = 'Lesevorgang abgebrochen.';
         return;
@@ -72,7 +73,8 @@
   <div>
     <h1 class="text-2xl font-semibold tracking-tight">Excel-Import</h1>
     <p class="text-sm text-muted-foreground">
-      Laden Sie eine Excel-Datei hoch, um Objektdaten und BACnet-Objekte direkt im Browser zu prüfen.
+      Laden Sie eine Excel-Datei hoch, um Objektdaten und BACnet-Objekte direkt im Browser zu
+      prüfen.
     </p>
   </div>
 

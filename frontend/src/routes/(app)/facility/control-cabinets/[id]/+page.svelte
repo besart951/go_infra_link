@@ -39,7 +39,6 @@
   const canUpdateCabinet = canPerform('update', 'controlcabinet');
   const canDeleteCabinet = canPerform('delete', 'controlcabinet');
 
-
   function resetForms() {
     showCabinetEdit = false;
     showSpsCreate = false;
@@ -95,7 +94,10 @@
   async function handleDeleteSps(controller: SPSController) {
     const ok = await confirm({
       title: $t('common.delete'),
-      message: $t('facility.delete_sps_controller_confirm').replace('{name}', controller.device_name),
+      message: $t('facility.delete_sps_controller_confirm').replace(
+        '{name}',
+        controller.device_name
+      ),
       confirmText: $t('common.delete'),
       cancelText: $t('common.cancel'),
       variant: 'destructive'
@@ -127,7 +129,9 @@
 </script>
 
 <svelte:head>
-  <title>#{data.cabinet.control_cabinet_nr} | {$t('facility.control_cabinets_title')} | Infra Link</title>
+  <title
+    >#{data.cabinet.control_cabinet_nr} | {$t('facility.control_cabinets_title')} | Infra Link</title
+  >
 </svelte:head>
 
 <ConfirmDialog />
@@ -193,5 +197,3 @@
     onDelete={handleDeleteSps}
   />
 </div>
-
-

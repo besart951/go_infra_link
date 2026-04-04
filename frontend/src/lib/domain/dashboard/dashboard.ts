@@ -47,4 +47,3 @@ export interface DashboardSnapshot {
   teams: DashboardTeamSummary[];
   online_users: DashboardUserPresence[];
 }
-

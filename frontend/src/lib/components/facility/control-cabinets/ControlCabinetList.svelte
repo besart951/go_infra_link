@@ -103,7 +103,7 @@
   {#if showForm}
     <ControlCabinetForm
       initialData={editingItem}
-      projectId={projectId}
+      {projectId}
       onSuccess={onFormSuccess}
       onCancel={onFormCancel}
     />

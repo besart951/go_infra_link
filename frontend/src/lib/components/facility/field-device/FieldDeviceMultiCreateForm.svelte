@@ -94,8 +94,10 @@
   let submitting = $state(false);
   let globalError = $state('');
 
-  // Project-specific filter for system types
-  let projectOnly = $state(!!projectId);
+  // Project-specific filter for system types.
+  // Default to project scope when a project is present, but allow the UI to override it.
+  let projectOnlyOverride = $state<boolean | null>(null);
+  const projectOnly = $derived(projectId ? (projectOnlyOverride ?? true) : false);
 
   // Internal tracking
   let selectionKey = $state('');
@@ -586,7 +588,9 @@
     {loadingObjectDataPreview}
     {objectDataPreviewError}
     {projectOnly}
-    onProjectOnlyChange={(checked) => { projectOnly = checked; }}
+    onProjectOnlyChange={(checked) => {
+      projectOnlyOverride = checked;
+    }}
     onSpsSystemTypeChange={handleSpsSystemTypeChange}
     onPreselectionChange={handlePreselectionChange}
     {fetchSpsControllerSystemTypes}

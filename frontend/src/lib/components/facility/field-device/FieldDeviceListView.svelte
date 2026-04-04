@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
-  import { ListPlus } from '@lucide/svelte';
+  import ListPlusIcon from '@lucide/svelte/icons/list-plus';
   import { createFieldDeviceStore } from '$lib/stores/facility/fieldDeviceStore.js';
   import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
   import { addToast } from '$lib/components/toast.svelte';
@@ -41,7 +41,6 @@
     refreshKey?: string | number;
     systemTypeRefreshKey?: string | number;
   }
-
   const { projectId, refreshKey, systemTypeRefreshKey }: Props = $props();
 
   // Create a store instance scoped to this component (optionally project-scoped).
@@ -65,13 +64,15 @@
   let searchInput = $state('');
 
   // Selection state
-  let selectedIds = $state<Set<string>>(new Set());
+  let selectedIds = $state(new Set<string>());
 
   // Derived states for selection
   const allSelected = $derived(
-    $store.items.length > 0 && $store.items.every((d) => selectedIds.has(d.id))
+    $store.items.length > 0 && $store.items.every((d: FieldDevice) => selectedIds.has(d.id))
   );
-  const someSelected = $derived($store.items.some((d) => selectedIds.has(d.id)) && !allSelected);
+  const someSelected = $derived(
+    $store.items.some((d: FieldDevice) => selectedIds.has(d.id)) && !allSelected
+  );
   const selectedCount = $derived(selectedIds.size);
   const hasActiveFilters = $derived(
     Boolean(
@@ -90,9 +91,11 @@
     }
   });
 
+  // Reload when parent signals a refresh
   $effect(() => {
-    if (refreshKey === undefined) return;
-    store.reload();
+    if (refreshKey !== undefined) {
+      store.reload();
+    }
   });
 
   onMount(() => {
@@ -180,7 +183,7 @@
     if (allSelected) {
       selectedIds = new Set();
     } else {
-      selectedIds = new Set($store.items.map((d) => d.id));
+      selectedIds = new Set($store.items.map((device) => device.id));
     }
   }
 
@@ -284,9 +287,9 @@
   <!-- Action Buttons -->
   <div class="flex justify-end gap-2">
     {#if !showMultiCreateForm && canPerform('create', 'fielddevice')}
-      <Button  onclick={() => (showMultiCreateForm = true)}>
-        <ListPlus class="size-4" />
-        {$t('field_device.actions.create')}
+      <Button onclick={() => (showMultiCreateForm = true)}>
+        <ListPlusIcon class="size-4" />
+        {$t('field_device.actions.multi_create')}
       </Button>
     {/if}
   </div>

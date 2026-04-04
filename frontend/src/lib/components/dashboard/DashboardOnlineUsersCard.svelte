@@ -34,7 +34,9 @@
               <UserAvatar firstName={user.first_name} lastName={user.last_name} />
               <div class="min-w-0">
                 <p class="truncate text-sm font-medium">{user.first_name} {user.last_name}</p>
-                <p class="truncate text-xs text-muted-foreground">{formatLastLogin(user.last_login_at)}</p>
+                <p class="truncate text-xs text-muted-foreground">
+                  {formatLastLogin(user.last_login_at)}
+                </p>
               </div>
             </div>
             <Badge variant="success">{$t('dashboard.online_badge')}</Badge>

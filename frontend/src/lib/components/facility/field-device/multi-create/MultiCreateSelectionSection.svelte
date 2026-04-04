@@ -50,9 +50,7 @@
   const t = createTranslator();
 
   // Derive a refresh key that changes when projectOnly toggles, to force re-fetch
-  const comboboxRefreshKey = $derived(
-    `${systemTypeRefreshKey ?? ''}-${projectOnly}`
-  );
+  const comboboxRefreshKey = $derived(`${systemTypeRefreshKey ?? ''}-${projectOnly}`);
 </script>
 
 <Card.Root class="p-6">
@@ -75,7 +73,10 @@
             }}
             disabled={submitting}
           />
-          <Label for="project-only-filter" class="shrink-0 text-xs text-muted-foreground cursor-pointer">
+          <Label
+            for="project-only-filter"
+            class="shrink-0 cursor-pointer text-xs text-muted-foreground"
+          >
             {$t('field_device.multi_create.selection.project_only')}
           </Label>
         {/if}

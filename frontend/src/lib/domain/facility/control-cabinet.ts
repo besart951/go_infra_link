@@ -51,4 +51,3 @@ export interface ControlCabinetDeleteImpact {
   bacnet_objects_count: number;
   specifications_count: number;
 }
-

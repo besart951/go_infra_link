@@ -29,7 +29,9 @@
           {project.name}
         </a>
         <div class="flex flex-wrap gap-2">
-          <Badge variant={projectStatusVariant(project.status)}>{$t(`messages.${project.status}`)}</Badge>
+          <Badge variant={projectStatusVariant(project.status)}
+            >{$t(`messages.${project.status}`)}</Badge
+          >
           <Badge variant="outline">{$t('dashboard.phase_label')}: {project.phase}</Badge>
         </div>
         <p class="text-sm text-muted-foreground">

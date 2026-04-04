@@ -60,7 +60,7 @@
     }
 
     try {
-      // Using backend relative path via proxy
+      // Use the same-origin API path that the edge reverse proxy exposes in production.
       await api('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password })

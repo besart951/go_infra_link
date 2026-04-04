@@ -14,7 +14,9 @@
 </script>
 
 {#if data.loadError}
-  <div class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+  <div
+    class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
+  >
     {data.loadError}
   </div>
 {:else if data.dashboard}

@@ -30,9 +30,13 @@
         <div class="flex items-center justify-between gap-3">
           <div>
             <p class="text-base font-semibold">{primaryTeam.name}</p>
-            <p class="text-xs text-muted-foreground">{$t('dashboard.your_role')}: {primaryTeam.role}</p>
+            <p class="text-xs text-muted-foreground">
+              {$t('dashboard.your_role')}: {primaryTeam.role}
+            </p>
           </div>
-          <Badge variant="outline">{$t('dashboard.members_count', { count: primaryTeam.members.length })}</Badge>
+          <Badge variant="outline"
+            >{$t('dashboard.members_count', { count: primaryTeam.members.length })}</Badge
+          >
         </div>
 
         <div class="space-y-2">
@@ -55,7 +59,7 @@
         {#if otherTeams.length > 0}
           <Separator />
           <div>
-            <p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p class="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
               {$t('dashboard.other_memberships')}
             </p>
             <div class="flex flex-wrap gap-2">

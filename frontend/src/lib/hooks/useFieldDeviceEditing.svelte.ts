@@ -509,7 +509,9 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
     const deviceEdits = pendingBacnetEdits.get(deviceId) || new Map();
     const objectEdits = deviceEdits.get(objectId) || {};
     deviceEdits.set(objectId, { ...objectEdits, [field]: value } as Partial<BacnetObjectInput>);
-    pendingBacnetEdits = new Map(pendingBacnetEdits).set(deviceId, new Map(deviceEdits));
+    const nextPendingBacnetEdits = new Map(pendingBacnetEdits);
+    nextPendingBacnetEdits.set(deviceId, new Map(deviceEdits));
+    pendingBacnetEdits = nextPendingBacnetEdits;
     clearBacnetFieldError(deviceId, objectId, field);
   }
 
@@ -1193,7 +1195,10 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
         return;
       }
 
-      setEditError(device.id, localizeEditErrorInfo({ message: item?.error, fields: item?.fields }));
+      setEditError(
+        device.id,
+        localizeEditErrorInfo({ message: item?.error, fields: item?.fields })
+      );
       addToast(
         getFirstFieldValidationToast(
           item?.fields ? localizeFieldErrorMap(item.fields) : undefined,
@@ -1320,15 +1325,21 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
   }
 
   function getBacnetPendingEdits(deviceId: string): Map<string, Partial<BacnetObjectInput>> {
-    return pendingBacnetEdits.get(deviceId) ?? new Map();
+    const edits = pendingBacnetEdits.get(deviceId);
+    if (edits) return edits;
+    return new Map();
   }
 
   function getBacnetFieldErrors(deviceId: string): Map<string, Record<string, string>> {
-    return bacnetFieldErrors.get(deviceId) ?? new Map();
+    const errors = bacnetFieldErrors.get(deviceId);
+    if (errors) return errors;
+    return new Map();
   }
 
   function getBacnetClientErrors(deviceId: string): Map<string, Record<string, string>> {
-    return bacnetClientErrors.get(deviceId) ?? new Map();
+    const errors = bacnetClientErrors.get(deviceId);
+    if (errors) return errors;
+    return new Map();
   }
 
   return {

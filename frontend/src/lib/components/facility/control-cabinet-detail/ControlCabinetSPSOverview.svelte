@@ -69,11 +69,15 @@
   <Card.Content>
     <Tooltip.Provider>
       {#if !canRead}
-        <div class="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+        <div
+          class="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground"
+        >
           {$t('facility.control_cabinet_detail.no_read_permission')}
         </div>
       {:else if controllers.length === 0}
-        <div class="rounded-md border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+        <div
+          class="rounded-md border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground"
+        >
           {$t('facility.control_cabinet_detail.no_sps')}
         </div>
       {:else}
@@ -137,19 +141,27 @@
               </div>
 
               <div class="mt-4 rounded-md border border-border/70 bg-background/60 p-3">
-                <p class="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <p
+                  class="mb-2 flex items-center gap-2 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                >
                   <NetworkIcon class="size-3.5" />
                   {$t('facility.control_cabinet_detail.system_types')}
                 </p>
                 {#if typesFor(controller.id).length === 0}
-                  <p class="text-sm text-muted-foreground">{$t('facility.control_cabinet_detail.no_system_types')}</p>
+                  <p class="text-sm text-muted-foreground">
+                    {$t('facility.control_cabinet_detail.no_system_types')}
+                  </p>
                 {:else}
                   <div class="grid gap-2 sm:grid-cols-2">
                     {#each typesFor(controller.id) as systemType (systemType.id)}
                       <div class="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
-                        <p class="font-medium text-foreground">{systemType.system_type_name ?? systemType.system_type_id}</p>
+                        <p class="font-medium text-foreground">
+                          {systemType.system_type_name ?? systemType.system_type_id}
+                        </p>
                         <p class="text-xs text-muted-foreground">
-                          {systemType.number != null ? `${$t('facility.control_cabinet_detail.number')}: ${systemType.number}` : ''}
+                          {systemType.number != null
+                            ? `${$t('facility.control_cabinet_detail.number')}: ${systemType.number}`
+                            : ''}
                           {#if systemType.document_name}
                             {systemType.number != null ? ' • ' : ''}
                             {systemType.document_name}

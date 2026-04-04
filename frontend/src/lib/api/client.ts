@@ -407,12 +407,7 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
 
     // Network errors
     if (err instanceof TypeError) {
-      throw new ApiException(
-        0,
-        'network_error',
-        t('errors.network_request_failed'),
-        err.message
-      );
+      throw new ApiException(0, 'network_error', t('errors.network_request_failed'), err.message);
     }
 
     // Unknown errors

@@ -175,7 +175,7 @@
     canDuplicate={canPerform('create', 'controlcabinet')}
     canUpdate={canPerform('update', 'controlcabinet')}
     canDelete={canPerform('delete', 'controlcabinet')}
-    getBuildingLabel={getBuildingLabel}
+    {getBuildingLabel}
     onCreate={handleCreate}
     onSearch={(text) => controlCabinetsStore.search(text)}
     onPageChange={(page) => controlCabinetsStore.goToPage(page)}

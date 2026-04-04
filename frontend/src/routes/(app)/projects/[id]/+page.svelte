@@ -382,7 +382,9 @@
       controlCabinetLinks = linksRes.items;
 
       const cabinetIds = linksRes.items.map((l) => l.control_cabinet_id);
-      controlCabinetOptions = mergeControlCabinetOptions(await fetchControlCabinetsByIds(cabinetIds));
+      controlCabinetOptions = mergeControlCabinetOptions(
+        await fetchControlCabinetsByIds(cabinetIds)
+      );
       await ensureBuildingLabels(controlCabinetOptions);
     } catch (err) {
       addToast(
@@ -736,7 +738,7 @@
             <h2 class="text-lg font-semibold">{$t('projects.sps_controllers.title')}</h2>
           </div>
           <Collapsible.Content class="mt-4">
-            <div class="flex flex-wrap items-center justify-end gap-2 mb-4">
+            <div class="mb-4 flex flex-wrap items-center justify-end gap-2">
               {#if !showSpsControllerForm}
                 <Button onclick={handleSpsControllerCreate}>
                   <Plus class="mr-2 size-4" />

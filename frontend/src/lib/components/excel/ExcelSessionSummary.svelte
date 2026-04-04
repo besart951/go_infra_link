@@ -685,7 +685,9 @@
       };
     } catch (error) {
       prepareError =
-        error instanceof Error ? error.message : 'Erstellungspayloads konnten nicht vorbereitet werden.';
+        error instanceof Error
+          ? error.message
+          : 'Erstellungspayloads konnten nicht vorbereitet werden.';
     } finally {
       preparing = false;
     }
@@ -830,7 +832,8 @@
       <span>Erstellt: {createReport.success}/{createReport.total}</span>
       <span class="ml-3">Fehlgeschlagen: {createReport.failed.length}</span>
       <span class="ml-3"
-        >Nicht aufgelöste Software-Verknüpfungen: {createReport.unresolvedSoftwareLinks.length}</span
+        >Nicht aufgelöste Software-Verknüpfungen: {createReport.unresolvedSoftwareLinks
+          .length}</span
       >
       {#if createReport.failed.length > 0}
         <div class="mt-2">
@@ -949,7 +952,9 @@
             {/if}
             {#if preparedItem.issues.missingNotificationClassLabels.length > 0}
               <div>
-                <strong class="text-foreground">Fehlende Bezeichnungen der Benachrichtigungsklassen:</strong>
+                <strong class="text-foreground"
+                  >Fehlende Bezeichnungen der Benachrichtigungsklassen:</strong
+                >
                 <p>{preparedItem.issues.missingNotificationClassLabels.join(', ')}</p>
               </div>
             {/if}

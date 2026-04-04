@@ -8,7 +8,7 @@ import (
 func RegisterPublicRoutes(publicV1 *gin.RouterGroup, handler *AuthHandler) {
 	publicAuth := publicV1.Group("/auth")
 	{
-		publicAuth.POST("/login", handler.Login)
+		publicAuth.POST("/login", middleware.LoginRateLimitMiddleware(), handler.Login)
 	}
 
 	authCsrf := publicV1.Group("/auth")

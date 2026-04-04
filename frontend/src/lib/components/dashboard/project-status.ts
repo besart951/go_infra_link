@@ -1,9 +1,8 @@
 import type { DashboardProjectStatus } from '$lib/domain/dashboard/index.js';
 
-export function projectStatusVariant(status: DashboardProjectStatus):
-  | 'secondary'
-  | 'success'
-  | 'default' {
+export function projectStatusVariant(
+  status: DashboardProjectStatus
+): 'secondary' | 'success' | 'default' {
   switch (status) {
     case 'ongoing':
       return 'default';

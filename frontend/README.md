@@ -1,65 +1,42 @@
-# Svelte library
+# go_infra_link frontend
 
-Everything you need to build a Svelte library, powered by [`sv`](https://npmjs.com/package/sv).
+SvelteKit frontend for `go_infra_link`.
 
-Read more about creating a library [in the docs](https://svelte.dev/docs/kit/packaging).
+## Runtime model
 
-## Creating a project
+This frontend is deployed as a static SPA.
 
-If you're seeing this, you've probably already done this step. Congrats!
+- `@sveltejs/adapter-static` builds static assets into `build/`
+- the frontend container serves those files via Caddy
+- the edge Caddy instance keeps `/api/*` on the same origin by reverse-proxying to the Go backend
+- authentication, sessions, authorization, CSRF, SSE, and all business APIs are owned by the backend
 
-```sh
-# create a new project in the current directory
-npx sv create
+There is no SvelteKit server runtime in production. Do not add `hooks.server.ts`, `+server.ts`, or server-only environment dependencies unless the deployment model is explicitly changed to a server adapter.
 
-# create a new project in my-app
-npx sv create my-app
-```
+## Development
 
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-pnpm dlx sv create --template library --types ts --add prettier tailwindcss="plugins:none" --install pnpm frontend
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Install dependencies and start the dev server:
 
 ```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+pnpm install
+pnpm dev
 ```
 
-Everything inside `src/lib` is part of your library, everything inside `src/routes` can be used as a showcase or preview app.
+The Vite dev server proxies `/api/*` to the backend so local development matches the production same-origin contract as closely as possible.
 
-## Building
-
-To build your library:
+## Checks
 
 ```sh
-npm pack
+pnpm check
+pnpm test
+pnpm build
 ```
 
-To create a production version of your showcase app:
+## Production build
 
 ```sh
-npm run build
+pnpm build
+docker build --target runtime -t local/go-infra-frontend:stable .
 ```
 
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
-
-## Publishing
-
-Go into the `package.json` and give your package the desired name through the `"name"` option. Also consider adding a `"license"` field and point it to a `LICENSE` file which you can create from a template (one popular option is the [MIT license](https://opensource.org/license/mit/)).
-
-To publish your library to [npm](https://www.npmjs.com):
-
-```sh
-npm publish
-```
+The runtime image contains only static files and a small Caddy configuration to serve the SPA fallback.

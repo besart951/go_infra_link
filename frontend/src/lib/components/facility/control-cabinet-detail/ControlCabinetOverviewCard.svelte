@@ -36,7 +36,9 @@
   <Card.Content>
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-md border border-border/70 bg-muted/30 p-3">
-        <p class="text-xs text-muted-foreground">{$t('facility.control_cabinet_detail.cabinet_number')}</p>
+        <p class="text-xs text-muted-foreground">
+          {$t('facility.control_cabinet_detail.cabinet_number')}
+        </p>
         <div class="mt-2 flex items-center gap-2">
           <Badge variant="default">#{cabinet.control_cabinet_nr}</Badge>
         </div>
@@ -51,7 +53,9 @@
       </div>
 
       <div class="rounded-md border border-border/70 bg-muted/30 p-3">
-        <p class="text-xs text-muted-foreground">{$t('facility.control_cabinet_detail.created_at')}</p>
+        <p class="text-xs text-muted-foreground">
+          {$t('facility.control_cabinet_detail.created_at')}
+        </p>
         <div class="mt-2 flex items-center gap-2 text-sm font-medium">
           <CalendarIcon class="size-4 text-primary" />
           <span>{fmtDate(cabinet.created_at)}</span>
@@ -59,7 +63,9 @@
       </div>
 
       <div class="rounded-md border border-border/70 bg-muted/30 p-3">
-        <p class="text-xs text-muted-foreground">{$t('facility.control_cabinet_detail.updated_at')}</p>
+        <p class="text-xs text-muted-foreground">
+          {$t('facility.control_cabinet_detail.updated_at')}
+        </p>
         <div class="mt-2 flex items-center gap-2 text-sm font-medium">
           <CalendarIcon class="size-4 text-primary" />
           <span>{fmtDate(cabinet.updated_at)}</span>

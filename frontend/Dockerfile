@@ -1,8 +1,8 @@
 # Base Stage
 FROM node:25-alpine AS base
 WORKDIR /app
-# Enable pnpm
-RUN npm install -g pnpm
+# Enable the same pinned pnpm version used in CI.
+RUN npm install -g pnpm@10.29.1
 COPY pnpm-lock.yaml package.json ./
 RUN pnpm install --frozen-lockfile --ignore-scripts
 

@@ -8,17 +8,12 @@ const config = {
     runes: true
   },
   kit: {
-    // adapter-static configuration for SPA mode
     adapter: adapter({
-      fallback: 'index.html', // Enables SPA mode
+      // Production is a static SPA served by Caddy. Deep links fall back to index.html,
+      // while the edge reverse proxy keeps /api/* on the same origin.
+      fallback: 'index.html',
       strict: false
-    }),
-    csrf: {
-      trustedOrigins: []
-    },
-    alias: {
-      '@/*': './path/to/lib/*'
-    }
+    })
   }
 };
 
