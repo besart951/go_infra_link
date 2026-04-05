@@ -13,7 +13,7 @@
   }>();
 </script>
 
-<div class="relative w-full overflow-auto">
+<div class="relative w-full overflow-x-auto overscroll-auto">
   <table class={cn('w-full caption-bottom text-sm', className)} {...restProps}>
     {@render children?.()}
   </table>
