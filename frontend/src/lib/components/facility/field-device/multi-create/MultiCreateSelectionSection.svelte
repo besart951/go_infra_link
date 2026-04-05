@@ -64,6 +64,7 @@
         value={state.selection.spsControllerSystemTypeId}
         onValueChange={(v) => state.handleSpsSystemTypeChange(v)}
         clearable
+        popupWidth="w-[360px]"
         clearText={$t('field_device.multi_create.selection.sps_system_type_clear')}
         disabled={state.submitting}
       />

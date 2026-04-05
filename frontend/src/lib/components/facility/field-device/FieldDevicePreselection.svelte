@@ -300,6 +300,7 @@
         value={value.objectDataId}
         onValueChange={handleObjectDataChange}
         clearable
+        popupWidth="w-[390px]"
         clearText={$t('field_device.preselection.object_data_clear')}
         disabled={disabled || loading}
       />

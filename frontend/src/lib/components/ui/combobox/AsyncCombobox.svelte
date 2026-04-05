@@ -267,10 +267,7 @@
               onSelect={() => selectItem(item)}
             >
               <Check
-                class={cn(
-                  'mr-2 h-4 w-4',
-                  value === String(item[idKey]) ? 'opacity-100' : 'opacity-0'
-                )}
+                class={cn('size-4', value === String(item[idKey]) ? 'opacity-100' : 'opacity-0')}
               />
               {getItemLabel(item)}
             </Command.Item>
