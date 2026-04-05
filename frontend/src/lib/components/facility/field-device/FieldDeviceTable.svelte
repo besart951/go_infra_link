@@ -329,9 +329,7 @@
           <FieldDeviceTableRow {device} />
 
           {#if state.isBacnetExpanded(device.id)}
-            <Table.Row
-              class="bg-purple-50/50 hover:bg-purple-50/70 dark:bg-purple-950/20 dark:hover:bg-purple-950/30"
-            >
+            <Table.Row class="bg-muted/30 hover:bg-muted/40">
               <Table.Cell colspan={columnCount} class="p-0">
                 <BacnetObjectsEditor
                   bacnetObjects={device.bacnet_objects ?? []}

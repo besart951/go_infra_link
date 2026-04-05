@@ -196,7 +196,7 @@
   {/if}
 
   {#if loading}
-    <div class="rounded-lg border bg-background p-6">
+    <div class="rounded-lg border bg-card p-6">
       <div class="grid gap-4 md:grid-cols-2">
         {#each Array(6) as _}
           <Skeleton class="h-6 w-full" />
@@ -204,12 +204,12 @@
       </div>
     </div>
   {:else if !project}
-    <div class="rounded-lg border bg-background p-6 text-sm text-muted-foreground">
+    <div class="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
       {$t('projects.errors.not_found')}
     </div>
   {:else}
     <div class="grid gap-6">
-      <div class="rounded-lg border bg-background p-6">
+      <div class="rounded-lg border bg-card p-6">
         <Collapsible.Root bind:open={controlCabinetOpen} class="group/collapsible">
           <div class="flex items-center gap-3">
             <Collapsible.Trigger class="rounded px-2 py-1 hover:bg-accent">
@@ -230,7 +230,7 @@
         </Collapsible.Root>
       </div>
 
-      <div class="rounded-lg border bg-background p-6">
+      <div class="rounded-lg border bg-card p-6">
         <Collapsible.Root bind:open={spsControllerOpen} class="group/collapsible">
           <div class="flex items-center gap-3">
             <Collapsible.Trigger class="rounded px-2 py-1 hover:bg-accent">
@@ -252,7 +252,7 @@
         </Collapsible.Root>
       </div>
 
-      <div class="rounded-lg border bg-background p-6">
+      <div class="rounded-lg border bg-card p-6">
         <div class="mb-4">
           <h2 class="text-lg font-semibold">{$t('projects.field_devices.title')}</h2>
         </div>

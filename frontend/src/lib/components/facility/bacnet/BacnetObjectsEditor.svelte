@@ -180,7 +180,7 @@
       </thead>
       <tbody>
         {#each sortedBacnetObjects as obj (obj.id)}
-          <tr class="border-b border-purple-100 last:border-0 dark:border-purple-900">
+          <tr class="border-b border-border/60 last:border-0">
             <td class="py-1 pr-1">
               <EditableCell
                 value={obj.text_fix}
