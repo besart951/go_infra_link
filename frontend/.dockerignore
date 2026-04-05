@@ -3,10 +3,12 @@
 node_modules
 .pnpm-store
 .svelte-kit
+.generated
 build
 dist
 coverage
 .vite
+.vite-inspect
 package-lock.json
 npm-debug.log*
 pnpm-debug.log*
