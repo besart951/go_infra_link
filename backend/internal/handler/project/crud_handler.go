@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
@@ -87,7 +88,7 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects [get]
 func (h *ProjectHandler) ListProjects(c *gin.Context) {
-	var query dto.PaginationQuery
+	var query dto.ListProjectsQuery
 	if !handlerutil.BindQuery(c, &query) {
 		return
 	}
@@ -98,7 +99,12 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(c.Request.Context(), userID, query.Page, query.Limit, query.Search)
+	var status *domainProject.ProjectStatus
+	if query.Status != "" {
+		status = &query.Status
+	}
+
+	result, err := h.service.List(c.Request.Context(), userID, query.Page, query.Limit, query.Search, status)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
 		return

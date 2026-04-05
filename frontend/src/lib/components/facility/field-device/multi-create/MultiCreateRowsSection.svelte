@@ -1,79 +1,39 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button/index.js';
   import FieldDeviceRow from '../FieldDeviceRow.svelte';
-  import * as Card from '$lib/components/ui/card/index.js';
+  import * as Table from '$lib/components/ui/table/index.js';
   import * as Alert from '$lib/components/ui/alert/index.js';
   import { Separator } from '$lib/components/ui/separator/index.js';
-  import { Plus, AlertCircle } from '@lucide/svelte';
+  import { Plus, CircleAlert } from '@lucide/svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
 
-  import type {
-    FieldDeviceRowData,
-    FieldDeviceRowError
-  } from '$lib/domain/facility/fieldDeviceMultiCreate.js';
+  import type { FieldDeviceMultiCreateState } from './FieldDeviceMultiCreateState.svelte.js';
 
   type Props = {
-    rows: FieldDeviceRowData[];
-    rowErrors: Map<number, FieldDeviceRowError>;
-    availableNumbersCount: number;
-    loadingAvailableNumbers: boolean;
-    canAddRow: boolean;
-    hasValidationErrors: boolean;
-    submitting: boolean;
+    state: FieldDeviceMultiCreateState;
     onCancel?: () => void;
-    onAddRow: () => void;
-    onSubmit: () => void;
-    onRowBmkChange: (index: number, value: string) => void;
-    onRowDescriptionChange: (index: number, value: string) => void;
-    onRowTextFixChange: (index: number, value: string) => void;
-    onRowApparatNrChange: (index: number, value: string) => void;
-    onRowRemove: (index: number) => void;
-    getPlaceholderForRow: (index: number) => string;
   };
 
-  let {
-    rows,
-    rowErrors,
-    availableNumbersCount,
-    loadingAvailableNumbers,
-    canAddRow,
-    hasValidationErrors,
-    submitting,
-    onCancel,
-    onAddRow,
-    onSubmit,
-    onRowBmkChange,
-    onRowDescriptionChange,
-    onRowTextFixChange,
-    onRowApparatNrChange,
-    onRowRemove,
-    getPlaceholderForRow
-  }: Props = $props();
+  let { state, onCancel }: Props = $props();
 
   const t = createTranslator();
 </script>
 
-<Card.Root class="p-6">
-  <div class="mb-4 flex items-center justify-between">
-    <div>
-      <h3 class="text-lg font-semibold">{$t('field_device.multi_create.rows.title')}</h3>
-      <p class="text-sm text-muted-foreground">
-        {$t('field_device.multi_create.rows.description')}
-      </p>
-    </div>
-    <Button onclick={onAddRow} disabled={!canAddRow} size="sm">
+<div class="p-6">
+  <div class="mb-4 flex justify-end">
+    <Button onclick={() => state.addRow()} disabled={!state.canAddRow} size="sm">
       <Plus class="mr-2 size-4" />
       {$t('field_device.multi_create.rows.add')}
     </Button>
   </div>
 
-  {#if rows.length === 0}
+  {#if state.rows.length === 0}
     <Alert.Root>
-      <AlertCircle class="size-4" />
+      <CircleAlert class="size-4" />
       <Alert.Description>
-        {#if availableNumbersCount === 0 && !loadingAvailableNumbers}
+        {#if state.availableNumbers.length === 0 && !state.loadingAvailableNumbers}
           {$t('field_device.multi_create.rows.none_available')}
-        {:else if loadingAvailableNumbers}
+        {:else if state.loadingAvailableNumbers}
           {$t('field_device.multi_create.rows.loading_numbers')}
         {:else}
           {$t('field_device.multi_create.rows.empty_prompt')}
@@ -82,50 +42,52 @@
     </Alert.Root>
   {/if}
 
-  {#if rows.length > 0}
-    <div class="space-y-4">
-      {#each rows as row, index (row.id)}
-        <FieldDeviceRow
-          {index}
-          {row}
-          error={rowErrors.get(index) ?? null}
-          placeholder={getPlaceholderForRow(index)}
-          disabled={submitting}
-          onBmkChange={(value) => onRowBmkChange(index, value)}
-          onDescriptionChange={(value) => onRowDescriptionChange(index, value)}
-          onTextFixChange={(value) => onRowTextFixChange(index, value)}
-          onApparatNrChange={(value) => onRowApparatNrChange(index, value)}
-          onRemove={() => onRowRemove(index)}
-        />
-      {/each}
+  {#if state.rows.length > 0}
+    <div class="overflow-x-auto rounded-lg border">
+      <Table.Root class="[&_td]:p-2 [&_th]:h-10 [&_th]:px-2">
+        <Table.Header>
+          <Table.Row class = "my-0">
+            <Table.Head class="text-center">#</Table.Head>
+            <Table.Head>{$t('field_device.row.bmk')}</Table.Head>
+            <Table.Head>{$t('field_device.row.description')}</Table.Head>
+            <Table.Head>{$t('field_device.row.text_fix')}</Table.Head>
+            <Table.Head>{$t('field_device.row.apparat_nr')}</Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {#each state.rows as row, index (row.id)}
+            <FieldDeviceRow {state} {index} />
+          {/each}
+        </Table.Body>
+      </Table.Root>
     </div>
 
     <Separator class="my-4" />
 
     <div class="flex items-center justify-between">
       <p class="text-sm text-muted-foreground">
-        {$t('field_device.multi_create.rows.summary', { count: rows.length })}
-        {#if hasValidationErrors}
+        {$t('field_device.multi_create.rows.summary', { count: state.rows.length })}
+        {#if state.hasValidationErrors}
           <span class="text-destructive">
-            {$t('field_device.multi_create.rows.errors', { count: rowErrors.size })}
+            {$t('field_device.multi_create.rows.errors', { count: state.rowErrors.size })}
           </span>
         {/if}
       </p>
       <div class="flex gap-2">
         {#if onCancel}
-          <Button variant="outline" onclick={onCancel} disabled={submitting}>
+          <Button variant="outline" onclick={onCancel} disabled={state.submitting}>
             {$t('common.cancel')}
           </Button>
         {/if}
         <Button
-          onclick={onSubmit}
-          disabled={submitting || rows.length === 0 || hasValidationErrors}
+          onclick={() => state.handleSubmit()}
+          disabled={state.submitting || state.rows.length === 0 || state.hasValidationErrors}
         >
-          {submitting
+          {state.submitting
             ? $t('field_device.multi_create.actions.creating')
-            : $t('field_device.multi_create.actions.create', { count: rows.length })}
+            : $t('field_device.multi_create.actions.create', { count: state.rows.length })}
         </Button>
       </div>
     </div>
   {/if}
-</Card.Root>
+</div>

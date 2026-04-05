@@ -6,51 +6,26 @@
   import ObjectDataBacnetPreview from './ObjectDataBacnetPreview.svelte';
   import * as Card from '$lib/components/ui/card/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
-
-  import type { ObjectData, SPSControllerSystemType } from '$lib/domain/facility/index.js';
-  import type { MultiCreateSelection } from '$lib/domain/facility/fieldDeviceMultiCreate.js';
-  import type { FieldDevicePreselection as PreselectionType } from '$lib/domain/facility/preselectionFilter.js';
+  import type { FieldDeviceMultiCreateState } from './FieldDeviceMultiCreateState.svelte.js';
 
   type Props = {
-    projectId?: string;
+    state: FieldDeviceMultiCreateState;
     systemTypeRefreshKey?: string | number;
-    selection: MultiCreateSelection;
-    preselectionValue: PreselectionType;
-    submitting: boolean;
-    selectedObjectData: ObjectData | null;
-    loadingObjectDataPreview: boolean;
-    objectDataPreviewError?: string;
-    projectOnly: boolean;
-    onProjectOnlyChange: (checked: boolean) => void;
-    onSpsSystemTypeChange: (value: string) => void;
-    onPreselectionChange: (value: PreselectionType) => void;
-    fetchSpsControllerSystemTypes: (search: string) => Promise<SPSControllerSystemType[]>;
-    fetchSpsControllerSystemTypeById: (id: string) => Promise<SPSControllerSystemType | null>;
-    formatSpsControllerSystemTypeLabel: (item: SPSControllerSystemType) => string;
   };
 
-  let {
-    projectId,
-    systemTypeRefreshKey,
-    selection,
-    preselectionValue,
-    submitting,
-    selectedObjectData,
-    loadingObjectDataPreview,
-    objectDataPreviewError,
-    projectOnly,
-    onProjectOnlyChange,
-    onSpsSystemTypeChange,
-    onPreselectionChange,
-    fetchSpsControllerSystemTypes,
-    fetchSpsControllerSystemTypeById,
-    formatSpsControllerSystemTypeLabel
-  }: Props = $props();
+  let { state, systemTypeRefreshKey }: Props = $props();
 
   const t = createTranslator();
 
-  // Derive a refresh key that changes when projectOnly toggles, to force re-fetch
-  const comboboxRefreshKey = $derived(`${systemTypeRefreshKey ?? ''}-${projectOnly}`);
+  const comboboxRefreshKey = $derived(`${systemTypeRefreshKey ?? ''}-${state.projectOnly}`);
+
+  function handleProjectOnlyCheckedChange(checked: boolean | 'indeterminate') {
+    if (typeof checked !== 'boolean') {
+      return;
+    }
+
+    state.handleProjectOnlyChange(checked);
+  }
 </script>
 
 <Card.Root class="p-6">
@@ -60,18 +35,12 @@
         >{$t('field_device.multi_create.selection.sps_system_type')}</Label
       >
       <div class="flex items-center gap-2">
-        {#if projectId}
+        {#if state.projectId}
           <Checkbox
             id="project-only-filter"
-            checked={projectOnly}
-            onCheckedChange={(checked) => {
-              if (typeof checked === 'boolean') {
-                onProjectOnlyChange(checked);
-                // Clear current selection when filter changes
-                onSpsSystemTypeChange('');
-              }
-            }}
-            disabled={submitting}
+            checked={state.projectOnly}
+            onCheckedChange={handleProjectOnlyCheckedChange}
+            disabled={state.submitting}
           />
           <Label
             for="project-only-filter"
@@ -87,33 +56,33 @@
         placeholder={$t('field_device.multi_create.selection.sps_system_type_placeholder')}
         searchPlaceholder={$t('field_device.multi_create.selection.sps_system_type_search')}
         emptyText={$t('field_device.multi_create.selection.sps_system_type_empty')}
-        fetcher={fetchSpsControllerSystemTypes}
-        fetchById={fetchSpsControllerSystemTypeById}
+        fetcher={(search) => state.fetchSpsControllerSystemTypes(search)}
+        fetchById={(id) => state.fetchSpsControllerSystemTypeById(id)}
         labelKey="system_type_name"
-        labelFormatter={formatSpsControllerSystemTypeLabel}
+        labelFormatter={(item) => state.formatSpsControllerSystemTypeLabel(item)}
         width="w-full"
-        value={selection.spsControllerSystemTypeId}
-        onValueChange={onSpsSystemTypeChange}
+        value={state.selection.spsControllerSystemTypeId}
+        onValueChange={(v) => state.handleSpsSystemTypeChange(v)}
         clearable
         clearText={$t('field_device.multi_create.selection.sps_system_type_clear')}
-        disabled={submitting}
+        disabled={state.submitting}
       />
     </div>
   </div>
 
   <div class="mt-4">
     <FieldDevicePreselection
-      value={preselectionValue}
-      onChange={onPreselectionChange}
-      {projectId}
-      disabled={!selection.spsControllerSystemTypeId || submitting}
+      value={state.preselectionValue}
+      onChange={(v) => state.handlePreselectionChange(v)}
+      projectId={state.projectId}
+      disabled={!state.selection.spsControllerSystemTypeId || state.submitting}
       className="grid grid-cols-1 gap-4 md:grid-cols-3"
     />
   </div>
 
   <ObjectDataBacnetPreview
-    objectData={selectedObjectData}
-    loading={loadingObjectDataPreview}
-    error={objectDataPreviewError}
+    objectData={state.selectedObjectData}
+    loading={state.loadingObjectDataPreview}
+    error={state.objectDataPreviewError}
   />
 </Card.Root>

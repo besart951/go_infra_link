@@ -615,7 +615,7 @@ func (s *Service) DeleteByID(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
 }
 
-func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainProject.Project], error) {
+func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string, status *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
 
 	users, err := s.userRepo.GetByIds(ctx, []uuid.UUID{requesterID})
@@ -630,10 +630,10 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 	}
 
 	if len(users) > 0 && domainUser.IsAdmin(users[0].Role) {
-		return s.repo.GetPaginatedList(ctx, params)
+		return s.repo.GetPaginatedListWithStatus(ctx, params, status)
 	}
 
-	return s.repo.GetPaginatedListForUser(ctx, params, requesterID)
+	return s.repo.GetPaginatedListForUserWithStatus(ctx, params, requesterID, status)
 }
 
 func (s *Service) ListControlCabinets(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error) {

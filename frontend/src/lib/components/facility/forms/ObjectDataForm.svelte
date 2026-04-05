@@ -332,16 +332,7 @@
           {@const rowErrors = getBacnetRowErrors(index)}
           <BacnetObjectRow
             {index}
-            bind:textFix={obj.text_fix}
-            bind:description={obj.description}
-            bind:gmsVisible={obj.gms_visible}
-            bind:optional={obj.optional}
-            bind:textIndividual={obj.text_individual}
-            bind:softwareType={obj.software_type}
-            bind:softwareNumber={obj.software_number}
-            bind:hardwareType={obj.hardware_type}
-            bind:hardwareQuantity={obj.hardware_quantity}
-            bind:alarmTypeId={obj.alarm_type_id}
+            bind:obj={bacnetObjects[index]}
             errors={rowErrors}
             onRemove={() => removeBacnetObject(index)}
             onUpdate={(field, value) => updateBacnetObject(index, field, value)}

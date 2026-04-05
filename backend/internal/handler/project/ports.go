@@ -13,7 +13,7 @@ import (
 type ProjectService interface {
 	Create(ctx context.Context, project *domainProject.Project) error
 	GetByID(ctx context.Context, id uuid.UUID) (*domainProject.Project, error)
-	List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainProject.Project], error)
+	List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string, status *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error)
 	CanAccessProject(ctx context.Context, requesterID, projectID uuid.UUID) (bool, error)
 	InviteUser(ctx context.Context, projectID, userID uuid.UUID) error
 	ListUsers(ctx context.Context, projectID uuid.UUID) ([]domainUser.User, error)

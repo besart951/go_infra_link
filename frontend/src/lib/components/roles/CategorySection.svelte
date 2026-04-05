@@ -1,76 +1,56 @@
 <script lang="ts">
-  import type { Permission } from '$lib/domain/role/index.js';
   import type { Component } from 'svelte';
   import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import { ChevronDown, ChevronRight } from '@lucide/svelte';
   import ResourceSection from './ResourceSection.svelte';
+  import { useRolePermissionEditorState } from './state/context.svelte.js';
+
+  import type { CategoryId } from './state/RolePermissionEditorState.svelte.js';
 
   interface Props {
-    id: string;
+    categoryId: CategoryId;
     label: string;
     icon: Component<{ class?: string }>;
-    resources: string[];
-    permissionsByResource: Record<string, Permission[]>;
-    selectedPermissions: Set<string>;
-    isExpanded: boolean;
-    expandedResources: Set<string>;
-    disabled?: boolean;
-    onToggleExpand: () => void;
-    onToggleAll: () => void;
-    onToggleResource: (resource: string) => void;
-    onToggleResourceAll: (resource: string) => void;
-    onTogglePermission: (permissionName: string) => void;
-    getResourceDisplayName: (resource: string) => string;
   }
 
-  let {
-    id,
-    label,
-    icon: Icon,
-    resources,
-    permissionsByResource,
-    selectedPermissions,
-    isExpanded,
-    expandedResources,
-    disabled = false,
-    onToggleExpand,
-    onToggleAll,
-    onToggleResource,
-    onToggleResourceAll,
-    onTogglePermission,
-    getResourceDisplayName
-  }: Props = $props();
+  let { categoryId, label, icon: Icon }: Props = $props();
 
-  // Calculate category totals
-  const categoryPermissions = $derived(Object.values(permissionsByResource).flat());
-  const selectedCount = $derived(
-    categoryPermissions.filter((p) => selectedPermissions.has(p.name)).length
-  );
-  const totalCount = $derived(categoryPermissions.length);
+  const state = useRolePermissionEditorState();
+
+  const resources = $derived(state.getResourcesForCategory(categoryId));
+  const counts = $derived(state.getCategorySelectionCounts(categoryId));
+  const selectedCount = $derived(counts.selected);
+  const totalCount = $derived(counts.total);
   const isFullySelected = $derived(totalCount > 0 && selectedCount === totalCount);
   const isPartiallySelected = $derived(selectedCount > 0 && selectedCount < totalCount);
+
+  function handleToggleExpand(): void {
+    state.toggleCategory(categoryId);
+  }
+
+  function handleToggleAll(): void {
+    state.toggleAllInCategory(categoryId);
+  }
 </script>
 
 {#if resources.length > 0}
   <div class="rounded-lg border bg-background">
     <!-- Category Header -->
     <div class="flex items-center gap-2 border-b bg-muted/50 px-4 py-3">
-      {#if !disabled}
-        <Checkbox
-          checked={isFullySelected}
-          indeterminate={isPartiallySelected}
-          onCheckedChange={onToggleAll}
-          aria-label={`Select all ${label} permissions`}
-        />
-      {/if}
+      <Checkbox
+        checked={isFullySelected}
+        indeterminate={isPartiallySelected}
+        onCheckedChange={handleToggleAll}
+        aria-label={`Select all ${label} permissions`}
+      />
 
       <button
         type="button"
         class="flex flex-1 items-center gap-2 text-left"
-        onclick={onToggleExpand}
+        onclick={handleToggleExpand}
       >
-        {#if isExpanded}
+        {#if state.isCategoryExpanded(categoryId)}
           <ChevronDown class="h-4 w-4 text-muted-foreground" />
         {:else}
           <ChevronRight class="h-4 w-4 text-muted-foreground" />
@@ -84,21 +64,10 @@
     </div>
 
     <!-- Resources within Category -->
-    {#if isExpanded}
+    {#if state.isCategoryExpanded(categoryId)}
       <div class="space-y-1 p-2">
         {#each resources as resource (resource)}
-          {@const resourcePerms = permissionsByResource[resource] || []}
-          <ResourceSection
-            {resource}
-            displayName={getResourceDisplayName(resource)}
-            permissions={resourcePerms}
-            {selectedPermissions}
-            isExpanded={expandedResources.has(resource)}
-            {disabled}
-            onToggleExpand={() => onToggleResource(resource)}
-            onToggleAll={() => onToggleResourceAll(resource)}
-            {onTogglePermission}
-          />
+          <ResourceSection {categoryId} {resource} />
         {/each}
       </div>
     {/if}

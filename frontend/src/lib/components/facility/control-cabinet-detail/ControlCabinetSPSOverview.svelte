@@ -10,40 +10,54 @@
   import Trash2Icon from '@lucide/svelte/icons/trash-2';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
-  import { goto } from '$app/navigation';
-  import type { SPSController, SPSControllerSystemType } from '$lib/domain/facility/index.js';
+  import type { SPSController } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
+  import { useControlCabinetDetailState } from './state/context.svelte.js';
 
-  type Props = {
-    controllers: SPSController[];
-    systemTypesByController: Record<string, SPSControllerSystemType[]>;
-    canRead: boolean;
-    canCreate: boolean;
-    canUpdate: boolean;
-    canDelete: boolean;
-    onCreate: () => void;
-    onEdit: (controller: SPSController) => void;
-    onCopy: (controller: SPSController) => void;
-    onDelete: (controller: SPSController) => void;
-  };
-
-  let {
-    controllers,
-    systemTypesByController,
-    canRead,
-    canCreate,
-    canUpdate,
-    canDelete,
-    onCreate,
-    onEdit,
-    onCopy,
-    onDelete
-  }: Props = $props();
-
+  const state = useControlCabinetDetailState();
   const t = createTranslator();
 
-  function typesFor(controllerId: string): SPSControllerSystemType[] {
-    return systemTypesByController[controllerId] ?? [];
+  function handleCreateClick(): void {
+    state.startSpsCreate();
+  }
+
+  function createViewHandler(controllerId: string): () => Promise<void> {
+    return async function (): Promise<void> {
+      await state.goToSpsController(controllerId);
+    };
+  }
+
+  function createEditHandler(controller: SPSController): () => void {
+    return function (): void {
+      state.startSpsEdit(controller);
+    };
+  }
+
+  function createCopyHandler(controller: SPSController): () => Promise<void> {
+    return async function (): Promise<void> {
+      await state.copySps(controller);
+    };
+  }
+
+  function createDeleteHandler(controller: SPSController): () => Promise<void> {
+    return async function (): Promise<void> {
+      await state.deleteSps(controller);
+    };
+  }
+
+  function systemTypeSummary(systemType: {
+    number?: number | null;
+    document_name?: string | null;
+  }): string {
+    if (systemType.number != null && systemType.document_name) {
+      return `${$t('facility.control_cabinet_detail.number')}: ${systemType.number} • ${systemType.document_name}`;
+    }
+
+    if (systemType.number != null) {
+      return `${$t('facility.control_cabinet_detail.number')}: ${systemType.number}`;
+    }
+
+    return systemType.document_name ?? '';
   }
 </script>
 
@@ -57,8 +71,8 @@
         </Card.Title>
         <Card.Description>{$t('facility.control_cabinet_detail.sps_desc')}</Card.Description>
       </div>
-      {#if canCreate}
-        <Button size="sm" onclick={onCreate}>
+      {#if state.canCreateSps}
+        <Button size="sm" onclick={handleCreateClick}>
           <PlusIcon class="mr-2 size-4" />
           {$t('facility.control_cabinet_detail.create_sps')}
         </Button>
@@ -68,13 +82,13 @@
 
   <Card.Content>
     <Tooltip.Provider>
-      {#if !canRead}
+      {#if !state.canReadSps}
         <div
           class="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground"
         >
           {$t('facility.control_cabinet_detail.no_read_permission')}
         </div>
-      {:else if controllers.length === 0}
+      {:else if state.controllers.length === 0}
         <div
           class="rounded-md border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground"
         >
@@ -82,7 +96,7 @@
         </div>
       {:else}
         <div class="space-y-3">
-          {#each controllers as controller (controller.id)}
+          {#each state.controllers as controller (controller.id)}
             <div class="rounded-lg border border-border/70 bg-muted/20 p-4">
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -97,18 +111,18 @@
                   <Tooltip.Root>
                     <Tooltip.Trigger
                       class={buttonVariants({ variant: 'ghost', size: 'sm' })}
-                      onclick={() => goto(`/facility/sps-controllers/${controller.id}`)}
+                      onclick={createViewHandler(controller.id)}
                     >
                       <ArrowRightIcon class="size-4" />
                     </Tooltip.Trigger>
                     <Tooltip.Content>{$t('facility.view')}</Tooltip.Content>
                   </Tooltip.Root>
 
-                  {#if canUpdate}
+                  {#if state.canUpdateSps}
                     <Tooltip.Root>
                       <Tooltip.Trigger
                         class={buttonVariants({ variant: 'ghost', size: 'sm' })}
-                        onclick={() => onEdit(controller)}
+                        onclick={createEditHandler(controller)}
                       >
                         <PencilIcon class="size-4" />
                       </Tooltip.Trigger>
@@ -118,7 +132,7 @@
                     <Tooltip.Root>
                       <Tooltip.Trigger
                         class={buttonVariants({ variant: 'ghost', size: 'sm' })}
-                        onclick={() => onCopy(controller)}
+                        onclick={createCopyHandler(controller)}
                       >
                         <CopyIcon class="size-4" />
                       </Tooltip.Trigger>
@@ -126,11 +140,11 @@
                     </Tooltip.Root>
                   {/if}
 
-                  {#if canDelete}
+                  {#if state.canDeleteSps}
                     <Tooltip.Root>
                       <Tooltip.Trigger
                         class={`${buttonVariants({ variant: 'ghost', size: 'sm' })} text-destructive`}
-                        onclick={() => onDelete(controller)}
+                        onclick={createDeleteHandler(controller)}
                       >
                         <Trash2Icon class="size-4" />
                       </Tooltip.Trigger>
@@ -147,26 +161,18 @@
                   <NetworkIcon class="size-3.5" />
                   {$t('facility.control_cabinet_detail.system_types')}
                 </p>
-                {#if typesFor(controller.id).length === 0}
+                {#if state.getSystemTypesForController(controller.id).length === 0}
                   <p class="text-sm text-muted-foreground">
                     {$t('facility.control_cabinet_detail.no_system_types')}
                   </p>
                 {:else}
                   <div class="grid gap-2 sm:grid-cols-2">
-                    {#each typesFor(controller.id) as systemType (systemType.id)}
+                    {#each state.getSystemTypesForController(controller.id) as systemType (systemType.id)}
                       <div class="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
                         <p class="font-medium text-foreground">
                           {systemType.system_type_name ?? systemType.system_type_id}
                         </p>
-                        <p class="text-xs text-muted-foreground">
-                          {systemType.number != null
-                            ? `${$t('facility.control_cabinet_detail.number')}: ${systemType.number}`
-                            : ''}
-                          {#if systemType.document_name}
-                            {systemType.number != null ? ' • ' : ''}
-                            {systemType.document_name}
-                          {/if}
-                        </p>
+                        <p class="text-xs text-muted-foreground">{systemTypeSummary(systemType)}</p>
                       </div>
                     {/each}
                   </div>

@@ -68,7 +68,7 @@
   </div>
 
   {#if fieldDeviceState.showMultiCreateForm}
-    <Card.Root>
+    <Card.Root class="bg-background">
       <Card.Header>
         <Card.Title>{$t('field_device.multi_create.title')}</Card.Title>
         <Card.Description>

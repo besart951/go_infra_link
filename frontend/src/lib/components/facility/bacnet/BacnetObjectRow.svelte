@@ -8,7 +8,7 @@
   import { createTranslator } from '$lib/i18n/translator.js';
   import AlarmTypeSelect from '$lib/components/facility/selects/AlarmTypeSelect.svelte';
   import { alarmTypeRepository } from '$lib/infrastructure/api/alarmTypeRepository.js';
-  import type { AlarmTypeField } from '$lib/domain/facility/index.js';
+  import type { AlarmTypeField, BacnetObjectInput } from '$lib/domain/facility/index.js';
 
   type BacnetRowErrors = Partial<
     Record<
@@ -24,43 +24,25 @@
 
   interface Props {
     index: number;
-    textFix: string;
-    description?: string;
-    gmsVisible?: boolean;
-    optional?: boolean;
-    textIndividual?: string;
-    softwareType: string;
-    softwareNumber: number;
-    hardwareType: string;
-    hardwareQuantity: number;
-    alarmTypeId?: string;
+    obj: BacnetObjectInput;
     readOnly?: boolean;
     errors?: BacnetRowErrors;
-    onRemove: () => void;
-    onUpdate: (field: string, value: any) => void;
+    onRemove?: () => void;
+    onUpdate?: (field: string, value: any) => void;
   }
 
   let {
     index,
-    textFix = $bindable(),
-    description = $bindable(),
-    gmsVisible = $bindable(false),
-    optional = $bindable(false),
-    textIndividual = $bindable(''),
-    softwareType = $bindable('ai'),
-    softwareNumber = $bindable(1),
-    hardwareType = $bindable('ai'),
-    hardwareQuantity = $bindable(1),
-    alarmTypeId = $bindable(),
+    obj = $bindable(),
     readOnly = false,
     errors = {},
-    onRemove,
-    onUpdate
+    onRemove = () => {},
+    onUpdate = () => {}
   }: Props = $props();
 
   const t = createTranslator();
 
-  let textIndividualEnabled = $state(!!textIndividual);
+  let textIndividualEnabled = $state(!!obj.text_individual);
   let prevGmsVisible = $state<boolean | null>(null);
   let prevOptional = $state<boolean | null>(null);
   let prevAlarmTypeId = $state<string | null>(null);
@@ -72,34 +54,34 @@
   $effect(() => {
     if (readOnly) return;
     if (prevGmsVisible === null) {
-      prevGmsVisible = gmsVisible;
+      prevGmsVisible = obj.gms_visible;
       return;
     }
-    if (gmsVisible !== prevGmsVisible) {
-      prevGmsVisible = gmsVisible;
-      onUpdate('gms_visible', gmsVisible);
+    if (obj.gms_visible !== prevGmsVisible) {
+      prevGmsVisible = obj.gms_visible;
+      onUpdate('gms_visible', obj.gms_visible);
     }
   });
 
   $effect(() => {
     if (readOnly) return;
     if (prevOptional === null) {
-      prevOptional = optional;
+      prevOptional = obj.optional;
       return;
     }
-    if (optional !== prevOptional) {
-      prevOptional = optional;
-      onUpdate('optional', optional);
+    if (obj.optional !== prevOptional) {
+      prevOptional = obj.optional;
+      onUpdate('optional', obj.optional);
     }
   });
 
   $effect(() => {
     if (readOnly) return;
     if (prevAlarmTypeId === null) {
-      prevAlarmTypeId = alarmTypeId ?? '';
+      prevAlarmTypeId = obj.alarm_type_id ?? '';
       return;
     }
-    const current = alarmTypeId ?? '';
+    const current = obj.alarm_type_id ?? '';
     if (current !== prevAlarmTypeId) {
       prevAlarmTypeId = current;
       onUpdate('alarm_type_id', current || null);
@@ -107,7 +89,7 @@
   });
 
   $effect(() => {
-    const selectedAlarmTypeId = alarmTypeId?.trim() ?? '';
+    const selectedAlarmTypeId = obj.alarm_type_id?.trim() ?? '';
     if (!selectedAlarmTypeId) {
       alarmTypeFields = [];
       alarmTypeFieldsError = '';
@@ -137,17 +119,17 @@
   $effect(() => {
     if (readOnly) return;
     const value = textIndividualEnabled ? $t('field_device.bacnet.row.text_individual_value') : '';
-    if (textIndividual !== value) {
-      textIndividual = value;
-      onUpdate('text_individual', textIndividual);
+    if (obj.text_individual !== value) {
+      obj.text_individual = value;
+      onUpdate('text_individual', value);
     }
   });
 
   $effect(() => {
-    if (textIndividual && !textIndividualEnabled) {
+    if (obj.text_individual && !textIndividualEnabled) {
       textIndividualEnabled = true;
     }
-    if (!textIndividual && textIndividualEnabled) {
+    if (!obj.text_individual && textIndividualEnabled) {
       textIndividualEnabled = false;
     }
   });
@@ -171,8 +153,8 @@
     <Label for="text_fix_{index}" class="text-xs">{$t('field_device.bacnet.row.text_fix')}</Label>
     <Input
       id="text_fix_{index}"
-      bind:value={textFix}
-      onchange={() => onUpdate('text_fix', textFix)}
+      bind:value={obj.text_fix}
+      onchange={() => onUpdate('text_fix', obj.text_fix)}
       required
       maxlength={250}
       placeholder={$t('field_device.bacnet.row.text_fix_placeholder')}
@@ -191,8 +173,8 @@
     </Label>
     <Input
       id="description_{index}"
-      bind:value={description}
-      onchange={() => onUpdate('description', description)}
+      bind:value={obj.description}
+      onchange={() => onUpdate('description', obj.description)}
       maxlength={250}
       placeholder={$t('field_device.bacnet.row.description_placeholder')}
       class="h-8 text-sm"
@@ -210,8 +192,8 @@
         </Label>
         <select
           id="software_type_{index}"
-          bind:value={softwareType}
-          onchange={() => onUpdate('software_type', softwareType)}
+          bind:value={obj.software_type}
+          onchange={() => onUpdate('software_type', obj.software_type)}
           required
           disabled={readOnly}
           class="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
@@ -232,8 +214,8 @@
         <Input
           id="software_number_{index}"
           type="number"
-          bind:value={softwareNumber}
-          onchange={() => onUpdate('software_number', softwareNumber)}
+          bind:value={obj.software_number}
+          onchange={() => onUpdate('software_number', obj.software_number)}
           required
           min={0}
           max={65535}
@@ -258,8 +240,8 @@
         </Label>
         <select
           id="hardware_type_{index}"
-          bind:value={hardwareType}
-          onchange={() => onUpdate('hardware_type', hardwareType)}
+          bind:value={obj.hardware_type}
+          onchange={() => onUpdate('hardware_type', obj.hardware_type)}
           disabled={readOnly}
           class="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -279,8 +261,8 @@
         <Input
           id="hardware_quantity_{index}"
           type="number"
-          bind:value={hardwareQuantity}
-          onchange={() => onUpdate('hardware_quantity', hardwareQuantity)}
+          bind:value={obj.hardware_quantity}
+          onchange={() => onUpdate('hardware_quantity', obj.hardware_quantity)}
           min={0}
           max={255}
           placeholder={$t('field_device.bacnet.row.hardware_quantity_placeholder')}
@@ -297,13 +279,13 @@
   <!-- Checkboxes -->
   <div class="col-span-12 flex flex-wrap items-center gap-4 md:col-span-6">
     <div class="flex items-center gap-2">
-      <Checkbox id="gms_visible_{index}" bind:checked={gmsVisible} disabled={readOnly} />
+      <Checkbox id="gms_visible_{index}" bind:checked={obj.gms_visible} disabled={readOnly} />
       <Label for="gms_visible_{index}" class="cursor-pointer text-xs">
         {$t('field_device.bacnet.row.gms_visible')}
       </Label>
     </div>
     <div class="flex items-center gap-2">
-      <Checkbox id="optional_{index}" bind:checked={optional} disabled={readOnly} />
+      <Checkbox id="optional_{index}" bind:checked={obj.optional} disabled={readOnly} />
       <Label for="optional_{index}" class="cursor-pointer text-xs">
         {$t('field_device.bacnet.row.optional')}
       </Label>
@@ -326,21 +308,21 @@
     <div class="space-y-2">
       {#if readOnly}
         <Input
-          value={alarmTypeId || ''}
+          value={obj.alarm_type_id || ''}
           disabled
           placeholder={$t('field_device.bacnet.row.no_alarm_type')}
           class="h-8 text-sm"
         />
       {:else}
-        <AlarmTypeSelect bind:value={alarmTypeId} width="w-full" />
+        <AlarmTypeSelect bind:value={obj.alarm_type_id} width="w-full" />
       {/if}
-      {#if alarmTypeId && !readOnly}
+      {#if obj.alarm_type_id && !readOnly}
         <div class="flex justify-end">
           <Button
             variant="ghost"
             size="sm"
             onclick={() => {
-              alarmTypeId = '';
+              obj.alarm_type_id = '';
             }}
             class="h-7 px-2 text-xs"
             title={$t('field_device.bacnet.row.alarm_type_remove')}
@@ -374,7 +356,7 @@
           {/each}
         </div>
       </div>
-    {:else if alarmTypeId}
+    {:else if obj.alarm_type_id}
       <p class="text-xs text-muted-foreground">
         {$t('field_device.bacnet.row.no_required_fields')}
       </p>

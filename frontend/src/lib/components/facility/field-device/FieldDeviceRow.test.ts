@@ -3,6 +3,9 @@
 import { render, screen } from '@testing-library/svelte';
 import FieldDeviceRow from './FieldDeviceRow.svelte';
 
+import type { FieldDeviceRowData } from '$lib/domain/facility/fieldDeviceMultiCreate.js';
+import type { FieldDeviceMultiCreateState } from './multi-create/FieldDeviceMultiCreateState.svelte.js';
+
 vi.mock('$lib/i18n/translator.js', () => ({
   createTranslator: () => ({
     subscribe(fn: (value: (key: string) => string) => void) {
@@ -13,17 +16,32 @@ vi.mock('$lib/i18n/translator.js', () => ({
 }));
 
 describe('FieldDeviceRow', () => {
+  function createMockState(rows: FieldDeviceRowData[]): FieldDeviceMultiCreateState {
+    const mock = {
+      rows,
+      rowErrors: new Map(),
+      submitting: false,
+      getPlaceholderForRow: function (): string {
+        return '';
+      },
+      handleRowBmkChange: vi.fn(),
+      handleRowDescriptionChange: vi.fn(),
+      handleRowTextFixChange: vi.fn(),
+      handleRowApparatNrChange: vi.fn(),
+      removeRow: vi.fn()
+    };
+
+    return mock as unknown as FieldDeviceMultiCreateState;
+  }
+
   it('renders empty form values for a new row', () => {
+    const state = createMockState([
+      { id: 'r-1', bmk: '', description: '', textFix: '', apparatNr: null }
+    ]);
+
     render(FieldDeviceRow, {
       index: 0,
-      row: { id: 'r-1', bmk: '', description: '', textFix: '', apparatNr: null },
-      error: null,
-      placeholder: '',
-      onBmkChange: vi.fn(),
-      onDescriptionChange: vi.fn(),
-      onTextFixChange: vi.fn(),
-      onApparatNrChange: vi.fn(),
-      onRemove: vi.fn()
+      state
     });
 
     expect(screen.getByLabelText('field_device.row.bmk')).toHaveValue('');
@@ -33,22 +51,19 @@ describe('FieldDeviceRow', () => {
   });
 
   it('populates form fields correctly for existing row data', () => {
-    render(FieldDeviceRow, {
-      index: 0,
-      row: {
+    const state = createMockState([
+      {
         id: 'r-2',
         bmk: 'BMK-EXISTING',
         description: 'Existing device description',
         textFix: 'TF-EX',
         apparatNr: 12
-      },
-      error: null,
-      placeholder: '',
-      onBmkChange: vi.fn(),
-      onDescriptionChange: vi.fn(),
-      onTextFixChange: vi.fn(),
-      onApparatNrChange: vi.fn(),
-      onRemove: vi.fn()
+      }
+    ]);
+
+    render(FieldDeviceRow, {
+      index: 0,
+      state
     });
 
     expect(screen.getByLabelText('field_device.row.bmk')).toHaveValue('BMK-EXISTING');

@@ -23,8 +23,6 @@
       lastObjectDataId = currentId;
     }
   });
-
-  function noop() {}
 </script>
 
 {#if objectData}
@@ -55,22 +53,7 @@
         {:else}
           <div class="space-y-3">
             {#each bacnetObjects as obj, index (obj.id)}
-              <BacnetObjectRow
-                {index}
-                textFix={obj.text_fix}
-                description={obj.description}
-                gmsVisible={obj.gms_visible}
-                optional={obj.optional}
-                textIndividual={obj.text_individual}
-                softwareType={obj.software_type}
-                softwareNumber={obj.software_number}
-                hardwareType={obj.hardware_type}
-                hardwareQuantity={obj.hardware_quantity}
-                alarmTypeId={obj.alarm_type_id}
-                readOnly
-                onRemove={noop}
-                onUpdate={noop}
-              />
+              <BacnetObjectRow {index} {obj} readOnly />
             {/each}
           </div>
         {/if}

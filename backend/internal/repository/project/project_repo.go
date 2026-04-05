@@ -47,14 +47,51 @@ func (r *projectRepo) Update(ctx context.Context, entity *domainProject.Project)
 }
 
 func (r *projectRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainProject.Project], error) {
-	result, err := r.BaseRepository.GetPaginatedList(ctx, params, 10)
-	if err != nil {
-		return nil, err
-	}
-	return gormbase.DerefPaginatedList(result), nil
+	return r.GetPaginatedListWithStatus(ctx, params, nil)
 }
 
 func (r *projectRepo) GetPaginatedListForUser(ctx context.Context, params domain.PaginationParams, userID uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
+	return r.GetPaginatedListForUserWithStatus(ctx, params, userID, nil)
+}
+
+func (r *projectRepo) GetPaginatedListWithStatus(ctx context.Context, params domain.PaginationParams, status *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error) {
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
+	offset := (page - 1) * limit
+
+	query := r.db.WithContext(ctx).Model(&domainProject.Project{})
+
+	if params.Search != "" {
+		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
+		query = query.Where("LOWER(name) LIKE ? OR LOWER(description) LIKE ?", pattern, pattern)
+	}
+
+	if status != nil && *status != "" {
+		query = query.Where("status = ?", *status)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	var items []domainProject.Project
+	if err := query.
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+
+	return &domain.PaginatedList[domainProject.Project]{
+		Items:      items,
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
+	}, nil
+}
+
+func (r *projectRepo) GetPaginatedListForUserWithStatus(ctx context.Context, params domain.PaginationParams, userID uuid.UUID, status *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
@@ -65,6 +102,10 @@ func (r *projectRepo) GetPaginatedListForUser(ctx context.Context, params domain
 	if params.Search != "" {
 		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
 		query = query.Where("LOWER(projects.name) LIKE ? OR LOWER(projects.description) LIKE ?", pattern, pattern)
+	}
+
+	if status != nil && *status != "" {
+		query = query.Where("projects.status = ?", *status)
 	}
 
 	var total int64

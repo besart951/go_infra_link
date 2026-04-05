@@ -43,3 +43,8 @@ type ProjectListResponse struct {
 	Page       int               `json:"page"`
 	TotalPages int               `json:"total_pages"`
 }
+
+type ListProjectsQuery struct {
+	PaginationQuery
+	Status domainproject.ProjectStatus `form:"status" binding:"omitempty,oneof=planned ongoing completed"`
+}
