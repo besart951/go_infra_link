@@ -23,4 +23,5 @@ func (ProjectControlCabinet) TableName() string {
 type ProjectControlCabinetRepository interface {
 	domain.Repository[ProjectControlCabinet]
 	GetPaginatedListByProjectID(ctx context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ProjectControlCabinet], error)
+	GetByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]*ProjectControlCabinet, error)
 }

@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -8,6 +9,7 @@ import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type SPSControllerHandler struct {
@@ -19,11 +21,11 @@ func NewSPSControllerHandler(service SPSControllerService, collaboration Project
 	return &SPSControllerHandler{service: service, collaboration: collaboration}
 }
 
-func (h *SPSControllerHandler) broadcastProjectRefresh() {
+func (h *SPSControllerHandler) broadcastProjectRefresh(ctx context.Context, spsControllerID uuid.UUID) {
 	if h.collaboration == nil {
 		return
 	}
-	h.collaboration.BroadcastRefreshToAllProjects("sps_controller")
+	h.collaboration.BroadcastRefreshForSPSController(ctx, spsControllerID, "sps_controller")
 }
 
 // CreateSPSController godoc
@@ -58,7 +60,7 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh()
+	h.broadcastProjectRefresh(c.Request.Context(), spsController.ID)
 	c.JSON(http.StatusCreated, toSPSControllerResponse(*spsController))
 }
 
@@ -149,7 +151,7 @@ func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh()
+	h.broadcastProjectRefresh(c.Request.Context(), copyEntity.ID)
 	c.JSON(http.StatusCreated, toSPSControllerResponse(*copyEntity))
 }
 
@@ -293,7 +295,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh()
+	h.broadcastProjectRefresh(ctx, spsController.ID)
 	c.JSON(http.StatusOK, toSPSControllerResponse(*spsController))
 }
 
@@ -317,6 +319,6 @@ func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh()
+	h.broadcastProjectRefresh(c.Request.Context(), id)
 	c.Status(http.StatusNoContent)
 }

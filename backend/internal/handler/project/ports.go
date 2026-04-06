@@ -38,6 +38,8 @@ type ProjectService interface {
 	RemoveObjectData(ctx context.Context, projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
 	Update(ctx context.Context, project *domainProject.Project) error
 	DeleteByID(ctx context.Context, id uuid.UUID) error
+	ListProjectIDsByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]uuid.UUID, error)
+	ListProjectIDsBySPSControllerID(ctx context.Context, spsControllerID uuid.UUID) ([]uuid.UUID, error)
 }
 
 type PhaseService interface {

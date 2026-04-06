@@ -111,6 +111,48 @@ func withTxResult[T any](s *Service, fn func(*Service) (T, error)) (T, error) {
 	return result, nil
 }
 
+func (s *Service) ListProjectIDsByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]uuid.UUID, error) {
+	items, err := s.projectControlCabinetRepo.GetByControlCabinetID(ctx, controlCabinetID)
+	if err != nil {
+		return nil, err
+	}
+
+	projectIDSet := make(map[uuid.UUID]struct{}, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		projectIDSet[item.ProjectID] = struct{}{}
+	}
+
+	projectIDs := make([]uuid.UUID, 0, len(projectIDSet))
+	for projectID := range projectIDSet {
+		projectIDs = append(projectIDs, projectID)
+	}
+	return projectIDs, nil
+}
+
+func (s *Service) ListProjectIDsBySPSControllerID(ctx context.Context, spsControllerID uuid.UUID) ([]uuid.UUID, error) {
+	items, err := s.projectSPSControllerRepo.GetBySPSControllerID(ctx, spsControllerID)
+	if err != nil {
+		return nil, err
+	}
+
+	projectIDSet := make(map[uuid.UUID]struct{}, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		projectIDSet[item.ProjectID] = struct{}{}
+	}
+
+	projectIDs := make([]uuid.UUID, 0, len(projectIDSet))
+	for projectID := range projectIDSet {
+		projectIDs = append(projectIDs, projectID)
+	}
+	return projectIDs, nil
+}
+
 func (s *Service) Create(ctx context.Context, project *domainProject.Project) error {
 	return s.withTx(func(txService *Service) error {
 		return txService.createProject(ctx, project)

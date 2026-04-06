@@ -293,19 +293,6 @@ func (h *ProjectCollaborationHub) BroadcastRefreshRequest(projectID uuid.UUID, a
 	})
 }
 
-func (h *ProjectCollaborationHub) BroadcastRefreshToAllProjects(scope string) {
-	h.mu.RLock()
-	projectIDs := make([]uuid.UUID, 0, len(h.rooms))
-	for projectID := range h.rooms {
-		projectIDs = append(projectIDs, projectID)
-	}
-	h.mu.RUnlock()
-
-	for _, projectID := range projectIDs {
-		h.BroadcastRefreshRequest(projectID, nil, scope, nil)
-	}
-}
-
 func (h *ProjectCollaborationHub) ensureRoomLocked(projectID uuid.UUID) *projectCollaborationRoom {
 	room, ok := h.rooms[projectID]
 	if !ok {

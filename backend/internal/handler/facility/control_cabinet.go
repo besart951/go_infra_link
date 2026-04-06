@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -8,6 +9,7 @@ import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type ControlCabinetHandler struct {
@@ -19,11 +21,11 @@ func NewControlCabinetHandler(service ControlCabinetService, collaboration Proje
 	return &ControlCabinetHandler{service: service, collaboration: collaboration}
 }
 
-func (h *ControlCabinetHandler) broadcastProjectRefresh() {
+func (h *ControlCabinetHandler) broadcastProjectRefresh(ctx context.Context, controlCabinetID uuid.UUID) {
 	if h.collaboration == nil {
 		return
 	}
-	h.collaboration.BroadcastRefreshToAllProjects("control_cabinet")
+	h.collaboration.BroadcastRefreshForControlCabinet(ctx, controlCabinetID, "control_cabinet")
 }
 
 // CreateControlCabinet godoc
@@ -57,7 +59,7 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh()
+	h.broadcastProjectRefresh(c.Request.Context(), controlCabinet.ID)
 	c.JSON(http.StatusCreated, toControlCabinetResponse(*controlCabinet))
 }
 
@@ -148,7 +150,7 @@ func (h *ControlCabinetHandler) CopyControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh()
+	h.broadcastProjectRefresh(c.Request.Context(), copyEntity.ID)
 	c.JSON(http.StatusCreated, toControlCabinetResponse(*copyEntity))
 }
 
@@ -276,7 +278,7 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh()
+	h.broadcastProjectRefresh(ctx, controlCabinet.ID)
 	c.JSON(http.StatusOK, toControlCabinetResponse(*controlCabinet))
 }
 
@@ -303,6 +305,6 @@ func (h *ControlCabinetHandler) DeleteControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh()
+	h.broadcastProjectRefresh(c.Request.Context(), id)
 	c.Status(http.StatusNoContent)
 }

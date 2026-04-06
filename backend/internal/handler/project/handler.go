@@ -1,6 +1,7 @@
 package project
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -28,8 +29,34 @@ func NewProjectHandler(service ProjectService, events *ProjectEventHub) *Project
 	}
 }
 
-func (h *ProjectHandler) CollaborationHub() *ProjectCollaborationHub {
-	return h.collaboration
+func (h *ProjectHandler) BroadcastRefreshForControlCabinet(ctx context.Context, controlCabinetID uuid.UUID, scope string) {
+	if h.collaboration == nil {
+		return
+	}
+
+	projectIDs, err := h.service.ListProjectIDsByControlCabinetID(ctx, controlCabinetID)
+	if err != nil {
+		return
+	}
+
+	for _, projectID := range projectIDs {
+		h.collaboration.BroadcastRefreshRequest(projectID, nil, scope, nil)
+	}
+}
+
+func (h *ProjectHandler) BroadcastRefreshForSPSController(ctx context.Context, spsControllerID uuid.UUID, scope string) {
+	if h.collaboration == nil {
+		return
+	}
+
+	projectIDs, err := h.service.ListProjectIDsBySPSControllerID(ctx, spsControllerID)
+	if err != nil {
+		return
+	}
+
+	for _, projectID := range projectIDs {
+		h.collaboration.BroadcastRefreshRequest(projectID, nil, scope, nil)
+	}
 }
 
 func (h *ProjectHandler) notifyProjectChange(c *gin.Context, projectID uuid.UUID, eventType string) {

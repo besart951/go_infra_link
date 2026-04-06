@@ -1,7 +1,14 @@
 package facility
 
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
+
 type ProjectRefreshBroadcaster interface {
-	BroadcastRefreshToAllProjects(scope string)
+	BroadcastRefreshForControlCabinet(ctx context.Context, controlCabinetID uuid.UUID, scope string)
+	BroadcastRefreshForSPSController(ctx context.Context, spsControllerID uuid.UUID, scope string)
 }
 
 // ServiceDeps groups service dependencies for facility handler construction.
