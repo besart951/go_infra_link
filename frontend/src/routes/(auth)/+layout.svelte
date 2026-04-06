@@ -9,6 +9,14 @@
     <AnimatedAirplane />
   </div>
 
+  <!-- Brand logo -->
+  <div class="absolute top-4 left-4 z-20 p-1">
+    <a href="/" aria-label="CodeLinks Home" class="inline-flex items-center">
+      <img src="/favicon.svg" alt="CodeLinks" class="h-8 w-auto dark:hidden" />
+      <img src="/codelinks_logo_dark.svg" alt="CodeLinks" class="hidden h-8 w-auto dark:block" />
+    </a>
+  </div>
+
   <!-- Login form layer -->
   <div class="relative z-10 flex min-h-svh items-center justify-center p-6">
     <div
