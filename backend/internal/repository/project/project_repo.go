@@ -97,7 +97,7 @@ func (r *projectRepo) GetPaginatedListForUserWithStatus(ctx context.Context, par
 
 	query := r.db.WithContext(ctx).Model(&domainProject.Project{}).
 		Joins("LEFT JOIN project_users pu ON pu.project_id = projects.id").
-		Where("pu.user_id = ? OR projects.creator_id = ?", userID, userID)
+		Where("pu.user_id = ?", userID)
 
 	if params.Search != "" {
 		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"

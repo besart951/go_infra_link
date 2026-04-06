@@ -660,19 +660,10 @@ func (s *Service) DeleteByID(ctx context.Context, id uuid.UUID) error {
 func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string, status *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
 
-	users, err := s.userRepo.GetByIds(ctx, []uuid.UUID{requesterID})
-	if err != nil {
-		return nil, err
-	}
-
 	params := domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,
 		Search: search,
-	}
-
-	if len(users) > 0 && domainUser.IsAdmin(users[0].Role) {
-		return s.repo.GetPaginatedListWithStatus(ctx, params, status)
 	}
 
 	return s.repo.GetPaginatedListForUserWithStatus(ctx, params, requesterID, status)
