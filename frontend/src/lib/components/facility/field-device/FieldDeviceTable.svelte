@@ -336,6 +336,7 @@
                   pendingEdits={state.editing.getBacnetPendingEdits(device.id) ?? new Map()}
                   fieldErrors={state.editing.getBacnetFieldErrors(device.id) ?? new Map()}
                   clientErrors={state.editing.getBacnetClientErrors(device.id) ?? new Map()}
+                  sharedEditors={state.getEditorsForDevice(device.id)}
                   disabled={!canPerform('update', 'fielddevice')}
                   onEdit={(objectId, field, value) => {
                     state.editing.queueBacnetEdit(device.id, objectId, field, value);

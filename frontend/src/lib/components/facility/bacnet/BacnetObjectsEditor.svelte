@@ -21,6 +21,7 @@
   import type { BacnetObject } from '$lib/domain/facility/bacnet-object.js';
   import type { BacnetObjectInput } from '$lib/domain/facility/field-device.js';
   import type { StateText, NotificationClass } from '$lib/domain/facility/index.js';
+  import type { SharedFieldDeviceEditor } from '$lib/services/projectCollaboration.svelte.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { BellRing } from '@lucide/svelte';
 
@@ -29,6 +30,7 @@
     pendingEdits: Map<string, Partial<BacnetObjectInput>>;
     fieldErrors: Map<string, Record<string, string>>;
     clientErrors: Map<string, Record<string, string>>;
+    sharedEditors?: SharedFieldDeviceEditor[];
     disabled?: boolean;
     onEdit: (objectId: string, field: string, value: unknown) => void;
   }
@@ -38,6 +40,7 @@
     pendingEdits,
     fieldErrors,
     clientErrors,
+    sharedEditors = [],
     disabled = false,
     onEdit
   }: Props = $props();
@@ -94,6 +97,40 @@
 
   function getFieldError(objectId: string, field: string): string | undefined {
     return fieldErrors.get(objectId)?.[field] || clientErrors.get(objectId)?.[field];
+  }
+
+  function getCollaborationFieldKey(objectId: string, field: string): string {
+    return `bacnet_objects.${objectId}.${field}`;
+  }
+
+  function getEditorsForField(objectId: string, field: string): SharedFieldDeviceEditor[] {
+    const collaborationField = getCollaborationFieldKey(objectId, field);
+    return sharedEditors.filter((editor) => editor.changedFields.includes(collaborationField));
+  }
+
+  function getPreviewTitle(objectId: string, field: string): string | undefined {
+    const collaborationField = getCollaborationFieldKey(objectId, field);
+    const editors = getEditorsForField(objectId, field);
+    if (editors.length === 0) return undefined;
+
+    return editors
+      .map((editor) => {
+        const value = editor.fieldValues?.[collaborationField];
+        const displayValue =
+          value === null || value === undefined
+            ? '(empty)'
+            : typeof value === 'object'
+              ? JSON.stringify(value)
+              : String(value);
+        return `${editor.firstName} ${editor.lastName}: ${displayValue}`;
+      })
+      .join('\n');
+  }
+
+  function getCollaborationClass(objectId: string, field: string): string {
+    return getEditorsForField(objectId, field).length > 0
+      ? 'rounded-md bg-yellow-100/40 dark:bg-yellow-900/20 cursor-help'
+      : '';
   }
 
   function hasAlarmType(obj: BacnetObject): boolean {
@@ -182,15 +219,20 @@
         {#each sortedBacnetObjects as obj (obj.id)}
           <tr class="border-b border-border/60 last:border-0">
             <td class="py-1 pr-1">
-              <EditableCell
-                value={obj.text_fix}
-                pendingValue={getPendingTextValue(obj.id, 'text_fix', obj.text_fix)}
-                maxlength={250}
-                isDirty={isDirty(obj.id, 'text_fix')}
-                error={getFieldError(obj.id, 'text_fix')}
-                {disabled}
-                onSave={(v) => onEdit(obj.id, 'text_fix', v)}
-              />
+              <div
+                class={getCollaborationClass(obj.id, 'text_fix')}
+                title={getPreviewTitle(obj.id, 'text_fix')}
+              >
+                <EditableCell
+                  value={obj.text_fix}
+                  pendingValue={getPendingTextValue(obj.id, 'text_fix', obj.text_fix)}
+                  maxlength={250}
+                  isDirty={isDirty(obj.id, 'text_fix')}
+                  error={getFieldError(obj.id, 'text_fix')}
+                  {disabled}
+                  onSave={(v) => onEdit(obj.id, 'text_fix', v)}
+                />
+              </div>
             </td>
             <td class="py-1 pr-1 text-center align-top">
               <Popover.Root>
@@ -226,7 +268,13 @@
               </Popover.Root>
             </td>
             <td class="py-1 pr-1 align-top">
-              <div class={isDirty(obj.id, 'state_text_id') ? 'rounded-md ring-1 ring-ring' : ''}>
+              <div
+                class={[
+                  isDirty(obj.id, 'state_text_id') ? 'rounded-md ring-1 ring-ring' : '',
+                  getCollaborationClass(obj.id, 'state_text_id')
+                ].filter(Boolean).join(' ')}
+                title={getPreviewTitle(obj.id, 'state_text_id')}
+              >
                 <AsyncCombobox
                   value={getPendingIdValue(obj.id, 'state_text_id', obj.state_text_id)}
                   fetcher={fetchStateTexts}
@@ -247,9 +295,11 @@
             </td>
             <td class="py-1 pr-1 align-top">
               <div
-                class={isDirty(obj.id, 'notification_class_id')
-                  ? 'rounded-md ring-1 ring-ring'
-                  : ''}
+                class={[
+                  isDirty(obj.id, 'notification_class_id') ? 'rounded-md ring-1 ring-ring' : '',
+                  getCollaborationClass(obj.id, 'notification_class_id')
+                ].filter(Boolean).join(' ')}
+                title={getPreviewTitle(obj.id, 'notification_class_id')}
               >
                 <AsyncCombobox
                   value={getPendingIdValue(
@@ -276,18 +326,26 @@
               {/if}
             </td>
             <td class="max-w-sm py-1 pr-1">
-              <EditableCell
-                value={obj.description || ''}
-                pendingValue={getPendingTextValue(obj.id, 'description', obj.description || '')}
-                maxlength={250}
-                isDirty={isDirty(obj.id, 'description')}
-                error={getFieldError(obj.id, 'description')}
-                {disabled}
-                onSave={(v) => onEdit(obj.id, 'description', v || undefined)}
-              />
+              <div
+                class={getCollaborationClass(obj.id, 'description')}
+                title={getPreviewTitle(obj.id, 'description')}
+              >
+                <EditableCell
+                  value={obj.description || ''}
+                  pendingValue={getPendingTextValue(obj.id, 'description', obj.description || '')}
+                  maxlength={250}
+                  isDirty={isDirty(obj.id, 'description')}
+                  error={getFieldError(obj.id, 'description')}
+                  {disabled}
+                  onSave={(v) => onEdit(obj.id, 'description', v || undefined)}
+                />
+              </div>
             </td>
             <td class="py-1 pr-1">
-              <div class="flex">
+              <div
+                class={`flex ${getCollaborationClass(obj.id, 'software_type')} ${getCollaborationClass(obj.id, 'software_number')}`}
+                title={[getPreviewTitle(obj.id, 'software_type'), getPreviewTitle(obj.id, 'software_number')].filter(Boolean).join('\n') || undefined}
+              >
                 <EditableSelectCell
                   value={obj.software_type}
                   options={softwareTypeOptions}
@@ -318,7 +376,10 @@
               </div>
             </td>
             <td class="py-1 pr-1">
-              <div class="flex">
+              <div
+                class={`flex ${getCollaborationClass(obj.id, 'hardware_type')} ${getCollaborationClass(obj.id, 'hardware_quantity')}`}
+                title={[getPreviewTitle(obj.id, 'hardware_type'), getPreviewTitle(obj.id, 'hardware_quantity')].filter(Boolean).join('\n') || undefined}
+              >
                 <EditableSelectCell
                   value={obj.hardware_type}
                   options={hardwareTypeOptions}
@@ -349,24 +410,34 @@
               </div>
             </td>
             <td class="py-1 pr-1">
-              <EditableBooleanCell
-                value={obj.gms_visible}
-                pendingValue={getPendingBoolValue(obj.id, 'gms_visible')}
-                isDirty={isDirty(obj.id, 'gms_visible')}
-                error={getFieldError(obj.id, 'gms_visible')}
-                {disabled}
-                onToggle={(v) => onEdit(obj.id, 'gms_visible', v)}
-              />
+              <div
+                class={getCollaborationClass(obj.id, 'gms_visible')}
+                title={getPreviewTitle(obj.id, 'gms_visible')}
+              >
+                <EditableBooleanCell
+                  value={obj.gms_visible}
+                  pendingValue={getPendingBoolValue(obj.id, 'gms_visible')}
+                  isDirty={isDirty(obj.id, 'gms_visible')}
+                  error={getFieldError(obj.id, 'gms_visible')}
+                  {disabled}
+                  onToggle={(v) => onEdit(obj.id, 'gms_visible', v)}
+                />
+              </div>
             </td>
             <td class="py-1 pr-1">
-              <EditableBooleanCell
-                value={obj.optional}
-                pendingValue={getPendingBoolValue(obj.id, 'optional')}
-                isDirty={isDirty(obj.id, 'optional')}
-                error={getFieldError(obj.id, 'optional')}
-                {disabled}
-                onToggle={(v) => onEdit(obj.id, 'optional', v)}
-              />
+              <div
+                class={getCollaborationClass(obj.id, 'optional')}
+                title={getPreviewTitle(obj.id, 'optional')}
+              >
+                <EditableBooleanCell
+                  value={obj.optional}
+                  pendingValue={getPendingBoolValue(obj.id, 'optional')}
+                  isDirty={isDirty(obj.id, 'optional')}
+                  error={getFieldError(obj.id, 'optional')}
+                  {disabled}
+                  onToggle={(v) => onEdit(obj.id, 'optional', v)}
+                />
+              </div>
             </td>
             <td class="py-1">
               {#if hasTextIndividual(obj)}
@@ -377,22 +448,27 @@
                 )}
                 {@const hasExistingTextIndividual =
                   (pendingTextIndividual ?? obj.text_individual ?? '').trim().length > 0}
-                <EditableCell
-                  value={obj.text_individual || ''}
-                  pendingValue={pendingTextIndividual}
-                  maxlength={250}
-                  isDirty={isDirty(obj.id, 'text_individual')}
-                  error={getFieldError(obj.id, 'text_individual')}
-                  {disabled}
-                  onSave={(v) => {
-                    const normalized = v.trim();
-                    onEdit(
-                      obj.id,
-                      'text_individual',
-                      normalized === '' ? (hasExistingTextIndividual ? '' : undefined) : normalized
-                    );
-                  }}
-                />
+                <div
+                  class={getCollaborationClass(obj.id, 'text_individual')}
+                  title={getPreviewTitle(obj.id, 'text_individual')}
+                >
+                  <EditableCell
+                    value={obj.text_individual || ''}
+                    pendingValue={pendingTextIndividual}
+                    maxlength={250}
+                    isDirty={isDirty(obj.id, 'text_individual')}
+                    error={getFieldError(obj.id, 'text_individual')}
+                    {disabled}
+                    onSave={(v) => {
+                      const normalized = v.trim();
+                      onEdit(
+                        obj.id,
+                        'text_individual',
+                        normalized === '' ? (hasExistingTextIndividual ? '' : undefined) : normalized
+                      );
+                    }}
+                  />
+                </div>
               {/if}
             </td>
           </tr>

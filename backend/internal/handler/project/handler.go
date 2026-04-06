@@ -12,15 +12,24 @@ import (
 )
 
 type ProjectHandler struct {
-	service ProjectService
-	events  *ProjectEventHub
+	service       ProjectService
+	events        *ProjectEventHub
+	collaboration *ProjectCollaborationHub
 }
 
 func NewProjectHandler(service ProjectService, events *ProjectEventHub) *ProjectHandler {
 	if events == nil {
 		events = NewProjectEventHub()
 	}
-	return &ProjectHandler{service: service, events: events}
+	return &ProjectHandler{
+		service:       service,
+		events:        events,
+		collaboration: NewProjectCollaborationHub(),
+	}
+}
+
+func (h *ProjectHandler) CollaborationHub() *ProjectCollaborationHub {
+	return h.collaboration
 }
 
 func (h *ProjectHandler) notifyProjectChange(c *gin.Context, projectID uuid.UUID, eventType string) {

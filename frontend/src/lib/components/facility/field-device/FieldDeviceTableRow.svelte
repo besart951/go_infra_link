@@ -9,6 +9,7 @@
   import TableApparatSelect from '../table-selects/TableApparatSelect.svelte';
   import TableSystemPartSelect from '../table-selects/TableSystemPartSelect.svelte';
   import type { FieldDevice } from '$lib/domain/facility/index.js';
+  import type { SharedFieldDeviceEditor } from '$lib/services/projectCollaboration.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { useFieldDeviceState } from './state/context.svelte.js';
@@ -69,6 +70,36 @@
       state.editing.getBacnetFieldErrors(device.id).size > 0 ||
       state.editing.getBacnetClientErrors(device.id).size > 0
   );
+  const collaborators = $derived(state.getEditorsForDevice(device.id));
+
+  function getEditorsForField(fieldName: string): SharedFieldDeviceEditor[] {
+    return collaborators.filter(
+      (collab: SharedFieldDeviceEditor) =>
+        collab.changedFields && collab.changedFields.includes(fieldName)
+    );
+  }
+
+  function getFieldPreviewTitle(fieldName: string): string | undefined {
+    const editors = getEditorsForField(fieldName);
+    if (editors.length === 0) return undefined;
+
+    const lines = editors.map((editor) => {
+      const value = editor.fieldValues?.[fieldName];
+      let displayValue = '(empty)';
+      if (value !== null && value !== undefined) {
+        displayValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+      }
+      return `${editor.firstName} ${editor.lastName}: ${displayValue}`;
+    });
+
+    return lines.join('\n');
+  }
+
+  function getEditingFieldClass(fieldName: string): string {
+    return getEditorsForField(fieldName).length > 0
+      ? 'bg-yellow-100/40 dark:bg-yellow-900/20 cursor-help'
+      : '';
+  }
 </script>
 
 <Table.Row
@@ -107,63 +138,71 @@
     {formatSPSControllerSystemType(device)}
   </Table.Cell>
   <Table.Cell class="p-1">
-    <EditableCell
-      value={device.bmk ?? ''}
-      pendingValue={state.editing.getPendingValue(device.id, 'bmk')}
-      type="text"
-      maxlength={10}
-      disabled={!canPerform('update', 'fielddevice')}
-      isDirty={state.editing.isFieldDirty(device.id, 'bmk')}
-      error={state.editing.getFieldError(device.id, 'bmk')}
-      onSave={(value) => {
-        state.editing.queueEdit(device.id, 'bmk', value === '' ? null : value);
-      }}
-    />
+    <div class={getEditingFieldClass('bmk')} title={getFieldPreviewTitle('bmk')}>
+      <EditableCell
+        value={device.bmk ?? ''}
+        pendingValue={state.editing.getPendingValue(device.id, 'bmk')}
+        type="text"
+        maxlength={10}
+        disabled={!canPerform('update', 'fielddevice')}
+        isDirty={state.editing.isFieldDirty(device.id, 'bmk')}
+        error={state.editing.getFieldError(device.id, 'bmk')}
+        onSave={(value) => {
+          state.editing.queueEdit(device.id, 'bmk', value === '' ? null : value);
+        }}
+      />
+    </div>
   </Table.Cell>
   <Table.Cell class="max-w-48 p-1">
-    <EditableCell
-      value={device.description ?? ''}
-      pendingValue={state.editing.getPendingValue(device.id, 'description')}
-      type="text"
-      maxlength={250}
-      disabled={!canPerform('update', 'fielddevice')}
-      isDirty={state.editing.isFieldDirty(device.id, 'description')}
-      error={state.editing.getFieldError(device.id, 'description')}
-      onSave={(value) => {
-        state.editing.queueEdit(device.id, 'description', value === '' ? null : value);
-      }}
-    />
+    <div class={getEditingFieldClass('description')} title={getFieldPreviewTitle('description')}>
+      <EditableCell
+        value={device.description ?? ''}
+        pendingValue={state.editing.getPendingValue(device.id, 'description')}
+        type="text"
+        maxlength={250}
+        disabled={!canPerform('update', 'fielddevice')}
+        isDirty={state.editing.isFieldDirty(device.id, 'description')}
+        error={state.editing.getFieldError(device.id, 'description')}
+        onSave={(value) => {
+          state.editing.queueEdit(device.id, 'description', value === '' ? null : value);
+        }}
+      />
+    </div>
   </Table.Cell>
   <Table.Cell class="p-1">
-    <EditableCell
-      value={device.text_fix ?? ''}
-      pendingValue={state.editing.getPendingValue(device.id, 'text_fix')}
-      type="text"
-      maxlength={250}
-      disabled={!canPerform('update', 'fielddevice')}
-      isDirty={state.editing.isFieldDirty(device.id, 'text_fix')}
-      error={state.editing.getFieldError(device.id, 'text_fix')}
-      onSave={(value) => {
-        state.editing.queueEdit(device.id, 'text_fix', value === '' ? null : value);
-      }}
-    />
+    <div class={getEditingFieldClass('text_fix')} title={getFieldPreviewTitle('text_fix')}>
+      <EditableCell
+        value={device.text_fix ?? ''}
+        pendingValue={state.editing.getPendingValue(device.id, 'text_fix')}
+        type="text"
+        maxlength={250}
+        disabled={!canPerform('update', 'fielddevice')}
+        isDirty={state.editing.isFieldDirty(device.id, 'text_fix')}
+        error={state.editing.getFieldError(device.id, 'text_fix')}
+        onSave={(value) => {
+          state.editing.queueEdit(device.id, 'text_fix', value === '' ? null : value);
+        }}
+      />
+    </div>
   </Table.Cell>
   <Table.Cell class="p-1">
-    <EditableCell
-      value={device.apparat_nr}
-      pendingValue={state.editing.getPendingValue(device.id, 'apparat_nr')}
-      type="number"
-      min={1}
-      max={99}
-      disabled={!canPerform('update', 'fielddevice')}
-      isDirty={state.editing.isFieldDirty(device.id, 'apparat_nr')}
-      error={state.editing.getFieldError(device.id, 'apparat_nr')}
-      onSave={(value) => {
-        state.editing.queueEdit(device.id, 'apparat_nr', value ? parseInt(value, 10) : undefined);
-      }}
-    />
+    <div class={getEditingFieldClass('apparat_nr')} title={getFieldPreviewTitle('apparat_nr')}>
+      <EditableCell
+        value={device.apparat_nr}
+        pendingValue={state.editing.getPendingValue(device.id, 'apparat_nr')}
+        type="number"
+        min={1}
+        max={99}
+        disabled={!canPerform('update', 'fielddevice')}
+        isDirty={state.editing.isFieldDirty(device.id, 'apparat_nr')}
+        error={state.editing.getFieldError(device.id, 'apparat_nr')}
+        onSave={(value) => {
+          state.editing.queueEdit(device.id, 'apparat_nr', value ? parseInt(value, 10) : undefined);
+        }}
+      />
+    </div>
   </Table.Cell>
-  <Table.Cell>
+  <Table.Cell class={getEditingFieldClass('apparat_id')} title={getFieldPreviewTitle('apparat_id')}>
     <TableApparatSelect
       items={state.allApparats}
       value={device.apparat_id}
@@ -173,7 +212,7 @@
       onValueChange={handleApparatChange}
     />
   </Table.Cell>
-  <Table.Cell>
+  <Table.Cell class={getEditingFieldClass('system_part_id')} title={getFieldPreviewTitle('system_part_id')}>
     <TableSystemPartSelect
       items={state.allSystemParts}
       value={device.system_part_id || ''}
@@ -197,7 +236,10 @@
     {/if}
   </Table.Cell>
   {#if state.showSpecifications}
-    <Table.Cell class="text-xs">
+    <Table.Cell
+      class={`text-xs ${getEditingFieldClass('specification.specification_supplier')}`}
+      title={getFieldPreviewTitle('specification.specification_supplier')}
+    >
       <EditableCell
         value={toDisplayString(device.specification?.specification_supplier)}
         pendingValue={state.editing.getPendingSpecValue(device.id, 'specification_supplier')}
@@ -214,7 +256,10 @@
         }}
       />
     </Table.Cell>
-    <Table.Cell class="text-xs">
+    <Table.Cell
+      class={`text-xs ${getEditingFieldClass('specification.specification_brand')}`}
+      title={getFieldPreviewTitle('specification.specification_brand')}
+    >
       <EditableCell
         value={toDisplayString(device.specification?.specification_brand)}
         pendingValue={state.editing.getPendingSpecValue(device.id, 'specification_brand')}
@@ -231,7 +276,10 @@
         }}
       />
     </Table.Cell>
-    <Table.Cell class="text-xs">
+    <Table.Cell
+      class={`text-xs ${getEditingFieldClass('specification.specification_type')}`}
+      title={getFieldPreviewTitle('specification.specification_type')}
+    >
       <EditableCell
         value={toDisplayString(device.specification?.specification_type)}
         pendingValue={state.editing.getPendingSpecValue(device.id, 'specification_type')}
@@ -244,7 +292,10 @@
         }}
       />
     </Table.Cell>
-    <Table.Cell class="text-xs">
+    <Table.Cell
+      class={`text-xs ${getEditingFieldClass('specification.additional_info_motor_valve')}`}
+      title={getFieldPreviewTitle('specification.additional_info_motor_valve')}
+    >
       <EditableCell
         value={toDisplayString(device.specification?.additional_info_motor_valve)}
         pendingValue={state.editing.getPendingSpecValue(device.id, 'additional_info_motor_valve')}
@@ -261,7 +312,10 @@
         }}
       />
     </Table.Cell>
-    <Table.Cell class="text-xs">
+    <Table.Cell
+      class={`text-xs ${getEditingFieldClass('specification.additional_info_size')}`}
+      title={getFieldPreviewTitle('specification.additional_info_size')}
+    >
       <EditableCell
         value={toDisplayString(device.specification?.additional_info_size, true)}
         pendingValue={state.editing.getPendingSpecValue(device.id, 'additional_info_size')}
@@ -278,7 +332,10 @@
         }}
       />
     </Table.Cell>
-    <Table.Cell class="text-xs">
+    <Table.Cell
+      class={`text-xs ${getEditingFieldClass('specification.additional_information_installation_location')}`}
+      title={getFieldPreviewTitle('specification.additional_information_installation_location')}
+    >
       <EditableCell
         value={toDisplayString(device.specification?.additional_information_installation_location)}
         pendingValue={state.editing.getPendingSpecValue(
@@ -304,7 +361,10 @@
         }}
       />
     </Table.Cell>
-    <Table.Cell class="text-xs">
+    <Table.Cell
+      class={`text-xs ${getEditingFieldClass('specification.electrical_connection_ph')}`}
+      title={getFieldPreviewTitle('specification.electrical_connection_ph')}
+    >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_ph, true)}
         pendingValue={state.editing.getPendingSpecValue(device.id, 'electrical_connection_ph')}
@@ -321,7 +381,10 @@
         }}
       />
     </Table.Cell>
-    <Table.Cell class="text-xs">
+    <Table.Cell
+      class={`text-xs ${getEditingFieldClass('specification.electrical_connection_acdc')}`}
+      title={getFieldPreviewTitle('specification.electrical_connection_acdc')}
+    >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_acdc)}
         pendingValue={state.editing.getPendingSpecValue(device.id, 'electrical_connection_acdc')}
@@ -339,7 +402,10 @@
         }}
       />
     </Table.Cell>
-    <Table.Cell class="text-xs">
+    <Table.Cell
+      class={`text-xs ${getEditingFieldClass('specification.electrical_connection_amperage')}`}
+      title={getFieldPreviewTitle('specification.electrical_connection_amperage')}
+    >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_amperage, true)}
         pendingValue={state.editing.getPendingSpecValue(
@@ -360,7 +426,10 @@
         }}
       />
     </Table.Cell>
-    <Table.Cell class="text-xs">
+    <Table.Cell
+      class={`text-xs ${getEditingFieldClass('specification.electrical_connection_power')}`}
+      title={getFieldPreviewTitle('specification.electrical_connection_power')}
+    >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_power, true)}
         pendingValue={state.editing.getPendingSpecValue(device.id, 'electrical_connection_power')}
@@ -378,7 +447,10 @@
         }}
       />
     </Table.Cell>
-    <Table.Cell class="text-xs">
+    <Table.Cell
+      class={`text-xs ${getEditingFieldClass('specification.electrical_connection_rotation')}`}
+      title={getFieldPreviewTitle('specification.electrical_connection_rotation')}
+    >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_rotation, true)}
         pendingValue={state.editing.getPendingSpecValue(

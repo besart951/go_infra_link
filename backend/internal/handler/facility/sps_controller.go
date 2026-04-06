@@ -11,11 +11,19 @@ import (
 )
 
 type SPSControllerHandler struct {
-	service SPSControllerService
+	service       SPSControllerService
+	collaboration ProjectRefreshBroadcaster
 }
 
-func NewSPSControllerHandler(service SPSControllerService) *SPSControllerHandler {
-	return &SPSControllerHandler{service: service}
+func NewSPSControllerHandler(service SPSControllerService, collaboration ProjectRefreshBroadcaster) *SPSControllerHandler {
+	return &SPSControllerHandler{service: service, collaboration: collaboration}
+}
+
+func (h *SPSControllerHandler) broadcastProjectRefresh() {
+	if h.collaboration == nil {
+		return
+	}
+	h.collaboration.BroadcastRefreshToAllProjects("sps_controller")
 }
 
 // CreateSPSController godoc
@@ -50,6 +58,7 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 		return
 	}
 
+	h.broadcastProjectRefresh()
 	c.JSON(http.StatusCreated, toSPSControllerResponse(*spsController))
 }
 
@@ -140,6 +149,7 @@ func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 		return
 	}
 
+	h.broadcastProjectRefresh()
 	c.JSON(http.StatusCreated, toSPSControllerResponse(*copyEntity))
 }
 
@@ -283,6 +293,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		return
 	}
 
+	h.broadcastProjectRefresh()
 	c.JSON(http.StatusOK, toSPSControllerResponse(*spsController))
 }
 
@@ -306,5 +317,6 @@ func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
 		return
 	}
 
+	h.broadcastProjectRefresh()
 	c.Status(http.StatusNoContent)
 }

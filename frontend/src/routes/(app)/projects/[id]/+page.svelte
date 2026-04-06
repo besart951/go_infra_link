@@ -8,14 +8,18 @@
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
   import { addToast } from '$lib/components/toast.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+  import UserAvatar from '$lib/components/user-avatar.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { t as translate } from '$lib/i18n/index.js';
   import ControlCabinetListView from '$lib/components/facility/control-cabinets/ControlCabinetListView.svelte';
   import SPSControllerListView from '$lib/components/facility/sps-controllers/SPSControllerListView.svelte';
   import FieldDeviceListView from '$lib/components/facility/field-device/FieldDeviceListView.svelte';
   import { getProject } from '$lib/infrastructure/api/project.adapter.js';
+  import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
   import type { Project } from '$lib/domain/project/index.js';
-  import { ArrowLeft, ChevronDown, Settings } from '@lucide/svelte';
+  import type { User } from '$lib/domain/user/index.js';
+  import { ProjectCollaborationState } from '$lib/services/projectCollaboration.svelte.js';
+  import { ArrowLeft, ChevronDown, Settings, Wifi, WifiOff } from '@lucide/svelte';
 
   const t = createTranslator();
   const projectId = $derived($page.params.id ?? '');
@@ -23,6 +27,7 @@
   let project = $state<Project | null>(null);
   let loading = $state(true);
   let error = $state<string | null>(null);
+  let projectUsers = $state<User[]>([]);
 
   let controlCabinetOpen = $state(true);
   let spsControllerOpen = $state(true);
@@ -36,6 +41,53 @@
   let projectEventsSource: EventSource | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingSseRefresh = $state(false);
+
+  const collaboration = new ProjectCollaborationState({
+    onRefreshRequest: (message) => {
+      if (message.actor_id && message.actor_id === currentUser?.id) return;
+
+      switch (message.scope) {
+        case 'field_device':
+          bumpFieldDeviceRefresh();
+          break;
+        case 'control_cabinet':
+          bumpControlCabinetViewRefresh();
+          bumpControlCabinetOptionsRefresh();
+          bumpSPSControllerRefresh();
+          bumpFieldDeviceRefresh();
+          bumpSystemTypeRefresh();
+          break;
+        case 'sps_controller':
+          bumpSPSControllerRefresh();
+          bumpFieldDeviceRefresh();
+          bumpSystemTypeRefresh();
+          break;
+      }
+    }
+  });
+
+  const currentUser = $derived(($page.data.user as User | null) ?? null);
+  const usersById = $derived.by(() => {
+    const users = new Map<string, User>();
+    for (const user of projectUsers) {
+      users.set(user.id, user);
+    }
+    if (currentUser) {
+      users.set(currentUser.id, currentUser);
+    }
+    return users;
+  });
+
+  const onlineCollaborators = $derived.by(() =>
+    collaboration.onlineUsers.map((presence) => ({
+      presence,
+      user: usersById.get(presence.user_id)
+    }))
+  );
+
+  const fieldDeviceEditorsByDevice = $derived.by(() =>
+    collaboration.buildFieldDeviceEditorsByDevice(usersById, currentUser?.id)
+  );
 
   function bumpControlCabinetViewRefresh(): void {
     controlCabinetViewRefreshKey += 1;
@@ -151,13 +203,27 @@
     }
   }
 
+  async function loadProjectUsers(): Promise<void> {
+    if (!projectId) return;
+
+    try {
+      const response = await projectRepository.listUsers(projectId);
+      projectUsers = response.items;
+    } catch (loadError) {
+      console.error('Failed to load project users', loadError);
+    }
+  }
+
   onMount(() => {
     void loadProject();
+    void loadProjectUsers();
     connectProjectEvents();
+    collaboration.connect(projectId);
   });
 
   onDestroy(() => {
     clearProjectEventsConnection();
+    collaboration.disconnect();
   });
 </script>
 
@@ -174,17 +240,49 @@
       <p class="mt-1 text-muted-foreground">{$t('projects.detail.description')}</p>
     </div>
     <div class="ml-auto">
-      <Tooltip.Root>
-        <Tooltip.Trigger>
-          <Button variant="ghost" href={`/projects/${projectId}/settings`} size="icon">
-            <Settings />
-          </Button>
-        </Tooltip.Trigger>
+      <div class="flex items-center gap-3">
+        <div
+          class="flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-sm text-muted-foreground"
+        >
+          {#if collaboration.socketStatus === 'connected'}
+            <Wifi class="h-4 w-4 text-emerald-600" />
+          {:else}
+            <WifiOff class="h-4 w-4 text-amber-600" />
+          {/if}
+          <span>{onlineCollaborators.length}</span>
+          <div class="flex -space-x-2">
+            {#each onlineCollaborators.slice(0, 4) as collaborator}
+              {#if collaborator.user}
+                <Tooltip.Root>
+                  <Tooltip.Trigger>
+                    <UserAvatar
+                      firstName={collaborator.user.first_name}
+                      lastName={collaborator.user.last_name}
+                      class="h-7 w-7 border-2 border-background"
+                    />
+                  </Tooltip.Trigger>
+                  <Tooltip.Content>
+                    {collaborator.user.first_name}
+                    {collaborator.user.last_name}
+                  </Tooltip.Content>
+                </Tooltip.Root>
+              {/if}
+            {/each}
+          </div>
+        </div>
 
-        <Tooltip.Content>
-          {$t('projects.detail.settings')}
-        </Tooltip.Content>
-      </Tooltip.Root>
+        <Tooltip.Root>
+          <Tooltip.Trigger>
+            <Button variant="ghost" href={`/projects/${projectId}/settings`} size="icon">
+              <Settings />
+            </Button>
+          </Tooltip.Trigger>
+
+          <Tooltip.Content>
+            {$t('projects.detail.settings')}
+          </Tooltip.Content>
+        </Tooltip.Root>
+      </div>
     </div>
   </div>
 
@@ -260,6 +358,10 @@
           {projectId}
           refreshKey={fieldDeviceRefreshKey}
           {systemTypeRefreshKey}
+          sharedFieldDeviceEditors={fieldDeviceEditorsByDevice}
+          onSharedFieldDeviceStateChange={(state) =>
+            collaboration.publishFieldDeviceDraftState(state)}
+          onFieldDevicesSaved={(deviceIds) => collaboration.requestFieldDeviceRefresh(deviceIds)}
         />
       </div>
     </div>

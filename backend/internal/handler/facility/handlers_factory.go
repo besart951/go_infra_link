@@ -1,5 +1,9 @@
 package facility
 
+type ProjectRefreshBroadcaster interface {
+	BroadcastRefreshToAllProjects(scope string)
+}
+
 // ServiceDeps groups service dependencies for facility handler construction.
 type ServiceDeps struct {
 	Building                BuildingService
@@ -21,6 +25,7 @@ type ServiceDeps struct {
 	AlarmField              AlarmFieldService
 	AlarmTypeField          AlarmTypeFieldService
 	BacnetAlarm             BacnetAlarmValueService
+	Collaboration           ProjectRefreshBroadcaster
 }
 
 // Handlers groups all facility HTTP handlers.
@@ -54,10 +59,10 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 		SystemType:              NewSystemTypeHandler(deps.SystemType),
 		SystemPart:              NewSystemPartHandler(deps.SystemPart, deps.Apparat, deps.ObjectData),
 		Apparat:                 NewApparatHandler(deps.Apparat, deps.SystemPart, deps.ObjectData),
-		ControlCabinet:          NewControlCabinetHandler(deps.ControlCabinet),
+		ControlCabinet:          NewControlCabinetHandler(deps.ControlCabinet, deps.Collaboration),
 		FieldDevice:             NewFieldDeviceHandler(deps.FieldDevice),
 		BacnetObject:            NewBacnetObjectHandler(deps.BacnetObject),
-		SPSController:           NewSPSControllerHandler(deps.SPSController),
+		SPSController:           NewSPSControllerHandler(deps.SPSController, deps.Collaboration),
 		StateText:               NewStateTextHandler(deps.StateText),
 		NotificationClass:       NewNotificationClassHandler(deps.NotificationClass),
 		AlarmDefinition:         NewAlarmDefinitionHandler(deps.AlarmDefinition),

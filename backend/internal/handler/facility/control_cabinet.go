@@ -11,11 +11,19 @@ import (
 )
 
 type ControlCabinetHandler struct {
-	service ControlCabinetService
+	service       ControlCabinetService
+	collaboration ProjectRefreshBroadcaster
 }
 
-func NewControlCabinetHandler(service ControlCabinetService) *ControlCabinetHandler {
-	return &ControlCabinetHandler{service: service}
+func NewControlCabinetHandler(service ControlCabinetService, collaboration ProjectRefreshBroadcaster) *ControlCabinetHandler {
+	return &ControlCabinetHandler{service: service, collaboration: collaboration}
+}
+
+func (h *ControlCabinetHandler) broadcastProjectRefresh() {
+	if h.collaboration == nil {
+		return
+	}
+	h.collaboration.BroadcastRefreshToAllProjects("control_cabinet")
 }
 
 // CreateControlCabinet godoc
@@ -49,6 +57,7 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 		return
 	}
 
+	h.broadcastProjectRefresh()
 	c.JSON(http.StatusCreated, toControlCabinetResponse(*controlCabinet))
 }
 
@@ -139,6 +148,7 @@ func (h *ControlCabinetHandler) CopyControlCabinet(c *gin.Context) {
 		return
 	}
 
+	h.broadcastProjectRefresh()
 	c.JSON(http.StatusCreated, toControlCabinetResponse(*copyEntity))
 }
 
@@ -266,6 +276,7 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 		return
 	}
 
+	h.broadcastProjectRefresh()
 	c.JSON(http.StatusOK, toControlCabinetResponse(*controlCabinet))
 }
 
@@ -292,5 +303,6 @@ func (h *ControlCabinetHandler) DeleteControlCabinet(c *gin.Context) {
 		return
 	}
 
+	h.broadcastProjectRefresh()
 	c.Status(http.StatusNoContent)
 }

@@ -46,6 +46,7 @@ export default defineConfig(({ mode }) => {
           target: backendUrl,
           changeOrigin: true,
           secure: false,
+          ws: true,
           // Dev-only parity with the production edge proxy. The production build is a static SPA.
           configure: (proxy) => {
             const proxyWithEvents = proxy as unknown as ProxyListenerHost;

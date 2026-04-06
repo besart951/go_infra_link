@@ -42,8 +42,23 @@ const STORAGE_KEY_PREFIX = 'fielddevice-editing';
 
 type ProjectIdInput = string | undefined | (() => string | undefined);
 
-export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
-  const resolvedProjectId = typeof projectId === 'function' ? projectId() : projectId;
+interface SharedFieldDeviceDraftState {
+  devices: Array<{
+    device_id: string;
+    changed_fields: string[];
+    field_values?: Record<string, unknown>;
+  }>;
+}
+
+interface UseFieldDeviceEditingOptions {
+  projectId?: ProjectIdInput;
+  onSharedStateChange?: (state: SharedFieldDeviceDraftState) => void;
+  onSaveSuccess?: (deviceIds: string[]) => void;
+}
+
+export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}) {
+  const resolvedProjectId =
+    typeof options.projectId === 'function' ? options.projectId() : options.projectId;
   const storageKey = resolvedProjectId
     ? `${STORAGE_KEY_PREFIX}-${resolvedProjectId}`
     : STORAGE_KEY_PREFIX;
@@ -112,6 +127,97 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
     sessionStorage.save(storageKey, state);
   }
 
+  function getPendingDeviceIds(): string[] {
+    const ids = new Set<string>();
+    for (const id of pendingEdits.keys()) {
+      ids.add(id);
+    }
+    for (const id of pendingBacnetEdits.keys()) {
+      ids.add(id);
+    }
+    return [...ids].sort();
+  }
+
+  function getChangedFieldsByDevice(): Array<{
+    device_id: string;
+    changed_fields: string[];
+    field_values?: Record<string, unknown>;
+  }> {
+    const result: Array<{
+      device_id: string;
+      changed_fields: string[];
+      field_values?: Record<string, unknown>;
+    }> = [];
+    const deviceIds = getPendingDeviceIds();
+
+    for (const deviceId of deviceIds) {
+      const fields = new Set<string>();
+      const values: Record<string, unknown> = {};
+      const changes = pendingEdits.get(deviceId);
+
+      if (changes) {
+        if ('bmk' in changes) {
+          fields.add('bmk');
+          values['bmk'] = changes.bmk;
+        }
+        if ('description' in changes) {
+          fields.add('description');
+          values['description'] = changes.description;
+        }
+        if ('text_fix' in changes) {
+          fields.add('text_fix');
+          values['text_fix'] = changes.text_fix;
+        }
+        if ('apparat_nr' in changes) {
+          fields.add('apparat_nr');
+          values['apparat_nr'] = changes.apparat_nr;
+        }
+        if ('apparat_id' in changes) {
+          fields.add('apparat_id');
+          values['apparat_id'] = changes.apparat_id;
+        }
+        if ('system_part_id' in changes) {
+          fields.add('system_part_id');
+          values['system_part_id'] = changes.system_part_id;
+        }
+        if ('specification' in changes) {
+          for (const [specKey, specValue] of Object.entries(changes.specification ?? {})) {
+            const fieldKey = `specification.${specKey}`;
+            fields.add(fieldKey);
+            values[fieldKey] = specValue;
+          }
+        }
+      }
+
+      const bacnetEdits = pendingBacnetEdits.get(deviceId);
+      if (bacnetEdits) {
+        for (const [objectId, objectChanges] of bacnetEdits.entries()) {
+          for (const [fieldName, fieldValue] of Object.entries(objectChanges)) {
+            const fieldKey = `bacnet_objects.${objectId}.${fieldName}`;
+            fields.add(fieldKey);
+            values[fieldKey] = fieldValue;
+          }
+        }
+      }
+
+      if (fields.size > 0) {
+        result.push({
+          device_id: deviceId,
+          changed_fields: [...fields].sort(),
+          field_values: Object.keys(values).length > 0 ? values : undefined
+        });
+      }
+    }
+
+    return result;
+  }
+
+  function emitSharedState() {
+    options.onSharedStateChange?.({
+      devices: getChangedFieldsByDevice()
+    });
+  }
+
   /**
    * Auto-save to sessionStorage whenever edits change
    */
@@ -119,9 +225,12 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
     // Track pendingEdits and pendingBacnetEdits for changes
     const _editsSize = pendingEdits.size;
     const _bacnetSize = pendingBacnetEdits.size;
+    const _editIds = [...pendingEdits.keys()].join('|');
+    const _bacnetIds = [...pendingBacnetEdits.keys()].join('|');
 
     // Save to sessionStorage
     savePersistedState();
+    emitSharedState();
   });
 
   function setEditError(deviceId: string, info?: EditErrorInfo) {
@@ -1119,6 +1228,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
 
       const totalSuccessful = successIds.size + partialSuccessIds.size;
       if (totalSuccessful > 0) {
+        options.onSaveSuccess?.([...new Set([...successIds, ...partialSuccessIds])]);
         if (partialSuccessIds.size > 0) {
           addToast(
             translate('field_device.editing.toasts.partial_success', {
@@ -1191,6 +1301,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
           pendingEdits = remaining;
         }
         setEditError(device.id);
+        options.onSaveSuccess?.([device.id]);
         onSuccess?.(optimistic);
         return;
       }
@@ -1266,6 +1377,7 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
         const nextBacnetErrors = new Map(bacnetFieldErrors);
         nextBacnetErrors.delete(device.id);
         bacnetFieldErrors = nextBacnetErrors;
+        options.onSaveSuccess?.([device.id]);
         onSuccess?.(optimistic);
         return;
       }
@@ -1348,6 +1460,9 @@ export function useFieldDeviceEditing(projectId?: ProjectIdInput) {
     },
     get pendingCount() {
       return pendingEdits.size + pendingBacnetEdits.size;
+    },
+    get pendingDeviceIds() {
+      return getPendingDeviceIds();
     },
     queueEdit,
     queueSpecEdit,

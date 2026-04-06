@@ -10,7 +10,11 @@ import { projectRepository } from '$lib/infrastructure/api/projectRepository.js'
 import { canPerform } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
 import type { Apparat, FieldDevice, SystemPart } from '$lib/domain/facility/index.js';
-import type { FieldDeviceFilters, FieldDeviceStateProps } from './types.js';
+import type {
+  FieldDeviceFilters,
+  FieldDeviceStateProps,
+  SharedFieldDeviceEditorsByDevice
+} from './types.js';
 import { toProjectIdResolver } from './types.js';
 import { FieldDeviceFetchStrategyFactory } from './strategies/FieldDeviceFetchStrategyFactory.js';
 
@@ -29,6 +33,8 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   readonly showBulkEditPanel = $derived.by(() => this.bulkEditPanelOpen && this.selectedCount > 0);
 
   private readonly resolveProjectId: () => string | undefined;
+  private readonly resolveSharedFieldDeviceEditors: () => SharedFieldDeviceEditorsByDevice;
+  private readonly onFieldDevicesSaved?: (deviceIds: string[]) => void;
   private readonly manageFieldDeviceUseCase = new ManageFieldDeviceUseCase(fieldDeviceRepository);
   private readonly listApparatsUseCase = new ListEntityUseCase(apparatRepository);
   private readonly listSystemPartsUseCase = new ListEntityUseCase(systemPartRepository);
@@ -40,11 +46,21 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     super(strategyFactory.create(), { pageSize: props.pageSize ?? 300 });
 
     this.resolveProjectId = resolveProjectId;
-    this.editing = useFieldDeviceEditing(() => this.projectId);
+    this.resolveSharedFieldDeviceEditors = props.sharedFieldDeviceEditors ?? (() => ({}));
+    this.onFieldDevicesSaved = props.onFieldDevicesSaved;
+    this.editing = useFieldDeviceEditing({
+      projectId: () => this.projectId,
+      onSharedStateChange: props.onSharedFieldDeviceStateChange,
+      onSaveSuccess: (deviceIds) => this.onFieldDevicesSaved?.(deviceIds)
+    });
   }
 
   get projectId() {
     return this.resolveProjectId();
+  }
+
+  getEditorsForDevice(deviceId: string) {
+    return this.resolveSharedFieldDeviceEditors()[deviceId] ?? [];
   }
 
   protected override onSelectionChanged() {

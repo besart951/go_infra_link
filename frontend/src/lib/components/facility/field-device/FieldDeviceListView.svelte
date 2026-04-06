@@ -22,11 +22,29 @@
     projectId?: string;
     refreshKey?: string | number;
     systemTypeRefreshKey?: string | number;
+    sharedFieldDeviceEditors?: import('./state/types.js').SharedFieldDeviceEditorsByDevice;
+    onSharedFieldDeviceStateChange?: (
+      state: import('./state/types.js').SharedFieldDeviceDraftState
+    ) => void;
+    onFieldDevicesSaved?: (deviceIds: string[]) => void;
   }
 
-  const { projectId, refreshKey, systemTypeRefreshKey }: Props = $props();
+  const {
+    projectId,
+    refreshKey,
+    systemTypeRefreshKey,
+    sharedFieldDeviceEditors,
+    onSharedFieldDeviceStateChange,
+    onFieldDevicesSaved
+  }: Props = $props();
 
-  const fieldDeviceState = provideFieldDeviceState({ projectId: () => projectId, pageSize: 300 });
+  const fieldDeviceState = provideFieldDeviceState({
+    projectId: () => projectId,
+    pageSize: 300,
+    sharedFieldDeviceEditors: () => sharedFieldDeviceEditors ?? {},
+    onSharedFieldDeviceStateChange: (state) => onSharedFieldDeviceStateChange?.(state),
+    onFieldDevicesSaved: (deviceIds) => onFieldDevicesSaved?.(deviceIds)
+  });
 
   useUnsavedChangesWarning(() => fieldDeviceState.editing.hasUnsavedChanges);
 
