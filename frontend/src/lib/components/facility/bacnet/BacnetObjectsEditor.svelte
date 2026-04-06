@@ -272,7 +272,9 @@
                 class={[
                   isDirty(obj.id, 'state_text_id') ? 'rounded-md ring-1 ring-ring' : '',
                   getCollaborationClass(obj.id, 'state_text_id')
-                ].filter(Boolean).join(' ')}
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 title={getPreviewTitle(obj.id, 'state_text_id')}
               >
                 <AsyncCombobox
@@ -298,7 +300,9 @@
                 class={[
                   isDirty(obj.id, 'notification_class_id') ? 'rounded-md ring-1 ring-ring' : '',
                   getCollaborationClass(obj.id, 'notification_class_id')
-                ].filter(Boolean).join(' ')}
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 title={getPreviewTitle(obj.id, 'notification_class_id')}
               >
                 <AsyncCombobox
@@ -344,7 +348,12 @@
             <td class="py-1 pr-1">
               <div
                 class={`flex ${getCollaborationClass(obj.id, 'software_type')} ${getCollaborationClass(obj.id, 'software_number')}`}
-                title={[getPreviewTitle(obj.id, 'software_type'), getPreviewTitle(obj.id, 'software_number')].filter(Boolean).join('\n') || undefined}
+                title={[
+                  getPreviewTitle(obj.id, 'software_type'),
+                  getPreviewTitle(obj.id, 'software_number')
+                ]
+                  .filter(Boolean)
+                  .join('\n') || undefined}
               >
                 <EditableSelectCell
                   value={obj.software_type}
@@ -378,7 +387,12 @@
             <td class="py-1 pr-1">
               <div
                 class={`flex ${getCollaborationClass(obj.id, 'hardware_type')} ${getCollaborationClass(obj.id, 'hardware_quantity')}`}
-                title={[getPreviewTitle(obj.id, 'hardware_type'), getPreviewTitle(obj.id, 'hardware_quantity')].filter(Boolean).join('\n') || undefined}
+                title={[
+                  getPreviewTitle(obj.id, 'hardware_type'),
+                  getPreviewTitle(obj.id, 'hardware_quantity')
+                ]
+                  .filter(Boolean)
+                  .join('\n') || undefined}
               >
                 <EditableSelectCell
                   value={obj.hardware_type}
@@ -464,7 +478,11 @@
                       onEdit(
                         obj.id,
                         'text_individual',
-                        normalized === '' ? (hasExistingTextIndividual ? '' : undefined) : normalized
+                        normalized === ''
+                          ? hasExistingTextIndividual
+                            ? ''
+                            : undefined
+                          : normalized
                       );
                     }}
                   />

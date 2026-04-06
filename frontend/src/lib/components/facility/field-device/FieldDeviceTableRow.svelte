@@ -212,7 +212,10 @@
       onValueChange={handleApparatChange}
     />
   </Table.Cell>
-  <Table.Cell class={getEditingFieldClass('system_part_id')} title={getFieldPreviewTitle('system_part_id')}>
+  <Table.Cell
+    class={getEditingFieldClass('system_part_id')}
+    title={getFieldPreviewTitle('system_part_id')}
+  >
     <TableSystemPartSelect
       items={state.allSystemParts}
       value={device.system_part_id || ''}
