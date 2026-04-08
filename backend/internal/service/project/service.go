@@ -21,6 +21,7 @@ type Service struct {
 	projectSPSControllerRepo  domainProject.ProjectSPSControllerRepository
 	projectFieldDeviceRepo    domainProject.ProjectFieldDeviceRepository
 	userRepo                  domainUser.UserRepository
+	rolePermissionRepo        domainUser.RolePermissionRepository
 	objectDataRepo            domainFacility.ObjectDataStore
 	bacnetObjectRepo          domainFacility.BacnetObjectStore
 	specificationRepo         domainFacility.SpecificationStore
@@ -39,6 +40,7 @@ func New(
 	projectSPSControllerRepo domainProject.ProjectSPSControllerRepository,
 	projectFieldDeviceRepo domainProject.ProjectFieldDeviceRepository,
 	userRepo domainUser.UserRepository,
+	rolePermissionRepo domainUser.RolePermissionRepository,
 	objectDataRepo domainFacility.ObjectDataStore,
 	bacnetObjectRepo domainFacility.BacnetObjectStore,
 	specificationRepo domainFacility.SpecificationStore,
@@ -56,6 +58,7 @@ func New(
 		projectSPSControllerRepo:  projectSPSControllerRepo,
 		projectFieldDeviceRepo:    projectFieldDeviceRepo,
 		userRepo:                  userRepo,
+		rolePermissionRepo:        rolePermissionRepo,
 		objectDataRepo:            objectDataRepo,
 		bacnetObjectRepo:          bacnetObjectRepo,
 		specificationRepo:         specificationRepo,
@@ -666,7 +669,43 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 		Search: search,
 	}
 
+	canReadAllProjects, err := s.canReadAllProjects(ctx, requesterID)
+	if err != nil {
+		return nil, err
+	}
+
+	if canReadAllProjects {
+		return s.repo.GetPaginatedListWithStatus(ctx, params, status)
+	}
+
 	return s.repo.GetPaginatedListForUserWithStatus(ctx, params, requesterID, status)
+}
+
+func (s *Service) canReadAllProjects(ctx context.Context, requesterID uuid.UUID) (bool, error) {
+	if s.rolePermissionRepo == nil {
+		return false, nil
+	}
+
+	users, err := s.userRepo.GetByIds(ctx, []uuid.UUID{requesterID})
+	if err != nil {
+		return false, err
+	}
+	if len(users) == 0 {
+		return false, nil
+	}
+
+	rolePermissions, err := s.rolePermissionRepo.ListByRole(ctx, users[0].Role)
+	if err != nil {
+		return false, err
+	}
+
+	for _, rolePermission := range rolePermissions {
+		if rolePermission.Permission == "project.read" {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func (s *Service) ListControlCabinets(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error) {
