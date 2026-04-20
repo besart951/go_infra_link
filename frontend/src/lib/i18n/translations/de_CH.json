@@ -471,6 +471,29 @@
       "no_system_types": "Keine Systemtypen zugeordnet.",
       "number": "Nummer"
     },
+    "sps_controller_detail": {
+      "subtitle": "Controllerdaten, Netzwerkwerte und Systemtypen auf einen Blick.",
+      "back_to_cabinet": "Zurück zum Schaltschrank",
+      "back_to_list": "Zurück zur SPS-Übersicht",
+      "edit_controller": "SPS-Regler bearbeiten",
+      "delete_controller": "SPS-Regler löschen",
+      "overview_title": "Controller-Informationen",
+      "overview_desc": "Netzwerk- und Standortdaten dieses SPS-Reglers.",
+      "system_types_title": "Anlagen",
+      "system_types_desc": "Zugeordnete SPS-Systemtypen mit Feldgeräteanzahl.",
+      "search_system_types": "Dokumentname oder Nummer suchen",
+      "document_name": "Dokumentname",
+      "location": "Standort",
+      "field_devices": "Feldgeräte",
+      "no_system_types": "Keine Systemtypen zugeordnet."
+    },
+    "sps_controller_system_type_detail": {
+      "subtitle": "Dokument, Nummer und Zuordnung dieses SPS-Systemtyps.",
+      "back_to_controller": "Zurück zum SPS-Regler",
+      "edit": "Bearbeiten",
+      "overview_title": "Systemtyp-Informationen",
+      "overview_desc": "Verknüpfung, Nummer und Feldgeräteanzahl auf einen Blick."
+    },
     "cabinet_type": "Schranktyp",
     "cabinet_location": "Standort",
     "field_devices": "Feldgeräte",
@@ -613,6 +636,7 @@
     "bacnet_object_not_found": "BACnet-Objekt nicht gefunden.",
     "control_cabinet_load_failed": "Schaltschrankdetails konnten nicht geladen werden.",
     "control_cabinet_not_found": "Schaltschrank nicht gefunden.",
+    "sps_controller_load_failed": "SPS-Reglerdetails konnten nicht geladen werden.",
     "sps_controller_not_found": "SPS-Regler nicht gefunden.",
     "notification_class_not_found": "Benachrichtigungsklasse nicht gefunden.",
     "state_text_not_found": "Statustext nicht gefunden.",

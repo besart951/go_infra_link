@@ -425,6 +425,7 @@ func toSPSControllerSystemTypeResponse(item domainFacility.SPSControllerSystemTy
 		SystemTypeName:    item.SystemType.Name,
 		Number:            item.Number,
 		DocumentName:      item.DocumentName,
+		FieldDevicesCount: item.FieldDevicesCount,
 		CreatedAt:         item.CreatedAt,
 		UpdatedAt:         item.UpdatedAt,
 	}

@@ -7,6 +7,7 @@ export interface SPSControllerSystemType {
   document_name?: string | null;
   sps_controller_id: string;
   system_type_id: string;
+  field_devices_count?: number;
   created_at: string;
   updated_at: string;
 }

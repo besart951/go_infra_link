@@ -177,10 +177,11 @@ type SPSControllerSystemTypeResponse struct {
 	SPSControllerName string `json:"sps_controller_name"`
 	SystemTypeName    string `json:"system_type_name"`
 
-	Number       *int      `json:"number"`
-	DocumentName *string   `json:"document_name"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	Number            *int      `json:"number"`
+	DocumentName      *string   `json:"document_name"`
+	FieldDevicesCount int       `json:"field_devices_count"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 type SPSControllerSystemTypeListResponse struct {

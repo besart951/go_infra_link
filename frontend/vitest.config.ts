@@ -9,7 +9,7 @@ const vitestOverrides = defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
-    include: ['src/**/*.test.ts']
+    include: ['src/**/*.test.ts', 'tests/**/*.test.ts']
   }
 });
 
