@@ -197,7 +197,7 @@
 </script>
 
 {#if bacnetObjects.length > 0}
-  <div class="overflow-x-auto">
+  <div class="min-w-0 max-w-full overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b text-left text-xs text-muted-foreground">

@@ -75,7 +75,7 @@
   });
 </script>
 
-<div class="flex flex-col gap-6">
+<div class="flex min-w-0 flex-col gap-6">
   <div class="flex justify-end gap-2">
     {#if !fieldDeviceState.showMultiCreateForm && canPerform('create', 'fielddevice')}
       <Button onclick={() => fieldDeviceState.openMultiCreateForm()}>
@@ -104,7 +104,7 @@
     </Card.Root>
   {/if}
 
-  <div class="flex flex-col gap-4">
+  <div class="flex min-w-0 flex-col gap-4">
     <FieldDeviceSearchBar />
 
     <div class:hidden={!fieldDeviceState.showFilterPanel}>
