@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs';
+import { readdirSync, type Dirent } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,10 +17,10 @@ function toPosix(filePath: string): string {
 }
 
 function collectPageFiles(dirPath: string): string[] {
-  const entries = readdirSync(dirPath, { withFileTypes: true });
+  const entries: Dirent[] = readdirSync(dirPath, { withFileTypes: true });
 
   return entries
-    .flatMap((entry) => {
+    .flatMap((entry: Dirent) => {
       const absolutePath = path.join(dirPath, entry.name);
 
       if (entry.isDirectory()) {
@@ -29,7 +29,7 @@ function collectPageFiles(dirPath: string): string[] {
 
       return /\+page\.(svelte|ts)$/.test(entry.name) ? [absolutePath] : [];
     })
-    .sort((left, right) => left.localeCompare(right));
+    .sort((left: string, right: string) => left.localeCompare(right));
 }
 
 function toRoutePath(relativeFilePath: string): string {
@@ -53,7 +53,7 @@ export function discoverRoutePages(): DiscoveredRoute[] {
     const files = byRoute.get(routePath) ?? [];
 
     files.push(relativePath);
-    files.sort((left, right) => left.localeCompare(right));
+    files.sort((left: string, right: string) => left.localeCompare(right));
     byRoute.set(routePath, files);
   }
 

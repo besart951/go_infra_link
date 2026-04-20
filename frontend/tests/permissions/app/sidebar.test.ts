@@ -2,6 +2,35 @@ import { render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildAdminUser, buildUser, permission } from '../../helpers/permissions.js';
+import type { Team } from '../../../src/lib/domain/team/index.js';
+import type { Project } from '../../../src/lib/domain/project/index.js';
+
+const DEFAULT_TIMESTAMP = '2026-01-01T00:00:00.000Z';
+
+function buildTeam(overrides: Partial<Team> = {}): Team {
+  return {
+    id: 'team-1',
+    name: 'Ops',
+    description: '',
+    created_at: DEFAULT_TIMESTAMP,
+    updated_at: DEFAULT_TIMESTAMP,
+    ...overrides
+  };
+}
+
+function buildProject(overrides: Partial<Project> = {}): Project {
+  return {
+    id: 'project-1',
+    name: 'Alpha',
+    description: '',
+    status: 'planned',
+    phase_id: 'phase-1',
+    creator_id: 'user-1',
+    created_at: DEFAULT_TIMESTAMP,
+    updated_at: DEFAULT_TIMESTAMP,
+    ...overrides
+  };
+}
 
 const state = vi.hoisted(() => {
   const grantedPermissions = new Set<string>();
@@ -108,8 +137,8 @@ describe('permission-aware sidebar navigation', () => {
 
     render(AppSidebar, {
       user: buildUser(),
-      teams: [{ id: 'team-1', name: 'Ops' }],
-      projects: [{ id: 'project-1', name: 'Alpha', status: 'planned' }]
+      teams: [buildTeam()],
+      projects: [buildProject()]
     });
 
     expect(screen.getByTestId('nav-link:/users')).toBeInTheDocument();

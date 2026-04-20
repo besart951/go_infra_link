@@ -1,21 +1,26 @@
 <script lang="ts">
   interface Props {
-    onSpsSystemTypeChange: (value: string) => void;
-    onPreselectionChange: (value: {
-      objectDataId: string;
-      apparatId: string;
-      systemPartId: string;
-    }) => void;
+    state: {
+      handleSpsSystemTypeChange: (value: string) => void;
+      handlePreselectionChange: (value: {
+        objectDataId: string;
+        apparatId: string;
+        systemPartId: string;
+      }) => void;
+    };
+    systemTypeRefreshKey?: string | number;
   }
 
-  let { onSpsSystemTypeChange, onPreselectionChange }: Props = $props();
+  let { state }: Props = $props();
 </script>
 
-<button data-testid="set-selection" onclick={() => onSpsSystemTypeChange('sps-1')}>set sps</button>
+<button data-testid="set-selection" onclick={() => state.handleSpsSystemTypeChange('sps-1')}>
+  set sps
+</button>
 <button
   data-testid="set-preselection"
   onclick={() =>
-    onPreselectionChange({
+    state.handlePreselectionChange({
       objectDataId: 'obj-1',
       apparatId: 'app-1',
       systemPartId: 'sp-1'

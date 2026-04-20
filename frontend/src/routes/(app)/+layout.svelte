@@ -14,7 +14,7 @@
 
   const translator = createTranslator();
 
-  const { children, data } = $props<{ children: any; data: LayoutData }>();
+  const { children, data } = $props<{ children?: any; data: LayoutData }>();
 
   onMount(async () => {
     await loadAuth();

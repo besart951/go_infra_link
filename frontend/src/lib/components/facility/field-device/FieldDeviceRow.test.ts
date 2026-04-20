@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 
-import { render, screen } from '@testing-library/svelte';
+import { render } from '@testing-library/svelte';
 import FieldDeviceRow from './FieldDeviceRow.svelte';
 
 import type { FieldDeviceRowData } from '$lib/domain/facility/fieldDeviceMultiCreate.js';
@@ -39,15 +39,15 @@ describe('FieldDeviceRow', () => {
       { id: 'r-1', bmk: '', description: '', textFix: '', apparatNr: null }
     ]);
 
-    render(FieldDeviceRow, {
+    const { container } = render(FieldDeviceRow, {
       index: 0,
       state
     });
 
-    expect(screen.getByLabelText('field_device.row.bmk')).toHaveValue('');
-    expect(screen.getByLabelText('field_device.row.description')).toHaveValue('');
-    expect(screen.getByLabelText('field_device.row.text_fix')).toHaveValue('');
-    expect(screen.getByLabelText('field_device.row.apparat_nr')).toHaveValue(null);
+    expect(container.querySelector('#bmk-0')).toHaveValue('');
+    expect(container.querySelector('#description-0')).toHaveValue('');
+    expect(container.querySelector('#text-fix-0')).toHaveValue('');
+    expect(container.querySelector('#apparat-nr-0')).toHaveValue(null);
   });
 
   it('populates form fields correctly for existing row data', () => {
@@ -61,16 +61,14 @@ describe('FieldDeviceRow', () => {
       }
     ]);
 
-    render(FieldDeviceRow, {
+    const { container } = render(FieldDeviceRow, {
       index: 0,
       state
     });
 
-    expect(screen.getByLabelText('field_device.row.bmk')).toHaveValue('BMK-EXISTING');
-    expect(screen.getByLabelText('field_device.row.description')).toHaveValue(
-      'Existing device description'
-    );
-    expect(screen.getByLabelText('field_device.row.text_fix')).toHaveValue('TF-EX');
-    expect(screen.getByLabelText('field_device.row.apparat_nr')).toHaveValue(12);
+    expect(container.querySelector('#bmk-0')).toHaveValue('BMK-EXISTING');
+    expect(container.querySelector('#description-0')).toHaveValue('Existing device description');
+    expect(container.querySelector('#text-fix-0')).toHaveValue('TF-EX');
+    expect(container.querySelector('#apparat-nr-0')).toHaveValue(12);
   });
 });

@@ -23,7 +23,7 @@ export interface RouteAudit {
   notes: string;
 }
 
-export const routeAudits: RouteAudit[] = [
+export const routeAudits = [
   {
     path: '/login',
     domain: 'auth',
@@ -308,6 +308,21 @@ export const routeAudits: RouteAudit[] = [
     notes: 'The controller detail screen loads and wires edit actions without a route-level check.'
   },
   {
+    path: '/facility/sps-controller-system-type/:id',
+    domain: 'facility',
+    files: [
+      'src/routes/(app)/facility/sps-controller-system-type/[id]/+page.svelte',
+      'src/routes/(app)/facility/sps-controller-system-type/[id]/+page.ts'
+    ],
+    auth: 'authenticated',
+    authorization: 'none',
+    status: 'misconfigured',
+    expectedAccess:
+      'Requires systemtype.read and the relevant update permission before exposing detail workflows.',
+    protectedUi: ['facility.sps_controller_system_type_detail.overview_title'],
+    notes: 'The system-type detail route resolves without a route-level permission check.'
+  },
+  {
     path: '/facility/field-devices',
     domain: 'facility',
     files: ['src/routes/(app)/facility/field-devices/+page.svelte'],
@@ -439,7 +454,9 @@ export const routeAudits: RouteAudit[] = [
     notes:
       'The page hides the uploader without objectdata.create, but the route still resolves and the sidebar uses objectdata.read instead.'
   }
-].sort((left, right) => left.path.localeCompare(right.path));
+] satisfies RouteAudit[];
+
+routeAudits.sort((left, right) => left.path.localeCompare(right.path));
 
 export const configuredRoutePaths = routeAudits
   .filter((route) => route.status === 'configured')
