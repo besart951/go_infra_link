@@ -20,7 +20,7 @@
   );
 </script>
 
-<div class="min-w-0 max-w-full rounded-lg border bg-background">
+<div class="max-w-full min-w-0 rounded-lg border bg-background">
   <Table.Root class="[&_td]:p-2 [&_th]:h-10 [&_th]:px-2">
     <Table.Header>
       <Table.Row>

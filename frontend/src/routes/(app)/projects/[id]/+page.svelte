@@ -294,7 +294,7 @@
   {/if}
 
   {#if loading}
-      <div class="min-w-0 rounded-lg border bg-card p-6">
+    <div class="min-w-0 rounded-lg border bg-card p-6">
       <div class="grid gap-4 md:grid-cols-2">
         {#each Array(6) as _}
           <Skeleton class="h-6 w-full" />
