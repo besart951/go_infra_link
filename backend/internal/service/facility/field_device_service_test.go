@@ -930,6 +930,75 @@ func newFieldDevice(
 	}
 }
 
+func TestFieldDeviceService_MultiCreate_CharacterizesPartialSuccessAndBatchConflicts(t *testing.T) {
+	fd1ID := uuid.New()
+	fd2ID := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+	spsSystemTypeID := uuid.New()
+	systemTypeID := uuid.New()
+
+	fieldDeviceRepo := &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{}}
+	spsSystemTypeRepo := &fakeSpsControllerSystemTypeRepo{
+		items: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+			spsSystemTypeID: {
+				Base:         domain.Base{ID: spsSystemTypeID},
+				SystemTypeID: systemTypeID,
+			},
+		},
+	}
+	systemTypeRepo := &fakeSystemTypeRepo{
+		items: map[uuid.UUID]*domainFacility.SystemType{
+			systemTypeID: {Base: domain.Base{ID: systemTypeID}, NumberMin: 1, NumberMax: 99},
+		},
+	}
+	apparatRepo := &fakeApparatRepo{
+		items: map[uuid.UUID]*domainFacility.Apparat{
+			apparatID: {Base: domain.Base{ID: apparatID}, ShortName: "PMP", Name: "Pump"},
+		},
+	}
+	systemPartRepo := &fakeSystemPartRepo{
+		items: map[uuid.UUID]*domainFacility.SystemPart{
+			systemPartID: {Base: domain.Base{ID: systemPartID}, ShortName: "AIR", Name: "Air"},
+		},
+	}
+
+	svc := facility.NewFieldDeviceService(
+		fieldDeviceRepo,
+		spsSystemTypeRepo,
+		systemTypeRepo,
+		apparatRepo,
+		systemPartRepo,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	result := svc.MultiCreate(context.Background(), []domainFacility.FieldDeviceCreateItem{
+		{FieldDevice: newFieldDevice(fd1ID, spsSystemTypeID, apparatID, systemPartID, 11)},
+		{FieldDevice: newFieldDevice(fd2ID, spsSystemTypeID, apparatID, systemPartID, 11)},
+		{},
+	})
+
+	if result.TotalRequests != 3 || result.SuccessCount != 1 || result.FailureCount != 2 {
+		t.Fatalf("expected one success and two failures, got %+v", result)
+	}
+	if !result.Results[0].Success || result.Results[0].FieldDevice == nil || result.Results[0].FieldDevice.ID != fd1ID {
+		t.Fatalf("expected first item to succeed with fd1, got %+v", result.Results[0])
+	}
+	if result.Results[1].Success || result.Results[1].ErrorField != "fielddevice.apparat_nr" || result.Results[1].Error != "apparatnummer ist bereits vergeben" {
+		t.Fatalf("expected second item to fail on in-batch apparat_nr conflict, got %+v", result.Results[1])
+	}
+	if result.Results[2].Success || result.Results[2].ErrorField != "fielddevice" || result.Results[2].Error != "field device is required" {
+		t.Fatalf("expected third item to fail as missing field device, got %+v", result.Results[2])
+	}
+	if _, ok := fieldDeviceRepo.items[fd1ID]; !ok || len(fieldDeviceRepo.items) != 1 {
+		t.Fatalf("expected only successful field device to be persisted, got %+v", fieldDeviceRepo.items)
+	}
+}
+
 func TestFieldDeviceService_BulkUpdate_AllowsSwapApparatNr(t *testing.T) {
 	fd1ID := uuid.New()
 	fd2ID := uuid.New()
