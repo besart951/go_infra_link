@@ -87,9 +87,41 @@ function Run-DbBootstrap {
     }
 }
 
+function Get-GoBin {
+    $goBin = (& go env GOBIN)
+    if ($goBin) {
+        return $goBin.Trim()
+    }
+
+    $goPath = (& go env GOPATH).Trim()
+    return (Join-Path $goPath 'bin')
+}
+
+function Ensure-Air {
+    $airCommand = Get-Command air -ErrorAction SilentlyContinue
+    if ($airCommand) {
+        return $airCommand.Source
+    }
+
+    $airExe = Join-Path (Get-GoBin) 'air.exe'
+    if (Test-Path $airExe) {
+        return $airExe
+    }
+
+    Write-Step 'Installing Air for backend hot reload...'
+    go install github.com/air-verse/air@latest
+
+    if (-not (Test-Path $airExe)) {
+        throw "Air was installed, but '$airExe' was not found. Check 'go env GOPATH' and 'go env GOBIN'."
+    }
+
+    return $airExe
+}
+
 function Start-Backend {
-    Write-Step 'Starting backend in a new terminal...'
-    Start-Process pwsh -ArgumentList '-NoExit', '-Command', "Set-Location '$RepoRoot/backend'; go run .\cmd\app\"
+    $airExe = Ensure-Air
+    Write-Step 'Starting backend with Air hot reload in a new terminal...'
+    Start-Process pwsh -ArgumentList '-NoExit', '-Command', "Set-Location '$RepoRoot/backend'; & '$airExe'"
 }
 
 function Start-Frontend {
@@ -146,10 +178,10 @@ Usage:
   ./scripts/dev.ps1 <action> [-Force]
 
 Actions:
-  start      Start postgres+pgAdmin, run db bootstrap, then backend and frontend in new terminals
+  start      Start postgres+pgAdmin, run db bootstrap, then backend with Air hot reload and frontend in new terminals
   postgres   Start only postgres + pgAdmin
   pgadmin    Start only pgAdmin
-  backend    Run db bootstrap, then start only backend (new terminal)
+  backend    Run db bootstrap, then start only backend with Air hot reload (new terminal)
   frontend   Start only frontend (new terminal)
   bootstrap  Run backend db bootstrap once
   seed       Run db bootstrap, then backend seeder once

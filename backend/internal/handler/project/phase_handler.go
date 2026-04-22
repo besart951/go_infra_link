@@ -165,6 +165,7 @@ func (h *PhaseHandler) DeletePhase(c *gin.Context) {
 
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "phase.deletion_failed")
+		return
 	}
 
 	c.Status(http.StatusNoContent)
