@@ -182,7 +182,9 @@ func (h *BuildingHandler) DeleteBuilding(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
+			localizedNotFound("facility.building_not_found"),
+		)
 		return
 	}
 

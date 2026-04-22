@@ -66,7 +66,10 @@ func (h *ProjectHandler) ListProjectObjectData(c *gin.Context) {
 
 	result, err := h.service.ListObjectData(c.Request.Context(), projectID, query.Page, query.Limit, query.Search, apparatID, systemPartID)
 	if err != nil {
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_or_object_data_not_found")),
+		)
 		return
 	}
 

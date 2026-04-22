@@ -49,6 +49,44 @@ func TestRespondDomainErrorMatchesMappedError(t *testing.T) {
 	}
 }
 
+func TestRespondMappedDomainErrorDoesNotWriteFallback(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+
+	handled := RespondMappedDomainError(
+		context,
+		errors.New("unmapped"),
+		MapError(domain.ErrNotFound, PlainError(http.StatusNotFound, "not_found", "missing")),
+	)
+
+	if handled {
+		t.Fatal("expected unmapped error not to be handled")
+	}
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected recorder to remain unwritten, got %d", recorder.Code)
+	}
+}
+
+func TestRespondMappedDomainErrorWritesMappedError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+
+	handled := RespondMappedDomainError(
+		context,
+		fmtWrapped(domain.ErrNotFound),
+		MapError(domain.ErrNotFound, PlainError(http.StatusNotFound, "not_found", "missing")),
+	)
+
+	if !handled {
+		t.Fatal("expected mapped error to be handled")
+	}
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", recorder.Code)
+	}
+}
+
 func fmtWrapped(err error) error {
 	return errors.Join(err)
 }

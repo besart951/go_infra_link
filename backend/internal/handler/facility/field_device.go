@@ -1,7 +1,6 @@
 package facility
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -108,23 +107,43 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 	// Parse optional filter parameters
 	filters := domainFacility.FieldDeviceFilterParams{}
 
-	if buildingID, ok := parseUUIDQueryParam(c, "building_id"); ok && buildingID != nil {
+	buildingID, ok := parseUUIDQueryParam(c, "building_id")
+	if !ok {
+		return
+	}
+	if buildingID != nil {
 		filters.BuildingID = buildingID
 	}
 
-	if controlCabinetID, ok := parseUUIDQueryParam(c, "control_cabinet_id"); ok && controlCabinetID != nil {
+	controlCabinetID, ok := parseUUIDQueryParam(c, "control_cabinet_id")
+	if !ok {
+		return
+	}
+	if controlCabinetID != nil {
 		filters.ControlCabinetID = controlCabinetID
 	}
 
-	if spsControllerID, ok := parseUUIDQueryParam(c, "sps_controller_id"); ok && spsControllerID != nil {
+	spsControllerID, ok := parseUUIDQueryParam(c, "sps_controller_id")
+	if !ok {
+		return
+	}
+	if spsControllerID != nil {
 		filters.SPSControllerID = spsControllerID
 	}
 
-	if spsControllerSystemTypeID, ok := parseUUIDQueryParam(c, "sps_controller_system_type_id"); ok && spsControllerSystemTypeID != nil {
+	spsControllerSystemTypeID, ok := parseUUIDQueryParam(c, "sps_controller_system_type_id")
+	if !ok {
+		return
+	}
+	if spsControllerSystemTypeID != nil {
 		filters.SPSControllerSystemTypeID = spsControllerSystemTypeID
 	}
 
-	if projectID, ok := parseUUIDQueryParam(c, "project_id"); ok && projectID != nil {
+	projectID, ok := parseUUIDQueryParam(c, "project_id")
+	if !ok {
+		return
+	}
+	if projectID != nil {
 		filters.ProjectID = projectID
 	}
 
@@ -250,23 +269,11 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateWithBacnetObjects(ctx, fieldDevice, req.ObjectDataID, bacnetObjects); err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		if errors.Is(err, domain.ErrInvalidArgument) {
-			respondLocalizedInvalidArgument(c, "facility.mutually_exclusive_error")
-			return
-		}
-		if errors.Is(err, domain.ErrNotFound) {
-			respondInvalidReference(c)
-			return
-		}
-		if errors.Is(err, domain.ErrConflict) {
-			respondLocalizedConflict(c, "facility.apparat_nr_already_used")
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
+		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
+			localizedInvalidArgument("facility.mutually_exclusive_error"),
+			localizedInvalidReference(),
+			localizedConflict("facility.apparat_nr_already_used"),
+		)
 		return
 	}
 
@@ -289,7 +296,9 @@ func (h *FieldDeviceHandler) DeleteFieldDevice(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
+			localizedNotFound("facility.field_device_not_found"),
+		)
 		return
 	}
 
@@ -351,14 +360,10 @@ func (h *FieldDeviceHandler) CreateFieldDeviceSpecification(c *gin.Context) {
 	spec := toFieldDeviceSpecification(req)
 
 	if err := h.service.CreateSpecification(c.Request.Context(), fieldDeviceID, spec); err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
-			return
-		}
-		if errors.Is(err, domain.ErrConflict) {
-			respondLocalizedConflict(c, "facility.specification_already_exists")
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
+			localizedNotFound("facility.field_device_not_found"),
+			localizedConflict("facility.specification_already_exists"),
+		)
 		return
 	}
 

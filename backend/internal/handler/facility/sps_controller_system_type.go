@@ -1,7 +1,6 @@
 package facility
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -111,15 +110,9 @@ func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Cont
 
 	copyEntity, err := h.service.CopyByID(c.Request.Context(), id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondLocalizedNotFoundError(c, "facility.sps_controller_system_type_not_found")
-			return
-		}
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
+			localizedNotFound("facility.sps_controller_system_type_not_found"),
+		)
 		return
 	}
 
@@ -143,10 +136,9 @@ func (h *SPSControllerSystemTypeHandler) DeleteSPSControllerSystemType(c *gin.Co
 	}
 
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.sps_controller_system_type_not_found") {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
+			localizedNotFound("facility.sps_controller_system_type_not_found"),
+		)
 		return
 	}
 

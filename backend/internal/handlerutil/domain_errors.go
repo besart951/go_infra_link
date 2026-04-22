@@ -31,7 +31,7 @@ func MapError(target error, spec ErrorSpec) ErrorMapping {
 	return ErrorMapping{Target: target, Spec: spec}
 }
 
-func RespondDomainError(c *gin.Context, err error, fallback ErrorSpec, mappings ...ErrorMapping) bool {
+func RespondMappedDomainError(c *gin.Context, err error, mappings ...ErrorMapping) bool {
 	if err == nil {
 		return false
 	}
@@ -46,6 +46,18 @@ func RespondDomainError(c *gin.Context, err error, fallback ErrorSpec, mappings 
 			respondWithSpec(c, mapping.Spec)
 			return true
 		}
+	}
+
+	return false
+}
+
+func RespondDomainError(c *gin.Context, err error, fallback ErrorSpec, mappings ...ErrorMapping) bool {
+	if err == nil {
+		return false
+	}
+
+	if RespondMappedDomainError(c, err, mappings...) {
+		return true
 	}
 
 	respondWithSpec(c, fallback)

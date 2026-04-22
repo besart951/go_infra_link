@@ -1,7 +1,6 @@
 package facility
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
@@ -66,27 +65,13 @@ func parseUUIDQueryParam(c *gin.Context, name string) (*uuid.UUID, bool) {
 }
 
 func respondValidationOrError(c *gin.Context, err error, fallbackCode string) bool {
-	if err == nil {
-		return false
-	}
-	if ve, ok := domain.AsValidationError(err); ok {
-		respondValidationError(c, ve.Fields)
-		return true
-	}
-	respondError(c, http.StatusInternalServerError, fallbackCode, err.Error())
-	return true
+	return handlerutil.RespondDomainError(c, err,
+		handlerutil.PlainError(http.StatusInternalServerError, fallbackCode, errMessage(err)),
+	)
 }
 
 func respondLocalizedValidationOrError(c *gin.Context, err error, translationKey string) bool {
-	if err == nil {
-		return false
-	}
-	if ve, ok := domain.AsValidationError(err); ok {
-		respondValidationError(c, ve.Fields)
-		return true
-	}
-	respondLocalizedError(c, http.StatusInternalServerError, "error", translationKey)
-	return true
+	return respondLocalizedDomainError(c, err, "error", translationKey)
 }
 
 func respondInvalidReference(c *gin.Context) {
@@ -106,11 +91,7 @@ func respondLocalizedInvalidArgument(c *gin.Context, translationKey string) {
 }
 
 func respondLocalizedNotFoundIf(c *gin.Context, err error, translationKey string) bool {
-	if errors.Is(err, domain.ErrNotFound) {
-		respondLocalizedNotFoundError(c, translationKey)
-		return true
-	}
-	return false
+	return handlerutil.RespondMappedDomainError(c, err, localizedNotFound(translationKey))
 }
 
 func parseUUIDString(s string) (uuid.UUID, error) {
@@ -119,4 +100,34 @@ func parseUUIDString(s string) (uuid.UUID, error) {
 
 func containsIgnoreCase(s, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
+
+func respondLocalizedDomainError(c *gin.Context, err error, fallbackCode, fallbackKey string, mappings ...handlerutil.ErrorMapping) bool {
+	return handlerutil.RespondDomainError(c, err,
+		handlerutil.LocalizedError(http.StatusInternalServerError, fallbackCode, fallbackKey),
+		mappings...,
+	)
+}
+
+func localizedNotFound(translationKey string) handlerutil.ErrorMapping {
+	return handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", translationKey))
+}
+
+func localizedConflict(translationKey string) handlerutil.ErrorMapping {
+	return handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "conflict", translationKey))
+}
+
+func localizedInvalidArgument(translationKey string) handlerutil.ErrorMapping {
+	return handlerutil.MapError(domain.ErrInvalidArgument, handlerutil.LocalizedError(http.StatusBadRequest, "validation_error", translationKey))
+}
+
+func localizedInvalidReference() handlerutil.ErrorMapping {
+	return handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusBadRequest, "invalid_reference", "facility.invalid_reference"))
+}
+
+func errMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }

@@ -36,7 +36,11 @@ func (h *PhaseHandler) CreatePhase(c *gin.Context) {
 	phase := ToPhaseModel(req)
 
 	if err := h.service.Create(c.Request.Context(), phase); err != nil {
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "phase.creation_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "phase.creation_failed"),
+			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "conflict", "phase.creation_failed")),
+			handlerutil.MapError(domain.ErrInvalidArgument, handlerutil.LocalizedError(http.StatusBadRequest, "validation_error", "phase.creation_failed")),
+		)
 		return
 	}
 
@@ -141,7 +145,12 @@ func (h *PhaseHandler) UpdatePhase(c *gin.Context) {
 	ApplyPhaseUpdate(phase, req)
 
 	if err := h.service.Update(ctx, phase); err != nil {
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "phase.update_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "phase.update_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "phase.phase_not_found")),
+			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "conflict", "phase.update_failed")),
+			handlerutil.MapError(domain.ErrInvalidArgument, handlerutil.LocalizedError(http.StatusBadRequest, "validation_error", "phase.update_failed")),
+		)
 		return
 	}
 
@@ -164,7 +173,10 @@ func (h *PhaseHandler) DeletePhase(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "phase.deletion_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "deletion_failed", "phase.deletion_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "phase.phase_not_found")),
+		)
 		return
 	}
 

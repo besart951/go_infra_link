@@ -2,7 +2,6 @@ package facility
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -84,23 +83,11 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 			}
 			bacnetObject := toBacnetObjectModel(createReq)
 			if err := h.bacnetService.CreateWithParent(ctx, bacnetObject, nil, &obj.ID); err != nil {
-				if ve, ok := domain.AsValidationError(err); ok {
-					respondValidationError(c, ve.Fields)
-					return
-				}
-				if errors.Is(err, domain.ErrInvalidArgument) {
-					respondLocalizedInvalidArgument(c, "facility.invalid_bacnet_object_data")
-					return
-				}
-				if errors.Is(err, domain.ErrNotFound) {
-					respondInvalidReference(c)
-					return
-				}
-				if errors.Is(err, domain.ErrConflict) {
-					respondLocalizedConflict(c, "facility.entity_conflict")
-					return
-				}
-				respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+				respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
+					localizedInvalidArgument("facility.invalid_bacnet_object_data"),
+					localizedInvalidReference(),
+					localizedConflict("facility.entity_conflict"),
+				)
 				return
 			}
 		}
@@ -320,14 +307,9 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 	if req.BacnetObjects != nil {
 		bacnetObjects := toFieldDeviceBacnetObjects(*req.BacnetObjects)
 		if err := h.bacnetService.ReplaceForObjectData(ctx, obj.ID, bacnetObjects); err != nil {
-			if ve, ok := domain.AsValidationError(err); ok {
-				respondValidationError(c, ve.Fields)
-				return
-			}
-			if respondLocalizedNotFoundIf(c, err, "facility.object_data_not_found") {
-				return
-			}
-			respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
+			respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
+				localizedNotFound("facility.object_data_not_found"),
+			)
 			return
 		}
 	}
@@ -360,7 +342,9 @@ func (h *ObjectDataHandler) DeleteObjectData(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
+			localizedNotFound("facility.object_data_not_found"),
+		)
 		return
 	}
 

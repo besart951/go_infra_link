@@ -289,7 +289,9 @@ func (h *SystemPartHandler) DeleteSystemPart(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
+			localizedNotFound("facility.system_part_not_found"),
+		)
 		return
 	}
 

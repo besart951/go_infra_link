@@ -2,7 +2,6 @@ package facility
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -47,15 +46,9 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 	controlCabinet := toControlCabinetModel(req)
 
 	if err := h.service.Create(c.Request.Context(), controlCabinet); err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		if errors.Is(err, domain.ErrNotFound) {
-			respondInvalidReference(c)
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
+			localizedInvalidReference(),
+		)
 		return
 	}
 
@@ -139,14 +132,10 @@ func (h *ControlCabinetHandler) CopyControlCabinet(c *gin.Context) {
 
 	copyEntity, err := h.service.CopyByID(c.Request.Context(), id)
 	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.control_cabinet_not_found") {
-			return
-		}
-		if errors.Is(err, domain.ErrConflict) {
-			respondLocalizedError(c, http.StatusConflict, "conflict", "facility.update_failed")
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
+			localizedNotFound("facility.control_cabinet_not_found"),
+			localizedConflict("facility.update_failed"),
+		)
 		return
 	}
 
@@ -266,15 +255,9 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 	applyControlCabinetUpdate(controlCabinet, req)
 
 	if err := h.service.Update(ctx, controlCabinet); err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		if errors.Is(err, domain.ErrNotFound) {
-			respondInvalidReference(c)
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
+		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
+			localizedInvalidReference(),
+		)
 		return
 	}
 
@@ -298,10 +281,9 @@ func (h *ControlCabinetHandler) DeleteControlCabinet(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.control_cabinet_not_found") {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
+			localizedNotFound("facility.control_cabinet_not_found"),
+		)
 		return
 	}
 

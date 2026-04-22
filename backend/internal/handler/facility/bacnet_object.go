@@ -1,11 +1,11 @@
 package facility
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
+	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
 
@@ -37,23 +37,11 @@ func (h *BacnetObjectHandler) CreateBacnetObject(c *gin.Context) {
 	obj := toBacnetObjectModel(req)
 
 	if err := h.service.CreateWithParent(c.Request.Context(), obj, req.FieldDeviceID, req.ObjectDataID); err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		if errors.Is(err, domain.ErrInvalidArgument) {
-			respondLocalizedInvalidArgument(c, "facility.exactly_one_required")
-			return
-		}
-		if errors.Is(err, domain.ErrNotFound) {
-			respondInvalidReference(c)
-			return
-		}
-		if errors.Is(err, domain.ErrConflict) {
-			respondLocalizedConflict(c, "facility.entity_conflict")
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
+			localizedInvalidArgument("facility.exactly_one_required"),
+			localizedInvalidReference(),
+			localizedConflict("facility.entity_conflict"),
+		)
 		return
 	}
 
@@ -105,23 +93,11 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 	}
 
 	if err := h.service.Update(ctx, existing, req.ObjectDataID); err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		if errors.Is(err, domain.ErrInvalidArgument) {
-			respondInvalidArgument(c, err.Error())
-			return
-		}
-		if errors.Is(err, domain.ErrNotFound) {
-			respondInvalidReference(c)
-			return
-		}
-		if errors.Is(err, domain.ErrConflict) {
-			respondLocalizedConflict(c, "facility.entity_conflict")
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
+		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
+			handlerutil.MapError(domain.ErrInvalidArgument, handlerutil.PlainError(http.StatusBadRequest, "validation_error", err.Error())),
+			localizedInvalidReference(),
+			localizedConflict("facility.entity_conflict"),
+		)
 		return
 	}
 

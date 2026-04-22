@@ -79,10 +79,9 @@ func (h *crudHandler[T, CreateReq, UpdateReq]) handleGetByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	item, err := h.svc.GetByID(ctx, id)
 	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, h.notFoundKey) {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+		respondLocalizedDomainError(c, err, "fetch_failed", "facility.fetch_failed",
+			localizedNotFound(h.notFoundKey),
+		)
 		return
 	}
 	c.JSON(http.StatusOK, h.toResp(*item))
@@ -114,10 +113,9 @@ func (h *crudHandler[T, CreateReq, UpdateReq]) handleUpdate(c *gin.Context) {
 	ctx := c.Request.Context()
 	item, err := h.svc.GetByID(ctx, id)
 	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, h.notFoundKey) {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+		respondLocalizedDomainError(c, err, "fetch_failed", "facility.fetch_failed",
+			localizedNotFound(h.notFoundKey),
+		)
 		return
 	}
 	h.applyUpdate(item, req)
@@ -134,7 +132,9 @@ func (h *crudHandler[T, CreateReq, UpdateReq]) handleDelete(c *gin.Context) {
 	}
 	ctx := c.Request.Context()
 	if err := h.svc.DeleteByID(ctx, id); err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
+			localizedNotFound(h.notFoundKey),
+		)
 		return
 	}
 	c.Status(http.StatusNoContent)

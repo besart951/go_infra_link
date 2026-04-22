@@ -2,7 +2,6 @@ package facility
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -48,15 +47,9 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 	systemTypes := toSPSControllerSystemTypes(req.SystemTypes)
 
 	if err := h.service.CreateWithSystemTypes(c.Request.Context(), spsController, systemTypes); err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		if errors.Is(err, domain.ErrNotFound) {
-			respondInvalidReference(c)
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
+			localizedInvalidReference(),
+		)
 		return
 	}
 
@@ -140,14 +133,10 @@ func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 
 	copyEntity, err := h.service.CopyByID(c.Request.Context(), id)
 	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.sps_controller_not_found") {
-			return
-		}
-		if errors.Is(err, domain.ErrConflict) {
-			respondLocalizedError(c, http.StatusConflict, "conflict", "facility.update_failed")
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
+			localizedNotFound("facility.sps_controller_not_found"),
+			localizedConflict("facility.update_failed"),
+		)
 		return
 	}
 
@@ -224,15 +213,10 @@ func (h *SPSControllerHandler) GetNextAvailableGADevice(c *gin.Context) {
 
 	gaDevice, err := h.service.NextAvailableGADevice(c.Request.Context(), *controlCabinetID, excludeID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			respondLocalizedNotFoundError(c, "facility.control_cabinet_not_found")
-			return
-		}
-		if errors.Is(err, domain.ErrConflict) {
-			respondLocalizedConflict(c, "facility.no_available_ga_device")
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+		respondLocalizedDomainError(c, err, "fetch_failed", "facility.fetch_failed",
+			localizedNotFound("facility.control_cabinet_not_found"),
+			localizedConflict("facility.no_available_ga_device"),
+		)
 		return
 	}
 
@@ -283,15 +267,9 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		updateErr = h.service.Update(ctx, spsController)
 	}
 	if updateErr != nil {
-		if ve, ok := domain.AsValidationError(updateErr); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		if errors.Is(updateErr, domain.ErrNotFound) {
-			respondInvalidReference(c)
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
+		respondLocalizedDomainError(c, updateErr, "update_failed", "facility.update_failed",
+			localizedInvalidReference(),
+		)
 		return
 	}
 
@@ -315,7 +293,9 @@ func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
+			localizedNotFound("facility.sps_controller_not_found"),
+		)
 		return
 	}
 

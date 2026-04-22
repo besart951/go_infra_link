@@ -62,7 +62,9 @@ func (h *AlarmTypeFieldHandler) DeleteAlarmTypeField(c *gin.Context) {
 		return
 	}
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
+			localizedNotFound("facility.not_found"),
+		)
 		return
 	}
 	c.Status(http.StatusNoContent)

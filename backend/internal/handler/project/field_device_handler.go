@@ -38,7 +38,11 @@ func (h *ProjectHandler) CreateProjectFieldDevice(c *gin.Context) {
 
 	created, err := h.service.CreateFieldDevice(c.Request.Context(), projectID, req.FieldDeviceID)
 	if err != nil {
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "facility.field_device_not_found")),
+			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "conflict", "project.creation_failed")),
+		)
 		return
 	}
 
