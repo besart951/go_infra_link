@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
@@ -26,12 +25,8 @@ func Connect(cfg config.Config) (*gorm.DB, error) {
 	case "postgres":
 		dialector = postgres.Open(cfg.DBDsn)
 
-	case "mysql", "mariadb":
-		// MariaDB is MySQL-compatible and uses the same driver
-		dialector = mysql.Open(cfg.DBDsn)
-
 	default:
-		return nil, fmt.Errorf("unsupported database type: %s (supported: postgres, mysql, mariadb)", cfg.DBType)
+		return nil, fmt.Errorf("unsupported database type: %s (supported: postgres)", cfg.DBType)
 	}
 
 	db, err := gorm.Open(dialector, &gorm.Config{})
@@ -366,58 +361,6 @@ func ensureForeignKey(db *gorm.DB, spec foreignKeySpec) error {
 				" FOREIGN KEY (" + spec.childColumn + ") REFERENCES " + spec.parentTable + "(" + spec.parentColumn + ")" +
 				" ON UPDATE CASCADE ON DELETE " + spec.onDelete,
 		).Error
-
-	case "mysql", "mariadb":
-		type existingForeignKey struct {
-			ConstraintName string
-			UpdateRule     string
-			DeleteRule     string
-		}
-
-		var existing []existingForeignKey
-		if err := db.Raw(
-			`SELECT
-				kcu.CONSTRAINT_NAME AS constraint_name,
-				COALESCE(rc.UPDATE_RULE, '') AS update_rule,
-				COALESCE(rc.DELETE_RULE, '') AS delete_rule
-			FROM information_schema.KEY_COLUMN_USAGE kcu
-			LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS rc
-			  ON rc.CONSTRAINT_SCHEMA = kcu.CONSTRAINT_SCHEMA
-			 AND rc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
-			WHERE kcu.TABLE_SCHEMA = DATABASE()
-			  AND kcu.TABLE_NAME = ?
-			  AND kcu.COLUMN_NAME = ?
-			  AND kcu.REFERENCED_TABLE_NAME = ?
-			  AND kcu.REFERENCED_COLUMN_NAME = ?`,
-			spec.childTable,
-			spec.childColumn,
-			spec.parentTable,
-			spec.parentColumn,
-		).Scan(&existing).Error; err != nil {
-			return err
-		}
-
-		for _, fk := range existing {
-			if normalizeRule(fk.UpdateRule) == "CASCADE" &&
-				normalizeRule(fk.DeleteRule) == spec.onDelete {
-				return nil
-			}
-		}
-
-		for _, fk := range existing {
-			if err := db.Exec(
-				"ALTER TABLE " + spec.childTable + " DROP FOREIGN KEY " + fk.ConstraintName,
-			).Error; err != nil {
-				return err
-			}
-		}
-
-		return db.Exec(
-			"ALTER TABLE " + spec.childTable +
-				" ADD CONSTRAINT " + spec.constraintName +
-				" FOREIGN KEY (" + spec.childColumn + ") REFERENCES " + spec.parentTable + "(" + spec.parentColumn + ")" +
-				" ON UPDATE CASCADE ON DELETE " + spec.onDelete,
-		).Error
 	}
 
 	return nil
@@ -468,47 +411,6 @@ func ensureObjectDataApparatsCascade(db *gorm.DB) error {
 				"FOREIGN KEY (object_data_id) REFERENCES object_data(id) " +
 				"ON UPDATE CASCADE ON DELETE CASCADE",
 		).Error
-
-	case "mysql", "mariadb":
-		var count int64
-		if err := db.Raw(
-			"SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS "+
-				"WHERE CONSTRAINT_SCHEMA = DATABASE() "+
-				"AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? AND CONSTRAINT_TYPE = 'FOREIGN KEY'",
-			"object_data_apparats",
-			constraintName,
-		).Scan(&count).Error; err != nil {
-			return err
-		}
-
-		if count > 0 {
-			var deleteRule string
-			if err := db.Raw(
-				"SELECT DELETE_RULE FROM information_schema.REFERENTIAL_CONSTRAINTS "+
-					"WHERE CONSTRAINT_SCHEMA = DATABASE() AND CONSTRAINT_NAME = ? LIMIT 1",
-				constraintName,
-			).Scan(&deleteRule).Error; err != nil {
-				return err
-			}
-			if deleteRule == "CASCADE" {
-				return nil
-			}
-		}
-
-		if count > 0 {
-			if err := db.Exec(
-				"ALTER TABLE object_data_apparats DROP FOREIGN KEY " + constraintName,
-			).Error; err != nil {
-				return err
-			}
-		}
-
-		return db.Exec(
-			"ALTER TABLE object_data_apparats " +
-				"ADD CONSTRAINT " + constraintName + " " +
-				"FOREIGN KEY (object_data_id) REFERENCES object_data(id) " +
-				"ON UPDATE CASCADE ON DELETE CASCADE",
-		).Error
 	}
 
 	return nil
@@ -524,26 +426,6 @@ func ensureBacnetObjectTextFixIndexNonUnique(db *gorm.DB) error {
 		}
 		return db.Exec(
 			"CREATE INDEX IF NOT EXISTS " + indexName + " ON bacnet_objects (field_device_id, text_fix)",
-		).Error
-
-	case "mysql", "mariadb":
-		var exists int64
-		if err := db.Raw(
-			"SELECT COUNT(*) FROM information_schema.STATISTICS "+
-				"WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?",
-			"bacnet_objects", indexName,
-		).Scan(&exists).Error; err != nil {
-			return err
-		}
-
-		if exists > 0 {
-			if err := db.Exec("ALTER TABLE bacnet_objects DROP INDEX " + indexName).Error; err != nil {
-				return err
-			}
-		}
-
-		return db.Exec(
-			"CREATE INDEX " + indexName + " ON bacnet_objects (field_device_id, text_fix)",
 		).Error
 	}
 

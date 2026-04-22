@@ -2,6 +2,7 @@ package facility
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -28,7 +29,10 @@ func (s *ApparatService) Create(ctx context.Context, apparat *domainFacility.App
 	if err := s.ensureUnique(ctx, apparat, nil); err != nil {
 		return err
 	}
-	return s.repo.Create(ctx, apparat)
+	if err := s.repo.Create(ctx, apparat); err != nil {
+		return s.mapWriteConflict(ctx, apparat, nil, err)
+	}
+	return nil
 }
 
 func (s *ApparatService) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.Apparat, error) {
@@ -42,7 +46,10 @@ func (s *ApparatService) Update(ctx context.Context, apparat *domainFacility.App
 	if err := s.ensureUnique(ctx, apparat, &apparat.ID); err != nil {
 		return err
 	}
-	return s.repo.Update(ctx, apparat)
+	if err := s.repo.Update(ctx, apparat); err != nil {
+		return s.mapWriteConflict(ctx, apparat, &apparat.ID, err)
+	}
+	return nil
 }
 
 func (s *ApparatService) GetSystemPartIDs(ctx context.Context, id uuid.UUID) ([]uuid.UUID, error) {
@@ -71,41 +78,54 @@ func (s *ApparatService) validateRequiredFields(apparat *domainFacility.Apparat)
 }
 
 func (s *ApparatService) ensureUnique(ctx context.Context, apparat *domainFacility.Apparat, excludeID *uuid.UUID) error {
-	ve := domain.NewValidationError()
-	if strings.TrimSpace(apparat.ShortName) != "" {
-		items, err := s.repo.GetPaginatedList(ctx, domain.PaginationParams{Page: 1, Limit: 1000, Search: apparat.ShortName})
-		if err != nil {
-			return err
-		}
-		for i := range items.Items {
-			item := items.Items[i]
-			if excludeID != nil && item.ID == *excludeID {
-				continue
-			}
-			if strings.EqualFold(item.ShortName, apparat.ShortName) {
-				ve = ve.Add("apparat.short_name", "short_name must be unique")
-				break
-			}
-		}
+	ve, err := s.uniqueValidationError(ctx, apparat, excludeID)
+	if err != nil {
+		return err
 	}
-	if strings.TrimSpace(apparat.Name) != "" {
-		items, err := s.repo.GetPaginatedList(ctx, domain.PaginationParams{Page: 1, Limit: 1000, Search: apparat.Name})
-		if err != nil {
-			return err
-		}
-		for i := range items.Items {
-			item := items.Items[i]
-			if excludeID != nil && item.ID == *excludeID {
-				continue
-			}
-			if strings.EqualFold(item.Name, apparat.Name) {
-				ve = ve.Add("apparat.name", "name must be unique")
-				break
-			}
-		}
-	}
-	if len(ve.Fields) > 0 {
+	if ve != nil {
 		return ve
 	}
 	return nil
+}
+
+func (s *ApparatService) uniqueValidationError(ctx context.Context, apparat *domainFacility.Apparat, excludeID *uuid.UUID) (*domain.ValidationError, error) {
+	ve := domain.NewValidationError()
+	if strings.TrimSpace(apparat.ShortName) != "" {
+		exists, err := s.extRepo.ExistsShortName(ctx, apparat.ShortName, excludeID)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
+			ve = ve.Add("apparat.short_name", "short_name must be unique")
+		}
+	}
+	if strings.TrimSpace(apparat.Name) != "" {
+		exists, err := s.extRepo.ExistsName(ctx, apparat.Name, excludeID)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
+			ve = ve.Add("apparat.name", "name must be unique")
+		}
+	}
+	if len(ve.Fields) > 0 {
+		return ve, nil
+	}
+	return nil, nil
+}
+
+func (s *ApparatService) mapWriteConflict(ctx context.Context, apparat *domainFacility.Apparat, excludeID *uuid.UUID, err error) error {
+	if !errors.Is(err, domain.ErrConflict) {
+		return err
+	}
+
+	ve, checkErr := s.uniqueValidationError(ctx, apparat, excludeID)
+	if checkErr != nil {
+		return checkErr
+	}
+	if ve != nil {
+		return ve
+	}
+
+	return err
 }

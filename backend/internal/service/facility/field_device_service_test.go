@@ -437,6 +437,30 @@ type fakeApparatRepo struct {
 	items map[uuid.UUID]*domainFacility.Apparat
 }
 
+func (r *fakeApparatRepo) ExistsShortName(_ context.Context, shortName string, excludeID *uuid.UUID) (bool, error) {
+	for _, item := range r.items {
+		if excludeID != nil && item.ID == *excludeID {
+			continue
+		}
+		if strings.EqualFold(item.ShortName, shortName) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (r *fakeApparatRepo) ExistsName(_ context.Context, name string, excludeID *uuid.UUID) (bool, error) {
+	for _, item := range r.items {
+		if excludeID != nil && item.ID == *excludeID {
+			continue
+		}
+		if strings.EqualFold(item.Name, name) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (r *fakeApparatRepo) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainFacility.Apparat, error) {
 	out := make([]*domainFacility.Apparat, 0, len(ids))
 	for _, id := range ids {

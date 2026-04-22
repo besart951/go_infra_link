@@ -24,7 +24,11 @@ type AlarmDefinitionRepository interface {
 	domain.Repository[AlarmDefinition]
 	FindOrCreateTemplateByAlarmTypeID(ctx context.Context, alarmTypeID uuid.UUID) (*AlarmDefinition, error)
 }
-type ApparatRepository = domain.Repository[Apparat]
+type ApparatRepository interface {
+	domain.Repository[Apparat]
+	ExistsShortName(ctx context.Context, shortName string, excludeID *uuid.UUID) (bool, error)
+	ExistsName(ctx context.Context, name string, excludeID *uuid.UUID) (bool, error)
+}
 type ObjectDataRepository = domain.Repository[ObjectData]
 type ControlCabinetRepository interface {
 	domain.Repository[ControlCabinet]

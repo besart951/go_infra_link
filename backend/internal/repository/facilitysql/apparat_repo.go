@@ -2,12 +2,14 @@ package facilitysql
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
 
@@ -62,9 +64,13 @@ func (r *apparatRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*domainF
 	return result, nil
 }
 
+func (r *apparatRepo) Create(ctx context.Context, entity *domainFacility.Apparat) error {
+	return mapApparatWriteError(r.BaseRepository.Create(ctx, entity))
+}
+
 func (r *apparatRepo) Update(ctx context.Context, entity *domainFacility.Apparat) error {
 	// Use GORM's Association API to replace SystemParts
-	return r.DB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := r.DB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Update the entity itself
 		if err := tx.Model(entity).Updates(entity).Error; err != nil {
 			return err
@@ -77,6 +83,15 @@ func (r *apparatRepo) Update(ctx context.Context, entity *domainFacility.Apparat
 
 		return nil
 	})
+	return mapApparatWriteError(err)
+}
+
+func (r *apparatRepo) ExistsShortName(ctx context.Context, shortName string, excludeID *uuid.UUID) (bool, error) {
+	return r.existsCaseInsensitive(ctx, "short_name", shortName, excludeID)
+}
+
+func (r *apparatRepo) ExistsName(ctx context.Context, name string, excludeID *uuid.UUID) (bool, error) {
+	return r.existsCaseInsensitive(ctx, "name", name, excludeID)
 }
 
 func (r *apparatRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Apparat], error) {
@@ -108,4 +123,44 @@ func (r *apparatRepo) loadSortedSystemParts(ctx context.Context, apparat *domain
 	}
 	apparat.SystemParts = systemParts
 	return nil
+}
+
+func (r *apparatRepo) existsCaseInsensitive(ctx context.Context, column string, value string, excludeID *uuid.UUID) (bool, error) {
+	query := r.DB().WithContext(ctx).
+		Model(&domainFacility.Apparat{}).
+		Where("LOWER("+column+") = ?", strings.ToLower(value))
+
+	if excludeID != nil {
+		query = query.Where("id <> ?", *excludeID)
+	}
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func mapApparatWriteError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if isDuplicateApparatWriteError(err) {
+		return domain.ErrConflict
+	}
+	return err
+}
+
+func isDuplicateApparatWriteError(err error) bool {
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return true
+	}
+
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.Code == "23505"
+	}
+
+	return false
 }

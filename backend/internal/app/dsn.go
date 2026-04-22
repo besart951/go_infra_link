@@ -6,8 +6,6 @@ func formatDSNForLog(dbType, dsn string) string {
 	switch strings.ToLower(dbType) {
 	case "postgres", "pg", "postgresql", "pgx":
 		return maskKeyValue(dsn, "password")
-	case "mysql", "mariadb":
-		return maskMySQLPassword(dsn)
 	default:
 		return dsn
 	}
@@ -26,21 +24,6 @@ func maskKeyValue(dsn, key string) string {
 		}
 	}
 	return strings.Join(parts, " ")
-}
-
-func maskMySQLPassword(dsn string) string {
-	at := strings.Index(dsn, "@")
-	if at <= 0 {
-		return dsn
-	}
-
-	creds := dsn[:at]
-	colon := strings.Index(creds, ":")
-	if colon <= 0 {
-		return dsn
-	}
-
-	return creds[:colon+1] + "****" + dsn[at:]
 }
 
 func localURL(addr, path string) string {

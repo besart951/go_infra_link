@@ -230,8 +230,6 @@ func normalizeDBType(dbType string) string {
 	switch dbType {
 	case "postgres", "pg", "postgresql", "pgx":
 		return "postgres"
-	case "mysql", "mariadb":
-		return "mysql"
 	default:
 		return dbType
 	}
