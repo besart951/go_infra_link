@@ -33,7 +33,7 @@ export interface UpdateProjectRequest {
   name?: string;
   description?: string;
   status?: ProjectStatus;
-  start_date?: string;
+  start_date?: string | null;
   phase_id?: string;
 }
 

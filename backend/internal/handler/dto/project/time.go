@@ -47,3 +47,25 @@ func (t *SwissDateTime) UnmarshalJSON(data []byte) error {
 	t.Time = parsed
 	return nil
 }
+
+// OptionalSwissDateTime tracks whether a timestamp field was present in a
+// PATCH-like request. A present null clears the target value.
+type OptionalSwissDateTime struct {
+	Set   bool
+	Value *SwissDateTime
+}
+
+func (t *OptionalSwissDateTime) UnmarshalJSON(data []byte) error {
+	t.Set = true
+	if bytes.Equal(data, []byte("null")) {
+		t.Value = nil
+		return nil
+	}
+
+	var parsed SwissDateTime
+	if err := parsed.UnmarshalJSON(data); err != nil {
+		return err
+	}
+	t.Value = &parsed
+	return nil
+}

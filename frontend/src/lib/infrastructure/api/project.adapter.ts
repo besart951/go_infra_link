@@ -72,7 +72,7 @@ export async function updateProject(
 ): Promise<Project> {
   return api<Project>(`/projects/${id}`, {
     ...options,
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(data)
   });
 }

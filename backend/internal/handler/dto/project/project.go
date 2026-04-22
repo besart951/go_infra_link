@@ -18,11 +18,11 @@ type CreateProjectRequest struct {
 }
 
 type UpdateProjectRequest struct {
-	Name        string                      `json:"name" binding:"omitempty,min=1,max=255"`
-	Description string                      `json:"description"`
-	Status      domainproject.ProjectStatus `json:"status" binding:"omitempty,oneof=planned ongoing completed"`
-	StartDate   *SwissDateTime              `json:"start_date"`
-	PhaseID     *uuid.UUID                  `json:"phase_id"`
+	Name        *string                      `json:"name" binding:"omitempty,max=255"`
+	Description *string                      `json:"description"`
+	Status      *domainproject.ProjectStatus `json:"status" binding:"omitempty,oneof=planned ongoing completed"`
+	StartDate   OptionalSwissDateTime        `json:"start_date" swaggertype:"string" format:"date-time" extensions:"x-nullable"`
+	PhaseID     *uuid.UUID                   `json:"phase_id"`
 }
 
 type ProjectResponse struct {

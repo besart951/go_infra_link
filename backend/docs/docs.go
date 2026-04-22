@@ -3084,6 +3084,12 @@ const docTemplate = `{
                         "description": "SPS Controller ID",
                         "name": "sps_controller_id",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID (filter by project)",
+                        "name": "project_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4749,6 +4755,7 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "description": "PATCH-like update: omitted fields remain unchanged and present string fields are applied even when empty. PUT is kept for compatibility; PATCH is the preferred method.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4768,7 +4775,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Phase data",
+                        "description": "Partial phase data",
                         "name": "phase",
                         "in": "body",
                         "required": true,
@@ -4827,6 +4834,63 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "PATCH-like update: omitted fields remain unchanged and present string fields are applied even when empty. PUT is kept for compatibility; PATCH is the preferred method.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "phases"
+                ],
+                "summary": "Update a phase",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Phase ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Partial phase data",
+                        "name": "phase",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdatePhaseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.PhaseResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
@@ -4982,6 +5046,7 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "description": "PATCH-like update: omitted fields remain unchanged, present string fields are applied even when empty, and start_date:null clears the date. PUT is kept for compatibility; PATCH is the preferred method.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5001,7 +5066,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Project data",
+                        "description": "Partial project data",
                         "name": "project",
                         "in": "body",
                         "required": true,
@@ -5060,6 +5125,63 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "PATCH-like update: omitted fields remain unchanged, present string fields are applied even when empty, and start_date:null clears the date. PUT is kept for compatibility; PATCH is the preferred method.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Update a project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Partial project data",
+                        "name": "project",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
@@ -8816,6 +8938,9 @@ const docTemplate = `{
                 "document_name": {
                     "type": "string"
                 },
+                "field_devices_count": {
+                    "type": "integer"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -10141,8 +10266,7 @@ const docTemplate = `{
             "properties": {
                 "name": {
                     "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1
+                    "maxLength": 255
                 }
             }
         },
@@ -10176,14 +10300,15 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1
+                    "maxLength": 255
                 },
                 "phase_id": {
                     "type": "string"
                 },
                 "start_date": {
-                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.SwissDateTime"
+                    "type": "string",
+                    "format": "date-time",
+                    "x-nullable": true
                 },
                 "status": {
                     "enum": [
@@ -10798,6 +10923,9 @@ const docTemplate = `{
                 },
                 "document_name": {
                     "type": "string"
+                },
+                "field_devices_count": {
+                    "type": "integer"
                 },
                 "id": {
                     "type": "string"

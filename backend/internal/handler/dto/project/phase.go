@@ -13,7 +13,7 @@ type CreatePhaseRequest struct {
 }
 
 type UpdatePhaseRequest struct {
-	Name string `json:"name" binding:"omitempty,min=1,max=255"`
+	Name *string `json:"name" binding:"omitempty,max=255"`
 }
 
 type PhaseResponse struct {

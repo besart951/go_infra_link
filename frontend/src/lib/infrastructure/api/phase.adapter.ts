@@ -44,7 +44,7 @@ export async function updatePhase(
 ): Promise<Phase> {
   return api<Phase>(`/phases/${id}`, {
     ...options,
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(data)
   });
 }

@@ -36,6 +36,7 @@ func RegisterProjectRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers) {
 		projects.GET("/:id/object-data", handlers.Project.ListProjectObjectData)
 		projects.POST("/:id/object-data", handlers.Project.AddProjectObjectData)
 		projects.DELETE("/:id/object-data/:objectDataId", handlers.Project.RemoveProjectObjectData)
+		projects.PATCH("/:id", handlers.Project.UpdateProject)
 		projects.PUT("/:id", handlers.Project.UpdateProject)
 		projects.DELETE("/:id", handlers.Project.DeleteProject)
 	}
@@ -47,6 +48,7 @@ func RegisterPhaseRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authC
 		phases.GET("", handlers.Phase.ListPhases)
 		phases.GET("/:id", handlers.Phase.GetPhase)
 		phases.POST("", middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG), handlers.Phase.CreatePhase)
+		phases.PATCH("/:id", middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG), handlers.Phase.UpdatePhase)
 		phases.PUT("/:id", middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG), handlers.Phase.UpdatePhase)
 		phases.DELETE("/:id", middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG), handlers.Phase.DeletePhase)
 	}

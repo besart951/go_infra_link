@@ -127,15 +127,17 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 
 // UpdateProject godoc
 // @Summary Update a project
+// @Description PATCH-like update: omitted fields remain unchanged, present string fields are applied even when empty, and start_date:null clears the date. PUT is kept for compatibility; PATCH is the preferred method.
 // @Tags projects
 // @Accept json
 // @Produce json
 // @Param id path string true "Project ID"
-// @Param project body dto.UpdateProjectRequest true "Project data"
+// @Param project body dto.UpdateProjectRequest true "Partial project data"
 // @Success 200 {object} dto.ProjectResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id} [patch]
 // @Router /api/v1/projects/{id} [put]
 func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 	id, ok := handlerutil.ParseUUIDParam(c, "id")

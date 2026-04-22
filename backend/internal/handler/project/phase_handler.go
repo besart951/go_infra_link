@@ -110,15 +110,17 @@ func (h *PhaseHandler) ListPhases(c *gin.Context) {
 
 // UpdatePhase godoc
 // @Summary Update a phase
+// @Description PATCH-like update: omitted fields remain unchanged and present string fields are applied even when empty. PUT is kept for compatibility; PATCH is the preferred method.
 // @Tags phases
 // @Accept json
 // @Produce json
 // @Param id path string true "Phase ID"
-// @Param phase body dto.UpdatePhaseRequest true "Phase data"
+// @Param phase body dto.UpdatePhaseRequest true "Partial phase data"
 // @Success 200 {object} dto.PhaseResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/phases/{id} [patch]
 // @Router /api/v1/phases/{id} [put]
 func (h *PhaseHandler) UpdatePhase(c *gin.Context) {
 	id, ok := handlerutil.ParseUUIDParam(c, "id")

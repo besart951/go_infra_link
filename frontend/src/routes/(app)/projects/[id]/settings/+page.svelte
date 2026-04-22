@@ -115,9 +115,9 @@
       const payload: UpdateProjectRequest = {
         id: projectId,
         name: form.name.trim(),
-        description: form.description.trim() || undefined,
+        description: form.description.trim(),
         status: form.status,
-        start_date: form.start_date || undefined,
+        start_date: form.start_date || null,
         phase_id: form.phase_id
       };
       project = await updateProject(projectId, payload);

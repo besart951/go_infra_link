@@ -83,7 +83,7 @@ export const projectRepository: ProjectRepository = {
 
   async update(id: string, data: UpdateProjectRequest, signal?: AbortSignal): Promise<Project> {
     return api<Project>(`/projects/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify(data),
       signal
     });

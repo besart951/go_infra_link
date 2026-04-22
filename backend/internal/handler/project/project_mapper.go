@@ -22,17 +22,17 @@ func ToProjectModel(req dto.CreateProjectRequest) *project.Project {
 
 // ApplyProjectUpdate applies UpdateProjectRequest fields to an existing Project
 func ApplyProjectUpdate(target *project.Project, req dto.UpdateProjectRequest) {
-	if req.Name != "" {
-		target.Name = req.Name
+	if req.Name != nil {
+		target.Name = *req.Name
 	}
-	if req.Description != "" {
-		target.Description = req.Description
+	if req.Description != nil {
+		target.Description = *req.Description
 	}
-	if req.Status != "" {
-		target.Status = req.Status
+	if req.Status != nil {
+		target.Status = *req.Status
 	}
-	if req.StartDate != nil {
-		target.StartDate = toTimePtr(req.StartDate)
+	if req.StartDate.Set {
+		target.StartDate = toTimePtr(req.StartDate.Value)
 	}
 	if req.PhaseID != nil {
 		target.PhaseID = *req.PhaseID

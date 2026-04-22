@@ -36,7 +36,7 @@ func ToPhaseListResponse(phases []project.Phase) []dto.PhaseResponse {
 }
 
 func ApplyPhaseUpdate(phase *project.Phase, req dto.UpdatePhaseRequest) {
-	if req.Name != "" {
-		phase.Name = req.Name
+	if req.Name != nil {
+		phase.Name = *req.Name
 	}
 }

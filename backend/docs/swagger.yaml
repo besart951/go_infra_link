@@ -1236,6 +1236,8 @@ definitions:
         type: string
       document_name:
         type: string
+      field_devices_count:
+        type: integer
       id:
         type: string
       number:
@@ -2122,7 +2124,6 @@ definitions:
     properties:
       name:
         maxLength: 255
-        minLength: 1
         type: string
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectControlCabinetRequest:
@@ -2145,12 +2146,13 @@ definitions:
         type: string
       name:
         maxLength: 255
-        minLength: 1
         type: string
       phase_id:
         type: string
       start_date:
-        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.SwissDateTime'
+        format: date-time
+        type: string
+        x-nullable: true
       status:
         allOf:
         - $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_project.ProjectStatus'
@@ -2563,6 +2565,8 @@ definitions:
         type: string
       document_name:
         type: string
+      field_devices_count:
+        type: integer
       id:
         type: string
       number:
@@ -4644,6 +4648,10 @@ paths:
         in: query
         name: sps_controller_id
         type: string
+      - description: Project ID (filter by project)
+        in: query
+        name: project_id
+        type: string
       produces:
       - application/json
       responses:
@@ -5763,16 +5771,59 @@ paths:
       summary: Get a phase by ID
       tags:
       - phases
-    put:
+    patch:
       consumes:
       - application/json
+      description: 'PATCH-like update: omitted fields remain unchanged and present
+        string fields are applied even when empty. PUT is kept for compatibility;
+        PATCH is the preferred method.'
       parameters:
       - description: Phase ID
         in: path
         name: id
         required: true
         type: string
-      - description: Phase data
+      - description: Partial phase data
+        in: body
+        name: phase
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdatePhaseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.PhaseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+      summary: Update a phase
+      tags:
+      - phases
+    put:
+      consumes:
+      - application/json
+      description: 'PATCH-like update: omitted fields remain unchanged and present
+        string fields are applied even when empty. PUT is kept for compatibility;
+        PATCH is the preferred method.'
+      parameters:
+      - description: Phase ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Partial phase data
         in: body
         name: phase
         required: true
@@ -5916,16 +5967,59 @@ paths:
       summary: Get a project by ID
       tags:
       - projects
-    put:
+    patch:
       consumes:
       - application/json
+      description: 'PATCH-like update: omitted fields remain unchanged, present string
+        fields are applied even when empty, and start_date:null clears the date. PUT
+        is kept for compatibility; PATCH is the preferred method.'
       parameters:
       - description: Project ID
         in: path
         name: id
         required: true
         type: string
-      - description: Project data
+      - description: Partial project data
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+      summary: Update a project
+      tags:
+      - projects
+    put:
+      consumes:
+      - application/json
+      description: 'PATCH-like update: omitted fields remain unchanged, present string
+        fields are applied even when empty, and start_date:null clears the date. PUT
+        is kept for compatibility; PATCH is the preferred method.'
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Partial project data
         in: body
         name: project
         required: true
