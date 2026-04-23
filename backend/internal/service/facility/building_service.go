@@ -2,7 +2,6 @@ package facility
 
 import (
 	"context"
-	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -69,23 +68,19 @@ func (s *BuildingService) DeleteByID(ctx context.Context, id uuid.UUID) error {
 }
 
 func (s *BuildingService) validateRequiredFields(building *domainFacility.Building) error {
-	builder := domain.NewValidationBuilder()
-	iwsCode := buildingIWSCodeField.RequireTrimmed(builder, building.IWSCode)
-	buildingIWSCodeField.ExactLength(builder, iwsCode, 4)
-	buildingGroupField.RequireNonZero(builder, building.BuildingGroup)
-	return builder.Err()
+	return validateRules(
+		requiredTrimmedExact(buildingIWSCodeField, building.IWSCode, 4),
+		requiredNonZero(buildingGroupField, building.BuildingGroup),
+	)
 }
 
 func (s *BuildingService) ensureUnique(ctx context.Context, building *domainFacility.Building, excludeID *uuid.UUID) error {
-	if strings.TrimSpace(building.IWSCode) == "" || building.BuildingGroup == 0 {
+	if building.BuildingGroup == 0 {
 		return nil
 	}
-	exists, err := s.repo.ExistsIWSCodeGroup(ctx, building.IWSCode, building.BuildingGroup, excludeID)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return buildingIWSCodeField.UniqueWithinError(buildingGroupScope)
-	}
-	return nil
+	return validateChecks(
+		uniqueWithinIfPresent(buildingIWSCodeField, buildingGroupScope, building.IWSCode, func() (bool, error) {
+			return s.repo.ExistsIWSCodeGroup(ctx, building.IWSCode, building.BuildingGroup, excludeID)
+		}),
+	)
 }

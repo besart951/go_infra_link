@@ -69,6 +69,18 @@ func (f ValidationField) RequireTrimmed(builder *ValidationBuilder, value string
 	return trimmed
 }
 
+func (f ValidationField) RequireTrimmedExact(builder *ValidationBuilder, value string, length int) string {
+	trimmed := f.RequireTrimmed(builder, value)
+	f.ExactLength(builder, trimmed, length)
+	return trimmed
+}
+
+func (f ValidationField) RequireTrimmedMax(builder *ValidationBuilder, value string, max int) string {
+	trimmed := f.RequireTrimmed(builder, value)
+	f.MaxLength(builder, trimmed, max)
+	return trimmed
+}
+
 func (f ValidationField) RequireTrimmedPtr(builder *ValidationBuilder, value *string) string {
 	if value == nil {
 		f.Add(builder, f.requiredMessage())
@@ -95,10 +107,24 @@ func (f ValidationField) ExactLength(builder *ValidationBuilder, value string, l
 	}
 }
 
+func (f ValidationField) ExactLengthPtr(builder *ValidationBuilder, value *string, length int) {
+	if value == nil {
+		return
+	}
+	f.ExactLength(builder, *value, length)
+}
+
 func (f ValidationField) MaxLength(builder *ValidationBuilder, value string, max int) {
 	if value != "" && len(value) > max {
 		f.Add(builder, fmt.Sprintf("%s must be at most %d characters", f.Name, max))
 	}
+}
+
+func (f ValidationField) MaxLengthPtr(builder *ValidationBuilder, value *string, max int) {
+	if value == nil {
+		return
+	}
+	f.MaxLength(builder, *value, max)
 }
 
 func (f ValidationField) Between(builder *ValidationBuilder, value, min, max int) {

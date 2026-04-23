@@ -234,7 +234,7 @@ func (s *SPSControllerService) DeleteByID(ctx context.Context, id uuid.UUID) err
 	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
 }
 func (s *SPSControllerService) ensureControlCabinetExists(ctx context.Context, controlCabinetID uuid.UUID) error {
-	return domain.EnsureReferenceExists(ctx, s.controlCabinetRepo, controlCabinetID)
+	return validateChecks(referenceExists(ctx, s.controlCabinetRepo, controlCabinetID))
 }
 
 func (s *SPSControllerService) loadSystemTypes(ctx context.Context, systemTypes []domainFacility.SPSControllerSystemType) (map[uuid.UUID]domainFacility.SystemType, error) {
@@ -314,21 +314,17 @@ func (s *SPSControllerService) nextAvailableGADevice(ctx context.Context, contro
 }
 
 func (s *SPSControllerService) validateRequiredFields(spsController *domainFacility.SPSController) error {
-	builder := domain.NewValidationBuilder()
-	spsControllerControlCabinetField.RequireUUID(builder, spsController.ControlCabinetID)
-	spsControllerDeviceNameField.RequireTrimmed(builder, spsController.DeviceName)
-	if spsController.GADevice == nil || strings.TrimSpace(*spsController.GADevice) == "" {
-		spsControllerGADeviceField.Add(builder, "ga_device is required")
-	} else if !isValidGADevice(*spsController.GADevice) {
-		spsControllerGADeviceField.Add(builder, "ga_device must be exactly 3 uppercase letters (A-Z)")
-	}
-
-	if err := validateNetworkFields(spsController); err != nil {
-		if mergeErr := builder.Merge(err); mergeErr != nil {
-			return mergeErr
-		}
-	}
-	return builder.Err()
+	gaDeviceMissing := spsController.GADevice == nil || strings.TrimSpace(*spsController.GADevice) == ""
+	gaDeviceInvalid := !gaDeviceMissing && !isValidGADevice(*spsController.GADevice)
+	return validateChecks(
+		mergeValidation(validateRules(
+			requiredUUID(spsControllerControlCabinetField, spsController.ControlCabinetID),
+			requiredTrimmed(spsControllerDeviceNameField, spsController.DeviceName),
+			addIf(spsControllerGADeviceField, gaDeviceMissing, "ga_device is required"),
+			addIf(spsControllerGADeviceField, gaDeviceInvalid, "ga_device must be exactly 3 uppercase letters (A-Z)"),
+		)),
+		mergeValidation(validateNetworkFields(spsController)),
+	)
 }
 
 func (s *SPSControllerService) Validate(ctx context.Context, spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
@@ -382,32 +378,32 @@ func (s *SPSControllerService) NextAvailableGADevice(ctx context.Context, contro
 }
 
 func (s *SPSControllerService) ensureUnique(ctx context.Context, spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
-	builder := domain.NewValidationBuilder()
-
-	if strings.TrimSpace(spsController.DeviceName) != "" && spsController.ControlCabinetID != uuid.Nil {
-		exists, err := s.repo.ExistsDeviceName(ctx, spsController.ControlCabinetID, spsController.DeviceName, excludeID)
-		if err != nil {
-			return err
-		}
-		if exists {
-			spsControllerDeviceNameField.UniqueWithin(builder, controlCabinetScope)
-		}
-	}
-
-	if spsController.GADevice != nil && strings.TrimSpace(*spsController.GADevice) != "" && spsController.ControlCabinetID != uuid.Nil {
-		exists, err := s.repo.ExistsGADevice(ctx, spsController.ControlCabinetID, *spsController.GADevice, excludeID)
-		if err != nil {
-			return err
-		}
-		if exists {
-			spsControllerGADeviceField.UniqueWithin(builder, controlCabinetScope)
-		}
-	}
-
-	if spsController.IPAddress != nil && spsController.Vlan != nil {
-		ip := strings.TrimSpace(*spsController.IPAddress)
-		vlan := strings.TrimSpace(*spsController.Vlan)
-		if ip != "" && vlan != "" {
+	return validateChecks(
+		func(builder *domain.ValidationBuilder) error {
+			if spsController.ControlCabinetID == uuid.Nil {
+				return nil
+			}
+			return uniqueWithinIfPresent(spsControllerDeviceNameField, controlCabinetScope, spsController.DeviceName, func() (bool, error) {
+				return s.repo.ExistsDeviceName(ctx, spsController.ControlCabinetID, spsController.DeviceName, excludeID)
+			})(builder)
+		},
+		func(builder *domain.ValidationBuilder) error {
+			if spsController.ControlCabinetID == uuid.Nil || spsController.GADevice == nil {
+				return nil
+			}
+			return uniqueWithinIfPresent(spsControllerGADeviceField, controlCabinetScope, *spsController.GADevice, func() (bool, error) {
+				return s.repo.ExistsGADevice(ctx, spsController.ControlCabinetID, *spsController.GADevice, excludeID)
+			})(builder)
+		},
+		func(builder *domain.ValidationBuilder) error {
+			if spsController.IPAddress == nil || spsController.Vlan == nil {
+				return nil
+			}
+			ip := strings.TrimSpace(*spsController.IPAddress)
+			vlan := strings.TrimSpace(*spsController.Vlan)
+			if ip == "" || vlan == "" {
+				return nil
+			}
 			exists, err := s.repo.ExistsIPAddressVlan(ctx, ip, vlan, excludeID)
 			if err != nil {
 				return err
@@ -416,10 +412,9 @@ func (s *SPSControllerService) ensureUnique(ctx context.Context, spsController *
 				spsControllerIPAddressField.Add(builder, "ip_address must be unique per vlan")
 				spsControllerVlanField.Add(builder, "vlan must be unique per ip_address")
 			}
-		}
-	}
-
-	return builder.Err()
+			return nil
+		},
+	)
 }
 
 func isValidGADevice(value string) bool {
@@ -455,35 +450,29 @@ func gaDeviceFromIndex(index int) string {
 }
 
 func validateNetworkFields(spsController *domainFacility.SPSController) error {
-	ve := domain.NewValidationError()
-
-	if spsController.IPAddress != nil && strings.TrimSpace(*spsController.IPAddress) != "" {
-		if !isValidIPv4(*spsController.IPAddress) {
-			ve = ve.Add("spscontroller.ip_address", "ip_address must be a valid IPv4 address")
-		}
-	}
-	if spsController.Gateway != nil && strings.TrimSpace(*spsController.Gateway) != "" {
-		if !isValidIPv4(*spsController.Gateway) {
-			ve = ve.Add("spscontroller.gateway", "gateway must be a valid IPv4 address")
-		}
-	}
-	if spsController.Subnet != nil && strings.TrimSpace(*spsController.Subnet) != "" {
-		if !isValidSubnetMask(*spsController.Subnet) {
-			ve = ve.Add("spscontroller.subnet", "subnet must be a valid IPv4 subnet mask")
-		}
-	}
-	if spsController.Vlan != nil && strings.TrimSpace(*spsController.Vlan) != "" {
-		vlanValue := strings.TrimSpace(*spsController.Vlan)
-		vlan, err := strconv.Atoi(vlanValue)
-		if err != nil || vlan < 1 || vlan > 4094 {
-			ve = ve.Add("spscontroller.vlan", "vlan must be a number between 1 and 4094")
-		}
-	}
-
-	if len(ve.Fields) > 0 {
-		return ve
-	}
-	return nil
+	return validateRules(
+		addIf(spsControllerIPAddressField,
+			spsController.IPAddress != nil && strings.TrimSpace(*spsController.IPAddress) != "" && !isValidIPv4(*spsController.IPAddress),
+			"ip_address must be a valid IPv4 address",
+		),
+		addIf(spsControllerGatewayField,
+			spsController.Gateway != nil && strings.TrimSpace(*spsController.Gateway) != "" && !isValidIPv4(*spsController.Gateway),
+			"gateway must be a valid IPv4 address",
+		),
+		addIf(spsControllerSubnetField,
+			spsController.Subnet != nil && strings.TrimSpace(*spsController.Subnet) != "" && !isValidSubnetMask(*spsController.Subnet),
+			"subnet must be a valid IPv4 subnet mask",
+		),
+		func(builder *domain.ValidationBuilder) {
+			if spsController.Vlan == nil || strings.TrimSpace(*spsController.Vlan) == "" {
+				return
+			}
+			vlan, err := strconv.Atoi(strings.TrimSpace(*spsController.Vlan))
+			if err != nil || vlan < 1 || vlan > 4094 {
+				spsControllerVlanField.Add(builder, "vlan must be a number between 1 and 4094")
+			}
+		},
+	)
 }
 
 func isValidIPv4(value string) bool {

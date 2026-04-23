@@ -2,7 +2,6 @@ package facility
 
 import (
 	"context"
-	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -43,39 +42,26 @@ func (s *SystemTypeService) Validate(ctx context.Context, systemType *domainFaci
 }
 
 func (s *SystemTypeService) validateRequiredFields(systemType *domainFacility.SystemType) error {
-	builder := domain.NewValidationBuilder()
-	name := strings.TrimSpace(systemType.Name)
-	if name == "" {
-		systemTypeNameField.Add(builder, "name is required")
-	} else {
-		systemTypeNameField.MaxLength(builder, name, 150)
-	}
-	if systemType.NumberMin > systemType.NumberMax {
-		systemTypeNumberMaxField.Add(builder, "number_max must be greater than or equal to number_min")
-	}
-	return builder.Err()
+	return validateRules(
+		requiredTrimmedMax(systemTypeNameField, systemType.Name, 150),
+		addIf(systemTypeNumberMaxField, systemType.NumberMin > systemType.NumberMax, "number_max must be greater than or equal to number_min"),
+	)
 }
 
 func (s *SystemTypeService) ensureUnique(ctx context.Context, systemType *domainFacility.SystemType, excludeID *uuid.UUID) error {
-	name := strings.TrimSpace(systemType.Name)
-	if name != "" {
-		exists, err := s.extRepo.ExistsName(ctx, name, excludeID)
-		if err != nil {
-			return err
-		}
-		if exists {
-			return systemTypeNameField.UniqueError()
-		}
-	}
-	exists, err := s.extRepo.ExistsOverlappingRange(ctx, systemType.NumberMin, systemType.NumberMax, excludeID)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return domain.NewValidationError().Add(
-			systemTypeNumberMinField.Key,
-			"number_min and number_max range must not overlap existing ranges",
-		)
-	}
-	return nil
+	return validateChecks(
+		uniqueIfPresent(systemTypeNameField, systemType.Name, func() (bool, error) {
+			return s.extRepo.ExistsName(ctx, systemType.Name, excludeID)
+		}),
+		func(builder *domain.ValidationBuilder) error {
+			exists, err := s.extRepo.ExistsOverlappingRange(ctx, systemType.NumberMin, systemType.NumberMax, excludeID)
+			if err != nil {
+				return err
+			}
+			if exists {
+				systemTypeNumberMinField.Add(builder, "number_min and number_max range must not overlap existing ranges")
+			}
+			return nil
+		},
+	)
 }

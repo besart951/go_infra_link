@@ -2,7 +2,6 @@ package facility
 
 import (
 	"context"
-	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -149,27 +148,23 @@ func (s *ControlCabinetService) DeleteByID(ctx context.Context, id uuid.UUID) er
 }
 
 func (s *ControlCabinetService) ensureBuildingExists(ctx context.Context, buildingID uuid.UUID) error {
-	return domain.EnsureReferenceExists(ctx, s.buildingRepo, buildingID)
+	return validateChecks(referenceExists(ctx, s.buildingRepo, buildingID))
 }
 
 func (s *ControlCabinetService) validateRequiredFields(controlCabinet *domainFacility.ControlCabinet) error {
-	builder := domain.NewValidationBuilder()
-	controlCabinetBuildingIDField.RequireUUID(builder, controlCabinet.BuildingID)
-	controlCabinetNr := controlCabinetNumberField.RequireTrimmedPtr(builder, controlCabinet.ControlCabinetNr)
-	controlCabinetNumberField.MaxLength(builder, controlCabinetNr, 11)
-	return builder.Err()
+	return validateRules(
+		requiredUUID(controlCabinetBuildingIDField, controlCabinet.BuildingID),
+		requiredTrimmedPtrMax(controlCabinetNumberField, controlCabinet.ControlCabinetNr, 11),
+	)
 }
 
 func (s *ControlCabinetService) ensureUnique(ctx context.Context, controlCabinet *domainFacility.ControlCabinet, excludeID *uuid.UUID) error {
-	if controlCabinet.ControlCabinetNr == nil || strings.TrimSpace(*controlCabinet.ControlCabinetNr) == "" || controlCabinet.BuildingID == uuid.Nil {
+	if controlCabinet.ControlCabinetNr == nil || controlCabinet.BuildingID == uuid.Nil {
 		return nil
 	}
-	exists, err := s.repo.ExistsControlCabinetNr(ctx, controlCabinet.BuildingID, *controlCabinet.ControlCabinetNr, excludeID)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return controlCabinetNumberField.UniqueWithinError(buildingScope)
-	}
-	return nil
+	return validateChecks(
+		uniqueWithinIfPresent(controlCabinetNumberField, buildingScope, *controlCabinet.ControlCabinetNr, func() (bool, error) {
+			return s.repo.ExistsControlCabinetNr(ctx, controlCabinet.BuildingID, *controlCabinet.ControlCabinetNr, excludeID)
+		}),
+	)
 }

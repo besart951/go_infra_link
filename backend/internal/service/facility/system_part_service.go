@@ -2,9 +2,7 @@ package facility
 
 import (
 	"context"
-	"strings"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
 )
@@ -55,36 +53,19 @@ func (s *SystemPartService) Validate(ctx context.Context, systemPart *domainFaci
 }
 
 func (s *SystemPartService) validateRequiredFields(systemPart *domainFacility.SystemPart) error {
-	builder := domain.NewValidationBuilder()
-	shortName := strings.TrimSpace(systemPart.ShortName)
-	if shortName == "" {
-		systemPartShortNameField.Add(builder, "short_name is required")
-	} else {
-		systemPartShortNameField.ExactLength(builder, shortName, 3)
-	}
-	systemPartNameField.RequireTrimmed(builder, systemPart.Name)
-	return builder.Err()
+	return validateRules(
+		requiredTrimmedExact(systemPartShortNameField, systemPart.ShortName, 3),
+		requiredTrimmed(systemPartNameField, systemPart.Name),
+	)
 }
 
 func (s *SystemPartService) ensureUnique(ctx context.Context, systemPart *domainFacility.SystemPart, excludeID *uuid.UUID) error {
-	builder := domain.NewValidationBuilder()
-	if strings.TrimSpace(systemPart.ShortName) != "" {
-		exists, err := s.extRepo.ExistsShortName(ctx, systemPart.ShortName, excludeID)
-		if err != nil {
-			return err
-		}
-		if exists {
-			systemPartShortNameField.Unique(builder)
-		}
-	}
-	if strings.TrimSpace(systemPart.Name) != "" {
-		exists, err := s.extRepo.ExistsName(ctx, systemPart.Name, excludeID)
-		if err != nil {
-			return err
-		}
-		if exists {
-			systemPartNameField.Unique(builder)
-		}
-	}
-	return builder.Err()
+	return validateChecks(
+		uniqueIfPresent(systemPartShortNameField, systemPart.ShortName, func() (bool, error) {
+			return s.extRepo.ExistsShortName(ctx, systemPart.ShortName, excludeID)
+		}),
+		uniqueIfPresent(systemPartNameField, systemPart.Name, func() (bool, error) {
+			return s.extRepo.ExistsName(ctx, systemPart.Name, excludeID)
+		}),
+	)
 }

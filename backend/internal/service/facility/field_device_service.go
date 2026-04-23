@@ -349,17 +349,17 @@ func (s *FieldDeviceService) ensureParentsExist(ctx context.Context, fieldDevice
 	}
 
 	// 2. system_type must exist (business rule: prevent creating instances with deprecated types)
-	if err := domain.EnsureReferenceExists(ctx, s.systemTypeRepo, sts.SystemTypeID); err != nil {
+	if err := validateChecks(referenceExists(ctx, s.systemTypeRepo, sts.SystemTypeID)); err != nil {
 		return err
 	}
 
 	// 3. apparat must exist and not be deleted
-	if err := domain.EnsureReferenceExists(ctx, s.apparatRepo, fieldDevice.ApparatID); err != nil {
+	if err := validateChecks(referenceExists(ctx, s.apparatRepo, fieldDevice.ApparatID)); err != nil {
 		return err
 	}
 
 	// 4. system_part must exist and not be deleted
-	if err := domain.EnsureReferenceExists(ctx, s.systemPartRepo, fieldDevice.SystemPartID); err != nil {
+	if err := validateChecks(referenceExists(ctx, s.systemPartRepo, fieldDevice.SystemPartID)); err != nil {
 		return err
 	}
 
@@ -375,27 +375,33 @@ func (s *FieldDeviceService) ensureApparatNrAvailable(ctx context.Context, field
 }
 
 func (s *FieldDeviceService) ensureApparatNrAvailableWithExclusions(ctx context.Context, fieldDevice *domainFacility.FieldDevice, excludeIDs []uuid.UUID) error {
-	builder := domain.NewValidationBuilder()
-	fieldDeviceApparatNrField.RequireNonZero(builder, fieldDevice.ApparatNr)
-	fieldDeviceApparatNrField.Between(builder, fieldDevice.ApparatNr, 1, 99)
-	if err := builder.Err(); err != nil {
+	if err := validateRules(
+		requiredNonZero(fieldDeviceApparatNrField, fieldDevice.ApparatNr),
+		func(builder *domain.ValidationBuilder) {
+			fieldDeviceApparatNrField.Between(builder, fieldDevice.ApparatNr, 1, 99)
+		},
+	); err != nil {
 		return err
 	}
 
-	exists, err := s.repo.ExistsApparatNrConflict(ctx,
-		fieldDevice.SPSControllerSystemTypeID,
-		fieldDevice.SystemPartID,
-		fieldDevice.ApparatID,
-		fieldDevice.ApparatNr,
-		excludeIDs,
+	return validateChecks(
+		func(builder *domain.ValidationBuilder) error {
+			exists, err := s.repo.ExistsApparatNrConflict(ctx,
+				fieldDevice.SPSControllerSystemTypeID,
+				fieldDevice.SystemPartID,
+				fieldDevice.ApparatID,
+				fieldDevice.ApparatNr,
+				excludeIDs,
+			)
+			if err != nil {
+				return err
+			}
+			if exists {
+				fieldDeviceApparatNrField.Add(builder, "apparatnummer ist bereits vergeben")
+			}
+			return nil
+		},
 	)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return domain.NewValidationError().Add(fieldDeviceApparatNrField.Key, "apparatnummer ist bereits vergeben")
-	}
-	return nil
 }
 
 func (s *FieldDeviceService) ListAvailableApparatNumbers(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID uuid.UUID, apparatID uuid.UUID) ([]int, error) {
@@ -523,20 +529,14 @@ func collectUniqueApparatIDs(objectDatas []*domainFacility.ObjectData) []uuid.UU
 }
 
 func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.FieldDevice) error {
-	builder := domain.NewValidationBuilder()
-	fieldDeviceSystemTypeIDField.RequireUUID(builder, fieldDevice.SPSControllerSystemTypeID)
-	fieldDeviceApparatIDField.RequireUUID(builder, fieldDevice.ApparatID)
-	fieldDeviceSystemPartIDField.RequireUUID(builder, fieldDevice.SystemPartID)
-	if fieldDevice.BMK != nil {
-		fieldDeviceBMKField.MaxLength(builder, *fieldDevice.BMK, 10)
-	}
-	if fieldDevice.Description != nil {
-		fieldDeviceDescriptionField.MaxLength(builder, *fieldDevice.Description, 250)
-	}
-	if fieldDevice.TextIndividuell != nil {
-		fieldDeviceTextFixField.MaxLength(builder, *fieldDevice.TextIndividuell, 250)
-	}
-	return builder.Err()
+	return validateRules(
+		requiredUUID(fieldDeviceSystemTypeIDField, fieldDevice.SPSControllerSystemTypeID),
+		requiredUUID(fieldDeviceApparatIDField, fieldDevice.ApparatID),
+		requiredUUID(fieldDeviceSystemPartIDField, fieldDevice.SystemPartID),
+		optionalMaxLength(fieldDeviceBMKField, fieldDevice.BMK, 10),
+		optionalMaxLength(fieldDeviceDescriptionField, fieldDevice.Description, 250),
+		optionalMaxLength(fieldDeviceTextFixField, fieldDevice.TextIndividuell, 250),
+	)
 }
 
 func normalizeOptionalString(value *string) *string {
@@ -554,26 +554,14 @@ func (s *FieldDeviceService) validateSpecification(spec *domainFacility.Specific
 		return nil
 	}
 
-	builder := domain.NewValidationBuilder()
-	if spec.SpecificationSupplier != nil {
-		specificationSupplierField.MaxLength(builder, *spec.SpecificationSupplier, 250)
-	}
-	if spec.SpecificationBrand != nil {
-		specificationBrandField.MaxLength(builder, *spec.SpecificationBrand, 250)
-	}
-	if spec.SpecificationType != nil {
-		specificationTypeField.MaxLength(builder, *spec.SpecificationType, 250)
-	}
-	if spec.AdditionalInfoMotorValve != nil {
-		specificationMotorValveInfoField.MaxLength(builder, *spec.AdditionalInfoMotorValve, 250)
-	}
-	if spec.AdditionalInformationInstallationLocation != nil {
-		specificationInstallLocationField.MaxLength(builder, *spec.AdditionalInformationInstallationLocation, 250)
-	}
-	if spec.ElectricalConnectionACDC != nil && *spec.ElectricalConnectionACDC != "" {
-		specificationElectricalACDCField.ExactLength(builder, *spec.ElectricalConnectionACDC, 2)
-	}
-	return builder.Err()
+	return validateRules(
+		optionalMaxLength(specificationSupplierField, spec.SpecificationSupplier, 250),
+		optionalMaxLength(specificationBrandField, spec.SpecificationBrand, 250),
+		optionalMaxLength(specificationTypeField, spec.SpecificationType, 250),
+		optionalMaxLength(specificationMotorValveInfoField, spec.AdditionalInfoMotorValve, 250),
+		optionalMaxLength(specificationInstallLocationField, spec.AdditionalInformationInstallationLocation, 250),
+		optionalExactLength(specificationElectricalACDCField, spec.ElectricalConnectionACDC, 2),
+	)
 }
 
 func (s *FieldDeviceService) buildAlarmValuesForBacnetObjects(ctx context.Context, bacnetObjects []*domainFacility.BacnetObject) ([]*domainFacility.BacnetObjectAlarmValue, error) {

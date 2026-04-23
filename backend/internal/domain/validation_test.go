@@ -33,6 +33,34 @@ func TestValidationBuilderAndFieldPolicies(t *testing.T) {
 	}
 }
 
+func TestValidationFieldCompositePolicies(t *testing.T) {
+	builder := NewValidationBuilder()
+	shortNameField := ValidationField{Key: "apparat.short_name", Name: "short_name"}
+	nameField := ValidationField{Key: "systemtype.name", Name: "name"}
+	acdcField := ValidationField{Key: "specification.electrical_connection_acdc", Name: "electrical_connection_acdc"}
+
+	shortNameField.RequireTrimmedExact(builder, "  ABCD  ", 3)
+	nameField.RequireTrimmedMax(builder, "  Main Pump  ", 4)
+	acdcValue := "123"
+	acdcField.ExactLengthPtr(builder, &acdcValue, 2)
+	description := "12345"
+	nameField.MaxLengthPtr(builder, &description, 4)
+
+	ve, ok := AsValidationError(builder.Err())
+	if !ok {
+		t.Fatalf("expected validation error, got %v", builder.Err())
+	}
+	if ve.Fields["apparat.short_name"] != "short_name must be exactly 3 characters" {
+		t.Fatalf("expected exact-length error, got %+v", ve.Fields)
+	}
+	if ve.Fields["systemtype.name"] != "name must be at most 4 characters" {
+		t.Fatalf("expected max-length error, got %+v", ve.Fields)
+	}
+	if ve.Fields["specification.electrical_connection_acdc"] != "electrical_connection_acdc must be exactly 2 characters" {
+		t.Fatalf("expected pointer exact-length error, got %+v", ve.Fields)
+	}
+}
+
 func TestValidationBuilderMergePreservesNonValidationErrors(t *testing.T) {
 	builder := NewValidationBuilder()
 	builder.Add("left", "left error")

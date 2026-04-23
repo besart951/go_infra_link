@@ -3,7 +3,6 @@ package facility
 import (
 	"context"
 	"errors"
-	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -66,12 +65,12 @@ func (s *ApparatService) ListWithFilters(ctx context.Context, params domain.Pagi
 	}
 
 	if filters.ObjectDataID != nil {
-		if err := domain.EnsureReferenceExists(ctx, s.objectDataReader, *filters.ObjectDataID); err != nil {
+		if err := validateChecks(referenceExists(ctx, s.objectDataReader, *filters.ObjectDataID)); err != nil {
 			return nil, err
 		}
 	}
 	if filters.SystemPartID != nil {
-		if err := domain.EnsureReferenceExists(ctx, s.systemPartReader, *filters.SystemPartID); err != nil {
+		if err := validateChecks(referenceExists(ctx, s.systemPartReader, *filters.SystemPartID)); err != nil {
 			return nil, err
 		}
 	}
@@ -147,11 +146,10 @@ func (s *ApparatService) Validate(ctx context.Context, apparat *domainFacility.A
 }
 
 func (s *ApparatService) validateRequiredFields(apparat *domainFacility.Apparat) error {
-	builder := domain.NewValidationBuilder()
-	shortName := apparatShortNameField.RequireTrimmed(builder, apparat.ShortName)
-	apparatShortNameField.ExactLength(builder, shortName, 3)
-	apparatNameField.RequireTrimmed(builder, apparat.Name)
-	return builder.Err()
+	return validateRules(
+		requiredTrimmedExact(apparatShortNameField, apparat.ShortName, 3),
+		requiredTrimmed(apparatNameField, apparat.Name),
+	)
 }
 
 func (s *ApparatService) ensureUnique(ctx context.Context, apparat *domainFacility.Apparat, excludeID *uuid.UUID) error {
@@ -166,26 +164,22 @@ func (s *ApparatService) ensureUnique(ctx context.Context, apparat *domainFacili
 }
 
 func (s *ApparatService) uniqueValidationError(ctx context.Context, apparat *domainFacility.Apparat, excludeID *uuid.UUID) (*domain.ValidationError, error) {
-	builder := domain.NewValidationBuilder()
-	if strings.TrimSpace(apparat.ShortName) != "" {
-		exists, err := s.extRepo.ExistsShortName(ctx, apparat.ShortName, excludeID)
-		if err != nil {
-			return nil, err
-		}
-		if exists {
-			apparatShortNameField.Unique(builder)
-		}
+	err := validateChecks(
+		uniqueIfPresent(apparatShortNameField, apparat.ShortName, func() (bool, error) {
+			return s.extRepo.ExistsShortName(ctx, apparat.ShortName, excludeID)
+		}),
+		uniqueIfPresent(apparatNameField, apparat.Name, func() (bool, error) {
+			return s.extRepo.ExistsName(ctx, apparat.Name, excludeID)
+		}),
+	)
+	if err == nil {
+		return nil, nil
 	}
-	if strings.TrimSpace(apparat.Name) != "" {
-		exists, err := s.extRepo.ExistsName(ctx, apparat.Name, excludeID)
-		if err != nil {
-			return nil, err
-		}
-		if exists {
-			apparatNameField.Unique(builder)
-		}
+	ve, ok := domain.AsValidationError(err)
+	if !ok {
+		return nil, err
 	}
-	return builder.ValidationError(), nil
+	return ve, nil
 }
 
 func (s *ApparatService) mapWriteConflict(ctx context.Context, apparat *domainFacility.Apparat, excludeID *uuid.UUID, err error) error {
