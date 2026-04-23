@@ -37,7 +37,7 @@ func (h *ProjectHandler) InviteProjectUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.InviteUser(c.Request.Context(), projectID, req.UserID); err != nil {
+	if err := h.membership.InviteUser(c.Request.Context(), projectID, req.UserID); err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "invite_failed", "project.user_invited_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_or_user_not_found")),
@@ -68,7 +68,7 @@ func (h *ProjectHandler) ListProjectUsers(c *gin.Context) {
 		return
 	}
 
-	users, err := h.service.ListUsers(c.Request.Context(), projectID)
+	users, err := h.membership.ListUsers(c.Request.Context(), projectID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),
@@ -106,7 +106,7 @@ func (h *ProjectHandler) RemoveProjectUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.RemoveUser(c.Request.Context(), projectID, userID); err != nil {
+	if err := h.membership.RemoveUser(c.Request.Context(), projectID, userID); err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "remove_failed", "project.user_remove_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_or_user_not_found")),

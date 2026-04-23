@@ -35,7 +35,7 @@ func (h *ProjectHandler) ListProjectControlCabinets(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.ListControlCabinets(c.Request.Context(), projectID, query.Page, query.Limit)
+	result, err := h.facilityLink.ListControlCabinets(c.Request.Context(), projectID, query.Page, query.Limit)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
 		return
@@ -78,7 +78,7 @@ func (h *ProjectHandler) ListProjectSPSControllers(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.ListSPSControllers(c.Request.Context(), projectID, query.Page, query.Limit)
+	result, err := h.facilityLink.ListSPSControllers(c.Request.Context(), projectID, query.Page, query.Limit)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
 		return
@@ -121,7 +121,7 @@ func (h *ProjectHandler) ListProjectFieldDevices(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.ListFieldDevices(c.Request.Context(), projectID, query.Page, query.Limit)
+	result, err := h.facilityLink.ListFieldDevices(c.Request.Context(), projectID, query.Page, query.Limit)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
 		return

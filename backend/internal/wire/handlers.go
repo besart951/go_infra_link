@@ -17,7 +17,14 @@ import (
 
 // NewHandlers creates all HTTP handler instances from services.
 func NewHandlers(services *Services, cookieSettings authhandler.CookieSettings, i18nLoader *i18n.Loader, accessTokenTTL, refreshTokenTTL time.Duration) *handler.Handlers {
-	projectHandlers := projecthandler.NewHandlers(services.Project, services.Phase, services.Facility.FieldDevice)
+	projectHandlers := projecthandler.NewHandlers(projecthandler.ServiceDeps{
+		Lifecycle:          services.Project.Lifecycle,
+		AccessPolicy:       services.Project.AccessPolicy,
+		Membership:         services.Project.Membership,
+		FacilityLink:       services.Project.FacilityLink,
+		Phase:              services.Phase,
+		FieldDeviceOptions: services.Facility.FieldDevice,
+	})
 
 	facilityHandlers := facilityhandler.NewHandlers(facilityhandler.ServiceDeps{
 		Building:                services.Facility.Building,

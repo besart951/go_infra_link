@@ -13,17 +13,23 @@ import (
 )
 
 type ProjectHandler struct {
-	service       ProjectService
+	lifecycle     ProjectLifecycleService
+	access        ProjectAccessPolicyService
+	membership    ProjectMembershipService
+	facilityLink  ProjectFacilityLinkService
 	events        *ProjectEventHub
 	collaboration *ProjectCollaborationHub
 }
 
-func NewProjectHandler(service ProjectService, events *ProjectEventHub) *ProjectHandler {
+func NewProjectHandler(lifecycle ProjectLifecycleService, access ProjectAccessPolicyService, membership ProjectMembershipService, facilityLink ProjectFacilityLinkService, events *ProjectEventHub) *ProjectHandler {
 	if events == nil {
 		events = NewProjectEventHub()
 	}
 	return &ProjectHandler{
-		service:       service,
+		lifecycle:     lifecycle,
+		access:        access,
+		membership:    membership,
+		facilityLink:  facilityLink,
 		events:        events,
 		collaboration: NewProjectCollaborationHub(),
 	}
@@ -34,7 +40,7 @@ func (h *ProjectHandler) BroadcastRefreshForControlCabinet(ctx context.Context, 
 		return
 	}
 
-	projectIDs, err := h.service.ListProjectIDsByControlCabinetID(ctx, controlCabinetID)
+	projectIDs, err := h.facilityLink.ListProjectIDsByControlCabinetID(ctx, controlCabinetID)
 	if err != nil {
 		return
 	}
@@ -49,7 +55,7 @@ func (h *ProjectHandler) BroadcastRefreshForSPSController(ctx context.Context, s
 		return
 	}
 
-	projectIDs, err := h.service.ListProjectIDsBySPSControllerID(ctx, spsControllerID)
+	projectIDs, err := h.facilityLink.ListProjectIDsBySPSControllerID(ctx, spsControllerID)
 	if err != nil {
 		return
 	}
@@ -138,7 +144,7 @@ func (h *ProjectHandler) ensureProjectAccess(c *gin.Context, projectID uuid.UUID
 		return false
 	}
 
-	hasAccess, err := h.service.CanAccessProject(c.Request.Context(), userID, projectID)
+	hasAccess, err := h.access.CanAccessProject(c.Request.Context(), userID, projectID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),

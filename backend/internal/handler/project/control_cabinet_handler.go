@@ -37,7 +37,7 @@ func (h *ProjectHandler) CreateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	created, err := h.service.CreateControlCabinet(c.Request.Context(), projectID, req.ControlCabinetID)
+	created, err := h.facilityLink.CreateControlCabinet(c.Request.Context(), projectID, req.ControlCabinetID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
@@ -66,7 +66,7 @@ func (h *ProjectHandler) CopyProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	copyEntity, err := h.service.CopyControlCabinet(c.Request.Context(), projectID, controlCabinetID)
+	copyEntity, err := h.facilityLink.CopyControlCabinet(c.Request.Context(), projectID, controlCabinetID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
@@ -113,7 +113,7 @@ func (h *ProjectHandler) UpdateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	updated, err := h.service.UpdateControlCabinet(c.Request.Context(), linkID, projectID, req.ControlCabinetID)
+	updated, err := h.facilityLink.UpdateControlCabinet(c.Request.Context(), linkID, projectID, req.ControlCabinetID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
@@ -153,7 +153,7 @@ func (h *ProjectHandler) DeleteProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteControlCabinet(c.Request.Context(), linkID, projectID); err != nil {
+	if err := h.facilityLink.DeleteControlCabinet(c.Request.Context(), linkID, projectID); err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "deletion_failed", "project.deletion_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.link_not_found")),

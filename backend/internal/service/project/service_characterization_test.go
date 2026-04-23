@@ -50,13 +50,11 @@ func TestProjectService_Create_CharacterizesTemplateCopyAndCreatorMembership(t *
 		},
 	}
 
-	svc := New(
+	svc := newProjectCharacterizationServices(
 		projectRepo,
 		newProjectControlCabinetRepo(),
 		newProjectSPSControllerRepo(),
 		newProjectFieldDeviceRepo(),
-		nil,
-		nil,
 		objectDataRepo,
 		bacnetRepo,
 		nil,
@@ -65,9 +63,7 @@ func TestProjectService_Create_CharacterizesTemplateCopyAndCreatorMembership(t *
 		nil,
 		nil,
 		nil,
-		nil,
-		nil,
-	)
+	).Lifecycle
 
 	project := &domainProject.Project{
 		Base:      domain.Base{ID: projectID},
@@ -148,7 +144,7 @@ func TestProjectService_CreateControlCabinet_CharacterizesDescendantLinking(t *t
 	fieldDeviceRepo.items[fieldDeviceOneID] = &domainFacility.FieldDevice{Base: domain.Base{ID: fieldDeviceOneID}, SPSControllerSystemTypeID: systemTypeOneID}
 	fieldDeviceRepo.items[fieldDeviceTwoID] = &domainFacility.FieldDevice{Base: domain.Base{ID: fieldDeviceTwoID}, SPSControllerSystemTypeID: systemTypeTwoID}
 
-	svc := newProjectCharacterizationService(
+	svc := newProjectCharacterizationServices(
 		newProjectRepo(),
 		controlCabinetLinks,
 		spsLinks,
@@ -161,7 +157,7 @@ func TestProjectService_CreateControlCabinet_CharacterizesDescendantLinking(t *t
 		spsSystemRepo,
 		fieldDeviceRepo,
 		nil,
-	)
+	).FacilityLink
 
 	created, err := svc.CreateControlCabinet(ctx, projectID, controlCabinetID)
 	if err != nil {
@@ -213,7 +209,7 @@ func TestProjectService_DeleteControlCabinet_CharacterizesLinkAndHierarchyDeleti
 	spsSystemRepo.items[systemTypeID] = &domainFacility.SPSControllerSystemType{Base: domain.Base{ID: systemTypeID}, SPSControllerID: spsID}
 	fieldDeviceRepo.items[fieldDeviceID] = &domainFacility.FieldDevice{Base: domain.Base{ID: fieldDeviceID}, SPSControllerSystemTypeID: systemTypeID}
 
-	svc := newProjectCharacterizationService(
+	svc := newProjectCharacterizationServices(
 		newProjectRepo(),
 		controlCabinetLinks,
 		spsLinks,
@@ -226,7 +222,7 @@ func TestProjectService_DeleteControlCabinet_CharacterizesLinkAndHierarchyDeleti
 		spsSystemRepo,
 		fieldDeviceRepo,
 		nil,
-	)
+	).FacilityLink
 
 	if err := svc.DeleteControlCabinet(ctx, linkID, projectID); err != nil {
 		t.Fatalf("expected delete to succeed, got %v", err)
@@ -292,7 +288,7 @@ func TestProjectService_CleanupProjectLinksForControlCabinetHierarchy_UsesDirect
 	fieldDeviceRepo.items[fieldDeviceID] = &domainFacility.FieldDevice{Base: domain.Base{ID: fieldDeviceID}, SPSControllerSystemTypeID: systemTypeID}
 	fieldDeviceRepo.items[keepFieldDeviceID] = &domainFacility.FieldDevice{Base: domain.Base{ID: keepFieldDeviceID}, SPSControllerSystemTypeID: keepSystemTypeID}
 
-	svc := newProjectCharacterizationService(
+	svc := newProjectCharacterizationServices(
 		newProjectRepo(),
 		controlCabinetLinks,
 		spsLinks,
@@ -305,7 +301,7 @@ func TestProjectService_CleanupProjectLinksForControlCabinetHierarchy_UsesDirect
 		spsSystemRepo,
 		fieldDeviceRepo,
 		nil,
-	)
+	).FacilityLink
 
 	if err := svc.cleanupProjectLinksForControlCabinetHierarchy(ctx, controlCabinetID); err != nil {
 		t.Fatalf("expected cleanup to succeed, got %v", err)
@@ -367,7 +363,7 @@ func TestProjectService_CleanupProjectLinksForSPSControllers_UsesDirectRepoDelet
 	fieldDeviceRepo.items[fieldDeviceTwoID] = &domainFacility.FieldDevice{Base: domain.Base{ID: fieldDeviceTwoID}, SPSControllerSystemTypeID: systemTypeTwoID}
 	fieldDeviceRepo.items[keepFieldDeviceID] = &domainFacility.FieldDevice{Base: domain.Base{ID: keepFieldDeviceID}, SPSControllerSystemTypeID: keepSystemTypeID}
 
-	svc := newProjectCharacterizationService(
+	svc := newProjectCharacterizationServices(
 		newProjectRepo(),
 		newProjectControlCabinetRepo(),
 		spsLinks,
@@ -380,7 +376,7 @@ func TestProjectService_CleanupProjectLinksForSPSControllers_UsesDirectRepoDelet
 		spsSystemRepo,
 		fieldDeviceRepo,
 		nil,
-	)
+	).FacilityLink
 
 	if err := svc.cleanupProjectLinksForSPSControllers(ctx, []uuid.UUID{spsControllerOneID, spsControllerTwoID}); err != nil {
 		t.Fatalf("expected cleanup to succeed, got %v", err)
@@ -424,7 +420,7 @@ func TestProjectService_CleanupProjectLinksForSystemTypes_UsesDirectRepoDeletes(
 	fieldDeviceRepo.items[fieldDeviceTwoID] = &domainFacility.FieldDevice{Base: domain.Base{ID: fieldDeviceTwoID}, SPSControllerSystemTypeID: systemTypeTwoID}
 	fieldDeviceRepo.items[keepFieldDeviceID] = &domainFacility.FieldDevice{Base: domain.Base{ID: keepFieldDeviceID}, SPSControllerSystemTypeID: keepSystemTypeID}
 
-	svc := newProjectCharacterizationService(
+	svc := newProjectCharacterizationServices(
 		newProjectRepo(),
 		newProjectControlCabinetRepo(),
 		newProjectSPSControllerRepo(),
@@ -437,7 +433,7 @@ func TestProjectService_CleanupProjectLinksForSystemTypes_UsesDirectRepoDeletes(
 		newProjectSPSSystemTypeRepo(),
 		fieldDeviceRepo,
 		nil,
-	)
+	).FacilityLink
 
 	if err := svc.cleanupProjectLinksForSystemTypes(ctx, []uuid.UUID{systemTypeOneID, systemTypeTwoID}); err != nil {
 		t.Fatalf("expected cleanup to succeed, got %v", err)
@@ -499,7 +495,7 @@ func TestProjectService_CopySPSControllerSystemType_CharacterizesCopiedFieldDevi
 		specRepo,
 		bacnetRepo,
 	)
-	svc := newProjectCharacterizationService(
+	svc := newProjectCharacterizationServices(
 		newProjectRepo(),
 		newProjectControlCabinetRepo(),
 		newProjectSPSControllerRepo(),
@@ -512,7 +508,7 @@ func TestProjectService_CopySPSControllerSystemType_CharacterizesCopiedFieldDevi
 		spsSystemRepo,
 		fieldDeviceRepo,
 		hierarchyCopier,
-	)
+	).FacilityLink
 
 	copiedSystemType, err := svc.CopySPSControllerSystemType(ctx, projectID, originalSystemTypeID)
 	if err != nil {
@@ -604,7 +600,7 @@ func TestProjectService_CopyControlCabinet_CharacterizesDeepCopyAndProjectLinks(
 		specRepo,
 		bacnetRepo,
 	)
-	svc := newProjectCharacterizationService(
+	svc := newProjectCharacterizationServices(
 		newProjectRepo(),
 		controlCabinetLinks,
 		spsLinks,
@@ -617,7 +613,7 @@ func TestProjectService_CopyControlCabinet_CharacterizesDeepCopyAndProjectLinks(
 		spsSystemRepo,
 		fieldDeviceRepo,
 		hierarchyCopier,
-	)
+	).FacilityLink
 
 	copiedControlCabinet, err := svc.CopyControlCabinet(ctx, projectID, originalControlCabinetID)
 	if err != nil {
@@ -672,7 +668,7 @@ func TestProjectService_AddAndRemoveObjectData_CharacterizesProjectActivation(t 
 		Version:     "1",
 		IsActive:    false,
 	}
-	svc := newProjectCharacterizationService(
+	svc := newProjectCharacterizationServices(
 		projectRepo,
 		newProjectControlCabinetRepo(),
 		newProjectSPSControllerRepo(),
@@ -685,7 +681,7 @@ func TestProjectService_AddAndRemoveObjectData_CharacterizesProjectActivation(t 
 		nil,
 		nil,
 		nil,
-	)
+	).FacilityLink
 
 	added, err := svc.AddObjectData(ctx, projectID, objectDataID)
 	if err != nil {
@@ -710,7 +706,7 @@ func TestProjectService_ListObjectData_CharacterizesProjectFilterRouting(t *test
 	apparatID := uuid.New()
 	systemPartID := uuid.New()
 	objectDataRepo := newProjectObjectDataRepo()
-	svc := newProjectCharacterizationService(
+	svc := newProjectCharacterizationServices(
 		newProjectRepo(),
 		newProjectControlCabinetRepo(),
 		newProjectSPSControllerRepo(),
@@ -723,7 +719,7 @@ func TestProjectService_ListObjectData_CharacterizesProjectFilterRouting(t *test
 		nil,
 		nil,
 		nil,
-	)
+	).FacilityLink
 
 	if _, err := svc.ListObjectData(ctx, projectID, 0, 0, "pump", nil, nil); err != nil {
 		t.Fatalf("expected unfiltered list to succeed, got %v", err)
@@ -754,7 +750,7 @@ func TestProjectService_ListObjectData_CharacterizesProjectFilterRouting(t *test
 	}
 }
 
-func newProjectCharacterizationService(
+func newProjectCharacterizationServices(
 	projectRepo *projectRepoFake,
 	controlCabinetLinks *projectControlCabinetRepoFake,
 	spsLinks *projectSPSControllerRepoFake,
@@ -767,34 +763,35 @@ func newProjectCharacterizationService(
 	spsSystemRepo *projectSPSSystemTypeRepoFake,
 	fieldDeviceRepo *projectFieldDeviceStoreFake,
 	hierarchyCopier *facilityservice.HierarchyCopier,
-) *Service {
-	return New(
-		projectRepo,
-		controlCabinetLinks,
-		spsLinks,
-		fieldDeviceLinks,
-		nil,
-		nil,
-		objectDataRepo,
-		bacnetRepo,
-		specRepo,
-		controlCabinetRepo,
-		spsRepo,
-		spsSystemRepo,
-		fieldDeviceRepo,
-		hierarchyCopier,
-		nil,
-		nil,
-	)
+) *Services {
+	return NewServices(Dependencies{
+		Projects:                 projectRepo,
+		ProjectControlCabinets:   controlCabinetLinks,
+		ProjectSPSControllers:    spsLinks,
+		ProjectFieldDevices:      fieldDeviceLinks,
+		ObjectData:               objectDataRepo,
+		BacnetObjects:            bacnetRepo,
+		Specifications:           specRepo,
+		ControlCabinets:          controlCabinetRepo,
+		SPSControllers:           spsRepo,
+		SPSControllerSystemTypes: spsSystemRepo,
+		FieldDevices:             fieldDeviceRepo,
+		HierarchyCopier:          hierarchyCopier,
+	})
 }
 
 type projectRepoFake struct {
-	items map[uuid.UUID]*domainProject.Project
-	users map[uuid.UUID]map[uuid.UUID]struct{}
+	items       map[uuid.UUID]*domainProject.Project
+	users       map[uuid.UUID]map[uuid.UUID]struct{}
+	listedUsers map[uuid.UUID][]domainUser.User
 }
 
 func newProjectRepo() *projectRepoFake {
-	return &projectRepoFake{items: map[uuid.UUID]*domainProject.Project{}, users: map[uuid.UUID]map[uuid.UUID]struct{}{}}
+	return &projectRepoFake{
+		items:       map[uuid.UUID]*domainProject.Project{},
+		users:       map[uuid.UUID]map[uuid.UUID]struct{}{},
+		listedUsers: map[uuid.UUID][]domainUser.User{},
+	}
 }
 
 func (r *projectRepoFake) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainProject.Project, error) {
@@ -863,8 +860,11 @@ func (r *projectRepoFake) RemoveUser(_ context.Context, projectID, userID uuid.U
 	return nil
 }
 
-func (r *projectRepoFake) ListUsers(context.Context, uuid.UUID) ([]domainUser.User, error) {
-	return nil, nil
+func (r *projectRepoFake) ListUsers(_ context.Context, projectID uuid.UUID) ([]domainUser.User, error) {
+	users := r.listedUsers[projectID]
+	out := make([]domainUser.User, len(users))
+	copy(out, users)
+	return out, nil
 }
 
 func (r *projectRepoFake) hasUser(projectID, userID uuid.UUID) bool {

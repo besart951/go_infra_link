@@ -10,14 +10,25 @@ import (
 	"github.com/google/uuid"
 )
 
-type ProjectService interface {
+type ProjectLifecycleService interface {
 	Create(ctx context.Context, project *domainProject.Project) error
 	GetByID(ctx context.Context, id uuid.UUID) (*domainProject.Project, error)
 	List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string, status *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error)
+	Update(ctx context.Context, project *domainProject.Project) error
+	DeleteByID(ctx context.Context, id uuid.UUID) error
+}
+
+type ProjectAccessPolicyService interface {
 	CanAccessProject(ctx context.Context, requesterID, projectID uuid.UUID) (bool, error)
+}
+
+type ProjectMembershipService interface {
 	InviteUser(ctx context.Context, projectID, userID uuid.UUID) error
 	ListUsers(ctx context.Context, projectID uuid.UUID) ([]domainUser.User, error)
 	RemoveUser(ctx context.Context, projectID, userID uuid.UUID) error
+}
+
+type ProjectFacilityLinkService interface {
 	CreateControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
 	CopyControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainFacility.ControlCabinet, error)
 	UpdateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
@@ -36,8 +47,6 @@ type ProjectService interface {
 	ListObjectData(ctx context.Context, projectID uuid.UUID, page, limit int, search string, apparatID, systemPartID *uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
 	AddObjectData(ctx context.Context, projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
 	RemoveObjectData(ctx context.Context, projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
-	Update(ctx context.Context, project *domainProject.Project) error
-	DeleteByID(ctx context.Context, id uuid.UUID) error
 	ListProjectIDsByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]uuid.UUID, error)
 	ListProjectIDsBySPSControllerID(ctx context.Context, spsControllerID uuid.UUID) ([]uuid.UUID, error)
 }

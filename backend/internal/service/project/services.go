@@ -1,0 +1,84 @@
+package project
+
+import (
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
+	"gorm.io/gorm"
+)
+
+type TxRunner func(func(tx *gorm.DB) error) error
+
+type Config struct {
+	TxRunner  TxRunner
+	TxFactory func(tx *gorm.DB) (*Services, error)
+}
+
+type Dependencies struct {
+	Projects                 domainProject.ProjectRepository
+	ProjectControlCabinets   domainProject.ProjectControlCabinetRepository
+	ProjectSPSControllers    domainProject.ProjectSPSControllerRepository
+	ProjectFieldDevices      domainProject.ProjectFieldDeviceRepository
+	Users                    domainUser.UserRepository
+	RolePermissions          domainUser.RolePermissionRepository
+	ObjectData               domainFacility.ObjectDataStore
+	BacnetObjects            domainFacility.BacnetObjectStore
+	Specifications           domainFacility.SpecificationStore
+	ControlCabinets          domainFacility.ControlCabinetRepository
+	SPSControllers           domainFacility.SPSControllerRepository
+	SPSControllerSystemTypes domainFacility.SPSControllerSystemTypeStore
+	FieldDevices             domainFacility.FieldDeviceStore
+	HierarchyCopier          *facilityservice.HierarchyCopier
+}
+
+type Services struct {
+	Lifecycle    *ProjectLifecycleService
+	AccessPolicy *ProjectAccessPolicyService
+	Membership   *ProjectMembershipService
+	FacilityLink *ProjectFacilityLinkService
+}
+
+func NewServices(deps Dependencies, cfgs ...Config) *Services {
+	var cfg Config
+	if len(cfgs) > 0 {
+		cfg = cfgs[0]
+	}
+
+	services := &Services{}
+	services.AccessPolicy = &ProjectAccessPolicyService{
+		repo:     deps.Projects,
+		userRepo: deps.Users,
+	}
+	services.Lifecycle = &ProjectLifecycleService{
+		repo:               deps.Projects,
+		userRepo:           deps.Users,
+		rolePermissionRepo: deps.RolePermissions,
+		objectDataRepo:     deps.ObjectData,
+		bacnetObjectRepo:   deps.BacnetObjects,
+		txRunner:           cfg.TxRunner,
+		txFactory:          cfg.TxFactory,
+	}
+	services.Membership = &ProjectMembershipService{
+		repo:     deps.Projects,
+		userRepo: deps.Users,
+	}
+	services.FacilityLink = &ProjectFacilityLinkService{
+		projectRepo:               deps.Projects,
+		projectControlCabinetRepo: deps.ProjectControlCabinets,
+		projectSPSControllerRepo:  deps.ProjectSPSControllers,
+		projectFieldDeviceRepo:    deps.ProjectFieldDevices,
+		objectDataRepo:            deps.ObjectData,
+		bacnetObjectRepo:          deps.BacnetObjects,
+		specificationRepo:         deps.Specifications,
+		controlCabinetRepo:        deps.ControlCabinets,
+		spsControllerRepo:         deps.SPSControllers,
+		spsControllerSystemRepo:   deps.SPSControllerSystemTypes,
+		fieldDeviceRepo:           deps.FieldDevices,
+		hierarchyCopier:           deps.HierarchyCopier,
+		txRunner:                  cfg.TxRunner,
+		txFactory:                 cfg.TxFactory,
+	}
+
+	return services
+}

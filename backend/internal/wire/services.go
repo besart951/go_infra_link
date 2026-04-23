@@ -25,7 +25,7 @@ import (
 
 // Services holds all service instances.
 type Services struct {
-	Project      *projectservice.Service
+	Project      *projectservice.Services
 	Dashboard    *dashboardservice.Service
 	Phase        *phaseservice.Service
 	User         *userservice.Service
@@ -100,7 +100,7 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 	)
 
 	return &Services{
-		Project:      buildProjectService(gormDB, repos, facilityServices),
+		Project:      buildProjectServices(gormDB, repos, facilityServices),
 		Dashboard:    dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
 		Phase:        phaseservice.NewPhaseService(repos.Phase),
 		User:         userservice.New(repos.User, passwordService),
@@ -150,54 +150,42 @@ func buildFacilityRepositories(repos *Repositories) facilityservice.Repositories
 	}
 }
 
-func buildProjectService(gormDB *gorm.DB, repos *Repositories, facilityServices *facilityservice.Services) *projectservice.Service {
+func buildProjectDependencies(repos *Repositories, hierarchyCopier *facilityservice.HierarchyCopier) projectservice.Dependencies {
+	return projectservice.Dependencies{
+		Projects:                 repos.Project,
+		ProjectControlCabinets:   repos.ProjectControlCabinets,
+		ProjectSPSControllers:    repos.ProjectSPSControllers,
+		ProjectFieldDevices:      repos.ProjectFieldDevices,
+		Users:                    repos.User,
+		RolePermissions:          repos.RolePermissions,
+		ObjectData:               repos.FacilityObjectData,
+		BacnetObjects:            repos.FacilityBacnetObjects,
+		Specifications:           repos.FacilitySpecifications,
+		ControlCabinets:          repos.FacilityControlCabinet,
+		SPSControllers:           repos.FacilitySPSControllers,
+		SPSControllerSystemTypes: repos.FacilitySPSControllerSystemTypes,
+		FieldDevices:             repos.FacilityFieldDevices,
+		HierarchyCopier:          hierarchyCopier,
+	}
+}
+
+func buildProjectServices(gormDB *gorm.DB, repos *Repositories, facilityServices *facilityservice.Services) *projectservice.Services {
 	txRunner := projectservice.TxRunner(func(run func(tx *gorm.DB) error) error {
 		return gormDB.Transaction(run)
 	})
 
-	txFactory := func(tx *gorm.DB) (*projectservice.Service, error) {
+	txFactory := func(tx *gorm.DB) (*projectservice.Services, error) {
 		txRepos, err := NewRepositories(tx)
 		if err != nil {
 			return nil, fmt.Errorf("transaction repositories: %w", err)
 		}
 
 		txFacilityServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return projectservice.New(
-			txRepos.Project,
-			txRepos.ProjectControlCabinets,
-			txRepos.ProjectSPSControllers,
-			txRepos.ProjectFieldDevices,
-			txRepos.User,
-			txRepos.RolePermissions,
-			txRepos.FacilityObjectData,
-			txRepos.FacilityBacnetObjects,
-			txRepos.FacilitySpecifications,
-			txRepos.FacilityControlCabinet,
-			txRepos.FacilitySPSControllers,
-			txRepos.FacilitySPSControllerSystemTypes,
-			txRepos.FacilityFieldDevices,
-			txFacilityServices.HierarchyCopier,
-			nil,
-			nil,
-		), nil
+		return projectservice.NewServices(buildProjectDependencies(txRepos, txFacilityServices.HierarchyCopier)), nil
 	}
 
-	return projectservice.New(
-		repos.Project,
-		repos.ProjectControlCabinets,
-		repos.ProjectSPSControllers,
-		repos.ProjectFieldDevices,
-		repos.User,
-		repos.RolePermissions,
-		repos.FacilityObjectData,
-		repos.FacilityBacnetObjects,
-		repos.FacilitySpecifications,
-		repos.FacilityControlCabinet,
-		repos.FacilitySPSControllers,
-		repos.FacilitySPSControllerSystemTypes,
-		repos.FacilityFieldDevices,
-		facilityServices.HierarchyCopier,
-		txRunner,
-		txFactory,
-	)
+	return projectservice.NewServices(buildProjectDependencies(repos, facilityServices.HierarchyCopier), projectservice.Config{
+		TxRunner:  txRunner,
+		TxFactory: txFactory,
+	})
 }

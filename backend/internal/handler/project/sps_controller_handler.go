@@ -37,7 +37,7 @@ func (h *ProjectHandler) CreateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	created, err := h.service.CreateSPSController(c.Request.Context(), projectID, req.SPSControllerID)
+	created, err := h.facilityLink.CreateSPSController(c.Request.Context(), projectID, req.SPSControllerID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
@@ -66,7 +66,7 @@ func (h *ProjectHandler) CopyProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	copyEntity, err := h.service.CopySPSController(c.Request.Context(), projectID, spsControllerID)
+	copyEntity, err := h.facilityLink.CopySPSController(c.Request.Context(), projectID, spsControllerID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
@@ -94,7 +94,7 @@ func (h *ProjectHandler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 		return
 	}
 
-	copyEntity, err := h.service.CopySPSControllerSystemType(c.Request.Context(), projectID, systemTypeID)
+	copyEntity, err := h.facilityLink.CopySPSControllerSystemType(c.Request.Context(), projectID, systemTypeID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
@@ -140,7 +140,7 @@ func (h *ProjectHandler) UpdateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	updated, err := h.service.UpdateSPSController(c.Request.Context(), linkID, projectID, req.SPSControllerID)
+	updated, err := h.facilityLink.UpdateSPSController(c.Request.Context(), linkID, projectID, req.SPSControllerID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
@@ -180,7 +180,7 @@ func (h *ProjectHandler) DeleteProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteSPSController(c.Request.Context(), linkID, projectID); err != nil {
+	if err := h.facilityLink.DeleteSPSController(c.Request.Context(), linkID, projectID); err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "deletion_failed", "project.deletion_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.link_not_found")),

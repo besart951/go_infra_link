@@ -6,11 +6,20 @@ type Handlers struct {
 	FieldDeviceOptions *FieldDeviceOptionsHandler
 }
 
-func NewHandlers(projectService ProjectService, phaseService PhaseService, fieldDeviceOptionsService FieldDeviceOptionsService) *Handlers {
-	projectHandler := NewProjectHandler(projectService, nil)
+type ServiceDeps struct {
+	Lifecycle          ProjectLifecycleService
+	AccessPolicy       ProjectAccessPolicyService
+	Membership         ProjectMembershipService
+	FacilityLink       ProjectFacilityLinkService
+	Phase              PhaseService
+	FieldDeviceOptions FieldDeviceOptionsService
+}
+
+func NewHandlers(deps ServiceDeps) *Handlers {
+	projectHandler := NewProjectHandler(deps.Lifecycle, deps.AccessPolicy, deps.Membership, deps.FacilityLink, nil)
 	return &Handlers{
 		Project:            projectHandler,
-		Phase:              NewPhaseHandler(phaseService),
-		FieldDeviceOptions: NewFieldDeviceOptionsHandler(projectService, fieldDeviceOptionsService),
+		Phase:              NewPhaseHandler(deps.Phase),
+		FieldDeviceOptions: NewFieldDeviceOptionsHandler(deps.AccessPolicy, deps.FieldDeviceOptions),
 	}
 }

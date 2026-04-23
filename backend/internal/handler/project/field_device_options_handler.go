@@ -11,12 +11,12 @@ import (
 )
 
 type FieldDeviceOptionsHandler struct {
-	projectService ProjectService
+	accessService  ProjectAccessPolicyService
 	service        FieldDeviceOptionsService
 }
 
-func NewFieldDeviceOptionsHandler(projectService ProjectService, service FieldDeviceOptionsService) *FieldDeviceOptionsHandler {
-	return &FieldDeviceOptionsHandler{projectService: projectService, service: service}
+func NewFieldDeviceOptionsHandler(accessService ProjectAccessPolicyService, service FieldDeviceOptionsService) *FieldDeviceOptionsHandler {
+	return &FieldDeviceOptionsHandler{accessService: accessService, service: service}
 }
 
 // GetFieldDeviceOptionsForProject godoc
@@ -42,7 +42,7 @@ func (h *FieldDeviceOptionsHandler) GetFieldDeviceOptionsForProject(c *gin.Conte
 		return
 	}
 
-	hasAccess, err := h.projectService.CanAccessProject(c.Request.Context(), userID, projectID)
+	hasAccess, err := h.accessService.CanAccessProject(c.Request.Context(), userID, projectID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),

@@ -64,7 +64,7 @@ func (h *ProjectHandler) ListProjectObjectData(c *gin.Context) {
 		systemPartID = &id
 	}
 
-	result, err := h.service.ListObjectData(c.Request.Context(), projectID, query.Page, query.Limit, query.Search, apparatID, systemPartID)
+	result, err := h.facilityLink.ListObjectData(c.Request.Context(), projectID, query.Page, query.Limit, query.Search, apparatID, systemPartID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),
@@ -111,7 +111,7 @@ func (h *ProjectHandler) AddProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	obj, err := h.service.AddObjectData(c.Request.Context(), projectID, req.ObjectDataID)
+	obj, err := h.facilityLink.AddObjectData(c.Request.Context(), projectID, req.ObjectDataID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
@@ -152,7 +152,7 @@ func (h *ProjectHandler) RemoveProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	obj, err := h.service.RemoveObjectData(c.Request.Context(), projectID, objectDataID)
+	obj, err := h.facilityLink.RemoveObjectData(c.Request.Context(), projectID, objectDataID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
