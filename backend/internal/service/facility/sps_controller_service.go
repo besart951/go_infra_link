@@ -18,6 +18,7 @@ type SPSControllerService struct {
 	spsControllerSystemTyper domainFacility.SPSControllerSystemTypeStore
 	fieldDeviceRepo          domainFacility.FieldDeviceStore
 	hierarchyCopier          *HierarchyCopier
+	tx                       txCoordinator
 }
 
 func NewSPSControllerService(
@@ -38,44 +39,48 @@ func NewSPSControllerService(
 	}
 }
 
+func (s *SPSControllerService) bindTransactions(tx txCoordinator) {
+	s.tx = tx
+}
+
 func (s *SPSControllerService) Create(ctx context.Context, spsController *domainFacility.SPSController) error {
 	return s.CreateWithSystemTypes(ctx, spsController, nil)
 }
 
 func (s *SPSControllerService) CreateWithSystemTypes(ctx context.Context, spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
-	if err := s.ensureGADeviceAssigned(ctx, spsController, nil); err != nil {
-		return err
-	}
-	if err := s.Validate(ctx, spsController, nil); err != nil {
-		return err
-	}
-	systemTypeMap, err := s.loadSystemTypes(ctx, systemTypes)
-	if err != nil {
-		return err
-	}
-	if err := s.assignSystemTypeNumbers(systemTypes, systemTypeMap); err != nil {
-		return err
-	}
-
-	if err := s.repo.Create(ctx, spsController); err != nil {
-		return err
-	}
-	if len(systemTypes) == 0 {
-		return nil
-	}
-
-	for _, st := range systemTypes {
-		entity := &domainFacility.SPSControllerSystemType{
-			Number:          st.Number,
-			DocumentName:    st.DocumentName,
-			SPSControllerID: spsController.ID,
-			SystemTypeID:    st.SystemTypeID,
-		}
-		if err := s.spsControllerSystemTyper.Create(ctx, entity); err != nil {
+	return runWithFacilityTx(s.tx, s, func(services *Services) *SPSControllerService {
+		return services.SPSController
+	}, func(txService *SPSControllerService) error {
+		if err := txService.ensureGADeviceAssigned(ctx, spsController, nil); err != nil {
 			return err
 		}
-	}
-	return nil
+		if err := txService.Validate(ctx, spsController, nil); err != nil {
+			return err
+		}
+		systemTypeMap, err := txService.loadSystemTypes(ctx, systemTypes)
+		if err != nil {
+			return err
+		}
+		if err := txService.assignSystemTypeNumbers(systemTypes, systemTypeMap); err != nil {
+			return err
+		}
+
+		if err := txService.repo.Create(ctx, spsController); err != nil {
+			return err
+		}
+		for _, st := range systemTypes {
+			entity := &domainFacility.SPSControllerSystemType{
+				Number:          st.Number,
+				DocumentName:    st.DocumentName,
+				SPSControllerID: spsController.ID,
+				SystemTypeID:    st.SystemTypeID,
+			}
+			if err := txService.spsControllerSystemTyper.Create(ctx, entity); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (s *SPSControllerService) GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSController, error) {
@@ -120,114 +125,116 @@ func (s *SPSControllerService) Update(ctx context.Context, spsController *domain
 }
 
 func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
-	if err := s.Validate(ctx, spsController, &spsController.ID); err != nil {
-		return err
-	}
-	systemTypeMap, err := s.loadSystemTypes(ctx, systemTypes)
-	if err != nil {
-		return err
-	}
-	if err := s.assignSystemTypeNumbers(systemTypes, systemTypeMap); err != nil {
-		return err
-	}
-
-	if err := s.repo.Update(ctx, spsController); err != nil {
-		return err
-	}
-
-	existing, err := s.spsControllerSystemTyper.ListBySPSControllerID(ctx, spsController.ID)
-	if err != nil {
-		return err
-	}
-
-	existingByID := make(map[uuid.UUID]*domainFacility.SPSControllerSystemType, len(existing))
-	existingBySystemType := make(map[uuid.UUID]*domainFacility.SPSControllerSystemType, len(existing))
-	for _, item := range existing {
-		existingByID[item.ID] = item
-		if _, ok := existingBySystemType[item.SystemTypeID]; !ok {
-			existingBySystemType[item.SystemTypeID] = item
-		}
-	}
-
-	incomingIDs := make(map[uuid.UUID]struct{}, len(systemTypes))
-	incomingSystemTypeIDs := make(map[uuid.UUID]struct{}, len(systemTypes))
-	hasIncomingIDs := false
-	for _, st := range systemTypes {
-		if st.ID != uuid.Nil {
-			hasIncomingIDs = true
-			break
-		}
-	}
-
-	for _, st := range systemTypes {
-		if st.ID != uuid.Nil {
-			incomingIDs[st.ID] = struct{}{}
-		}
-		incomingSystemTypeIDs[st.SystemTypeID] = struct{}{}
-
-		if st.ID != uuid.Nil {
-			if existingItem, ok := existingByID[st.ID]; ok {
-				existingItem.SystemTypeID = st.SystemTypeID
-				existingItem.Number = st.Number
-				existingItem.DocumentName = st.DocumentName
-				if err := s.spsControllerSystemTyper.Update(ctx, existingItem); err != nil {
-					return err
-				}
-				continue
-			}
-		}
-
-		if !hasIncomingIDs {
-			if existingItem, ok := existingBySystemType[st.SystemTypeID]; ok {
-				existingItem.Number = st.Number
-				existingItem.DocumentName = st.DocumentName
-				if err := s.spsControllerSystemTyper.Update(ctx, existingItem); err != nil {
-					return err
-				}
-				continue
-			}
-		}
-
-		entity := &domainFacility.SPSControllerSystemType{
-			Number:          st.Number,
-			DocumentName:    st.DocumentName,
-			SPSControllerID: spsController.ID,
-			SystemTypeID:    st.SystemTypeID,
-		}
-		if err := s.spsControllerSystemTyper.Create(ctx, entity); err != nil {
+	return runWithFacilityTx(s.tx, s, func(services *Services) *SPSControllerService {
+		return services.SPSController
+	}, func(txService *SPSControllerService) error {
+		if err := txService.Validate(ctx, spsController, &spsController.ID); err != nil {
 			return err
 		}
-	}
+		systemTypeMap, err := txService.loadSystemTypes(ctx, systemTypes)
+		if err != nil {
+			return err
+		}
+		if err := txService.assignSystemTypeNumbers(systemTypes, systemTypeMap); err != nil {
+			return err
+		}
 
-	var deleteIDs []uuid.UUID
-	if hasIncomingIDs {
+		if err := txService.repo.Update(ctx, spsController); err != nil {
+			return err
+		}
+
+		existing, err := txService.spsControllerSystemTyper.ListBySPSControllerID(ctx, spsController.ID)
+		if err != nil {
+			return err
+		}
+
+		existingByID := make(map[uuid.UUID]*domainFacility.SPSControllerSystemType, len(existing))
+		existingBySystemType := make(map[uuid.UUID]*domainFacility.SPSControllerSystemType, len(existing))
 		for _, item := range existing {
-			if _, ok := incomingIDs[item.ID]; !ok {
-				deleteIDs = append(deleteIDs, item.ID)
+			existingByID[item.ID] = item
+			if _, ok := existingBySystemType[item.SystemTypeID]; !ok {
+				existingBySystemType[item.SystemTypeID] = item
 			}
 		}
-	} else {
-		for _, item := range existing {
-			if _, ok := incomingSystemTypeIDs[item.SystemTypeID]; !ok {
-				deleteIDs = append(deleteIDs, item.ID)
+
+		incomingIDs := make(map[uuid.UUID]struct{}, len(systemTypes))
+		incomingSystemTypeIDs := make(map[uuid.UUID]struct{}, len(systemTypes))
+		hasIncomingIDs := false
+		for _, st := range systemTypes {
+			if st.ID != uuid.Nil {
+				hasIncomingIDs = true
+				break
 			}
 		}
-	}
 
-	if len(deleteIDs) > 0 {
-		fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(ctx, deleteIDs)
+		for _, st := range systemTypes {
+			if st.ID != uuid.Nil {
+				incomingIDs[st.ID] = struct{}{}
+			}
+			incomingSystemTypeIDs[st.SystemTypeID] = struct{}{}
+
+			if st.ID != uuid.Nil {
+				if existingItem, ok := existingByID[st.ID]; ok {
+					existingItem.SystemTypeID = st.SystemTypeID
+					existingItem.Number = st.Number
+					existingItem.DocumentName = st.DocumentName
+					if err := txService.spsControllerSystemTyper.Update(ctx, existingItem); err != nil {
+						return err
+					}
+					continue
+				}
+			}
+
+			if !hasIncomingIDs {
+				if existingItem, ok := existingBySystemType[st.SystemTypeID]; ok {
+					existingItem.Number = st.Number
+					existingItem.DocumentName = st.DocumentName
+					if err := txService.spsControllerSystemTyper.Update(ctx, existingItem); err != nil {
+						return err
+					}
+					continue
+				}
+			}
+
+			entity := &domainFacility.SPSControllerSystemType{
+				Number:          st.Number,
+				DocumentName:    st.DocumentName,
+				SPSControllerID: spsController.ID,
+				SystemTypeID:    st.SystemTypeID,
+			}
+			if err := txService.spsControllerSystemTyper.Create(ctx, entity); err != nil {
+				return err
+			}
+		}
+
+		var deleteIDs []uuid.UUID
+		if hasIncomingIDs {
+			for _, item := range existing {
+				if _, ok := incomingIDs[item.ID]; !ok {
+					deleteIDs = append(deleteIDs, item.ID)
+				}
+			}
+		} else {
+			for _, item := range existing {
+				if _, ok := incomingSystemTypeIDs[item.SystemTypeID]; !ok {
+					deleteIDs = append(deleteIDs, item.ID)
+				}
+			}
+		}
+
+		if len(deleteIDs) == 0 {
+			return nil
+		}
+
+		fieldDeviceIDs, err := txService.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(ctx, deleteIDs)
 		if err != nil {
 			return err
 		}
 		if len(fieldDeviceIDs) > 0 {
 			return domain.NewValidationError().Add("spscontroller.system_types", "referenced_entity_in_use")
 		}
-		if err := s.spsControllerSystemTyper.DeleteByIds(ctx, deleteIDs); err != nil {
-			return err
-		}
-	}
-
-	return nil
+		return txService.spsControllerSystemTyper.DeleteByIds(ctx, deleteIDs)
+	})
 }
 
 func (s *SPSControllerService) DeleteByID(ctx context.Context, id uuid.UUID) error {

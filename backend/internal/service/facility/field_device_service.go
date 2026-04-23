@@ -22,6 +22,7 @@ type FieldDeviceService struct {
 	objectDataRepo              domainFacility.ObjectDataStore
 	alarmTypeRepo               domainFacility.AlarmTypeRepository
 	bacnetAlarmValueRepo        domainFacility.BacnetObjectAlarmValueRepository
+	tx                          txCoordinator
 }
 
 func NewFieldDeviceService(
@@ -50,36 +51,38 @@ func NewFieldDeviceService(
 	}
 }
 
+func (s *FieldDeviceService) bindTransactions(tx txCoordinator) {
+	s.tx = tx
+}
+
 func (s *FieldDeviceService) Create(ctx context.Context, fieldDevice *domainFacility.FieldDevice) error {
 	return s.CreateWithBacnetObjects(ctx, fieldDevice, nil, nil)
 }
 
 func (s *FieldDeviceService) CreateWithBacnetObjects(ctx context.Context, fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects []domainFacility.BacnetObject) error {
-	if objectDataID != nil && len(bacnetObjects) > 0 {
-		return domain.ErrInvalidArgument
-	}
-	if err := s.Validate(ctx, fieldDevice, nil); err != nil {
-		return err
-	}
-
-	if err := s.repo.Create(ctx, fieldDevice); err != nil {
-		return err
-	}
-
-	if objectDataID != nil {
-		if err := s.replaceBacnetObjectsFromObjectData(ctx, fieldDevice.ID, *objectDataID); err != nil {
-			_ = s.DeleteByID(ctx, fieldDevice.ID)
+	return runWithFacilityTx(s.tx, s, func(services *Services) *FieldDeviceService {
+		return services.FieldDevice
+	}, func(txService *FieldDeviceService) error {
+		if objectDataID != nil && len(bacnetObjects) > 0 {
+			return domain.ErrInvalidArgument
+		}
+		if err := txService.Validate(ctx, fieldDevice, nil); err != nil {
 			return err
 		}
+
+		if err := txService.repo.Create(ctx, fieldDevice); err != nil {
+			return err
+		}
+
+		if objectDataID != nil {
+			return txService.replaceBacnetObjectsFromObjectData(ctx, fieldDevice.ID, *objectDataID)
+		}
+		if len(bacnetObjects) > 0 {
+			return txService.replaceBacnetObjects(ctx, fieldDevice.ID, bacnetObjects)
+		}
+
 		return nil
-	}
-	if len(bacnetObjects) > 0 {
-		if err := s.replaceBacnetObjects(ctx, fieldDevice.ID, bacnetObjects); err != nil {
-			_ = s.DeleteByID(ctx, fieldDevice.ID)
-			return err
-		}
-	}
-	return nil
+	})
 }
 
 func (s *FieldDeviceService) GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.FieldDevice, error) {
@@ -109,25 +112,29 @@ func (s *FieldDeviceService) Update(ctx context.Context, fieldDevice *domainFaci
 }
 
 func (s *FieldDeviceService) UpdateWithBacnetObjects(ctx context.Context, fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects *[]domainFacility.BacnetObject) error {
-	if objectDataID != nil && bacnetObjects != nil {
-		return domain.ErrInvalidArgument
-	}
-	if err := s.Validate(ctx, fieldDevice, &fieldDevice.ID); err != nil {
-		return err
-	}
+	return runWithFacilityTx(s.tx, s, func(services *Services) *FieldDeviceService {
+		return services.FieldDevice
+	}, func(txService *FieldDeviceService) error {
+		if objectDataID != nil && bacnetObjects != nil {
+			return domain.ErrInvalidArgument
+		}
+		if err := txService.Validate(ctx, fieldDevice, &fieldDevice.ID); err != nil {
+			return err
+		}
 
-	if err := s.repo.Update(ctx, fieldDevice); err != nil {
-		return err
-	}
+		if err := txService.repo.Update(ctx, fieldDevice); err != nil {
+			return err
+		}
 
-	if objectDataID != nil {
-		return s.replaceBacnetObjectsFromObjectData(ctx, fieldDevice.ID, *objectDataID)
-	}
-	if bacnetObjects != nil {
-		return s.replaceBacnetObjects(ctx, fieldDevice.ID, *bacnetObjects)
-	}
+		if objectDataID != nil {
+			return txService.replaceBacnetObjectsFromObjectData(ctx, fieldDevice.ID, *objectDataID)
+		}
+		if bacnetObjects != nil {
+			return txService.replaceBacnetObjects(ctx, fieldDevice.ID, *bacnetObjects)
+		}
 
-	return nil
+		return nil
+	})
 }
 
 func (s *FieldDeviceService) Validate(ctx context.Context, fieldDevice *domainFacility.FieldDevice, excludeID *uuid.UUID) error {
@@ -151,40 +158,41 @@ func (s *FieldDeviceService) DeleteByIDs(ctx context.Context, ids []uuid.UUID) e
 	return s.repo.DeleteByIds(ctx, ids)
 }
 func (s *FieldDeviceService) CreateSpecification(ctx context.Context, fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error {
-	// Ensure field device exists (and not deleted)
-	fieldDevice, err := domain.GetByID(ctx, s.repo, fieldDeviceID)
-	if err != nil {
-		return err
-	}
+	return runWithFacilityTx(s.tx, s, func(services *Services) *FieldDeviceService {
+		return services.FieldDevice
+	}, func(txService *FieldDeviceService) error {
+		fieldDevice, err := domain.GetByID(ctx, txService.repo, fieldDeviceID)
+		if err != nil {
+			return err
+		}
 
-	// Ensure 1:1 uniqueness
-	existing, err := s.specificationRepo.GetByFieldDeviceIDs(ctx, []uuid.UUID{fieldDeviceID})
-	if err != nil {
-		return err
-	}
-	if len(existing) > 0 {
-		return domain.ErrConflict
-	}
+		existing, err := txService.specificationRepo.GetByFieldDeviceIDs(ctx, []uuid.UUID{fieldDeviceID})
+		if err != nil {
+			return err
+		}
+		if len(existing) > 0 {
+			return domain.ErrConflict
+		}
 
-	specification.SpecificationSupplier = normalizeOptionalString(specification.SpecificationSupplier)
-	specification.SpecificationBrand = normalizeOptionalString(specification.SpecificationBrand)
-	specification.SpecificationType = normalizeOptionalString(specification.SpecificationType)
-	specification.AdditionalInfoMotorValve = normalizeOptionalString(specification.AdditionalInfoMotorValve)
-	specification.AdditionalInformationInstallationLocation = normalizeOptionalString(specification.AdditionalInformationInstallationLocation)
-	specification.ElectricalConnectionACDC = normalizeOptionalString(specification.ElectricalConnectionACDC)
-	if err := s.validateSpecification(specification); err != nil {
-		return err
-	}
+		specification.SpecificationSupplier = normalizeOptionalString(specification.SpecificationSupplier)
+		specification.SpecificationBrand = normalizeOptionalString(specification.SpecificationBrand)
+		specification.SpecificationType = normalizeOptionalString(specification.SpecificationType)
+		specification.AdditionalInfoMotorValve = normalizeOptionalString(specification.AdditionalInfoMotorValve)
+		specification.AdditionalInformationInstallationLocation = normalizeOptionalString(specification.AdditionalInformationInstallationLocation)
+		specification.ElectricalConnectionACDC = normalizeOptionalString(specification.ElectricalConnectionACDC)
+		if err := txService.validateSpecification(specification); err != nil {
+			return err
+		}
 
-	id := fieldDeviceID
-	specification.FieldDeviceID = &id
-	if err := s.specificationRepo.Create(ctx, specification); err != nil {
-		return err
-	}
+		id := fieldDeviceID
+		specification.FieldDeviceID = &id
+		if err := txService.specificationRepo.Create(ctx, specification); err != nil {
+			return err
+		}
 
-	// Update the bidirectional relationship: set field_device.specification_id
-	fieldDevice.SpecificationID = &specification.ID
-	return s.repo.Update(ctx, fieldDevice)
+		fieldDevice.SpecificationID = &specification.ID
+		return txService.repo.Update(ctx, fieldDevice)
+	})
 }
 
 func (s *FieldDeviceService) UpdateSpecification(ctx context.Context, fieldDeviceID uuid.UUID, patch *domainFacility.Specification) (*domainFacility.Specification, error) {

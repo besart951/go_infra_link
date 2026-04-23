@@ -105,7 +105,13 @@ type Services struct {
 }
 
 // NewServices creates facility services using a factory-style constructor.
-func NewServices(repos Repositories) *Services {
+func NewServices(repos Repositories, cfgs ...Config) *Services {
+	var cfg Config
+	if len(cfgs) > 0 {
+		cfg = cfgs[0]
+	}
+	tx := newTxCoordinator(cfg)
+
 	hierarchyCopier := NewHierarchyCopier(
 		repos.ControlCabinets,
 		repos.Buildings,
@@ -116,6 +122,7 @@ func NewServices(repos Repositories) *Services {
 		repos.Specifications,
 		repos.BacnetObjects,
 	)
+	hierarchyCopier.bindTransactions(tx)
 
 	fieldDeviceService := NewFieldDeviceService(
 		repos.FieldDevices,
@@ -129,6 +136,25 @@ func NewServices(repos Repositories) *Services {
 		repos.AlarmTypes,
 		repos.BacnetObjectAlarmValues,
 	)
+	fieldDeviceService.bindTransactions(tx)
+	bacnetObjectService := NewBacnetObjectService(
+		repos.BacnetObjects,
+		repos.FieldDevices,
+		repos.ObjectData,
+		repos.ObjectDataBacnetObjects,
+		repos.AlarmDefinitions,
+		repos.AlarmTypes,
+	)
+	bacnetObjectService.bindTransactions(tx)
+	spsControllerService := NewSPSControllerService(
+		repos.SPSControllers,
+		repos.ControlCabinets,
+		repos.SystemTypes,
+		repos.SPSControllerSystemTypes,
+		repos.FieldDevices,
+		hierarchyCopier,
+	)
+	spsControllerService.bindTransactions(tx)
 
 	return &Services{
 		HierarchyCopier: hierarchyCopier,
@@ -146,23 +172,9 @@ func NewServices(repos Repositories) *Services {
 			repos.Specifications,
 			hierarchyCopier,
 		),
-		FieldDevice: fieldDeviceService,
-		BacnetObject: NewBacnetObjectService(
-			repos.BacnetObjects,
-			repos.FieldDevices,
-			repos.ObjectData,
-			repos.ObjectDataBacnetObjects,
-			repos.AlarmDefinitions,
-			repos.AlarmTypes,
-		),
-		SPSController: NewSPSControllerService(
-			repos.SPSControllers,
-			repos.ControlCabinets,
-			repos.SystemTypes,
-			repos.SPSControllerSystemTypes,
-			repos.FieldDevices,
-			hierarchyCopier,
-		),
+		FieldDevice:       fieldDeviceService,
+		BacnetObject:      bacnetObjectService,
+		SPSController:     spsControllerService,
 		StateText:         NewStateTextService(repos.StateTexts),
 		NotificationClass: NewNotificationClassService(repos.NotificationClasses),
 		AlarmDefinition:   NewAlarmDefinitionService(repos.AlarmDefinitions),

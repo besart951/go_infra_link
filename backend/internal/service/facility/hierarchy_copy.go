@@ -20,6 +20,7 @@ type HierarchyCopier struct {
 	fieldDeviceRepo         domainFacility.FieldDeviceStore
 	specificationRepo       domainFacility.SpecificationStore
 	bacnetObjectRepo        domainFacility.BacnetObjectStore
+	tx                      txCoordinator
 }
 
 func NewHierarchyCopier(
@@ -44,142 +45,155 @@ func NewHierarchyCopier(
 	}
 }
 
+func (c *HierarchyCopier) bindTransactions(tx txCoordinator) {
+	c.tx = tx
+}
+
 func (c *HierarchyCopier) CopyControlCabinetByID(ctx context.Context, id uuid.UUID) (*domainFacility.ControlCabinet, error) {
-	original, err := domain.GetByID(ctx, c.controlCabinetRepo, id)
-	if err != nil {
-		return nil, err
-	}
+	return runWithFacilityTxResult(c.tx, c, func(services *Services) *HierarchyCopier {
+		return services.HierarchyCopier
+	}, func(copier *HierarchyCopier) (*domainFacility.ControlCabinet, error) {
+		original, err := domain.GetByID(ctx, copier.controlCabinetRepo, id)
+		if err != nil {
+			return nil, err
+		}
 
-	baseNr := ""
-	if original.ControlCabinetNr != nil {
-		baseNr = strings.TrimSpace(*original.ControlCabinetNr)
-	}
+		baseNr := ""
+		if original.ControlCabinetNr != nil {
+			baseNr = strings.TrimSpace(*original.ControlCabinetNr)
+		}
 
-	nextNr, err := c.nextAvailableControlCabinetNr(ctx, original.BuildingID, baseNr)
-	if err != nil {
-		return nil, err
-	}
+		nextNr, err := copier.nextAvailableControlCabinetNr(ctx, original.BuildingID, baseNr)
+		if err != nil {
+			return nil, err
+		}
 
-	copyEntity := &domainFacility.ControlCabinet{
-		BuildingID:       original.BuildingID,
-		ControlCabinetNr: &nextNr,
-	}
-	if err := c.controlCabinetRepo.Create(ctx, copyEntity); err != nil {
-		return nil, err
-	}
+		copyEntity := &domainFacility.ControlCabinet{
+			BuildingID:       original.BuildingID,
+			ControlCabinetNr: &nextNr,
+		}
+		if err := copier.controlCabinetRepo.Create(ctx, copyEntity); err != nil {
+			return nil, err
+		}
 
-	if err := c.copySPSControllersForControlCabinet(ctx, original.ID, copyEntity.ID); err != nil {
-		_ = c.rollbackCopiedControlCabinet(ctx, copyEntity.ID)
-		return nil, err
-	}
+		if err := copier.copySPSControllersForControlCabinet(ctx, original.ID, copyEntity.ID); err != nil {
+			return nil, err
+		}
 
-	return copyEntity, nil
+		return copyEntity, nil
+	})
 }
 
 func (c *HierarchyCopier) CopySPSControllerByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSController, error) {
-	original, err := domain.GetByID(ctx, c.spsControllerRepo, id)
-	if err != nil {
-		return nil, err
-	}
+	return runWithFacilityTxResult(c.tx, c, func(services *Services) *HierarchyCopier {
+		return services.HierarchyCopier
+	}, func(copier *HierarchyCopier) (*domainFacility.SPSController, error) {
+		original, err := domain.GetByID(ctx, copier.spsControllerRepo, id)
+		if err != nil {
+			return nil, err
+		}
 
-	controlCabinet, err := domain.GetByID(ctx, c.controlCabinetRepo, original.ControlCabinetID)
-	if err != nil {
-		return nil, err
-	}
+		controlCabinet, err := domain.GetByID(ctx, copier.controlCabinetRepo, original.ControlCabinetID)
+		if err != nil {
+			return nil, err
+		}
 
-	building, err := domain.GetByID(ctx, c.buildingRepo, controlCabinet.BuildingID)
-	if err != nil {
-		return nil, err
-	}
+		building, err := domain.GetByID(ctx, copier.buildingRepo, controlCabinet.BuildingID)
+		if err != nil {
+			return nil, err
+		}
 
-	nextGADevice, err := c.nextAvailableGADevice(ctx, original.ControlCabinetID)
-	if err != nil {
-		return nil, err
-	}
-	if nextGADevice == "" {
-		return nil, domain.NewValidationError().Add("spscontroller.ga_device", "no available ga_device for control cabinet")
-	}
+		nextGADevice, err := copier.nextAvailableGADevice(ctx, original.ControlCabinetID)
+		if err != nil {
+			return nil, err
+		}
+		if nextGADevice == "" {
+			return nil, domain.NewValidationError().Add("spscontroller.ga_device", "no available ga_device for control cabinet")
+		}
 
-	iwsCode := strings.TrimSpace(building.IWSCode)
-	cabinetNr := ""
-	if controlCabinet.ControlCabinetNr != nil {
-		cabinetNr = strings.TrimSpace(*controlCabinet.ControlCabinetNr)
-	}
+		iwsCode := strings.TrimSpace(building.IWSCode)
+		cabinetNr := ""
+		if controlCabinet.ControlCabinetNr != nil {
+			cabinetNr = strings.TrimSpace(*controlCabinet.ControlCabinetNr)
+		}
 
-	deviceName := nextGADevice
-	if iwsCode != "" && cabinetNr != "" {
-		deviceName = strings.ToUpper(iwsCode + "_" + cabinetNr + "_" + nextGADevice)
-	}
+		deviceName := nextGADevice
+		if iwsCode != "" && cabinetNr != "" {
+			deviceName = strings.ToUpper(iwsCode + "_" + cabinetNr + "_" + nextGADevice)
+		}
 
-	copyEntity := &domainFacility.SPSController{
-		ControlCabinetID:  original.ControlCabinetID,
-		GADevice:          &nextGADevice,
-		DeviceName:        deviceName,
-		DeviceDescription: original.DeviceDescription,
-		DeviceLocation:    original.DeviceLocation,
-		IPAddress:         nil,
-		Subnet:            original.Subnet,
-		Gateway:           original.Gateway,
-		Vlan:              original.Vlan,
-	}
-	if err := c.spsControllerRepo.Create(ctx, copyEntity); err != nil {
-		return nil, err
-	}
+		copyEntity := &domainFacility.SPSController{
+			ControlCabinetID:  original.ControlCabinetID,
+			GADevice:          &nextGADevice,
+			DeviceName:        deviceName,
+			DeviceDescription: original.DeviceDescription,
+			DeviceLocation:    original.DeviceLocation,
+			IPAddress:         nil,
+			Subnet:            original.Subnet,
+			Gateway:           original.Gateway,
+			Vlan:              original.Vlan,
+		}
+		if err := copier.spsControllerRepo.Create(ctx, copyEntity); err != nil {
+			return nil, err
+		}
 
-	if err := c.copySystemTypesAndFieldDevicesForSPSController(ctx, original.ID, copyEntity.ID); err != nil {
-		_ = c.rollbackCopiedSPSController(ctx, copyEntity.ID)
-		return nil, err
-	}
+		if err := copier.copySystemTypesAndFieldDevicesForSPSController(ctx, original.ID, copyEntity.ID); err != nil {
+			return nil, err
+		}
 
-	return copyEntity, nil
+		return copyEntity, nil
+	})
 }
 
 func (c *HierarchyCopier) CopySPSControllerSystemTypeByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSControllerSystemType, error) {
-	original, err := domain.GetByID(ctx, c.spsControllerSystemRepo, id)
-	if err != nil {
-		return nil, err
-	}
-
-	systemType, err := domain.GetByID(ctx, c.systemTypeRepo, original.SystemTypeID)
-	if err != nil {
-		return nil, err
-	}
-
-	existing, err := c.spsControllerSystemRepo.ListBySPSControllerID(ctx, original.SPSControllerID)
-	if err != nil {
-		return nil, err
-	}
-
-	usedNumbers := make(map[int]struct{}, len(existing))
-	for _, item := range existing {
-		if item.SystemTypeID != original.SystemTypeID || item.Number == nil {
-			continue
+	return runWithFacilityTxResult(c.tx, c, func(services *Services) *HierarchyCopier {
+		return services.HierarchyCopier
+	}, func(copier *HierarchyCopier) (*domainFacility.SPSControllerSystemType, error) {
+		original, err := domain.GetByID(ctx, copier.spsControllerSystemRepo, id)
+		if err != nil {
+			return nil, err
 		}
-		usedNumbers[*item.Number] = struct{}{}
-	}
 
-	nextNumber, ok := findLowestAvailableNumber(systemType.NumberMin, systemType.NumberMax, usedNumbers)
-	if !ok {
-		return nil, domain.NewValidationError().Add("spscontroller.system_types", "no available number in the system type range")
-	}
+		systemType, err := domain.GetByID(ctx, copier.systemTypeRepo, original.SystemTypeID)
+		if err != nil {
+			return nil, err
+		}
 
-	copyNumber := nextNumber
-	copyEntity := &domainFacility.SPSControllerSystemType{
-		Number:          &copyNumber,
-		DocumentName:    original.DocumentName,
-		SPSControllerID: original.SPSControllerID,
-		SystemTypeID:    original.SystemTypeID,
-	}
-	if err := c.spsControllerSystemRepo.Create(ctx, copyEntity); err != nil {
-		return nil, err
-	}
+		existing, err := copier.spsControllerSystemRepo.ListBySPSControllerID(ctx, original.SPSControllerID)
+		if err != nil {
+			return nil, err
+		}
 
-	if err := c.copyFieldDevicesForSystemTypes(ctx, map[uuid.UUID]uuid.UUID{original.ID: copyEntity.ID}); err != nil {
-		_ = c.rollbackCopiedSPSControllerSystemType(ctx, copyEntity.ID)
-		return nil, err
-	}
+		usedNumbers := make(map[int]struct{}, len(existing))
+		for _, item := range existing {
+			if item.SystemTypeID != original.SystemTypeID || item.Number == nil {
+				continue
+			}
+			usedNumbers[*item.Number] = struct{}{}
+		}
 
-	return domain.GetByID(ctx, c.spsControllerSystemRepo, copyEntity.ID)
+		nextNumber, ok := findLowestAvailableNumber(systemType.NumberMin, systemType.NumberMax, usedNumbers)
+		if !ok {
+			return nil, domain.NewValidationError().Add("spscontroller.system_types", "no available number in the system type range")
+		}
+
+		copyNumber := nextNumber
+		copyEntity := &domainFacility.SPSControllerSystemType{
+			Number:          &copyNumber,
+			DocumentName:    original.DocumentName,
+			SPSControllerID: original.SPSControllerID,
+			SystemTypeID:    original.SystemTypeID,
+		}
+		if err := copier.spsControllerSystemRepo.Create(ctx, copyEntity); err != nil {
+			return nil, err
+		}
+
+		if err := copier.copyFieldDevicesForSystemTypes(ctx, map[uuid.UUID]uuid.UUID{original.ID: copyEntity.ID}); err != nil {
+			return nil, err
+		}
+
+		return domain.GetByID(ctx, copier.spsControllerSystemRepo, copyEntity.ID)
+	})
 }
 
 func (c *HierarchyCopier) copySPSControllersForControlCabinet(ctx context.Context, originalControlCabinetID, newControlCabinetID uuid.UUID) error {
@@ -380,72 +394,6 @@ func (c *HierarchyCopier) nextAvailableGADevice(ctx context.Context, controlCabi
 		return next, nil
 	}
 	return "", domain.ErrConflict
-}
-
-func (c *HierarchyCopier) rollbackCopiedControlCabinet(ctx context.Context, controlCabinetID uuid.UUID) error {
-	spsControllerIDs, err := c.spsControllerRepo.GetIDsByControlCabinetID(ctx, controlCabinetID)
-	if err != nil {
-		return err
-	}
-	if err := c.rollbackCopiedSPSControllers(ctx, spsControllerIDs); err != nil {
-		return err
-	}
-	if len(spsControllerIDs) > 0 {
-		if err := c.spsControllerRepo.DeleteByIds(ctx, spsControllerIDs); err != nil {
-			return err
-		}
-	}
-	return c.controlCabinetRepo.DeleteByIds(ctx, []uuid.UUID{controlCabinetID})
-}
-
-func (c *HierarchyCopier) rollbackCopiedSPSController(ctx context.Context, spsControllerID uuid.UUID) error {
-	if err := c.rollbackCopiedSPSControllers(ctx, []uuid.UUID{spsControllerID}); err != nil {
-		return err
-	}
-	return c.spsControllerRepo.DeleteByIds(ctx, []uuid.UUID{spsControllerID})
-}
-
-func (c *HierarchyCopier) rollbackCopiedSPSControllerSystemType(ctx context.Context, systemTypeID uuid.UUID) error {
-	fieldDeviceIDs, err := c.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(ctx, []uuid.UUID{systemTypeID})
-	if err != nil {
-		return err
-	}
-	if err := c.deleteFieldDevicesWithChildren(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	return c.spsControllerSystemRepo.DeleteByIds(ctx, []uuid.UUID{systemTypeID})
-}
-
-func (c *HierarchyCopier) rollbackCopiedSPSControllers(ctx context.Context, spsControllerIDs []uuid.UUID) error {
-	if len(spsControllerIDs) == 0 {
-		return nil
-	}
-
-	systemTypeIDs, err := c.spsControllerSystemRepo.GetIDsBySPSControllerIDs(ctx, spsControllerIDs)
-	if err != nil {
-		return err
-	}
-	fieldDeviceIDs, err := c.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(ctx, systemTypeIDs)
-	if err != nil {
-		return err
-	}
-	if err := c.deleteFieldDevicesWithChildren(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	return c.spsControllerSystemRepo.DeleteBySPSControllerIDs(ctx, spsControllerIDs)
-}
-
-func (c *HierarchyCopier) deleteFieldDevicesWithChildren(ctx context.Context, fieldDeviceIDs []uuid.UUID) error {
-	if len(fieldDeviceIDs) == 0 {
-		return nil
-	}
-	if err := c.bacnetObjectRepo.DeleteByFieldDeviceIDs(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	if err := c.specificationRepo.DeleteByFieldDeviceIDs(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	return c.fieldDeviceRepo.DeleteByIds(ctx, fieldDeviceIDs)
 }
 
 func loadSystemTypeDefinitions(

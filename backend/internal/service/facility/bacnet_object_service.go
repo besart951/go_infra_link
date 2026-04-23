@@ -17,6 +17,7 @@ type BacnetObjectService struct {
 	objectDataBacnetStore domainFacility.ObjectDataBacnetObjectStore
 	alarmDefinitionRepo   domainFacility.AlarmDefinitionRepository
 	alarmTypeRepo         domainFacility.AlarmTypeRepository
+	tx                    txCoordinator
 }
 
 func (s *BacnetObjectService) resolveAlarmBindingForTemplate(ctx context.Context, bacnetObject *domainFacility.BacnetObject) error {
@@ -125,6 +126,10 @@ func NewBacnetObjectService(
 	}
 }
 
+func (s *BacnetObjectService) bindTransactions(tx txCoordinator) {
+	s.tx = tx
+}
+
 func (s *BacnetObjectService) GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.BacnetObject, error) {
 	return domain.GetByID(ctx, s.repo, id)
 }
@@ -136,157 +141,165 @@ func (s *BacnetObjectService) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]
 // CreateWithParent creates a bacnet object either for a field device (fieldDeviceID)
 // or for an object data template (objectDataID). Exactly one must be provided.
 func (s *BacnetObjectService) CreateWithParent(ctx context.Context, bacnetObject *domainFacility.BacnetObject, fieldDeviceID *uuid.UUID, objectDataID *uuid.UUID) error {
-	if (fieldDeviceID == nil && objectDataID == nil) || (fieldDeviceID != nil && objectDataID != nil) {
-		return domain.ErrInvalidArgument
-	}
-
-	bacnetObject.TextFix = normalizeBacnetTextFix(bacnetObject.TextFix)
-
-	if fieldDeviceID != nil {
-		if err := s.validateRequiredFields(bacnetObject, "fielddevice.bacnetobject"); err != nil {
-			return err
+	return runWithFacilityTx(s.tx, s, func(services *Services) *BacnetObjectService {
+		return services.BacnetObject
+	}, func(txService *BacnetObjectService) error {
+		if (fieldDeviceID == nil && objectDataID == nil) || (fieldDeviceID != nil && objectDataID != nil) {
+			return domain.ErrInvalidArgument
 		}
-	}
-	if objectDataID != nil {
-		if err := s.validateRequiredFields(bacnetObject, "objectdata.bacnetobject"); err != nil {
-			return err
+
+		bacnetObject.TextFix = normalizeBacnetTextFix(bacnetObject.TextFix)
+
+		if fieldDeviceID != nil {
+			if err := txService.validateRequiredFields(bacnetObject, "fielddevice.bacnetobject"); err != nil {
+				return err
+			}
 		}
-	}
-
-	if fieldDeviceID != nil {
-		if _, err := domain.GetByID(ctx, s.fieldDeviceRepo, *fieldDeviceID); err != nil {
-			return err
+		if objectDataID != nil {
+			if err := txService.validateRequiredFields(bacnetObject, "objectdata.bacnetobject"); err != nil {
+				return err
+			}
 		}
-		if err := s.ensureTextFixUniqueForFieldDevice(ctx, *fieldDeviceID, bacnetObject.TextFix, nil); err != nil {
-			return err
+
+		if fieldDeviceID != nil {
+			if _, err := domain.GetByID(ctx, txService.fieldDeviceRepo, *fieldDeviceID); err != nil {
+				return err
+			}
+			if err := txService.ensureTextFixUniqueForFieldDevice(ctx, *fieldDeviceID, bacnetObject.TextFix, nil); err != nil {
+				return err
+			}
+			if err := txService.resolveAlarmBindingForTemplate(ctx, bacnetObject); err != nil {
+				return err
+			}
+			bacnetObject.FieldDeviceID = fieldDeviceID
+			return txService.repo.Create(ctx, bacnetObject)
 		}
-		if err := s.resolveAlarmBindingForTemplate(ctx, bacnetObject); err != nil {
-			return err
-		}
-		bacnetObject.FieldDeviceID = fieldDeviceID
-		return s.repo.Create(ctx, bacnetObject)
-	}
 
-	od, err := domain.GetByID(ctx, s.objectDataRepo, *objectDataID)
-	if err != nil {
-		return err
-	}
-	if !od.IsActive {
-		return domain.ErrNotFound
-	}
-
-	if err := s.ensureSoftwareUniqueForObjectData(ctx, *objectDataID, bacnetObject.SoftwareType, bacnetObject.SoftwareNumber, nil); err != nil {
-		return err
-	}
-	if err := s.resolveAlarmBindingForTemplate(ctx, bacnetObject); err != nil {
-		return err
-	}
-
-	bacnetObject.FieldDeviceID = nil
-	if err := s.repo.Create(ctx, bacnetObject); err != nil {
-		return err
-	}
-	return s.objectDataBacnetStore.Add(ctx, *objectDataID, bacnetObject.ID)
-}
-
-// Update updates a bacnet object. If objectDataID is provided, it will also attach
-// the bacnet object to that object data (template) after validating the object data.
-func (s *BacnetObjectService) Update(ctx context.Context, bacnetObject *domainFacility.BacnetObject, objectDataID *uuid.UUID) error {
-	bacnetObject.TextFix = normalizeBacnetTextFix(bacnetObject.TextFix)
-
-	if bacnetObject.FieldDeviceID != nil {
-		if err := s.validateRequiredFields(bacnetObject, "fielddevice.bacnetobject"); err != nil {
-			return err
-		}
-	} else if objectDataID != nil {
-		if err := s.validateRequiredFields(bacnetObject, "objectdata.bacnetobject"); err != nil {
-			return err
-		}
-	}
-
-	if _, err := domain.GetByID(ctx, s.repo, bacnetObject.ID); err != nil {
-		return err
-	}
-	if bacnetObject.FieldDeviceID != nil {
-		if err := s.ensureTextFixUniqueForFieldDevice(ctx, *bacnetObject.FieldDeviceID, bacnetObject.TextFix, &bacnetObject.ID); err != nil {
-			return err
-		}
-	}
-
-	if objectDataID != nil {
-		if err := s.ensureSoftwareUniqueForObjectData(ctx, *objectDataID, bacnetObject.SoftwareType, bacnetObject.SoftwareNumber, &bacnetObject.ID); err != nil {
-			return err
-		}
-	}
-
-	if err := s.resolveAlarmBindingForTemplate(ctx, bacnetObject); err != nil {
-		return err
-	}
-
-	if err := s.repo.Update(ctx, bacnetObject); err != nil {
-		return err
-	}
-
-	if objectDataID != nil {
-		od, err := domain.GetByID(ctx, s.objectDataRepo, *objectDataID)
+		od, err := domain.GetByID(ctx, txService.objectDataRepo, *objectDataID)
 		if err != nil {
 			return err
 		}
 		if !od.IsActive {
 			return domain.ErrNotFound
 		}
-		return s.objectDataBacnetStore.Add(ctx, *objectDataID, bacnetObject.ID)
-	}
 
-	return nil
+		if err := txService.ensureSoftwareUniqueForObjectData(ctx, *objectDataID, bacnetObject.SoftwareType, bacnetObject.SoftwareNumber, nil); err != nil {
+			return err
+		}
+		if err := txService.resolveAlarmBindingForTemplate(ctx, bacnetObject); err != nil {
+			return err
+		}
+
+		bacnetObject.FieldDeviceID = nil
+		if err := txService.repo.Create(ctx, bacnetObject); err != nil {
+			return err
+		}
+		return txService.objectDataBacnetStore.Add(ctx, *objectDataID, bacnetObject.ID)
+	})
+}
+
+// Update updates a bacnet object. If objectDataID is provided, it will also attach
+// the bacnet object to that object data (template) after validating the object data.
+func (s *BacnetObjectService) Update(ctx context.Context, bacnetObject *domainFacility.BacnetObject, objectDataID *uuid.UUID) error {
+	return runWithFacilityTx(s.tx, s, func(services *Services) *BacnetObjectService {
+		return services.BacnetObject
+	}, func(txService *BacnetObjectService) error {
+		bacnetObject.TextFix = normalizeBacnetTextFix(bacnetObject.TextFix)
+
+		if bacnetObject.FieldDeviceID != nil {
+			if err := txService.validateRequiredFields(bacnetObject, "fielddevice.bacnetobject"); err != nil {
+				return err
+			}
+		} else if objectDataID != nil {
+			if err := txService.validateRequiredFields(bacnetObject, "objectdata.bacnetobject"); err != nil {
+				return err
+			}
+		}
+
+		if _, err := domain.GetByID(ctx, txService.repo, bacnetObject.ID); err != nil {
+			return err
+		}
+		if bacnetObject.FieldDeviceID != nil {
+			if err := txService.ensureTextFixUniqueForFieldDevice(ctx, *bacnetObject.FieldDeviceID, bacnetObject.TextFix, &bacnetObject.ID); err != nil {
+				return err
+			}
+		}
+
+		if objectDataID != nil {
+			if err := txService.ensureSoftwareUniqueForObjectData(ctx, *objectDataID, bacnetObject.SoftwareType, bacnetObject.SoftwareNumber, &bacnetObject.ID); err != nil {
+				return err
+			}
+		}
+
+		if err := txService.resolveAlarmBindingForTemplate(ctx, bacnetObject); err != nil {
+			return err
+		}
+
+		if err := txService.repo.Update(ctx, bacnetObject); err != nil {
+			return err
+		}
+
+		if objectDataID != nil {
+			od, err := domain.GetByID(ctx, txService.objectDataRepo, *objectDataID)
+			if err != nil {
+				return err
+			}
+			if !od.IsActive {
+				return domain.ErrNotFound
+			}
+			return txService.objectDataBacnetStore.Add(ctx, *objectDataID, bacnetObject.ID)
+		}
+
+		return nil
+	})
 }
 
 // ReplaceForObjectData replaces all bacnet objects for an object data template.
 // Existing links are removed and the provided list is created and attached.
 func (s *BacnetObjectService) ReplaceForObjectData(ctx context.Context, objectDataID uuid.UUID, inputs []domainFacility.BacnetObject) error {
-	od, err := domain.GetByID(ctx, s.objectDataRepo, objectDataID)
-	if err != nil {
-		return err
-	}
-	if !od.IsActive {
-		return domain.ErrNotFound
-	}
-
-	seen := map[string]struct{}{}
-	for i := range inputs {
-		bo := &inputs[i]
-		bo.TextFix = normalizeBacnetTextFix(bo.TextFix)
-		if err := s.validateRequiredFields(bo, "objectdata.bacnetobject"); err != nil {
+	return runWithFacilityTx(s.tx, s, func(services *Services) *BacnetObjectService {
+		return services.BacnetObject
+	}, func(txService *BacnetObjectService) error {
+		od, err := domain.GetByID(ctx, txService.objectDataRepo, objectDataID)
+		if err != nil {
 			return err
 		}
-		if err := s.resolveAlarmBindingForTemplate(ctx, bo); err != nil {
+		if !od.IsActive {
+			return domain.ErrNotFound
+		}
+
+		seen := map[string]struct{}{}
+		for i := range inputs {
+			bo := &inputs[i]
+			bo.TextFix = normalizeBacnetTextFix(bo.TextFix)
+			if err := txService.validateRequiredFields(bo, "objectdata.bacnetobject"); err != nil {
+				return err
+			}
+			if err := txService.resolveAlarmBindingForTemplate(ctx, bo); err != nil {
+				return err
+			}
+			softwareKey := strings.ToLower(strings.TrimSpace(string(bo.SoftwareType))) + ":" + strconv.FormatUint(uint64(bo.SoftwareNumber), 10)
+			if _, exists := seen[softwareKey]; exists {
+				return domain.NewValidationError().Add("objectdata.bacnetobject.software", "software_type + software_number must be unique within the object data")
+			}
+			seen[softwareKey] = struct{}{}
+		}
+
+		if err := txService.objectDataBacnetStore.DeleteByObjectDataID(ctx, objectDataID); err != nil {
 			return err
 		}
-		softwareKey := strings.ToLower(strings.TrimSpace(string(bo.SoftwareType))) + ":" + strconv.FormatUint(uint64(bo.SoftwareNumber), 10)
-		if _, exists := seen[softwareKey]; exists {
-			return domain.NewValidationError().Add("objectdata.bacnetobject.software", "software_type + software_number must be unique within the object data")
+
+		for i := range inputs {
+			bo := inputs[i]
+			bo.FieldDeviceID = nil
+			if err := txService.repo.Create(ctx, &bo); err != nil {
+				return err
+			}
+			if err := txService.objectDataBacnetStore.Add(ctx, objectDataID, bo.ID); err != nil {
+				return err
+			}
 		}
-		seen[softwareKey] = struct{}{}
-	}
 
-	if err := s.objectDataBacnetStore.DeleteByObjectDataID(ctx, objectDataID); err != nil {
-		return err
-	}
-
-	if len(inputs) == 0 {
 		return nil
-	}
-
-	for i := range inputs {
-		bo := inputs[i]
-		bo.FieldDeviceID = nil
-		if err := s.repo.Create(ctx, &bo); err != nil {
-			return err
-		}
-		if err := s.objectDataBacnetStore.Add(ctx, objectDataID, bo.ID); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	})
 }

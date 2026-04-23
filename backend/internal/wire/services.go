@@ -54,7 +54,20 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 	passwordService := passwordsvc.New()
 	jwtService := authservice.NewJWTService(cfg.JWTSecret, cfg.Issuer)
 	rbacSvc := rbacservice.New(repos.User, repos.TeamMember, repos.Permissions, repos.RolePermissions)
-	facilityServices := facilityservice.NewServices(buildFacilityRepositories(repos))
+	facilityTxRunner := facilityservice.TxRunner(func(run func(tx *gorm.DB) error) error {
+		return gormDB.Transaction(run)
+	})
+	facilityTxFactory := func(tx *gorm.DB) (*facilityservice.Services, error) {
+		txRepos, err := NewRepositories(tx)
+		if err != nil {
+			return nil, fmt.Errorf("transaction repositories: %w", err)
+		}
+		return facilityservice.NewServices(buildFacilityRepositories(txRepos)), nil
+	}
+	facilityServices := facilityservice.NewServices(buildFacilityRepositories(repos), facilityservice.Config{
+		TxRunner:  facilityTxRunner,
+		TxFactory: facilityTxFactory,
+	})
 
 	jobStore := exportinfra.NewMemoryJobStore()
 	fileStore, err := exportinfra.NewLocalFileStore(filepath.Join("data", "exports"))
