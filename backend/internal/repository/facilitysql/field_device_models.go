@@ -12,15 +12,15 @@ type fieldDeviceRecord struct {
 	Description               *string
 	ApparatNr                 int
 	TextIndividuell           *string
-	SPSControllerSystemTypeID uuid.UUID                         `gorm:"type:uuid;not null;index"`
+	SPSControllerSystemTypeID uuid.UUID                              `gorm:"type:uuid;not null;index"`
 	SPSControllerSystemType   domainFacility.SPSControllerSystemType `gorm:"foreignKey:SPSControllerSystemTypeID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	SystemPartID              uuid.UUID                         `gorm:"type:uuid;not null;index"`
-	SystemPart                domainFacility.SystemPart         `gorm:"foreignKey:SystemPartID"`
-	SpecificationID           *uuid.UUID                        `gorm:"type:uuid;index"`
-	Specification             *domainFacility.Specification     `gorm:"foreignKey:SpecificationID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	ApparatID                 uuid.UUID                         `gorm:"type:uuid;not null;index"`
-	Apparat                   domainFacility.Apparat            `gorm:"foreignKey:ApparatID"`
-	BacnetObjects             []domainFacility.BacnetObject     `gorm:"foreignKey:FieldDeviceID"`
+	SystemPartID              uuid.UUID                              `gorm:"type:uuid;not null;index"`
+	SystemPart                domainFacility.SystemPart              `gorm:"foreignKey:SystemPartID"`
+	SpecificationID           *uuid.UUID                             `gorm:"type:uuid;index"`
+	Specification             *domainFacility.Specification          `gorm:"foreignKey:SpecificationID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	ApparatID                 uuid.UUID                              `gorm:"type:uuid;not null;index"`
+	Apparat                   domainFacility.Apparat                 `gorm:"foreignKey:ApparatID"`
+	BacnetObjects             []domainFacility.BacnetObject          `gorm:"foreignKey:FieldDeviceID"`
 }
 
 func (fieldDeviceRecord) TableName() string {

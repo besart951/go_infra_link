@@ -10,7 +10,7 @@ import (
 
 type projectRecord struct {
 	domain.Base
-	Name        string                      `gorm:"not null"`
+	Name        string `gorm:"not null"`
 	Description string
 	Status      domainProject.ProjectStatus `gorm:"type:varchar(50);not null"`
 	StartDate   *time.Time
