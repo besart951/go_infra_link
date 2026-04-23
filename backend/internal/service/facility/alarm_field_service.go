@@ -24,7 +24,7 @@ type AlarmFieldService struct {
 }
 
 func NewAlarmFieldService(repo domainFacility.AlarmFieldRepository) *AlarmFieldService {
-	return &AlarmFieldService{baseService: newBase[domainFacility.AlarmField](repo, 20)}
+	return &AlarmFieldService{baseService: newBase(repo, 20)}
 }
 
 func (s *AlarmFieldService) Create(ctx context.Context, field *domainFacility.AlarmField) error {

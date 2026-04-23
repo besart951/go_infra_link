@@ -16,7 +16,7 @@ type SystemTypeService struct {
 
 func NewSystemTypeService(repo domainFacility.SystemTypeRepository) *SystemTypeService {
 	return &SystemTypeService{
-		baseService: newBase[domainFacility.SystemType](repo, 10),
+		baseService: newBase(repo, 10),
 		extRepo:     repo,
 	}
 }

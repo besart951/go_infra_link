@@ -11,7 +11,7 @@ type AlarmDefinitionService struct {
 }
 
 func NewAlarmDefinitionService(repo domainFacility.AlarmDefinitionRepository) *AlarmDefinitionService {
-	return &AlarmDefinitionService{baseService: newBase[domainFacility.AlarmDefinition](repo, 10)}
+	return &AlarmDefinitionService{baseService: newBase(repo, 10)}
 }
 
 func (s *AlarmDefinitionService) Create(ctx context.Context, ad *domainFacility.AlarmDefinition) error {

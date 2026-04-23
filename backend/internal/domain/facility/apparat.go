@@ -2,6 +2,7 @@ package facility
 
 import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	"github.com/google/uuid"
 )
 
 type Apparat struct {
@@ -12,4 +13,9 @@ type Apparat struct {
 
 	SystemParts  []*SystemPart `gorm:"many2many:system_part_apparats;"`
 	FieldDevices []FieldDevice `gorm:"foreignKey:ApparatID"`
+}
+
+type ApparatFilterParams struct {
+	ObjectDataID *uuid.UUID
+	SystemPartID *uuid.UUID
 }

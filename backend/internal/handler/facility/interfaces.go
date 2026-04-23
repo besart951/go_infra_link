@@ -39,10 +39,13 @@ type SystemPartService interface {
 
 type ApparatService interface {
 	Create(ctx context.Context, apparat *domainFacility.Apparat) error
+	CreateWithSystemPartIDs(ctx context.Context, apparat *domainFacility.Apparat, systemPartIDs []uuid.UUID) error
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.Apparat, error)
 	GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.Apparat, error)
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.Apparat], error)
+	ListWithFilters(ctx context.Context, params domain.PaginationParams, filters domainFacility.ApparatFilterParams) (*domain.PaginatedList[domainFacility.Apparat], error)
 	Update(ctx context.Context, apparat *domainFacility.Apparat) error
+	UpdateWithSystemPartIDs(ctx context.Context, apparat *domainFacility.Apparat, systemPartIDs *[]uuid.UUID) error
 	DeleteByID(ctx context.Context, id uuid.UUID) error
 	GetSystemPartIDs(ctx context.Context, id uuid.UUID) ([]uuid.UUID, error)
 }

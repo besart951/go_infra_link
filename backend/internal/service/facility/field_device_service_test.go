@@ -511,6 +511,10 @@ func (r *fakeApparatRepo) GetPaginatedList(_ context.Context, params domain.Pagi
 	}, nil
 }
 
+func (r *fakeApparatRepo) GetPaginatedListWithFilters(_ context.Context, params domain.PaginationParams, _ domainFacility.ApparatFilterParams) (*domain.PaginatedList[domainFacility.Apparat], error) {
+	return r.GetPaginatedList(context.Background(), params)
+}
+
 type fakeSystemPartRepo struct {
 	items map[uuid.UUID]*domainFacility.SystemPart
 }

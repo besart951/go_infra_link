@@ -19,30 +19,26 @@ func TestApparatHandler_ListApparats_CharacterizesCombinedFiltersAndSearch(t *te
 
 	objectDataID := uuid.New()
 	systemPartID := uuid.New()
-	objectOnlyID := uuid.New()
 	intersectionID := uuid.New()
-	systemPartOnlyID := uuid.New()
 	desc := "Primary pump"
 
 	apparatSvc := &fakeApparatHandlerService{
-		items: map[uuid.UUID]*domainFacility.Apparat{
-			objectOnlyID:     {Base: domain.Base{ID: objectOnlyID}, ShortName: "OBJ", Name: "Object only"},
-			intersectionID:   {Base: domain.Base{ID: intersectionID}, ShortName: "PMP", Name: "Pump", Description: &desc},
-			systemPartOnlyID: {Base: domain.Base{ID: systemPartOnlyID}, ShortName: "SYS", Name: "System part only"},
-		},
-	}
-	systemPartSvc := &fakeSystemPartHandlerService{
-		apparatIDsBySystemPart: map[uuid.UUID][]uuid.UUID{
-			systemPartID: {intersectionID, systemPartOnlyID},
-		},
-	}
-	objectDataSvc := &fakeObjectDataHandlerService{
-		apparatIDsByObjectData: map[uuid.UUID][]uuid.UUID{
-			objectDataID: {objectOnlyID, intersectionID},
+		listWithFiltersResult: &domain.PaginatedList[domainFacility.Apparat]{
+			Items: []domainFacility.Apparat{
+				{
+					Base:        domain.Base{ID: intersectionID},
+					ShortName:   "PMP",
+					Name:        "Pump",
+					Description: &desc,
+				},
+			},
+			Total:      1,
+			Page:       1,
+			TotalPages: 1,
 		},
 	}
 
-	handler := NewApparatHandler(apparatSvc, systemPartSvc, objectDataSvc)
+	handler := NewApparatHandler(apparatSvc)
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
 	context.Request = httptest.NewRequest(
@@ -67,8 +63,14 @@ func TestApparatHandler_ListApparats_CharacterizesCombinedFiltersAndSearch(t *te
 	if len(response.Items) != 1 || response.Items[0].ID != intersectionID {
 		t.Fatalf("expected only intersected and search-matching apparat %s, got %+v", intersectionID, response.Items)
 	}
-	if !sameUUIDSequence(apparatSvc.lastGetByIDs, []uuid.UUID{intersectionID}) {
-		t.Fatalf("expected handler to fetch only intersected apparat id, got %v", apparatSvc.lastGetByIDs)
+	if apparatSvc.lastListParams.Search != "primary" || apparatSvc.lastListParams.Page != 1 || apparatSvc.lastListParams.Limit != 10 {
+		t.Fatalf("expected pagination params to be forwarded, got %+v", apparatSvc.lastListParams)
+	}
+	if apparatSvc.lastListFilters.ObjectDataID == nil || *apparatSvc.lastListFilters.ObjectDataID != objectDataID {
+		t.Fatalf("expected object_data_id %s, got %+v", objectDataID, apparatSvc.lastListFilters)
+	}
+	if apparatSvc.lastListFilters.SystemPartID == nil || *apparatSvc.lastListFilters.SystemPartID != systemPartID {
+		t.Fatalf("expected system_part_id %s, got %+v", systemPartID, apparatSvc.lastListFilters)
 	}
 }
 
@@ -77,11 +79,14 @@ func TestApparatHandler_ListApparats_CharacterizesEmptyFilteredResult(t *testing
 
 	objectDataID := uuid.New()
 	systemPartID := uuid.New()
-	handler := NewApparatHandler(
-		&fakeApparatHandlerService{items: map[uuid.UUID]*domainFacility.Apparat{}},
-		&fakeSystemPartHandlerService{apparatIDsBySystemPart: map[uuid.UUID][]uuid.UUID{systemPartID: {uuid.New()}}},
-		&fakeObjectDataHandlerService{apparatIDsByObjectData: map[uuid.UUID][]uuid.UUID{objectDataID: {uuid.New()}}},
-	)
+	handler := NewApparatHandler(&fakeApparatHandlerService{
+		listWithFiltersResult: &domain.PaginatedList[domainFacility.Apparat]{
+			Items:      []domainFacility.Apparat{},
+			Total:      0,
+			Page:       1,
+			TotalPages: 0,
+		},
+	})
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
 	context.Request = httptest.NewRequest(
@@ -106,11 +111,18 @@ func TestApparatHandler_ListApparats_CharacterizesEmptyFilteredResult(t *testing
 }
 
 type fakeApparatHandlerService struct {
-	items        map[uuid.UUID]*domainFacility.Apparat
-	lastGetByIDs []uuid.UUID
+	items                 map[uuid.UUID]*domainFacility.Apparat
+	listWithFiltersResult *domain.PaginatedList[domainFacility.Apparat]
+	listWithFiltersErr    error
+	lastListParams        domain.PaginationParams
+	lastListFilters       domainFacility.ApparatFilterParams
 }
 
 func (s *fakeApparatHandlerService) Create(context.Context, *domainFacility.Apparat) error {
+	return nil
+}
+
+func (s *fakeApparatHandlerService) CreateWithSystemPartIDs(context.Context, *domainFacility.Apparat, []uuid.UUID) error {
 	return nil
 }
 
@@ -123,7 +135,6 @@ func (s *fakeApparatHandlerService) GetByID(_ context.Context, id uuid.UUID) (*d
 }
 
 func (s *fakeApparatHandlerService) GetByIDs(_ context.Context, ids []uuid.UUID) ([]*domainFacility.Apparat, error) {
-	s.lastGetByIDs = append([]uuid.UUID(nil), ids...)
 	out := make([]*domainFacility.Apparat, 0, len(ids))
 	for _, id := range ids {
 		if item, ok := s.items[id]; ok {
@@ -134,7 +145,10 @@ func (s *fakeApparatHandlerService) GetByIDs(_ context.Context, ids []uuid.UUID)
 	return out, nil
 }
 
-func (s *fakeApparatHandlerService) List(context.Context, int, int, string) (*domain.PaginatedList[domainFacility.Apparat], error) {
+func (s *fakeApparatHandlerService) List(_ context.Context, _ int, _ int, _ string) (*domain.PaginatedList[domainFacility.Apparat], error) {
+	if s.listWithFiltersResult != nil {
+		return s.listWithFiltersResult, s.listWithFiltersErr
+	}
 	items := make([]domainFacility.Apparat, 0, len(s.items))
 	for _, item := range s.items {
 		items = append(items, *item)
@@ -142,7 +156,20 @@ func (s *fakeApparatHandlerService) List(context.Context, int, int, string) (*do
 	return &domain.PaginatedList[domainFacility.Apparat]{Items: items, Total: int64(len(items)), Page: 1, TotalPages: 1}, nil
 }
 
+func (s *fakeApparatHandlerService) ListWithFilters(_ context.Context, params domain.PaginationParams, filters domainFacility.ApparatFilterParams) (*domain.PaginatedList[domainFacility.Apparat], error) {
+	s.lastListParams = params
+	s.lastListFilters = filters
+	if s.listWithFiltersResult != nil || s.listWithFiltersErr != nil {
+		return s.listWithFiltersResult, s.listWithFiltersErr
+	}
+	return &domain.PaginatedList[domainFacility.Apparat]{Items: []domainFacility.Apparat{}, Total: 0, Page: params.Page, TotalPages: 0}, nil
+}
+
 func (s *fakeApparatHandlerService) Update(context.Context, *domainFacility.Apparat) error {
+	return nil
+}
+
+func (s *fakeApparatHandlerService) UpdateWithSystemPartIDs(context.Context, *domainFacility.Apparat, *[]uuid.UUID) error {
 	return nil
 }
 
@@ -152,96 +179,4 @@ func (s *fakeApparatHandlerService) DeleteByID(context.Context, uuid.UUID) error
 
 func (s *fakeApparatHandlerService) GetSystemPartIDs(context.Context, uuid.UUID) ([]uuid.UUID, error) {
 	return nil, nil
-}
-
-type fakeSystemPartHandlerService struct {
-	apparatIDsBySystemPart map[uuid.UUID][]uuid.UUID
-}
-
-func (s *fakeSystemPartHandlerService) Create(context.Context, *domainFacility.SystemPart) error {
-	return nil
-}
-
-func (s *fakeSystemPartHandlerService) GetByID(context.Context, uuid.UUID) (*domainFacility.SystemPart, error) {
-	return nil, nil
-}
-
-func (s *fakeSystemPartHandlerService) GetByIDs(context.Context, []uuid.UUID) ([]*domainFacility.SystemPart, error) {
-	return nil, nil
-}
-
-func (s *fakeSystemPartHandlerService) GetApparatIDs(_ context.Context, id uuid.UUID) ([]uuid.UUID, error) {
-	return append([]uuid.UUID(nil), s.apparatIDsBySystemPart[id]...), nil
-}
-
-func (s *fakeSystemPartHandlerService) List(context.Context, int, int, string) (*domain.PaginatedList[domainFacility.SystemPart], error) {
-	return nil, nil
-}
-
-func (s *fakeSystemPartHandlerService) Update(context.Context, *domainFacility.SystemPart) error {
-	return nil
-}
-
-func (s *fakeSystemPartHandlerService) DeleteByID(context.Context, uuid.UUID) error {
-	return nil
-}
-
-type fakeObjectDataHandlerService struct {
-	apparatIDsByObjectData map[uuid.UUID][]uuid.UUID
-}
-
-func (s *fakeObjectDataHandlerService) Create(context.Context, *domainFacility.ObjectData) error {
-	return nil
-}
-
-func (s *fakeObjectDataHandlerService) GetByID(context.Context, uuid.UUID) (*domainFacility.ObjectData, error) {
-	return nil, nil
-}
-
-func (s *fakeObjectDataHandlerService) List(context.Context, int, int, string) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return nil, nil
-}
-
-func (s *fakeObjectDataHandlerService) ListByApparatID(context.Context, int, int, string, uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return nil, nil
-}
-
-func (s *fakeObjectDataHandlerService) ListBySystemPartID(context.Context, int, int, string, uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return nil, nil
-}
-
-func (s *fakeObjectDataHandlerService) ListByApparatAndSystemPartID(context.Context, int, int, string, uuid.UUID, uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return nil, nil
-}
-
-func (s *fakeObjectDataHandlerService) Update(context.Context, *domainFacility.ObjectData) error {
-	return nil
-}
-
-func (s *fakeObjectDataHandlerService) DeleteByID(context.Context, uuid.UUID) error {
-	return nil
-}
-
-func (s *fakeObjectDataHandlerService) GetBacnetObjectIDs(context.Context, uuid.UUID) ([]uuid.UUID, error) {
-	return nil, nil
-}
-
-func (s *fakeObjectDataHandlerService) GetApparatIDs(_ context.Context, id uuid.UUID) ([]uuid.UUID, error) {
-	return append([]uuid.UUID(nil), s.apparatIDsByObjectData[id]...), nil
-}
-
-func (s *fakeObjectDataHandlerService) ExistsByDescription(context.Context, *uuid.UUID, string, *uuid.UUID) (bool, error) {
-	return false, nil
-}
-
-func sameUUIDSequence(left, right []uuid.UUID) bool {
-	if len(left) != len(right) {
-		return false
-	}
-	for i := range left {
-		if left[i] != right[i] {
-			return false
-		}
-	}
-	return true
 }

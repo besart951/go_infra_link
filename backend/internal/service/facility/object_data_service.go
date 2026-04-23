@@ -16,7 +16,7 @@ type ObjectDataService struct {
 
 func NewObjectDataService(repo domainFacility.ObjectDataStore) *ObjectDataService {
 	return &ObjectDataService{
-		baseService: newBase[domainFacility.ObjectData](repo, 10),
+		baseService: newBase(repo, 10),
 		extRepo:     repo,
 	}
 }

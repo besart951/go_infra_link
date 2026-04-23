@@ -65,7 +65,7 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 		Building:                NewBuildingHandler(deps.Building),
 		SystemType:              NewSystemTypeHandler(deps.SystemType),
 		SystemPart:              NewSystemPartHandler(deps.SystemPart, deps.Apparat, deps.ObjectData),
-		Apparat:                 NewApparatHandler(deps.Apparat, deps.SystemPart, deps.ObjectData),
+		Apparat:                 NewApparatHandler(deps.Apparat),
 		ControlCabinet:          NewControlCabinetHandler(deps.ControlCabinet, deps.Collaboration),
 		FieldDevice:             NewFieldDeviceHandler(deps.FieldDevice),
 		BacnetObject:            NewBacnetObjectHandler(deps.BacnetObject),

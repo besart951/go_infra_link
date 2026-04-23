@@ -13,7 +13,7 @@ type UnitService struct {
 }
 
 func NewUnitService(repo domainFacility.UnitRepository) *UnitService {
-	return &UnitService{baseService: newBase[domainFacility.Unit](repo, 20)}
+	return &UnitService{baseService: newBase(repo, 20)}
 }
 
 func (s *UnitService) Create(ctx context.Context, unit *domainFacility.Unit) error {

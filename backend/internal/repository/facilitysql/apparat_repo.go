@@ -110,6 +110,65 @@ func (r *apparatRepo) GetPaginatedList(ctx context.Context, params domain.Pagina
 	return gormbase.DerefPaginatedList(result), nil
 }
 
+func (r *apparatRepo) GetPaginatedListWithFilters(ctx context.Context, params domain.PaginationParams, filters domainFacility.ApparatFilterParams) (*domain.PaginatedList[domainFacility.Apparat], error) {
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
+	offset := (page - 1) * limit
+
+	query := r.DB().WithContext(ctx).Model(&domainFacility.Apparat{})
+
+	if filters.ObjectDataID != nil {
+		objectDataSubquery := r.DB().WithContext(ctx).
+			Table("object_data_apparats").
+			Select("apparat_id").
+			Where("object_data_id = ?", *filters.ObjectDataID)
+		query = query.Where("apparats.id IN (?)", objectDataSubquery)
+	}
+
+	if filters.SystemPartID != nil {
+		systemPartSubquery := r.DB().WithContext(ctx).
+			Table("system_part_apparats").
+			Select("apparat_id").
+			Where("system_part_id = ?", *filters.SystemPartID)
+		query = query.Where("apparats.id IN (?)", systemPartSubquery)
+	}
+
+	if strings.TrimSpace(params.Search) != "" {
+		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
+		query = query.Where(
+			"LOWER(apparats.short_name) LIKE ? OR LOWER(apparats.name) LIKE ? OR LOWER(COALESCE(apparats.description, '')) LIKE ?",
+			pattern,
+			pattern,
+			pattern,
+		)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	var items []*domainFacility.Apparat
+	if err := orderApparatsForFieldDeviceOptions(query.Session(&gorm.Session{})).
+		Limit(limit).
+		Offset(offset).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+
+	for _, apparat := range items {
+		if err := r.loadSortedSystemParts(ctx, apparat); err != nil {
+			return nil, err
+		}
+	}
+
+	return gormbase.DerefPaginatedList(&domain.PaginatedList[*domainFacility.Apparat]{
+		Items:      items,
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
+	}), nil
+}
+
 func (r *apparatRepo) loadSortedSystemParts(ctx context.Context, apparat *domainFacility.Apparat) error {
 	var systemParts []*domainFacility.SystemPart
 	err := orderSystemPartsForFieldDeviceOptions(

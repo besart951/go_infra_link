@@ -11,7 +11,7 @@ type NotificationClassService struct {
 }
 
 func NewNotificationClassService(repo domainFacility.NotificationClassRepository) *NotificationClassService {
-	return &NotificationClassService{baseService: newBase[domainFacility.NotificationClass](repo, 10)}
+	return &NotificationClassService{baseService: newBase(repo, 10)}
 }
 
 func (s *NotificationClassService) Create(ctx context.Context, nc *domainFacility.NotificationClass) error {

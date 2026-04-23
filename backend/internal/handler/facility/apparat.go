@@ -1,27 +1,20 @@
 package facility
 
 import (
-	"context"
 	"net/http"
 
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type ApparatHandler struct {
-	service           ApparatService
-	systemPartService SystemPartService
-	objectDataService ObjectDataService
+	service ApparatService
 }
 
-func NewApparatHandler(service ApparatService, systemPartService SystemPartService, objectDataService ObjectDataService) *ApparatHandler {
-	return &ApparatHandler{
-		service:           service,
-		systemPartService: systemPartService,
-		objectDataService: objectDataService,
-	}
+func NewApparatHandler(service ApparatService) *ApparatHandler {
+	return &ApparatHandler{service: service}
 }
 
 // CreateApparat godoc
@@ -40,22 +33,8 @@ func (h *ApparatHandler) CreateApparat(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-
-	// Load system parts if IDs are provided
-	var systemParts []*domainFacility.SystemPart
-	if len(req.SystemPartIDs) > 0 {
-		loadedParts, err := h.systemPartService.GetByIDs(ctx, req.SystemPartIDs)
-		if err != nil {
-			respondLocalizedError(c, http.StatusBadRequest, "invalid_system_parts", "facility.invalid_system_parts")
-			return
-		}
-		systemParts = loadedParts
-	}
-
-	apparat := toApparatModel(req, systemParts)
-
-	if err := h.service.Create(ctx, apparat); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
+	apparat := toApparatModel(req)
+	if err := h.service.CreateWithSystemPartIDs(c.Request.Context(), apparat, req.SystemPartIDs); respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed", localizedInvalidSystemParts()) {
 		return
 	}
 
@@ -146,119 +125,37 @@ func (h *ApparatHandler) ListApparats(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
+	filters := domainFacility.ApparatFilterParams{}
 	objectDataIDStr := c.Query("object_data_id")
 	systemPartIDStr := c.Query("system_part_id")
 
-	filtering := objectDataIDStr != "" || systemPartIDStr != ""
-	if filtering {
-		var byObjectData []uuid.UUID
-		var bySystemPart []uuid.UUID
-
-		if objectDataIDStr != "" {
-			objectDataID, err := parseUUIDString(objectDataIDStr)
-			if err != nil {
-				respondLocalizedError(c, http.StatusBadRequest, "invalid_object_data_id", "facility.invalid_object_data_id")
-				return
-			}
-
-			ids, err := h.getApparatsForObjectData(ctx, objectDataID)
-			if err != nil {
-				if respondLocalizedNotFoundIf(c, err, "facility.apparat_not_found") {
-					return
-				}
-				respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-				return
-			}
-			byObjectData = ids
-		}
-
-		if systemPartIDStr != "" {
-			systemPartID, err := parseUUIDString(systemPartIDStr)
-			if err != nil {
-				respondLocalizedError(c, http.StatusBadRequest, "invalid_system_part_id", "facility.invalid_system_part_id")
-				return
-			}
-
-			ids, err := h.systemPartService.GetApparatIDs(ctx, systemPartID)
-			if err != nil {
-				if respondLocalizedNotFoundIf(c, err, "facility.apparat_not_found") {
-					return
-				}
-				respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-				return
-			}
-			bySystemPart = ids
-		}
-
-		finalIDs := byObjectData
-		if objectDataIDStr == "" {
-			finalIDs = bySystemPart
-		} else if systemPartIDStr != "" {
-			set := map[uuid.UUID]struct{}{}
-			for _, id := range bySystemPart {
-				set[id] = struct{}{}
-			}
-			out := make([]uuid.UUID, 0, len(byObjectData))
-			for _, id := range byObjectData {
-				if _, ok := set[id]; ok {
-					out = append(out, id)
-				}
-			}
-			finalIDs = out
-		}
-
-		if len(finalIDs) == 0 {
-			c.JSON(http.StatusOK, dto.ApparatListResponse{Items: []dto.ApparatResponse{}, TotalPages: 0, Page: 1, Total: 0})
-			return
-		}
-
-		apparats, err := h.service.GetByIDs(ctx, finalIDs)
+	if objectDataIDStr != "" {
+		objectDataID, err := parseUUIDString(objectDataIDStr)
 		if err != nil {
-			respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+			respondLocalizedError(c, http.StatusBadRequest, "invalid_object_data_id", "facility.invalid_object_data_id")
 			return
 		}
-
-		filtered := make([]*domainFacility.Apparat, 0, len(apparats))
-		for _, apparat := range apparats {
-			if apparat == nil {
-				continue
-			}
-			if query.Search == "" ||
-				containsIgnoreCase(apparat.ShortName, query.Search) ||
-				containsIgnoreCase(apparat.Name, query.Search) ||
-				(apparat.Description != nil && containsIgnoreCase(*apparat.Description, query.Search)) {
-				filtered = append(filtered, apparat)
-			}
-		}
-
-		total := len(filtered)
-		totalPages := (total + query.Limit - 1) / query.Limit
-		if totalPages == 0 {
-			totalPages = 1
-		}
-
-		start := (query.Page - 1) * query.Limit
-		end := start + query.Limit
-		if start >= total {
-			start = 0
-			end = 0
-		} else if end > total {
-			end = total
-		}
-
-		pageItems := filtered[start:end]
-		responses := make([]dto.ApparatResponse, 0, len(pageItems))
-		for _, a := range pageItems {
-			responses = append(responses, toApparatResponse(*a))
-		}
-
-		c.JSON(http.StatusOK, dto.ApparatListResponse{Items: responses, TotalPages: totalPages, Page: query.Page, Total: int64(total)})
-		return
+		filters.ObjectDataID = &objectDataID
 	}
 
-	result, err := h.service.List(ctx, query.Page, query.Limit, query.Search)
+	if systemPartIDStr != "" {
+		systemPartID, err := parseUUIDString(systemPartIDStr)
+		if err != nil {
+			respondLocalizedError(c, http.StatusBadRequest, "invalid_system_part_id", "facility.invalid_system_part_id")
+			return
+		}
+		filters.SystemPartID = &systemPartID
+	}
+
+	result, err := h.service.ListWithFilters(c.Request.Context(), domain.PaginationParams{
+		Page:   query.Page,
+		Limit:  query.Limit,
+		Search: query.Search,
+	}, filters)
 	if err != nil {
+		if respondLocalizedDomainError(c, err, "fetch_failed", "facility.fetch_failed", localizedNotFound("facility.apparat_not_found")) {
+			return
+		}
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
@@ -300,26 +197,9 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 		return
 	}
 
-	// Load system parts if IDs are provided
-	var systemParts *[]*domainFacility.SystemPart
-	if req.SystemPartIDs != nil {
-		if len(*req.SystemPartIDs) > 0 {
-			loadedParts, err := h.systemPartService.GetByIDs(ctx, *req.SystemPartIDs)
-			if err != nil {
-				respondLocalizedError(c, http.StatusBadRequest, "invalid_system_parts", "facility.invalid_system_parts")
-				return
-			}
-			systemParts = &loadedParts
-		} else {
-			// Empty array means clear all system parts
-			emptyParts := []*domainFacility.SystemPart{}
-			systemParts = &emptyParts
-		}
-	}
+	applyApparatUpdate(apparat, req)
 
-	applyApparatUpdate(apparat, req, systemParts)
-
-	if err := h.service.Update(ctx, apparat); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
+	if err := h.service.UpdateWithSystemPartIDs(ctx, apparat, req.SystemPartIDs); respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed", localizedInvalidSystemParts()) {
 		return
 	}
 
@@ -349,8 +229,4 @@ func (h *ApparatHandler) DeleteApparat(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
-}
-
-func (h *ApparatHandler) getApparatsForObjectData(ctx context.Context, objectDataID uuid.UUID) ([]uuid.UUID, error) {
-	return h.objectDataService.GetApparatIDs(ctx, objectDataID)
 }

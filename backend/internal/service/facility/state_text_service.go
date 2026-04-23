@@ -11,7 +11,7 @@ type StateTextService struct {
 }
 
 func NewStateTextService(repo domainFacility.StateTextRepository) *StateTextService {
-	return &StateTextService{baseService: newBase[domainFacility.StateText](repo, 10)}
+	return &StateTextService{baseService: newBase(repo, 10)}
 }
 
 func (s *StateTextService) Create(ctx context.Context, stateText *domainFacility.StateText) error {

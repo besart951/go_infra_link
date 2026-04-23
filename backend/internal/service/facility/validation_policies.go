@@ -19,7 +19,6 @@ var (
 	spsControllerGADeviceField        = domain.ValidationField{Key: "spscontroller.ga_device", Name: "ga_device"}
 	spsControllerIPAddressField       = domain.ValidationField{Key: "spscontroller.ip_address", Name: "ip_address"}
 	spsControllerVlanField            = domain.ValidationField{Key: "spscontroller.vlan", Name: "vlan"}
-	spsControllerSystemTypesField     = domain.ValidationField{Key: "spscontroller.system_types", Name: "system_types"}
 	fieldDeviceSystemTypeIDField      = domain.ValidationField{Key: "fielddevice.sps_controller_system_type_id", Name: "sps_controller_system_type_id"}
 	fieldDeviceApparatIDField         = domain.ValidationField{Key: "fielddevice.apparat_id", Name: "apparat_id"}
 	fieldDeviceSystemPartIDField      = domain.ValidationField{Key: "fielddevice.system_part_id", Name: "system_part_id"}

@@ -16,7 +16,7 @@ type SystemPartService struct {
 
 func NewSystemPartService(repo domainFacility.SystemPartRepository) *SystemPartService {
 	return &SystemPartService{
-		baseService: newBase[domainFacility.SystemPart](repo, 10),
+		baseService: newBase(repo, 10),
 		extRepo:     repo,
 	}
 }

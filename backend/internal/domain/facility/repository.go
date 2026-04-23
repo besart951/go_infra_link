@@ -32,6 +32,7 @@ type ApparatRepository interface {
 	domain.Repository[Apparat]
 	ExistsShortName(ctx context.Context, shortName string, excludeID *uuid.UUID) (bool, error)
 	ExistsName(ctx context.Context, name string, excludeID *uuid.UUID) (bool, error)
+	GetPaginatedListWithFilters(ctx context.Context, params domain.PaginationParams, filters ApparatFilterParams) (*domain.PaginatedList[Apparat], error)
 }
 type ObjectDataRepository = domain.Repository[ObjectData]
 type ControlCabinetRepository interface {

@@ -14,7 +14,7 @@ type AlarmTypeService struct {
 
 func NewAlarmTypeService(repo domainFacility.AlarmTypeRepository) *AlarmTypeService {
 	return &AlarmTypeService{
-		baseService: newBase[domainFacility.AlarmType](repo, 20),
+		baseService: newBase(repo, 20),
 		extRepo:     repo,
 	}
 }

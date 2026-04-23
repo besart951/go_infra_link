@@ -135,7 +135,7 @@ func NewServices(repos Repositories) *Services {
 		Building:        NewBuildingService(repos.Buildings),
 		SystemType:      NewSystemTypeService(repos.SystemTypes),
 		SystemPart:      NewSystemPartService(repos.SystemParts),
-		Apparat:         NewApparatService(repos.Apparats),
+		Apparat:         NewApparatService(repos.Apparats, repos.SystemParts, repos.ObjectData),
 		ControlCabinet: NewControlCabinetService(
 			repos.ControlCabinets,
 			repos.Buildings,

@@ -27,10 +27,6 @@ func respondNotFound(c *gin.Context, message string) {
 	handlerutil.RespondNotFound(c, message)
 }
 
-func respondLocalizedNotFoundError(c *gin.Context, translationKey string) {
-	handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", translationKey)
-}
-
 func bindJSON(c *gin.Context, dst any) bool {
 	return handlerutil.BindJSON(c, dst)
 }
@@ -74,14 +70,6 @@ func respondLocalizedValidationOrError(c *gin.Context, err error, translationKey
 	return respondLocalizedDomainError(c, err, "error", translationKey)
 }
 
-func respondInvalidReference(c *gin.Context) {
-	respondLocalizedError(c, http.StatusBadRequest, "invalid_reference", "facility.invalid_reference")
-}
-
-func respondLocalizedConflict(c *gin.Context, translationKey string) {
-	respondLocalizedError(c, http.StatusConflict, "conflict", translationKey)
-}
-
 func respondInvalidArgument(c *gin.Context, message string) {
 	respondError(c, http.StatusBadRequest, "validation_error", message)
 }
@@ -96,10 +84,6 @@ func respondLocalizedNotFoundIf(c *gin.Context, err error, translationKey string
 
 func parseUUIDString(s string) (uuid.UUID, error) {
 	return uuid.Parse(s)
-}
-
-func containsIgnoreCase(s, substr string) bool {
-	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
 
 func respondLocalizedDomainError(c *gin.Context, err error, fallbackCode, fallbackKey string, mappings ...handlerutil.ErrorMapping) bool {
@@ -123,6 +107,10 @@ func localizedInvalidArgument(translationKey string) handlerutil.ErrorMapping {
 
 func localizedInvalidReference() handlerutil.ErrorMapping {
 	return handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusBadRequest, "invalid_reference", "facility.invalid_reference"))
+}
+
+func localizedInvalidSystemParts() handlerutil.ErrorMapping {
+	return handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusBadRequest, "invalid_system_parts", "facility.invalid_system_parts"))
 }
 
 func errMessage(err error) string {
