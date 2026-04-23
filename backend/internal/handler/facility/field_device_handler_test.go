@@ -52,6 +52,7 @@ func (w *fieldDeviceStatusTrackingWriter) WriteHeader(code int) {
 
 type fakeFieldDeviceHandlerService struct {
 	listWithFiltersCalls int
+	listAvailableCalls   int
 }
 
 func (s *fakeFieldDeviceHandlerService) Create(context.Context, *domainFacility.FieldDevice) error {
@@ -83,7 +84,8 @@ func (s *fakeFieldDeviceHandlerService) ListWithFilters(context.Context, domain.
 	}, nil
 }
 
-func (s *fakeFieldDeviceHandlerService) ListAvailableApparatNumbers(context.Context, uuid.UUID, *uuid.UUID, uuid.UUID) ([]int, error) {
+func (s *fakeFieldDeviceHandlerService) ListAvailableApparatNumbers(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) ([]int, error) {
+	s.listAvailableCalls++
 	return nil, nil
 }
 

@@ -3,6 +3,7 @@ package project
 import (
 	"context"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -1239,6 +1240,18 @@ func (r *projectSPSRepoFake) ListGADevicesByControlCabinetID(_ context.Context, 
 	return out, nil
 }
 
+func (r *projectSPSRepoFake) ExistsDeviceName(_ context.Context, controlCabinetID uuid.UUID, deviceName string, excludeID *uuid.UUID) (bool, error) {
+	for id, item := range r.items {
+		if excludeID != nil && id == *excludeID {
+			continue
+		}
+		if item.ControlCabinetID == controlCabinetID && strings.EqualFold(item.DeviceName, deviceName) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (r *projectSPSRepoFake) ExistsGADevice(_ context.Context, controlCabinetID uuid.UUID, gaDevice string, excludeID *uuid.UUID) (bool, error) {
 	for id, item := range r.items {
 		if excludeID != nil && id == *excludeID {
@@ -1402,11 +1415,11 @@ func (r *projectFieldDeviceStoreFake) GetIDsBySPSControllerSystemTypeIDs(_ conte
 	return out, nil
 }
 
-func (r *projectFieldDeviceStoreFake) ExistsApparatNrConflict(context.Context, uuid.UUID, *uuid.UUID, uuid.UUID, int, []uuid.UUID) (bool, error) {
+func (r *projectFieldDeviceStoreFake) ExistsApparatNrConflict(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, int, []uuid.UUID) (bool, error) {
 	return false, nil
 }
 
-func (r *projectFieldDeviceStoreFake) GetUsedApparatNumbers(context.Context, uuid.UUID, *uuid.UUID, uuid.UUID) ([]int, error) {
+func (r *projectFieldDeviceStoreFake) GetUsedApparatNumbers(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) ([]int, error) {
 	return nil, nil
 }
 

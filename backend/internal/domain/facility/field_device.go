@@ -13,7 +13,7 @@ type FieldDevice struct {
 	TextIndividuell           *string
 	SPSControllerSystemTypeID uuid.UUID               `gorm:"type:uuid;not null;index"`
 	SPSControllerSystemType   SPSControllerSystemType `gorm:"foreignKey:SPSControllerSystemTypeID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	SystemPartID              uuid.UUID               `gorm:"type:uuid;index"`
+	SystemPartID              uuid.UUID               `gorm:"type:uuid;not null;index"`
 	SystemPart                SystemPart              `gorm:"foreignKey:SystemPartID"`
 	SpecificationID           *uuid.UUID              `gorm:"type:uuid;index"`
 	Specification             *Specification          `gorm:"foreignKey:SpecificationID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`

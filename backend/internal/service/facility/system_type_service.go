@@ -43,20 +43,17 @@ func (s *SystemTypeService) Validate(ctx context.Context, systemType *domainFaci
 }
 
 func (s *SystemTypeService) validateRequiredFields(systemType *domainFacility.SystemType) error {
-	ve := domain.NewValidationError()
+	builder := domain.NewValidationBuilder()
 	name := strings.TrimSpace(systemType.Name)
 	if name == "" {
-		ve = ve.Add("systemtype.name", "name is required")
-	} else if len(name) > 150 {
-		ve = ve.Add("systemtype.name", "name must be 150 characters or less")
+		systemTypeNameField.Add(builder, "name is required")
+	} else {
+		systemTypeNameField.MaxLength(builder, name, 150)
 	}
 	if systemType.NumberMin > systemType.NumberMax {
-		ve = ve.Add("systemtype.number_max", "number_max must be greater than or equal to number_min")
+		systemTypeNumberMaxField.Add(builder, "number_max must be greater than or equal to number_min")
 	}
-	if len(ve.Fields) > 0 {
-		return ve
-	}
-	return nil
+	return builder.Err()
 }
 
 func (s *SystemTypeService) ensureUnique(ctx context.Context, systemType *domainFacility.SystemType, excludeID *uuid.UUID) error {
@@ -67,7 +64,7 @@ func (s *SystemTypeService) ensureUnique(ctx context.Context, systemType *domain
 			return err
 		}
 		if exists {
-			return domain.NewValidationError().Add("systemtype.name", "name must be unique")
+			return systemTypeNameField.UniqueError()
 		}
 	}
 	exists, err := s.extRepo.ExistsOverlappingRange(ctx, systemType.NumberMin, systemType.NumberMax, excludeID)
@@ -76,7 +73,7 @@ func (s *SystemTypeService) ensureUnique(ctx context.Context, systemType *domain
 	}
 	if exists {
 		return domain.NewValidationError().Add(
-			"systemtype.number_min",
+			systemTypeNumberMinField.Key,
 			"number_min and number_max range must not overlap existing ranges",
 		)
 	}

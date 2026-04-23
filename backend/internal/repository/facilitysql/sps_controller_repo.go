@@ -102,6 +102,22 @@ func (r *spsControllerRepo) ListGADevicesByControlCabinetID(ctx context.Context,
 	return devices, nil
 }
 
+func (r *spsControllerRepo) ExistsDeviceName(ctx context.Context, controlCabinetID uuid.UUID, deviceName string, excludeID *uuid.UUID) (bool, error) {
+	query := r.db.WithContext(ctx).Model(&domainFacility.SPSController{}).
+		Where("control_cabinet_id = ?", controlCabinetID).
+		Where("LOWER(device_name) = ?", strings.ToLower(strings.TrimSpace(deviceName)))
+
+	if excludeID != nil {
+		query = query.Where("id <> ?", *excludeID)
+	}
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (r *spsControllerRepo) ExistsGADevice(ctx context.Context, controlCabinetID uuid.UUID, gaDevice string, excludeID *uuid.UUID) (bool, error) {
 	query := r.db.WithContext(ctx).Model(&domainFacility.SPSController{}).
 		Where("control_cabinet_id = ?", controlCabinetID).

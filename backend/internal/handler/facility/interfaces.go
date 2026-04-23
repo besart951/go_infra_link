@@ -62,7 +62,7 @@ type FieldDeviceService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.FieldDevice, error)
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.FieldDevice], error)
 	ListWithFilters(ctx context.Context, params domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error)
-	ListAvailableApparatNumbers(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID) ([]int, error)
+	ListAvailableApparatNumbers(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID uuid.UUID, apparatID uuid.UUID) ([]int, error)
 	GetFieldDeviceOptions(ctx context.Context) (*domainFacility.FieldDeviceOptions, error)
 	Update(ctx context.Context, fieldDevice *domainFacility.FieldDevice) error
 	UpdateWithBacnetObjects(ctx context.Context, fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects *[]domainFacility.BacnetObject) error

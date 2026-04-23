@@ -43,9 +43,6 @@ func (s *SPSControllerService) Create(ctx context.Context, spsController *domain
 }
 
 func (s *SPSControllerService) CreateWithSystemTypes(ctx context.Context, spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
-	if err := s.ensureControlCabinetExists(ctx, spsController.ControlCabinetID); err != nil {
-		return err
-	}
 	if err := s.ensureGADeviceAssigned(ctx, spsController, nil); err != nil {
 		return err
 	}
@@ -119,17 +116,11 @@ func (s *SPSControllerService) Update(ctx context.Context, spsController *domain
 	if err := s.Validate(ctx, spsController, &spsController.ID); err != nil {
 		return err
 	}
-	if err := s.ensureControlCabinetExists(ctx, spsController.ControlCabinetID); err != nil {
-		return err
-	}
 	return s.repo.Update(ctx, spsController)
 }
 
 func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
 	if err := s.Validate(ctx, spsController, &spsController.ID); err != nil {
-		return err
-	}
-	if err := s.ensureControlCabinetExists(ctx, spsController.ControlCabinetID); err != nil {
 		return err
 	}
 	systemTypeMap, err := s.loadSystemTypes(ctx, systemTypes)
@@ -243,8 +234,7 @@ func (s *SPSControllerService) DeleteByID(ctx context.Context, id uuid.UUID) err
 	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
 }
 func (s *SPSControllerService) ensureControlCabinetExists(ctx context.Context, controlCabinetID uuid.UUID) error {
-	_, err := domain.GetByID(ctx, s.controlCabinetRepo, controlCabinetID)
-	return err
+	return domain.EnsureReferenceExists(ctx, s.controlCabinetRepo, controlCabinetID)
 }
 
 func (s *SPSControllerService) loadSystemTypes(ctx context.Context, systemTypes []domainFacility.SPSControllerSystemType) (map[uuid.UUID]domainFacility.SystemType, error) {
@@ -277,6 +267,9 @@ func (s *SPSControllerService) GetNextGADevice(ctx context.Context, controlCabin
 func (s *SPSControllerService) ensureGADeviceAssigned(ctx context.Context, spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
 	if spsController.GADevice != nil && strings.TrimSpace(*spsController.GADevice) != "" {
 		return nil
+	}
+	if err := s.ensureControlCabinetExists(ctx, spsController.ControlCabinetID); err != nil {
+		return err
 	}
 
 	next, err := s.nextAvailableGADevice(ctx, spsController.ControlCabinetID)
@@ -321,34 +314,28 @@ func (s *SPSControllerService) nextAvailableGADevice(ctx context.Context, contro
 }
 
 func (s *SPSControllerService) validateRequiredFields(spsController *domainFacility.SPSController) error {
-	ve := domain.NewValidationError()
-	if spsController.ControlCabinetID == uuid.Nil {
-		ve = ve.Add("spscontroller.control_cabinet_id", "control_cabinet_id is required")
-	}
-	if strings.TrimSpace(spsController.DeviceName) == "" {
-		ve = ve.Add("spscontroller.device_name", "device_name is required")
-	}
+	builder := domain.NewValidationBuilder()
+	spsControllerControlCabinetField.RequireUUID(builder, spsController.ControlCabinetID)
+	spsControllerDeviceNameField.RequireTrimmed(builder, spsController.DeviceName)
 	if spsController.GADevice == nil || strings.TrimSpace(*spsController.GADevice) == "" {
-		ve = ve.Add("spscontroller.ga_device", "ga_device is required")
+		spsControllerGADeviceField.Add(builder, "ga_device is required")
 	} else if !isValidGADevice(*spsController.GADevice) {
-		ve = ve.Add("spscontroller.ga_device", "ga_device must be exactly 3 uppercase letters (A-Z)")
+		spsControllerGADeviceField.Add(builder, "ga_device must be exactly 3 uppercase letters (A-Z)")
 	}
 
 	if err := validateNetworkFields(spsController); err != nil {
-		if veNet, ok := domain.AsValidationError(err); ok {
-			for field, msg := range veNet.Fields {
-				ve = ve.Add(field, msg)
-			}
+		if mergeErr := builder.Merge(err); mergeErr != nil {
+			return mergeErr
 		}
 	}
-	if len(ve.Fields) > 0 {
-		return ve
-	}
-	return nil
+	return builder.Err()
 }
 
 func (s *SPSControllerService) Validate(ctx context.Context, spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
 	if err := s.validateRequiredFields(spsController); err != nil {
+		return err
+	}
+	if err := s.ensureControlCabinetExists(ctx, spsController.ControlCabinetID); err != nil {
 		return err
 	}
 	if err := s.ensureUnique(ctx, spsController, excludeID); err != nil {
@@ -395,32 +382,25 @@ func (s *SPSControllerService) NextAvailableGADevice(ctx context.Context, contro
 }
 
 func (s *SPSControllerService) ensureUnique(ctx context.Context, spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
-	ve := domain.NewValidationError()
+	builder := domain.NewValidationBuilder()
 
-	if strings.TrimSpace(spsController.DeviceName) != "" {
-		items, err := s.repo.GetPaginatedList(ctx, domain.PaginationParams{Page: 1, Limit: 1000, Search: spsController.DeviceName})
+	if strings.TrimSpace(spsController.DeviceName) != "" && spsController.ControlCabinetID != uuid.Nil {
+		exists, err := s.repo.ExistsDeviceName(ctx, spsController.ControlCabinetID, spsController.DeviceName, excludeID)
 		if err != nil {
 			return err
 		}
-		for i := range items.Items {
-			item := items.Items[i]
-			if excludeID != nil && item.ID == *excludeID {
-				continue
-			}
-			if item.ControlCabinetID == spsController.ControlCabinetID && strings.EqualFold(item.DeviceName, spsController.DeviceName) {
-				ve = ve.Add("spscontroller.device_name", "device_name must be unique within the control cabinet")
-				break
-			}
+		if exists {
+			spsControllerDeviceNameField.UniqueWithin(builder, controlCabinetScope)
 		}
 	}
 
-	if spsController.GADevice != nil && strings.TrimSpace(*spsController.GADevice) != "" {
+	if spsController.GADevice != nil && strings.TrimSpace(*spsController.GADevice) != "" && spsController.ControlCabinetID != uuid.Nil {
 		exists, err := s.repo.ExistsGADevice(ctx, spsController.ControlCabinetID, *spsController.GADevice, excludeID)
 		if err != nil {
 			return err
 		}
 		if exists {
-			ve = ve.Add("spscontroller.ga_device", "ga_device must be unique within the control cabinet")
+			spsControllerGADeviceField.UniqueWithin(builder, controlCabinetScope)
 		}
 	}
 
@@ -433,16 +413,13 @@ func (s *SPSControllerService) ensureUnique(ctx context.Context, spsController *
 				return err
 			}
 			if exists {
-				ve = ve.Add("spscontroller.ip_address", "ip_address must be unique per vlan")
-				ve = ve.Add("spscontroller.vlan", "vlan must be unique per ip_address")
+				spsControllerIPAddressField.Add(builder, "ip_address must be unique per vlan")
+				spsControllerVlanField.Add(builder, "vlan must be unique per ip_address")
 			}
 		}
 	}
 
-	if len(ve.Fields) > 0 {
-		return ve
-	}
-	return nil
+	return builder.Err()
 }
 
 func isValidGADevice(value string) bool {

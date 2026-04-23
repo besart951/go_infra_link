@@ -16,7 +16,11 @@ type SystemTypeRepository interface {
 	ExistsName(ctx context.Context, name string, excludeID *uuid.UUID) (bool, error)
 	ExistsOverlappingRange(ctx context.Context, numberMin, numberMax int, excludeID *uuid.UUID) (bool, error)
 }
-type SystemPartRepository = domain.Repository[SystemPart]
+type SystemPartRepository interface {
+	domain.Repository[SystemPart]
+	ExistsShortName(ctx context.Context, shortName string, excludeID *uuid.UUID) (bool, error)
+	ExistsName(ctx context.Context, name string, excludeID *uuid.UUID) (bool, error)
+}
 type SpecificationRepository = domain.Repository[Specification]
 type StateTextRepository = domain.Repository[StateText]
 type NotificationClassRepository = domain.Repository[NotificationClass]
@@ -43,6 +47,7 @@ type SPSControllerRepository interface {
 	GetIDsByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]uuid.UUID, error)
 	GetIDsByControlCabinetIDs(ctx context.Context, controlCabinetIDs []uuid.UUID) ([]uuid.UUID, error)
 	ListGADevicesByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]string, error)
+	ExistsDeviceName(ctx context.Context, controlCabinetID uuid.UUID, deviceName string, excludeID *uuid.UUID) (bool, error)
 	ExistsGADevice(ctx context.Context, controlCabinetID uuid.UUID, gaDevice string, excludeID *uuid.UUID) (bool, error)
 	ExistsIPAddressVlan(ctx context.Context, ipAddress string, vlan string, excludeID *uuid.UUID) (bool, error)
 	GetByIdsForExport(ctx context.Context, ids []uuid.UUID) ([]SPSController, error)

@@ -23,10 +23,7 @@ func NewApparatService(repo domainFacility.ApparatRepository) *ApparatService {
 }
 
 func (s *ApparatService) Create(ctx context.Context, apparat *domainFacility.Apparat) error {
-	if err := s.validateRequiredFields(apparat); err != nil {
-		return err
-	}
-	if err := s.ensureUnique(ctx, apparat, nil); err != nil {
+	if err := s.Validate(ctx, apparat, nil); err != nil {
 		return err
 	}
 	if err := s.repo.Create(ctx, apparat); err != nil {
@@ -40,10 +37,7 @@ func (s *ApparatService) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*doma
 }
 
 func (s *ApparatService) Update(ctx context.Context, apparat *domainFacility.Apparat) error {
-	if err := s.validateRequiredFields(apparat); err != nil {
-		return err
-	}
-	if err := s.ensureUnique(ctx, apparat, &apparat.ID); err != nil {
+	if err := s.Validate(ctx, apparat, &apparat.ID); err != nil {
 		return err
 	}
 	if err := s.repo.Update(ctx, apparat); err != nil {
@@ -60,21 +54,19 @@ func (s *ApparatService) GetSystemPartIDs(ctx context.Context, id uuid.UUID) ([]
 	return extractIDs(apparat.SystemParts, func(sp *domainFacility.SystemPart) uuid.UUID { return sp.ID }), nil
 }
 
+func (s *ApparatService) Validate(ctx context.Context, apparat *domainFacility.Apparat, excludeID *uuid.UUID) error {
+	if err := s.validateRequiredFields(apparat); err != nil {
+		return err
+	}
+	return s.ensureUnique(ctx, apparat, excludeID)
+}
+
 func (s *ApparatService) validateRequiredFields(apparat *domainFacility.Apparat) error {
-	ve := domain.NewValidationError()
-	shortName := strings.TrimSpace(apparat.ShortName)
-	if shortName == "" {
-		ve = ve.Add("apparat.short_name", "short_name is required")
-	} else if len(shortName) != 3 {
-		ve = ve.Add("apparat.short_name", "short_name must be exactly 3 characters")
-	}
-	if strings.TrimSpace(apparat.Name) == "" {
-		ve = ve.Add("apparat.name", "name is required")
-	}
-	if len(ve.Fields) > 0 {
-		return ve
-	}
-	return nil
+	builder := domain.NewValidationBuilder()
+	shortName := apparatShortNameField.RequireTrimmed(builder, apparat.ShortName)
+	apparatShortNameField.ExactLength(builder, shortName, 3)
+	apparatNameField.RequireTrimmed(builder, apparat.Name)
+	return builder.Err()
 }
 
 func (s *ApparatService) ensureUnique(ctx context.Context, apparat *domainFacility.Apparat, excludeID *uuid.UUID) error {
@@ -89,14 +81,14 @@ func (s *ApparatService) ensureUnique(ctx context.Context, apparat *domainFacili
 }
 
 func (s *ApparatService) uniqueValidationError(ctx context.Context, apparat *domainFacility.Apparat, excludeID *uuid.UUID) (*domain.ValidationError, error) {
-	ve := domain.NewValidationError()
+	builder := domain.NewValidationBuilder()
 	if strings.TrimSpace(apparat.ShortName) != "" {
 		exists, err := s.extRepo.ExistsShortName(ctx, apparat.ShortName, excludeID)
 		if err != nil {
 			return nil, err
 		}
 		if exists {
-			ve = ve.Add("apparat.short_name", "short_name must be unique")
+			apparatShortNameField.Unique(builder)
 		}
 	}
 	if strings.TrimSpace(apparat.Name) != "" {
@@ -105,13 +97,10 @@ func (s *ApparatService) uniqueValidationError(ctx context.Context, apparat *dom
 			return nil, err
 		}
 		if exists {
-			ve = ve.Add("apparat.name", "name must be unique")
+			apparatNameField.Unique(builder)
 		}
 	}
-	if len(ve.Fields) > 0 {
-		return ve, nil
-	}
-	return nil, nil
+	return builder.ValidationError(), nil
 }
 
 func (s *ApparatService) mapWriteConflict(ctx context.Context, apparat *domainFacility.Apparat, excludeID *uuid.UUID, err error) error {

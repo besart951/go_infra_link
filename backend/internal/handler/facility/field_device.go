@@ -170,7 +170,7 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 // @Produce json
 // @Param sps_controller_system_type_id query string true "SPS Controller System Type ID"
 // @Param apparat_id query string true "Apparat ID"
-// @Param system_part_id query string false "System Part ID"
+// @Param system_part_id query string true "System Part ID"
 // @Success 200 {object} dto.AvailableApparatNumbersResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -198,8 +198,12 @@ func (h *FieldDeviceHandler) ListAvailableApparatNumbers(c *gin.Context) {
 	if !ok {
 		return
 	}
+	if systemPartID == nil {
+		respondLocalizedInvalidArgument(c, "facility.system_part_id_required")
+		return
+	}
 
-	available, err := h.service.ListAvailableApparatNumbers(c.Request.Context(), *spsControllerSystemTypeID, systemPartID, *apparatID)
+	available, err := h.service.ListAvailableApparatNumbers(c.Request.Context(), *spsControllerSystemTypeID, *systemPartID, *apparatID)
 	if err != nil {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return

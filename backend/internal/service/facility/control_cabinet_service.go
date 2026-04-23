@@ -46,9 +46,6 @@ func (s *ControlCabinetService) Create(ctx context.Context, controlCabinet *doma
 	if err := s.Validate(ctx, controlCabinet, nil); err != nil {
 		return err
 	}
-	if err := s.ensureBuildingExists(ctx, controlCabinet.BuildingID); err != nil {
-		return err
-	}
 	return s.repo.Create(ctx, controlCabinet)
 }
 
@@ -131,14 +128,14 @@ func (s *ControlCabinetService) Update(ctx context.Context, controlCabinet *doma
 	if err := s.Validate(ctx, controlCabinet, &controlCabinet.ID); err != nil {
 		return err
 	}
-	if err := s.ensureBuildingExists(ctx, controlCabinet.BuildingID); err != nil {
-		return err
-	}
 	return s.repo.Update(ctx, controlCabinet)
 }
 
 func (s *ControlCabinetService) Validate(ctx context.Context, controlCabinet *domainFacility.ControlCabinet, excludeID *uuid.UUID) error {
 	if err := s.validateRequiredFields(controlCabinet); err != nil {
+		return err
+	}
+	if err := s.ensureBuildingExists(ctx, controlCabinet.BuildingID); err != nil {
 		return err
 	}
 	if err := s.ensureUnique(ctx, controlCabinet, excludeID); err != nil {
@@ -152,24 +149,15 @@ func (s *ControlCabinetService) DeleteByID(ctx context.Context, id uuid.UUID) er
 }
 
 func (s *ControlCabinetService) ensureBuildingExists(ctx context.Context, buildingID uuid.UUID) error {
-	_, err := domain.GetByID(ctx, s.buildingRepo, buildingID)
-	return err
+	return domain.EnsureReferenceExists(ctx, s.buildingRepo, buildingID)
 }
 
 func (s *ControlCabinetService) validateRequiredFields(controlCabinet *domainFacility.ControlCabinet) error {
-	ve := domain.NewValidationError()
-	if controlCabinet.BuildingID == uuid.Nil {
-		ve = ve.Add("controlcabinet.building_id", "building_id is required")
-	}
-	if controlCabinet.ControlCabinetNr == nil || strings.TrimSpace(*controlCabinet.ControlCabinetNr) == "" {
-		ve = ve.Add("controlcabinet.control_cabinet_nr", "control_cabinet_nr is required")
-	} else if len(strings.TrimSpace(*controlCabinet.ControlCabinetNr)) > 11 {
-		ve = ve.Add("controlcabinet.control_cabinet_nr", "control_cabinet_nr must be 11 characters or less")
-	}
-	if len(ve.Fields) > 0 {
-		return ve
-	}
-	return nil
+	builder := domain.NewValidationBuilder()
+	controlCabinetBuildingIDField.RequireUUID(builder, controlCabinet.BuildingID)
+	controlCabinetNr := controlCabinetNumberField.RequireTrimmedPtr(builder, controlCabinet.ControlCabinetNr)
+	controlCabinetNumberField.MaxLength(builder, controlCabinetNr, 11)
+	return builder.Err()
 }
 
 func (s *ControlCabinetService) ensureUnique(ctx context.Context, controlCabinet *domainFacility.ControlCabinet, excludeID *uuid.UUID) error {
@@ -181,7 +169,7 @@ func (s *ControlCabinetService) ensureUnique(ctx context.Context, controlCabinet
 		return err
 	}
 	if exists {
-		return domain.NewValidationError().Add("controlcabinet.control_cabinet_nr", "control_cabinet_nr must be unique within the building")
+		return controlCabinetNumberField.UniqueWithinError(buildingScope)
 	}
 	return nil
 }

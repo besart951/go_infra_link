@@ -69,19 +69,11 @@ func (s *BuildingService) DeleteByID(ctx context.Context, id uuid.UUID) error {
 }
 
 func (s *BuildingService) validateRequiredFields(building *domainFacility.Building) error {
-	ve := domain.NewValidationError()
-	if strings.TrimSpace(building.IWSCode) == "" {
-		ve = ve.Add("building.iws_code", "iws_code is required")
-	} else if len(strings.TrimSpace(building.IWSCode)) != 4 {
-		ve = ve.Add("building.iws_code", "iws_code must be exactly 4 characters")
-	}
-	if building.BuildingGroup == 0 {
-		ve = ve.Add("building.building_group", "building_group is required")
-	}
-	if len(ve.Fields) > 0 {
-		return ve
-	}
-	return nil
+	builder := domain.NewValidationBuilder()
+	iwsCode := buildingIWSCodeField.RequireTrimmed(builder, building.IWSCode)
+	buildingIWSCodeField.ExactLength(builder, iwsCode, 4)
+	buildingGroupField.RequireNonZero(builder, building.BuildingGroup)
+	return builder.Err()
 }
 
 func (s *BuildingService) ensureUnique(ctx context.Context, building *domainFacility.Building, excludeID *uuid.UUID) error {
@@ -93,7 +85,7 @@ func (s *BuildingService) ensureUnique(ctx context.Context, building *domainFaci
 		return err
 	}
 	if exists {
-		return domain.NewValidationError().Add("building.iws_code", "iws_code must be unique within the building group")
+		return buildingIWSCodeField.UniqueWithinError(buildingGroupScope)
 	}
 	return nil
 }

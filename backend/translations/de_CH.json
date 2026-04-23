@@ -401,6 +401,7 @@
     "no_available_ga_device": "Kein verfügbares GA-Gerät.",
     "sps_controller_system_type_id_required": "SPS-Regler-Systemtyp-ID erforderlich.",
     "apparat_id_required": "Apparat-ID erforderlich.",
+    "system_part_id_required": "Systemteil-ID erforderlich.",
     "mutually_exclusive_error": "Die Parameter sind sich gegenseitig ausschliessend.",
     "apparat_nr_already_used": "Apparat-Nummer wird bereits in diesem Kontext verwendet.",
     "specification_already_exists": "Spezifikation existiert bereits für dieses Feldgerät.",

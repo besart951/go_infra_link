@@ -48,3 +48,28 @@ func (r *systemPartRepo) GetPaginatedList(ctx context.Context, params domain.Pag
 	}
 	return gormbase.DerefPaginatedList(result), nil
 }
+
+func (r *systemPartRepo) ExistsShortName(ctx context.Context, shortName string, excludeID *uuid.UUID) (bool, error) {
+	return r.existsCaseInsensitive(ctx, "short_name", shortName, excludeID)
+}
+
+func (r *systemPartRepo) ExistsName(ctx context.Context, name string, excludeID *uuid.UUID) (bool, error) {
+	return r.existsCaseInsensitive(ctx, "name", name, excludeID)
+}
+
+func (r *systemPartRepo) existsCaseInsensitive(ctx context.Context, column string, value string, excludeID *uuid.UUID) (bool, error) {
+	query := r.DB().WithContext(ctx).
+		Model(&domainFacility.SystemPart{}).
+		Where("LOWER("+column+") = ?", strings.ToLower(strings.TrimSpace(value)))
+
+	if excludeID != nil {
+		query = query.Where("id <> ?", *excludeID)
+	}
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}

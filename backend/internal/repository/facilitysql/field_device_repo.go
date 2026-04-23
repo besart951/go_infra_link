@@ -158,16 +158,12 @@ func (r *fieldDeviceRepo) GetIDsBySPSControllerSystemTypeIDs(ctx context.Context
 	return out, nil
 }
 
-func (r *fieldDeviceRepo) ExistsApparatNrConflict(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID, apparatNr int, excludeIDs []uuid.UUID) (bool, error) {
+func (r *fieldDeviceRepo) ExistsApparatNrConflict(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID uuid.UUID, apparatID uuid.UUID, apparatNr int, excludeIDs []uuid.UUID) (bool, error) {
 	db := r.db.WithContext(ctx).Model(&domainFacility.FieldDevice{}).
 		Where("sps_controller_system_type_id = ?", spsControllerSystemTypeID).
+		Where("system_part_id = ?", systemPartID).
 		Where("apparat_id = ?", apparatID).
 		Where("apparat_nr = ?", apparatNr)
-
-	// Only filter by system_part_id if provided (it's always a non-null UUID in the database)
-	if systemPartID != nil {
-		db = db.Where("system_part_id = ?", *systemPartID)
-	}
 
 	if len(excludeIDs) > 0 {
 		db = db.Where("id NOT IN ?", excludeIDs)
@@ -178,15 +174,11 @@ func (r *fieldDeviceRepo) ExistsApparatNrConflict(ctx context.Context, spsContro
 	return count > 0, err
 }
 
-func (r *fieldDeviceRepo) GetUsedApparatNumbers(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID *uuid.UUID, apparatID uuid.UUID) ([]int, error) {
+func (r *fieldDeviceRepo) GetUsedApparatNumbers(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID uuid.UUID, apparatID uuid.UUID) ([]int, error) {
 	query := r.db.WithContext(ctx).Model(&domainFacility.FieldDevice{}).
 		Where("sps_controller_system_type_id = ?", spsControllerSystemTypeID).
+		Where("system_part_id = ?", systemPartID).
 		Where("apparat_id = ?", apparatID)
-
-	// Only filter by system_part_id if provided (it's always a non-null UUID in the database)
-	if systemPartID != nil {
-		query = query.Where("system_part_id = ?", *systemPartID)
-	}
 
 	var nums []int
 	if err := query.Pluck("apparat_nr", &nums).Error; err != nil {

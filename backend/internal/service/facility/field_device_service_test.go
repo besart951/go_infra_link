@@ -103,7 +103,7 @@ func (r *fakeFieldDeviceStore) GetIDsBySPSControllerSystemTypeIDs(_ context.Cont
 func (r *fakeFieldDeviceStore) ExistsApparatNrConflict(
 	_ context.Context,
 	spsControllerSystemTypeID uuid.UUID,
-	systemPartID *uuid.UUID,
+	systemPartID uuid.UUID,
 	apparatID uuid.UUID,
 	apparatNr int,
 	excludeIDs []uuid.UUID,
@@ -125,7 +125,7 @@ func (r *fakeFieldDeviceStore) ExistsApparatNrConflict(
 		if item.ApparatNr != apparatNr {
 			continue
 		}
-		if systemPartID != nil && item.SystemPartID != *systemPartID {
+		if item.SystemPartID != systemPartID {
 			continue
 		}
 		return true, nil
@@ -136,7 +136,7 @@ func (r *fakeFieldDeviceStore) ExistsApparatNrConflict(
 func (r *fakeFieldDeviceStore) GetUsedApparatNumbers(
 	_ context.Context,
 	spsControllerSystemTypeID uuid.UUID,
-	systemPartID *uuid.UUID,
+	systemPartID uuid.UUID,
 	apparatID uuid.UUID,
 ) ([]int, error) {
 	out := make([]int, 0)
@@ -147,7 +147,7 @@ func (r *fakeFieldDeviceStore) GetUsedApparatNumbers(
 		if item.ApparatID != apparatID {
 			continue
 		}
-		if systemPartID != nil && item.SystemPartID != *systemPartID {
+		if item.SystemPartID != systemPartID {
 			continue
 		}
 		out = append(out, item.ApparatNr)
@@ -513,6 +513,30 @@ func (r *fakeApparatRepo) GetPaginatedList(_ context.Context, params domain.Pagi
 
 type fakeSystemPartRepo struct {
 	items map[uuid.UUID]*domainFacility.SystemPart
+}
+
+func (r *fakeSystemPartRepo) ExistsShortName(_ context.Context, shortName string, excludeID *uuid.UUID) (bool, error) {
+	for _, item := range r.items {
+		if excludeID != nil && item.ID == *excludeID {
+			continue
+		}
+		if strings.EqualFold(item.ShortName, shortName) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (r *fakeSystemPartRepo) ExistsName(_ context.Context, name string, excludeID *uuid.UUID) (bool, error) {
+	for _, item := range r.items {
+		if excludeID != nil && item.ID == *excludeID {
+			continue
+		}
+		if strings.EqualFold(item.Name, name) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (r *fakeSystemPartRepo) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainFacility.SystemPart, error) {
