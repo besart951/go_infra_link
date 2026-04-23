@@ -63,9 +63,27 @@ func (r *projectFieldDeviceRepo) GetByProjectID(ctx context.Context, projectID u
 }
 
 func (r *projectFieldDeviceRepo) GetByFieldDeviceID(ctx context.Context, fieldDeviceID uuid.UUID) ([]*project.ProjectFieldDevice, error) {
+	return r.GetByFieldDeviceIDs(ctx, []uuid.UUID{fieldDeviceID})
+}
+
+func (r *projectFieldDeviceRepo) GetByFieldDeviceIDs(ctx context.Context, fieldDeviceIDs []uuid.UUID) ([]*project.ProjectFieldDevice, error) {
+	if len(fieldDeviceIDs) == 0 {
+		return []*project.ProjectFieldDevice{}, nil
+	}
+
 	var items []*project.ProjectFieldDevice
-	err := r.db.WithContext(ctx).Where("field_device_id = ?", fieldDeviceID).Find(&items).Error
+	err := r.db.WithContext(ctx).Where("field_device_id IN ?", fieldDeviceIDs).Find(&items).Error
 	return items, err
+}
+
+func (r *projectFieldDeviceRepo) DeleteByFieldDeviceIDs(ctx context.Context, fieldDeviceIDs []uuid.UUID) error {
+	if len(fieldDeviceIDs) == 0 {
+		return nil
+	}
+
+	return r.db.WithContext(ctx).
+		Where("field_device_id IN ?", fieldDeviceIDs).
+		Delete(&project.ProjectFieldDevice{}).Error
 }
 
 func (r *projectFieldDeviceRepo) DeleteByProjectAndFieldDevice(ctx context.Context, projectID, fieldDeviceID uuid.UUID) error {

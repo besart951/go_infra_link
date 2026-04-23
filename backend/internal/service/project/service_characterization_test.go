@@ -255,6 +255,205 @@ func TestProjectService_DeleteControlCabinet_CharacterizesLinkAndHierarchyDeleti
 	}
 }
 
+func TestProjectService_CleanupProjectLinksForControlCabinetHierarchy_UsesDirectRepoDeletes(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	otherProjectID := uuid.New()
+	controlCabinetID := uuid.New()
+	keepControlCabinetID := uuid.New()
+	spsControllerID := uuid.New()
+	keepSPSControllerID := uuid.New()
+	systemTypeID := uuid.New()
+	keepSystemTypeID := uuid.New()
+	fieldDeviceID := uuid.New()
+	keepFieldDeviceID := uuid.New()
+
+	controlCabinetLinks := newProjectControlCabinetRepo()
+	spsLinks := newProjectSPSControllerRepo()
+	fieldDeviceLinks := newProjectFieldDeviceRepo()
+	spsRepo := newProjectSPSRepo()
+	spsSystemRepo := newProjectSPSSystemTypeRepo()
+	fieldDeviceRepo := newProjectFieldDeviceStore()
+
+	_ = controlCabinetLinks.Create(ctx, &domainProject.ProjectControlCabinet{ProjectID: projectID, ControlCabinetID: controlCabinetID})
+	_ = controlCabinetLinks.Create(ctx, &domainProject.ProjectControlCabinet{ProjectID: otherProjectID, ControlCabinetID: controlCabinetID})
+	_ = controlCabinetLinks.Create(ctx, &domainProject.ProjectControlCabinet{ProjectID: projectID, ControlCabinetID: keepControlCabinetID})
+	spsLinks.createWithID(projectID, spsControllerID)
+	spsLinks.createWithID(otherProjectID, spsControllerID)
+	spsLinks.createWithID(projectID, keepSPSControllerID)
+	fieldDeviceLinks.createWithID(projectID, fieldDeviceID)
+	fieldDeviceLinks.createWithID(otherProjectID, fieldDeviceID)
+	fieldDeviceLinks.createWithID(projectID, keepFieldDeviceID)
+
+	spsRepo.items[spsControllerID] = &domainFacility.SPSController{Base: domain.Base{ID: spsControllerID}, ControlCabinetID: controlCabinetID}
+	spsRepo.items[keepSPSControllerID] = &domainFacility.SPSController{Base: domain.Base{ID: keepSPSControllerID}, ControlCabinetID: keepControlCabinetID}
+	spsSystemRepo.items[systemTypeID] = &domainFacility.SPSControllerSystemType{Base: domain.Base{ID: systemTypeID}, SPSControllerID: spsControllerID}
+	spsSystemRepo.items[keepSystemTypeID] = &domainFacility.SPSControllerSystemType{Base: domain.Base{ID: keepSystemTypeID}, SPSControllerID: keepSPSControllerID}
+	fieldDeviceRepo.items[fieldDeviceID] = &domainFacility.FieldDevice{Base: domain.Base{ID: fieldDeviceID}, SPSControllerSystemTypeID: systemTypeID}
+	fieldDeviceRepo.items[keepFieldDeviceID] = &domainFacility.FieldDevice{Base: domain.Base{ID: keepFieldDeviceID}, SPSControllerSystemTypeID: keepSystemTypeID}
+
+	svc := newProjectCharacterizationService(
+		newProjectRepo(),
+		controlCabinetLinks,
+		spsLinks,
+		fieldDeviceLinks,
+		newProjectObjectDataRepo(),
+		newProjectBacnetObjectRepo(),
+		nil,
+		nil,
+		spsRepo,
+		spsSystemRepo,
+		fieldDeviceRepo,
+		nil,
+	)
+
+	if err := svc.cleanupProjectLinksForControlCabinetHierarchy(ctx, controlCabinetID); err != nil {
+		t.Fatalf("expected cleanup to succeed, got %v", err)
+	}
+
+	if len(controlCabinetLinks.deleteByControlCabinetIDCalls) != 1 || !sameUUIDSet(controlCabinetLinks.deleteByControlCabinetIDCalls[0], []uuid.UUID{controlCabinetID}) {
+		t.Fatalf("expected direct control cabinet cleanup for %s, got %v", controlCabinetID, controlCabinetLinks.deleteByControlCabinetIDCalls)
+	}
+	if len(spsLinks.deleteBySPSControllerCalls) != 1 || !sameUUIDSet(spsLinks.deleteBySPSControllerCalls[0], []uuid.UUID{spsControllerID}) {
+		t.Fatalf("expected direct sps cleanup for %s, got %v", spsControllerID, spsLinks.deleteBySPSControllerCalls)
+	}
+	if len(fieldDeviceLinks.deleteByFieldDeviceCalls) != 1 || !sameUUIDSet(fieldDeviceLinks.deleteByFieldDeviceCalls[0], []uuid.UUID{fieldDeviceID}) {
+		t.Fatalf("expected direct field-device cleanup for %s, got %v", fieldDeviceID, fieldDeviceLinks.deleteByFieldDeviceCalls)
+	}
+	if controlCabinetLinks.getPaginatedListCalls != 0 || spsLinks.getPaginatedListCalls != 0 || fieldDeviceLinks.getPaginatedListCalls != 0 {
+		t.Fatalf("expected cleanup without paginated scans, got cc=%d sps=%d fd=%d", controlCabinetLinks.getPaginatedListCalls, spsLinks.getPaginatedListCalls, fieldDeviceLinks.getPaginatedListCalls)
+	}
+	if len(controlCabinetLinks.items) != 1 || !sameUUIDSet(controlCabinetLinks.controlCabinetIDs(projectID), []uuid.UUID{keepControlCabinetID}) {
+		t.Fatalf("expected only unrelated control cabinet links to remain, got %+v", controlCabinetLinks.items)
+	}
+	if len(spsLinks.items) != 1 || !sameUUIDSet(spsLinks.spsControllerIDs(projectID), []uuid.UUID{keepSPSControllerID}) {
+		t.Fatalf("expected only unrelated sps links to remain, got %+v", spsLinks.items)
+	}
+	if len(fieldDeviceLinks.items) != 1 || !sameUUIDSet(fieldDeviceLinks.fieldDeviceIDs(projectID), []uuid.UUID{keepFieldDeviceID}) {
+		t.Fatalf("expected only unrelated field-device links to remain, got %+v", fieldDeviceLinks.items)
+	}
+}
+
+func TestProjectService_CleanupProjectLinksForSPSControllers_UsesDirectRepoDeletes(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	otherProjectID := uuid.New()
+	spsControllerOneID := uuid.New()
+	spsControllerTwoID := uuid.New()
+	keepSPSControllerID := uuid.New()
+	systemTypeOneID := uuid.New()
+	systemTypeTwoID := uuid.New()
+	keepSystemTypeID := uuid.New()
+	fieldDeviceOneID := uuid.New()
+	fieldDeviceTwoID := uuid.New()
+	keepFieldDeviceID := uuid.New()
+
+	spsLinks := newProjectSPSControllerRepo()
+	fieldDeviceLinks := newProjectFieldDeviceRepo()
+	spsSystemRepo := newProjectSPSSystemTypeRepo()
+	fieldDeviceRepo := newProjectFieldDeviceStore()
+
+	spsLinks.createWithID(projectID, spsControllerOneID)
+	spsLinks.createWithID(otherProjectID, spsControllerTwoID)
+	spsLinks.createWithID(projectID, keepSPSControllerID)
+	fieldDeviceLinks.createWithID(projectID, fieldDeviceOneID)
+	fieldDeviceLinks.createWithID(otherProjectID, fieldDeviceTwoID)
+	fieldDeviceLinks.createWithID(projectID, keepFieldDeviceID)
+
+	spsSystemRepo.items[systemTypeOneID] = &domainFacility.SPSControllerSystemType{Base: domain.Base{ID: systemTypeOneID}, SPSControllerID: spsControllerOneID}
+	spsSystemRepo.items[systemTypeTwoID] = &domainFacility.SPSControllerSystemType{Base: domain.Base{ID: systemTypeTwoID}, SPSControllerID: spsControllerTwoID}
+	spsSystemRepo.items[keepSystemTypeID] = &domainFacility.SPSControllerSystemType{Base: domain.Base{ID: keepSystemTypeID}, SPSControllerID: keepSPSControllerID}
+	fieldDeviceRepo.items[fieldDeviceOneID] = &domainFacility.FieldDevice{Base: domain.Base{ID: fieldDeviceOneID}, SPSControllerSystemTypeID: systemTypeOneID}
+	fieldDeviceRepo.items[fieldDeviceTwoID] = &domainFacility.FieldDevice{Base: domain.Base{ID: fieldDeviceTwoID}, SPSControllerSystemTypeID: systemTypeTwoID}
+	fieldDeviceRepo.items[keepFieldDeviceID] = &domainFacility.FieldDevice{Base: domain.Base{ID: keepFieldDeviceID}, SPSControllerSystemTypeID: keepSystemTypeID}
+
+	svc := newProjectCharacterizationService(
+		newProjectRepo(),
+		newProjectControlCabinetRepo(),
+		spsLinks,
+		fieldDeviceLinks,
+		newProjectObjectDataRepo(),
+		newProjectBacnetObjectRepo(),
+		nil,
+		nil,
+		newProjectSPSRepo(),
+		spsSystemRepo,
+		fieldDeviceRepo,
+		nil,
+	)
+
+	if err := svc.cleanupProjectLinksForSPSControllers(ctx, []uuid.UUID{spsControllerOneID, spsControllerTwoID}); err != nil {
+		t.Fatalf("expected cleanup to succeed, got %v", err)
+	}
+
+	if len(spsLinks.deleteBySPSControllerCalls) != 1 || !sameUUIDSet(spsLinks.deleteBySPSControllerCalls[0], []uuid.UUID{spsControllerOneID, spsControllerTwoID}) {
+		t.Fatalf("expected direct sps cleanup for targeted controllers, got %v", spsLinks.deleteBySPSControllerCalls)
+	}
+	if len(fieldDeviceLinks.deleteByFieldDeviceCalls) != 1 || !sameUUIDSet(fieldDeviceLinks.deleteByFieldDeviceCalls[0], []uuid.UUID{fieldDeviceOneID, fieldDeviceTwoID}) {
+		t.Fatalf("expected direct field-device cleanup for targeted descendants, got %v", fieldDeviceLinks.deleteByFieldDeviceCalls)
+	}
+	if spsLinks.getPaginatedListCalls != 0 || fieldDeviceLinks.getPaginatedListCalls != 0 {
+		t.Fatalf("expected cleanup without paginated scans, got sps=%d fd=%d", spsLinks.getPaginatedListCalls, fieldDeviceLinks.getPaginatedListCalls)
+	}
+	if len(spsLinks.items) != 1 || !sameUUIDSet(spsLinks.spsControllerIDs(projectID), []uuid.UUID{keepSPSControllerID}) {
+		t.Fatalf("expected only unrelated sps links to remain, got %+v", spsLinks.items)
+	}
+	if len(fieldDeviceLinks.items) != 1 || !sameUUIDSet(fieldDeviceLinks.fieldDeviceIDs(projectID), []uuid.UUID{keepFieldDeviceID}) {
+		t.Fatalf("expected only unrelated field-device links to remain, got %+v", fieldDeviceLinks.items)
+	}
+}
+
+func TestProjectService_CleanupProjectLinksForSystemTypes_UsesDirectRepoDeletes(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	otherProjectID := uuid.New()
+	systemTypeOneID := uuid.New()
+	systemTypeTwoID := uuid.New()
+	keepSystemTypeID := uuid.New()
+	fieldDeviceOneID := uuid.New()
+	fieldDeviceTwoID := uuid.New()
+	keepFieldDeviceID := uuid.New()
+
+	fieldDeviceLinks := newProjectFieldDeviceRepo()
+	fieldDeviceRepo := newProjectFieldDeviceStore()
+
+	fieldDeviceLinks.createWithID(projectID, fieldDeviceOneID)
+	fieldDeviceLinks.createWithID(otherProjectID, fieldDeviceTwoID)
+	fieldDeviceLinks.createWithID(projectID, keepFieldDeviceID)
+	fieldDeviceRepo.items[fieldDeviceOneID] = &domainFacility.FieldDevice{Base: domain.Base{ID: fieldDeviceOneID}, SPSControllerSystemTypeID: systemTypeOneID}
+	fieldDeviceRepo.items[fieldDeviceTwoID] = &domainFacility.FieldDevice{Base: domain.Base{ID: fieldDeviceTwoID}, SPSControllerSystemTypeID: systemTypeTwoID}
+	fieldDeviceRepo.items[keepFieldDeviceID] = &domainFacility.FieldDevice{Base: domain.Base{ID: keepFieldDeviceID}, SPSControllerSystemTypeID: keepSystemTypeID}
+
+	svc := newProjectCharacterizationService(
+		newProjectRepo(),
+		newProjectControlCabinetRepo(),
+		newProjectSPSControllerRepo(),
+		fieldDeviceLinks,
+		newProjectObjectDataRepo(),
+		newProjectBacnetObjectRepo(),
+		nil,
+		nil,
+		newProjectSPSRepo(),
+		newProjectSPSSystemTypeRepo(),
+		fieldDeviceRepo,
+		nil,
+	)
+
+	if err := svc.cleanupProjectLinksForSystemTypes(ctx, []uuid.UUID{systemTypeOneID, systemTypeTwoID}); err != nil {
+		t.Fatalf("expected cleanup to succeed, got %v", err)
+	}
+
+	if len(fieldDeviceLinks.deleteByFieldDeviceCalls) != 1 || !sameUUIDSet(fieldDeviceLinks.deleteByFieldDeviceCalls[0], []uuid.UUID{fieldDeviceOneID, fieldDeviceTwoID}) {
+		t.Fatalf("expected direct field-device cleanup for targeted descendants, got %v", fieldDeviceLinks.deleteByFieldDeviceCalls)
+	}
+	if fieldDeviceLinks.getPaginatedListCalls != 0 {
+		t.Fatalf("expected cleanup without paginated scans, got fd=%d", fieldDeviceLinks.getPaginatedListCalls)
+	}
+	if len(fieldDeviceLinks.items) != 1 || !sameUUIDSet(fieldDeviceLinks.fieldDeviceIDs(projectID), []uuid.UUID{keepFieldDeviceID}) {
+		t.Fatalf("expected only unrelated field-device links to remain, got %+v", fieldDeviceLinks.items)
+	}
+}
+
 func TestProjectService_CopySPSControllerSystemType_CharacterizesCopiedFieldDeviceLinking(t *testing.T) {
 	ctx := context.Background()
 	projectID := uuid.New()
@@ -674,7 +873,9 @@ func (r *projectRepoFake) hasUser(projectID, userID uuid.UUID) bool {
 }
 
 type projectControlCabinetRepoFake struct {
-	items map[uuid.UUID]*domainProject.ProjectControlCabinet
+	items                         map[uuid.UUID]*domainProject.ProjectControlCabinet
+	getPaginatedListCalls         int
+	deleteByControlCabinetIDCalls [][]uuid.UUID
 }
 
 func newProjectControlCabinetRepo() *projectControlCabinetRepoFake {
@@ -706,6 +907,7 @@ func (r *projectControlCabinetRepoFake) DeleteByIds(_ context.Context, ids []uui
 }
 
 func (r *projectControlCabinetRepoFake) GetPaginatedList(context.Context, domain.PaginationParams) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error) {
+	r.getPaginatedListCalls++
 	return paginatedFromMap(r.items), nil
 }
 
@@ -714,14 +916,30 @@ func (r *projectControlCabinetRepoFake) GetPaginatedListByProjectID(_ context.Co
 }
 
 func (r *projectControlCabinetRepoFake) GetByControlCabinetID(_ context.Context, controlCabinetID uuid.UUID) ([]*domainProject.ProjectControlCabinet, error) {
+	return r.GetByControlCabinetIDs(context.Background(), []uuid.UUID{controlCabinetID})
+}
+
+func (r *projectControlCabinetRepoFake) GetByControlCabinetIDs(_ context.Context, controlCabinetIDs []uuid.UUID) ([]*domainProject.ProjectControlCabinet, error) {
+	set := uuidSet(controlCabinetIDs)
 	out := make([]*domainProject.ProjectControlCabinet, 0)
 	for _, item := range r.items {
-		if item.ControlCabinetID == controlCabinetID {
+		if _, ok := set[item.ControlCabinetID]; ok {
 			clone := *item
 			out = append(out, &clone)
 		}
 	}
 	return out, nil
+}
+
+func (r *projectControlCabinetRepoFake) DeleteByControlCabinetIDs(_ context.Context, controlCabinetIDs []uuid.UUID) error {
+	r.deleteByControlCabinetIDCalls = append(r.deleteByControlCabinetIDCalls, append([]uuid.UUID(nil), controlCabinetIDs...))
+	set := uuidSet(controlCabinetIDs)
+	for id, item := range r.items {
+		if _, ok := set[item.ControlCabinetID]; ok {
+			delete(r.items, id)
+		}
+	}
+	return nil
 }
 
 func (r *projectControlCabinetRepoFake) controlCabinetIDs(projectID uuid.UUID) []uuid.UUID {
@@ -735,7 +953,9 @@ func (r *projectControlCabinetRepoFake) controlCabinetIDs(projectID uuid.UUID) [
 }
 
 type projectSPSControllerRepoFake struct {
-	items map[uuid.UUID]*domainProject.ProjectSPSController
+	items                      map[uuid.UUID]*domainProject.ProjectSPSController
+	getPaginatedListCalls      int
+	deleteBySPSControllerCalls [][]uuid.UUID
 }
 
 func newProjectSPSControllerRepo() *projectSPSControllerRepoFake {
@@ -767,6 +987,7 @@ func (r *projectSPSControllerRepoFake) DeleteByIds(_ context.Context, ids []uuid
 }
 
 func (r *projectSPSControllerRepoFake) GetPaginatedList(context.Context, domain.PaginationParams) (*domain.PaginatedList[domainProject.ProjectSPSController], error) {
+	r.getPaginatedListCalls++
 	return paginatedFromMap(r.items), nil
 }
 
@@ -775,14 +996,30 @@ func (r *projectSPSControllerRepoFake) GetPaginatedListByProjectID(_ context.Con
 }
 
 func (r *projectSPSControllerRepoFake) GetBySPSControllerID(_ context.Context, spsControllerID uuid.UUID) ([]*domainProject.ProjectSPSController, error) {
+	return r.GetBySPSControllerIDs(context.Background(), []uuid.UUID{spsControllerID})
+}
+
+func (r *projectSPSControllerRepoFake) GetBySPSControllerIDs(_ context.Context, spsControllerIDs []uuid.UUID) ([]*domainProject.ProjectSPSController, error) {
+	set := uuidSet(spsControllerIDs)
 	out := make([]*domainProject.ProjectSPSController, 0)
 	for _, item := range r.items {
-		if item.SPSControllerID == spsControllerID {
+		if _, ok := set[item.SPSControllerID]; ok {
 			clone := *item
 			out = append(out, &clone)
 		}
 	}
 	return out, nil
+}
+
+func (r *projectSPSControllerRepoFake) DeleteBySPSControllerIDs(_ context.Context, spsControllerIDs []uuid.UUID) error {
+	r.deleteBySPSControllerCalls = append(r.deleteBySPSControllerCalls, append([]uuid.UUID(nil), spsControllerIDs...))
+	set := uuidSet(spsControllerIDs)
+	for id, item := range r.items {
+		if _, ok := set[item.SPSControllerID]; ok {
+			delete(r.items, id)
+		}
+	}
+	return nil
 }
 
 func (r *projectSPSControllerRepoFake) createWithID(projectID, spsControllerID uuid.UUID) {
@@ -800,7 +1037,9 @@ func (r *projectSPSControllerRepoFake) spsControllerIDs(projectID uuid.UUID) []u
 }
 
 type projectFieldDeviceRepoFake struct {
-	items map[uuid.UUID]*domainProject.ProjectFieldDevice
+	items                    map[uuid.UUID]*domainProject.ProjectFieldDevice
+	getPaginatedListCalls    int
+	deleteByFieldDeviceCalls [][]uuid.UUID
 }
 
 func newProjectFieldDeviceRepo() *projectFieldDeviceRepoFake {
@@ -832,11 +1071,35 @@ func (r *projectFieldDeviceRepoFake) DeleteByIds(_ context.Context, ids []uuid.U
 }
 
 func (r *projectFieldDeviceRepoFake) GetPaginatedList(context.Context, domain.PaginationParams) (*domain.PaginatedList[domainProject.ProjectFieldDevice], error) {
+	r.getPaginatedListCalls++
 	return paginatedFromMap(r.items), nil
 }
 
 func (r *projectFieldDeviceRepoFake) GetPaginatedListByProjectID(_ context.Context, projectID uuid.UUID, _ domain.PaginationParams) (*domain.PaginatedList[domainProject.ProjectFieldDevice], error) {
 	return paginatedFromFilter(r.items, func(item *domainProject.ProjectFieldDevice) bool { return item.ProjectID == projectID }), nil
+}
+
+func (r *projectFieldDeviceRepoFake) GetByFieldDeviceIDs(_ context.Context, fieldDeviceIDs []uuid.UUID) ([]*domainProject.ProjectFieldDevice, error) {
+	set := uuidSet(fieldDeviceIDs)
+	out := make([]*domainProject.ProjectFieldDevice, 0)
+	for _, item := range r.items {
+		if _, ok := set[item.FieldDeviceID]; ok {
+			clone := *item
+			out = append(out, &clone)
+		}
+	}
+	return out, nil
+}
+
+func (r *projectFieldDeviceRepoFake) DeleteByFieldDeviceIDs(_ context.Context, fieldDeviceIDs []uuid.UUID) error {
+	r.deleteByFieldDeviceCalls = append(r.deleteByFieldDeviceCalls, append([]uuid.UUID(nil), fieldDeviceIDs...))
+	set := uuidSet(fieldDeviceIDs)
+	for id, item := range r.items {
+		if _, ok := set[item.FieldDeviceID]; ok {
+			delete(r.items, id)
+		}
+	}
+	return nil
 }
 
 func (r *projectFieldDeviceRepoFake) createWithID(projectID, fieldDeviceID uuid.UUID) {

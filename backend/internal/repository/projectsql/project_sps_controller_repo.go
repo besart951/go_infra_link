@@ -63,9 +63,27 @@ func (r *projectSPSControllerRepo) GetByProjectID(ctx context.Context, projectID
 }
 
 func (r *projectSPSControllerRepo) GetBySPSControllerID(ctx context.Context, spsControllerID uuid.UUID) ([]*project.ProjectSPSController, error) {
+	return r.GetBySPSControllerIDs(ctx, []uuid.UUID{spsControllerID})
+}
+
+func (r *projectSPSControllerRepo) GetBySPSControllerIDs(ctx context.Context, spsControllerIDs []uuid.UUID) ([]*project.ProjectSPSController, error) {
+	if len(spsControllerIDs) == 0 {
+		return []*project.ProjectSPSController{}, nil
+	}
+
 	var items []*project.ProjectSPSController
-	err := r.db.WithContext(ctx).Where("sps_controller_id = ?", spsControllerID).Find(&items).Error
+	err := r.db.WithContext(ctx).Where("sps_controller_id IN ?", spsControllerIDs).Find(&items).Error
 	return items, err
+}
+
+func (r *projectSPSControllerRepo) DeleteBySPSControllerIDs(ctx context.Context, spsControllerIDs []uuid.UUID) error {
+	if len(spsControllerIDs) == 0 {
+		return nil
+	}
+
+	return r.db.WithContext(ctx).
+		Where("sps_controller_id IN ?", spsControllerIDs).
+		Delete(&project.ProjectSPSController{}).Error
 }
 
 func (r *projectSPSControllerRepo) DeleteByProjectAndSPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) error {

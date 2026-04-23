@@ -23,4 +23,6 @@ func (ProjectFieldDevice) TableName() string {
 type ProjectFieldDeviceRepository interface {
 	domain.Repository[ProjectFieldDevice]
 	GetPaginatedListByProjectID(ctx context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ProjectFieldDevice], error)
+	GetByFieldDeviceIDs(ctx context.Context, fieldDeviceIDs []uuid.UUID) ([]*ProjectFieldDevice, error)
+	DeleteByFieldDeviceIDs(ctx context.Context, fieldDeviceIDs []uuid.UUID) error
 }

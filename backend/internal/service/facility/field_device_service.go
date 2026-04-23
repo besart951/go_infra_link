@@ -1126,40 +1126,12 @@ func (s *FieldDeviceService) MultiCreate(ctx context.Context, items []domainFaci
 		return result
 	}
 
-	fieldDevices := make([]*domainFacility.FieldDevice, 0, len(createWork))
-	for _, work := range createWork {
-		fieldDevices = append(fieldDevices, work.item.FieldDevice)
-	}
-
-	if err := s.repo.BulkCreate(ctx, fieldDevices, 100); err != nil {
-		for _, work := range createWork {
-			createResult := &result.Results[work.index]
-			setCreateError(createResult, err, "fielddevice")
-			result.FailureCount++
-		}
-		return result
-	}
-
 	for _, work := range createWork {
 		createResult := &result.Results[work.index]
-		if work.item.ObjectDataID != nil {
-			if err := s.replaceBacnetObjectsFromObjectData(ctx, work.item.FieldDevice.ID, *work.item.ObjectDataID); err != nil {
-				if cleanupErr := s.DeleteByID(ctx, work.item.FieldDevice.ID); cleanupErr != nil {
-					err = fmt.Errorf("%w; cleanup failed: %v", err, cleanupErr)
-				}
-				setCreateError(createResult, err, "fielddevice")
-				result.FailureCount++
-				continue
-			}
-		} else if len(work.item.BacnetObjects) > 0 {
-			if err := s.replaceBacnetObjects(ctx, work.item.FieldDevice.ID, work.item.BacnetObjects); err != nil {
-				if cleanupErr := s.DeleteByID(ctx, work.item.FieldDevice.ID); cleanupErr != nil {
-					err = fmt.Errorf("%w; cleanup failed: %v", err, cleanupErr)
-				}
-				setCreateError(createResult, err, "fielddevice")
-				result.FailureCount++
-				continue
-			}
+		if err := s.CreateWithBacnetObjects(ctx, work.item.FieldDevice, work.item.ObjectDataID, work.item.BacnetObjects); err != nil {
+			setCreateError(createResult, err, "fielddevice")
+			result.FailureCount++
+			continue
 		}
 
 		createResult.Success = true

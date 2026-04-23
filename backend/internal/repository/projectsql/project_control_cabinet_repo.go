@@ -63,9 +63,27 @@ func (r *projectControlCabinetRepo) GetByProjectID(ctx context.Context, projectI
 }
 
 func (r *projectControlCabinetRepo) GetByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]*project.ProjectControlCabinet, error) {
+	return r.GetByControlCabinetIDs(ctx, []uuid.UUID{controlCabinetID})
+}
+
+func (r *projectControlCabinetRepo) GetByControlCabinetIDs(ctx context.Context, controlCabinetIDs []uuid.UUID) ([]*project.ProjectControlCabinet, error) {
+	if len(controlCabinetIDs) == 0 {
+		return []*project.ProjectControlCabinet{}, nil
+	}
+
 	var items []*project.ProjectControlCabinet
-	err := r.db.WithContext(ctx).Where("control_cabinet_id = ?", controlCabinetID).Find(&items).Error
+	err := r.db.WithContext(ctx).Where("control_cabinet_id IN ?", controlCabinetIDs).Find(&items).Error
 	return items, err
+}
+
+func (r *projectControlCabinetRepo) DeleteByControlCabinetIDs(ctx context.Context, controlCabinetIDs []uuid.UUID) error {
+	if len(controlCabinetIDs) == 0 {
+		return nil
+	}
+
+	return r.db.WithContext(ctx).
+		Where("control_cabinet_id IN ?", controlCabinetIDs).
+		Delete(&project.ProjectControlCabinet{}).Error
 }
 
 func (r *projectControlCabinetRepo) DeleteByProjectAndControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) error {

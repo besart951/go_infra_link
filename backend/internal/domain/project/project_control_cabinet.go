@@ -24,4 +24,6 @@ type ProjectControlCabinetRepository interface {
 	domain.Repository[ProjectControlCabinet]
 	GetPaginatedListByProjectID(ctx context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ProjectControlCabinet], error)
 	GetByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]*ProjectControlCabinet, error)
+	GetByControlCabinetIDs(ctx context.Context, controlCabinetIDs []uuid.UUID) ([]*ProjectControlCabinet, error)
+	DeleteByControlCabinetIDs(ctx context.Context, controlCabinetIDs []uuid.UUID) error
 }

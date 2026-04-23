@@ -825,15 +825,7 @@ func (s *Service) deleteProjectControlCabinetLinksByControlCabinetIDs(ctx contex
 		return nil
 	}
 
-	idSet := toUUIDSet(controlCabinetIDs)
-	linkIDs, err := s.collectProjectControlCabinetLinkIDs(ctx, idSet)
-	if err != nil {
-		return err
-	}
-	if len(linkIDs) == 0 {
-		return nil
-	}
-	return s.projectControlCabinetRepo.DeleteByIds(ctx, linkIDs)
+	return s.projectControlCabinetRepo.DeleteByControlCabinetIDs(ctx, controlCabinetIDs)
 }
 
 func (s *Service) deleteProjectSPSControllerLinksBySPSControllerIDs(ctx context.Context, spsControllerIDs []uuid.UUID) error {
@@ -841,15 +833,7 @@ func (s *Service) deleteProjectSPSControllerLinksBySPSControllerIDs(ctx context.
 		return nil
 	}
 
-	idSet := toUUIDSet(spsControllerIDs)
-	linkIDs, err := s.collectProjectSPSControllerLinkIDs(ctx, idSet)
-	if err != nil {
-		return err
-	}
-	if len(linkIDs) == 0 {
-		return nil
-	}
-	return s.projectSPSControllerRepo.DeleteByIds(ctx, linkIDs)
+	return s.projectSPSControllerRepo.DeleteBySPSControllerIDs(ctx, spsControllerIDs)
 }
 
 func (s *Service) deleteProjectFieldDeviceLinksByFieldDeviceIDs(ctx context.Context, fieldDeviceIDs []uuid.UUID) error {
@@ -857,107 +841,7 @@ func (s *Service) deleteProjectFieldDeviceLinksByFieldDeviceIDs(ctx context.Cont
 		return nil
 	}
 
-	idSet := toUUIDSet(fieldDeviceIDs)
-	linkIDs, err := s.collectProjectFieldDeviceLinkIDs(ctx, idSet)
-	if err != nil {
-		return err
-	}
-	if len(linkIDs) == 0 {
-		return nil
-	}
-	return s.projectFieldDeviceRepo.DeleteByIds(ctx, linkIDs)
-}
-
-func (s *Service) collectProjectControlCabinetLinkIDs(ctx context.Context, controlCabinetIDSet map[uuid.UUID]struct{}) ([]uuid.UUID, error) {
-	result := make([]uuid.UUID, 0)
-	page := 1
-
-	for {
-		items, err := s.projectControlCabinetRepo.GetPaginatedList(ctx, domain.PaginationParams{
-			Page:  page,
-			Limit: 500,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		for _, item := range items.Items {
-			if _, ok := controlCabinetIDSet[item.ControlCabinetID]; ok {
-				result = append(result, item.ID)
-			}
-		}
-
-		if page >= items.TotalPages || len(items.Items) == 0 {
-			break
-		}
-		page++
-	}
-
-	return result, nil
-}
-
-func (s *Service) collectProjectSPSControllerLinkIDs(ctx context.Context, spsControllerIDSet map[uuid.UUID]struct{}) ([]uuid.UUID, error) {
-	result := make([]uuid.UUID, 0)
-	page := 1
-
-	for {
-		items, err := s.projectSPSControllerRepo.GetPaginatedList(ctx, domain.PaginationParams{
-			Page:  page,
-			Limit: 500,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		for _, item := range items.Items {
-			if _, ok := spsControllerIDSet[item.SPSControllerID]; ok {
-				result = append(result, item.ID)
-			}
-		}
-
-		if page >= items.TotalPages || len(items.Items) == 0 {
-			break
-		}
-		page++
-	}
-
-	return result, nil
-}
-
-func (s *Service) collectProjectFieldDeviceLinkIDs(ctx context.Context, fieldDeviceIDSet map[uuid.UUID]struct{}) ([]uuid.UUID, error) {
-	result := make([]uuid.UUID, 0)
-	page := 1
-
-	for {
-		items, err := s.projectFieldDeviceRepo.GetPaginatedList(ctx, domain.PaginationParams{
-			Page:  page,
-			Limit: 500,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		for _, item := range items.Items {
-			if _, ok := fieldDeviceIDSet[item.FieldDeviceID]; ok {
-				result = append(result, item.ID)
-			}
-		}
-
-		if page >= items.TotalPages || len(items.Items) == 0 {
-			break
-		}
-		page++
-	}
-
-	return result, nil
-}
-
-func toUUIDSet(ids []uuid.UUID) map[uuid.UUID]struct{} {
-	result := make(map[uuid.UUID]struct{}, len(ids))
-	for _, id := range ids {
-		result[id] = struct{}{}
-	}
-	return result
+	return s.projectFieldDeviceRepo.DeleteByFieldDeviceIDs(ctx, fieldDeviceIDs)
 }
 
 func (s *Service) linkDescendantsForControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) error {
