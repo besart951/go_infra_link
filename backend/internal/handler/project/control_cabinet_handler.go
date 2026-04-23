@@ -5,7 +5,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
-	facilitypresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/facility"
+	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
@@ -77,7 +77,7 @@ func (h *ProjectHandler) CopyProjectControlCabinet(c *gin.Context) {
 	}
 
 	h.notifyProjectChange(c, projectID, "project.control_cabinet.copied")
-	c.JSON(http.StatusCreated, facilitypresenter.ToControlCabinetResponse(*copyEntity))
+	c.JSON(http.StatusCreated, sharedpresenter.ToControlCabinetResponse(*copyEntity))
 }
 
 // UpdateProjectControlCabinet godoc

@@ -5,7 +5,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
-	facilitypresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/facility"
+	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
@@ -77,7 +77,7 @@ func (h *ProjectHandler) CopyProjectSPSController(c *gin.Context) {
 	}
 
 	h.notifyProjectChange(c, projectID, "project.sps_controller.copied")
-	c.JSON(http.StatusCreated, facilitypresenter.ToSPSControllerResponse(*copyEntity))
+	c.JSON(http.StatusCreated, sharedpresenter.ToSPSControllerResponse(*copyEntity))
 }
 
 func (h *ProjectHandler) CopyProjectSPSControllerSystemType(c *gin.Context) {
@@ -104,7 +104,7 @@ func (h *ProjectHandler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 	}
 
 	h.notifyProjectChange(c, projectID, "project.sps_controller_system_type.copied")
-	c.JSON(http.StatusCreated, facilitypresenter.ToSPSControllerSystemTypeResponse(*copyEntity))
+	c.JSON(http.StatusCreated, sharedpresenter.ToSPSControllerSystemTypeResponse(*copyEntity))
 }
 
 // UpdateProjectSPSController godoc

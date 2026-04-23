@@ -1,4 +1,4 @@
-package facility
+package shared
 
 import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"

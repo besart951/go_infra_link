@@ -4,7 +4,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
-	facilitypresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/facility"
+	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	"github.com/google/uuid"
 )
 
@@ -116,7 +116,7 @@ func toApparatListResponse(list *domain.PaginatedList[domainFacility.Apparat]) d
 }
 
 func toControlCabinetResponse(controlCabinet domainFacility.ControlCabinet) dto.ControlCabinetResponse {
-	return facilitypresenter.ToControlCabinetResponse(controlCabinet)
+	return sharedpresenter.ToControlCabinetResponse(controlCabinet)
 }
 
 func toControlCabinetResponses(items []domainFacility.ControlCabinet) []dto.ControlCabinetResponse {
@@ -128,7 +128,7 @@ func toControlCabinetListResponse(list *domain.PaginatedList[domainFacility.Cont
 }
 
 func toSPSControllerResponse(controller domainFacility.SPSController) dto.SPSControllerResponse {
-	return facilitypresenter.ToSPSControllerResponse(controller)
+	return sharedpresenter.ToSPSControllerResponse(controller)
 }
 
 func toSPSControllerResponses(items []domainFacility.SPSController) []dto.SPSControllerResponse {
@@ -193,7 +193,7 @@ func toFieldDeviceListResponse(list *domain.PaginatedList[domainFacility.FieldDe
 }
 
 func toFieldDeviceOptionsResponse(options *domainFacility.FieldDeviceOptions) dto.FieldDeviceOptionsResponse {
-	return facilitypresenter.ToFieldDeviceOptionsResponse(options)
+	return sharedpresenter.ToFieldDeviceOptionsResponse(options)
 }
 
 func toMultiCreateFieldDeviceResponse(result *domainFacility.FieldDeviceMultiCreateResult) dto.MultiCreateFieldDeviceResponse {
@@ -356,7 +356,7 @@ func toObjectDataListResponse(list *domain.PaginatedList[domainFacility.ObjectDa
 }
 
 func toSPSControllerSystemTypeResponse(item domainFacility.SPSControllerSystemType) dto.SPSControllerSystemTypeResponse {
-	return facilitypresenter.ToSPSControllerSystemTypeResponse(item)
+	return sharedpresenter.ToSPSControllerSystemTypeResponse(item)
 }
 
 func toSPSControllerSystemTypeListResponse(list *domain.PaginatedList[domainFacility.SPSControllerSystemType]) dto.SPSControllerSystemTypeListResponse {

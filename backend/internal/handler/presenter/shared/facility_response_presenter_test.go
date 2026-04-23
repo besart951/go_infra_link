@@ -1,4 +1,4 @@
-package facility
+package shared
 
 import (
 	"testing"

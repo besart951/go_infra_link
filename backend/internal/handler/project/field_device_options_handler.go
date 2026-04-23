@@ -5,7 +5,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
-	facilitypresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/facility"
+	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
@@ -61,5 +61,5 @@ func (h *FieldDeviceOptionsHandler) GetFieldDeviceOptionsForProject(c *gin.Conte
 		return
 	}
 
-	c.JSON(http.StatusOK, facilitypresenter.ToFieldDeviceOptionsResponse(options))
+	c.JSON(http.StatusOK, sharedpresenter.ToFieldDeviceOptionsResponse(options))
 }
