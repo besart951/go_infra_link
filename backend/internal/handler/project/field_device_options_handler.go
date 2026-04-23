@@ -11,8 +11,8 @@ import (
 )
 
 type FieldDeviceOptionsHandler struct {
-	accessService  ProjectAccessPolicyService
-	service        FieldDeviceOptionsService
+	accessService ProjectAccessPolicyService
+	service       FieldDeviceOptionsService
 }
 
 func NewFieldDeviceOptionsHandler(accessService ProjectAccessPolicyService, service FieldDeviceOptionsService) *FieldDeviceOptionsHandler {
