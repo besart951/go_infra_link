@@ -3,29 +3,23 @@ package facilitysql
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type fieldDeviceRepo struct {
-	*gormbase.BaseRepository[*domainFacility.FieldDevice]
 	db *gorm.DB
 }
 
 func NewFieldDeviceRepository(db *gorm.DB) domainFacility.FieldDeviceStore {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where("LOWER(bmk) LIKE ? OR LOWER(description) LIKE ?", pattern, pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainFacility.FieldDevice](db, searchCallback)
 	return &fieldDeviceRepo{
-		BaseRepository: baseRepo,
-		db:             db,
+		db: db,
 	}
 }
 
@@ -101,16 +95,74 @@ func (r *fieldDeviceRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*dom
 	if len(ids) == 0 {
 		return []*domainFacility.FieldDevice{}, nil
 	}
-	var items []*domainFacility.FieldDevice
-	err := r.db.WithContext(ctx).Where("id IN ?", ids).Preload("Specification").Find(&items).Error
-	return items, err
+	var records []*fieldDeviceRecord
+	err := r.db.WithContext(ctx).Where("id IN ?", ids).Preload("Specification").Find(&records).Error
+	return toFieldDeviceDomains(records), err
+}
+
+func (r *fieldDeviceRepo) Create(ctx context.Context, entity *domainFacility.FieldDevice) error {
+	if err := entity.Base.InitForCreate(time.Now().UTC()); err != nil {
+		return err
+	}
+
+	return r.db.WithContext(ctx).
+		Omit(clause.Associations).
+		Create(toFieldDeviceRecord(entity)).Error
+}
+
+func (r *fieldDeviceRepo) BulkCreate(ctx context.Context, entities []*domainFacility.FieldDevice, batchSize int) error {
+	if len(entities) == 0 {
+		return nil
+	}
+
+	now := time.Now().UTC()
+	records := make([]*fieldDeviceRecord, len(entities))
+	for i, entity := range entities {
+		if err := entity.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		records[i] = toFieldDeviceRecord(entity)
+	}
+
+	if batchSize <= 0 {
+		batchSize = gormbase.DefaultBatchSize
+	}
+
+	return r.db.WithContext(ctx).
+		Omit(clause.Associations).
+		CreateInBatches(records, batchSize).Error
+}
+
+func (r *fieldDeviceRepo) Update(ctx context.Context, entity *domainFacility.FieldDevice) error {
+	entity.Base.TouchForUpdate(time.Now().UTC())
+	return r.db.WithContext(ctx).Model(&fieldDeviceRecord{}).
+		Where("id = ?", entity.ID).
+		Updates(map[string]any{
+			"updated_at":                    entity.UpdatedAt,
+			"bmk":                           entity.BMK,
+			"description":                   entity.Description,
+			"apparat_nr":                    entity.ApparatNr,
+			"text_individuell":              entity.TextIndividuell,
+			"sps_controller_system_type_id": entity.SPSControllerSystemTypeID,
+			"system_part_id":                entity.SystemPartID,
+			"specification_id":              entity.SpecificationID,
+			"apparat_id":                    entity.ApparatID,
+		}).Error
+}
+
+func (r *fieldDeviceRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&fieldDeviceRecord{}).Error
 }
 
 func (r *fieldDeviceRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.WithContext(ctx).Model(&domainFacility.FieldDevice{})
+	query := r.db.WithContext(ctx).Model(&fieldDeviceRecord{})
 
 	// Apply search
 	if strings.TrimSpace(params.Search) != "" {
@@ -125,19 +177,19 @@ func (r *fieldDeviceRepo) GetPaginatedList(ctx context.Context, params domain.Pa
 	}
 
 	// Fetch items with preloads
-	var items []domainFacility.FieldDevice
+	var records []fieldDeviceRecord
 	if err := query.
 		Order("created_at DESC").
 		Preload("Specification").
 		Preload("BacnetObjects").
 		Limit(limit).
 		Offset(offset).
-		Find(&items).Error; err != nil {
+		Find(&records).Error; err != nil {
 		return nil, err
 	}
 
 	return &domain.PaginatedList[domainFacility.FieldDevice]{
-		Items:      items,
+		Items:      fieldDeviceDomainValues(records),
 		Total:      total,
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
@@ -149,7 +201,7 @@ func (r *fieldDeviceRepo) GetIDsBySPSControllerSystemTypeIDs(ctx context.Context
 		return []uuid.UUID{}, nil
 	}
 	var out []uuid.UUID
-	err := r.db.WithContext(ctx).Model(&domainFacility.FieldDevice{}).
+	err := r.db.WithContext(ctx).Model(&fieldDeviceRecord{}).
 		Where("sps_controller_system_type_id IN ?", ids).
 		Pluck("id", &out).Error
 	if err != nil {
@@ -159,7 +211,7 @@ func (r *fieldDeviceRepo) GetIDsBySPSControllerSystemTypeIDs(ctx context.Context
 }
 
 func (r *fieldDeviceRepo) ExistsApparatNrConflict(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID uuid.UUID, apparatID uuid.UUID, apparatNr int, excludeIDs []uuid.UUID) (bool, error) {
-	db := r.db.WithContext(ctx).Model(&domainFacility.FieldDevice{}).
+	db := r.db.WithContext(ctx).Model(&fieldDeviceRecord{}).
 		Where("sps_controller_system_type_id = ?", spsControllerSystemTypeID).
 		Where("system_part_id = ?", systemPartID).
 		Where("apparat_id = ?", apparatID).
@@ -175,7 +227,7 @@ func (r *fieldDeviceRepo) ExistsApparatNrConflict(ctx context.Context, spsContro
 }
 
 func (r *fieldDeviceRepo) GetUsedApparatNumbers(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID uuid.UUID, apparatID uuid.UUID) ([]int, error) {
-	query := r.db.WithContext(ctx).Model(&domainFacility.FieldDevice{}).
+	query := r.db.WithContext(ctx).Model(&fieldDeviceRecord{}).
 		Where("sps_controller_system_type_id = ?", spsControllerSystemTypeID).
 		Where("system_part_id = ?", systemPartID).
 		Where("apparat_id = ?", apparatID)
@@ -191,7 +243,7 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(ctx context.Context, param
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 1000)
 	offset := (page - 1) * limit
 
-	query := r.db.WithContext(ctx).Model(&domainFacility.FieldDevice{})
+	query := r.db.WithContext(ctx).Model(&fieldDeviceRecord{})
 	hasPotentialDuplicateRows := false
 
 	// Apply filters by joining through the hierarchy
@@ -246,12 +298,12 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(ctx context.Context, param
 		return nil, err
 	}
 
-	var items []domainFacility.FieldDevice
+	var records []fieldDeviceRecord
 	orderedQuery := query.Session(&gorm.Session{})
 	if hasPotentialDuplicateRows {
 		distinctIDs := query.Session(&gorm.Session{}).Select("DISTINCT field_devices.id")
 		orderedQuery = r.db.WithContext(ctx).
-			Model(&domainFacility.FieldDevice{}).
+			Model(&fieldDeviceRecord{}).
 			Joins("JOIN (?) ids ON ids.id = field_devices.id", distinctIDs)
 	}
 	orderedQuery = applyFieldDeviceSorting(orderedQuery, params)
@@ -269,12 +321,12 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(ctx context.Context, param
 		Preload("BacnetObjects.AlarmType").
 		Limit(limit).
 		Offset(offset).
-		Find(&items).Error; err != nil {
+		Find(&records).Error; err != nil {
 		return nil, err
 	}
 
 	return &domain.PaginatedList[domainFacility.FieldDevice]{
-		Items:      items,
+		Items:      fieldDeviceDomainValues(records),
 		Total:      total,
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),

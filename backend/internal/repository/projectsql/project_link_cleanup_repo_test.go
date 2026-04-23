@@ -163,11 +163,7 @@ func newProjectLinkRepoTestDB(t *testing.T) *gorm.DB {
 		_ = sqlDB.Close()
 	})
 
-	if err := db.AutoMigrate(
-		&domainProject.ProjectControlCabinet{},
-		&domainProject.ProjectSPSController{},
-		&domainProject.ProjectFieldDevice{},
-	); err != nil {
+	if err := db.AutoMigrate(AutoMigrateModels()...); err != nil {
 		t.Fatalf("expected project link tables to migrate, got %v", err)
 	}
 

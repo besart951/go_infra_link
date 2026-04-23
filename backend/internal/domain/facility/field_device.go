@@ -11,16 +11,16 @@ type FieldDevice struct {
 	Description               *string
 	ApparatNr                 int
 	TextIndividuell           *string
-	SPSControllerSystemTypeID uuid.UUID               `gorm:"type:uuid;not null;index"`
-	SPSControllerSystemType   SPSControllerSystemType `gorm:"foreignKey:SPSControllerSystemTypeID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	SystemPartID              uuid.UUID               `gorm:"type:uuid;not null;index"`
-	SystemPart                SystemPart              `gorm:"foreignKey:SystemPartID"`
-	SpecificationID           *uuid.UUID              `gorm:"type:uuid;index"`
-	Specification             *Specification          `gorm:"foreignKey:SpecificationID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	ApparatID                 uuid.UUID               `gorm:"type:uuid;not null;index"`
-	Apparat                   Apparat                 `gorm:"foreignKey:ApparatID"`
+	SPSControllerSystemTypeID uuid.UUID
+	SPSControllerSystemType   SPSControllerSystemType
+	SystemPartID              uuid.UUID
+	SystemPart                SystemPart
+	SpecificationID           *uuid.UUID
+	Specification             *Specification
+	ApparatID                 uuid.UUID
+	Apparat                   Apparat
 
-	BacnetObjects []BacnetObject `gorm:"foreignKey:FieldDeviceID"`
+	BacnetObjects []BacnetObject
 }
 
 // FieldDeviceOptions contains all metadata needed for creating/editing field devices

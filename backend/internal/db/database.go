@@ -15,6 +15,9 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/besart951/go_infra_link/backend/internal/domain/team"
 	"github.com/besart951/go_infra_link/backend/internal/domain/user"
+	facilityrepo "github.com/besart951/go_infra_link/backend/internal/repository/facilitysql"
+	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
+	projectsql "github.com/besart951/go_infra_link/backend/internal/repository/projectsql"
 )
 
 // Connect establishes a database connection and verifies reachability.
@@ -87,7 +90,7 @@ func Bootstrap(cfg config.Config) error {
 // autoMigrateCurrentSchema creates the current schema baseline.
 // Keep this limited to schema creation only; all repairs and follow-up changes belong in versioned migrations.
 func autoMigrateCurrentSchema(db *gorm.DB) error {
-	if err := db.AutoMigrate(
+	models := []any{
 		// User domain
 		&user.User{},
 		&user.BusinessDetails{},
@@ -105,10 +108,6 @@ func autoMigrateCurrentSchema(db *gorm.DB) error {
 
 		// Project domain
 		&project.Phase{},
-		&project.Project{},
-		&project.ProjectFieldDevice{},
-		&project.ProjectControlCabinet{},
-		&project.ProjectSPSController{},
 
 		// Facility domain
 		&facility.Building{},
@@ -119,7 +118,6 @@ func autoMigrateCurrentSchema(db *gorm.DB) error {
 		&facility.SystemPart{},
 		&facility.Apparat{},
 		&facility.Specification{},
-		&facility.FieldDevice{},
 		&facility.StateText{},
 		&facility.NotificationClass{},
 		&facility.AlarmDefinition{},
@@ -131,7 +129,12 @@ func autoMigrateCurrentSchema(db *gorm.DB) error {
 		&facility.AlarmTypeField{},
 		&facility.AlarmDefinitionFieldOverride{},
 		&facility.BacnetObjectAlarmValue{},
-	); err != nil {
+	}
+	models = append(models, projectrepo.AutoMigrateModels()...)
+	models = append(models, projectsql.AutoMigrateModels()...)
+	models = append(models, facilityrepo.AutoMigrateFieldDeviceModels()...)
+
+	if err := db.AutoMigrate(models...); err != nil {
 		return err
 	}
 

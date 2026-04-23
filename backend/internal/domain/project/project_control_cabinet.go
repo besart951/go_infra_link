@@ -10,14 +10,10 @@ import (
 
 type ProjectControlCabinet struct {
 	domain.Base
-	ProjectID        uuid.UUID               `gorm:"type:uuid;not null;uniqueIndex:idx_project_control_cabinet_unique"`
-	Project          Project                 `gorm:"foreignKey:ProjectID;references:ID"`
-	ControlCabinetID uuid.UUID               `gorm:"type:uuid;not null;uniqueIndex:idx_project_control_cabinet_unique"`
-	ControlCabinet   facility.ControlCabinet `gorm:"foreignKey:ControlCabinetID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-}
-
-func (ProjectControlCabinet) TableName() string {
-	return "project_control_cabinets"
+	ProjectID        uuid.UUID
+	Project          Project
+	ControlCabinetID uuid.UUID
+	ControlCabinet   facility.ControlCabinet
 }
 
 type ProjectControlCabinetRepository interface {
