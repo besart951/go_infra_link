@@ -4,6 +4,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
+	facilitypresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/facility"
 	"github.com/google/uuid"
 )
 
@@ -115,13 +116,7 @@ func toApparatListResponse(list *domain.PaginatedList[domainFacility.Apparat]) d
 }
 
 func toControlCabinetResponse(controlCabinet domainFacility.ControlCabinet) dto.ControlCabinetResponse {
-	return dto.ControlCabinetResponse{
-		ID:               controlCabinet.ID,
-		BuildingID:       controlCabinet.BuildingID,
-		ControlCabinetNr: controlCabinet.ControlCabinetNr,
-		CreatedAt:        controlCabinet.CreatedAt,
-		UpdatedAt:        controlCabinet.UpdatedAt,
-	}
+	return facilitypresenter.ToControlCabinetResponse(controlCabinet)
 }
 
 func toControlCabinetResponses(items []domainFacility.ControlCabinet) []dto.ControlCabinetResponse {
@@ -133,20 +128,7 @@ func toControlCabinetListResponse(list *domain.PaginatedList[domainFacility.Cont
 }
 
 func toSPSControllerResponse(controller domainFacility.SPSController) dto.SPSControllerResponse {
-	return dto.SPSControllerResponse{
-		ID:                controller.ID,
-		ControlCabinetID:  controller.ControlCabinetID,
-		GADevice:          controller.GADevice,
-		DeviceName:        controller.DeviceName,
-		DeviceDescription: controller.DeviceDescription,
-		DeviceLocation:    controller.DeviceLocation,
-		IPAddress:         controller.IPAddress,
-		Subnet:            controller.Subnet,
-		Gateway:           controller.Gateway,
-		Vlan:              controller.Vlan,
-		CreatedAt:         controller.CreatedAt,
-		UpdatedAt:         controller.UpdatedAt,
-	}
+	return facilitypresenter.ToSPSControllerResponse(controller)
 }
 
 func toSPSControllerResponses(items []domainFacility.SPSController) []dto.SPSControllerResponse {
@@ -210,51 +192,8 @@ func toFieldDeviceListResponse(list *domain.PaginatedList[domainFacility.FieldDe
 	return dto.FieldDeviceListResponse{Items: mapItems(list.Items, toFieldDeviceResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
 }
 
-func ToFieldDeviceOptionsResponse(options *domainFacility.FieldDeviceOptions) dto.FieldDeviceOptionsResponse {
-	// Convert Apparats
-	apparats := make([]dto.ApparatResponse, len(options.Apparats))
-	for i, app := range options.Apparats {
-		apparats[i] = toApparatResponse(app)
-	}
-
-	// Convert SystemParts
-	systemParts := make([]dto.SystemPartResponse, len(options.SystemParts))
-	for i, sp := range options.SystemParts {
-		systemParts[i] = toSystemPartResponse(sp)
-	}
-
-	// Convert ObjectDatas
-	objectDatas := make([]dto.ObjectDataResponse, len(options.ObjectDatas))
-	for i, od := range options.ObjectDatas {
-		objectDatas[i] = toObjectDataResponse(od)
-	}
-
-	// Convert UUID maps to string maps for JSON compatibility
-	apparatToSystemPart := make(map[string][]string)
-	for apparatID, systemPartIDs := range options.ApparatToSystemPart {
-		strIDs := make([]string, len(systemPartIDs))
-		for i, id := range systemPartIDs {
-			strIDs[i] = id.String()
-		}
-		apparatToSystemPart[apparatID.String()] = strIDs
-	}
-
-	objectDataToApparat := make(map[string][]string)
-	for objectDataID, apparatIDs := range options.ObjectDataToApparat {
-		strIDs := make([]string, len(apparatIDs))
-		for i, id := range apparatIDs {
-			strIDs[i] = id.String()
-		}
-		objectDataToApparat[objectDataID.String()] = strIDs
-	}
-
-	return dto.FieldDeviceOptionsResponse{
-		Apparats:            apparats,
-		SystemParts:         systemParts,
-		ObjectDatas:         objectDatas,
-		ApparatToSystemPart: apparatToSystemPart,
-		ObjectDataToApparat: objectDataToApparat,
-	}
+func toFieldDeviceOptionsResponse(options *domainFacility.FieldDeviceOptions) dto.FieldDeviceOptionsResponse {
+	return facilitypresenter.ToFieldDeviceOptionsResponse(options)
 }
 
 func toMultiCreateFieldDeviceResponse(result *domainFacility.FieldDeviceMultiCreateResult) dto.MultiCreateFieldDeviceResponse {
@@ -417,34 +356,11 @@ func toObjectDataListResponse(list *domain.PaginatedList[domainFacility.ObjectDa
 }
 
 func toSPSControllerSystemTypeResponse(item domainFacility.SPSControllerSystemType) dto.SPSControllerSystemTypeResponse {
-	return dto.SPSControllerSystemTypeResponse{
-		ID:                item.ID,
-		SPSControllerID:   item.SPSControllerID,
-		SystemTypeID:      item.SystemTypeID,
-		SPSControllerName: item.SPSController.DeviceName,
-		SystemTypeName:    item.SystemType.Name,
-		Number:            item.Number,
-		DocumentName:      item.DocumentName,
-		FieldDevicesCount: item.FieldDevicesCount,
-		CreatedAt:         item.CreatedAt,
-		UpdatedAt:         item.UpdatedAt,
-	}
+	return facilitypresenter.ToSPSControllerSystemTypeResponse(item)
 }
 
 func toSPSControllerSystemTypeListResponse(list *domain.PaginatedList[domainFacility.SPSControllerSystemType]) dto.SPSControllerSystemTypeListResponse {
 	return dto.SPSControllerSystemTypeListResponse{Items: mapItems(list.Items, toSPSControllerSystemTypeResponse), Total: list.Total, Page: list.Page, TotalPages: list.TotalPages}
-}
-
-func ToControlCabinetResponse(controlCabinet domainFacility.ControlCabinet) dto.ControlCabinetResponse {
-	return toControlCabinetResponse(controlCabinet)
-}
-
-func ToSPSControllerResponse(controller domainFacility.SPSController) dto.SPSControllerResponse {
-	return toSPSControllerResponse(controller)
-}
-
-func ToSPSControllerSystemTypeResponse(item domainFacility.SPSControllerSystemType) dto.SPSControllerSystemTypeResponse {
-	return toSPSControllerSystemTypeResponse(item)
 }
 
 func toUnitResponse(unit domainFacility.Unit) dto.UnitResponse {

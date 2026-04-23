@@ -227,7 +227,7 @@ func (h *FieldDeviceHandler) GetFieldDeviceOptions(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, ToFieldDeviceOptionsResponse(options))
+	c.JSON(http.StatusOK, toFieldDeviceOptionsResponse(options))
 }
 
 // UpdateFieldDevice godoc

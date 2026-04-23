@@ -8,6 +8,9 @@ import (
 type ErrorResponse = commondto.ErrorResponse
 type PaginationQuery = commondto.PaginationQuery
 type BacnetObjectResponse = facilitydto.BacnetObjectResponse
+type ControlCabinetResponse = facilitydto.ControlCabinetResponse
 type FieldDeviceOptionsResponse = facilitydto.FieldDeviceOptionsResponse
 type ObjectDataListResponse = facilitydto.ObjectDataListResponse
 type ObjectDataResponse = facilitydto.ObjectDataResponse
+type SPSControllerResponse = facilitydto.SPSControllerResponse
+type SPSControllerSystemTypeResponse = facilitydto.SPSControllerSystemTypeResponse
