@@ -146,7 +146,6 @@ func (s *ProjectFacilityLinkService) copyControlCabinet(ctx context.Context, pro
 	}
 
 	if _, err := s.createControlCabinet(ctx, projectID, copyEntity.ID); err != nil {
-		_ = s.rollbackCopiedControlCabinet(ctx, copyEntity.ID)
 		return nil, err
 	}
 
@@ -263,7 +262,6 @@ func (s *ProjectFacilityLinkService) copySPSController(ctx context.Context, proj
 	}
 
 	if _, err := s.createSPSController(ctx, projectID, copyEntity.ID); err != nil {
-		_ = s.rollbackCopiedSPSController(ctx, copyEntity.ID)
 		return nil, err
 	}
 
@@ -284,7 +282,6 @@ func (s *ProjectFacilityLinkService) copySPSControllerSystemType(ctx context.Con
 
 	if err := s.linkFieldDevicesForSystemTypes(ctx, projectID, []uuid.UUID{copyEntity.ID}); err != nil {
 		_ = s.cleanupProjectLinksForSystemTypes(ctx, []uuid.UUID{copyEntity.ID})
-		_ = s.rollbackCopiedSPSControllerSystemType(ctx, copyEntity.ID)
 		return nil, err
 	}
 
@@ -677,50 +674,6 @@ func (s *ProjectFacilityLinkService) cleanupProjectLinksForSystemTypes(ctx conte
 		return err
 	}
 	return s.deleteProjectFieldDeviceLinksByFieldDeviceIDs(ctx, fieldDeviceIDs)
-}
-
-func (s *ProjectFacilityLinkService) rollbackCopiedControlCabinet(ctx context.Context, controlCabinetID uuid.UUID) error {
-	spsControllerIDs, _, fieldDeviceIDs, err := s.collectDescendantIDsForControlCabinet(ctx, controlCabinetID)
-	if err != nil {
-		return err
-	}
-	if err := s.deleteFieldDevicesWithChildren(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	if len(spsControllerIDs) > 0 {
-		if err := s.spsControllerSystemRepo.DeleteBySPSControllerIDs(ctx, spsControllerIDs); err != nil {
-			return err
-		}
-		if err := s.spsControllerRepo.DeleteByIds(ctx, spsControllerIDs); err != nil {
-			return err
-		}
-	}
-	return s.controlCabinetRepo.DeleteByIds(ctx, []uuid.UUID{controlCabinetID})
-}
-
-func (s *ProjectFacilityLinkService) rollbackCopiedSPSController(ctx context.Context, spsControllerID uuid.UUID) error {
-	_, fieldDeviceIDs, err := s.collectDescendantIDsForSPSControllers(ctx, []uuid.UUID{spsControllerID})
-	if err != nil {
-		return err
-	}
-	if err := s.deleteFieldDevicesWithChildren(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	if err := s.spsControllerSystemRepo.DeleteBySPSControllerIDs(ctx, []uuid.UUID{spsControllerID}); err != nil {
-		return err
-	}
-	return s.spsControllerRepo.DeleteByIds(ctx, []uuid.UUID{spsControllerID})
-}
-
-func (s *ProjectFacilityLinkService) rollbackCopiedSPSControllerSystemType(ctx context.Context, systemTypeID uuid.UUID) error {
-	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(ctx, []uuid.UUID{systemTypeID})
-	if err != nil {
-		return err
-	}
-	if err := s.deleteFieldDevicesWithChildren(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	return s.spsControllerSystemRepo.DeleteByIds(ctx, []uuid.UUID{systemTypeID})
 }
 
 func (s *ProjectFacilityLinkService) listProjectSPSControllerIDSet(ctx context.Context, projectID uuid.UUID) (map[uuid.UUID]struct{}, error) {

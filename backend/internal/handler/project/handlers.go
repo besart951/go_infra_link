@@ -16,7 +16,7 @@ type ServiceDeps struct {
 }
 
 func NewHandlers(deps ServiceDeps) *Handlers {
-	projectHandler := NewProjectHandler(deps.Lifecycle, deps.AccessPolicy, deps.Membership, deps.FacilityLink, nil)
+	projectHandler := NewProjectHandler(deps.Lifecycle, deps.AccessPolicy, deps.Membership, deps.FacilityLink)
 	return &Handlers{
 		Project:            projectHandler,
 		Phase:              NewPhaseHandler(deps.Phase),

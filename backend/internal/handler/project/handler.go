@@ -21,16 +21,13 @@ type ProjectHandler struct {
 	collaboration *ProjectCollaborationHub
 }
 
-func NewProjectHandler(lifecycle ProjectLifecycleService, access ProjectAccessPolicyService, membership ProjectMembershipService, facilityLink ProjectFacilityLinkService, events *ProjectEventHub) *ProjectHandler {
-	if events == nil {
-		events = NewProjectEventHub()
-	}
+func NewProjectHandler(lifecycle ProjectLifecycleService, access ProjectAccessPolicyService, membership ProjectMembershipService, facilityLink ProjectFacilityLinkService) *ProjectHandler {
 	return &ProjectHandler{
 		lifecycle:     lifecycle,
 		access:        access,
 		membership:    membership,
 		facilityLink:  facilityLink,
-		events:        events,
+		events:        NewProjectEventHub(),
 		collaboration: NewProjectCollaborationHub(),
 	}
 }

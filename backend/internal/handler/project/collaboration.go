@@ -182,9 +182,7 @@ func (h *ProjectCollaborationHub) Unregister(client *projectCollaborationClient)
 	h.mu.Lock()
 	room, ok := h.rooms[client.projectID]
 	if ok {
-		if _, exists := room.clients[client]; exists {
-			delete(room.clients, client)
-		}
+		delete(room.clients, client)
 		if room.connectionByID[client.userID] > 1 {
 			room.connectionByID[client.userID] -= 1
 			presenceState := room.presence[client.userID]
