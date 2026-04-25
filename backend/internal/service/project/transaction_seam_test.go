@@ -385,6 +385,148 @@ func TestProjectTransaction_CopySPSControllerSystemTypeFailureDoesNotUseRollback
 	}
 }
 
+func TestProjectTransaction_CreateControlCabinetFailureDoesNotUseRollbackCleanup(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	controlCabinetID := uuid.New()
+	spsControllerID := uuid.New()
+	systemTypeID := uuid.New()
+	fieldDeviceID := uuid.New()
+	linkErr := errors.New("link field device failed")
+
+	txControlCabinetLinks := newProjectControlCabinetRepo()
+	txSPSLinks := newProjectSPSControllerRepo()
+	txFieldDeviceLinks := &failingProjectFieldDeviceLinkRepo{projectFieldDeviceRepoFake: newProjectFieldDeviceRepo(), createErr: linkErr}
+	txSPSRepo := newProjectSPSRepo()
+	txSPSSystemRepo := newProjectSPSSystemTypeRepo()
+	txFieldDeviceRepo := newProjectFieldDeviceStore()
+
+	txSPSRepo.items[spsControllerID] = &domainFacility.SPSController{
+		Base:             domain.Base{ID: spsControllerID},
+		ControlCabinetID: controlCabinetID,
+	}
+	txSPSSystemRepo.items[systemTypeID] = &domainFacility.SPSControllerSystemType{
+		Base:            domain.Base{ID: systemTypeID},
+		SPSControllerID: spsControllerID,
+	}
+	txFieldDeviceRepo.items[fieldDeviceID] = &domainFacility.FieldDevice{
+		Base:                      domain.Base{ID: fieldDeviceID},
+		SPSControllerSystemTypeID: systemTypeID,
+	}
+
+	txDeps := Dependencies{
+		Projects:                 newProjectRepo(),
+		ProjectControlCabinets:   txControlCabinetLinks,
+		ProjectSPSControllers:    txSPSLinks,
+		ProjectFieldDevices:      txFieldDeviceLinks,
+		ObjectData:               newProjectObjectDataRepo(),
+		BacnetObjects:            newProjectBacnetObjectRepo(),
+		Specifications:           newProjectSpecificationRepo(),
+		ControlCabinets:          newProjectControlCabinetStore(),
+		SPSControllers:           txSPSRepo,
+		SPSControllerSystemTypes: txSPSSystemRepo,
+		FieldDevices:             txFieldDeviceRepo,
+		HierarchyCopier: facilityservice.NewHierarchyCopier(
+			newProjectControlCabinetStore(),
+			newProjectBuildingRepo(),
+			txSPSRepo,
+			newProjectSystemTypeRepo(),
+			txSPSSystemRepo,
+			txFieldDeviceRepo,
+			newProjectSpecificationRepo(),
+			newProjectBacnetObjectRepo(),
+		),
+	}
+
+	runnerCalls := 0
+	services := newProjectTxServices(Dependencies{}, txDeps, &runnerCalls)
+
+	_, err := services.FacilityLink.CreateControlCabinet(ctx, projectID, controlCabinetID)
+	if !errors.Is(err, linkErr) {
+		t.Fatalf("expected link error, got %v", err)
+	}
+	if runnerCalls != 1 {
+		t.Fatalf("expected one transaction run, got %d", runnerCalls)
+	}
+	if len(txControlCabinetLinks.items) != 1 || len(txSPSLinks.items) != 1 {
+		t.Fatalf("expected partial tx links to remain for transaction rollback, got cabinets=%d sps=%d", len(txControlCabinetLinks.items), len(txSPSLinks.items))
+	}
+	if len(txControlCabinetLinks.deleteByControlCabinetIDCalls) != 0 || len(txSPSLinks.deleteBySPSControllerCalls) != 0 || len(txFieldDeviceLinks.deleteByFieldDeviceCalls) != 0 {
+		t.Fatalf("expected no manual cleanup deletes, got cabinets=%d sps=%d fieldDevices=%d", len(txControlCabinetLinks.deleteByControlCabinetIDCalls), len(txSPSLinks.deleteBySPSControllerCalls), len(txFieldDeviceLinks.deleteByFieldDeviceCalls))
+	}
+}
+
+func TestProjectTransaction_UpdateSPSControllerFailureDoesNotRestorePreviousLink(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	linkID := uuid.New()
+	previousSPSID := uuid.New()
+	newSPSID := uuid.New()
+	systemTypeID := uuid.New()
+	fieldDeviceID := uuid.New()
+	linkErr := errors.New("link field device failed")
+
+	txSPSLinks := newProjectSPSControllerRepo()
+	txFieldDeviceLinks := &failingProjectFieldDeviceLinkRepo{projectFieldDeviceRepoFake: newProjectFieldDeviceRepo(), createErr: linkErr}
+	txSPSSystemRepo := newProjectSPSSystemTypeRepo()
+	txFieldDeviceRepo := newProjectFieldDeviceStore()
+
+	txSPSLinks.items[linkID] = &domainProject.ProjectSPSController{
+		Base:            domain.Base{ID: linkID},
+		ProjectID:       projectID,
+		SPSControllerID: previousSPSID,
+	}
+	txSPSSystemRepo.items[systemTypeID] = &domainFacility.SPSControllerSystemType{
+		Base:            domain.Base{ID: systemTypeID},
+		SPSControllerID: newSPSID,
+	}
+	txFieldDeviceRepo.items[fieldDeviceID] = &domainFacility.FieldDevice{
+		Base:                      domain.Base{ID: fieldDeviceID},
+		SPSControllerSystemTypeID: systemTypeID,
+	}
+
+	txDeps := Dependencies{
+		Projects:                 newProjectRepo(),
+		ProjectControlCabinets:   newProjectControlCabinetRepo(),
+		ProjectSPSControllers:    txSPSLinks,
+		ProjectFieldDevices:      txFieldDeviceLinks,
+		ObjectData:               newProjectObjectDataRepo(),
+		BacnetObjects:            newProjectBacnetObjectRepo(),
+		Specifications:           newProjectSpecificationRepo(),
+		ControlCabinets:          newProjectControlCabinetStore(),
+		SPSControllers:           newProjectSPSRepo(),
+		SPSControllerSystemTypes: txSPSSystemRepo,
+		FieldDevices:             txFieldDeviceRepo,
+		HierarchyCopier: facilityservice.NewHierarchyCopier(
+			newProjectControlCabinetStore(),
+			newProjectBuildingRepo(),
+			newProjectSPSRepo(),
+			newProjectSystemTypeRepo(),
+			txSPSSystemRepo,
+			txFieldDeviceRepo,
+			newProjectSpecificationRepo(),
+			newProjectBacnetObjectRepo(),
+		),
+	}
+
+	runnerCalls := 0
+	services := newProjectTxServices(Dependencies{}, txDeps, &runnerCalls)
+
+	_, err := services.FacilityLink.UpdateSPSController(ctx, linkID, projectID, newSPSID)
+	if !errors.Is(err, linkErr) {
+		t.Fatalf("expected link error, got %v", err)
+	}
+	if runnerCalls != 1 {
+		t.Fatalf("expected one transaction run, got %d", runnerCalls)
+	}
+	if got := txSPSLinks.items[linkID].SPSControllerID; got != newSPSID {
+		t.Fatalf("expected tx link to remain at failed target %s without manual restore, got %s", newSPSID, got)
+	}
+	if len(txSPSLinks.deleteBySPSControllerCalls) != 0 || len(txFieldDeviceLinks.deleteByFieldDeviceCalls) != 0 {
+		t.Fatalf("expected no manual cleanup deletes, got sps=%d fieldDevices=%d", len(txSPSLinks.deleteBySPSControllerCalls), len(txFieldDeviceLinks.deleteByFieldDeviceCalls))
+	}
+}
+
 type failingProjectControlCabinetLinkRepo struct {
 	*projectControlCabinetRepoFake
 	createErr error

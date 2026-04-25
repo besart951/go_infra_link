@@ -257,20 +257,8 @@ func toFieldDeviceSpecification(req dto.CreateFieldDeviceSpecificationRequest) *
 	}
 }
 
-func toFieldDeviceSpecificationPatch(req dto.UpdateFieldDeviceSpecificationRequest) *domainFacility.Specification {
-	return &domainFacility.Specification{
-		SpecificationSupplier:                     req.SpecificationSupplier,
-		SpecificationBrand:                        req.SpecificationBrand,
-		SpecificationType:                         req.SpecificationType,
-		AdditionalInfoMotorValve:                  req.AdditionalInfoMotorValve,
-		AdditionalInfoSize:                        req.AdditionalInfoSize,
-		AdditionalInformationInstallationLocation: req.AdditionalInformationInstallationLocation,
-		ElectricalConnectionPH:                    req.ElectricalConnectionPH,
-		ElectricalConnectionACDC:                  req.ElectricalConnectionACDC,
-		ElectricalConnectionAmperage:              req.ElectricalConnectionAmperage,
-		ElectricalConnectionPower:                 req.ElectricalConnectionPower,
-		ElectricalConnectionRotation:              req.ElectricalConnectionRotation,
-	}
+func toFieldDeviceSpecificationPatch(req dto.UpdateFieldDeviceSpecificationRequest) *domainFacility.SpecificationPatch {
+	return toSpecificationPatchFromInput(&req)
 }
 
 // toSpecificationPatchFromInput converts a SpecificationInput DTO to a domain patch.

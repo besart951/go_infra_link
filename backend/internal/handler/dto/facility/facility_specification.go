@@ -37,10 +37,9 @@ type UpdateSpecificationRequest struct {
 	ElectricalConnectionRotation              *int     `json:"electrical_connection_rotation"`
 }
 
-// FieldDevice-specific endpoints use the same payload shape as UpdateSpecificationRequest,
-// but the FieldDevice ID comes from the URL path.
+// FieldDevice-specific endpoints take the FieldDevice ID from the URL path.
 type CreateFieldDeviceSpecificationRequest = UpdateSpecificationRequest
-type UpdateFieldDeviceSpecificationRequest = UpdateSpecificationRequest
+type UpdateFieldDeviceSpecificationRequest = SpecificationInput
 
 type SpecificationResponse struct {
 	ID                                        uuid.UUID  `json:"id"`

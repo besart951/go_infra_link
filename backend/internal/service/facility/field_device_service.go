@@ -195,7 +195,7 @@ func (s *FieldDeviceService) CreateSpecification(ctx context.Context, fieldDevic
 	})
 }
 
-func (s *FieldDeviceService) UpdateSpecification(ctx context.Context, fieldDeviceID uuid.UUID, patch *domainFacility.Specification) (*domainFacility.Specification, error) {
+func (s *FieldDeviceService) UpdateSpecificationPatch(ctx context.Context, fieldDeviceID uuid.UUID, patch *domainFacility.SpecificationPatch) (*domainFacility.Specification, error) {
 	// Ensure field device exists (and not deleted)
 	if _, err := domain.GetByID(ctx, s.repo, fieldDeviceID); err != nil {
 		return nil, err
@@ -210,39 +210,7 @@ func (s *FieldDeviceService) UpdateSpecification(ctx context.Context, fieldDevic
 	}
 	spec := specs[0]
 
-	if patch.SpecificationSupplier != nil {
-		spec.SpecificationSupplier = normalizeOptionalString(patch.SpecificationSupplier)
-	}
-	if patch.SpecificationBrand != nil {
-		spec.SpecificationBrand = normalizeOptionalString(patch.SpecificationBrand)
-	}
-	if patch.SpecificationType != nil {
-		spec.SpecificationType = normalizeOptionalString(patch.SpecificationType)
-	}
-	if patch.AdditionalInfoMotorValve != nil {
-		spec.AdditionalInfoMotorValve = normalizeOptionalString(patch.AdditionalInfoMotorValve)
-	}
-	if patch.AdditionalInfoSize != nil {
-		spec.AdditionalInfoSize = patch.AdditionalInfoSize
-	}
-	if patch.AdditionalInformationInstallationLocation != nil {
-		spec.AdditionalInformationInstallationLocation = normalizeOptionalString(patch.AdditionalInformationInstallationLocation)
-	}
-	if patch.ElectricalConnectionPH != nil {
-		spec.ElectricalConnectionPH = patch.ElectricalConnectionPH
-	}
-	if patch.ElectricalConnectionACDC != nil {
-		spec.ElectricalConnectionACDC = normalizeOptionalString(patch.ElectricalConnectionACDC)
-	}
-	if patch.ElectricalConnectionAmperage != nil {
-		spec.ElectricalConnectionAmperage = patch.ElectricalConnectionAmperage
-	}
-	if patch.ElectricalConnectionPower != nil {
-		spec.ElectricalConnectionPower = patch.ElectricalConnectionPower
-	}
-	if patch.ElectricalConnectionRotation != nil {
-		spec.ElectricalConnectionRotation = patch.ElectricalConnectionRotation
-	}
+	applySpecificationPatch(spec, patch)
 	if err := s.validateSpecification(spec); err != nil {
 		return nil, err
 	}
@@ -289,6 +257,18 @@ func (s *FieldDeviceService) ApplySpecificationPatch(ctx context.Context, fieldD
 	}
 
 	spec := specs[0]
+	applySpecificationPatch(spec, patch)
+
+	if err := s.validateSpecification(spec); err != nil {
+		return err
+	}
+	return s.specificationRepo.Update(ctx, spec)
+}
+
+func applySpecificationPatch(spec *domainFacility.Specification, patch *domainFacility.SpecificationPatch) {
+	if spec == nil || patch == nil {
+		return
+	}
 	if patch.HasSpecificationSupplier {
 		spec.SpecificationSupplier = normalizeOptionalString(patch.SpecificationSupplier)
 	}
@@ -322,11 +302,6 @@ func (s *FieldDeviceService) ApplySpecificationPatch(ctx context.Context, fieldD
 	if patch.HasElectricalConnectionRotation {
 		spec.ElectricalConnectionRotation = patch.ElectricalConnectionRotation
 	}
-
-	if err := s.validateSpecification(spec); err != nil {
-		return err
-	}
-	return s.specificationRepo.Update(ctx, spec)
 }
 
 func (s *FieldDeviceService) ListBacnetObjects(ctx context.Context, fieldDeviceID uuid.UUID) ([]domainFacility.BacnetObject, error) {

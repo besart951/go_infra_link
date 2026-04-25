@@ -72,7 +72,7 @@ type FieldDeviceService interface {
 	DeleteByID(ctx context.Context, id uuid.UUID) error
 	ListBacnetObjects(ctx context.Context, fieldDeviceID uuid.UUID) ([]domainFacility.BacnetObject, error)
 	CreateSpecification(ctx context.Context, fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error
-	UpdateSpecification(ctx context.Context, fieldDeviceID uuid.UUID, patch *domainFacility.Specification) (*domainFacility.Specification, error)
+	UpdateSpecificationPatch(ctx context.Context, fieldDeviceID uuid.UUID, patch *domainFacility.SpecificationPatch) (*domainFacility.Specification, error)
 	BulkUpdate(ctx context.Context, updates []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult
 	BulkDelete(ctx context.Context, ids []uuid.UUID) *domainFacility.BulkOperationResult
 }

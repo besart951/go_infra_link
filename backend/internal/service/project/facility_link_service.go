@@ -126,7 +126,6 @@ func (s *ProjectFacilityLinkService) createControlCabinet(ctx context.Context, p
 	}
 
 	if err := s.linkDescendantsForControlCabinet(ctx, projectID, controlCabinetID); err != nil {
-		_ = s.cleanupProjectLinksForControlCabinetHierarchy(ctx, controlCabinetID)
 		return nil, err
 	}
 
@@ -167,16 +166,12 @@ func (s *ProjectFacilityLinkService) updateControlCabinet(ctx context.Context, l
 		return nil, domain.ErrNotFound
 	}
 
-	previousControlCabinetID := entity.ControlCabinetID
 	entity.ControlCabinetID = controlCabinetID
 	if err := s.projectControlCabinetRepo.Update(ctx, entity); err != nil {
 		return nil, err
 	}
 
 	if err := s.linkDescendantsForControlCabinet(ctx, projectID, controlCabinetID); err != nil {
-		_ = s.cleanupProjectLinksForControlCabinetHierarchy(ctx, controlCabinetID)
-		entity.ControlCabinetID = previousControlCabinetID
-		_ = s.projectControlCabinetRepo.Update(ctx, entity)
 		return nil, err
 	}
 
@@ -242,7 +237,6 @@ func (s *ProjectFacilityLinkService) createSPSController(ctx context.Context, pr
 	}
 
 	if err := s.linkDescendantsForSPSControllers(ctx, projectID, []uuid.UUID{spsControllerID}); err != nil {
-		_ = s.cleanupProjectLinksForSPSControllers(ctx, []uuid.UUID{spsControllerID})
 		return nil, err
 	}
 
@@ -281,7 +275,6 @@ func (s *ProjectFacilityLinkService) copySPSControllerSystemType(ctx context.Con
 	}
 
 	if err := s.linkFieldDevicesForSystemTypes(ctx, projectID, []uuid.UUID{copyEntity.ID}); err != nil {
-		_ = s.cleanupProjectLinksForSystemTypes(ctx, []uuid.UUID{copyEntity.ID})
 		return nil, err
 	}
 
@@ -303,16 +296,12 @@ func (s *ProjectFacilityLinkService) updateSPSController(ctx context.Context, li
 		return nil, domain.ErrNotFound
 	}
 
-	previousSPSControllerID := entity.SPSControllerID
 	entity.SPSControllerID = spsControllerID
 	if err := s.projectSPSControllerRepo.Update(ctx, entity); err != nil {
 		return nil, err
 	}
 
 	if err := s.linkDescendantsForSPSControllers(ctx, projectID, []uuid.UUID{spsControllerID}); err != nil {
-		_ = s.cleanupProjectLinksForSPSControllers(ctx, []uuid.UUID{spsControllerID})
-		entity.SPSControllerID = previousSPSControllerID
-		_ = s.projectSPSControllerRepo.Update(ctx, entity)
 		return nil, err
 	}
 
@@ -633,47 +622,6 @@ func (s *ProjectFacilityLinkService) linkFieldDevicesForSystemTypes(ctx context.
 	}
 
 	return nil
-}
-
-func (s *ProjectFacilityLinkService) cleanupProjectLinksForControlCabinetHierarchy(ctx context.Context, controlCabinetID uuid.UUID) error {
-	spsControllerIDs, _, fieldDeviceIDs, err := s.collectDescendantIDsForControlCabinet(ctx, controlCabinetID)
-	if err != nil {
-		return err
-	}
-	if err := s.deleteProjectFieldDeviceLinksByFieldDeviceIDs(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	if err := s.deleteProjectSPSControllerLinksBySPSControllerIDs(ctx, spsControllerIDs); err != nil {
-		return err
-	}
-	return s.deleteProjectControlCabinetLinksByControlCabinetIDs(ctx, []uuid.UUID{controlCabinetID})
-}
-
-func (s *ProjectFacilityLinkService) cleanupProjectLinksForSPSControllers(ctx context.Context, spsControllerIDs []uuid.UUID) error {
-	if len(spsControllerIDs) == 0 {
-		return nil
-	}
-
-	_, fieldDeviceIDs, err := s.collectDescendantIDsForSPSControllers(ctx, spsControllerIDs)
-	if err != nil {
-		return err
-	}
-	if err := s.deleteProjectFieldDeviceLinksByFieldDeviceIDs(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	return s.deleteProjectSPSControllerLinksBySPSControllerIDs(ctx, spsControllerIDs)
-}
-
-func (s *ProjectFacilityLinkService) cleanupProjectLinksForSystemTypes(ctx context.Context, systemTypeIDs []uuid.UUID) error {
-	if len(systemTypeIDs) == 0 {
-		return nil
-	}
-
-	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(ctx, systemTypeIDs)
-	if err != nil {
-		return err
-	}
-	return s.deleteProjectFieldDeviceLinksByFieldDeviceIDs(ctx, fieldDeviceIDs)
 }
 
 func (s *ProjectFacilityLinkService) listProjectSPSControllerIDSet(ctx context.Context, projectID uuid.UUID) (map[uuid.UUID]struct{}, error) {

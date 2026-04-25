@@ -1,7 +1,6 @@
 package project
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -22,43 +21,24 @@ type ProjectHandler struct {
 }
 
 func NewProjectHandler(lifecycle ProjectLifecycleService, access ProjectAccessPolicyService, membership ProjectMembershipService, facilityLink ProjectFacilityLinkService) *ProjectHandler {
+	return newProjectHandler(lifecycle, access, membership, facilityLink, NewProjectEventHub(), NewProjectCollaborationHub())
+}
+
+func newProjectHandler(
+	lifecycle ProjectLifecycleService,
+	access ProjectAccessPolicyService,
+	membership ProjectMembershipService,
+	facilityLink ProjectFacilityLinkService,
+	events *ProjectEventHub,
+	collaboration *ProjectCollaborationHub,
+) *ProjectHandler {
 	return &ProjectHandler{
 		lifecycle:     lifecycle,
 		access:        access,
 		membership:    membership,
 		facilityLink:  facilityLink,
-		events:        NewProjectEventHub(),
-		collaboration: NewProjectCollaborationHub(),
-	}
-}
-
-func (h *ProjectHandler) BroadcastRefreshForControlCabinet(ctx context.Context, controlCabinetID uuid.UUID, scope string) {
-	if h.collaboration == nil {
-		return
-	}
-
-	projectIDs, err := h.facilityLink.ListProjectIDsByControlCabinetID(ctx, controlCabinetID)
-	if err != nil {
-		return
-	}
-
-	for _, projectID := range projectIDs {
-		h.collaboration.BroadcastRefreshRequest(projectID, nil, scope, nil)
-	}
-}
-
-func (h *ProjectHandler) BroadcastRefreshForSPSController(ctx context.Context, spsControllerID uuid.UUID, scope string) {
-	if h.collaboration == nil {
-		return
-	}
-
-	projectIDs, err := h.facilityLink.ListProjectIDsBySPSControllerID(ctx, spsControllerID)
-	if err != nil {
-		return
-	}
-
-	for _, projectID := range projectIDs {
-		h.collaboration.BroadcastRefreshRequest(projectID, nil, scope, nil)
+		events:        events,
+		collaboration: collaboration,
 	}
 }
 

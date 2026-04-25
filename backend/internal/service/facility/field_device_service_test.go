@@ -1637,6 +1637,53 @@ func TestFieldDeviceService_BulkUpdate_ClearsExistingSpecificationFields(t *test
 	}
 }
 
+func TestFieldDeviceService_UpdateSpecificationPatchClearsExplicitNullFields(t *testing.T) {
+	ctx := context.Background()
+	fdID := uuid.New()
+	specID := uuid.New()
+	spsSystemTypeID := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+	supplier := "Supplier"
+	brand := "Brand"
+	acdc := "AC"
+	replacementBrand := "Replacement"
+
+	fieldDevices := &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{
+		fdID: newFieldDevice(fdID, spsSystemTypeID, apparatID, systemPartID, 1),
+	}}
+	specStore := &fakeSpecificationStore{items: map[uuid.UUID]*domainFacility.Specification{
+		specID: {
+			Base:                     domain.Base{ID: specID},
+			FieldDeviceID:            &fdID,
+			SpecificationSupplier:    &supplier,
+			SpecificationBrand:       &brand,
+			ElectricalConnectionACDC: &acdc,
+		},
+	}}
+	svc := facility.NewFieldDeviceService(fieldDevices, nil, nil, nil, nil, specStore, nil, nil, nil, nil)
+
+	updated, err := svc.UpdateSpecificationPatch(ctx, fdID, &domainFacility.SpecificationPatch{
+		HasSpecificationSupplier:    true,
+		HasSpecificationBrand:       true,
+		SpecificationBrand:          &replacementBrand,
+		HasElectricalConnectionACDC: true,
+	})
+	if err != nil {
+		t.Fatalf("expected specification patch to succeed, got %v", err)
+	}
+
+	if updated.SpecificationSupplier != nil {
+		t.Fatalf("expected specification_supplier to be cleared, got %+v", updated.SpecificationSupplier)
+	}
+	if updated.SpecificationBrand == nil || *updated.SpecificationBrand != replacementBrand {
+		t.Fatalf("expected specification_brand to be replaced, got %+v", updated.SpecificationBrand)
+	}
+	if updated.ElectricalConnectionACDC != nil {
+		t.Fatalf("expected electrical_connection_acdc to be cleared, got %+v", updated.ElectricalConnectionACDC)
+	}
+}
+
 func TestFieldDeviceService_BulkUpdate_ClearOnlyPatchDoesNotCreateEmptySpecification(t *testing.T) {
 	fdID := uuid.New()
 	apparatID := uuid.New()

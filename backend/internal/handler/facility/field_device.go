@@ -399,7 +399,7 @@ func (h *FieldDeviceHandler) UpdateFieldDeviceSpecification(c *gin.Context) {
 
 	patch := toFieldDeviceSpecificationPatch(req)
 
-	spec, err := h.service.UpdateSpecification(c.Request.Context(), fieldDeviceID, patch)
+	spec, err := h.service.UpdateSpecificationPatch(c.Request.Context(), fieldDeviceID, patch)
 	if err != nil {
 		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
 			return

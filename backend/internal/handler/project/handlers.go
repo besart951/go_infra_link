@@ -4,6 +4,7 @@ type Handlers struct {
 	Project            *ProjectHandler
 	Phase              *PhaseHandler
 	FieldDeviceOptions *FieldDeviceOptionsHandler
+	RefreshBroadcaster *FacilityRefreshBroadcaster
 }
 
 type ServiceDeps struct {
@@ -16,10 +17,13 @@ type ServiceDeps struct {
 }
 
 func NewHandlers(deps ServiceDeps) *Handlers {
-	projectHandler := NewProjectHandler(deps.Lifecycle, deps.AccessPolicy, deps.Membership, deps.FacilityLink)
+	events := NewProjectEventHub()
+	collaboration := NewProjectCollaborationHub()
+	projectHandler := newProjectHandler(deps.Lifecycle, deps.AccessPolicy, deps.Membership, deps.FacilityLink, events, collaboration)
 	return &Handlers{
 		Project:            projectHandler,
 		Phase:              NewPhaseHandler(deps.Phase),
 		FieldDeviceOptions: NewFieldDeviceOptionsHandler(deps.AccessPolicy, deps.FieldDeviceOptions),
+		RefreshBroadcaster: NewFacilityRefreshBroadcaster(deps.FacilityLink, collaboration),
 	}
 }

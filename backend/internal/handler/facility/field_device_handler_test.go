@@ -2,12 +2,14 @@ package facility
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -37,6 +39,24 @@ func TestListFieldDevicesReturnsAfterInvalidFilterParam(t *testing.T) {
 	}
 	if tracker.statusWrites[0] != http.StatusBadRequest {
 		t.Fatalf("expected only status write to be 400, got %v", tracker.statusWrites)
+	}
+}
+
+func TestToFieldDeviceSpecificationPatchPreservesExplicitNull(t *testing.T) {
+	var req dto.UpdateFieldDeviceSpecificationRequest
+	if err := json.Unmarshal([]byte(`{"specification_supplier":null,"specification_brand":"Replacement"}`), &req); err != nil {
+		t.Fatalf("expected specification patch request to decode, got %v", err)
+	}
+
+	patch := toFieldDeviceSpecificationPatch(req)
+	if patch == nil {
+		t.Fatal("expected patch to be created")
+	}
+	if !patch.HasSpecificationSupplier || patch.SpecificationSupplier != nil {
+		t.Fatalf("expected explicit null supplier to be preserved, got %+v", patch)
+	}
+	if !patch.HasSpecificationBrand || patch.SpecificationBrand == nil || *patch.SpecificationBrand != "Replacement" {
+		t.Fatalf("expected replacement brand to be preserved, got %+v", patch)
 	}
 }
 
@@ -113,7 +133,7 @@ func (s *fakeFieldDeviceHandlerService) CreateSpecification(context.Context, uui
 	return nil
 }
 
-func (s *fakeFieldDeviceHandlerService) UpdateSpecification(context.Context, uuid.UUID, *domainFacility.Specification) (*domainFacility.Specification, error) {
+func (s *fakeFieldDeviceHandlerService) UpdateSpecificationPatch(context.Context, uuid.UUID, *domainFacility.SpecificationPatch) (*domainFacility.Specification, error) {
 	return nil, nil
 }
 
