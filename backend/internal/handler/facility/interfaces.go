@@ -131,12 +131,14 @@ type AlarmDefinitionService interface {
 
 type ObjectDataService interface {
 	Create(ctx context.Context, objectData *domainFacility.ObjectData) error
+	CreateTemplate(ctx context.Context, input domainFacility.ObjectDataTemplateCreate) (*domainFacility.ObjectData, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.ObjectData, error)
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.ObjectData], error)
 	ListByApparatID(ctx context.Context, page, limit int, search string, apparatID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
 	ListBySystemPartID(ctx context.Context, page, limit int, search string, systemPartID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
 	ListByApparatAndSystemPartID(ctx context.Context, page, limit int, search string, apparatID, systemPartID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
 	Update(ctx context.Context, objectData *domainFacility.ObjectData) error
+	UpdateTemplate(ctx context.Context, id uuid.UUID, input domainFacility.ObjectDataTemplateUpdate) (*domainFacility.ObjectData, error)
 	DeleteByID(ctx context.Context, id uuid.UUID) error
 	GetBacnetObjectIDs(ctx context.Context, id uuid.UUID) ([]uuid.UUID, error)
 	GetApparatIDs(ctx context.Context, id uuid.UUID) ([]uuid.UUID, error)

@@ -2,7 +2,6 @@ package facility
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -55,33 +54,25 @@ func (s *FieldDeviceService) bindTransactions(tx txCoordinator) {
 	s.tx = tx
 }
 
+func (s *FieldDeviceService) transaction() facilityTx[*FieldDeviceService] {
+	return newFacilityTx(s.tx, s, func(services *Services) *FieldDeviceService {
+		return services.FieldDevice
+	})
+}
+
+func (s *FieldDeviceService) writer() fieldDeviceWriter {
+	return fieldDeviceWriter{service: s}
+}
+
 func (s *FieldDeviceService) Create(ctx context.Context, fieldDevice *domainFacility.FieldDevice) error {
 	return s.CreateWithBacnetObjects(ctx, fieldDevice, nil, nil)
 }
 
 func (s *FieldDeviceService) CreateWithBacnetObjects(ctx context.Context, fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects []domainFacility.BacnetObject) error {
-	return runWithFacilityTx(s.tx, s, func(services *Services) *FieldDeviceService {
-		return services.FieldDevice
-	}, func(txService *FieldDeviceService) error {
-		if objectDataID != nil && len(bacnetObjects) > 0 {
-			return domain.ErrInvalidArgument
-		}
-		if err := txService.Validate(ctx, fieldDevice, nil); err != nil {
-			return err
-		}
-
-		if err := txService.repo.Create(ctx, fieldDevice); err != nil {
-			return err
-		}
-
-		if objectDataID != nil {
-			return txService.replaceBacnetObjectsFromObjectData(ctx, fieldDevice.ID, *objectDataID)
-		}
-		if len(bacnetObjects) > 0 {
-			return txService.replaceBacnetObjects(ctx, fieldDevice.ID, bacnetObjects)
-		}
-
-		return nil
+	return s.writer().create(ctx, fieldDevice, fieldDeviceBacnetSelection{
+		objectDataID: objectDataID,
+		objects:      bacnetObjects,
+		objectsSet:   len(bacnetObjects) > 0,
 	})
 }
 
@@ -105,36 +96,16 @@ func (s *FieldDeviceService) ListWithFilters(ctx context.Context, params domain.
 	return s.repo.GetPaginatedListWithFilters(ctx, params, filters)
 }
 func (s *FieldDeviceService) Update(ctx context.Context, fieldDevice *domainFacility.FieldDevice) error {
-	if err := s.Validate(ctx, fieldDevice, &fieldDevice.ID); err != nil {
-		return err
-	}
-	return s.repo.Update(ctx, fieldDevice)
+	return s.writer().updateBase(ctx, fieldDevice)
 }
 
 func (s *FieldDeviceService) UpdateWithBacnetObjects(ctx context.Context, fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects *[]domainFacility.BacnetObject) error {
-	return runWithFacilityTx(s.tx, s, func(services *Services) *FieldDeviceService {
-		return services.FieldDevice
-	}, func(txService *FieldDeviceService) error {
-		if objectDataID != nil && bacnetObjects != nil {
-			return domain.ErrInvalidArgument
-		}
-		if err := txService.Validate(ctx, fieldDevice, &fieldDevice.ID); err != nil {
-			return err
-		}
-
-		if err := txService.repo.Update(ctx, fieldDevice); err != nil {
-			return err
-		}
-
-		if objectDataID != nil {
-			return txService.replaceBacnetObjectsFromObjectData(ctx, fieldDevice.ID, *objectDataID)
-		}
-		if bacnetObjects != nil {
-			return txService.replaceBacnetObjects(ctx, fieldDevice.ID, *bacnetObjects)
-		}
-
-		return nil
-	})
+	selection := fieldDeviceBacnetSelection{objectDataID: objectDataID}
+	if bacnetObjects != nil {
+		selection.objects = *bacnetObjects
+		selection.objectsSet = true
+	}
+	return s.writer().update(ctx, fieldDevice, selection)
 }
 
 func (s *FieldDeviceService) Validate(ctx context.Context, fieldDevice *domainFacility.FieldDevice, excludeID *uuid.UUID) error {
@@ -158,111 +129,15 @@ func (s *FieldDeviceService) DeleteByIDs(ctx context.Context, ids []uuid.UUID) e
 	return s.repo.DeleteByIds(ctx, ids)
 }
 func (s *FieldDeviceService) CreateSpecification(ctx context.Context, fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error {
-	return runWithFacilityTx(s.tx, s, func(services *Services) *FieldDeviceService {
-		return services.FieldDevice
-	}, func(txService *FieldDeviceService) error {
-		fieldDevice, err := domain.GetByID(ctx, txService.repo, fieldDeviceID)
-		if err != nil {
-			return err
-		}
-
-		existing, err := txService.specificationRepo.GetByFieldDeviceIDs(ctx, []uuid.UUID{fieldDeviceID})
-		if err != nil {
-			return err
-		}
-		if len(existing) > 0 {
-			return domain.ErrConflict
-		}
-
-		specification.SpecificationSupplier = normalizeOptionalString(specification.SpecificationSupplier)
-		specification.SpecificationBrand = normalizeOptionalString(specification.SpecificationBrand)
-		specification.SpecificationType = normalizeOptionalString(specification.SpecificationType)
-		specification.AdditionalInfoMotorValve = normalizeOptionalString(specification.AdditionalInfoMotorValve)
-		specification.AdditionalInformationInstallationLocation = normalizeOptionalString(specification.AdditionalInformationInstallationLocation)
-		specification.ElectricalConnectionACDC = normalizeOptionalString(specification.ElectricalConnectionACDC)
-		if err := txService.validateSpecification(specification); err != nil {
-			return err
-		}
-
-		id := fieldDeviceID
-		specification.FieldDeviceID = &id
-		if err := txService.specificationRepo.Create(ctx, specification); err != nil {
-			return err
-		}
-
-		fieldDevice.SpecificationID = &specification.ID
-		return txService.repo.Update(ctx, fieldDevice)
-	})
+	return s.writer().createSpecification(ctx, fieldDeviceID, specification)
 }
 
 func (s *FieldDeviceService) UpdateSpecificationPatch(ctx context.Context, fieldDeviceID uuid.UUID, patch *domainFacility.SpecificationPatch) (*domainFacility.Specification, error) {
-	// Ensure field device exists (and not deleted)
-	if _, err := domain.GetByID(ctx, s.repo, fieldDeviceID); err != nil {
-		return nil, err
-	}
-
-	specs, err := s.specificationRepo.GetByFieldDeviceIDs(ctx, []uuid.UUID{fieldDeviceID})
-	if err != nil {
-		return nil, err
-	}
-	if len(specs) == 0 {
-		return nil, domain.ErrNotFound
-	}
-	spec := specs[0]
-
-	applySpecificationPatch(spec, patch)
-	if err := s.validateSpecification(spec); err != nil {
-		return nil, err
-	}
-
-	if err := s.specificationRepo.Update(ctx, spec); err != nil {
-		return nil, err
-	}
-	return spec, nil
+	return s.writer().updateSpecificationPatch(ctx, fieldDeviceID, patch)
 }
 
 func (s *FieldDeviceService) ApplySpecificationPatch(ctx context.Context, fieldDeviceID uuid.UUID, patch *domainFacility.SpecificationPatch) error {
-	if patch == nil || !patch.HasChanges() {
-		return nil
-	}
-
-	if _, err := domain.GetByID(ctx, s.repo, fieldDeviceID); err != nil {
-		return err
-	}
-
-	specs, err := s.specificationRepo.GetByFieldDeviceIDs(ctx, []uuid.UUID{fieldDeviceID})
-	if err != nil {
-		return err
-	}
-
-	if len(specs) == 0 {
-		if !patch.HasNonNilValues() {
-			return nil
-		}
-
-		spec := &domainFacility.Specification{
-			SpecificationSupplier:                     normalizeOptionalString(patch.SpecificationSupplier),
-			SpecificationBrand:                        normalizeOptionalString(patch.SpecificationBrand),
-			SpecificationType:                         normalizeOptionalString(patch.SpecificationType),
-			AdditionalInfoMotorValve:                  normalizeOptionalString(patch.AdditionalInfoMotorValve),
-			AdditionalInfoSize:                        patch.AdditionalInfoSize,
-			AdditionalInformationInstallationLocation: normalizeOptionalString(patch.AdditionalInformationInstallationLocation),
-			ElectricalConnectionPH:                    patch.ElectricalConnectionPH,
-			ElectricalConnectionACDC:                  normalizeOptionalString(patch.ElectricalConnectionACDC),
-			ElectricalConnectionAmperage:              patch.ElectricalConnectionAmperage,
-			ElectricalConnectionPower:                 patch.ElectricalConnectionPower,
-			ElectricalConnectionRotation:              patch.ElectricalConnectionRotation,
-		}
-		return s.CreateSpecification(ctx, fieldDeviceID, spec)
-	}
-
-	spec := specs[0]
-	applySpecificationPatch(spec, patch)
-
-	if err := s.validateSpecification(spec); err != nil {
-		return err
-	}
-	return s.specificationRepo.Update(ctx, spec)
+	return s.writer().applySpecificationPatch(ctx, fieldDeviceID, patch)
 }
 
 func applySpecificationPatch(spec *domainFacility.Specification, patch *domainFacility.SpecificationPatch) {
@@ -547,199 +422,8 @@ func (s *FieldDeviceService) validateSpecification(spec *domainFacility.Specific
 	)
 }
 
-func (s *FieldDeviceService) buildAlarmValuesForBacnetObjects(ctx context.Context, bacnetObjects []*domainFacility.BacnetObject) ([]*domainFacility.BacnetObjectAlarmValue, error) {
-	if len(bacnetObjects) == 0 {
-		return nil, nil
-	}
-
-	alarmTypeCache := make(map[uuid.UUID]*domainFacility.AlarmType)
-	values := make([]*domainFacility.BacnetObjectAlarmValue, 0)
-
-	for _, obj := range bacnetObjects {
-		if obj == nil || obj.AlarmTypeID == nil {
-			continue
-		}
-
-		alarmType, ok := alarmTypeCache[*obj.AlarmTypeID]
-		if !ok {
-			loaded, err := s.alarmTypeRepo.GetWithFields(ctx, *obj.AlarmTypeID)
-			if err != nil {
-				return nil, err
-			}
-			if loaded == nil {
-				return nil, domain.ErrNotFound
-			}
-			alarmType = loaded
-			alarmTypeCache[*obj.AlarmTypeID] = loaded
-		}
-
-		for _, field := range alarmType.Fields {
-			value := &domainFacility.BacnetObjectAlarmValue{
-				BacnetObjectID:   obj.ID,
-				AlarmTypeFieldID: field.ID,
-				UnitID:           field.DefaultUnitID,
-				Source:           domainFacility.AlarmValueSourceDefault,
-			}
-
-			if field.DefaultValueJSON != nil && field.AlarmField != nil {
-				applyAlarmDefaultValue(value, field.AlarmField.DataType, *field.DefaultValueJSON)
-			}
-
-			values = append(values, value)
-		}
-	}
-
-	return values, nil
-}
-
-func (s *FieldDeviceService) createAlarmValuesForBacnetObjects(ctx context.Context, bacnetObjects []*domainFacility.BacnetObject) error {
-	values, err := s.buildAlarmValuesForBacnetObjects(ctx, bacnetObjects)
-	if err != nil {
-		return err
-	}
-	if len(values) == 0 {
-		return nil
-	}
-
-	return s.bacnetAlarmValueRepo.BulkCreate(ctx, values, 500)
-}
-
-func applyAlarmDefaultValue(value *domainFacility.BacnetObjectAlarmValue, dataType string, defaultValueJSON string) {
-	if value == nil {
-		return
-	}
-
-	var decoded any
-	if err := json.Unmarshal([]byte(defaultValueJSON), &decoded); err != nil {
-		value.ValueString = &defaultValueJSON
-		return
-	}
-
-	switch strings.ToLower(strings.TrimSpace(dataType)) {
-	case "number", "duration":
-		if n, ok := toFloat64(decoded); ok {
-			value.ValueNumber = &n
-		}
-	case "integer":
-		if n, ok := toInt64(decoded); ok {
-			value.ValueInteger = &n
-		}
-	case "boolean":
-		if b, ok := decoded.(bool); ok {
-			value.ValueBoolean = &b
-		}
-	case "string", "enum":
-		if s, ok := decoded.(string); ok {
-			value.ValueString = &s
-		}
-	case "state_map", "json":
-		if b, err := json.Marshal(decoded); err == nil {
-			raw := string(b)
-			value.ValueJSON = &raw
-		}
-	default:
-		if b, err := json.Marshal(decoded); err == nil {
-			raw := string(b)
-			value.ValueJSON = &raw
-		}
-	}
-}
-
-func toFloat64(value any) (float64, bool) {
-	switch v := value.(type) {
-	case float64:
-		return v, true
-	case float32:
-		return float64(v), true
-	case int:
-		return float64(v), true
-	case int8:
-		return float64(v), true
-	case int16:
-		return float64(v), true
-	case int32:
-		return float64(v), true
-	case int64:
-		return float64(v), true
-	case uint:
-		return float64(v), true
-	case uint8:
-		return float64(v), true
-	case uint16:
-		return float64(v), true
-	case uint32:
-		return float64(v), true
-	case uint64:
-		return float64(v), true
-	default:
-		return 0, false
-	}
-}
-
-func toInt64(value any) (int64, bool) {
-	switch v := value.(type) {
-	case int:
-		return int64(v), true
-	case int8:
-		return int64(v), true
-	case int16:
-		return int64(v), true
-	case int32:
-		return int64(v), true
-	case int64:
-		return v, true
-	case uint:
-		return int64(v), true
-	case uint8:
-		return int64(v), true
-	case uint16:
-		return int64(v), true
-	case uint32:
-		return int64(v), true
-	case uint64:
-		return int64(v), true
-	case float64:
-		return int64(v), true
-	case float32:
-		return int64(v), true
-	default:
-		return 0, false
-	}
-}
-
 func (s *FieldDeviceService) replaceBacnetObjects(ctx context.Context, fieldDeviceID uuid.UUID, bacnetObjects []domainFacility.BacnetObject) error {
-	ve := domain.NewValidationError()
-	for i, obj := range bacnetObjects {
-		obj.TextFix = normalizeBacnetTextFix(obj.TextFix)
-		bacnetObjects[i].TextFix = obj.TextFix
-		if obj.TextFix == "" {
-			ve = ve.Add(fmt.Sprintf("bacnet_objects.%d.text_fix", i), "text_fix is required")
-			continue
-		}
-	}
-	if len(ve.Fields) > 0 {
-		return ve
-	}
-
-	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(ctx, []uuid.UUID{fieldDeviceID}); err != nil {
-		return err
-	}
-	if len(bacnetObjects) == 0 {
-		return nil
-	}
-
-	objects := make([]*domainFacility.BacnetObject, 0, len(bacnetObjects))
-	for i := range bacnetObjects {
-		id := fieldDeviceID
-		bacnetObjects[i].FieldDeviceID = &id
-		objects = append(objects, &bacnetObjects[i])
-	}
-
-	if err := s.bacnetObjectRepo.BulkCreate(ctx, objects, 200); err != nil {
-		return err
-	}
-
-	return s.createAlarmValuesForBacnetObjects(ctx, objects)
+	return s.projectFacilityCopy().replaceFieldDeviceBacnetObjects(ctx, fieldDeviceID, bacnetObjects)
 }
 
 func applyBacnetObjectPatch(target *domainFacility.BacnetObject, patch domainFacility.BacnetObjectPatch) {
@@ -838,511 +522,21 @@ func (s *FieldDeviceService) patchBacnetObjects(ctx context.Context, fieldDevice
 }
 
 func (s *FieldDeviceService) replaceBacnetObjectsFromObjectData(ctx context.Context, fieldDeviceID uuid.UUID, objectDataID uuid.UUID) error {
-	od, err := domain.GetByID(ctx, s.objectDataRepo, objectDataID)
-	if err != nil {
-		return err
-	}
-	if !od.IsActive {
-		return domain.ErrNotFound
-	}
-
-	ids, err := s.objectDataRepo.GetBacnetObjectIDs(ctx, objectDataID)
-	if err != nil {
-		return err
-	}
-	if len(ids) == 0 {
-		return s.bacnetObjectRepo.DeleteByFieldDeviceIDs(ctx, []uuid.UUID{fieldDeviceID})
-	}
-
-	templates, err := s.bacnetObjectRepo.GetByIds(ctx, ids)
-	if err != nil {
-		return err
-	}
-	if len(templates) != len(ids) {
-		return domain.ErrNotFound
-	}
-
-	templateToClone := make(map[uuid.UUID]*domainFacility.BacnetObject, len(templates))
-	templateRef := make(map[uuid.UUID]*uuid.UUID, len(templates))
-	clones := make([]*domainFacility.BacnetObject, 0, len(templates))
-
-	for _, t := range templates {
-		textFix := normalizeBacnetTextFix(t.TextFix)
-		if textFix == "" {
-			return domain.NewValidationError().Add("bacnet_objects.text_fix", "text_fix is required")
-		}
-
-		clone := &domainFacility.BacnetObject{
-			TextFix:             textFix,
-			Description:         t.Description,
-			GMSVisible:          t.GMSVisible,
-			Optional:            t.Optional,
-			TextIndividual:      t.TextIndividual,
-			SoftwareType:        t.SoftwareType,
-			SoftwareNumber:      t.SoftwareNumber,
-			HardwareType:        t.HardwareType,
-			HardwareQuantity:    t.HardwareQuantity,
-			FieldDeviceID:       &fieldDeviceID,
-			SoftwareReferenceID: nil,
-			StateTextID:         t.StateTextID,
-			NotificationClassID: t.NotificationClassID,
-			AlarmTypeID:         t.AlarmTypeID,
-		}
-		templateToClone[t.ID] = clone
-		templateRef[t.ID] = t.SoftwareReferenceID
-		clones = append(clones, clone)
-	}
-
-	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(ctx, []uuid.UUID{fieldDeviceID}); err != nil {
-		return err
-	}
-
-	// First pass: create clones without software references.
-	if err := s.bacnetObjectRepo.BulkCreate(ctx, clones, 200); err != nil {
-		return err
-	}
-	if err := s.createAlarmValuesForBacnetObjects(ctx, clones); err != nil {
-		return err
-	}
-
-	oldToNew := make(map[uuid.UUID]uuid.UUID, len(templates))
-	for tid, clone := range templateToClone {
-		oldToNew[tid] = clone.ID
-	}
-
-	// Second pass: update internal software references.
-	for tid, ref := range templateRef {
-		if ref == nil {
-			continue
-		}
-		mapped, ok := oldToNew[*ref]
-		if !ok {
-			continue
-		}
-		clone := templateToClone[tid]
-		clone.SoftwareReferenceID = &mapped
-		if err := s.bacnetObjectRepo.Update(ctx, clone); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return s.projectFacilityCopy().replaceFieldDeviceBacnetObjectsFromObjectData(ctx, fieldDeviceID, objectDataID)
 }
 
 // MultiCreate creates multiple field devices in a single operation.
 // It validates each device independently and continues on failures.
 // Returns detailed results for each device creation attempt.
 func (s *FieldDeviceService) MultiCreate(ctx context.Context, items []domainFacility.FieldDeviceCreateItem) *domainFacility.FieldDeviceMultiCreateResult {
-	result := &domainFacility.FieldDeviceMultiCreateResult{
-		Results:       make([]domainFacility.FieldDeviceCreateResult, len(items)),
-		TotalRequests: len(items),
-		SuccessCount:  0,
-		FailureCount:  0,
-	}
-
-	// Cache lookups to reduce DB round-trips during multi-create.
-	stsCache := make(map[uuid.UUID]*domainFacility.SPSControllerSystemType)
-	systemTypeCache := make(map[uuid.UUID]bool)
-	apparatCache := make(map[uuid.UUID]bool)
-	systemPartCache := make(map[uuid.UUID]bool)
-	usedApparatNumbersCache := make(map[string]map[int]struct{})
-
-	getApparatNumbersKey := func(spsControllerSystemTypeID uuid.UUID, systemPartID uuid.UUID, apparatID uuid.UUID) string {
-		return spsControllerSystemTypeID.String() + "|" + apparatID.String() + "|" + systemPartID.String()
-	}
-
-	ensureParentsExistCached := func(fieldDevice *domainFacility.FieldDevice) error {
-		sts, ok := stsCache[fieldDevice.SPSControllerSystemTypeID]
-		if !ok {
-			loaded, err := domain.GetByID(ctx, s.spsControllerSystemTypeRepo, fieldDevice.SPSControllerSystemTypeID)
-			if err != nil {
-				stsCache[fieldDevice.SPSControllerSystemTypeID] = nil
-				return err
-			}
-			sts = loaded
-			stsCache[fieldDevice.SPSControllerSystemTypeID] = loaded
-		}
-		if sts == nil {
-			return domain.ErrNotFound
-		}
-
-		if _, ok := systemTypeCache[sts.SystemTypeID]; !ok {
-			if _, err := domain.GetByID(ctx, s.systemTypeRepo, sts.SystemTypeID); err != nil {
-				return err
-			}
-			systemTypeCache[sts.SystemTypeID] = true
-		}
-
-		if _, ok := apparatCache[fieldDevice.ApparatID]; !ok {
-			if _, err := domain.GetByID(ctx, s.apparatRepo, fieldDevice.ApparatID); err != nil {
-				return err
-			}
-			apparatCache[fieldDevice.ApparatID] = true
-		}
-
-		if _, ok := systemPartCache[fieldDevice.SystemPartID]; !ok {
-			if _, err := domain.GetByID(ctx, s.systemPartRepo, fieldDevice.SystemPartID); err != nil {
-				return err
-			}
-			systemPartCache[fieldDevice.SystemPartID] = true
-		}
-
-		return nil
-	}
-
-	setCreateError := func(resultItem *domainFacility.FieldDeviceCreateResult, err error, defaultField string) {
-		if ve, ok := domain.AsValidationError(err); ok {
-			for field, msg := range ve.Fields {
-				resultItem.Error = msg
-				resultItem.ErrorField = field
-				return
-			}
-		}
-		resultItem.Error = err.Error()
-		resultItem.ErrorField = defaultField
-	}
-
-	type createWorkItem struct {
-		index int
-		item  domainFacility.FieldDeviceCreateItem
-	}
-	createWork := make([]createWorkItem, 0, len(items))
-
-	for i, item := range items {
-		createResult := &result.Results[i]
-		createResult.Index = i
-		createResult.Success = false
-
-		// Validate the item
-		if item.FieldDevice == nil {
-			createResult.Error = "field device is required"
-			createResult.ErrorField = "fielddevice"
-			result.FailureCount++
-			continue
-		}
-
-		// Check for mutually exclusive options
-		if item.ObjectDataID != nil && len(item.BacnetObjects) > 0 {
-			createResult.Error = "object_data_id and bacnet_objects are mutually exclusive"
-			createResult.ErrorField = "fielddevice"
-			result.FailureCount++
-			continue
-		}
-
-		// Validate required fields
-		if err := s.validateRequiredFields(item.FieldDevice); err != nil {
-			setCreateError(createResult, err, "fielddevice")
-			result.FailureCount++
-			continue
-		}
-
-		// Ensure parent entities exist
-		if err := ensureParentsExistCached(item.FieldDevice); err != nil {
-			if err == domain.ErrNotFound {
-				createResult.Error = "one or more parent entities (SPS controller, apparat, system part) not found"
-				createResult.ErrorField = "fielddevice"
-			} else {
-				createResult.Error = err.Error()
-				createResult.ErrorField = "fielddevice"
-			}
-			result.FailureCount++
-			continue
-		}
-
-		// Validate apparat_nr uniqueness
-		if item.FieldDevice.ApparatNr == 0 {
-			createResult.Error = "apparat_nr is required"
-			createResult.ErrorField = "fielddevice.apparat_nr"
-			result.FailureCount++
-			continue
-		}
-		if item.FieldDevice.ApparatNr < 1 || item.FieldDevice.ApparatNr > 99 {
-			createResult.Error = "apparat_nr must be between 1 and 99"
-			createResult.ErrorField = "fielddevice.apparat_nr"
-			result.FailureCount++
-			continue
-		}
-
-		key := getApparatNumbersKey(
-			item.FieldDevice.SPSControllerSystemTypeID,
-			item.FieldDevice.SystemPartID,
-			item.FieldDevice.ApparatID,
-		)
-		usedSet, ok := usedApparatNumbersCache[key]
-		if !ok {
-			usedNumbers, err := s.repo.GetUsedApparatNumbers(ctx,
-				item.FieldDevice.SPSControllerSystemTypeID,
-				item.FieldDevice.SystemPartID,
-				item.FieldDevice.ApparatID,
-			)
-			if err != nil {
-				createResult.Error = err.Error()
-				createResult.ErrorField = "fielddevice.apparat_nr"
-				result.FailureCount++
-				continue
-			}
-			usedSet = make(map[int]struct{}, len(usedNumbers))
-			for _, n := range usedNumbers {
-				usedSet[n] = struct{}{}
-			}
-			usedApparatNumbersCache[key] = usedSet
-		}
-		if _, exists := usedSet[item.FieldDevice.ApparatNr]; exists {
-			createResult.Error = "apparatnummer ist bereits vergeben"
-			createResult.ErrorField = "fielddevice.apparat_nr"
-			result.FailureCount++
-			continue
-		}
-		usedSet[item.FieldDevice.ApparatNr] = struct{}{}
-		createWork = append(createWork, createWorkItem{index: i, item: item})
-	}
-
-	if len(createWork) == 0 {
-		return result
-	}
-
-	for _, work := range createWork {
-		createResult := &result.Results[work.index]
-		if err := s.CreateWithBacnetObjects(ctx, work.item.FieldDevice, work.item.ObjectDataID, work.item.BacnetObjects); err != nil {
-			setCreateError(createResult, err, "fielddevice")
-			result.FailureCount++
-			continue
-		}
-
-		createResult.Success = true
-		createResult.FieldDevice = work.item.FieldDevice
-		result.SuccessCount++
-	}
-
-	return result
+	return s.writer().multiCreate(ctx, items)
 }
 
 // BulkUpdate updates multiple field devices in a single operation.
 // It processes updates ensuring that swaps/permutations within the batch are handled correctly.
 // Uniqueness constraints are checked against the database (excluding batch items) AND internally within the batch.
 func (s *FieldDeviceService) BulkUpdate(ctx context.Context, updates []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult {
-	result := &domainFacility.BulkOperationResult{
-		Results:      make([]domainFacility.BulkOperationResultItem, len(updates)),
-		TotalCount:   len(updates),
-		SuccessCount: 0,
-		FailureCount: 0,
-	}
-
-	// 1. Collect all IDs involved in the batch
-	ids := make([]uuid.UUID, 0, len(updates))
-	updateMap := make(map[uuid.UUID]domainFacility.BulkFieldDeviceUpdate)
-	for _, u := range updates {
-		ids = append(ids, u.ID)
-		updateMap[u.ID] = u
-	}
-
-	// 2. Fetch existing items from DB to build context
-	existingItems, err := s.repo.GetByIds(ctx, ids)
-	if err != nil {
-		// If we can't fetch state, we can't safely proceed
-		for i := range result.Results {
-			result.Results[i].Error = "failed to fetch existing items: " + err.Error()
-			result.FailureCount++
-		}
-		return result
-	}
-
-	existingMap := make(map[uuid.UUID]*domainFacility.FieldDevice)
-	for _, item := range existingItems {
-		existingMap[item.ID] = item
-	}
-
-	// 3. Build "Proposed State" for all items
-	// This represents what the items WILL look like if updates succeed.
-	proposedMap := make(map[uuid.UUID]*domainFacility.FieldDevice)
-	for _, update := range updates {
-		existing, ok := existingMap[update.ID]
-		if !ok {
-			continue // Handled in the processing loop
-		}
-
-		// Shallow copy existing item to apply updates
-		clone := *existing
-		if update.HasBMKUpdate() {
-			clone.BMK = normalizeOptionalString(update.BMK)
-		}
-		if update.HasDescriptionUpdate() {
-			clone.Description = normalizeOptionalString(update.Description)
-		}
-		if update.HasTextIndividuellUpdate() {
-			clone.TextIndividuell = normalizeOptionalString(update.TextIndividuell)
-		}
-		if update.ApparatNr != nil {
-			clone.ApparatNr = *update.ApparatNr
-		}
-		if update.ApparatID != nil {
-			clone.ApparatID = *update.ApparatID
-		}
-		if update.SystemPartID != nil {
-			clone.SystemPartID = *update.SystemPartID
-		}
-		proposedMap[update.ID] = &clone
-	}
-
-	// Helper to check conflict between two proposed states
-	isApparatNrConflict := func(a, b *domainFacility.FieldDevice) bool {
-		if a.SPSControllerSystemTypeID != b.SPSControllerSystemTypeID {
-			return false
-		}
-		if a.ApparatID != b.ApparatID {
-			return false
-		}
-		if a.ApparatNr != b.ApparatNr {
-			return false
-		}
-		return a.SystemPartID == b.SystemPartID
-	}
-
-	// 4. Process Updates with Granular Field-Level Success Tracking
-	// Each device update is now split into 3 independent phases:
-	// - Phase 1: Base FieldDevice fields (bmk, description, apparat_nr, etc.)
-	// - Phase 2: Specification update/create
-	// - Phase 3: BACnet objects patch
-	// If any phase fails, we still attempt the other phases and track field-level errors.
-	for i, update := range updates {
-		resultItem := &result.Results[i]
-		resultItem.ID = update.ID
-		resultItem.Success = false
-		resultItem.Fields = make(map[string]string)
-
-		_, ok := existingMap[update.ID]
-		if !ok {
-			resultItem.Error = "field device not found"
-			result.FailureCount++
-			continue
-		}
-
-		proposed, ok := proposedMap[update.ID]
-		if !ok {
-			resultItem.Error = "field device not found"
-			result.FailureCount++
-			continue
-		}
-
-		hasBaseFieldUpdates := update.HasBMKUpdate() || update.HasDescriptionUpdate() || update.HasTextIndividuellUpdate() || update.ApparatNr != nil || update.ApparatID != nil || update.SystemPartID != nil
-		phaseErrors := make(map[string]string)
-		phaseSuccesses := 0
-		totalPhases := 0
-
-		// PHASE 1: Update base FieldDevice fields
-		if hasBaseFieldUpdates {
-			totalPhases++
-			baseUpdateSuccess := true
-
-			// Basic Validation
-			if err := s.validateRequiredFields(proposed); err != nil {
-				baseUpdateSuccess = false
-				if ve, ok := domain.AsValidationError(err); ok {
-					for field, msg := range ve.Fields {
-						phaseErrors[field] = msg
-					}
-				} else {
-					phaseErrors["fielddevice"] = err.Error()
-				}
-			}
-
-			// Check if parents exist
-			if baseUpdateSuccess {
-				if err := s.ensureParentsExist(ctx, proposed); err != nil {
-					baseUpdateSuccess = false
-					if err == domain.ErrNotFound {
-						phaseErrors["fielddevice"] = "one or more parent entities not found"
-					} else {
-						phaseErrors["fielddevice"] = err.Error()
-					}
-				}
-			}
-
-			// ApparatNr Validation (The "Swap" Logic)
-			// Validate if ANY of the uniqueness-constraint fields changed: apparat_nr, apparat_id, system_part_id
-			hasApparatNrConstraintChanges := update.ApparatNr != nil || update.ApparatID != nil || update.SystemPartID != nil
-			if baseUpdateSuccess && hasApparatNrConstraintChanges {
-				for otherID, otherProposed := range proposedMap {
-					if otherID == update.ID {
-						continue
-					}
-					if isApparatNrConflict(proposed, otherProposed) {
-						baseUpdateSuccess = false
-						phaseErrors["fielddevice.apparat_nr"] = "apparatnummer ist bereits vergeben"
-						break
-					}
-				}
-
-				// B. Check for conflicts in DB (Excluding ALL batch items)
-				if baseUpdateSuccess {
-					if err := s.ensureApparatNrAvailableWithExclusions(ctx, proposed, ids); err != nil {
-						baseUpdateSuccess = false
-						if ve, ok := domain.AsValidationError(err); ok {
-							for field, msg := range ve.Fields {
-								phaseErrors[field] = msg
-							}
-						} else {
-							phaseErrors["fielddevice.apparat_nr"] = err.Error()
-						}
-					}
-				}
-			}
-
-			// Attempt to save base fields if validation passed
-			if baseUpdateSuccess {
-				if err := s.repo.Update(ctx, proposed); err != nil {
-					phaseErrors["fielddevice"] = err.Error()
-				} else {
-					phaseSuccesses++
-				}
-			}
-		}
-
-		// PHASE 2: Handle specification update/create (independent of Phase 1)
-		if update.Specification != nil && update.Specification.HasChanges() {
-			totalPhases++
-			if err := s.ApplySpecificationPatch(ctx, proposed.ID, update.Specification); err != nil {
-				phaseErrors["specification"] = "failed to update specification: " + err.Error()
-			} else {
-				phaseSuccesses++
-			}
-		}
-
-		// PHASE 3: Handle BACnet objects patch updates (independent of Phase 1 and 2)
-		if update.BacnetObjects != nil {
-			totalPhases++
-			if err := s.patchBacnetObjects(ctx, proposed.ID, *update.BacnetObjects); err != nil {
-				if ve, ok := domain.AsValidationError(err); ok {
-					for field, msg := range ve.Fields {
-						phaseErrors[field] = msg
-					}
-				} else {
-					phaseErrors["bacnet_objects"] = "failed to update BACnet objects: " + err.Error()
-				}
-			} else {
-				phaseSuccesses++
-			}
-		}
-
-		// Determine overall success
-		if len(phaseErrors) == 0 && totalPhases > 0 {
-			resultItem.Success = true
-			result.SuccessCount++
-		} else {
-			resultItem.Fields = phaseErrors
-			// Set a summary error message
-			if len(phaseErrors) > 0 {
-				// Pick the first error as the main error message
-				for _, msg := range phaseErrors {
-					resultItem.Error = msg
-					break
-				}
-			}
-			result.FailureCount++
-		}
-	}
-
-	return result
+	return s.writer().bulkUpdate(ctx, updates)
 }
 
 // BulkDelete deletes multiple field devices in a single operation.

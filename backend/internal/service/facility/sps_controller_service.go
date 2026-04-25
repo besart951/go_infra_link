@@ -43,14 +43,18 @@ func (s *SPSControllerService) bindTransactions(tx txCoordinator) {
 	s.tx = tx
 }
 
+func (s *SPSControllerService) transaction() facilityTx[*SPSControllerService] {
+	return newFacilityTx(s.tx, s, func(services *Services) *SPSControllerService {
+		return services.SPSController
+	})
+}
+
 func (s *SPSControllerService) Create(ctx context.Context, spsController *domainFacility.SPSController) error {
 	return s.CreateWithSystemTypes(ctx, spsController, nil)
 }
 
 func (s *SPSControllerService) CreateWithSystemTypes(ctx context.Context, spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
-	return runWithFacilityTx(s.tx, s, func(services *Services) *SPSControllerService {
-		return services.SPSController
-	}, func(txService *SPSControllerService) error {
+	return s.transaction().run(func(txService *SPSControllerService) error {
 		if err := txService.ensureGADeviceAssigned(ctx, spsController, nil); err != nil {
 			return err
 		}
@@ -125,9 +129,7 @@ func (s *SPSControllerService) Update(ctx context.Context, spsController *domain
 }
 
 func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
-	return runWithFacilityTx(s.tx, s, func(services *Services) *SPSControllerService {
-		return services.SPSController
-	}, func(txService *SPSControllerService) error {
+	return s.transaction().run(func(txService *SPSControllerService) error {
 		if err := txService.Validate(ctx, spsController, &spsController.ID); err != nil {
 			return err
 		}

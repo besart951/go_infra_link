@@ -1,10 +1,7 @@
 package facility
 
 import (
-	"context"
 	"net/http"
-	"strconv"
-	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -39,111 +36,18 @@ func (h *ObjectDataHandler) CreateObjectData(c *gin.Context) {
 		return
 	}
 
-	if req.BacnetObjects != nil && len(*req.BacnetObjects) > 0 {
-		if err := validateObjectDataBacnetInputs(*req.BacnetObjects); err != nil {
-			if ve, ok := domain.AsValidationError(err); ok {
-				respondValidationError(c, ve.Fields)
-				return
-			}
-			respondLocalizedError(c, http.StatusBadRequest, "invalid_bacnet_objects", "facility.invalid_bacnet_objects")
-			return
-		}
-	}
-
 	ctx := c.Request.Context()
-	obj := toObjectDataModel(req)
-	if err := h.ensureObjectDataDescriptionUnique(ctx, obj.ProjectID, obj.Description, nil); err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "validation_failed", "facility.validation_failed")
-		return
-	}
-
-	// Load apparats if IDs are provided
-	if len(req.ApparatIDs) > 0 {
-		apparats, err := h.apparatService.GetByIDs(ctx, req.ApparatIDs)
-		if err != nil {
-			respondLocalizedError(c, http.StatusBadRequest, "invalid_apparats", "facility.invalid_apparat_id")
-			return
-		}
-		obj.Apparats = apparats
-	}
-
-	if err := h.service.Create(ctx, obj); respondLocalizedValidationOrError(c, err, "facility.creation_failed") {
-		return
-	}
-
-	if req.BacnetObjects != nil && len(*req.BacnetObjects) > 0 {
-		for _, input := range *req.BacnetObjects {
-			createReq := dto.CreateBacnetObjectRequest{
-				ObjectDataID:      &obj.ID,
-				BacnetObjectInput: input,
-			}
-			bacnetObject := toBacnetObjectModel(createReq)
-			if err := h.bacnetService.CreateWithParent(ctx, bacnetObject, nil, &obj.ID); err != nil {
-				respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
-					localizedInvalidArgument("facility.invalid_bacnet_object_data"),
-					localizedInvalidReference(),
-					localizedConflict("facility.entity_conflict"),
-				)
-				return
-			}
-		}
-	}
-
-	if created, err := h.service.GetByID(ctx, obj.ID); err == nil && created != nil {
-		c.JSON(http.StatusCreated, toObjectDataResponse(*created))
-		return
-	}
-
-	c.JSON(http.StatusCreated, toObjectDataResponse(*obj))
-}
-
-func validateObjectDataBacnetInputs(inputs []dto.BacnetObjectInput) error {
-	ve := domain.NewValidationError()
-	seenSoftware := make(map[string]struct{}, len(inputs))
-
-	for i := range inputs {
-		input := inputs[i]
-		textFix := strings.TrimSpace(input.TextFix)
-		if textFix == "" {
-			ve = ve.Add("objectdata.bacnetobject.textfix", "textfix is required")
-		}
-
-		softwareType := strings.ToLower(strings.TrimSpace(input.SoftwareType))
-		if softwareType == "" {
-			ve = ve.Add("objectdata.bacnetobject.software_type", "software_type is required")
-		} else {
-			softwareKey := softwareType + ":" + strconv.Itoa(input.SoftwareNumber)
-			if _, exists := seenSoftware[softwareKey]; exists {
-				ve = ve.Add("objectdata.bacnetobject.software", "software_type + software_number must be unique within the object data")
-			} else {
-				seenSoftware[softwareKey] = struct{}{}
-			}
-		}
-
-		if input.AlarmTypeID == nil && input.AlarmDefinitionID == nil {
-			continue
-		}
-	}
-
-	if len(ve.Fields) > 0 {
-		return ve
-	}
-	return nil
-}
-
-func (h *ObjectDataHandler) ensureObjectDataDescriptionUnique(ctx context.Context, projectID *uuid.UUID, description string, excludeID *uuid.UUID) error {
-	exists, err := h.service.ExistsByDescription(ctx, projectID, description, excludeID)
+	created, err := h.service.CreateTemplate(ctx, toObjectDataTemplateCreate(req))
 	if err != nil {
-		return err
+		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
+			localizedInvalidArgument("facility.invalid_bacnet_object_data"),
+			localizedInvalidReference(),
+			localizedConflict("facility.entity_conflict"),
+		)
+		return
 	}
-	if exists {
-		return domain.NewValidationError().Add("objectdata.description", "description must be unique")
-	}
-	return nil
+
+	c.JSON(http.StatusCreated, toObjectDataResponse(*created))
 }
 
 // GetObjectData godoc
@@ -266,60 +170,13 @@ func (h *ObjectDataHandler) UpdateObjectData(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
-	obj, err := h.service.GetByID(ctx, id)
+	updated, err := h.service.UpdateTemplate(ctx, id, toObjectDataTemplateUpdate(req))
 	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.object_data_not_found") {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-		return
-	}
-
-	applyObjectDataUpdate(obj, req)
-	if err := h.ensureObjectDataDescriptionUnique(ctx, obj.ProjectID, obj.Description, &obj.ID); err != nil {
-		if ve, ok := domain.AsValidationError(err); ok {
-			respondValidationError(c, ve.Fields)
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "validation_failed", "facility.validation_failed")
-		return
-	}
-
-	// Load apparats if IDs are provided
-	if req.ApparatIDs != nil {
-		if len(*req.ApparatIDs) > 0 {
-			apparats, err := h.apparatService.GetByIDs(ctx, *req.ApparatIDs)
-			if err != nil {
-				respondLocalizedError(c, http.StatusBadRequest, "invalid_apparats", "facility.invalid_apparats")
-				return
-			}
-			obj.Apparats = apparats
-		} else {
-			// Empty array means clear all apparats
-			obj.Apparats = []*domainFacility.Apparat{}
-		}
-	}
-
-	if err := h.service.Update(ctx, obj); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
-		return
-	}
-
-	if req.BacnetObjects != nil {
-		bacnetObjects := toFieldDeviceBacnetObjects(*req.BacnetObjects)
-		if err := h.bacnetService.ReplaceForObjectData(ctx, obj.ID, bacnetObjects); err != nil {
-			respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
-				localizedNotFound("facility.object_data_not_found"),
-			)
-			return
-		}
-	}
-
-	updated, err := h.service.GetByID(ctx, obj.ID)
-	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.object_data_not_found") {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
+			localizedNotFound("facility.object_data_not_found"),
+			localizedInvalidReference(),
+			localizedConflict("facility.entity_conflict"),
+		)
 		return
 	}
 

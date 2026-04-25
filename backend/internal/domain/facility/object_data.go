@@ -15,3 +15,21 @@ type ObjectData struct {
 	BacnetObjects []*BacnetObject `gorm:"many2many:object_data_bacnet_objects;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Apparats      []*Apparat      `gorm:"many2many:object_data_apparats;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
+
+type ObjectDataTemplateCreate struct {
+	Description   string
+	Version       string
+	IsActive      *bool
+	ProjectID     *uuid.UUID
+	ApparatIDs    []uuid.UUID
+	BacnetObjects []BacnetObject
+}
+
+type ObjectDataTemplateUpdate struct {
+	Description   *string
+	Version       *string
+	IsActive      *bool
+	ProjectID     *uuid.UUID
+	ApparatIDs    *[]uuid.UUID
+	BacnetObjects *[]BacnetObject
+}

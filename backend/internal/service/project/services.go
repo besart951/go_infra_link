@@ -5,15 +5,7 @@ import (
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
-	"gorm.io/gorm"
 )
-
-type TxRunner func(func(tx *gorm.DB) error) error
-
-type Config struct {
-	TxRunner  TxRunner
-	TxFactory func(tx *gorm.DB) (*Services, error)
-}
 
 type Dependencies struct {
 	Projects                 domainProject.ProjectRepository
@@ -44,6 +36,7 @@ func NewServices(deps Dependencies, cfgs ...Config) *Services {
 	if len(cfgs) > 0 {
 		cfg = cfgs[0]
 	}
+	tx := newTxCoordinator(cfg)
 
 	services := &Services{}
 	services.AccessPolicy = &ProjectAccessPolicyService{
@@ -56,9 +49,8 @@ func NewServices(deps Dependencies, cfgs ...Config) *Services {
 		rolePermissionRepo: deps.RolePermissions,
 		objectDataRepo:     deps.ObjectData,
 		bacnetObjectRepo:   deps.BacnetObjects,
-		txRunner:           cfg.TxRunner,
-		txFactory:          cfg.TxFactory,
 	}
+	services.Lifecycle.bindTransactions(tx)
 	services.Membership = &ProjectMembershipService{
 		repo:     deps.Projects,
 		userRepo: deps.Users,
@@ -76,9 +68,8 @@ func NewServices(deps Dependencies, cfgs ...Config) *Services {
 		spsControllerSystemRepo:   deps.SPSControllerSystemTypes,
 		fieldDeviceRepo:           deps.FieldDevices,
 		hierarchyCopier:           deps.HierarchyCopier,
-		txRunner:                  cfg.TxRunner,
-		txFactory:                 cfg.TxFactory,
 	}
+	services.FacilityLink.bindTransactions(tx)
 
 	return services
 }

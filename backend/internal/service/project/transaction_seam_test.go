@@ -569,8 +569,8 @@ func newProjectTxServices(baseDeps Dependencies, txDeps Dependencies, runnerCall
 			*runnerCalls = *runnerCalls + 1
 			return run(&gorm.DB{})
 		},
-		TxFactory: func(_ *gorm.DB) (*Services, error) {
-			return NewServices(txDeps), nil
+		TxDependencies: func(_ *gorm.DB) (Dependencies, error) {
+			return txDeps, nil
 		},
 	})
 }

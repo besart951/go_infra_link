@@ -659,8 +659,8 @@ func newTxServices(baseRepos, txRepos facility.Repositories, runnerCalls *int) *
 			*runnerCalls++
 			return run(nil)
 		},
-		TxFactory: func(tx *gorm.DB) (*facility.Services, error) {
-			return facility.NewServices(txRepos), nil
+		TxRepositories: func(tx *gorm.DB) (facility.Repositories, error) {
+			return txRepos, nil
 		},
 	})
 }

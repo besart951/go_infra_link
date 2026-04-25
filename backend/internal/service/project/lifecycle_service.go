@@ -7,8 +7,8 @@ import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type ProjectLifecycleService struct {
@@ -17,26 +17,21 @@ type ProjectLifecycleService struct {
 	rolePermissionRepo domainUser.RolePermissionRepository
 	objectDataRepo     domainFacility.ObjectDataStore
 	bacnetObjectRepo   domainFacility.BacnetObjectStore
-	txRunner           TxRunner
-	txFactory          func(tx *gorm.DB) (*Services, error)
+	tx                 txCoordinator
 }
 
-func (s *ProjectLifecycleService) withTx(fn func(*ProjectLifecycleService) error) error {
-	if s.txRunner == nil || s.txFactory == nil {
-		return fn(s)
-	}
+func (s *ProjectLifecycleService) bindTransactions(tx txCoordinator) {
+	s.tx = tx
+}
 
-	return s.txRunner(func(tx *gorm.DB) error {
-		txServices, err := s.txFactory(tx)
-		if err != nil {
-			return err
-		}
-		return fn(txServices.Lifecycle)
+func (s *ProjectLifecycleService) transaction() projectTx[*ProjectLifecycleService] {
+	return newProjectTx(s.tx, s, func(services *Services) *ProjectLifecycleService {
+		return services.Lifecycle
 	})
 }
 
 func (s *ProjectLifecycleService) Create(ctx context.Context, project *domainProject.Project) error {
-	return s.withTx(func(txService *ProjectLifecycleService) error {
+	return s.transaction().run(func(txService *ProjectLifecycleService) error {
 		return txService.createProject(ctx, project)
 	})
 }
@@ -56,71 +51,7 @@ func (s *ProjectLifecycleService) createProject(ctx context.Context, project *do
 		}
 	}
 
-	templates, err := s.objectDataRepo.GetTemplates(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, tmpl := range templates {
-		copy := *tmpl
-		copy.ID = uuid.Nil
-		copy.ProjectID = &project.ID
-		copy.BacnetObjects = nil
-
-		if err := s.objectDataRepo.Create(ctx, &copy); err != nil {
-			return err
-		}
-
-		if len(tmpl.BacnetObjects) == 0 {
-			continue
-		}
-
-		oldToNew := make(map[uuid.UUID]*domainFacility.BacnetObject)
-		oldRefs := make(map[uuid.UUID]*uuid.UUID)
-
-		for _, bo := range tmpl.BacnetObjects {
-			newBO := &domainFacility.BacnetObject{
-				TextFix:             bo.TextFix,
-				Description:         bo.Description,
-				GMSVisible:          bo.GMSVisible,
-				Optional:            bo.Optional,
-				TextIndividual:      bo.TextIndividual,
-				SoftwareType:        bo.SoftwareType,
-				SoftwareNumber:      bo.SoftwareNumber,
-				HardwareType:        bo.HardwareType,
-				HardwareQuantity:    bo.HardwareQuantity,
-				StateTextID:         bo.StateTextID,
-				NotificationClassID: bo.NotificationClassID,
-				AlarmTypeID:         bo.AlarmTypeID,
-			}
-			if err := s.bacnetObjectRepo.Create(ctx, newBO); err != nil {
-				return err
-			}
-			oldToNew[bo.ID] = newBO
-			oldRefs[bo.ID] = bo.SoftwareReferenceID
-		}
-
-		newBacnetObjects := make([]*domainFacility.BacnetObject, 0, len(tmpl.BacnetObjects))
-		for oldID, newBO := range oldToNew {
-			if refID := oldRefs[oldID]; refID != nil {
-				if target, ok := oldToNew[*refID]; ok {
-					id := target.ID
-					newBO.SoftwareReferenceID = &id
-					if err := s.bacnetObjectRepo.Update(ctx, newBO); err != nil {
-						return err
-					}
-				}
-			}
-			newBacnetObjects = append(newBacnetObjects, newBO)
-		}
-
-		copy.BacnetObjects = newBacnetObjects
-		if err := s.objectDataRepo.Update(ctx, &copy); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return facilityservice.CopyObjectDataTemplatesForProject(ctx, s.objectDataRepo, s.bacnetObjectRepo, project.ID)
 }
 
 func (s *ProjectLifecycleService) GetByID(ctx context.Context, id uuid.UUID) (*domainProject.Project, error) {

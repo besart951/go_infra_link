@@ -2,7 +2,6 @@ package facility
 
 import (
 	"context"
-	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -11,28 +10,79 @@ import (
 
 type ObjectDataService struct {
 	baseService[domainFacility.ObjectData]
-	extRepo domainFacility.ObjectDataStore
+	extRepo               domainFacility.ObjectDataStore
+	bacnetObjectRepo      domainFacility.BacnetObjectStore
+	objectDataBacnetStore domainFacility.ObjectDataBacnetObjectStore
+	apparatRepo           domainFacility.ApparatRepository
+	alarmDefinitionRepo   domainFacility.AlarmDefinitionRepository
+	alarmTypeRepo         domainFacility.AlarmTypeRepository
+	tx                    txCoordinator
 }
 
-func NewObjectDataService(repo domainFacility.ObjectDataStore) *ObjectDataService {
+func NewObjectDataService(
+	repo domainFacility.ObjectDataStore,
+	bacnetObjectRepo domainFacility.BacnetObjectStore,
+	objectDataBacnetStore domainFacility.ObjectDataBacnetObjectStore,
+	apparatRepo domainFacility.ApparatRepository,
+	alarmDefinitionRepo domainFacility.AlarmDefinitionRepository,
+	alarmTypeRepo domainFacility.AlarmTypeRepository,
+) *ObjectDataService {
 	return &ObjectDataService{
-		baseService: newBase(repo, 10),
-		extRepo:     repo,
+		baseService:           newBase(repo, 10),
+		extRepo:               repo,
+		bacnetObjectRepo:      bacnetObjectRepo,
+		objectDataBacnetStore: objectDataBacnetStore,
+		apparatRepo:           apparatRepo,
+		alarmDefinitionRepo:   alarmDefinitionRepo,
+		alarmTypeRepo:         alarmTypeRepo,
+	}
+}
+
+func (s *ObjectDataService) bindTransactions(tx txCoordinator) {
+	s.tx = tx
+}
+
+func (s *ObjectDataService) transaction() facilityTx[*ObjectDataService] {
+	return newFacilityTx(s.tx, s, func(services *Services) *ObjectDataService {
+		return services.ObjectData
+	})
+}
+
+func (s *ObjectDataService) template() objectDataTemplate {
+	return objectDataTemplate{
+		objectDataRepo:        s.extRepo,
+		bacnetObjectRepo:      s.bacnetObjectRepo,
+		objectDataBacnetStore: s.objectDataBacnetStore,
+		apparatRepo:           s.apparatRepo,
+		alarmDefinitionRepo:   s.alarmDefinitionRepo,
+		alarmTypeRepo:         s.alarmTypeRepo,
 	}
 }
 
 func (s *ObjectDataService) Create(ctx context.Context, objectData *domainFacility.ObjectData) error {
-	if err := s.ensureUnique(ctx, objectData, nil); err != nil {
+	if err := s.template().ensureDescriptionUnique(ctx, objectData, nil); err != nil {
 		return err
 	}
 	return s.repo.Create(ctx, objectData)
 }
 
 func (s *ObjectDataService) Update(ctx context.Context, objectData *domainFacility.ObjectData) error {
-	if err := s.ensureUnique(ctx, objectData, &objectData.ID); err != nil {
+	if err := s.template().ensureDescriptionUnique(ctx, objectData, &objectData.ID); err != nil {
 		return err
 	}
 	return s.repo.Update(ctx, objectData)
+}
+
+func (s *ObjectDataService) CreateTemplate(ctx context.Context, input domainFacility.ObjectDataTemplateCreate) (*domainFacility.ObjectData, error) {
+	return runWithFacilityTxResult(s.transaction(), func(txService *ObjectDataService) (*domainFacility.ObjectData, error) {
+		return txService.template().create(ctx, input)
+	})
+}
+
+func (s *ObjectDataService) UpdateTemplate(ctx context.Context, id uuid.UUID, input domainFacility.ObjectDataTemplateUpdate) (*domainFacility.ObjectData, error) {
+	return runWithFacilityTxResult(s.transaction(), func(txService *ObjectDataService) (*domainFacility.ObjectData, error) {
+		return txService.template().update(ctx, id, input)
+	})
 }
 
 func (s *ObjectDataService) ListByApparatID(ctx context.Context, page, limit int, search string, apparatID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error) {
@@ -64,19 +114,4 @@ func (s *ObjectDataService) GetApparatIDs(ctx context.Context, id uuid.UUID) ([]
 
 func (s *ObjectDataService) ExistsByDescription(ctx context.Context, projectID *uuid.UUID, description string, excludeID *uuid.UUID) (bool, error) {
 	return s.extRepo.ExistsByDescription(ctx, projectID, description, excludeID)
-}
-
-func (s *ObjectDataService) ensureUnique(ctx context.Context, objectData *domainFacility.ObjectData, excludeID *uuid.UUID) error {
-	description := strings.TrimSpace(objectData.Description)
-	if description == "" {
-		return nil
-	}
-	exists, err := s.extRepo.ExistsByDescription(ctx, objectData.ProjectID, description, excludeID)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return domain.NewValidationError().Add("objectdata.description", "description must be unique")
-	}
-	return nil
 }

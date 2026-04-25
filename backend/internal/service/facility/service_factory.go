@@ -137,6 +137,15 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 		repos.BacnetObjectAlarmValues,
 	)
 	fieldDeviceService.bindTransactions(tx)
+	objectDataService := NewObjectDataService(
+		repos.ObjectData,
+		repos.BacnetObjects,
+		repos.ObjectDataBacnetObjects,
+		repos.Apparats,
+		repos.AlarmDefinitions,
+		repos.AlarmTypes,
+	)
+	objectDataService.bindTransactions(tx)
 	bacnetObjectService := NewBacnetObjectService(
 		repos.BacnetObjects,
 		repos.FieldDevices,
@@ -178,7 +187,7 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 		StateText:         NewStateTextService(repos.StateTexts),
 		NotificationClass: NewNotificationClassService(repos.NotificationClasses),
 		AlarmDefinition:   NewAlarmDefinitionService(repos.AlarmDefinitions),
-		ObjectData:        NewObjectDataService(repos.ObjectData),
+		ObjectData:        objectDataService,
 		Unit:              NewUnitService(repos.Units),
 		AlarmField:        NewAlarmFieldService(repos.AlarmFields),
 		AlarmTypeField:    NewAlarmTypeFieldService(repos.AlarmTypeFields),

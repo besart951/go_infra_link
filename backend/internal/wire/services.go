@@ -57,16 +57,16 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 	facilityTxRunner := facilityservice.TxRunner(func(run func(tx *gorm.DB) error) error {
 		return gormDB.Transaction(run)
 	})
-	facilityTxFactory := func(tx *gorm.DB) (*facilityservice.Services, error) {
+	facilityTxRepositories := func(tx *gorm.DB) (facilityservice.Repositories, error) {
 		txRepos, err := NewRepositories(tx)
 		if err != nil {
-			return nil, fmt.Errorf("transaction repositories: %w", err)
+			return facilityservice.Repositories{}, fmt.Errorf("transaction repositories: %w", err)
 		}
-		return facilityservice.NewServices(buildFacilityRepositories(txRepos)), nil
+		return buildFacilityRepositories(txRepos), nil
 	}
 	facilityServices := facilityservice.NewServices(buildFacilityRepositories(repos), facilityservice.Config{
-		TxRunner:  facilityTxRunner,
-		TxFactory: facilityTxFactory,
+		TxRunner:       facilityTxRunner,
+		TxRepositories: facilityTxRepositories,
 	})
 
 	jobStore := exportinfra.NewMemoryJobStore()
@@ -174,18 +174,18 @@ func buildProjectServices(gormDB *gorm.DB, repos *Repositories, facilityServices
 		return gormDB.Transaction(run)
 	})
 
-	txFactory := func(tx *gorm.DB) (*projectservice.Services, error) {
+	txDependencies := func(tx *gorm.DB) (projectservice.Dependencies, error) {
 		txRepos, err := NewRepositories(tx)
 		if err != nil {
-			return nil, fmt.Errorf("transaction repositories: %w", err)
+			return projectservice.Dependencies{}, fmt.Errorf("transaction repositories: %w", err)
 		}
 
 		txFacilityServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return projectservice.NewServices(buildProjectDependencies(txRepos, txFacilityServices.HierarchyCopier)), nil
+		return buildProjectDependencies(txRepos, txFacilityServices.HierarchyCopier), nil
 	}
 
 	return projectservice.NewServices(buildProjectDependencies(repos, facilityServices.HierarchyCopier), projectservice.Config{
-		TxRunner:  txRunner,
-		TxFactory: txFactory,
+		TxRunner:       txRunner,
+		TxDependencies: txDependencies,
 	})
 }

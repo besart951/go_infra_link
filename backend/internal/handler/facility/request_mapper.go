@@ -385,6 +385,35 @@ func toObjectDataModel(req dto.CreateObjectDataRequest) *domainFacility.ObjectDa
 	return obj
 }
 
+func toObjectDataTemplateCreate(req dto.CreateObjectDataRequest) domainFacility.ObjectDataTemplateCreate {
+	input := domainFacility.ObjectDataTemplateCreate{
+		Description: req.Description,
+		Version:     req.Version,
+		IsActive:    req.IsActive,
+		ProjectID:   req.ProjectID,
+		ApparatIDs:  req.ApparatIDs,
+	}
+	if req.BacnetObjects != nil {
+		input.BacnetObjects = toFieldDeviceBacnetObjects(*req.BacnetObjects)
+	}
+	return input
+}
+
+func toObjectDataTemplateUpdate(req dto.UpdateObjectDataRequest) domainFacility.ObjectDataTemplateUpdate {
+	input := domainFacility.ObjectDataTemplateUpdate{
+		Description: req.Description,
+		Version:     req.Version,
+		IsActive:    req.IsActive,
+		ProjectID:   req.ProjectID,
+		ApparatIDs:  req.ApparatIDs,
+	}
+	if req.BacnetObjects != nil {
+		bacnetObjects := toFieldDeviceBacnetObjects(*req.BacnetObjects)
+		input.BacnetObjects = &bacnetObjects
+	}
+	return input
+}
+
 func applyObjectDataUpdate(target *domainFacility.ObjectData, req dto.UpdateObjectDataRequest) {
 	if req.Description != nil {
 		target.Description = *req.Description
