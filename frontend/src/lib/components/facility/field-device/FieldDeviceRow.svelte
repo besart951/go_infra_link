@@ -44,7 +44,7 @@
 </script>
 
 <Table.Row class={hasRowError ? 'bg-destructive/5' : ''}>
-  <Table.Cell class="w-14 text-center align-center text-sm">
+  <Table.Cell class="align-center w-14 text-center text-sm">
     {index + 1}
   </Table.Cell>
 

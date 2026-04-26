@@ -46,7 +46,7 @@
     <div class="overflow-x-auto rounded-lg border">
       <Table.Root class="[&_td]:p-2 [&_th]:h-10 [&_th]:px-2">
         <Table.Header>
-          <Table.Row class = "my-0">
+          <Table.Row class="my-0">
             <Table.Head class="text-center">#</Table.Head>
             <Table.Head>{$t('field_device.row.bmk')}</Table.Head>
             <Table.Head>{$t('field_device.row.description')}</Table.Head>

@@ -7,7 +7,9 @@
     projectId?: string;
     refreshKey?: string | number;
     refreshRequest?: import('../shared/entityRefresh.js').EntityRefreshRequest;
-    deltaRequest?: import('../shared/entityRefresh.js').EntityDeltaRequest<import('$lib/domain/facility/index.js').ControlCabinet>;
+    deltaRequest?: import('../shared/entityRefresh.js').EntityDeltaRequest<
+      import('$lib/domain/facility/index.js').ControlCabinet
+    >;
     onChanged?: (
       event?: import('../shared/entityRefresh.js').EntityChangeEvent<
         import('$lib/domain/facility/index.js').ControlCabinet

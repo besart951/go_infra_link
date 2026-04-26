@@ -7,9 +7,13 @@
     projectId?: string;
     refreshKey?: string | number;
     refreshRequest?: import('../shared/entityRefresh.js').EntityRefreshRequest;
-    deltaRequest?: import('../shared/entityRefresh.js').EntityDeltaRequest<import('$lib/domain/facility/index.js').SPSController>;
+    deltaRequest?: import('../shared/entityRefresh.js').EntityDeltaRequest<
+      import('$lib/domain/facility/index.js').SPSController
+    >;
     controlCabinetLabelRefreshRequest?: import('../shared/entityRefresh.js').EntityRefreshRequest;
-    controlCabinetLabelDeltaRequest?: import('../shared/entityRefresh.js').EntityDeltaRequest<import('$lib/domain/facility/index.js').ControlCabinet>;
+    controlCabinetLabelDeltaRequest?: import('../shared/entityRefresh.js').EntityDeltaRequest<
+      import('$lib/domain/facility/index.js').ControlCabinet
+    >;
     controlCabinetRefreshKey?: string | number;
     onChanged?: (
       event?: import('../shared/entityRefresh.js').EntityChangeEvent<

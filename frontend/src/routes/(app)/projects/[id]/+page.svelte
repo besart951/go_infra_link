@@ -48,9 +48,7 @@
   let spsControllerRefreshKey = $state(0);
   let spsControllerRefreshRequest = $state<EntityRefreshRequest | undefined>(undefined);
   let spsControllerDeltaRequest = $state<EntityDeltaRequest<SPSController> | undefined>(undefined);
-  let spsControllerCabinetLabelRefreshRequest = $state<EntityRefreshRequest | undefined>(
-    undefined
-  );
+  let spsControllerCabinetLabelRefreshRequest = $state<EntityRefreshRequest | undefined>(undefined);
   let spsControllerCabinetLabelDeltaRequest = $state<
     EntityDeltaRequest<ControlCabinet> | undefined
   >(undefined);
