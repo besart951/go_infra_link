@@ -14,6 +14,7 @@ linters:
     - ineffassign
     - unused
     - misspell
+    - gofmt
 
 issues:
   max-issues-per-linter: 0

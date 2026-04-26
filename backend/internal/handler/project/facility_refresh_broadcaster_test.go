@@ -63,7 +63,7 @@ func TestFacilityRefreshBroadcasterBroadcastsControlCabinetDelta(t *testing.T) {
 
 	controlCabinetNr := "CC-1"
 	broadcaster.BroadcastControlCabinetDelta(ctx, nil, domainFacility.ControlCabinet{
-		Base: domain.Base{ID: controlCabinetID},
+		Base:             domain.Base{ID: controlCabinetID},
 		BuildingID:       uuid.New(),
 		ControlCabinetNr: &controlCabinetNr,
 	})
@@ -88,9 +88,9 @@ func TestFacilityRefreshBroadcasterBroadcastsSPSControllerDelta(t *testing.T) {
 
 	deviceName := "SPS 1"
 	broadcaster.BroadcastSPSControllerDelta(ctx, nil, domainFacility.SPSController{
-		Base:              domain.Base{ID: spsControllerID},
-		ControlCabinetID:  uuid.New(),
-		DeviceName:        deviceName,
+		Base:             domain.Base{ID: spsControllerID},
+		ControlCabinetID: uuid.New(),
+		DeviceName:       deviceName,
 	})
 
 	if len(publisher.spsControllerDeltas) != 1 {
@@ -128,11 +128,11 @@ func (f *fakeFacilityProjectLookup) ListProjectIDsBySPSControllerID(context.Cont
 }
 
 type fakeProjectRefreshPublisher struct {
-	calls                     []projectRefreshCall
-	controlCabinetDeltas      []projectCollaborationControlCabinet
+	calls                       []projectRefreshCall
+	controlCabinetDeltas        []projectCollaborationControlCabinet
 	controlCabinetDeltaProjects []uuid.UUID
-	spsControllerDeltas       []projectCollaborationSPSController
-	spsControllerDeltaProjects []uuid.UUID
+	spsControllerDeltas         []projectCollaborationSPSController
+	spsControllerDeltaProjects  []uuid.UUID
 }
 
 type projectRefreshCall struct {

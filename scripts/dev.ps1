@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('start', 'postgres', 'pgadmin', 'backend', 'frontend', 'bootstrap', 'seed', 'reset-db', 'reseed', 'stop', 'help')]
+    [ValidateSet('start', 'postgres', 'pgadmin', 'backend', 'frontend', 'bootstrap', 'seed', 'reset-db', 'reseed', 'stop', 'format', 'help')]
     [string]$Action = 'start',
     [switch]$Force
 )
@@ -188,6 +188,7 @@ Actions:
   reset-db   Drop & recreate public schema, then run db bootstrap
   reseed     reset-db + seed
   stop       Stop docker compose services
+  format     Run gofmt -w on the backend (equivalent to pnpm format)
   help       Show this help
 
 Examples:
@@ -243,6 +244,17 @@ switch ($Action) {
     }
     'stop' {
         Stop-All
+    }
+    'format' {
+        Write-Step 'Formatting Go code (gofmt -w)...'
+        Push-Location (Join-Path $RepoRoot 'backend')
+        try {
+            gofmt -w .
+        }
+        finally {
+            Pop-Location
+        }
+        Write-Step 'Done. Run: gofmt -l . to list any remaining differences.'
     }
     'help' {
         Show-Help
