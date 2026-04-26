@@ -50,6 +50,56 @@ type UserListResponse struct {
 	TotalPages int            `json:"total_pages"`
 }
 
+type UserDirectoryTeamResponse struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+}
+
+type UserDirectoryCapabilitiesResponse struct {
+	CanUpdate     bool `json:"can_update"`
+	CanDelete     bool `json:"can_delete"`
+	CanDisable    bool `json:"can_disable"`
+	CanEnable     bool `json:"can_enable"`
+	CanChangeRole bool `json:"can_change_role"`
+}
+
+type UserDirectoryPageCapabilitiesResponse struct {
+	CanCreateUser bool `json:"can_create_user"`
+}
+
+type UserDirectoryUserResponse struct {
+	ID                  uuid.UUID                           `json:"id"`
+	FirstName           string                              `json:"first_name"`
+	LastName            string                              `json:"last_name"`
+	Email               string                              `json:"email"`
+	IsActive            bool                                `json:"is_active"`
+	Role                string                              `json:"role"`
+	RoleDisplayName     string                              `json:"role_display_name"`
+	CreatedAt           time.Time                           `json:"created_at"`
+	UpdatedAt           time.Time                           `json:"updated_at"`
+	LastLoginAt         *time.Time                          `json:"last_login_at,omitempty"`
+	DisabledAt          *time.Time                          `json:"disabled_at,omitempty"`
+	LockedUntil         *time.Time                          `json:"locked_until,omitempty"`
+	FailedLoginAttempts int                                 `json:"failed_login_attempts"`
+	Teams               []UserDirectoryTeamResponse         `json:"teams"`
+	Capabilities        UserDirectoryCapabilitiesResponse   `json:"capabilities"`
+}
+
+type UserDirectoryTeamFilterResponse struct {
+	ID    uuid.UUID `json:"id"`
+	Name  string    `json:"name"`
+	Count int64     `json:"count"`
+}
+
+type UserDirectoryListResponse struct {
+	Items        []UserDirectoryUserResponse           `json:"items"`
+	Total        int64                                 `json:"total"`
+	Page         int                                   `json:"page"`
+	TotalPages   int                                   `json:"total_pages"`
+	Teams        []UserDirectoryTeamFilterResponse     `json:"teams"`
+	Capabilities UserDirectoryPageCapabilitiesResponse `json:"capabilities"`
+}
+
 type AllowedRole struct {
 	Role        string `json:"role"`
 	DisplayName string `json:"display_name"`

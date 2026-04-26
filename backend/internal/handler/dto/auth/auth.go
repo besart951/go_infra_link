@@ -19,6 +19,7 @@ type AuthUserResponse struct {
 	IsActive            bool       `json:"is_active"`
 	Role                string     `json:"role"`
 	Permissions         []string   `json:"permissions"`
+	CanAccessUserDirectory bool    `json:"can_access_user_directory"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
 	LastLoginAt         *time.Time `json:"last_login_at,omitempty"`

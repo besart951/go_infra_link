@@ -111,7 +111,7 @@ describe('permission-aware sidebar navigation', () => {
     state.resetPermissions();
   });
 
-  it('hides protected navigation links when the user has no matching permissions', () => {
+  it('hides protected navigation links except /projects when the user has no matching permissions', () => {
     render(AppSidebar, {
       user: buildUser(),
       teams: [],
@@ -120,7 +120,7 @@ describe('permission-aware sidebar navigation', () => {
 
     expect(screen.queryByTestId('nav-link:/users')).not.toBeInTheDocument();
     expect(screen.queryByTestId('nav-link:/teams')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('nav-link:/projects')).not.toBeInTheDocument();
+    expect(screen.getByTestId('nav-link:/projects')).toBeInTheDocument();
     expect(screen.queryByTestId('nav-link:/facility/buildings')).not.toBeInTheDocument();
     expect(screen.queryByTestId('nav-link:/admin/notifications/smtp')).not.toBeInTheDocument();
   });
@@ -136,7 +136,7 @@ describe('permission-aware sidebar navigation', () => {
     ]);
 
     render(AppSidebar, {
-      user: buildUser(),
+      user: buildUser({ can_access_user_directory: true }),
       teams: [buildTeam()],
       projects: [buildProject()]
     });

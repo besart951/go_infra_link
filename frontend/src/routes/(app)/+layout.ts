@@ -25,8 +25,11 @@ export const load: LayoutLoad = async ({ fetch }) => {
 
     if (user) {
       try {
+        const teamPromise = user.can_access_user_directory
+          ? Promise.resolve([] as Team[])
+          : api<Team[]>('/teams', { customFetch });
         const [t, p] = await Promise.all([
-          api<Team[]>('/teams', { customFetch }),
+          teamPromise,
           api<Project[]>('/projects', { customFetch })
         ]);
         teams = t;

@@ -20,6 +20,9 @@ export interface User {
   last_name: string;
   email: string;
   role: UserRole;
+  role_display_name?: string;
+  permissions?: string[];
+  can_access_user_directory?: boolean;
   is_active: boolean;
   disabled_at?: string;
   locked_until?: string;

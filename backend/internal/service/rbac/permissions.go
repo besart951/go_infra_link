@@ -162,6 +162,15 @@ func (s *Service) HasPermission(ctx context.Context, role domainUser.Role, permi
 	return false, nil
 }
 
+func (s *Service) CanAccessUserDirectory(role domainUser.Role) bool {
+	switch role {
+	case domainUser.RoleSuperAdmin, domainUser.RoleAdminFZAG, domainUser.RoleFZAG, domainUser.RoleAdminPlaner, domainUser.RoleAdminEnterpreneur:
+		return true
+	default:
+		return false
+	}
+}
+
 func (s *Service) validatePermissionsExist(ctx context.Context, names []string) error {
 	if len(names) == 0 {
 		return nil

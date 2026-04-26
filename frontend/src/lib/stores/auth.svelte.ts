@@ -105,6 +105,10 @@ export function hasMinRole(minRole: UserRole): boolean {
   return getRoleLevel(authState.user.role) >= getRoleLevel(minRole);
 }
 
+export function canAccessUserDirectory(): boolean {
+  return Boolean(authState.user?.can_access_user_directory);
+}
+
 /**
  * Check if the current user is authenticated
  */
@@ -156,5 +160,8 @@ export const auth = {
   },
   get isAuthenticated() {
     return authState.user !== null;
+  },
+  get canAccessUserDirectory() {
+    return Boolean(authState.user?.can_access_user_directory);
   }
 };

@@ -158,6 +158,7 @@ func (h *AuthHandler) buildAuthResponse(ctx context.Context, result *domainAuth.
 			IsActive:            result.User.IsActive,
 			Role:                string(result.User.Role),
 			Permissions:         permissions,
+			CanAccessUserDirectory: h.canAccessUserDirectory(result.User.Role),
 			CreatedAt:           result.User.CreatedAt,
 			UpdatedAt:           result.User.UpdatedAt,
 			LastLoginAt:         result.User.LastLoginAt,
@@ -205,6 +206,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		IsActive:            usr.IsActive,
 		Role:                string(usr.Role),
 		Permissions:         h.getRolePermissions(c.Request.Context(), usr.Role),
+		CanAccessUserDirectory: h.canAccessUserDirectory(usr.Role),
 		CreatedAt:           usr.CreatedAt,
 		UpdatedAt:           usr.UpdatedAt,
 		LastLoginAt:         usr.LastLoginAt,
@@ -223,6 +225,13 @@ func (h *AuthHandler) getRolePermissions(ctx context.Context, role domainUser.Ro
 		return []string{}
 	}
 	return permissions
+}
+
+func (h *AuthHandler) canAccessUserDirectory(role domainUser.Role) bool {
+	if h.permissionSvc == nil {
+		return false
+	}
+	return h.permissionSvc.CanAccessUserDirectory(role)
 }
 
 func (h *AuthHandler) setAuthCookies(c *gin.Context, result *domainAuth.LoginResult) {

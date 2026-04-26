@@ -5,6 +5,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	userdirectory "github.com/besart951/go_infra_link/backend/internal/service/userdirectory"
 	"github.com/google/uuid"
 )
 
@@ -25,6 +26,11 @@ type AdminService interface {
 type RoleQueryService interface {
 	GetGlobalRole(ctx context.Context, userID uuid.UUID) (domainUser.Role, error)
 	GetAllowedRoles(requesterRole domainUser.Role) []domainUser.Role
+	CanAccessUserDirectory(role domainUser.Role) bool
+}
+
+type UserDirectoryService interface {
+	List(ctx context.Context, requesterID uuid.UUID, page, limit int, search, teamID, orderBy, order string) (*userdirectory.ListResult, error)
 }
 
 type PermissionService interface {

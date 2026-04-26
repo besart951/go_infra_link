@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
@@ -12,13 +13,19 @@
   import RoleBadge from '$lib/components/role-badge.svelte';
   import UserAvatar from '$lib/components/user-avatar.svelte';
   import UserManagementForm from '$lib/components/user-management-form.svelte';
-  import { setUserRole, disableUser, enableUser, deleteUser } from '$lib/api/users.js';
-  import type { UserRole } from '$lib/api/users.js';
-  import { listTeams, listTeamMembers } from '$lib/api/teams.js';
-  import type { Team } from '$lib/domain/entities/team.js';
-  import type { User } from '$lib/domain/entities/user.js';
-  import { getAllowedRolesForCreation } from '$lib/stores/auth.svelte.js';
-  import { canPerform } from '$lib/utils/permissions.js';
+  import {
+    listUserDirectory,
+    setUserRole,
+    disableUser,
+    enableUser,
+    deleteUser,
+    type UserRole,
+    type UserDirectoryUser,
+    type UserDirectoryTeamFilter,
+    type UserDirectoryPageCapabilities
+  } from '$lib/api/users.js';
+  import { getErrorMessage } from '$lib/api/client.js';
+  import { getAllowedRolesForCreation, auth } from '$lib/stores/auth.svelte.js';
   import {
     MoreVertical,
     UserMinus,
@@ -29,70 +36,49 @@
     KeyRound,
     UserPlus
   } from '@lucide/svelte';
-  import PaginatedList from '$lib/components/list/PaginatedList.svelte';
-  import { usersStore } from '$lib/stores/list/entityStores.js';
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  let teams = $state<Team[]>([]);
-  let teamByUserId = $state<Map<string, string[]>>(new Map());
+  let users = $state<UserDirectoryUser[]>([]);
+  let total = $state(0);
+  let page = $state(1);
+  let totalPages = $state(1);
+  let searchText = $state('');
   let selectedTeamId = $state<string>('all');
-  let teamsLoading = $state(true);
-  let teamsError = $state<string | null>(null);
+  let teamFilters = $state<UserDirectoryTeamFilter[]>([]);
+  let pageCapabilities = $state<UserDirectoryPageCapabilities>({ can_create_user: false });
+  let isLoading = $state(true);
+  let error = $state<string | null>(null);
   let createDialogOpen = $state(false);
 
-  function getUserTeams(userId: string): string[] {
-    return teamByUserId.get(userId) ?? [];
-  }
-
-  function userMatchesTeam(userId: string): boolean {
-    if (selectedTeamId === 'all') return true;
-    const names = getUserTeams(userId);
-    const t = teams.find((x) => x.id === selectedTeamId);
-    if (!t) return true;
-    return names.includes(t.name);
-  }
-
-  function visibleUsers(): User[] {
-    if (selectedTeamId === 'all') return $usersStore.items;
-    return $usersStore.items.filter((u) => userMatchesTeam(u.id));
-  }
-
-  async function loadTeamsAndMembers() {
-    teamsLoading = true;
-    teamsError = null;
+  async function loadDirectory(nextPage = page, nextSearch = searchText, nextTeamId = selectedTeamId) {
+    isLoading = true;
+    error = null;
     try {
-      const res = await listTeams({ page: 1, limit: 100, search: '' });
-      teams = res.items;
-
-      const memberLists = await Promise.all(
-        teams.map(async (t) => ({
-          team: t,
-          members: await listTeamMembers(t.id, { page: 1, limit: 1000 })
-        }))
-      );
-
-      const map = new Map<string, string[]>();
-      for (const { team, members } of memberLists) {
-        for (const m of members.items) {
-          const arr = map.get(m.user_id) ?? [];
-          arr.push(team.name);
-          map.set(m.user_id, arr);
-        }
-      }
-      teamByUserId = map;
+      const result = await listUserDirectory({
+        page: nextPage,
+        limit: 10,
+        search: nextSearch || undefined,
+        team_id: nextTeamId === 'all' ? undefined : nextTeamId
+      });
+      users = result.items;
+      total = result.total;
+      page = result.page;
+      totalPages = result.total_pages;
+      teamFilters = result.teams;
+      pageCapabilities = result.capabilities;
     } catch (err) {
-      teamsError = err instanceof Error ? err.message : $t('team.fetch_failed');
+      error = getErrorMessage(err);
     } finally {
-      teamsLoading = false;
+      isLoading = false;
     }
   }
 
   async function handleRoleChange(userId: string, newRole: UserRole) {
     try {
       await setUserRole(userId, newRole);
-      usersStore.reload();
+      await loadDirectory();
       addToast($t('messages.role_updated_success'), 'success');
     } catch (err) {
       addToast(err instanceof Error ? err.message : $t('errors.change_role_failed'), 'error');
@@ -108,7 +94,7 @@
         await enableUser(userId);
         addToast($t('messages.user_enabled_success'), 'success');
       }
-      usersStore.reload();
+      await loadDirectory();
     } catch (err) {
       addToast(
         err instanceof Error ? err.message : $t('errors.toggle_user_status_failed'),
@@ -126,14 +112,14 @@
       variant: 'destructive'
     });
 
-    if (confirmed) {
-      try {
-        await deleteUser(userId);
-        usersStore.reload();
-        addToast($t('messages.user_deleted_success'), 'success');
-      } catch (err) {
-        addToast(err instanceof Error ? err.message : $t('errors.delete_user_failed'), 'error');
-      }
+    if (!confirmed) return;
+
+    try {
+      await deleteUser(userId);
+      await loadDirectory();
+      addToast($t('messages.user_deleted_success'), 'success');
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : $t('errors.delete_user_failed'), 'error');
     }
   }
 
@@ -154,17 +140,24 @@
     return $t('messages.years_ago').replace('{count}', String(Math.floor(diffInDays / 365)));
   }
 
-  function authVerified(user: User): boolean {
+  function authVerified(user: UserDirectoryUser): boolean {
     return Boolean(user.is_active && !user.disabled_at);
   }
 
-  function twoFactorEnabled(_user: User): boolean {
+  function twoFactorEnabled(_user: UserDirectoryUser): boolean {
     return false;
   }
 
+  function roleOptionsFor(user: UserDirectoryUser) {
+    return getAllowedRolesForCreation().filter((roleObj) => roleObj.role !== user.role);
+  }
+
   onMount(() => {
-    loadTeamsAndMembers();
-    usersStore.load();
+    if (!auth.canAccessUserDirectory) {
+      void goto('/');
+      return;
+    }
+    void loadDirectory();
   });
 </script>
 
@@ -179,7 +172,7 @@
       <h1 class="text-3xl font-bold tracking-tight">{$t('pages.user_management')}</h1>
       <p class="mt-1 text-muted-foreground">{$t('pages.user_management_desc')}</p>
     </div>
-    {#if canPerform('create', 'user')}
+    {#if pageCapabilities.can_create_user}
       <Button onclick={() => (createDialogOpen = true)}>
         <UserPlus class="mr-2 h-4 w-4" />
         {$t('common.create_user')}
@@ -187,15 +180,29 @@
     {/if}
   </div>
 
-  <!-- Team Filter -->
-  <div class="flex items-center justify-end gap-3">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex flex-1 items-center gap-3">
+      <input
+        class="h-9 min-w-55 flex-1 rounded-md border bg-background px-3 text-sm"
+        bind:value={searchText}
+        placeholder={$t('messages.search_users')}
+        onkeydown={(event) => {
+          if (event.key === 'Enter') {
+            void loadDirectory(1, searchText, selectedTeamId);
+          }
+        }}
+      />
+      <Button variant="outline" onclick={() => void loadDirectory(1, searchText, selectedTeamId)} disabled={isLoading}>
+        {$t('messages.refresh')}
+      </Button>
+    </div>
     <div class="text-sm text-muted-foreground">
       {#if selectedTeamId === 'all'}
-        {$usersStore.total}
-        {$usersStore.total === 1 ? $t('common.user') : $t('common.users')}
+        {total}
+        {total === 1 ? $t('common.user') : $t('common.users')}
         {$t('common.total')}
       {:else}
-        {visibleUsers().length} {$t('common.shown')} • {$usersStore.total} {$t('common.total')}
+        {users.length} {$t('common.shown')} • {total} {$t('common.total')}
       {/if}
     </div>
     <div class="flex items-center gap-2">
@@ -203,44 +210,55 @@
       <select
         class="h-9 rounded-md border bg-background px-3 text-sm"
         bind:value={selectedTeamId}
-        disabled={teamsLoading || teams.length === 0}
+        disabled={isLoading || teamFilters.length === 0}
+        onchange={() => void loadDirectory(1, searchText, selectedTeamId)}
       >
         <option value="all">{$t('common.all_teams')}</option>
-        {#each teams as t (t.id)}
+        {#each teamFilters as t (t.id)}
           <option value={t.id}>{t.name}</option>
         {/each}
       </select>
     </div>
   </div>
 
-  {#if teamsError}
+  {#if error}
     <div class="rounded-md border bg-muted px-4 py-3 text-muted-foreground">
-      <p class="font-medium">{$t('messages.teams_unavailable')}</p>
-      <p class="text-sm">{teamsError}</p>
+      <p class="text-sm">{error}</p>
     </div>
   {/if}
 
-  <PaginatedList
-    state={$usersStore}
-    columns={[
-      { key: 'name', label: $t('common.name_email') },
-      { key: 'team', label: $t('common.team') },
-      { key: 'role', label: $t('common.role') },
-      { key: 'auth', label: $t('common.auth') },
-      { key: 'status', label: $t('common.status') },
-      { key: 'last_active', label: $t('common.last_active') },
-      { key: 'actions', label: $t('common.actions'), width: 'text-right' }
-    ]}
-    searchPlaceholder={$t('messages.search_users')}
-    emptyMessage={$t('messages.no_users_found')}
-    onSearch={(text) => usersStore.search(text)}
-    onPageChange={(page) => usersStore.goToPage(page)}
-    onReload={() => usersStore.reload()}
-  >
-    {#snippet rowSnippet(user: User)}
-      {@const isVisible = userMatchesTeam(user.id)}
-      {#if isVisible || selectedTeamId === 'all'}
-        <Table.Cell>
+  <div class="overflow-hidden rounded-lg border bg-background">
+    <Table.Root>
+      <Table.Header>
+        <Table.Row>
+          <Table.Head>{$t('common.name_email')}</Table.Head>
+          <Table.Head>{$t('common.team')}</Table.Head>
+          <Table.Head>{$t('common.role')}</Table.Head>
+          <Table.Head>{$t('common.auth')}</Table.Head>
+          <Table.Head>{$t('common.status')}</Table.Head>
+          <Table.Head>{$t('common.last_active')}</Table.Head>
+          <Table.Head class="text-right">{$t('common.actions')}</Table.Head>
+        </Table.Row>
+      </Table.Header>
+      <Table.Body>
+        {#if isLoading && users.length === 0}
+          {#each Array(5) as _, rowIndex (rowIndex)}
+            <Table.Row>
+              {#each Array(7) as _, colIndex (colIndex)}
+                <Table.Cell><div class="h-8 w-full rounded bg-muted/40"></div></Table.Cell>
+              {/each}
+            </Table.Row>
+          {/each}
+        {:else if users.length === 0}
+          <Table.Row>
+            <Table.Cell colspan={7} class="h-24 text-center text-muted-foreground">
+              {$t('messages.no_users_found')}
+            </Table.Cell>
+          </Table.Row>
+        {:else}
+          {#each users as user (user.id)}
+            <Table.Row>
+              <Table.Cell>
           <div class="flex items-center gap-3">
             <UserAvatar firstName={user.first_name} lastName={user.last_name} />
             <div class="flex flex-col">
@@ -253,7 +271,7 @@
           </div>
         </Table.Cell>
         <Table.Cell>
-          {@const tnames = getUserTeams(user.id)}
+          {@const tnames = user.teams.map((team) => team.name)}
           {#if tnames.length === 0}
             <span class="text-sm text-muted-foreground">&mdash;</span>
           {:else}
@@ -331,57 +349,76 @@
           <span class="text-sm">{formatDate(user.last_login_at)}</span>
         </Table.Cell>
         <Table.Cell class="text-right">
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger>
-              {#snippet child({ props })}
-                <Button variant="ghost" size="sm" {...props}>
-                  <MoreVertical class="h-4 w-4" />
-                </Button>
-              {/snippet}
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content align="end" class="w-56">
-              {#if canPerform('update', 'user')}
-                <DropdownMenu.Label>{$t('common.change_role')}</DropdownMenu.Label>
-                <DropdownMenu.Separator />
-                {#each getAllowedRolesForCreation() as roleObj (roleObj.role)}
-                  <DropdownMenu.Item
-                    disabled={user.role === roleObj.role}
-                    onclick={() => handleRoleChange(user.id, roleObj.role)}
-                  >
-                    {roleObj.display_name}
-                    {#if user.role === roleObj.role}
-                      <DropdownMenu.Shortcut>{$t('common.current')}</DropdownMenu.Shortcut>
+          {#if user.capabilities.can_change_role || user.capabilities.can_disable || user.capabilities.can_enable || user.capabilities.can_delete}
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger>
+                {#snippet child({ props })}
+                  <Button variant="ghost" size="sm" {...props}>
+                    <MoreVertical class="h-4 w-4" />
+                  </Button>
+                {/snippet}
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content align="end" class="w-56">
+                {#if user.capabilities.can_change_role}
+                  <DropdownMenu.Label>{$t('common.change_role')}</DropdownMenu.Label>
+                  <DropdownMenu.Separator />
+                  {#each roleOptionsFor(user) as roleObj (roleObj.role)}
+                    <DropdownMenu.Item onclick={() => handleRoleChange(user.id, roleObj.role)}>
+                      {roleObj.display_name}
+                    </DropdownMenu.Item>
+                  {/each}
+                {/if}
+
+                {#if user.capabilities.can_disable || user.capabilities.can_enable}
+                  <DropdownMenu.Separator />
+                  <DropdownMenu.Item onclick={() => handleToggleActive(user.id, user.is_active)}>
+                    {#if user.is_active}
+                      <UserMinus class="mr-2 h-4 w-4" />
+                      {$t('actions.disable_user')}
+                    {:else}
+                      <UserCheck class="mr-2 h-4 w-4" />
+                      {$t('actions.enable_user')}
                     {/if}
                   </DropdownMenu.Item>
-                {/each}
-                <DropdownMenu.Separator />
-                <DropdownMenu.Item onclick={() => handleToggleActive(user.id, user.is_active)}>
-                  {#if user.is_active}
-                    <UserMinus class="mr-2 h-4 w-4" />
-                    {$t('actions.disable_user')}
-                  {:else}
-                    <UserCheck class="mr-2 h-4 w-4" />
-                    {$t('actions.enable_user')}
-                  {/if}
-                </DropdownMenu.Item>
-              {/if}
+                {/if}
 
-              {#if canPerform('delete', 'user')}
-                <DropdownMenu.Separator />
-                <DropdownMenu.Item
-                  class="text-destructive"
-                  onclick={() => handleDeleteUser(user.id, `${user.first_name} ${user.last_name}`)}
-                >
-                  <Trash2 class="mr-2 h-4 w-4" />
-                  {$t('actions.delete_user')}
-                </DropdownMenu.Item>
-              {/if}
-            </DropdownMenu.Content>
-          </DropdownMenu.Root>
+                {#if user.capabilities.can_delete}
+                  <DropdownMenu.Separator />
+                  <DropdownMenu.Item
+                    class="text-destructive"
+                    onclick={() => handleDeleteUser(user.id, `${user.first_name} ${user.last_name}`)}
+                  >
+                    <Trash2 class="mr-2 h-4 w-4" />
+                    {$t('actions.delete_user')}
+                  </DropdownMenu.Item>
+                {/if}
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+          {/if}
         </Table.Cell>
-      {/if}
-    {/snippet}
-  </PaginatedList>
+            </Table.Row>
+          {/each}
+        {/if}
+      </Table.Body>
+    </Table.Root>
+  </div>
+
+  {#if totalPages > 1}
+    <div class="flex items-center justify-between">
+      <div class="text-sm text-muted-foreground">
+        {$t('messages.page_of').replace('{page}', String(page)).replace('{total}', String(totalPages))}
+        • {$t('messages.total_items').replace('{count}', String(total))}
+      </div>
+      <div class="flex items-center gap-2">
+        <Button variant="outline" size="sm" disabled={page <= 1 || isLoading} onclick={() => void loadDirectory(page - 1, searchText, selectedTeamId)}>
+          {$t('messages.previous')}
+        </Button>
+        <Button variant="outline" size="sm" disabled={page >= totalPages || isLoading} onclick={() => void loadDirectory(page + 1, searchText, selectedTeamId)}>
+          {$t('messages.next')}
+        </Button>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <Dialog.Root bind:open={createDialogOpen}>
@@ -393,7 +430,7 @@
     <UserManagementForm
       onSuccess={() => {
         createDialogOpen = false;
-        usersStore.reload();
+        void loadDirectory();
         addToast($t('messages.user_created_success'), 'success');
       }}
       onCancel={() => (createDialogOpen = false)}

@@ -1,51 +1,32 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { permission } from '../../helpers/permissions.js';
-
 const state = vi.hoisted(() => {
-  const grantedPermissions = new Set<string>();
-
-  const usersStoreValue = {
-    items: [],
-    total: 0,
-    page: 1,
-    total_pages: 1,
-    loading: false,
-    error: null
-  };
-
   return {
-    setPermissions(permissions: string[]) {
-      grantedPermissions.clear();
-      for (const granted of permissions) {
-        grantedPermissions.add(granted);
-      }
-    },
-    resetPermissions() {
-      grantedPermissions.clear();
-    },
-    canPerform(action: string, resource: string) {
-      return grantedPermissions.has(`${resource}.${action}`);
-    },
+    gotoMock: vi.fn(),
+    canAccessUserDirectory: true,
     addToastMock: vi.fn(),
     confirmMock: vi.fn().mockResolvedValue(true),
-    listTeamsMock: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, total_pages: 1 }),
-    listTeamMembersMock: vi
-      .fn()
-      .mockResolvedValue({ items: [], total: 0, page: 1, total_pages: 1 }),
-    usersStore: {
-      subscribe(run: (value: unknown) => void) {
-        run(usersStoreValue);
-        return () => {};
-      },
-      load: vi.fn(),
-      reload: vi.fn(),
-      search: vi.fn(),
-      goToPage: vi.fn()
-    }
+    listUserDirectoryMock: vi.fn(),
+    setUserRoleMock: vi.fn(),
+    disableUserMock: vi.fn(),
+    enableUserMock: vi.fn(),
+    deleteUserMock: vi.fn()
   };
 });
+
+const defaultDirectoryResponse = {
+  items: [],
+  total: 0,
+  page: 1,
+  total_pages: 1,
+  teams: [],
+  capabilities: { can_create_user: false }
+};
+
+vi.mock('$app/navigation', () => ({
+  goto: state.gotoMock
+}));
 
 vi.mock('$lib/i18n/translator', () => ({
   createTranslator: () => ({
@@ -60,24 +41,25 @@ vi.mock('$lib/i18n/index.js', () => ({
   t: (key: string) => key
 }));
 
-vi.mock('$lib/utils/permissions.js', () => ({
-  canPerform: (action: string, resource: string) => state.canPerform(action, resource)
-}));
-
-vi.mock('$lib/api/teams.js', () => ({
-  listTeams: state.listTeamsMock,
-  listTeamMembers: state.listTeamMembersMock
+vi.mock('$lib/api/client.js', () => ({
+  getErrorMessage: (error: unknown) => (error instanceof Error ? error.message : 'unknown')
 }));
 
 vi.mock('$lib/api/users.js', () => ({
-  setUserRole: vi.fn(),
-  disableUser: vi.fn(),
-  enableUser: vi.fn(),
-  deleteUser: vi.fn()
+  listUserDirectory: state.listUserDirectoryMock,
+  setUserRole: state.setUserRoleMock,
+  disableUser: state.disableUserMock,
+  enableUser: state.enableUserMock,
+  deleteUser: state.deleteUserMock
 }));
 
 vi.mock('$lib/stores/auth.svelte.js', () => ({
-  getAllowedRolesForCreation: () => []
+  getAllowedRolesForCreation: () => [],
+  auth: {
+    get canAccessUserDirectory() {
+      return state.canAccessUserDirectory;
+    }
+  }
 }));
 
 vi.mock('$lib/components/toast.svelte', () => ({
@@ -87,15 +69,6 @@ vi.mock('$lib/components/toast.svelte', () => ({
 vi.mock('$lib/stores/confirm-dialog.js', () => ({
   confirm: state.confirmMock
 }));
-
-vi.mock('$lib/stores/list/entityStores.js', () => ({
-  usersStore: state.usersStore
-}));
-
-vi.mock('$lib/components/list/PaginatedList.svelte', async () => {
-  const { default: EmptyList } = await import('../../setup/stubs/EmptyList.svelte');
-  return { default: EmptyList };
-});
 
 vi.mock('$lib/components/confirm-dialog.svelte', async () => {
   const { default: SlotContainer } = await import('../../setup/stubs/SlotContainer.svelte');
@@ -132,43 +105,56 @@ import UsersPage from '../../../src/routes/(app)/users/+page.svelte';
 
 describe('/users permission surface', () => {
   beforeEach(() => {
-    state.resetPermissions();
+    state.gotoMock.mockReset();
+    state.canAccessUserDirectory = true;
     state.addToastMock.mockReset();
     state.confirmMock.mockReset();
     state.confirmMock.mockResolvedValue(true);
-    state.usersStore.load.mockClear();
+    state.listUserDirectoryMock.mockReset();
+    state.listUserDirectoryMock.mockResolvedValue(defaultDirectoryResponse);
+    state.setUserRoleMock.mockReset();
+    state.disableUserMock.mockReset();
+    state.enableUserMock.mockReset();
+    state.deleteUserMock.mockReset();
   });
 
-  it('still renders for a logged-in user without user.read, exposing the current route leak', () => {
+  it('redirects to / when auth says user cannot access directory', async () => {
+    state.canAccessUserDirectory = false;
+
     render(UsersPage);
 
+    await waitFor(() => {
+      expect(state.gotoMock).toHaveBeenCalledWith('/');
+    });
+    expect(state.listUserDirectoryMock).not.toHaveBeenCalled();
+  });
+
+  it('loads data from /users/directory and keeps create CTA hidden when capability is false', async () => {
+    state.listUserDirectoryMock.mockResolvedValue({
+      ...defaultDirectoryResponse,
+      capabilities: { can_create_user: false }
+    });
+
+    render(UsersPage);
+
+    await waitFor(() => {
+      expect(state.listUserDirectoryMock).toHaveBeenCalled();
+    });
     expect(screen.getByText('pages.user_management')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'common.create_user' })).not.toBeInTheDocument();
   });
 
-  it('still renders for a logged-in user with an unrelated permission set', () => {
-    state.setPermissions([permission('team')]);
+  it('shows create CTA when directory page capability allows user creation', async () => {
+    state.listUserDirectoryMock.mockResolvedValue({
+      ...defaultDirectoryResponse,
+      capabilities: { can_create_user: true }
+    });
 
     render(UsersPage);
 
-    expect(screen.getByText('pages.user_management')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'common.create_user' })).not.toBeInTheDocument();
-  });
-
-  it('keeps the create CTA hidden when the user can only read users', () => {
-    state.setPermissions([permission('user')]);
-
-    render(UsersPage);
-
-    expect(screen.getByText('pages.user_management')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'common.create_user' })).not.toBeInTheDocument();
-  });
-
-  it('shows the create CTA when user.create is granted', () => {
-    state.setPermissions([permission('user'), permission('user', 'create')]);
-
-    render(UsersPage);
-
+    await waitFor(() => {
+      expect(state.listUserDirectoryMock).toHaveBeenCalled();
+    });
     expect(screen.getByRole('button', { name: 'common.create_user' })).toBeInTheDocument();
   });
 });

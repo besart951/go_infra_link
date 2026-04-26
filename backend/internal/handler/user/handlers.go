@@ -7,9 +7,9 @@ type Handlers struct {
 	Permission *PermissionHandler
 }
 
-func NewHandlers(userService UserService, adminService AdminService, roleService RoleQueryService, permissionService PermissionService, rolePermissionService RolePermissionService) *Handlers {
+func NewHandlers(userService UserService, adminService AdminService, roleService RoleQueryService, directoryService UserDirectoryService, permissionService PermissionService, rolePermissionService RolePermissionService) *Handlers {
 	return &Handlers{
-		User:       NewUserHandler(userService, roleService),
+		User:       NewUserHandler(userService, roleService, directoryService),
 		Admin:      NewAdminHandler(adminService),
 		Role:       NewRoleHandler(rolePermissionService),
 		Permission: NewPermissionHandler(permissionService),

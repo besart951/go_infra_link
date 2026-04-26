@@ -55,7 +55,7 @@
           {
             title: $t('navigation.all_users'),
             url: '/users',
-            hasAccess: canPerform('read', 'user')
+            hasAccess: Boolean(user.can_access_user_directory)
           },
           { title: $t('navigation.teams'), url: '/teams', hasAccess: canPerform('read', 'team') },
           {
@@ -143,7 +143,7 @@
           {
             title: $t('navigation.projects'),
             url: '/projects',
-            hasAccess: canPerform('read', 'project')
+            hasAccess: true
           },
           {
             title: $t('phase.phases'),

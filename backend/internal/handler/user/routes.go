@@ -10,6 +10,7 @@ func RegisterUserRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authCh
 	users := protectedV1.Group("/users")
 	{
 		users.GET("/allowed-roles", handlers.User.GetAllowedRoles)
+		users.GET("/directory", handlers.User.ListDirectory)
 	}
 
 	usersAdmin := protectedV1.Group("/users")

@@ -18,6 +18,7 @@ export interface User {
   role: UserRole;
   role_display_name: string;
   permissions?: string[];
+  can_access_user_directory?: boolean;
   created_at: string;
   updated_at: string;
   last_login_at?: string | null;
@@ -68,6 +69,43 @@ export interface AllowedRolesResponse {
   roles: AllowedRole[];
 }
 
+export interface UserDirectoryTeam {
+  id: string;
+  name: string;
+}
+
+export interface UserDirectoryCapabilities {
+  can_update: boolean;
+  can_delete: boolean;
+  can_disable: boolean;
+  can_enable: boolean;
+  can_change_role: boolean;
+}
+
+export interface UserDirectoryUser extends User {
+  teams: UserDirectoryTeam[];
+  capabilities: UserDirectoryCapabilities;
+}
+
+export interface UserDirectoryTeamFilter {
+  id: string;
+  name: string;
+  count: number;
+}
+
+export interface UserDirectoryPageCapabilities {
+  can_create_user: boolean;
+}
+
+export interface UserDirectoryResponse {
+  items: UserDirectoryUser[];
+  total: number;
+  page: number;
+  total_pages: number;
+  teams: UserDirectoryTeamFilter[];
+  capabilities: UserDirectoryPageCapabilities;
+}
+
 /**
  * List all users with pagination and filtering
  * CSRF token is automatically included
@@ -87,6 +125,24 @@ export async function listUsers(
   const endpoint = query ? `/users?${query}` : '/users';
 
   return api<PaginatedUserResponse>(endpoint, options);
+}
+
+export async function listUserDirectory(
+  params: ListUsersParams & { team_id?: string } = {},
+  options?: RequestInit
+): Promise<UserDirectoryResponse> {
+  const searchParams = new URLSearchParams();
+  if (params.page) searchParams.set('page', params.page.toString());
+  if (params.limit) searchParams.set('limit', params.limit.toString());
+  if (params.search) searchParams.set('search', params.search);
+  if (params.order_by) searchParams.set('order_by', params.order_by);
+  if (params.order) searchParams.set('order', params.order);
+  if (params.team_id) searchParams.set('team_id', params.team_id);
+
+  const query = searchParams.toString();
+  const endpoint = query ? `/users/directory?${query}` : '/users/directory';
+
+  return api<UserDirectoryResponse>(endpoint, options);
 }
 
 /**

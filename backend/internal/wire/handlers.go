@@ -49,7 +49,7 @@ func NewHandlers(services *Services, cookieSettings authhandler.CookieSettings, 
 		BacnetAlarm:             services.Facility.BacnetAlarmValue,
 		Collaboration:           projectHandlers.RefreshBroadcaster,
 	})
-	userHandlers := userhandler.NewHandlers(services.User, services.Admin, services.RBAC, services.RBAC, services.RBAC)
+	userHandlers := userhandler.NewHandlers(services.User, services.Admin, services.RBAC, services.UserDirectory, services.RBAC, services.RBAC)
 
 	return &handler.Handlers{
 		Auth: authhandler.NewAuthHandler(

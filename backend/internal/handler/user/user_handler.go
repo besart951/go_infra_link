@@ -14,12 +14,14 @@ import (
 type UserHandler struct {
 	service     UserService
 	roleService RoleQueryService
+	directory   UserDirectoryService
 }
 
-func NewUserHandler(service UserService, roleService RoleQueryService) *UserHandler {
+func NewUserHandler(service UserService, roleService RoleQueryService, directory UserDirectoryService) *UserHandler {
 	return &UserHandler{
 		service:     service,
 		roleService: roleService,
+		directory:   directory,
 	}
 }
 
@@ -110,6 +112,56 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+// ListDirectory godoc
+// @Summary List visible users for the user directory
+// @Tags users
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Param search query string false "Search query"
+// @Param team_id query string false "Visible team filter"
+// @Success 200 {object} dto.UserDirectoryListResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/users/directory [get]
+func (h *UserHandler) ListDirectory(c *gin.Context) {
+	requesterID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return
+	}
+
+	var query struct {
+		dto.PaginationQuery
+		TeamID string `form:"team_id"`
+	}
+	if !handlerutil.BindQuery(c, &query) {
+		return
+	}
+
+	result, err := h.directory.List(
+		c.Request.Context(),
+		requesterID,
+		query.Page,
+		query.Limit,
+		query.Search,
+		query.TeamID,
+		query.OrderBy,
+		query.Order,
+	)
+	if err != nil {
+		if err == domainUser.ErrForbiddenUserDirectory {
+			handlerutil.RespondLocalizedError(c, http.StatusForbidden, "forbidden", "errors.forbidden")
+			return
+		}
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "user.fetch_failed")
+		return
+	}
+
+	c.JSON(http.StatusOK, ToUserDirectoryListResponse(result))
 }
 
 // UpdateUser godoc

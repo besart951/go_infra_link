@@ -20,6 +20,7 @@ import (
 	rbacservice "github.com/besart951/go_infra_link/backend/internal/service/rbac"
 	teamservice "github.com/besart951/go_infra_link/backend/internal/service/team"
 	userservice "github.com/besart951/go_infra_link/backend/internal/service/user"
+	userdirectoryservice "github.com/besart951/go_infra_link/backend/internal/service/userdirectory"
 	"gorm.io/gorm"
 )
 
@@ -34,6 +35,7 @@ type Services struct {
 	RBAC         *rbacservice.Service
 	Team         *teamservice.Service
 	Admin        *adminservice.Service
+	UserDirectory *userdirectoryservice.Service
 	Notification *notificationservice.Service
 	Password     domainUser.PasswordHasher
 	Export       *exportservice.Service
@@ -109,6 +111,7 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 		RBAC:         rbacSvc,
 		Team:         teamservice.New(repos.Team, repos.TeamMember),
 		Admin:        adminservice.New(repos.User),
+		UserDirectory: userdirectoryservice.New(repos.User, repos.Team, repos.TeamMember, repos.RolePermissions),
 		Notification: notificationSvc,
 		Auth: authservice.NewService(
 			jwtService,

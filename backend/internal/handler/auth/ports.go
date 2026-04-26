@@ -27,4 +27,5 @@ type UserService interface {
 
 type PermissionQueryService interface {
 	GetRolePermissions(ctx context.Context, role domainUser.Role) ([]string, error)
+	CanAccessUserDirectory(role domainUser.Role) bool
 }
