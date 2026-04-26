@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -14,28 +14,32 @@ import (
 type ProjectHandler struct {
 	lifecycle     ProjectLifecycleService
 	access        ProjectAccessPolicyService
-	membership    ProjectMembershipService
+	workflow      ProjectWorkflowService
 	facilityLink  ProjectFacilityLinkService
 	events        *ProjectEventHub
 	collaboration *ProjectCollaborationHub
 }
 
 func NewProjectHandler(lifecycle ProjectLifecycleService, access ProjectAccessPolicyService, membership ProjectMembershipService, facilityLink ProjectFacilityLinkService) *ProjectHandler {
-	return newProjectHandler(lifecycle, access, membership, facilityLink, NewProjectEventHub(), NewProjectCollaborationHub())
+	return newProjectHandler(lifecycle, access, membership, newWorkflowFromServices(lifecycle, membership), facilityLink, NewProjectEventHub(), NewProjectCollaborationHub())
 }
 
 func newProjectHandler(
 	lifecycle ProjectLifecycleService,
 	access ProjectAccessPolicyService,
 	membership ProjectMembershipService,
+	workflow ProjectWorkflowService,
 	facilityLink ProjectFacilityLinkService,
 	events *ProjectEventHub,
 	collaboration *ProjectCollaborationHub,
 ) *ProjectHandler {
+	if workflow == nil {
+		workflow = newWorkflowFromServices(lifecycle, membership)
+	}
 	return &ProjectHandler{
 		lifecycle:     lifecycle,
 		access:        access,
-		membership:    membership,
+		workflow:      workflow,
 		facilityLink:  facilityLink,
 		events:        events,
 		collaboration: collaboration,
@@ -115,25 +119,5 @@ func (h *ProjectHandler) StreamProjectEvents(c *gin.Context) {
 }
 
 func (h *ProjectHandler) ensureProjectAccess(c *gin.Context, projectID uuid.UUID) bool {
-	userID, ok := middleware.GetUserID(c)
-	if !ok {
-		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
-		return false
-	}
-
-	hasAccess, err := h.access.CanAccessProject(c.Request.Context(), userID, projectID)
-	if err != nil {
-		handlerutil.RespondDomainError(c, err,
-			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),
-			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_not_found")),
-		)
-		return false
-	}
-
-	if !hasAccess {
-		handlerutil.RespondLocalizedError(c, http.StatusForbidden, "forbidden", "errors.forbidden")
-		return false
-	}
-
-	return true
+	return projectshared.EnsureProjectAccess(c, h.access, projectID)
 }

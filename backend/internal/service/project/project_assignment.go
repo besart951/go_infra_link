@@ -34,6 +34,71 @@ type projectAssignmentResult struct {
 	fieldDevice    *domainProject.ProjectFieldDevice
 }
 
+func (a projectAssignment) assignControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
+	result, err := a.assign(ctx, projectID, projectAssignmentTarget{kind: projectAssignmentControlCabinet, id: controlCabinetID})
+	if err != nil {
+		return nil, err
+	}
+	return result.controlCabinet, nil
+}
+
+func (a projectAssignment) assignSPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
+	result, err := a.assign(ctx, projectID, projectAssignmentTarget{kind: projectAssignmentSPSController, id: spsControllerID})
+	if err != nil {
+		return nil, err
+	}
+	return result.spsController, nil
+}
+
+func (a projectAssignment) assignSPSControllerSystemType(ctx context.Context, projectID, systemTypeID uuid.UUID) error {
+	_, err := a.assign(ctx, projectID, projectAssignmentTarget{kind: projectAssignmentSPSControllerSystemType, id: systemTypeID})
+	return err
+}
+
+func (a projectAssignment) assignFieldDevice(ctx context.Context, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
+	result, err := a.assign(ctx, projectID, projectAssignmentTarget{kind: projectAssignmentFieldDevice, id: fieldDeviceID})
+	if err != nil {
+		return nil, err
+	}
+	return result.fieldDevice, nil
+}
+
+func (a projectAssignment) updateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
+	result, err := a.update(ctx, linkID, projectID, projectAssignmentTarget{kind: projectAssignmentControlCabinet, id: controlCabinetID})
+	if err != nil {
+		return nil, err
+	}
+	return result.controlCabinet, nil
+}
+
+func (a projectAssignment) updateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
+	result, err := a.update(ctx, linkID, projectID, projectAssignmentTarget{kind: projectAssignmentSPSController, id: spsControllerID})
+	if err != nil {
+		return nil, err
+	}
+	return result.spsController, nil
+}
+
+func (a projectAssignment) updateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
+	result, err := a.update(ctx, linkID, projectID, projectAssignmentTarget{kind: projectAssignmentFieldDevice, id: fieldDeviceID})
+	if err != nil {
+		return nil, err
+	}
+	return result.fieldDevice, nil
+}
+
+func (a projectAssignment) removeControlCabinet(ctx context.Context, linkID, projectID uuid.UUID) error {
+	return a.remove(ctx, linkID, projectID, projectAssignmentControlCabinet)
+}
+
+func (a projectAssignment) removeSPSController(ctx context.Context, linkID, projectID uuid.UUID) error {
+	return a.remove(ctx, linkID, projectID, projectAssignmentSPSController)
+}
+
+func (a projectAssignment) removeFieldDevice(ctx context.Context, linkID, projectID uuid.UUID) error {
+	return a.remove(ctx, linkID, projectID, projectAssignmentFieldDevice)
+}
+
 func (s *ProjectFacilityLinkService) assignments() projectAssignment {
 	return projectAssignment{service: s}
 }

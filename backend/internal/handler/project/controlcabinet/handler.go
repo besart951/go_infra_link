@@ -1,14 +1,37 @@
-package project
+package controlcabinet
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
 	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
+	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
+
+type FacilityLinkService interface {
+	CreateControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
+	CopyControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainFacility.ControlCabinet, error)
+	UpdateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
+	DeleteControlCabinet(ctx context.Context, linkID, projectID uuid.UUID) error
+	ListControlCabinets(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error)
+}
+
+type Handler struct {
+	access       projectshared.AccessPolicyService
+	facilityLink FacilityLinkService
+	notify       projectshared.ProjectChangeNotifier
+}
+
+func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier) *Handler {
+	return &Handler{access: access, facilityLink: facilityLink, notify: notify}
+}
 
 // CreateProjectControlCabinet godoc
 // @Summary Create project control cabinet link
@@ -22,13 +45,13 @@ import (
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/control-cabinets [post]
-func (h *ProjectHandler) CreateProjectControlCabinet(c *gin.Context) {
+func (h *Handler) CreateProjectControlCabinet(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, projectID) {
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -47,17 +70,63 @@ func (h *ProjectHandler) CreateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.notifyProjectChange(c, projectID, "project.control_cabinet.created")
+	if h.notify != nil {
+		h.notify(c, projectID, "project.control_cabinet.created")
+	}
 
-	c.JSON(http.StatusCreated, ToProjectControlCabinetResponse(*created))
+	c.JSON(http.StatusCreated, toProjectControlCabinetResponse(*created))
 }
 
-func (h *ProjectHandler) CopyProjectControlCabinet(c *gin.Context) {
+// ListProjectControlCabinets godoc
+// @Summary List project control cabinets with pagination
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} dto.ProjectControlCabinetListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/control-cabinets [get]
+func (h *Handler) ListProjectControlCabinets(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
-	if !h.ensureProjectAccess(c, projectID) {
+
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+		return
+	}
+
+	var query dto.PaginationQuery
+	if !handlerutil.BindQuery(c, &query) {
+		return
+	}
+
+	result, err := h.facilityLink.ListControlCabinets(c.Request.Context(), projectID, query.Page, query.Limit)
+	if err != nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
+		return
+	}
+
+	response := dto.ProjectControlCabinetListResponse{
+		Items:      toProjectControlCabinetList(result.Items),
+		Total:      result.Total,
+		Page:       result.Page,
+		TotalPages: result.TotalPages,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -76,7 +145,10 @@ func (h *ProjectHandler) CopyProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.notifyProjectChange(c, projectID, "project.control_cabinet.copied")
+	if h.notify != nil {
+		h.notify(c, projectID, "project.control_cabinet.copied")
+	}
+
 	c.JSON(http.StatusCreated, sharedpresenter.ToControlCabinetResponse(*copyEntity))
 }
 
@@ -93,13 +165,13 @@ func (h *ProjectHandler) CopyProjectControlCabinet(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/control-cabinets/{linkId} [put]
-func (h *ProjectHandler) UpdateProjectControlCabinet(c *gin.Context) {
+func (h *Handler) UpdateProjectControlCabinet(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, projectID) {
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -122,9 +194,11 @@ func (h *ProjectHandler) UpdateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.notifyProjectChange(c, projectID, "project.control_cabinet.updated")
+	if h.notify != nil {
+		h.notify(c, projectID, "project.control_cabinet.updated")
+	}
 
-	c.JSON(http.StatusOK, ToProjectControlCabinetResponse(*updated))
+	c.JSON(http.StatusOK, toProjectControlCabinetResponse(*updated))
 }
 
 // DeleteProjectControlCabinet godoc
@@ -138,13 +212,13 @@ func (h *ProjectHandler) UpdateProjectControlCabinet(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/control-cabinets/{linkId} [delete]
-func (h *ProjectHandler) DeleteProjectControlCabinet(c *gin.Context) {
+func (h *Handler) DeleteProjectControlCabinet(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, projectID) {
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -161,7 +235,27 @@ func (h *ProjectHandler) DeleteProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.notifyProjectChange(c, projectID, "project.control_cabinet.deleted")
+	if h.notify != nil {
+		h.notify(c, projectID, "project.control_cabinet.deleted")
+	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func toProjectControlCabinetResponse(item domainProject.ProjectControlCabinet) dto.ProjectControlCabinetResponse {
+	return dto.ProjectControlCabinetResponse{
+		ID:               item.ID,
+		ProjectID:        item.ProjectID,
+		ControlCabinetID: item.ControlCabinetID,
+		CreatedAt:        item.CreatedAt,
+		UpdatedAt:        item.UpdatedAt,
+	}
+}
+
+func toProjectControlCabinetList(items []domainProject.ProjectControlCabinet) []dto.ProjectControlCabinetResponse {
+	out := make([]dto.ProjectControlCabinetResponse, len(items))
+	for i, item := range items {
+		out[i] = toProjectControlCabinetResponse(item)
+	}
+	return out
 }

@@ -1,20 +1,31 @@
-package project
+package phase
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
-type PhaseHandler struct {
-	service PhaseService
+type Service interface {
+	Create(ctx context.Context, phase *domainProject.Phase) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domainProject.Phase, error)
+	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainProject.Phase], error)
+	Update(ctx context.Context, phase *domainProject.Phase) error
+	DeleteByID(ctx context.Context, id uuid.UUID) error
 }
 
-func NewPhaseHandler(service PhaseService) *PhaseHandler {
-	return &PhaseHandler{service: service}
+type Handler struct {
+	service Service
+}
+
+func NewHandler(service Service) *Handler {
+	return &Handler{service: service}
 }
 
 // CreatePhase godoc
@@ -27,13 +38,13 @@ func NewPhaseHandler(service PhaseService) *PhaseHandler {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/phases [post]
-func (h *PhaseHandler) CreatePhase(c *gin.Context) {
+func (h *Handler) CreatePhase(c *gin.Context) {
 	var req dto.CreatePhaseRequest
 	if !handlerutil.BindJSON(c, &req) {
 		return
 	}
 
-	phase := ToPhaseModel(req)
+	phase := toModel(req)
 
 	if err := h.service.Create(c.Request.Context(), phase); err != nil {
 		handlerutil.RespondDomainError(c, err,
@@ -44,7 +55,7 @@ func (h *PhaseHandler) CreatePhase(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, ToPhaseResponse(phase))
+	c.JSON(http.StatusCreated, toResponse(phase))
 }
 
 // GetPhase godoc
@@ -57,7 +68,7 @@ func (h *PhaseHandler) CreatePhase(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/phases/{id} [get]
-func (h *PhaseHandler) GetPhase(c *gin.Context) {
+func (h *Handler) GetPhase(c *gin.Context) {
 	id, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
@@ -72,7 +83,7 @@ func (h *PhaseHandler) GetPhase(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, ToPhaseResponse(phase))
+	c.JSON(http.StatusOK, toResponse(phase))
 }
 
 // ListPhases godoc
@@ -86,7 +97,7 @@ func (h *PhaseHandler) GetPhase(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/phases [get]
-func (h *PhaseHandler) ListPhases(c *gin.Context) {
+func (h *Handler) ListPhases(c *gin.Context) {
 	var query dto.PaginationQuery
 	if !handlerutil.BindQuery(c, &query) {
 		return
@@ -99,7 +110,7 @@ func (h *PhaseHandler) ListPhases(c *gin.Context) {
 	}
 
 	response := dto.PhaseListResponse{
-		Items:      ToPhaseListResponse(result.Items),
+		Items:      toListResponse(result.Items),
 		Total:      result.Total,
 		Page:       result.Page,
 		TotalPages: result.TotalPages,
@@ -122,7 +133,7 @@ func (h *PhaseHandler) ListPhases(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/phases/{id} [patch]
 // @Router /api/v1/phases/{id} [put]
-func (h *PhaseHandler) UpdatePhase(c *gin.Context) {
+func (h *Handler) UpdatePhase(c *gin.Context) {
 	id, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
@@ -144,7 +155,7 @@ func (h *PhaseHandler) UpdatePhase(c *gin.Context) {
 		return
 	}
 
-	ApplyPhaseUpdate(phase, req)
+	applyUpdate(phase, req)
 
 	if err := h.service.Update(ctx, phase); err != nil {
 		handlerutil.RespondDomainError(c, err,
@@ -156,7 +167,7 @@ func (h *PhaseHandler) UpdatePhase(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, ToPhaseResponse(phase))
+	c.JSON(http.StatusOK, toResponse(phase))
 }
 
 // DeletePhase godoc
@@ -168,7 +179,7 @@ func (h *PhaseHandler) UpdatePhase(c *gin.Context) {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/phases/{id} [delete]
-func (h *PhaseHandler) DeletePhase(c *gin.Context) {
+func (h *Handler) DeletePhase(c *gin.Context) {
 	id, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
@@ -183,4 +194,36 @@ func (h *PhaseHandler) DeletePhase(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func toModel(req dto.CreatePhaseRequest) *domainProject.Phase {
+	return &domainProject.Phase{Name: req.Name}
+}
+
+func toResponse(phase *domainProject.Phase) dto.PhaseResponse {
+	return dto.PhaseResponse{
+		ID:        phase.ID,
+		Name:      phase.Name,
+		CreatedAt: phase.CreatedAt,
+		UpdatedAt: phase.UpdatedAt,
+	}
+}
+
+func toListResponse(phases []domainProject.Phase) []dto.PhaseResponse {
+	result := make([]dto.PhaseResponse, len(phases))
+	for i, phase := range phases {
+		result[i] = dto.PhaseResponse{
+			ID:        phase.ID,
+			Name:      phase.Name,
+			CreatedAt: phase.CreatedAt,
+			UpdatedAt: phase.UpdatedAt,
+		}
+	}
+	return result
+}
+
+func applyUpdate(phase *domainProject.Phase, req dto.UpdatePhaseRequest) {
+	if req.Name != nil {
+		phase.Name = *req.Name
+	}
 }

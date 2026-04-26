@@ -28,6 +28,13 @@ type ProjectMembershipService interface {
 	RemoveUser(ctx context.Context, projectID, userID uuid.UUID) error
 }
 
+type ProjectWorkflowService interface {
+	CreateProject(ctx context.Context, project *domainProject.Project) error
+	InviteUser(ctx context.Context, projectID, userID uuid.UUID) error
+	ListUsers(ctx context.Context, projectID uuid.UUID) ([]domainUser.User, error)
+	RemoveUser(ctx context.Context, projectID, userID uuid.UUID) error
+}
+
 type ProjectFacilityLinkService interface {
 	CreateControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
 	CopyControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainFacility.ControlCabinet, error)

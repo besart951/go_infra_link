@@ -578,27 +578,7 @@ func (c projectFacilityCopy) replaceFieldDeviceBacnetObjectsFromObjectData(ctx c
 		return err
 	}
 
-	oldToNew := make(map[uuid.UUID]uuid.UUID, len(templates))
-	for tid, clone := range templateToClone {
-		oldToNew[tid] = clone.ID
-	}
-
-	for tid, ref := range templateRef {
-		if ref == nil {
-			continue
-		}
-		mapped, ok := oldToNew[*ref]
-		if !ok {
-			continue
-		}
-		clone := templateToClone[tid]
-		clone.SoftwareReferenceID = &mapped
-		if err := c.bacnetObjectRepo.Update(ctx, clone); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return c.remapSoftwareReferences(ctx, templateToClone, templateRef)
 }
 
 func cloneBacnetObjectForFieldDeviceTemplate(original domainFacility.BacnetObject, fieldDeviceID uuid.UUID, textFix string) *domainFacility.BacnetObject {
@@ -677,17 +657,12 @@ func (c projectFacilityCopy) copyBacnetObjectsForObjectData(ctx context.Context,
 		oldRefs[bo.ID] = bo.SoftwareReferenceID
 	}
 
+	if err := c.remapSoftwareReferences(ctx, oldToNew, oldRefs); err != nil {
+		return nil, err
+	}
+
 	newBacnetObjects := make([]*domainFacility.BacnetObject, 0, len(oldToNew))
-	for oldID, newBO := range oldToNew {
-		if refID := oldRefs[oldID]; refID != nil {
-			if target, ok := oldToNew[*refID]; ok {
-				id := target.ID
-				newBO.SoftwareReferenceID = &id
-				if err := c.bacnetObjectRepo.Update(ctx, newBO); err != nil {
-					return nil, err
-				}
-			}
-		}
+	for _, newBO := range oldToNew {
 		newBacnetObjects = append(newBacnetObjects, newBO)
 	}
 

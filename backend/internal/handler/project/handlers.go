@@ -1,9 +1,23 @@
 package project
 
+import (
+	controlcabinethandler "github.com/besart951/go_infra_link/backend/internal/handler/project/controlcabinet"
+	fielddevicehandler "github.com/besart951/go_infra_link/backend/internal/handler/project/fielddevice"
+	membershiphandler "github.com/besart951/go_infra_link/backend/internal/handler/project/membership"
+	objectdatahandler "github.com/besart951/go_infra_link/backend/internal/handler/project/objectdata"
+	phasehandler "github.com/besart951/go_infra_link/backend/internal/handler/project/phase"
+	spscontrollerhandler "github.com/besart951/go_infra_link/backend/internal/handler/project/spscontroller"
+)
+
 type Handlers struct {
 	Project            *ProjectHandler
-	Phase              *PhaseHandler
-	FieldDeviceOptions *FieldDeviceOptionsHandler
+	Membership         *membershiphandler.Handler
+	ControlCabinet     *controlcabinethandler.Handler
+	SPSController      *spscontrollerhandler.Handler
+	FieldDevice        *fielddevicehandler.Handler
+	ObjectData         *objectdatahandler.Handler
+	Phase              *phasehandler.Handler
+	FieldDeviceOptions *fielddevicehandler.OptionsHandler
 	RefreshBroadcaster *FacilityRefreshBroadcaster
 }
 
@@ -11,6 +25,7 @@ type ServiceDeps struct {
 	Lifecycle          ProjectLifecycleService
 	AccessPolicy       ProjectAccessPolicyService
 	Membership         ProjectMembershipService
+	Workflow           ProjectWorkflowService
 	FacilityLink       ProjectFacilityLinkService
 	Phase              PhaseService
 	FieldDeviceOptions FieldDeviceOptionsService
@@ -19,11 +34,20 @@ type ServiceDeps struct {
 func NewHandlers(deps ServiceDeps) *Handlers {
 	events := NewProjectEventHub()
 	collaboration := NewProjectCollaborationHub()
-	projectHandler := newProjectHandler(deps.Lifecycle, deps.AccessPolicy, deps.Membership, deps.FacilityLink, events, collaboration)
+	workflow := deps.Workflow
+	if workflow == nil {
+		workflow = newWorkflowFromServices(deps.Lifecycle, deps.Membership)
+	}
+	projectHandler := newProjectHandler(deps.Lifecycle, deps.AccessPolicy, deps.Membership, workflow, deps.FacilityLink, events, collaboration)
 	return &Handlers{
 		Project:            projectHandler,
-		Phase:              NewPhaseHandler(deps.Phase),
-		FieldDeviceOptions: NewFieldDeviceOptionsHandler(deps.AccessPolicy, deps.FieldDeviceOptions),
+		Membership:         membershiphandler.NewHandler(deps.AccessPolicy, workflow),
+		ControlCabinet:     controlcabinethandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange),
+		SPSController:      spscontrollerhandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange),
+		FieldDevice:        fielddevicehandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange),
+		ObjectData:         objectdatahandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange),
+		Phase:              phasehandler.NewHandler(deps.Phase),
+		FieldDeviceOptions: fielddevicehandler.NewOptionsHandler(deps.AccessPolicy, deps.FieldDeviceOptions),
 		RefreshBroadcaster: NewFacilityRefreshBroadcaster(deps.FacilityLink, collaboration),
 	}
 }

@@ -88,14 +88,7 @@ func (s *ProjectFacilityLinkService) ListProjectIDsBySPSControllerID(ctx context
 
 func (s *ProjectFacilityLinkService) CreateControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
 	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
-		result, err := txService.assignments().assign(ctx, projectID, projectAssignmentTarget{
-			kind: projectAssignmentControlCabinet,
-			id:   controlCabinetID,
-		})
-		if err != nil {
-			return nil, err
-		}
-		return result.controlCabinet, nil
+		return txService.assignments().assignControlCabinet(ctx, projectID, controlCabinetID)
 	})
 }
 
@@ -111,10 +104,7 @@ func (s *ProjectFacilityLinkService) copyControlCabinet(ctx context.Context, pro
 		return nil, err
 	}
 
-	if _, err := s.assignments().assign(ctx, projectID, projectAssignmentTarget{
-		kind: projectAssignmentControlCabinet,
-		id:   copyEntity.ID,
-	}); err != nil {
+	if _, err := s.assignments().assignControlCabinet(ctx, projectID, copyEntity.ID); err != nil {
 		return nil, err
 	}
 
@@ -123,33 +113,19 @@ func (s *ProjectFacilityLinkService) copyControlCabinet(ctx context.Context, pro
 
 func (s *ProjectFacilityLinkService) UpdateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
 	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
-		result, err := txService.assignments().update(ctx, linkID, projectID, projectAssignmentTarget{
-			kind: projectAssignmentControlCabinet,
-			id:   controlCabinetID,
-		})
-		if err != nil {
-			return nil, err
-		}
-		return result.controlCabinet, nil
+		return txService.assignments().updateControlCabinet(ctx, linkID, projectID, controlCabinetID)
 	})
 }
 
 func (s *ProjectFacilityLinkService) DeleteControlCabinet(ctx context.Context, linkID, projectID uuid.UUID) error {
 	return s.withTx(func(txService *ProjectFacilityLinkService) error {
-		return txService.assignments().remove(ctx, linkID, projectID, projectAssignmentControlCabinet)
+		return txService.assignments().removeControlCabinet(ctx, linkID, projectID)
 	})
 }
 
 func (s *ProjectFacilityLinkService) CreateSPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
 	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainProject.ProjectSPSController, error) {
-		result, err := txService.assignments().assign(ctx, projectID, projectAssignmentTarget{
-			kind: projectAssignmentSPSController,
-			id:   spsControllerID,
-		})
-		if err != nil {
-			return nil, err
-		}
-		return result.spsController, nil
+		return txService.assignments().assignSPSController(ctx, projectID, spsControllerID)
 	})
 }
 
@@ -165,10 +141,7 @@ func (s *ProjectFacilityLinkService) copySPSController(ctx context.Context, proj
 		return nil, err
 	}
 
-	if _, err := s.assignments().assign(ctx, projectID, projectAssignmentTarget{
-		kind: projectAssignmentSPSController,
-		id:   copyEntity.ID,
-	}); err != nil {
+	if _, err := s.assignments().assignSPSController(ctx, projectID, copyEntity.ID); err != nil {
 		return nil, err
 	}
 
@@ -187,10 +160,7 @@ func (s *ProjectFacilityLinkService) copySPSControllerSystemType(ctx context.Con
 		return nil, err
 	}
 
-	if _, err := s.assignments().assign(ctx, projectID, projectAssignmentTarget{
-		kind: projectAssignmentSPSControllerSystemType,
-		id:   copyEntity.ID,
-	}); err != nil {
+	if err := s.assignments().assignSPSControllerSystemType(ctx, projectID, copyEntity.ID); err != nil {
 		return nil, err
 	}
 
@@ -199,50 +169,29 @@ func (s *ProjectFacilityLinkService) copySPSControllerSystemType(ctx context.Con
 
 func (s *ProjectFacilityLinkService) UpdateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
 	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainProject.ProjectSPSController, error) {
-		result, err := txService.assignments().update(ctx, linkID, projectID, projectAssignmentTarget{
-			kind: projectAssignmentSPSController,
-			id:   spsControllerID,
-		})
-		if err != nil {
-			return nil, err
-		}
-		return result.spsController, nil
+		return txService.assignments().updateSPSController(ctx, linkID, projectID, spsControllerID)
 	})
 }
 
 func (s *ProjectFacilityLinkService) DeleteSPSController(ctx context.Context, linkID, projectID uuid.UUID) error {
 	return s.withTx(func(txService *ProjectFacilityLinkService) error {
-		return txService.assignments().remove(ctx, linkID, projectID, projectAssignmentSPSController)
+		return txService.assignments().removeSPSController(ctx, linkID, projectID)
 	})
 }
 
 func (s *ProjectFacilityLinkService) CreateFieldDevice(ctx context.Context, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
 	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainProject.ProjectFieldDevice, error) {
-		result, err := txService.assignments().assign(ctx, projectID, projectAssignmentTarget{
-			kind: projectAssignmentFieldDevice,
-			id:   fieldDeviceID,
-		})
-		if err != nil {
-			return nil, err
-		}
-		return result.fieldDevice, nil
+		return txService.assignments().assignFieldDevice(ctx, projectID, fieldDeviceID)
 	})
 }
 
 func (s *ProjectFacilityLinkService) UpdateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
-	result, err := s.assignments().update(ctx, linkID, projectID, projectAssignmentTarget{
-		kind: projectAssignmentFieldDevice,
-		id:   fieldDeviceID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return result.fieldDevice, nil
+	return s.assignments().updateFieldDevice(ctx, linkID, projectID, fieldDeviceID)
 }
 
 func (s *ProjectFacilityLinkService) DeleteFieldDevice(ctx context.Context, linkID, projectID uuid.UUID) error {
 	return s.withTx(func(txService *ProjectFacilityLinkService) error {
-		return txService.assignments().remove(ctx, linkID, projectID, projectAssignmentFieldDevice)
+		return txService.assignments().removeFieldDevice(ctx, linkID, projectID)
 	})
 }
 

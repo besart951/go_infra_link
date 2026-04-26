@@ -214,31 +214,34 @@ func (m objectDataTemplate) resolveAlarmBinding(ctx context.Context, bacnetObjec
 		return nil
 	}
 
+	if bacnetObject.AlarmDefinitionID != nil {
+		defs, err := m.alarmDefinitionRepo.GetByIds(ctx, []uuid.UUID{*bacnetObject.AlarmDefinitionID})
+		if err != nil {
+			return err
+		}
+		if len(defs) == 0 || defs[0].AlarmTypeID == nil {
+			return domain.NewValidationError().Add("objectdata.bacnetobject.alarm_type_id", "alarm_type_id is required")
+		}
+
+		if bacnetObject.AlarmTypeID != nil && *bacnetObject.AlarmTypeID != *defs[0].AlarmTypeID {
+			return domain.NewValidationError().Add("objectdata.bacnetobject.alarm_type_id", "alarm_type_id conflicts with alarm_definition_id")
+		}
+
+		bacnetObject.AlarmTypeID = defs[0].AlarmTypeID
+		bacnetObject.AlarmDefinitionID = nil
+		if _, err := domain.GetByID(ctx, m.alarmTypeRepo, *bacnetObject.AlarmTypeID); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	if bacnetObject.AlarmTypeID != nil {
 		if _, err := domain.GetByID(ctx, m.alarmTypeRepo, *bacnetObject.AlarmTypeID); err != nil {
 			return err
 		}
 		bacnetObject.AlarmDefinitionID = nil
-		return nil
 	}
 
-	if bacnetObject.AlarmDefinitionID == nil {
-		return nil
-	}
-
-	defs, err := m.alarmDefinitionRepo.GetByIds(ctx, []uuid.UUID{*bacnetObject.AlarmDefinitionID})
-	if err != nil {
-		return err
-	}
-	if len(defs) == 0 || defs[0].AlarmTypeID == nil {
-		return domain.NewValidationError().Add("objectdata.bacnetobject.alarm_type_id", "alarm_type_id is required")
-	}
-
-	bacnetObject.AlarmTypeID = defs[0].AlarmTypeID
-	bacnetObject.AlarmDefinitionID = nil
-	if _, err := domain.GetByID(ctx, m.alarmTypeRepo, *bacnetObject.AlarmTypeID); err != nil {
-		return err
-	}
 	return nil
 }
 

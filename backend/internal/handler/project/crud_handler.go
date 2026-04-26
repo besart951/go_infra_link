@@ -36,7 +36,7 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 	}
 	proj.CreatorID = creatorID
 
-	if err := h.lifecycle.Create(c.Request.Context(), proj); err != nil {
+	if err := h.workflow.CreateProject(c.Request.Context(), proj); err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_or_object_data_not_found")),

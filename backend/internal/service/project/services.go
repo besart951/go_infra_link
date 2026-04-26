@@ -28,6 +28,7 @@ type Services struct {
 	Lifecycle    *ProjectLifecycleService
 	AccessPolicy *ProjectAccessPolicyService
 	Membership   *ProjectMembershipService
+	Workflow     *ProjectWorkflowService
 	FacilityLink *ProjectFacilityLinkService
 }
 
@@ -55,6 +56,7 @@ func NewServices(deps Dependencies, cfgs ...Config) *Services {
 		repo:     deps.Projects,
 		userRepo: deps.Users,
 	}
+	services.Workflow = newProjectWorkflowService(services.Lifecycle, services.Membership)
 	services.FacilityLink = &ProjectFacilityLinkService{
 		projectRepo:               deps.Projects,
 		projectControlCabinetRepo: deps.ProjectControlCabinets,

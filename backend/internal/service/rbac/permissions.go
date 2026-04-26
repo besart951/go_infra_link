@@ -81,9 +81,9 @@ func (s *Service) ListRolesWithPermissions(ctx context.Context) ([]domainUser.Ro
 			Name:        role,
 			DisplayName: domainUser.RoleDisplayName(role),
 			Description: domainUser.RoleDescription(role),
-			Level:       domainUser.RoleLevel(role),
+			Level:       s.GetRoleLevel(role),
 			Permissions: permissions,
-			CanManage:   domainUser.GetAllowedRoles(role),
+			CanManage:   s.GetAllowedRoles(role),
 		})
 	}
 

@@ -1,14 +1,33 @@
-package project
+package membership
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
+	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	userhandler "github.com/besart951/go_infra_link/backend/internal/handler/user"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
+
+type WorkflowService interface {
+	InviteUser(ctx context.Context, projectID, userID uuid.UUID) error
+	ListUsers(ctx context.Context, projectID uuid.UUID) ([]domainUser.User, error)
+	RemoveUser(ctx context.Context, projectID, userID uuid.UUID) error
+}
+
+type Handler struct {
+	access   projectshared.AccessPolicyService
+	workflow WorkflowService
+}
+
+func NewHandler(access projectshared.AccessPolicyService, workflow WorkflowService) *Handler {
+	return &Handler{access: access, workflow: workflow}
+}
 
 // InviteProjectUser godoc
 // @Summary Invite user to project
@@ -22,13 +41,13 @@ import (
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/users [post]
-func (h *ProjectHandler) InviteProjectUser(c *gin.Context) {
+func (h *Handler) InviteProjectUser(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, projectID) {
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -37,7 +56,7 @@ func (h *ProjectHandler) InviteProjectUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.membership.InviteUser(c.Request.Context(), projectID, req.UserID); err != nil {
+	if err := h.workflow.InviteUser(c.Request.Context(), projectID, req.UserID); err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "invite_failed", "project.user_invited_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_or_user_not_found")),
@@ -58,17 +77,17 @@ func (h *ProjectHandler) InviteProjectUser(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/users [get]
-func (h *ProjectHandler) ListProjectUsers(c *gin.Context) {
+func (h *Handler) ListProjectUsers(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, projectID) {
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
-	users, err := h.membership.ListUsers(c.Request.Context(), projectID)
+	users, err := h.workflow.ListUsers(c.Request.Context(), projectID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),
@@ -91,13 +110,13 @@ func (h *ProjectHandler) ListProjectUsers(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/users/{userId} [delete]
-func (h *ProjectHandler) RemoveProjectUser(c *gin.Context) {
+func (h *Handler) RemoveProjectUser(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, projectID) {
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -106,7 +125,7 @@ func (h *ProjectHandler) RemoveProjectUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.membership.RemoveUser(c.Request.Context(), projectID, userID); err != nil {
+	if err := h.workflow.RemoveUser(c.Request.Context(), projectID, userID); err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "remove_failed", "project.user_remove_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_or_user_not_found")),

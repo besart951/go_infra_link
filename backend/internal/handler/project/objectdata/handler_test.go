@@ -1,4 +1,4 @@
-package project
+package objectdata
 
 import (
 	"context"
@@ -17,7 +17,7 @@ func TestListProjectObjectDataReturnsAfterInvalidApparatID(t *testing.T) {
 	projectID := uuid.New()
 	userID := uuid.New()
 	accessService := &fakeProjectAccessPolicyService{hasAccess: true}
-	handler := NewProjectHandler(nil, accessService, nil, nil)
+	handler := NewHandler(accessService, nil, nil)
 
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
@@ -62,4 +62,14 @@ func (s *fakeProjectAccessPolicyService) CanAccessProject(_ context.Context, req
 		return false, s.err
 	}
 	return s.hasAccess, nil
+}
+
+type statusTrackingWriter struct {
+	gin.ResponseWriter
+	statusWrites []int
+}
+
+func (w *statusTrackingWriter) WriteHeader(code int) {
+	w.statusWrites = append(w.statusWrites, code)
+	w.ResponseWriter.WriteHeader(code)
 }

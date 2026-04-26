@@ -41,15 +41,78 @@ func (s *Service) GetTeamRole(ctx context.Context, teamID, userID uuid.UUID) (*d
 
 // GetRoleLevel returns the hierarchical level of a role (higher = more privileged)
 func (s *Service) GetRoleLevel(role domainUser.Role) int {
-	return domainUser.RoleLevel(role)
+	switch role {
+	case domainUser.RoleSuperAdmin:
+		return 100
+	case domainUser.RoleAdminFZAG:
+		return 90
+	case domainUser.RoleFZAG:
+		return 80
+	case domainUser.RoleAdminPlaner:
+		return 70
+	case domainUser.RolePlaner:
+		return 60
+	case domainUser.RoleAdminEnterpreneur:
+		return 50
+	case domainUser.RoleEnterpreneur:
+		return 40
+	default:
+		return 0
+	}
 }
 
 // CanManageRole checks if a user with requesterRole can manage/create a user with targetRole
 func (s *Service) CanManageRole(requesterRole domainUser.Role, targetRole domainUser.Role) bool {
-	return domainUser.CanManageRole(requesterRole, targetRole)
+	if requesterRole == domainUser.RoleEnterpreneur {
+		return false
+	}
+	return s.GetRoleLevel(requesterRole) > s.GetRoleLevel(targetRole)
 }
 
 // GetAllowedRoles returns the list of roles that a user with the given role can assign to others
 func (s *Service) GetAllowedRoles(requesterRole domainUser.Role) []domainUser.Role {
-	return domainUser.GetAllowedRoles(requesterRole)
+	switch requesterRole {
+	case domainUser.RoleSuperAdmin:
+		return []domainUser.Role{
+			domainUser.RoleSuperAdmin,
+			domainUser.RoleAdminFZAG,
+			domainUser.RoleFZAG,
+			domainUser.RoleAdminPlaner,
+			domainUser.RolePlaner,
+			domainUser.RoleAdminEnterpreneur,
+			domainUser.RoleEnterpreneur,
+		}
+	case domainUser.RoleAdminFZAG:
+		return []domainUser.Role{
+			domainUser.RoleFZAG,
+			domainUser.RoleAdminPlaner,
+			domainUser.RolePlaner,
+			domainUser.RoleAdminEnterpreneur,
+			domainUser.RoleEnterpreneur,
+		}
+	case domainUser.RoleFZAG:
+		return []domainUser.Role{
+			domainUser.RoleAdminPlaner,
+			domainUser.RolePlaner,
+			domainUser.RoleAdminEnterpreneur,
+			domainUser.RoleEnterpreneur,
+		}
+	case domainUser.RoleAdminPlaner:
+		return []domainUser.Role{
+			domainUser.RolePlaner,
+			domainUser.RoleAdminEnterpreneur,
+			domainUser.RoleEnterpreneur,
+		}
+	case domainUser.RolePlaner:
+		return []domainUser.Role{
+			domainUser.RoleAdminEnterpreneur,
+			domainUser.RoleEnterpreneur,
+		}
+	case domainUser.RoleAdminEnterpreneur:
+		return []domainUser.Role{
+			domainUser.RoleEnterpreneur,
+		}
+	default:
+		return []domainUser.Role{}
+	}
 }

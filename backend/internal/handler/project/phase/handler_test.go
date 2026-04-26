@@ -1,4 +1,4 @@
-package project
+package phase
 
 import (
 	"context"
@@ -17,7 +17,7 @@ func TestDeletePhaseReturnsAfterErrorResponse(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	phaseID := uuid.New()
-	handler := NewPhaseHandler(&fakePhaseService{deleteErr: errors.New("delete failed")})
+	handler := NewHandler(&fakePhaseService{deleteErr: errors.New("delete failed")})
 
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)

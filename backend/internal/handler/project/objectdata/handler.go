@@ -1,14 +1,33 @@
-package project
+package objectdata
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
+	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+type FacilityLinkService interface {
+	ListObjectData(ctx context.Context, projectID uuid.UUID, page, limit int, search string, apparatID, systemPartID *uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
+	AddObjectData(ctx context.Context, projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
+	RemoveObjectData(ctx context.Context, projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
+}
+
+type Handler struct {
+	access       projectshared.AccessPolicyService
+	facilityLink FacilityLinkService
+	notify       projectshared.ProjectChangeNotifier
+}
+
+func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier) *Handler {
+	return &Handler{access: access, facilityLink: facilityLink, notify: notify}
+}
 
 // ListProjectObjectData godoc
 // @Summary List project object data with pagination
@@ -25,13 +44,13 @@ import (
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/object-data [get]
-func (h *ProjectHandler) ListProjectObjectData(c *gin.Context) {
+func (h *Handler) ListProjectObjectData(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, projectID) {
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -74,7 +93,7 @@ func (h *ProjectHandler) ListProjectObjectData(c *gin.Context) {
 	}
 
 	response := dto.ObjectDataListResponse{
-		Items:      ToObjectDataList(result.Items),
+		Items:      toObjectDataList(result.Items),
 		Total:      result.Total,
 		Page:       result.Page,
 		TotalPages: result.TotalPages,
@@ -96,13 +115,13 @@ func (h *ProjectHandler) ListProjectObjectData(c *gin.Context) {
 // @Failure 409 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/object-data [post]
-func (h *ProjectHandler) AddProjectObjectData(c *gin.Context) {
+func (h *Handler) AddProjectObjectData(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, projectID) {
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -121,9 +140,11 @@ func (h *ProjectHandler) AddProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	h.notifyProjectChange(c, projectID, "project.object_data.created")
+	if h.notify != nil {
+		h.notify(c, projectID, "project.object_data.created")
+	}
 
-	c.JSON(http.StatusCreated, ToObjectDataResponse(*obj))
+	c.JSON(http.StatusCreated, toObjectDataResponse(*obj))
 }
 
 // RemoveProjectObjectData godoc
@@ -137,13 +158,13 @@ func (h *ProjectHandler) AddProjectObjectData(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/object-data/{objectDataId} [delete]
-func (h *ProjectHandler) RemoveProjectObjectData(c *gin.Context) {
+func (h *Handler) RemoveProjectObjectData(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, projectID) {
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -161,7 +182,68 @@ func (h *ProjectHandler) RemoveProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	h.notifyProjectChange(c, projectID, "project.object_data.deleted")
+	if h.notify != nil {
+		h.notify(c, projectID, "project.object_data.deleted")
+	}
 
-	c.JSON(http.StatusOK, ToObjectDataResponse(*obj))
+	c.JSON(http.StatusOK, toObjectDataResponse(*obj))
+}
+
+func toObjectDataResponse(item domainFacility.ObjectData) dto.ObjectDataResponse {
+	bacnetObjects := []domainFacility.BacnetObject{}
+	if len(item.BacnetObjects) > 0 {
+		bacnetObjects = make([]domainFacility.BacnetObject, 0, len(item.BacnetObjects))
+		for _, obj := range item.BacnetObjects {
+			if obj == nil {
+				continue
+			}
+			bacnetObjects = append(bacnetObjects, *obj)
+		}
+	}
+
+	return dto.ObjectDataResponse{
+		ID:            item.ID,
+		Description:   item.Description,
+		Version:       item.Version,
+		IsActive:      item.IsActive,
+		ProjectID:     item.ProjectID,
+		BacnetObjects: mapBacnetObjectResponses(bacnetObjects),
+		CreatedAt:     item.CreatedAt,
+		UpdatedAt:     item.UpdatedAt,
+	}
+}
+
+func toObjectDataList(items []domainFacility.ObjectData) []dto.ObjectDataResponse {
+	out := make([]dto.ObjectDataResponse, len(items))
+	for i, item := range items {
+		out[i] = toObjectDataResponse(item)
+	}
+	return out
+}
+
+func mapBacnetObjectResponses(objs []domainFacility.BacnetObject) []dto.BacnetObjectResponse {
+	items := make([]dto.BacnetObjectResponse, len(objs))
+	for i, obj := range objs {
+		items[i] = dto.BacnetObjectResponse{
+			ID:                  obj.ID.String(),
+			TextFix:             obj.TextFix,
+			Description:         obj.Description,
+			GMSVisible:          obj.GMSVisible,
+			Optional:            obj.Optional,
+			TextIndividual:      obj.TextIndividual,
+			SoftwareType:        string(obj.SoftwareType),
+			SoftwareNumber:      int(obj.SoftwareNumber),
+			HardwareType:        string(obj.HardwareType),
+			HardwareQuantity:    int(obj.HardwareQuantity),
+			FieldDeviceID:       obj.FieldDeviceID,
+			SoftwareReferenceID: obj.SoftwareReferenceID,
+			StateTextID:         obj.StateTextID,
+			NotificationClassID: obj.NotificationClassID,
+			AlarmDefinitionID:   obj.AlarmDefinitionID,
+			AlarmTypeID:         obj.AlarmTypeID,
+			CreatedAt:           obj.CreatedAt,
+			UpdatedAt:           obj.UpdatedAt,
+		}
+	}
+	return items
 }

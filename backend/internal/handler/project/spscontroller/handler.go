@@ -1,14 +1,38 @@
-package project
+package spscontroller
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
 	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
+	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
+
+type FacilityLinkService interface {
+	CreateSPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error)
+	CopySPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainFacility.SPSController, error)
+	CopySPSControllerSystemType(ctx context.Context, projectID, systemTypeID uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
+	UpdateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error)
+	DeleteSPSController(ctx context.Context, linkID, projectID uuid.UUID) error
+	ListSPSControllers(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectSPSController], error)
+}
+
+type Handler struct {
+	access       projectshared.AccessPolicyService
+	facilityLink FacilityLinkService
+	notify       projectshared.ProjectChangeNotifier
+}
+
+func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier) *Handler {
+	return &Handler{access: access, facilityLink: facilityLink, notify: notify}
+}
 
 // CreateProjectSPSController godoc
 // @Summary Create project SPS controller link
@@ -22,13 +46,13 @@ import (
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/sps-controllers [post]
-func (h *ProjectHandler) CreateProjectSPSController(c *gin.Context) {
+func (h *Handler) CreateProjectSPSController(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, projectID) {
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -47,17 +71,63 @@ func (h *ProjectHandler) CreateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	h.notifyProjectChange(c, projectID, "project.sps_controller.created")
+	if h.notify != nil {
+		h.notify(c, projectID, "project.sps_controller.created")
+	}
 
-	c.JSON(http.StatusCreated, ToProjectSPSControllerResponse(*created))
+	c.JSON(http.StatusCreated, toProjectSPSControllerResponse(*created))
 }
 
-func (h *ProjectHandler) CopyProjectSPSController(c *gin.Context) {
+// ListProjectSPSControllers godoc
+// @Summary List project SPS controllers with pagination
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} dto.ProjectSPSControllerListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/sps-controllers [get]
+func (h *Handler) ListProjectSPSControllers(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
-	if !h.ensureProjectAccess(c, projectID) {
+
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+		return
+	}
+
+	var query dto.PaginationQuery
+	if !handlerutil.BindQuery(c, &query) {
+		return
+	}
+
+	result, err := h.facilityLink.ListSPSControllers(c.Request.Context(), projectID, query.Page, query.Limit)
+	if err != nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
+		return
+	}
+
+	response := dto.ProjectSPSControllerListResponse{
+		Items:      toProjectSPSControllerList(result.Items),
+		Total:      result.Total,
+		Page:       result.Page,
+		TotalPages: result.TotalPages,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (h *Handler) CopyProjectSPSController(c *gin.Context) {
+	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -76,16 +146,20 @@ func (h *ProjectHandler) CopyProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	h.notifyProjectChange(c, projectID, "project.sps_controller.copied")
+	if h.notify != nil {
+		h.notify(c, projectID, "project.sps_controller.copied")
+	}
+
 	c.JSON(http.StatusCreated, sharedpresenter.ToSPSControllerResponse(*copyEntity))
 }
 
-func (h *ProjectHandler) CopyProjectSPSControllerSystemType(c *gin.Context) {
+func (h *Handler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
-	if !h.ensureProjectAccess(c, projectID) {
+
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -103,7 +177,10 @@ func (h *ProjectHandler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 		return
 	}
 
-	h.notifyProjectChange(c, projectID, "project.sps_controller_system_type.copied")
+	if h.notify != nil {
+		h.notify(c, projectID, "project.sps_controller_system_type.copied")
+	}
+
 	c.JSON(http.StatusCreated, sharedpresenter.ToSPSControllerSystemTypeResponse(*copyEntity))
 }
 
@@ -120,13 +197,13 @@ func (h *ProjectHandler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/sps-controllers/{linkId} [put]
-func (h *ProjectHandler) UpdateProjectSPSController(c *gin.Context) {
+func (h *Handler) UpdateProjectSPSController(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, projectID) {
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -149,9 +226,11 @@ func (h *ProjectHandler) UpdateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	h.notifyProjectChange(c, projectID, "project.sps_controller.updated")
+	if h.notify != nil {
+		h.notify(c, projectID, "project.sps_controller.updated")
+	}
 
-	c.JSON(http.StatusOK, ToProjectSPSControllerResponse(*updated))
+	c.JSON(http.StatusOK, toProjectSPSControllerResponse(*updated))
 }
 
 // DeleteProjectSPSController godoc
@@ -165,13 +244,13 @@ func (h *ProjectHandler) UpdateProjectSPSController(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/sps-controllers/{linkId} [delete]
-func (h *ProjectHandler) DeleteProjectSPSController(c *gin.Context) {
+func (h *Handler) DeleteProjectSPSController(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, projectID) {
+	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
 		return
 	}
 
@@ -188,7 +267,27 @@ func (h *ProjectHandler) DeleteProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	h.notifyProjectChange(c, projectID, "project.sps_controller.deleted")
+	if h.notify != nil {
+		h.notify(c, projectID, "project.sps_controller.deleted")
+	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func toProjectSPSControllerResponse(item domainProject.ProjectSPSController) dto.ProjectSPSControllerResponse {
+	return dto.ProjectSPSControllerResponse{
+		ID:              item.ID,
+		ProjectID:       item.ProjectID,
+		SPSControllerID: item.SPSControllerID,
+		CreatedAt:       item.CreatedAt,
+		UpdatedAt:       item.UpdatedAt,
+	}
+}
+
+func toProjectSPSControllerList(items []domainProject.ProjectSPSController) []dto.ProjectSPSControllerResponse {
+	out := make([]dto.ProjectSPSControllerResponse, len(items))
+	for i, item := range items {
+		out[i] = toProjectSPSControllerResponse(item)
+	}
+	return out
 }
