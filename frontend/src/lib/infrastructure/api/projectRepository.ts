@@ -16,10 +16,13 @@ import type {
   ProjectObjectDataListResponse,
   ProjectControlCabinetListResponse,
   ProjectSPSControllerListResponse,
-  ProjectFieldDeviceListResponse
+  ProjectFieldDeviceListResponse,
+  ProjectFieldDeviceMultiCreateResponse
 } from '$lib/domain/project/index.js';
 import type {
   ControlCabinet,
+  MultiCreateFieldDeviceRequest,
+  MultiCreateFieldDeviceResponse,
   ObjectDataListParams,
   SPSController
 } from '$lib/domain/facility/index.js';
@@ -284,6 +287,36 @@ export const projectRepository: ProjectRepository = {
       body: JSON.stringify({ field_device_id: fieldDeviceId }),
       signal
     });
+  },
+
+  async addFieldDevices(
+    projectId: string,
+    fieldDeviceIds: string[],
+    signal?: AbortSignal
+  ): Promise<ProjectFieldDeviceMultiCreateResponse> {
+    return api<ProjectFieldDeviceMultiCreateResponse>(
+      `/projects/${projectId}/field-devices/multi-create`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ field_device_ids: fieldDeviceIds }),
+        signal
+      }
+    );
+  },
+
+  async createFieldDevices(
+    projectId: string,
+    data: MultiCreateFieldDeviceRequest,
+    signal?: AbortSignal
+  ): Promise<MultiCreateFieldDeviceResponse> {
+    return api<MultiCreateFieldDeviceResponse>(
+      `/projects/${projectId}/field-devices/multi-create`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+        signal
+      }
+    );
   },
 
   async removeFieldDevice(projectId: string, linkId: string, signal?: AbortSignal): Promise<void> {

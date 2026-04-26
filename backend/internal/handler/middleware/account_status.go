@@ -6,6 +6,7 @@ import (
 	"time"
 
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	"github.com/besart951/go_infra_link/backend/internal/requestutil"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -26,6 +27,11 @@ func AccountStatusGuard(userService UserStatusService) gin.HandlerFunc {
 		ctx := c.Request.Context()
 		usr, err := userService.GetByID(ctx, userID)
 		if err != nil {
+			if requestutil.ShouldSuppressErrorResponse(ctx, err) {
+				c.Abort()
+				return
+			}
+
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 			c.Abort()
 			return
@@ -46,6 +52,8 @@ func AccountStatusGuard(userService UserStatusService) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+
+		c.Set(ContextUserRoleKey, usr.Role)
 
 		c.Next()
 	}

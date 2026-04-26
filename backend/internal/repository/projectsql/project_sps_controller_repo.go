@@ -8,6 +8,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type projectSPSControllerRepo struct {
@@ -35,6 +36,34 @@ func (r *projectSPSControllerRepo) Create(ctx context.Context, entity *project.P
 		return err
 	}
 	return r.db.WithContext(ctx).Create(toProjectSPSControllerRecord(entity)).Error
+}
+
+func (r *projectSPSControllerRepo) BulkCreate(ctx context.Context, entities []*project.ProjectSPSController, batchSize int) error {
+	if len(entities) == 0 {
+		return nil
+	}
+	if batchSize <= 0 {
+		batchSize = 200
+	}
+
+	now := time.Now().UTC()
+	records := make([]projectSPSControllerRecord, 0, len(entities))
+	for _, entity := range entities {
+		if entity == nil {
+			continue
+		}
+		if err := entity.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		records = append(records, *toProjectSPSControllerRecord(entity))
+	}
+	if len(records) == 0 {
+		return nil
+	}
+
+	return r.db.WithContext(ctx).
+		Clauses(clause.OnConflict{DoNothing: true}).
+		CreateInBatches(records, batchSize).Error
 }
 
 func (r *projectSPSControllerRepo) Update(ctx context.Context, entity *project.ProjectSPSController) error {

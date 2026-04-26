@@ -39,10 +39,6 @@ func (s *BacnetObjectService) ensureTextFixUniqueForFieldDevice(ctx context.Cont
 	return nil
 }
 
-func (s *BacnetObjectService) ensureSoftwareUniqueForObjectData(ctx context.Context, objectDataID uuid.UUID, softwareType domainFacility.BacnetSoftwareType, softwareNumber uint16, excludeID *uuid.UUID) error {
-	return s.objectDataTemplate().ensureSoftwareUnique(ctx, objectDataID, softwareType, softwareNumber, excludeID)
-}
-
 func (s *BacnetObjectService) validateRequiredFields(bacnetObject *domainFacility.BacnetObject, prefix string) error {
 	ve := domain.NewValidationError()
 

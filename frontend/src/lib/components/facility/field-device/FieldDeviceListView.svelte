@@ -21,35 +21,42 @@
   interface Props {
     projectId?: string;
     refreshKey?: string | number;
+    refreshRequest?: import('./state/types.js').FieldDeviceRefreshRequest;
+    pageSize?: number;
     systemTypeRefreshKey?: string | number;
     sharedFieldDeviceEditors?: import('./state/types.js').SharedFieldDeviceEditorsByDevice;
     onSharedFieldDeviceStateChange?: (
       state: import('./state/types.js').SharedFieldDeviceDraftState
     ) => void;
-    onFieldDevicesSaved?: (deviceIds: string[]) => void;
+    onFieldDevicesSaved?: (devices: import('$lib/domain/facility/index.js').FieldDevice[]) => void;
+    onMultiCreateFormVisibilityChange?: (open: boolean) => void;
   }
 
   const {
     projectId,
     refreshKey,
+    refreshRequest,
+    pageSize = 300,
     systemTypeRefreshKey,
     sharedFieldDeviceEditors,
     onSharedFieldDeviceStateChange,
-    onFieldDevicesSaved
+    onFieldDevicesSaved,
+    onMultiCreateFormVisibilityChange
   }: Props = $props();
 
   const fieldDeviceState = provideFieldDeviceState({
     projectId: () => projectId,
-    pageSize: 300,
+    pageSize: () => pageSize,
     sharedFieldDeviceEditors: () => sharedFieldDeviceEditors ?? {},
     onSharedFieldDeviceStateChange: (state) => onSharedFieldDeviceStateChange?.(state),
-    onFieldDevicesSaved: (deviceIds) => onFieldDevicesSaved?.(deviceIds)
+    onFieldDevicesSaved: (devices) => onFieldDevicesSaved?.(devices)
   });
 
   useUnsavedChangesWarning(() => fieldDeviceState.editing.hasUnsavedChanges);
 
   let initialized = $state(false);
   let lastRefreshKey: string | number | undefined = $state(undefined);
+  let lastRefreshRequestKey: string | number | undefined = $state(undefined);
 
   onMount(() => {
     initialized = true;
@@ -71,6 +78,43 @@
     }
 
     lastRefreshKey = nextRefreshKey;
+    void fieldDeviceState.reload();
+  });
+
+  $effect(() => {
+    onMultiCreateFormVisibilityChange?.(fieldDeviceState.showMultiCreateForm);
+  });
+
+  $effect(() => {
+    const nextRefreshRequest = refreshRequest;
+
+    if (!initialized) return;
+    if (!nextRefreshRequest || nextRefreshRequest.key === lastRefreshRequestKey) {
+      lastRefreshRequestKey = nextRefreshRequest?.key;
+      return;
+    }
+
+    lastRefreshRequestKey = nextRefreshRequest.key;
+    if (nextRefreshRequest.devices && nextRefreshRequest.devices.length > 0) {
+      void fieldDeviceState.applyDeviceDelta(nextRefreshRequest.devices);
+      return;
+    }
+
+    if (nextRefreshRequest.spsControllers && nextRefreshRequest.spsControllers.length > 0) {
+      fieldDeviceState.applySPSControllerDelta(nextRefreshRequest.spsControllers);
+      return;
+    }
+
+    if (nextRefreshRequest.deviceIds && nextRefreshRequest.deviceIds.length > 0) {
+      void fieldDeviceState.refreshDevices(nextRefreshRequest.deviceIds);
+      return;
+    }
+
+    if (nextRefreshRequest.spsControllerIds && nextRefreshRequest.spsControllerIds.length > 0) {
+      void fieldDeviceState.refreshDevicesForSPSControllers(nextRefreshRequest.spsControllerIds);
+      return;
+    }
+
     void fieldDeviceState.reload();
   });
 </script>

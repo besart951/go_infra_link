@@ -1,4 +1,5 @@
 import type { TableFilterRecord } from '$lib/state/table/contracts.js';
+import type { FieldDevice, SPSController } from '$lib/domain/facility/index.js';
 
 export interface FieldDeviceFilters extends TableFilterRecord {
   buildingId?: string;
@@ -9,6 +10,7 @@ export interface FieldDeviceFilters extends TableFilterRecord {
 }
 
 export type ProjectIdInput = string | undefined | (() => string | undefined);
+export type PageSizeInput = number | undefined | (() => number | undefined);
 
 export interface SharedFieldDeviceDraftState {
   devices: Array<{
@@ -16,6 +18,14 @@ export interface SharedFieldDeviceDraftState {
     changed_fields: string[];
     field_values?: Record<string, unknown>;
   }>;
+}
+
+export interface FieldDeviceRefreshRequest {
+  key: string | number;
+  devices?: FieldDevice[];
+  deviceIds?: string[];
+  spsControllers?: SPSController[];
+  spsControllerIds?: string[];
 }
 
 export interface SharedFieldDeviceEditor {
@@ -31,10 +41,10 @@ export type SharedFieldDeviceEditorsByDevice = Record<string, SharedFieldDeviceE
 
 export interface FieldDeviceStateProps {
   projectId?: ProjectIdInput;
-  pageSize?: number;
+  pageSize?: PageSizeInput;
   sharedFieldDeviceEditors?: () => SharedFieldDeviceEditorsByDevice;
   onSharedFieldDeviceStateChange?: (state: SharedFieldDeviceDraftState) => void;
-  onFieldDevicesSaved?: (deviceIds: string[]) => void;
+  onFieldDevicesSaved?: (devices: FieldDevice[]) => void;
 }
 
 export function toProjectIdResolver(projectId?: ProjectIdInput): () => string | undefined {
@@ -43,4 +53,12 @@ export function toProjectIdResolver(projectId?: ProjectIdInput): () => string | 
   }
 
   return () => projectId;
+}
+
+export function resolvePageSize(pageSize?: PageSizeInput): number | undefined {
+  if (typeof pageSize === 'function') {
+    return pageSize();
+  }
+
+  return pageSize;
 }

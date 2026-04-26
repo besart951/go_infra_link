@@ -3,6 +3,7 @@ package project
 import (
 	"context"
 
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
 )
 
@@ -12,7 +13,9 @@ type facilityProjectLookup interface {
 }
 
 type projectRefreshPublisher interface {
-	BroadcastRefreshRequest(projectID uuid.UUID, actorID *uuid.UUID, scope string, deviceIDs []string)
+	BroadcastRefreshRequest(projectID uuid.UUID, actorID *uuid.UUID, scope string, entityIDs []string)
+	BroadcastControlCabinetDelta(projectID uuid.UUID, actorID *uuid.UUID, controlCabinet projectCollaborationControlCabinet)
+	BroadcastSPSControllerDelta(projectID uuid.UUID, actorID *uuid.UUID, spsController projectCollaborationSPSController)
 }
 
 type FacilityRefreshBroadcaster struct {
@@ -27,7 +30,7 @@ func NewFacilityRefreshBroadcaster(lookup facilityProjectLookup, publisher proje
 	}
 }
 
-func (b *FacilityRefreshBroadcaster) BroadcastRefreshForControlCabinet(ctx context.Context, controlCabinetID uuid.UUID, scope string) {
+func (b *FacilityRefreshBroadcaster) BroadcastRefreshForControlCabinet(ctx context.Context, actorID *uuid.UUID, controlCabinetID uuid.UUID, scope string) {
 	if b == nil || b.lookup == nil || b.publisher == nil {
 		return
 	}
@@ -38,11 +41,11 @@ func (b *FacilityRefreshBroadcaster) BroadcastRefreshForControlCabinet(ctx conte
 	}
 
 	for _, projectID := range projectIDs {
-		b.publisher.BroadcastRefreshRequest(projectID, nil, scope, nil)
+		b.publisher.BroadcastRefreshRequest(projectID, actorID, scope, []string{controlCabinetID.String()})
 	}
 }
 
-func (b *FacilityRefreshBroadcaster) BroadcastRefreshForSPSController(ctx context.Context, spsControllerID uuid.UUID, scope string) {
+func (b *FacilityRefreshBroadcaster) BroadcastRefreshForSPSController(ctx context.Context, actorID *uuid.UUID, spsControllerID uuid.UUID, scope string) {
 	if b == nil || b.lookup == nil || b.publisher == nil {
 		return
 	}
@@ -53,6 +56,39 @@ func (b *FacilityRefreshBroadcaster) BroadcastRefreshForSPSController(ctx contex
 	}
 
 	for _, projectID := range projectIDs {
-		b.publisher.BroadcastRefreshRequest(projectID, nil, scope, nil)
+		b.publisher.BroadcastRefreshRequest(projectID, actorID, scope, []string{spsControllerID.String()})
+	}
+}
+
+func (b *FacilityRefreshBroadcaster) BroadcastControlCabinetDelta(ctx context.Context, actorID *uuid.UUID, controlCabinet domainFacility.ControlCabinet) {
+	if b == nil || b.lookup == nil || b.publisher == nil {
+		return
+	}
+
+	projectIDs, err := b.lookup.ListProjectIDsByControlCabinetID(ctx, controlCabinet.ID)
+	if err != nil {
+		return
+	}
+
+	payload := toProjectCollaborationControlCabinet(controlCabinet)
+	for _, projectID := range projectIDs {
+		b.publisher.BroadcastControlCabinetDelta(projectID, actorID, payload)
+	}
+
+}
+
+func (b *FacilityRefreshBroadcaster) BroadcastSPSControllerDelta(ctx context.Context, actorID *uuid.UUID, spsController domainFacility.SPSController) {
+	if b == nil || b.lookup == nil || b.publisher == nil {
+		return
+	}
+
+	projectIDs, err := b.lookup.ListProjectIDsBySPSControllerID(ctx, spsController.ID)
+	if err != nil {
+		return
+	}
+
+	payload := toProjectCollaborationSPSController(spsController)
+	for _, projectID := range projectIDs {
+		b.publisher.BroadcastSPSControllerDelta(projectID, actorID, payload)
 	}
 }

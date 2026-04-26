@@ -5,6 +5,7 @@ import (
 
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	"github.com/besart951/go_infra_link/backend/internal/requestutil"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -21,6 +22,11 @@ func RequireGlobalRole(authz AuthorizationChecker, min domainUser.Role) gin.Hand
 		ctx := c.Request.Context()
 		role, err := authz.GetGlobalRole(ctx, userID)
 		if err != nil {
+			if requestutil.ShouldSuppressErrorResponse(ctx, err) {
+				c.Abort()
+				return
+			}
+
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 			c.Abort()
 			return
@@ -49,6 +55,11 @@ func RequireTeamRole(authz AuthorizationChecker, teamIDParam string, min domainT
 		ctx := c.Request.Context()
 		globalRole, err := authz.GetGlobalRole(ctx, userID)
 		if err != nil {
+			if requestutil.ShouldSuppressErrorResponse(ctx, err) {
+				c.Abort()
+				return
+			}
+
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 			c.Abort()
 			return
@@ -67,6 +78,11 @@ func RequireTeamRole(authz AuthorizationChecker, teamIDParam string, min domainT
 
 		role, err := authz.GetTeamRole(ctx, teamID, userID)
 		if err != nil {
+			if requestutil.ShouldSuppressErrorResponse(ctx, err) {
+				c.Abort()
+				return
+			}
+
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 			c.Abort()
 			return

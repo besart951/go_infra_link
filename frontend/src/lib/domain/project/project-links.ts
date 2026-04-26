@@ -24,6 +24,11 @@ export interface ProjectFieldDeviceLink {
   updated_at: string;
 }
 
+export interface ProjectFieldDeviceMultiCreateResponse {
+  success_field_device_ids: string[];
+  association_errors: string[];
+}
+
 export interface ProjectControlCabinetListResponse extends Pagination<ProjectControlCabinetLink> {}
 export interface ProjectSPSControllerListResponse extends Pagination<ProjectSPSControllerLink> {}
 export interface ProjectFieldDeviceListResponse extends Pagination<ProjectFieldDeviceLink> {}

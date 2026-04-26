@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
@@ -25,10 +26,9 @@ const (
 	projectCollaborationMessageSnapshot       = "snapshot"
 	projectCollaborationMessagePresence       = "presence"
 	projectCollaborationMessageEditStates     = "edit_states"
+	projectCollaborationMessageEntityDelta    = "entity_delta"
 	projectCollaborationMessageRefreshRequest = "refresh_request"
 	projectCollaborationMessageEditState      = "edit_state"
-
-	projectCollaborationScopeFieldDevice = "field_device"
 )
 
 var projectCollaborationUpgrader = websocket.Upgrader{
@@ -99,15 +99,54 @@ type ProjectCollaborationRefreshMessage struct {
 	ProjectID uuid.UUID `json:"project_id"`
 	Scope     string    `json:"scope"`
 	ActorID   string    `json:"actor_id,omitempty"`
+	EntityIDs []string  `json:"entity_ids,omitempty"`
 	DeviceIDs []string  `json:"device_ids,omitempty"`
 	At        time.Time `json:"at"`
 }
 
+type projectCollaborationControlCabinet struct {
+	ID               uuid.UUID `json:"id"`
+	BuildingID       uuid.UUID `json:"building_id"`
+	ControlCabinetNr *string   `json:"control_cabinet_nr"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+type projectCollaborationSPSController struct {
+	ID                uuid.UUID `json:"id"`
+	ControlCabinetID  uuid.UUID `json:"control_cabinet_id"`
+	GADevice          *string   `json:"ga_device"`
+	DeviceName        string    `json:"device_name"`
+	DeviceDescription *string   `json:"device_description,omitempty"`
+	DeviceLocation    *string   `json:"device_location,omitempty"`
+	IPAddress         *string   `json:"ip_address,omitempty"`
+	Subnet            *string   `json:"subnet,omitempty"`
+	Gateway           *string   `json:"gateway,omitempty"`
+	Vlan              *string   `json:"vlan,omitempty"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+type projectCollaborationEntityDeltaMessage struct {
+	Type            string                               `json:"type"`
+	ProjectID       uuid.UUID                            `json:"project_id"`
+	Scope           string                               `json:"scope"`
+	ActorID         string                               `json:"actor_id,omitempty"`
+	ControlCabinets []projectCollaborationControlCabinet `json:"control_cabinets,omitempty"`
+	SPSControllers  []projectCollaborationSPSController  `json:"sps_controllers,omitempty"`
+	FieldDevices    []map[string]interface{}             `json:"field_devices,omitempty"`
+	At              time.Time                            `json:"at"`
+}
+
 type projectCollaborationClientMessage struct {
-	Type      string                       `json:"type"`
-	Devices   []ProjectFieldDeviceByFields `json:"devices,omitempty"`
-	Scope     string                       `json:"scope,omitempty"`
-	DeviceIDs []string                     `json:"device_ids,omitempty"`
+	Type            string                               `json:"type"`
+	Devices         []ProjectFieldDeviceByFields         `json:"devices,omitempty"`
+	Scope           string                               `json:"scope,omitempty"`
+	EntityIDs       []string                             `json:"entity_ids,omitempty"`
+	DeviceIDs       []string                             `json:"device_ids,omitempty"`
+	ControlCabinets []projectCollaborationControlCabinet `json:"control_cabinets,omitempty"`
+	SPSControllers  []projectCollaborationSPSController  `json:"sps_controllers,omitempty"`
+	FieldDevices    []map[string]interface{}             `json:"field_devices,omitempty"`
 }
 
 type projectCollaborationClient struct {
@@ -275,20 +314,60 @@ func (h *ProjectCollaborationHub) UpdateEditState(projectID, userID uuid.UUID, d
 	})
 }
 
-func (h *ProjectCollaborationHub) BroadcastRefreshRequest(projectID uuid.UUID, actorID *uuid.UUID, scope string, deviceIDs []string) {
+func (h *ProjectCollaborationHub) BroadcastRefreshRequest(projectID uuid.UUID, actorID *uuid.UUID, scope string, entityIDs []string) {
 	actor := ""
 	if actorID != nil {
 		actor = actorID.String()
 	}
+
+	normalizedEntityIDs := normalizeIDs(entityIDs)
 
 	h.broadcast(projectID, ProjectCollaborationRefreshMessage{
 		Type:      projectCollaborationMessageRefreshRequest,
 		ProjectID: projectID,
 		Scope:     scope,
 		ActorID:   actor,
-		DeviceIDs: normalizeIDs(deviceIDs),
+		EntityIDs: normalizedEntityIDs,
+		DeviceIDs: refreshDeviceIDs(scope, normalizedEntityIDs),
 		At:        time.Now().UTC(),
 	})
+}
+
+func (h *ProjectCollaborationHub) BroadcastControlCabinetDelta(projectID uuid.UUID, actorID *uuid.UUID, controlCabinet projectCollaborationControlCabinet) {
+	h.broadcastEntityDelta(projectID, actorID, projectRefreshScopeControlCabinet, projectCollaborationEntityDeltaMessage{
+		ControlCabinets: []projectCollaborationControlCabinet{controlCabinet},
+	})
+}
+
+func (h *ProjectCollaborationHub) BroadcastSPSControllerDelta(projectID uuid.UUID, actorID *uuid.UUID, spsController projectCollaborationSPSController) {
+	h.broadcastEntityDelta(projectID, actorID, projectRefreshScopeSPSController, projectCollaborationEntityDeltaMessage{
+		SPSControllers: []projectCollaborationSPSController{spsController},
+	})
+}
+
+func (h *ProjectCollaborationHub) BroadcastFieldDeviceDelta(projectID uuid.UUID, actorID *uuid.UUID, fieldDevices []map[string]interface{}) {
+	if len(fieldDevices) == 0 {
+		return
+	}
+
+	h.broadcastEntityDelta(projectID, actorID, projectRefreshScopeFieldDevice, projectCollaborationEntityDeltaMessage{
+		FieldDevices: cloneFieldDeviceDeltas(fieldDevices),
+	})
+}
+
+func (h *ProjectCollaborationHub) broadcastEntityDelta(projectID uuid.UUID, actorID *uuid.UUID, scope string, payload projectCollaborationEntityDeltaMessage) {
+	actor := ""
+	if actorID != nil {
+		actor = actorID.String()
+	}
+
+	payload.Type = projectCollaborationMessageEntityDelta
+	payload.ProjectID = projectID
+	payload.Scope = scope
+	payload.ActorID = actor
+	payload.At = time.Now().UTC()
+
+	h.broadcast(projectID, payload)
 }
 
 func (h *ProjectCollaborationHub) ensureRoomLocked(projectID uuid.UUID) *projectCollaborationRoom {
@@ -421,6 +500,78 @@ func normalizeIDs(ids []string) []string {
 	return result
 }
 
+func normalizeRefreshEntityIDs(scope string, entityIDs, deviceIDs []string) []string {
+	if normalized := normalizeIDs(entityIDs); len(normalized) > 0 {
+		return normalized
+	}
+
+	if scope == projectRefreshScopeFieldDevice {
+		return normalizeIDs(deviceIDs)
+	}
+
+	return nil
+}
+
+func refreshDeviceIDs(scope string, entityIDs []string) []string {
+	if scope != projectRefreshScopeFieldDevice {
+		return nil
+	}
+
+	return entityIDs
+}
+
+func cloneFieldDeviceDeltas(fieldDevices []map[string]interface{}) []map[string]interface{} {
+	if len(fieldDevices) == 0 {
+		return nil
+	}
+
+	cloned := make([]map[string]interface{}, 0, len(fieldDevices))
+	for _, item := range fieldDevices {
+		if item == nil {
+			continue
+		}
+
+		copied := make(map[string]interface{}, len(item))
+		for key, value := range item {
+			copied[key] = value
+		}
+		cloned = append(cloned, copied)
+	}
+
+	if len(cloned) == 0 {
+		return nil
+	}
+
+	return cloned
+}
+
+func toProjectCollaborationControlCabinet(controlCabinet domainFacility.ControlCabinet) projectCollaborationControlCabinet {
+	return projectCollaborationControlCabinet{
+		ID:               controlCabinet.ID,
+		BuildingID:       controlCabinet.BuildingID,
+		ControlCabinetNr: controlCabinet.ControlCabinetNr,
+		CreatedAt:        controlCabinet.CreatedAt,
+		UpdatedAt:        controlCabinet.UpdatedAt,
+	}
+}
+
+func toProjectCollaborationSPSController(spsController domainFacility.SPSController) projectCollaborationSPSController {
+	return projectCollaborationSPSController{
+		ID:                spsController.ID,
+		ControlCabinetID:  spsController.ControlCabinetID,
+		GADevice:          spsController.GADevice,
+		DeviceName:        spsController.DeviceName,
+		DeviceDescription: spsController.DeviceDescription,
+		DeviceLocation:    spsController.DeviceLocation,
+		IPAddress:         spsController.IPAddress,
+		Subnet:            spsController.Subnet,
+		Gateway:           spsController.Gateway,
+		Vlan:              spsController.Vlan,
+		CreatedAt:         spsController.CreatedAt,
+		UpdatedAt:         spsController.UpdatedAt,
+	}
+}
+
 func normalizeFieldValues(values map[string]interface{}) map[string]interface{} {
 	if len(values) == 0 {
 		return nil
@@ -474,12 +625,23 @@ func (c *projectCollaborationClient) readPump() {
 		switch message.Type {
 		case projectCollaborationMessageEditState:
 			c.hub.UpdateEditState(c.projectID, c.userID, message.Devices)
+		case projectCollaborationMessageEntityDelta:
+			if strings.TrimSpace(message.Scope) != projectRefreshScopeFieldDevice || len(message.FieldDevices) == 0 {
+				continue
+			}
+
+			c.hub.BroadcastFieldDeviceDelta(c.projectID, &c.userID, message.FieldDevices)
 		case projectCollaborationMessageRefreshRequest:
 			scope := strings.TrimSpace(message.Scope)
 			if scope == "" {
-				scope = projectCollaborationScopeFieldDevice
+				scope = projectRefreshScopeFieldDevice
 			}
-			c.hub.BroadcastRefreshRequest(c.projectID, &c.userID, scope, message.DeviceIDs)
+			c.hub.BroadcastRefreshRequest(
+				c.projectID,
+				&c.userID,
+				scope,
+				normalizeRefreshEntityIDs(scope, message.EntityIDs, message.DeviceIDs),
+			)
 		}
 	}
 }

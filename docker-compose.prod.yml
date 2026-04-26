@@ -1,0 +1,110 @@
+# ─────────────────────────────────────────────────────────────
+#  go_infra_link — Production Docker Compose Stack
+#
+#  Usage (one command):
+#    ./scripts/prod.ps1
+#
+#  Or manually:
+#    docker compose -f docker-compose.prod.yml up -d --build
+#    docker compose -f docker-compose.prod.yml logs -f
+#    docker compose -f docker-compose.prod.yml down
+#
+#  Prerequisites:
+#    - .env file exists with APP_ENV=production and all required vars
+#    - See .env.prod.example for a template
+#
+#  Differences from dev docker-compose.yml:
+#    - Pre-compiled binaries (runtime/bootstrap build targets, no go run)
+#    - No source volume mounts (immutable image)
+#    - Backend HEALTHCHECK active
+#    - Frontend served by Caddy on port 80 (static SPA)
+#    - Postgres NOT exposed on host (internal network only)
+#    - Resource limits on all services
+#    - pgAdmin excluded (dev tool)
+# ─────────────────────────────────────────────────────────────
+
+services:
+  backend-bootstrap:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: bootstrap
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=host=${POSTGRES_SERVICE_HOST:-postgres} user=${POSTGRES_USER:-postgres} password=${POSTGRES_PASSWORD:-postgres} dbname=${POSTGRES_DB:-go_infra_link} port=${POSTGRES_CONTAINER_PORT:-5432} sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    ports:
+      - "${BACKEND_PORT:-8080}:${BACKEND_PORT:-8080}"
+    env_file:
+      - .env
+    environment:
+      - HTTP_ADDR=:${BACKEND_PORT:-8080}
+      - DATABASE_URL=host=${POSTGRES_SERVICE_HOST:-postgres} user=${POSTGRES_USER:-postgres} password=${POSTGRES_PASSWORD:-postgres} dbname=${POSTGRES_DB:-go_infra_link} port=${POSTGRES_CONTAINER_PORT:-5432} sslmode=disable
+    depends_on:
+      backend-bootstrap:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runtime
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 64M
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-go_infra_link}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    command: ["postgres", "-p", "${POSTGRES_CONTAINER_PORT:-5432}"]
+    # No ports: mapping — Postgres is only accessible within the Docker network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -p ${POSTGRES_CONTAINER_PORT:-5432}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

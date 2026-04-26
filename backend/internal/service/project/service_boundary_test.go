@@ -43,7 +43,7 @@ func TestProjectAccessPolicyService_CanAccessProject_CharacterizesAccessSources(
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			hasAccess, err := svc.CanAccessProject(ctx, tc.requesterID, projectID)
+			hasAccess, err := svc.CanAccessProject(ctx, tc.requesterID, projectID, nil)
 			if err != nil {
 				t.Fatalf("expected access check to succeed, got %v", err)
 			}
@@ -51,6 +51,26 @@ func TestProjectAccessPolicyService_CanAccessProject_CharacterizesAccessSources(
 				t.Fatalf("expected access=%t, got %t", tc.wantAccess, hasAccess)
 			}
 		})
+	}
+}
+
+func TestProjectAccessPolicyService_CanAccessProject_UsesRequesterRoleHint(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	requesterID := uuid.New()
+
+	projectRepo := newProjectRepo()
+	projectRepo.items[projectID] = &domainProject.Project{Base: domain.Base{ID: projectID}, CreatorID: uuid.New()}
+
+	svc := NewServices(Dependencies{Projects: projectRepo}).AccessPolicy
+	adminRole := domainUser.RoleAdminFZAG
+
+	hasAccess, err := svc.CanAccessProject(ctx, requesterID, projectID, &adminRole)
+	if err != nil {
+		t.Fatalf("expected access check to succeed, got %v", err)
+	}
+	if !hasAccess {
+		t.Fatal("expected access for admin role hint")
 	}
 }
 

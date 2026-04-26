@@ -11,10 +11,13 @@ import type {
   ProjectObjectDataListResponse,
   ProjectControlCabinetListResponse,
   ProjectSPSControllerListResponse,
-  ProjectFieldDeviceListResponse
+  ProjectFieldDeviceListResponse,
+  ProjectFieldDeviceMultiCreateResponse
 } from '$lib/domain/project/index.js';
 import type {
   ControlCabinet,
+  MultiCreateFieldDeviceRequest,
+  MultiCreateFieldDeviceResponse,
   ObjectDataListParams,
   SPSController
 } from '$lib/domain/facility/index.js';
@@ -84,5 +87,15 @@ export interface ProjectRepository extends ListRepository<Project> {
     signal?: AbortSignal
   ): Promise<ProjectFieldDeviceListResponse>;
   addFieldDevice(projectId: string, fieldDeviceId: string, signal?: AbortSignal): Promise<void>;
+  addFieldDevices(
+    projectId: string,
+    fieldDeviceIds: string[],
+    signal?: AbortSignal
+  ): Promise<ProjectFieldDeviceMultiCreateResponse>;
+  createFieldDevices(
+    projectId: string,
+    data: MultiCreateFieldDeviceRequest,
+    signal?: AbortSignal
+  ): Promise<MultiCreateFieldDeviceResponse>;
   removeFieldDevice(projectId: string, linkId: string, signal?: AbortSignal): Promise<void>;
 }

@@ -20,11 +20,19 @@ func NewControlCabinetHandler(service ControlCabinetService, collaboration Proje
 	return &ControlCabinetHandler{service: service, collaboration: collaboration}
 }
 
-func (h *ControlCabinetHandler) broadcastProjectRefresh(ctx context.Context, controlCabinetID uuid.UUID) {
+func (h *ControlCabinetHandler) broadcastProjectRefresh(ctx context.Context, actorID *uuid.UUID, controlCabinetID uuid.UUID) {
 	if h.collaboration == nil {
 		return
 	}
-	h.collaboration.BroadcastRefreshForControlCabinet(ctx, controlCabinetID, "control_cabinet")
+	h.collaboration.BroadcastRefreshForControlCabinet(ctx, actorID, controlCabinetID, "control_cabinet")
+}
+
+func (h *ControlCabinetHandler) broadcastProjectDelta(ctx context.Context, actorID *uuid.UUID, controlCabinet *domainFacility.ControlCabinet) {
+	if h.collaboration == nil || controlCabinet == nil {
+		return
+	}
+
+	h.collaboration.BroadcastControlCabinetDelta(ctx, actorID, *controlCabinet)
 }
 
 // CreateControlCabinet godoc
@@ -52,7 +60,7 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh(c.Request.Context(), controlCabinet.ID)
+	h.broadcastProjectDelta(c.Request.Context(), currentActorID(c), controlCabinet)
 	c.JSON(http.StatusCreated, toControlCabinetResponse(*controlCabinet))
 }
 
@@ -139,7 +147,7 @@ func (h *ControlCabinetHandler) CopyControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh(c.Request.Context(), copyEntity.ID)
+	h.broadcastProjectDelta(c.Request.Context(), currentActorID(c), copyEntity)
 	c.JSON(http.StatusCreated, toControlCabinetResponse(*copyEntity))
 }
 
@@ -261,7 +269,7 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh(ctx, controlCabinet.ID)
+	h.broadcastProjectDelta(ctx, currentActorID(c), controlCabinet)
 	c.JSON(http.StatusOK, toControlCabinetResponse(*controlCabinet))
 }
 
@@ -287,6 +295,6 @@ func (h *ControlCabinetHandler) DeleteControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh(c.Request.Context(), id)
+	h.broadcastProjectRefresh(c.Request.Context(), currentActorID(c), id)
 	c.Status(http.StatusNoContent)
 }

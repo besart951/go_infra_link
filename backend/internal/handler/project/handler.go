@@ -1,12 +1,9 @@
 package project
 
 import (
-	"net/http"
-	"time"
-
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
-	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -16,12 +13,11 @@ type ProjectHandler struct {
 	access        ProjectAccessPolicyService
 	workflow      ProjectWorkflowService
 	facilityLink  ProjectFacilityLinkService
-	events        *ProjectEventHub
 	collaboration *ProjectCollaborationHub
 }
 
 func NewProjectHandler(lifecycle ProjectLifecycleService, access ProjectAccessPolicyService, membership ProjectMembershipService, facilityLink ProjectFacilityLinkService) *ProjectHandler {
-	return newProjectHandler(lifecycle, access, membership, newWorkflowFromServices(lifecycle, membership), facilityLink, NewProjectEventHub(), NewProjectCollaborationHub())
+	return newProjectHandler(lifecycle, access, membership, newWorkflowFromServices(lifecycle, membership), facilityLink, NewProjectCollaborationHub())
 }
 
 func newProjectHandler(
@@ -30,7 +26,6 @@ func newProjectHandler(
 	membership ProjectMembershipService,
 	workflow ProjectWorkflowService,
 	facilityLink ProjectFacilityLinkService,
-	events *ProjectEventHub,
 	collaboration *ProjectCollaborationHub,
 ) *ProjectHandler {
 	if workflow == nil {
@@ -41,13 +36,25 @@ func newProjectHandler(
 		access:        access,
 		workflow:      workflow,
 		facilityLink:  facilityLink,
-		events:        events,
 		collaboration: collaboration,
 	}
 }
 
-func (h *ProjectHandler) notifyProjectChange(c *gin.Context, projectID uuid.UUID, eventType string) {
-	if h.events == nil {
+func (h *ProjectHandler) notifyProjectChange(c *gin.Context, projectID uuid.UUID, eventType string, entityIDs ...string) {
+	var actorID *uuid.UUID
+	if userID, ok := middleware.GetUserID(c); ok {
+		actorID = &userID
+	}
+
+	if h.collaboration != nil {
+		if scope, ok := refreshScopeForProjectEvent(eventType); ok {
+			h.collaboration.BroadcastRefreshRequest(projectID, actorID, scope, entityIDs)
+		}
+	}
+}
+
+func (h *ProjectHandler) notifyProjectFieldDeviceDelta(c *gin.Context, projectID uuid.UUID, fieldDevices []domainFacility.FieldDevice) {
+	if h.collaboration == nil || len(fieldDevices) == 0 {
 		return
 	}
 
@@ -56,68 +63,57 @@ func (h *ProjectHandler) notifyProjectChange(c *gin.Context, projectID uuid.UUID
 		actorID = &userID
 	}
 
-	h.events.Publish(projectID, eventType, actorID)
+	h.collaboration.BroadcastFieldDeviceDelta(projectID, actorID, projectFieldDeviceDeltaPayload(fieldDevices))
 }
 
-func (h *ProjectHandler) StreamProjectEvents(c *gin.Context) {
-	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
-	if !ok {
+func (h *ProjectHandler) notifyProjectControlCabinetDelta(c *gin.Context, projectID uuid.UUID, controlCabinet domainFacility.ControlCabinet) {
+	if h.collaboration == nil {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, projectID) {
+	var actorID *uuid.UUID
+	if userID, ok := middleware.GetUserID(c); ok {
+		actorID = &userID
+	}
+
+	h.collaboration.BroadcastControlCabinetDelta(projectID, actorID, toProjectCollaborationControlCabinet(controlCabinet))
+}
+
+func (h *ProjectHandler) notifyProjectSPSControllerDelta(c *gin.Context, projectID uuid.UUID, spsController domainFacility.SPSController) {
+	if h.collaboration == nil {
 		return
 	}
 
-	flusher, ok := c.Writer.(http.Flusher)
-	if !ok {
-		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "stream_unsupported", "project.fetch_failed")
-		return
+	var actorID *uuid.UUID
+	if userID, ok := middleware.GetUserID(c); ok {
+		actorID = &userID
 	}
 
-	events, unsubscribe := h.events.Subscribe(projectID)
-	defer unsubscribe()
-
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-	c.Header("X-Accel-Buffering", "no")
-	c.Status(http.StatusOK)
-
-	readyPayload := map[string]any{
-		"type":       "ready",
-		"project_id": projectID,
-		"at":         time.Now().UTC(),
-	}
-	if msg, err := formatSSE(projectEventName, readyPayload); err == nil {
-		_, _ = c.Writer.WriteString(msg)
-		flusher.Flush()
-	}
-
-	heartbeat := time.NewTicker(25 * time.Second)
-	defer heartbeat.Stop()
-
-	for {
-		select {
-		case <-c.Request.Context().Done():
-			return
-		case <-heartbeat.C:
-			_, _ = c.Writer.WriteString(": ping\n\n")
-			flusher.Flush()
-		case event, ok := <-events:
-			if !ok {
-				return
-			}
-			msg, err := formatSSE(projectEventName, event)
-			if err != nil {
-				continue
-			}
-			_, _ = c.Writer.WriteString(msg)
-			flusher.Flush()
-		}
-	}
+	h.collaboration.BroadcastSPSControllerDelta(projectID, actorID, toProjectCollaborationSPSController(spsController))
 }
 
 func (h *ProjectHandler) ensureProjectAccess(c *gin.Context, projectID uuid.UUID) bool {
 	return projectshared.EnsureProjectAccess(c, h.access, projectID)
+}
+
+func projectFieldDeviceDeltaPayload(fieldDevices []domainFacility.FieldDevice) []map[string]interface{} {
+	items := make([]map[string]interface{}, 0, len(fieldDevices))
+	for _, item := range fieldDevices {
+		apparatNr := item.ApparatNr
+		systemPartID := item.SystemPartID
+		items = append(items, map[string]interface{}{
+			"id":                            item.ID,
+			"bmk":                           item.BMK,
+			"description":                   item.Description,
+			"text_fix":                      item.TextIndividuell,
+			"apparat_nr":                    &apparatNr,
+			"sps_controller_system_type_id": item.SPSControllerSystemTypeID,
+			"system_part_id":                &systemPartID,
+			"specification_id":              item.SpecificationID,
+			"apparat_id":                    item.ApparatID,
+			"created_at":                    item.CreatedAt,
+			"updated_at":                    item.UpdatedAt,
+		})
+	}
+	return items
 }

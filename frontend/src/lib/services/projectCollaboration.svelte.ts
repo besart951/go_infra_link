@@ -1,3 +1,4 @@
+import type { ControlCabinet, FieldDevice, SPSController } from '$lib/domain/facility/index.js';
 import type { User } from '$lib/domain/user/index.js';
 
 export interface ProjectCollaboratorPresence {
@@ -21,7 +22,19 @@ export interface ProjectCollaborationRefreshRequest {
   project_id: string;
   scope: string;
   actor_id?: string;
+  entity_ids?: string[];
   device_ids?: string[];
+  at: string;
+}
+
+export interface ProjectCollaborationEntityDeltaMessage {
+  type: 'entity_delta';
+  project_id: string;
+  scope: string;
+  actor_id?: string;
+  control_cabinets?: ControlCabinet[];
+  sps_controllers?: SPSController[];
+  field_devices?: FieldDevice[];
   at: string;
 }
 
@@ -45,6 +58,7 @@ type ProjectCollaborationInboundMessage =
   | ProjectCollaborationSnapshotMessage
   | ProjectCollaborationPresenceMessage
   | ProjectCollaborationEditStatesMessage
+  | ProjectCollaborationEntityDeltaMessage
   | ProjectCollaborationRefreshRequest;
 
 type SocketStatus = 'disconnected' | 'connecting' | 'connected';
@@ -70,6 +84,7 @@ export type SharedFieldDeviceEditorsByDevice = Record<string, SharedFieldDeviceE
 
 interface ProjectCollaborationStateOptions {
   onRefreshRequest?: (message: ProjectCollaborationRefreshRequest) => void;
+  onEntityDelta?: (message: ProjectCollaborationEntityDeltaMessage) => void;
 }
 
 export class ProjectCollaborationState {
@@ -78,6 +93,7 @@ export class ProjectCollaborationState {
   socketStatus = $state<SocketStatus>('disconnected');
 
   private readonly onRefreshRequest?: (message: ProjectCollaborationRefreshRequest) => void;
+  private readonly onEntityDelta?: (message: ProjectCollaborationEntityDeltaMessage) => void;
 
   private projectId: string | null = null;
   private socket: WebSocket | null = null;
@@ -90,6 +106,7 @@ export class ProjectCollaborationState {
 
   constructor(options: ProjectCollaborationStateOptions = {}) {
     this.onRefreshRequest = options.onRefreshRequest;
+    this.onEntityDelta = options.onEntityDelta;
   }
 
   connect(projectId: string): void {
@@ -139,6 +156,18 @@ export class ProjectCollaborationState {
       type: 'refresh_request',
       scope: 'field_device',
       device_ids: deviceIds
+    });
+  }
+
+  publishFieldDeviceDelta(fieldDevices: FieldDevice[]): void {
+    if (fieldDevices.length === 0) {
+      return;
+    }
+
+    this.send({
+      type: 'entity_delta',
+      scope: 'field_device',
+      field_devices: fieldDevices
     });
   }
 
@@ -228,6 +257,9 @@ export class ProjectCollaborationState {
         break;
       case 'edit_states':
         this.fieldDeviceEditStates = message.edit_states ?? [];
+        break;
+      case 'entity_delta':
+        this.onEntityDelta?.(message);
         break;
       case 'refresh_request':
         this.onRefreshRequest?.(message);

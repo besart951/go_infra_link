@@ -6,6 +6,7 @@ import { buildFieldDevice } from '$lib/test/fieldDevice.fixtures.js';
 
 const mockDelete = vi.fn();
 const mockBulkDelete = vi.fn();
+const mockGet = vi.fn();
 const mockList = vi.fn();
 const mockAddToast = vi.fn();
 
@@ -65,7 +66,7 @@ vi.mock('$lib/infrastructure/api/fieldDeviceRepository.js', () => ({
     multiCreate: vi.fn(),
     bulkUpdate: vi.fn(),
     list: (...args: unknown[]) => mockList(...args),
-    get: vi.fn(),
+    get: (...args: unknown[]) => mockGet(...args),
     create: vi.fn(),
     update: vi.fn(),
     getOptions: vi.fn(),
@@ -97,7 +98,11 @@ vi.mock('$lib/infrastructure/api/systemPartRepository.js', () => ({
 
 vi.mock('$lib/infrastructure/api/projectRepository.js', () => ({
   projectRepository: {
-    addFieldDevice: vi.fn().mockResolvedValue(undefined)
+    addFieldDevice: vi.fn().mockResolvedValue(undefined),
+    addFieldDevices: vi.fn().mockResolvedValue({
+      success_field_device_ids: [],
+      association_errors: []
+    })
   }
 }));
 
@@ -134,6 +139,7 @@ describe('FieldDeviceListView', () => {
     vi.clearAllMocks();
     resetDevices([]);
     mockDelete.mockResolvedValue(undefined);
+    mockGet.mockImplementation(async (id: string) => listItems.find((item) => item.id === id));
     mockBulkDelete.mockResolvedValue({
       results: [{ id: 'fd-1', success: true }],
       total_count: 1,
@@ -240,5 +246,134 @@ describe('FieldDeviceListView', () => {
     await waitFor(() => {
       expect(mockList).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('refreshes visible device ids without full list reload', async () => {
+    const device = buildFieldDevice();
+    const updatedDevice = { ...device, description: 'Updated remotely' };
+    resetDevices([device]);
+    mockGet.mockResolvedValue(updatedDevice);
+
+    const rendered = render(FieldDeviceListView, {});
+
+    await waitFor(() => {
+      expect(mockList).toHaveBeenCalledTimes(1);
+    });
+
+    await rendered.rerender({
+      refreshRequest: {
+        key: 1,
+        deviceIds: [device.id]
+      }
+    });
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith(device.id);
+    });
+    expect(mockList).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies field device delta without follow-up fetch', async () => {
+    const device = buildFieldDevice();
+    const updatedDevice = { ...device, description: 'Updated by delta' };
+    resetDevices([device]);
+
+    const rendered = render(FieldDeviceListView, {});
+
+    await waitFor(() => {
+      expect(mockList).toHaveBeenCalledTimes(1);
+    });
+
+    await rendered.rerender({
+      refreshRequest: {
+        key: 1,
+        devices: [updatedDevice]
+      }
+    });
+
+    await waitFor(() => {
+      expect(mockGet).not.toHaveBeenCalled();
+    });
+    expect(mockList).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes visible devices for targeted sps controller ids without full list reload', async () => {
+    const device = buildFieldDevice({
+      sps_controller_system_type: {
+        id: 'system-type-1',
+        sps_controller_id: 'controller-1',
+        system_type_id: 'type-1',
+        sps_controller_name: 'SPS 1',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z'
+      }
+    });
+    const updatedDevice = {
+      ...device,
+      sps_controller_system_type: {
+        ...device.sps_controller_system_type!,
+        sps_controller_name: 'SPS 1 updated'
+      }
+    };
+    resetDevices([device]);
+    mockGet.mockResolvedValue(updatedDevice);
+
+    const rendered = render(FieldDeviceListView, {});
+
+    await waitFor(() => {
+      expect(mockList).toHaveBeenCalledTimes(1);
+    });
+
+    await rendered.rerender({
+      refreshRequest: {
+        key: 1,
+        spsControllerIds: ['controller-1']
+      }
+    });
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith(device.id);
+    });
+    expect(mockList).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies sps controller delta to visible field devices without follow-up fetch', async () => {
+    const device = buildFieldDevice({
+      sps_controller_system_type: {
+        id: 'system-type-1',
+        sps_controller_id: 'controller-1',
+        system_type_id: 'type-1',
+        sps_controller_name: 'SPS 1',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z'
+      }
+    });
+    resetDevices([device]);
+
+    const rendered = render(FieldDeviceListView, {});
+
+    await waitFor(() => {
+      expect(mockList).toHaveBeenCalledTimes(1);
+    });
+
+    await rendered.rerender({
+      refreshRequest: {
+        key: 1,
+        spsControllers: [
+          {
+            id: 'controller-1',
+            control_cabinet_id: 'cabinet-1',
+            device_name: 'SPS 1 updated',
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z'
+          }
+        ]
+      }
+    });
+
+    await waitFor(() => {
+      expect(mockGet).not.toHaveBeenCalled();
+    });
+    expect(mockList).toHaveBeenCalledTimes(1);
   });
 });

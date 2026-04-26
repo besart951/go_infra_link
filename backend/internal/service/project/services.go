@@ -22,6 +22,7 @@ type Dependencies struct {
 	SPSControllerSystemTypes domainFacility.SPSControllerSystemTypeStore
 	FieldDevices             domainFacility.FieldDeviceStore
 	HierarchyCopier          *facilityservice.HierarchyCopier
+	FieldDeviceCreator       fieldDeviceCreator
 }
 
 type Services struct {
@@ -70,6 +71,7 @@ func NewServices(deps Dependencies, cfgs ...Config) *Services {
 		spsControllerSystemRepo:   deps.SPSControllerSystemTypes,
 		fieldDeviceRepo:           deps.FieldDevices,
 		hierarchyCopier:           deps.HierarchyCopier,
+		fieldDeviceCreator:        deps.FieldDeviceCreator,
 	}
 	services.FacilityLink.bindTransactions(tx)
 

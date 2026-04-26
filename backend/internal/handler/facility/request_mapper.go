@@ -373,18 +373,6 @@ func applyApparatUpdate(target *domainFacility.Apparat, req dto.UpdateApparatReq
 	}
 }
 
-func toObjectDataModel(req dto.CreateObjectDataRequest) *domainFacility.ObjectData {
-	obj := &domainFacility.ObjectData{
-		Description: req.Description,
-		Version:     req.Version,
-		ProjectID:   req.ProjectID,
-	}
-	if req.IsActive != nil {
-		obj.IsActive = *req.IsActive
-	}
-	return obj
-}
-
 func toObjectDataTemplateCreate(req dto.CreateObjectDataRequest) domainFacility.ObjectDataTemplateCreate {
 	input := domainFacility.ObjectDataTemplateCreate{
 		Description: req.Description,
@@ -412,21 +400,6 @@ func toObjectDataTemplateUpdate(req dto.UpdateObjectDataRequest) domainFacility.
 		input.BacnetObjects = &bacnetObjects
 	}
 	return input
-}
-
-func applyObjectDataUpdate(target *domainFacility.ObjectData, req dto.UpdateObjectDataRequest) {
-	if req.Description != nil {
-		target.Description = *req.Description
-	}
-	if req.Version != nil {
-		target.Version = *req.Version
-	}
-	if req.IsActive != nil {
-		target.IsActive = *req.IsActive
-	}
-	if req.ProjectID != nil {
-		target.ProjectID = req.ProjectID
-	}
 }
 
 func toStateTextModel(req dto.CreateStateTextRequest) *domainFacility.StateText {

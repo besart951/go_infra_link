@@ -70,6 +70,9 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 
 	fieldDevice, err := h.service.GetByID(c.Request.Context(), id)
 	if err != nil {
+		if suppressCanceledRequestError(c, err) {
+			return
+		}
 		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
 			return
 		}
@@ -157,6 +160,9 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 
 	result, err := h.service.ListWithFilters(c.Request.Context(), params, filters)
 	if err != nil {
+		if suppressCanceledRequestError(c, err) {
+			return
+		}
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
@@ -205,6 +211,9 @@ func (h *FieldDeviceHandler) ListAvailableApparatNumbers(c *gin.Context) {
 
 	available, err := h.service.ListAvailableApparatNumbers(c.Request.Context(), *spsControllerSystemTypeID, *systemPartID, *apparatID)
 	if err != nil {
+		if suppressCanceledRequestError(c, err) {
+			return
+		}
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
@@ -223,6 +232,9 @@ func (h *FieldDeviceHandler) ListAvailableApparatNumbers(c *gin.Context) {
 func (h *FieldDeviceHandler) GetFieldDeviceOptions(c *gin.Context) {
 	options, err := h.service.GetFieldDeviceOptions(c.Request.Context())
 	if err != nil {
+		if suppressCanceledRequestError(c, err) {
+			return
+		}
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}

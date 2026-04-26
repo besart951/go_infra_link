@@ -60,6 +60,62 @@ func TestToFieldDeviceSpecificationPatchPreservesExplicitNull(t *testing.T) {
 	}
 }
 
+func TestListAvailableApparatNumbersSuppressesCanceledRequestError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &fakeFieldDeviceHandlerService{listAvailableErr: context.Canceled}
+	handler := NewFieldDeviceHandler(service)
+
+	recorder := httptest.NewRecorder()
+	ginContext, _ := gin.CreateTestContext(recorder)
+	ginContext.Request = httptest.NewRequest(
+		http.MethodGet,
+		"/field-devices/available-apparat-nr?sps_controller_system_type_id="+uuid.NewString()+"&apparat_id="+uuid.NewString()+"&system_part_id="+uuid.NewString(),
+		nil,
+	)
+
+	handler.ListAvailableApparatNumbers(ginContext)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected no response to be written, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if recorder.Body.Len() != 0 {
+		t.Fatalf("expected empty body, got %q", recorder.Body.String())
+	}
+	if !ginContext.IsAborted() {
+		t.Fatal("expected request to be aborted")
+	}
+	if service.listAvailableCalls != 1 {
+		t.Fatalf("expected service to be called once, got %d", service.listAvailableCalls)
+	}
+}
+
+func TestListFieldDevicesSuppressesCanceledRequestError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &fakeFieldDeviceHandlerService{listWithFiltersErr: context.Canceled}
+	handler := NewFieldDeviceHandler(service)
+
+	recorder := httptest.NewRecorder()
+	ginContext, _ := gin.CreateTestContext(recorder)
+	ginContext.Request = httptest.NewRequest(http.MethodGet, "/field-devices?page=1&limit=20", nil)
+
+	handler.ListFieldDevices(ginContext)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected no response to be written, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if recorder.Body.Len() != 0 {
+		t.Fatalf("expected empty body, got %q", recorder.Body.String())
+	}
+	if !ginContext.IsAborted() {
+		t.Fatal("expected request to be aborted")
+	}
+	if service.listWithFiltersCalls != 1 {
+		t.Fatalf("expected service to be called once, got %d", service.listWithFiltersCalls)
+	}
+}
+
 type fieldDeviceStatusTrackingWriter struct {
 	gin.ResponseWriter
 	statusWrites []int
@@ -73,6 +129,8 @@ func (w *fieldDeviceStatusTrackingWriter) WriteHeader(code int) {
 type fakeFieldDeviceHandlerService struct {
 	listWithFiltersCalls int
 	listAvailableCalls   int
+	listWithFiltersErr   error
+	listAvailableErr     error
 }
 
 func (s *fakeFieldDeviceHandlerService) Create(context.Context, *domainFacility.FieldDevice) error {
@@ -97,6 +155,9 @@ func (s *fakeFieldDeviceHandlerService) List(context.Context, int, int, string) 
 
 func (s *fakeFieldDeviceHandlerService) ListWithFilters(context.Context, domain.PaginationParams, domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
 	s.listWithFiltersCalls++
+	if s.listWithFiltersErr != nil {
+		return nil, s.listWithFiltersErr
+	}
 	return &domain.PaginatedList[domainFacility.FieldDevice]{
 		Items:      []domainFacility.FieldDevice{},
 		Page:       1,
@@ -106,6 +167,9 @@ func (s *fakeFieldDeviceHandlerService) ListWithFilters(context.Context, domain.
 
 func (s *fakeFieldDeviceHandlerService) ListAvailableApparatNumbers(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) ([]int, error) {
 	s.listAvailableCalls++
+	if s.listAvailableErr != nil {
+		return nil, s.listAvailableErr
+	}
 	return nil, nil
 }
 

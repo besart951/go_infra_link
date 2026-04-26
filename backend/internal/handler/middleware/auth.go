@@ -6,13 +6,15 @@ import (
 	"strings"
 
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
 const (
-	ContextUserIDKey = "user_id"
+	ContextUserIDKey   = "user_id"
+	ContextUserRoleKey = "user_role"
 )
 
 // AuthGuard creates a middleware that validates authentication using a TokenValidator port.
@@ -74,6 +76,15 @@ func GetUserID(c *gin.Context) (uuid.UUID, bool) {
 	}
 	id, ok := v.(uuid.UUID)
 	return id, ok
+}
+
+func GetUserRole(c *gin.Context) (domainUser.Role, bool) {
+	v, ok := c.Get(ContextUserRoleKey)
+	if !ok {
+		return "", false
+	}
+	role, ok := v.(domainUser.Role)
+	return role, ok
 }
 
 func isSafeMethod(method string) bool {

@@ -28,10 +28,17 @@ type Handler struct {
 	access       projectshared.AccessPolicyService
 	facilityLink FacilityLinkService
 	notify       projectshared.ProjectChangeNotifier
+	notifyDelta  ProjectSPSControllerDeltaNotifier
 }
 
-func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier) *Handler {
-	return &Handler{access: access, facilityLink: facilityLink, notify: notify}
+type ProjectSPSControllerDeltaNotifier func(*gin.Context, uuid.UUID, domainFacility.SPSController)
+
+func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier, notifyDelta ...ProjectSPSControllerDeltaNotifier) *Handler {
+	var delta ProjectSPSControllerDeltaNotifier
+	if len(notifyDelta) > 0 {
+		delta = notifyDelta[0]
+	}
+	return &Handler{access: access, facilityLink: facilityLink, notify: notify, notifyDelta: delta}
 }
 
 // CreateProjectSPSController godoc
@@ -72,7 +79,7 @@ func (h *Handler) CreateProjectSPSController(c *gin.Context) {
 	}
 
 	if h.notify != nil {
-		h.notify(c, projectID, "project.sps_controller.created")
+		h.notify(c, projectID, "project.sps_controller.created", created.SPSControllerID.String())
 	}
 
 	c.JSON(http.StatusCreated, toProjectSPSControllerResponse(*created))
@@ -146,8 +153,10 @@ func (h *Handler) CopyProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.sps_controller.copied")
+	if h.notifyDelta != nil {
+		h.notifyDelta(c, projectID, *copyEntity)
+	} else if h.notify != nil {
+		h.notify(c, projectID, "project.sps_controller.copied", copyEntity.ID.String())
 	}
 
 	c.JSON(http.StatusCreated, sharedpresenter.ToSPSControllerResponse(*copyEntity))
@@ -178,7 +187,7 @@ func (h *Handler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 	}
 
 	if h.notify != nil {
-		h.notify(c, projectID, "project.sps_controller_system_type.copied")
+		h.notify(c, projectID, "project.sps_controller_system_type.copied", copyEntity.SPSControllerID.String())
 	}
 
 	c.JSON(http.StatusCreated, sharedpresenter.ToSPSControllerSystemTypeResponse(*copyEntity))
@@ -227,7 +236,7 @@ func (h *Handler) UpdateProjectSPSController(c *gin.Context) {
 	}
 
 	if h.notify != nil {
-		h.notify(c, projectID, "project.sps_controller.updated")
+		h.notify(c, projectID, "project.sps_controller.updated", updated.SPSControllerID.String())
 	}
 
 	c.JSON(http.StatusOK, toProjectSPSControllerResponse(*updated))

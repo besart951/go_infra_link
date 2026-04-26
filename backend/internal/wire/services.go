@@ -150,7 +150,7 @@ func buildFacilityRepositories(repos *Repositories) facilityservice.Repositories
 	}
 }
 
-func buildProjectDependencies(repos *Repositories, hierarchyCopier *facilityservice.HierarchyCopier) projectservice.Dependencies {
+func buildProjectDependencies(repos *Repositories, facilityServices *facilityservice.Services) projectservice.Dependencies {
 	return projectservice.Dependencies{
 		Projects:                 repos.Project,
 		ProjectControlCabinets:   repos.ProjectControlCabinets,
@@ -165,7 +165,8 @@ func buildProjectDependencies(repos *Repositories, hierarchyCopier *facilityserv
 		SPSControllers:           repos.FacilitySPSControllers,
 		SPSControllerSystemTypes: repos.FacilitySPSControllerSystemTypes,
 		FieldDevices:             repos.FacilityFieldDevices,
-		HierarchyCopier:          hierarchyCopier,
+		HierarchyCopier:          facilityServices.HierarchyCopier,
+		FieldDeviceCreator:       facilityServices.FieldDevice,
 	}
 }
 
@@ -181,10 +182,10 @@ func buildProjectServices(gormDB *gorm.DB, repos *Repositories, facilityServices
 		}
 
 		txFacilityServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return buildProjectDependencies(txRepos, txFacilityServices.HierarchyCopier), nil
+		return buildProjectDependencies(txRepos, txFacilityServices), nil
 	}
 
-	return projectservice.NewServices(buildProjectDependencies(repos, facilityServices.HierarchyCopier), projectservice.Config{
+	return projectservice.NewServices(buildProjectDependencies(repos, facilityServices), projectservice.Config{
 		TxRunner:       txRunner,
 		TxDependencies: txDependencies,
 	})

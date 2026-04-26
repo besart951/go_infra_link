@@ -4,4 +4,19 @@
     root * /usr/share/caddy
     file_server
     try_files {path} /index.html
+
+    header {
+        # Prevent clickjacking: only allow framing from same origin
+        X-Frame-Options "SAMEORIGIN"
+        # Prevent MIME-type sniffing
+        X-Content-Type-Options "nosniff"
+        # Control referrer information
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Enable HSTS (enforced by the browser once received over HTTPS)
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        # Disable FLoC / interest-cohort tracking
+        Permissions-Policy "interest-cohort=()"
+        # Remove Server header to avoid version disclosure
+        -Server
+    }
 }

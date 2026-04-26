@@ -27,10 +27,17 @@ type Handler struct {
 	access       projectshared.AccessPolicyService
 	facilityLink FacilityLinkService
 	notify       projectshared.ProjectChangeNotifier
+	notifyDelta  ProjectControlCabinetDeltaNotifier
 }
 
-func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier) *Handler {
-	return &Handler{access: access, facilityLink: facilityLink, notify: notify}
+type ProjectControlCabinetDeltaNotifier func(*gin.Context, uuid.UUID, domainFacility.ControlCabinet)
+
+func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier, notifyDelta ...ProjectControlCabinetDeltaNotifier) *Handler {
+	var delta ProjectControlCabinetDeltaNotifier
+	if len(notifyDelta) > 0 {
+		delta = notifyDelta[0]
+	}
+	return &Handler{access: access, facilityLink: facilityLink, notify: notify, notifyDelta: delta}
 }
 
 // CreateProjectControlCabinet godoc
@@ -71,7 +78,7 @@ func (h *Handler) CreateProjectControlCabinet(c *gin.Context) {
 	}
 
 	if h.notify != nil {
-		h.notify(c, projectID, "project.control_cabinet.created")
+		h.notify(c, projectID, "project.control_cabinet.created", created.ControlCabinetID.String())
 	}
 
 	c.JSON(http.StatusCreated, toProjectControlCabinetResponse(*created))
@@ -145,8 +152,10 @@ func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.control_cabinet.copied")
+	if h.notifyDelta != nil {
+		h.notifyDelta(c, projectID, *copyEntity)
+	} else if h.notify != nil {
+		h.notify(c, projectID, "project.control_cabinet.copied", copyEntity.ID.String())
 	}
 
 	c.JSON(http.StatusCreated, sharedpresenter.ToControlCabinetResponse(*copyEntity))
@@ -195,7 +204,7 @@ func (h *Handler) UpdateProjectControlCabinet(c *gin.Context) {
 	}
 
 	if h.notify != nil {
-		h.notify(c, projectID, "project.control_cabinet.updated")
+		h.notify(c, projectID, "project.control_cabinet.updated", updated.ControlCabinetID.String())
 	}
 
 	c.JSON(http.StatusOK, toProjectControlCabinetResponse(*updated))

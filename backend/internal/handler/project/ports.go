@@ -19,7 +19,7 @@ type ProjectLifecycleService interface {
 }
 
 type ProjectAccessPolicyService interface {
-	CanAccessProject(ctx context.Context, requesterID, projectID uuid.UUID) (bool, error)
+	CanAccessProject(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role) (bool, error)
 }
 
 type ProjectMembershipService interface {
@@ -48,6 +48,8 @@ type ProjectFacilityLinkService interface {
 	CreateFieldDevice(ctx context.Context, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error)
 	UpdateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error)
 	DeleteFieldDevice(ctx context.Context, linkID, projectID uuid.UUID) error
+	MultiCreateFieldDevices(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) ([]uuid.UUID, []string)
+	MultiCreateAndAssignFieldDevices(ctx context.Context, projectID uuid.UUID, items []domainFacility.FieldDeviceCreateItem) (*domainFacility.FieldDeviceMultiCreateResult, error)
 	ListControlCabinets(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error)
 	ListSPSControllers(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectSPSController], error)
 	ListFieldDevices(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectFieldDevice], error)

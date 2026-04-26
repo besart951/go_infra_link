@@ -14,13 +14,17 @@ type ProjectAccessPolicyService struct {
 	userRepo domainUser.UserRepository
 }
 
-func (s *ProjectAccessPolicyService) CanAccessProject(ctx context.Context, requesterID, projectID uuid.UUID) (bool, error) {
+func (s *ProjectAccessPolicyService) CanAccessProject(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role) (bool, error) {
 	project, err := domain.GetByID(ctx, s.repo, projectID)
 	if err != nil {
 		return false, err
 	}
 
 	if project.CreatorID == requesterID {
+		return true, nil
+	}
+
+	if requesterRole != nil && domainUser.IsAdmin(*requesterRole) {
 		return true, nil
 	}
 

@@ -1,6 +1,7 @@
 package handlerutil
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -84,6 +85,26 @@ func TestRespondMappedDomainErrorWritesMappedError(t *testing.T) {
 	}
 	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("expected status 404, got %d", recorder.Code)
+	}
+}
+
+func TestRespondErrorSuppressesCanceledRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	ginContext, _ := gin.CreateTestContext(recorder)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	ctx, cancel := context.WithCancel(req.Context())
+	cancel()
+	ginContext.Request = req.WithContext(ctx)
+
+	RespondError(ginContext, http.StatusInternalServerError, "fetch_failed", "failed")
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected no response to be written, got %d", recorder.Code)
+	}
+	if recorder.Body.Len() != 0 {
+		t.Fatalf("expected empty body, got %q", recorder.Body.String())
 	}
 }
 

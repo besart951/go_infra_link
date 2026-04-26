@@ -23,7 +23,12 @@ type ProjectFacilityLinkService struct {
 	spsControllerSystemRepo   domainFacility.SPSControllerSystemTypeStore
 	fieldDeviceRepo           domainFacility.FieldDeviceStore
 	hierarchyCopier           *facilityservice.HierarchyCopier
+	fieldDeviceCreator        fieldDeviceCreator
 	tx                        txCoordinator
+}
+
+type fieldDeviceCreator interface {
+	MultiCreate(ctx context.Context, items []domainFacility.FieldDeviceCreateItem) *domainFacility.FieldDeviceMultiCreateResult
 }
 
 func (s *ProjectFacilityLinkService) bindTransactions(tx txCoordinator) {
@@ -267,4 +272,45 @@ func (s *ProjectFacilityLinkService) ListObjectData(ctx context.Context, project
 
 func (s *ProjectFacilityLinkService) MultiCreateFieldDevices(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) ([]uuid.UUID, []string) {
 	return s.assignments().multiAssignFieldDevices(ctx, projectID, fieldDeviceIDs)
+}
+
+func (s *ProjectFacilityLinkService) MultiCreateAndAssignFieldDevices(ctx context.Context, projectID uuid.UUID, items []domainFacility.FieldDeviceCreateItem) (*domainFacility.FieldDeviceMultiCreateResult, error) {
+	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainFacility.FieldDeviceMultiCreateResult, error) {
+		return txService.multiCreateAndAssignFieldDevices(ctx, projectID, items)
+	})
+}
+
+func (s *ProjectFacilityLinkService) multiCreateAndAssignFieldDevices(ctx context.Context, projectID uuid.UUID, items []domainFacility.FieldDeviceCreateItem) (*domainFacility.FieldDeviceMultiCreateResult, error) {
+	if _, err := domain.GetByID(ctx, s.projectRepo, projectID); err != nil {
+		return nil, err
+	}
+	if s.fieldDeviceCreator == nil {
+		return nil, domain.ErrInvalidArgument
+	}
+
+	result := s.fieldDeviceCreator.MultiCreate(ctx, items)
+	fieldDeviceIDs := successfulFieldDeviceIDs(result)
+	if len(fieldDeviceIDs) == 0 {
+		return result, nil
+	}
+
+	if err := s.assignments().assignFieldDeviceIDs(ctx, projectID, fieldDeviceIDs); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func successfulFieldDeviceIDs(result *domainFacility.FieldDeviceMultiCreateResult) []uuid.UUID {
+	if result == nil {
+		return nil
+	}
+
+	ids := make([]uuid.UUID, 0, result.SuccessCount)
+	for _, item := range result.Results {
+		if item.Success && item.FieldDevice != nil {
+			ids = append(ids, item.FieldDevice.ID)
+		}
+	}
+	return ids
 }

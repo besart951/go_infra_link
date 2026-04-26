@@ -16,7 +16,7 @@ func TestService_CanManageRoleHierarchy(t *testing.T) {
 		t.Fatal("expected same-role management to be denied")
 	}
 	if svc.CanManageRole(domainUser.RoleEnterpreneur, domainUser.RolePlaner) {
-		t.Fatal("expected enterpreneur to manage nobody")
+		t.Fatal("expected entrepreneur to manage nobody")
 	}
 }
 

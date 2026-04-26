@@ -6,7 +6,9 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
+	"github.com/besart951/go_infra_link/backend/internal/requestutil"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -19,8 +21,13 @@ func respondLocalizedError(c *gin.Context, status int, code, translationKey stri
 	handlerutil.RespondLocalizedError(c, status, code, translationKey)
 }
 
-func respondValidationError(c *gin.Context, fields map[string]string) {
-	handlerutil.RespondValidationError(c, fields)
+func suppressCanceledRequestError(c *gin.Context, err error) bool {
+	if !requestutil.ShouldSuppressErrorResponse(c.Request.Context(), err) {
+		return false
+	}
+
+	c.Abort()
+	return true
 }
 
 func respondNotFound(c *gin.Context, message string) {
@@ -84,6 +91,19 @@ func respondLocalizedNotFoundIf(c *gin.Context, err error, translationKey string
 
 func parseUUIDString(s string) (uuid.UUID, error) {
 	return uuid.Parse(s)
+}
+
+func currentActorID(c *gin.Context) *uuid.UUID {
+	if c == nil {
+		return nil
+	}
+
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		return nil
+	}
+
+	return &userID
 }
 
 func respondLocalizedDomainError(c *gin.Context, err error, fallbackCode, fallbackKey string, mappings ...handlerutil.ErrorMapping) bool {

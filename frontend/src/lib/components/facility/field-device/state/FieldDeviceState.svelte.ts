@@ -6,7 +6,6 @@ import { ListEntityUseCase } from '$lib/application/useCases/listEntityUseCase.j
 import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
 import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
-import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
 import { canPerform } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
 import type { Apparat, FieldDevice, SystemPart } from '$lib/domain/facility/index.js';
@@ -15,7 +14,7 @@ import type {
   FieldDeviceStateProps,
   SharedFieldDeviceEditorsByDevice
 } from './types.js';
-import { toProjectIdResolver } from './types.js';
+import { resolvePageSize, toProjectIdResolver } from './types.js';
 import { FieldDeviceFetchStrategyFactory } from './strategies/FieldDeviceFetchStrategyFactory.js';
 
 export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDeviceFilters> {
@@ -34,7 +33,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   private readonly resolveProjectId: () => string | undefined;
   private readonly resolveSharedFieldDeviceEditors: () => SharedFieldDeviceEditorsByDevice;
-  private readonly onFieldDevicesSaved?: (deviceIds: string[]) => void;
+  private readonly onFieldDevicesSaved?: (devices: FieldDevice[]) => void;
   private readonly manageFieldDeviceUseCase = new ManageFieldDeviceUseCase(fieldDeviceRepository);
   private readonly listApparatsUseCase = new ListEntityUseCase(apparatRepository);
   private readonly listSystemPartsUseCase = new ListEntityUseCase(systemPartRepository);
@@ -43,7 +42,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     const resolveProjectId = toProjectIdResolver(props.projectId);
     const strategyFactory = new FieldDeviceFetchStrategyFactory(resolveProjectId);
 
-    super(strategyFactory.create(), { pageSize: props.pageSize ?? 300 });
+    super(strategyFactory.create(), { pageSize: resolvePageSize(props.pageSize) ?? 300 });
 
     this.resolveProjectId = resolveProjectId;
     this.resolveSharedFieldDeviceEditors = props.sharedFieldDeviceEditors ?? (() => ({}));
@@ -51,7 +50,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     this.editing = useFieldDeviceEditing({
       projectId: () => this.projectId,
       onSharedStateChange: props.onSharedFieldDeviceStateChange,
-      onSaveSuccess: (deviceIds) => this.onFieldDevicesSaved?.(deviceIds)
+      onSaveSuccess: () => undefined
     });
   }
 
@@ -217,31 +216,133 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     }
   }
 
-  async handleMultiCreateSuccess(createdDevices: FieldDevice[]): Promise<void> {
+  async handleMultiCreateSuccess(_createdDevices: FieldDevice[]): Promise<void> {
     this.showMultiCreateForm = false;
 
-    if (this.projectId) {
-      try {
-        await Promise.all(
-          createdDevices.map((device) =>
-            projectRepository.addFieldDevice(this.projectId!, device.id)
-          )
-        );
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : translate('field_device.toasts.partial_link_failed');
-        addToast(translate('field_device.toasts.link_failed', { message }), 'error');
-      }
+    await this.reload();
+  }
+
+  async refreshDevices(deviceIds: string[]): Promise<void> {
+    const uniqueDeviceIds = [...new Set(deviceIds.filter(Boolean))];
+
+    if (uniqueDeviceIds.length === 0) {
+      await this.reload();
+      return;
     }
 
-    await this.reload();
+    if (this.searchText || this.orderBy || this.order || this.hasActiveFilters) {
+      await this.reload();
+      return;
+    }
+
+    const visibleIds = new Set(this.items.map((item) => item.id));
+    if (uniqueDeviceIds.some((id) => !visibleIds.has(id))) {
+      await this.reload();
+      return;
+    }
+
+    try {
+      const updatedItems = await Promise.all(
+        uniqueDeviceIds.map((id) => fieldDeviceRepository.get(id))
+      );
+
+      this.replaceItems(updatedItems);
+    } catch (error) {
+      console.error('Failed to refresh field devices:', error);
+      await this.reload();
+    }
+  }
+
+  async applyDeviceDelta(fieldDevices: FieldDevice[]): Promise<void> {
+    const updatedDevices = [...new Map(fieldDevices.map((item) => [item.id, item])).values()];
+
+    if (updatedDevices.length === 0) {
+      return;
+    }
+
+    if (this.searchText || this.orderBy || this.order || this.hasActiveFilters) {
+      await this.reload();
+      return;
+    }
+
+    const visibleIDs = new Set(this.items.map((item) => item.id));
+    const visibleDevices = updatedDevices.filter((item) => visibleIDs.has(item.id));
+    const hasNewDevices = updatedDevices.some((item) => !visibleIDs.has(item.id));
+
+    if (hasNewDevices) {
+      await this.reload();
+      return;
+    }
+
+    this.replaceItems(visibleDevices);
+  }
+
+  async refreshDevicesForSPSControllers(spsControllerIds: string[]): Promise<void> {
+    const uniqueSPSControllerIDs = [...new Set(spsControllerIds.filter(Boolean))];
+
+    if (uniqueSPSControllerIDs.length === 0) {
+      await this.reload();
+      return;
+    }
+
+    if (this.searchText || this.orderBy || this.order || this.hasActiveFilters) {
+      await this.reload();
+      return;
+    }
+
+    const controllerIDs = new Set(uniqueSPSControllerIDs);
+    const visibleDeviceIDs = this.items
+      .filter((item) => {
+        const controllerID = item.sps_controller_system_type?.sps_controller_id;
+        return controllerID ? controllerIDs.has(controllerID) : false;
+      })
+      .map((item) => item.id);
+
+    if (visibleDeviceIDs.length === 0) {
+      return;
+    }
+
+    await this.refreshDevices(visibleDeviceIDs);
+  }
+
+  applySPSControllerDelta(
+    spsControllers: import('$lib/domain/facility/index.js').SPSController[]
+  ): void {
+    const controllerNames = new Map(
+      spsControllers
+        .filter((item) => item.id && item.device_name)
+        .map((item) => [item.id, item.device_name])
+    );
+
+    if (controllerNames.size === 0) {
+      return;
+    }
+
+    this.items = this.items.map((item) => {
+      const systemType = item.sps_controller_system_type;
+      if (!systemType?.sps_controller_id) {
+        return item;
+      }
+
+      const nextName = controllerNames.get(systemType.sps_controller_id);
+      if (!nextName || systemType.sps_controller_name === nextName) {
+        return item;
+      }
+
+      return {
+        ...item,
+        sps_controller_system_type: {
+          ...systemType,
+          sps_controller_name: nextName
+        }
+      };
+    });
   }
 
   savePendingEdits(): void {
     this.editing.saveAllPendingEdits(this.items, (updatedItems) => {
       this.replaceItems(updatedItems);
+      this.onFieldDevicesSaved?.(updatedItems);
     });
   }
 

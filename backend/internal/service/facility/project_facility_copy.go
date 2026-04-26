@@ -25,6 +25,14 @@ type projectFacilityCopy struct {
 	bacnetAlarmValueRepo    domainFacility.BacnetObjectAlarmValueRepository
 }
 
+type spsControllerBulkCreator interface {
+	BulkCreate(ctx context.Context, entities []*domainFacility.SPSController, batchSize int) error
+}
+
+type spsControllerSystemTypeBulkCreator interface {
+	BulkCreate(ctx context.Context, entities []*domainFacility.SPSControllerSystemType, batchSize int) error
+}
+
 func (s *FieldDeviceService) projectFacilityCopy() projectFacilityCopy {
 	return projectFacilityCopy{
 		fieldDeviceRepo:         s.repo,
@@ -209,6 +217,9 @@ func (c projectFacilityCopy) copySPSControllersForControlCabinet(ctx context.Con
 		return err
 	}
 
+	spsCopies := make([]*domainFacility.SPSController, 0, len(originalSPSControllers))
+	originalToCopy := make(map[uuid.UUID]*domainFacility.SPSController, len(originalSPSControllers))
+
 	for _, originalSPS := range originalSPSControllers {
 		gaDevice := ""
 		if originalSPS.GADevice != nil {
@@ -243,58 +254,118 @@ func (c projectFacilityCopy) copySPSControllersForControlCabinet(ctx context.Con
 			Gateway:           originalSPS.Gateway,
 			Vlan:              originalSPS.Vlan,
 		}
-		if err := c.spsControllerRepo.Create(ctx, spsCopy); err != nil {
-			return err
-		}
-
-		if err := c.copySystemTypesAndFieldDevicesForSPSController(ctx, originalSPS.ID, spsCopy.ID); err != nil {
-			return err
-		}
+		spsCopies = append(spsCopies, spsCopy)
+		originalToCopy[originalSPS.ID] = spsCopy
 	}
 
-	return nil
+	if err := c.createSPSControllerCopies(ctx, spsCopies); err != nil {
+		return err
+	}
+
+	spsIDMap := make(map[uuid.UUID]uuid.UUID, len(originalToCopy))
+	for originalID, copyEntity := range originalToCopy {
+		spsIDMap[originalID] = copyEntity.ID
+	}
+
+	return c.copySystemTypesAndFieldDevicesForSPSControllers(ctx, spsIDMap)
 }
 
 func (c projectFacilityCopy) copySystemTypesAndFieldDevicesForSPSController(ctx context.Context, originalSPSControllerID, newSPSControllerID uuid.UUID) error {
-	originalSystemTypes, err := c.listSystemTypesBySPSControllerID(ctx, originalSPSControllerID)
+	return c.copySystemTypesAndFieldDevicesForSPSControllers(ctx, map[uuid.UUID]uuid.UUID{originalSPSControllerID: newSPSControllerID})
+}
+
+func (c projectFacilityCopy) copySystemTypesAndFieldDevicesForSPSControllers(ctx context.Context, spsIDMap map[uuid.UUID]uuid.UUID) error {
+	if len(spsIDMap) == 0 {
+		return nil
+	}
+
+	originalSPSControllerIDs := make([]uuid.UUID, 0, len(spsIDMap))
+	for originalID := range spsIDMap {
+		originalSPSControllerIDs = append(originalSPSControllerIDs, originalID)
+	}
+
+	systemTypeIDs, err := c.spsControllerSystemRepo.GetIDsBySPSControllerIDs(ctx, originalSPSControllerIDs)
+	if err != nil {
+		return err
+	}
+	if len(systemTypeIDs) == 0 {
+		return nil
+	}
+
+	originalSystemTypes, err := c.spsControllerSystemRepo.GetByIds(ctx, systemTypeIDs)
 	if err != nil {
 		return err
 	}
 
 	newSystemTypeMap := make(map[uuid.UUID]uuid.UUID, len(originalSystemTypes))
-	if len(originalSystemTypes) > 0 {
-		systemTypesToCreate := make([]domainFacility.SPSControllerSystemType, 0, len(originalSystemTypes))
-		for _, item := range originalSystemTypes {
-			systemTypesToCreate = append(systemTypesToCreate, domainFacility.SPSControllerSystemType{
-				Number:       item.Number,
-				DocumentName: item.DocumentName,
-				SystemTypeID: item.SystemTypeID,
-			})
+	newSystemTypes := make([]*domainFacility.SPSControllerSystemType, 0, len(originalSystemTypes))
+	originalToCopy := make(map[uuid.UUID]*domainFacility.SPSControllerSystemType, len(originalSystemTypes))
+
+	for _, item := range originalSystemTypes {
+		if item == nil {
+			continue
+		}
+		newSPSControllerID, ok := spsIDMap[item.SPSControllerID]
+		if !ok {
+			continue
 		}
 
-		systemTypeMap, err := c.loadSystemTypeDefinitions(ctx, systemTypesToCreate)
-		if err != nil {
-			return err
+		newSystemType := &domainFacility.SPSControllerSystemType{
+			Number:          cloneIntPointer(item.Number),
+			DocumentName:    item.DocumentName,
+			SPSControllerID: newSPSControllerID,
+			SystemTypeID:    item.SystemTypeID,
 		}
-		if err := assignSystemTypeNumbers(systemTypesToCreate, systemTypeMap); err != nil {
-			return err
-		}
+		newSystemTypes = append(newSystemTypes, newSystemType)
+		originalToCopy[item.ID] = newSystemType
+	}
 
-		for idx, item := range systemTypesToCreate {
-			newSystemType := &domainFacility.SPSControllerSystemType{
-				Number:          item.Number,
-				DocumentName:    item.DocumentName,
-				SPSControllerID: newSPSControllerID,
-				SystemTypeID:    item.SystemTypeID,
-			}
-			if err := c.spsControllerSystemRepo.Create(ctx, newSystemType); err != nil {
-				return err
-			}
-			newSystemTypeMap[originalSystemTypes[idx].ID] = newSystemType.ID
-		}
+	if err := c.createSPSControllerSystemTypeCopies(ctx, newSystemTypes); err != nil {
+		return err
+	}
+	for originalID, copyEntity := range originalToCopy {
+		newSystemTypeMap[originalID] = copyEntity.ID
 	}
 
 	return c.copyFieldDevicesForSystemTypes(ctx, newSystemTypeMap)
+}
+
+func (c projectFacilityCopy) createSPSControllerCopies(ctx context.Context, copies []*domainFacility.SPSController) error {
+	if len(copies) == 0 {
+		return nil
+	}
+	if repo, ok := c.spsControllerRepo.(spsControllerBulkCreator); ok {
+		return repo.BulkCreate(ctx, copies, 100)
+	}
+	for _, copyEntity := range copies {
+		if err := c.spsControllerRepo.Create(ctx, copyEntity); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c projectFacilityCopy) createSPSControllerSystemTypeCopies(ctx context.Context, copies []*domainFacility.SPSControllerSystemType) error {
+	if len(copies) == 0 {
+		return nil
+	}
+	if repo, ok := c.spsControllerSystemRepo.(spsControllerSystemTypeBulkCreator); ok {
+		return repo.BulkCreate(ctx, copies, 100)
+	}
+	for _, copyEntity := range copies {
+		if err := c.spsControllerSystemRepo.Create(ctx, copyEntity); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func cloneIntPointer(value *int) *int {
+	if value == nil {
+		return nil
+	}
+	clone := *value
+	return &clone
 }
 
 func (c projectFacilityCopy) copyFieldDevicesForSystemTypes(ctx context.Context, newSystemTypeMap map[uuid.UUID]uuid.UUID) error {
@@ -848,17 +919,6 @@ func toInt64(value any) (int64, bool) {
 
 func (c projectFacilityCopy) listSPSControllersByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]domainFacility.SPSController, error) {
 	result, err := c.spsControllerRepo.GetPaginatedListByControlCabinetID(ctx, controlCabinetID, domain.PaginationParams{
-		Page:  1,
-		Limit: 500,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return result.Items, nil
-}
-
-func (c projectFacilityCopy) listSystemTypesBySPSControllerID(ctx context.Context, spsControllerID uuid.UUID) ([]domainFacility.SPSControllerSystemType, error) {
-	result, err := c.spsControllerSystemRepo.GetPaginatedListBySPSControllerID(ctx, spsControllerID, domain.PaginationParams{
 		Page:  1,
 		Limit: 500,
 	})

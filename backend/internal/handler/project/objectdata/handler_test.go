@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -54,7 +55,7 @@ type fakeProjectAccessPolicyService struct {
 	lastProjectID   uuid.UUID
 }
 
-func (s *fakeProjectAccessPolicyService) CanAccessProject(_ context.Context, requesterID, projectID uuid.UUID) (bool, error) {
+func (s *fakeProjectAccessPolicyService) CanAccessProject(_ context.Context, requesterID, projectID uuid.UUID, _ *domainUser.Role) (bool, error) {
 	s.calls++
 	s.lastRequesterID = requesterID
 	s.lastProjectID = projectID

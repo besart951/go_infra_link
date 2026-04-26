@@ -100,8 +100,8 @@ func TestFieldDeviceRepo_ProjectFilteredListMapsAggregateRelations(t *testing.T)
 	if item.Specification == nil || item.Specification.ID != specification.ID || item.Specification.SpecificationSupplier == nil || *item.Specification.SpecificationSupplier != supplier {
 		t.Fatalf("expected mapped specification, got %+v", item.Specification)
 	}
-	if len(item.BacnetObjects) != 1 || item.BacnetObjects[0].StateText == nil || item.BacnetObjects[0].NotificationClass == nil || item.BacnetObjects[0].AlarmType == nil {
-		t.Fatalf("expected mapped bacnet object relations, got %+v", item.BacnetObjects)
+	if len(item.BacnetObjects) != 1 || item.BacnetObjects[0].StateTextID == nil || item.BacnetObjects[0].NotificationClassID == nil || item.BacnetObjects[0].AlarmTypeID == nil {
+		t.Fatalf("expected mapped bacnet object relation ids, got %+v", item.BacnetObjects)
 	}
 }
 

@@ -17,7 +17,7 @@ COPY . .
 RUN pnpm build -- --logLevel warn
 
 # Serve Stage
-FROM caddy:2.11 AS runtime
+FROM caddy:2.11.2-alpine AS runtime
 
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=builder /app/build /usr/share/caddy

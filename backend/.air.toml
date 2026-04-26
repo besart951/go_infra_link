@@ -1,4 +1,5 @@
 #:schema https://json.schemastore.org/any.json
+#:tombi schema.strict = false
 
 root = "."
 tmp_dir = "tmp"

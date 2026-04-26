@@ -3,12 +3,15 @@ package facility
 import (
 	"context"
 
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
 )
 
 type ProjectRefreshBroadcaster interface {
-	BroadcastRefreshForControlCabinet(ctx context.Context, controlCabinetID uuid.UUID, scope string)
-	BroadcastRefreshForSPSController(ctx context.Context, spsControllerID uuid.UUID, scope string)
+	BroadcastRefreshForControlCabinet(ctx context.Context, actorID *uuid.UUID, controlCabinetID uuid.UUID, scope string)
+	BroadcastRefreshForSPSController(ctx context.Context, actorID *uuid.UUID, spsControllerID uuid.UUID, scope string)
+	BroadcastControlCabinetDelta(ctx context.Context, actorID *uuid.UUID, controlCabinet domainFacility.ControlCabinet)
+	BroadcastSPSControllerDelta(ctx context.Context, actorID *uuid.UUID, spsController domainFacility.SPSController)
 }
 
 // ServiceDeps groups service dependencies for facility handler construction.

@@ -20,11 +20,19 @@ func NewSPSControllerHandler(service SPSControllerService, collaboration Project
 	return &SPSControllerHandler{service: service, collaboration: collaboration}
 }
 
-func (h *SPSControllerHandler) broadcastProjectRefresh(ctx context.Context, spsControllerID uuid.UUID) {
+func (h *SPSControllerHandler) broadcastProjectRefresh(ctx context.Context, actorID *uuid.UUID, spsControllerID uuid.UUID) {
 	if h.collaboration == nil {
 		return
 	}
-	h.collaboration.BroadcastRefreshForSPSController(ctx, spsControllerID, "sps_controller")
+	h.collaboration.BroadcastRefreshForSPSController(ctx, actorID, spsControllerID, "sps_controller")
+}
+
+func (h *SPSControllerHandler) broadcastProjectDelta(ctx context.Context, actorID *uuid.UUID, spsController *domainFacility.SPSController) {
+	if h.collaboration == nil || spsController == nil {
+		return
+	}
+
+	h.collaboration.BroadcastSPSControllerDelta(ctx, actorID, *spsController)
 }
 
 // CreateSPSController godoc
@@ -53,7 +61,7 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh(c.Request.Context(), spsController.ID)
+	h.broadcastProjectDelta(c.Request.Context(), currentActorID(c), spsController)
 	c.JSON(http.StatusCreated, toSPSControllerResponse(*spsController))
 }
 
@@ -140,7 +148,7 @@ func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh(c.Request.Context(), copyEntity.ID)
+	h.broadcastProjectDelta(c.Request.Context(), currentActorID(c), copyEntity)
 	c.JSON(http.StatusCreated, toSPSControllerResponse(*copyEntity))
 }
 
@@ -273,7 +281,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh(ctx, spsController.ID)
+	h.broadcastProjectDelta(ctx, currentActorID(c), spsController)
 	c.JSON(http.StatusOK, toSPSControllerResponse(*spsController))
 }
 
@@ -299,6 +307,6 @@ func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectRefresh(c.Request.Context(), id)
+	h.broadcastProjectRefresh(c.Request.Context(), currentActorID(c), id)
 	c.Status(http.StatusNoContent)
 }

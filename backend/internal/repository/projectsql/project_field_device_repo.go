@@ -8,6 +8,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type projectFieldDeviceRepo struct {
@@ -35,6 +36,34 @@ func (r *projectFieldDeviceRepo) Create(ctx context.Context, entity *project.Pro
 		return err
 	}
 	return r.db.WithContext(ctx).Create(toProjectFieldDeviceRecord(entity)).Error
+}
+
+func (r *projectFieldDeviceRepo) BulkCreate(ctx context.Context, entities []*project.ProjectFieldDevice, batchSize int) error {
+	if len(entities) == 0 {
+		return nil
+	}
+	if batchSize <= 0 {
+		batchSize = 200
+	}
+
+	now := time.Now().UTC()
+	records := make([]projectFieldDeviceRecord, 0, len(entities))
+	for _, entity := range entities {
+		if entity == nil {
+			continue
+		}
+		if err := entity.Base.InitForCreate(now); err != nil {
+			return err
+		}
+		records = append(records, *toProjectFieldDeviceRecord(entity))
+	}
+	if len(records) == 0 {
+		return nil
+	}
+
+	return r.db.WithContext(ctx).
+		Clauses(clause.OnConflict{DoNothing: true}).
+		CreateInBatches(records, batchSize).Error
 }
 
 func (r *projectFieldDeviceRepo) Update(ctx context.Context, entity *project.ProjectFieldDevice) error {

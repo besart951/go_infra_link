@@ -14,6 +14,7 @@
   import BacnetAlarmValuesEditor from './BacnetAlarmValuesEditor.svelte';
   import { stateTextRepository } from '$lib/infrastructure/api/stateTextRepository.js';
   import { notificationClassRepository } from '$lib/infrastructure/api/notificationClassRepository.js';
+  import { createCachedFetchById } from '$lib/infrastructure/api/createCachedFetchById.js';
   import {
     BACNET_SOFTWARE_TYPES,
     BACNET_HARDWARE_TYPES
@@ -55,6 +56,12 @@
     value: t.value,
     label: t.value.toUpperCase()
   }));
+  const fetchStateTextByIdCached = createCachedFetchById('state-text', (id) =>
+    stateTextRepository.get(id)
+  );
+  const fetchNotificationClassByIdCached = createCachedFetchById('notification-class', (id) =>
+    notificationClassRepository.get(id)
+  );
 
   function isDirty(objectId: string, field: string): boolean {
     const edits = pendingEdits.get(objectId);
@@ -152,7 +159,7 @@
   }
 
   async function fetchStateTextById(id: string): Promise<StateText> {
-    return stateTextRepository.get(id);
+    return fetchStateTextByIdCached(id) as Promise<StateText>;
   }
 
   function formatStateTextLabel(item: StateText): string {
@@ -180,7 +187,7 @@
   }
 
   async function fetchNotificationClassById(id: string): Promise<NotificationClass> {
-    return notificationClassRepository.get(id);
+    return fetchNotificationClassByIdCached(id) as Promise<NotificationClass>;
   }
 
   function formatNotificationClassLabel(item: NotificationClass): string {

@@ -20,7 +20,9 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
 
   private readonly buildingRequests = new Set<string>();
   private readonly resolveProjectId: () => string | undefined;
-  private readonly onChanged?: () => void;
+  private readonly onChanged?: (
+    event?: import('../../shared/entityRefresh.js').EntityChangeEvent<ControlCabinet>
+  ) => void;
   private readonly manageControlCabinetUseCase = new ManageControlCabinetUseCase(
     controlCabinetRepository
   );
@@ -59,6 +61,63 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
     await this.ensureBuildingLabels(this.items);
   }
 
+  async refreshCabinets(controlCabinetIds: string[]): Promise<void> {
+    const uniqueControlCabinetIDs = [...new Set(controlCabinetIds.filter(Boolean))];
+
+    if (uniqueControlCabinetIDs.length === 0) {
+      await this.reload();
+      return;
+    }
+
+    if (this.searchText || this.orderBy || this.order || this.hasActiveFilters) {
+      await this.reload();
+      return;
+    }
+
+    const visibleIDs = new Set(this.items.map((item) => item.id));
+    if (uniqueControlCabinetIDs.some((id) => !visibleIDs.has(id))) {
+      await this.reload();
+      return;
+    }
+
+    try {
+      const updatedCabinets = await Promise.all(
+        uniqueControlCabinetIDs.map((id) => controlCabinetRepository.get(id))
+      );
+
+      this.replaceItems(updatedCabinets);
+      await this.ensureBuildingLabels(updatedCabinets);
+    } catch (error) {
+      console.error('Failed to refresh control cabinets:', error);
+      await this.reload();
+    }
+  }
+
+  async applyCabinetDelta(controlCabinets: ControlCabinet[]): Promise<void> {
+    const updatedCabinets = [...new Map(controlCabinets.map((item) => [item.id, item])).values()];
+
+    if (updatedCabinets.length === 0) {
+      return;
+    }
+
+    if (this.searchText || this.orderBy || this.order || this.hasActiveFilters) {
+      await this.reload();
+      return;
+    }
+
+    const visibleIDs = new Set(this.items.map((item) => item.id));
+    const visibleCabinets = updatedCabinets.filter((item) => visibleIDs.has(item.id));
+    const hasNewCabinets = updatedCabinets.some((item) => !visibleIDs.has(item.id));
+
+    if (hasNewCabinets) {
+      await this.reload();
+      return;
+    }
+
+    this.replaceItems(visibleCabinets);
+    await this.ensureBuildingLabels(visibleCabinets);
+  }
+
   openCreateForm(): void {
     this.editingItem = undefined;
     this.showForm = true;
@@ -75,6 +134,8 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
   }
 
   async handleFormSuccess(controlCabinet: ControlCabinet): Promise<void> {
+    const isUpdate = Boolean(this.editingItem);
+
     if (this.projectId && !this.editingItem) {
       try {
         await projectRepository.addControlCabinet(this.projectId, controlCabinet.id);
@@ -92,8 +153,15 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
     }
 
     this.cancelForm();
+
+    if (isUpdate) {
+      await this.applyCabinetDelta([controlCabinet]);
+      this.notifyChanged({ entityIds: [controlCabinet.id], items: [controlCabinet] });
+      return;
+    }
+
     await this.reload();
-    this.notifyChanged();
+    this.notifyChanged({ entityIds: [controlCabinet.id] });
   }
 
   async deleteControlCabinet(controlCabinet: ControlCabinet): Promise<void> {
@@ -254,7 +322,9 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
     }
   }
 
-  private notifyChanged(): void {
-    this.onChanged?.();
+  private notifyChanged(
+    event?: import('../../shared/entityRefresh.js').EntityChangeEvent<ControlCabinet>
+  ): void {
+    this.onChanged?.(event);
   }
 }

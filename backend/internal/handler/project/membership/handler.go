@@ -23,10 +23,11 @@ type WorkflowService interface {
 type Handler struct {
 	access   projectshared.AccessPolicyService
 	workflow WorkflowService
+	notify   projectshared.ProjectChangeNotifier
 }
 
-func NewHandler(access projectshared.AccessPolicyService, workflow WorkflowService) *Handler {
-	return &Handler{access: access, workflow: workflow}
+func NewHandler(access projectshared.AccessPolicyService, workflow WorkflowService, notify projectshared.ProjectChangeNotifier) *Handler {
+	return &Handler{access: access, workflow: workflow, notify: notify}
 }
 
 // InviteProjectUser godoc
@@ -62,6 +63,10 @@ func (h *Handler) InviteProjectUser(c *gin.Context) {
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_or_user_not_found")),
 		)
 		return
+	}
+
+	if h.notify != nil {
+		h.notify(c, projectID, "project.user.invited")
 	}
 
 	c.JSON(http.StatusCreated, dto.ProjectUserResponse{ProjectID: projectID, UserID: req.UserID})
@@ -131,6 +136,10 @@ func (h *Handler) RemoveProjectUser(c *gin.Context) {
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_or_user_not_found")),
 		)
 		return
+	}
+
+	if h.notify != nil {
+		h.notify(c, projectID, "project.user.removed")
 	}
 
 	c.Status(http.StatusNoContent)

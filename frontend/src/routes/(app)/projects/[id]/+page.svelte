@@ -16,8 +16,15 @@
   import FieldDeviceListView from '$lib/components/facility/field-device/FieldDeviceListView.svelte';
   import { getProject } from '$lib/infrastructure/api/project.adapter.js';
   import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
+  import type { ControlCabinet, FieldDevice, SPSController } from '$lib/domain/facility/index.js';
   import type { Project } from '$lib/domain/project/index.js';
   import type { User } from '$lib/domain/user/index.js';
+  import type { FieldDeviceRefreshRequest } from '$lib/components/facility/field-device/state/types.js';
+  import type {
+    EntityChangeEvent,
+    EntityDeltaRequest,
+    EntityRefreshRequest
+  } from '$lib/components/facility/shared/entityRefresh.js';
   import { ProjectCollaborationState } from '$lib/services/projectCollaboration.svelte.js';
   import { ArrowLeft, ChevronDown, Settings, Wifi, WifiOff } from '@lucide/svelte';
 
@@ -34,33 +41,95 @@
 
   let controlCabinetViewRefreshKey = $state(0);
   let controlCabinetOptionsRefreshKey = $state(0);
+  let controlCabinetRefreshRequest = $state<EntityRefreshRequest | undefined>(undefined);
+  let controlCabinetDeltaRequest = $state<EntityDeltaRequest<ControlCabinet> | undefined>(
+    undefined
+  );
   let spsControllerRefreshKey = $state(0);
+  let spsControllerRefreshRequest = $state<EntityRefreshRequest | undefined>(undefined);
+  let spsControllerDeltaRequest = $state<EntityDeltaRequest<SPSController> | undefined>(undefined);
+  let spsControllerCabinetLabelRefreshRequest = $state<EntityRefreshRequest | undefined>(
+    undefined
+  );
+  let spsControllerCabinetLabelDeltaRequest = $state<
+    EntityDeltaRequest<ControlCabinet> | undefined
+  >(undefined);
   let fieldDeviceRefreshKey = $state(0);
+  let fieldDeviceRefreshRequest = $state<FieldDeviceRefreshRequest | undefined>(undefined);
   let systemTypeRefreshKey = $state(0);
-
-  let projectEventsSource: EventSource | null = null;
-  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  let pendingSseRefresh = $state(false);
+  let fieldDeviceMultiCreateFormOpen = $state(false);
+  let entityRefreshRequestVersion = 0;
+  let entityDeltaRequestVersion = 0;
+  let fieldDeviceRefreshRequestVersion = 0;
 
   const collaboration = new ProjectCollaborationState({
+    onEntityDelta: (message) => {
+      if (message.actor_id && message.actor_id === currentUser?.id) return;
+
+      switch (message.scope) {
+        case 'control_cabinet':
+          if (message.control_cabinets && message.control_cabinets.length > 0) {
+            requestControlCabinetDelta(message.control_cabinets);
+            requestSPSControllerCabinetLabelDelta(message.control_cabinets);
+            bumpControlCabinetOptionsRefresh();
+          }
+          break;
+        case 'sps_controller':
+          if (message.sps_controllers && message.sps_controllers.length > 0) {
+            requestSPSControllerDelta(message.sps_controllers);
+            requestFieldDeviceSPSControllerDelta(message.sps_controllers);
+            bumpSystemTypeRefresh();
+          }
+          break;
+        case 'field_device':
+          if (message.field_devices && message.field_devices.length > 0) {
+            requestFieldDeviceDelta(message.field_devices);
+          }
+          break;
+      }
+    },
     onRefreshRequest: (message) => {
       if (message.actor_id && message.actor_id === currentUser?.id) return;
 
       switch (message.scope) {
         case 'field_device':
+          if (message.device_ids && message.device_ids.length > 0) {
+            requestFieldDeviceRefresh(message.device_ids);
+            break;
+          }
+
           bumpFieldDeviceRefresh();
           break;
         case 'control_cabinet':
+          if (message.entity_ids && message.entity_ids.length > 0) {
+            requestControlCabinetRefresh(message.entity_ids);
+            requestSPSControllerCabinetLabelRefresh(message.entity_ids);
+            bumpControlCabinetOptionsRefresh();
+            break;
+          }
+
           bumpControlCabinetViewRefresh();
           bumpControlCabinetOptionsRefresh();
+          bumpSPSControllerRefresh();
+          break;
+        case 'sps_controller':
+          if (message.entity_ids && message.entity_ids.length > 0) {
+            requestSPSControllerRefresh(message.entity_ids);
+            requestFieldDeviceSPSControllerRefresh(message.entity_ids);
+            bumpSystemTypeRefresh();
+            break;
+          }
+
           bumpSPSControllerRefresh();
           bumpFieldDeviceRefresh();
           bumpSystemTypeRefresh();
           break;
-        case 'sps_controller':
-          bumpSPSControllerRefresh();
-          bumpFieldDeviceRefresh();
-          bumpSystemTypeRefresh();
+        case 'project':
+          refreshProjectFacilityViews();
+          void loadProject();
+          break;
+        case 'project_users':
+          void loadProjectUsers();
           break;
       }
     }
@@ -105,7 +174,83 @@
     fieldDeviceRefreshKey += 1;
   }
 
+  function requestFieldDeviceRefresh(deviceIds: string[]): void {
+    fieldDeviceRefreshRequestVersion += 1;
+    fieldDeviceRefreshRequest = {
+      key: fieldDeviceRefreshRequestVersion,
+      deviceIds: [...deviceIds]
+    };
+  }
+
+  function requestFieldDeviceSPSControllerRefresh(spsControllerIds: string[]): void {
+    fieldDeviceRefreshRequestVersion += 1;
+    fieldDeviceRefreshRequest = {
+      key: fieldDeviceRefreshRequestVersion,
+      spsControllerIds: [...spsControllerIds]
+    };
+  }
+
+  function nextEntityRefreshRequest(entityIds: string[]): EntityRefreshRequest {
+    entityRefreshRequestVersion += 1;
+    return {
+      key: entityRefreshRequestVersion,
+      entityIds: [...entityIds]
+    };
+  }
+
+  function nextEntityDeltaRequest<T>(items: T[]): EntityDeltaRequest<T> {
+    entityDeltaRequestVersion += 1;
+    return {
+      key: entityDeltaRequestVersion,
+      items: [...items]
+    };
+  }
+
+  function requestControlCabinetRefresh(entityIds: string[]): void {
+    controlCabinetRefreshRequest = nextEntityRefreshRequest(entityIds);
+  }
+
+  function requestControlCabinetDelta(items: ControlCabinet[]): void {
+    controlCabinetDeltaRequest = nextEntityDeltaRequest(items);
+  }
+
+  function requestSPSControllerRefresh(entityIds: string[]): void {
+    spsControllerRefreshRequest = nextEntityRefreshRequest(entityIds);
+  }
+
+  function requestSPSControllerDelta(items: SPSController[]): void {
+    spsControllerDeltaRequest = nextEntityDeltaRequest(items);
+  }
+
+  function requestSPSControllerCabinetLabelRefresh(entityIds: string[]): void {
+    spsControllerCabinetLabelRefreshRequest = nextEntityRefreshRequest(entityIds);
+  }
+
+  function requestSPSControllerCabinetLabelDelta(items: ControlCabinet[]): void {
+    spsControllerCabinetLabelDeltaRequest = nextEntityDeltaRequest(items);
+  }
+
+  function requestFieldDeviceDelta(devices: FieldDevice[]): void {
+    fieldDeviceRefreshRequestVersion += 1;
+    fieldDeviceRefreshRequest = {
+      key: fieldDeviceRefreshRequestVersion,
+      devices: [...devices]
+    };
+  }
+
+  function requestFieldDeviceSPSControllerDelta(controllers: SPSController[]): void {
+    fieldDeviceRefreshRequestVersion += 1;
+    fieldDeviceRefreshRequest = {
+      key: fieldDeviceRefreshRequestVersion,
+      spsControllers: [...controllers]
+    };
+  }
+
   function bumpSystemTypeRefresh(): void {
+    if (!fieldDeviceMultiCreateFormOpen) {
+      return;
+    }
+
     systemTypeRefreshKey += 1;
   }
 
@@ -117,72 +262,29 @@
     bumpSystemTypeRefresh();
   }
 
-  function handleControlCabinetsChanged(): void {
+  function handleControlCabinetsChanged(event?: EntityChangeEvent<ControlCabinet>): void {
     bumpControlCabinetOptionsRefresh();
-    bumpSPSControllerRefresh();
-    bumpFieldDeviceRefresh();
-    bumpSystemTypeRefresh();
-  }
 
-  function handleSPSControllersChanged(): void {
-    bumpFieldDeviceRefresh();
-    bumpSystemTypeRefresh();
-  }
-
-  function clearProjectEventsConnection(): void {
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
+    if (event?.items && event.items.length > 0) {
+      requestSPSControllerCabinetLabelDelta(event.items);
+      return;
     }
 
-    if (projectEventsSource) {
-      projectEventsSource.close();
-      projectEventsSource = null;
+    if (event?.entityIds && event.entityIds.length > 0) {
+      requestSPSControllerCabinetLabelRefresh(event.entityIds);
     }
   }
 
-  function queueProjectRefreshFromEvent(): void {
-    if (pendingSseRefresh) return;
-    pendingSseRefresh = true;
+  function handleSPSControllersChanged(event?: EntityChangeEvent<SPSController>): void {
+    if (event?.items && event.items.length > 0) {
+      requestFieldDeviceSPSControllerDelta(event.items);
+    } else if (event?.entityIds && event.entityIds.length > 0) {
+      requestFieldDeviceSPSControllerRefresh(event.entityIds);
+    } else {
+      bumpFieldDeviceRefresh();
+    }
 
-    setTimeout(() => {
-      pendingSseRefresh = false;
-      refreshProjectFacilityViews();
-    }, 200);
-  }
-
-  function connectProjectEvents(): void {
-    if (!projectId) return;
-
-    clearProjectEventsConnection();
-
-    const source = new EventSource(`/api/v1/projects/${projectId}/events`);
-    projectEventsSource = source;
-
-    source.addEventListener('project.change', (event) => {
-      try {
-        const payload = JSON.parse((event as MessageEvent<string>).data) as { type?: string };
-        if (payload.type === 'ready') return;
-      } catch {
-        // Ignore parse issues and still trigger refresh.
-      }
-
-      queueProjectRefreshFromEvent();
-    });
-
-    source.onerror = () => {
-      source.close();
-      if (projectEventsSource === source) {
-        projectEventsSource = null;
-      }
-
-      if (!reconnectTimer) {
-        reconnectTimer = setTimeout(() => {
-          reconnectTimer = null;
-          connectProjectEvents();
-        }, 3000);
-      }
-    };
+    bumpSystemTypeRefresh();
   }
 
   async function loadProject(): Promise<void> {
@@ -217,12 +319,10 @@
   onMount(() => {
     void loadProject();
     void loadProjectUsers();
-    connectProjectEvents();
     collaboration.connect(projectId);
   });
 
   onDestroy(() => {
-    clearProjectEventsConnection();
     collaboration.disconnect();
   });
 </script>
@@ -322,6 +422,8 @@
             <ControlCabinetListView
               {projectId}
               refreshKey={controlCabinetViewRefreshKey}
+              refreshRequest={controlCabinetRefreshRequest}
+              deltaRequest={controlCabinetDeltaRequest}
               onChanged={handleControlCabinetsChanged}
             />
           </Collapsible.Content>
@@ -343,6 +445,10 @@
             <SPSControllerListView
               {projectId}
               refreshKey={spsControllerRefreshKey}
+              refreshRequest={spsControllerRefreshRequest}
+              deltaRequest={spsControllerDeltaRequest}
+              controlCabinetLabelRefreshRequest={spsControllerCabinetLabelRefreshRequest}
+              controlCabinetLabelDeltaRequest={spsControllerCabinetLabelDeltaRequest}
               controlCabinetRefreshKey={controlCabinetOptionsRefreshKey}
               onChanged={handleSPSControllersChanged}
             />
@@ -356,12 +462,17 @@
         </div>
         <FieldDeviceListView
           {projectId}
+          pageSize={100}
           refreshKey={fieldDeviceRefreshKey}
+          refreshRequest={fieldDeviceRefreshRequest}
           {systemTypeRefreshKey}
+          onMultiCreateFormVisibilityChange={(open) => {
+            fieldDeviceMultiCreateFormOpen = open;
+          }}
           sharedFieldDeviceEditors={fieldDeviceEditorsByDevice}
           onSharedFieldDeviceStateChange={(state) =>
             collaboration.publishFieldDeviceDraftState(state)}
-          onFieldDevicesSaved={(deviceIds) => collaboration.requestFieldDeviceRefresh(deviceIds)}
+          onFieldDevicesSaved={(devices) => collaboration.publishFieldDeviceDelta(devices)}
         />
       </div>
     </div>

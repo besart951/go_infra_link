@@ -170,6 +170,10 @@ func validateConfig(cfg Config) error {
 		errs = append(errs, fmt.Errorf("missing JWT_SECRET in production environment"))
 	}
 
+	if IsProduction(cfg.AppEnv) && strings.TrimSpace(cfg.CookieDomain) == "" {
+		errs = append(errs, fmt.Errorf("COOKIE_DOMAIN must be set in production (e.g. .yourdomain.com)"))
+	}
+
 	if IsProduction(cfg.AppEnv) && cfg.SeedUserEnabled {
 		switch {
 		case strings.TrimSpace(cfg.SeedUserEmail) == "":

@@ -3,6 +3,7 @@ package project
 import (
 	"time"
 
+	facilitydto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	userdto "github.com/besart951/go_infra_link/backend/internal/handler/dto/user"
 	"github.com/google/uuid"
 )
@@ -70,6 +71,16 @@ type ProjectSPSControllerListResponse struct {
 
 type CreateProjectFieldDeviceRequest struct {
 	FieldDeviceID uuid.UUID `json:"field_device_id" binding:"required"`
+}
+
+type MultiCreateProjectFieldDeviceRequest struct {
+	FieldDeviceIDs []uuid.UUID                            `json:"field_device_ids"`
+	FieldDevices   []facilitydto.CreateFieldDeviceRequest `json:"field_devices" binding:"omitempty,dive"`
+}
+
+type MultiCreateProjectFieldDeviceResponse struct {
+	SuccessFieldDeviceIDs []uuid.UUID `json:"success_field_device_ids"`
+	AssociationErrors     []string    `json:"association_errors"`
 }
 
 type CreateProjectObjectDataRequest struct {

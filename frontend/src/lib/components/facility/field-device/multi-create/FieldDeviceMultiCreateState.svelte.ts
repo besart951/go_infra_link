@@ -20,6 +20,7 @@ import { ManageObjectDataUseCase } from '$lib/application/useCases/facility/mana
 import { ListSPSControllersUseCase } from '$lib/application/useCases/facility/listSPSControllersUseCase.js';
 import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
+import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
 import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
 
 import type {
@@ -316,7 +317,11 @@ export class FieldDeviceMultiCreateState {
 
     try {
       const fieldDevices = this.buildCreatePayload();
-      const rawResponse = await this.manageUseCase.multiCreate({ field_devices: fieldDevices });
+      const rawResponse = this.projectId
+        ? await projectRepository.createFieldDevices(this.projectId, {
+            field_devices: fieldDevices
+          })
+        : await this.manageUseCase.multiCreate({ field_devices: fieldDevices });
       const response = this.normalizeMultiCreateResponse(rawResponse);
 
       const successfulIndices = new Set<number>();

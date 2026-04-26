@@ -17,6 +17,7 @@ import type { SPSControllerFilters, SPSControllerStateProps } from './types.js';
 import { toProjectIdResolver, toRefreshKeyResolver } from './types.js';
 import { ContextualSPSControllerFetchStrategy } from './strategies/ContextualSPSControllerFetchStrategy.js';
 import { SPSControllerFetchStrategyFactory } from './SPSControllerFetchStrategyFactory.js';
+import { groupSystemTypesByController } from './groupSystemTypesByController.js';
 
 export class SPSControllerState extends BaseDataTableState<SPSController, SPSControllerFilters> {
   showForm = $state(false);
@@ -26,7 +27,9 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
 
   private readonly resolveProjectId: () => string | undefined;
   private readonly resolveControlCabinetRefreshKey: () => string | number | undefined;
-  private readonly onChanged?: () => void;
+  private readonly onChanged?: (
+    event?: import('../../shared/entityRefresh.js').EntityChangeEvent<SPSController>
+  ) => void;
   private readonly manageSPSControllerUseCase = new ManageSPSControllerUseCase(
     spsControllerRepository
   );
@@ -70,6 +73,90 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
     await Promise.all([this.ensureCabinetLabels(this.items), this.loadSystemTypes(this.items)]);
   }
 
+  async refreshControllers(controllerIds: string[]): Promise<void> {
+    const uniqueControllerIDs = [...new Set(controllerIds.filter(Boolean))];
+
+    if (uniqueControllerIDs.length === 0) {
+      await this.reload();
+      return;
+    }
+
+    if (this.searchText || this.orderBy || this.order || this.hasActiveFilters) {
+      await this.reload();
+      return;
+    }
+
+    const visibleIDs = new Set(this.items.map((item) => item.id));
+    if (uniqueControllerIDs.some((id) => !visibleIDs.has(id))) {
+      await this.reload();
+      return;
+    }
+
+    try {
+      const updatedControllers = await Promise.all(
+        uniqueControllerIDs.map((id) => spsControllerRepository.get(id))
+      );
+
+      this.replaceItems(updatedControllers);
+      await Promise.all([
+        this.ensureCabinetLabels(updatedControllers),
+        this.loadSystemTypesForControllerIDs(uniqueControllerIDs)
+      ]);
+    } catch (error) {
+      console.error('Failed to refresh SPS controllers:', error);
+      await this.reload();
+    }
+  }
+
+  async applyControllerDelta(controllers: SPSController[]): Promise<void> {
+    const updatedControllers = [...new Map(controllers.map((item) => [item.id, item])).values()];
+
+    if (updatedControllers.length === 0) {
+      return;
+    }
+
+    if (this.searchText || this.orderBy || this.order || this.hasActiveFilters) {
+      await this.reload();
+      return;
+    }
+
+    const visibleIDs = new Set(this.items.map((item) => item.id));
+    const visibleControllers = updatedControllers.filter((item) => visibleIDs.has(item.id));
+    const hasNewControllers = updatedControllers.some((item) => !visibleIDs.has(item.id));
+
+    if (hasNewControllers) {
+      await this.reload();
+      return;
+    }
+
+    this.replaceItems(visibleControllers);
+    await this.ensureCabinetLabels(visibleControllers);
+  }
+
+  async refreshCabinetLabels(cabinetIds: string[]): Promise<void> {
+    const uniqueCabinetIDs = [...new Set(cabinetIds.filter(Boolean))];
+
+    if (uniqueCabinetIDs.length === 0) {
+      return;
+    }
+
+    try {
+      const cabinets = await controlCabinetRepository.getBulk(uniqueCabinetIDs);
+      this.updateCabinetMap(cabinets);
+    } catch (error) {
+      console.error('Failed to refresh control cabinet labels:', error);
+      await this.reload();
+    }
+  }
+
+  applyCabinetLabelDelta(cabinets: ControlCabinet[]): void {
+    if (cabinets.length === 0) {
+      return;
+    }
+
+    this.updateCabinetMap(cabinets);
+  }
+
   openCreateForm(): void {
     this.editingItem = undefined;
     this.showForm = true;
@@ -86,6 +173,8 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
   }
 
   async handleFormSuccess(controller: SPSController): Promise<void> {
+    const isUpdate = Boolean(this.editingItem);
+
     if (this.projectId && !this.editingItem) {
       try {
         await projectRepository.addSPSController(this.projectId, controller.id);
@@ -103,8 +192,15 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
     }
 
     this.cancelForm();
+
+    if (isUpdate) {
+      await this.applyControllerDelta([controller]);
+      this.notifyChanged({ entityIds: [controller.id], items: [controller] });
+      return;
+    }
+
     await this.reload();
-    this.notifyChanged();
+    this.notifyChanged({ entityIds: [controller.id] });
   }
 
   async deleteSPSController(controller: SPSController): Promise<void> {
@@ -135,7 +231,7 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
         'success'
       );
       await this.reload();
-      this.notifyChanged();
+      this.notifyChanged({ entityIds: [controller.id] });
     } catch (error) {
       const message =
         error instanceof Error
@@ -160,7 +256,7 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
       }
 
       await this.reload();
-      this.notifyChanged();
+      this.notifyChanged({ entityIds: [controller.id] });
     } catch (error) {
       const message =
         error instanceof Error
@@ -250,6 +346,34 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
       return;
     }
 
+    if (this.projectId) {
+      try {
+        const response = await spsControllerSystemTypeRepository.list({
+          pagination: { page: 1, pageSize: 1000 },
+          search: { text: '' },
+          filters: { project_id: this.projectId }
+        });
+
+        this.systemTypesByController = groupSystemTypesByController(response.items);
+      } catch (error) {
+        console.error('Failed to load project SPS controller system types:', error);
+        this.systemTypesByController = {};
+      }
+
+      return;
+    }
+
+    await this.loadSystemTypesForControllerIDs(controllerIds, {});
+  }
+
+  private async loadSystemTypesForControllerIDs(
+    controllerIds: string[],
+    current: Record<string, SPSControllerSystemType[]> = this.systemTypesByController
+  ): Promise<void> {
+    if (controllerIds.length === 0) {
+      return;
+    }
+
     const results = await Promise.allSettled(
       controllerIds.map(async (controllerId) => {
         const response = await spsControllerSystemTypeRepository.list({
@@ -262,7 +386,7 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
       })
     );
 
-    const next: Record<string, SPSControllerSystemType[]> = {};
+    const next: Record<string, SPSControllerSystemType[]> = { ...current };
 
     for (const result of results) {
       if (result.status === 'fulfilled') {
@@ -286,7 +410,9 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
     return filters;
   }
 
-  private notifyChanged(): void {
-    this.onChanged?.();
+  private notifyChanged(
+    event?: import('../../shared/entityRefresh.js').EntityChangeEvent<SPSController>
+  ): void {
+    this.onChanged?.(event);
   }
 }
