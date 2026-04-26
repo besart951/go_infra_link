@@ -68,21 +68,21 @@ type UserDirectoryPageCapabilitiesResponse struct {
 }
 
 type UserDirectoryUserResponse struct {
-	ID                  uuid.UUID                           `json:"id"`
-	FirstName           string                              `json:"first_name"`
-	LastName            string                              `json:"last_name"`
-	Email               string                              `json:"email"`
-	IsActive            bool                                `json:"is_active"`
-	Role                string                              `json:"role"`
-	RoleDisplayName     string                              `json:"role_display_name"`
-	CreatedAt           time.Time                           `json:"created_at"`
-	UpdatedAt           time.Time                           `json:"updated_at"`
-	LastLoginAt         *time.Time                          `json:"last_login_at,omitempty"`
-	DisabledAt          *time.Time                          `json:"disabled_at,omitempty"`
-	LockedUntil         *time.Time                          `json:"locked_until,omitempty"`
-	FailedLoginAttempts int                                 `json:"failed_login_attempts"`
-	Teams               []UserDirectoryTeamResponse         `json:"teams"`
-	Capabilities        UserDirectoryCapabilitiesResponse   `json:"capabilities"`
+	ID                  uuid.UUID                         `json:"id"`
+	FirstName           string                            `json:"first_name"`
+	LastName            string                            `json:"last_name"`
+	Email               string                            `json:"email"`
+	IsActive            bool                              `json:"is_active"`
+	Role                string                            `json:"role"`
+	RoleDisplayName     string                            `json:"role_display_name"`
+	CreatedAt           time.Time                         `json:"created_at"`
+	UpdatedAt           time.Time                         `json:"updated_at"`
+	LastLoginAt         *time.Time                        `json:"last_login_at,omitempty"`
+	DisabledAt          *time.Time                        `json:"disabled_at,omitempty"`
+	LockedUntil         *time.Time                        `json:"locked_until,omitempty"`
+	FailedLoginAttempts int                               `json:"failed_login_attempts"`
+	Teams               []UserDirectoryTeamResponse       `json:"teams"`
+	Capabilities        UserDirectoryCapabilitiesResponse `json:"capabilities"`
 }
 
 type UserDirectoryTeamFilterResponse struct {

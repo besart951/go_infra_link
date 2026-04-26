@@ -166,8 +166,8 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 		sort.Slice(itemTeams, func(i, j int) bool { return strings.ToLower(itemTeams[i].Name) < strings.ToLower(itemTeams[j].Name) })
 
 		visible = append(visible, Item{
-			User:  *candidate,
-			Teams: itemTeams,
+			User:         *candidate,
+			Teams:        itemTeams,
 			Capabilities: buildCapabilities(requester, *candidate, len(allUsers)),
 		})
 	}

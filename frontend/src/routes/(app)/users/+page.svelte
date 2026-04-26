@@ -52,7 +52,11 @@
   let error = $state<string | null>(null);
   let createDialogOpen = $state(false);
 
-  async function loadDirectory(nextPage = page, nextSearch = searchText, nextTeamId = selectedTeamId) {
+  async function loadDirectory(
+    nextPage = page,
+    nextSearch = searchText,
+    nextTeamId = selectedTeamId
+  ) {
     isLoading = true;
     error = null;
     try {
@@ -192,7 +196,11 @@
           }
         }}
       />
-      <Button variant="outline" onclick={() => void loadDirectory(1, searchText, selectedTeamId)} disabled={isLoading}>
+      <Button
+        variant="outline"
+        onclick={() => void loadDirectory(1, searchText, selectedTeamId)}
+        disabled={isLoading}
+      >
         {$t('messages.refresh')}
       </Button>
     </div>
@@ -259,143 +267,148 @@
           {#each users as user (user.id)}
             <Table.Row>
               <Table.Cell>
-          <div class="flex items-center gap-3">
-            <UserAvatar firstName={user.first_name} lastName={user.last_name} />
-            <div class="flex flex-col">
-              <div class="font-medium">
-                {user.first_name}
-                {user.last_name}
-              </div>
-              <div class="text-sm text-muted-foreground">{user.email}</div>
-            </div>
-          </div>
-        </Table.Cell>
-        <Table.Cell>
-          {@const tnames = user.teams.map((team) => team.name)}
-          {#if tnames.length === 0}
-            <span class="text-sm text-muted-foreground">&mdash;</span>
-          {:else}
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-medium">{tnames[0]}</span>
-              {#if tnames.length > 1}
-                <Tooltip.Root>
-                  <Tooltip.Trigger class="inline-flex">
-                    <Badge variant="outline">+{tnames.length - 1}</Badge>
-                  </Tooltip.Trigger>
-                  <Tooltip.Content class="max-w-xs">
-                    <div class="text-sm">{tnames.join(', ')}</div>
-                  </Tooltip.Content>
-                </Tooltip.Root>
-              {/if}
-            </div>
-          {/if}
-        </Table.Cell>
-        <Table.Cell>
-          <RoleBadge role={user.role} label={user.role_display_name ?? ''} />
-        </Table.Cell>
-        <Table.Cell>
-          <div class="flex items-center gap-2">
-            <Tooltip.Root>
-              <Tooltip.Trigger class="inline-flex">
-                {#if authVerified(user)}
-                  <Badge variant="success">
-                    <BadgeCheck class="mr-1 h-3 w-3" />
-                    {$t('common.verified')}
-                  </Badge>
+                <div class="flex items-center gap-3">
+                  <UserAvatar firstName={user.first_name} lastName={user.last_name} />
+                  <div class="flex flex-col">
+                    <div class="font-medium">
+                      {user.first_name}
+                      {user.last_name}
+                    </div>
+                    <div class="text-sm text-muted-foreground">{user.email}</div>
+                  </div>
+                </div>
+              </Table.Cell>
+              <Table.Cell>
+                {@const tnames = user.teams.map((team) => team.name)}
+                {#if tnames.length === 0}
+                  <span class="text-sm text-muted-foreground">&mdash;</span>
                 {:else}
-                  <Badge variant="outline">
-                    <BadgeX class="mr-1 h-3 w-3" />
-                    {$t('common.unverified')}
-                  </Badge>
-                {/if}
-              </Tooltip.Trigger>
-              <Tooltip.Content>
-                <div class="text-sm">{$t('messages.email_verification_info')}</div>
-              </Tooltip.Content>
-            </Tooltip.Root>
-
-            <Tooltip.Root>
-              <Tooltip.Trigger class="inline-flex">
-                {#if twoFactorEnabled(user)}
-                  <Badge variant="secondary">
-                    <KeyRound class="mr-1 h-3 w-3" />
-                    {$t('common.2fa')}
-                  </Badge>
-                {:else}
-                  <Badge variant="outline">
-                    <KeyRound class="mr-1 h-3 w-3" />
-                    {$t('common.2fa_off')}
-                  </Badge>
-                {/if}
-              </Tooltip.Trigger>
-              <Tooltip.Content>
-                <div class="text-sm">{$t('messages.2fa_not_implemented')}</div>
-              </Tooltip.Content>
-            </Tooltip.Root>
-          </div>
-        </Table.Cell>
-        <Table.Cell>
-          {#if user.disabled_at}
-            <Badge variant="destructive">{$t('common.disabled')}</Badge>
-          {:else if user.locked_until}
-            <Badge variant="warning">{$t('common.locked')}</Badge>
-          {:else if user.is_active}
-            <Badge variant="success">{$t('common.active')}</Badge>
-          {:else}
-            <Badge variant="outline">{$t('common.inactive')}</Badge>
-          {/if}
-        </Table.Cell>
-        <Table.Cell>
-          <span class="text-sm">{formatDate(user.last_login_at)}</span>
-        </Table.Cell>
-        <Table.Cell class="text-right">
-          {#if user.capabilities.can_change_role || user.capabilities.can_disable || user.capabilities.can_enable || user.capabilities.can_delete}
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger>
-                {#snippet child({ props })}
-                  <Button variant="ghost" size="sm" {...props}>
-                    <MoreVertical class="h-4 w-4" />
-                  </Button>
-                {/snippet}
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content align="end" class="w-56">
-                {#if user.capabilities.can_change_role}
-                  <DropdownMenu.Label>{$t('common.change_role')}</DropdownMenu.Label>
-                  <DropdownMenu.Separator />
-                  {#each roleOptionsFor(user) as roleObj (roleObj.role)}
-                    <DropdownMenu.Item onclick={() => handleRoleChange(user.id, roleObj.role)}>
-                      {roleObj.display_name}
-                    </DropdownMenu.Item>
-                  {/each}
-                {/if}
-
-                {#if user.capabilities.can_disable || user.capabilities.can_enable}
-                  <DropdownMenu.Separator />
-                  <DropdownMenu.Item onclick={() => handleToggleActive(user.id, user.is_active)}>
-                    {#if user.is_active}
-                      <UserMinus class="mr-2 h-4 w-4" />
-                      {$t('actions.disable_user')}
-                    {:else}
-                      <UserCheck class="mr-2 h-4 w-4" />
-                      {$t('actions.enable_user')}
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium">{tnames[0]}</span>
+                    {#if tnames.length > 1}
+                      <Tooltip.Root>
+                        <Tooltip.Trigger class="inline-flex">
+                          <Badge variant="outline">+{tnames.length - 1}</Badge>
+                        </Tooltip.Trigger>
+                        <Tooltip.Content class="max-w-xs">
+                          <div class="text-sm">{tnames.join(', ')}</div>
+                        </Tooltip.Content>
+                      </Tooltip.Root>
                     {/if}
-                  </DropdownMenu.Item>
+                  </div>
                 {/if}
+              </Table.Cell>
+              <Table.Cell>
+                <RoleBadge role={user.role} label={user.role_display_name ?? ''} />
+              </Table.Cell>
+              <Table.Cell>
+                <div class="flex items-center gap-2">
+                  <Tooltip.Root>
+                    <Tooltip.Trigger class="inline-flex">
+                      {#if authVerified(user)}
+                        <Badge variant="success">
+                          <BadgeCheck class="mr-1 h-3 w-3" />
+                          {$t('common.verified')}
+                        </Badge>
+                      {:else}
+                        <Badge variant="outline">
+                          <BadgeX class="mr-1 h-3 w-3" />
+                          {$t('common.unverified')}
+                        </Badge>
+                      {/if}
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                      <div class="text-sm">{$t('messages.email_verification_info')}</div>
+                    </Tooltip.Content>
+                  </Tooltip.Root>
 
-                {#if user.capabilities.can_delete}
-                  <DropdownMenu.Separator />
-                  <DropdownMenu.Item
-                    class="text-destructive"
-                    onclick={() => handleDeleteUser(user.id, `${user.first_name} ${user.last_name}`)}
-                  >
-                    <Trash2 class="mr-2 h-4 w-4" />
-                    {$t('actions.delete_user')}
-                  </DropdownMenu.Item>
+                  <Tooltip.Root>
+                    <Tooltip.Trigger class="inline-flex">
+                      {#if twoFactorEnabled(user)}
+                        <Badge variant="secondary">
+                          <KeyRound class="mr-1 h-3 w-3" />
+                          {$t('common.2fa')}
+                        </Badge>
+                      {:else}
+                        <Badge variant="outline">
+                          <KeyRound class="mr-1 h-3 w-3" />
+                          {$t('common.2fa_off')}
+                        </Badge>
+                      {/if}
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                      <div class="text-sm">{$t('messages.2fa_not_implemented')}</div>
+                    </Tooltip.Content>
+                  </Tooltip.Root>
+                </div>
+              </Table.Cell>
+              <Table.Cell>
+                {#if user.disabled_at}
+                  <Badge variant="destructive">{$t('common.disabled')}</Badge>
+                {:else if user.locked_until}
+                  <Badge variant="warning">{$t('common.locked')}</Badge>
+                {:else if user.is_active}
+                  <Badge variant="success">{$t('common.active')}</Badge>
+                {:else}
+                  <Badge variant="outline">{$t('common.inactive')}</Badge>
                 {/if}
-              </DropdownMenu.Content>
-            </DropdownMenu.Root>
-          {/if}
-        </Table.Cell>
+              </Table.Cell>
+              <Table.Cell>
+                <span class="text-sm">{formatDate(user.last_login_at)}</span>
+              </Table.Cell>
+              <Table.Cell class="text-right">
+                {#if user.capabilities.can_change_role || user.capabilities.can_disable || user.capabilities.can_enable || user.capabilities.can_delete}
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger>
+                      {#snippet child({ props })}
+                        <Button variant="ghost" size="sm" {...props}>
+                          <MoreVertical class="h-4 w-4" />
+                        </Button>
+                      {/snippet}
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content align="end" class="w-56">
+                      {#if user.capabilities.can_change_role}
+                        <DropdownMenu.Label>{$t('common.change_role')}</DropdownMenu.Label>
+                        <DropdownMenu.Separator />
+                        {#each roleOptionsFor(user) as roleObj (roleObj.role)}
+                          <DropdownMenu.Item
+                            onclick={() => handleRoleChange(user.id, roleObj.role)}
+                          >
+                            {roleObj.display_name}
+                          </DropdownMenu.Item>
+                        {/each}
+                      {/if}
+
+                      {#if user.capabilities.can_disable || user.capabilities.can_enable}
+                        <DropdownMenu.Separator />
+                        <DropdownMenu.Item
+                          onclick={() => handleToggleActive(user.id, user.is_active)}
+                        >
+                          {#if user.is_active}
+                            <UserMinus class="mr-2 h-4 w-4" />
+                            {$t('actions.disable_user')}
+                          {:else}
+                            <UserCheck class="mr-2 h-4 w-4" />
+                            {$t('actions.enable_user')}
+                          {/if}
+                        </DropdownMenu.Item>
+                      {/if}
+
+                      {#if user.capabilities.can_delete}
+                        <DropdownMenu.Separator />
+                        <DropdownMenu.Item
+                          class="text-destructive"
+                          onclick={() =>
+                            handleDeleteUser(user.id, `${user.first_name} ${user.last_name}`)}
+                        >
+                          <Trash2 class="mr-2 h-4 w-4" />
+                          {$t('actions.delete_user')}
+                        </DropdownMenu.Item>
+                      {/if}
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Root>
+                {/if}
+              </Table.Cell>
             </Table.Row>
           {/each}
         {/if}
@@ -406,14 +419,26 @@
   {#if totalPages > 1}
     <div class="flex items-center justify-between">
       <div class="text-sm text-muted-foreground">
-        {$t('messages.page_of').replace('{page}', String(page)).replace('{total}', String(totalPages))}
+        {$t('messages.page_of')
+          .replace('{page}', String(page))
+          .replace('{total}', String(totalPages))}
         • {$t('messages.total_items').replace('{count}', String(total))}
       </div>
       <div class="flex items-center gap-2">
-        <Button variant="outline" size="sm" disabled={page <= 1 || isLoading} onclick={() => void loadDirectory(page - 1, searchText, selectedTeamId)}>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page <= 1 || isLoading}
+          onclick={() => void loadDirectory(page - 1, searchText, selectedTeamId)}
+        >
           {$t('messages.previous')}
         </Button>
-        <Button variant="outline" size="sm" disabled={page >= totalPages || isLoading} onclick={() => void loadDirectory(page + 1, searchText, selectedTeamId)}>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page >= totalPages || isLoading}
+          onclick={() => void loadDirectory(page + 1, searchText, selectedTeamId)}
+        >
           {$t('messages.next')}
         </Button>
       </div>
