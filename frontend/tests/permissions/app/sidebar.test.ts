@@ -159,4 +159,15 @@ describe('permission-aware sidebar navigation', () => {
 
     expect(screen.getByTestId('nav-link:/admin/notifications/smtp')).toBeInTheDocument();
   });
+
+  it('shows facility navigation for fzag roles even without granular facility permissions', () => {
+    render(AppSidebar, {
+      user: buildUser({ role: 'fzag' }),
+      teams: [],
+      projects: []
+    });
+
+    expect(screen.getByTestId('nav-link:/facility/buildings')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-link:/facility/control-cabinets')).toBeInTheDocument();
+  });
 });
