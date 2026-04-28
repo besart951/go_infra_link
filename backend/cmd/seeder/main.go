@@ -12,6 +12,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type infralinkBasicSnapshot struct {
@@ -240,10 +241,11 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	database, err := db.Connect(cfg)
+	database, err := db.Connect(cfg.DBConfig)
 	if err != nil {
 		log.Fatalf("failed to connect db: %v", err)
 	}
+	database = database.Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Error)})
 
 	snapshotPath := filepath.Join("data", "seed", "infralink_basic.json")
 	if err := seedFromSnapshot(database, snapshotPath); err != nil {

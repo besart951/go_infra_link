@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type projectRecord struct {
+type ProjectRecord struct {
 	domain.Base
 	Name        string `gorm:"not null"`
 	Description string
@@ -18,29 +18,25 @@ type projectRecord struct {
 	CreatorID   uuid.UUID `gorm:"type:uuid;not null"`
 }
 
-func (projectRecord) TableName() string {
+func (ProjectRecord) TableName() string {
 	return "projects"
 }
 
-type projectUserRecord struct {
+type ProjectUserRecord struct {
 	ProjectID uuid.UUID `gorm:"type:uuid;not null;primaryKey"`
 	UserID    uuid.UUID `gorm:"type:uuid;not null;primaryKey"`
 }
 
-func (projectUserRecord) TableName() string {
+func (ProjectUserRecord) TableName() string {
 	return "project_users"
 }
 
-func AutoMigrateModels() []any {
-	return []any{&projectRecord{}, &projectUserRecord{}}
-}
-
-func toProjectRecord(entity *domainProject.Project) *projectRecord {
+func toProjectRecord(entity *domainProject.Project) *ProjectRecord {
 	if entity == nil {
 		return nil
 	}
 
-	record := &projectRecord{
+	record := &ProjectRecord{
 		Base:        entity.Base,
 		Name:        entity.Name,
 		Description: entity.Description,
@@ -53,7 +49,7 @@ func toProjectRecord(entity *domainProject.Project) *projectRecord {
 	return record
 }
 
-func toProjectDomain(record *projectRecord) *domainProject.Project {
+func toProjectDomain(record *ProjectRecord) *domainProject.Project {
 	if record == nil {
 		return nil
 	}
@@ -71,7 +67,7 @@ func toProjectDomain(record *projectRecord) *domainProject.Project {
 	return entity
 }
 
-func toProjectDomains(records []*projectRecord) []*domainProject.Project {
+func toProjectDomains(records []*ProjectRecord) []*domainProject.Project {
 	items := make([]*domainProject.Project, len(records))
 	for i, record := range records {
 		items[i] = toProjectDomain(record)
@@ -79,7 +75,7 @@ func toProjectDomains(records []*projectRecord) []*domainProject.Project {
 	return items
 }
 
-func projectDomainValues(records []projectRecord) []domainProject.Project {
+func projectDomainValues(records []ProjectRecord) []domainProject.Project {
 	items := make([]domainProject.Project, len(records))
 	for i := range records {
 		items[i] = *toProjectDomain(&records[i])

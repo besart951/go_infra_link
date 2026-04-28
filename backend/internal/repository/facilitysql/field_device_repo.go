@@ -95,7 +95,7 @@ func (r *fieldDeviceRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*dom
 	if len(ids) == 0 {
 		return []*domainFacility.FieldDevice{}, nil
 	}
-	var records []*fieldDeviceRecord
+	var records []*FieldDeviceRecord
 	err := r.db.WithContext(ctx).Where("id IN ?", ids).Preload("Specification").Find(&records).Error
 	return toFieldDeviceDomains(records), err
 }
@@ -116,7 +116,7 @@ func (r *fieldDeviceRepo) BulkCreate(ctx context.Context, entities []*domainFaci
 	}
 
 	now := time.Now().UTC()
-	records := make([]*fieldDeviceRecord, len(entities))
+	records := make([]*FieldDeviceRecord, len(entities))
 	for i, entity := range entities {
 		if err := entity.Base.InitForCreate(now); err != nil {
 			return err
@@ -135,7 +135,7 @@ func (r *fieldDeviceRepo) BulkCreate(ctx context.Context, entities []*domainFaci
 
 func (r *fieldDeviceRepo) Update(ctx context.Context, entity *domainFacility.FieldDevice) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Model(&fieldDeviceRecord{}).
+	return r.db.WithContext(ctx).Model(&FieldDeviceRecord{}).
 		Where("id = ?", entity.ID).
 		Updates(map[string]any{
 			"updated_at":                    entity.UpdatedAt,
@@ -155,14 +155,14 @@ func (r *fieldDeviceRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) erro
 		return nil
 	}
 
-	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&fieldDeviceRecord{}).Error
+	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&FieldDeviceRecord{}).Error
 }
 
 func (r *fieldDeviceRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.WithContext(ctx).Model(&fieldDeviceRecord{})
+	query := r.db.WithContext(ctx).Model(&FieldDeviceRecord{})
 
 	// Apply search
 	if strings.TrimSpace(params.Search) != "" {
@@ -177,7 +177,7 @@ func (r *fieldDeviceRepo) GetPaginatedList(ctx context.Context, params domain.Pa
 	}
 
 	// Fetch items with preloads
-	var records []fieldDeviceRecord
+	var records []FieldDeviceRecord
 	if err := query.
 		Order("created_at DESC").
 		Preload("Specification").
@@ -201,7 +201,7 @@ func (r *fieldDeviceRepo) GetIDsBySPSControllerSystemTypeIDs(ctx context.Context
 		return []uuid.UUID{}, nil
 	}
 	var out []uuid.UUID
-	err := r.db.WithContext(ctx).Model(&fieldDeviceRecord{}).
+	err := r.db.WithContext(ctx).Model(&FieldDeviceRecord{}).
 		Where("sps_controller_system_type_id IN ?", ids).
 		Pluck("id", &out).Error
 	if err != nil {
@@ -211,7 +211,7 @@ func (r *fieldDeviceRepo) GetIDsBySPSControllerSystemTypeIDs(ctx context.Context
 }
 
 func (r *fieldDeviceRepo) ExistsApparatNrConflict(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID uuid.UUID, apparatID uuid.UUID, apparatNr int, excludeIDs []uuid.UUID) (bool, error) {
-	db := r.db.WithContext(ctx).Model(&fieldDeviceRecord{}).
+	db := r.db.WithContext(ctx).Model(&FieldDeviceRecord{}).
 		Where("sps_controller_system_type_id = ?", spsControllerSystemTypeID).
 		Where("system_part_id = ?", systemPartID).
 		Where("apparat_id = ?", apparatID).
@@ -227,7 +227,7 @@ func (r *fieldDeviceRepo) ExistsApparatNrConflict(ctx context.Context, spsContro
 }
 
 func (r *fieldDeviceRepo) GetUsedApparatNumbers(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID uuid.UUID, apparatID uuid.UUID) ([]int, error) {
-	query := r.db.WithContext(ctx).Model(&fieldDeviceRecord{}).
+	query := r.db.WithContext(ctx).Model(&FieldDeviceRecord{}).
 		Where("sps_controller_system_type_id = ?", spsControllerSystemTypeID).
 		Where("system_part_id = ?", systemPartID).
 		Where("apparat_id = ?", apparatID)
@@ -243,7 +243,7 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(ctx context.Context, param
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 1000)
 	offset := (page - 1) * limit
 
-	query := r.db.WithContext(ctx).Model(&fieldDeviceRecord{})
+	query := r.db.WithContext(ctx).Model(&FieldDeviceRecord{})
 	hasPotentialDuplicateRows := false
 
 	// Apply filters by joining through the hierarchy
@@ -298,12 +298,12 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(ctx context.Context, param
 		return nil, err
 	}
 
-	var records []fieldDeviceRecord
+	var records []FieldDeviceRecord
 	orderedQuery := query.Session(&gorm.Session{})
 	if hasPotentialDuplicateRows {
 		distinctIDs := query.Session(&gorm.Session{}).Select("DISTINCT field_devices.id")
 		orderedQuery = r.db.WithContext(ctx).
-			Model(&fieldDeviceRecord{}).
+			Model(&FieldDeviceRecord{}).
 			Joins("JOIN (?) ids ON ids.id = field_devices.id", distinctIDs)
 	}
 	orderedQuery = applyFieldDeviceSorting(orderedQuery, params)

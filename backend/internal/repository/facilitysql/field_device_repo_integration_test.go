@@ -123,20 +123,22 @@ func newFieldDeviceRepoTestDB(t *testing.T) *gorm.DB {
 		_ = sqlDB.Close()
 	})
 
-	models := append([]any{}, projectsql.AutoMigrateModels()...)
-	models = append(models,
+	models := []any{
+		&projectsql.ProjectControlCabinetRecord{},
+		&projectsql.ProjectSPSControllerRecord{},
+		&projectsql.ProjectFieldDeviceRecord{},
 		&domainFacility.SystemType{},
 		&domainFacility.SPSController{},
 		&domainFacility.SPSControllerSystemType{},
 		&domainFacility.SystemPart{},
 		&domainFacility.Apparat{},
 		&domainFacility.Specification{},
-		&fieldDeviceRecord{},
+		&FieldDeviceRecord{},
 		&domainFacility.StateText{},
 		&domainFacility.NotificationClass{},
 		&domainFacility.AlarmType{},
 		&domainFacility.BacnetObject{},
-	)
+	}
 	if err := db.AutoMigrate(models...); err != nil {
 		t.Fatalf("expected field device repo tables to migrate, got %v", err)
 	}

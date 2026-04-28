@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type fieldDeviceRecord struct {
+type FieldDeviceRecord struct {
 	domain.Base
 	BMK                       *string
 	Description               *string
@@ -23,20 +23,16 @@ type fieldDeviceRecord struct {
 	BacnetObjects             []domainFacility.BacnetObject          `gorm:"foreignKey:FieldDeviceID"`
 }
 
-func (fieldDeviceRecord) TableName() string {
+func (FieldDeviceRecord) TableName() string {
 	return "field_devices"
 }
 
-func AutoMigrateFieldDeviceModels() []any {
-	return []any{&fieldDeviceRecord{}}
-}
-
-func toFieldDeviceRecord(entity *domainFacility.FieldDevice) *fieldDeviceRecord {
+func toFieldDeviceRecord(entity *domainFacility.FieldDevice) *FieldDeviceRecord {
 	if entity == nil {
 		return nil
 	}
 
-	return &fieldDeviceRecord{
+	return &FieldDeviceRecord{
 		Base:                      entity.Base,
 		BMK:                       entity.BMK,
 		Description:               entity.Description,
@@ -49,7 +45,7 @@ func toFieldDeviceRecord(entity *domainFacility.FieldDevice) *fieldDeviceRecord 
 	}
 }
 
-func toFieldDeviceDomain(record *fieldDeviceRecord) *domainFacility.FieldDevice {
+func toFieldDeviceDomain(record *FieldDeviceRecord) *domainFacility.FieldDevice {
 	if record == nil {
 		return nil
 	}
@@ -72,7 +68,7 @@ func toFieldDeviceDomain(record *fieldDeviceRecord) *domainFacility.FieldDevice 
 	}
 }
 
-func toFieldDeviceDomains(records []*fieldDeviceRecord) []*domainFacility.FieldDevice {
+func toFieldDeviceDomains(records []*FieldDeviceRecord) []*domainFacility.FieldDevice {
 	items := make([]*domainFacility.FieldDevice, len(records))
 	for i, record := range records {
 		items[i] = toFieldDeviceDomain(record)
@@ -80,7 +76,7 @@ func toFieldDeviceDomains(records []*fieldDeviceRecord) []*domainFacility.FieldD
 	return items
 }
 
-func fieldDeviceDomainValues(records []fieldDeviceRecord) []domainFacility.FieldDevice {
+func fieldDeviceDomainValues(records []FieldDeviceRecord) []domainFacility.FieldDevice {
 	items := make([]domainFacility.FieldDevice, len(records))
 	for i := range records {
 		items[i] = *toFieldDeviceDomain(&records[i])

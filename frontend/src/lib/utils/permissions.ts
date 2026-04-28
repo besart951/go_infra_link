@@ -6,10 +6,12 @@
  */
 
 import type { UserRole } from '$lib/api/users.js';
-import { canManageRole, auth } from '$lib/stores/auth.svelte';
+import { canManageRole, auth, hasRole } from '$lib/stores/auth.svelte';
 
 export function canPerform(action: string, resource: string): boolean {
   if (!auth.user) return false;
+  if (hasRole('superadmin')) return true;
+
   const rolePerms = auth.user.permissions || [];
   const permission = `${resource}.${action}`;
   return rolePerms.includes(permission);

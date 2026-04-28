@@ -25,7 +25,7 @@ func (r *projectControlCabinetRepo) GetByIds(ctx context.Context, ids []uuid.UUI
 		return []*project.ProjectControlCabinet{}, nil
 	}
 
-	var records []*projectControlCabinetRecord
+	var records []*ProjectControlCabinetRecord
 	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&records).Error
 	return toProjectControlCabinetDomains(records), err
 }
@@ -39,7 +39,7 @@ func (r *projectControlCabinetRepo) Create(ctx context.Context, entity *project.
 
 func (r *projectControlCabinetRepo) Update(ctx context.Context, entity *project.ProjectControlCabinet) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Model(&projectControlCabinetRecord{}).
+	return r.db.WithContext(ctx).Model(&ProjectControlCabinetRecord{}).
 		Where("id = ?", entity.ID).
 		Updates(map[string]any{
 			"updated_at":         entity.UpdatedAt,
@@ -52,21 +52,21 @@ func (r *projectControlCabinetRepo) DeleteByIds(ctx context.Context, ids []uuid.
 	if len(ids) == 0 {
 		return nil
 	}
-	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&projectControlCabinetRecord{}).Error
+	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&ProjectControlCabinetRecord{}).Error
 }
 
 func (r *projectControlCabinetRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[project.ProjectControlCabinet], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.WithContext(ctx).Model(&projectControlCabinetRecord{})
+	query := r.db.WithContext(ctx).Model(&ProjectControlCabinetRecord{})
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	var records []projectControlCabinetRecord
+	var records []ProjectControlCabinetRecord
 	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&records).Error; err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (r *projectControlCabinetRepo) GetPaginatedListByProjectID(ctx context.Cont
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.WithContext(ctx).Model(&projectControlCabinetRecord{}).
+	query := r.db.WithContext(ctx).Model(&ProjectControlCabinetRecord{}).
 		Where("project_id = ?", projectID)
 
 	var total int64
@@ -91,7 +91,7 @@ func (r *projectControlCabinetRepo) GetPaginatedListByProjectID(ctx context.Cont
 		return nil, err
 	}
 
-	var records []projectControlCabinetRecord
+	var records []ProjectControlCabinetRecord
 	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&records).Error; err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (r *projectControlCabinetRepo) GetPaginatedListByProjectID(ctx context.Cont
 }
 
 func (r *projectControlCabinetRepo) GetByProjectID(ctx context.Context, projectID uuid.UUID) ([]*project.ProjectControlCabinet, error) {
-	var records []*projectControlCabinetRecord
+	var records []*ProjectControlCabinetRecord
 	err := r.db.WithContext(ctx).Where("project_id = ?", projectID).Find(&records).Error
 	return toProjectControlCabinetDomains(records), err
 }
@@ -119,7 +119,7 @@ func (r *projectControlCabinetRepo) GetByControlCabinetIDs(ctx context.Context, 
 		return []*project.ProjectControlCabinet{}, nil
 	}
 
-	var records []*projectControlCabinetRecord
+	var records []*ProjectControlCabinetRecord
 	err := r.db.WithContext(ctx).Where("control_cabinet_id IN ?", controlCabinetIDs).Find(&records).Error
 	return toProjectControlCabinetDomains(records), err
 }
@@ -131,11 +131,11 @@ func (r *projectControlCabinetRepo) DeleteByControlCabinetIDs(ctx context.Contex
 
 	return r.db.WithContext(ctx).
 		Where("control_cabinet_id IN ?", controlCabinetIDs).
-		Delete(&projectControlCabinetRecord{}).Error
+		Delete(&ProjectControlCabinetRecord{}).Error
 }
 
 func (r *projectControlCabinetRepo) DeleteByProjectAndControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) error {
 	return r.db.WithContext(ctx).
 		Where("project_id = ? AND control_cabinet_id = ?", projectID, controlCabinetID).
-		Delete(&projectControlCabinetRecord{}).Error
+		Delete(&ProjectControlCabinetRecord{}).Error
 }

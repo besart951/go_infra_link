@@ -37,8 +37,8 @@ func TestSPSControllerSystemTypeRepo_ProjectListUsesProjectSPSLinksAndCountsFiel
 		SystemTypeID:    otherSystemType.ID,
 	})
 
-	seedFacilityRecord(t, db, &fieldDeviceRecord{SPSControllerSystemTypeID: targetSystemType.ID, ApparatNr: 1, SystemPartID: uuid.New(), ApparatID: uuid.New()})
-	seedFacilityRecord(t, db, &fieldDeviceRecord{SPSControllerSystemTypeID: targetSystemType.ID, ApparatNr: 2, SystemPartID: uuid.New(), ApparatID: uuid.New()})
+	seedFacilityRecord(t, db, &FieldDeviceRecord{SPSControllerSystemTypeID: targetSystemType.ID, ApparatNr: 1, SystemPartID: uuid.New(), ApparatID: uuid.New()})
+	seedFacilityRecord(t, db, &FieldDeviceRecord{SPSControllerSystemTypeID: targetSystemType.ID, ApparatNr: 2, SystemPartID: uuid.New(), ApparatID: uuid.New()})
 
 	projectID := uuid.New()
 	if err := projectSPSLinks.Create(ctx, &domainProject.ProjectSPSController{ProjectID: projectID, SPSControllerID: controller.ID}); err != nil {

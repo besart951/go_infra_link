@@ -44,20 +44,20 @@ func TestLoadUsesTypedEnvParsing(t *testing.T) {
 		t.Fatalf("Load returned error: %v", err)
 	}
 
-	if cfg.DBType != "postgres" {
-		t.Fatalf("expected normalized DB type postgres, got %q", cfg.DBType)
+	if cfg.DBConfig.Type != "postgres" {
+		t.Fatalf("expected normalized DB type postgres, got %q", cfg.DBConfig.Type)
 	}
-	if cfg.DBMaxOpenConns != 42 {
-		t.Fatalf("expected max open conns 42, got %d", cfg.DBMaxOpenConns)
+	if cfg.DBConfig.MaxOpenConns != 42 {
+		t.Fatalf("expected max open conns 42, got %d", cfg.DBConfig.MaxOpenConns)
 	}
-	if cfg.DBMaxIdleConns != 7 {
-		t.Fatalf("expected max idle conns 7, got %d", cfg.DBMaxIdleConns)
+	if cfg.DBConfig.MaxIdleConns != 7 {
+		t.Fatalf("expected max idle conns 7, got %d", cfg.DBConfig.MaxIdleConns)
 	}
-	if cfg.DBConnMaxLifetime != 30*time.Minute {
-		t.Fatalf("expected conn lifetime 30m, got %s", cfg.DBConnMaxLifetime)
+	if cfg.DBConfig.ConnMaxLifetime != 30*time.Minute {
+		t.Fatalf("expected conn lifetime 30m, got %s", cfg.DBConfig.ConnMaxLifetime)
 	}
-	if cfg.DBConnectTimeout != 12*time.Second {
-		t.Fatalf("expected connect timeout 12s, got %s", cfg.DBConnectTimeout)
+	if cfg.DBConfig.ConnectTimeout != 12*time.Second {
+		t.Fatalf("expected connect timeout 12s, got %s", cfg.DBConfig.ConnectTimeout)
 	}
 	if cfg.AccessTokenTTL != 20*time.Minute {
 		t.Fatalf("expected access token TTL 20m, got %s", cfg.AccessTokenTTL)

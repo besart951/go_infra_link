@@ -25,7 +25,7 @@ type runtime struct {
 func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func(), error) {
 	logDatabaseConfig(cfg, log)
 
-	gormDB, cleanup, err := openDatabase(cfg, log)
+	gormDB, cleanup, err := openDatabase(cfg.DBConfig, log)
 	if err != nil {
 		return nil, cleanup, err
 	}
@@ -73,7 +73,7 @@ func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func()
 	}, cleanup, nil
 }
 
-func openDatabase(cfg config.Config, log applogger.Logger) (*gorm.DB, func(), error) {
+func openDatabase(cfg config.DBConfig, log applogger.Logger) (*gorm.DB, func(), error) {
 	gormDB, err := db.Connect(cfg)
 	if err != nil {
 		log.Error("Failed to connect to database", "err", err)
@@ -100,7 +100,7 @@ func logDatabaseConfig(cfg config.Config, log applogger.Logger) {
 		return
 	}
 
-	log.Info("Database config", "type", cfg.DBType, "dsn", formatDSNForLog(cfg.DBType, cfg.DBDsn))
+	log.Info("Database config", "type", cfg.DBConfig.Type, "dsn", formatDSNForLog(cfg.DBConfig.Type, cfg.DBConfig.Dsn))
 }
 
 func cookieSettingsFromConfig(cfg config.Config) authhandler.CookieSettings {

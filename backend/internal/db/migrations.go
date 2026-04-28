@@ -29,31 +29,6 @@ var migrations = []migration{
 		description: "baseline_schema",
 		apply:       autoMigrateCurrentSchema,
 	},
-	{
-		version:     "202604030002",
-		description: "cleanup_facility_delete_orphans",
-		apply:       cleanupFacilityDeleteOrphans,
-	},
-	{
-		version:     "202604030003",
-		description: "ensure_facility_delete_cascades",
-		apply:       ensureFacilityDeleteCascades,
-	},
-	{
-		version:     "202604030004",
-		description: "ensure_object_data_apparats_cascade",
-		apply:       ensureObjectDataApparatsCascade,
-	},
-	{
-		version:     "202604030005",
-		description: "ensure_bacnet_object_textfix_index_non_unique",
-		apply:       ensureBacnetObjectTextFixIndexNonUnique,
-	},
-	{
-		version:     "202604030006",
-		description: "drop_legacy_phases_project_id",
-		apply:       dropLegacyPhaseProjectID,
-	},
 }
 
 func ApplyMigrations(db *gorm.DB) error {

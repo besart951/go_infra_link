@@ -25,7 +25,7 @@ func TestProjectRepo_MembershipAndUserScopedListing(t *testing.T) {
 
 	ongoing := &domainProject.Project{
 		Name:        "Ongoing Migration",
-		Description: "mapped via projectRecord",
+		Description: "mapped via ProjectRecord",
 		Status:      domainProject.StatusOngoing,
 		PhaseID:     uuid.New(),
 		CreatorID:   creator.ID,
@@ -121,7 +121,7 @@ func newProjectRepoTestDB(t *testing.T) *gorm.DB {
 		_ = sqlDB.Close()
 	})
 
-	if err := db.AutoMigrate(&projectRecord{}, &projectUserRecord{}, &domainUser.User{}); err != nil {
+	if err := db.AutoMigrate(&ProjectRecord{}, &ProjectUserRecord{}, &domainUser.User{}); err != nil {
 		t.Fatalf("expected project repo tables to migrate, got %v", err)
 	}
 

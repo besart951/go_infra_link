@@ -26,12 +26,16 @@ type Config struct {
 	SeedUserLastName  string
 	SeedUserEmail     string
 	SeedUserPassword  string
-	DBType            string
-	DBDsn             string
-	DBMaxOpenConns    int
-	DBMaxIdleConns    int
-	DBConnMaxLifetime time.Duration
-	DBConnectTimeout  time.Duration
+	DBConfig          DBConfig
+}
+
+type DBConfig struct {
+	Type            string
+	Dsn             string
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
+	ConnectTimeout  time.Duration
 }
 
 const DefaultIssuer = "go_infra_link"
@@ -51,15 +55,17 @@ func Load() (Config, error) {
 		RefreshTokenTTL:   env.Duration("REFRESH_TOKEN_TTL", 720*time.Hour),
 		CookieDomain:      env.String("COOKIE_DOMAIN", ""),
 		CookieSecure:      env.Bool("COOKIE_SECURE", false),
-		DBType:            normalizeDBType(env.First("postgres", "DB_TYPE", "DB_DRIVER")),
-		DBMaxOpenConns:    env.Int("DB_MAX_OPEN_CONNS", 25),
-		DBMaxIdleConns:    env.Int("DB_MAX_IDLE_CONNS", 5),
-		DBConnMaxLifetime: env.Duration("DB_CONN_MAX_LIFETIME", time.Hour),
-		DBConnectTimeout:  env.Duration("DB_CONNECT_TIMEOUT", 5*time.Second),
+		DBConfig: DBConfig{
+			Type:            normalizeDBType(env.First("postgres", "DB_TYPE", "DB_DRIVER")),
+			MaxOpenConns:    env.Int("DB_MAX_OPEN_CONNS", 25),
+			MaxIdleConns:    env.Int("DB_MAX_IDLE_CONNS", 5),
+			ConnMaxLifetime: env.Duration("DB_CONN_MAX_LIFETIME", time.Hour),
+			ConnectTimeout:  env.Duration("DB_CONNECT_TIMEOUT", 5*time.Second),
+		},
 	}
 
 	applySeedUserConfig(&cfg, env)
-	cfg.DBDsn = resolveDatabaseDSN(env)
+	cfg.DBConfig.Dsn = resolveDatabaseDSN(env)
 
 	if err := validateConfig(cfg); err != nil {
 		return Config{}, err
