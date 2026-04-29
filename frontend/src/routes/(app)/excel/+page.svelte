@@ -4,13 +4,17 @@
   import ExcelUploadDropzone from '$lib/components/excel/ExcelUploadDropzone.svelte';
   import ExcelReadProgressCard from '$lib/components/excel/ExcelReadProgressCard.svelte';
   import ExcelSessionSummary from '$lib/components/excel/ExcelSessionSummary.svelte';
+  import SpreadsheetPreviewer from '$lib/components/excel/spreadsheet-preview/SpreadsheetPreviewer.svelte';
+  import * as Tabs from '$lib/components/ui/tabs/index.js';
   import { addToast } from '$lib/components/toast.svelte';
   import { StartExcelReadSessionUseCase } from '$lib/application/useCases/excel/startExcelReadSessionUseCase.js';
   import { ExcelWorkerReaderAdapter } from '$lib/infrastructure/excel/excelWorkerReaderAdapter.js';
   import type { ExcelReadSession } from '$lib/domain/excel/index.js';
+  import { FileSpreadsheet, Table2 } from '@lucide/svelte';
 
   const readSessionUseCase = new StartExcelReadSessionUseCase(new ExcelWorkerReaderAdapter());
 
+  let activeImporterTab = $state('object-importer');
   let isReading = $state(false);
   let progressPercent = $state(0);
   let progressMessage = $state('Warten auf Datei...');
@@ -79,29 +83,50 @@
   </div>
 
   {#if canPerform('create', 'objectdata')}
-    <ExcelUploadDropzone disabled={isReading} onFileSelected={handleFileSelected} />
+    <Tabs.Root bind:value={activeImporterTab}>
+      <Tabs.List class="w-full justify-start overflow-x-auto sm:w-fit">
+        <Tabs.Trigger value="object-importer" class="gap-2">
+          <FileSpreadsheet class="size-4" />
+          Objektdaten-Importer
+        </Tabs.Trigger>
+        <Tabs.Trigger value="worksheet-preview" class="gap-2">
+          <Table2 class="size-4" />
+          Arbeitsblatt-Vorschau
+        </Tabs.Trigger>
+      </Tabs.List>
 
-    <ExcelReadProgressCard
-      {progressPercent}
-      {progressMessage}
-      {isReading}
-      onCancel={cancelReadSession}
-    />
+      <Tabs.Content value="object-importer" class="mt-4">
+        <div class="flex flex-col gap-6">
+          <ExcelUploadDropzone disabled={isReading} onFileSelected={handleFileSelected} />
+
+          <ExcelReadProgressCard
+            {progressPercent}
+            {progressMessage}
+            {isReading}
+            onCancel={cancelReadSession}
+          />
+
+          {#if errorMessage}
+            <div
+              class="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+            >
+              {errorMessage}
+            </div>
+          {/if}
+
+          {#if preparedSession}
+            <ExcelSessionSummary session={preparedSession} />
+          {/if}
+        </div>
+      </Tabs.Content>
+
+      <Tabs.Content value="worksheet-preview" class="mt-4">
+        <SpreadsheetPreviewer />
+      </Tabs.Content>
+    </Tabs.Root>
   {:else}
     <div class="rounded-lg border bg-muted p-4 text-center text-sm text-muted-foreground">
       Sie haben keine Berechtigung, Excel-Daten zu importieren.
     </div>
-  {/if}
-
-  {#if errorMessage}
-    <div
-      class="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
-    >
-      {errorMessage}
-    </div>
-  {/if}
-
-  {#if preparedSession}
-    <ExcelSessionSummary session={preparedSession} />
   {/if}
 </div>

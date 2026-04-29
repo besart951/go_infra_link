@@ -27,7 +27,7 @@ func (r *projectRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*domainP
 		return []*domainProject.Project{}, nil
 	}
 
-	var records []*projectRecord
+	var records []*ProjectRecord
 	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&records).Error
 	return toProjectDomains(records), err
 }
@@ -42,7 +42,7 @@ func (r *projectRepo) Create(ctx context.Context, entity *domainProject.Project)
 
 func (r *projectRepo) Update(ctx context.Context, entity *domainProject.Project) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Model(&projectRecord{}).
+	return r.db.WithContext(ctx).Model(&ProjectRecord{}).
 		Where("id = ?", entity.ID).
 		Updates(map[string]any{
 			"updated_at":  entity.UpdatedAt,
@@ -60,7 +60,7 @@ func (r *projectRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {
 		return nil
 	}
 
-	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&projectRecord{}).Error
+	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&ProjectRecord{}).Error
 }
 
 func (r *projectRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainProject.Project], error) {
@@ -75,7 +75,7 @@ func (r *projectRepo) GetPaginatedListWithStatus(ctx context.Context, params dom
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.WithContext(ctx).Model(&projectRecord{})
+	query := r.db.WithContext(ctx).Model(&ProjectRecord{})
 
 	if params.Search != "" {
 		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
@@ -91,7 +91,7 @@ func (r *projectRepo) GetPaginatedListWithStatus(ctx context.Context, params dom
 		return nil, err
 	}
 
-	var records []projectRecord
+	var records []ProjectRecord
 	if err := query.
 		Order("created_at DESC").
 		Limit(limit).
@@ -112,7 +112,7 @@ func (r *projectRepo) GetPaginatedListForUserWithStatus(ctx context.Context, par
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.WithContext(ctx).Model(&projectRecord{}).
+	query := r.db.WithContext(ctx).Model(&ProjectRecord{}).
 		Joins("LEFT JOIN project_users pu ON pu.project_id = projects.id").
 		Where("pu.user_id = ?", userID)
 
@@ -130,7 +130,7 @@ func (r *projectRepo) GetPaginatedListForUserWithStatus(ctx context.Context, par
 		return nil, err
 	}
 
-	var records []projectRecord
+	var records []ProjectRecord
 	if err := query.
 		Distinct("projects.*").
 		Order("projects.created_at DESC").
@@ -149,7 +149,7 @@ func (r *projectRepo) GetPaginatedListForUserWithStatus(ctx context.Context, par
 }
 
 func (r *projectRepo) AddUser(ctx context.Context, projectID, userID uuid.UUID) error {
-	return r.db.WithContext(ctx).Create(&projectUserRecord{ProjectID: projectID, UserID: userID}).Error
+	return r.db.WithContext(ctx).Create(&ProjectUserRecord{ProjectID: projectID, UserID: userID}).Error
 }
 
 func (r *projectRepo) HasUser(ctx context.Context, projectID, userID uuid.UUID) (bool, error) {
@@ -166,7 +166,7 @@ func (r *projectRepo) HasUser(ctx context.Context, projectID, userID uuid.UUID) 
 func (r *projectRepo) RemoveUser(ctx context.Context, projectID, userID uuid.UUID) error {
 	return r.db.WithContext(ctx).
 		Where("project_id = ? AND user_id = ?", projectID, userID).
-		Delete(&projectUserRecord{}).Error
+		Delete(&ProjectUserRecord{}).Error
 }
 
 func (r *projectRepo) ListUsers(ctx context.Context, projectID uuid.UUID) ([]domainUser.User, error) {

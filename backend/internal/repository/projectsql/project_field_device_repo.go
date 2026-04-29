@@ -26,7 +26,7 @@ func (r *projectFieldDeviceRepo) GetByIds(ctx context.Context, ids []uuid.UUID) 
 		return []*project.ProjectFieldDevice{}, nil
 	}
 
-	var records []*projectFieldDeviceRecord
+	var records []*ProjectFieldDeviceRecord
 	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&records).Error
 	return toProjectFieldDeviceDomains(records), err
 }
@@ -68,7 +68,7 @@ func (r *projectFieldDeviceRepo) BulkCreate(ctx context.Context, entities []*pro
 
 func (r *projectFieldDeviceRepo) Update(ctx context.Context, entity *project.ProjectFieldDevice) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Model(&projectFieldDeviceRecord{}).
+	return r.db.WithContext(ctx).Model(&ProjectFieldDeviceRecord{}).
 		Where("id = ?", entity.ID).
 		Updates(map[string]any{
 			"updated_at":      entity.UpdatedAt,
@@ -81,21 +81,21 @@ func (r *projectFieldDeviceRepo) DeleteByIds(ctx context.Context, ids []uuid.UUI
 	if len(ids) == 0 {
 		return nil
 	}
-	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&projectFieldDeviceRecord{}).Error
+	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&ProjectFieldDeviceRecord{}).Error
 }
 
 func (r *projectFieldDeviceRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[project.ProjectFieldDevice], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.WithContext(ctx).Model(&projectFieldDeviceRecord{})
+	query := r.db.WithContext(ctx).Model(&ProjectFieldDeviceRecord{})
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	var records []projectFieldDeviceRecord
+	var records []ProjectFieldDeviceRecord
 	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&records).Error; err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (r *projectFieldDeviceRepo) GetPaginatedListByProjectID(ctx context.Context
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.WithContext(ctx).Model(&projectFieldDeviceRecord{}).
+	query := r.db.WithContext(ctx).Model(&ProjectFieldDeviceRecord{}).
 		Where("project_id = ?", projectID)
 
 	var total int64
@@ -120,7 +120,7 @@ func (r *projectFieldDeviceRepo) GetPaginatedListByProjectID(ctx context.Context
 		return nil, err
 	}
 
-	var records []projectFieldDeviceRecord
+	var records []ProjectFieldDeviceRecord
 	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&records).Error; err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (r *projectFieldDeviceRepo) GetPaginatedListByProjectID(ctx context.Context
 }
 
 func (r *projectFieldDeviceRepo) GetByProjectID(ctx context.Context, projectID uuid.UUID) ([]*project.ProjectFieldDevice, error) {
-	var records []*projectFieldDeviceRecord
+	var records []*ProjectFieldDeviceRecord
 	err := r.db.WithContext(ctx).Where("project_id = ?", projectID).Find(&records).Error
 	return toProjectFieldDeviceDomains(records), err
 }
@@ -148,7 +148,7 @@ func (r *projectFieldDeviceRepo) GetByFieldDeviceIDs(ctx context.Context, fieldD
 		return []*project.ProjectFieldDevice{}, nil
 	}
 
-	var records []*projectFieldDeviceRecord
+	var records []*ProjectFieldDeviceRecord
 	err := r.db.WithContext(ctx).Where("field_device_id IN ?", fieldDeviceIDs).Find(&records).Error
 	return toProjectFieldDeviceDomains(records), err
 }
@@ -160,11 +160,11 @@ func (r *projectFieldDeviceRepo) DeleteByFieldDeviceIDs(ctx context.Context, fie
 
 	return r.db.WithContext(ctx).
 		Where("field_device_id IN ?", fieldDeviceIDs).
-		Delete(&projectFieldDeviceRecord{}).Error
+		Delete(&ProjectFieldDeviceRecord{}).Error
 }
 
 func (r *projectFieldDeviceRepo) DeleteByProjectAndFieldDevice(ctx context.Context, projectID, fieldDeviceID uuid.UUID) error {
 	return r.db.WithContext(ctx).
 		Where("project_id = ? AND field_device_id = ?", projectID, fieldDeviceID).
-		Delete(&projectFieldDeviceRecord{}).Error
+		Delete(&ProjectFieldDeviceRecord{}).Error
 }

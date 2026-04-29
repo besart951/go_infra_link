@@ -26,7 +26,7 @@ func (r *projectSPSControllerRepo) GetByIds(ctx context.Context, ids []uuid.UUID
 		return []*project.ProjectSPSController{}, nil
 	}
 
-	var records []*projectSPSControllerRecord
+	var records []*ProjectSPSControllerRecord
 	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&records).Error
 	return toProjectSPSControllerDomains(records), err
 }
@@ -68,7 +68,7 @@ func (r *projectSPSControllerRepo) BulkCreate(ctx context.Context, entities []*p
 
 func (r *projectSPSControllerRepo) Update(ctx context.Context, entity *project.ProjectSPSController) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Model(&projectSPSControllerRecord{}).
+	return r.db.WithContext(ctx).Model(&ProjectSPSControllerRecord{}).
 		Where("id = ?", entity.ID).
 		Updates(map[string]any{
 			"updated_at":        entity.UpdatedAt,
@@ -81,21 +81,21 @@ func (r *projectSPSControllerRepo) DeleteByIds(ctx context.Context, ids []uuid.U
 	if len(ids) == 0 {
 		return nil
 	}
-	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&projectSPSControllerRecord{}).Error
+	return r.db.WithContext(ctx).Where("id IN ?", ids).Delete(&ProjectSPSControllerRecord{}).Error
 }
 
 func (r *projectSPSControllerRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[project.ProjectSPSController], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.WithContext(ctx).Model(&projectSPSControllerRecord{})
+	query := r.db.WithContext(ctx).Model(&ProjectSPSControllerRecord{})
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	var records []projectSPSControllerRecord
+	var records []ProjectSPSControllerRecord
 	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&records).Error; err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (r *projectSPSControllerRepo) GetPaginatedListByProjectID(ctx context.Conte
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.db.WithContext(ctx).Model(&projectSPSControllerRecord{}).
+	query := r.db.WithContext(ctx).Model(&ProjectSPSControllerRecord{}).
 		Where("project_id = ?", projectID)
 
 	var total int64
@@ -120,7 +120,7 @@ func (r *projectSPSControllerRepo) GetPaginatedListByProjectID(ctx context.Conte
 		return nil, err
 	}
 
-	var records []projectSPSControllerRecord
+	var records []ProjectSPSControllerRecord
 	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&records).Error; err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (r *projectSPSControllerRepo) GetPaginatedListByProjectID(ctx context.Conte
 }
 
 func (r *projectSPSControllerRepo) GetByProjectID(ctx context.Context, projectID uuid.UUID) ([]*project.ProjectSPSController, error) {
-	var records []*projectSPSControllerRecord
+	var records []*ProjectSPSControllerRecord
 	err := r.db.WithContext(ctx).Where("project_id = ?", projectID).Find(&records).Error
 	return toProjectSPSControllerDomains(records), err
 }
@@ -148,7 +148,7 @@ func (r *projectSPSControllerRepo) GetBySPSControllerIDs(ctx context.Context, sp
 		return []*project.ProjectSPSController{}, nil
 	}
 
-	var records []*projectSPSControllerRecord
+	var records []*ProjectSPSControllerRecord
 	err := r.db.WithContext(ctx).Where("sps_controller_id IN ?", spsControllerIDs).Find(&records).Error
 	return toProjectSPSControllerDomains(records), err
 }
@@ -160,11 +160,11 @@ func (r *projectSPSControllerRepo) DeleteBySPSControllerIDs(ctx context.Context,
 
 	return r.db.WithContext(ctx).
 		Where("sps_controller_id IN ?", spsControllerIDs).
-		Delete(&projectSPSControllerRecord{}).Error
+		Delete(&ProjectSPSControllerRecord{}).Error
 }
 
 func (r *projectSPSControllerRepo) DeleteByProjectAndSPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) error {
 	return r.db.WithContext(ctx).
 		Where("project_id = ? AND sps_controller_id = ?", projectID, spsControllerID).
-		Delete(&projectSPSControllerRecord{}).Error
+		Delete(&ProjectSPSControllerRecord{}).Error
 }

@@ -18,7 +18,7 @@ type spsControllerSystemTypeRepo struct {
 
 func (r *spsControllerSystemTypeRepo) queryWithFieldDeviceCounts(ctx context.Context) *gorm.DB {
 	fieldDeviceCounts := r.db.WithContext(ctx).
-		Model(&fieldDeviceRecord{}).
+		Model(&FieldDeviceRecord{}).
 		Select("sps_controller_system_type_id, COUNT(*) AS field_devices_count").
 		Group("sps_controller_system_type_id")
 

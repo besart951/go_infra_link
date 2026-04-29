@@ -15,7 +15,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := db.Bootstrap(cfg); err != nil {
+	if err := db.Bootstrap(cfg.DBConfig); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "db bootstrap:", err)
 		os.Exit(1)
 	}
