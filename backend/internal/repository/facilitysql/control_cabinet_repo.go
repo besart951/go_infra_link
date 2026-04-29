@@ -17,13 +17,26 @@ type controlCabinetRepo struct {
 }
 
 func NewControlCabinetRepository(db *gorm.DB) domainFacility.ControlCabinetRepository {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where("LOWER(control_cabinet_nr) LIKE ?", pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainFacility.ControlCabinet](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository[*domainFacility.ControlCabinet](db, applyControlCabinetSearch)
 	return &controlCabinetRepo{BaseRepository: baseRepo, db: db}
+}
+
+func applyControlCabinetSearch(query *gorm.DB, search string) *gorm.DB {
+	tokens := strings.Fields(strings.ToLower(strings.TrimSpace(search)))
+	for _, token := range tokens {
+		pattern := "%" + token + "%"
+		query = query.Where(`
+			LOWER(control_cabinet_nr) LIKE ?
+			OR building_id IN (
+				SELECT id
+				FROM buildings
+				WHERE LOWER(iws_code) LIKE ?
+					OR CAST(building_group AS TEXT) LIKE ?
+					OR LOWER(iws_code || '-' || CAST(building_group AS TEXT)) LIKE ?
+			)
+		`, pattern, pattern, pattern, pattern)
+	}
+	return query
 }
 
 func (r *controlCabinetRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ControlCabinet], error) {
@@ -42,8 +55,7 @@ func (r *controlCabinetRepo) GetPaginatedListByBuildingID(ctx context.Context, b
 		Where("building_id = ?", buildingID)
 
 	if strings.TrimSpace(params.Search) != "" {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
-		query = query.Where("LOWER(control_cabinet_nr) LIKE ?", pattern)
+		query = applyControlCabinetSearch(query, params.Search)
 	}
 
 	var total int64
