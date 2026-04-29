@@ -994,6 +994,7 @@
       "team": "Teams",
       "role": "Rollen",
       "permission": "Berechtigungen",
+      "project_self": "Projekte",
       "building": "Gebäude",
       "controlcabinet": "Schaltschränke",
       "spscontroller": "SPS-Regler",
@@ -1011,10 +1012,10 @@
       "project": {
         "controlcabinet": "Schaltschränke",
         "spscontroller": "SPS-Regler",
-        "spscontrollersystemtype": "SPS-Regler-Systemtypen",
+        "spscontroller_systemtype": "SPS-Regler-Systemtypen",
         "fielddevice": "Feldgeräte",
-        "bacnetobject": "BACnet-Objekte",
-        "systemtype": "Systemtypen"
+        "fielddevice_specification": "Feldgeräte-Spezifikationen",
+        "fielddevice_bacnetobjects": "Feldgeräte-BACnet-Objekte"
       }
     },
     "toasts": {

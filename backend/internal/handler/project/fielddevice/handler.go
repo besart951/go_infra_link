@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	facilitydto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
 	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
@@ -73,7 +74,13 @@ func (h *Handler) CreateProjectFieldDevice(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndAnyPermission(
+		c,
+		h.access,
+		projectID,
+		domainUser.PermissionProjectFieldDeviceCreate,
+		domainUser.PermissionProjectFieldDeviceEdit,
+	) {
 		return
 	}
 
@@ -117,7 +124,13 @@ func (h *Handler) MultiCreateProjectFieldDevices(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndAnyPermission(
+		c,
+		h.access,
+		projectID,
+		domainUser.PermissionProjectFieldDeviceCreate,
+		domainUser.PermissionProjectFieldDeviceEdit,
+	) {
 		return
 	}
 
@@ -241,7 +254,13 @@ func (h *Handler) UpdateProjectFieldDevice(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndAnyPermission(
+		c,
+		h.access,
+		projectID,
+		domainUser.PermissionProjectFieldDeviceUpdate,
+		domainUser.PermissionProjectFieldDeviceEdit,
+	) {
 		return
 	}
 
@@ -288,7 +307,13 @@ func (h *Handler) DeleteProjectFieldDevice(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndAnyPermission(
+		c,
+		h.access,
+		projectID,
+		domainUser.PermissionProjectFieldDeviceDelete,
+		domainUser.PermissionProjectFieldDeviceEdit,
+	) {
 		return
 	}
 

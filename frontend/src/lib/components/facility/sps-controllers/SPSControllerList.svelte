@@ -9,7 +9,6 @@
   import SPSControllerForm from '$lib/components/facility/forms/SPSControllerForm.svelte';
   import type { SPSController } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import { canPerform } from '$lib/utils/permissions.js';
   import { Plus } from '@lucide/svelte';
   import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
   import { useSPSControllerState } from './state/context.svelte.js';
@@ -56,7 +55,7 @@
 
 <div class="flex flex-col gap-4">
   <div class="flex flex-wrap items-center justify-end gap-2">
-    {#if !state.showForm && canPerform('create', 'spscontroller')}
+    {#if !state.showForm && state.canCreateSPSController()}
       <Button onclick={() => state.openCreateForm()}>
         <Plus class="mr-2 size-4" />
         {newLabel}
@@ -179,24 +178,24 @@
                   {$t('facility.copy')}
                 </DropdownMenu.Item>
               {/if}
-              {#if canPerform('create', 'spscontroller')}
+              {#if state.canCreateSPSController()}
                 <DropdownMenu.Item onclick={() => void state.duplicateSPSController(controller)}>
                   {$t('facility.duplicate')}
                 </DropdownMenu.Item>
               {/if}
-              {#if canPerform('read', 'spscontroller')}
+              {#if state.canReadSPSController()}
                 <DropdownMenu.Item
                   onclick={() => goto(`/facility/sps-controllers/${controller.id}`)}
                 >
                   {$t('common.view')}
                 </DropdownMenu.Item>
               {/if}
-              {#if canPerform('update', 'spscontroller')}
+              {#if state.canUpdateSPSController()}
                 <DropdownMenu.Item onclick={() => state.editSPSController(controller)}>
                   {$t('common.edit')}
                 </DropdownMenu.Item>
               {/if}
-              {#if canPerform('delete', 'spscontroller')}
+              {#if state.canDeleteSPSController()}
                 <DropdownMenu.Separator />
                 <DropdownMenu.Item
                   variant="destructive"

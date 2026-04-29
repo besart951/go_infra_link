@@ -4,13 +4,12 @@ import (
 	"net/http"
 
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
-	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/requestutil"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-func RequireGlobalRole(authz AuthorizationChecker, min domainUser.Role) gin.HandlerFunc {
+func RequirePermission(authz AuthorizationChecker, permission string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, ok := GetUserID(c)
 		if !ok {
@@ -31,7 +30,19 @@ func RequireGlobalRole(authz AuthorizationChecker, min domainUser.Role) gin.Hand
 			c.Abort()
 			return
 		}
-		if domainUser.RoleLevel(role) < domainUser.RoleLevel(min) {
+
+		hasPermission, err := authz.HasPermission(ctx, role, permission)
+		if err != nil {
+			if requestutil.ShouldSuppressErrorResponse(ctx, err) {
+				c.Abort()
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
+			c.Abort()
+			return
+		}
+		if !hasPermission {
 			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			c.Abort()
 			return
@@ -40,7 +51,7 @@ func RequireGlobalRole(authz AuthorizationChecker, min domainUser.Role) gin.Hand
 	}
 }
 
-func RequireTeamRole(authz AuthorizationChecker, teamIDParam string, min domainTeam.MemberRole) gin.HandlerFunc {
+func RequireTeamPermission(authz AuthorizationChecker, teamIDParam string, permission string) gin.HandlerFunc {
 	if teamIDParam == "" {
 		teamIDParam = "id"
 	}
@@ -53,20 +64,34 @@ func RequireTeamRole(authz AuthorizationChecker, teamIDParam string, min domainT
 		}
 
 		ctx := c.Request.Context()
-		globalRole, err := authz.GetGlobalRole(ctx, userID)
-		if err != nil {
-			if requestutil.ShouldSuppressErrorResponse(ctx, err) {
+		if permission != "" {
+			globalRole, err := authz.GetGlobalRole(ctx, userID)
+			if err != nil {
+				if requestutil.ShouldSuppressErrorResponse(ctx, err) {
+					c.Abort()
+					return
+				}
+
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
 				c.Abort()
 				return
 			}
 
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
-			c.Abort()
-			return
-		}
-		if domainUser.IsAdmin(globalRole) {
-			c.Next()
-			return
+			hasPermission, err := authz.HasPermission(ctx, globalRole, permission)
+			if err != nil {
+				if requestutil.ShouldSuppressErrorResponse(ctx, err) {
+					c.Abort()
+					return
+				}
+
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
+				c.Abort()
+				return
+			}
+			if hasPermission {
+				c.Next()
+				return
+			}
 		}
 
 		teamID, err := uuid.Parse(c.Param(teamIDParam))
@@ -92,7 +117,7 @@ func RequireTeamRole(authz AuthorizationChecker, teamIDParam string, min domainT
 			c.Abort()
 			return
 		}
-		if domainTeam.RoleLevel(*role) < domainTeam.RoleLevel(min) {
+		if permission == "" || !domainTeam.HasPermission(*role, permission) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 			c.Abort()
 			return

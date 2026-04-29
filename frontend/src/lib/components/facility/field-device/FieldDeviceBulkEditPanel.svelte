@@ -22,6 +22,9 @@
   let bulkSpecValues = $state<Partial<SpecificationInput>>({});
   let showBulkSpecFields = $state(false);
 
+  const canEditBaseFields = $derived(fieldDeviceState.canUpdateFieldDevice());
+  const canEditSpecificationFields = $derived(fieldDeviceState.canUpdateFieldDeviceSpecification());
+
   const hasBulkValues = $derived.by(
     () =>
       Object.values(bulkEditValues).some((value) => value !== undefined && value !== '') ||
@@ -34,20 +37,28 @@
     let appliedCount = 0;
 
     for (const deviceId of fieldDeviceState.selectedIds) {
-      for (const [field, value] of Object.entries(bulkEditValues)) {
-        if (value === undefined || value === '') continue;
-        fieldDeviceState.editing.queueEdit(
-          deviceId,
-          field as keyof BulkUpdateFieldDeviceItem,
-          value
-        );
-        appliedCount++;
+      if (canEditBaseFields) {
+        for (const [field, value] of Object.entries(bulkEditValues)) {
+          if (value === undefined || value === '') continue;
+          fieldDeviceState.editing.queueEdit(
+            deviceId,
+            field as keyof BulkUpdateFieldDeviceItem,
+            value
+          );
+          appliedCount++;
+        }
       }
 
-      for (const [field, value] of Object.entries(bulkSpecValues)) {
-        if (value === undefined || value === '') continue;
-        fieldDeviceState.editing.queueSpecEdit(deviceId, field as keyof SpecificationInput, value);
-        appliedCount++;
+      if (canEditSpecificationFields) {
+        for (const [field, value] of Object.entries(bulkSpecValues)) {
+          if (value === undefined || value === '') continue;
+          fieldDeviceState.editing.queueSpecEdit(
+            deviceId,
+            field as keyof SpecificationInput,
+            value
+          );
+          appliedCount++;
+        }
       }
     }
 
@@ -81,7 +92,8 @@
   </Card.Header>
   <Card.Content>
     <div class="mb-4">
-      <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+      <fieldset disabled={!canEditBaseFields}>
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <div class="flex flex-col gap-1">
           <Label class="text-xs">{$t('field_device.bulk_edit.bmk')}</Label>
           <Input
@@ -160,24 +172,28 @@
             }}
           />
         </div>
-      </div>
+        </div>
+      </fieldset>
     </div>
 
     <div class="mb-4">
-      <button
-        type="button"
-        class="mb-2 flex items-center gap-1 text-sm font-medium hover:underline"
-        onclick={() => (showBulkSpecFields = !showBulkSpecFields)}
-      >
-        {#if showBulkSpecFields}
-          <ChevronDown class="h-4 w-4" />
-        {:else}
-          <ChevronRight class="h-4 w-4" />
-        {/if}
-        {$t('field_device.bulk_edit.spec_fields')}
-      </button>
-      {#if showBulkSpecFields}
-        <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+      {#if canEditSpecificationFields}
+        <button
+          type="button"
+          class="mb-2 flex items-center gap-1 text-sm font-medium hover:underline"
+          onclick={() => (showBulkSpecFields = !showBulkSpecFields)}
+        >
+          {#if showBulkSpecFields}
+            <ChevronDown class="h-4 w-4" />
+          {:else}
+            <ChevronRight class="h-4 w-4" />
+          {/if}
+          {$t('field_device.bulk_edit.spec_fields')}
+        </button>
+      {/if}
+      {#if showBulkSpecFields && canEditSpecificationFields}
+        <fieldset>
+          <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           <div class="flex flex-col gap-1">
             <Label class="text-xs">{$t('field_device.bulk_edit.supplier')}</Label>
             <Input
@@ -340,7 +356,8 @@
               }}
             />
           </div>
-        </div>
+          </div>
+        </fieldset>
       {/if}
     </div>
 

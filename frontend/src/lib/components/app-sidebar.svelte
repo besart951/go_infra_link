@@ -40,10 +40,8 @@
 
   import { canPerform } from '$lib/utils/permissions.js';
 
-  const hasFacilityRoleAccess = $derived(user.role === 'fzag' || user.role === 'admin_fzag');
-
   const canReadFacility = (resource: string) => {
-    return hasFacilityRoleAccess || canPerform('read', resource);
+    return canPerform('read', resource);
   };
 
   // Navigation items with collapsible sub-menus
@@ -170,7 +168,7 @@
         url: '/admin/notifications/smtp',
         icon: BellRingIcon,
         isActive: $page.url.pathname.startsWith('/admin/notifications'),
-        hasAccess: user.role === 'superadmin'
+        hasAccess: canPerform('manage', 'notification.smtp')
       }
     ];
 
@@ -184,7 +182,7 @@
 
   // Transform projects for NavProjects component
   const projectItems = $derived(
-    Array.isArray(projects) && canPerform('read', 'project')
+    Array.isArray(projects)
       ? projects.map((p) => ({
           id: p.id,
           name: p.name,

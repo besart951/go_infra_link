@@ -34,6 +34,7 @@ const RESOURCE_DISPLAY_NAMES: Record<string, string> = {
   team: 'roles.resources.team',
   role: 'roles.resources.role',
   permission: 'roles.resources.permission',
+  project: 'roles.resources.project_self',
   building: 'roles.resources.building',
   controlcabinet: 'roles.resources.controlcabinet',
   spscontroller: 'roles.resources.spscontroller',
@@ -50,10 +51,10 @@ const RESOURCE_DISPLAY_NAMES: Record<string, string> = {
   notificationclass: 'roles.resources.notificationclass',
   'project.controlcabinet': 'roles.resources.project.controlcabinet',
   'project.spscontroller': 'roles.resources.project.spscontroller',
-  'project.spscontrollersystemtype': 'roles.resources.project.spscontrollersystemtype',
+  'project.spscontroller.systemtype': 'roles.resources.project.spscontroller_systemtype',
   'project.fielddevice': 'roles.resources.project.fielddevice',
-  'project.bacnetobject': 'roles.resources.project.bacnetobject',
-  'project.systemtype': 'roles.resources.project.systemtype'
+  'project.fielddevice_specification': 'roles.resources.project.fielddevice_specification',
+  'project.fielddevice.bacnetobjects': 'roles.resources.project.fielddevice_bacnetobjects'
 };
 
 export interface RolePermissionEditorStateOptions {

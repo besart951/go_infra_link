@@ -159,4 +159,24 @@ describe('useFieldDeviceEditing', () => {
     expect(updated.bacnet_objects[0].software_type).toBe(device.bacnet_objects?.[0].software_type);
     expect(updated.bacnet_objects[0].text_fix).toBe(device.bacnet_objects?.[0].text_fix);
   });
+
+  it('tracks pending edit categories for project-specific permission gating', async () => {
+    const device = buildFieldDevice();
+    const editing = await createEditing();
+
+    expect(editing.hasPendingBaseEdits).toBe(false);
+    expect(editing.hasPendingSpecificationEdits).toBe(false);
+    expect(editing.hasPendingBacnetEdits).toBe(false);
+
+    editing.queueEdit(device.id, 'bmk', 'FD-UPDATED');
+    expect(editing.hasPendingBaseEdits).toBe(true);
+    expect(editing.hasPendingSpecificationEdits).toBe(false);
+    expect(editing.hasPendingBacnetEdits).toBe(false);
+
+    editing.queueSpecEdit(device.id, 'specification_brand', 'Brand X');
+    expect(editing.hasPendingSpecificationEdits).toBe(true);
+
+    editing.queueBacnetEdit(device.id, 'bo-1', 'text_fix', 'TF-UPDATED');
+    expect(editing.hasPendingBacnetEdits).toBe(true);
+  });
 });

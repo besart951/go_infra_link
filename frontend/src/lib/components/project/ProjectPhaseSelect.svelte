@@ -7,9 +7,15 @@
     value?: string;
     width?: string;
     id?: string;
+    disabled?: boolean;
   }
 
-  let { value = $bindable(''), width = 'w-[260px]', id }: ProjectPhaseSelectProps = $props();
+  let {
+    value = $bindable(''),
+    width = 'w-[260px]',
+    id,
+    disabled = false
+  }: ProjectPhaseSelectProps = $props();
 
   const MAX_PHASE_SAMPLES = 100;
 
@@ -37,4 +43,5 @@
   emptyText="No phases found."
   {width}
   {id}
+  {disabled}
 />

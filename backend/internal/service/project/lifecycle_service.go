@@ -95,6 +95,9 @@ func (s *ProjectLifecycleService) canReadAllProjects(ctx context.Context, reques
 	if len(users) == 0 {
 		return false, nil
 	}
+	if users[0].Role == domainUser.RoleSuperAdmin {
+		return true, nil
+	}
 
 	rolePermissions, err := s.rolePermissionRepo.ListByRole(ctx, users[0].Role)
 	if err != nil {
@@ -102,7 +105,7 @@ func (s *ProjectLifecycleService) canReadAllProjects(ctx context.Context, reques
 	}
 
 	for _, rolePermission := range rolePermissions {
-		if rolePermission.Permission == "project.read" {
+		if rolePermission.Permission == domainUser.PermissionProjectListAll {
 			return true, nil
 		}
 	}

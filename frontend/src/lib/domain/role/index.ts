@@ -70,8 +70,19 @@ export interface RolePermission {
 /**
  * Predefined permission actions
  */
-export const PERMISSION_ACTIONS = ['create', 'read', 'update', 'delete', 'manage'] as const;
+export const PERMISSION_ACTIONS = [
+  'create',
+  'read',
+  'update',
+  'delete',
+  'manage',
+  'edit',
+  'listAll'
+] as const;
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
+
+export const PROJECT_PERMISSION_ACTIONS = ['create', 'read', 'update', 'delete', 'edit'] as const;
+export type ProjectPermissionAction = (typeof PROJECT_PERMISSION_ACTIONS)[number];
 
 /**
  * Facility resources (direct: resource.action)
@@ -100,10 +111,10 @@ export type FacilityResource = (typeof FACILITY_RESOURCES)[number];
 export const PROJECT_SUB_RESOURCES = [
   'controlcabinet',
   'spscontroller',
-  'spscontrollersystemtype',
+  'spscontroller.systemtype',
   'fielddevice',
-  'bacnetobject',
-  'systemtype'
+  'fielddevice_specification',
+  'fielddevice.bacnetobjects'
 ] as const;
 export type ProjectSubResource = (typeof PROJECT_SUB_RESOURCES)[number];
 
@@ -158,12 +169,11 @@ export function parsePermissionName(permissionName: string): {
 } {
   const parts = permissionName.split('.');
 
-  if (parts.length === 3 && parts[0] === 'project') {
-    // project.subresource.action format
+  if (parts.length >= 3 && parts[0] === 'project') {
     return {
       resource: parts[0],
-      subResource: parts[1],
-      action: parts[2],
+      subResource: parts.slice(1, -1).join('.'),
+      action: parts[parts.length - 1],
       category: 'project'
     };
   }

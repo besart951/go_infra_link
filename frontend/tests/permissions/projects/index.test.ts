@@ -102,7 +102,7 @@ describe('/projects permission surface', () => {
     state.resetPermissions();
   });
 
-  it('still renders for a logged-in user without project.read, exposing the current route leak', () => {
+  it('renders the scoped project list without requiring project.listAll', () => {
     render(ProjectsPage);
 
     expect(screen.getByText('navigation.projects')).toBeInTheDocument();
@@ -119,7 +119,7 @@ describe('/projects permission surface', () => {
   });
 
   it('shows the create CTA when project.create is granted', () => {
-    state.setPermissions([permission('project'), permission('project', 'create')]);
+    state.setPermissions([permission('project', 'create')]);
 
     render(ProjectsPage);
 

@@ -158,7 +158,7 @@ func (h *AuthHandler) buildAuthResponse(ctx context.Context, result *domainAuth.
 			IsActive:               result.User.IsActive,
 			Role:                   string(result.User.Role),
 			Permissions:            permissions,
-			CanAccessUserDirectory: h.canAccessUserDirectory(result.User.Role),
+			CanAccessUserDirectory: hasPermission(permissions, domainUser.PermissionUserRead),
 			CreatedAt:              result.User.CreatedAt,
 			UpdatedAt:              result.User.UpdatedAt,
 			LastLoginAt:            result.User.LastLoginAt,
@@ -197,6 +197,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		)
 		return
 	}
+	permissions := h.getRolePermissions(c.Request.Context(), usr.Role)
 
 	c.JSON(http.StatusOK, dto.AuthUserResponse{
 		ID:                     usr.ID,
@@ -205,8 +206,8 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		Email:                  usr.Email,
 		IsActive:               usr.IsActive,
 		Role:                   string(usr.Role),
-		Permissions:            h.getRolePermissions(c.Request.Context(), usr.Role),
-		CanAccessUserDirectory: h.canAccessUserDirectory(usr.Role),
+		Permissions:            permissions,
+		CanAccessUserDirectory: hasPermission(permissions, domainUser.PermissionUserRead),
 		CreatedAt:              usr.CreatedAt,
 		UpdatedAt:              usr.UpdatedAt,
 		LastLoginAt:            usr.LastLoginAt,
@@ -227,11 +228,13 @@ func (h *AuthHandler) getRolePermissions(ctx context.Context, role domainUser.Ro
 	return permissions
 }
 
-func (h *AuthHandler) canAccessUserDirectory(role domainUser.Role) bool {
-	if h.permissionSvc == nil {
-		return false
+func hasPermission(permissions []string, permission string) bool {
+	for _, granted := range permissions {
+		if granted == permission {
+			return true
+		}
 	}
-	return h.permissionSvc.CanAccessUserDirectory(role)
+	return false
 }
 
 func (h *AuthHandler) setAuthCookies(c *gin.Context, result *domainAuth.LoginResult) {

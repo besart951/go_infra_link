@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { permission } from '../../helpers/permissions.js';
 import { buildAdminUser, buildUser } from '../../helpers/permissions.js';
 import { load } from '../../../src/routes/(app)/admin/notifications/smtp/+page';
 
@@ -12,7 +13,7 @@ describe('/admin/notifications/smtp load guard', () => {
     ).rejects.toMatchObject({ status: 302, location: '/login' });
   });
 
-  it('redirects non-superadmin users back to the dashboard', async () => {
+  it('redirects users without SMTP manage permission back to the dashboard', async () => {
     await expect(
       load({
         parent: async () => ({ user: buildUser() })
@@ -20,8 +21,8 @@ describe('/admin/notifications/smtp load guard', () => {
     ).rejects.toMatchObject({ status: 302, location: '/' });
   });
 
-  it('allows superadmin users through', async () => {
-    const user = buildAdminUser();
+  it('allows users with SMTP manage permission through', async () => {
+    const user = buildAdminUser({ permissions: [permission('notification.smtp', 'manage')] });
 
     await expect(
       load({

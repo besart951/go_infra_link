@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
 	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
@@ -58,7 +59,13 @@ func (h *Handler) CreateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndAnyPermission(
+		c,
+		h.access,
+		projectID,
+		domainUser.PermissionProjectControlCabinetCreate,
+		domainUser.PermissionProjectControlCabinetEdit,
+	) {
 		return
 	}
 
@@ -133,7 +140,13 @@ func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndAnyPermission(
+		c,
+		h.access,
+		projectID,
+		domainUser.PermissionProjectControlCabinetCreate,
+		domainUser.PermissionProjectControlCabinetEdit,
+	) {
 		return
 	}
 
@@ -180,7 +193,13 @@ func (h *Handler) UpdateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndAnyPermission(
+		c,
+		h.access,
+		projectID,
+		domainUser.PermissionProjectControlCabinetUpdate,
+		domainUser.PermissionProjectControlCabinetEdit,
+	) {
 		return
 	}
 
@@ -227,7 +246,13 @@ func (h *Handler) DeleteProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndAnyPermission(
+		c,
+		h.access,
+		projectID,
+		domainUser.PermissionProjectControlCabinetDelete,
+		domainUser.PermissionProjectControlCabinetEdit,
+	) {
 		return
 	}
 

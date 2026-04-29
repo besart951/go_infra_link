@@ -91,6 +91,11 @@ func (h *RoleHandler) UpdateRolePermissions(c *gin.Context) {
 	}
 
 	now := time.Now().UTC()
+	canManage, err := h.service.GetAllowedRoles(c.Request.Context(), roleParam)
+	if err != nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "roles.fetch_failed")
+		return
+	}
 	c.JSON(http.StatusOK, dto.RoleResponse{
 		ID:          string(roleParam),
 		Name:        roleParam,
@@ -98,7 +103,7 @@ func (h *RoleHandler) UpdateRolePermissions(c *gin.Context) {
 		Description: domainUser.RoleDescription(roleParam),
 		Level:       domainUser.RoleLevel(roleParam),
 		Permissions: permissions,
-		CanManage:   domainUser.GetAllowedRoles(roleParam),
+		CanManage:   canManage,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	})

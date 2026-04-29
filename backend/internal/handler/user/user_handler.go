@@ -254,7 +254,11 @@ func (h *UserHandler) GetAllowedRoles(c *gin.Context) {
 		return
 	}
 
-	allowedRoles := h.roleService.GetAllowedRoles(role)
+	allowedRoles, err := h.roleService.GetAllowedRoles(c.Request.Context(), role)
+	if err != nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "user.fetch_failed")
+		return
+	}
 	roleObjects := make([]dto.AllowedRole, len(allowedRoles))
 	for i, r := range allowedRoles {
 		roleObjects[i] = dto.AllowedRole{

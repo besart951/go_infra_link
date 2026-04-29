@@ -10,15 +10,15 @@ import (
 func RegisterRoutes(protectedV1 *gin.RouterGroup, handler *TeamHandler, authChecker middleware.AuthorizationChecker) {
 	teams := protectedV1.Group("/teams")
 	{
-		teams.POST("", middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG), handler.CreateTeam)
-		teams.GET("", middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG), handler.ListTeams)
+		teams.POST("", middleware.RequirePermission(authChecker, domainUser.PermissionTeamCreate), handler.CreateTeam)
+		teams.GET("", middleware.RequirePermission(authChecker, domainUser.PermissionTeamRead), handler.ListTeams)
 
-		teams.GET("/:id", middleware.RequireTeamRole(authChecker, "id", domainTeam.MemberRoleMember), handler.GetTeam)
-		teams.PUT("/:id", middleware.RequireTeamRole(authChecker, "id", domainTeam.MemberRoleManager), handler.UpdateTeam)
-		teams.DELETE("/:id", middleware.RequireTeamRole(authChecker, "id", domainTeam.MemberRoleOwner), handler.DeleteTeam)
+		teams.GET("/:id", middleware.RequireTeamPermission(authChecker, "id", domainTeam.PermissionTeamView), handler.GetTeam)
+		teams.PUT("/:id", middleware.RequireTeamPermission(authChecker, "id", domainTeam.PermissionTeamEdit), handler.UpdateTeam)
+		teams.DELETE("/:id", middleware.RequireTeamPermission(authChecker, "id", domainTeam.PermissionTeamDelete), handler.DeleteTeam)
 
-		teams.POST("/:id/members", middleware.RequireTeamRole(authChecker, "id", domainTeam.MemberRoleManager), handler.AddMember)
-		teams.GET("/:id/members", middleware.RequireTeamRole(authChecker, "id", domainTeam.MemberRoleMember), handler.ListMembers)
-		teams.DELETE("/:id/members/:userId", middleware.RequireTeamRole(authChecker, "id", domainTeam.MemberRoleManager), handler.RemoveMember)
+		teams.POST("/:id/members", middleware.RequireTeamPermission(authChecker, "id", domainTeam.PermissionTeamMemberAdd), handler.AddMember)
+		teams.GET("/:id/members", middleware.RequireTeamPermission(authChecker, "id", domainTeam.PermissionTeamMemberList), handler.ListMembers)
+		teams.DELETE("/:id/members/:userId", middleware.RequireTeamPermission(authChecker, "id", domainTeam.PermissionTeamMemberRemove), handler.RemoveMember)
 	}
 }

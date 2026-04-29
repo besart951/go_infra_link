@@ -91,6 +91,10 @@ type RolePermissionReader interface {
 	ListByRole(ctx context.Context, role domainUser.Role) ([]domainUser.RolePermission, error)
 }
 
+type permissionSet map[string]struct{}
+
+const superAdminPermissionWildcard = "*"
+
 func New(users UserReader, teams TeamReader, memberships TeamMembershipReader, rolePermissions RolePermissionReader) *Service {
 	return &Service{users: users, teams: teams, memberships: memberships, rolePermissions: rolePermissions}
 }
@@ -100,7 +104,13 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 	if err != nil {
 		return nil, err
 	}
-	if !CanAccessUserDirectory(requester.Role) {
+
+	requesterRolePerms, err := s.rolePermissions.ListByRole(ctx, requester.Role)
+	if err != nil {
+		return nil, err
+	}
+	requesterPermissions := permissionSetForRole(requester.Role, requesterRolePerms)
+	if !requesterPermissions.has(domainUser.PermissionUserRead) {
 		return nil, domainUser.ErrForbiddenUserDirectory
 	}
 
@@ -125,19 +135,37 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 		requestedTeamID = parsed
 	}
 
-	requesterRolePerms, err := s.rolePermissions.ListByRole(ctx, requester.Role)
-	if err != nil {
-		return nil, err
+	rolePermissionCache := map[domainUser.Role]permissionSet{
+		requester.Role: requesterPermissions,
 	}
-	canCreateUser := hasPermission(requesterRolePerms, "user.create") && (requester.Role == domainUser.RoleSuperAdmin || requester.Role == domainUser.RoleAdminFZAG)
+	resolveRolePermissions := func(role domainUser.Role) (permissionSet, error) {
+		if cached, ok := rolePermissionCache[role]; ok {
+			return cached, nil
+		}
+		permissions, err := s.rolePermissions.ListByRole(ctx, role)
+		if err != nil {
+			return nil, err
+		}
+		resolved := permissionSetForRole(role, permissions)
+		rolePermissionCache[role] = resolved
+		return resolved, nil
+	}
+
+	canCreateUser := requesterPermissions.has(domainUser.PermissionUserCreate)
 
 	for _, candidate := range allUsers {
 		candidateTeams, candidateTeamNames, err := s.loadUserTeams(ctx, candidate.ID)
 		if err != nil {
 			return nil, err
 		}
-		visibleTeamIDs := intersectVisibleTeamIDs(requester, requesterTeams, candidate, candidateTeams)
-		if !canSeeUser(requester, candidate, visibleTeamIDs) {
+
+		candidatePermissions, err := resolveRolePermissions(candidate.Role)
+		if err != nil {
+			return nil, err
+		}
+
+		visibleTeamIDs := intersectVisibleTeamIDs(requesterPermissions.has(domainUser.PermissionTeamRead), requesterTeams, candidateTeams)
+		if !canSeeUser(requester.ID, requesterPermissions, candidate, visibleTeamIDs, candidatePermissions) {
 			continue
 		}
 
@@ -168,7 +196,7 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 		visible = append(visible, Item{
 			User:         *candidate,
 			Teams:        itemTeams,
-			Capabilities: buildCapabilities(requester, *candidate, len(allUsers)),
+			Capabilities: buildCapabilities(requester.ID, requesterPermissions, *candidate, candidatePermissions, len(allUsers)),
 		})
 	}
 
@@ -205,56 +233,32 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 	}, nil
 }
 
-func CanAccessUserDirectory(role domainUser.Role) bool {
-	switch role {
-	case domainUser.RoleSuperAdmin, domainUser.RoleAdminFZAG, domainUser.RoleFZAG, domainUser.RoleAdminPlaner, domainUser.RoleAdminEnterpreneur:
-		return true
-	default:
-		return false
+func buildCapabilities(requesterID uuid.UUID, requesterPermissions permissionSet, target domainUser.User, targetPermissions permissionSet, totalUsers int) Capabilities {
+	if requesterID == target.ID {
+		return Capabilities{}
 	}
-}
+	if !permissionSetContainsAll(requesterPermissions, targetPermissions) {
+		return Capabilities{}
+	}
 
-func buildCapabilities(requester *domainUser.User, target domainUser.User, totalUsers int) Capabilities {
-	if requester.Role != domainUser.RoleSuperAdmin && requester.Role != domainUser.RoleAdminFZAG {
-		return Capabilities{}
-	}
-	if requester.ID == target.ID {
-		return Capabilities{}
-	}
-	if target.Role == domainUser.RoleSuperAdmin && requester.Role != domainUser.RoleSuperAdmin {
-		return Capabilities{}
-	}
-	canManage := requester.Role == domainUser.RoleSuperAdmin || domainUser.RoleLevel(requester.Role) > domainUser.RoleLevel(target.Role)
-	if !canManage {
-		return Capabilities{}
-	}
 	canMutateSuperAdmin := !(target.Role == domainUser.RoleSuperAdmin && totalUsers <= 1)
 	return Capabilities{
-		CanUpdate:     canManage,
-		CanDelete:     canManage && canMutateSuperAdmin,
-		CanDisable:    canManage && target.IsActive && canMutateSuperAdmin,
-		CanEnable:     canManage && !target.IsActive,
-		CanChangeRole: canManage,
+		CanUpdate:     requesterPermissions.has(domainUser.PermissionUserUpdate),
+		CanDelete:     requesterPermissions.has(domainUser.PermissionUserDelete) && canMutateSuperAdmin,
+		CanDisable:    requesterPermissions.has(domainUser.PermissionUserUpdate) && target.IsActive && canMutateSuperAdmin,
+		CanEnable:     requesterPermissions.has(domainUser.PermissionUserUpdate) && !target.IsActive,
+		CanChangeRole: requesterPermissions.has(domainUser.PermissionUserUpdate),
 	}
 }
 
-func canSeeUser(requester *domainUser.User, candidate *domainUser.User, visibleTeamIDs map[uuid.UUID]struct{}) bool {
-	if requester.ID == candidate.ID {
+func canSeeUser(requesterID uuid.UUID, requesterPermissions permissionSet, candidate *domainUser.User, visibleTeamIDs map[uuid.UUID]struct{}, candidatePermissions permissionSet) bool {
+	if requesterID == candidate.ID {
 		return true
 	}
-	if candidate.Role == domainUser.RoleSuperAdmin && requester.Role != domainUser.RoleSuperAdmin {
-		return false
-	}
-	if requester.Role == domainUser.RoleSuperAdmin {
+	if permissionSetContainsAll(requesterPermissions, candidatePermissions) {
 		return true
 	}
-	if requester.Role == domainUser.RoleAdminFZAG || requester.Role == domainUser.RoleFZAG {
-		return candidate.Role != domainUser.RoleSuperAdmin
-	}
-	if requester.Role == domainUser.RoleAdminPlaner || requester.Role == domainUser.RoleAdminEnterpreneur {
-		return len(visibleTeamIDs) > 0
-	}
-	return false
+	return len(visibleTeamIDs) > 0
 }
 
 func matchesSearch(candidate *domainUser.User, search string) bool {
@@ -267,15 +271,6 @@ func matchesSearch(candidate *domainUser.User, search string) bool {
 		strings.Contains(strings.ToLower(candidate.LastName), search) ||
 		strings.Contains(strings.ToLower(candidate.Email), search) ||
 		strings.Contains(fullName, search)
-}
-
-func hasPermission(permissions []domainUser.RolePermission, permission string) bool {
-	for _, rolePermission := range permissions {
-		if rolePermission.Permission == permission {
-			return true
-		}
-	}
-	return false
 }
 
 func sortVisible(items []Item, orderBy, order string) {
@@ -292,8 +287,8 @@ func sortVisible(items []Item, orderBy, order string) {
 	})
 }
 
-func intersectVisibleTeamIDs(requester *domainUser.User, requesterTeams map[uuid.UUID]struct{}, candidate *domainUser.User, candidateTeams map[uuid.UUID]struct{}) map[uuid.UUID]struct{} {
-	if requester.Role == domainUser.RoleSuperAdmin || requester.Role == domainUser.RoleAdminFZAG || requester.Role == domainUser.RoleFZAG {
+func intersectVisibleTeamIDs(canReadAllTeams bool, requesterTeams map[uuid.UUID]struct{}, candidateTeams map[uuid.UUID]struct{}) map[uuid.UUID]struct{} {
+	if canReadAllTeams {
 		return candidateTeams
 	}
 	result := map[uuid.UUID]struct{}{}
@@ -303,6 +298,38 @@ func intersectVisibleTeamIDs(requester *domainUser.User, requesterTeams map[uuid
 		}
 	}
 	return result
+}
+
+func permissionSetFromRolePermissions(permissions []domainUser.RolePermission) permissionSet {
+	set := permissionSet{}
+	for _, rolePermission := range permissions {
+		set[rolePermission.Permission] = struct{}{}
+	}
+	return set
+}
+
+func permissionSetForRole(role domainUser.Role, permissions []domainUser.RolePermission) permissionSet {
+	if role == domainUser.RoleSuperAdmin {
+		return permissionSet{superAdminPermissionWildcard: {}}
+	}
+	return permissionSetFromRolePermissions(permissions)
+}
+
+func permissionSetContainsAll(granted permissionSet, required permissionSet) bool {
+	for permission := range required {
+		if !granted.has(permission) {
+			return false
+		}
+	}
+	return true
+}
+
+func (s permissionSet) has(permission string) bool {
+	if _, ok := s[superAdminPermissionWildcard]; ok {
+		return true
+	}
+	_, ok := s[permission]
+	return ok
 }
 
 func (s *Service) loadAllUsers(ctx context.Context) ([]*domainUser.User, error) {

@@ -7,7 +7,6 @@
   import ControlCabinetForm from '$lib/components/facility/forms/ControlCabinetForm.svelte';
   import type { ControlCabinet } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import { canPerform } from '$lib/utils/permissions.js';
   import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import { useControlCabinetState } from './state/context.svelte.js';
@@ -56,7 +55,7 @@
 
 <div class="flex flex-col gap-4">
   <div class="flex flex-wrap items-center justify-end gap-2">
-    {#if !state.showForm && canPerform('create', 'controlcabinet')}
+    {#if !state.showForm && state.canCreateControlCabinet()}
       <Button onclick={() => state.openCreateForm()}>
         <PlusIcon class="mr-2 size-4" />
         {newLabel}
@@ -104,7 +103,7 @@
             >
               {$t('common.copy')}
             </DropdownMenu.Item>
-            {#if canPerform('create', 'controlcabinet')}
+            {#if state.canCreateControlCabinet()}
               <DropdownMenu.Item onclick={() => void state.duplicateControlCabinet(cabinet)}>
                 {$t('facility.duplicate')}
               </DropdownMenu.Item>
@@ -112,12 +111,12 @@
             <DropdownMenu.Item onclick={() => void handleView(cabinet)}>
               {$t('common.view')}
             </DropdownMenu.Item>
-            {#if canPerform('update', 'controlcabinet')}
+            {#if state.canUpdateControlCabinet()}
               <DropdownMenu.Item onclick={() => state.editControlCabinet(cabinet)}>
                 {$t('common.edit')}
               </DropdownMenu.Item>
             {/if}
-            {#if canPerform('delete', 'controlcabinet')}
+            {#if state.canDeleteControlCabinet()}
               <DropdownMenu.Separator />
               <DropdownMenu.Item
                 variant="destructive"

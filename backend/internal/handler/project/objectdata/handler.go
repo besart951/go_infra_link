@@ -6,6 +6,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
 	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
@@ -121,7 +122,7 @@ func (h *Handler) AddProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectUpdate) {
 		return
 	}
 
@@ -164,7 +165,7 @@ func (h *Handler) RemoveProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectUpdate) {
 		return
 	}
 

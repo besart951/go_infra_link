@@ -6,7 +6,7 @@ import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinet
 import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
 import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
 import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsControllerSystemTypeRepository.js';
-import { canPerform } from '$lib/utils/permissions.js';
+import { canPerform, canPerformAny } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
 import type {
   ControlCabinet,
@@ -58,6 +58,28 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
 
   get isProjectContext(): boolean {
     return Boolean(this.projectId);
+  }
+
+  canCreateSPSController(): boolean {
+    return this.isProjectContext
+      ? canPerformAny(['create', 'edit'], 'project.spscontroller')
+      : canPerform('create', 'spscontroller');
+  }
+
+  canReadSPSController(): boolean {
+    return this.isProjectContext || canPerform('read', 'spscontroller');
+  }
+
+  canUpdateSPSController(): boolean {
+    return this.isProjectContext
+      ? canPerformAny(['update', 'edit'], 'project.spscontroller')
+      : canPerform('update', 'spscontroller');
+  }
+
+  canDeleteSPSController(): boolean {
+    return this.isProjectContext
+      ? canPerformAny(['delete', 'edit'], 'project.spscontroller')
+      : canPerform('delete', 'spscontroller');
   }
 
   async initialize(): Promise<void> {
@@ -204,7 +226,7 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
   }
 
   async deleteSPSController(controller: SPSController): Promise<void> {
-    if (!canPerform('delete', 'spscontroller')) return;
+    if (!this.canDeleteSPSController()) return;
 
     const confirmed = await confirm({
       title: this.isProjectContext
@@ -223,7 +245,11 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
     if (!confirmed) return;
 
     try {
-      await this.manageSPSControllerUseCase.delete(controller.id);
+      if (this.projectId) {
+        await this.removeProjectSPSController(controller.id);
+      } else {
+        await this.manageSPSControllerUseCase.delete(controller.id);
+      }
       addToast(
         this.isProjectContext
           ? translate('projects.sps_controllers.deleted')
@@ -244,7 +270,7 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
   }
 
   async duplicateSPSController(controller: SPSController): Promise<void> {
-    if (!canPerform('create', 'spscontroller')) return;
+    if (!this.canCreateSPSController()) return;
 
     try {
       if (this.projectId) {
@@ -408,6 +434,24 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
     }
 
     return filters;
+  }
+
+  private async removeProjectSPSController(controllerId: string): Promise<void> {
+    if (!this.projectId) {
+      return;
+    }
+
+    const links = await projectRepository.listSPSControllers(this.projectId, {
+      page: 1,
+      limit: 1000
+    });
+    const link = links.items.find((item) => item.sps_controller_id === controllerId);
+
+    if (!link) {
+      throw new Error(translate('projects.sps_controllers.delete_failed'));
+    }
+
+    await projectRepository.removeSPSController(this.projectId, link.id);
   }
 
   private notifyChanged(

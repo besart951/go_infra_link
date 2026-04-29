@@ -14,42 +14,38 @@ func RegisterUserRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authCh
 	}
 
 	usersAdmin := protectedV1.Group("/users")
-	usersAdmin.Use(middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG))
 	{
-		usersAdmin.POST("", handlers.User.CreateUser)
-		usersAdmin.GET("", handlers.User.ListUsers)
-		usersAdmin.GET("/:id", handlers.User.GetUser)
-		usersAdmin.PUT("/:id", handlers.User.UpdateUser)
-		usersAdmin.DELETE("/:id", handlers.User.DeleteUser)
+		usersAdmin.POST("", middleware.RequirePermission(authChecker, domainUser.PermissionUserCreate), handlers.User.CreateUser)
+		usersAdmin.GET("", middleware.RequirePermission(authChecker, domainUser.PermissionUserRead), handlers.User.ListUsers)
+		usersAdmin.GET("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionUserRead), handlers.User.GetUser)
+		usersAdmin.PUT("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionUserUpdate), handlers.User.UpdateUser)
+		usersAdmin.DELETE("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionUserDelete), handlers.User.DeleteUser)
 	}
 }
 
 func RegisterRoleRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authChecker middleware.AuthorizationChecker) {
 	roles := protectedV1.Group("/roles")
-	roles.Use(middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG))
 	{
-		roles.GET("", handlers.Role.ListRoles)
-		roles.PUT("/:role/permissions", handlers.Role.UpdateRolePermissions)
-		roles.POST("/:role/permissions", handlers.Role.AddRolePermission)
-		roles.DELETE("/:role/permissions/:permission", handlers.Role.RemoveRolePermission)
+		roles.GET("", middleware.RequirePermission(authChecker, domainUser.PermissionRoleRead), handlers.Role.ListRoles)
+		roles.PUT("/:role/permissions", middleware.RequirePermission(authChecker, domainUser.PermissionRoleUpdate), handlers.Role.UpdateRolePermissions)
+		roles.POST("/:role/permissions", middleware.RequirePermission(authChecker, domainUser.PermissionRoleUpdate), handlers.Role.AddRolePermission)
+		roles.DELETE("/:role/permissions/:permission", middleware.RequirePermission(authChecker, domainUser.PermissionRoleUpdate), handlers.Role.RemoveRolePermission)
 	}
 
 	permissions := protectedV1.Group("/permissions")
-	permissions.Use(middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG))
 	{
-		permissions.GET("", handlers.Permission.ListPermissions)
-		permissions.POST("", handlers.Permission.CreatePermission)
-		permissions.PUT("/:id", handlers.Permission.UpdatePermission)
-		permissions.DELETE("/:id", handlers.Permission.DeletePermission)
+		permissions.GET("", middleware.RequirePermission(authChecker, domainUser.PermissionPermissionRead), handlers.Permission.ListPermissions)
+		permissions.POST("", middleware.RequirePermission(authChecker, domainUser.PermissionPermissionCreate), handlers.Permission.CreatePermission)
+		permissions.PUT("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionPermissionUpdate), handlers.Permission.UpdatePermission)
+		permissions.DELETE("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionPermissionDelete), handlers.Permission.DeletePermission)
 	}
 }
 
 func RegisterAdminRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authChecker middleware.AuthorizationChecker) {
 	admin := protectedV1.Group("/admin")
-	admin.Use(middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG))
 	{
-		admin.POST("/users/:id/disable", handlers.Admin.DisableUser)
-		admin.POST("/users/:id/enable", handlers.Admin.EnableUser)
-		admin.POST("/users/:id/role", handlers.Admin.SetUserRole)
+		admin.POST("/users/:id/disable", middleware.RequirePermission(authChecker, domainUser.PermissionUserUpdate), handlers.Admin.DisableUser)
+		admin.POST("/users/:id/enable", middleware.RequirePermission(authChecker, domainUser.PermissionUserUpdate), handlers.Admin.EnableUser)
+		admin.POST("/users/:id/role", middleware.RequirePermission(authChecker, domainUser.PermissionUserUpdate), handlers.Admin.SetUserRole)
 	}
 }

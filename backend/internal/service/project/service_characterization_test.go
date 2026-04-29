@@ -551,6 +551,79 @@ func TestProjectService_ListObjectData_CharacterizesProjectFilterRouting(t *test
 	}
 }
 
+func TestProjectLifecycleService_List_CharacterizesPermissionScopedProjectListing(t *testing.T) {
+	ctx := context.Background()
+	requesterID := uuid.New()
+	status := domainProject.StatusPlanned
+
+	t.Run("requester without project.listAll stays membership scoped", func(t *testing.T) {
+		projectRepo := newProjectRepo()
+		userRepo := newProjectUserRepo()
+		rolePermissionRepo := newProjectRolePermissionRepo()
+
+		userRepo.items[requesterID] = &domainUser.User{Base: domain.Base{ID: requesterID}, Role: domainUser.RoleAdminPlaner}
+
+		svc := NewServices(Dependencies{
+			Projects:        projectRepo,
+			Users:           userRepo,
+			RolePermissions: rolePermissionRepo,
+		}).Lifecycle
+
+		if _, err := svc.List(ctx, requesterID, 1, 10, "pump", &status); err != nil {
+			t.Fatalf("expected list to succeed, got %v", err)
+		}
+
+		if projectRepo.lastListMethod != "for_user_with_status" {
+			t.Fatalf("expected membership scoped listing, got %s", projectRepo.lastListMethod)
+		}
+	})
+
+	t.Run("project.listAll alone enables unrestricted listing", func(t *testing.T) {
+		projectRepo := newProjectRepo()
+		userRepo := newProjectUserRepo()
+		rolePermissionRepo := newProjectRolePermissionRepo()
+
+		userRepo.items[requesterID] = &domainUser.User{Base: domain.Base{ID: requesterID}, Role: domainUser.RoleAdminPlaner}
+		rolePermissionRepo.grant(domainUser.RoleAdminPlaner, domainUser.PermissionProjectListAll)
+
+		svc := NewServices(Dependencies{
+			Projects:        projectRepo,
+			Users:           userRepo,
+			RolePermissions: rolePermissionRepo,
+		}).Lifecycle
+
+		if _, err := svc.List(ctx, requesterID, 1, 10, "pump", &status); err != nil {
+			t.Fatalf("expected list to succeed, got %v", err)
+		}
+
+		if projectRepo.lastListMethod != "with_status" {
+			t.Fatalf("expected unrestricted listing, got %s", projectRepo.lastListMethod)
+		}
+	})
+
+	t.Run("superadmin can list all projects without stored project.listAll grant", func(t *testing.T) {
+		projectRepo := newProjectRepo()
+		userRepo := newProjectUserRepo()
+		rolePermissionRepo := newProjectRolePermissionRepo()
+
+		userRepo.items[requesterID] = &domainUser.User{Base: domain.Base{ID: requesterID}, Role: domainUser.RoleSuperAdmin}
+
+		svc := NewServices(Dependencies{
+			Projects:        projectRepo,
+			Users:           userRepo,
+			RolePermissions: rolePermissionRepo,
+		}).Lifecycle
+
+		if _, err := svc.List(ctx, requesterID, 1, 10, "pump", &status); err != nil {
+			t.Fatalf("expected list to succeed, got %v", err)
+		}
+
+		if projectRepo.lastListMethod != "with_status" {
+			t.Fatalf("expected unrestricted listing for superadmin, got %s", projectRepo.lastListMethod)
+		}
+	})
+}
+
 func newProjectCharacterizationServices(
 	projectRepo *projectRepoFake,
 	controlCabinetLinks *projectControlCabinetRepoFake,
@@ -582,9 +655,10 @@ func newProjectCharacterizationServices(
 }
 
 type projectRepoFake struct {
-	items       map[uuid.UUID]*domainProject.Project
-	users       map[uuid.UUID]map[uuid.UUID]struct{}
-	listedUsers map[uuid.UUID][]domainUser.User
+	items          map[uuid.UUID]*domainProject.Project
+	users          map[uuid.UUID]map[uuid.UUID]struct{}
+	listedUsers    map[uuid.UUID][]domainUser.User
+	lastListMethod string
 }
 
 func newProjectRepo() *projectRepoFake {
@@ -629,18 +703,22 @@ func (r *projectRepoFake) DeleteByIds(_ context.Context, ids []uuid.UUID) error 
 }
 
 func (r *projectRepoFake) GetPaginatedList(_ context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainProject.Project], error) {
+	r.lastListMethod = "all"
 	return paginatedFromMap(r.items), nil
 }
 
 func (r *projectRepoFake) GetPaginatedListForUser(context.Context, domain.PaginationParams, uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
+	r.lastListMethod = "for_user"
 	return paginatedFromMap(r.items), nil
 }
 
 func (r *projectRepoFake) GetPaginatedListWithStatus(context.Context, domain.PaginationParams, *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error) {
+	r.lastListMethod = "with_status"
 	return paginatedFromMap(r.items), nil
 }
 
 func (r *projectRepoFake) GetPaginatedListForUserWithStatus(context.Context, domain.PaginationParams, uuid.UUID, *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error) {
+	r.lastListMethod = "for_user_with_status"
 	return paginatedFromMap(r.items), nil
 }
 

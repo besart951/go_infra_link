@@ -687,7 +687,7 @@
         "alarm_type_id": "019c780c-f864-7bbd-b537-394774d87240",
         "created_at": "2026-02-19T22:37:21.886181Z",
         "default_unit_id": null,
-        "default_value_json": "{\"1\":\"DG0 (\u003e3500lx)\",\"2\":\"DG1 (3500lx)\",\"3\":\"DG2 (2200lx)\",\"4\":\"DG3 (700lx)\",\"5\":\"DG4 (300lx)\",\"6\":\"DG5 (200lx)\"}",
+        "default_value_json": "{\"1\":\"DG0 (>3500lx)\",\"2\":\"DG1 (3500lx)\",\"3\":\"DG2 (2200lx)\",\"4\":\"DG3 (700lx)\",\"5\":\"DG4 (300lx)\",\"6\":\"DG5 (200lx)\"}",
         "display_order": 1,
         "id": "019c780c-f867-7747-be64-95f89ee0e808",
         "is_required": true,
@@ -2052,7 +2052,7 @@
       {
         "alarm_definition_id": null,
         "created_at": "2026-02-19T22:38:41.205103Z",
-        "description": "Beispiel RIO-Module, sind mehrere Teilnehmer vorhanden -\u003e BV21 - BVNN",
+        "description": "Beispiel RIO-Module, sind mehrere Teilnehmer vorhanden -> BV21 - BVNN",
         "field_device_id": null,
         "gms_visible": true,
         "hardware_quantity": 0,
@@ -4351,7 +4351,7 @@
       {
         "alarm_definition_id": null,
         "created_at": "2026-02-19T22:38:42.752991Z",
-        "description": "Siehe Funktionsbeschreibung --\u003e Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
+        "description": "Siehe Funktionsbeschreibung --> Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
         "field_device_id": null,
         "gms_visible": true,
         "hardware_quantity": 0,
@@ -4370,7 +4370,7 @@
       {
         "alarm_definition_id": null,
         "created_at": "2026-02-19T22:38:42.758866Z",
-        "description": "Siehe Funktionsbeschreibung --\u003e Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
+        "description": "Siehe Funktionsbeschreibung --> Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
         "field_device_id": null,
         "gms_visible": true,
         "hardware_quantity": 0,
@@ -4389,7 +4389,7 @@
       {
         "alarm_definition_id": null,
         "created_at": "2026-02-19T22:38:42.767184Z",
-        "description": "Siehe Funktionsbeschreibung --\u003e Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
+        "description": "Siehe Funktionsbeschreibung --> Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
         "field_device_id": null,
         "gms_visible": true,
         "hardware_quantity": 0,
@@ -4408,7 +4408,7 @@
       {
         "alarm_definition_id": null,
         "created_at": "2026-02-19T22:38:42.773436Z",
-        "description": "Siehe Funktionsbeschreibung --\u003e Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
+        "description": "Siehe Funktionsbeschreibung --> Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
         "field_device_id": null,
         "gms_visible": true,
         "hardware_quantity": 0,
@@ -4427,7 +4427,7 @@
       {
         "alarm_definition_id": null,
         "created_at": "2026-02-19T22:38:42.779885Z",
-        "description": "Siehe Funktionsbeschreibung --\u003e Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
+        "description": "Siehe Funktionsbeschreibung --> Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
         "field_device_id": null,
         "gms_visible": true,
         "hardware_quantity": 0,
@@ -4446,7 +4446,7 @@
       {
         "alarm_definition_id": null,
         "created_at": "2026-02-19T22:38:42.799515Z",
-        "description": "Siehe Funktionsbeschreibung --\u003e Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
+        "description": "Siehe Funktionsbeschreibung --> Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
         "field_device_id": null,
         "gms_visible": true,
         "hardware_quantity": 0,
@@ -4465,7 +4465,7 @@
       {
         "alarm_definition_id": null,
         "created_at": "2026-02-19T22:38:42.807874Z",
-        "description": "Siehe Funktionsbeschreibung --\u003e Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
+        "description": "Siehe Funktionsbeschreibung --> Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
         "field_device_id": null,
         "gms_visible": true,
         "hardware_quantity": 0,
@@ -4484,7 +4484,7 @@
       {
         "alarm_definition_id": null,
         "created_at": "2026-02-19T22:38:42.814435Z",
-        "description": "Siehe Funktionsbeschreibung --\u003e Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
+        "description": "Siehe Funktionsbeschreibung --> Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
         "field_device_id": null,
         "gms_visible": true,
         "hardware_quantity": 0,
@@ -4503,7 +4503,7 @@
       {
         "alarm_definition_id": null,
         "created_at": "2026-02-19T22:38:42.821782Z",
-        "description": "Siehe Funktionsbeschreibung --\u003e Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
+        "description": "Siehe Funktionsbeschreibung --> Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
         "field_device_id": null,
         "gms_visible": true,
         "hardware_quantity": 0,
@@ -4522,7 +4522,7 @@
       {
         "alarm_definition_id": null,
         "created_at": "2026-02-19T22:38:42.831415Z",
-        "description": "Siehe Funktionsbeschreibung --\u003e Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
+        "description": "Siehe Funktionsbeschreibung --> Eigentlich sind diese DP bei den Reglern (ref. SW/SW Vorgabe)",
         "field_device_id": null,
         "gms_visible": true,
         "hardware_quantity": 0,
@@ -9329,7 +9329,7 @@
       {
         "alarm_definition_id": "019c780e-2d49-7953-ac08-4cce6c500ccc",
         "created_at": "2026-02-19T22:38:46.159724Z",
-        "description": "z.B Stoerung Pumpe und ZUL-Temp \u003c 10°C ???? Wie soll so was gehandhabt werden???",
+        "description": "z.B Stoerung Pumpe und ZUL-Temp < 10°C ???? Wie soll so was gehandhabt werden???",
         "field_device_id": null,
         "gms_visible": true,
         "hardware_quantity": 0,
@@ -17917,7 +17917,7 @@
       {
         "alarm_definition_id": null,
         "created_at": "2026-02-19T22:38:53.534678Z",
-        "description": "Vergleich AT und ABL-Temp.\r\nWenn AT +3K \u003e ABL-Temp. = WRG kuehlen",
+        "description": "Vergleich AT und ABL-Temp.\r\nWenn AT +3K > ABL-Temp. = WRG kuehlen",
         "field_device_id": null,
         "gms_visible": true,
         "hardware_quantity": 0,
@@ -19829,7 +19829,7 @@
         "software_reference_id": null,
         "software_type": "bv",
         "state_text_id": "019c780c-f801-7c8a-be5a-ae8bb20f749f",
-        "text_fix": "Freigabe Comfort \u0026 Ecobetrieb",
+        "text_fix": "Freigabe Comfort & Ecobetrieb",
         "text_individual": null,
         "updated_at": "2026-02-19T22:38:55.334308Z"
       },
@@ -28765,11 +28765,11 @@
         "updated_at": "2026-02-19T22:37:21.758137Z"
       },
       {
-        "action": "read",
+        "action": "listAll",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read project",
+        "description": "List all projects",
         "id": "019c780c-f7de-7220-ade3-3676d6ab8bdb",
-        "name": "project.read",
+        "name": "project.listAll",
         "resource": "project",
         "updated_at": "2026-02-19T22:37:21.758137Z"
       },
@@ -29404,219 +29404,30 @@
         "updated_at": "2026-02-19T22:37:21.758137Z"
       },
       {
-        "action": "create",
+        "action": "edit",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create project controlcabinet",
+        "description": "Edit project control cabinets",
         "id": "019c780c-f7de-7267-b0fd-be138b4d6323",
-        "name": "project.controlcabinet.create",
+        "name": "project.controlcabinet.edit",
         "resource": "project.controlcabinet",
         "updated_at": "2026-02-19T22:37:21.758137Z"
       },
       {
-        "action": "read",
+        "action": "edit",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read project controlcabinet",
-        "id": "019c780c-f7de-7268-9f8d-7663e738097d",
-        "name": "project.controlcabinet.read",
-        "resource": "project.controlcabinet",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "update",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update project controlcabinet",
-        "id": "019c780c-f7de-7269-8726-ea240f089528",
-        "name": "project.controlcabinet.update",
-        "resource": "project.controlcabinet",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "delete",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete project controlcabinet",
-        "id": "019c780c-f7de-726a-9d31-513ae38583d7",
-        "name": "project.controlcabinet.delete",
-        "resource": "project.controlcabinet",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "create",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create project spscontroller",
+        "description": "Edit project SPS controllers",
         "id": "019c780c-f7de-726b-b0e9-c02f82bb8882",
-        "name": "project.spscontroller.create",
+        "name": "project.spscontroller.edit",
         "resource": "project.spscontroller",
         "updated_at": "2026-02-19T22:37:21.758137Z"
       },
       {
-        "action": "read",
+        "action": "edit",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read project spscontroller",
-        "id": "019c780c-f7de-726c-9661-328225c10082",
-        "name": "project.spscontroller.read",
-        "resource": "project.spscontroller",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "update",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update project spscontroller",
-        "id": "019c780c-f7de-726d-9bf2-c959b2202615",
-        "name": "project.spscontroller.update",
-        "resource": "project.spscontroller",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "delete",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete project spscontroller",
-        "id": "019c780c-f7de-726e-a529-c23313bfb4f6",
-        "name": "project.spscontroller.delete",
-        "resource": "project.spscontroller",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "create",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create project spscontrollersystemtype",
-        "id": "019c780c-f7de-726f-bd55-4ff5c68a89d7",
-        "name": "project.spscontrollersystemtype.create",
-        "resource": "project.spscontrollersystemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "read",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read project spscontrollersystemtype",
-        "id": "019c780c-f7de-7270-aef3-46f74819a5ab",
-        "name": "project.spscontrollersystemtype.read",
-        "resource": "project.spscontrollersystemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "update",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update project spscontrollersystemtype",
-        "id": "019c780c-f7de-7271-8ebf-1eb8b6b67fd7",
-        "name": "project.spscontrollersystemtype.update",
-        "resource": "project.spscontrollersystemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "delete",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete project spscontrollersystemtype",
-        "id": "019c780c-f7de-7272-bf6c-e1d630e2d1cb",
-        "name": "project.spscontrollersystemtype.delete",
-        "resource": "project.spscontrollersystemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "create",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create project fielddevice",
+        "description": "Edit project field devices",
         "id": "019c780c-f7de-7273-a55b-1c91d834d4e7",
-        "name": "project.fielddevice.create",
+        "name": "project.fielddevice.edit",
         "resource": "project.fielddevice",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "read",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read project fielddevice",
-        "id": "019c780c-f7de-7274-ad2d-2f9d3ecb4767",
-        "name": "project.fielddevice.read",
-        "resource": "project.fielddevice",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "update",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update project fielddevice",
-        "id": "019c780c-f7de-7275-ba8b-ba7439c78605",
-        "name": "project.fielddevice.update",
-        "resource": "project.fielddevice",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "delete",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete project fielddevice",
-        "id": "019c780c-f7de-7276-9f67-94e341ac7e34",
-        "name": "project.fielddevice.delete",
-        "resource": "project.fielddevice",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "create",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create project bacnetobject",
-        "id": "019c780c-f7de-7277-b51d-c36d2f0f82b1",
-        "name": "project.bacnetobject.create",
-        "resource": "project.bacnetobject",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "read",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read project bacnetobject",
-        "id": "019c780c-f7de-7278-aae6-f2201ea22e49",
-        "name": "project.bacnetobject.read",
-        "resource": "project.bacnetobject",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "update",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update project bacnetobject",
-        "id": "019c780c-f7de-7279-a2c6-5d51fba16a58",
-        "name": "project.bacnetobject.update",
-        "resource": "project.bacnetobject",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "delete",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete project bacnetobject",
-        "id": "019c780c-f7de-727a-ae00-19ad57dbfa0a",
-        "name": "project.bacnetobject.delete",
-        "resource": "project.bacnetobject",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "create",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create project systemtype",
-        "id": "019c780c-f7de-727b-af01-3d1fe6b7b7a2",
-        "name": "project.systemtype.create",
-        "resource": "project.systemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "read",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read project systemtype",
-        "id": "019c780c-f7de-727c-8216-1a5f1342bbc6",
-        "name": "project.systemtype.read",
-        "resource": "project.systemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "update",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update project systemtype",
-        "id": "019c780c-f7de-727d-9227-22ad3f95d5ae",
-        "name": "project.systemtype.update",
-        "resource": "project.systemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "delete",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete project systemtype",
-        "id": "019c780c-f7de-727e-864c-d263d55c870f",
-        "name": "project.systemtype.delete",
-        "resource": "project.systemtype",
         "updated_at": "2026-02-19T22:37:21.758137Z"
       }
     ],
@@ -29732,7 +29543,7 @@
       {
         "created_at": "2026-02-19T22:37:21.758137Z",
         "id": "019c780c-f7e3-7a25-8001-043e814b06c9",
-        "permission": "project.read",
+        "permission": "project.listAll",
         "role": "superadmin",
         "updated_at": "2026-02-19T22:37:21.758137Z"
       },
@@ -30229,168 +30040,21 @@
       {
         "created_at": "2026-02-19T22:37:21.758137Z",
         "id": "019c780c-f7e3-7a6c-9c8f-3bbf7c0e67ac",
-        "permission": "project.controlcabinet.create",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a6d-a50d-6a3f66dd1285",
-        "permission": "project.controlcabinet.read",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a6e-bdcd-26738a760cb3",
-        "permission": "project.controlcabinet.update",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a6f-ba86-a315143e62b2",
-        "permission": "project.controlcabinet.delete",
+        "permission": "project.controlcabinet.edit",
         "role": "superadmin",
         "updated_at": "2026-02-19T22:37:21.758137Z"
       },
       {
         "created_at": "2026-02-19T22:37:21.758137Z",
         "id": "019c780c-f7e3-7a70-a061-3e7845236ac4",
-        "permission": "project.spscontroller.create",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a71-939f-52a11ec29acf",
-        "permission": "project.spscontroller.read",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a72-b488-ef66d9a5093b",
-        "permission": "project.spscontroller.update",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a73-8596-5678ddd3fe78",
-        "permission": "project.spscontroller.delete",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a74-9e0c-59aa3f28bd5f",
-        "permission": "project.spscontrollersystemtype.create",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a75-91d4-b27de8c281cb",
-        "permission": "project.spscontrollersystemtype.read",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a76-bcca-9f38ece55666",
-        "permission": "project.spscontrollersystemtype.update",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a77-9f42-66efad42f8f5",
-        "permission": "project.spscontrollersystemtype.delete",
+        "permission": "project.spscontroller.edit",
         "role": "superadmin",
         "updated_at": "2026-02-19T22:37:21.758137Z"
       },
       {
         "created_at": "2026-02-19T22:37:21.758137Z",
         "id": "019c780c-f7e3-7a78-b0aa-27c74721a424",
-        "permission": "project.fielddevice.create",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a79-8e0a-4dffc7880c9d",
-        "permission": "project.fielddevice.read",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a7a-a48d-a3ab04f8cd1c",
-        "permission": "project.fielddevice.update",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a7b-8550-067c86fa3446",
-        "permission": "project.fielddevice.delete",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a7c-bd47-99fe85241c93",
-        "permission": "project.bacnetobject.create",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a7d-9020-84f15777f28c",
-        "permission": "project.bacnetobject.read",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a7e-a72e-e54ec8891c8b",
-        "permission": "project.bacnetobject.update",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a7f-ae4f-32a998515d36",
-        "permission": "project.bacnetobject.delete",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a80-b7f1-ad44e40c54b2",
-        "permission": "project.systemtype.create",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a81-9fbe-bc977c470df6",
-        "permission": "project.systemtype.read",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a82-bf9a-5b9634f02929",
-        "permission": "project.systemtype.update",
-        "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a83-9e13-8a66288e154c",
-        "permission": "project.systemtype.delete",
+        "permission": "project.fielddevice.edit",
         "role": "superadmin",
         "updated_at": "2026-02-19T22:37:21.758137Z"
       }
@@ -35463,7 +35127,7 @@
         "created_at": "2026-02-19T22:37:21.793822Z",
         "id": "019c780c-f801-7d70-b072-81b33b1761f8",
         "ref_number": 1408,
-        "state_text1": "Wert 1 \u003e DG",
+        "state_text1": "Wert 1 > DG",
         "state_text10": null,
         "state_text11": null,
         "state_text12": null,
@@ -35471,7 +35135,7 @@
         "state_text14": null,
         "state_text15": null,
         "state_text16": null,
-        "state_text2": "Wert 2 \u003c DG",
+        "state_text2": "Wert 2 < DG",
         "state_text3": null,
         "state_text4": null,
         "state_text5": null,
@@ -77351,7 +77015,7 @@
     "object_data_apparats": 119,
     "object_data_bacnet_objects": 1080,
     "password_reset_tokens": 0,
-    "permissions": 104,
+    "permissions": 83,
     "phase_permissions": 0,
     "phases": 4,
     "project_control_cabinets": 0,
@@ -77360,7 +77024,7 @@
     "project_users": 0,
     "projects": 0,
     "refresh_tokens": 1,
-    "role_permissions": 104,
+    "role_permissions": 83,
     "specifications": 0,
     "sps_controller_system_types": 0,
     "sps_controllers": 0,

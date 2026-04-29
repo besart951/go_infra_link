@@ -30,7 +30,6 @@
     RolePermissionEditor
   } from '$lib/components/roles/index.js';
   import { canPerform } from '$lib/utils/permissions.js';
-  import { auth, hasMinRole } from '$lib/stores/auth.svelte.js';
   import { Plus, RefreshCw, Grid3X3, LayoutGrid, Shield, Users } from '@lucide/svelte';
 
   const t = createTranslator();

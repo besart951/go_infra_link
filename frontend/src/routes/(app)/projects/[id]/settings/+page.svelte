@@ -28,12 +28,15 @@
   import type { Project, ProjectStatus, UpdateProjectRequest } from '$lib/domain/project/index.js';
   import type { User } from '$lib/domain/user/index.js';
   import type { ObjectData } from '$lib/domain/facility/index.js';
+  import { canPerform } from '$lib/utils/permissions.js';
   import { ArrowLeft, Pencil } from '@lucide/svelte';
   import ObjectDataForm from '$lib/components/facility/forms/ObjectDataForm.svelte';
 
   const t = createTranslator();
 
   const projectId = $derived($page.params.id ?? '');
+  const canUpdateProject = $derived(canPerform('update', 'project'));
+  const canUpdateObjectData = $derived(canPerform('update', 'objectdata'));
 
   let project = $state<Project | null>(null);
   let loading = $state(true);
@@ -106,6 +109,7 @@
 
   async function saveSettings() {
     if (!projectId || !project) return;
+    if (!canUpdateProject) return;
     if (!form.phase_id.trim()) {
       addToast(translate('projects.settings.phase_required'), 'error');
       return;
@@ -182,6 +186,7 @@
 
   async function toggleUser(user: User) {
     if (!projectId) return;
+    if (!canUpdateProject) return;
     if (isUserInProject(user.id)) {
       const ok = await confirm({
         title: translate('projects.users.remove_title'),
@@ -239,6 +244,7 @@
 
   async function toggleObjectData(objectData: ObjectData) {
     if (!projectId) return;
+    if (!canUpdateProject) return;
     const isAssigned = objectData.project_id === projectId;
     const isActive = isAssigned && objectData.is_active;
     if (isActive) {
@@ -280,6 +286,7 @@
   }
 
   async function editObjectData(item: ObjectData) {
+    if (!canUpdateObjectData) return;
     try {
       editingObjectData = await objectDataRepository.get(item.id);
     } catch (err) {
@@ -396,7 +403,11 @@
         <div class="grid gap-4 md:grid-cols-2">
           <div class="flex flex-col gap-2">
             <label class="text-sm font-medium" for="project_name">{$t('common.name')}</label>
-            <Input id="project_name" bind:value={form.name} disabled={saving} />
+            <Input
+              id="project_name"
+              bind:value={form.name}
+              disabled={saving || !canUpdateProject}
+            />
           </div>
 
           <div class="flex flex-col gap-2">
@@ -405,7 +416,7 @@
               id="project_status"
               class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
               bind:value={form.status}
-              disabled={saving}
+              disabled={saving || !canUpdateProject}
             >
               {#each statusOptions as opt}
                 <option value={opt.value}>{$t(opt.label)}</option>
@@ -417,19 +428,34 @@
             <label class="text-sm font-medium" for="project_start">
               {$t('projects.settings.start_date')}
             </label>
-            <Input id="project_start" type="date" bind:value={form.start_date} disabled={saving} />
+            <Input
+              id="project_start"
+              type="date"
+              bind:value={form.start_date}
+              disabled={saving || !canUpdateProject}
+            />
           </div>
 
           <div class="flex flex-col gap-2">
             <label class="text-sm font-medium" for="project_phase_edit"
               >{$t('projects.settings.phase')}</label
             >
-            <ProjectPhaseSelect id="project_phase_edit" bind:value={form.phase_id} width="w-full" />
+            <ProjectPhaseSelect
+              id="project_phase_edit"
+              bind:value={form.phase_id}
+              width="w-full"
+              disabled={saving || !canUpdateProject}
+            />
           </div>
 
           <div class="flex flex-col gap-2 md:col-span-2">
             <label class="text-sm font-medium" for="project_desc">{$t('common.description')}</label>
-            <Textarea id="project_desc" rows={4} bind:value={form.description} disabled={saving} />
+            <Textarea
+              id="project_desc"
+              rows={4}
+              bind:value={form.description}
+              disabled={saving || !canUpdateProject}
+            />
           </div>
         </div>
 
@@ -437,11 +463,11 @@
           <Button
             variant="outline"
             onclick={() => project && hydrateForm(project)}
-            disabled={saving}
+            disabled={saving || !canUpdateProject}
           >
             {$t('common.reset')}
           </Button>
-          <Button onclick={saveSettings} disabled={saving}>
+          <Button onclick={saveSettings} disabled={saving || !canUpdateProject}>
             {$t('projects.settings.save_changes')}
           </Button>
         </div>
@@ -513,12 +539,14 @@
                       {isUserInProject(user.id) ? $t('common.active') : $t('common.inactive')}
                     </Table.Cell>
                     <Table.Cell class="text-right">
-                      <Button
-                        variant={isUserInProject(user.id) ? 'outline' : 'default'}
-                        onclick={() => toggleUser(user)}
-                      >
-                        {isUserInProject(user.id) ? $t('common.remove') : $t('common.add')}
-                      </Button>
+                      {#if canUpdateProject}
+                        <Button
+                          variant={isUserInProject(user.id) ? 'outline' : 'default'}
+                          onclick={() => toggleUser(user)}
+                        >
+                          {isUserInProject(user.id) ? $t('common.remove') : $t('common.add')}
+                        </Button>
+                      {/if}
                     </Table.Cell>
                   </Table.Row>
                 {/each}
@@ -529,7 +557,7 @@
       </div>
     {:else}
       <div class="p-6">
-        {#if showObjectDataForm}
+        {#if showObjectDataForm && canUpdateObjectData}
           <ObjectDataForm
             initialData={editingObjectData}
             onSuccess={handleObjectDataSuccess}
@@ -606,18 +634,22 @@
                     </Table.Cell>
                     <Table.Cell class="text-right">
                       <div class="flex items-center justify-end gap-2">
-                        <Button variant="outline" onclick={() => editObjectData(obj)}>
-                          <Pencil class="mr-2 h-4 w-4" />
-                          {$t('common.edit')}
-                        </Button>
-                        <Button
-                          variant={isObjectDataActive(obj) ? 'outline' : 'default'}
-                          onclick={() => toggleObjectData(obj)}
-                        >
-                          {isObjectDataActive(obj)
-                            ? $t('projects.object_data.deactivate')
-                            : $t('projects.object_data.activate')}
-                        </Button>
+                        {#if canUpdateObjectData}
+                          <Button variant="outline" onclick={() => editObjectData(obj)}>
+                            <Pencil class="mr-2 h-4 w-4" />
+                            {$t('common.edit')}
+                          </Button>
+                        {/if}
+                        {#if canUpdateProject}
+                          <Button
+                            variant={isObjectDataActive(obj) ? 'outline' : 'default'}
+                            onclick={() => toggleObjectData(obj)}
+                          >
+                            {isObjectDataActive(obj)
+                              ? $t('projects.object_data.deactivate')
+                              : $t('projects.object_data.activate')}
+                          </Button>
+                        {/if}
                       </div>
                     </Table.Cell>
                   </Table.Row>

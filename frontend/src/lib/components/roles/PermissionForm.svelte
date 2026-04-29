@@ -2,6 +2,7 @@
   import type { Permission, PermissionCategory } from '$lib/domain/role/index.js';
   import {
     PERMISSION_ACTIONS,
+    PROJECT_PERMISSION_ACTIONS,
     GENERAL_RESOURCES,
     FACILITY_RESOURCES,
     PROJECT_SUB_RESOURCES,
@@ -93,6 +94,10 @@
         return [...GENERAL_RESOURCES];
     }
   });
+
+  const availableActions = $derived.by(() =>
+    category === 'project' ? [...PROJECT_PERMISSION_ACTIONS] : [...PERMISSION_ACTIONS]
+  );
 
   // Build permission name based on category
   const permissionName = $derived.by(() => {
@@ -323,7 +328,7 @@
     />
     {#if !isEditMode}
       <div class="flex flex-wrap gap-1.5">
-        {#each PERMISSION_ACTIONS as act}
+        {#each availableActions as act}
           <button
             type="button"
             class={cn(

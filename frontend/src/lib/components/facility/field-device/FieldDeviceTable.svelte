@@ -6,7 +6,6 @@
   import { ArrowDown, ArrowUp, Settings2 } from '@lucide/svelte';
   import BacnetObjectsEditor from '../bacnet/BacnetObjectsEditor.svelte';
   import FieldDeviceTableRow from './FieldDeviceTableRow.svelte';
-  import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { useFieldDeviceState } from './state/context.svelte.js';
 
@@ -337,7 +336,7 @@
                   fieldErrors={state.editing.getBacnetFieldErrors(device.id) ?? new Map()}
                   clientErrors={state.editing.getBacnetClientErrors(device.id) ?? new Map()}
                   sharedEditors={state.getEditorsForDevice(device.id)}
-                  disabled={!canPerform('update', 'fielddevice')}
+                  disabled={!state.canUpdateFieldDeviceBacnetObjects()}
                   onEdit={(objectId, field, value) => {
                     state.editing.queueBacnetEdit(device.id, objectId, field, value);
                   }}

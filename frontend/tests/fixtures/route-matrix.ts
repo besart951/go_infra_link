@@ -145,9 +145,10 @@ export const routeAudits = [
     auth: 'authenticated',
     authorization: 'ui-only',
     status: 'misconfigured',
-    expectedAccess: 'Requires project.read for the route and project.create for creation.',
+    expectedAccess: 'Requires authentication for the scoped route and project.create for creation.',
     protectedUi: ['common.create', 'project creation form'],
-    notes: 'The page still renders without project.read and only hides the create workflow.'
+    notes:
+      'The backend scopes the listing to project.listAll or project membership; the UI only hides creation.'
   },
   {
     path: '/projects/:id',
@@ -156,7 +157,7 @@ export const routeAudits = [
     auth: 'authenticated',
     authorization: 'none',
     status: 'misconfigured',
-    expectedAccess: 'Requires project membership or a project.read-style grant.',
+    expectedAccess: 'Requires project membership or project.listAll.',
     protectedUi: ['project collaboration surface', 'project details'],
     notes: 'The frontend does not verify project membership before rendering the page.'
   },

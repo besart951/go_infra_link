@@ -14,7 +14,6 @@
   import FieldDeviceFloatingSaveBar from './FieldDeviceFloatingSaveBar.svelte';
   import FieldDeviceExportPanel from './FieldDeviceExportPanel.svelte';
   import { provideFieldDeviceState } from './state/context.svelte.js';
-  import { canPerform } from '$lib/utils/permissions.js';
 
   const t = createTranslator();
 
@@ -121,7 +120,7 @@
 
 <div class="flex min-w-0 flex-col gap-6">
   <div class="flex justify-end gap-2">
-    {#if !fieldDeviceState.showMultiCreateForm && canPerform('create', 'fielddevice')}
+    {#if !fieldDeviceState.showMultiCreateForm && fieldDeviceState.canCreateFieldDevice()}
       <Button onclick={() => fieldDeviceState.openMultiCreateForm()}>
         <ListPlusIcon class="size-4" />
         {$t('field_device.actions.multi_create')}

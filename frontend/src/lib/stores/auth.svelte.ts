@@ -3,23 +3,12 @@
  *
  * This store manages:
  * - Current authenticated user
- * - User's role and permissions
- * - Hierarchical permission checks (can-manage logic)
+ * - User permissions and derived capabilities
+ * - Allowed role assignments returned by the backend
  */
 
-import { getCurrentUser, getAllowedRoles, type User, type UserRole } from '$lib/api/users.js';
+import { getCurrentUser, getAllowedRoles, type User } from '$lib/api/users.js';
 import { t } from '$lib/i18n/index.js';
-
-// Role hierarchy levels (higher = more privileged)
-export const ROLE_LEVELS: Record<UserRole, number> = {
-  superadmin: 100,
-  admin_fzag: 90,
-  fzag: 80,
-  admin_planer: 70,
-  planer: 60,
-  admin_entrepreneur: 50,
-  entrepreneur: 40
-};
 
 interface AuthState {
   user: User | null;
@@ -64,45 +53,6 @@ export function clearAuth(): void {
   authState.user = null;
   authState.allowedRoles = [];
   authState.error = null;
-}
-
-/**
- * Get the hierarchical level of a role
- */
-export function getRoleLevel(role: UserRole): number {
-  return ROLE_LEVELS[role] || 0;
-}
-
-/**
- * Check if the current user can manage a specific role
- * Based on the hierarchy:
- * - superadmin > admin_fzag > fzag > admin_planer > planer > admin_entrepreneur > entrepreneur
- */
-export function canManageRole(targetRole: UserRole): boolean {
-  if (!authState.user) return false;
-
-  const currentRole = authState.user.role;
-
-  // entrepreneur cannot manage any users
-  if (currentRole === 'entrepreneur') return false;
-
-  // User can manage roles below their level
-  return getRoleLevel(currentRole) > getRoleLevel(targetRole);
-}
-
-/**
- * Check if the current user has a specific role
- */
-export function hasRole(role: UserRole): boolean {
-  return authState.user?.role === role;
-}
-
-/**
- * Check if the current user has at least a certain role level
- */
-export function hasMinRole(minRole: UserRole): boolean {
-  if (!authState.user) return false;
-  return getRoleLevel(authState.user.role) >= getRoleLevel(minRole);
 }
 
 export function canAccessUserDirectory(): boolean {

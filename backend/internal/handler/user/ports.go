@@ -25,8 +25,7 @@ type AdminService interface {
 
 type RoleQueryService interface {
 	GetGlobalRole(ctx context.Context, userID uuid.UUID) (domainUser.Role, error)
-	GetAllowedRoles(requesterRole domainUser.Role) []domainUser.Role
-	CanAccessUserDirectory(role domainUser.Role) bool
+	GetAllowedRoles(ctx context.Context, requesterRole domainUser.Role) ([]domainUser.Role, error)
 }
 
 type UserDirectoryService interface {
@@ -43,6 +42,7 @@ type PermissionService interface {
 
 type RolePermissionService interface {
 	ListRolesWithPermissions(ctx context.Context) ([]domainUser.RoleInfo, error)
+	GetAllowedRoles(ctx context.Context, role domainUser.Role) ([]domainUser.Role, error)
 	UpdateRolePermissions(ctx context.Context, role domainUser.Role, permissions []string) ([]string, error)
 	AddRolePermission(ctx context.Context, role domainUser.Role, permission string) (*domainUser.RolePermission, error)
 	RemoveRolePermission(ctx context.Context, role domainUser.Role, permission string) error

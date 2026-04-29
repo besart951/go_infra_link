@@ -47,9 +47,9 @@ func RegisterPhaseRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authC
 	{
 		phases.GET("", handlers.Phase.ListPhases)
 		phases.GET("/:id", handlers.Phase.GetPhase)
-		phases.POST("", middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG), handlers.Phase.CreatePhase)
-		phases.PATCH("/:id", middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG), handlers.Phase.UpdatePhase)
-		phases.PUT("/:id", middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG), handlers.Phase.UpdatePhase)
-		phases.DELETE("/:id", middleware.RequireGlobalRole(authChecker, domainUser.RoleAdminFZAG), handlers.Phase.DeletePhase)
+		phases.POST("", middleware.RequirePermission(authChecker, domainUser.PermissionPhaseCreate), handlers.Phase.CreatePhase)
+		phases.PATCH("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionPhaseUpdate), handlers.Phase.UpdatePhase)
+		phases.PUT("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionPhaseUpdate), handlers.Phase.UpdatePhase)
+		phases.DELETE("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionPhaseDelete), handlers.Phase.DeletePhase)
 	}
 }

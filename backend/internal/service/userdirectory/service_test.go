@@ -8,65 +8,73 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestCanAccessUserDirectory(t *testing.T) {
-	tests := []struct {
-		name string
-		role domainUser.Role
-		want bool
-	}{
-		{name: "superadmin", role: domainUser.RoleSuperAdmin, want: true},
-		{name: "admin_fzag", role: domainUser.RoleAdminFZAG, want: true},
-		{name: "fzag", role: domainUser.RoleFZAG, want: true},
-		{name: "admin_planer", role: domainUser.RoleAdminPlaner, want: true},
-		{name: "admin_entrepreneur", role: domainUser.RoleAdminEnterpreneur, want: true},
-		{name: "planer", role: domainUser.RolePlaner, want: false},
-		{name: "entrepreneur", role: domainUser.RoleEnterpreneur, want: false},
+func TestPermissionSetContainsAll(t *testing.T) {
+	granted := permissionSetFromRolePermissions([]domainUser.RolePermission{{Permission: domainUser.PermissionUserRead}, {Permission: domainUser.PermissionUserUpdate}})
+	required := permissionSetFromRolePermissions([]domainUser.RolePermission{{Permission: domainUser.PermissionUserRead}})
+	if !permissionSetContainsAll(granted, required) {
+		t.Fatal("expected superset permissions to satisfy subset")
 	}
+}
 
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
-			got := CanAccessUserDirectory(testCase.role)
-			if got != testCase.want {
-				t.Fatalf("CanAccessUserDirectory(%s) = %v, want %v", testCase.role, got, testCase.want)
-			}
-		})
+func TestPermissionSetForRole_SuperadminActsAsWildcard(t *testing.T) {
+	permissions := permissionSetForRole(domainUser.RoleSuperAdmin, nil)
+	if !permissions.has(domainUser.PermissionUserRead) {
+		t.Fatal("expected superadmin wildcard to satisfy user.read")
+	}
+	if !permissionSetContainsAll(permissions, permissionSetFromRolePermissions([]domainUser.RolePermission{{Permission: domainUser.PermissionTeamRead}})) {
+		t.Fatal("expected superadmin wildcard to satisfy subset comparisons")
 	}
 }
 
 func TestCanSeeUserScopedRolesRequireSharedTeam(t *testing.T) {
-	requester := &domainUser.User{Base: mustBase(), Role: domainUser.RoleAdminPlaner}
+	requesterID := uuid.New()
 	candidate := &domainUser.User{Base: mustBase(), Role: domainUser.RolePlaner}
+	requesterPermissions := permissionSetFromRolePermissions([]domainUser.RolePermission{{Permission: domainUser.PermissionUserRead}})
+	candidatePermissions := permissionSetFromRolePermissions([]domainUser.RolePermission{{Permission: domainUser.PermissionUserRead}, {Permission: domainUser.PermissionUserUpdate}})
 
-	if canSeeUser(requester, candidate, map[uuid.UUID]struct{}{}) {
-		t.Fatal("expected admin_planer to not see candidate without shared team")
+	if canSeeUser(requesterID, requesterPermissions, candidate, map[uuid.UUID]struct{}{}, candidatePermissions) {
+		t.Fatal("expected user to not see stronger candidate without shared team")
 	}
 
-	if !canSeeUser(requester, candidate, map[uuid.UUID]struct{}{uuid.New(): {}}) {
-		t.Fatal("expected admin_planer to see candidate with shared team")
+	if !canSeeUser(requesterID, requesterPermissions, candidate, map[uuid.UUID]struct{}{uuid.New(): {}}, candidatePermissions) {
+		t.Fatal("expected shared team visibility to allow candidate")
 	}
 }
 
-func TestCanSeeUserFZAGCannotSeeSuperadmin(t *testing.T) {
-	requester := &domainUser.User{Base: mustBase(), Role: domainUser.RoleFZAG}
-	candidate := &domainUser.User{Base: mustBase(), Role: domainUser.RoleSuperAdmin}
+func TestCanSeeUserPermissionSupersetAllowsVisibility(t *testing.T) {
+	requesterID := uuid.New()
+	candidate := &domainUser.User{Base: mustBase(), Role: domainUser.RolePlaner}
+	requesterPermissions := permissionSetFromRolePermissions([]domainUser.RolePermission{{Permission: domainUser.PermissionUserRead}, {Permission: domainUser.PermissionUserUpdate}, {Permission: domainUser.PermissionTeamRead}})
+	candidatePermissions := permissionSetFromRolePermissions([]domainUser.RolePermission{{Permission: domainUser.PermissionUserRead}})
 
-	if canSeeUser(requester, candidate, map[uuid.UUID]struct{}{uuid.New(): {}}) {
-		t.Fatal("expected fzag to be blocked from seeing superadmin")
+	if !canSeeUser(requesterID, requesterPermissions, candidate, map[uuid.UUID]struct{}{}, candidatePermissions) {
+		t.Fatal("expected permission superset to allow visibility")
 	}
 }
 
 func TestBuildCapabilitiesSelfAndLastSuperadminProtection(t *testing.T) {
 	requesterID := uuid.New()
-	requester := &domainUser.User{Base: mustBaseWithID(requesterID), Role: domainUser.RoleSuperAdmin}
+	requesterPermissions := permissionSetFromRolePermissions([]domainUser.RolePermission{
+		{Permission: domainUser.PermissionUserRead},
+		{Permission: domainUser.PermissionUserUpdate},
+		{Permission: domainUser.PermissionUserDelete},
+	})
+	superadminPermissions := permissionSetFromRolePermissions([]domainUser.RolePermission{
+		{Permission: domainUser.PermissionUserRead},
+		{Permission: domainUser.PermissionUserUpdate},
+		{Permission: domainUser.PermissionUserDelete},
+	})
 
-	selfCaps := buildCapabilities(requester, domainUser.User{Base: mustBaseWithID(requesterID), Role: domainUser.RoleSuperAdmin, IsActive: true}, 2)
+	selfCaps := buildCapabilities(requesterID, requesterPermissions, domainUser.User{Base: mustBaseWithID(requesterID), Role: domainUser.RoleSuperAdmin, IsActive: true}, superadminPermissions, 2)
 	if selfCaps.CanUpdate || selfCaps.CanDelete || selfCaps.CanDisable || selfCaps.CanEnable || selfCaps.CanChangeRole {
 		t.Fatal("expected no self-management capabilities")
 	}
 
 	lastSuperadminCaps := buildCapabilities(
-		requester,
+		requesterID,
+		requesterPermissions,
 		domainUser.User{Base: mustBase(), Role: domainUser.RoleSuperAdmin, IsActive: true},
+		superadminPermissions,
 		1,
 	)
 	if !lastSuperadminCaps.CanUpdate || !lastSuperadminCaps.CanChangeRole {
@@ -81,13 +89,10 @@ func TestIntersectVisibleTeamIDsScoped(t *testing.T) {
 	teamA := uuid.New()
 	teamB := uuid.New()
 
-	requester := &domainUser.User{Base: mustBase(), Role: domainUser.RoleAdminEnterpreneur}
-	candidate := &domainUser.User{Base: mustBase(), Role: domainUser.RoleEnterpreneur}
-
 	requesterTeams := map[uuid.UUID]struct{}{teamA: {}}
 	candidateTeams := map[uuid.UUID]struct{}{teamA: {}, teamB: {}}
 
-	result := intersectVisibleTeamIDs(requester, requesterTeams, candidate, candidateTeams)
+	result := intersectVisibleTeamIDs(false, requesterTeams, candidateTeams)
 	if len(result) != 1 {
 		t.Fatalf("expected one shared team, got %d", len(result))
 	}
@@ -96,6 +101,18 @@ func TestIntersectVisibleTeamIDsScoped(t *testing.T) {
 	}
 	if _, ok := result[teamB]; ok {
 		t.Fatal("expected non-shared team to be excluded")
+	}
+}
+
+func TestIntersectVisibleTeamIDsWithTeamReadShowsAllTeams(t *testing.T) {
+	teamA := uuid.New()
+	teamB := uuid.New()
+	requesterTeams := map[uuid.UUID]struct{}{teamA: {}}
+	candidateTeams := map[uuid.UUID]struct{}{teamA: {}, teamB: {}}
+
+	result := intersectVisibleTeamIDs(true, requesterTeams, candidateTeams)
+	if len(result) != 2 {
+		t.Fatalf("expected both candidate teams, got %d", len(result))
 	}
 }
 

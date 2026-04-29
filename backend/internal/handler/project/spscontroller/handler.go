@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
 	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
@@ -59,7 +60,13 @@ func (h *Handler) CreateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndAnyPermission(
+		c,
+		h.access,
+		projectID,
+		domainUser.PermissionProjectSPSControllerCreate,
+		domainUser.PermissionProjectSPSControllerEdit,
+	) {
 		return
 	}
 
@@ -134,7 +141,13 @@ func (h *Handler) CopyProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndAnyPermission(
+		c,
+		h.access,
+		projectID,
+		domainUser.PermissionProjectSPSControllerCreate,
+		domainUser.PermissionProjectSPSControllerEdit,
+	) {
 		return
 	}
 
@@ -168,7 +181,14 @@ func (h *Handler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndAnyPermission(
+		c,
+		h.access,
+		projectID,
+		domainUser.PermissionProjectSPSControllerSystemTypeCreate,
+		domainUser.PermissionProjectSPSControllerSystemTypeEdit,
+		domainUser.PermissionProjectSPSControllerEdit,
+	) {
 		return
 	}
 
@@ -212,7 +232,13 @@ func (h *Handler) UpdateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndAnyPermission(
+		c,
+		h.access,
+		projectID,
+		domainUser.PermissionProjectSPSControllerUpdate,
+		domainUser.PermissionProjectSPSControllerEdit,
+	) {
 		return
 	}
 
@@ -259,7 +285,13 @@ func (h *Handler) DeleteProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndAnyPermission(
+		c,
+		h.access,
+		projectID,
+		domainUser.PermissionProjectSPSControllerDelete,
+		domainUser.PermissionProjectSPSControllerEdit,
+	) {
 		return
 	}
 

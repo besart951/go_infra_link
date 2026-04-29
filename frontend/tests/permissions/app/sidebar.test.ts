@@ -132,7 +132,8 @@ describe('permission-aware sidebar navigation', () => {
       permission('role'),
       permission('project'),
       permission('phase'),
-      permission('building')
+      permission('building'),
+      permission('notification.smtp', 'manage')
     ]);
 
     render(AppSidebar, {
@@ -147,10 +148,13 @@ describe('permission-aware sidebar navigation', () => {
     expect(screen.getByTestId('nav-link:/projects')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/projects/phases')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/facility/buildings')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-link:/admin/notifications/smtp')).toBeInTheDocument();
     expect(screen.getByTestId('project-link:project-1')).toBeInTheDocument();
   });
 
-  it('keeps the admin notifications link restricted to superadmin users', () => {
+  it('shows the admin notifications link only with the SMTP manage permission', () => {
+    state.setPermissions([permission('notification.smtp', 'manage')]);
+
     render(AppSidebar, {
       user: buildAdminUser(),
       teams: [],
@@ -160,14 +164,14 @@ describe('permission-aware sidebar navigation', () => {
     expect(screen.getByTestId('nav-link:/admin/notifications/smtp')).toBeInTheDocument();
   });
 
-  it('shows facility navigation for fzag roles even without granular facility permissions', () => {
+  it('does not show facility navigation without granular facility permissions even for fzag roles', () => {
     render(AppSidebar, {
       user: buildUser({ role: 'fzag' }),
       teams: [],
       projects: []
     });
 
-    expect(screen.getByTestId('nav-link:/facility/buildings')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-link:/facility/control-cabinets')).toBeInTheDocument();
+    expect(screen.queryByTestId('nav-link:/facility/buildings')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('nav-link:/facility/control-cabinets')).not.toBeInTheDocument();
   });
 });

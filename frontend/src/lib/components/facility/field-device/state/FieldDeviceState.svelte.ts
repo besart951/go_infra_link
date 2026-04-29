@@ -5,8 +5,9 @@ import { ManageFieldDeviceUseCase } from '$lib/application/useCases/facility/man
 import { ListEntityUseCase } from '$lib/application/useCases/listEntityUseCase.js';
 import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
+import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
 import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
-import { canPerform } from '$lib/utils/permissions.js';
+import { canPerform, canPerformAny } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
 import type { Apparat, FieldDevice, SystemPart } from '$lib/domain/facility/index.js';
 import type {
@@ -56,6 +57,94 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   get projectId() {
     return this.resolveProjectId();
+  }
+
+  get isProjectContext(): boolean {
+    return Boolean(this.projectId);
+  }
+
+  private canPerformProjectFieldDevice(...actions: string[]): boolean {
+    return canPerformAny(actions, 'project.fielddevice');
+  }
+
+  private canPerformProjectFieldDeviceSpecification(...actions: string[]): boolean {
+    return canPerformAny(actions, 'project.fielddevice_specification');
+  }
+
+  private canPerformProjectFieldDeviceBacnetObjects(...actions: string[]): boolean {
+    return canPerformAny(actions, 'project.fielddevice.bacnetobjects');
+  }
+
+  canCreateFieldDevice(): boolean {
+    return this.isProjectContext
+      ? this.canPerformProjectFieldDevice('create', 'edit')
+      : canPerform('create', 'fielddevice');
+  }
+
+  canUpdateFieldDevice(): boolean {
+    return this.isProjectContext
+      ? this.canPerformProjectFieldDevice('update', 'edit')
+      : canPerform('update', 'fielddevice');
+  }
+
+  canDeleteFieldDevice(): boolean {
+    return this.isProjectContext
+      ? this.canPerformProjectFieldDevice('delete', 'edit')
+      : canPerform('delete', 'fielddevice');
+  }
+
+  canUpdateFieldDeviceSpecification(): boolean {
+    if (!this.isProjectContext) {
+      return this.canUpdateFieldDevice();
+    }
+
+    return (
+      this.canPerformProjectFieldDeviceSpecification('update', 'edit') ||
+      this.canPerformProjectFieldDevice('edit')
+    );
+  }
+
+  canUpdateFieldDeviceBacnetObjects(): boolean {
+    if (!this.isProjectContext) {
+      return this.canUpdateFieldDevice();
+    }
+
+    return (
+      this.canPerformProjectFieldDeviceBacnetObjects('update', 'edit') ||
+      this.canPerformProjectFieldDevice('edit')
+    );
+  }
+
+  canOpenBulkEditPanel(): boolean {
+    if (!this.isProjectContext) {
+      return this.canUpdateFieldDevice();
+    }
+
+    return this.canUpdateFieldDevice() || this.canUpdateFieldDeviceSpecification();
+  }
+
+  canSavePendingEdits(): boolean {
+    if (!this.editing.hasUnsavedChanges) {
+      return false;
+    }
+
+    if (!this.isProjectContext) {
+      return this.canUpdateFieldDevice();
+    }
+
+    if (this.editing.hasPendingBaseEdits && !this.canUpdateFieldDevice()) {
+      return false;
+    }
+
+    if (this.editing.hasPendingSpecificationEdits && !this.canUpdateFieldDeviceSpecification()) {
+      return false;
+    }
+
+    if (this.editing.hasPendingBacnetEdits && !this.canUpdateFieldDeviceBacnetObjects()) {
+      return false;
+    }
+
+    return true;
   }
 
   getEditorsForDevice(deviceId: string) {
@@ -115,6 +204,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   toggleBulkEditPanel(): void {
     if (this.selectedCount === 0) return;
+    if (!this.canOpenBulkEditPanel()) return;
     this.bulkEditPanelOpen = !this.bulkEditPanelOpen;
   }
 
@@ -154,7 +244,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   }
 
   async deleteDevice(device: FieldDevice): Promise<void> {
-    if (!canPerform('delete', 'fielddevice')) return;
+    if (!this.canDeleteFieldDevice()) return;
     if (
       !confirm(
         translate('field_device.confirm.delete', {
@@ -166,7 +256,11 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     }
 
     try {
-      await this.manageFieldDeviceUseCase.delete(device.id);
+      if (this.projectId) {
+        await this.removeProjectFieldDevice(device.id);
+      } else {
+        await this.manageFieldDeviceUseCase.delete(device.id);
+      }
       addToast(translate('field_device.toasts.deleted'), 'success');
 
       const nextSelectedIds = new Set(this.selectedIds);
@@ -183,7 +277,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   async bulkDeleteSelected(): Promise<void> {
     if (this.selectedIds.size === 0) return;
-    if (!canPerform('delete', 'fielddevice')) return;
+    if (!this.canDeleteFieldDevice()) return;
 
     const ids = [...this.selectedIds];
     if (!confirm(translate('field_device.confirm.bulk_delete', { count: ids.length }))) {
@@ -191,7 +285,9 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     }
 
     try {
-      const result = await this.manageFieldDeviceUseCase.bulkDelete(ids);
+      const result = this.projectId
+        ? await this.removeProjectFieldDevices(ids)
+        : await this.manageFieldDeviceUseCase.bulkDelete(ids);
 
       if (result.success_count > 0) {
         addToast(
@@ -340,6 +436,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   }
 
   savePendingEdits(): void {
+    if (!this.canSavePendingEdits()) return;
     this.editing.saveAllPendingEdits(this.items, (updatedItems) => {
       this.replaceItems(updatedItems);
       this.onFieldDevicesSaved?.(updatedItems);
@@ -348,5 +445,65 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   discardPendingEdits(): void {
     this.editing.discardAllEdits();
+  }
+
+  private async removeProjectFieldDevice(deviceId: string): Promise<void> {
+    const linkId = await this.resolveProjectFieldDeviceLinkId(deviceId);
+
+    if (!this.projectId || !linkId) {
+      throw new Error(translate('projects.errors.load_failed'));
+    }
+
+    await projectRepository.removeFieldDevice(this.projectId, linkId);
+  }
+
+  private async removeProjectFieldDevices(ids: string[]): Promise<{
+    results: Array<{ id: string; success: boolean }>;
+    total_count: number;
+    success_count: number;
+    failure_count: number;
+  }> {
+    const linkIdsByDeviceId = await this.loadProjectFieldDeviceLinkIds();
+
+    const results = await Promise.all(
+      ids.map(async (id) => {
+        const linkId = linkIdsByDeviceId.get(id);
+        if (!this.projectId || !linkId) {
+          return { id, success: false };
+        }
+
+        try {
+          await projectRepository.removeFieldDevice(this.projectId, linkId);
+          return { id, success: true };
+        } catch {
+          return { id, success: false };
+        }
+      })
+    );
+
+    const successCount = results.filter((item) => item.success).length;
+    return {
+      results,
+      total_count: ids.length,
+      success_count: successCount,
+      failure_count: ids.length - successCount
+    };
+  }
+
+  private async resolveProjectFieldDeviceLinkId(deviceId: string): Promise<string | undefined> {
+    const linkIdsByDeviceId = await this.loadProjectFieldDeviceLinkIds();
+    return linkIdsByDeviceId.get(deviceId);
+  }
+
+  private async loadProjectFieldDeviceLinkIds(): Promise<Map<string, string>> {
+    if (!this.projectId) {
+      return new Map();
+    }
+
+    const links = await projectRepository.listFieldDevices(this.projectId, {
+      page: 1,
+      limit: 1000
+    });
+    return new Map(links.items.map((item) => [item.field_device_id, item.id]));
   }
 }

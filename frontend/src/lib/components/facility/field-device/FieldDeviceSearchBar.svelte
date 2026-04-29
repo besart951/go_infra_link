@@ -5,7 +5,6 @@
   import { createTranslator } from '$lib/i18n/translator.js';
   import * as ButtonGroup from '$lib/components/ui/button-group/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
-  import { canPerform } from '$lib/utils/permissions.js';
   import { useFieldDeviceState } from './state/context.svelte.js';
 
   const t = createTranslator();
@@ -49,7 +48,7 @@
             <Tooltip.Content>{$t('field_device.search.clear')}</Tooltip.Content>
           </Tooltip.Root>
 
-          {#if canPerform('delete', 'fielddevice')}
+          {#if state.canDeleteFieldDevice()}
             <Tooltip.Root>
               <Tooltip.Trigger
                 class={buttonVariants({ variant: 'destructive', size: 'icon-sm' })}
@@ -61,7 +60,7 @@
             </Tooltip.Root>
           {/if}
 
-          {#if canPerform('update', 'fielddevice')}
+          {#if state.canOpenBulkEditPanel()}
             <Tooltip.Root>
               <Tooltip.Trigger
                 class={buttonVariants({

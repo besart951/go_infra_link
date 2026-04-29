@@ -5,8 +5,10 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
@@ -22,6 +24,10 @@ import (
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects [post]
 func (h *ProjectHandler) CreateProject(c *gin.Context) {
+	if !projectshared.EnsureProjectPermission(c, h.access, domainUser.PermissionProjectCreate) {
+		return
+	}
+
 	var req dto.CreateProjectRequest
 	if !handlerutil.BindJSON(c, &req) {
 		return
@@ -145,7 +151,7 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, id) {
+	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, id, domainUser.PermissionProjectUpdate) {
 		return
 	}
 
@@ -197,7 +203,7 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 		return
 	}
 
-	if !h.ensureProjectAccess(c, id) {
+	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, id, domainUser.PermissionProjectDelete) {
 		return
 	}
 

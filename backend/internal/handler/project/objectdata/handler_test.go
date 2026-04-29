@@ -65,6 +65,10 @@ func (s *fakeProjectAccessPolicyService) CanAccessProject(_ context.Context, req
 	return s.hasAccess, nil
 }
 
+func (s *fakeProjectAccessPolicyService) CanUseProjectPermission(_ context.Context, _ uuid.UUID, _ *domainUser.Role, _ string) (bool, error) {
+	return true, nil
+}
+
 type statusTrackingWriter struct {
 	gin.ResponseWriter
 	statusWrites []int

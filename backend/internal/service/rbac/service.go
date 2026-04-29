@@ -61,58 +61,12 @@ func (s *Service) GetRoleLevel(role domainUser.Role) int {
 	}
 }
 
-// CanManageRole checks if a user with requesterRole can manage/create a user with targetRole
-func (s *Service) CanManageRole(requesterRole domainUser.Role, targetRole domainUser.Role) bool {
-	if requesterRole == domainUser.RoleEnterpreneur {
-		return false
+func (s *Service) GetAllowedRoles(ctx context.Context, requesterRole domainUser.Role) ([]domainUser.Role, error) {
+	roles := domainUser.AllRoles()
+	permissionSets, err := s.loadRolePermissionSets(ctx, roles)
+	if err != nil {
+		return nil, err
 	}
-	return s.GetRoleLevel(requesterRole) > s.GetRoleLevel(targetRole)
-}
-
-// GetAllowedRoles returns the list of roles that a user with the given role can assign to others
-func (s *Service) GetAllowedRoles(requesterRole domainUser.Role) []domainUser.Role {
-	switch requesterRole {
-	case domainUser.RoleSuperAdmin:
-		return []domainUser.Role{
-			domainUser.RoleSuperAdmin,
-			domainUser.RoleAdminFZAG,
-			domainUser.RoleFZAG,
-			domainUser.RoleAdminPlaner,
-			domainUser.RolePlaner,
-			domainUser.RoleAdminEnterpreneur,
-			domainUser.RoleEnterpreneur,
-		}
-	case domainUser.RoleAdminFZAG:
-		return []domainUser.Role{
-			domainUser.RoleFZAG,
-			domainUser.RoleAdminPlaner,
-			domainUser.RolePlaner,
-			domainUser.RoleAdminEnterpreneur,
-			domainUser.RoleEnterpreneur,
-		}
-	case domainUser.RoleFZAG:
-		return []domainUser.Role{
-			domainUser.RoleAdminPlaner,
-			domainUser.RolePlaner,
-			domainUser.RoleAdminEnterpreneur,
-			domainUser.RoleEnterpreneur,
-		}
-	case domainUser.RoleAdminPlaner:
-		return []domainUser.Role{
-			domainUser.RolePlaner,
-			domainUser.RoleAdminEnterpreneur,
-			domainUser.RoleEnterpreneur,
-		}
-	case domainUser.RolePlaner:
-		return []domainUser.Role{
-			domainUser.RoleAdminEnterpreneur,
-			domainUser.RoleEnterpreneur,
-		}
-	case domainUser.RoleAdminEnterpreneur:
-		return []domainUser.Role{
-			domainUser.RoleEnterpreneur,
-		}
-	default:
-		return []domainUser.Role{}
-	}
+	requesterPermissions := permissionSets[requesterRole]
+	return manageableRolesForPermissionSet(roles, requesterPermissions, permissionSets), nil
 }

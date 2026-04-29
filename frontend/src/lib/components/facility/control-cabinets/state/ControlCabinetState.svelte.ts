@@ -5,7 +5,7 @@ import { ManageControlCabinetUseCase } from '$lib/application/useCases/facility/
 import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
 import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
 import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
-import { canPerform } from '$lib/utils/permissions.js';
+import { canPerform, canPerformAny } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
 import type { Building, ControlCabinet } from '$lib/domain/facility/index.js';
 import type { ControlCabinetFilters, ControlCabinetStateProps } from './types.js';
@@ -46,6 +46,24 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
 
   get isProjectContext(): boolean {
     return Boolean(this.projectId);
+  }
+
+  canCreateControlCabinet(): boolean {
+    return this.isProjectContext
+      ? canPerformAny(['create', 'edit'], 'project.controlcabinet')
+      : canPerform('create', 'controlcabinet');
+  }
+
+  canUpdateControlCabinet(): boolean {
+    return this.isProjectContext
+      ? canPerformAny(['update', 'edit'], 'project.controlcabinet')
+      : canPerform('update', 'controlcabinet');
+  }
+
+  canDeleteControlCabinet(): boolean {
+    return this.isProjectContext
+      ? canPerformAny(['delete', 'edit'], 'project.controlcabinet')
+      : canPerform('delete', 'controlcabinet');
   }
 
   async initialize(): Promise<void> {
@@ -165,7 +183,7 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
   }
 
   async deleteControlCabinet(controlCabinet: ControlCabinet): Promise<void> {
-    if (!canPerform('delete', 'controlcabinet')) return;
+    if (!this.canDeleteControlCabinet()) return;
 
     if (this.isProjectContext) {
       await this.removeProjectControlCabinet(controlCabinet);
@@ -176,7 +194,7 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
   }
 
   async duplicateControlCabinet(controlCabinet: ControlCabinet): Promise<void> {
-    if (!canPerform('create', 'controlcabinet')) return;
+    if (!this.canCreateControlCabinet()) return;
 
     try {
       if (this.projectId) {

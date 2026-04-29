@@ -224,7 +224,12 @@
           <label class="text-sm font-medium" for="project_phase_create"
             >{$t('messages.phase')}</label
           >
-          <ProjectPhaseSelect id="project_phase_create" bind:value={form.phase_id} width="w-full" />
+          <ProjectPhaseSelect
+            id="project_phase_create"
+            bind:value={form.phase_id}
+            width="w-full"
+            disabled={createBusy}
+          />
         </div>
 
         <div class="flex flex-col gap-2 md:col-span-2">

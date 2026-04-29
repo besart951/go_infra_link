@@ -1454,6 +1454,33 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
     return new Map();
   }
 
+  function hasPendingBaseEdits(): boolean {
+    for (const changes of pendingEdits.values()) {
+      if (Object.keys(changes).some((key) => key !== 'specification')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function hasPendingSpecificationEdits(): boolean {
+    for (const changes of pendingEdits.values()) {
+      if (changes.specification && Object.keys(changes.specification).length > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function hasPendingBacnetEdits(): boolean {
+    for (const changes of pendingBacnetEdits.values()) {
+      if (changes.size > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   return {
     get hasUnsavedChanges() {
       return pendingEdits.size > 0 || pendingBacnetEdits.size > 0;
@@ -1463,6 +1490,15 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
     },
     get pendingDeviceIds() {
       return getPendingDeviceIds();
+    },
+    get hasPendingBaseEdits() {
+      return hasPendingBaseEdits();
+    },
+    get hasPendingSpecificationEdits() {
+      return hasPendingSpecificationEdits();
+    },
+    get hasPendingBacnetEdits() {
+      return hasPendingBacnetEdits();
     },
     queueEdit,
     queueSpecEdit,

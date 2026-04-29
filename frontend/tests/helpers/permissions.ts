@@ -72,9 +72,12 @@ export function buildAdminUser(overrides: Partial<TestUser> = {}): TestUser {
   const permissions =
     overrides.permissions && overrides.permissions.length > 0
       ? overrides.permissions
-      : ADMIN_RESOURCES.flatMap((resource) =>
-          ADMIN_ACTIONS.map((action) => permission(resource, action))
-        );
+      : [
+          ...ADMIN_RESOURCES.flatMap((resource) =>
+            ADMIN_ACTIONS.map((action) => permission(resource, action))
+          ),
+          permission('notification.smtp', 'manage')
+        ];
 
   return buildUser({
     role: 'superadmin' satisfies UserRole,

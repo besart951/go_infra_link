@@ -8,7 +8,7 @@ import (
 
 func RegisterRoutes(protectedV1 *gin.RouterGroup, handler *NotificationSettingsHandler, authChecker middleware.AuthorizationChecker) {
 	notificationsAdmin := protectedV1.Group("/admin/notifications")
-	notificationsAdmin.Use(middleware.RequireGlobalRole(authChecker, domainUser.RoleSuperAdmin))
+	notificationsAdmin.Use(middleware.RequirePermission(authChecker, domainUser.PermissionNotificationSMTPManage))
 	{
 		notificationsAdmin.GET("/smtp", handler.GetSMTPSettings)
 		notificationsAdmin.PUT("/smtp", handler.UpsertSMTPSettings)

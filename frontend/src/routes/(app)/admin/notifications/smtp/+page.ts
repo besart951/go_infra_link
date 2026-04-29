@@ -8,7 +8,7 @@ export const load: PageLoad = async ({ parent }) => {
     throw redirect(302, '/login');
   }
 
-  if (user.role !== 'superadmin') {
+  if (!user.permissions?.includes('notification.smtp.manage')) {
     throw redirect(302, '/');
   }
 

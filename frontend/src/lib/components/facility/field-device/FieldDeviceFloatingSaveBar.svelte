@@ -28,13 +28,19 @@
 
     <Tooltip.Root>
       <Tooltip.Trigger class="inline-flex">
+        {@const canSavePendingEdits = state.canSavePendingEdits()}
         <div
-          class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border"
+          class={`inline-flex h-8 w-8 items-center justify-center rounded-md border ${
+            canSavePendingEdits ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+          }`}
           role="button"
           tabindex="0"
-          onclick={() => state.savePendingEdits()}
+          aria-disabled={!canSavePendingEdits}
+          onclick={() => canSavePendingEdits && state.savePendingEdits()}
           onkeydown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') state.savePendingEdits();
+            if ((event.key === 'Enter' || event.key === ' ') && canSavePendingEdits) {
+              state.savePendingEdits();
+            }
           }}
           aria-label={$t('field_device.save_bar.save_all')}
         >

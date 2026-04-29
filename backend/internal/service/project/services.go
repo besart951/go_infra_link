@@ -42,8 +42,9 @@ func NewServices(deps Dependencies, cfgs ...Config) *Services {
 
 	services := &Services{}
 	services.AccessPolicy = &ProjectAccessPolicyService{
-		repo:     deps.Projects,
-		userRepo: deps.Users,
+		repo:               deps.Projects,
+		userRepo:           deps.Users,
+		rolePermissionRepo: deps.RolePermissions,
 	}
 	services.Lifecycle = &ProjectLifecycleService{
 		repo:               deps.Projects,
