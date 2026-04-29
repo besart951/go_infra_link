@@ -179,4 +179,62 @@ describe('useFieldDeviceEditing', () => {
     editing.queueBacnetEdit(device.id, 'bo-1', 'text_fix', 'TF-UPDATED');
     expect(editing.hasPendingBacnetEdits).toBe(true);
   });
+
+  it('keeps all base field edits pending when apparat number validation rejects the base update', async () => {
+    const device = buildFieldDevice({
+      apparat_id: 'app-krg',
+      apparat_nr: '2',
+      system_part_id: 'sp-1'
+    });
+    const editing = await createEditing();
+    const onSuccess = vi.fn();
+
+    mockBulkUpdate.mockResolvedValueOnce({
+      results: [
+        {
+          id: device.id,
+          success: false,
+          error: 'apparatnummer ist bereits vergeben',
+          fields: {
+            'fielddevice.apparat_nr': 'apparatnummer ist bereits vergeben'
+          }
+        }
+      ],
+      total_count: 1,
+      success_count: 0,
+      failure_count: 1
+    });
+
+    editing.queueEdit(device.id, 'apparat_id', 'app-abk');
+    editing.queueEdit(device.id, 'apparat_nr', 2);
+
+    await editing.saveAllPendingEdits([device], onSuccess);
+
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(editing.isFieldDirty(device.id, 'apparat_id')).toBe(true);
+    expect(editing.isFieldDirty(device.id, 'apparat_nr')).toBe(true);
+
+    mockBulkUpdate.mockResolvedValueOnce({
+      results: [{ id: device.id, success: true }],
+      total_count: 1,
+      success_count: 1,
+      failure_count: 0
+    });
+
+    editing.queueEdit(device.id, 'apparat_nr', 1);
+
+    await editing.saveAllPendingEdits([device], onSuccess);
+
+    expect(mockBulkUpdate).toHaveBeenLastCalledWith({
+      updates: [
+        {
+          id: device.id,
+          apparat_nr: 1,
+          apparat_id: 'app-abk'
+        }
+      ]
+    });
+    expect(editing.isFieldDirty(device.id, 'apparat_id')).toBe(false);
+    expect(editing.isFieldDirty(device.id, 'apparat_nr')).toBe(false);
+  });
 });

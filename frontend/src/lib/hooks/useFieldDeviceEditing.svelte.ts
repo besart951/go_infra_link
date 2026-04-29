@@ -56,6 +56,12 @@ interface UseFieldDeviceEditingOptions {
   onSaveSuccess?: (deviceIds: string[]) => void;
 }
 
+function createBacnetObjectEditMap(
+  entries?: Iterable<[string, Partial<BacnetObjectInput>]>
+): Map<string, Partial<BacnetObjectInput>> {
+  return new Map(entries);
+}
+
 export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}) {
   const resolvedProjectId =
     typeof options.projectId === 'function' ? options.projectId() : options.projectId;
@@ -615,7 +621,10 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
 
   // BACnet edit queuing
   function queueBacnetEdit(deviceId: string, objectId: string, field: string, value: unknown) {
-    const deviceEdits = pendingBacnetEdits.get(deviceId) || new Map();
+    let deviceEdits = pendingBacnetEdits.get(deviceId);
+    if (!deviceEdits) {
+      deviceEdits = createBacnetObjectEditMap();
+    }
     const objectEdits = deviceEdits.get(objectId) || {};
     deviceEdits.set(objectId, { ...objectEdits, [field]: value } as Partial<BacnetObjectInput>);
     const nextPendingBacnetEdits = new Map(pendingBacnetEdits);
@@ -858,6 +867,57 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
     return patches;
   }
 
+  type BulkUpdatePhase = 'fielddevice' | 'specification' | 'bacnet_objects';
+
+  function getUpdatePhases(update: BulkUpdateFieldDeviceItem): Set<BulkUpdatePhase> {
+    const phases = new Set<BulkUpdatePhase>();
+    if (
+      'bmk' in update ||
+      'description' in update ||
+      'text_fix' in update ||
+      'apparat_nr' in update ||
+      'apparat_id' in update ||
+      'system_part_id' in update
+    ) {
+      phases.add('fielddevice');
+    }
+    if (update.specification) {
+      phases.add('specification');
+    }
+    if (update.bacnet_objects) {
+      phases.add('bacnet_objects');
+    }
+    return phases;
+  }
+
+  function getFailedPhases(fields: Record<string, string>): Set<BulkUpdatePhase> {
+    const phases = new Set<BulkUpdatePhase>();
+    for (const fieldPath of Object.keys(fields)) {
+      if (fieldPath === 'fielddevice' || fieldPath.startsWith('fielddevice.')) {
+        phases.add('fielddevice');
+      } else if (fieldPath === 'specification' || fieldPath.startsWith('specification.')) {
+        phases.add('specification');
+      } else if (fieldPath === 'bacnet_objects' || fieldPath.startsWith('bacnet_objects.')) {
+        phases.add('bacnet_objects');
+      }
+    }
+    return phases;
+  }
+
+  function hasPartialPhaseSuccess(
+    update: BulkUpdateFieldDeviceItem,
+    fields: Record<string, string>
+  ): boolean {
+    const phases = getUpdatePhases(update);
+    const failedPhases = getFailedPhases(fields);
+    for (const phase of phases) {
+      if (!failedPhases.has(phase)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   async function saveAllPendingEdits(
     storeItems: FieldDevice[],
     onSuccess?: (updated: FieldDevice[]) => void
@@ -944,8 +1004,10 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
             if (objErrors.size > 0) {
               newBacnetFieldErrors.set(r.id, objErrors);
             }
-            // Mark this device for partial success handling
-            partialSuccessIds.add(r.id);
+            const update = updates.find((item) => item.id === r.id);
+            if (update && hasPartialPhaseSuccess(update, r.fields)) {
+              partialSuccessIds.add(r.id);
+            }
           }
         }
       }
@@ -977,11 +1039,13 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
               // Generic fielddevice error - all base fields failed
               entireFieldDeviceFailed = true;
             } else if (fieldPath.startsWith('fielddevice.')) {
+              entireFieldDeviceFailed = true;
               failedFields.add(fieldPath.replace('fielddevice.', ''));
             } else if (fieldPath === 'specification') {
               // Generic specification error - all spec fields failed
               entireSpecificationFailed = true;
             } else if (fieldPath.startsWith('specification.')) {
+              entireSpecificationFailed = true;
               failedSpecFields.add(fieldPath.replace('specification.', ''));
             } else if (fieldPath.startsWith('bacnet_objects.')) {
               const match = fieldPath.match(/^bacnet_objects\.([0-9a-f-]+)/);
@@ -993,7 +1057,7 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
         // Build optimistic update with only successful fields
         const changes = pendingEdits.get(id);
         if (changes) {
-          let updated: FieldDevice = { ...device };
+          let updated: FieldDevice = device;
 
           // Apply successful top-level fields (only if not all fielddevice fields failed)
           if (!entireFieldDeviceFailed) {
@@ -1127,10 +1191,12 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
           if (fieldPath === 'fielddevice') {
             entireFieldDeviceFailed = true;
           } else if (fieldPath.startsWith('fielddevice.')) {
+            entireFieldDeviceFailed = true;
             failedFields.add(fieldPath.replace('fielddevice.', ''));
           } else if (fieldPath === 'specification') {
             entireSpecificationFailed = true;
           } else if (fieldPath.startsWith('specification.')) {
+            entireSpecificationFailed = true;
             failedSpecFields.add(fieldPath.replace('specification.', ''));
           }
         }

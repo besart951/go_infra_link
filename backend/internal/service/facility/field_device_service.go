@@ -10,6 +10,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	fieldDeviceListDefaultLimit = 300
+	fieldDeviceListMaxLimit     = 300
+)
+
 type FieldDeviceService struct {
 	repo                        domainFacility.FieldDeviceStore
 	spsControllerSystemTypeRepo domainFacility.SPSControllerSystemTypeStore
@@ -21,7 +26,16 @@ type FieldDeviceService struct {
 	objectDataRepo              domainFacility.ObjectDataStore
 	alarmTypeRepo               domainFacility.AlarmTypeRepository
 	bacnetAlarmValueRepo        domainFacility.BacnetObjectAlarmValueRepository
+	fieldDeviceOptionsCache     *fieldDeviceOptionsCache
 	tx                          txCoordinator
+}
+
+func normalizeFieldDeviceListPagination(page, limit int) (int, int) {
+	page, limit = domain.NormalizePagination(page, limit, fieldDeviceListDefaultLimit)
+	if limit > fieldDeviceListMaxLimit {
+		limit = fieldDeviceListMaxLimit
+	}
+	return page, limit
 }
 
 func NewFieldDeviceService(
@@ -47,6 +61,7 @@ func NewFieldDeviceService(
 		objectDataRepo:              objectDataRepo,
 		alarmTypeRepo:               alarmTypeRepo,
 		bacnetAlarmValueRepo:        bacnetAlarmValueRepo,
+		fieldDeviceOptionsCache:     newFieldDeviceOptionsCache(),
 	}
 }
 
@@ -81,7 +96,7 @@ func (s *FieldDeviceService) GetByID(ctx context.Context, id uuid.UUID) (*domain
 }
 
 func (s *FieldDeviceService) List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
-	page, limit = domain.NormalizePagination(page, limit, 300)
+	page, limit = normalizeFieldDeviceListPagination(page, limit)
 	return s.repo.GetPaginatedList(ctx, domain.PaginationParams{
 		Page:   page,
 		Limit:  limit,
@@ -90,7 +105,7 @@ func (s *FieldDeviceService) List(ctx context.Context, page, limit int, search s
 }
 
 func (s *FieldDeviceService) ListWithFilters(ctx context.Context, params domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
-	page, limit := domain.NormalizePagination(params.Page, params.Limit, 300)
+	page, limit := normalizeFieldDeviceListPagination(params.Page, params.Limit)
 	params.Page = page
 	params.Limit = limit
 	return s.repo.GetPaginatedListWithFilters(ctx, params, filters)
@@ -287,25 +302,48 @@ func (s *FieldDeviceService) ListAvailableApparatNumbers(ctx context.Context, sp
 // GetFieldDeviceOptions returns all metadata needed for creating/editing field devices.
 // This implements the "Single-Fetch Metadata Strategy" to avoid multiple API calls.
 func (s *FieldDeviceService) GetFieldDeviceOptions(ctx context.Context) (*domainFacility.FieldDeviceOptions, error) {
-	// Fetch all active object datas (templates) with their apparats only
-	objectDatas, err := s.objectDataRepo.GetTemplatesLite(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.buildFieldDeviceOptions(ctx, objectDatas)
+	return s.getFieldDeviceOptions(ctx, nil, func(ctx context.Context) ([]*domainFacility.ObjectData, error) {
+		return s.objectDataRepo.GetTemplatesLite(ctx)
+	})
 }
 
 // GetFieldDeviceOptionsForProject returns all metadata needed for creating/editing field devices within a project.
 // This fetches object data that belongs to the specified project (project_id = projectID AND is_active = true).
 func (s *FieldDeviceService) GetFieldDeviceOptionsForProject(ctx context.Context, projectID uuid.UUID) (*domainFacility.FieldDeviceOptions, error) {
-	// Fetch object datas for the project with their apparats only
-	objectDatas, err := s.objectDataRepo.GetForProjectLite(ctx, projectID)
+	return s.getFieldDeviceOptions(ctx, &projectID, func(ctx context.Context) ([]*domainFacility.ObjectData, error) {
+		return s.objectDataRepo.GetForProjectLite(ctx, projectID)
+	})
+}
+
+func (s *FieldDeviceService) getFieldDeviceOptions(ctx context.Context, projectID *uuid.UUID, loadObjectDatas func(context.Context) ([]*domainFacility.ObjectData, error)) (*domainFacility.FieldDeviceOptions, error) {
+	cacheKey := "templates"
+	if projectID != nil {
+		cacheKey = "project:" + projectID.String()
+	}
+
+	revision := ""
+	if revisioner, ok := s.objectDataRepo.(fieldDeviceOptionsRevisioner); ok {
+		var err error
+		revision, err = revisioner.GetFieldDeviceOptionsRevision(ctx, projectID)
+		if err != nil {
+			return nil, err
+		}
+		if options, ok := s.fieldDeviceOptionsCache.get(cacheKey, revision); ok {
+			return options, nil
+		}
+	}
+
+	objectDatas, err := loadObjectDatas(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.buildFieldDeviceOptions(ctx, objectDatas)
+	options, err := s.buildFieldDeviceOptions(ctx, objectDatas)
+	if err != nil {
+		return nil, err
+	}
+	s.fieldDeviceOptionsCache.set(cacheKey, revision, options)
+	return options, nil
 }
 
 func (s *FieldDeviceService) buildFieldDeviceOptions(ctx context.Context, objectDatas []*domainFacility.ObjectData) (*domainFacility.FieldDeviceOptions, error) {

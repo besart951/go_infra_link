@@ -42,6 +42,42 @@ export class HandledApiException extends ApiException {
   }
 }
 
+export function getHttpErrorPath(status: number): string | null {
+  if (status === 403) return '/errors/403';
+  if (status === 404) return '/errors/404';
+  return null;
+}
+
+export function buildHttpErrorRoute(status: number, fromPath: string): string | null {
+  const path = getHttpErrorPath(status);
+  if (!path) return null;
+
+  const target = new URL(path, 'http://localhost');
+  if (fromPath && fromPath !== path) {
+    target.searchParams.set('from', fromPath);
+  }
+  return `${target.pathname}${target.search}`;
+}
+
+async function navigateToHttpErrorPage(status: number): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+
+  const path = getHttpErrorPath(status);
+  if (!path) return false;
+
+  const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (currentPath === path || currentPath.startsWith(`${path}?`)) {
+    return true;
+  }
+
+  const route = buildHttpErrorRoute(status, currentPath);
+  if (!route) return false;
+
+  const { goto } = await import('$app/navigation');
+  await goto(route, { replaceState: true });
+  return true;
+}
+
 const FIELD_LABEL_KEYS: Record<string, string> = {
   apparat: 'facility.apparat',
   apparat_id: 'facility.apparat',
@@ -366,20 +402,13 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
         );
       }
 
-      // Central handling: authorization errors should be surfaced via toast,
-      // not rendered inline in table/list UIs.
-      if (error.error === 'authorization_failed') {
-        const message = localizeErrorText(error.message || 'authorization_failed');
-        if (typeof window !== 'undefined') {
-          try {
-            const { addToast } = await import('$lib/components/toast.svelte');
-            addToast(message, 'error');
-          } catch {
-            // Ignore toast rendering failures (e.g. during SSR or if component isn't mounted)
-          }
-        }
-
-        throw new HandledApiException(response.status, error.error, message, error.details);
+      if (await navigateToHttpErrorPage(response.status)) {
+        throw new HandledApiException(
+          response.status,
+          error.error,
+          localizeErrorText(error.message || response.statusText || `HTTP ${response.status}`),
+          error.details
+        );
       }
 
       throw new ApiException(

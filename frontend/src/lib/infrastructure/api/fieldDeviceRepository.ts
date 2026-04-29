@@ -13,7 +13,8 @@ import type {
   FieldDeviceOptions,
   AvailableApparatNumbersResponse,
   CreateFieldDeviceExportRequest,
-  FieldDeviceExportJobResponse
+  FieldDeviceExportJobResponse,
+  BacnetObject
 } from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
 import {
@@ -119,6 +120,12 @@ export const fieldDeviceRepository: FieldDeviceRepository = {
 
   async getOptionsForProject(projectId: string, signal?: AbortSignal): Promise<FieldDeviceOptions> {
     return getFieldDeviceOptionsForProject(projectId, { signal });
+  },
+
+  async listBacnetObjects(fieldDeviceId: string, signal?: AbortSignal): Promise<BacnetObject[]> {
+    return api<BacnetObject[]>(`/facility/field-devices/${fieldDeviceId}/bacnet-objects`, {
+      signal
+    });
   },
 
   async getAvailableApparatNumbers(

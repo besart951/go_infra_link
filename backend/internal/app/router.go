@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"net/http"
 
 	docs "github.com/besart951/go_infra_link/backend/docs"
@@ -16,6 +17,10 @@ func newRouter(appRuntime *runtime) *gin.Engine {
 	configureGinMode(appRuntime.cfg.AppEnv)
 
 	router := gin.Default()
+	if err := router.SetTrustedProxies(appRuntime.cfg.TrustedProxies); err != nil {
+		panic(fmt.Sprintf("configure trusted proxies: %v", err))
+	}
+
 	registerSwaggerRoute(router, appRuntime.cfg)
 	router.Use(middleware.LocaleMiddleware(appRuntime.translator, defaultLocale))
 

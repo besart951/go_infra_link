@@ -97,11 +97,14 @@ func TestFieldDeviceRepo_ProjectFilteredListMapsAggregateRelations(t *testing.T)
 	if item.SystemPart.ID != systemPart.ID || item.Apparat.ID != apparat.ID {
 		t.Fatalf("expected mapped system part and apparat, got %+v", item)
 	}
-	if item.Specification == nil || item.Specification.ID != specification.ID || item.Specification.SpecificationSupplier == nil || *item.Specification.SpecificationSupplier != supplier {
-		t.Fatalf("expected mapped specification, got %+v", item.Specification)
+	if item.SpecificationID == nil || *item.SpecificationID != specification.ID {
+		t.Fatalf("expected specification id to be preserved, got %+v", item.SpecificationID)
 	}
-	if len(item.BacnetObjects) != 1 || item.BacnetObjects[0].StateTextID == nil || item.BacnetObjects[0].NotificationClassID == nil || item.BacnetObjects[0].AlarmTypeID == nil {
-		t.Fatalf("expected mapped bacnet object relation ids, got %+v", item.BacnetObjects)
+	if item.Specification != nil {
+		t.Fatalf("expected list rows to omit specification details, got %+v", item.Specification)
+	}
+	if len(item.BacnetObjects) != 0 {
+		t.Fatalf("expected list rows to omit bacnet objects, got %+v", item.BacnetObjects)
 	}
 }
 

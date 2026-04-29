@@ -1,22 +1,27 @@
 :80 {
-    # This container serves only the static SPA bundle.
-    # Same-origin /api/* proxying is handled by the edge Caddy instance in server-setup/Caddyfile.
-    root * /usr/share/caddy
-    file_server
-    try_files {path} /index.html
+	# This container serves only the static SPA bundle.
+	# Same-origin /api/* proxying is handled by the edge Caddy instance in server-setup/Caddyfile.
+	root * /usr/share/caddy
+	file_server
+	try_files {path} /index.html
 
-    header {
-        # Prevent clickjacking: only allow framing from same origin
-        X-Frame-Options "SAMEORIGIN"
-        # Prevent MIME-type sniffing
-        X-Content-Type-Options "nosniff"
-        # Control referrer information
-        Referrer-Policy "strict-origin-when-cross-origin"
-        # Enable HSTS (enforced by the browser once received over HTTPS)
-        Strict-Transport-Security "max-age=31536000; includeSubDomains"
-        # Disable FLoC / interest-cohort tracking
-        Permissions-Policy "interest-cohort=()"
-        # Remove Server header to avoid version disclosure
-        -Server
-    }
+	@immutable path /_app/immutable/*
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+	header {
+		# Prevent clickjacking: only allow framing from same origin
+		X-Frame-Options "SAMEORIGIN"
+		# Prevent MIME-type sniffing
+		X-Content-Type-Options "nosniff"
+		# Control referrer information
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Enable HSTS (enforced by the browser once received over HTTPS)
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Disable FLoC / interest-cohort tracking
+		Permissions-Policy "interest-cohort=()"
+		# Restrict executable content and browser integration surfaces for the static SPA
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; worker-src 'self' blob:; form-action 'self'; manifest-src 'self'"
+		# Remove Server header to avoid version disclosure
+		-Server
+	}
 }

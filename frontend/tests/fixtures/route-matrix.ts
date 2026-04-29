@@ -94,6 +94,20 @@ export const routeAudits = [
     notes: 'This is the current reference implementation for load-level authorization.'
   },
   {
+    path: '/errors/:status',
+    domain: 'app',
+    files: [
+      'src/routes/(app)/errors/[status]/+page.svelte',
+      'src/routes/(app)/errors/[status]/+page.ts'
+    ],
+    auth: 'authenticated',
+    authorization: 'none',
+    status: 'configured',
+    expectedAccess: 'Any authenticated user viewing a routed error state.',
+    protectedUi: ['403/404 message', 'back navigation'],
+    notes: 'Backend middleware errors are routed here by the API client.'
+  },
+  {
     path: '/users',
     domain: 'user',
     files: ['src/routes/(app)/users/+page.svelte'],

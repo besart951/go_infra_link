@@ -123,7 +123,7 @@
       ]
         .filter(Boolean)
         .join(' ')}
-      onclick={() => state.toggleBacnetExpansion(device.id)}
+      onclick={() => void state.toggleBacnetExpansion(device.id)}
       title={$t('field_device.table.bacnet_expand')}
     >
       {#if state.isBacnetExpanded(device.id)}
@@ -225,7 +225,7 @@
     />
   </Table.Cell>
   <Table.Cell class="text-center">
-    {#if device.specification}
+    {#if device.specification_id || device.specification}
       <span
         class="inline-block h-2 w-2 rounded-full bg-green-500"
         title={$t('field_device.table.spec_available')}

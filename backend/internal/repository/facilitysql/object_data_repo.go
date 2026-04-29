@@ -2,6 +2,11 @@ package facilitysql
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"hash"
+	"sort"
 	"strings"
 	"time"
 
@@ -15,6 +20,21 @@ import (
 type objectDataRepo struct {
 	*gormbase.BaseRepository[*domainFacility.ObjectData]
 	db *gorm.DB
+}
+
+type fieldDeviceOptionsRevisionEntity struct {
+	ID        uuid.UUID `gorm:"column:id"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
+}
+
+type fieldDeviceOptionsObjectDataApparatRevision struct {
+	ObjectDataID uuid.UUID `gorm:"column:object_data_id"`
+	ApparatID    uuid.UUID `gorm:"column:apparat_id"`
+}
+
+type fieldDeviceOptionsSystemPartApparatRevision struct {
+	SystemPartID uuid.UUID `gorm:"column:system_part_id"`
+	ApparatID    uuid.UUID `gorm:"column:apparat_id"`
 }
 
 func orderFieldDeviceOptionObjectDatas(query *gorm.DB) *gorm.DB {
@@ -268,6 +288,151 @@ func (r *objectDataRepo) GetForProjectLite(ctx context.Context, projectID uuid.U
 		),
 	).Find(&items).Error
 	return items, err
+}
+
+func (r *objectDataRepo) GetFieldDeviceOptionsRevision(ctx context.Context, projectID *uuid.UUID) (string, error) {
+	var objectDatas []fieldDeviceOptionsRevisionEntity
+	objectDataQuery := r.db.WithContext(ctx).
+		Model(&domainFacility.ObjectData{}).
+		Select("id, updated_at").
+		Where("is_active = ?", true)
+	if projectID == nil {
+		objectDataQuery = objectDataQuery.Where("project_id IS NULL")
+	} else {
+		objectDataQuery = objectDataQuery.Where("project_id = ?", *projectID)
+	}
+	if err := objectDataQuery.Find(&objectDatas).Error; err != nil {
+		return "", err
+	}
+
+	objectDataIDs := revisionEntityIDs(objectDatas)
+	h := sha256.New()
+	writeRevisionEntities(h, "object_data", objectDatas)
+
+	objectDataApparats := []fieldDeviceOptionsObjectDataApparatRevision{}
+	if len(objectDataIDs) > 0 {
+		if err := r.db.WithContext(ctx).
+			Table("object_data_apparats").
+			Select("object_data_id, apparat_id").
+			Where("object_data_id IN ?", objectDataIDs).
+			Scan(&objectDataApparats).Error; err != nil {
+			return "", err
+		}
+	}
+	writeObjectDataApparatRevision(h, objectDataApparats)
+
+	apparatIDs := objectDataApparatIDs(objectDataApparats)
+	var apparats []fieldDeviceOptionsRevisionEntity
+	if len(apparatIDs) > 0 {
+		if err := r.db.WithContext(ctx).
+			Model(&domainFacility.Apparat{}).
+			Select("id, updated_at").
+			Where("id IN ?", apparatIDs).
+			Find(&apparats).Error; err != nil {
+			return "", err
+		}
+	}
+	writeRevisionEntities(h, "apparat", apparats)
+
+	systemPartApparats := []fieldDeviceOptionsSystemPartApparatRevision{}
+	if len(apparatIDs) > 0 {
+		if err := r.db.WithContext(ctx).
+			Table("system_part_apparats").
+			Select("system_part_id, apparat_id").
+			Where("apparat_id IN ?", apparatIDs).
+			Scan(&systemPartApparats).Error; err != nil {
+			return "", err
+		}
+	}
+	writeSystemPartApparatRevision(h, systemPartApparats)
+
+	systemPartIDs := systemPartApparatIDs(systemPartApparats)
+	var systemParts []fieldDeviceOptionsRevisionEntity
+	if len(systemPartIDs) > 0 {
+		if err := r.db.WithContext(ctx).
+			Model(&domainFacility.SystemPart{}).
+			Select("id, updated_at").
+			Where("id IN ?", systemPartIDs).
+			Find(&systemParts).Error; err != nil {
+			return "", err
+		}
+	}
+	writeRevisionEntities(h, "system_part", systemParts)
+
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func revisionEntityIDs(rows []fieldDeviceOptionsRevisionEntity) []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row.ID)
+	}
+	return ids
+}
+
+func objectDataApparatIDs(rows []fieldDeviceOptionsObjectDataApparatRevision) []uuid.UUID {
+	seen := make(map[uuid.UUID]struct{}, len(rows))
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, row := range rows {
+		if _, ok := seen[row.ApparatID]; ok {
+			continue
+		}
+		seen[row.ApparatID] = struct{}{}
+		ids = append(ids, row.ApparatID)
+	}
+	return ids
+}
+
+func systemPartApparatIDs(rows []fieldDeviceOptionsSystemPartApparatRevision) []uuid.UUID {
+	seen := make(map[uuid.UUID]struct{}, len(rows))
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, row := range rows {
+		if _, ok := seen[row.SystemPartID]; ok {
+			continue
+		}
+		seen[row.SystemPartID] = struct{}{}
+		ids = append(ids, row.SystemPartID)
+	}
+	return ids
+}
+
+func writeRevisionEntities(h hash.Hash, label string, rows []fieldDeviceOptionsRevisionEntity) {
+	sort.Slice(rows, func(i, j int) bool {
+		return rows[i].ID.String() < rows[j].ID.String()
+	})
+
+	fmt.Fprintf(h, "%s:%d;", label, len(rows))
+	for _, row := range rows {
+		fmt.Fprintf(h, "%s:%s;", row.ID.String(), row.UpdatedAt.UTC().Format(time.RFC3339Nano))
+	}
+}
+
+func writeObjectDataApparatRevision(h hash.Hash, rows []fieldDeviceOptionsObjectDataApparatRevision) {
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].ObjectDataID == rows[j].ObjectDataID {
+			return rows[i].ApparatID.String() < rows[j].ApparatID.String()
+		}
+		return rows[i].ObjectDataID.String() < rows[j].ObjectDataID.String()
+	})
+
+	fmt.Fprintf(h, "object_data_apparats:%d;", len(rows))
+	for _, row := range rows {
+		fmt.Fprintf(h, "%s:%s;", row.ObjectDataID.String(), row.ApparatID.String())
+	}
+}
+
+func writeSystemPartApparatRevision(h hash.Hash, rows []fieldDeviceOptionsSystemPartApparatRevision) {
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].ApparatID == rows[j].ApparatID {
+			return rows[i].SystemPartID.String() < rows[j].SystemPartID.String()
+		}
+		return rows[i].ApparatID.String() < rows[j].ApparatID.String()
+	})
+
+	fmt.Fprintf(h, "system_part_apparats:%d;", len(rows))
+	for _, row := range rows {
+		fmt.Fprintf(h, "%s:%s;", row.ApparatID.String(), row.SystemPartID.String())
+	}
 }
 
 func (r *objectDataRepo) GetPaginatedListForProject(ctx context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {

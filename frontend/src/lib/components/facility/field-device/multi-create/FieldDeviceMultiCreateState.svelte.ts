@@ -37,6 +37,10 @@ export interface FieldDeviceMultiCreateStateOptions {
   onSuccess?: () => ((createdDevices: FieldDevice[]) => void) | undefined;
 }
 
+function createRowErrorMap(): Map<number, FieldDeviceRowError> {
+  return new Map<number, FieldDeviceRowError>();
+}
+
 export class FieldDeviceMultiCreateState {
   selection = $state<MultiCreateSelection>({
     spsControllerSystemTypeId: '',
@@ -52,7 +56,7 @@ export class FieldDeviceMultiCreateState {
   });
 
   rows = $state<FieldDeviceRowData[]>([]);
-  rowErrors = $state<Map<number, FieldDeviceRowError>>(new Map());
+  rowErrors = $state<Map<number, FieldDeviceRowError>>(createRowErrorMap());
   availableNumbers = $state<number[]>([]);
   loadingAvailableNumbers = $state(false);
   selectedObjectData = $state<ObjectData | null>(null);
@@ -150,7 +154,7 @@ export class FieldDeviceMultiCreateState {
     this.selectedObjectData = null;
     this.loadingObjectDataPreview = false;
     this.objectDataPreviewError = '';
-    this.rowErrors = new Map();
+    this.rowErrors = createRowErrorMap();
   }
 
   handlePreselectionChange(next: PreselectionType): void {
@@ -389,7 +393,7 @@ export class FieldDeviceMultiCreateState {
 
       clearPersistedState();
       this.rows = [];
-      this.rowErrors = new Map();
+      this.rowErrors = createRowErrorMap();
 
       const onSuccess = this.resolveOnSuccess();
       if (onSuccess) {
@@ -442,7 +446,7 @@ export class FieldDeviceMultiCreateState {
       if (keyChanged) {
         this.availableNumbers = [];
         this.rows = [];
-        this.rowErrors = new Map();
+        this.rowErrors = createRowErrorMap();
       }
 
       this.selectionKey = newKey;

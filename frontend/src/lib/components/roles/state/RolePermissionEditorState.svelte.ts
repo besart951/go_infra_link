@@ -62,11 +62,23 @@ export interface RolePermissionEditorStateOptions {
   allPermissions: () => Permission[];
 }
 
+function createPermissionSet(values?: Iterable<string>): Set<string> {
+  return new Set(values);
+}
+
+function createCategorySet(values: Iterable<CategoryId> = CATEGORY_IDS): Set<CategoryId> {
+  return new Set(values);
+}
+
+function createResourceSet(values?: Iterable<string>): Set<string> {
+  return new Set(values);
+}
+
 export class RolePermissionEditorState {
   searchQuery = $state('');
-  selectedPermissions = $state<Set<string>>(new Set());
-  expandedCategories = $state<Set<CategoryId>>(new Set(CATEGORY_IDS));
-  expandedResources = $state<Set<string>>(new Set());
+  selectedPermissions = $state<Set<string>>(createPermissionSet());
+  expandedCategories = $state<Set<CategoryId>>(createCategorySet());
+  expandedResources = $state<Set<string>>(createResourceSet());
 
   private readonly resolveRole: () => Role;
   private readonly resolveAllPermissions: () => Permission[];
@@ -190,7 +202,7 @@ export class RolePermissionEditorState {
   }
 
   togglePermission(permissionName: string): void {
-    const next = new Set(this.selectedPermissions);
+    const next = createPermissionSet(this.selectedPermissions);
     if (next.has(permissionName)) {
       next.delete(permissionName);
     } else {
@@ -201,7 +213,7 @@ export class RolePermissionEditorState {
   }
 
   toggleCategory(categoryId: CategoryId): void {
-    const next = new Set(this.expandedCategories);
+    const next = createCategorySet(this.expandedCategories);
     if (next.has(categoryId)) {
       next.delete(categoryId);
     } else {
@@ -212,7 +224,7 @@ export class RolePermissionEditorState {
   }
 
   toggleResource(resource: string): void {
-    const next = new Set(this.expandedResources);
+    const next = createResourceSet(this.expandedResources);
     if (next.has(resource)) {
       next.delete(resource);
     } else {
@@ -226,7 +238,7 @@ export class RolePermissionEditorState {
     const permissions = this.permissionsByCategoryValue[categoryId][resource] ?? [];
     const allSelected = this.areAllSelected(permissions);
 
-    const next = new Set(this.selectedPermissions);
+    const next = createPermissionSet(this.selectedPermissions);
     for (const permission of permissions) {
       if (allSelected) {
         next.delete(permission.name);
@@ -243,7 +255,7 @@ export class RolePermissionEditorState {
     const permissions = this.flattenPermissions(byResource);
     const allSelected = this.areAllSelected(permissions);
 
-    const next = new Set(this.selectedPermissions);
+    const next = createPermissionSet(this.selectedPermissions);
     for (const permission of permissions) {
       if (allSelected) {
         next.delete(permission.name);
@@ -256,7 +268,7 @@ export class RolePermissionEditorState {
   }
 
   selectAll(): void {
-    const next = new Set<string>();
+    const next = createPermissionSet();
     for (const permission of this.allPermissions) {
       next.add(permission.name);
     }
@@ -265,7 +277,7 @@ export class RolePermissionEditorState {
   }
 
   deselectAll(): void {
-    this.selectedPermissions = new Set();
+    this.selectedPermissions = createPermissionSet();
   }
 
   buildSubmitPayload(): { permissions: string[] } {
@@ -282,7 +294,7 @@ export class RolePermissionEditorState {
       }
 
       this.roleSignature = nextSignature;
-      this.selectedPermissions = new Set(this.role.permissions);
+      this.selectedPermissions = createPermissionSet(this.role.permissions);
     });
 
     $effect(() => {
@@ -290,7 +302,7 @@ export class RolePermissionEditorState {
         return;
       }
 
-      const resources = new Set<string>();
+      const resources = createResourceSet();
       for (const categoryId of CATEGORY_IDS) {
         for (const resource of this.getResourcesForCategory(categoryId)) {
           resources.add(resource);
@@ -298,7 +310,7 @@ export class RolePermissionEditorState {
       }
 
       this.expandedResources = resources;
-      this.expandedCategories = new Set(CATEGORY_IDS);
+      this.expandedCategories = createCategorySet();
     });
   }
 

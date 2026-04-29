@@ -1,4 +1,4 @@
-import { read, utils } from 'xlsx';
+import { read, utils } from '@e965/xlsx';
 import {
   SpreadsheetWorkbook,
   WorksheetPreview,

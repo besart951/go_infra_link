@@ -17,10 +17,77 @@ type fieldDeviceRepo struct {
 	db *gorm.DB
 }
 
+const (
+	fieldDeviceListDefaultLimit = 300
+	fieldDeviceListMaxLimit     = 300
+	fieldDeviceListSelect       = `
+		field_devices.id,
+		field_devices.created_at,
+		field_devices.updated_at,
+		field_devices.bmk,
+		field_devices.description,
+		field_devices.apparat_nr,
+		field_devices.text_individuell,
+		field_devices.sps_controller_system_type_id,
+		field_devices.system_part_id,
+		field_devices.specification_id,
+		field_devices.apparat_id,
+		scts_list.id AS sps_system_type_id,
+		scts_list.created_at AS sps_system_type_created_at,
+		scts_list.updated_at AS sps_system_type_updated_at,
+		scts_list.number AS sps_system_type_number,
+		scts_list.document_name AS sps_system_type_document_name,
+		sc_list.id AS sps_controller_id,
+		sc_list.device_name AS sps_controller_device_name,
+		st_list.id AS system_type_id,
+		st_list.name AS system_type_name,
+		apparats_list.id AS apparat_list_id,
+		apparats_list.created_at AS apparat_created_at,
+		apparats_list.updated_at AS apparat_updated_at,
+		apparats_list.short_name AS apparat_short_name,
+		apparats_list.name AS apparat_name,
+		apparats_list.description AS apparat_description,
+		system_parts_list.id AS system_part_list_id,
+		system_parts_list.created_at AS system_part_created_at,
+		system_parts_list.updated_at AS system_part_updated_at,
+		system_parts_list.short_name AS system_part_short_name,
+		system_parts_list.name AS system_part_name,
+		system_parts_list.description AS system_part_description`
+)
+
 func NewFieldDeviceRepository(db *gorm.DB) domainFacility.FieldDeviceStore {
 	return &fieldDeviceRepo{
 		db: db,
 	}
+}
+
+func normalizeFieldDeviceListPagination(page, limit int) (int, int) {
+	page, limit = domain.NormalizePagination(page, limit, fieldDeviceListDefaultLimit)
+	if limit > fieldDeviceListMaxLimit {
+		limit = fieldDeviceListMaxLimit
+	}
+	return page, limit
+}
+
+func withFieldDeviceListJoins(query *gorm.DB) *gorm.DB {
+	return query.
+		Joins("LEFT JOIN sps_controller_system_types scts_list ON scts_list.id = field_devices.sps_controller_system_type_id").
+		Joins("LEFT JOIN sps_controllers sc_list ON sc_list.id = scts_list.sps_controller_id").
+		Joins("LEFT JOIN system_types st_list ON st_list.id = scts_list.system_type_id").
+		Joins("LEFT JOIN apparats apparats_list ON apparats_list.id = field_devices.apparat_id").
+		Joins("LEFT JOIN system_parts system_parts_list ON system_parts_list.id = field_devices.system_part_id")
+}
+
+func scanFieldDeviceListRows(query *gorm.DB, limit, offset int) ([]domainFacility.FieldDevice, error) {
+	var rows []fieldDeviceListRow
+	if err := withFieldDeviceListJoins(query).
+		Select(fieldDeviceListSelect).
+		Limit(limit).
+		Offset(offset).
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return fieldDeviceListRowDomainValues(rows), nil
 }
 
 func applyFieldDeviceSorting(query *gorm.DB, params domain.PaginationParams) *gorm.DB {
@@ -159,7 +226,7 @@ func (r *fieldDeviceRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) erro
 }
 
 func (r *fieldDeviceRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
-	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
+	page, limit := normalizeFieldDeviceListPagination(params.Page, params.Limit)
 	offset := (page - 1) * limit
 
 	query := r.db.WithContext(ctx).Model(&FieldDeviceRecord{})
@@ -176,20 +243,14 @@ func (r *fieldDeviceRepo) GetPaginatedList(ctx context.Context, params domain.Pa
 		return nil, err
 	}
 
-	// Fetch items with preloads
-	var records []FieldDeviceRecord
-	if err := query.
-		Order("created_at DESC").
-		Preload("Specification").
-		Preload("BacnetObjects").
-		Limit(limit).
-		Offset(offset).
-		Find(&records).Error; err != nil {
+	orderedQuery := applyFieldDeviceSorting(query.Session(&gorm.Session{}), params)
+	items, err := scanFieldDeviceListRows(orderedQuery, limit, offset)
+	if err != nil {
 		return nil, err
 	}
 
 	return &domain.PaginatedList[domainFacility.FieldDevice]{
-		Items:      fieldDeviceDomainValues(records),
+		Items:      items,
 		Total:      total,
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
@@ -240,7 +301,7 @@ func (r *fieldDeviceRepo) GetUsedApparatNumbers(ctx context.Context, spsControll
 }
 
 func (r *fieldDeviceRepo) GetPaginatedListWithFilters(ctx context.Context, params domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
-	page, limit := domain.NormalizePagination(params.Page, params.Limit, 1000)
+	page, limit := normalizeFieldDeviceListPagination(params.Page, params.Limit)
 	offset := (page - 1) * limit
 
 	query := r.db.WithContext(ctx).Model(&FieldDeviceRecord{})
@@ -298,7 +359,6 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(ctx context.Context, param
 		return nil, err
 	}
 
-	var records []FieldDeviceRecord
 	orderedQuery := query.Session(&gorm.Session{})
 	if hasPotentialDuplicateRows {
 		distinctIDs := query.Session(&gorm.Session{}).Select("DISTINCT field_devices.id")
@@ -308,22 +368,13 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(ctx context.Context, param
 	}
 	orderedQuery = applyFieldDeviceSorting(orderedQuery, params)
 
-	if err := orderedQuery.
-		Preload("Specification").
-		Preload("SPSControllerSystemType").
-		Preload("SPSControllerSystemType.SPSController").
-		Preload("SPSControllerSystemType.SystemType").
-		Preload("Apparat").
-		Preload("SystemPart").
-		Preload("BacnetObjects").
-		Limit(limit).
-		Offset(offset).
-		Find(&records).Error; err != nil {
+	items, err := scanFieldDeviceListRows(orderedQuery, limit, offset)
+	if err != nil {
 		return nil, err
 	}
 
 	return &domain.PaginatedList[domainFacility.FieldDevice]{
-		Items:      fieldDeviceDomainValues(records),
+		Items:      items,
 		Total:      total,
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),

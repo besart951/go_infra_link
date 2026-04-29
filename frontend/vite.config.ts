@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const backendPort = env.BACKEND_PORT ?? '8080';
   const backendUrl = env.BACKEND_URL ?? `http://localhost:${backendPort}`;
+  const buildSourcemap = env.VITE_BUILD_SOURCEMAP === 'true';
 
   return {
     plugins: [
@@ -68,7 +69,7 @@ export default defineConfig(({ mode }) => {
       }
     },
     build: {
-      sourcemap: true
+      sourcemap: buildSourcemap
     }
   };
 });

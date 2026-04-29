@@ -135,7 +135,7 @@
             variant={state.showSpecifications ? 'secondary' : 'ghost'}
             size="sm"
             class="h-7 w-7 p-0"
-            onclick={() => state.toggleSpecifications()}
+            onclick={() => void state.toggleSpecifications()}
             title={state.showSpecifications
               ? $t('field_device.table.hide_specifications')
               : $t('field_device.table.show_specifications')}
@@ -330,17 +330,23 @@
           {#if state.isBacnetExpanded(device.id)}
             <Table.Row class="bg-muted/30 hover:bg-muted/40">
               <Table.Cell colspan={columnCount} class="p-0">
-                <BacnetObjectsEditor
-                  bacnetObjects={device.bacnet_objects ?? []}
-                  pendingEdits={state.editing.getBacnetPendingEdits(device.id) ?? new Map()}
-                  fieldErrors={state.editing.getBacnetFieldErrors(device.id) ?? new Map()}
-                  clientErrors={state.editing.getBacnetClientErrors(device.id) ?? new Map()}
-                  sharedEditors={state.getEditorsForDevice(device.id)}
-                  disabled={!state.canUpdateFieldDeviceBacnetObjects()}
-                  onEdit={(objectId, field, value) => {
-                    state.editing.queueBacnetEdit(device.id, objectId, field, value);
-                  }}
-                />
+                {#if state.isBacnetLoading(device.id)}
+                  <div class="p-4">
+                    <Skeleton class="h-10 w-full" />
+                  </div>
+                {:else}
+                  <BacnetObjectsEditor
+                    bacnetObjects={device.bacnet_objects ?? []}
+                    pendingEdits={state.editing.getBacnetPendingEdits(device.id) ?? new Map()}
+                    fieldErrors={state.editing.getBacnetFieldErrors(device.id) ?? new Map()}
+                    clientErrors={state.editing.getBacnetClientErrors(device.id) ?? new Map()}
+                    sharedEditors={state.getEditorsForDevice(device.id)}
+                    disabled={!state.canUpdateFieldDeviceBacnetObjects()}
+                    onEdit={(objectId, field, value) => {
+                      state.editing.queueBacnetEdit(device.id, objectId, field, value);
+                    }}
+                  />
+                {/if}
               </Table.Cell>
             </Table.Row>
           {/if}

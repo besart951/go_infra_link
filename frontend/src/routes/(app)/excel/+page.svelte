@@ -4,15 +4,18 @@
   import ExcelUploadDropzone from '$lib/components/excel/ExcelUploadDropzone.svelte';
   import ExcelReadProgressCard from '$lib/components/excel/ExcelReadProgressCard.svelte';
   import ExcelSessionSummary from '$lib/components/excel/ExcelSessionSummary.svelte';
-  import SpreadsheetPreviewer from '$lib/components/excel/spreadsheet-preview/SpreadsheetPreviewer.svelte';
   import * as Tabs from '$lib/components/ui/tabs/index.js';
   import { addToast } from '$lib/components/toast.svelte';
-  import { StartExcelReadSessionUseCase } from '$lib/application/useCases/excel/startExcelReadSessionUseCase.js';
-  import { ExcelWorkerReaderAdapter } from '$lib/infrastructure/excel/excelWorkerReaderAdapter.js';
+  import type { StartExcelReadSessionUseCase } from '$lib/application/useCases/excel/startExcelReadSessionUseCase.js';
   import type { ExcelReadSession } from '$lib/domain/excel/index.js';
   import { FileSpreadsheet, Table2 } from '@lucide/svelte';
 
-  const readSessionUseCase = new StartExcelReadSessionUseCase(new ExcelWorkerReaderAdapter());
+  type SpreadsheetPreviewerModule = typeof import('$lib/components/excel/spreadsheet-preview/SpreadsheetPreviewer.svelte');
+
+  let readSessionUseCase: StartExcelReadSessionUseCase | null = null;
+  let readSessionGeneration = 0;
+  let spreadsheetPreviewerModule = $state<SpreadsheetPreviewerModule | null>(null);
+  let spreadsheetPreviewerLoad = $state<Promise<SpreadsheetPreviewerModule> | null>(null);
 
   let activeImporterTab = $state('object-importer');
   let isReading = $state(false);
@@ -21,7 +24,35 @@
   let errorMessage = $state<string | null>(null);
   let preparedSession = $state<ExcelReadSession | null>(null);
 
+  async function getReadSessionUseCase(): Promise<StartExcelReadSessionUseCase> {
+    if (readSessionUseCase) {
+      return readSessionUseCase;
+    }
+
+    const [{ StartExcelReadSessionUseCase }, { ExcelWorkerReaderAdapter }] = await Promise.all([
+      import('$lib/application/useCases/excel/startExcelReadSessionUseCase.js'),
+      import('$lib/infrastructure/excel/excelWorkerReaderAdapter.js')
+    ]);
+    readSessionUseCase = new StartExcelReadSessionUseCase(new ExcelWorkerReaderAdapter());
+    return readSessionUseCase;
+  }
+
+  function loadSpreadsheetPreviewer(): Promise<SpreadsheetPreviewerModule> {
+    if (spreadsheetPreviewerModule) {
+      return Promise.resolve(spreadsheetPreviewerModule);
+    }
+
+    spreadsheetPreviewerLoad ??= import(
+      '$lib/components/excel/spreadsheet-preview/SpreadsheetPreviewer.svelte'
+    ).then((module) => {
+      spreadsheetPreviewerModule = module;
+      return module;
+    });
+    return spreadsheetPreviewerLoad;
+  }
+
   async function startReadSession(file: File): Promise<void> {
+    const generation = ++readSessionGeneration;
     isReading = true;
     errorMessage = null;
     preparedSession = null;
@@ -29,10 +60,15 @@
     progressMessage = 'Scanner wird vorbereitet...';
 
     try {
-      const session = await readSessionUseCase.execute(file, (progress) => {
+      const useCase = await getReadSessionUseCase();
+      if (generation !== readSessionGeneration) return;
+
+      const session = await useCase.execute(file, (progress) => {
+        if (generation !== readSessionGeneration) return;
         progressPercent = progress.percent;
         progressMessage = progress.message;
       });
+      if (generation !== readSessionGeneration) return;
 
       preparedSession = session;
       progressPercent = 100;
@@ -58,14 +94,15 @@
   }
 
   function cancelReadSession(): void {
-    readSessionUseCase.cancel();
+    readSessionGeneration += 1;
+    readSessionUseCase?.cancel();
     isReading = false;
     progressMessage = 'Lesevorgang abgebrochen.';
     progressPercent = 0;
   }
 
   onDestroy(() => {
-    readSessionUseCase.cancel();
+    readSessionUseCase?.cancel();
   });
 </script>
 
@@ -121,7 +158,22 @@
       </Tabs.Content>
 
       <Tabs.Content value="worksheet-preview" class="mt-4">
-        <SpreadsheetPreviewer />
+        {#if activeImporterTab === 'worksheet-preview'}
+          {#await loadSpreadsheetPreviewer()}
+            <div class="rounded-lg border bg-muted/20 p-4">
+              <div class="h-10 animate-pulse rounded bg-muted"></div>
+            </div>
+          {:then module}
+            {@const Previewer = module.default}
+            <Previewer />
+          {:catch}
+            <div
+              class="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+            >
+              Arbeitsblatt-Vorschau konnte nicht geladen werden.
+            </div>
+          {/await}
+        {/if}
       </Tabs.Content>
     </Tabs.Root>
   {:else}

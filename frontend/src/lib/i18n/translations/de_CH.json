@@ -1234,7 +1234,27 @@
     "create_team": "Team erstellen",
     "backend_unavailable": "Der Backend-Dienst ist derzeit nicht verfügbar. Einige Aktionen können fehlschlagen.",
     "backend_unavailable_title": "Backend nicht verfügbar",
-    "backend_unavailable_desc": "Der Backend-Dienst ist derzeit nicht erreichbar. Bitte überprüfen Sie Ihre Verbindung oder kontaktieren Sie den Support."
+    "backend_unavailable_desc": "Der Backend-Dienst ist derzeit nicht erreichbar. Bitte überprüfen Sie Ihre Verbindung oder kontaktieren Sie den Support.",
+    "http_error": {
+      "title": "Hinweis",
+      "back": "Zurück",
+      "dashboard": "Dashboard",
+      "forbidden": {
+        "eyebrow": "403 Forbidden",
+        "title": "Keine Berechtigung",
+        "description": "Sie haben keine Berechtigung, diese Seite oder diese Daten zu öffnen. Falls Sie Zugriff benötigen, wenden Sie sich an eine verantwortliche Person."
+      },
+      "not_found": {
+        "eyebrow": "404 Not Found",
+        "title": "Seite nicht gefunden",
+        "description": "Diese Seite oder Ressource existiert nicht oder ist nicht mehr verfügbar."
+      },
+      "generic": {
+        "eyebrow": "Fehler",
+        "title": "Diese Seite kann nicht geladen werden",
+        "description": "Beim Laden der Seite ist ein Fehler aufgetreten."
+      }
+    }
   },
   "field_device": {
     "actions": {

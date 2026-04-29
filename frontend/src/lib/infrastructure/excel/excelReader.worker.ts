@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import { read, utils } from 'xlsx';
+import { read, utils } from '@e965/xlsx';
 import type { BacnetObjectExcel, ObjectDataExcel } from '$lib/domain/excel/index.js';
 import type {
   ExcelReaderWorkerRequest,

@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -21,6 +22,7 @@ type Config struct {
 	RefreshTokenTTL   time.Duration
 	CookieDomain      string
 	CookieSecure      bool
+	TrustedProxies    []string
 	SeedUserEnabled   bool
 	SeedUserFirstName string
 	SeedUserLastName  string
@@ -55,6 +57,7 @@ func Load() (Config, error) {
 		RefreshTokenTTL: env.Duration("REFRESH_TOKEN_TTL", 720*time.Hour),
 		CookieDomain:    env.String("COOKIE_DOMAIN", ""),
 		CookieSecure:    env.Bool("COOKIE_SECURE", false),
+		TrustedProxies:  env.List("TRUSTED_PROXIES"),
 		DBConfig: DBConfig{
 			Type:            normalizeDBType(env.First("postgres", "DB_TYPE", "DB_DRIVER")),
 			MaxOpenConns:    env.Int("DB_MAX_OPEN_CONNS", 25),
@@ -134,6 +137,23 @@ func (p envParser) Duration(key string, fallback time.Duration) time.Duration {
 	return d
 }
 
+func (p envParser) List(key string) []string {
+	value, ok := p.lookup(key)
+	if !ok || strings.TrimSpace(value) == "" {
+		return nil
+	}
+
+	parts := strings.Split(value, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			values = append(values, trimmed)
+		}
+	}
+	return values
+}
+
 func applySeedUserConfig(cfg *Config, env envParser) {
 	firstNameDefault, lastNameDefault, emailDefault, passwordDefault := seedUserDefaults(cfg.AppEnv)
 	cfg.SeedUserEnabled = env.Bool("SEED_USER_ENABLED", !IsProduction(cfg.AppEnv))
@@ -191,7 +211,22 @@ func validateConfig(cfg Config) error {
 		}
 	}
 
+	for _, proxy := range cfg.TrustedProxies {
+		if !isValidTrustedProxy(proxy) {
+			errs = append(errs, fmt.Errorf("TRUSTED_PROXIES contains invalid IP/CIDR %q", proxy))
+		}
+	}
+
 	return errors.Join(errs...)
+}
+
+func isValidTrustedProxy(proxy string) bool {
+	if net.ParseIP(proxy) != nil {
+		return true
+	}
+
+	_, _, err := net.ParseCIDR(proxy)
+	return err == nil
 }
 
 func loadEnvFiles() {

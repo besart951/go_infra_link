@@ -15,7 +15,8 @@ import type {
   FieldDeviceOptions,
   AvailableApparatNumbersResponse,
   CreateFieldDeviceExportRequest,
-  FieldDeviceExportJobResponse
+  FieldDeviceExportJobResponse,
+  BacnetObject
 } from '$lib/domain/facility/index.js';
 
 export interface FieldDeviceRepository extends ListRepository<FieldDevice> {
@@ -40,6 +41,7 @@ export interface FieldDeviceRepository extends ListRepository<FieldDevice> {
   // Options / Helpers
   getOptions(signal?: AbortSignal): Promise<FieldDeviceOptions>;
   getOptionsForProject(projectId: string, signal?: AbortSignal): Promise<FieldDeviceOptions>;
+  listBacnetObjects(fieldDeviceId: string, signal?: AbortSignal): Promise<BacnetObject[]>;
   getAvailableApparatNumbers(
     spsControllerSystemTypeId: string,
     apparatId: string,

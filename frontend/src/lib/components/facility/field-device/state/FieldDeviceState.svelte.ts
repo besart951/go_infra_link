@@ -29,6 +29,8 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   showFilterPanel = $state(false);
   showSpecifications = $state(false);
   expandedBacnetRows = $state<Set<string>>(new Set());
+  loadingBacnetRows = $state<Set<string>>(new Set());
+  loadingSpecifications = $state(false);
 
   readonly showBulkEditPanel = $derived.by(() => this.bulkEditPanelOpen && this.selectedCount > 0);
 
@@ -161,6 +163,16 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     await Promise.all([this.load(), this.loadLookups()]);
   }
 
+  override async load(): Promise<void> {
+    await super.load();
+
+    if (!this.showSpecifications || this.error || this.loading) {
+      return;
+    }
+
+    await this.loadSpecificationDetailsForVisibleDevices();
+  }
+
   private async loadLookups(): Promise<void> {
     const [apparatsResult, systemPartsResult] = await Promise.allSettled([
       this.listApparatsUseCase.execute({
@@ -216,11 +228,16 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     this.showFilterPanel = !this.showFilterPanel;
   }
 
-  toggleSpecifications(): void {
-    this.showSpecifications = !this.showSpecifications;
+  async toggleSpecifications(): Promise<void> {
+    const nextShowSpecifications = !this.showSpecifications;
+    this.showSpecifications = nextShowSpecifications;
+
+    if (nextShowSpecifications) {
+      await this.loadSpecificationDetailsForVisibleDevices();
+    }
   }
 
-  toggleBacnetExpansion(deviceId: string): void {
+  async toggleBacnetExpansion(deviceId: string): Promise<void> {
     const nextExpanded = new Set(this.expandedBacnetRows);
     if (nextExpanded.has(deviceId)) {
       nextExpanded.delete(deviceId);
@@ -229,10 +246,18 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     }
 
     this.expandedBacnetRows = nextExpanded;
+
+    if (nextExpanded.has(deviceId)) {
+      await this.loadBacnetObjectsForDevice(deviceId);
+    }
   }
 
   isBacnetExpanded(deviceId: string): boolean {
     return this.expandedBacnetRows.has(deviceId);
+  }
+
+  isBacnetLoading(deviceId: string): boolean {
+    return this.loadingBacnetRows.has(deviceId);
   }
 
   async copyToClipboard(value: string): Promise<void> {
@@ -505,5 +530,92 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
       limit: 1000
     });
     return new Map(links.items.map((item) => [item.field_device_id, item.id]));
+  }
+
+  private async loadSpecificationDetailsForVisibleDevices(): Promise<void> {
+    if (this.loadingSpecifications) return;
+
+    const deviceIds = this.items
+      .filter((item) => item.specification_id && !item.specification)
+      .map((item) => item.id);
+
+    if (deviceIds.length === 0) {
+      return;
+    }
+
+    this.loadingSpecifications = true;
+    try {
+      const updatedItems = await this.mapWithConcurrency(deviceIds, 6, (id) =>
+        fieldDeviceRepository.get(id)
+      );
+      this.replaceItems(updatedItems.map((item) => this.mergeHydratedDevice(item)));
+    } catch (error) {
+      console.error('Failed to load field device specifications:', error);
+    } finally {
+      this.loadingSpecifications = false;
+    }
+  }
+
+  private async loadBacnetObjectsForDevice(deviceId: string): Promise<void> {
+    const device = this.items.find((item) => item.id === deviceId);
+    if (!device || device.bacnet_objects || this.loadingBacnetRows.has(deviceId)) {
+      return;
+    }
+
+    const nextLoading = new Set(this.loadingBacnetRows);
+    nextLoading.add(deviceId);
+    this.loadingBacnetRows = nextLoading;
+
+    try {
+      const bacnetObjects = await fieldDeviceRepository.listBacnetObjects(deviceId);
+      const currentDevice = this.items.find((item) => item.id === deviceId) ?? device;
+      this.replaceItem({ ...currentDevice, bacnet_objects: bacnetObjects });
+    } catch (error) {
+      console.error('Failed to load BACnet objects:', error);
+      addToast('BACnet-Objekte konnten nicht geladen werden.', 'error');
+    } finally {
+      const nextLoading = new Set(this.loadingBacnetRows);
+      nextLoading.delete(deviceId);
+      this.loadingBacnetRows = nextLoading;
+    }
+  }
+
+  private mergeHydratedDevice(updated: FieldDevice): FieldDevice {
+    const current = this.items.find((item) => item.id === updated.id);
+    if (!current) {
+      return updated;
+    }
+
+    return {
+      ...current,
+      ...updated,
+      sps_controller_system_type:
+        updated.sps_controller_system_type ?? current.sps_controller_system_type,
+      apparat: updated.apparat ?? current.apparat,
+      system_part: updated.system_part ?? current.system_part,
+      bacnet_objects: current.bacnet_objects ?? updated.bacnet_objects
+    };
+  }
+
+  private async mapWithConcurrency<T, TResult>(
+    items: T[],
+    concurrency: number,
+    worker: (item: T) => Promise<TResult>
+  ): Promise<TResult[]> {
+    const results = new Array<TResult>(items.length);
+    let nextIndex = 0;
+    const workerCount = Math.min(Math.max(concurrency, 1), items.length);
+
+    await Promise.all(
+      Array.from({ length: workerCount }, async () => {
+        while (nextIndex < items.length) {
+          const currentIndex = nextIndex;
+          nextIndex += 1;
+          results[currentIndex] = await worker(items[currentIndex]);
+        }
+      })
+    );
+
+    return results;
   }
 }
