@@ -7,7 +7,7 @@
  * - Allowed role assignments returned by the backend
  */
 
-import { getCurrentUser, getAllowedRoles, type User } from '$lib/api/users.js';
+import { getCurrentUser, getAllowedRoles, type User, type UserRole } from '$lib/api/users.js';
 import { t } from '$lib/i18n/index.js';
 
 interface AuthState {
@@ -53,6 +53,35 @@ export function clearAuth(): void {
   authState.user = null;
   authState.allowedRoles = [];
   authState.error = null;
+}
+
+const ROLE_LEVELS: Record<UserRole, number> = {
+  superadmin: 100,
+  admin_fzag: 90,
+  fzag: 80,
+  admin_planer: 70,
+  planer: 60,
+  admin_entrepreneur: 50,
+  entrepreneur: 40
+};
+
+// Legacy compatibility for stale HMR/module consumers. Authorization stays permission-based.
+export function getRoleLevel(role: UserRole): number {
+  return ROLE_LEVELS[role] ?? 0;
+}
+
+export function canManageRole(targetRole: UserRole): boolean {
+  if (!authState.user) return false;
+  return getRoleLevel(authState.user.role) > getRoleLevel(targetRole);
+}
+
+export function hasRole(role: UserRole): boolean {
+  return authState.user?.role === role;
+}
+
+export function hasMinRole(minRole: UserRole): boolean {
+  if (!authState.user) return false;
+  return getRoleLevel(authState.user.role) >= getRoleLevel(minRole);
 }
 
 export function canAccessUserDirectory(): boolean {

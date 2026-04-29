@@ -47,7 +47,7 @@ func (r *projectSPSControllerRepo) BulkCreate(ctx context.Context, entities []*p
 	}
 
 	now := time.Now().UTC()
-	records := make([]projectSPSControllerRecord, 0, len(entities))
+	records := make([]ProjectSPSControllerRecord, 0, len(entities))
 	for _, entity := range entities {
 		if entity == nil {
 			continue

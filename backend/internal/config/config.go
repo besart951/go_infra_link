@@ -46,15 +46,15 @@ func Load() (Config, error) {
 	appEnv := env.First("development", "APP_ENV", "ENV")
 
 	cfg := Config{
-		AppEnv:            appEnv,
-		LogLevel:          env.First("info", "APP_LOG_LEVEL", "LOG_LEVEL"),
-		HTTPAddr:          resolveHTTPAddr(env),
-		SwaggerEnabled:    env.Bool("SWAGGER_ENABLED", !IsProduction(appEnv)),
-		JWTSecret:         env.String("JWT_SECRET", "change-me"),
-		AccessTokenTTL:    env.Duration("ACCESS_TOKEN_TTL", 15*time.Minute),
-		RefreshTokenTTL:   env.Duration("REFRESH_TOKEN_TTL", 720*time.Hour),
-		CookieDomain:      env.String("COOKIE_DOMAIN", ""),
-		CookieSecure:      env.Bool("COOKIE_SECURE", false),
+		AppEnv:          appEnv,
+		LogLevel:        env.First("info", "APP_LOG_LEVEL", "LOG_LEVEL"),
+		HTTPAddr:        resolveHTTPAddr(env),
+		SwaggerEnabled:  env.Bool("SWAGGER_ENABLED", !IsProduction(appEnv)),
+		JWTSecret:       env.String("JWT_SECRET", "change-me"),
+		AccessTokenTTL:  env.Duration("ACCESS_TOKEN_TTL", 15*time.Minute),
+		RefreshTokenTTL: env.Duration("REFRESH_TOKEN_TTL", 720*time.Hour),
+		CookieDomain:    env.String("COOKIE_DOMAIN", ""),
+		CookieSecure:    env.Bool("COOKIE_SECURE", false),
 		DBConfig: DBConfig{
 			Type:            normalizeDBType(env.First("postgres", "DB_TYPE", "DB_DRIVER")),
 			MaxOpenConns:    env.Int("DB_MAX_OPEN_CONNS", 25),

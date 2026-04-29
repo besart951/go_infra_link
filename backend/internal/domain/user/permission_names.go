@@ -35,7 +35,7 @@ const (
 	PermissionProjectControlCabinetRead   = "project.controlcabinet.read"
 	PermissionProjectControlCabinetUpdate = "project.controlcabinet.update"
 	PermissionProjectControlCabinetDelete = "project.controlcabinet.delete"
-	PermissionProjectControlCabinetEdit = "project.controlcabinet.edit"
+	PermissionProjectControlCabinetEdit   = "project.controlcabinet.edit"
 
 	PermissionProjectSPSControllerCreate = "project.spscontroller.create"
 	PermissionProjectSPSControllerRead   = "project.spscontroller.read"

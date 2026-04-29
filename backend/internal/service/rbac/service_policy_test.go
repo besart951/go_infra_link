@@ -119,7 +119,7 @@ func TestService_GetRolePermissions_SuperadminGetsAllPermissions(t *testing.T) {
 func TestService_HasPermission_SuperadminChecksDefinedPermissions(t *testing.T) {
 	ctx := context.Background()
 	svc := &Service{
-		permissionRepo: &permissionRepoStub{items: []domainUser.Permission{{Name: domainUser.PermissionUserRead}}},
+		permissionRepo:     &permissionRepoStub{items: []domainUser.Permission{{Name: domainUser.PermissionUserRead}}},
 		rolePermissionRepo: &rolePermissionRepoStub{},
 	}
 
@@ -144,7 +144,7 @@ func TestService_UpdateRolePermissions_SuperadminRemainsSyncedToAllPermissions(t
 	ctx := context.Background()
 	roleRepo := &rolePermissionRepoStub{}
 	svc := &Service{
-		permissionRepo: &permissionRepoStub{items: []domainUser.Permission{{Name: domainUser.PermissionUserRead}, {Name: domainUser.PermissionTeamUpdate}}},
+		permissionRepo:     &permissionRepoStub{items: []domainUser.Permission{{Name: domainUser.PermissionUserRead}, {Name: domainUser.PermissionTeamUpdate}}},
 		rolePermissionRepo: roleRepo,
 	}
 
@@ -165,11 +165,15 @@ type rolePermissionRepoStub struct {
 	items map[domainUser.Role][]domainUser.RolePermission
 }
 
-func (r *rolePermissionRepoStub) Create(context.Context, *domainUser.RolePermission) error { return nil }
+func (r *rolePermissionRepoStub) Create(context.Context, *domainUser.RolePermission) error {
+	return nil
+}
 func (r *rolePermissionRepoStub) GetByIds(context.Context, []uuid.UUID) ([]*domainUser.RolePermission, error) {
 	return nil, nil
 }
-func (r *rolePermissionRepoStub) Update(context.Context, *domainUser.RolePermission) error { return nil }
+func (r *rolePermissionRepoStub) Update(context.Context, *domainUser.RolePermission) error {
+	return nil
+}
 func (r *rolePermissionRepoStub) DeleteByIds(context.Context, []uuid.UUID) error { return nil }
 func (r *rolePermissionRepoStub) GetPaginatedList(context.Context, domain.PaginationParams) (*domain.PaginatedList[domainUser.RolePermission], error) {
 	return &domain.PaginatedList[domainUser.RolePermission]{}, nil
@@ -215,7 +219,7 @@ func (p *permissionRepoStub) GetByIds(context.Context, []uuid.UUID) ([]*domainUs
 	return nil, nil
 }
 func (p *permissionRepoStub) Update(context.Context, *domainUser.Permission) error { return nil }
-func (p *permissionRepoStub) DeleteByIds(context.Context, []uuid.UUID) error { return nil }
+func (p *permissionRepoStub) DeleteByIds(context.Context, []uuid.UUID) error       { return nil }
 func (p *permissionRepoStub) GetPaginatedList(context.Context, domain.PaginationParams) (*domain.PaginatedList[domainUser.Permission], error) {
 	return &domain.PaginatedList[domainUser.Permission]{}, nil
 }

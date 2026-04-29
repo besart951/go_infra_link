@@ -47,7 +47,7 @@ func (r *projectFieldDeviceRepo) BulkCreate(ctx context.Context, entities []*pro
 	}
 
 	now := time.Now().UTC()
-	records := make([]projectFieldDeviceRecord, 0, len(entities))
+	records := make([]ProjectFieldDeviceRecord, 0, len(entities))
 	for _, entity := range entities {
 		if entity == nil {
 			continue

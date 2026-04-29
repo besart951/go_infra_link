@@ -29,6 +29,21 @@ var migrations = []migration{
 		description: "baseline_schema",
 		apply:       autoMigrateCurrentSchema,
 	},
+	{
+		version:     "202604030007",
+		description: "migrate_project_permissions",
+		apply:       migrateProjectPermissions,
+	},
+	{
+		version:     "202604030008",
+		description: "ensure_notification_smtp_manage_permission",
+		apply:       ensureNotificationSMTPManagePermission,
+	},
+	{
+		version:     "202604030009",
+		description: "expand_project_subresource_permissions",
+		apply:       expandProjectSubresourcePermissions,
+	},
 }
 
 func ApplyMigrations(db *gorm.DB) error {

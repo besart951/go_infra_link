@@ -6,12 +6,10 @@
  */
 
 import type { UserRole } from '$lib/api/users.js';
-import { auth, hasRole } from '$lib/stores/auth.svelte';
+import { auth } from '$lib/stores/auth.svelte';
 
 function hasPermission(permission: string): boolean {
   if (!auth.user) return false;
-  if (hasRole('superadmin')) return true;
-
   const rolePerms = auth.user.permissions || [];
   return rolePerms.includes(permission);
 }
