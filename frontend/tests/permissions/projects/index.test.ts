@@ -91,9 +91,9 @@ vi.mock('$lib/components/project/ProjectPhaseSelect.svelte', async () => {
   return { default: SlotContainer };
 });
 
-import ProjectsPage from '../../../src/routes/(app)/projects/+page.svelte';
+import ProjectsPage from '../../../src/routes/(app)/projects/list/+page.svelte';
 
-describe('/projects permission surface', () => {
+describe('/projects/list permission surface', () => {
   beforeEach(() => {
     state.gotoMock.mockReset();
     state.addToastMock.mockReset();

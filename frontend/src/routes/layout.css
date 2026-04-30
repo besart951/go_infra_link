@@ -38,6 +38,38 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --hub-user-border: oklch(0.88 0.07 220 / 70%);
+  --hub-user-border-hover: oklch(0.8 0.09 220);
+  --hub-user-surface-hover: oklch(0.97 0.025 220 / 45%);
+  --hub-user-stripe: oklch(0.64 0.12 220 / 75%);
+  --hub-user-icon-bg: oklch(0.97 0.025 220);
+  --hub-user-icon-fg: oklch(0.46 0.12 220);
+  --hub-user-icon-ring: oklch(0.88 0.07 220 / 80%);
+  --hub-user-accent: oklch(0.46 0.12 220);
+  --hub-facility-border: oklch(0.88 0.07 180 / 70%);
+  --hub-facility-border-hover: oklch(0.79 0.09 180);
+  --hub-facility-surface-hover: oklch(0.97 0.025 180 / 45%);
+  --hub-facility-stripe: oklch(0.61 0.12 180 / 75%);
+  --hub-facility-icon-bg: oklch(0.97 0.025 180);
+  --hub-facility-icon-fg: oklch(0.43 0.11 180);
+  --hub-facility-icon-ring: oklch(0.88 0.07 180 / 80%);
+  --hub-facility-accent: oklch(0.43 0.11 180);
+  --hub-project-border: oklch(0.88 0.075 300 / 70%);
+  --hub-project-border-hover: oklch(0.8 0.1 300);
+  --hub-project-surface-hover: oklch(0.97 0.025 300 / 45%);
+  --hub-project-stripe: oklch(0.62 0.13 300 / 75%);
+  --hub-project-icon-bg: oklch(0.97 0.025 300);
+  --hub-project-icon-fg: oklch(0.45 0.13 300);
+  --hub-project-icon-ring: oklch(0.88 0.075 300 / 80%);
+  --hub-project-accent: oklch(0.45 0.13 300);
+  --hub-notification-border: oklch(0.88 0.09 85 / 80%);
+  --hub-notification-border-hover: oklch(0.78 0.11 85);
+  --hub-notification-surface-hover: oklch(0.97 0.035 85 / 45%);
+  --hub-notification-stripe: oklch(0.68 0.14 85 / 80%);
+  --hub-notification-icon-bg: oklch(0.97 0.035 85);
+  --hub-notification-icon-fg: oklch(0.48 0.12 85);
+  --hub-notification-icon-ring: oklch(0.88 0.09 85 / 90%);
+  --hub-notification-accent: oklch(0.48 0.12 85);
 }
 
 .dark {
@@ -72,6 +104,38 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --hub-user-border: oklch(0.34 0.08 250 / 50%);
+  --hub-user-border-hover: oklch(0.45 0.11 250);
+  --hub-user-surface-hover: oklch(0.28 0.045 250 / 20%);
+  --hub-user-stripe: oklch(0.64 0.15 250 / 70%);
+  --hub-user-icon-bg: oklch(0.24 0.055 250);
+  --hub-user-icon-fg: oklch(0.8 0.08 250);
+  --hub-user-icon-ring: oklch(0.34 0.08 250);
+  --hub-user-accent: oklch(0.8 0.08 250);
+  --hub-facility-border: oklch(0.34 0.08 160 / 50%);
+  --hub-facility-border-hover: oklch(0.45 0.1 160);
+  --hub-facility-surface-hover: oklch(0.28 0.045 160 / 20%);
+  --hub-facility-stripe: oklch(0.64 0.14 160 / 70%);
+  --hub-facility-icon-bg: oklch(0.24 0.055 160);
+  --hub-facility-icon-fg: oklch(0.8 0.08 160);
+  --hub-facility-icon-ring: oklch(0.34 0.08 160);
+  --hub-facility-accent: oklch(0.8 0.08 160);
+  --hub-project-border: oklch(0.34 0.08 285 / 50%);
+  --hub-project-border-hover: oklch(0.45 0.11 285);
+  --hub-project-surface-hover: oklch(0.28 0.045 285 / 20%);
+  --hub-project-stripe: oklch(0.64 0.15 285 / 70%);
+  --hub-project-icon-bg: oklch(0.24 0.055 285);
+  --hub-project-icon-fg: oklch(0.82 0.08 285);
+  --hub-project-icon-ring: oklch(0.34 0.08 285);
+  --hub-project-accent: oklch(0.82 0.08 285);
+  --hub-notification-border: oklch(0.34 0.08 20 / 50%);
+  --hub-notification-border-hover: oklch(0.45 0.11 20);
+  --hub-notification-surface-hover: oklch(0.28 0.045 20 / 20%);
+  --hub-notification-stripe: oklch(0.64 0.15 20 / 70%);
+  --hub-notification-icon-bg: oklch(0.24 0.055 20);
+  --hub-notification-icon-fg: oklch(0.82 0.08 20);
+  --hub-notification-icon-ring: oklch(0.34 0.08 20);
+  --hub-notification-accent: oklch(0.82 0.08 20);
 }
 
 @theme inline {

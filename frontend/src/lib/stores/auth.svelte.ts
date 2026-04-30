@@ -8,6 +8,7 @@
  */
 
 import { getCurrentUser, getAllowedRoles, type User, type UserRole } from '$lib/api/users.js';
+import { ApiException } from '$lib/api/client.js';
 import { t } from '$lib/i18n/index.js';
 
 interface AuthState {
@@ -33,14 +34,24 @@ export async function loadAuth(): Promise<void> {
   authState.error = null;
 
   try {
-    const [user, allowedRolesResponse] = await Promise.all([getCurrentUser(), getAllowedRoles()]);
-
+    const user = await getCurrentUser();
     authState.user = user;
-    authState.allowedRoles = allowedRolesResponse.roles;
+
+    try {
+      const allowedRolesResponse = await getAllowedRoles();
+      authState.allowedRoles = allowedRolesResponse.roles;
+    } catch (error) {
+      authState.error = error instanceof Error ? error.message : t('auth.load_failed');
+      if (authState.allowedRoles.length === 0) {
+        authState.allowedRoles = [];
+      }
+    }
   } catch (error) {
     authState.error = error instanceof Error ? error.message : t('auth.load_failed');
-    authState.user = null;
-    authState.allowedRoles = [];
+    if (!(error instanceof ApiException && error.status === 0 && authState.user)) {
+      authState.user = null;
+      authState.allowedRoles = [];
+    }
   } finally {
     authState.isLoading = false;
   }

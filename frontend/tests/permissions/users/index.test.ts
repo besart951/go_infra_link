@@ -101,9 +101,9 @@ vi.mock('$lib/components/ui/dialog/index.js', async () => {
   };
 });
 
-import UsersPage from '../../../src/routes/(app)/users/+page.svelte';
+import UsersPage from '../../../src/routes/(app)/users/directory/+page.svelte';
 
-describe('/users permission surface', () => {
+describe('/users/directory permission surface', () => {
   beforeEach(() => {
     state.gotoMock.mockReset();
     state.canAccessUserDirectory = true;

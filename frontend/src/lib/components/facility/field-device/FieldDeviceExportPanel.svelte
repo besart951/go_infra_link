@@ -52,6 +52,10 @@
   let polling = $state(false);
   let activeJob = $state<FieldDeviceExportJobResponse | null>(null);
   let pollingTimer: ReturnType<typeof setInterval> | null = null;
+  let pollingFailureCount = 0;
+  let pollingError = $state<string | null>(null);
+  let refreshingJobStatus = false;
+  const maxPollingFailures = 3;
 
   $effect(() => {
     if (projectId && selectedProjectIds.length === 0) {
@@ -150,8 +154,13 @@
 
   async function refreshJobStatus() {
     if (!activeJob?.job_id) return;
+    if (refreshingJobStatus) return;
+
+    refreshingJobStatus = true;
     try {
       const next = await exportUseCase.getExportJob(activeJob.job_id);
+      pollingFailureCount = 0;
+      pollingError = null;
       activeJob = next;
       if (next.status === 'completed') {
         stopPolling();
@@ -162,18 +171,34 @@
         addToast(next.error || translate('field_device.export.toasts.failed'), 'error');
       }
     } catch (error) {
-      stopPolling();
-      addToast(
+      pollingFailureCount += 1;
+      const message =
         error instanceof Error
           ? error.message
-          : translate('field_device.export.toasts.refresh_failed'),
-        'error'
-      );
+          : translate('field_device.export.toasts.refresh_failed');
+      pollingError = translate('field_device.export.toasts.refresh_retrying', {
+        count: Math.max(0, maxPollingFailures - pollingFailureCount),
+        message
+      });
+
+      if (pollingFailureCount >= maxPollingFailures) {
+        stopPolling();
+        addToast(
+          translate('field_device.export.toasts.refresh_failed_after_retries', {
+            count: maxPollingFailures
+          }),
+          'error'
+        );
+      }
+    } finally {
+      refreshingJobStatus = false;
     }
   }
 
   function startPolling() {
     stopPolling();
+    pollingFailureCount = 0;
+    pollingError = null;
     polling = true;
     pollingTimer = setInterval(() => {
       void refreshJobStatus();
@@ -336,6 +361,9 @@
           <div class="h-full bg-primary transition-all" style={`width: ${progressWidth};`}></div>
         </div>
         <p class="text-xs text-muted-foreground">{activeJob.message}</p>
+        {#if pollingError && isRunning}
+          <p class="text-xs text-amber-700">{pollingError}</p>
+        {/if}
         {#if isFailed && activeJob.error}
           <p class="text-sm text-destructive">{activeJob.error}</p>
         {/if}

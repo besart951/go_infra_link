@@ -1,5 +1,24 @@
 import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const state = vi.hoisted(() => {
+  const grantedPermissions = new Set<string>();
+
+  return {
+    setPermissions(permissions: string[]) {
+      grantedPermissions.clear();
+      for (const granted of permissions) {
+        grantedPermissions.add(granted);
+      }
+    },
+    resetPermissions() {
+      grantedPermissions.clear();
+    },
+    canPerform(action: string, resource: string) {
+      return grantedPermissions.has(`${resource}.${action}`);
+    }
+  };
+});
 
 vi.mock('$lib/i18n/translator', () => ({
   createTranslator: () => ({
@@ -10,27 +29,39 @@ vi.mock('$lib/i18n/translator', () => ({
   })
 }));
 
+vi.mock('$lib/utils/permissions.js', () => ({
+  canPerform: (action: string, resource: string) => state.canPerform(action, resource)
+}));
+
 import FacilityOverviewPage from '../../../src/routes/(app)/facility/+page.svelte';
 
 describe('/facility overview', () => {
-  it('renders protected facility deep links without checking permissions', () => {
+  beforeEach(() => {
+    state.resetPermissions();
+  });
+
+  it('hides protected facility deep links without matching permissions', () => {
+    render(FacilityOverviewPage);
+
+    expect(screen.getByText('hub.no_access')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /facility.buildings/ })).not.toBeInTheDocument();
+  });
+
+  it('renders only facility deep links allowed by read permissions', () => {
+    state.setPermissions(['building.read', 'fielddevice.read']);
+
     render(FacilityOverviewPage);
 
     expect(
       screen.getByRole('link', {
-        name: 'facility.buildings facility.manage_building_infrastructure'
+        name: 'facility.buildings facility.buildings_desc'
       })
     ).toHaveAttribute('href', '/facility/buildings');
     expect(
-      screen.getByRole('link', {
-        name: 'facility.control_cabinets facility.manage_cabinet_configurations'
-      })
-    ).toHaveAttribute('href', '/facility/control-cabinets');
-    expect(
-      screen.getByRole('link', { name: 'facility.sps_controllers facility.manage_sps_devices' })
-    ).toHaveAttribute('href', '/facility/sps-controllers');
-    expect(
       screen.getByRole('link', { name: 'facility.field_devices facility.field_devices_desc' })
     ).toHaveAttribute('href', '/facility/field-devices');
+    expect(
+      screen.queryByRole('link', { name: /facility.control_cabinets/ })
+    ).not.toBeInTheDocument();
   });
 });

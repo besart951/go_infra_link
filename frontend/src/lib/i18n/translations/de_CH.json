@@ -1443,6 +1443,11 @@
     "backend_unavailable": "Der Backend-Dienst ist derzeit nicht verfügbar. Einige Aktionen können fehlschlagen.",
     "backend_unavailable_title": "Backend nicht verfügbar",
     "backend_unavailable_desc": "Der Backend-Dienst ist derzeit nicht erreichbar. Bitte überprüfen Sie Ihre Verbindung oder kontaktieren Sie den Support.",
+    "connection": {
+      "offline": "Keine Internetverbindung. Bereits geladene Daten bleiben sichtbar, neue Aktionen können fehlschlagen.",
+      "retrying": "Verbindungsproblem. Anfrage wird erneut versucht ({attempt}/{max}).",
+      "backend_unavailable_stale": "Verbindung zum Backend unterbrochen. Bereits geladene Daten bleiben sichtbar; aktualisieren Sie bei Bedarf erneut."
+    },
     "http_error": {
       "title": "Hinweis",
       "back": "Zurück",
@@ -1725,6 +1730,8 @@
         "completed_ready": "Export abgeschlossen. Sie können die Datei jetzt herunterladen.",
         "failed": "Export fehlgeschlagen",
         "refresh_failed": "Exportstatus konnte nicht aktualisiert werden",
+        "refresh_retrying": "Statusaktualisierung fehlgeschlagen ({message}). Es wird erneut versucht, {count} Versuch(e) übrig.",
+        "refresh_failed_after_retries": "Exportstatus konnte nach {count} Versuchen nicht aktualisiert werden.",
         "select_filter": "Bitte mindestens einen Filter für den Export auswählen.",
         "started": "Export gestartet. Status wird aktualisiert...",
         "completed": "Export abgeschlossen. Bereit zum Download.",
@@ -1859,6 +1866,41 @@
     "other_memberships": "Weitere Mitgliedschaften",
     "no_team": "Keine Teamzugehörigkeit gefunden.",
     "unavailable": "Dashboard-Daten sind derzeit nicht verfügbar."
+  },
+  "hub": {
+    "overview": "Übersicht",
+    "back_to_dashboard": "Zurück zum Dashboard",
+    "back_to_overview": "Zurück zur Übersicht",
+    "no_access": "Für diesen Bereich sind aktuell keine Seiten für Ihre Berechtigungen freigeschaltet.",
+    "dashboard_description": "Wählen Sie einen Hauptbereich, um zu den passenden Übersichten und Arbeitsseiten zu wechseln.",
+    "users": {
+      "title": "Benutzer",
+      "description": "Benutzerverzeichnis, Teams sowie Rollen und Berechtigungen an einem Ort.",
+      "dashboard_desc": "Personen, Teams und Rollen verwalten.",
+      "directory_title": "Benutzerverzeichnis",
+      "directory_desc": "Benutzer suchen, Status prüfen und Rollen ändern.",
+      "teams_desc": "Teams und Mitgliedschaften für Zugriffe verwalten.",
+      "roles_desc": "Rollenmatrix, Berechtigungen und Phasenregeln pflegen."
+    },
+    "facility": {
+      "description": "Anlagenstammdaten, Feldgeräte, BACnet-nahe Daten und Alarmkonfigurationen nach Berechtigung öffnen.",
+      "dashboard_desc": "Gebäude, Schaltschränke und Anlagenstammdaten öffnen.",
+      "alarm_catalog_desc": "Alarmtypen, Felder und Einheiten verwalten."
+    },
+    "projects": {
+      "title": "Projekte",
+      "description": "Projektlisten, Phasen und projektbezogene Arbeitsflächen gebündelt öffnen.",
+      "dashboard_desc": "Projektlisten, Phasen und Projektarbeit öffnen.",
+      "list_title": "Projektliste",
+      "list_desc": "Infrastrukturprojekte suchen, öffnen und bei Berechtigung erstellen.",
+      "phases_desc": "Projektphasen erstellen, bearbeiten und zuordnen."
+    },
+    "notifications": {
+      "title": "Benachrichtigungen",
+      "description": "Systemmeldungen lesen und bei Berechtigung den Versand konfigurieren.",
+      "dashboard_desc": "Inbox und Benachrichtigungseinstellungen öffnen.",
+      "smtp_desc": "SMTP-Versand, Test-E-Mails und Benachrichtigungsregeln verwalten."
+    }
   },
   "messages": {
     "search_users": "Benutzer nach Name oder E-Mail suchen...",

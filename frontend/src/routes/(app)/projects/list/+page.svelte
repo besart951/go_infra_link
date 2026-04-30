@@ -1,0 +1,321 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { Button } from '$lib/components/ui/button/index.js';
+  import { Input } from '$lib/components/ui/input/index.js';
+  import { Textarea } from '$lib/components/ui/textarea/index.js';
+  import * as Table from '$lib/components/ui/table/index.js';
+  import { ArrowLeft, Plus } from '@lucide/svelte';
+  import PaginatedList from '$lib/components/list/PaginatedList.svelte';
+  import { addToast } from '$lib/components/toast.svelte';
+  import ProjectPhaseSelect from '$lib/components/project/ProjectPhaseSelect.svelte';
+  import { projectListStore } from '$lib/stores/projects/projectListStore.js';
+  import { createProject } from '$lib/infrastructure/api/project.adapter.js';
+  import type { CreateProjectRequest, Project, ProjectStatus } from '$lib/domain/project/index.js';
+  import { canPerform } from '$lib/utils/permissions.js';
+  import { createTranslator } from '$lib/i18n/translator';
+
+  import { useOptimisticUpdate } from '$lib/hooks/useOptimisticUpdate.svelte.js';
+
+  const t = createTranslator();
+
+  function getStatusClass(status: string): string {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'ongoing':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+    }
+  }
+
+  const statusOptions: Array<{ value: ProjectStatus | 'all'; label: string }> = [
+    { value: 'all', label: $t('messages.all_statuses') },
+    { value: 'planned', label: $t('messages.planned') },
+    { value: 'ongoing', label: $t('messages.ongoing') },
+    { value: 'completed', label: $t('messages.completed') }
+  ];
+
+  const createStatusOptions: Array<{ value: ProjectStatus; label: string }> = [
+    { value: 'planned', label: $t('messages.planned') },
+    { value: 'ongoing', label: $t('messages.ongoing') },
+    { value: 'completed', label: $t('messages.completed') }
+  ];
+
+  type CreateProjectForm = {
+    name: string;
+    description: string;
+    status: ProjectStatus;
+    start_date: string;
+    phase_id: string;
+  };
+
+  function todayInputValue(): string {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  let createOpen = $state(false);
+  let createBusy = $state(false);
+  let form = $state<CreateProjectForm>({
+    name: '',
+    description: '',
+    status: 'planned',
+    start_date: todayInputValue(),
+    phase_id: ''
+  });
+
+  // Optimistic update helper
+  const optimisticCreate = useOptimisticUpdate<Project>({
+    onSuccess: (project) => {
+      goto(`/projects/${project.id}`);
+    },
+    onError: (err) => {
+      addToast(err instanceof Error ? err.message : $t('project.creation_failed'), 'error');
+    }
+  });
+
+  function canSubmitCreate(): boolean {
+    return form.name.trim().length > 0 && form.phase_id.trim().length > 0 && !createBusy;
+  }
+
+  async function submitCreate() {
+    if (!canSubmitCreate()) return;
+    createBusy = true;
+
+    const payload: CreateProjectRequest = {
+      name: form.name.trim(),
+      description: form.description.trim() || undefined,
+      status: form.status,
+      start_date: form.start_date
+        ? new Date(`${form.start_date}T00:00:00Z`).toISOString()
+        : undefined,
+      phase_id: form.phase_id
+    };
+
+    // Create optimistic project for immediate UI feedback
+    const optimisticProject: Project = {
+      id: `temp-${Date.now()}`, // Temporary ID
+      name: payload.name,
+      description: payload.description ?? '',
+      status: form.status,
+      start_date: payload.start_date ?? '',
+      phase_id: payload.phase_id,
+      creator_id: '', // Will be set by server
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    try {
+      await optimisticCreate.execute(
+        // Optimistic action - close form and show toast immediately
+        () => {
+          createOpen = false;
+          form = {
+            name: '',
+            description: '',
+            status: 'planned',
+            start_date: todayInputValue(),
+            phase_id: ''
+          };
+          addToast($t('projects.page.creating'), 'info', 2000);
+        },
+        // Server action
+        async () => {
+          const project = await createProject(payload);
+          addToast($t('project.project_created'), 'success');
+          projectListStore.reload();
+          return project;
+        },
+        // Rollback action on error
+        () => {
+          // Reopen form with previous values
+          createOpen = true;
+          form = {
+            name: payload.name,
+            description: payload.description ?? '',
+            status: form.status,
+            start_date: payload.start_date ? payload.start_date.split('T')[0] : todayInputValue(),
+            phase_id: payload.phase_id
+          };
+        }
+      );
+    } finally {
+      createBusy = false;
+    }
+  }
+
+  function handleStatusChange(e: Event) {
+    const value = (e.target as HTMLSelectElement).value;
+    projectListStore.setStatus(value === 'all' ? 'all' : (value as ProjectStatus));
+  }
+
+  onMount(() => {
+    projectListStore.load();
+  });
+</script>
+
+<svelte:head>
+  <title>{$t('navigation.projects')} | Infra Link</title>
+</svelte:head>
+
+<div class="flex flex-col gap-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">{$t('navigation.projects')}</h1>
+      <p class="text-sm text-muted-foreground">
+        {$t('pages.projects_desc')}
+      </p>
+    </div>
+    <div class="flex flex-col gap-2 sm:flex-row">
+      <Button variant="outline" href="/projects">
+        <ArrowLeft class="size-4" />
+        {$t('hub.back_to_overview')}
+      </Button>
+      {#if canPerform('create', 'project')}
+        <Button onclick={() => (createOpen = !createOpen)}>
+          <Plus class="mr-2 size-4" />
+          {$t('common.create')}
+        </Button>
+      {/if}
+    </div>
+  </div>
+
+  {#if createOpen}
+    <div class="rounded-lg border bg-background p-4">
+      <div class="grid gap-4 md:grid-cols-2">
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-medium" for="project_name_create">{$t('common.name')}</label>
+          <Input
+            id="project_name_create"
+            placeholder={$t('messages.project_name_placeholder')}
+            bind:value={form.name}
+            disabled={createBusy}
+          />
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-medium" for="project_status_create"
+            >{$t('common.status')}</label
+          >
+          <select
+            id="project_status_create"
+            class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
+            bind:value={form.status}
+            disabled={createBusy}
+          >
+            {#each createStatusOptions as opt}
+              <option value={opt.value}>{opt.label}</option>
+            {/each}
+          </select>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-medium" for="project_start_create"
+            >{$t('messages.start_date')}</label
+          >
+          <Input
+            id="project_start_create"
+            type="date"
+            bind:value={form.start_date}
+            disabled={createBusy}
+          />
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-medium" for="project_phase_create"
+            >{$t('messages.phase')}</label
+          >
+          <ProjectPhaseSelect
+            id="project_phase_create"
+            bind:value={form.phase_id}
+            width="w-full"
+            disabled={createBusy}
+          />
+        </div>
+
+        <div class="flex flex-col gap-2 md:col-span-2">
+          <label class="text-sm font-medium" for="project_desc_create"
+            >{$t('common.description')}</label
+          >
+          <Textarea
+            id="project_desc_create"
+            placeholder={$t('messages.project_description_placeholder')}
+            rows={3}
+            bind:value={form.description}
+            disabled={createBusy}
+          />
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center justify-end gap-2">
+        <Button variant="outline" onclick={() => (createOpen = false)} disabled={createBusy}
+          >{$t('common.cancel')}</Button
+        >
+        <Button onclick={submitCreate} disabled={!canSubmitCreate()}>{$t('common.create')}</Button>
+      </div>
+    </div>
+  {/if}
+
+  <div class="flex flex-wrap items-center gap-3">
+    <label class="text-sm font-medium" for="project_status_filter">{$t('common.status')}</label>
+    <select
+      id="project_status_filter"
+      class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
+      value={$projectListStore.status}
+      onchange={handleStatusChange}
+    >
+      {#each statusOptions as opt}
+        <option value={opt.value}>{opt.label}</option>
+      {/each}
+    </select>
+  </div>
+
+  <PaginatedList
+    state={$projectListStore}
+    columns={[
+      { key: 'name', label: $t('common.name') },
+      { key: 'status', label: $t('common.status') },
+      { key: 'start_date', label: $t('messages.start_date') },
+      { key: 'created', label: $t('messages.created') },
+      { key: 'actions', label: $t('messages.actions'), width: 'w-[100px]' }
+    ]}
+    searchPlaceholder={$t('messages.search_projects')}
+    emptyMessage={$t('messages.no_projects_found')}
+    onSearch={(text) => projectListStore.search(text)}
+    onPageChange={(page) => projectListStore.goToPage(page)}
+    onReload={() => projectListStore.reload()}
+  >
+    {#snippet rowSnippet(project: Project)}
+      <Table.Cell class="font-medium">
+        <a href="/projects/{project.id}" class="hover:underline">
+          {project.name}
+        </a>
+      </Table.Cell>
+      <Table.Cell>
+        <span
+          class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {getStatusClass(
+            project.status
+          )}"
+        >
+          {project.status}
+        </span>
+      </Table.Cell>
+      <Table.Cell>
+        {project.start_date ? new Date(project.start_date).toLocaleDateString() : '-'}
+      </Table.Cell>
+      <Table.Cell>
+        {new Date(project.created_at).toLocaleDateString()}
+      </Table.Cell>
+      <Table.Cell>
+        <Button variant="ghost" size="sm" href="/projects/{project.id}"
+          >{$t('messages.view')}</Button
+        >
+      </Table.Cell>
+    {/snippet}
+  </PaginatedList>
+</div>

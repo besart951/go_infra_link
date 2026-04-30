@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
-  import { Plus, Pencil, Trash2, Eye } from '@lucide/svelte';
+  import { ArrowLeft, Plus, Pencil, Trash2, Eye } from '@lucide/svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import { addToast } from '$lib/components/toast.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
@@ -84,12 +84,18 @@
       <h1 class="text-2xl font-semibold tracking-tight">{$t('phases.page.heading')}</h1>
       <p class="text-sm text-muted-foreground">{$t('phases.page.description')}</p>
     </div>
-    {#if !showForm && canPerform('create', 'phase')}
-      <Button onclick={handleCreate}>
-        <Plus class="mr-2 size-4" />
-        {$t('phases.page.new')}
+    <div class="flex flex-col gap-2 sm:flex-row">
+      <Button variant="outline" href="/projects">
+        <ArrowLeft class="size-4" />
+        {$t('hub.back_to_overview')}
       </Button>
-    {/if}
+      {#if !showForm && canPerform('create', 'phase')}
+        <Button onclick={handleCreate}>
+          <Plus class="mr-2 size-4" />
+          {$t('phases.page.new')}
+        </Button>
+      {/if}
+    </div>
   </div>
 
   {#if showForm}

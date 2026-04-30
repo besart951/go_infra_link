@@ -9,7 +9,7 @@
   import { confirm } from '$lib/stores/confirm-dialog.js';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
   import { createTeam, deleteTeam, listTeamMembers } from '$lib/api/teams.js';
-  import { Plus, Trash2 } from '@lucide/svelte';
+  import { ArrowLeft, Plus, Trash2 } from '@lucide/svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import { teamsStore } from '$lib/stores/list/entityStores.js';
   import type { Team } from '$lib/domain/entities/team.js';
@@ -109,12 +109,18 @@
       <h1 class="text-3xl font-bold tracking-tight">{$t('navigation.teams')}</h1>
       <p class="mt-1 text-muted-foreground">{$t('pages.teams_desc')}</p>
     </div>
-    {#if canPerform('create', 'team')}
-      <Button variant="outline" onclick={() => (createOpen = !createOpen)}>
-        <Plus class="mr-2 h-4 w-4" />
-        {$t('pages.create_team')}
+    <div class="flex flex-col gap-2 sm:flex-row">
+      <Button variant="outline" href="/users">
+        <ArrowLeft class="size-4" />
+        {$t('hub.back_to_overview')}
       </Button>
-    {/if}
+      {#if canPerform('create', 'team')}
+        <Button variant="outline" onclick={() => (createOpen = !createOpen)}>
+          <Plus class="mr-2 h-4 w-4" />
+          {$t('pages.create_team')}
+        </Button>
+      {/if}
+    </div>
   </div>
 
   {#if createOpen}

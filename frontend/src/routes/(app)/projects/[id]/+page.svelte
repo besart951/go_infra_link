@@ -130,6 +130,11 @@
           void loadProjectUsers();
           break;
       }
+    },
+    onReconnect: () => {
+      refreshProjectFacilityViews();
+      void loadProject();
+      void loadProjectUsers();
     }
   });
 

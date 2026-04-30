@@ -85,6 +85,7 @@ export type SharedFieldDeviceEditorsByDevice = Record<string, SharedFieldDeviceE
 interface ProjectCollaborationStateOptions {
   onRefreshRequest?: (message: ProjectCollaborationRefreshRequest) => void;
   onEntityDelta?: (message: ProjectCollaborationEntityDeltaMessage) => void;
+  onReconnect?: () => void;
 }
 
 export class ProjectCollaborationState {
@@ -94,11 +95,14 @@ export class ProjectCollaborationState {
 
   private readonly onRefreshRequest?: (message: ProjectCollaborationRefreshRequest) => void;
   private readonly onEntityDelta?: (message: ProjectCollaborationEntityDeltaMessage) => void;
+  private readonly onReconnect?: () => void;
 
   private projectId: string | null = null;
   private socket: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectDelayMs = 2000;
+  private hasConnectedOnce = false;
+  private pendingMessages: Array<Record<string, unknown>> = [];
   private destroyed = false;
   private desiredEditState: SharedFieldDeviceDraftState = {
     devices: []
@@ -107,6 +111,7 @@ export class ProjectCollaborationState {
   constructor(options: ProjectCollaborationStateOptions = {}) {
     this.onRefreshRequest = options.onRefreshRequest;
     this.onEntityDelta = options.onEntityDelta;
+    this.onReconnect = options.onReconnect;
   }
 
   connect(projectId: string): void {
@@ -119,6 +124,10 @@ export class ProjectCollaborationState {
     this.projectId = projectId;
     this.destroyed = false;
     this.clearReconnectTimer();
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
+    }
     this.openSocket();
   }
 
@@ -129,6 +138,8 @@ export class ProjectCollaborationState {
     this.socketStatus = 'disconnected';
     this.onlineUsers = [];
     this.fieldDeviceEditStates = [];
+    this.hasConnectedOnce = false;
+    this.pendingMessages = [];
 
     if (this.socket) {
       this.socket.close();
@@ -152,11 +163,14 @@ export class ProjectCollaborationState {
   }
 
   requestFieldDeviceRefresh(deviceIds: string[]): void {
-    this.send({
-      type: 'refresh_request',
-      scope: 'field_device',
-      device_ids: deviceIds
-    });
+    this.send(
+      {
+        type: 'refresh_request',
+        scope: 'field_device',
+        device_ids: deviceIds
+      },
+      { queueWhenClosed: true }
+    );
   }
 
   publishFieldDeviceDelta(fieldDevices: FieldDevice[]): void {
@@ -164,11 +178,14 @@ export class ProjectCollaborationState {
       return;
     }
 
-    this.send({
-      type: 'entity_delta',
-      scope: 'field_device',
-      field_devices: fieldDevices
-    });
+    this.send(
+      {
+        type: 'entity_delta',
+        scope: 'field_device',
+        field_devices: fieldDevices
+      },
+      { queueWhenClosed: true }
+    );
   }
 
   buildFieldDeviceEditorsByDevice(
@@ -213,9 +230,15 @@ export class ProjectCollaborationState {
 
     socket.addEventListener('open', () => {
       if (this.socket !== socket) return;
+      const wasReconnect = this.hasConnectedOnce;
+      this.hasConnectedOnce = true;
       this.socketStatus = 'connected';
       this.reconnectDelayMs = 2000;
       this.publishFieldDeviceDraftState(this.desiredEditState);
+      this.flushPendingMessages();
+      if (wasReconnect) {
+        this.onReconnect?.();
+      }
     });
 
     socket.addEventListener('message', (event) => {
@@ -267,12 +290,32 @@ export class ProjectCollaborationState {
     }
   }
 
-  private send(payload: Record<string, unknown>): void {
+  private send(
+    payload: Record<string, unknown>,
+    options: { queueWhenClosed?: boolean } = {}
+  ): void {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      if (options.queueWhenClosed) {
+        this.queuePendingMessage(payload);
+      }
       return;
     }
 
     this.socket.send(JSON.stringify(payload));
+  }
+
+  private queuePendingMessage(payload: Record<string, unknown>): void {
+    this.pendingMessages = [...this.pendingMessages, payload].slice(-50);
+  }
+
+  private flushPendingMessages(): void {
+    if (this.pendingMessages.length === 0) return;
+
+    const messages = this.pendingMessages;
+    this.pendingMessages = [];
+    for (const message of messages) {
+      this.send(message);
+    }
   }
 
   private scheduleReconnect(): void {

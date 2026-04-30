@@ -16,7 +16,16 @@
     PhasePermissionRules
   } from '$lib/components/roles/index.js';
   import { RolesPageState } from '$lib/components/roles/state/RolesPageState.svelte.js';
-  import { GitBranch, Plus, RefreshCw, Grid3X3, LayoutGrid, Shield, Users } from '@lucide/svelte';
+  import {
+    ArrowLeft,
+    GitBranch,
+    Plus,
+    RefreshCw,
+    Grid3X3,
+    LayoutGrid,
+    Shield,
+    Users
+  } from '@lucide/svelte';
 
   const t = createTranslator();
   const state = new RolesPageState();
@@ -39,6 +48,10 @@
       <p class="mt-1 text-muted-foreground">{$t('roles.page.description')}</p>
     </div>
     <div class="flex items-center gap-2">
+      <Button variant="outline" href="/users">
+        <ArrowLeft class="size-4" />
+        {$t('hub.back_to_overview')}
+      </Button>
       <Button variant="outline" onclick={state.loadData} disabled={state.isLoading}>
         <RefreshCw class="mr-2 h-4 w-4 {state.isLoading ? 'animate-spin' : ''}" />
         {$t('roles.actions.refresh')}

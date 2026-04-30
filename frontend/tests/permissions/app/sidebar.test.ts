@@ -111,7 +111,7 @@ describe('permission-aware sidebar navigation', () => {
     state.resetPermissions();
   });
 
-  it('hides protected navigation links except /projects when the user has no matching permissions', () => {
+  it('hides protected navigation links except public area hubs when the user has no matching permissions', () => {
     render(AppSidebar, {
       user: buildUser(),
       teams: [],
@@ -121,6 +121,9 @@ describe('permission-aware sidebar navigation', () => {
     expect(screen.queryByTestId('nav-link:/users')).not.toBeInTheDocument();
     expect(screen.queryByTestId('nav-link:/teams')).not.toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/projects')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-link:/projects/list')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-link:/notifications')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-link:/notifications/inbox')).toBeInTheDocument();
     expect(screen.queryByTestId('nav-link:/facility/buildings')).not.toBeInTheDocument();
     expect(screen.queryByTestId('nav-link:/admin/notifications/smtp')).not.toBeInTheDocument();
   });
@@ -143,9 +146,11 @@ describe('permission-aware sidebar navigation', () => {
     });
 
     expect(screen.getByTestId('nav-link:/users')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-link:/users/directory')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/teams')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/users/roles')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/projects')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-link:/projects/list')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/projects/phases')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/facility/buildings')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/admin/notifications/smtp')).toBeInTheDocument();

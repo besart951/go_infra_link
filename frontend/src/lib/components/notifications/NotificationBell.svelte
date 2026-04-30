@@ -153,7 +153,7 @@
         class="w-full justify-center"
         onclick={() => {
           open = false;
-          goto('/notifications');
+          goto('/notifications/inbox');
         }}
       >
         {$t('notifications.inbox.view_all')}

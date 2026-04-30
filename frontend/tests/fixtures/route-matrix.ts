@@ -64,6 +64,17 @@ export const routeAudits = [
     auth: 'authenticated',
     authorization: 'none',
     status: 'configured',
+    expectedAccess: 'Any authenticated user viewing the notification area hub.',
+    protectedUi: ['notification inbox link', 'SMTP settings link'],
+    notes: 'The hub only exposes admin settings when notification.smtp.manage is granted.'
+  },
+  {
+    path: '/notifications/inbox',
+    domain: 'app',
+    files: ['src/routes/(app)/notifications/inbox/+page.svelte'],
+    auth: 'authenticated',
+    authorization: 'none',
+    status: 'configured',
     expectedAccess: 'Any authenticated user viewing their own notifications.',
     protectedUi: ['notification inbox', 'mark read actions'],
     notes: 'The backend scopes notification reads and updates to the authenticated user.'
@@ -86,7 +97,7 @@ export const routeAudits = [
     auth: 'authenticated',
     authorization: 'none',
     status: 'configured',
-    expectedAccess: 'Redirect helper into /projects.',
+    expectedAccess: 'Redirect helper into /projects/list.',
     protectedUi: [],
     notes: 'This route does not expose a separate form; it only forwards to the list page.'
   },
@@ -122,6 +133,17 @@ export const routeAudits = [
     path: '/users',
     domain: 'user',
     files: ['src/routes/(app)/users/+page.svelte'],
+    auth: 'authenticated',
+    authorization: 'none',
+    status: 'configured',
+    expectedAccess: 'Any authenticated user viewing the user area hub.',
+    protectedUi: ['user directory link', 'team link', 'roles link'],
+    notes: 'The hub only surfaces links that match user, team, or role permissions.'
+  },
+  {
+    path: '/users/directory',
+    domain: 'user',
+    files: ['src/routes/(app)/users/directory/+page.svelte'],
     auth: 'authenticated',
     authorization: 'ui-only',
     status: 'misconfigured',
@@ -167,6 +189,18 @@ export const routeAudits = [
     path: '/projects',
     domain: 'project',
     files: ['src/routes/(app)/projects/+page.svelte'],
+    auth: 'authenticated',
+    authorization: 'none',
+    status: 'configured',
+    expectedAccess: 'Any authenticated user viewing the project area hub.',
+    protectedUi: ['project list link', 'phase link'],
+    notes:
+      'The hub exposes the scoped project list to all authenticated users and hides phases without phase.read.'
+  },
+  {
+    path: '/projects/list',
+    domain: 'project',
+    files: ['src/routes/(app)/projects/list/+page.svelte'],
     auth: 'authenticated',
     authorization: 'ui-only',
     status: 'misconfigured',
@@ -241,16 +275,16 @@ export const routeAudits = [
     files: ['src/routes/(app)/facility/+page.svelte'],
     auth: 'authenticated',
     authorization: 'none',
-    status: 'misconfigured',
+    status: 'configured',
     expectedAccess:
-      'The overview should only surface links that match the user’s facility permissions.',
+      'Any authenticated user; the overview only surfaces links that match the user’s facility permissions.',
     protectedUi: [
       'facility.buildings',
       'facility.control_cabinets',
       'facility.sps_controllers',
       'facility.field_devices'
     ],
-    notes: 'The overview links are static and currently ignore permission state completely.'
+    notes: 'The overview hides every facility link without the matching read permission.'
   },
   {
     path: '/facility/buildings',

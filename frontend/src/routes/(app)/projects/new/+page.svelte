@@ -6,7 +6,7 @@
   const t = createTranslator();
 
   onMount(() => {
-    goto('/projects');
+    goto('/projects/list');
   });
 </script>
 

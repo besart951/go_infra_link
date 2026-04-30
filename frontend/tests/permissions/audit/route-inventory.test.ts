@@ -28,18 +28,22 @@ describe('route permission audit inventory', () => {
   it('summarizes which routes are currently configured correctly', () => {
     const summary = getRouteAuditSummary();
 
-    expect(summary.totalRoutes).toBe(37);
+    expect(summary.totalRoutes).toBe(40);
     expect(summary.configured).toEqual([
       '/',
       '/account',
       '/admin/notifications/smtp',
       '/errors/:status',
+      '/facility',
       '/login',
       '/logout',
       '/notifications',
-      '/projects/new'
+      '/notifications/inbox',
+      '/projects',
+      '/projects/new',
+      '/users'
     ]);
-    expect(summary.misconfigured).toHaveLength(29);
-    expect(configuredRoutePaths).toHaveLength(8);
+    expect(summary.misconfigured).toHaveLength(28);
+    expect(configuredRoutePaths).toHaveLength(12);
   });
 });

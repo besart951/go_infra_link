@@ -93,4 +93,65 @@ describe('api client HTTP error navigation', () => {
     expect(caught).toMatchObject({ status: 404, error: 'not_found' });
     expect(mockGoto).not.toHaveBeenCalled();
   });
+
+  it('retries safe GET requests after a transient network failure', async () => {
+    const customFetch = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      );
+
+    await expect(
+      api<{ ok: boolean }>('/health', { customFetch, retryDelayMs: 0 })
+    ).resolves.toEqual({
+      ok: true
+    });
+
+    expect(customFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry unsafe POST requests after a network failure', async () => {
+    const customFetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(
+      api('/teams', {
+        customFetch,
+        method: 'POST',
+        body: JSON.stringify({ name: 'Team' }),
+        retryDelayMs: 0
+      })
+    ).rejects.toMatchObject({ status: 0, error: 'network_error' });
+
+    expect(customFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries safe GET requests on transient backend availability responses', async () => {
+    const customFetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'unavailable', message: 'Service Unavailable' }), {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { 'Content-Type': 'application/json' }
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      );
+
+    await expect(
+      api<{ ok: boolean }>('/dashboard', { customFetch, retryDelayMs: 0 })
+    ).resolves.toEqual({
+      ok: true
+    });
+
+    expect(customFetch).toHaveBeenCalledTimes(2);
+  });
 });
