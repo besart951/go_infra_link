@@ -1,7 +1,8 @@
 <script lang="ts">
+  import '@fontsource-variable/noto-sans';
   import { onMount } from 'svelte';
   import './layout.css';
-  import { initTheme } from '$lib/stores/theme.js';
+  import { initAppearance } from '$lib/stores/appearance.js';
   import { i18n } from '$lib/i18n/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
 
@@ -12,7 +13,7 @@
   let translationError = $state<string | null>(null);
 
   onMount(() => {
-    initTheme();
+    initAppearance();
 
     // Subscribe to i18n store to know when translations are loaded
     const unsubscribe = i18n.subscribe((state) => {

@@ -24,7 +24,9 @@ func NewHandlers(services *Services, cookieSettings authhandler.CookieSettings, 
 		Workflow:           services.Project.Workflow,
 		FacilityLink:       services.Project.FacilityLink,
 		Phase:              services.Phase,
+		PhasePermission:    services.PhasePermission,
 		FieldDeviceOptions: services.Facility.FieldDevice,
+		Notifications:      services.Notification,
 	})
 
 	facilityHandlers := facilityhandler.NewHandlers(facilityhandler.ServiceDeps{

@@ -1,6 +1,7 @@
 {
   "app": {
     "name": "Infrastruktur Link",
+    "brand": "Infra Link",
     "version": "1.0.0"
   },
   "common": {
@@ -13,6 +14,8 @@
     "close": "Schliessen",
     "cancel": "Abbrechen",
     "save": "Speichern",
+    "save_changes": "Änderungen speichern",
+    "saving": "Speichern...",
     "delete": "Löschen",
     "edit": "Bearbeiten",
     "create": "Erstellen",
@@ -123,6 +126,18 @@
     "date_invalid": "{field} muss ein gültiges Datum sein.",
     "range": "{field} muss zwischen {min} und {max} liegen.",
     "must_match": "{field1} und {field2} müssen übereinstimmen.",
+    "invalid": "{field} ist ungültig.",
+    "min_generic": "{field} muss mindestens {min} sein.",
+    "max_generic": "{field} darf höchstens {max} sein.",
+    "exact_length": "{field} muss genau {length} Zeichen lang sein.",
+    "one_of": "{field} muss einer der folgenden Werte sein: {options}.",
+    "valid_ipv4": "{field} muss eine gültige IPv4-Adresse sein.",
+    "valid_ipv4_subnet": "{field} muss eine gültige IPv4-Subnetzmaske sein.",
+    "number_between": "{field} muss eine Zahl zwischen {min} und {max} sein.",
+    "exact_uppercase_letters": "{field} muss genau {count} Grossbuchstaben (A-Z) enthalten.",
+    "unique_within": "{field} muss innerhalb von {scope} eindeutig sein.",
+    "unique_per": "{field} muss pro {scope} eindeutig sein.",
+    "required_when_plain_auth": "{field} ist erforderlich, wenn die SMTP-Authentifizierung mit Benutzername und Passwort aktiv ist.",
     "until_must_be_future": "Das Datum muss in der Zukunft liegen.",
     "phase_id_required": "Die Phase-ID ist erforderlich.",
     "invalid_uuid_format": "Das UUID-Format ist ungültig."
@@ -132,6 +147,7 @@
     "profile": "Benutzerprofil",
     "users": "Benutzer",
     "user": "Benutzer",
+    "create": "Benutzer erstellen",
     "name": "Name",
     "firstname": "Vorname",
     "lastname": "Nachname",
@@ -216,7 +232,8 @@
     "project_or_user_not_found": "Projekt oder Benutzer nicht gefunden.",
     "link_not_found": "Verknüpfung nicht gefunden.",
     "project_or_object_data_not_found": "Projekt oder Objekt nicht gefunden.",
-    "object_data_already_linked": "Das Objekt ist bereits mit einem anderen Projekt verknüpft."
+    "object_data_already_linked": "Das Objekt ist bereits mit einem anderen Projekt verknüpft.",
+    "field_device_required": "Ein Feldgerät ist erforderlich."
   },
   "facility": {
     "management": "Anlagenverwaltung",
@@ -290,6 +307,7 @@
     "search_sps_controllers": "SPS-Regler suchen...",
     "no_sps_controllers_found": "Keine SPS-Regler gefunden. Erstellen Sie Ihren ersten SPS-Regler, um zu beginnen.",
     "sps_controller_copied": "SPS-Regler kopiert",
+    "sps_controller_system_type": "SPS-Regler-Systemtyp",
     "sps_controller_deleted": "SPS-Regler gelöscht",
     "delete_sps_controller_confirm": "SPS-Regler {name} löschen?",
     "delete_sps_controller_failed": "SPS-Regler löschen fehlgeschlagen",
@@ -385,6 +403,7 @@
     "update_failed": "Eintrag konnte nicht aktualisiert werden.",
     "deletion_failed": "Eintrag konnte nicht gelöscht werden.",
     "fetch_failed": "Daten konnten nicht abgerufen werden.",
+    "not_found": "Eintrag nicht gefunden.",
     "validation_failed": "Validierung fehlgeschlagen.",
     "invalid_reference": "Referenzierter Eintrag nicht gefunden oder gelöscht.",
     "invalid_apparat_id": "Ungültige Apparat-ID.",
@@ -450,6 +469,27 @@
     "role_user": "Benutzer",
     "role_viewer": "Betrachter"
   },
+  "permissions": {
+    "creation_failed": "Berechtigung konnte nicht erstellt werden.",
+    "update_failed": "Berechtigung konnte nicht aktualisiert werden.",
+    "deletion_failed": "Berechtigung konnte nicht gelöscht werden.",
+    "fetch_failed": "Berechtigungen konnten nicht geladen werden.",
+    "permission_not_found": "Berechtigung nicht gefunden."
+  },
+  "roles": {
+    "fetch_failed": "Rollen konnten nicht geladen werden.",
+    "invalid_role": "Die Rolle ist ungültig.",
+    "invalid_permission": "Die Berechtigung ist ungültig.",
+    "permission_not_found": "Berechtigung nicht gefunden.",
+    "permission_assign_failed": "Berechtigung konnte der Rolle nicht zugewiesen werden.",
+    "permission_remove_failed": "Berechtigung konnte von der Rolle nicht entfernt werden.",
+    "update_failed": "Rolle konnte nicht aktualisiert werden.",
+    "permissions": {
+      "table": {
+        "permission": "Berechtigung"
+      }
+    }
+  },
   "admin": {
     "password_reset_requested": "Passwort-Reset wurde angefordert.",
     "user_disabled": "Benutzer wurde deaktiviert.",
@@ -481,8 +521,14 @@
     "not_found": "Nicht gefunden.",
     "server_error": "Serverfehler. Bitte versuchen Sie es später erneut.",
     "network_error": "Netzwerkfehler. Bitte überprüfen Sie Ihre Internetverbindung.",
+    "network_request_failed": "Netzwerkanfrage fehlgeschlagen. Das Backend ist möglicherweise nicht verfügbar.",
     "validation_error": "Validierungsfehler. Bitte überprüfen Sie Ihre Eingaben.",
     "unknown_error": "Ein unbekannter Fehler ist aufgetreten.",
+    "unexpected_error": "Ein unerwarteter Fehler ist aufgetreten.",
+    "invalid_locale": "Die angeforderte Sprache ist ungültig.",
+    "locale_not_found": "Für die angeforderte Sprache wurden keine Übersetzungen gefunden.",
+    "fetch_failed": "Daten konnten nicht geladen werden.",
+    "update_failed": "Änderungen konnten nicht gespeichert werden.",
     "change_role_failed": "Rollenänderung fehlgeschlagen",
     "toggle_user_status_failed": "Benutzerstatuswechsel fehlgeschlagen",
     "delete_user_failed": "Benutzer löschen fehlgeschlagen",
@@ -494,7 +540,284 @@
     "forbidden": "Sie haben keine Berechtigung für diese Aktion.",
     "conflict": "Die Aktion konnte nicht ausgeführt werden, da ein Konflikt mit bestehenden Daten vorliegt.",
     "database_error": "Ein Datenbankfehler ist aufgetreten.",
-    "file_not_found": "Die Datei wurde nicht gefunden."
+    "file_not_found": "Die Datei wurde nicht gefunden.",
+    "expired": "Der Code ist abgelaufen. Bitte senden Sie einen neuen Prüfcode."
+  },
+  "notifications": {
+    "page": {
+      "title": "SMTP & Benachrichtigungen",
+      "description": "Konfigurieren Sie den SMTP-Versand, aktivieren Sie den Benachrichtigungsdienst und prüfen Sie die Zustellung mit Test-E-Mails."
+    },
+    "hero": {
+      "scope": "Nur für Superadmin sichtbar",
+      "service_status": "Dienststatus",
+      "delivery_channel": "SMTP-Ziel",
+      "last_sync": "Letzte Synchronisation"
+    },
+    "status": {
+      "enabled": "Benachrichtigungen aktiv",
+      "disabled": "Benachrichtigungen pausiert",
+      "not_configured": "Noch nicht konfiguriert",
+      "loading": "Lade Konfiguration",
+      "synced": "Mit Backend synchron",
+      "unsaved": "Ungespeicherte Änderungen"
+    },
+    "preferences": {
+      "channel_title": "Zustellung",
+      "frequency_title": "Zeitpunkt",
+      "email": {
+        "title": "Empfängeradresse",
+        "label": "Benachrichtigungs-E-Mail",
+        "verified": "Bestätigt",
+        "unverified": "Nicht bestätigt",
+        "missing": "Keine Adresse",
+        "send_code": "Prüfcode senden",
+        "sending_code": "Code wird gesendet...",
+        "code_label": "Prüfcode",
+        "verify": "E-Mail bestätigen",
+        "verifying": "Wird bestätigt...",
+        "ready": "Diese Adresse ist bestätigt und wird für E-Mail-Benachrichtigungen verwendet.",
+        "code_invalid": "Bitte geben Sie den 6-stelligen Prüfcode ein."
+      },
+      "channels": {
+        "email": {
+          "label": "E-Mail",
+          "description": "Benachrichtigungen an Ihre Benachrichtigungs-E-Mail senden."
+        },
+        "system": {
+          "label": "System",
+          "description": "Benachrichtigungen nur in Infra Link anzeigen."
+        },
+        "both": {
+          "label": "Beides",
+          "description": "E-Mail und Systembenachrichtigung kombinieren."
+        }
+      },
+      "frequencies": {
+        "immediate": {
+          "label": "Sofort",
+          "description": "Benachrichtigungen direkt auslösen."
+        },
+        "hourly": {
+          "label": "1h",
+          "description": "Benachrichtigungen stündlich sammeln."
+        },
+        "daily": {
+          "label": "Täglich",
+          "description": "Benachrichtigungen einmal pro Tag senden."
+        },
+        "weekly": {
+          "label": "Wöchentlich",
+          "description": "Benachrichtigungen einmal pro Woche senden."
+        }
+      }
+    },
+    "providers": {
+      "smtp": "SMTP"
+    },
+    "security": {
+      "none": "Ohne Transportverschlüsselung",
+      "starttls": "STARTTLS",
+      "tls": "TLS / SMTPS"
+    },
+    "security_descriptions": {
+      "none": "Verbindet unverschlüsselt. Nur in abgeschotteten Netzen sinnvoll.",
+      "starttls": "Beginnt unverschlüsselt und hebt die Verbindung per STARTTLS auf TLS an.",
+      "tls": "Verwendet vom ersten Paket an eine TLS-geschützte Verbindung."
+    },
+    "auth": {
+      "none": "Keine SMTP-Anmeldung",
+      "plain": "Benutzername + Passwort"
+    },
+    "auth_descriptions": {
+      "none": "Für Relays, die dem Absendernetz ohne Login vertrauen.",
+      "plain": "Standard für die meisten SMTP-Provider und Mailserver."
+    },
+    "overview": {
+      "title": "Aktuelle SMTP-Lage",
+      "description": "Zeigt den zuletzt gespeicherten Serverzustand und die Versandbereitschaft.",
+      "empty_title": "Es ist noch keine SMTP-Konfiguration gespeichert.",
+      "empty_description": "Speichern Sie unten Host, Authentifizierung und Absenderdaten, um E-Mail-Benachrichtigungen zu aktivieren.",
+      "provider": "Provider",
+      "host": "Host",
+      "port": "Port",
+      "sender": "Absender",
+      "reply_to": "Antwortadresse",
+      "transport": "Transport",
+      "authentication": "Authentifizierung",
+      "password_set": "Passwort hinterlegt",
+      "password_missing": "Kein Passwort gespeichert",
+      "updated_at": "Zuletzt aktualisiert",
+      "service_disabled": "Der Dienst ist gespeichert, aber derzeit deaktiviert. Ereignisse senden keine E-Mails, bis Sie ihn aktivieren.",
+      "service_enabled": "Die Konfiguration ist bereit für produktive Benachrichtigungen."
+    },
+    "form": {
+      "title": "SMTP einrichten",
+      "description": "Pflegen Sie Server, Senderidentität und Sicherheitsmodus an einer Stelle.",
+      "enable_title": "Benachrichtigungsdienst aktivieren",
+      "enable_description": "Wenn deaktiviert, bleibt die Konfiguration gespeichert, aber produktive Benachrichtigungen werden nicht versendet.",
+      "host": "SMTP-Host",
+      "host_placeholder": "smtp.example.com",
+      "port": "Port",
+      "username": "Benutzername",
+      "username_placeholder": "mailer@example.com",
+      "password": "Passwort",
+      "password_placeholder": "Nur eingeben, wenn Sie das Passwort setzen oder ändern möchten",
+      "from_email": "Absender-E-Mail",
+      "from_email_placeholder": "no-reply@example.com",
+      "from_name": "Absendername",
+      "from_name_placeholder": "Infra Link",
+      "reply_to": "Reply-To",
+      "reply_to_placeholder": "support@example.com",
+      "transport_title": "Transportsicherheit",
+      "transport_description": "Wählen Sie, wie sich der Backend-Dienst mit dem Mailserver verbindet.",
+      "auth_title": "SMTP-Authentifizierung",
+      "auth_description": "Legt fest, ob der Server einen Login erwartet.",
+      "allow_insecure_title": "Unsichere TLS-Zertifikate akzeptieren",
+      "allow_insecure_description": "Nur für Testsysteme oder interne Zertifikate ohne saubere Vertrauenskette verwenden.",
+      "password_required": "Ein Passwort ist erforderlich, solange die Authentifizierung auf Benutzername + Passwort steht.",
+      "password_kept": "Ein Passwort ist bereits gespeichert. Lassen Sie das Feld leer, um es unverändert zu behalten.",
+      "save": "SMTP speichern",
+      "reset": "Zurücksetzen"
+    },
+    "setup": {
+      "server_step": "Mailserver",
+      "server_description": "Host und Port des Servers, der E-Mails annimmt.",
+      "sender_step": "Absender",
+      "sender_description": "Adresse und Name, die Empfänger in der E-Mail sehen.",
+      "security_step": "Verbindung",
+      "security_description": "TLS-Modus und Zertifikatsprüfung für den SMTP-Transport.",
+      "auth_step": "Login",
+      "auth_description": "Anmeldedaten nur setzen, wenn Ihr Mailserver sie verlangt."
+    },
+    "test": {
+      "title": "Test-E-Mail senden",
+      "description": "Prüfen Sie direkt aus der Admin-Oberfläche, ob der Mailserver erreichbar ist.",
+      "to": "Empfänger",
+      "to_placeholder": "admin@example.com",
+      "subject": "Betreff",
+      "subject_placeholder": "SMTP-Konfigurationstest",
+      "body": "Nachricht",
+      "body_placeholder": "Dies ist eine Test-E-Mail aus Infra Link.",
+      "send": "Test senden",
+      "missing_config": "Speichern Sie zuerst eine SMTP-Konfiguration, bevor Sie eine Test-E-Mail senden.",
+      "disabled_hint": "Auch bei deaktiviertem Dienst wird die Test-E-Mail mit der gespeicherten Konfiguration versendet."
+    },
+    "validation": {
+      "host_required": "Host ist erforderlich.",
+      "port_range": "Port muss zwischen 1 und 65535 liegen.",
+      "email_invalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+      "username_required": "Benutzername ist erforderlich, wenn SMTP-Authentifizierung aktiv ist.",
+      "password_required": "Passwort ist erforderlich, wenn noch kein Passwort gespeichert ist."
+    },
+    "toasts": {
+      "saved": "SMTP-Konfiguration gespeichert.",
+      "test_sent": "Test-E-Mail wurde versendet.",
+      "refreshed": "SMTP-Konfiguration aktualisiert."
+    },
+    "inbox": {
+      "title": "Benachrichtigungen",
+      "page_title": "Benachrichtigungen",
+      "page_description": "Systembenachrichtigungen, Projektänderungen und Freigabehinweise an einem Ort.",
+      "open": "Benachrichtigungen öffnen",
+      "empty": "Keine Benachrichtigungen vorhanden.",
+      "view_all": "Alle anzeigen",
+      "unread_count": "{count} ungelesen",
+      "unread_only": "Nur ungelesene",
+      "mark_read": "Als gelesen markieren",
+      "mark_all_read": "Alle gelesen"
+    },
+    "rules": {
+      "title": "Benachrichtigungsregeln",
+      "description": "Definieren Sie, welche Empfänger bei späteren Projekt- und Ressourcenereignissen informiert werden.",
+      "name": "Name",
+      "event_key": "Ereignis",
+      "event_search": "Ereignis suchen...",
+      "project_id": "Projekt",
+      "project_placeholder": "Projekt auswählen...",
+      "project_search": "Projekt suchen...",
+      "resource_type": "Ressourcentyp",
+      "resource_type_search": "Ressourcentyp suchen...",
+      "resource_id": "Ressource",
+      "resource_placeholder": "Ressource auswählen...",
+      "resource_search": "Ressource suchen...",
+      "resource_requires_project": "Zuerst Projekt auswählen...",
+      "resource_not_available": "Keine einzelne Ressource verfügbar...",
+      "recipient_type": "Empfängerart",
+      "recipient_type_search": "Empfängerart suchen...",
+      "recipient_project_users": "Projektbenutzer",
+      "recipient_project_role": "Projektrolle",
+      "recipient_team": "Team",
+      "recipient_users": "Einzelne Benutzer",
+      "enabled": "Aktiv",
+      "user_ids": "Benutzer-IDs",
+      "team_id": "Team",
+      "team_placeholder": "Team auswählen...",
+      "team_search": "Team suchen...",
+      "role": "Rolle",
+      "role_search": "Rolle suchen...",
+      "role_hint": "Die Rolle meint die Benutzerrolle des Projektmitglieds, zum Beispiel FZAG oder Planer.",
+      "create": "Regel erstellen",
+      "empty": "Noch keine Benachrichtigungsregeln.",
+      "clear_selection": "Auswahl löschen",
+      "no_events": "Keine Ereignisse gefunden.",
+      "no_projects": "Keine Projekte gefunden.",
+      "no_resource_types": "Keine Ressourcentypen gefunden.",
+      "no_resources": "Keine Ressourcen gefunden.",
+      "no_recipient_types": "Keine Empfängerarten gefunden.",
+      "no_roles": "Keine Rollen gefunden.",
+      "no_teams": "Keine Teams gefunden.",
+      "events": {
+        "project_updated": "Projekt aktualisiert",
+        "project_deleted": "Projekt gelöscht",
+        "project_phase_changed": "Projektphase geändert",
+        "project_user_invited": "Projektmitglied hinzugefügt",
+        "project_user_removed": "Projektmitglied entfernt",
+        "control_cabinet_created": "Schaltschrank hinzugefügt",
+        "control_cabinet_updated": "Schaltschrank aktualisiert",
+        "control_cabinet_deleted": "Schaltschrank entfernt",
+        "sps_controller_created": "SPS-Regler hinzugefügt",
+        "sps_controller_updated": "SPS-Regler aktualisiert",
+        "sps_controller_deleted": "SPS-Regler entfernt",
+        "sps_controller_ip_changed": "SPS-Regler IP-Adresse geändert",
+        "field_device_created": "Feldgerät hinzugefügt",
+        "field_device_updated": "Feldgerät aktualisiert",
+        "field_device_deleted": "Feldgerät entfernt",
+        "field_device_multi_created": "Feldgeräte hinzugefügt",
+        "object_data_created": "Objektdaten verknüpft",
+        "object_data_deleted": "Objektdaten entfernt"
+      },
+      "resource_types": {
+        "all": "Alle Ressourcen",
+        "project": "Projekt",
+        "project_user": "Projektmitglied",
+        "control_cabinet": "Schaltschrank",
+        "sps_controller": "SPS-Regler",
+        "field_device": "Feldgerät",
+        "object_data": "Objektdaten"
+      }
+    },
+    "errors": {
+      "smtp_settings_not_configured": "SMTP ist noch nicht konfiguriert. Bitte richten Sie zuerst den Mailserver ein.",
+      "smtp_settings_load_failed": "SMTP-Einstellungen konnten nicht geladen werden.",
+      "smtp_settings_save_failed": "SMTP-Einstellungen konnten nicht gespeichert werden.",
+      "smtp_disabled": "Der SMTP-Benachrichtigungsdienst ist deaktiviert.",
+      "smtp_delivery_failed": "Die E-Mail konnte nicht zugestellt werden. Bitte prüfen Sie SMTP-Server, Zugangsdaten und Netzwerk.",
+      "smtp_secret_failed": "Das gespeicherte SMTP-Passwort konnte nicht gelesen werden.",
+      "smtp_test_failed": "Die Test-E-Mail konnte nicht gesendet werden.",
+      "preference_load_failed": "Benachrichtigungseinstellungen konnten nicht geladen werden.",
+      "preference_save_failed": "Benachrichtigungseinstellungen konnten nicht gespeichert werden.",
+      "email_verification_failed": "Die Benachrichtigungs-E-Mail konnte nicht bestätigt werden.",
+      "notifications_load_failed": "Benachrichtigungen konnten nicht geladen werden.",
+      "notification_count_load_failed": "Der Benachrichtigungszähler konnte nicht geladen werden.",
+      "mark_read_failed": "Benachrichtigung konnte nicht als gelesen markiert werden.",
+      "mark_all_read_failed": "Benachrichtigungen konnten nicht als gelesen markiert werden.",
+      "notification_not_found": "Benachrichtigung nicht gefunden.",
+      "rules_load_failed": "Benachrichtigungsregeln konnten nicht geladen werden.",
+      "rule_save_failed": "Benachrichtigungsregel konnte nicht gespeichert werden.",
+      "rule_delete_failed": "Benachrichtigungsregel konnte nicht gelöscht werden.",
+      "rule_not_found": "Benachrichtigungsregel nicht gefunden."
+    }
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -543,6 +866,38 @@
     "settings_theme_light_desc": "Verwenden Sie immer das helle Design.",
     "settings_theme_dark": "Dunkel",
     "settings_theme_dark_desc": "Verwenden Sie immer das dunkle Design.",
+    "settings_contrast": "Kontrast",
+    "settings_contrast_desc": "Passen Sie die Lesbarkeit der Oberfläche an.",
+    "settings_contrast_reset": "Kontrast zurücksetzen",
+    "settings_contrast_min": "Niedrig",
+    "settings_contrast_default": "Standard",
+    "settings_contrast_max": "Hoch",
+    "settings_font": "Schrift",
+    "settings_font_desc": "Wählen Sie die Schriftart für die Oberfläche.",
+    "settings_font_noto": "Noto Sans",
+    "settings_font_noto_desc": "Standard-Schrift für Infra Link.",
+    "settings_font_system": "System",
+    "settings_font_system_desc": "Verwendet die Schrift Ihres Betriebssystems.",
+    "settings_font_serif": "Serif",
+    "settings_font_serif_desc": "Klassische Serifenschrift.",
+    "settings_font_mono": "Mono",
+    "settings_font_mono_desc": "Monospace-Schrift für technische Inhalte.",
+    "account_desc": "Verwalten Sie Ihre Kontodaten, Passwort und Einstellungen.",
+    "account_tabs_information": "Information",
+    "account_tabs_notifications": "Benachrichtigungen",
+    "account_tabs_password": "Passwort",
+    "account_tabs_preferences": "Präferenzen",
+    "account_information_title": "Kontoinformationen",
+    "account_information_desc": "Aktualisieren Sie Ihre persönlichen Daten.",
+    "account_access_title": "Rolle, Berechtigungen und Teams",
+    "account_permissions_empty": "Keine Berechtigungen zugewiesen.",
+    "account_teams_empty": "Keinen Teams zugeordnet.",
+    "account_notifications_title": "Benachrichtigungen",
+    "account_notifications_desc": "Legen Sie fest, über welche Kanäle und in welchem Rhythmus Sie Projekt- und Freigabeereignisse erhalten.",
+    "account_notifications_empty": "Dieser Bereich bleibt vorerst leer.",
+    "account_password_title": "Passwort ändern",
+    "account_password_desc": "Legen Sie ein neues Passwort für Ihr Konto fest.",
+    "account_password_save": "Passwort speichern",
     "optional": "optional",
     "teams_desc": "Erstellen Sie Teams und verwalten Sie den Zugriff.",
     "create_team": "Team erstellen",
@@ -597,6 +952,11 @@
     "team_description": "Team-Beschreibung (optional)",
     "loading_teams": "Teams werden geladen...",
     "account_page": "Konto-Seite",
+    "account_info_saved": "Kontoinformationen erfolgreich gespeichert.",
+    "account_notifications_saved": "Benachrichtigungseinstellungen gespeichert.",
+    "account_notification_email_code_sent": "Prüfcode wurde an Ihre Benachrichtigungs-E-Mail gesendet.",
+    "account_notification_email_verified": "Benachrichtigungs-E-Mail bestätigt.",
+    "account_password_saved": "Passwort erfolgreich aktualisiert.",
     "never": "Nie",
     "today": "Heute",
     "yesterday": "Gestern",

@@ -65,7 +65,6 @@ func (h *Handler) CreateProjectSPSController(c *gin.Context) {
 		h.access,
 		projectID,
 		domainUser.PermissionProjectSPSControllerCreate,
-		domainUser.PermissionProjectSPSControllerEdit,
 	) {
 		return
 	}
@@ -146,7 +145,6 @@ func (h *Handler) CopyProjectSPSController(c *gin.Context) {
 		h.access,
 		projectID,
 		domainUser.PermissionProjectSPSControllerCreate,
-		domainUser.PermissionProjectSPSControllerEdit,
 	) {
 		return
 	}
@@ -186,8 +184,6 @@ func (h *Handler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 		h.access,
 		projectID,
 		domainUser.PermissionProjectSPSControllerSystemTypeCreate,
-		domainUser.PermissionProjectSPSControllerSystemTypeEdit,
-		domainUser.PermissionProjectSPSControllerEdit,
 	) {
 		return
 	}
@@ -237,7 +233,6 @@ func (h *Handler) UpdateProjectSPSController(c *gin.Context) {
 		h.access,
 		projectID,
 		domainUser.PermissionProjectSPSControllerUpdate,
-		domainUser.PermissionProjectSPSControllerEdit,
 	) {
 		return
 	}
@@ -290,7 +285,6 @@ func (h *Handler) DeleteProjectSPSController(c *gin.Context) {
 		h.access,
 		projectID,
 		domainUser.PermissionProjectSPSControllerDelete,
-		domainUser.PermissionProjectSPSControllerEdit,
 	) {
 		return
 	}

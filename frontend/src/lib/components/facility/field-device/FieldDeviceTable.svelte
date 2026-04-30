@@ -3,11 +3,14 @@
   import * as Table from '$lib/components/ui/table/index.js';
   import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-  import { ArrowDown, ArrowUp, Settings2 } from '@lucide/svelte';
+  import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Settings2 } from '@lucide/svelte';
   import BacnetObjectsEditor from '../bacnet/BacnetObjectsEditor.svelte';
   import FieldDeviceTableRow from './FieldDeviceTableRow.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { useFieldDeviceState } from './state/context.svelte.js';
+  import type { FieldDevice } from '$lib/domain/facility/index.js';
+  import type { TableGroupNode } from '$lib/state/table/TableViewState.svelte.js';
+  import type { FieldDeviceGroupKey } from './state/FieldDeviceTableView.svelte.js';
 
   const t = createTranslator();
   const state = useFieldDeviceState();
@@ -17,10 +20,16 @@
   const columnCount = $derived.by(() =>
     state.showSpecifications ? baseColumnCount + specColumnCount : baseColumnCount
   );
+
+  function getGroupLabelKey(key: FieldDeviceGroupKey): string {
+    return (
+      state.view.grouping.definitions.find((definition) => definition.key === key)?.labelKey ?? ''
+    );
+  }
 </script>
 
 <div class="max-w-full min-w-0 rounded-lg border bg-background">
-  <Table.Root class="[&_td]:p-2 [&_th]:h-10 [&_th]:px-2">
+  <Table.Root class={state.view.tableClass}>
     <Table.Header>
       <Table.Row>
         <Table.Head class="w-10">
@@ -302,6 +311,75 @@
       </Table.Row>
     </Table.Header>
     <Table.Body>
+      {#snippet renderDevice(device: FieldDevice)}
+        <FieldDeviceTableRow {device} />
+
+        {#if state.isBacnetExpanded(device.id)}
+          <Table.Row class="bg-muted/30 hover:bg-muted/40">
+            <Table.Cell colspan={columnCount} class="p-0">
+              {#if state.isBacnetLoading(device.id)}
+                <div class="p-4">
+                  <Skeleton class="h-10 w-full" />
+                </div>
+              {:else}
+                <BacnetObjectsEditor
+                  bacnetObjects={device.bacnet_objects ?? []}
+                  pendingEdits={state.editing.getBacnetPendingEdits(device.id) ?? new Map()}
+                  fieldErrors={state.editing.getBacnetFieldErrors(device.id) ?? new Map()}
+                  clientErrors={state.editing.getBacnetClientErrors(device.id) ?? new Map()}
+                  sharedEditors={state.getEditorsForDevice(device.id)}
+                  disabled={!state.canUpdateFieldDeviceBacnetObjects()}
+                  onEdit={(objectId, field, value) => {
+                    state.editing.queueBacnetEdit(device.id, objectId, field, value);
+                  }}
+                />
+              {/if}
+            </Table.Cell>
+          </Table.Row>
+        {/if}
+      {/snippet}
+
+      {#snippet renderGroup(group: TableGroupNode<FieldDevice, FieldDeviceGroupKey>)}
+        <Table.Row class="bg-muted/35 hover:bg-muted/50">
+          <Table.Cell colspan={columnCount} class="p-0">
+            <button
+              type="button"
+              class="flex w-full items-center gap-2 px-3 py-2 text-left font-medium"
+              style={`padding-left: ${0.75 + group.level * 1.25}rem`}
+              aria-expanded={state.view.grouping.isGroupExpanded(group.id)}
+              onclick={() => state.view.grouping.toggleGroupExpansion(group.id)}
+            >
+              {#if state.view.grouping.isGroupExpanded(group.id)}
+                <ChevronDown class="h-4 w-4 text-muted-foreground" />
+              {:else}
+                <ChevronRight class="h-4 w-4 text-muted-foreground" />
+              {/if}
+              <span class="text-xs font-semibold text-muted-foreground uppercase">
+                {$t(getGroupLabelKey(group.key))}
+              </span>
+              <span class="truncate">{group.label}</span>
+              <span
+                class="ml-auto rounded bg-background px-1.5 py-0.5 text-xs font-medium text-muted-foreground"
+              >
+                {$t('field_device.view.group_count', { count: group.count })}
+              </span>
+            </button>
+          </Table.Cell>
+        </Table.Row>
+
+        {#if state.view.grouping.isGroupExpanded(group.id)}
+          {#if group.children.length > 0}
+            {#each group.children as child (child.id)}
+              {@render renderGroup(child)}
+            {/each}
+          {:else}
+            {#each group.items as device (device.id)}
+              {@render renderDevice(device)}
+            {/each}
+          {/if}
+        {/if}
+      {/snippet}
+
       {#if state.loading && state.items.length === 0}
         {#each Array(5) as _}
           <Table.Row>
@@ -323,33 +401,13 @@
             </div>
           </Table.Cell>
         </Table.Row>
+      {:else if state.view.grouping.isGrouped}
+        {#each state.tableGroups as group (group.id)}
+          {@render renderGroup(group)}
+        {/each}
       {:else}
         {#each state.items as device (device.id)}
-          <FieldDeviceTableRow {device} />
-
-          {#if state.isBacnetExpanded(device.id)}
-            <Table.Row class="bg-muted/30 hover:bg-muted/40">
-              <Table.Cell colspan={columnCount} class="p-0">
-                {#if state.isBacnetLoading(device.id)}
-                  <div class="p-4">
-                    <Skeleton class="h-10 w-full" />
-                  </div>
-                {:else}
-                  <BacnetObjectsEditor
-                    bacnetObjects={device.bacnet_objects ?? []}
-                    pendingEdits={state.editing.getBacnetPendingEdits(device.id) ?? new Map()}
-                    fieldErrors={state.editing.getBacnetFieldErrors(device.id) ?? new Map()}
-                    clientErrors={state.editing.getBacnetClientErrors(device.id) ?? new Map()}
-                    sharedEditors={state.getEditorsForDevice(device.id)}
-                    disabled={!state.canUpdateFieldDeviceBacnetObjects()}
-                    onEdit={(objectId, field, value) => {
-                      state.editing.queueBacnetEdit(device.id, objectId, field, value);
-                    }}
-                  />
-                {/if}
-              </Table.Cell>
-            </Table.Row>
-          {/if}
+          {@render renderDevice(device)}
         {/each}
       {/if}
     </Table.Body>

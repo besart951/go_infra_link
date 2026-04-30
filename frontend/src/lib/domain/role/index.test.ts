@@ -19,10 +19,10 @@ describe('role permission helpers', () => {
   });
 
   it('parses underscored project specification permissions', () => {
-    expect(parsePermissionName('project.fielddevice_specification.edit')).toEqual({
+    expect(parsePermissionName('project.fielddevice_specification.update')).toEqual({
       resource: 'project',
       subResource: 'fielddevice_specification',
-      action: 'edit',
+      action: 'update',
       category: 'project'
     });
   });

@@ -8,12 +8,33 @@
       (function () {
         try {
           var pref = localStorage.getItem('theme_preference') || 'system';
+          var contrast = Number(localStorage.getItem('contrast_preference') || '100');
+          var font = localStorage.getItem('font_preference') || 'noto';
+          var fonts = {
+            noto: "'Noto Sans Variable', 'Noto Sans', sans-serif",
+            system: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+            serif: "Georgia, 'Times New Roman', serif",
+            mono: "'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace"
+          };
           var dark =
             pref === 'dark' ||
             (pref === 'system' &&
               window.matchMedia &&
               window.matchMedia('(prefers-color-scheme: dark)').matches);
           document.documentElement.classList.toggle('dark', !!dark);
+          if (!Number.isFinite(contrast) || contrast < 80 || contrast > 140) {
+            contrast = 100;
+          }
+          contrast = Math.min(140, Math.max(80, Math.round(contrast / 5) * 5));
+          document.documentElement.style.setProperty('--app-contrast', contrast + '%');
+          document.documentElement.style.setProperty(
+            '--app-contrast-filter',
+            contrast === 100 ? 'none' : 'contrast(' + contrast + '%)'
+          );
+          document.documentElement.style.setProperty(
+            '--app-font-family',
+            fonts[font] || fonts.noto
+          );
         } catch (e) {
           // ignore
         }

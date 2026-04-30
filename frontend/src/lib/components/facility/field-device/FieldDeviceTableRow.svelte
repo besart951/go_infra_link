@@ -12,6 +12,7 @@
   import type { SharedFieldDeviceEditor } from '$lib/services/projectCollaboration.svelte.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { useFieldDeviceState } from './state/context.svelte.js';
+  import { formatFieldDeviceSPSControllerSystemType } from './state/FieldDeviceTableView.svelte.js';
 
   interface Props {
     device: FieldDevice;
@@ -26,32 +27,6 @@
     if (value === null || value === undefined || value === '') return '';
     if (isNumeric && typeof value === 'number') return String(value);
     return String(value);
-  }
-
-  function formatSPSControllerSystemType(fieldDevice: FieldDevice): string {
-    const systemType = fieldDevice.sps_controller_system_type;
-    if (!systemType) return '-';
-
-    const deviceName = systemType.sps_controller_name ?? '';
-    const number =
-      systemType.number === null || systemType.number === undefined
-        ? ''
-        : String(systemType.number).padStart(4, '0');
-    const documentName = systemType.document_name ?? '';
-
-    let systemTypePart = '';
-    if (number && documentName) {
-      systemTypePart = `${number} - ${documentName}`;
-    } else if (number) {
-      systemTypePart = number;
-    } else if (documentName) {
-      systemTypePart = documentName;
-    }
-
-    if (deviceName && systemTypePart) return `${deviceName}_${systemTypePart}`;
-    if (deviceName) return deviceName;
-    if (systemTypePart) return systemTypePart;
-    return '-';
   }
 
   function handleApparatChange(newApparatId: string) {
@@ -134,7 +109,7 @@
     </Button>
   </Table.Cell>
   <Table.Cell class="font-medium">
-    {formatSPSControllerSystemType(device)}
+    {formatFieldDeviceSPSControllerSystemType(device)}
   </Table.Cell>
   <Table.Cell class="p-1">
     <div class={getEditingFieldClass('bmk')} title={getFieldPreviewTitle('bmk')}>

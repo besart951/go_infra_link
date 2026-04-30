@@ -16,6 +16,7 @@ import (
 type AccessPolicyService interface {
 	CanAccessProject(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role) (bool, error)
 	CanUseProjectPermission(ctx context.Context, requesterID uuid.UUID, requesterRole *domainUser.Role, permission string) (bool, error)
+	CanUseProjectPermissionForProject(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role, permission string) (bool, error)
 }
 
 type ProjectChangeNotifier func(*gin.Context, uuid.UUID, string, ...string)
@@ -70,14 +71,14 @@ func EnsureProjectAccessAndPermission(c *gin.Context, access AccessPolicyService
 	if !EnsureProjectAccess(c, access, projectID) {
 		return false
 	}
-	return EnsureProjectPermission(c, access, permission)
+	return EnsureProjectPermissionForProject(c, access, projectID, permission)
 }
 
 func EnsureProjectAccessAndAnyPermission(c *gin.Context, access AccessPolicyService, projectID uuid.UUID, permissions ...string) bool {
 	if !EnsureProjectAccess(c, access, projectID) {
 		return false
 	}
-	return EnsureProjectAnyPermission(c, access, permissions...)
+	return EnsureProjectAnyPermissionForProject(c, access, projectID, permissions...)
 }
 
 func EnsureProjectPermission(c *gin.Context, access AccessPolicyService, permission string) bool {
@@ -127,6 +128,53 @@ func EnsureProjectAnyPermission(c *gin.Context, access AccessPolicyService, perm
 	return false
 }
 
+func EnsureProjectPermissionForProject(c *gin.Context, access AccessPolicyService, projectID uuid.UUID, permission string) bool {
+	return EnsureProjectAnyPermissionForProject(c, access, projectID, permission)
+}
+
+func EnsureProjectAnyPermissionForProject(c *gin.Context, access AccessPolicyService, projectID uuid.UUID, permissions ...string) bool {
+	if access == nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "authorization_failed", "authorization_failed")
+		return false
+	}
+
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return false
+	}
+
+	var requesterRole *domainUser.Role
+	if role, ok := middleware.GetUserRole(c); ok {
+		requesterRole = &role
+	}
+
+	for _, permission := range permissions {
+		cacheKey := projectScopedPermissionCacheKey(userID, projectID, requesterRole, permission)
+		if cached, ok := c.Get(cacheKey); ok {
+			if hasPermission, ok := cached.(bool); ok {
+				if hasPermission {
+					return true
+				}
+				continue
+			}
+		}
+
+		hasPermission, err := access.CanUseProjectPermissionForProject(c.Request.Context(), userID, projectID, requesterRole, permission)
+		if err != nil {
+			handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "authorization_failed", "authorization_failed")
+			return false
+		}
+		c.Set(cacheKey, hasPermission)
+		if hasPermission {
+			return true
+		}
+	}
+
+	handlerutil.RespondLocalizedError(c, http.StatusForbidden, "forbidden", "errors.forbidden")
+	return false
+}
+
 func projectAccessCacheKey(userID, projectID uuid.UUID, requesterRole *domainUser.Role) string {
 	role := ""
 	if requesterRole != nil {
@@ -141,4 +189,12 @@ func projectPermissionCacheKey(userID uuid.UUID, requesterRole *domainUser.Role,
 		role = string(*requesterRole)
 	}
 	return fmt.Sprintf("project_permission:%s:%s:%s", userID, role, permission)
+}
+
+func projectScopedPermissionCacheKey(userID, projectID uuid.UUID, requesterRole *domainUser.Role, permission string) string {
+	role := ""
+	if requesterRole != nil {
+		role = string(*requesterRole)
+	}
+	return fmt.Sprintf("project_permission:%s:%s:%s:%s", userID, projectID, role, permission)
 }

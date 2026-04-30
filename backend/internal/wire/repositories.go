@@ -23,6 +23,7 @@ import (
 type Repositories struct {
 	Project                  domainProject.ProjectRepository
 	Phase                    domainProject.PhaseRepository
+	PhasePermissions         domainProject.PhasePermissionRepository
 	ProjectControlCabinets   domainProject.ProjectControlCabinetRepository
 	ProjectSPSControllers    domainProject.ProjectSPSControllerRepository
 	ProjectFieldDevices      domainProject.ProjectFieldDeviceRepository
@@ -32,6 +33,10 @@ type Repositories struct {
 	RolePermissions          domainUser.RolePermissionRepository
 	RefreshToken             domainAuth.RefreshTokenRepository
 	NotificationSMTPSettings domainNotification.SMTPSettingsRepository
+	NotificationPreferences  domainNotification.UserPreferenceRepository
+	SystemNotifications      domainNotification.SystemNotificationRepository
+	NotificationEmailOutbox  domainNotification.EmailOutboxRepository
+	NotificationRules        domainNotification.NotificationRuleRepository
 	Team                     domainTeam.TeamRepository
 	TeamMember               domainTeam.TeamMemberRepository
 
@@ -72,6 +77,7 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 	return &Repositories{
 		Project:                  projectrepo.NewProjectRepository(gormDB),
 		Phase:                    projectrepo.NewPhaseRepository(gormDB),
+		PhasePermissions:         projectrepo.NewPhasePermissionRepository(gormDB),
 		ProjectControlCabinets:   projectsqlrepo.NewProjectControlCabinetRepository(gormDB),
 		ProjectSPSControllers:    projectsqlrepo.NewProjectSPSControllerRepository(gormDB),
 		ProjectFieldDevices:      projectsqlrepo.NewProjectFieldDeviceRepository(gormDB),
@@ -81,6 +87,10 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 		RolePermissions:          rolePermissionRepo,
 		RefreshToken:             authrepo.NewRefreshTokenRepository(gormDB),
 		NotificationSMTPSettings: notificationrepo.NewSMTPSettingsRepository(gormDB),
+		NotificationPreferences:  notificationrepo.NewUserPreferenceRepository(gormDB),
+		SystemNotifications:      notificationrepo.NewSystemNotificationRepository(gormDB),
+		NotificationEmailOutbox:  notificationrepo.NewEmailOutboxRepository(gormDB),
+		NotificationRules:        notificationrepo.NewNotificationRuleRepository(gormDB),
 		Team:                     teamrepo.NewTeamRepository(gormDB),
 		TeamMember:               teamrepo.NewTeamMemberRepository(gormDB),
 

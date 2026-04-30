@@ -9,7 +9,10 @@ import type { NotificationSettingsRepository } from '$lib/domain/ports/notificat
 export const notificationSettingsRepository: NotificationSettingsRepository = {
   async getSMTPSettings(signal?: AbortSignal): Promise<SMTPSettings | null> {
     try {
-      return await api<SMTPSettings>('/admin/notifications/smtp', { signal });
+      return await api<SMTPSettings>('/admin/notifications/smtp', {
+        signal,
+        skipHttpErrorNavigation: true
+      });
     } catch (error) {
       if (error instanceof ApiException && error.status === 404) {
         return null;

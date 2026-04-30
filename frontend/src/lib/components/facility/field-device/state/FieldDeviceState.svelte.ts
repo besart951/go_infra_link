@@ -5,11 +5,21 @@ import { ManageFieldDeviceUseCase } from '$lib/application/useCases/facility/man
 import { ListEntityUseCase } from '$lib/application/useCases/listEntityUseCase.js';
 import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
+import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
+import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
 import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
+import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
 import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
 import { canPerform, canPerformAny } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
-import type { Apparat, FieldDevice, SystemPart } from '$lib/domain/facility/index.js';
+import type {
+  Apparat,
+  Building,
+  ControlCabinet,
+  FieldDevice,
+  SPSController,
+  SystemPart
+} from '$lib/domain/facility/index.js';
 import type {
   FieldDeviceFilters,
   FieldDeviceStateProps,
@@ -17,12 +27,24 @@ import type {
 } from './types.js';
 import { resolvePageSize, toProjectIdResolver } from './types.js';
 import { FieldDeviceFetchStrategyFactory } from './strategies/FieldDeviceFetchStrategyFactory.js';
+import {
+  FieldDeviceTableViewState,
+  type FieldDeviceGroupKey
+} from './FieldDeviceTableView.svelte.js';
 
 export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDeviceFilters> {
   readonly editing: ReturnType<typeof useFieldDeviceEditing>;
+  readonly view = new FieldDeviceTableViewState({
+    getSPSController: (id) => this.groupingSPSControllers.get(id),
+    getControlCabinet: (id) => this.groupingControlCabinets.get(id),
+    getBuilding: (id) => this.groupingBuildings.get(id)
+  });
 
   allApparats = $state<Apparat[]>([]);
   allSystemParts = $state<SystemPart[]>([]);
+  groupingSPSControllers = $state<Map<string, SPSController>>(new Map());
+  groupingControlCabinets = $state<Map<string, ControlCabinet>>(new Map());
+  groupingBuildings = $state<Map<string, Building>>(new Map());
   showMultiCreateForm = $state(false);
   bulkEditPanelOpen = $state(false);
   showExportPanel = $state(false);
@@ -31,8 +53,10 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   expandedBacnetRows = $state<Set<string>>(new Set());
   loadingBacnetRows = $state<Set<string>>(new Set());
   loadingSpecifications = $state(false);
+  loadingGroupingLookups = $state(false);
 
   readonly showBulkEditPanel = $derived.by(() => this.bulkEditPanelOpen && this.selectedCount > 0);
+  readonly tableGroups = $derived.by(() => this.view.groupItems(this.items));
 
   private readonly resolveProjectId: () => string | undefined;
   private readonly resolveSharedFieldDeviceEditors: () => SharedFieldDeviceEditorsByDevice;
@@ -166,6 +190,10 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   override async load(): Promise<void> {
     await super.load();
 
+    if (this.view.grouping.isGrouped && !this.error && !this.loading) {
+      await this.loadGroupingLookupsForVisibleDevices();
+    }
+
     if (!this.showSpecifications || this.error || this.loading) {
       return;
     }
@@ -226,6 +254,14 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   toggleFilterPanel(): void {
     this.showFilterPanel = !this.showFilterPanel;
+  }
+
+  async toggleGrouping(key: FieldDeviceGroupKey): Promise<void> {
+    this.view.grouping.toggle(key);
+
+    if (this.view.grouping.isGrouped) {
+      await this.loadGroupingLookupsForVisibleDevices();
+    }
   }
 
   async toggleSpecifications(): Promise<void> {
@@ -368,6 +404,9 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
       );
 
       this.replaceItems(updatedItems);
+      if (this.view.grouping.isGrouped) {
+        await this.loadGroupingLookupsForVisibleDevices();
+      }
     } catch (error) {
       console.error('Failed to refresh field devices:', error);
       await this.reload();
@@ -396,6 +435,9 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     }
 
     this.replaceItems(visibleDevices);
+    if (this.view.grouping.isGrouped) {
+      await this.loadGroupingLookupsForVisibleDevices();
+    }
   }
 
   async refreshDevicesForSPSControllers(spsControllerIds: string[]): Promise<void> {
@@ -532,6 +574,91 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     return new Map(links.items.map((item) => [item.field_device_id, item.id]));
   }
 
+  private async loadGroupingLookupsForVisibleDevices(): Promise<void> {
+    if (this.loadingGroupingLookups) return;
+
+    const activeGroups = new Set(this.view.grouping.activeKeys);
+    const shouldLoadControllers =
+      activeGroups.has('building') ||
+      activeGroups.has('controlCabinet') ||
+      activeGroups.has('spsController');
+    const shouldLoadCabinets = activeGroups.has('building') || activeGroups.has('controlCabinet');
+    const shouldLoadBuildings = activeGroups.has('building');
+
+    if (!shouldLoadControllers && !shouldLoadCabinets && !shouldLoadBuildings) {
+      return;
+    }
+
+    this.loadingGroupingLookups = true;
+
+    try {
+      const visibleControllerIds = [
+        ...new Set(
+          this.items
+            .map((item) => item.sps_controller_system_type?.sps_controller_id)
+            .filter((id): id is string => Boolean(id))
+        )
+      ];
+
+      if (shouldLoadControllers) {
+        const missingControllerIds = visibleControllerIds.filter(
+          (id) => !this.groupingSPSControllers.has(id)
+        );
+
+        if (missingControllerIds.length > 0) {
+          const controllers = await spsControllerRepository.getBulk(missingControllerIds);
+          this.groupingSPSControllers = this.mergeLookupItems(
+            this.groupingSPSControllers,
+            controllers
+          );
+        }
+      }
+
+      if (shouldLoadCabinets) {
+        const visibleCabinetIds = [
+          ...new Set(
+            visibleControllerIds
+              .map((id) => this.groupingSPSControllers.get(id)?.control_cabinet_id)
+              .filter((id): id is string => Boolean(id))
+          )
+        ];
+        const missingCabinetIds = visibleCabinetIds.filter(
+          (id) => !this.groupingControlCabinets.has(id)
+        );
+
+        if (missingCabinetIds.length > 0) {
+          const cabinets = await controlCabinetRepository.getBulk(missingCabinetIds);
+          this.groupingControlCabinets = this.mergeLookupItems(
+            this.groupingControlCabinets,
+            cabinets
+          );
+        }
+      }
+
+      if (shouldLoadBuildings) {
+        const visibleBuildingIds = [
+          ...new Set(
+            [...this.groupingControlCabinets.values()]
+              .map((cabinet) => cabinet.building_id)
+              .filter((id): id is string => Boolean(id))
+          )
+        ];
+        const missingBuildingIds = visibleBuildingIds.filter(
+          (id) => !this.groupingBuildings.has(id)
+        );
+
+        if (missingBuildingIds.length > 0) {
+          const buildings = await buildingRepository.getBulk(missingBuildingIds);
+          this.groupingBuildings = this.mergeLookupItems(this.groupingBuildings, buildings);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load field device grouping lookups:', error);
+    } finally {
+      this.loadingGroupingLookups = false;
+    }
+  }
+
   private async loadSpecificationDetailsForVisibleDevices(): Promise<void> {
     if (this.loadingSpecifications) return;
 
@@ -595,6 +722,17 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
       system_part: updated.system_part ?? current.system_part,
       bacnet_objects: current.bacnet_objects ?? updated.bacnet_objects
     };
+  }
+
+  private mergeLookupItems<TItem extends { id: string }>(
+    current: Map<string, TItem>,
+    items: TItem[]
+  ): Map<string, TItem> {
+    const next = new Map(current);
+    for (const item of items) {
+      next.set(item.id, item);
+    }
+    return next;
   }
 
   private async mapWithConcurrency<T, TResult>(

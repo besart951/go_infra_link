@@ -5,6 +5,7 @@
   import { createTranslator } from '$lib/i18n/translator.js';
   import * as ButtonGroup from '$lib/components/ui/button-group/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+  import FieldDeviceViewPopover from './FieldDeviceViewPopover.svelte';
   import { useFieldDeviceState } from './state/context.svelte.js';
 
   const t = createTranslator();
@@ -88,6 +89,8 @@
           </Tooltip.Trigger>
           <Tooltip.Content>{$t('field_device.search.table')}</Tooltip.Content>
         </Tooltip.Root>
+
+        <FieldDeviceViewPopover />
 
         <Tooltip.Root>
           <Tooltip.Trigger

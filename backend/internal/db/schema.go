@@ -33,12 +33,17 @@ func currentSchemaModels() []any {
 
 		&auth.RefreshToken{},
 		&notification.SMTPSettings{},
+		&notification.UserPreference{},
+		&notification.SystemNotification{},
+		&notification.EmailOutbox{},
+		&notification.NotificationRule{},
 
 		&team.Team{},
 		&team.TeamMember{},
 		&user.UserTeam{},
 
 		&project.Phase{},
+		&project.PhasePermission{},
 		&facility.Building{},
 		&facility.ControlCabinet{},
 		&facility.SPSController{},

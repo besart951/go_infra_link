@@ -16,6 +16,7 @@ import (
 	notificationservice "github.com/besart951/go_infra_link/backend/internal/service/notification"
 	passwordsvc "github.com/besart951/go_infra_link/backend/internal/service/password"
 	phaseservice "github.com/besart951/go_infra_link/backend/internal/service/phase"
+	phasepermissionservice "github.com/besart951/go_infra_link/backend/internal/service/phasepermission"
 	projectservice "github.com/besart951/go_infra_link/backend/internal/service/project"
 	rbacservice "github.com/besart951/go_infra_link/backend/internal/service/rbac"
 	teamservice "github.com/besart951/go_infra_link/backend/internal/service/team"
@@ -26,19 +27,20 @@ import (
 
 // Services holds all service instances.
 type Services struct {
-	Project       *projectservice.Services
-	Dashboard     *dashboardservice.Service
-	Phase         *phaseservice.Service
-	User          *userservice.Service
-	Auth          *authservice.Service
-	JWT           domainAuth.TokenService
-	RBAC          *rbacservice.Service
-	Team          *teamservice.Service
-	Admin         *adminservice.Service
-	UserDirectory *userdirectoryservice.Service
-	Notification  *notificationservice.Service
-	Password      domainUser.PasswordHasher
-	Export        *exportservice.Service
+	Project         *projectservice.Services
+	Dashboard       *dashboardservice.Service
+	Phase           *phaseservice.Service
+	PhasePermission *phasepermissionservice.Service
+	User            *userservice.Service
+	Auth            *authservice.Service
+	JWT             domainAuth.TokenService
+	RBAC            *rbacservice.Service
+	Team            *teamservice.Service
+	Admin           *adminservice.Service
+	UserDirectory   *userdirectoryservice.Service
+	Notification    *notificationservice.Service
+	Password        domainUser.PasswordHasher
+	Export          *exportservice.Service
 
 	Facility *facilityservice.Services
 }
@@ -103,22 +105,31 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 	}
 	notificationSvc := notificationservice.New(
 		repos.NotificationSMTPSettings,
+		repos.NotificationPreferences,
+		repos.SystemNotifications,
+		repos.NotificationEmailOutbox,
+		repos.NotificationRules,
+		repos.Project,
+		repos.TeamMember,
+		repos.User,
 		secretCipher,
+		cfg.JWTSecret,
 		notificationservice.NewSMTPStrategy(),
 	)
 
 	return &Services{
-		Project:       buildProjectServices(gormDB, repos, facilityServices),
-		Dashboard:     dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
-		Phase:         phaseservice.NewPhaseService(repos.Phase),
-		User:          userservice.New(repos.User, passwordService),
-		Password:      passwordService,
-		JWT:           jwtService,
-		RBAC:          rbacSvc,
-		Team:          teamservice.New(repos.Team, repos.TeamMember),
-		Admin:         adminservice.New(repos.User),
-		UserDirectory: userdirectoryservice.New(repos.User, repos.Team, repos.TeamMember, repos.RolePermissions),
-		Notification:  notificationSvc,
+		Project:         buildProjectServices(gormDB, repos, facilityServices),
+		Dashboard:       dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
+		Phase:           phaseservice.NewPhaseService(repos.Phase),
+		PhasePermission: phasepermissionservice.New(repos.PhasePermissions, repos.Phase, repos.Permissions),
+		User:            userservice.New(repos.User, passwordService),
+		Password:        passwordService,
+		JWT:             jwtService,
+		RBAC:            rbacSvc,
+		Team:            teamservice.New(repos.Team, repos.TeamMember),
+		Admin:           adminservice.New(repos.User),
+		UserDirectory:   userdirectoryservice.New(repos.User, repos.Team, repos.TeamMember, repos.RolePermissions),
+		Notification:    notificationSvc,
 		Auth: authservice.NewService(
 			jwtService,
 			repos.User,
@@ -162,6 +173,7 @@ func buildFacilityRepositories(repos *Repositories) facilityservice.Repositories
 func buildProjectDependencies(repos *Repositories, facilityServices *facilityservice.Services) projectservice.Dependencies {
 	return projectservice.Dependencies{
 		Projects:                 repos.Project,
+		PhasePermissions:         repos.PhasePermissions,
 		ProjectControlCabinets:   repos.ProjectControlCabinets,
 		ProjectSPSControllers:    repos.ProjectSPSControllers,
 		ProjectFieldDevices:      repos.ProjectFieldDevices,

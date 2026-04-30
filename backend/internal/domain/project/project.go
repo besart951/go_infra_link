@@ -36,6 +36,14 @@ type Phase struct {
 	Name string
 }
 
+type PhasePermission struct {
+	domain.Base
+	PhaseID     uuid.UUID `json:"phase_id" gorm:"type:uuid;not null;uniqueIndex:idx_phase_permission_phase_role"`
+	Phase       *Phase
+	Role        user.Role `json:"role" gorm:"type:varchar(50);not null;uniqueIndex:idx_phase_permission_phase_role"`
+	Permissions []string  `json:"permissions" gorm:"serializer:json;type:text;not null"`
+}
+
 type ProjectRepository interface {
 	domain.Repository[Project]
 	GetPaginatedListForUser(ctx context.Context, params domain.PaginationParams, userID uuid.UUID) (*domain.PaginatedList[Project], error)
@@ -48,3 +56,9 @@ type ProjectRepository interface {
 }
 
 type PhaseRepository = domain.Repository[Phase]
+
+type PhasePermissionRepository interface {
+	domain.Repository[PhasePermission]
+	GetByPhaseAndRole(ctx context.Context, phaseID uuid.UUID, role user.Role) (*PhasePermission, error)
+	List(ctx context.Context, phaseID *uuid.UUID) ([]PhasePermission, error)
+}

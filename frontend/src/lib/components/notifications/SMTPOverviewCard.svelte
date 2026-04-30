@@ -32,12 +32,14 @@
   }
 </script>
 
-<Card.Root>
-  <Card.Header class="gap-3">
-    <div class="flex items-start justify-between gap-3">
+<Card.Root class="overflow-hidden rounded-lg shadow-none">
+  <Card.Header class="gap-3 border-b px-4 py-4 sm:px-5">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div class="space-y-1">
         <Card.Title>{$t('notifications.overview.title')}</Card.Title>
-        <Card.Description>{$t('notifications.overview.description')}</Card.Description>
+        <Card.Description class="leading-6"
+          >{$t('notifications.overview.description')}</Card.Description
+        >
       </div>
       {#if isLoading}
         <Skeleton class="h-6 w-32 rounded-full" />
@@ -51,29 +53,29 @@
     </div>
   </Card.Header>
 
-  <Card.Content class="space-y-4">
+  <Card.Content class="space-y-4 px-4 sm:px-5">
     {#if isLoading}
-      <div class="grid gap-3 sm:grid-cols-2">
+      <div class="grid gap-3">
         {#each Array(6) as _, index (index)}
-          <div class="rounded-xl border bg-background p-4">
+          <div class="rounded-lg border bg-background p-4">
             <Skeleton class="h-4 w-28" />
             <Skeleton class="mt-3 h-6 w-40" />
           </div>
         {/each}
       </div>
     {:else if !settings}
-      <div class="rounded-xl border border-dashed bg-muted/30 p-4">
+      <div class="rounded-lg border border-dashed bg-muted/30 p-4">
         <p class="font-medium">{$t('notifications.overview.empty_title')}</p>
         <p class="mt-1 text-sm leading-6 text-muted-foreground">
           {$t('notifications.overview.empty_description')}
         </p>
       </div>
-      <div class="grid gap-3 sm:grid-cols-2">
-        <div class="rounded-xl border bg-background p-4">
+      <div class="grid gap-3">
+        <div class="rounded-lg border bg-background p-4">
           <p class="text-sm text-muted-foreground">{$t('notifications.overview.provider')}</p>
           <p class="mt-2 font-medium">{$t('notifications.providers.smtp')}</p>
         </div>
-        <div class="rounded-xl border bg-background p-4">
+        <div class="rounded-lg border bg-background p-4">
           <p class="text-sm text-muted-foreground">{$t('notifications.overview.transport')}</p>
           <p class="mt-2 font-medium">{$t('notifications.security.starttls')}</p>
         </div>
@@ -102,36 +104,36 @@
         </Alert.Root>
       {/if}
 
-      <div class="grid gap-3 sm:grid-cols-2">
-        <div class="rounded-xl border bg-background p-4">
+      <div class="grid gap-3">
+        <div class="rounded-lg border bg-background p-4">
           <p class="text-sm text-muted-foreground">{$t('notifications.overview.host')}</p>
-          <p class="mt-2 font-medium">{settings.host}</p>
+          <p class="mt-2 font-medium break-all">{settings.host}</p>
         </div>
-        <div class="rounded-xl border bg-background p-4">
+        <div class="rounded-lg border bg-background p-4">
           <p class="text-sm text-muted-foreground">{$t('notifications.overview.port')}</p>
           <p class="mt-2 font-medium">{settings.port}</p>
         </div>
-        <div class="rounded-xl border bg-background p-4">
+        <div class="rounded-lg border bg-background p-4">
           <p class="text-sm text-muted-foreground">{$t('notifications.overview.sender')}</p>
           <p class="mt-2 font-medium break-all">{settings.from_email}</p>
           {#if settings.from_name}
             <p class="mt-1 text-sm text-muted-foreground">{settings.from_name}</p>
           {/if}
         </div>
-        <div class="rounded-xl border bg-background p-4">
+        <div class="rounded-lg border bg-background p-4">
           <p class="text-sm text-muted-foreground">{$t('notifications.overview.reply_to')}</p>
           <p class="mt-2 font-medium break-all">
             {settings.reply_to || $t('common.not_available')}
           </p>
         </div>
-        <div class="rounded-xl border bg-background p-4">
+        <div class="rounded-lg border bg-background p-4">
           <p class="text-sm text-muted-foreground">{$t('notifications.overview.authentication')}</p>
           <p class="mt-2 font-medium">{authLabel(settings.auth_mode)}</p>
           {#if settings.username}
-            <p class="mt-1 text-sm text-muted-foreground">{settings.username}</p>
+            <p class="mt-1 text-sm break-all text-muted-foreground">{settings.username}</p>
           {/if}
         </div>
-        <div class="rounded-xl border bg-background p-4">
+        <div class="rounded-lg border bg-background p-4">
           <p class="text-sm text-muted-foreground">{$t('notifications.overview.updated_at')}</p>
           <p class="mt-2 font-medium">{formatDateTime(settings.updated_at)}</p>
         </div>

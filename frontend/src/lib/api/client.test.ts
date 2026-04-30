@@ -10,7 +10,13 @@ vi.mock('$lib/i18n/index.js', () => ({
   t: (key: string) => key
 }));
 
-import { api, buildHttpErrorRoute, getHttpErrorPath, HandledApiException } from './client.js';
+import {
+  api,
+  ApiException,
+  buildHttpErrorRoute,
+  getHttpErrorPath,
+  HandledApiException
+} from './client.js';
 
 describe('api client HTTP error navigation', () => {
   beforeEach(() => {
@@ -61,5 +67,30 @@ describe('api client HTTP error navigation', () => {
     expect(mockGoto).toHaveBeenCalledWith('/errors/404?from=%2Fprojects%2Fproject-1', {
       replaceState: true
     });
+  });
+
+  it('lets callers handle recoverable 404 responses without page navigation', async () => {
+    const customFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'not_found', message: 'Not Found' }), {
+        status: 404,
+        statusText: 'Not Found',
+        headers: { 'Content-Type': 'application/json' }
+      })
+    );
+
+    let caught: unknown;
+    try {
+      await api('/admin/notifications/smtp', {
+        customFetch,
+        skipHttpErrorNavigation: true
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(ApiException);
+    expect(caught).not.toBeInstanceOf(HandledApiException);
+    expect(caught).toMatchObject({ status: 404, error: 'not_found' });
+    expect(mockGoto).not.toHaveBeenCalled();
   });
 });

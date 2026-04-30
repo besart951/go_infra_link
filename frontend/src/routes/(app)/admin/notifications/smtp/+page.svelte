@@ -1,17 +1,19 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { BellRing, RefreshCw, Send, ShieldCheck } from '@lucide/svelte';
+  import { MailCheck, RefreshCw, ServerCog, ShieldCheck } from '@lucide/svelte';
   import { getErrorMessage, getFieldErrors } from '$lib/api/client.js';
   import { GetSMTPSettingsUseCase } from '$lib/application/useCases/notification/getSMTPSettingsUseCase.js';
   import { SaveSMTPSettingsUseCase } from '$lib/application/useCases/notification/saveSMTPSettingsUseCase.js';
   import { SendSMTPTestEmailUseCase } from '$lib/application/useCases/notification/sendSMTPTestEmailUseCase.js';
   import {
+    NotificationRulesCard,
     SMTPOverviewCard,
     SMTPSettingsForm,
     SMTPTestEmailCard
   } from '$lib/components/notifications/index.js';
   import { addToast } from '$lib/components/toast.svelte';
   import * as Alert from '$lib/components/ui/alert/index.js';
+  import { Badge } from '$lib/components/ui/badge/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import type {
     SendSMTPTestEmailRequest,
@@ -48,6 +50,16 @@
     if (!settings) return $t('notifications.status.not_configured');
     return $t(settings.enabled ? 'notifications.status.enabled' : 'notifications.status.disabled');
   });
+
+  const connectionLabel = $derived(
+    settings ? `${settings.host}:${settings.port}` : $t('notifications.status.not_configured')
+  );
+
+  function statusVariant(): 'secondary' | 'outline' | 'success' | 'warning' {
+    if (isLoading) return 'secondary';
+    if (!settings) return 'outline';
+    return settings.enabled ? 'success' : 'warning';
+  }
 
   async function loadSettings(mode: 'initial' | 'refresh' = 'initial') {
     if (mode === 'initial') {
@@ -139,68 +151,62 @@
   <title>{$t('notifications.page.title')} | {$t('app.brand')}</title>
 </svelte:head>
 
-<div class="flex flex-col gap-6">
-  <section class="overflow-hidden rounded-2xl border bg-card">
-    <div class="border-b bg-muted/30 px-6 py-5">
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div class="space-y-3">
-          <div
-            class="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground"
-          >
-            <ShieldCheck class="size-3.5 text-primary" />
-            {$t('notifications.hero.scope')}
-          </div>
-          <div class="space-y-1">
-            <h1 class="text-3xl font-semibold tracking-tight">{$t('notifications.page.title')}</h1>
-            <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
-              {$t('notifications.page.description')}
-            </p>
-          </div>
-        </div>
+<div class="mx-auto flex w-full max-w-7xl flex-col gap-5">
+  <header class="flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-end lg:justify-between">
+    <div class="min-w-0 space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <Badge variant="outline" class="gap-1.5">
+          <ShieldCheck class="size-3.5" />
+          {$t('notifications.hero.scope')}
+        </Badge>
+        <Badge variant={statusVariant()} class="gap-1.5">
+          <MailCheck class="size-3.5" />
+          {serviceStatus}
+        </Badge>
+      </div>
 
-        <div class="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onclick={() => loadSettings('refresh')}
-            disabled={isLoading || isRefreshing || isSaving || isSendingTest}
-          >
-            <RefreshCw class={`size-4${isRefreshing ? ' animate-spin' : ''}`} />
-            {$t('common.refresh')}
-          </Button>
-        </div>
+      <div class="space-y-1">
+        <h1 class="text-2xl leading-8 font-semibold tracking-tight sm:text-3xl">
+          {$t('notifications.page.title')}
+        </h1>
+        <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
+          {$t('notifications.page.description')}
+        </p>
       </div>
     </div>
 
-    <div class="grid gap-3 px-6 py-5 md:grid-cols-3">
-      <div class="rounded-xl border bg-background p-4">
-        <p class="text-sm text-muted-foreground">{$t('notifications.hero.service_status')}</p>
-        <div class="mt-2 flex items-center gap-2">
-          <BellRing class="size-4 text-primary" />
-          <p class="font-medium">{serviceStatus}</p>
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div
+        class="flex min-w-0 items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm"
+      >
+        <ServerCog class="size-4 shrink-0 text-muted-foreground" />
+        <div class="min-w-0">
+          <p class="text-xs text-muted-foreground">{$t('notifications.hero.delivery_channel')}</p>
+          <p class="truncate font-medium">{connectionLabel}</p>
         </div>
       </div>
 
-      <div class="rounded-xl border bg-background p-4">
-        <p class="text-sm text-muted-foreground">{$t('notifications.hero.delivery_channel')}</p>
-        <div class="mt-2 flex items-center gap-2">
-          <Send class="size-4 text-primary" />
-          <p class="font-medium break-all">
-            {settings
-              ? `${settings.host}:${settings.port}`
-              : $t('notifications.status.not_configured')}
-          </p>
+      <div
+        class="flex min-w-0 items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm"
+      >
+        <RefreshCw class="size-4 shrink-0 text-muted-foreground" />
+        <div class="min-w-0">
+          <p class="text-xs text-muted-foreground">{$t('notifications.hero.last_sync')}</p>
+          <p class="truncate font-medium">{formatDateTime(lastLoadedAt)}</p>
         </div>
       </div>
 
-      <div class="rounded-xl border bg-background p-4">
-        <p class="text-sm text-muted-foreground">{$t('notifications.hero.last_sync')}</p>
-        <div class="mt-2 flex items-center gap-2">
-          <RefreshCw class="size-4 text-primary" />
-          <p class="font-medium">{formatDateTime(lastLoadedAt)}</p>
-        </div>
-      </div>
+      <Button
+        variant="outline"
+        class="w-full sm:w-auto"
+        onclick={() => loadSettings('refresh')}
+        disabled={isLoading || isRefreshing || isSaving || isSendingTest}
+      >
+        <RefreshCw class={`size-4${isRefreshing ? ' animate-spin' : ''}`} />
+        {$t('common.refresh')}
+      </Button>
     </div>
-  </section>
+  </header>
 
   {#if loadError}
     <Alert.Root variant="destructive">
@@ -208,7 +214,7 @@
     </Alert.Root>
   {/if}
 
-  <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+  <div class="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
     <SMTPSettingsForm
       {settings}
       hasStoredPassword={settings?.has_password ?? false}
@@ -219,7 +225,7 @@
       onSubmit={handleSave}
     />
 
-    <div class="flex flex-col gap-6">
+    <aside class="flex min-w-0 flex-col gap-5 xl:sticky xl:top-20">
       <SMTPOverviewCard {settings} {isLoading} />
       <SMTPTestEmailCard
         {settings}
@@ -229,6 +235,8 @@
         fieldErrors={testFieldErrors}
         onSubmit={handleSendTest}
       />
-    </div>
+    </aside>
   </div>
+
+  <NotificationRulesCard />
 </div>

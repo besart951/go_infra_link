@@ -64,7 +64,6 @@ func (h *Handler) CreateProjectControlCabinet(c *gin.Context) {
 		h.access,
 		projectID,
 		domainUser.PermissionProjectControlCabinetCreate,
-		domainUser.PermissionProjectControlCabinetEdit,
 	) {
 		return
 	}
@@ -145,7 +144,6 @@ func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 		h.access,
 		projectID,
 		domainUser.PermissionProjectControlCabinetCreate,
-		domainUser.PermissionProjectControlCabinetEdit,
 	) {
 		return
 	}
@@ -198,7 +196,6 @@ func (h *Handler) UpdateProjectControlCabinet(c *gin.Context) {
 		h.access,
 		projectID,
 		domainUser.PermissionProjectControlCabinetUpdate,
-		domainUser.PermissionProjectControlCabinetEdit,
 	) {
 		return
 	}
@@ -251,7 +248,6 @@ func (h *Handler) DeleteProjectControlCabinet(c *gin.Context) {
 		h.access,
 		projectID,
 		domainUser.PermissionProjectControlCabinetDelete,
-		domainUser.PermissionProjectControlCabinetEdit,
 	) {
 		return
 	}

@@ -44,27 +44,43 @@
     return canPerform('read', resource);
   };
 
+  const isPathActive = (pathname: string, url: string) => {
+    return pathname === url || pathname.startsWith(`${url}/`);
+  };
+
+  const isProjectsIndexActive = (pathname: string) => {
+    return isPathActive(pathname, '/projects') && !isPathActive(pathname, '/projects/phases');
+  };
+
   // Navigation items with collapsible sub-menus
   const navItems = $derived.by(() => {
+    const pathname = $page.url.pathname;
     const items = [
       {
         title: $t('navigation.users'),
         url: '/users',
         icon: UsersIcon,
         isActive:
-          $page.url.pathname.startsWith('/users') ||
-          $page.url.pathname.startsWith('/auth') ||
-          $page.url.pathname.startsWith('/teams'),
+          isPathActive(pathname, '/users') ||
+          isPathActive(pathname, '/auth') ||
+          isPathActive(pathname, '/teams'),
         items: [
           {
             title: $t('navigation.all_users'),
             url: '/users',
+            isActive: pathname === '/users',
             hasAccess: Boolean(user.can_access_user_directory)
           },
-          { title: $t('navigation.teams'), url: '/teams', hasAccess: canPerform('read', 'team') },
+          {
+            title: $t('navigation.teams'),
+            url: '/teams',
+            isActive: isPathActive(pathname, '/teams'),
+            hasAccess: canPerform('read', 'team')
+          },
           {
             title: $t('navigation.roles_permissions'),
             url: '/users/roles',
+            isActive: isPathActive(pathname, '/users/roles'),
             hasAccess: canPerform('read', 'role')
           }
         ].filter((item) => item.hasAccess)
@@ -73,67 +89,79 @@
         title: $t('navigation.facility'),
         url: '/facility',
         icon: Building2Icon,
-        isActive: $page.url.pathname.startsWith('/facility'),
+        isActive: isPathActive(pathname, '/facility'),
         items: [
           {
             title: $t('navigation.buildings'),
             url: '/facility/buildings',
+            isActive: isPathActive(pathname, '/facility/buildings'),
             hasAccess: canReadFacility('building')
           },
           {
             title: $t('navigation.control_cabinets'),
             url: '/facility/control-cabinets',
+            isActive: isPathActive(pathname, '/facility/control-cabinets'),
             hasAccess: canReadFacility('controlcabinet')
           },
           {
             title: $t('navigation.sps_controllers'),
             url: '/facility/sps-controllers',
+            isActive: isPathActive(pathname, '/facility/sps-controllers'),
             hasAccess: canReadFacility('spscontroller')
           },
           {
             title: $t('navigation.field_devices'),
             url: '/facility/field-devices',
+            isActive: isPathActive(pathname, '/facility/field-devices'),
             hasAccess: canReadFacility('fielddevice'),
             dividerAfter: true
           },
           {
             title: $t('navigation.system_types'),
             url: '/facility/system-types',
+            isActive: isPathActive(pathname, '/facility/system-types'),
             hasAccess: canReadFacility('systemtype')
           },
           {
             title: $t('navigation.system_parts'),
             url: '/facility/system-parts',
+            isActive: isPathActive(pathname, '/facility/system-parts'),
             hasAccess: canReadFacility('systempart')
           },
           {
             title: $t('navigation.apparats'),
             url: '/facility/apparats',
+            isActive: isPathActive(pathname, '/facility/apparats'),
             hasAccess: canReadFacility('apparat')
           },
           {
             title: $t('navigation.object_data'),
             url: '/facility/object-data',
+            isActive: isPathActive(pathname, '/facility/object-data'),
             hasAccess: canReadFacility('objectdata')
           },
           {
             title: $t('navigation.state_texts'),
             url: '/facility/state-texts',
+            isActive: isPathActive(pathname, '/facility/state-texts'),
             hasAccess: canReadFacility('statetext')
           },
           {
             title: $t('navigation.alarm_definitions'),
             url: '/facility/alarm-definitions',
+            isActive: isPathActive(pathname, '/facility/alarm-definitions'),
             hasAccess: canReadFacility('alarmdefinition')
           },
           {
             title: $t('navigation.alarm_catalog'),
             url: '/facility/alarm-catalog',
+            isActive: isPathActive(pathname, '/facility/alarm-catalog'),
             hasAccess: canReadFacility('alarmtype')
           },
           {
             title: $t('navigation.notification_classes'),
             url: '/facility/notification-classes',
+            isActive: isPathActive(pathname, '/facility/notification-classes'),
             hasAccess: canReadFacility('notificationclass')
           }
         ].filter((item) => item.hasAccess)
@@ -142,16 +170,18 @@
         title: $t('navigation.projects'),
         url: '/projects',
         icon: FolderKanbanIcon,
-        isActive: $page.url.pathname.startsWith('/projects'),
+        isActive: isPathActive(pathname, '/projects'),
         items: [
           {
             title: $t('navigation.projects'),
             url: '/projects',
+            isActive: isProjectsIndexActive(pathname),
             hasAccess: true
           },
           {
             title: $t('phase.phases'),
             url: '/projects/phases',
+            isActive: isPathActive(pathname, '/projects/phases'),
             hasAccess: canPerform('read', 'phase')
           }
         ].filter((item) => item.hasAccess)
@@ -160,14 +190,14 @@
         title: $t('navigation.excel_importer'),
         url: '/excel',
         icon: SheetIcon,
-        isActive: $page.url.pathname.startsWith('/excel'),
+        isActive: isPathActive(pathname, '/excel'),
         hasAccess: canPerform('read', 'objectdata')
       },
       {
         title: $t('navigation.notifications'),
         url: '/admin/notifications/smtp',
         icon: BellRingIcon,
-        isActive: $page.url.pathname.startsWith('/admin/notifications'),
+        isActive: isPathActive(pathname, '/admin/notifications'),
         hasAccess: canPerform('manage', 'notification.smtp')
       }
     ];

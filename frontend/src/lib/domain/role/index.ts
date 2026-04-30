@@ -76,12 +76,11 @@ export const PERMISSION_ACTIONS = [
   'update',
   'delete',
   'manage',
-  'edit',
   'listAll'
 ] as const;
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
 
-export const PROJECT_PERMISSION_ACTIONS = ['create', 'read', 'update', 'delete', 'edit'] as const;
+export const PROJECT_PERMISSION_ACTIONS = ['create', 'read', 'update', 'delete'] as const;
 export type ProjectPermissionAction = (typeof PROJECT_PERMISSION_ACTIONS)[number];
 
 /**
@@ -126,6 +125,7 @@ export const GENERAL_RESOURCES = [
   'team',
   'project',
   'phase',
+  'phase_permission',
   'role',
   'permission'
 ] as const;

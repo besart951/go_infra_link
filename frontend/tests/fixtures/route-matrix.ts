@@ -58,6 +58,17 @@ export const routeAudits = [
     notes: 'This is intentionally auth-only rather than permission-gated.'
   },
   {
+    path: '/notifications',
+    domain: 'app',
+    files: ['src/routes/(app)/notifications/+page.svelte'],
+    auth: 'authenticated',
+    authorization: 'none',
+    status: 'configured',
+    expectedAccess: 'Any authenticated user viewing their own notifications.',
+    protectedUi: ['notification inbox', 'mark read actions'],
+    notes: 'The backend scopes notification reads and updates to the authenticated user.'
+  },
+  {
     path: '/logout',
     domain: 'app',
     files: ['src/routes/(app)/logout/+page.svelte'],

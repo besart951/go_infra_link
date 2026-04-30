@@ -79,7 +79,6 @@ func (h *Handler) CreateProjectFieldDevice(c *gin.Context) {
 		h.access,
 		projectID,
 		domainUser.PermissionProjectFieldDeviceCreate,
-		domainUser.PermissionProjectFieldDeviceEdit,
 	) {
 		return
 	}
@@ -129,7 +128,6 @@ func (h *Handler) MultiCreateProjectFieldDevices(c *gin.Context) {
 		h.access,
 		projectID,
 		domainUser.PermissionProjectFieldDeviceCreate,
-		domainUser.PermissionProjectFieldDeviceEdit,
 	) {
 		return
 	}
@@ -259,7 +257,6 @@ func (h *Handler) UpdateProjectFieldDevice(c *gin.Context) {
 		h.access,
 		projectID,
 		domainUser.PermissionProjectFieldDeviceUpdate,
-		domainUser.PermissionProjectFieldDeviceEdit,
 	) {
 		return
 	}
@@ -312,7 +309,6 @@ func (h *Handler) DeleteProjectFieldDevice(c *gin.Context) {
 		h.access,
 		projectID,
 		domainUser.PermissionProjectFieldDeviceDelete,
-		domainUser.PermissionProjectFieldDeviceEdit,
 	) {
 		return
 	}

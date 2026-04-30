@@ -94,19 +94,19 @@ func TestProjectAccessPolicyService_CanUseProjectPermission(t *testing.T) {
 	projectEditorRole := domainUser.Role("project_editor")
 
 	rolePermissionRepo := newProjectRolePermissionRepo()
-	rolePermissionRepo.grant(projectEditorRole, domainUser.PermissionProjectFieldDeviceEdit)
+	rolePermissionRepo.grant(projectEditorRole, domainUser.PermissionProjectFieldDeviceUpdate)
 
 	svc := NewServices(Dependencies{RolePermissions: rolePermissionRepo}).AccessPolicy
 
-	hasPermission, err := svc.CanUseProjectPermission(ctx, requesterID, &projectEditorRole, domainUser.PermissionProjectFieldDeviceEdit)
+	hasPermission, err := svc.CanUseProjectPermission(ctx, requesterID, &projectEditorRole, domainUser.PermissionProjectFieldDeviceUpdate)
 	if err != nil {
 		t.Fatalf("expected permission check to succeed, got %v", err)
 	}
 	if !hasPermission {
-		t.Fatal("expected role hint with project field device edit permission to pass")
+		t.Fatal("expected role hint with project field device update permission to pass")
 	}
 
-	hasPermission, err = svc.CanUseProjectPermission(ctx, requesterID, &projectEditorRole, domainUser.PermissionProjectSPSControllerEdit)
+	hasPermission, err = svc.CanUseProjectPermission(ctx, requesterID, &projectEditorRole, domainUser.PermissionProjectSPSControllerUpdate)
 	if err != nil {
 		t.Fatalf("expected permission check to succeed, got %v", err)
 	}
@@ -122,12 +122,124 @@ func TestProjectAccessPolicyService_SuperadminHasProjectPermissionsWithoutStored
 
 	svc := NewServices(Dependencies{RolePermissions: newProjectRolePermissionRepo()}).AccessPolicy
 
-	hasPermission, err := svc.CanUseProjectPermission(ctx, requesterID, &superadminRole, domainUser.PermissionProjectFieldDeviceEdit)
+	hasPermission, err := svc.CanUseProjectPermission(ctx, requesterID, &superadminRole, domainUser.PermissionProjectFieldDeviceUpdate)
 	if err != nil {
 		t.Fatalf("expected superadmin permission check to succeed, got %v", err)
 	}
 	if !hasPermission {
 		t.Fatal("expected superadmin to have project permissions without stored grant")
+	}
+}
+
+func TestProjectAccessPolicyService_PhaseRulesRestrictProjectScopedPermissions(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	phaseID := uuid.New()
+	requesterID := uuid.New()
+	role := domainUser.RoleAdminPlaner
+
+	projectRepo := newProjectRepo()
+	projectRepo.items[projectID] = &domainProject.Project{Base: domain.Base{ID: projectID}, PhaseID: phaseID}
+
+	rolePermissionRepo := newProjectRolePermissionRepo()
+	rolePermissionRepo.grant(role, domainUser.PermissionProjectFieldDeviceCreate)
+	rolePermissionRepo.grant(role, domainUser.PermissionProjectFieldDeviceUpdate)
+
+	phasePermissionRepo := newProjectPhasePermissionRepo()
+	if err := phasePermissionRepo.Create(ctx, &domainProject.PhasePermission{
+		PhaseID:     phaseID,
+		Role:        role,
+		Permissions: []string{domainUser.PermissionProjectFieldDeviceUpdate},
+	}); err != nil {
+		t.Fatalf("expected phase rule setup to succeed, got %v", err)
+	}
+
+	svc := NewServices(Dependencies{
+		Projects:         projectRepo,
+		RolePermissions:  rolePermissionRepo,
+		PhasePermissions: phasePermissionRepo,
+	}).AccessPolicy
+
+	hasPermission, err := svc.CanUseProjectPermissionForProject(ctx, requesterID, projectID, &role, domainUser.PermissionProjectFieldDeviceUpdate)
+	if err != nil {
+		t.Fatalf("expected project-scoped permission check to succeed, got %v", err)
+	}
+	if !hasPermission {
+		t.Fatal("expected phase rule to allow update")
+	}
+
+	hasPermission, err = svc.CanUseProjectPermissionForProject(ctx, requesterID, projectID, &role, domainUser.PermissionProjectFieldDeviceCreate)
+	if err != nil {
+		t.Fatalf("expected project-scoped permission check to succeed, got %v", err)
+	}
+	if hasPermission {
+		t.Fatal("expected phase rule to deny create")
+	}
+
+	hasPermission, err = svc.CanUseProjectPermission(ctx, requesterID, &role, domainUser.PermissionProjectFieldDeviceCreate)
+	if err != nil {
+		t.Fatalf("expected global permission check to succeed, got %v", err)
+	}
+	if !hasPermission {
+		t.Fatal("expected global role permission to remain unchanged")
+	}
+}
+
+func TestProjectAccessPolicyService_MissingPhaseRuleKeepsRolePermissions(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	role := domainUser.RoleAdminPlaner
+
+	projectRepo := newProjectRepo()
+	projectRepo.items[projectID] = &domainProject.Project{Base: domain.Base{ID: projectID}, PhaseID: uuid.New()}
+
+	rolePermissionRepo := newProjectRolePermissionRepo()
+	rolePermissionRepo.grant(role, domainUser.PermissionProjectFieldDeviceCreate)
+
+	svc := NewServices(Dependencies{
+		Projects:         projectRepo,
+		RolePermissions:  rolePermissionRepo,
+		PhasePermissions: newProjectPhasePermissionRepo(),
+	}).AccessPolicy
+
+	hasPermission, err := svc.CanUseProjectPermissionForProject(ctx, uuid.New(), projectID, &role, domainUser.PermissionProjectFieldDeviceCreate)
+	if err != nil {
+		t.Fatalf("expected project-scoped permission check to succeed, got %v", err)
+	}
+	if !hasPermission {
+		t.Fatal("expected missing phase rule to keep existing role permission")
+	}
+}
+
+func TestProjectAccessPolicyService_EmptyPhaseRuleDeniesProjectPermissions(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	phaseID := uuid.New()
+	role := domainUser.RoleAdminPlaner
+
+	projectRepo := newProjectRepo()
+	projectRepo.items[projectID] = &domainProject.Project{Base: domain.Base{ID: projectID}, PhaseID: phaseID}
+
+	rolePermissionRepo := newProjectRolePermissionRepo()
+	rolePermissionRepo.grant(role, domainUser.PermissionProjectFieldDeviceUpdate)
+
+	phasePermissionRepo := newProjectPhasePermissionRepo()
+	if err := phasePermissionRepo.Create(ctx, &domainProject.PhasePermission{PhaseID: phaseID, Role: role}); err != nil {
+		t.Fatalf("expected empty phase rule setup to succeed, got %v", err)
+	}
+
+	svc := NewServices(Dependencies{
+		Projects:         projectRepo,
+		RolePermissions:  rolePermissionRepo,
+		PhasePermissions: phasePermissionRepo,
+	}).AccessPolicy
+
+	hasPermission, err := svc.CanUseProjectPermissionForProject(ctx, uuid.New(), projectID, &role, domainUser.PermissionProjectFieldDeviceUpdate)
+	if err != nil {
+		t.Fatalf("expected project-scoped permission check to succeed, got %v", err)
+	}
+	if hasPermission {
+		t.Fatal("expected empty phase rule to deny update")
 	}
 }
 
@@ -311,4 +423,80 @@ func (r *projectRolePermissionRepoFake) DeleteByPermissionName(_ context.Context
 		r.items[role] = next
 	}
 	return nil
+}
+
+type projectPhasePermissionRepoFake struct {
+	items map[uuid.UUID]*domainProject.PhasePermission
+}
+
+func newProjectPhasePermissionRepo() *projectPhasePermissionRepoFake {
+	return &projectPhasePermissionRepoFake{items: map[uuid.UUID]*domainProject.PhasePermission{}}
+}
+
+func (r *projectPhasePermissionRepoFake) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainProject.PhasePermission, error) {
+	out := make([]*domainProject.PhasePermission, 0, len(ids))
+	for _, id := range ids {
+		if item, ok := r.items[id]; ok {
+			clone := *item
+			clone.Permissions = append([]string{}, item.Permissions...)
+			out = append(out, &clone)
+		}
+	}
+	return out, nil
+}
+
+func (r *projectPhasePermissionRepoFake) Create(_ context.Context, entity *domainProject.PhasePermission) error {
+	if entity.ID == uuid.Nil {
+		entity.ID = uuid.New()
+	}
+	clone := *entity
+	clone.Permissions = append([]string{}, entity.Permissions...)
+	r.items[entity.ID] = &clone
+	return nil
+}
+
+func (r *projectPhasePermissionRepoFake) Update(_ context.Context, entity *domainProject.PhasePermission) error {
+	clone := *entity
+	clone.Permissions = append([]string{}, entity.Permissions...)
+	r.items[entity.ID] = &clone
+	return nil
+}
+
+func (r *projectPhasePermissionRepoFake) DeleteByIds(_ context.Context, ids []uuid.UUID) error {
+	for _, id := range ids {
+		delete(r.items, id)
+	}
+	return nil
+}
+
+func (r *projectPhasePermissionRepoFake) GetPaginatedList(_ context.Context, _ domain.PaginationParams) (*domain.PaginatedList[domainProject.PhasePermission], error) {
+	items := make([]domainProject.PhasePermission, 0, len(r.items))
+	for _, item := range r.items {
+		items = append(items, *item)
+	}
+	return &domain.PaginatedList[domainProject.PhasePermission]{Items: items, Total: int64(len(items)), Page: 1, TotalPages: 1}, nil
+}
+
+func (r *projectPhasePermissionRepoFake) GetByPhaseAndRole(_ context.Context, phaseID uuid.UUID, role domainUser.Role) (*domainProject.PhasePermission, error) {
+	for _, item := range r.items {
+		if item.PhaseID == phaseID && item.Role == role {
+			clone := *item
+			clone.Permissions = append([]string{}, item.Permissions...)
+			return &clone, nil
+		}
+	}
+	return nil, domain.ErrNotFound
+}
+
+func (r *projectPhasePermissionRepoFake) List(_ context.Context, phaseID *uuid.UUID) ([]domainProject.PhasePermission, error) {
+	items := make([]domainProject.PhasePermission, 0, len(r.items))
+	for _, item := range r.items {
+		if phaseID != nil && item.PhaseID != *phaseID {
+			continue
+		}
+		clone := *item
+		clone.Permissions = append([]string{}, item.Permissions...)
+		items = append(items, clone)
+	}
+	return items, nil
 }

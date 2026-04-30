@@ -69,13 +69,13 @@
   }
 </script>
 
-<Card.Root>
-  <Card.Header class="gap-3">
+<Card.Root class="overflow-hidden rounded-lg shadow-none">
+  <Card.Header class="gap-3 border-b px-4 py-4 sm:px-5">
     <Card.Title>{$t('notifications.test.title')}</Card.Title>
-    <Card.Description>{$t('notifications.test.description')}</Card.Description>
+    <Card.Description class="leading-6">{$t('notifications.test.description')}</Card.Description>
   </Card.Header>
 
-  <Card.Content class="space-y-4">
+  <Card.Content class="space-y-4 px-4 sm:px-5">
     {#if !settings}
       <Alert.Root>
         <Alert.Description>{$t('notifications.test.missing_config')}</Alert.Description>
@@ -141,7 +141,7 @@
         </div>
 
         <div class="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" class="w-full sm:w-auto" disabled={isSubmitting}>
             {$t(isSubmitting ? 'common.saving' : 'notifications.test.send')}
           </Button>
         </div>

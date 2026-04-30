@@ -1,194 +1,28 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { Role, Permission } from '$lib/domain/role/index.js';
-  import type { UserRole } from '$lib/domain/user/index.js';
-  import {
-    listRoles,
-    listPermissions,
-    createPermission,
-    updatePermission,
-    deletePermission,
-    updateRolePermissions
-  } from '$lib/infrastructure/api/role.adapter.js';
-  import { getErrorMessage } from '$lib/api/client.js';
   import { Button } from '$lib/components/ui/button/index.js';
-  import { Badge } from '$lib/components/ui/badge/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import * as Tabs from '$lib/components/ui/tabs/index.js';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import * as Sheet from '$lib/components/ui/sheet/index.js';
-  import { addToast } from '$lib/components/toast.svelte';
-  import { confirm } from '$lib/stores/confirm-dialog.js';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import { t as translate } from '$lib/i18n/index.js';
   import {
     RoleCard,
     PermissionForm,
     PermissionTable,
     PermissionMatrix,
-    RolePermissionEditor
+    RolePermissionEditor,
+    PhasePermissionRules
   } from '$lib/components/roles/index.js';
-  import { canPerform } from '$lib/utils/permissions.js';
-  import { Plus, RefreshCw, Grid3X3, LayoutGrid, Shield, Users } from '@lucide/svelte';
+  import { RolesPageState } from '$lib/components/roles/state/RolesPageState.svelte.js';
+  import { GitBranch, Plus, RefreshCw, Grid3X3, LayoutGrid, Shield, Users } from '@lucide/svelte';
 
   const t = createTranslator();
-
-  // State
-  let roles = $state<Role[]>([]);
-  let permissions = $state<Permission[]>([]);
-  let isLoading = $state(true);
-  let error = $state<string | null>(null);
-  let activeTab = $state('roles');
-
-  // Dialog/Sheet states
-  let createPermissionDialogOpen = $state(false);
-  let editPermissionDialogOpen = $state(false);
-  let editRoleSheetOpen = $state(false);
-  let selectedPermission = $state<Permission | null>(null);
-  let selectedRole = $state<Role | null>(null);
-
-  // Submission states
-  let isSubmittingPermission = $state(false);
-  let isSubmittingRole = $state(false);
-  let permissionError = $state<string | null>(null);
-  let roleError = $state<string | null>(null);
-
-  // Check if user can manage roles and permissions
-  const canManageRoles = $derived(
-    canPerform('update', 'role') || canPerform('update', 'permission')
-  );
-
-  // Stats
-  const totalPermissions = $derived(permissions.length);
-  const totalRoles = $derived(roles.length);
-  const uniqueResources = $derived(new Set(permissions.map((p) => p.resource)).size);
-
-  async function loadData() {
-    isLoading = true;
-    error = null;
-
-    try {
-      const [rolesData, permissionsData] = await Promise.all([listRoles(), listPermissions()]);
-      roles = rolesData;
-      permissions = permissionsData;
-    } catch (err) {
-      error = err instanceof Error ? err.message : translate('roles.errors.load_failed');
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  // Permission CRUD handlers
-  async function handleCreatePermission(data: {
-    name: string;
-    description: string;
-    resource: string;
-    action: string;
-  }) {
-    isSubmittingPermission = true;
-    permissionError = null;
-
-    try {
-      await createPermission(data);
-      addToast(translate('roles.toasts.permission_created'), 'success');
-      createPermissionDialogOpen = false;
-      await loadData();
-    } catch (err) {
-      permissionError = getErrorMessage(err);
-    } finally {
-      isSubmittingPermission = false;
-    }
-  }
-
-  async function handleUpdatePermission(data: {
-    name: string;
-    description: string;
-    resource: string;
-    action: string;
-  }) {
-    if (!selectedPermission) return;
-
-    isSubmittingPermission = true;
-    permissionError = null;
-
-    try {
-      await updatePermission(selectedPermission.id, { description: data.description });
-      addToast(translate('roles.toasts.permission_updated'), 'success');
-      editPermissionDialogOpen = false;
-      selectedPermission = null;
-      await loadData();
-    } catch (err) {
-      permissionError = getErrorMessage(err);
-    } finally {
-      isSubmittingPermission = false;
-    }
-  }
-
-  async function handleDeletePermission(permission: Permission) {
-    const confirmed = await confirm({
-      title: translate('roles.permissions.delete_confirm_title'),
-      message: translate('roles.permissions.delete_confirm_message', { name: permission.name }),
-      confirmText: translate('roles.permissions.delete_confirm_confirm'),
-      cancelText: translate('common.cancel'),
-      variant: 'destructive'
-    });
-
-    if (confirmed) {
-      try {
-        await deletePermission(permission.id);
-        addToast(translate('roles.toasts.permission_deleted'), 'success');
-        await loadData();
-      } catch (err) {
-        addToast(getErrorMessage(err), 'error');
-      }
-    }
-  }
-
-  function openEditPermission(permission: Permission) {
-    selectedPermission = permission;
-    permissionError = null;
-    editPermissionDialogOpen = true;
-  }
-
-  // Role CRUD handlers
-  function openEditRole(role: Role) {
-    selectedRole = role;
-    roleError = null;
-    editRoleSheetOpen = true;
-  }
-
-  async function handleUpdateRolePermissions(data: { permissions: string[] }) {
-    if (!selectedRole) return;
-
-    isSubmittingRole = true;
-    roleError = null;
-
-    try {
-      await updateRolePermissions(selectedRole.name, data);
-      addToast(
-        translate('roles.toasts.role_permissions_updated', {
-          role: selectedRole.display_name
-        }),
-        'success'
-      );
-      editRoleSheetOpen = false;
-      selectedRole = null;
-      await loadData();
-    } catch (err) {
-      roleError = getErrorMessage(err);
-    } finally {
-      isSubmittingRole = false;
-    }
-  }
-
-  function viewRolePermissions(role: Role) {
-    selectedRole = role;
-    editRoleSheetOpen = true;
-  }
+  const state = new RolesPageState();
 
   onMount(() => {
-    loadData();
+    state.loadData();
   });
 </script>
 
@@ -199,19 +33,18 @@
 <ConfirmDialog />
 
 <div class="flex flex-col gap-6">
-  <!-- Header -->
   <div class="flex items-start justify-between">
     <div>
       <h1 class="text-3xl font-bold tracking-tight">{$t('roles.page.title')}</h1>
       <p class="mt-1 text-muted-foreground">{$t('roles.page.description')}</p>
     </div>
     <div class="flex items-center gap-2">
-      <Button variant="outline" onclick={loadData} disabled={isLoading}>
-        <RefreshCw class="mr-2 h-4 w-4 {isLoading ? 'animate-spin' : ''}" />
+      <Button variant="outline" onclick={state.loadData} disabled={state.isLoading}>
+        <RefreshCw class="mr-2 h-4 w-4 {state.isLoading ? 'animate-spin' : ''}" />
         {$t('roles.actions.refresh')}
       </Button>
-      {#if canManageRoles}
-        <Button onclick={() => (createPermissionDialogOpen = true)}>
+      {#if state.canManageRoles}
+        <Button onclick={state.openCreatePermissionDialog}>
           <Plus class="mr-2 h-4 w-4" />
           {$t('roles.actions.create_permission')}
         </Button>
@@ -219,7 +52,6 @@
     </div>
   </div>
 
-  <!-- Stats Cards -->
   <div class="grid gap-4 sm:grid-cols-3">
     <div class="rounded-lg border bg-card p-4">
       <div class="flex items-center gap-3">
@@ -228,10 +60,10 @@
         </div>
         <div>
           <p class="text-sm text-muted-foreground">{$t('roles.stats.total_roles')}</p>
-          {#if isLoading}
+          {#if state.isLoading}
             <Skeleton class="h-7 w-12" />
           {:else}
-            <p class="text-2xl font-bold">{totalRoles}</p>
+            <p class="text-2xl font-bold">{state.totalRoles}</p>
           {/if}
         </div>
       </div>
@@ -244,10 +76,10 @@
         </div>
         <div>
           <p class="text-sm text-muted-foreground">{$t('roles.stats.total_permissions')}</p>
-          {#if isLoading}
+          {#if state.isLoading}
             <Skeleton class="h-7 w-12" />
           {:else}
-            <p class="text-2xl font-bold">{totalPermissions}</p>
+            <p class="text-2xl font-bold">{state.totalPermissions}</p>
           {/if}
         </div>
       </div>
@@ -260,26 +92,24 @@
         </div>
         <div>
           <p class="text-sm text-muted-foreground">{$t('roles.stats.resources')}</p>
-          {#if isLoading}
+          {#if state.isLoading}
             <Skeleton class="h-7 w-12" />
           {:else}
-            <p class="text-2xl font-bold">{uniqueResources}</p>
+            <p class="text-2xl font-bold">{state.uniqueResources}</p>
           {/if}
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Error State -->
-  {#if error}
+  {#if state.error}
     <div class="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-destructive">
       <p class="font-medium">{$t('roles.errors.load_title')}</p>
-      <p class="text-sm">{error}</p>
+      <p class="text-sm">{state.error}</p>
     </div>
   {/if}
 
-  <!-- Tabs -->
-  <Tabs.Root bind:value={activeTab}>
+  <Tabs.Root bind:value={state.activeTab}>
     <Tabs.List>
       <Tabs.Trigger value="roles" class="gap-2">
         <LayoutGrid class="h-4 w-4" />
@@ -293,11 +123,16 @@
         <Grid3X3 class="h-4 w-4" />
         {$t('roles.tabs.matrix')}
       </Tabs.Trigger>
+      {#if state.canManagePhaseRules}
+        <Tabs.Trigger value="phase-rules" class="gap-2">
+          <GitBranch class="h-4 w-4" />
+          {$t('roles.tabs.phase_rules')}
+        </Tabs.Trigger>
+      {/if}
     </Tabs.List>
 
-    <!-- Roles Tab -->
     <Tabs.Content value="roles" class="mt-6">
-      {#if isLoading}
+      {#if state.isLoading}
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {#each Array(7) as _}
             <div class="rounded-lg border p-4">
@@ -316,21 +151,20 @@
         </div>
       {:else}
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {#each roles as role (role.id)}
+          {#each state.roles as role (role.id)}
             <RoleCard
               {role}
-              onEdit={canManageRoles ? openEditRole : undefined}
-              onViewPermissions={viewRolePermissions}
-              canEdit={canManageRoles}
+              onEdit={state.canManageRoles ? state.openEditRole : undefined}
+              onViewPermissions={state.viewRolePermissions}
+              canEdit={state.canManageRoles}
             />
           {/each}
         </div>
       {/if}
     </Tabs.Content>
 
-    <!-- Permissions Tab -->
     <Tabs.Content value="permissions" class="mt-6">
-      {#if isLoading}
+      {#if state.isLoading}
         <div class="space-y-4">
           <div class="flex items-center justify-between">
             <Skeleton class="h-10 w-64" />
@@ -349,18 +183,17 @@
         </div>
       {:else}
         <PermissionTable
-          {permissions}
-          onEdit={canManageRoles ? openEditPermission : undefined}
-          onDelete={canManageRoles ? handleDeletePermission : undefined}
-          onCreate={canManageRoles ? () => (createPermissionDialogOpen = true) : undefined}
-          canManage={canManageRoles}
+          permissions={state.permissions}
+          onEdit={state.canManageRoles ? state.openEditPermission : undefined}
+          onDelete={state.canManageRoles ? state.deletePermission : undefined}
+          onCreate={state.canManageRoles ? state.openCreatePermissionDialog : undefined}
+          canManage={state.canManageRoles}
         />
       {/if}
     </Tabs.Content>
 
-    <!-- Matrix Tab -->
     <Tabs.Content value="matrix" class="mt-6">
-      {#if isLoading}
+      {#if state.isLoading}
         <div class="space-y-4">
           <Skeleton class="h-4 w-48" />
           <div class="rounded-lg border">
@@ -374,54 +207,64 @@
           </div>
         </div>
       {:else}
-        <PermissionMatrix {roles} {permissions} />
+        <PermissionMatrix roles={state.roles} permissions={state.permissions} />
+      {/if}
+    </Tabs.Content>
+
+    <Tabs.Content value="phase-rules" class="mt-6">
+      {#if state.isLoading}
+        <div class="space-y-4">
+          <Skeleton class="h-10 w-full" />
+          <Skeleton class="h-40 w-full" />
+          <Skeleton class="h-40 w-full" />
+        </div>
+      {:else if state.canManagePhaseRules}
+        <PhasePermissionRules
+          roles={state.roles}
+          phases={state.phases}
+          permissions={state.permissions}
+          rules={state.phasePermissions}
+          canManage={state.canManagePhaseRules}
+          onRulesChange={state.reloadPhaseRules}
+        />
       {/if}
     </Tabs.Content>
   </Tabs.Root>
 </div>
 
-<!-- Create Permission Dialog -->
-<Dialog.Root bind:open={createPermissionDialogOpen}>
+<Dialog.Root bind:open={state.createPermissionDialogOpen}>
   <Dialog.Content class="sm:max-w-125">
     <PermissionForm
-      onSubmit={handleCreatePermission}
-      onCancel={() => (createPermissionDialogOpen = false)}
-      isSubmitting={isSubmittingPermission}
-      error={permissionError}
+      onSubmit={state.createPermission}
+      onCancel={state.closeCreatePermissionDialog}
+      isSubmitting={state.isSubmittingPermission}
+      error={state.permissionError}
     />
   </Dialog.Content>
 </Dialog.Root>
 
-<!-- Edit Permission Dialog -->
-<Dialog.Root bind:open={editPermissionDialogOpen}>
+<Dialog.Root bind:open={state.editPermissionDialogOpen}>
   <Dialog.Content class="sm:max-w-125">
     <PermissionForm
-      permission={selectedPermission}
-      onSubmit={handleUpdatePermission}
-      onCancel={() => {
-        editPermissionDialogOpen = false;
-        selectedPermission = null;
-      }}
-      isSubmitting={isSubmittingPermission}
-      error={permissionError}
+      permission={state.selectedPermission}
+      onSubmit={state.updatePermission}
+      onCancel={state.closeEditPermissionDialog}
+      isSubmitting={state.isSubmittingPermission}
+      error={state.permissionError}
     />
   </Dialog.Content>
 </Dialog.Root>
 
-<!-- Edit Role Permissions Sheet -->
-<Sheet.Root bind:open={editRoleSheetOpen}>
+<Sheet.Root bind:open={state.editRoleSheetOpen}>
   <Sheet.Content side="right" class="flex h-full w-full flex-col p-0 sm:max-w-2xl">
-    {#if selectedRole}
+    {#if state.selectedRole}
       <RolePermissionEditor
-        role={selectedRole}
-        allPermissions={permissions}
-        onSubmit={handleUpdateRolePermissions}
-        onCancel={() => {
-          editRoleSheetOpen = false;
-          selectedRole = null;
-        }}
-        isSubmitting={isSubmittingRole}
-        error={roleError}
+        role={state.selectedRole}
+        allPermissions={state.permissions}
+        onSubmit={state.updateSelectedRolePermissions}
+        onCancel={state.closeRoleSheet}
+        isSubmitting={state.isSubmittingRole}
+        error={state.roleError}
       />
     {/if}
   </Sheet.Content>

@@ -5,6 +5,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainNotification "github.com/besart951/go_infra_link/backend/internal/domain/notification"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/google/uuid"
@@ -21,6 +22,7 @@ type ProjectLifecycleService interface {
 type ProjectAccessPolicyService interface {
 	CanAccessProject(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role) (bool, error)
 	CanUseProjectPermission(ctx context.Context, requesterID uuid.UUID, requesterRole *domainUser.Role, permission string) (bool, error)
+	CanUseProjectPermissionForProject(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role, permission string) (bool, error)
 }
 
 type ProjectMembershipService interface {
@@ -69,6 +71,18 @@ type PhaseService interface {
 	DeleteByID(ctx context.Context, id uuid.UUID) error
 }
 
+type PhasePermissionService interface {
+	Create(ctx context.Context, rule *domainProject.PhasePermission) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domainProject.PhasePermission, error)
+	List(ctx context.Context, phaseID *uuid.UUID) ([]domainProject.PhasePermission, error)
+	Update(ctx context.Context, rule *domainProject.PhasePermission) error
+	DeleteByID(ctx context.Context, id uuid.UUID) error
+}
+
 type FieldDeviceOptionsService interface {
 	GetFieldDeviceOptionsForProject(ctx context.Context, projectID uuid.UUID) (*domainFacility.FieldDeviceOptions, error)
+}
+
+type NotificationEventDispatcher interface {
+	DispatchEvent(ctx context.Context, input domainNotification.DispatchEventInput) error
 }

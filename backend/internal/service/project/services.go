@@ -9,6 +9,7 @@ import (
 
 type Dependencies struct {
 	Projects                 domainProject.ProjectRepository
+	PhasePermissions         domainProject.PhasePermissionRepository
 	ProjectControlCabinets   domainProject.ProjectControlCabinetRepository
 	ProjectSPSControllers    domainProject.ProjectSPSControllerRepository
 	ProjectFieldDevices      domainProject.ProjectFieldDeviceRepository
@@ -42,9 +43,10 @@ func NewServices(deps Dependencies, cfgs ...Config) *Services {
 
 	services := &Services{}
 	services.AccessPolicy = &ProjectAccessPolicyService{
-		repo:               deps.Projects,
-		userRepo:           deps.Users,
-		rolePermissionRepo: deps.RolePermissions,
+		repo:                deps.Projects,
+		userRepo:            deps.Users,
+		rolePermissionRepo:  deps.RolePermissions,
+		phasePermissionRepo: deps.PhasePermissions,
 	}
 	services.Lifecycle = &ProjectLifecycleService{
 		repo:               deps.Projects,

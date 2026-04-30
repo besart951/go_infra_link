@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import AppSidebar from '$lib/components/app-sidebar.svelte';
+  import { NotificationBell } from '$lib/components/notifications/index.js';
   import Toasts from '$lib/components/toast.svelte';
   import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
   import { Separator } from '$lib/components/ui/separator/index.js';
@@ -32,6 +33,7 @@
     if (pathname.startsWith('/users')) return t('navigation.users');
     if (pathname.startsWith('/teams')) return t('navigation.teams');
     if (pathname.startsWith('/account')) return t('navigation.account');
+    if (pathname.startsWith('/notifications')) return t('notifications.inbox.page_title');
     if (pathname.startsWith('/admin/notifications')) return t('notifications.page.title');
     if (pathname.startsWith('/errors')) return t('pages.http_error.title');
     if (pathname.startsWith('/facility/buildings')) return t('navigation.buildings');
@@ -57,8 +59,8 @@
   <Sidebar.Provider>
     <AppSidebar user={data.user} teams={data.teams ?? []} projects={data.projects ?? []} />
     <Sidebar.Inset>
-      <header class="flex h-16 shrink-0 items-center gap-2">
-        <div class="flex items-center gap-2 px-4">
+      <header class="flex h-16 shrink-0 items-center justify-between gap-2">
+        <div class="flex min-w-0 items-center gap-2 px-4">
           <Sidebar.Trigger class="-ms-1" />
           <Separator orientation="vertical" class="me-2 data-[orientation=vertical]:h-4" />
           <Breadcrumb.Root>
@@ -72,6 +74,9 @@
               </Breadcrumb.Item>
             </Breadcrumb.List>
           </Breadcrumb.Root>
+        </div>
+        <div class="flex items-center gap-2 px-4">
+          <NotificationBell />
         </div>
       </header>
       {#if data && data.backendAvailable === false}

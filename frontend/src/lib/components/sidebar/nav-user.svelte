@@ -3,7 +3,7 @@
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
   import * as Sidebar from '$lib/components/ui/sidebar/index.js';
   import { useSidebar } from '$lib/components/ui/sidebar/index.js';
-  import { setThemePreference, initTheme } from '$lib/stores/theme.js';
+  import { initAppearance, setThemePreference } from '$lib/stores/appearance.js';
   import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
   import LogOutIcon from '@lucide/svelte/icons/log-out';
   import MoonIcon from '@lucide/svelte/icons/moon';
@@ -24,7 +24,7 @@
   };
 
   onMount(() => {
-    initTheme();
+    initAppearance();
   });
 </script>
 

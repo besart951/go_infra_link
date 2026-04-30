@@ -16,6 +16,8 @@ const (
 	PermissionPhaseUpdate = "phase.update"
 	PermissionPhaseDelete = "phase.delete"
 
+	PermissionPhasePermissionManage = "phase_permission.manage"
+
 	PermissionRoleCreate = "role.create"
 	PermissionRoleRead   = "role.read"
 	PermissionRoleUpdate = "role.update"

@@ -10,7 +10,8 @@
   import type { ExcelReadSession } from '$lib/domain/excel/index.js';
   import { FileSpreadsheet, Table2 } from '@lucide/svelte';
 
-  type SpreadsheetPreviewerModule = typeof import('$lib/components/excel/spreadsheet-preview/SpreadsheetPreviewer.svelte');
+  type SpreadsheetPreviewerModule =
+    typeof import('$lib/components/excel/spreadsheet-preview/SpreadsheetPreviewer.svelte');
 
   let readSessionUseCase: StartExcelReadSessionUseCase | null = null;
   let readSessionGeneration = 0;
@@ -42,12 +43,13 @@
       return Promise.resolve(spreadsheetPreviewerModule);
     }
 
-    spreadsheetPreviewerLoad ??= import(
-      '$lib/components/excel/spreadsheet-preview/SpreadsheetPreviewer.svelte'
-    ).then((module) => {
-      spreadsheetPreviewerModule = module;
-      return module;
-    });
+    spreadsheetPreviewerLoad ??=
+      import('$lib/components/excel/spreadsheet-preview/SpreadsheetPreviewer.svelte').then(
+        (module) => {
+          spreadsheetPreviewerModule = module;
+          return module;
+        }
+      );
     return spreadsheetPreviewerLoad;
   }
 

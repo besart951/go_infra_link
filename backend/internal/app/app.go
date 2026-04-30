@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	applogger "github.com/besart951/go_infra_link/backend/pkg/logger"
@@ -18,6 +19,8 @@ func Run() error {
 		return err
 	}
 	defer cleanup()
+	stopNotificationWorker := runtimeDeps.services.Notification.StartEmailOutboxWorker(time.Minute, 100)
+	defer stopNotificationWorker()
 
 	router := newRouter(runtimeDeps)
 	return serveHTTP(runtimeDeps.cfg, runtimeDeps.log, router)

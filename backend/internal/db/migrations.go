@@ -44,6 +44,26 @@ var migrations = []migration{
 		description: "expand_project_subresource_permissions",
 		apply:       expandProjectSubresourcePermissions,
 	},
+	{
+		version:     "202604300001",
+		description: "phase_permission_rules_and_remove_project_edit_permissions",
+		apply:       migratePhasePermissions,
+	},
+	{
+		version:     "202604300002",
+		description: "user_notification_preferences_and_system_notifications",
+		apply:       migrateUserNotificationPreferences,
+	},
+	{
+		version:     "202604300003",
+		description: "notification_email_verification",
+		apply:       migrateUserNotificationPreferences,
+	},
+	{
+		version:     "202604300004",
+		description: "notification_outbox_and_rules",
+		apply:       migrateNotificationDispatch,
+	},
 }
 
 func ApplyMigrations(db *gorm.DB) error {

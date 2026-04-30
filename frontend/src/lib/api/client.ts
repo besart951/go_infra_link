@@ -92,7 +92,11 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   control_cabinet_nr: 'facility.forms.control_cabinet.number_label',
   description: 'common.description',
   device_name: 'facility.device_name',
+  channel: 'notifications.preferences.channel_title',
+  code: 'notifications.preferences.email.code_label',
+  event_key: 'notifications.rules.event_key',
   fielddevice: 'facility.field_device',
+  frequency: 'notifications.preferences.frequency_title',
   from_email: 'notifications.form.from_email',
   ga_device: 'facility.ga_device',
   gateway: 'facility.forms.sps_controller.gateway_label',
@@ -100,12 +104,20 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   ip_address: 'facility.ip_address',
   iws_code: 'facility.iws_code',
   name: 'common.name',
+  notification_email: 'notifications.preferences.email.label',
   objectdata: 'facility.object_data',
   object_data_id: 'facility.object_data',
   password: 'notifications.form.password',
   phase_id: 'projects.settings.phase',
   port: 'notifications.form.port',
+  project_id: 'notifications.rules.project_id',
   reply_to: 'notifications.form.reply_to',
+  recipient_role: 'notifications.rules.role',
+  recipient_team_id: 'notifications.rules.team_id',
+  recipient_type: 'notifications.rules.recipient_type',
+  recipient_user_ids: 'notifications.rules.user_ids',
+  resource_id: 'notifications.rules.resource_id',
+  resource_type: 'notifications.rules.resource_type',
   spscontroller: 'facility.sps_controller',
   specification: 'facility.specifications',
   subnet: 'facility.forms.sps_controller.subnet_label',
@@ -129,13 +141,32 @@ const SCOPE_LABEL_KEYS: Record<string, string> = {
 const DIRECT_MESSAGE_KEYS: Record<string, string> = {
   'Bad Request': 'errors.bad_request',
   Conflict: 'errors.conflict',
+  'Failed to load notification count': 'notifications.errors.notification_count_load_failed',
+  'Failed to load notification preference': 'notifications.errors.preference_load_failed',
+  'Failed to load notifications': 'notifications.errors.notifications_load_failed',
+  'Failed to load notification rules': 'notifications.errors.rules_load_failed',
+  'Failed to load SMTP settings': 'notifications.errors.smtp_settings_load_failed',
+  'Failed to mark notification read': 'notifications.errors.mark_read_failed',
+  'Failed to mark notifications read': 'notifications.errors.mark_all_read_failed',
+  'Failed to save notification preference': 'notifications.errors.preference_save_failed',
+  'Failed to save notification rule': 'notifications.errors.rule_save_failed',
+  'Failed to save SMTP settings': 'notifications.errors.smtp_settings_save_failed',
+  'Failed to verify notification email': 'notifications.errors.email_verification_failed',
   Forbidden: 'errors.forbidden',
   'Internal Server Error': 'errors.internal_server_error',
+  'Notification not found': 'notifications.errors.notification_not_found',
+  'Notification rule not found': 'notifications.errors.rule_not_found',
   'Not Found': 'errors.not_found',
+  'SMTP settings not configured': 'notifications.errors.smtp_settings_not_configured',
   'Unknown error': 'errors.unknown_error',
   Unauthorized: 'errors.unauthorized',
   authorization_failed: 'errors.unauthorized',
+  email_verification_failed: 'notifications.errors.email_verification_failed',
+  fetch_failed: 'errors.fetch_failed',
   'field device is required': 'field_device.multi_create.validation.field_device_required',
+  'notification provider disabled': 'notifications.errors.smtp_disabled',
+  'notification provider not configured': 'notifications.errors.smtp_settings_not_configured',
+  'Failed to delete notification rule': 'notifications.errors.rule_delete_failed',
   'no available ga_device for control cabinet': 'facility.no_available_ga_device',
   'object_data_id and bacnet_objects are mutually exclusive': 'facility.mutually_exclusive_error',
   'one or more parent entities (SPS controller, apparat, system part) not found':
@@ -144,6 +175,8 @@ const DIRECT_MESSAGE_KEYS: Record<string, string> = {
   'apparat_nr must be between 1 and 99': 'field_device.validation.apparat_nr_range',
   'apparatnummer ist bereits vergeben': 'field_device.multi_create.validation.apparat_nr_used',
   referenced_entity_in_use: 'facility.referenced_entity_in_use',
+  smtp_test_failed: 'notifications.errors.smtp_test_failed',
+  update_failed: 'errors.update_failed',
   validation_error: 'errors.validation_error'
 };
 
@@ -211,6 +244,18 @@ export function localizeErrorText(message: string, fieldPath?: string): string {
 
   if (trimmed === 'invalid') {
     return t('validation.invalid', { field: getFieldLabel(fieldPath) });
+  }
+
+  if (
+    /^(smtp dial|smtp tls dial|smtp client|smtp starttls|smtp auth|smtp mail from|smtp rcpt to|smtp data|smtp write|smtp close data|smtp quit):/i.test(
+      trimmed
+    )
+  ) {
+    return t('notifications.errors.smtp_delivery_failed');
+  }
+
+  if (/^(decode secret|decrypt secret):/i.test(trimmed)) {
+    return t('notifications.errors.smtp_secret_failed');
   }
 
   let match = trimmed.match(/^([a-z0-9_.-]+) is required$/i);
@@ -344,14 +389,17 @@ async function parseError(response: Response): Promise<ApiError> {
 export interface ApiOptions extends RequestInit {
   customFetch?: typeof fetch;
   baseUrl?: string;
+  skipHttpErrorNavigation?: boolean;
 }
 
 export async function api<T = unknown>(endpoint: string, options: ApiOptions = {}): Promise<T> {
-  const basePath = options.baseUrl ?? '';
+  const { baseUrl, customFetch, skipHttpErrorNavigation = false, ...fetchOptions } = options;
+
+  const basePath = baseUrl ?? '';
   const url = `${basePath}/api/v1${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
 
   const csrf = getCsrfToken();
-  const customHeaders = options.headers;
+  const customHeaders = fetchOptions.headers;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json'
@@ -378,11 +426,11 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
     headers['X-CSRF-Token'] = csrf;
   }
 
-  const fetchImpl = options.customFetch ?? fetch;
+  const fetchImpl = customFetch ?? fetch;
 
   try {
     const response = await fetchImpl(url, {
-      ...options,
+      ...fetchOptions,
       credentials: 'include',
       headers
     });
@@ -402,7 +450,7 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
         );
       }
 
-      if (await navigateToHttpErrorPage(response.status)) {
+      if (!skipHttpErrorNavigation && (await navigateToHttpErrorPage(response.status))) {
         throw new HandledApiException(
           response.status,
           error.error,

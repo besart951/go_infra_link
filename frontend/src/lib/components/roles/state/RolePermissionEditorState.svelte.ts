@@ -9,7 +9,7 @@ type PermissionGroups = Record<CategoryId, Record<string, Permission[]>>;
 const CATEGORY_IDS: CategoryId[] = ['users', 'facility', 'projects'];
 
 const CATEGORY_RESOURCE_MAP: Record<CategoryId, string[]> = {
-  users: ['user', 'team', 'role', 'permission'],
+  users: ['user', 'team', 'project', 'phase', 'phase_permission', 'role', 'permission'],
   facility: [
     'building',
     'controlcabinet',
@@ -34,6 +34,8 @@ const RESOURCE_DISPLAY_NAMES: Record<string, string> = {
   team: 'roles.resources.team',
   role: 'roles.resources.role',
   permission: 'roles.resources.permission',
+  phase: 'roles.resources.phase',
+  phase_permission: 'roles.resources.phase_permission',
   project: 'roles.resources.project_self',
   building: 'roles.resources.building',
   controlcabinet: 'roles.resources.controlcabinet',

@@ -29,15 +29,17 @@
         {#snippet child({ props })}
           <Sidebar.MenuButton
             size="lg"
-            class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            class="group-data-[collapsible=icon]:justify-center data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             {...props}
           >
             <div
-              class="flex size-8 items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground"
+              class="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground"
             >
               {activeTeam?.name?.[0]?.toUpperCase() ?? $t('app.brand_short')}
             </div>
-            <div class="grid flex-1 text-start text-sm leading-tight">
+            <div
+              class="grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden"
+            >
               <span class="truncate font-semibold">{activeTeam?.name ?? $t('app.brand')}</span>
               <span class="truncate text-xs text-muted-foreground">
                 {activeTeam
@@ -45,7 +47,7 @@
                   : $t('sidebar.team_switcher.console')}
               </span>
             </div>
-            <ChevronsUpDownIcon class="ms-auto" />
+            <ChevronsUpDownIcon class="ms-auto shrink-0 group-data-[collapsible=icon]:hidden" />
           </Sidebar.MenuButton>
         {/snippet}
       </DropdownMenu.Trigger>
