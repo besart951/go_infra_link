@@ -19,6 +19,8 @@ export const load: LayoutLoad = async ({ fetch }) => {
 
   const customFetch = fetch;
 
+  const hasPermission = (permission: string) => Boolean(user?.permissions?.includes(permission));
+
   try {
     try {
       const userRes = await api<User>('/auth/me', { customFetch });
@@ -32,12 +34,15 @@ export const load: LayoutLoad = async ({ fetch }) => {
 
     if (user) {
       try {
-        const teamPromise = user.can_access_user_directory
+        const teamPromise = user.can_access_user_directory || !hasPermission('team.read')
           ? Promise.resolve([] as Team[])
-          : api<Team[]>('/teams', { customFetch });
+          : api<Team[]>('/teams', { customFetch, skipHttpErrorNavigation: true });
+        const projectPromise = hasPermission('project.listAll')
+          ? api<Project[]>('/projects', { customFetch, skipHttpErrorNavigation: true })
+          : Promise.resolve([] as Project[]);
         const [t, p] = await Promise.all([
           teamPromise,
-          api<Project[]>('/projects', { customFetch })
+          projectPromise
         ]);
         teams = t;
         projects = p;
