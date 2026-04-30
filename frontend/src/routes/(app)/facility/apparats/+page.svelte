@@ -15,64 +15,26 @@
   import ApparatForm from '$lib/components/facility/forms/ApparatForm.svelte';
   import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
   import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
+  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
   const manageApparat = new ManageEntityUseCase(apparatRepository);
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  let showForm = $state(false);
-  let editingItem: Apparat | undefined = $state(undefined);
-
-  function handleEdit(item: Apparat) {
-    editingItem = item;
-    showForm = true;
-  }
-
-  function handleCreate() {
-    editingItem = undefined;
-    showForm = true;
-  }
-
-  function handleSuccess() {
-    showForm = false;
-    editingItem = undefined;
-    apparatsStore.reload();
-  }
-
-  function handleCancel() {
-    showForm = false;
-    editingItem = undefined;
-  }
-
-  async function handleCopy(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-    }
-  }
-
-  async function handleDelete(item: Apparat) {
-    const ok = await confirm({
-      title: $t('common.delete'),
-      message: $t('facility.delete_apparat_confirm').replace(
-        '{name}',
-        item.short_name ?? item.name
-      ),
-      confirmText: $t('common.delete'),
-      cancelText: $t('common.cancel'),
-      variant: 'destructive'
-    });
-    if (!ok) return;
-    try {
-      await manageApparat.delete(item.id);
-      addToast($t('facility.apparat_deleted'), 'success');
-      apparatsStore.reload();
-    } catch (err) {
-      addToast(err instanceof Error ? err.message : $t('facility.delete_apparat_failed'), 'error');
-    }
-  }
+  const actions = new CrudPageActions<Apparat>({
+    reload: () => apparatsStore.reload(),
+    deleteItem: (item) => manageApparat.delete(item.id),
+    confirmDelete: confirm,
+    addToast,
+    getDeleteTitle: () => $t('common.delete'),
+    getDeleteMessage: (item) =>
+      $t('facility.delete_apparat_confirm').replace('{name}', item.short_name ?? item.name),
+    getDeleteConfirmText: () => $t('common.delete'),
+    getDeleteCancelText: () => $t('common.cancel'),
+    getDeleteSuccessMessage: () => $t('facility.apparat_deleted'),
+    getDeleteFailureMessage: () => $t('facility.delete_apparat_failed')
+  });
 
   onMount(() => {
     apparatsStore.load();
@@ -91,16 +53,20 @@
       <h1 class="text-2xl font-semibold tracking-tight">{$t('facility.apparats_title')}</h1>
       <p class="text-sm text-muted-foreground">{$t('facility.apparats_desc')}</p>
     </div>
-    {#if !showForm && canPerform('create', 'apparat')}
-      <Button onclick={handleCreate}>
+    {#if !actions.showForm && canPerform('create', 'apparat')}
+      <Button onclick={() => actions.create()}>
         <Plus class="mr-2 size-4" />
         {$t('facility.new_apparat')}
       </Button>
     {/if}
   </div>
 
-  {#if showForm}
-    <ApparatForm initialData={editingItem} onSuccess={handleSuccess} onCancel={handleCancel} />
+  {#if actions.showForm}
+    <ApparatForm
+      initialData={actions.editingItem}
+      onSuccess={() => actions.success()}
+      onCancel={() => actions.cancel()}
+    />
   {/if}
 
   <PaginatedList
@@ -131,20 +97,20 @@
             {/snippet}
           </DropdownMenu.Trigger>
           <DropdownMenu.Content align="end" class="w-40">
-            <DropdownMenu.Item onclick={() => handleCopy(item.short_name ?? item.id)}>
+            <DropdownMenu.Item onclick={() => actions.copy(item.short_name ?? item.id)}>
               {$t('facility.copy')}
             </DropdownMenu.Item>
             <DropdownMenu.Item onclick={() => goto(`/facility/apparats/${item.id}`)}>
               {$t('facility.view')}
             </DropdownMenu.Item>
             {#if canPerform('update', 'apparat')}
-              <DropdownMenu.Item onclick={() => handleEdit(item)}
+              <DropdownMenu.Item onclick={() => actions.edit(item)}
                 >{$t('common.edit')}</DropdownMenu.Item
               >
             {/if}
             {#if canPerform('delete', 'apparat')}
               <DropdownMenu.Separator />
-              <DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+              <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(item)}>
                 {$t('common.delete')}
               </DropdownMenu.Item>
             {/if}

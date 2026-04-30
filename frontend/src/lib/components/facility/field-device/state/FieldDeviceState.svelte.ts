@@ -2,16 +2,19 @@ import { addToast } from '$lib/components/toast.svelte';
 import { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.js';
 import { t as translate } from '$lib/i18n/index.js';
 import { ManageFieldDeviceUseCase } from '$lib/application/useCases/facility/manageFieldDeviceUseCase.js';
-import { ListEntityUseCase } from '$lib/application/useCases/listEntityUseCase.js';
 import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
-import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
-import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
-import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
-import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
-import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
-import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
-import { canPerform, canPerformAny } from '$lib/utils/permissions.js';
+import { canPerform } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
+import { createFieldDevicePermissionPolicy } from './fieldDevicePermissionPolicy.js';
+import { FieldDeviceGroupingLookupService } from './fieldDeviceGroupingLookupService.js';
+import { FieldDeviceLookupService } from './fieldDeviceLookupService.js';
+import { ProjectFieldDeviceAssociationService } from './projectFieldDeviceAssociationService.js';
+import {
+  applySPSControllerNameDelta,
+  planSPSControllerDeviceRefresh,
+  planVisibleDeviceDelta,
+  planVisibleDeviceRefresh
+} from './fieldDeviceVisibleRows.js';
 import type {
   Apparat,
   Building,
@@ -62,8 +65,10 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   private readonly resolveSharedFieldDeviceEditors: () => SharedFieldDeviceEditorsByDevice;
   private readonly onFieldDevicesSaved?: (devices: FieldDevice[]) => void;
   private readonly manageFieldDeviceUseCase = new ManageFieldDeviceUseCase(fieldDeviceRepository);
-  private readonly listApparatsUseCase = new ListEntityUseCase(apparatRepository);
-  private readonly listSystemPartsUseCase = new ListEntityUseCase(systemPartRepository);
+  private readonly lookupService = new FieldDeviceLookupService();
+  private readonly groupingLookupService = new FieldDeviceGroupingLookupService();
+  private readonly projectAssociationService = new ProjectFieldDeviceAssociationService();
+  private readonly permissionPolicy: ReturnType<typeof createFieldDevicePermissionPolicy>;
 
   constructor(props: FieldDeviceStateProps = {}) {
     const resolveProjectId = toProjectIdResolver(props.projectId);
@@ -74,6 +79,11 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     this.resolveProjectId = resolveProjectId;
     this.resolveSharedFieldDeviceEditors = props.sharedFieldDeviceEditors ?? (() => ({}));
     this.onFieldDevicesSaved = props.onFieldDevicesSaved;
+    this.permissionPolicy = createFieldDevicePermissionPolicy({
+      isProjectContext: () => this.isProjectContext,
+      canPerform,
+      canPerformAny: (actions, resource) => actions.some((action) => canPerform(action, resource))
+    });
     this.editing = useFieldDeviceEditing({
       projectId: () => this.projectId,
       onSharedStateChange: props.onSharedFieldDeviceStateChange,
@@ -89,88 +99,37 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     return Boolean(this.projectId);
   }
 
-  private canPerformProjectFieldDevice(...actions: string[]): boolean {
-    return canPerformAny(actions, 'project.fielddevice');
-  }
-
-  private canPerformProjectFieldDeviceSpecification(...actions: string[]): boolean {
-    return canPerformAny(actions, 'project.fielddevice_specification');
-  }
-
-  private canPerformProjectFieldDeviceBacnetObjects(...actions: string[]): boolean {
-    return canPerformAny(actions, 'project.fielddevice.bacnetobjects');
-  }
-
   canCreateFieldDevice(): boolean {
-    return this.isProjectContext
-      ? this.canPerformProjectFieldDevice('create', 'edit')
-      : canPerform('create', 'fielddevice');
+    return this.permissionPolicy.canCreateFieldDevice();
   }
 
   canUpdateFieldDevice(): boolean {
-    return this.isProjectContext
-      ? this.canPerformProjectFieldDevice('update', 'edit')
-      : canPerform('update', 'fielddevice');
+    return this.permissionPolicy.canUpdateFieldDevice();
   }
 
   canDeleteFieldDevice(): boolean {
-    return this.isProjectContext
-      ? this.canPerformProjectFieldDevice('delete', 'edit')
-      : canPerform('delete', 'fielddevice');
+    return this.permissionPolicy.canDeleteFieldDevice();
   }
 
   canUpdateFieldDeviceSpecification(): boolean {
-    if (!this.isProjectContext) {
-      return this.canUpdateFieldDevice();
-    }
-
-    return (
-      this.canPerformProjectFieldDeviceSpecification('update', 'edit') ||
-      this.canPerformProjectFieldDevice('edit')
-    );
+    return this.permissionPolicy.canUpdateFieldDeviceSpecification();
   }
 
   canUpdateFieldDeviceBacnetObjects(): boolean {
-    if (!this.isProjectContext) {
-      return this.canUpdateFieldDevice();
-    }
-
-    return (
-      this.canPerformProjectFieldDeviceBacnetObjects('update', 'edit') ||
-      this.canPerformProjectFieldDevice('edit')
-    );
+    return this.permissionPolicy.canUpdateFieldDeviceBacnetObjects();
   }
 
   canOpenBulkEditPanel(): boolean {
-    if (!this.isProjectContext) {
-      return this.canUpdateFieldDevice();
-    }
-
-    return this.canUpdateFieldDevice() || this.canUpdateFieldDeviceSpecification();
+    return this.permissionPolicy.canOpenBulkEditPanel();
   }
 
   canSavePendingEdits(): boolean {
-    if (!this.editing.hasUnsavedChanges) {
-      return false;
-    }
-
-    if (!this.isProjectContext) {
-      return this.canUpdateFieldDevice();
-    }
-
-    if (this.editing.hasPendingBaseEdits && !this.canUpdateFieldDevice()) {
-      return false;
-    }
-
-    if (this.editing.hasPendingSpecificationEdits && !this.canUpdateFieldDeviceSpecification()) {
-      return false;
-    }
-
-    if (this.editing.hasPendingBacnetEdits && !this.canUpdateFieldDeviceBacnetObjects()) {
-      return false;
-    }
-
-    return true;
+    return this.permissionPolicy.canSavePendingEdits({
+      hasUnsavedChanges: this.editing.hasUnsavedChanges,
+      hasPendingBaseEdits: this.editing.hasPendingBaseEdits,
+      hasPendingSpecificationEdits: this.editing.hasPendingSpecificationEdits,
+      hasPendingBacnetEdits: this.editing.hasPendingBacnetEdits
+    });
   }
 
   getEditorsForDevice(deviceId: string) {
@@ -202,27 +161,12 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   }
 
   private async loadLookups(): Promise<void> {
-    const [apparatsResult, systemPartsResult] = await Promise.allSettled([
-      this.listApparatsUseCase.execute({
-        pagination: { page: 1, pageSize: 1000 },
-        search: { text: '' }
-      }),
-      this.listSystemPartsUseCase.execute({
-        pagination: { page: 1, pageSize: 1000 },
-        search: { text: '' }
-      })
-    ]);
-
-    if (apparatsResult.status === 'fulfilled') {
-      this.allApparats = apparatsResult.value.items;
-    } else {
-      console.error('Failed to load apparats', apparatsResult.reason);
-    }
-
-    if (systemPartsResult.status === 'fulfilled') {
-      this.allSystemParts = systemPartsResult.value.items;
-    } else {
-      console.error('Failed to load system parts', systemPartsResult.reason);
+    const result = await this.lookupService.loadStaticLookups();
+    if (result.apparats) this.allApparats = result.apparats;
+    if (result.systemParts) this.allSystemParts = result.systemParts;
+    if (result.apparatsError) console.error('Failed to load apparats', result.apparatsError);
+    if (result.systemPartsError) {
+      console.error('Failed to load system parts', result.systemPartsError);
     }
   }
 
@@ -380,28 +324,18 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   }
 
   async refreshDevices(deviceIds: string[]): Promise<void> {
-    const uniqueDeviceIds = [...new Set(deviceIds.filter(Boolean))];
-
-    if (uniqueDeviceIds.length === 0) {
+    const plan = planVisibleDeviceRefresh(this.visibleRowContext(), deviceIds);
+    if (plan.action === 'reload') {
       await this.reload();
       return;
     }
 
-    if (this.searchText || this.orderBy || this.order || this.hasActiveFilters) {
-      await this.reload();
-      return;
-    }
-
-    const visibleIds = new Set(this.items.map((item) => item.id));
-    if (uniqueDeviceIds.some((id) => !visibleIds.has(id))) {
-      await this.reload();
+    if (plan.action === 'none') {
       return;
     }
 
     try {
-      const updatedItems = await Promise.all(
-        uniqueDeviceIds.map((id) => fieldDeviceRepository.get(id))
-      );
+      const updatedItems = await Promise.all(plan.ids.map((id) => fieldDeviceRepository.get(id)));
 
       this.replaceItems(updatedItems);
       if (this.view.grouping.isGrouped) {
@@ -414,92 +348,40 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   }
 
   async applyDeviceDelta(fieldDevices: FieldDevice[]): Promise<void> {
-    const updatedDevices = [...new Map(fieldDevices.map((item) => [item.id, item])).values()];
-
-    if (updatedDevices.length === 0) {
-      return;
-    }
-
-    if (this.searchText || this.orderBy || this.order || this.hasActiveFilters) {
+    const plan = planVisibleDeviceDelta(this.visibleRowContext(), fieldDevices);
+    if (plan.action === 'reload') {
       await this.reload();
       return;
     }
 
-    const visibleIDs = new Set(this.items.map((item) => item.id));
-    const visibleDevices = updatedDevices.filter((item) => visibleIDs.has(item.id));
-    const hasNewDevices = updatedDevices.some((item) => !visibleIDs.has(item.id));
-
-    if (hasNewDevices) {
-      await this.reload();
+    if (plan.action === 'none') {
       return;
     }
 
-    this.replaceItems(visibleDevices);
+    this.replaceItems(plan.devices);
     if (this.view.grouping.isGrouped) {
       await this.loadGroupingLookupsForVisibleDevices();
     }
   }
 
   async refreshDevicesForSPSControllers(spsControllerIds: string[]): Promise<void> {
-    const uniqueSPSControllerIDs = [...new Set(spsControllerIds.filter(Boolean))];
-
-    if (uniqueSPSControllerIDs.length === 0) {
+    const plan = planSPSControllerDeviceRefresh(this.visibleRowContext(), spsControllerIds);
+    if (plan.action === 'reload') {
       await this.reload();
       return;
     }
 
-    if (this.searchText || this.orderBy || this.order || this.hasActiveFilters) {
-      await this.reload();
+    if (plan.action === 'none') {
       return;
     }
 
-    const controllerIDs = new Set(uniqueSPSControllerIDs);
-    const visibleDeviceIDs = this.items
-      .filter((item) => {
-        const controllerID = item.sps_controller_system_type?.sps_controller_id;
-        return controllerID ? controllerIDs.has(controllerID) : false;
-      })
-      .map((item) => item.id);
-
-    if (visibleDeviceIDs.length === 0) {
-      return;
-    }
-
-    await this.refreshDevices(visibleDeviceIDs);
+    await this.refreshDevices(plan.ids);
   }
 
   applySPSControllerDelta(
     spsControllers: import('$lib/domain/facility/index.js').SPSController[]
   ): void {
-    const controllerNames = new Map(
-      spsControllers
-        .filter((item) => item.id && item.device_name)
-        .map((item) => [item.id, item.device_name])
-    );
-
-    if (controllerNames.size === 0) {
-      return;
-    }
-
-    this.items = this.items.map((item) => {
-      const systemType = item.sps_controller_system_type;
-      if (!systemType?.sps_controller_id) {
-        return item;
-      }
-
-      const nextName = controllerNames.get(systemType.sps_controller_id);
-      if (!nextName || systemType.sps_controller_name === nextName) {
-        return item;
-      }
-
-      return {
-        ...item,
-        sps_controller_system_type: {
-          ...systemType,
-          sps_controller_name: nextName
-        }
-      };
-    });
+    this.items = applySPSControllerNameDelta(this.items, spsControllers);
   }
 
   savePendingEdits(): void {
@@ -514,14 +396,26 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     this.editing.discardAllEdits();
   }
 
-  private async removeProjectFieldDevice(deviceId: string): Promise<void> {
-    const linkId = await this.resolveProjectFieldDeviceLinkId(deviceId);
+  private visibleRowContext() {
+    return {
+      items: this.items,
+      searchText: this.searchText,
+      orderBy: this.orderBy,
+      order: this.order,
+      hasActiveFilters: this.hasActiveFilters
+    };
+  }
 
-    if (!this.projectId || !linkId) {
+  private async removeProjectFieldDevice(deviceId: string): Promise<void> {
+    if (!this.projectId) {
       throw new Error(translate('projects.errors.load_failed'));
     }
 
-    await projectRepository.removeFieldDevice(this.projectId, linkId);
+    await this.projectAssociationService.removeFieldDevice(
+      this.projectId,
+      deviceId,
+      translate('projects.errors.load_failed')
+    );
   }
 
   private async removeProjectFieldDevices(ids: string[]): Promise<{
@@ -530,128 +424,34 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     success_count: number;
     failure_count: number;
   }> {
-    const linkIdsByDeviceId = await this.loadProjectFieldDeviceLinkIds();
-
-    const results = await Promise.all(
-      ids.map(async (id) => {
-        const linkId = linkIdsByDeviceId.get(id);
-        if (!this.projectId || !linkId) {
-          return { id, success: false };
-        }
-
-        try {
-          await projectRepository.removeFieldDevice(this.projectId, linkId);
-          return { id, success: true };
-        } catch {
-          return { id, success: false };
-        }
-      })
-    );
-
-    const successCount = results.filter((item) => item.success).length;
-    return {
-      results,
-      total_count: ids.length,
-      success_count: successCount,
-      failure_count: ids.length - successCount
-    };
-  }
-
-  private async resolveProjectFieldDeviceLinkId(deviceId: string): Promise<string | undefined> {
-    const linkIdsByDeviceId = await this.loadProjectFieldDeviceLinkIds();
-    return linkIdsByDeviceId.get(deviceId);
-  }
-
-  private async loadProjectFieldDeviceLinkIds(): Promise<Map<string, string>> {
     if (!this.projectId) {
-      return new Map();
+      return {
+        results: ids.map((id) => ({ id, success: false })),
+        total_count: ids.length,
+        success_count: 0,
+        failure_count: ids.length
+      };
     }
 
-    const links = await projectRepository.listFieldDevices(this.projectId, {
-      page: 1,
-      limit: 1000
-    });
-    return new Map(links.items.map((item) => [item.field_device_id, item.id]));
+    return this.projectAssociationService.removeFieldDevices(this.projectId, ids);
   }
 
   private async loadGroupingLookupsForVisibleDevices(): Promise<void> {
     if (this.loadingGroupingLookups) return;
 
-    const activeGroups = new Set(this.view.grouping.activeKeys);
-    const shouldLoadControllers =
-      activeGroups.has('building') ||
-      activeGroups.has('controlCabinet') ||
-      activeGroups.has('spsController');
-    const shouldLoadCabinets = activeGroups.has('building') || activeGroups.has('controlCabinet');
-    const shouldLoadBuildings = activeGroups.has('building');
-
-    if (!shouldLoadControllers && !shouldLoadCabinets && !shouldLoadBuildings) {
-      return;
-    }
-
     this.loadingGroupingLookups = true;
 
     try {
-      const visibleControllerIds = [
-        ...new Set(
-          this.items
-            .map((item) => item.sps_controller_system_type?.sps_controller_id)
-            .filter((id): id is string => Boolean(id))
-        )
-      ];
-
-      if (shouldLoadControllers) {
-        const missingControllerIds = visibleControllerIds.filter(
-          (id) => !this.groupingSPSControllers.has(id)
-        );
-
-        if (missingControllerIds.length > 0) {
-          const controllers = await spsControllerRepository.getBulk(missingControllerIds);
-          this.groupingSPSControllers = this.mergeLookupItems(
-            this.groupingSPSControllers,
-            controllers
-          );
-        }
-      }
-
-      if (shouldLoadCabinets) {
-        const visibleCabinetIds = [
-          ...new Set(
-            visibleControllerIds
-              .map((id) => this.groupingSPSControllers.get(id)?.control_cabinet_id)
-              .filter((id): id is string => Boolean(id))
-          )
-        ];
-        const missingCabinetIds = visibleCabinetIds.filter(
-          (id) => !this.groupingControlCabinets.has(id)
-        );
-
-        if (missingCabinetIds.length > 0) {
-          const cabinets = await controlCabinetRepository.getBulk(missingCabinetIds);
-          this.groupingControlCabinets = this.mergeLookupItems(
-            this.groupingControlCabinets,
-            cabinets
-          );
-        }
-      }
-
-      if (shouldLoadBuildings) {
-        const visibleBuildingIds = [
-          ...new Set(
-            [...this.groupingControlCabinets.values()]
-              .map((cabinet) => cabinet.building_id)
-              .filter((id): id is string => Boolean(id))
-          )
-        ];
-        const missingBuildingIds = visibleBuildingIds.filter(
-          (id) => !this.groupingBuildings.has(id)
-        );
-
-        if (missingBuildingIds.length > 0) {
-          const buildings = await buildingRepository.getBulk(missingBuildingIds);
-          this.groupingBuildings = this.mergeLookupItems(this.groupingBuildings, buildings);
-        }
-      }
+      const lookups = await this.groupingLookupService.loadForVisibleDevices({
+        items: this.items,
+        activeGroups: new Set(this.view.grouping.activeKeys),
+        spsControllers: this.groupingSPSControllers,
+        controlCabinets: this.groupingControlCabinets,
+        buildings: this.groupingBuildings
+      });
+      this.groupingSPSControllers = lookups.spsControllers;
+      this.groupingControlCabinets = lookups.controlCabinets;
+      this.groupingBuildings = lookups.buildings;
     } catch (error) {
       console.error('Failed to load field device grouping lookups:', error);
     } finally {
@@ -722,17 +522,6 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
       system_part: updated.system_part ?? current.system_part,
       bacnet_objects: current.bacnet_objects ?? updated.bacnet_objects
     };
-  }
-
-  private mergeLookupItems<TItem extends { id: string }>(
-    current: Map<string, TItem>,
-    items: TItem[]
-  ): Map<string, TItem> {
-    const next = new Map(current);
-    for (const item of items) {
-      next.set(item.id, item);
-    }
-    return next;
   }
 
   private async mapWithConcurrency<T, TResult>(

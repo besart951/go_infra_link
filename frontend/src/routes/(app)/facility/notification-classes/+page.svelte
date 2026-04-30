@@ -15,67 +15,26 @@
   import NotificationClassForm from '$lib/components/facility/forms/NotificationClassForm.svelte';
   import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
   import { notificationClassRepository } from '$lib/infrastructure/api/notificationClassRepository.js';
+  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
   const manageNotificationClass = new ManageEntityUseCase(notificationClassRepository);
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  let showForm = $state(false);
-  let editingItem: NotificationClass | undefined = $state(undefined);
-
-  function handleEdit(item: NotificationClass) {
-    editingItem = item;
-    showForm = true;
-  }
-
-  function handleCreate() {
-    editingItem = undefined;
-    showForm = true;
-  }
-
-  function handleSuccess() {
-    showForm = false;
-    editingItem = undefined;
-    notificationClassesStore.reload();
-  }
-
-  function handleCancel() {
-    showForm = false;
-    editingItem = undefined;
-  }
-
-  async function handleCopy(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-    }
-  }
-
-  async function handleDelete(item: NotificationClass) {
-    const ok = await confirm({
-      title: $t('facility.delete_notification_class_confirm').replace('{name}', ''),
-      message: $t('facility.delete_notification_class_confirm').replace(
-        '{name}',
-        item.event_category || ''
-      ),
-      confirmText: $t('common.delete'),
-      cancelText: $t('common.cancel'),
-      variant: 'destructive'
-    });
-    if (!ok) return;
-    try {
-      await manageNotificationClass.delete(item.id);
-      addToast($t('facility.notification_class_deleted'), 'success');
-      notificationClassesStore.reload();
-    } catch (err) {
-      addToast(
-        err instanceof Error ? err.message : $t('facility.delete_notification_class_failed'),
-        'error'
-      );
-    }
-  }
+  const actions = new CrudPageActions<NotificationClass>({
+    reload: () => notificationClassesStore.reload(),
+    deleteItem: (item) => manageNotificationClass.delete(item.id),
+    confirmDelete: confirm,
+    addToast,
+    getDeleteTitle: () => $t('facility.delete_notification_class_confirm').replace('{name}', ''),
+    getDeleteMessage: (item) =>
+      $t('facility.delete_notification_class_confirm').replace('{name}', item.event_category || ''),
+    getDeleteConfirmText: () => $t('common.delete'),
+    getDeleteCancelText: () => $t('common.cancel'),
+    getDeleteSuccessMessage: () => $t('facility.notification_class_deleted'),
+    getDeleteFailureMessage: () => $t('facility.delete_notification_class_failed')
+  });
 
   onMount(() => {
     notificationClassesStore.load();
@@ -96,19 +55,19 @@
       </h1>
       <p class="text-sm text-muted-foreground">{$t('facility.notification_classes_desc')}</p>
     </div>
-    {#if !showForm && canPerform('create', 'notificationclass')}
-      <Button onclick={handleCreate}>
+    {#if !actions.showForm && canPerform('create', 'notificationclass')}
+      <Button onclick={() => actions.create()}>
         <Plus class="mr-2 size-4" />
         {$t('facility.new_notification_class')}
       </Button>
     {/if}
   </div>
 
-  {#if showForm}
+  {#if actions.showForm}
     <NotificationClassForm
-      initialData={editingItem}
-      onSuccess={handleSuccess}
-      onCancel={handleCancel}
+      initialData={actions.editingItem}
+      onSuccess={() => actions.success()}
+      onCancel={() => actions.cancel()}
     />
   {/if}
 
@@ -142,20 +101,20 @@
             {/snippet}
           </DropdownMenu.Trigger>
           <DropdownMenu.Content align="end" class="w-40">
-            <DropdownMenu.Item onclick={() => handleCopy(item.event_category ?? item.id)}>
+            <DropdownMenu.Item onclick={() => actions.copy(item.event_category ?? item.id)}>
               {$t('facility.copy')}
             </DropdownMenu.Item>
             <DropdownMenu.Item onclick={() => goto(`/facility/notification-classes/${item.id}`)}>
               {$t('facility.view')}
             </DropdownMenu.Item>
             {#if canPerform('update', 'notificationclass')}
-              <DropdownMenu.Item onclick={() => handleEdit(item)}
+              <DropdownMenu.Item onclick={() => actions.edit(item)}
                 >{$t('common.edit')}</DropdownMenu.Item
               >
             {/if}
             {#if canPerform('delete', 'notificationclass')}
               <DropdownMenu.Separator />
-              <DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+              <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(item)}>
                 {$t('common.delete')}
               </DropdownMenu.Item>
             {/if}

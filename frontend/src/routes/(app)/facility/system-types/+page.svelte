@@ -15,67 +15,29 @@
   import SystemTypeForm from '$lib/components/facility/forms/SystemTypeForm.svelte';
   import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
   import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
+  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
   const manageSystemType = new ManageEntityUseCase(systemTypeRepository);
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  let showForm = $state(false);
-  let editingItem: SystemType | undefined = $state(undefined);
+  const actions = new CrudPageActions<SystemType>({
+    reload: () => systemTypesStore.reload(),
+    deleteItem: (item) => manageSystemType.delete(item.id),
+    confirmDelete: confirm,
+    addToast,
+    getDeleteTitle: () => $t('common.delete'),
+    getDeleteMessage: (item) =>
+      $t('facility.delete_system_type_confirm').replace('{name}', item.name),
+    getDeleteConfirmText: () => $t('common.delete'),
+    getDeleteCancelText: () => $t('common.cancel'),
+    getDeleteSuccessMessage: () => $t('facility.system_type_deleted'),
+    getDeleteFailureMessage: () => $t('facility.delete_system_type_failed')
+  });
 
   function formatNumber(value: number) {
     return String(value).padStart(4, '0');
-  }
-
-  function handleEdit(item: SystemType) {
-    editingItem = item;
-    showForm = true;
-  }
-
-  function handleCreate() {
-    editingItem = undefined;
-    showForm = true;
-  }
-
-  function handleSuccess() {
-    showForm = false;
-    editingItem = undefined;
-    systemTypesStore.reload();
-  }
-
-  function handleCancel() {
-    showForm = false;
-    editingItem = undefined;
-  }
-
-  async function handleCopy(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-    }
-  }
-
-  async function handleDelete(item: SystemType) {
-    const ok = await confirm({
-      title: $t('common.delete'),
-      message: $t('facility.delete_system_type_confirm').replace('{name}', item.name),
-      confirmText: $t('common.delete'),
-      cancelText: $t('common.cancel'),
-      variant: 'destructive'
-    });
-    if (!ok) return;
-    try {
-      await manageSystemType.delete(item.id);
-      addToast($t('facility.system_type_deleted'), 'success');
-      systemTypesStore.reload();
-    } catch (err) {
-      addToast(
-        err instanceof Error ? err.message : $t('facility.delete_system_type_failed'),
-        'error'
-      );
-    }
   }
 
   onMount(() => {
@@ -95,24 +57,28 @@
       <h1 class="text-2xl font-semibold tracking-tight">{$t('facility.system_types_title')}</h1>
       <p class="text-sm text-muted-foreground">{$t('facility.system_types_desc')}</p>
     </div>
-    {#if !showForm && canPerform('create', 'systemtype')}
-      <Button onclick={handleCreate}>
+    {#if !actions.showForm && canPerform('create', 'systemtype')}
+      <Button onclick={() => actions.create()}>
         <Plus class="mr-2 size-4" />
         {$t('facility.new_system_type')}
       </Button>
     {/if}
   </div>
 
-  {#if showForm}
-    <SystemTypeForm initialData={editingItem} onSuccess={handleSuccess} onCancel={handleCancel} />
+  {#if actions.showForm}
+    <SystemTypeForm
+      initialData={actions.editingItem}
+      onSuccess={() => actions.success()}
+      onCancel={() => actions.cancel()}
+    />
   {/if}
 
   <PaginatedList
     state={$systemTypesStore}
     columns={[
       { key: 'name', label: $t('common.name') },
-      { key: 'number_min', label: 'Min Number' },
-      { key: 'number_max', label: 'Max Number' },
+      { key: 'number_min', label: $t('facility.forms.system_type.min_label') },
+      { key: 'number_max', label: $t('facility.forms.system_type.max_label') },
       { key: 'actions', label: '', width: 'w-[100px]' }
     ]}
     searchPlaceholder={$t('facility.search_system_types')}
@@ -135,20 +101,20 @@
             {/snippet}
           </DropdownMenu.Trigger>
           <DropdownMenu.Content align="end" class="w-40">
-            <DropdownMenu.Item onclick={() => handleCopy(item.name ?? item.id)}>
+            <DropdownMenu.Item onclick={() => actions.copy(item.name ?? item.id)}>
               {$t('facility.copy')}
             </DropdownMenu.Item>
             <DropdownMenu.Item onclick={() => goto(`/facility/system-types/${item.id}`)}>
               {$t('facility.view')}
             </DropdownMenu.Item>
             {#if canPerform('update', 'systemtype')}
-              <DropdownMenu.Item onclick={() => handleEdit(item)}
+              <DropdownMenu.Item onclick={() => actions.edit(item)}
                 >{$t('common.edit')}</DropdownMenu.Item
               >
             {/if}
             {#if canPerform('delete', 'systemtype')}
               <DropdownMenu.Separator />
-              <DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+              <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(item)}>
                 {$t('common.delete')}
               </DropdownMenu.Item>
             {/if}

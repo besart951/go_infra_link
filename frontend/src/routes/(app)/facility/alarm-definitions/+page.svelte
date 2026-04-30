@@ -15,64 +15,26 @@
   import AlarmDefinitionForm from '$lib/components/facility/forms/AlarmDefinitionForm.svelte';
   import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
   import { alarmDefinitionRepository } from '$lib/infrastructure/api/alarmDefinitionRepository.js';
+  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
   const manageAlarmDefinition = new ManageEntityUseCase(alarmDefinitionRepository);
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  let showForm = $state(false);
-  let editingItem: AlarmDefinition | undefined = $state(undefined);
-
-  function handleEdit(item: AlarmDefinition) {
-    editingItem = item;
-    showForm = true;
-  }
-
-  function handleCreate() {
-    editingItem = undefined;
-    showForm = true;
-  }
-
-  function handleSuccess() {
-    showForm = false;
-    editingItem = undefined;
-    alarmDefinitionsStore.reload();
-  }
-
-  function handleCancel() {
-    showForm = false;
-    editingItem = undefined;
-  }
-
-  async function handleCopy(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-    }
-  }
-
-  async function handleDelete(item: AlarmDefinition) {
-    const ok = await confirm({
-      title: $t('facility.delete_alarm_definition_confirm').replace('{name}', ''),
-      message: $t('facility.delete_alarm_definition_confirm').replace('{name}', item.name || ''),
-      confirmText: $t('common.delete'),
-      cancelText: $t('common.cancel'),
-      variant: 'destructive'
-    });
-    if (!ok) return;
-    try {
-      await manageAlarmDefinition.delete(item.id);
-      addToast($t('facility.alarm_definition_deleted'), 'success');
-      alarmDefinitionsStore.reload();
-    } catch (err) {
-      addToast(
-        err instanceof Error ? err.message : $t('facility.delete_alarm_definition_failed'),
-        'error'
-      );
-    }
-  }
+  const actions = new CrudPageActions<AlarmDefinition>({
+    reload: () => alarmDefinitionsStore.reload(),
+    deleteItem: (item) => manageAlarmDefinition.delete(item.id),
+    confirmDelete: confirm,
+    addToast,
+    getDeleteTitle: () => $t('facility.delete_alarm_definition_confirm').replace('{name}', ''),
+    getDeleteMessage: (item) =>
+      $t('facility.delete_alarm_definition_confirm').replace('{name}', item.name || ''),
+    getDeleteConfirmText: () => $t('common.delete'),
+    getDeleteCancelText: () => $t('common.cancel'),
+    getDeleteSuccessMessage: () => $t('facility.alarm_definition_deleted'),
+    getDeleteFailureMessage: () => $t('facility.delete_alarm_definition_failed')
+  });
 
   onMount(() => {
     alarmDefinitionsStore.load();
@@ -93,19 +55,19 @@
       </h1>
       <p class="text-sm text-muted-foreground">{$t('facility.alarm_definitions_desc')}</p>
     </div>
-    {#if !showForm && canPerform('create', 'alarmdefinition')}
-      <Button onclick={handleCreate}>
+    {#if !actions.showForm && canPerform('create', 'alarmdefinition')}
+      <Button onclick={() => actions.create()}>
         <Plus class="mr-2 size-4" />
         {$t('facility.new_alarm_definition')}
       </Button>
     {/if}
   </div>
 
-  {#if showForm}
+  {#if actions.showForm}
     <AlarmDefinitionForm
-      initialData={editingItem}
-      onSuccess={handleSuccess}
-      onCancel={handleCancel}
+      initialData={actions.editingItem}
+      onSuccess={() => actions.success()}
+      onCancel={() => actions.cancel()}
     />
   {/if}
 
@@ -135,20 +97,20 @@
             {/snippet}
           </DropdownMenu.Trigger>
           <DropdownMenu.Content align="end" class="w-40">
-            <DropdownMenu.Item onclick={() => handleCopy(item.name ?? item.id)}>
+            <DropdownMenu.Item onclick={() => actions.copy(item.name ?? item.id)}>
               {$t('facility.copy')}
             </DropdownMenu.Item>
             <DropdownMenu.Item onclick={() => goto(`/facility/alarm-definitions/${item.id}`)}>
               {$t('facility.view')}
             </DropdownMenu.Item>
             {#if canPerform('update', 'alarmdefinition')}
-              <DropdownMenu.Item onclick={() => handleEdit(item)}
+              <DropdownMenu.Item onclick={() => actions.edit(item)}
                 >{$t('common.edit')}</DropdownMenu.Item
               >
             {/if}
             {#if canPerform('delete', 'alarmdefinition')}
               <DropdownMenu.Separator />
-              <DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+              <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(item)}>
                 {$t('common.delete')}
               </DropdownMenu.Item>
             {/if}

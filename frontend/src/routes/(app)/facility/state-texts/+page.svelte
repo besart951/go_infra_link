@@ -15,67 +15,26 @@
   import StateTextForm from '$lib/components/facility/forms/StateTextForm.svelte';
   import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
   import { stateTextRepository } from '$lib/infrastructure/api/stateTextRepository.js';
+  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
   const manageStateText = new ManageEntityUseCase(stateTextRepository);
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  let showForm = $state(false);
-  let editingItem: StateText | undefined = $state(undefined);
-
-  function handleEdit(item: StateText) {
-    editingItem = item;
-    showForm = true;
-  }
-
-  function handleCreate() {
-    editingItem = undefined;
-    showForm = true;
-  }
-
-  function handleSuccess() {
-    showForm = false;
-    editingItem = undefined;
-    stateTextsStore.reload();
-  }
-
-  function handleCancel() {
-    showForm = false;
-    editingItem = undefined;
-  }
-
-  async function handleCopy(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-    }
-  }
-
-  async function handleDelete(item: StateText) {
-    const ok = await confirm({
-      title: $t('facility.delete_state_text_confirm').replace('{ref}', ''),
-      message: $t('facility.delete_state_text_confirm').replace(
-        '{ref}',
-        String(item.ref_number || '')
-      ),
-      confirmText: $t('common.delete'),
-      cancelText: $t('common.cancel'),
-      variant: 'destructive'
-    });
-    if (!ok) return;
-    try {
-      await manageStateText.delete(item.id);
-      addToast($t('facility.state_text_deleted'), 'success');
-      stateTextsStore.reload();
-    } catch (err) {
-      addToast(
-        err instanceof Error ? err.message : $t('facility.delete_state_text_failed'),
-        'error'
-      );
-    }
-  }
+  const actions = new CrudPageActions<StateText>({
+    reload: () => stateTextsStore.reload(),
+    deleteItem: (item) => manageStateText.delete(item.id),
+    confirmDelete: confirm,
+    addToast,
+    getDeleteTitle: () => $t('facility.delete_state_text_confirm').replace('{ref}', ''),
+    getDeleteMessage: (item) =>
+      $t('facility.delete_state_text_confirm').replace('{ref}', String(item.ref_number || '')),
+    getDeleteConfirmText: () => $t('common.delete'),
+    getDeleteCancelText: () => $t('common.cancel'),
+    getDeleteSuccessMessage: () => $t('facility.state_text_deleted'),
+    getDeleteFailureMessage: () => $t('facility.delete_state_text_failed')
+  });
 
   onMount(() => {
     stateTextsStore.load();
@@ -94,16 +53,20 @@
       <h1 class="text-2xl font-semibold tracking-tight">{$t('facility.state_texts_title')}</h1>
       <p class="text-sm text-muted-foreground">{$t('facility.state_texts_desc')}</p>
     </div>
-    {#if !showForm && canPerform('create', 'statetext')}
-      <Button onclick={handleCreate}>
+    {#if !actions.showForm && canPerform('create', 'statetext')}
+      <Button onclick={() => actions.create()}>
         <Plus class="mr-2 size-4" />
         {$t('facility.new_state_text')}
       </Button>
     {/if}
   </div>
 
-  {#if showForm}
-    <StateTextForm initialData={editingItem} onSuccess={handleSuccess} onCancel={handleCancel} />
+  {#if actions.showForm}
+    <StateTextForm
+      initialData={actions.editingItem}
+      onSuccess={() => actions.success()}
+      onCancel={() => actions.cancel()}
+    />
   {/if}
 
   <PaginatedList
@@ -132,20 +95,20 @@
             {/snippet}
           </DropdownMenu.Trigger>
           <DropdownMenu.Content align="end" class="w-40">
-            <DropdownMenu.Item onclick={() => handleCopy(String(item.ref_number ?? item.id))}>
+            <DropdownMenu.Item onclick={() => actions.copy(String(item.ref_number ?? item.id))}>
               {$t('facility.copy')}
             </DropdownMenu.Item>
             <DropdownMenu.Item onclick={() => goto(`/facility/state-texts/${item.id}`)}>
               {$t('facility.view')}
             </DropdownMenu.Item>
             {#if canPerform('update', 'statetext')}
-              <DropdownMenu.Item onclick={() => handleEdit(item)}
+              <DropdownMenu.Item onclick={() => actions.edit(item)}
                 >{$t('common.edit')}</DropdownMenu.Item
               >
             {/if}
             {#if canPerform('delete', 'statetext')}
               <DropdownMenu.Separator />
-              <DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+              <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(item)}>
                 {$t('common.delete')}
               </DropdownMenu.Item>
             {/if}

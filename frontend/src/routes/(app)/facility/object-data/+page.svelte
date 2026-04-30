@@ -14,6 +14,7 @@
   import type { ObjectData } from '$lib/domain/facility/index.js';
   import { ManageObjectDataUseCase } from '$lib/application/useCases/facility/manageObjectDataUseCase.js';
   import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
+  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
   const manageObjectData = new ManageObjectDataUseCase(objectDataRepository);
   import ObjectDataForm from '$lib/components/facility/forms/ObjectDataForm.svelte';
@@ -21,61 +22,26 @@
 
   const t = createTranslator();
 
-  let showForm = $state(false);
-  let editingItem: ObjectData | undefined = $state(undefined);
+  const actions = new CrudPageActions<ObjectData>({
+    reload: () => objectDataStore.reload(),
+    deleteItem: (item) => manageObjectData.delete(item.id),
+    confirmDelete: confirm,
+    addToast,
+    getDeleteTitle: () => $t('facility.delete_object_data_confirm').replace('{desc}', ''),
+    getDeleteMessage: (item) =>
+      $t('facility.delete_object_data_confirm').replace('{desc}', item.description || ''),
+    getDeleteConfirmText: () => $t('common.delete'),
+    getDeleteCancelText: () => $t('common.cancel'),
+    getDeleteSuccessMessage: () => $t('facility.object_data_deleted'),
+    getDeleteFailureMessage: () => $t('facility.delete_object_data_failed')
+  });
 
   async function handleEdit(item: ObjectData) {
     try {
-      editingItem = await manageObjectData.get(item.id);
+      actions.edit(await manageObjectData.get(item.id));
     } catch (error) {
       console.error(error);
-      editingItem = item;
-    }
-    showForm = true;
-  }
-
-  function handleCreate() {
-    editingItem = undefined;
-    showForm = true;
-  }
-
-  function handleSuccess() {
-    showForm = false;
-    editingItem = undefined;
-    objectDataStore.reload();
-  }
-
-  function handleCancel() {
-    showForm = false;
-    editingItem = undefined;
-  }
-
-  async function handleCopy(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-    }
-  }
-
-  async function handleDelete(item: ObjectData) {
-    const ok = await confirm({
-      title: $t('facility.delete_object_data_confirm').replace('{desc}', ''),
-      message: $t('facility.delete_object_data_confirm').replace('{desc}', item.description || ''),
-      confirmText: $t('common.delete'),
-      cancelText: $t('common.cancel'),
-      variant: 'destructive'
-    });
-    if (!ok) return;
-    try {
-      await manageObjectData.delete(item.id);
-      addToast($t('facility.object_data_deleted'), 'success');
-      objectDataStore.reload();
-    } catch (err) {
-      addToast(
-        err instanceof Error ? err.message : $t('facility.delete_object_data_failed'),
-        'error'
-      );
+      actions.edit(item);
     }
   }
 
@@ -98,16 +64,20 @@
         {$t('facility.object_data_desc')}
       </p>
     </div>
-    {#if !showForm && canPerform('create', 'objectdata')}
-      <Button onclick={handleCreate}>
+    {#if !actions.showForm && canPerform('create', 'objectdata')}
+      <Button onclick={() => actions.create()}>
         <Plus class="mr-2 size-4" />
         {$t('facility.new_object_data')}
       </Button>
     {/if}
   </div>
 
-  {#if showForm}
-    <ObjectDataForm initialData={editingItem} onSuccess={handleSuccess} onCancel={handleCancel} />
+  {#if actions.showForm}
+    <ObjectDataForm
+      initialData={actions.editingItem}
+      onSuccess={() => actions.success()}
+      onCancel={() => actions.cancel()}
+    />
   {/if}
 
   <PaginatedList
@@ -148,7 +118,7 @@
             {/snippet}
           </DropdownMenu.Trigger>
           <DropdownMenu.Content align="end" class="w-40">
-            <DropdownMenu.Item onclick={() => handleCopy(item.description ?? item.id)}>
+            <DropdownMenu.Item onclick={() => actions.copy(item.description ?? item.id)}>
               {$t('facility.copy')}
             </DropdownMenu.Item>
             <DropdownMenu.Item onclick={() => goto(`/facility/object-data/${item.id}`)}>
@@ -161,7 +131,7 @@
             {/if}
             {#if canPerform('delete', 'objectdata')}
               <DropdownMenu.Separator />
-              <DropdownMenu.Item variant="destructive" onclick={() => handleDelete(item)}>
+              <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(item)}>
                 {$t('common.delete')}
               </DropdownMenu.Item>
             {/if}

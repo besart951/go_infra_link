@@ -3,11 +3,8 @@
   import { getTeam, listTeams, type Team } from '$lib/api/teams.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
-  import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
-  import StaticCombobox from '$lib/components/ui/combobox/StaticCombobox.svelte';
-  import { Input } from '$lib/components/ui/input/index.js';
-  import { Label } from '$lib/components/ui/label/index.js';
-  import { Switch } from '$lib/components/ui/switch/index.js';
+  import NotificationRuleFormSection from './NotificationRuleFormSection.svelte';
+  import NotificationRuleListSection from './NotificationRuleListSection.svelte';
   import type {
     NotificationRule,
     NotificationRuleRecipientType,
@@ -20,23 +17,17 @@
     SPSController
   } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import {
-    getControlCabinet,
-    getControlCabinets,
-    getFieldDevice,
-    getObjectData,
-    getSPSController,
-    getSPSControllers
-  } from '$lib/infrastructure/api/facility.adapter.js';
+  import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
+  import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
+  import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
+  import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
   import { notificationRuleRepository } from '$lib/infrastructure/api/notificationRuleRepository.js';
   import { getProject, listProjects } from '$lib/infrastructure/api/project.adapter.js';
   import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
   import { listRoles } from '$lib/infrastructure/api/role.adapter.js';
   import type { Role } from '$lib/domain/role/index.js';
   import type { Project } from '$lib/domain/project/index.js';
-  import PlusIcon from '@lucide/svelte/icons/plus';
   import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
-  import Trash2Icon from '@lucide/svelte/icons/trash-2';
   import { onMount } from 'svelte';
 
   type SelectOption = {
@@ -339,13 +330,13 @@
       case 'project':
         return projectOption(await getProject(id));
       case 'control_cabinet':
-        return controlCabinetOption(await getControlCabinet(id));
+        return controlCabinetOption(await controlCabinetRepository.get(id));
       case 'sps_controller':
-        return spsControllerOption(await getSPSController(id));
+        return spsControllerOption(await spsControllerRepository.get(id));
       case 'field_device':
-        return fieldDeviceOption(await getFieldDevice(id));
+        return fieldDeviceOption(await fieldDeviceRepository.get(id));
       case 'object_data':
-        return objectDataOption(await getObjectData(id));
+        return objectDataOption(await objectDataRepository.get(id));
       default:
         return null;
     }
@@ -355,22 +346,22 @@
     const links = await projectRepository.listControlCabinets(projectID, { page: 1, limit: 100 });
     const ids = links.items.map((link) => link.control_cabinet_id);
     if (ids.length === 0) return [];
-    const response = await getControlCabinets(ids);
-    return response.items.map(controlCabinetOption);
+    const cabinets = await controlCabinetRepository.getBulk(ids);
+    return cabinets.map(controlCabinetOption);
   }
 
   async function fetchProjectSPSControllers(): Promise<SelectOption[]> {
     const links = await projectRepository.listSPSControllers(projectID, { page: 1, limit: 100 });
     const ids = links.items.map((link) => link.sps_controller_id);
     if (ids.length === 0) return [];
-    const response = await getSPSControllers(ids);
-    return response.items.map(spsControllerOption);
+    const controllers = await spsControllerRepository.getBulk(ids);
+    return controllers.map(spsControllerOption);
   }
 
   async function fetchProjectFieldDevices(): Promise<SelectOption[]> {
     const links = await projectRepository.listFieldDevices(projectID, { page: 1, limit: 50 });
     const devices = await Promise.all(
-      links.items.map((link) => getFieldDevice(link.field_device_id).catch(() => null))
+      links.items.map((link) => fieldDeviceRepository.get(link.field_device_id).catch(() => null))
     );
     return devices.filter((item): item is FieldDevice => item !== null).map(fieldDeviceOption);
   }
@@ -401,10 +392,6 @@
   function objectDataOption(item: ObjectData): SelectOption {
     const parts = [item.description, item.version].filter(Boolean);
     return { id: item.id, label: parts.length ? parts.join(' · ') : item.id };
-  }
-
-  function displayRole(role: string): string {
-    return roleOptions.find((option) => option.id === role)?.label || role;
   }
 
   async function createRule() {
@@ -467,188 +454,41 @@
       </div>
     {/if}
 
-    <div class="grid gap-3 rounded-md border p-3 lg:grid-cols-2">
-      <div class="space-y-2">
-        <Label for="notification_rule_name">{$t('notifications.rules.name')}</Label>
-        <Input id="notification_rule_name" bind:value={name} />
-      </div>
-      <div class="space-y-2">
-        <Label for="notification_rule_event">{$t('notifications.rules.event_key')}</Label>
-        <StaticCombobox
-          id="notification_rule_event"
-          items={eventOptions}
-          bind:value={eventKey}
-          labelKey="label"
-          width="w-full"
-          searchPlaceholder={$t('notifications.rules.event_search')}
-          emptyText={$t('notifications.rules.no_events')}
-          onValueChange={handleEventKeyChange}
-        />
-      </div>
-      <div class="space-y-2">
-        <Label for="notification_rule_project">{$t('notifications.rules.project_id')}</Label>
-        <AsyncCombobox
-          id="notification_rule_project"
-          bind:value={projectID}
-          fetcher={fetchProjects}
-          fetchById={getProject}
-          labelKey="name"
-          clearable
-          clearText={$t('notifications.rules.clear_selection')}
-          placeholder={$t('notifications.rules.project_placeholder')}
-          searchPlaceholder={$t('notifications.rules.project_search')}
-          emptyText={$t('notifications.rules.no_projects')}
-          width="w-full"
-          popupWidth="w-[min(32rem,calc(100vw-2rem))]"
-        />
-      </div>
-      <div class="space-y-2">
-        <Label for="notification_rule_resource_type"
-          >{$t('notifications.rules.resource_type')}</Label
-        >
-        <StaticCombobox
-          id="notification_rule_resource_type"
-          items={resourceTypeOptions}
-          bind:value={resourceType}
-          labelKey="label"
-          width="w-full"
-          clearable
-          clearText={$t('notifications.rules.clear_selection')}
-          searchPlaceholder={$t('notifications.rules.resource_type_search')}
-          emptyText={$t('notifications.rules.no_resource_types')}
-          onValueChange={handleResourceTypeChange}
-        />
-      </div>
-      <div class="space-y-2">
-        <Label for="notification_rule_resource">{$t('notifications.rules.resource_id')}</Label>
-        <AsyncCombobox
-          id="notification_rule_resource"
-          bind:value={resourceID}
-          fetcher={fetchResources}
-          fetchById={fetchResourceById}
-          labelKey="label"
-          disabled={resourceDisabled}
-          clearable
-          clearText={$t('notifications.rules.clear_selection')}
-          placeholder={$t(
-            resourceType === 'project_user'
-              ? 'notifications.rules.resource_not_available'
-              : resourceDisabled
-                ? 'notifications.rules.resource_requires_project'
-                : 'notifications.rules.resource_placeholder'
-          )}
-          searchPlaceholder={$t('notifications.rules.resource_search')}
-          emptyText={$t('notifications.rules.no_resources')}
-          width="w-full"
-          popupWidth="w-[min(32rem,calc(100vw-2rem))]"
-          refreshKey={resourceRefreshKey}
-        />
-      </div>
-      <div class="space-y-2">
-        <Label for="notification_rule_recipient_type"
-          >{$t('notifications.rules.recipient_type')}</Label
-        >
-        <StaticCombobox
-          id="notification_rule_recipient_type"
-          items={translatedRecipientTypeOptions}
-          bind:value={recipientType}
-          labelKey="label"
-          width="w-full"
-          searchPlaceholder={$t('notifications.rules.recipient_type_search')}
-          emptyText={$t('notifications.rules.no_recipient_types')}
-        />
-      </div>
-      <div class="flex items-end gap-2">
-        <Switch id="notification_rule_enabled" bind:checked={enabled} />
-        <Label for="notification_rule_enabled">{$t('notifications.rules.enabled')}</Label>
-      </div>
+    <NotificationRuleFormSection
+      bind:name
+      bind:eventKey
+      bind:projectID
+      bind:resourceType
+      bind:resourceID
+      bind:recipientType
+      bind:recipientUserIDs
+      bind:recipientTeamID
+      bind:recipientRole
+      bind:enabled
+      {isSubmitting}
+      {eventOptions}
+      {resourceTypeOptions}
+      recipientTypeOptions={translatedRecipientTypeOptions}
+      {roleOptions}
+      {resourceDisabled}
+      {resourceRefreshKey}
+      {fetchProjects}
+      fetchProjectById={getProject}
+      {fetchResources}
+      {fetchResourceById}
+      {fetchTeams}
+      fetchTeamById={getTeam}
+      onEventKeyChange={handleEventKeyChange}
+      onResourceTypeChange={handleResourceTypeChange}
+      onCreateRule={createRule}
+    />
 
-      {#if recipientType === 'users'}
-        <div class="space-y-2 lg:col-span-2">
-          <Label for="notification_rule_users">{$t('notifications.rules.user_ids')}</Label>
-          <Input id="notification_rule_users" bind:value={recipientUserIDs} />
-        </div>
-      {:else if recipientType === 'team'}
-        <div class="space-y-2 lg:col-span-2">
-          <Label for="notification_rule_team">{$t('notifications.rules.team_id')}</Label>
-          <AsyncCombobox
-            id="notification_rule_team"
-            bind:value={recipientTeamID}
-            fetcher={fetchTeams}
-            fetchById={getTeam}
-            labelKey="name"
-            clearable
-            clearText={$t('notifications.rules.clear_selection')}
-            placeholder={$t('notifications.rules.team_placeholder')}
-            searchPlaceholder={$t('notifications.rules.team_search')}
-            emptyText={$t('notifications.rules.no_teams')}
-            width="w-full"
-            popupWidth="w-[min(32rem,calc(100vw-2rem))]"
-          />
-        </div>
-      {:else if recipientType === 'project_role'}
-        <div class="space-y-2 lg:col-span-2">
-          <Label for="notification_rule_role">{$t('notifications.rules.role')}</Label>
-          <StaticCombobox
-            id="notification_rule_role"
-            items={roleOptions}
-            bind:value={recipientRole}
-            labelKey="label"
-            width="w-full"
-            searchPlaceholder={$t('notifications.rules.role_search')}
-            emptyText={$t('notifications.rules.no_roles')}
-          />
-          <p class="text-xs text-muted-foreground">{$t('notifications.rules.role_hint')}</p>
-        </div>
-      {/if}
-
-      <div class="lg:col-span-2">
-        <Button onclick={createRule} disabled={isSubmitting || !name.trim() || !eventKey.trim()}>
-          <PlusIcon class="size-4" />
-          {$t('notifications.rules.create')}
-        </Button>
-      </div>
-    </div>
-
-    <div class="space-y-2">
-      {#if isLoading && rules.length === 0}
-        <div class="py-4 text-sm text-muted-foreground">{$t('common.loading')}</div>
-      {:else if rules.length === 0}
-        <div class="py-4 text-sm text-muted-foreground">{$t('notifications.rules.empty')}</div>
-      {:else}
-        {#each rules as rule (rule.id)}
-          <div class="flex items-start justify-between gap-3 rounded-md border px-3 py-2">
-            <div class="min-w-0">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="font-medium">{rule.name}</span>
-                <span class="rounded-full bg-muted px-2 py-0.5 text-xs">{rule.event_key}</span>
-              </div>
-              <p class="mt-1 text-xs text-muted-foreground">
-                {$t(`notifications.rules.recipient_${rule.recipient_type}`)}
-                {#if rule.recipient_role}
-                  · {displayRole(rule.recipient_role)}
-                {/if}
-                {#if rule.project_id}
-                  · {$t('notifications.rules.project_id')}: {rule.project_id}
-                {/if}
-                {#if rule.resource_type}
-                  · {$t('notifications.rules.resource_type')}: {$t(
-                    `notifications.rules.resource_types.${rule.resource_type}`
-                  )}
-                {/if}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onclick={() => deleteRule(rule)}
-              disabled={isSubmitting}
-            >
-              <Trash2Icon class="size-4" />
-            </Button>
-          </div>
-        {/each}
-      {/if}
-    </div>
+    <NotificationRuleListSection
+      {rules}
+      {isLoading}
+      {isSubmitting}
+      {roleOptions}
+      onDeleteRule={deleteRule}
+    />
   </Card.Content>
 </Card.Root>

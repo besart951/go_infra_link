@@ -5,33 +5,21 @@ import type {
   UpdateAlarmFieldRequest
 } from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
-
-interface AlarmFieldListResponse {
-  items: AlarmField[];
-  total: number;
-  page: number;
-  total_pages: number;
-}
+import {
+  buildListUrl,
+  mapPaginatedResponse,
+  type ApiPaginatedListResponse
+} from './listHelpers.js';
 
 export const alarmFieldRepository: AlarmFieldRepository = {
   async list(params, signal) {
-    const page = params.pagination.page;
-    const pageSize = params.pagination.pageSize;
-    const search = params.search.text;
-    const qp = new URLSearchParams({ page: String(page), limit: String(pageSize) });
-    if (search) qp.set('search', search);
-    const response = await api<AlarmFieldListResponse>(`/facility/alarm-fields?${qp.toString()}`, {
-      signal
-    });
-    return {
-      items: response.items,
-      metadata: {
-        total: response.total,
-        page: response.page,
-        pageSize,
-        totalPages: response.total_pages
+    const response = await api<ApiPaginatedListResponse<AlarmField>>(
+      buildListUrl('/facility/alarm-fields', params),
+      {
+        signal
       }
-    };
+    );
+    return mapPaginatedResponse<AlarmField>(response, params);
   },
   async get(id, signal) {
     return api<AlarmField>(`/facility/alarm-fields/${id}`, { signal });

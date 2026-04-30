@@ -16,19 +16,33 @@ import {
   clearPersistedState
 } from '$lib/domain/facility/fieldDeviceMultiCreate.js';
 import { ManageFieldDeviceUseCase } from '$lib/application/useCases/facility/manageFieldDeviceUseCase.js';
-import { ManageObjectDataUseCase } from '$lib/application/useCases/facility/manageObjectDataUseCase.js';
 import { ListSPSControllersUseCase } from '$lib/application/useCases/facility/listSPSControllersUseCase.js';
 import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
-import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
 import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
 import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
+import {
+  applyPreselectionToSelection,
+  createEmptyFieldDevicePreselection,
+  createEmptyMultiCreateSelection,
+  preselectionFromSelection,
+  resetSelectionForSpsSystemType
+} from './multiCreateSelection.js';
+import {
+  buildMultiCreatePayload,
+  collectCreatedDevices,
+  normalizeMultiCreateResponse,
+  reconcileMultiCreateRows
+} from './multiCreateSubmission.js';
+import {
+  MultiCreateAvailableNumbersService,
+  autoAssignApparatNumbers
+} from './multiCreateAvailableNumbersService.js';
+import { MultiCreateObjectDataPreviewService } from './multiCreateObjectDataPreviewService.js';
 
 import type {
   FieldDevice,
   ObjectData,
-  SPSControllerSystemType,
-  CreateFieldDeviceRequest,
-  MultiCreateFieldDeviceResponse
+  SPSControllerSystemType
 } from '$lib/domain/facility/index.js';
 import type { FieldDevicePreselection as PreselectionType } from '$lib/domain/facility/preselectionFilter.js';
 
@@ -42,18 +56,9 @@ function createRowErrorMap(): Map<number, FieldDeviceRowError> {
 }
 
 export class FieldDeviceMultiCreateState {
-  selection = $state<MultiCreateSelection>({
-    spsControllerSystemTypeId: '',
-    objectDataId: '',
-    apparatId: '',
-    systemPartId: ''
-  });
+  selection = $state<MultiCreateSelection>(createEmptyMultiCreateSelection());
 
-  preselectionValue = $state<PreselectionType>({
-    objectDataId: '',
-    apparatId: '',
-    systemPartId: ''
-  });
+  preselectionValue = $state<PreselectionType>(createEmptyFieldDevicePreselection());
 
   rows = $state<FieldDeviceRowData[]>([]);
   rowErrors = $state<Map<number, FieldDeviceRowError>>(createRowErrorMap());
@@ -73,8 +78,9 @@ export class FieldDeviceMultiCreateState {
   private readonly resolveProjectId: () => string | undefined;
   private readonly resolveOnSuccess: () => ((createdDevices: FieldDevice[]) => void) | undefined;
   private readonly manageUseCase = new ManageFieldDeviceUseCase(fieldDeviceRepository);
-  private readonly manageObjectDataUseCase = new ManageObjectDataUseCase(objectDataRepository);
   private readonly spsUseCase = new ListSPSControllersUseCase(spsControllerRepository);
+  private readonly availableNumbersService = new MultiCreateAvailableNumbersService();
+  private readonly objectDataPreviewService = new MultiCreateObjectDataPreviewService();
 
   constructor(options: FieldDeviceMultiCreateStateOptions = {}) {
     this.resolveProjectId = options.projectId ?? this.resolveUndefinedProjectId;
@@ -138,17 +144,8 @@ export class FieldDeviceMultiCreateState {
     this.availableNumbersAbortController?.abort();
     this.objectDataPreviewAbortController?.abort();
 
-    this.selection = {
-      spsControllerSystemTypeId: value,
-      objectDataId: '',
-      apparatId: '',
-      systemPartId: ''
-    };
-    this.preselectionValue = {
-      objectDataId: '',
-      apparatId: '',
-      systemPartId: ''
-    };
+    this.selection = resetSelectionForSpsSystemType(value);
+    this.preselectionValue = createEmptyFieldDevicePreselection();
     this.rows = [];
     this.availableNumbers = [];
     this.selectedObjectData = null;
@@ -159,12 +156,7 @@ export class FieldDeviceMultiCreateState {
 
   handlePreselectionChange(next: PreselectionType): void {
     this.preselectionValue = next;
-    this.selection = {
-      ...this.selection,
-      objectDataId: next.objectDataId,
-      apparatId: next.apparatId,
-      systemPartId: next.systemPartId
-    };
+    this.selection = applyPreselectionToSelection(this.selection, next);
   }
 
   addRow(): void {
@@ -320,57 +312,20 @@ export class FieldDeviceMultiCreateState {
     this.globalError = '';
 
     try {
-      const fieldDevices = this.buildCreatePayload();
+      const fieldDevices = buildMultiCreatePayload(this.rows, this.selection);
       const rawResponse = this.projectId
         ? await projectRepository.createFieldDevices(this.projectId, {
             field_devices: fieldDevices
           })
         : await this.manageUseCase.multiCreate({ field_devices: fieldDevices });
-      const response = this.normalizeMultiCreateResponse(rawResponse);
+      const response = normalizeMultiCreateResponse(
+        rawResponse,
+        translate('field_device.multi_create.errors.create')
+      );
+      const reconciledRows = reconcileMultiCreateRows(this.rows, response, localizeErrorText);
 
-      const successfulIndices = new Set<number>();
-      const backendErrors = new Map<number, FieldDeviceRowError>();
-
-      for (const result of response.results) {
-        if (result.index < 0 || result.index >= this.rows.length) {
-          continue;
-        }
-
-        if (result.success) {
-          successfulIndices.add(result.index);
-          continue;
-        }
-
-        backendErrors.set(result.index, {
-          message: localizeErrorText(result.error, result.error_field),
-          field: (result.error_field as FieldDeviceRowError['field']) || ''
-        });
-      }
-
-      const indexMap = new Map<number, number>();
-      const remainingRows: FieldDeviceRowData[] = [];
-
-      for (let index = 0; index < this.rows.length; index += 1) {
-        const row = this.rows[index];
-        if (!successfulIndices.has(index)) {
-          indexMap.set(index, remainingRows.length);
-          remainingRows.push(row);
-        }
-      }
-
-      const remappedErrors = new Map<number, FieldDeviceRowError>();
-      for (const entry of backendErrors.entries()) {
-        const originalIndex = entry[0];
-        const error = entry[1];
-        const nextIndex = indexMap.get(originalIndex);
-
-        if (nextIndex !== undefined) {
-          remappedErrors.set(nextIndex, error);
-        }
-      }
-
-      this.rows = remainingRows;
-      this.rowErrors = remappedErrors;
+      this.rows = reconciledRows.remainingRows;
+      this.rowErrors = reconciledRows.rowErrors;
 
       if (response.failure_count > 0) {
         addToast(
@@ -397,7 +352,7 @@ export class FieldDeviceMultiCreateState {
 
       const onSuccess = this.resolveOnSuccess();
       if (onSuccess) {
-        onSuccess(this.collectCreatedDevices(response));
+        onSuccess(collectCreatedDevices(response));
       }
     } catch (error) {
       this.globalError =
@@ -431,11 +386,7 @@ export class FieldDeviceMultiCreateState {
 
     this.selection = persisted.selection;
     this.rows = persisted.rows;
-    this.preselectionValue = {
-      objectDataId: persisted.selection.objectDataId,
-      apparatId: persisted.selection.apparatId,
-      systemPartId: persisted.selection.systemPartId
-    };
+    this.preselectionValue = preselectionFromSelection(persisted.selection);
   }
 
   private setupEffects(): void {
@@ -490,12 +441,7 @@ export class FieldDeviceMultiCreateState {
     this.availableNumbersAbortController = controller;
 
     try {
-      const response = await this.manageUseCase.getAvailableApparatNumbers(
-        this.selection.spsControllerSystemTypeId,
-        this.selection.apparatId,
-        this.selection.systemPartId,
-        controller.signal
-      );
+      const response = await this.availableNumbersService.fetch(this.selection, controller.signal);
 
       if (!controller.signal.aborted) {
         this.availableNumbers = response.available;
@@ -535,7 +481,7 @@ export class FieldDeviceMultiCreateState {
     this.objectDataPreviewError = '';
 
     try {
-      const objectData = await this.manageObjectDataUseCase.get(objectDataId, controller.signal);
+      const objectData = await this.objectDataPreviewService.fetch(objectDataId, controller.signal);
 
       if (!controller.signal.aborted) {
         this.selectedObjectData = objectData;
@@ -559,102 +505,14 @@ export class FieldDeviceMultiCreateState {
   }
 
   private autoAssignApparatNumbers(): void {
-    const usedNumbers = getUsedApparatNumbers(this.rows);
-    let changed = false;
-
-    for (const row of this.rows) {
-      if (row.apparatNr !== null) {
-        continue;
-      }
-
-      let nextAvailable: number | undefined;
-      for (const candidate of this.availableNumbers) {
-        if (!usedNumbers.has(candidate)) {
-          nextAvailable = candidate;
-          break;
-        }
-      }
-
-      if (nextAvailable !== undefined) {
-        row.apparatNr = nextAvailable;
-        usedNumbers.add(nextAvailable);
-        changed = true;
-      }
-    }
-
+    const { rows, changed } = autoAssignApparatNumbers(this.rows, this.availableNumbers);
     if (changed) {
-      this.rows = [...this.rows];
+      this.rows = rows;
       this.revalidateAllRows();
     }
   }
 
   private revalidateAllRows(): void {
     this.rowErrors = validateAllRows(this.rows, this.availableNumbers, false);
-  }
-
-  private buildCreatePayload(): CreateFieldDeviceRequest[] {
-    const fieldDevices: CreateFieldDeviceRequest[] = [];
-
-    for (const row of this.rows) {
-      fieldDevices.push({
-        bmk: row.bmk || undefined,
-        description: row.description || undefined,
-        text_fix: row.textFix || undefined,
-        apparat_nr: row.apparatNr!,
-        sps_controller_system_type_id: this.selection.spsControllerSystemTypeId,
-        system_part_id: this.selection.systemPartId,
-        apparat_id: this.selection.apparatId,
-        object_data_id: this.selection.objectDataId || undefined
-      });
-    }
-
-    return fieldDevices;
-  }
-
-  private normalizeMultiCreateResponse(
-    response: MultiCreateFieldDeviceResponse | { preview?: MultiCreateFieldDeviceResponse }
-  ): MultiCreateFieldDeviceResponse {
-    if (this.isMultiCreateFieldDeviceResponse(response)) {
-      return response;
-    }
-
-    if (
-      'preview' in response &&
-      response.preview &&
-      this.isMultiCreateFieldDeviceResponse(response.preview)
-    ) {
-      return response.preview;
-    }
-
-    throw new Error(translate('field_device.multi_create.errors.create'));
-  }
-
-  private isMultiCreateFieldDeviceResponse(
-    value: unknown
-  ): value is MultiCreateFieldDeviceResponse {
-    if (!value || typeof value !== 'object') {
-      return false;
-    }
-
-    const candidate = value as Record<string, unknown>;
-
-    return (
-      Array.isArray(candidate.results) &&
-      typeof candidate.total_requests === 'number' &&
-      typeof candidate.success_count === 'number' &&
-      typeof candidate.failure_count === 'number'
-    );
-  }
-
-  private collectCreatedDevices(response: MultiCreateFieldDeviceResponse): FieldDevice[] {
-    const createdDevices: FieldDevice[] = [];
-
-    for (const result of response.results) {
-      if (result.success && result.field_device) {
-        createdDevices.push(result.field_device);
-      }
-    }
-
-    return createdDevices;
   }
 }

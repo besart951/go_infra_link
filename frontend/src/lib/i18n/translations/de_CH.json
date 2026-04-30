@@ -579,6 +579,74 @@
     "delete_alarm_definition_confirm": "Alarmdefinition {name} löschen?",
     "delete_alarm_definition_failed": "Alarmdefinition löschen fehlgeschlagen",
     "alarm_note": "Alarmhinweis",
+    "alarm_catalog_page": {
+      "title": "Alarm-Katalog",
+      "description": "Verwaltung von Alarmtypen, Alarmfeldern, Einheiten und Type-Field-Zuordnungen.",
+      "loading": "Lade Daten…",
+      "labels": {
+        "action": "Aktion",
+        "alarm_field": "Alarmfeld",
+        "alarm_type": "Alarmtyp",
+        "code": "Code",
+        "data_type": "Datentyp",
+        "default_unit": "Default Unit",
+        "default_unit_code": "Default Unit Code",
+        "display_order": "Display Order",
+        "editable": "Editierbar",
+        "field": "Feld",
+        "group": "Group",
+        "key": "Key",
+        "label": "Label",
+        "no": "Nein",
+        "order": "Order",
+        "required": "Pflicht",
+        "select": "Bitte wählen",
+        "symbol": "Symbol",
+        "type": "Typ",
+        "ui_group": "UI Group",
+        "unit": "Unit",
+        "yes": "Ja"
+      },
+      "units": {
+        "title": "Einheiten",
+        "description": "Verfügbare Einheiten für Alarmfelder und Zuordnungen.",
+        "create": "Einheit erstellen",
+        "delete": "Einheit löschen",
+        "empty": "Keine Einheiten vorhanden."
+      },
+      "fields": {
+        "title": "Alarmfelder",
+        "description": "Definition von Key, Datentyp und optionaler Standard-Einheit.",
+        "create": "Alarmfeld erstellen",
+        "delete": "Alarmfeld löschen",
+        "empty": "Keine Alarmfelder vorhanden."
+      },
+      "types": {
+        "title": "Alarmtypen",
+        "description": "Alarmtypen mit fachlichem Code und Anzeigenamen.",
+        "create": "Alarmtyp erstellen",
+        "delete": "Alarmtyp löschen",
+        "empty": "Keine Alarmtypen vorhanden."
+      },
+      "mappings": {
+        "title": "Type-Field-Zuordnungen",
+        "description": "Zuordnung von Feldern zu Alarmtypen inkl. Reihenfolge und Regeln.",
+        "create": "Zuordnung erstellen",
+        "delete": "Zuordnung löschen",
+        "empty": "Keine Zuordnungen für diesen Alarmtyp vorhanden.",
+        "select_type_empty": "Bitte zuerst einen Alarmtyp auswählen."
+      },
+      "toasts": {
+        "field_created": "Alarmfeld erstellt",
+        "field_deleted": "Alarmfeld gelöscht",
+        "mapping_created": "Zuordnung erstellt",
+        "mapping_deleted": "Zuordnung gelöscht",
+        "type_created": "Alarmtyp erstellt",
+        "type_deleted": "Alarmtyp gelöscht",
+        "unit_created": "Einheit erstellt",
+        "unit_deleted": "Einheit gelöscht"
+      }
+    },
     "notification_classes": "Benachrichtigungsklassen",
     "notification_classes_title": "Benachrichtigungsklassen",
     "notification_classes_desc": "Verwalten Sie Benachrichtigungsklassen und Ereigniskategorien.",

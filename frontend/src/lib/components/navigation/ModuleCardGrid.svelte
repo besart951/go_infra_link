@@ -13,28 +13,11 @@
     tone: ModuleCardTone | string;
   };
 
-  const toneStyles: Record<
-    ModuleCardTone,
-    {
-      style: string;
-    }
-  > = {
-    user: {
-      style:
-        '--module-card-border: var(--hub-user-border); --module-card-border-hover: var(--hub-user-border-hover); --module-card-surface-hover: var(--hub-user-surface-hover); --module-card-stripe: var(--hub-user-stripe); --module-card-icon-bg: var(--hub-user-icon-bg); --module-card-icon-fg: var(--hub-user-icon-fg); --module-card-icon-ring: var(--hub-user-icon-ring); --module-card-accent: var(--hub-user-accent);'
-    },
-    facility: {
-      style:
-        '--module-card-border: var(--hub-facility-border); --module-card-border-hover: var(--hub-facility-border-hover); --module-card-surface-hover: var(--hub-facility-surface-hover); --module-card-stripe: var(--hub-facility-stripe); --module-card-icon-bg: var(--hub-facility-icon-bg); --module-card-icon-fg: var(--hub-facility-icon-fg); --module-card-icon-ring: var(--hub-facility-icon-ring); --module-card-accent: var(--hub-facility-accent);'
-    },
-    project: {
-      style:
-        '--module-card-border: var(--hub-project-border); --module-card-border-hover: var(--hub-project-border-hover); --module-card-surface-hover: var(--hub-project-surface-hover); --module-card-stripe: var(--hub-project-stripe); --module-card-icon-bg: var(--hub-project-icon-bg); --module-card-icon-fg: var(--hub-project-icon-fg); --module-card-icon-ring: var(--hub-project-icon-ring); --module-card-accent: var(--hub-project-accent);'
-    },
-    notification: {
-      style:
-        '--module-card-border: var(--hub-notification-border); --module-card-border-hover: var(--hub-notification-border-hover); --module-card-surface-hover: var(--hub-notification-surface-hover); --module-card-stripe: var(--hub-notification-stripe); --module-card-icon-bg: var(--hub-notification-icon-bg); --module-card-icon-fg: var(--hub-notification-icon-fg); --module-card-icon-ring: var(--hub-notification-icon-ring); --module-card-accent: var(--hub-notification-accent);'
-    }
+  const toneClasses: Record<ModuleCardTone, string> = {
+    user: 'module-card-tone-user',
+    facility: 'module-card-tone-facility',
+    project: 'module-card-tone-project',
+    notification: 'module-card-tone-notification'
   };
 
   let {
@@ -51,12 +34,12 @@
 {#if items.length > 0}
   <div class={cn('grid gap-3 sm:grid-cols-2', columns)}>
     {#each items as item (item.href)}
-      {@const tone = toneStyles[item.tone as ModuleCardTone] ?? toneStyles.project}
+      {@const toneClass = toneClasses[item.tone as ModuleCardTone] ?? toneClasses.project}
       <a
         href={item.href}
-        style={tone.style}
         class={cn(
-          'group relative overflow-hidden rounded-lg border border-[color:var(--module-card-border)] bg-card p-4 text-card-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--module-card-border-hover)] hover:bg-[var(--module-card-surface-hover)] hover:shadow-md focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none'
+          'group relative overflow-hidden rounded-lg border border-[color:var(--module-card-border)] bg-card p-4 text-card-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--module-card-border-hover)] hover:bg-[var(--module-card-surface-hover)] hover:shadow-md focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
+          toneClass
         )}
       >
         <span class="absolute inset-x-0 top-0 h-0.5 bg-[var(--module-card-stripe)]"></span>
@@ -82,3 +65,49 @@
     {emptyMessage}
   </div>
 {/if}
+
+<style>
+  :global(.module-card-tone-user) {
+    --module-card-border: var(--hub-user-border);
+    --module-card-border-hover: var(--hub-user-border-hover);
+    --module-card-surface-hover: var(--hub-user-surface-hover);
+    --module-card-stripe: var(--hub-user-stripe);
+    --module-card-icon-bg: var(--hub-user-icon-bg);
+    --module-card-icon-fg: var(--hub-user-icon-fg);
+    --module-card-icon-ring: var(--hub-user-icon-ring);
+    --module-card-accent: var(--hub-user-accent);
+  }
+
+  :global(.module-card-tone-facility) {
+    --module-card-border: var(--hub-facility-border);
+    --module-card-border-hover: var(--hub-facility-border-hover);
+    --module-card-surface-hover: var(--hub-facility-surface-hover);
+    --module-card-stripe: var(--hub-facility-stripe);
+    --module-card-icon-bg: var(--hub-facility-icon-bg);
+    --module-card-icon-fg: var(--hub-facility-icon-fg);
+    --module-card-icon-ring: var(--hub-facility-icon-ring);
+    --module-card-accent: var(--hub-facility-accent);
+  }
+
+  :global(.module-card-tone-project) {
+    --module-card-border: var(--hub-project-border);
+    --module-card-border-hover: var(--hub-project-border-hover);
+    --module-card-surface-hover: var(--hub-project-surface-hover);
+    --module-card-stripe: var(--hub-project-stripe);
+    --module-card-icon-bg: var(--hub-project-icon-bg);
+    --module-card-icon-fg: var(--hub-project-icon-fg);
+    --module-card-icon-ring: var(--hub-project-icon-ring);
+    --module-card-accent: var(--hub-project-accent);
+  }
+
+  :global(.module-card-tone-notification) {
+    --module-card-border: var(--hub-notification-border);
+    --module-card-border-hover: var(--hub-notification-border-hover);
+    --module-card-surface-hover: var(--hub-notification-surface-hover);
+    --module-card-stripe: var(--hub-notification-stripe);
+    --module-card-icon-bg: var(--hub-notification-icon-bg);
+    --module-card-icon-fg: var(--hub-notification-icon-fg);
+    --module-card-icon-ring: var(--hub-notification-icon-ring);
+    --module-card-accent: var(--hub-notification-accent);
+  }
+</style>

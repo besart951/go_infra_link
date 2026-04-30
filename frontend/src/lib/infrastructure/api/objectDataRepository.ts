@@ -8,35 +8,16 @@ import type {
 } from '$lib/domain/facility/index.js';
 import type { BacnetObject } from '$lib/domain/facility/bacnet-object.js';
 import { api } from '$lib/api/client.js';
+import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
 
 export const objectDataRepository: ObjectDataRepository = {
   async list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<ObjectData>> {
-    const searchParams = new URLSearchParams();
-    searchParams.set('page', String(params.pagination.page));
-    searchParams.set('limit', String(params.pagination.pageSize));
-    if (params.search.text) searchParams.set('search', params.search.text);
-
-    if (params.filters) {
-      Object.entries(params.filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) searchParams.set(key, String(value));
-      });
-    }
-
-    const query = searchParams.toString();
     const response = await api<ObjectDataListResponse>(
-      `/facility/object-data${query ? `?${query}` : ''}`,
+      buildListUrl('/facility/object-data', params),
       { signal }
     );
 
-    return {
-      items: response.items,
-      metadata: {
-        total: response.total,
-        page: response.page,
-        pageSize: response.limit,
-        totalPages: response.total_pages
-      }
-    };
+    return mapPaginatedResponse(response, params);
   },
 
   async get(id: string, signal?: AbortSignal): Promise<ObjectData> {

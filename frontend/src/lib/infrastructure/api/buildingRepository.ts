@@ -8,35 +8,15 @@ import type {
   UpdateBuildingRequest
 } from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
+import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
 
 export const buildingRepository: BuildingRepository = {
   async list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<Building>> {
-    const searchParams = new URLSearchParams();
-    searchParams.set('page', String(params.pagination.page));
-    searchParams.set('limit', String(params.pagination.pageSize));
-    if (params.search.text) searchParams.set('search', params.search.text);
+    const response = await api<BuildingListResponse>(buildListUrl('/facility/buildings', params), {
+      signal
+    });
 
-    if (params.filters) {
-      Object.entries(params.filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) searchParams.set(key, value);
-      });
-    }
-
-    const query = searchParams.toString();
-    const response = await api<BuildingListResponse>(
-      `/facility/buildings${query ? `?${query}` : ''}`,
-      { signal }
-    );
-
-    return {
-      items: response.items,
-      metadata: {
-        total: response.total,
-        page: response.page,
-        pageSize: params.pagination.pageSize,
-        totalPages: response.total_pages
-      }
-    };
+    return mapPaginatedResponse(response, params);
   },
 
   async get(id: string, signal?: AbortSignal): Promise<Building> {

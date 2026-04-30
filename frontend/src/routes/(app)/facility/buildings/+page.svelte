@@ -15,61 +15,26 @@
   import BuildingForm from '$lib/components/facility/forms/BuildingForm.svelte';
   import { ManageBuildingUseCase } from '$lib/application/useCases/facility/manageBuildingUseCase.js';
   import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
+  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
   const manageBuilding = new ManageBuildingUseCase(buildingRepository);
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  let showForm = $state(false);
-  let editingBuilding: Building | undefined = $state(undefined);
-
-  function handleEdit(building: Building) {
-    editingBuilding = building;
-    showForm = true;
-  }
-
-  function handleCreate() {
-    editingBuilding = undefined;
-    showForm = true;
-  }
-
-  function handleSuccess() {
-    showForm = false;
-    editingBuilding = undefined;
-    buildingsStore.reload();
-  }
-
-  function handleCancel() {
-    showForm = false;
-    editingBuilding = undefined;
-  }
-
-  async function handleCopy(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-    }
-  }
-
-  async function handleDelete(building: Building) {
-    const ok = await confirm({
-      title: $t('common.delete'),
-      message: $t('facility.delete_building_confirm').replace('{name}', building.iws_code),
-      confirmText: $t('common.delete'),
-      cancelText: $t('common.cancel'),
-      variant: 'destructive'
-    });
-    if (!ok) return;
-    try {
-      await manageBuilding.delete(building.id);
-      addToast($t('facility.building_deleted'), 'success');
-      buildingsStore.reload();
-    } catch (err) {
-      addToast(err instanceof Error ? err.message : $t('facility.delete_building_failed'), 'error');
-    }
-  }
+  const actions = new CrudPageActions<Building>({
+    reload: () => buildingsStore.reload(),
+    deleteItem: (building) => manageBuilding.delete(building.id),
+    confirmDelete: confirm,
+    addToast,
+    getDeleteTitle: () => $t('common.delete'),
+    getDeleteMessage: (building) =>
+      $t('facility.delete_building_confirm').replace('{name}', building.iws_code),
+    getDeleteConfirmText: () => $t('common.delete'),
+    getDeleteCancelText: () => $t('common.cancel'),
+    getDeleteSuccessMessage: () => $t('facility.building_deleted'),
+    getDeleteFailureMessage: () => $t('facility.delete_building_failed')
+  });
 
   onMount(() => {
     buildingsStore.load();
@@ -88,16 +53,20 @@
       <h1 class="text-2xl font-semibold tracking-tight">{$t('facility.buildings_title')}</h1>
       <p class="text-sm text-muted-foreground">{$t('facility.buildings_desc')}</p>
     </div>
-    {#if !showForm && canPerform('create', 'building')}
-      <Button onclick={handleCreate}>
+    {#if !actions.showForm && canPerform('create', 'building')}
+      <Button onclick={() => actions.create()}>
         <Plus class="mr-2 size-4" />
         {$t('facility.new_building')}
       </Button>
     {/if}
   </div>
 
-  {#if showForm}
-    <BuildingForm initialData={editingBuilding} onSuccess={handleSuccess} onCancel={handleCancel} />
+  {#if actions.showForm}
+    <BuildingForm
+      initialData={actions.editingItem}
+      onSuccess={() => actions.success()}
+      onCancel={() => actions.cancel()}
+    />
   {/if}
 
   <PaginatedList
@@ -130,20 +99,20 @@
             {/snippet}
           </DropdownMenu.Trigger>
           <DropdownMenu.Content align="end" class="w-40">
-            <DropdownMenu.Item onclick={() => handleCopy(building.iws_code)}>
+            <DropdownMenu.Item onclick={() => actions.copy(building.iws_code)}>
               {$t('facility.copy')}
             </DropdownMenu.Item>
             <DropdownMenu.Item onclick={() => goto(`/facility/buildings/${building.id}`)}>
               {$t('facility.view')}
             </DropdownMenu.Item>
             {#if canPerform('update', 'building')}
-              <DropdownMenu.Item onclick={() => handleEdit(building)}
+              <DropdownMenu.Item onclick={() => actions.edit(building)}
                 >{$t('common.edit')}</DropdownMenu.Item
               >
             {/if}
             {#if canPerform('delete', 'building')}
               <DropdownMenu.Separator />
-              <DropdownMenu.Item variant="destructive" onclick={() => handleDelete(building)}>
+              <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(building)}>
                 {$t('common.delete')}
               </DropdownMenu.Item>
             {/if}

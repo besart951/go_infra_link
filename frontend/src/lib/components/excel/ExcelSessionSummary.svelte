@@ -1,15 +1,16 @@
 <script lang="ts">
-  import { CircleCheck } from '@lucide/svelte';
-  import { Button } from '$lib/components/ui/button/index.js';
   import type { ExcelReadSession } from '$lib/domain/excel/index.js';
   import type { CreateObjectDataRequest } from '$lib/domain/facility/object-data.js';
   import type { CreateBacnetObjectRequest } from '$lib/domain/facility/bacnet-object.js';
-  import {
-    listApparats,
-    listStateTexts,
-    listNotificationClasses,
-    updateBacnetObject
-  } from '$lib/infrastructure/api/facility.adapter.js';
+  import ExcelSessionActionSection from './ExcelSessionActionSection.svelte';
+  import ExcelSessionWarningSection from './ExcelSessionWarningSection.svelte';
+  import ExcelSessionPreparedSummary from './ExcelSessionPreparedSummary.svelte';
+  import ExcelSessionPreparedDetails from './ExcelSessionPreparedDetails.svelte';
+  import ExcelSessionWorkbookSection from './ExcelSessionWorkbookSection.svelte';
+  import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
+  import { notificationClassRepository } from '$lib/infrastructure/api/notificationClassRepository.js';
+  import { stateTextRepository } from '$lib/infrastructure/api/stateTextRepository.js';
+  import { updateBacnetObject } from '$lib/infrastructure/api/bacnetObjectEndpoint.js';
   import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
   import { alarmTypeRepository } from '$lib/infrastructure/api/alarmTypeRepository.js';
   import { ApiException } from '$lib/api/client.js';
@@ -370,10 +371,6 @@
     }
   }
 
-  function isFilterActive(filter: PrepareFilterKey): boolean {
-    return activePrepareFilter === filter;
-  }
-
   function setPrepareFilter(filter: PrepareFilterKey): void {
     activePrepareFilter = filter;
   }
@@ -400,6 +397,17 @@
       page += 1;
     }
     return items;
+  }
+
+  function repositoryPage<T>(response: {
+    items: T[];
+    metadata: { page: number; totalPages: number };
+  }): { items: T[]; page: number; total_pages: number } {
+    return {
+      items: response.items,
+      page: response.metadata.page,
+      total_pages: response.metadata.totalPages
+    };
   }
 
   function runDuplicateSoftwareCheck(): void {
@@ -443,9 +451,30 @@
 
     try {
       const [apparats, stateTexts, notificationClasses, alarmTypes] = await Promise.all([
-        fetchAllPages((page, limit) => listApparats({ page, limit })),
-        fetchAllPages((page, limit) => listStateTexts({ page, limit })),
-        fetchAllPages((page, limit) => listNotificationClasses({ page, limit })),
+        fetchAllPages(async (page, limit) =>
+          repositoryPage(
+            await apparatRepository.list({
+              pagination: { page, pageSize: limit },
+              search: { text: '' }
+            })
+          )
+        ),
+        fetchAllPages(async (page, limit) =>
+          repositoryPage(
+            await stateTextRepository.list({
+              pagination: { page, pageSize: limit },
+              search: { text: '' }
+            })
+          )
+        ),
+        fetchAllPages(async (page, limit) =>
+          repositoryPage(
+            await notificationClassRepository.list({
+              pagination: { page, pageSize: limit },
+              search: { text: '' }
+            })
+          )
+        ),
         fetchAllPages(async (page, limit) => {
           const res = await alarmTypeRepository.list({ page, pageSize: limit });
           return {
@@ -777,333 +806,22 @@
 </script>
 
 <div class="rounded-lg border bg-background p-4">
-  <div class="mb-3 flex items-center gap-2">
-    <CircleCheck class="size-4 text-primary" />
-    <h2 class="text-sm font-semibold">Objektdaten geladen</h2>
-  </div>
-  <div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-    <span>{session.fileName}</span>
-    <span>{session.objectDataExcel.length} Objektdaten</span>
-    <Button type="button" size="sm" variant="outline" onclick={runDuplicateSoftwareCheck}>
-      Doppelte Software-IDs prüfen
-    </Button>
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      onclick={prepareCreatePayloads}
-      disabled={preparing}
-    >
-      {preparing ? 'Vorbereitung läuft...' : 'Erstellung vorbereiten'}
-    </Button>
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      onclick={createAllPreparedSequentially}
-      disabled={creating || preparing}
-    >
-      {creating ? 'Erstellung läuft...' : 'Alles nacheinander erstellen'}
-    </Button>
-    {#if duplicateCheckDone}
-      <span>
-        {duplicateSoftwareIds.size > 0
-          ? `${duplicateSoftwareIds.size} nicht eindeutige BACnet-Zeilen markiert`
-          : 'Alle BACnet-Software-IDs sind eindeutig'}
-      </span>
-    {/if}
-  </div>
-  {#if prepareError}
-    <div
-      class="mb-4 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive"
-    >
-      {prepareError}
-    </div>
-  {/if}
-  {#if createError}
-    <div
-      class="mb-4 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive"
-    >
-      {createError}
-    </div>
-  {/if}
-  {#if createReport}
-    <div class="mb-4 rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground">
-      <span>Erstellt: {createReport.success}/{createReport.total}</span>
-      <span class="ml-3">Fehlgeschlagen: {createReport.failed.length}</span>
-      <span class="ml-3"
-        >Nicht aufgelöste Software-Verknüpfungen: {createReport.unresolvedSoftwareLinks
-          .length}</span
-      >
-      {#if createReport.failed.length > 0}
-        <div class="mt-2">
-          <strong class="text-foreground">Fehlgeschlagene Objektdaten:</strong>
-          <p>
-            {createReport.failed.map((item) => `${item.objectDataId} (${item.reason})`).join(' | ')}
-          </p>
-        </div>
-      {/if}
-      {#if createReport.unresolvedSoftwareLinks.length > 0}
-        <div class="mt-2">
-          <strong class="text-foreground">Nicht aufgelöste Software-Verknüpfungen:</strong>
-          <p>
-            {createReport.unresolvedSoftwareLinks
-              .map((item) => `${item.objectDataId}: ${item.from} -> ${item.to}`)
-              .join(' | ')}
-          </p>
-        </div>
-      {/if}
-    </div>
-  {/if}
-  {#if preparedSummary}
-    <div class="mb-4 rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground">
-      <button
-        type="button"
-        onclick={() => setPrepareFilter('all')}
-        class={`cursor-pointer ${isFilterActive('all') ? 'font-semibold text-foreground underline' : ''}`}
-      >
-        {preparedSummary.objectDataCount} Objektdaten vorbereitet
-      </button>
-      <button type="button" onclick={() => setPrepareFilter('all')} class="ml-3 cursor-pointer">
-        {preparedSummary.bacnetCount} BACnet-Objekte
-      </button>
-      <button
-        type="button"
-        onclick={() => setPrepareFilter('missingApparats')}
-        class={`ml-3 cursor-pointer ${isFilterActive('missingApparats') ? 'font-semibold text-foreground underline' : ''}`}
-      >
-        Fehlende Apparate: {preparedSummary.missingApparats}
-      </button>
-      <button
-        type="button"
-        onclick={() => setPrepareFilter('missingStateTexts')}
-        class={`ml-3 cursor-pointer ${isFilterActive('missingStateTexts') ? 'font-semibold text-foreground underline' : ''}`}
-      >
-        Fehlende Statustexte: {preparedSummary.missingStateTexts}
-      </button>
-      <button
-        type="button"
-        onclick={() => setPrepareFilter('missingNotificationClasses')}
-        class={`ml-3 cursor-pointer ${isFilterActive('missingNotificationClasses') ? 'font-semibold text-foreground underline' : ''}`}
-      >
-        Fehlende Benachrichtigungsklassen: {preparedSummary.missingNotificationClasses}
-      </button>
-      <button
-        type="button"
-        onclick={() => setPrepareFilter('missingSoftwareReferences')}
-        class={`ml-3 cursor-pointer ${isFilterActive('missingSoftwareReferences') ? 'font-semibold text-foreground underline' : ''}`}
-      >
-        Fehlende Software-Referenzen: {preparedSummary.missingSoftwareReferences}
-      </button>
-      <button
-        type="button"
-        onclick={() => setPrepareFilter('missingHardware')}
-        class={`ml-3 cursor-pointer ${isFilterActive('missingHardware') ? 'font-semibold text-foreground underline' : ''}`}
-      >
-        Fehlende Hardware: {preparedSummary.missingHardware}
-      </button>
-      <button
-        type="button"
-        onclick={() => setPrepareFilter('missingSoftwareNumbers')}
-        class={`ml-3 cursor-pointer ${isFilterActive('missingSoftwareNumbers') ? 'font-semibold text-foreground underline' : ''}`}
-      >
-        Fehlende Softwarenummern: {preparedSummary.missingSoftwareNumbers}
-      </button>
-      <button
-        type="button"
-        onclick={() => setPrepareFilter('plannedAlarmDefinitions')}
-        class={`ml-3 cursor-pointer ${isFilterActive('plannedAlarmDefinitions') ? 'font-semibold text-foreground underline' : ''}`}
-      >
-        Geplante Alarmtyp-Zuordnungen: {preparedSummary.plannedAlarmDefinitionCreates}
-      </button>
-      <button
-        type="button"
-        onclick={() => setPrepareFilter('plannedSoftwareLinks')}
-        class={`ml-3 cursor-pointer ${isFilterActive('plannedSoftwareLinks') ? 'font-semibold text-foreground underline' : ''}`}
-      >
-        Geplante Software-Verknüpfungen: {preparedSummary.plannedSoftwareReferenceLinks}
-      </button>
-    </div>
-  {/if}
-  {#if preparedPayloads}
-    <div class="mb-4 space-y-2">
-      {#if filteredPreparedPayloads.length === 0}
-        <div class="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-          Keine Einträge für den ausgewählten Filter gefunden.
-        </div>
-      {/if}
-      {#each filteredPreparedPayloads as preparedItem}
-        <details class="rounded-md border bg-background p-3 text-xs">
-          <summary class="cursor-pointer font-medium">
-            {preparedItem.objectDataId} - fehlende Details
-          </summary>
-          <div class="mt-2 space-y-2 text-muted-foreground">
-            {#if preparedItem.issues.missingApparatLabels.length > 0}
-              <div>
-                <strong class="text-foreground">Fehlende Apparat-Bezeichnungen:</strong>
-                <p>{preparedItem.issues.missingApparatLabels.join(', ')}</p>
-              </div>
-            {/if}
-            {#if preparedItem.issues.missingStateTextLabels.length > 0}
-              <div>
-                <strong class="text-foreground">Fehlende Statustext-Bezeichnungen:</strong>
-                <p>{preparedItem.issues.missingStateTextLabels.join(', ')}</p>
-              </div>
-            {/if}
-            {#if preparedItem.issues.missingNotificationClassLabels.length > 0}
-              <div>
-                <strong class="text-foreground"
-                  >Fehlende Bezeichnungen der Benachrichtigungsklassen:</strong
-                >
-                <p>{preparedItem.issues.missingNotificationClassLabels.join(', ')}</p>
-              </div>
-            {/if}
-            {#if preparedItem.plannedAlarmDefinitions.length > 0}
-              <div>
-                <strong class="text-foreground">Geplante Alarmtyp-Zuordnungen:</strong>
-                <p>
-                  {preparedItem.plannedAlarmDefinitions
-                    .map(
-                      (entry) =>
-                        `${entry.bacnetSoftwareId} -> ${entry.name}${entry.alarmTypeCode ? ` [${entry.alarmTypeCode}]` : ''}`
-                    )
-                    .join(' | ')}
-                </p>
-              </div>
-            {/if}
-            {#if preparedItem.plannedSoftwareReferenceLinks.length > 0}
-              <div>
-                <strong class="text-foreground">Geplante Software-Referenzverknüpfungen:</strong>
-                <p>
-                  {preparedItem.plannedSoftwareReferenceLinks
-                    .map((entry) => `${entry.fromSoftwareId} -> ${entry.toSoftwareId}`)
-                    .join(' | ')}
-                </p>
-              </div>
-            {/if}
-            {#if preparedItem.issues.missingSoftwareReferences.length > 0}
-              <div>
-                <strong class="text-foreground">Fehlende Software-Referenzen:</strong>
-                <p>{preparedItem.issues.missingSoftwareReferences.join(', ')}</p>
-              </div>
-            {/if}
-            {#if preparedItem.issues.missingHardwareEntries.length > 0}
-              <div>
-                <strong class="text-foreground">Ungültige oder fehlende Hardware-Zeilen:</strong>
-                <p>{preparedItem.issues.missingHardwareEntries.join(' | ')}</p>
-              </div>
-            {/if}
-            {#if preparedItem.issues.missingSoftwareNumberEntries.length > 0}
-              <div>
-                <strong class="text-foreground">Ungültige Softwarenummern-Zeilen:</strong>
-                <p>{preparedItem.issues.missingSoftwareNumberEntries.join(' | ')}</p>
-              </div>
-            {/if}
-          </div>
-        </details>
-      {/each}
-    </div>
-  {/if}
-
-  {#if session.objectDataExcel.length === 0}
-    <div class="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-      Im Excel-Blatt wurden keine Objektdaten-Einträge gefunden.
-    </div>
-  {:else}
-    <div class="overflow-x-auto rounded-md border">
-      <div class="min-w-[840px] text-xs">
-        <div
-          class="grid grid-cols-[32px_240px_1fr_96px_88px] border-b bg-muted/30 font-medium text-muted-foreground"
-        >
-          <div class="px-2 py-1"></div>
-          <div class="px-2 py-1">Objektdaten-ID</div>
-          <div class="px-2 py-1">Beschreibung</div>
-          <div class="px-2 py-1">BACnet</div>
-          <div class="px-2 py-1">Optional</div>
-        </div>
-
-        {#each session.objectDataExcel as objectData}
-          <details class="group border-b last:border-b-0">
-            <summary class="cursor-pointer list-none">
-              <div class="grid grid-cols-[32px_240px_1fr_96px_88px] items-center hover:bg-muted/20">
-                <div class="px-2 py-1.5 text-muted-foreground">
-                  <span class="group-open:hidden">▸</span><span class="hidden group-open:inline"
-                    >▾</span
-                  >
-                </div>
-                <div class="truncate px-2 py-1.5 font-medium">{objectData.id}</div>
-                <div class="truncate px-2 py-1.5 text-muted-foreground">
-                  {objectData.description || '-'}
-                </div>
-                <div class="px-2 py-1.5 text-muted-foreground">
-                  {objectData.bacnet_objects.length}
-                </div>
-                <div class="px-2 py-1.5 text-muted-foreground">
-                  {objectData.is_optional_anchor ? 'Ja' : 'Nein'}
-                </div>
-              </div>
-            </summary>
-
-            <div class="border-t bg-muted/10 px-2 py-2">
-              {#if objectData.bacnet_objects.length === 0}
-                <p class="px-2 py-1 text-muted-foreground">
-                  Keine BACnet-Objekte für diesen Eintrag vorhanden.
-                </p>
-              {:else}
-                <div class="overflow-x-auto rounded-sm border bg-background">
-                  <div class="min-w-245 text-[11px]">
-                    <div
-                      class="grid grid-cols-[180px_220px_70px_70px_180px_80px_90px_110px_140px_150px_150px_140px] border-b bg-muted/30 font-medium text-muted-foreground"
-                    >
-                      <div class="px-1 py-1">Text fix</div>
-                      <div class="px-1 py-1">Beschreibung</div>
-                      <div class="px-1 py-1">Sichtbar</div>
-                      <div class="px-1 py-1">Optional</div>
-                      <div class="px-1 py-1">Text individuell</div>
-                      <div class="px-1 py-1">Typ</div>
-                      <div class="px-1 py-1">Nummer</div>
-                      <div class="px-1 py-1">Hardware</div>
-                      <div class="px-1 py-1">Software-Ref.</div>
-                      <div class="px-1 py-1">Statustext</div>
-                      <div class="px-1 py-1">Benachrichtigungsklasse</div>
-                      <div class="px-1 py-1">Alarmdefinition</div>
-                      <div class="px-1 py-1">Apparat</div>
-                    </div>
-
-                    {#each objectData.bacnet_objects as bacnetObject}
-                      <div
-                        class={`grid grid-cols-[180px_220px_70px_70px_180px_80px_90px_110px_140px_150px_150px_140px] border-b last:border-b-0 ${duplicateSoftwareIds.has(rowIdentifier(objectData.id, bacnetObject.id)) ? 'bg-destructive/10' : ''}`}
-                      >
-                        <div class="truncate px-1 py-1">{bacnetObject.text_fix || '-'}</div>
-                        <div class="truncate px-1 py-1 text-muted-foreground">
-                          {bacnetObject.description || '-'}
-                        </div>
-                        <div class="px-1 py-1">{bacnetObject.gms_visible ? 'Ja' : 'Nein'}</div>
-                        <div class="px-1 py-1">{bacnetObject.is_optional ? 'Ja' : 'Nein'}</div>
-                        <div class="truncate px-1 py-1">{bacnetObject.text_individual || '-'}</div>
-                        <div class="px-1 py-1">{bacnetObject.software_type || '-'}</div>
-                        <div class="px-1 py-1">{bacnetObject.software_number || '-'}</div>
-                        <div class="px-1 py-1">{bacnetObject.hardware_label || '-'}</div>
-                        <div class="truncate px-1 py-1">
-                          {bacnetObject.software_reference_label || '-'}
-                        </div>
-                        <div class="truncate px-1 py-1">{bacnetObject.state_text_label || '-'}</div>
-                        <div class="truncate px-1 py-1">
-                          {bacnetObject.notification_class_label || '-'}
-                        </div>
-                        <div class="truncate px-1 py-1">
-                          {bacnetObject.alarm_definition_label || '-'}
-                        </div>
-                        <div class="truncate px-1 py-1">{bacnetObject.apparat_label || '-'}</div>
-                      </div>
-                    {/each}
-                  </div>
-                </div>
-              {/if}
-            </div>
-          </details>
-        {/each}
-      </div>
-    </div>
-  {/if}
+  <ExcelSessionActionSection
+    {session}
+    {duplicateSoftwareIds}
+    {duplicateCheckDone}
+    {preparing}
+    {creating}
+    onRunDuplicateSoftwareCheck={runDuplicateSoftwareCheck}
+    onPrepareCreatePayloads={prepareCreatePayloads}
+    onCreateAllPreparedSequentially={createAllPreparedSequentially}
+  />
+  <ExcelSessionWarningSection {prepareError} {createError} {createReport} />
+  <ExcelSessionPreparedSummary
+    {preparedSummary}
+    {activePrepareFilter}
+    onSetPrepareFilter={setPrepareFilter}
+  />
+  <ExcelSessionPreparedDetails {preparedPayloads} {filteredPreparedPayloads} />
+  <ExcelSessionWorkbookSection {session} {duplicateSoftwareIds} {rowIdentifier} />
 </div>
