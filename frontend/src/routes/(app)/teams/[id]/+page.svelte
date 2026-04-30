@@ -7,169 +7,29 @@
   import * as Popover from '$lib/components/ui/popover/index.js';
   import * as Command from '$lib/components/ui/command/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-  import { addToast } from '$lib/components/toast.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
-  import { confirm } from '$lib/stores/confirm-dialog.js';
   import UserAvatar from '$lib/components/user-avatar.svelte';
   import { ArrowLeft, UserMinus, UserPlus } from '@lucide/svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import { t as translate } from '$lib/i18n/index.js';
-
-  import {
-    addTeamMember,
-    getTeam,
-    listTeamMembers,
-    removeTeamMember,
-    type Team,
-    type TeamMember
-  } from '$lib/api/teams.js';
-  import { listUsers, type User } from '$lib/api/users.js';
+  import { TeamDetailPageState } from '$lib/components/teams/TeamDetailPageState.svelte.js';
 
   const teamId = $derived($page.params.id ?? '');
-
-  let team = $state<Team | null>(null);
-  let members = $state<TeamMember[]>([]);
-  let users = $state<User[]>([]);
-  let loading = $state(true);
-  let error = $state<string | null>(null);
-  let busy = $state(false);
+  const state = new TeamDetailPageState(() => teamId);
 
   const t = createTranslator();
 
-  // Add Member popover state
-  let addMemberOpen = $state(false);
-  let addMemberSearch = $state('');
-  let addMemberResults = $state<User[]>([]);
-  let addMemberLoading = $state(false);
-  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
-
-  function userById(id: string): User | undefined {
-    return users.find((u) => u.id === id);
-  }
-
-  function memberUserIds(): Set<string> {
-    return new Set(members.map((m) => m.user_id));
-  }
-
-  async function load() {
-    if (!teamId) {
-      error = translate('teams.errors.missing_id');
-      loading = false;
-      return;
-    }
-    loading = true;
-    error = null;
-    try {
-      const [t, m, u] = await Promise.all([
-        getTeam(teamId),
-        listTeamMembers(teamId, { page: 1, limit: 100 }),
-        listUsers({ page: 1, limit: 100, search: '' })
-      ]);
-      team = t;
-      members = m.items;
-      users = u.items;
-    } catch (err) {
-      error = err instanceof Error ? err.message : translate('teams.errors.load_failed');
-    } finally {
-      loading = false;
-    }
-  }
-
-  async function searchUsers(query: string) {
-    addMemberLoading = true;
-    try {
-      const res = await listUsers({ page: 1, limit: 20, search: query });
-      const existingIds = memberUserIds();
-      addMemberResults = res.items.filter((u) => !existingIds.has(u.id));
-    } catch {
-      addMemberResults = [];
-    } finally {
-      addMemberLoading = false;
-    }
-  }
-
   $effect(() => {
-    const query = addMemberSearch;
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      searchUsers(query);
-    }, 300);
+    state.scheduleUserSearch();
   });
 
-  async function handleAddMember(userId: string) {
-    if (!teamId) return;
-    busy = true;
-    try {
-      await addTeamMember(teamId, { user_id: userId, role: 'member' });
-      addToast(translate('teams.toasts.member_added'), 'success');
-      addMemberOpen = false;
-      addMemberSearch = '';
-      addMemberResults = [];
-      await load();
-    } catch (err) {
-      addToast(
-        err instanceof Error ? err.message : translate('teams.toasts.member_add_failed'),
-        'error'
-      );
-    } finally {
-      busy = false;
-    }
-  }
-
-  async function changeRole(userId: string, role: 'member' | 'manager' | 'owner') {
-    if (!teamId) return;
-    busy = true;
-    try {
-      await addTeamMember(teamId, { user_id: userId, role });
-      addToast(translate('teams.toasts.role_updated'), 'success');
-      await load();
-    } catch (err) {
-      addToast(
-        err instanceof Error ? err.message : translate('teams.toasts.role_update_failed'),
-        'error'
-      );
-    } finally {
-      busy = false;
-    }
-  }
-
-  async function remove(userId: string) {
-    if (!teamId) return;
-    const u = userById(userId);
-    const ok = await confirm({
-      title: translate('teams.confirm.remove_title'),
-      message: translate('teams.confirm.remove_message', {
-        name: u ? `${u.first_name} ${u.last_name}` : translate('teams.confirm.user_fallback')
-      }),
-      confirmText: translate('teams.confirm.remove_confirm'),
-      cancelText: translate('common.cancel'),
-      variant: 'destructive'
-    });
-    if (!ok) return;
-
-    busy = true;
-    try {
-      await removeTeamMember(teamId, userId);
-      addToast(translate('teams.toasts.member_removed'), 'success');
-      await load();
-    } catch (err) {
-      addToast(
-        err instanceof Error ? err.message : translate('teams.toasts.member_remove_failed'),
-        'error'
-      );
-    } finally {
-      busy = false;
-    }
-  }
-
   $effect(() => {
-    if (addMemberOpen) {
-      searchUsers('');
+    if (state.addMemberOpen) {
+      void state.searchUsers('');
     }
   });
 
   onMount(() => {
-    load();
+    void state.load();
   });
 </script>
 
@@ -183,11 +43,11 @@
         {$t('common.back')}
       </Button>
       <div>
-        <h1 class="text-3xl font-bold tracking-tight">{team?.name ?? $t('team.team')}</h1>
+        <h1 class="text-3xl font-bold tracking-tight">{state.team?.name ?? $t('team.team')}</h1>
         <p class="mt-1 text-muted-foreground">{$t('teams.detail.description')}</p>
       </div>
     </div>
-    <Popover.Root bind:open={addMemberOpen}>
+    <Popover.Root bind:open={state.addMemberOpen}>
       <Popover.Trigger>
         {#snippet child({ props })}
           <Button {...props}>
@@ -200,15 +60,17 @@
         <Command.Root shouldFilter={false}>
           <Command.Input
             placeholder={$t('teams.detail.search_users_placeholder')}
-            bind:value={addMemberSearch}
+            bind:value={state.addMemberSearch}
           />
           <Command.List>
             <Command.Empty>
-              {addMemberLoading ? $t('teams.detail.searching') : $t('teams.detail.no_users_found')}
+              {state.addMemberLoading
+                ? $t('teams.detail.searching')
+                : $t('teams.detail.no_users_found')}
             </Command.Empty>
             <Command.Group>
-              {#each addMemberResults as user (user.id)}
-                <Command.Item value={user.id} onSelect={() => handleAddMember(user.id)}>
+              {#each state.addMemberResults as user (user.id)}
+                <Command.Item value={user.id} onSelect={() => state.handleAddMember(user.id)}>
                   <div class="flex items-center gap-2">
                     <UserAvatar
                       firstName={user.first_name}
@@ -229,14 +91,14 @@
     </Popover.Root>
   </div>
 
-  {#if team?.description}
-    <div class="text-sm text-muted-foreground">{team.description}</div>
+  {#if state.team?.description}
+    <div class="text-sm text-muted-foreground">{state.team.description}</div>
   {/if}
 
-  {#if error}
+  {#if state.error}
     <div class="rounded-md border bg-muted px-4 py-3 text-muted-foreground">
       <p class="font-medium">{$t('teams.errors.load_title')}</p>
-      <p class="text-sm">{error}</p>
+      <p class="text-sm">{state.error}</p>
     </div>
   {/if}
 
@@ -250,7 +112,7 @@
         </Table.Row>
       </Table.Header>
       <Table.Body>
-        {#if loading}
+        {#if state.loading}
           {#each Array(6) as _}
             <Table.Row>
               <Table.Cell><Skeleton class="h-4 w-70" /></Table.Cell>
@@ -258,7 +120,7 @@
               <Table.Cell><Skeleton class="h-8 w-24" /></Table.Cell>
             </Table.Row>
           {/each}
-        {:else if members.length === 0}
+        {:else if state.members.length === 0}
           <Table.Row>
             <Table.Cell colspan={3}>
               <div class="flex flex-col items-center justify-center gap-2 py-10 text-center">
@@ -270,11 +132,11 @@
             </Table.Cell>
           </Table.Row>
         {:else}
-          {#each members as m (m.user_id)}
+          {#each state.members as m (m.user_id)}
             <Table.Row>
               <Table.Cell>
-                {#if userById(m.user_id)}
-                  {@const u = userById(m.user_id)!}
+                {#if state.userById(m.user_id)}
+                  {@const u = state.userById(m.user_id)!}
                   <div class="flex items-center gap-3">
                     <UserAvatar firstName={u.first_name} lastName={u.last_name} />
                     <div class="flex flex-col">
@@ -293,8 +155,8 @@
                 <select
                   class="flex h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
                   onchange={(e) =>
-                    changeRole(m.user_id, (e.target as HTMLSelectElement).value as any)}
-                  disabled={busy}
+                    state.changeRole(m.user_id, (e.target as HTMLSelectElement).value as any)}
+                  disabled={state.busy}
                 >
                   <option value="member" selected={m.role === 'member'}
                     >{$t('teams.roles.member')}</option
@@ -308,7 +170,11 @@
                 </select>
               </Table.Cell>
               <Table.Cell class="text-right">
-                <Button variant="outline" onclick={() => remove(m.user_id)} disabled={busy}>
+                <Button
+                  variant="outline"
+                  onclick={() => state.remove(m.user_id)}
+                  disabled={state.busy}
+                >
                   <UserMinus class="mr-2 h-4 w-4" />
                   {$t('teams.detail.remove_member')}
                 </Button>

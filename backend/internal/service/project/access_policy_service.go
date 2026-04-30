@@ -3,6 +3,7 @@ package project
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -122,12 +123,7 @@ func (s *ProjectAccessPolicyService) phaseAllowsProjectPermission(ctx context.Co
 		return false, err
 	}
 
-	for _, allowed := range rule.Permissions {
-		if allowed == permission {
-			return true, nil
-		}
-	}
-	return false, nil
+	return slices.Contains(rule.Permissions, permission), nil
 }
 
 func isPhaseScopedProjectPermission(permission string) bool {

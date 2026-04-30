@@ -18,11 +18,11 @@ type ObjectDataStore interface {
 	GetTemplatesLite(ctx context.Context) ([]*ObjectData, error)
 	GetForProject(ctx context.Context, projectID uuid.UUID) ([]*ObjectData, error)
 	GetForProjectLite(ctx context.Context, projectID uuid.UUID) ([]*ObjectData, error)
-	GetPaginatedListForProject(ctx context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ObjectData], error)
-	GetPaginatedListByApparatID(ctx context.Context, apparatID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ObjectData], error)
-	GetPaginatedListBySystemPartID(ctx context.Context, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ObjectData], error)
-	GetPaginatedListByApparatAndSystemPartID(ctx context.Context, apparatID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ObjectData], error)
-	GetPaginatedListForProjectByApparatID(ctx context.Context, projectID, apparatID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ObjectData], error)
-	GetPaginatedListForProjectBySystemPartID(ctx context.Context, projectID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ObjectData], error)
-	GetPaginatedListForProjectByApparatAndSystemPartID(ctx context.Context, projectID, apparatID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[ObjectData], error)
+	GetPaginatedListWithFilters(ctx context.Context, params domain.PaginationParams, filters ObjectDataFilterParams) (*domain.PaginatedList[ObjectData], error)
+}
+
+type ObjectDataFilterParams struct {
+	ProjectID    *uuid.UUID
+	ApparatID    *uuid.UUID
+	SystemPartID *uuid.UUID
 }

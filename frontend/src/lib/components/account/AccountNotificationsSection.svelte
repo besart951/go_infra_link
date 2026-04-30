@@ -13,7 +13,7 @@
     MonitorCheck
   } from '@lucide/svelte';
   import type { Component } from 'svelte';
-  import type { User } from '$lib/api/users.js';
+  import type { User } from '$lib/infrastructure/api/userRepository.js';
   import type {
     NotificationChannel,
     NotificationFrequency,

@@ -1067,40 +1067,25 @@ func (r *projectObjectDataRepoFake) GetForProjectLite(ctx context.Context, proje
 	return r.GetForProject(ctx, projectID)
 }
 
-func (r *projectObjectDataRepoFake) GetPaginatedListForProject(_ context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	r.lastListMethod = "project"
+func (r *projectObjectDataRepoFake) GetPaginatedListWithFilters(_ context.Context, params domain.PaginationParams, filters domainFacility.ObjectDataFilterParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	r.lastPagination = params
-	return paginatedObjectData(objectDataForProject(r.items, projectID)), nil
-}
-
-func (r *projectObjectDataRepoFake) GetPaginatedListByApparatID(context.Context, uuid.UUID, domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return paginatedObjectData(nil), nil
-}
-
-func (r *projectObjectDataRepoFake) GetPaginatedListBySystemPartID(context.Context, uuid.UUID, domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return paginatedObjectData(nil), nil
-}
-
-func (r *projectObjectDataRepoFake) GetPaginatedListByApparatAndSystemPartID(context.Context, uuid.UUID, uuid.UUID, domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return paginatedObjectData(nil), nil
-}
-
-func (r *projectObjectDataRepoFake) GetPaginatedListForProjectByApparatID(ctx context.Context, projectID, _ uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	r.lastListMethod = "project_apparat"
-	r.lastPagination = params
-	return paginatedObjectData(objectDataForProject(r.items, projectID)), nil
-}
-
-func (r *projectObjectDataRepoFake) GetPaginatedListForProjectBySystemPartID(ctx context.Context, projectID, _ uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	r.lastListMethod = "project_system_part"
-	r.lastPagination = params
-	return paginatedObjectData(objectDataForProject(r.items, projectID)), nil
-}
-
-func (r *projectObjectDataRepoFake) GetPaginatedListForProjectByApparatAndSystemPartID(ctx context.Context, projectID, _, _ uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	r.lastListMethod = "project_apparat_system_part"
-	r.lastPagination = params
-	return paginatedObjectData(objectDataForProject(r.items, projectID)), nil
+	switch {
+	case filters.ProjectID != nil && filters.ApparatID != nil && filters.SystemPartID != nil:
+		r.lastListMethod = "project_apparat_system_part"
+		return paginatedObjectData(objectDataForProject(r.items, *filters.ProjectID)), nil
+	case filters.ProjectID != nil && filters.ApparatID != nil:
+		r.lastListMethod = "project_apparat"
+		return paginatedObjectData(objectDataForProject(r.items, *filters.ProjectID)), nil
+	case filters.ProjectID != nil && filters.SystemPartID != nil:
+		r.lastListMethod = "project_system_part"
+		return paginatedObjectData(objectDataForProject(r.items, *filters.ProjectID)), nil
+	case filters.ProjectID != nil:
+		r.lastListMethod = "project"
+		return paginatedObjectData(objectDataForProject(r.items, *filters.ProjectID)), nil
+	default:
+		r.lastListMethod = "template"
+		return paginatedObjectData(nil), nil
+	}
 }
 
 type projectBacnetObjectRepoFake struct {

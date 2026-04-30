@@ -7,7 +7,7 @@
   import { Switch } from '$lib/components/ui/switch/index.js';
   import type { NotificationRuleRecipientType } from '$lib/domain/notification/index.js';
   import type { Project } from '$lib/domain/project/index.js';
-  import type { Team } from '$lib/api/teams.js';
+  import type { Team } from '$lib/infrastructure/api/teamRepository.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import PlusIcon from '@lucide/svelte/icons/plus';
 

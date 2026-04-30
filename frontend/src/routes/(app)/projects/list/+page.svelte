@@ -1,23 +1,20 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Textarea } from '$lib/components/ui/textarea/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import { ArrowLeft, Plus } from '@lucide/svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
-  import { addToast } from '$lib/components/toast.svelte';
   import ProjectPhaseSelect from '$lib/components/project/ProjectPhaseSelect.svelte';
+  import { ProjectListPageState } from '$lib/components/project/ProjectListPageState.svelte.js';
   import { projectListStore } from '$lib/stores/projects/projectListStore.js';
-  import { createProject } from '$lib/infrastructure/api/project.adapter.js';
-  import type { CreateProjectRequest, Project, ProjectStatus } from '$lib/domain/project/index.js';
+  import type { Project, ProjectStatus } from '$lib/domain/project/index.js';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator';
 
-  import { useOptimisticUpdate } from '$lib/hooks/useOptimisticUpdate.svelte.js';
-
   const t = createTranslator();
+  const state = new ProjectListPageState();
 
   function getStatusClass(status: string): string {
     switch (status) {
@@ -43,119 +40,8 @@
     { value: 'completed', label: $t('messages.completed') }
   ];
 
-  type CreateProjectForm = {
-    name: string;
-    description: string;
-    status: ProjectStatus;
-    start_date: string;
-    phase_id: string;
-  };
-
-  function todayInputValue(): string {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  let createOpen = $state(false);
-  let createBusy = $state(false);
-  let form = $state<CreateProjectForm>({
-    name: '',
-    description: '',
-    status: 'planned',
-    start_date: todayInputValue(),
-    phase_id: ''
-  });
-
-  // Optimistic update helper
-  const optimisticCreate = useOptimisticUpdate<Project>({
-    onSuccess: (project) => {
-      goto(`/projects/${project.id}`);
-    },
-    onError: (err) => {
-      addToast(err instanceof Error ? err.message : $t('project.creation_failed'), 'error');
-    }
-  });
-
-  function canSubmitCreate(): boolean {
-    return form.name.trim().length > 0 && form.phase_id.trim().length > 0 && !createBusy;
-  }
-
-  async function submitCreate() {
-    if (!canSubmitCreate()) return;
-    createBusy = true;
-
-    const payload: CreateProjectRequest = {
-      name: form.name.trim(),
-      description: form.description.trim() || undefined,
-      status: form.status,
-      start_date: form.start_date
-        ? new Date(`${form.start_date}T00:00:00Z`).toISOString()
-        : undefined,
-      phase_id: form.phase_id
-    };
-
-    // Create optimistic project for immediate UI feedback
-    const optimisticProject: Project = {
-      id: `temp-${Date.now()}`, // Temporary ID
-      name: payload.name,
-      description: payload.description ?? '',
-      status: form.status,
-      start_date: payload.start_date ?? '',
-      phase_id: payload.phase_id,
-      creator_id: '', // Will be set by server
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    try {
-      await optimisticCreate.execute(
-        // Optimistic action - close form and show toast immediately
-        () => {
-          createOpen = false;
-          form = {
-            name: '',
-            description: '',
-            status: 'planned',
-            start_date: todayInputValue(),
-            phase_id: ''
-          };
-          addToast($t('projects.page.creating'), 'info', 2000);
-        },
-        // Server action
-        async () => {
-          const project = await createProject(payload);
-          addToast($t('project.project_created'), 'success');
-          projectListStore.reload();
-          return project;
-        },
-        // Rollback action on error
-        () => {
-          // Reopen form with previous values
-          createOpen = true;
-          form = {
-            name: payload.name,
-            description: payload.description ?? '',
-            status: form.status,
-            start_date: payload.start_date ? payload.start_date.split('T')[0] : todayInputValue(),
-            phase_id: payload.phase_id
-          };
-        }
-      );
-    } finally {
-      createBusy = false;
-    }
-  }
-
-  function handleStatusChange(e: Event) {
-    const value = (e.target as HTMLSelectElement).value;
-    projectListStore.setStatus(value === 'all' ? 'all' : (value as ProjectStatus));
-  }
-
   onMount(() => {
-    projectListStore.load();
+    state.initialize();
   });
 </script>
 
@@ -177,7 +63,7 @@
         {$t('hub.back_to_overview')}
       </Button>
       {#if canPerform('create', 'project')}
-        <Button onclick={() => (createOpen = !createOpen)}>
+        <Button onclick={() => (state.createOpen = !state.createOpen)}>
           <Plus class="mr-2 size-4" />
           {$t('common.create')}
         </Button>
@@ -185,7 +71,7 @@
     </div>
   </div>
 
-  {#if createOpen}
+  {#if state.createOpen}
     <div class="rounded-lg border bg-background p-4">
       <div class="grid gap-4 md:grid-cols-2">
         <div class="flex flex-col gap-2">
@@ -193,8 +79,8 @@
           <Input
             id="project_name_create"
             placeholder={$t('messages.project_name_placeholder')}
-            bind:value={form.name}
-            disabled={createBusy}
+            bind:value={state.form.name}
+            disabled={state.createBusy}
           />
         </div>
 
@@ -205,8 +91,8 @@
           <select
             id="project_status_create"
             class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
-            bind:value={form.status}
-            disabled={createBusy}
+            bind:value={state.form.status}
+            disabled={state.createBusy}
           >
             {#each createStatusOptions as opt}
               <option value={opt.value}>{opt.label}</option>
@@ -221,8 +107,8 @@
           <Input
             id="project_start_create"
             type="date"
-            bind:value={form.start_date}
-            disabled={createBusy}
+            bind:value={state.form.start_date}
+            disabled={state.createBusy}
           />
         </div>
 
@@ -232,9 +118,9 @@
           >
           <ProjectPhaseSelect
             id="project_phase_create"
-            bind:value={form.phase_id}
+            bind:value={state.form.phase_id}
             width="w-full"
-            disabled={createBusy}
+            disabled={state.createBusy}
           />
         </div>
 
@@ -246,17 +132,21 @@
             id="project_desc_create"
             placeholder={$t('messages.project_description_placeholder')}
             rows={3}
-            bind:value={form.description}
-            disabled={createBusy}
+            bind:value={state.form.description}
+            disabled={state.createBusy}
           />
         </div>
       </div>
 
       <div class="mt-4 flex items-center justify-end gap-2">
-        <Button variant="outline" onclick={() => (createOpen = false)} disabled={createBusy}
-          >{$t('common.cancel')}</Button
+        <Button
+          variant="outline"
+          onclick={() => (state.createOpen = false)}
+          disabled={state.createBusy}>{$t('common.cancel')}</Button
         >
-        <Button onclick={submitCreate} disabled={!canSubmitCreate()}>{$t('common.create')}</Button>
+        <Button onclick={() => state.submitCreate()} disabled={!state.canSubmitCreate()}
+          >{$t('common.create')}</Button
+        >
       </div>
     </div>
   {/if}
@@ -267,7 +157,7 @@
       id="project_status_filter"
       class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
       value={$projectListStore.status}
-      onchange={handleStatusChange}
+      onchange={(event) => state.handleStatusChange(event)}
     >
       {#each statusOptions as opt}
         <option value={opt.value}>{opt.label}</option>

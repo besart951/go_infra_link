@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -229,12 +230,7 @@ func (h *AuthHandler) getRolePermissions(ctx context.Context, role domainUser.Ro
 }
 
 func hasPermission(permissions []string, permission string) bool {
-	for _, granted := range permissions {
-		if granted == permission {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(permissions, permission)
 }
 
 func (h *AuthHandler) setAuthCookies(c *gin.Context, result *domainAuth.LoginResult) {

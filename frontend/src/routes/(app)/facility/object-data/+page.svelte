@@ -8,42 +8,16 @@
   import { Plus } from '@lucide/svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
-  import { addToast } from '$lib/components/toast.svelte';
-  import { confirm } from '$lib/stores/confirm-dialog.js';
   import { objectDataStore } from '$lib/stores/list/entityStores.js';
   import type { ObjectData } from '$lib/domain/facility/index.js';
-  import { ManageObjectDataUseCase } from '$lib/application/useCases/facility/manageObjectDataUseCase.js';
-  import { objectDataRepository } from '$lib/infrastructure/api/objectDataRepository.js';
-  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
+  import { createObjectDataActions } from '$lib/components/facility/shared/facilityCrudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
-  const manageObjectData = new ManageObjectDataUseCase(objectDataRepository);
   import ObjectDataForm from '$lib/components/facility/forms/ObjectDataForm.svelte';
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  const actions = new CrudPageActions<ObjectData>({
-    reload: () => objectDataStore.reload(),
-    deleteItem: (item) => manageObjectData.delete(item.id),
-    confirmDelete: confirm,
-    addToast,
-    getDeleteTitle: () => $t('facility.delete_object_data_confirm').replace('{desc}', ''),
-    getDeleteMessage: (item) =>
-      $t('facility.delete_object_data_confirm').replace('{desc}', item.description || ''),
-    getDeleteConfirmText: () => $t('common.delete'),
-    getDeleteCancelText: () => $t('common.cancel'),
-    getDeleteSuccessMessage: () => $t('facility.object_data_deleted'),
-    getDeleteFailureMessage: () => $t('facility.delete_object_data_failed')
-  });
-
-  async function handleEdit(item: ObjectData) {
-    try {
-      actions.edit(await manageObjectData.get(item.id));
-    } catch (error) {
-      console.error(error);
-      actions.edit(item);
-    }
-  }
+  const actions = createObjectDataActions();
 
   onMount(() => {
     objectDataStore.load();
@@ -125,7 +99,7 @@
               {$t('facility.view')}
             </DropdownMenu.Item>
             {#if canPerform('update', 'objectdata')}
-              <DropdownMenu.Item onclick={() => handleEdit(item)}
+              <DropdownMenu.Item onclick={() => actions.editFresh(item)}
                 >{$t('common.edit')}</DropdownMenu.Item
               >
             {/if}

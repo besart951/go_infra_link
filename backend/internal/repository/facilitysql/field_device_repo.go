@@ -8,6 +8,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -233,8 +234,7 @@ func (r *fieldDeviceRepo) GetPaginatedList(ctx context.Context, params domain.Pa
 
 	// Apply search
 	if strings.TrimSpace(params.Search) != "" {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
-		query = query.Where("LOWER(bmk) LIKE ? OR LOWER(description) LIKE ?", pattern, pattern)
+		query = applyFieldDeviceSearch(query, params.Search)
 	}
 
 	// Count total
@@ -345,8 +345,7 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(ctx context.Context, param
 
 	// Apply search
 	if strings.TrimSpace(params.Search) != "" {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
-		query = query.Where("LOWER(field_devices.bmk) LIKE ? OR LOWER(field_devices.description) LIKE ?", pattern, pattern)
+		query = applyFieldDeviceSearch(query, params.Search)
 	}
 
 	// Count total (count before DISTINCT to get accurate total)
@@ -379,4 +378,8 @@ func (r *fieldDeviceRepo) GetPaginatedListWithFilters(ctx context.Context, param
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
+}
+
+func applyFieldDeviceSearch(query *gorm.DB, search string) *gorm.DB {
+	return gormbase.ApplyTrigramSearch(query, search, searchspec.FieldDevices.SearchColumns("field_devices.")...)
 }

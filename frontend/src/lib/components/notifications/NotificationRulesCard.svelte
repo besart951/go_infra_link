@@ -1,6 +1,5 @@
 <script lang="ts">
   import { getErrorMessage } from '$lib/api/client.js';
-  import { getTeam, listTeams, type Team } from '$lib/api/teams.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
   import NotificationRuleFormSection from './NotificationRuleFormSection.svelte';
@@ -25,6 +24,7 @@
   import { getProject, listProjects } from '$lib/infrastructure/api/project.adapter.js';
   import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
   import { listRoles } from '$lib/infrastructure/api/role.adapter.js';
+  import { teamRepository, type Team } from '$lib/infrastructure/api/teamRepository.js';
   import type { Role } from '$lib/domain/role/index.js';
   import type { Project } from '$lib/domain/project/index.js';
   import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
@@ -295,7 +295,7 @@
   }
 
   async function fetchTeams(search: string): Promise<Team[]> {
-    const result = await listTeams({ page: 1, limit: 20, search });
+    const result = await teamRepository.list({ page: 1, limit: 20, search });
     return result.items || [];
   }
 
@@ -477,7 +477,7 @@
       {fetchResources}
       {fetchResourceById}
       {fetchTeams}
-      fetchTeamById={getTeam}
+      fetchTeamById={teamRepository.get}
       onEventKeyChange={handleEventKeyChange}
       onResourceTypeChange={handleResourceTypeChange}
       onCreateRule={createRule}

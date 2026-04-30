@@ -2,11 +2,11 @@ package facilitysql
 
 import (
 	"context"
-	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -18,11 +18,9 @@ type unitRepo struct {
 }
 
 func NewUnitRepository(db *gorm.DB) domainFacility.UnitRepository {
-	search := func(q *gorm.DB, s string) *gorm.DB {
-		p := "%" + strings.ToLower(strings.TrimSpace(s)) + "%"
-		return q.Where("LOWER(name) LIKE ? OR LOWER(code) LIKE ?", p, p)
-	}
-	return &unitRepo{gormbase.NewBaseRepository[*domainFacility.Unit](db, search)}
+	return &unitRepo{gormbase.NewBaseRepository(db,
+		gormbase.TrigramSearchCallback[*domainFacility.Unit](searchspec.Units.SearchColumns("")...),
+	)}
 }
 
 func (r *unitRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.Unit], error) {
@@ -40,11 +38,9 @@ type alarmFieldRepo struct {
 }
 
 func NewAlarmFieldRepository(db *gorm.DB) domainFacility.AlarmFieldRepository {
-	search := func(q *gorm.DB, s string) *gorm.DB {
-		p := "%" + strings.ToLower(strings.TrimSpace(s)) + "%"
-		return q.Where("LOWER(label) LIKE ? OR LOWER(key) LIKE ?", p, p)
-	}
-	return &alarmFieldRepo{gormbase.NewBaseRepository[*domainFacility.AlarmField](db, search)}
+	return &alarmFieldRepo{gormbase.NewBaseRepository(db,
+		gormbase.TrigramSearchCallback[*domainFacility.AlarmField](searchspec.AlarmFields.SearchColumns("")...),
+	)}
 }
 
 func (r *alarmFieldRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.AlarmField], error) {
@@ -63,12 +59,8 @@ type alarmTypeRepo struct {
 }
 
 func NewAlarmTypeRepository(db *gorm.DB) domainFacility.AlarmTypeRepository {
-	search := func(q *gorm.DB, s string) *gorm.DB {
-		p := "%" + strings.ToLower(strings.TrimSpace(s)) + "%"
-		return q.Where("LOWER(name) LIKE ? OR LOWER(code) LIKE ?", p, p)
-	}
 	return &alarmTypeRepo{
-		BaseRepository: gormbase.NewBaseRepository[*domainFacility.AlarmType](db, search),
+		BaseRepository: gormbase.NewBaseRepository(db, alarmTypeSearchCallback()),
 		db:             db,
 	}
 }
@@ -101,8 +93,7 @@ func (r *alarmTypeRepo) ListWithFields(ctx context.Context, params domain.Pagina
 
 	query := r.db.WithContext(ctx).Model(&domainFacility.AlarmType{})
 	if params.Search != "" {
-		p := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
-		query = query.Where("LOWER(name) LIKE ? OR LOWER(code) LIKE ?", p, p)
+		query = alarmTypeSearchCallback()(query, params.Search)
 	}
 
 	var total int64
@@ -127,6 +118,10 @@ func (r *alarmTypeRepo) ListWithFields(ctx context.Context, params domain.Pagina
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
+}
+
+func alarmTypeSearchCallback() gormbase.SearchCallback[*domainFacility.AlarmType] {
+	return gormbase.TrigramSearchCallback[*domainFacility.AlarmType](searchspec.AlarmTypes.SearchColumns("")...)
 }
 
 // --- AlarmTypeField ---

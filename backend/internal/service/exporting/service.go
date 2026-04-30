@@ -246,13 +246,6 @@ func (s *Service) deleteRequest(jobID uuid.UUID) {
 	delete(s.requests, jobID)
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 func uniqueControlCabinetCount(controllers []domainExport.Controller) int {
 	unique := make(map[uuid.UUID]struct{}, len(controllers))
 	for _, controller := range controllers {

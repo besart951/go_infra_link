@@ -1,6 +1,7 @@
 package facility
 
 import (
+	"github.com/besart951/go_infra_link/backend/internal/service/changecapture"
 	"github.com/besart951/go_infra_link/backend/internal/service/transaction"
 	"gorm.io/gorm"
 )
@@ -10,6 +11,7 @@ type TxRunner = transaction.Runner
 type Config struct {
 	TxRunner       TxRunner
 	TxRepositories func(tx *gorm.DB) (Repositories, error)
+	ChangeRecorder changecapture.Recorder
 }
 
 type txCoordinator struct {
@@ -24,12 +26,12 @@ func newTxCoordinator(cfg Config) txCoordinator {
 			if err != nil {
 				return nil, err
 			}
-			return NewServices(repos), nil
+			return NewServices(repos, Config{ChangeRecorder: cfg.ChangeRecorder}), nil
 		}
 	}
 
 	return txCoordinator{
-		boundary: transaction.NewBoundary[*Services](cfg.TxRunner, factory),
+		boundary: transaction.NewBoundary(cfg.TxRunner, factory),
 	}
 }
 

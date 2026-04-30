@@ -2,11 +2,11 @@ package project
 
 import (
 	"context"
-	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"gorm.io/gorm"
 )
 
@@ -16,12 +16,9 @@ type phaseRepo struct {
 }
 
 func NewPhaseRepository(db *gorm.DB) domainProject.PhaseRepository {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where("LOWER(name) LIKE ?", pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainProject.Phase](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository(db,
+		gormbase.TrigramSearchCallback[*domainProject.Phase](searchspec.Phases.SearchColumns("")...),
+	)
 	return &phaseRepo{
 		BaseRepository: baseRepo,
 		db:             db,

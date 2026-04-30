@@ -2,11 +2,11 @@ package facilitysql
 
 import (
 	"context"
-	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"gorm.io/gorm"
 )
 
@@ -15,13 +15,9 @@ type notificationClassRepo struct {
 }
 
 func NewNotificationClassRepository(db *gorm.DB) domainFacility.NotificationClassRepository {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where("LOWER(object_description) LIKE ? OR LOWER(event_category) LIKE ? OR LOWER(meaning) LIKE ?",
-			pattern, pattern, pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainFacility.NotificationClass](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository(db,
+		gormbase.TrigramSearchCallback[*domainFacility.NotificationClass](searchspec.NotificationClasses.SearchColumns("")...),
+	)
 	return &notificationClassRepo{BaseRepository: baseRepo}
 }
 

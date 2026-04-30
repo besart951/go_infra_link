@@ -3,6 +3,7 @@ package rbac
 import (
 	"context"
 	"errors"
+	"slices"
 	"sort"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -220,12 +221,7 @@ func (s *Service) syncSuperAdminPermissions(ctx context.Context) ([]string, erro
 }
 
 func containsRole(roles []domainUser.Role, target domainUser.Role) bool {
-	for _, role := range roles {
-		if role == target {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(roles, target)
 }
 
 func (s *Service) validatePermissionsExist(ctx context.Context, names []string) error {
@@ -297,12 +293,7 @@ func (s permissionSet) has(permission string) bool {
 }
 
 func (s permissionSet) hasAny(permissions ...string) bool {
-	for _, permission := range permissions {
-		if s.has(permission) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(permissions, s.has)
 }
 
 func (s permissionSet) sortedValues() []string {

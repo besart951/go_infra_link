@@ -34,9 +34,5 @@ func (e *ValidationError) Add(field, message string) *ValidationError {
 }
 
 func AsValidationError(err error) (*ValidationError, bool) {
-	var ve *ValidationError
-	if errors.As(err, &ve) {
-		return ve, true
-	}
-	return nil, false
+	return errors.AsType[*ValidationError](err)
 }

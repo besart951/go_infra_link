@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -16,12 +17,9 @@ type systemPartRepo struct {
 }
 
 func NewSystemPartRepository(db *gorm.DB) domainFacility.SystemPartRepository {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where("LOWER(short_name) LIKE ? OR LOWER(name) LIKE ?", pattern, pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainFacility.SystemPart](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository(db,
+		gormbase.TrigramSearchCallback[*domainFacility.SystemPart](searchspec.SystemParts.SearchColumns("")...),
+	)
 	return &systemPartRepo{BaseRepository: baseRepo}
 }
 

@@ -8,33 +8,16 @@
   import { Plus } from '@lucide/svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
-  import { addToast } from '$lib/components/toast.svelte';
-  import { confirm } from '$lib/stores/confirm-dialog.js';
   import { notificationClassesStore } from '$lib/stores/list/entityStores.js';
   import type { NotificationClass } from '$lib/domain/facility/index.js';
   import NotificationClassForm from '$lib/components/facility/forms/NotificationClassForm.svelte';
-  import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
-  import { notificationClassRepository } from '$lib/infrastructure/api/notificationClassRepository.js';
-  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
+  import { createNotificationClassActions } from '$lib/components/facility/shared/facilityCrudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
-  const manageNotificationClass = new ManageEntityUseCase(notificationClassRepository);
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  const actions = new CrudPageActions<NotificationClass>({
-    reload: () => notificationClassesStore.reload(),
-    deleteItem: (item) => manageNotificationClass.delete(item.id),
-    confirmDelete: confirm,
-    addToast,
-    getDeleteTitle: () => $t('facility.delete_notification_class_confirm').replace('{name}', ''),
-    getDeleteMessage: (item) =>
-      $t('facility.delete_notification_class_confirm').replace('{name}', item.event_category || ''),
-    getDeleteConfirmText: () => $t('common.delete'),
-    getDeleteCancelText: () => $t('common.cancel'),
-    getDeleteSuccessMessage: () => $t('facility.notification_class_deleted'),
-    getDeleteFailureMessage: () => $t('facility.delete_notification_class_failed')
-  });
+  const actions = createNotificationClassActions();
 
   onMount(() => {
     notificationClassesStore.load();

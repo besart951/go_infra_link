@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { buttonVariants } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Search, Trash2, Settings2, TableIcon, Filter, X, RefreshCcw } from '@lucide/svelte';
@@ -9,12 +10,27 @@
   import { useFieldDeviceState } from './state/context.svelte.js';
 
   const t = createTranslator();
-  const state = useFieldDeviceState();
+  const fieldDeviceState = useFieldDeviceState();
+  const SEARCH_DEBOUNCE_MS = 300;
+
+  let searchText = $state(fieldDeviceState.searchText);
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   function handleSearchInput(event: Event) {
-    const value = (event.target as HTMLInputElement).value;
-    void state.search(value);
+    searchText = (event.target as HTMLInputElement).value;
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      void fieldDeviceState.search(searchText);
+    }, SEARCH_DEBOUNCE_MS);
   }
+
+  $effect(() => {
+    searchText = fieldDeviceState.searchText;
+  });
+
+  onDestroy(() => {
+    clearTimeout(searchDebounceTimer);
+  });
 </script>
 
 <div class="flex items-center gap-3">
@@ -24,36 +40,36 @@
       type="search"
       placeholder={$t('field_device.search.placeholder')}
       class="pl-9"
-      value={state.searchText}
+      value={searchText}
       oninput={handleSearchInput}
     />
   </div>
 
   <div class="ml-auto flex items-center gap-2">
-    {#if state.selectedCount > 0}
+    {#if fieldDeviceState.selectedCount > 0}
       <span class="text-sm text-muted-foreground">
-        {$t('field_device.search.selected', { count: state.selectedCount })}
+        {$t('field_device.search.selected', { count: fieldDeviceState.selectedCount })}
       </span>
     {/if}
 
     <Tooltip.Provider>
       <ButtonGroup.Root>
-        {#if state.selectedCount > 0}
+        {#if fieldDeviceState.selectedCount > 0}
           <Tooltip.Root>
             <Tooltip.Trigger
               class={buttonVariants({ variant: 'outline', size: 'icon-sm' })}
-              onclick={() => state.clearSelection()}
+              onclick={() => fieldDeviceState.clearSelection()}
             >
               <X />
             </Tooltip.Trigger>
             <Tooltip.Content>{$t('field_device.search.clear')}</Tooltip.Content>
           </Tooltip.Root>
 
-          {#if state.canDeleteFieldDevice()}
+          {#if fieldDeviceState.canDeleteFieldDevice()}
             <Tooltip.Root>
               <Tooltip.Trigger
                 class={buttonVariants({ variant: 'destructive', size: 'icon-sm' })}
-                onclick={() => void state.bulkDeleteSelected()}
+                onclick={() => void fieldDeviceState.bulkDeleteSelected()}
               >
                 <Trash2 />
               </Tooltip.Trigger>
@@ -61,14 +77,14 @@
             </Tooltip.Root>
           {/if}
 
-          {#if state.canOpenBulkEditPanel()}
+          {#if fieldDeviceState.canOpenBulkEditPanel()}
             <Tooltip.Root>
               <Tooltip.Trigger
                 class={buttonVariants({
-                  variant: state.showBulkEditPanel ? 'secondary' : 'outline',
+                  variant: fieldDeviceState.showBulkEditPanel ? 'secondary' : 'outline',
                   size: 'icon-sm'
                 })}
-                onclick={() => state.toggleBulkEditPanel()}
+                onclick={() => fieldDeviceState.toggleBulkEditPanel()}
               >
                 <Settings2 />
               </Tooltip.Trigger>
@@ -80,10 +96,10 @@
         <Tooltip.Root>
           <Tooltip.Trigger
             class={buttonVariants({
-              variant: state.showExportPanel ? 'secondary' : 'outline',
+              variant: fieldDeviceState.showExportPanel ? 'secondary' : 'outline',
               size: 'icon-sm'
             })}
-            onclick={() => state.toggleExportPanel()}
+            onclick={() => fieldDeviceState.toggleExportPanel()}
           >
             <TableIcon />
           </Tooltip.Trigger>
@@ -95,13 +111,13 @@
         <Tooltip.Root>
           <Tooltip.Trigger
             class={`${buttonVariants({
-              variant: state.showFilterPanel ? 'secondary' : 'outline',
+              variant: fieldDeviceState.showFilterPanel ? 'secondary' : 'outline',
               size: 'icon-sm'
             })} relative`}
-            onclick={() => state.toggleFilterPanel()}
+            onclick={() => fieldDeviceState.toggleFilterPanel()}
           >
             <Filter />
-            {#if state.hasActiveFilters}
+            {#if fieldDeviceState.hasActiveFilters}
               <span
                 class="pointer-events-none absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background"
               ></span>
@@ -113,8 +129,8 @@
         <Tooltip.Root>
           <Tooltip.Trigger
             class={buttonVariants({ variant: 'outline', size: 'icon-sm' })}
-            onclick={() => void state.reload()}
-            disabled={state.loading}
+            onclick={() => void fieldDeviceState.reload()}
+            disabled={fieldDeviceState.loading}
           >
             <RefreshCcw />
           </Tooltip.Trigger>

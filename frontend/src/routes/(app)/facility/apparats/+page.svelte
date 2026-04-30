@@ -8,33 +8,16 @@
   import { Plus } from '@lucide/svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
-  import { addToast } from '$lib/components/toast.svelte';
-  import { confirm } from '$lib/stores/confirm-dialog.js';
   import { apparatsStore } from '$lib/stores/list/entityStores.js';
   import type { Apparat } from '$lib/domain/facility/index.js';
   import ApparatForm from '$lib/components/facility/forms/ApparatForm.svelte';
-  import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
-  import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
-  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
+  import { createApparatActions } from '$lib/components/facility/shared/facilityCrudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
-  const manageApparat = new ManageEntityUseCase(apparatRepository);
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  const actions = new CrudPageActions<Apparat>({
-    reload: () => apparatsStore.reload(),
-    deleteItem: (item) => manageApparat.delete(item.id),
-    confirmDelete: confirm,
-    addToast,
-    getDeleteTitle: () => $t('common.delete'),
-    getDeleteMessage: (item) =>
-      $t('facility.delete_apparat_confirm').replace('{name}', item.short_name ?? item.name),
-    getDeleteConfirmText: () => $t('common.delete'),
-    getDeleteCancelText: () => $t('common.cancel'),
-    getDeleteSuccessMessage: () => $t('facility.apparat_deleted'),
-    getDeleteFailureMessage: () => $t('facility.delete_apparat_failed')
-  });
+  const actions = createApparatActions();
 
   onMount(() => {
     apparatsStore.load();

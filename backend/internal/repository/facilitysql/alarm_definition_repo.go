@@ -9,6 +9,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -19,12 +20,9 @@ type alarmDefinitionRepo struct {
 }
 
 func NewAlarmDefinitionRepository(db *gorm.DB) domainFacility.AlarmDefinitionRepository {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where("LOWER(name) LIKE ?", pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainFacility.AlarmDefinition](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository(db,
+		gormbase.TrigramSearchCallback[*domainFacility.AlarmDefinition](searchspec.AlarmDefinitions.SearchColumns("")...),
+	)
 	return &alarmDefinitionRepo{BaseRepository: baseRepo, db: db}
 }
 

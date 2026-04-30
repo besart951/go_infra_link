@@ -4,14 +4,10 @@
   import { Label } from '$lib/components/ui/label/index.js';
   import ControlCabinetSelect from '../selects/ControlCabinetSelect.svelte';
   import SystemTypeSelect from '../selects/SystemTypeSelect.svelte';
-  import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
-  import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
-  import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
-  import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsControllerSystemTypeRepository.js';
-  import { copyProjectSPSControllerSystemType } from '$lib/infrastructure/api/project.adapter.js';
-  import { ManageSPSControllerUseCase } from '$lib/application/useCases/facility/manageSPSControllerUseCase.js';
-  import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
-  const manageSPSController = new ManageSPSControllerUseCase(spsControllerRepository);
+  import {
+    spsControllerFormService,
+    type SPSControllerSystemTypeEntry
+  } from './state/SPSControllerFormService.js';
   import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
   import type {
     Building,
@@ -55,7 +51,6 @@
   let vlan = $state('');
   let control_cabinet_id = $state('');
   let system_type_id = $state('');
-  type SPSControllerSystemTypeEntry = SPSControllerSystemTypeInput & { id?: string };
   let systemTypes: SPSControllerSystemTypeEntry[] = $state([]);
   let systemTypeLabels: Record<string, string> = $state({});
   let systemTypeDetails: Record<string, SystemType> = $state({});
@@ -86,7 +81,7 @@
       subnet?: string;
       gateway?: string;
       vlan?: string;
-    }) => manageSPSController.validate(data),
+    }) => spsControllerFormService.validate(data),
     { debounceMs: 400 }
   );
 
@@ -205,7 +200,10 @@
     if (!control_cabinet_id) return null;
     gaDeviceSuggestionLoading = true;
     try {
-      const res = await manageSPSController.getNextGADevice(control_cabinet_id, initialData?.id);
+      const res = await spsControllerFormService.getNextGADevice(
+        control_cabinet_id,
+        initialData?.id
+      );
       nextGADevice = res?.ga_device ?? null;
       return nextGADevice;
     } catch (e) {
@@ -241,7 +239,7 @@
     if (!initialData?.id) return;
     systemTypesLoading = true;
     try {
-      const res = await spsControllerSystemTypeRepository.list({
+      const res = await spsControllerFormService.listSystemTypes({
         pagination: { page: 1, pageSize: 100 },
         search: { text: '' },
         filters: { sps_controller_id: initialData.id }
@@ -324,7 +322,7 @@
     if (systemTypeDetails[id]) return systemTypeDetails[id];
     systemTypeDetailsLoading = true;
     try {
-      const systemType = await systemTypeRepository.get(id);
+      const systemType = await spsControllerFormService.getSystemType(id);
       systemTypeDetails = { ...systemTypeDetails, [id]: systemType };
       return systemType;
     } catch (e) {
@@ -352,14 +350,14 @@
     cabinetLoading = true;
     buildingLoading = true;
     try {
-      const cabinet = await controlCabinetRepository.get(cabinetId);
+      const cabinet = await spsControllerFormService.getControlCabinet(cabinetId);
       if (control_cabinet_id !== cabinetId) return;
       controlCabinet = cabinet;
       if (!cabinet?.building_id) {
         building = null;
         return;
       }
-      const b = await buildingRepository.get(cabinet.building_id);
+      const b = await spsControllerFormService.getBuilding(cabinet.building_id);
       if (control_cabinet_id !== cabinetId) return;
       building = b;
     } catch (e) {
@@ -379,7 +377,7 @@
     const entries = await Promise.all(
       ids.map(async (id) => {
         try {
-          const systemType = await systemTypeRepository.get(id);
+          const systemType = await spsControllerFormService.getSystemType(id);
           return [
             id,
             buildSystemTypeLabel(systemType.name, systemType.number_min, systemType.number_max)
@@ -401,7 +399,7 @@
       return;
     }
     try {
-      await spsControllerSystemTypeRepository.delete(entry.id);
+      await spsControllerFormService.deleteSystemType(entry.id);
       systemTypes = systemTypes.filter((_, i) => i !== index);
     } catch (e) {
       console.error(e);
@@ -429,8 +427,8 @@
     if (!entry?.id) return;
     try {
       const copied = projectId
-        ? await copyProjectSPSControllerSystemType(projectId, entry.id)
-        : await spsControllerSystemTypeRepository.copy(entry.id);
+        ? await spsControllerFormService.copyProjectSystemType(projectId, entry.id)
+        : await spsControllerFormService.copySystemType(entry.id);
       const systemTypeId = copied.system_type_id;
       if (!systemTypeDetails[systemTypeId]) {
         const details = await ensureSystemTypeDetails(systemTypeId);
@@ -531,7 +529,7 @@
 
     try {
       if (initialData) {
-        const res = await manageSPSController.update(initialData.id, {
+        const res = await spsControllerFormService.update(initialData.id, {
           id: initialData.id,
           ga_device,
           device_name,
@@ -549,7 +547,7 @@
         });
         onSuccess?.(res);
       } else {
-        const res = await manageSPSController.create({
+        const res = await spsControllerFormService.create({
           ga_device,
           device_name,
           ip_address: ip_address || undefined,

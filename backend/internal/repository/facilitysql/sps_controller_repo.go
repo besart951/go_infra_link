@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -17,12 +18,7 @@ type spsControllerRepo struct {
 }
 
 func NewSPSControllerRepository(db *gorm.DB) domainFacility.SPSControllerRepository {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where("LOWER(device_name) LIKE ? OR LOWER(ip_address) LIKE ?", pattern, pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainFacility.SPSController](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository(db, spsControllerSearchCallback())
 	return &spsControllerRepo{BaseRepository: baseRepo, db: db}
 }
 
@@ -42,8 +38,7 @@ func (r *spsControllerRepo) GetPaginatedListByControlCabinetID(ctx context.Conte
 		Where("control_cabinet_id = ?", controlCabinetID)
 
 	if strings.TrimSpace(params.Search) != "" {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
-		query = query.Where("LOWER(device_name) LIKE ? OR LOWER(ip_address) LIKE ?", pattern, pattern)
+		query = spsControllerSearchCallback()(query, params.Search)
 	}
 
 	var total int64
@@ -62,6 +57,10 @@ func (r *spsControllerRepo) GetPaginatedListByControlCabinetID(ctx context.Conte
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
+}
+
+func spsControllerSearchCallback() gormbase.SearchCallback[*domainFacility.SPSController] {
+	return gormbase.TrigramSearchCallback[*domainFacility.SPSController](searchspec.SPSControllers.SearchColumns("")...)
 }
 
 func (r *spsControllerRepo) GetIDsByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]uuid.UUID, error) {

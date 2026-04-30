@@ -16,7 +16,7 @@ type AuthStrategy interface {
 	ValidateToken(token string) (uuid.UUID, error)
 
 	// ParseToken validates and returns the full claims for backward compatibility.
-	ParseToken(token string) (interface{}, error)
+	ParseToken(token string) (any, error)
 
 	// Name returns the name of the authentication strategy.
 	Name() string

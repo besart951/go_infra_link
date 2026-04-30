@@ -2,9 +2,11 @@ package facility
 
 import (
 	"context"
+	"maps"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	"github.com/besart951/go_infra_link/backend/internal/service/changecapture"
 	"github.com/google/uuid"
 )
 
@@ -41,14 +43,20 @@ func (w fieldDeviceWriter) createInTx(ctx context.Context, fieldDevice *domainFa
 	if err := w.service.repo.Create(ctx, fieldDevice); err != nil {
 		return err
 	}
-	return w.applyBacnetSelection(ctx, fieldDevice.ID, selection)
+	if err := w.applyBacnetSelection(ctx, fieldDevice.ID, selection); err != nil {
+		return err
+	}
+	return w.service.recordFieldDeviceChange(ctx, changecapture.ActionCreated, fieldDevice.ID)
 }
 
 func (w fieldDeviceWriter) updateBase(ctx context.Context, fieldDevice *domainFacility.FieldDevice) error {
 	if err := w.service.Validate(ctx, fieldDevice, &fieldDevice.ID); err != nil {
 		return err
 	}
-	return w.service.repo.Update(ctx, fieldDevice)
+	if err := w.service.repo.Update(ctx, fieldDevice); err != nil {
+		return err
+	}
+	return w.service.recordFieldDeviceChange(ctx, changecapture.ActionUpdated, fieldDevice.ID)
 }
 
 func (w fieldDeviceWriter) update(ctx context.Context, fieldDevice *domainFacility.FieldDevice, selection fieldDeviceBacnetSelection) error {
@@ -67,7 +75,10 @@ func (w fieldDeviceWriter) updateInTx(ctx context.Context, fieldDevice *domainFa
 	if err := w.service.repo.Update(ctx, fieldDevice); err != nil {
 		return err
 	}
-	return w.applyBacnetSelection(ctx, fieldDevice.ID, selection)
+	if err := w.applyBacnetSelection(ctx, fieldDevice.ID, selection); err != nil {
+		return err
+	}
+	return w.service.recordFieldDeviceChange(ctx, changecapture.ActionUpdated, fieldDevice.ID)
 }
 
 func (w fieldDeviceWriter) applyBacnetSelection(ctx context.Context, fieldDeviceID uuid.UUID, selection fieldDeviceBacnetSelection) error {
@@ -495,6 +506,10 @@ func (w fieldDeviceWriter) applyBulkBaseUpdate(
 
 	if err := w.service.repo.Update(ctx, proposed); err != nil {
 		phaseErrors["fielddevice"] = err.Error()
+		return
+	}
+	if err := w.service.recordFieldDeviceChange(ctx, changecapture.ActionUpdated, proposed.ID); err != nil {
+		phaseErrors["fielddevice"] = err.Error()
 	}
 }
 
@@ -549,9 +564,7 @@ func isApparatNrConflict(a, b *domainFacility.FieldDevice) bool {
 
 func addBulkUpdateError(fields map[string]string, fallbackField string, prefix string, err error) {
 	if ve, ok := domain.AsValidationError(err); ok {
-		for field, msg := range ve.Fields {
-			fields[field] = msg
-		}
+		maps.Copy(fields, ve.Fields)
 		return
 	}
 	fields[fallbackField] = prefix + err.Error()

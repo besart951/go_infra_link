@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -91,7 +92,7 @@ func (r *BaseRepository[T]) GetPaginatedList(ctx context.Context, params domain.
 
 	// Retrieve paginated items
 	var items []T
-	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&items).Error; err != nil {
+	if err := query.Order(defaultCreatedAtOrder(query)).Limit(limit).Offset(offset).Find(&items).Error; err != nil {
 		return nil, err
 	}
 
@@ -148,6 +149,21 @@ func (r *BaseRepository[T]) BulkUpdate(ctx context.Context, entities []T) error 
 // DB returns the underlying GORM database instance for custom queries
 func (r *BaseRepository[T]) DB() *gorm.DB {
 	return r.db
+}
+
+func defaultCreatedAtOrder(query *gorm.DB) clause.OrderByColumn {
+	table := ""
+	if query != nil && query.Statement != nil {
+		table = query.Statement.Table
+		if table == "" && query.Statement.Schema != nil {
+			table = query.Statement.Schema.Table
+		}
+	}
+
+	return clause.OrderByColumn{
+		Column: clause.Column{Table: table, Name: "created_at"},
+		Desc:   true,
+	}
 }
 
 // DerefPaginatedList converts a PaginatedList[*T] to PaginatedList[T]

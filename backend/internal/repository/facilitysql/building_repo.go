@@ -2,12 +2,12 @@ package facilitysql
 
 import (
 	"context"
-	"strconv"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -18,15 +18,9 @@ type buildingRepo struct {
 }
 
 func NewBuildingRepository(db *gorm.DB) domainFacility.BuildingRepository {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		if num, err := strconv.Atoi(strings.TrimSpace(search)); err == nil {
-			return query.Where("LOWER(iws_code) LIKE ? OR building_group = ?", pattern, num)
-		}
-		return query.Where("LOWER(iws_code) LIKE ?", pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainFacility.Building](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository(db,
+		gormbase.TrigramSearchCallback[*domainFacility.Building](searchspec.Buildings.SearchColumns("")...),
+	)
 	return &buildingRepo{BaseRepository: baseRepo, db: db}
 }
 

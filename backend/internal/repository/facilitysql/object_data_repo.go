@@ -13,6 +13,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -65,35 +66,34 @@ func (r *objectDataRepo) withObjectDataLitePreloads(query *gorm.DB) *gorm.DB {
 	})
 }
 
-func (r *objectDataRepo) getPaginatedListFiltered(ctx context.Context, projectID *uuid.UUID, apparatID *uuid.UUID, systemPartID *uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+func (r *objectDataRepo) GetPaginatedListWithFilters(ctx context.Context, params domain.PaginationParams, filters domainFacility.ObjectDataFilterParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
 	query := r.db.WithContext(ctx).Model(&domainFacility.ObjectData{})
-	if projectID == nil {
+	if filters.ProjectID == nil {
 		query = query.Where("project_id IS NULL")
 	} else {
-		query = query.Where("project_id = ?", *projectID)
+		query = query.Where("project_id = ?", *filters.ProjectID)
 	}
 
-	if apparatID != nil {
+	if filters.ApparatID != nil {
 		sub := r.db.WithContext(ctx).Table("object_data_apparats").
 			Select("object_data_id").
-			Where("apparat_id = ?", *apparatID)
+			Where("apparat_id = ?", *filters.ApparatID)
 		query = query.Where("id IN (?)", sub)
 	}
 
-	if systemPartID != nil {
+	if filters.SystemPartID != nil {
 		sub := r.db.WithContext(ctx).Table("object_data_apparats AS oda").
 			Select("DISTINCT oda.object_data_id").
 			Joins("JOIN system_part_apparats spa ON spa.apparat_id = oda.apparat_id").
-			Where("spa.system_part_id = ?", *systemPartID)
+			Where("spa.system_part_id = ?", *filters.SystemPartID)
 		query = query.Where("id IN (?)", sub)
 	}
 
 	if strings.TrimSpace(params.Search) != "" {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
-		query = query.Where("LOWER(description) LIKE ?", pattern)
+		query = applyObjectDataSearch(query, params.Search)
 	}
 
 	var total int64
@@ -119,12 +119,9 @@ func (r *objectDataRepo) getPaginatedListFiltered(ctx context.Context, projectID
 }
 
 func NewObjectDataRepository(db *gorm.DB) domainFacility.ObjectDataStore {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where("LOWER(description) LIKE ?", pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainFacility.ObjectData](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository(db,
+		gormbase.TrigramSearchCallback[*domainFacility.ObjectData](searchspec.ObjectData.SearchColumns("")...),
+	)
 	return &objectDataRepo{
 		BaseRepository: baseRepo,
 		db:             db,
@@ -183,37 +180,11 @@ func (r *objectDataRepo) Update(ctx context.Context, entity *domainFacility.Obje
 }
 
 func (r *objectDataRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
-	offset := (page - 1) * limit
+	return r.GetPaginatedListWithFilters(ctx, params, domainFacility.ObjectDataFilterParams{})
+}
 
-	query := r.db.WithContext(ctx).Model(&domainFacility.ObjectData{}).
-		Where("project_id IS NULL")
-
-	if strings.TrimSpace(params.Search) != "" {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
-		query = query.Where("LOWER(description) LIKE ?", pattern)
-	}
-
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
-
-	var items []domainFacility.ObjectData
-	if err := r.withObjectDataPreloads(query).
-		Order("created_at DESC").
-		Limit(limit).
-		Offset(offset).
-		Find(&items).Error; err != nil {
-		return nil, err
-	}
-
-	return &domain.PaginatedList[domainFacility.ObjectData]{
-		Items:      items,
-		Total:      total,
-		Page:       page,
-		TotalPages: domain.CalculateTotalPages(total, limit),
-	}, nil
+func applyObjectDataSearch(query *gorm.DB, search string) *gorm.DB {
+	return gormbase.ApplyTrigramSearch(query, search, searchspec.ObjectData.SearchColumns("")...)
 }
 
 func (r *objectDataRepo) GetBacnetObjectIDs(ctx context.Context, objectDataID uuid.UUID) ([]uuid.UUID, error) {
@@ -433,32 +404,4 @@ func writeSystemPartApparatRevision(h hash.Hash, rows []fieldDeviceOptionsSystem
 	for _, row := range rows {
 		fmt.Fprintf(h, "%s:%s;", row.ApparatID.String(), row.SystemPartID.String())
 	}
-}
-
-func (r *objectDataRepo) GetPaginatedListForProject(ctx context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return r.getPaginatedListFiltered(ctx, &projectID, nil, nil, params)
-}
-
-func (r *objectDataRepo) GetPaginatedListByApparatID(ctx context.Context, apparatID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return r.getPaginatedListFiltered(ctx, nil, &apparatID, nil, params)
-}
-
-func (r *objectDataRepo) GetPaginatedListBySystemPartID(ctx context.Context, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return r.getPaginatedListFiltered(ctx, nil, nil, &systemPartID, params)
-}
-
-func (r *objectDataRepo) GetPaginatedListByApparatAndSystemPartID(ctx context.Context, apparatID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return r.getPaginatedListFiltered(ctx, nil, &apparatID, &systemPartID, params)
-}
-
-func (r *objectDataRepo) GetPaginatedListForProjectByApparatID(ctx context.Context, projectID, apparatID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return r.getPaginatedListFiltered(ctx, &projectID, &apparatID, nil, params)
-}
-
-func (r *objectDataRepo) GetPaginatedListForProjectBySystemPartID(ctx context.Context, projectID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return r.getPaginatedListFiltered(ctx, &projectID, nil, &systemPartID, params)
-}
-
-func (r *objectDataRepo) GetPaginatedListForProjectByApparatAndSystemPartID(ctx context.Context, projectID, apparatID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return r.getPaginatedListFiltered(ctx, &projectID, &apparatID, &systemPartID, params)
 }

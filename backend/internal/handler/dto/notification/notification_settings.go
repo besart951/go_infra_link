@@ -76,8 +76,8 @@ type UserNotificationPreferenceResponse struct {
 	EmailVerificationExpiresAt  *time.Time `json:"email_verification_expires_at,omitempty"`
 	Channel                     string     `json:"channel"`
 	Frequency                   string     `json:"frequency"`
-	CreatedAt                   time.Time  `json:"created_at,omitempty"`
-	UpdatedAt                   time.Time  `json:"updated_at,omitempty"`
+	CreatedAt                   time.Time  `json:"created_at"`
+	UpdatedAt                   time.Time  `json:"updated_at"`
 }
 
 type SystemNotificationResponse struct {

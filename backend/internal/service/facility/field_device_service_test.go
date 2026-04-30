@@ -586,14 +586,6 @@ func (r *fakeSystemPartRepo) GetPaginatedList(_ context.Context, params domain.P
 	}, nil
 }
 
-func intPtr(value int) *int {
-	return &value
-}
-
-func stringPtr(value string) *string {
-	return &value
-}
-
 type fakeObjectDataStore struct {
 	templates        []*domainFacility.ObjectData
 	projectTemplates map[uuid.UUID][]*domainFacility.ObjectData
@@ -670,37 +662,16 @@ func (r *fakeObjectDataStore) GetForProjectLite(_ context.Context, projectID uui
 	return sortedObjectDataSlice(r.projectTemplates[projectID]), nil
 }
 
-func (r *fakeObjectDataStore) GetPaginatedListForProject(_ context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	items := derefObjectDatas(sortedObjectDataSlice(r.projectTemplates[projectID]))
-	return &domain.PaginatedList[domainFacility.ObjectData]{
-		Items:      items,
-		Total:      int64(len(items)),
-		Page:       1,
-		TotalPages: 1,
-	}, nil
-}
-
-func (r *fakeObjectDataStore) GetPaginatedListByApparatID(_ context.Context, apparatID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return &domain.PaginatedList[domainFacility.ObjectData]{Items: []domainFacility.ObjectData{}, Total: 0, Page: 1, TotalPages: 1}, nil
-}
-
-func (r *fakeObjectDataStore) GetPaginatedListBySystemPartID(_ context.Context, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return &domain.PaginatedList[domainFacility.ObjectData]{Items: []domainFacility.ObjectData{}, Total: 0, Page: 1, TotalPages: 1}, nil
-}
-
-func (r *fakeObjectDataStore) GetPaginatedListByApparatAndSystemPartID(_ context.Context, apparatID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return &domain.PaginatedList[domainFacility.ObjectData]{Items: []domainFacility.ObjectData{}, Total: 0, Page: 1, TotalPages: 1}, nil
-}
-
-func (r *fakeObjectDataStore) GetPaginatedListForProjectByApparatID(_ context.Context, projectID, apparatID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return &domain.PaginatedList[domainFacility.ObjectData]{Items: []domainFacility.ObjectData{}, Total: 0, Page: 1, TotalPages: 1}, nil
-}
-
-func (r *fakeObjectDataStore) GetPaginatedListForProjectBySystemPartID(_ context.Context, projectID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return &domain.PaginatedList[domainFacility.ObjectData]{Items: []domainFacility.ObjectData{}, Total: 0, Page: 1, TotalPages: 1}, nil
-}
-
-func (r *fakeObjectDataStore) GetPaginatedListForProjectByApparatAndSystemPartID(_ context.Context, projectID, apparatID, systemPartID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+func (r *fakeObjectDataStore) GetPaginatedListWithFilters(_ context.Context, params domain.PaginationParams, filters domainFacility.ObjectDataFilterParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+	if filters.ProjectID != nil {
+		items := derefObjectDatas(sortedObjectDataSlice(r.projectTemplates[*filters.ProjectID]))
+		return &domain.PaginatedList[domainFacility.ObjectData]{
+			Items:      items,
+			Total:      int64(len(items)),
+			Page:       1,
+			TotalPages: 1,
+		}, nil
+	}
 	return &domain.PaginatedList[domainFacility.ObjectData]{Items: []domainFacility.ObjectData{}, Total: 0, Page: 1, TotalPages: 1}, nil
 }
 
@@ -1103,8 +1074,8 @@ func TestFieldDeviceService_BulkUpdate_AllowsSwapApparatNr(t *testing.T) {
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
-		{ID: fd1ID, ApparatNr: intPtr(2)},
-		{ID: fd2ID, ApparatNr: intPtr(1)},
+		{ID: fd1ID, ApparatNr: new(2)},
+		{ID: fd2ID, ApparatNr: new(1)},
 	}
 	result := svc.BulkUpdate(context.Background(), updates)
 
@@ -1175,7 +1146,7 @@ func TestFieldDeviceService_BulkUpdate_DetectsApparatNrConflict(t *testing.T) {
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
-		{ID: fd1ID, ApparatNr: intPtr(3)},
+		{ID: fd1ID, ApparatNr: new(3)},
 	}
 	result := svc.BulkUpdate(context.Background(), updates)
 
@@ -1242,7 +1213,7 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_Succeeds(t *testi
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
-		{ID: fd1ID, ApparatNr: intPtr(2)},
+		{ID: fd1ID, ApparatNr: new(2)},
 	}
 
 	// Act
@@ -1310,7 +1281,7 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_Conflict(t *testi
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
-		{ID: fd1ID, ApparatNr: intPtr(2)},
+		{ID: fd1ID, ApparatNr: new(2)},
 	}
 
 	// Act
@@ -1383,7 +1354,7 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_DifferentSystemPa
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
-		{ID: fd1ID, ApparatNr: intPtr(2)},
+		{ID: fd1ID, ApparatNr: new(2)},
 	}
 
 	// Act
@@ -1450,8 +1421,8 @@ func TestFieldDeviceService_BulkUpdate_TextIndividuellOnly_Succeeds(t *testing.T
 	)
 
 	updates := []domainFacility.BulkFieldDeviceUpdate{
-		{ID: fd1ID, TextIndividuell: stringPtr("klj")},
-		{ID: fd2ID, TextIndividuell: stringPtr("kj")},
+		{ID: fd1ID, TextIndividuell: new("klj")},
+		{ID: fd2ID, TextIndividuell: new("kj")},
 	}
 
 	result := svc.BulkUpdate(context.Background(), updates)
@@ -1479,9 +1450,9 @@ func TestFieldDeviceService_BulkUpdate_AllowsClearingOptionalTextFields(t *testi
 	systemTypeID := uuid.New()
 
 	device := newFieldDevice(fdID, spsSystemTypeID, apparatID, systemPartID, 1)
-	device.BMK = stringPtr("BMK-1")
-	device.Description = stringPtr("Description")
-	device.TextIndividuell = stringPtr("TextFix")
+	device.BMK = new("BMK-1")
+	device.Description = new("Description")
+	device.TextIndividuell = new("TextFix")
 
 	fieldDeviceRepo := &fakeFieldDeviceStore{
 		items: map[uuid.UUID]*domainFacility.FieldDevice{
@@ -1566,8 +1537,8 @@ func TestFieldDeviceService_BulkUpdate_ClearsExistingSpecificationFields(t *test
 			specID: {
 				Base:                  domain.Base{ID: specID},
 				FieldDeviceID:         &fdID,
-				SpecificationSupplier: stringPtr("Supplier"),
-				AdditionalInfoSize:    intPtr(12),
+				SpecificationSupplier: new("Supplier"),
+				AdditionalInfoSize:    new(12),
 			},
 		},
 	}

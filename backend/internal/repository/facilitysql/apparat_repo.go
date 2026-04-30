@@ -8,6 +8,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
@@ -32,12 +33,7 @@ func orderSystemPartsForFieldDeviceOptions(query *gorm.DB) *gorm.DB {
 }
 
 func NewApparatRepository(db *gorm.DB) domainFacility.ApparatRepository {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where("LOWER(short_name) LIKE ? OR LOWER(name) LIKE ?", pattern, pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainFacility.Apparat](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository(db, apparatSearchCallback())
 	return &apparatRepo{BaseRepository: baseRepo}
 }
 
@@ -133,13 +129,7 @@ func (r *apparatRepo) GetPaginatedListWithFilters(ctx context.Context, params do
 	}
 
 	if strings.TrimSpace(params.Search) != "" {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
-		query = query.Where(
-			"LOWER(apparats.short_name) LIKE ? OR LOWER(apparats.name) LIKE ? OR LOWER(COALESCE(apparats.description, '')) LIKE ?",
-			pattern,
-			pattern,
-			pattern,
-		)
+		query = gormbase.ApplyTrigramSearch(query, params.Search, searchspec.Apparats.SearchColumns("apparats.")...)
 	}
 
 	var total int64
@@ -167,6 +157,12 @@ func (r *apparatRepo) GetPaginatedListWithFilters(ctx context.Context, params do
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}), nil
+}
+
+func apparatSearchCallback() gormbase.SearchCallback[*domainFacility.Apparat] {
+	return gormbase.TrigramSearchCallback[*domainFacility.Apparat](
+		searchspec.Apparats.NamedSearchColumns("", "short_name", "name")...,
+	)
 }
 
 func (r *apparatRepo) loadSortedSystemParts(ctx context.Context, apparat *domainFacility.Apparat) error {
@@ -216,8 +212,7 @@ func isDuplicateApparatWriteError(err error) bool {
 		return true
 	}
 
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return pgErr.Code == "23505"
 	}
 

@@ -62,9 +62,14 @@ vi.mock('$lib/utils/permissions.js', () => ({
 }));
 
 vi.mock('$lib/api/teams.js', () => ({
+  addTeamMember: vi.fn(),
   createTeam: vi.fn(),
   deleteTeam: vi.fn(),
-  listTeamMembers: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, total_pages: 1 })
+  getTeam: vi.fn(),
+  listTeams: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, total_pages: 1 }),
+  listTeamMembers: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, total_pages: 1 }),
+  removeTeamMember: vi.fn(),
+  updateTeam: vi.fn()
 }));
 
 vi.mock('$lib/components/toast.svelte', () => ({

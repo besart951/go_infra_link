@@ -7,6 +7,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	"github.com/besart951/go_infra_link/backend/internal/service/changecapture"
 	"github.com/google/uuid"
 )
 
@@ -27,6 +28,7 @@ type FieldDeviceService struct {
 	alarmTypeRepo               domainFacility.AlarmTypeRepository
 	bacnetAlarmValueRepo        domainFacility.BacnetObjectAlarmValueRepository
 	fieldDeviceOptionsCache     *fieldDeviceOptionsCache
+	changeRecorder              changecapture.Recorder
 	tx                          txCoordinator
 }
 
@@ -62,11 +64,16 @@ func NewFieldDeviceService(
 		alarmTypeRepo:               alarmTypeRepo,
 		bacnetAlarmValueRepo:        bacnetAlarmValueRepo,
 		fieldDeviceOptionsCache:     newFieldDeviceOptionsCache(),
+		changeRecorder:              changecapture.NoopRecorder{},
 	}
 }
 
 func (s *FieldDeviceService) bindTransactions(tx txCoordinator) {
 	s.tx = tx
+}
+
+func (s *FieldDeviceService) bindChangeRecorder(recorder changecapture.Recorder) {
+	s.changeRecorder = changecapture.DefaultRecorder(recorder)
 }
 
 func (s *FieldDeviceService) transaction() facilityTx[*FieldDeviceService] {
@@ -77,6 +84,17 @@ func (s *FieldDeviceService) transaction() facilityTx[*FieldDeviceService] {
 
 func (s *FieldDeviceService) writer() fieldDeviceWriter {
 	return fieldDeviceWriter{service: s}
+}
+
+func (s *FieldDeviceService) recordFieldDeviceChange(ctx context.Context, action changecapture.Action, id uuid.UUID) error {
+	return changecapture.DefaultRecorder(s.changeRecorder).Record(ctx, changecapture.Change{
+		Action: action,
+		Entity: changecapture.EntityRef{
+			Domain: "facility",
+			Type:   "field_device",
+			ID:     id,
+		},
+	})
 }
 
 func (s *FieldDeviceService) Create(ctx context.Context, fieldDevice *domainFacility.FieldDevice) error {
@@ -134,14 +152,25 @@ func (s *FieldDeviceService) Validate(ctx context.Context, fieldDevice *domainFa
 }
 
 func (s *FieldDeviceService) DeleteByID(ctx context.Context, id uuid.UUID) error {
-	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
+	if err := s.repo.DeleteByIds(ctx, []uuid.UUID{id}); err != nil {
+		return err
+	}
+	return s.recordFieldDeviceChange(ctx, changecapture.ActionDeleted, id)
 }
 
 func (s *FieldDeviceService) DeleteByIDs(ctx context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	return s.repo.DeleteByIds(ctx, ids)
+	if err := s.repo.DeleteByIds(ctx, ids); err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if err := s.recordFieldDeviceChange(ctx, changecapture.ActionDeleted, id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 func (s *FieldDeviceService) CreateSpecification(ctx context.Context, fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error {
 	return s.writer().createSpecification(ctx, fieldDeviceID, specification)

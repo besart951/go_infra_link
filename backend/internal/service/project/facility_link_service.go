@@ -257,17 +257,11 @@ func (s *ProjectFacilityLinkService) ListFieldDevices(ctx context.Context, proje
 func (s *ProjectFacilityLinkService) ListObjectData(ctx context.Context, projectID uuid.UUID, page, limit int, search string, apparatID, systemPartID *uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
 	params := domain.PaginationParams{Page: page, Limit: limit, Search: search}
-
-	switch {
-	case apparatID != nil && systemPartID != nil:
-		return s.objectDataRepo.GetPaginatedListForProjectByApparatAndSystemPartID(ctx, projectID, *apparatID, *systemPartID, params)
-	case apparatID != nil:
-		return s.objectDataRepo.GetPaginatedListForProjectByApparatID(ctx, projectID, *apparatID, params)
-	case systemPartID != nil:
-		return s.objectDataRepo.GetPaginatedListForProjectBySystemPartID(ctx, projectID, *systemPartID, params)
-	default:
-		return s.objectDataRepo.GetPaginatedListForProject(ctx, projectID, params)
-	}
+	return s.objectDataRepo.GetPaginatedListWithFilters(ctx, params, domainFacility.ObjectDataFilterParams{
+		ProjectID:    &projectID,
+		ApparatID:    apparatID,
+		SystemPartID: systemPartID,
+	})
 }
 
 func (s *ProjectFacilityLinkService) MultiCreateFieldDevices(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) ([]uuid.UUID, []string) {

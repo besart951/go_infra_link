@@ -2,12 +2,12 @@ package team
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"gorm.io/gorm"
 )
 
@@ -17,12 +17,9 @@ type teamRepo struct {
 }
 
 func NewTeamRepository(db *gorm.DB) domainTeam.TeamRepository {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where("LOWER(name) LIKE ? OR LOWER(description) LIKE ?", pattern, pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainTeam.Team](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository(db,
+		gormbase.TrigramSearchCallback[*domainTeam.Team](searchspec.Teams.SearchColumns("")...),
+	)
 	return &teamRepo{
 		BaseRepository: baseRepo,
 		db:             db,

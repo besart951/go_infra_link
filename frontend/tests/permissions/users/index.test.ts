@@ -46,11 +46,17 @@ vi.mock('$lib/api/client.js', () => ({
 }));
 
 vi.mock('$lib/api/users.js', () => ({
-  listUserDirectory: state.listUserDirectoryMock,
-  setUserRole: state.setUserRoleMock,
+  createUser: vi.fn(),
+  deleteUser: state.deleteUserMock,
   disableUser: state.disableUserMock,
   enableUser: state.enableUserMock,
-  deleteUser: state.deleteUserMock
+  getAllowedRoles: vi.fn().mockResolvedValue({ roles: [] }),
+  getCurrentUser: vi.fn(),
+  listUsers: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, total_pages: 1 }),
+  listUserDirectory: state.listUserDirectoryMock,
+  setUserRole: state.setUserRoleMock,
+  updateCurrentUser: vi.fn(),
+  updateCurrentUserPassword: vi.fn()
 }));
 
 vi.mock('$lib/stores/auth.svelte.js', () => ({

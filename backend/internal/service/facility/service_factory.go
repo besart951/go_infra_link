@@ -137,6 +137,7 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 		repos.BacnetObjectAlarmValues,
 	)
 	fieldDeviceService.bindTransactions(tx)
+	fieldDeviceService.bindChangeRecorder(cfg.ChangeRecorder)
 	objectDataService := NewObjectDataService(
 		repos.ObjectData,
 		repos.BacnetObjects,

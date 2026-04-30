@@ -87,17 +87,26 @@ func (s *ObjectDataService) UpdateTemplate(ctx context.Context, id uuid.UUID, in
 
 func (s *ObjectDataService) ListByApparatID(ctx context.Context, page, limit int, search string, apparatID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	page, limit = domain.NormalizePagination(page, limit, s.defaultLimit)
-	return s.extRepo.GetPaginatedListByApparatID(ctx, apparatID, domain.PaginationParams{Page: page, Limit: limit, Search: search})
+	return s.extRepo.GetPaginatedListWithFilters(ctx,
+		domain.PaginationParams{Page: page, Limit: limit, Search: search},
+		domainFacility.ObjectDataFilterParams{ApparatID: &apparatID},
+	)
 }
 
 func (s *ObjectDataService) ListBySystemPartID(ctx context.Context, page, limit int, search string, systemPartID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	page, limit = domain.NormalizePagination(page, limit, s.defaultLimit)
-	return s.extRepo.GetPaginatedListBySystemPartID(ctx, systemPartID, domain.PaginationParams{Page: page, Limit: limit, Search: search})
+	return s.extRepo.GetPaginatedListWithFilters(ctx,
+		domain.PaginationParams{Page: page, Limit: limit, Search: search},
+		domainFacility.ObjectDataFilterParams{SystemPartID: &systemPartID},
+	)
 }
 
 func (s *ObjectDataService) ListByApparatAndSystemPartID(ctx context.Context, page, limit int, search string, apparatID, systemPartID uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	page, limit = domain.NormalizePagination(page, limit, s.defaultLimit)
-	return s.extRepo.GetPaginatedListByApparatAndSystemPartID(ctx, apparatID, systemPartID, domain.PaginationParams{Page: page, Limit: limit, Search: search})
+	return s.extRepo.GetPaginatedListWithFilters(ctx,
+		domain.PaginationParams{Page: page, Limit: limit, Search: search},
+		domainFacility.ObjectDataFilterParams{ApparatID: &apparatID, SystemPartID: &systemPartID},
+	)
 }
 
 func (s *ObjectDataService) GetBacnetObjectIDs(ctx context.Context, id uuid.UUID) ([]uuid.UUID, error) {

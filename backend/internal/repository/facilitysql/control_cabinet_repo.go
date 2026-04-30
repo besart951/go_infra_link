@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -22,21 +23,15 @@ func NewControlCabinetRepository(db *gorm.DB) domainFacility.ControlCabinetRepos
 }
 
 func applyControlCabinetSearch(query *gorm.DB, search string) *gorm.DB {
-	tokens := strings.Fields(strings.ToLower(strings.TrimSpace(search)))
-	for _, token := range tokens {
-		pattern := "%" + token + "%"
-		query = query.Where(`
-			LOWER(control_cabinet_nr) LIKE ?
-			OR building_id IN (
-				SELECT id
-				FROM buildings
-				WHERE LOWER(iws_code) LIKE ?
-					OR CAST(building_group AS TEXT) LIKE ?
-					OR LOWER(iws_code || '-' || CAST(building_group AS TEXT)) LIKE ?
-			)
-		`, pattern, pattern, pattern, pattern)
-	}
-	return query
+	columns := append(
+		searchspec.ControlCabinets.SearchColumns("control_cabinets."),
+		searchspec.Buildings.SearchColumns("search_buildings.")...,
+	)
+	return gormbase.ApplyTrigramTokenSearch(
+		query.Joins("LEFT JOIN buildings search_buildings ON search_buildings.id = control_cabinets.building_id"),
+		search,
+		columns...,
+	)
 }
 
 func (r *controlCabinetRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ControlCabinet], error) {

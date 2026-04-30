@@ -8,33 +8,16 @@
   import { Plus } from '@lucide/svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
-  import { addToast } from '$lib/components/toast.svelte';
-  import { confirm } from '$lib/stores/confirm-dialog.js';
   import { buildingsStore } from '$lib/stores/list/entityStores.js';
   import type { Building } from '$lib/domain/facility/index.js';
   import BuildingForm from '$lib/components/facility/forms/BuildingForm.svelte';
-  import { ManageBuildingUseCase } from '$lib/application/useCases/facility/manageBuildingUseCase.js';
-  import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
-  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
+  import { createBuildingActions } from '$lib/components/facility/shared/facilityCrudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
-  const manageBuilding = new ManageBuildingUseCase(buildingRepository);
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  const actions = new CrudPageActions<Building>({
-    reload: () => buildingsStore.reload(),
-    deleteItem: (building) => manageBuilding.delete(building.id),
-    confirmDelete: confirm,
-    addToast,
-    getDeleteTitle: () => $t('common.delete'),
-    getDeleteMessage: (building) =>
-      $t('facility.delete_building_confirm').replace('{name}', building.iws_code),
-    getDeleteConfirmText: () => $t('common.delete'),
-    getDeleteCancelText: () => $t('common.cancel'),
-    getDeleteSuccessMessage: () => $t('facility.building_deleted'),
-    getDeleteFailureMessage: () => $t('facility.delete_building_failed')
-  });
+  const actions = createBuildingActions();
 
   onMount(() => {
     buildingsStore.load();

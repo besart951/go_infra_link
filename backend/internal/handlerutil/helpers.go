@@ -81,11 +81,8 @@ func ParseUUIDParamWithCode(c *gin.Context, name, code string) (uuid.UUID, bool)
 }
 
 func asValidationErrors(err error) validator.ValidationErrors {
-	var verr validator.ValidationErrors
-	if errors.As(err, &verr) {
-		return verr
-	}
-	return nil
+	verr, _ := errors.AsType[validator.ValidationErrors](err)
+	return verr
 }
 
 func validationErrorFields(dst any, verr validator.ValidationErrors) map[string]string {
@@ -107,19 +104,18 @@ func structJSONFieldMap(dst any) map[string]string {
 		return result
 	}
 	t := reflect.TypeOf(dst)
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	if t.Kind() != reflect.Struct {
 		return result
 	}
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
+	for field := range t.Fields() {
 		jsonTag := field.Tag.Get("json")
 		if jsonTag == "-" {
 			continue
 		}
-		name := strings.Split(jsonTag, ",")[0]
+		name, _, _ := strings.Cut(jsonTag, ",")
 		if name == "" {
 			name = field.Name
 		}

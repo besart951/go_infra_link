@@ -4,71 +4,19 @@
   import * as Table from '$lib/components/ui/table/index.js';
   import { ArrowLeft, Plus, Pencil, Trash2, Eye } from '@lucide/svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
-  import { addToast } from '$lib/components/toast.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
-  import { confirm } from '$lib/stores/confirm-dialog.js';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import { t as translate } from '$lib/i18n/index.js';
   import { phaseListStore } from '$lib/stores/phases/phaseListStore.js';
   import type { Phase } from '$lib/domain/phase/index.js';
   import PhaseForm from '$lib/components/project/PhaseForm.svelte';
-  import { deletePhase } from '$lib/infrastructure/api/phase.adapter.js';
+  import { PhaseListPageState } from '$lib/components/project/PhaseListPageState.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
 
   const t = createTranslator();
-
-  let showForm = $state(false);
-  let editingPhase: Phase | undefined = $state(undefined);
-  let deleting = $state(false);
-
-  function handleEdit(phase: Phase) {
-    editingPhase = phase;
-    showForm = true;
-  }
-
-  function handleCreate() {
-    editingPhase = undefined;
-    showForm = true;
-  }
-
-  function handleSuccess() {
-    showForm = false;
-    editingPhase = undefined;
-    phaseListStore.reload();
-  }
-
-  function handleCancel() {
-    showForm = false;
-    editingPhase = undefined;
-  }
-
-  async function handleDelete(phase: Phase) {
-    const ok = await confirm({
-      title: translate('phases.confirm.delete_title'),
-      message: translate('phases.confirm.delete_message', { name: phase.name }),
-      confirmText: translate('common.delete'),
-      cancelText: translate('common.cancel'),
-      variant: 'destructive'
-    });
-
-    if (!ok) return;
-    deleting = true;
-    try {
-      await deletePhase(phase.id);
-      addToast(translate('phases.toasts.deleted'), 'success');
-      phaseListStore.reload();
-    } catch (err) {
-      addToast(
-        err instanceof Error ? err.message : translate('phases.toasts.delete_failed'),
-        'error'
-      );
-    } finally {
-      deleting = false;
-    }
-  }
+  const state = new PhaseListPageState();
 
   onMount(() => {
-    phaseListStore.load();
+    state.initialize();
   });
 </script>
 
@@ -89,8 +37,8 @@
         <ArrowLeft class="size-4" />
         {$t('hub.back_to_overview')}
       </Button>
-      {#if !showForm && canPerform('create', 'phase')}
-        <Button onclick={handleCreate}>
+      {#if !state.showForm && canPerform('create', 'phase')}
+        <Button onclick={() => state.handleCreate()}>
           <Plus class="mr-2 size-4" />
           {$t('phases.page.new')}
         </Button>
@@ -98,8 +46,12 @@
     </div>
   </div>
 
-  {#if showForm}
-    <PhaseForm initialData={editingPhase} onSuccess={handleSuccess} onCancel={handleCancel} />
+  {#if state.showForm}
+    <PhaseForm
+      initialData={state.editingPhase}
+      onSuccess={() => state.handleSuccess()}
+      onCancel={() => state.handleCancel()}
+    />
   {/if}
 
   <PaginatedList
@@ -129,7 +81,7 @@
       <Table.Cell>
         <div class="flex items-center gap-2">
           {#if canPerform('update', 'phase')}
-            <Button variant="ghost" size="icon" onclick={() => handleEdit(phase)}>
+            <Button variant="ghost" size="icon" onclick={() => state.handleEdit(phase)}>
               <Pencil class="size-4" />
             </Button>
           {/if}
@@ -140,8 +92,8 @@
             <Button
               variant="ghost"
               size="icon"
-              disabled={deleting}
-              onclick={() => handleDelete(phase)}
+              disabled={state.deleting}
+              onclick={() => state.handleDelete(phase)}
             >
               <Trash2 class="size-4 text-destructive" />
             </Button>

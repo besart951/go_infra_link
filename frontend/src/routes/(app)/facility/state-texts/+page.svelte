@@ -8,33 +8,16 @@
   import { Plus } from '@lucide/svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
-  import { addToast } from '$lib/components/toast.svelte';
-  import { confirm } from '$lib/stores/confirm-dialog.js';
   import { stateTextsStore } from '$lib/stores/list/entityStores.js';
   import type { StateText } from '$lib/domain/facility/index.js';
   import StateTextForm from '$lib/components/facility/forms/StateTextForm.svelte';
-  import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
-  import { stateTextRepository } from '$lib/infrastructure/api/stateTextRepository.js';
-  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
+  import { createStateTextActions } from '$lib/components/facility/shared/facilityCrudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
-  const manageStateText = new ManageEntityUseCase(stateTextRepository);
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  const actions = new CrudPageActions<StateText>({
-    reload: () => stateTextsStore.reload(),
-    deleteItem: (item) => manageStateText.delete(item.id),
-    confirmDelete: confirm,
-    addToast,
-    getDeleteTitle: () => $t('facility.delete_state_text_confirm').replace('{ref}', ''),
-    getDeleteMessage: (item) =>
-      $t('facility.delete_state_text_confirm').replace('{ref}', String(item.ref_number || '')),
-    getDeleteConfirmText: () => $t('common.delete'),
-    getDeleteCancelText: () => $t('common.cancel'),
-    getDeleteSuccessMessage: () => $t('facility.state_text_deleted'),
-    getDeleteFailureMessage: () => $t('facility.delete_state_text_failed')
-  });
+  const actions = createStateTextActions();
 
   onMount(() => {
     stateTextsStore.load();

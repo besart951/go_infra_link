@@ -64,6 +64,11 @@ var migrations = []migration{
 		description: "notification_outbox_and_rules",
 		apply:       migrateNotificationDispatch,
 	},
+	{
+		version:     "202604300005",
+		description: "enable_pg_trgm_search_indexes",
+		apply:       migratePGTrgmSearch,
+	},
 }
 
 func ApplyMigrations(db *gorm.DB) error {

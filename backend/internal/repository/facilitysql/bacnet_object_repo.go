@@ -2,11 +2,11 @@ package facilitysql
 
 import (
 	"context"
-	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -17,12 +17,9 @@ type bacnetObjectRepo struct {
 }
 
 func NewBacnetObjectRepository(db *gorm.DB) domainFacility.BacnetObjectStore {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where("LOWER(text_fix) LIKE ?", pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainFacility.BacnetObject](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository(db,
+		gormbase.TrigramSearchCallback[*domainFacility.BacnetObject](searchspec.BacnetObjects.SearchColumns("")...),
+	)
 	return &bacnetObjectRepo{
 		BaseRepository: baseRepo,
 		db:             db,

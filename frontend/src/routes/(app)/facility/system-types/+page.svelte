@@ -8,33 +8,16 @@
   import { Plus } from '@lucide/svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
-  import { addToast } from '$lib/components/toast.svelte';
-  import { confirm } from '$lib/stores/confirm-dialog.js';
   import { systemTypesStore } from '$lib/stores/list/entityStores.js';
   import type { SystemType } from '$lib/domain/facility/index.js';
   import SystemTypeForm from '$lib/components/facility/forms/SystemTypeForm.svelte';
-  import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
-  import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
-  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
+  import { createSystemTypeActions } from '$lib/components/facility/shared/facilityCrudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
-  const manageSystemType = new ManageEntityUseCase(systemTypeRepository);
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  const actions = new CrudPageActions<SystemType>({
-    reload: () => systemTypesStore.reload(),
-    deleteItem: (item) => manageSystemType.delete(item.id),
-    confirmDelete: confirm,
-    addToast,
-    getDeleteTitle: () => $t('common.delete'),
-    getDeleteMessage: (item) =>
-      $t('facility.delete_system_type_confirm').replace('{name}', item.name),
-    getDeleteConfirmText: () => $t('common.delete'),
-    getDeleteCancelText: () => $t('common.cancel'),
-    getDeleteSuccessMessage: () => $t('facility.system_type_deleted'),
-    getDeleteFailureMessage: () => $t('facility.delete_system_type_failed')
-  });
+  const actions = createSystemTypeActions();
 
   function formatNumber(value: number) {
     return String(value).padStart(4, '0');

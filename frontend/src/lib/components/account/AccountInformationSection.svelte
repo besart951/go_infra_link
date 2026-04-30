@@ -3,7 +3,7 @@
   import { Input } from '$lib/components/ui/input/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import { createTranslator } from '$lib/i18n/translator';
-  import type { User } from '$lib/api/users.js';
+  import type { User } from '$lib/infrastructure/api/userRepository.js';
 
   interface Props {
     currentUser: User;

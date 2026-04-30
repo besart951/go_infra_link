@@ -14,7 +14,7 @@ func TestValidateRules_AppliesSharedRequiredAndLengthPolicies(t *testing.T) {
 	err := validateRules(
 		requiredTrimmedExact(apparatShortNameField, "  APP1 ", 3),
 		requiredTrimmedMax(systemTypeNameField, "  Alpha  ", 4),
-		optionalMaxLength(fieldDeviceBMKField, testStringPtr("TOO-LONG-BMK"), 10),
+		optionalMaxLength(fieldDeviceBMKField, new("TOO-LONG-BMK"), 10),
 	)
 
 	ve, ok := domain.AsValidationError(err)
@@ -182,7 +182,3 @@ func (f *validationControlCabinetRepoFake) ExistsControlCabinetNr(context.Contex
 
 var _ domainFacility.BuildingRepository = (*validationBuildingRepoFake)(nil)
 var _ domainFacility.ControlCabinetRepository = (*validationControlCabinetRepoFake)(nil)
-
-func testStringPtr(value string) *string {
-	return &value
-}

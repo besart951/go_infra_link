@@ -32,30 +32,30 @@ func (s *SMTPStrategy) ValidateSettings(settings *domainNotification.SMTPSetting
 		return ve.Add("settings", "is required")
 	}
 	if !settings.Provider.Valid() {
-		ve.Add("provider", "must be smtp")
+		ve = ve.Add("provider", "must be smtp")
 	}
 	if strings.TrimSpace(settings.Host) == "" {
-		ve.Add("host", "is required")
+		ve = ve.Add("host", "is required")
 	}
 	if settings.Port < 1 || settings.Port > 65535 {
-		ve.Add("port", "must be between 1 and 65535")
+		ve = ve.Add("port", "must be between 1 and 65535")
 	}
 	if _, err := mail.ParseAddress(settings.FromEmail); err != nil {
-		ve.Add("from_email", "must be a valid email")
+		ve = ve.Add("from_email", "must be a valid email")
 	}
 	if settings.ReplyTo != "" {
 		if _, err := mail.ParseAddress(settings.ReplyTo); err != nil {
-			ve.Add("reply_to", "must be a valid email")
+			ve = ve.Add("reply_to", "must be a valid email")
 		}
 	}
 	if !settings.Security.Valid() {
-		ve.Add("security", "must be one of: none starttls tls")
+		ve = ve.Add("security", "must be one of: none starttls tls")
 	}
 	if !settings.AuthMode.Valid() {
-		ve.Add("auth_mode", "must be one of: none plain")
+		ve = ve.Add("auth_mode", "must be one of: none plain")
 	}
 	if settings.AuthMode == domainNotification.AuthModePlain && strings.TrimSpace(settings.Username) == "" {
-		ve.Add("username", "is required when auth_mode is plain")
+		ve = ve.Add("username", "is required when auth_mode is plain")
 	}
 	if len(ve.Fields) > 0 {
 		return ve

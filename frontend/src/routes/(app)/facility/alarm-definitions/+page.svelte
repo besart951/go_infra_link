@@ -8,33 +8,16 @@
   import { Plus } from '@lucide/svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
-  import { addToast } from '$lib/components/toast.svelte';
-  import { confirm } from '$lib/stores/confirm-dialog.js';
   import { alarmDefinitionsStore } from '$lib/stores/list/entityStores.js';
   import type { AlarmDefinition } from '$lib/domain/facility/index.js';
   import AlarmDefinitionForm from '$lib/components/facility/forms/AlarmDefinitionForm.svelte';
-  import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
-  import { alarmDefinitionRepository } from '$lib/infrastructure/api/alarmDefinitionRepository.js';
-  import { CrudPageActions } from '$lib/components/facility/shared/crudPageActions.svelte.js';
+  import { createAlarmDefinitionActions } from '$lib/components/facility/shared/facilityCrudPageActions.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
-  const manageAlarmDefinition = new ManageEntityUseCase(alarmDefinitionRepository);
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
-  const actions = new CrudPageActions<AlarmDefinition>({
-    reload: () => alarmDefinitionsStore.reload(),
-    deleteItem: (item) => manageAlarmDefinition.delete(item.id),
-    confirmDelete: confirm,
-    addToast,
-    getDeleteTitle: () => $t('facility.delete_alarm_definition_confirm').replace('{name}', ''),
-    getDeleteMessage: (item) =>
-      $t('facility.delete_alarm_definition_confirm').replace('{name}', item.name || ''),
-    getDeleteConfirmText: () => $t('common.delete'),
-    getDeleteCancelText: () => $t('common.cancel'),
-    getDeleteSuccessMessage: () => $t('facility.alarm_definition_deleted'),
-    getDeleteFailureMessage: () => $t('facility.delete_alarm_definition_failed')
-  });
+  const actions = createAlarmDefinitionActions();
 
   onMount(() => {
     alarmDefinitionsStore.load();

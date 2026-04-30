@@ -1,149 +1,26 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { MailCheck, RefreshCw, ServerCog, ShieldCheck } from '@lucide/svelte';
-  import { getErrorMessage, getFieldErrors } from '$lib/api/client.js';
-  import { GetSMTPSettingsUseCase } from '$lib/application/useCases/notification/getSMTPSettingsUseCase.js';
-  import { SaveSMTPSettingsUseCase } from '$lib/application/useCases/notification/saveSMTPSettingsUseCase.js';
-  import { SendSMTPTestEmailUseCase } from '$lib/application/useCases/notification/sendSMTPTestEmailUseCase.js';
   import {
     NotificationRulesCard,
     SMTPOverviewCard,
     SMTPSettingsForm,
     SMTPTestEmailCard
   } from '$lib/components/notifications/index.js';
-  import { addToast } from '$lib/components/toast.svelte';
+  import { SMTPManagementPageState } from '$lib/components/notifications/SMTPManagementPageState.svelte.js';
   import * as Alert from '$lib/components/ui/alert/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
-  import type {
-    SendSMTPTestEmailRequest,
-    SMTPSettings,
-    UpsertSMTPSettingsRequest
-  } from '$lib/domain/notification/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import { notificationSettingsRepository } from '$lib/infrastructure/api/notificationSettingsRepository.js';
   import type { PageData } from './$types.js';
 
   let { data }: { data: PageData } = $props();
 
   const t = createTranslator();
-
-  const getSMTPSettings = new GetSMTPSettingsUseCase(notificationSettingsRepository);
-  const saveSMTPSettings = new SaveSMTPSettingsUseCase(notificationSettingsRepository);
-  const sendSMTPTestEmail = new SendSMTPTestEmailUseCase(notificationSettingsRepository);
-
-  let settings = $state<SMTPSettings | null>(null);
-  let isLoading = $state(true);
-  let isRefreshing = $state(false);
-  let loadError = $state<string | null>(null);
-  let lastLoadedAt = $state<string | null>(null);
-
-  let isSaving = $state(false);
-  let saveError = $state<string | null>(null);
-  let saveFieldErrors = $state<Record<string, string>>({});
-
-  let isSendingTest = $state(false);
-  let testError = $state<string | null>(null);
-  let testFieldErrors = $state<Record<string, string>>({});
-
-  const serviceStatus = $derived.by(() => {
-    if (!settings) return $t('notifications.status.not_configured');
-    return $t(settings.enabled ? 'notifications.status.enabled' : 'notifications.status.disabled');
-  });
-
-  const connectionLabel = $derived(
-    settings ? `${settings.host}:${settings.port}` : $t('notifications.status.not_configured')
-  );
-
-  function statusVariant(): 'secondary' | 'outline' | 'success' | 'warning' {
-    if (isLoading) return 'secondary';
-    if (!settings) return 'outline';
-    return settings.enabled ? 'success' : 'warning';
-  }
-
-  async function loadSettings(mode: 'initial' | 'refresh' = 'initial') {
-    if (mode === 'initial') {
-      isLoading = true;
-    } else {
-      isRefreshing = true;
-    }
-
-    loadError = null;
-
-    try {
-      settings = await getSMTPSettings.execute();
-      lastLoadedAt = new Date().toISOString();
-
-      if (mode === 'refresh') {
-        addToast($t('notifications.toasts.refreshed'), 'success');
-      }
-    } catch (error) {
-      loadError = getErrorMessage(error);
-
-      if (mode === 'refresh') {
-        addToast(loadError, 'error');
-      }
-    } finally {
-      isLoading = false;
-      isRefreshing = false;
-    }
-  }
-
-  async function handleSave(payload: UpsertSMTPSettingsRequest) {
-    isSaving = true;
-    saveError = null;
-    saveFieldErrors = {};
-
-    try {
-      settings = await saveSMTPSettings.execute(payload);
-      lastLoadedAt = new Date().toISOString();
-      saveError = null;
-      saveFieldErrors = {};
-      addToast($t('notifications.toasts.saved'), 'success');
-    } catch (error) {
-      saveFieldErrors = getFieldErrors(error);
-      saveError = Object.keys(saveFieldErrors).length === 0 ? getErrorMessage(error) : null;
-
-      if (saveError) {
-        addToast(saveError, 'error');
-      }
-    } finally {
-      isSaving = false;
-    }
-  }
-
-  async function handleSendTest(payload: SendSMTPTestEmailRequest) {
-    isSendingTest = true;
-    testError = null;
-    testFieldErrors = {};
-
-    try {
-      await sendSMTPTestEmail.execute(payload);
-      testError = null;
-      testFieldErrors = {};
-      addToast($t('notifications.toasts.test_sent'), 'success');
-    } catch (error) {
-      testFieldErrors = getFieldErrors(error);
-      testError = Object.keys(testFieldErrors).length === 0 ? getErrorMessage(error) : null;
-
-      if (testError) {
-        addToast(testError, 'error');
-      }
-    } finally {
-      isSendingTest = false;
-    }
-  }
-
-  function formatDateTime(value: string | null): string {
-    if (!value) return $t('common.not_available');
-    return new Intl.DateTimeFormat('de-CH', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    }).format(new Date(value));
-  }
+  const state = new SMTPManagementPageState();
 
   onMount(() => {
-    loadSettings();
+    void state.loadSettings();
   });
 </script>
 
@@ -159,9 +36,9 @@
           <ShieldCheck class="size-3.5" />
           {$t('notifications.hero.scope')}
         </Badge>
-        <Badge variant={statusVariant()} class="gap-1.5">
+        <Badge variant={state.statusVariant()} class="gap-1.5">
           <MailCheck class="size-3.5" />
-          {serviceStatus}
+          {state.serviceStatus}
         </Badge>
       </div>
 
@@ -182,7 +59,7 @@
         <ServerCog class="size-4 shrink-0 text-muted-foreground" />
         <div class="min-w-0">
           <p class="text-xs text-muted-foreground">{$t('notifications.hero.delivery_channel')}</p>
-          <p class="truncate font-medium">{connectionLabel}</p>
+          <p class="truncate font-medium">{state.connectionLabel}</p>
         </div>
       </div>
 
@@ -192,48 +69,48 @@
         <RefreshCw class="size-4 shrink-0 text-muted-foreground" />
         <div class="min-w-0">
           <p class="text-xs text-muted-foreground">{$t('notifications.hero.last_sync')}</p>
-          <p class="truncate font-medium">{formatDateTime(lastLoadedAt)}</p>
+          <p class="truncate font-medium">{state.formatDateTime(state.lastLoadedAt)}</p>
         </div>
       </div>
 
       <Button
         variant="outline"
         class="w-full sm:w-auto"
-        onclick={() => loadSettings('refresh')}
-        disabled={isLoading || isRefreshing || isSaving || isSendingTest}
+        onclick={() => state.loadSettings('refresh')}
+        disabled={state.isLoading || state.isRefreshing || state.isSaving || state.isSendingTest}
       >
-        <RefreshCw class={`size-4${isRefreshing ? ' animate-spin' : ''}`} />
+        <RefreshCw class={`size-4${state.isRefreshing ? ' animate-spin' : ''}`} />
         {$t('common.refresh')}
       </Button>
     </div>
   </header>
 
-  {#if loadError}
+  {#if state.loadError}
     <Alert.Root variant="destructive">
-      <Alert.Description>{loadError}</Alert.Description>
+      <Alert.Description>{state.loadError}</Alert.Description>
     </Alert.Root>
   {/if}
 
   <div class="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
     <SMTPSettingsForm
-      {settings}
-      hasStoredPassword={settings?.has_password ?? false}
-      {isLoading}
-      isSubmitting={isSaving}
-      formError={saveError}
-      fieldErrors={saveFieldErrors}
-      onSubmit={handleSave}
+      settings={state.settings}
+      hasStoredPassword={state.settings?.has_password ?? false}
+      isLoading={state.isLoading}
+      isSubmitting={state.isSaving}
+      formError={state.saveError}
+      fieldErrors={state.saveFieldErrors}
+      onSubmit={(payload) => state.handleSave(payload)}
     />
 
     <aside class="flex min-w-0 flex-col gap-5 xl:sticky xl:top-20">
-      <SMTPOverviewCard {settings} {isLoading} />
+      <SMTPOverviewCard settings={state.settings} isLoading={state.isLoading} />
       <SMTPTestEmailCard
-        {settings}
+        settings={state.settings}
         defaultRecipient={data.user.email}
-        isSubmitting={isSendingTest}
-        formError={testError}
-        fieldErrors={testFieldErrors}
-        onSubmit={handleSendTest}
+        isSubmitting={state.isSendingTest}
+        formError={state.testError}
+        fieldErrors={state.testFieldErrors}
+        onSubmit={(payload) => state.handleSendTest(payload)}
       />
     </aside>
   </div>

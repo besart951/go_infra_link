@@ -312,7 +312,7 @@ func (s *SPSControllerService) nextAvailableGADevice(ctx context.Context, contro
 	}
 
 	const max = 26 * 26 * 26
-	for i := 0; i < max; i++ {
+	for i := range max {
 		candidate := gaDeviceFromIndex(i)
 		if _, exists := used[candidate]; !exists {
 			return candidate, nil
@@ -441,7 +441,7 @@ func isValidGADevice(value string) bool {
 
 func findLowestAvailableGADevice(used map[string]struct{}) (string, bool) {
 	const max = 26 * 26 * 26
-	for i := 0; i < max; i++ {
+	for i := range max {
 		candidate := gaDeviceFromIndex(i)
 		if _, exists := used[candidate]; !exists {
 			return candidate, true

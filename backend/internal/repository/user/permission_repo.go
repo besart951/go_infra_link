@@ -2,11 +2,11 @@ package user
 
 import (
 	"context"
-	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"gorm.io/gorm"
 )
 
@@ -16,18 +16,9 @@ type permissionRepo struct {
 }
 
 func NewPermissionRepository(db *gorm.DB) domainUser.PermissionRepository {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where(
-			"LOWER(name) LIKE ? OR LOWER(description) LIKE ? OR LOWER(resource) LIKE ? OR LOWER(action) LIKE ?",
-			pattern,
-			pattern,
-			pattern,
-			pattern,
-		)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainUser.Permission](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository(db,
+		gormbase.TrigramSearchCallback[*domainUser.Permission](searchspec.Permissions.SearchColumns("")...),
+	)
 	return &permissionRepo{
 		BaseRepository: baseRepo,
 		db:             db,

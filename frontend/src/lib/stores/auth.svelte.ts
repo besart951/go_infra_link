@@ -7,13 +7,17 @@
  * - Allowed role assignments returned by the backend
  */
 
-import { getCurrentUser, getAllowedRoles, type User, type UserRole } from '$lib/api/users.js';
 import { ApiException } from '$lib/api/client.js';
 import { t } from '$lib/i18n/index.js';
+import {
+  userRepository,
+  type AllowedRole,
+  type User
+} from '$lib/infrastructure/api/userRepository.js';
 
 interface AuthState {
   user: User | null;
-  allowedRoles: import('$lib/api/users.js').AllowedRole[];
+  allowedRoles: AllowedRole[];
   isLoading: boolean;
   error: string | null;
 }
@@ -34,11 +38,11 @@ export async function loadAuth(): Promise<void> {
   authState.error = null;
 
   try {
-    const user = await getCurrentUser();
+    const user = await userRepository.getCurrent();
     authState.user = user;
 
     try {
-      const allowedRolesResponse = await getAllowedRoles();
+      const allowedRolesResponse = await userRepository.getAllowedRoles();
       authState.allowedRoles = allowedRolesResponse.roles;
     } catch (error) {
       authState.error = error instanceof Error ? error.message : t('auth.load_failed');
@@ -58,80 +62,10 @@ export async function loadAuth(): Promise<void> {
 }
 
 /**
- * Clear auth state (on logout)
- */
-export function clearAuth(): void {
-  authState.user = null;
-  authState.allowedRoles = [];
-  authState.error = null;
-}
-
-const ROLE_LEVELS: Record<UserRole, number> = {
-  superadmin: 100,
-  admin_fzag: 90,
-  fzag: 80,
-  admin_planer: 70,
-  planer: 60,
-  admin_entrepreneur: 50,
-  entrepreneur: 40
-};
-
-// Legacy compatibility for stale HMR/module consumers. Authorization stays permission-based.
-export function getRoleLevel(role: UserRole): number {
-  return ROLE_LEVELS[role] ?? 0;
-}
-
-export function canManageRole(targetRole: UserRole): boolean {
-  if (!authState.user) return false;
-  return getRoleLevel(authState.user.role) > getRoleLevel(targetRole);
-}
-
-export function hasRole(role: UserRole): boolean {
-  return authState.user?.role === role;
-}
-
-export function hasMinRole(minRole: UserRole): boolean {
-  if (!authState.user) return false;
-  return getRoleLevel(authState.user.role) >= getRoleLevel(minRole);
-}
-
-export function canAccessUserDirectory(): boolean {
-  return Boolean(authState.user?.can_access_user_directory);
-}
-
-/**
- * Check if the current user is authenticated
- */
-export function isAuthenticated(): boolean {
-  return authState.user !== null;
-}
-
-/**
  * Get allowed roles for creating new users
  */
-export function getAllowedRolesForCreation(): import('$lib/api/users.js').AllowedRole[] {
+export function getAllowedRolesForCreation(): AllowedRole[] {
   return authState.allowedRoles;
-}
-
-/**
- * Get current user
- */
-export function getCurrentUserState(): User | null {
-  return authState.user;
-}
-
-/**
- * Check if auth is loading
- */
-export function isAuthLoading(): boolean {
-  return authState.isLoading;
-}
-
-/**
- * Get auth error
- */
-export function getAuthError(): string | null {
-  return authState.error;
 }
 
 // Export reactive getters using Svelte 5 runes

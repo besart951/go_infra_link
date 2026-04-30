@@ -53,6 +53,10 @@ vi.mock('$lib/i18n/translator.js', () => ({
   })
 }));
 
+vi.mock('$lib/i18n/index.js', () => ({
+  t: (key: string) => key
+}));
+
 vi.mock('$lib/components/confirm-dialog.svelte', async () => ({
   default: (await import('./__tests__/Noop.svelte')).default
 }));

@@ -1,5 +1,7 @@
 package team
 
+import "slices"
+
 const (
 	PermissionTeamView         = "team.read"
 	PermissionTeamEdit         = "team.update"
@@ -32,10 +34,5 @@ func PermissionsForMemberRole(role MemberRole) []string {
 }
 
 func HasPermission(role MemberRole, permission string) bool {
-	for _, granted := range PermissionsForMemberRole(role) {
-		if granted == permission {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(PermissionsForMemberRole(role), permission)
 }

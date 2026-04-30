@@ -29,7 +29,7 @@ func newTxCoordinator(cfg Config) txCoordinator {
 	}
 
 	return txCoordinator{
-		boundary: transaction.NewBoundary[*Services](cfg.TxRunner, factory),
+		boundary: transaction.NewBoundary(cfg.TxRunner, factory),
 	}
 }
 

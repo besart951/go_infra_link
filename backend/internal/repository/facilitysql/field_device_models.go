@@ -78,14 +78,6 @@ func toFieldDeviceDomains(records []*FieldDeviceRecord) []*domainFacility.FieldD
 	return items
 }
 
-func fieldDeviceDomainValues(records []FieldDeviceRecord) []domainFacility.FieldDevice {
-	items := make([]domainFacility.FieldDevice, len(records))
-	for i := range records {
-		items[i] = *toFieldDeviceDomain(&records[i])
-	}
-	return items
-}
-
 type fieldDeviceListRow struct {
 	ID                        uuid.UUID  `gorm:"column:id"`
 	CreatedAt                 time.Time  `gorm:"column:created_at"`

@@ -18,7 +18,7 @@ func TestRequireTeamPermission_AllowsMemberBundlePermission(t *testing.T) {
 	teamID := uuid.New()
 	authz := &authCheckerStub{
 		globalRole: domainUser.RolePlaner,
-		teamRole:   rolePtr(domainTeam.MemberRoleManager),
+		teamRole:   new(domainTeam.MemberRoleManager),
 	}
 
 	router := gin.New()
@@ -45,7 +45,7 @@ func TestRequireTeamPermission_RejectsMissingMemberPermission(t *testing.T) {
 	teamID := uuid.New()
 	authz := &authCheckerStub{
 		globalRole: domainUser.RolePlaner,
-		teamRole:   rolePtr(domainTeam.MemberRoleMember),
+		teamRole:   new(domainTeam.MemberRoleMember),
 	}
 
 	router := gin.New()
@@ -114,8 +114,4 @@ func (a *authCheckerStub) GetTeamRole(context.Context, uuid.UUID, uuid.UUID) (*d
 func (a *authCheckerStub) HasPermission(_ context.Context, _ domainUser.Role, permission string) (bool, error) {
 	a.lastPermission = permission
 	return a.hasPermissionResponse, nil
-}
-
-func rolePtr(role domainTeam.MemberRole) *domainTeam.MemberRole {
-	return &role
 }

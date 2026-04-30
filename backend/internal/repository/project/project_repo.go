@@ -2,12 +2,13 @@ package project
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -78,8 +79,7 @@ func (r *projectRepo) GetPaginatedListWithStatus(ctx context.Context, params dom
 	query := r.db.WithContext(ctx).Model(&ProjectRecord{})
 
 	if params.Search != "" {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
-		query = query.Where("LOWER(name) LIKE ? OR LOWER(description) LIKE ?", pattern, pattern)
+		query = projectSearch(query, params.Search, "")
 	}
 
 	if status != nil && *status != "" {
@@ -117,8 +117,7 @@ func (r *projectRepo) GetPaginatedListForUserWithStatus(ctx context.Context, par
 		Where("pu.user_id = ?", userID)
 
 	if params.Search != "" {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
-		query = query.Where("LOWER(projects.name) LIKE ? OR LOWER(projects.description) LIKE ?", pattern, pattern)
+		query = projectSearch(query, params.Search, "projects.")
 	}
 
 	if status != nil && *status != "" {
@@ -146,6 +145,10 @@ func (r *projectRepo) GetPaginatedListForUserWithStatus(ctx context.Context, par
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
+}
+
+func projectSearch(query *gorm.DB, search string, qualifier string) *gorm.DB {
+	return gormbase.ApplyTrigramSearch(query, search, searchspec.Projects.SearchColumns(qualifier)...)
 }
 
 func (r *projectRepo) AddUser(ctx context.Context, projectID, userID uuid.UUID) error {

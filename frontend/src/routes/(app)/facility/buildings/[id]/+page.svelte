@@ -5,9 +5,7 @@
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
   import TrashIcon from '@lucide/svelte/icons/trash-2';
   import type { PageData } from './$types.js';
-  import { ManageBuildingUseCase } from '$lib/application/useCases/facility/manageBuildingUseCase.js';
-  import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
-  const manageBuilding = new ManageBuildingUseCase(buildingRepository);
+  import { buildingDetailService } from '$lib/components/facility/buildings/BuildingDetailService.js';
   import { goto, invalidateAll } from '$app/navigation';
   import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
   import { getFieldError } from '$lib/api/client.js';
@@ -28,7 +26,7 @@
     iwsCode = data.building.iws_code;
     buildingGroup = data.building.building_group;
   });
-  const liveValidation = useLiveValidation((data: any) => manageBuilding.validate(data), {
+  const liveValidation = useLiveValidation((data: any) => buildingDetailService.validate(data), {
     debounceMs: 400
   });
 
@@ -47,7 +45,7 @@
 
     try {
       isSubmitting = true;
-      await manageBuilding.delete(data.building.id);
+      await buildingDetailService.delete(data.building.id);
       await goto('/facility/buildings');
     } catch (e: any) {
       console.error('Delete failed', e);
@@ -84,7 +82,7 @@
     }
 
     try {
-      await manageBuilding.update(data.building.id, {
+      await buildingDetailService.update(data.building.id, {
         iws_code,
         building_group: Number(building_group)
       });

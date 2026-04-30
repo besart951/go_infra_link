@@ -1,6 +1,4 @@
 <script lang="ts">
-  import type { UserRole } from '$lib/api/users.js';
-  import { createUser } from '$lib/api/users.js';
   import { getAllowedRolesForCreation } from '$lib/stores/auth.svelte';
   import { getErrorMessage, getFieldErrors } from '$lib/api/client.js';
   import { Button } from '$lib/components/ui/button/index.js';
@@ -13,6 +11,7 @@
   import { cn } from '$lib/utils.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { t as translate } from '$lib/i18n/index.js';
+  import { userRepository, type AllowedRole } from '$lib/infrastructure/api/userRepository.js';
 
   interface Props {
     onSuccess?: () => void;
@@ -28,7 +27,7 @@
   let email = $state('');
   let password = $state('');
   let isActive = $state(true);
-  let selectedRole = $state<import('$lib/api/users.js').AllowedRole | null>(null);
+  let selectedRole = $state<AllowedRole | null>(null);
   let openCombobox = $state(false);
 
   let isSubmitting = $state(false);
@@ -50,7 +49,7 @@
     fieldErrors = {};
 
     try {
-      await createUser({
+      await userRepository.create({
         first_name: firstName,
         last_name: lastName,
         email,

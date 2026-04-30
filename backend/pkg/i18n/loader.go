@@ -24,7 +24,7 @@ func NewLoader(basePath string) *Loader {
 // Load loads a translation file for a specific language.
 // filename should be the name of the file (e.g., "de_ch.json")
 // Returns the parsed translation data as a map.
-func (l *Loader) Load(filename string) (map[string]interface{}, error) {
+func (l *Loader) Load(filename string) (map[string]any, error) {
 	path := filepath.Join(l.basePath, filename)
 
 	data, err := os.ReadFile(path)
@@ -32,7 +32,7 @@ func (l *Loader) Load(filename string) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("failed to read translation file %s: %w", filename, err)
 	}
 
-	var translations map[string]interface{}
+	var translations map[string]any
 	if err := json.Unmarshal(data, &translations); err != nil {
 		return nil, fmt.Errorf("failed to parse translation file %s: %w", filename, err)
 	}
@@ -43,8 +43,8 @@ func (l *Loader) Load(filename string) (map[string]interface{}, error) {
 // LoadAll loads all translation files from the base directory.
 // Only .json files are loaded.
 // Returns a map of language -> translations.
-func (l *Loader) LoadAll() (map[string]map[string]interface{}, error) {
-	result := make(map[string]map[string]interface{})
+func (l *Loader) LoadAll() (map[string]map[string]any, error) {
+	result := make(map[string]map[string]any)
 
 	entries, err := os.ReadDir(l.basePath)
 	if err != nil {

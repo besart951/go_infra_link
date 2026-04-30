@@ -153,18 +153,18 @@ func (s *Service) UpsertUserPreference(ctx context.Context, input domainNotifica
 	}
 
 	if !preference.Channel.Valid() {
-		ve.Add("channel", "must be one of: email system both")
+		ve = ve.Add("channel", "must be one of: email system both")
 	}
 	if !preference.Frequency.Valid() {
-		ve.Add("frequency", "must be one of: immediate hourly daily weekly")
+		ve = ve.Add("frequency", "must be one of: immediate hourly daily weekly")
 	}
 	if preference.NotificationEmail != "" {
 		if _, err := mail.ParseAddress(preference.NotificationEmail); err != nil {
-			ve.Add("notification_email", "must be a valid email")
+			ve = ve.Add("notification_email", "must be a valid email")
 		}
 	}
 	if preference.Channel.AllowsEmail() && preference.NotificationEmail == "" {
-		ve.Add("notification_email", "is required")
+		ve = ve.Add("notification_email", "is required")
 	}
 	if len(ve.Fields) > 0 {
 		return nil, ve
@@ -656,26 +656,26 @@ func (s *Service) resolveRuleRecipients(ctx context.Context, rules []domainNotif
 func validateNotificationRule(rule *domainNotification.NotificationRule) error {
 	ve := domain.NewValidationError()
 	if strings.TrimSpace(rule.Name) == "" {
-		ve.Add("name", "is required")
+		ve = ve.Add("name", "is required")
 	}
 	if strings.TrimSpace(rule.EventKey) == "" {
-		ve.Add("event_key", "is required")
+		ve = ve.Add("event_key", "is required")
 	}
 	if !rule.RecipientType.Valid() {
-		ve.Add("recipient_type", "must be one of: users team project_users project_role")
+		ve = ve.Add("recipient_type", "must be one of: users team project_users project_role")
 	}
 	switch rule.RecipientType {
 	case domainNotification.RuleRecipientUsers:
 		if len(rule.RecipientUserIDs) == 0 {
-			ve.Add("recipient_user_ids", "is required")
+			ve = ve.Add("recipient_user_ids", "is required")
 		}
 	case domainNotification.RuleRecipientTeam:
 		if rule.RecipientTeamID == nil || *rule.RecipientTeamID == uuid.Nil {
-			ve.Add("recipient_team_id", "is required")
+			ve = ve.Add("recipient_team_id", "is required")
 		}
 	case domainNotification.RuleRecipientProjectRole:
 		if rule.RecipientRole == "" {
-			ve.Add("recipient_role", "is required")
+			ve = ve.Add("recipient_role", "is required")
 		}
 	}
 	if len(ve.Fields) == 0 {
@@ -896,7 +896,7 @@ func renderDigestBody(items []domainNotification.EmailOutbox) string {
 	var builder strings.Builder
 	builder.WriteString("Ihre gesammelten Benachrichtigungen:\n\n")
 	for index, item := range items {
-		builder.WriteString(fmt.Sprintf("%d. %s\n", index+1, item.Subject))
+		fmt.Fprintf(&builder, "%d. %s\n", index+1, item.Subject)
 		if strings.TrimSpace(item.Body) != "" {
 			builder.WriteString(strings.TrimSpace(item.Body))
 			builder.WriteString("\n")

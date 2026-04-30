@@ -1,75 +1,20 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getErrorMessage } from '$lib/api/client.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
-  import type { SystemNotification } from '$lib/domain/notification/index.js';
+  import { NotificationInboxPageState } from '$lib/components/notifications/NotificationInboxPageState.svelte.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
-  import { systemNotificationRepository } from '$lib/infrastructure/api/systemNotificationRepository.js';
   import BellIcon from '@lucide/svelte/icons/bell';
   import CheckIcon from '@lucide/svelte/icons/check';
   import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 
   const t = createTranslator();
-
-  let notifications = $state<SystemNotification[]>([]);
-  let unreadCount = $state(0);
-  let page = $state(1);
-  let totalPages = $state(1);
-  let unreadOnly = $state(false);
-  let isLoading = $state(true);
-  let error = $state<string | null>(null);
-
-  async function loadNotifications(nextPage = page) {
-    isLoading = true;
-    error = null;
-    try {
-      const result = await systemNotificationRepository.list({
-        page: nextPage,
-        limit: 20,
-        unread_only: unreadOnly
-      });
-      notifications = result.items;
-      unreadCount = result.unread_count;
-      page = result.page;
-      totalPages = result.total_pages || 1;
-    } catch (err) {
-      error = getErrorMessage(err);
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  async function markRead(notification: SystemNotification) {
-    if (notification.read_at) return;
-    try {
-      await systemNotificationRepository.markRead(notification.id);
-      await loadNotifications();
-    } catch (err) {
-      error = getErrorMessage(err);
-    }
-  }
-
-  async function markAllRead() {
-    try {
-      await systemNotificationRepository.markAllRead();
-      await loadNotifications(1);
-    } catch (err) {
-      error = getErrorMessage(err);
-    }
-  }
-
-  function formatDateTime(value: string): string {
-    return new Intl.DateTimeFormat('de-CH', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    }).format(new Date(value));
-  }
+  const state = new NotificationInboxPageState();
 
   onMount(() => {
-    loadNotifications(1);
+    void state.loadNotifications(1);
   });
 </script>
 
@@ -93,61 +38,66 @@
         <ArrowLeftIcon class="size-4" />
         {$t('hub.back_to_overview')}
       </Button>
-      <Badge variant={unreadCount > 0 ? 'default' : 'secondary'}>
-        {$t('notifications.inbox.unread_count', { count: unreadCount })}
+      <Badge variant={state.unreadCount > 0 ? 'default' : 'secondary'}>
+        {$t('notifications.inbox.unread_count', { count: state.unreadCount })}
       </Badge>
       <Button
-        variant={unreadOnly ? 'default' : 'outline'}
-        onclick={() => {
-          unreadOnly = !unreadOnly;
-          loadNotifications(1);
-        }}
+        variant={state.unreadOnly ? 'default' : 'outline'}
+        onclick={() => state.toggleUnreadOnly()}
       >
         {$t('notifications.inbox.unread_only')}
       </Button>
-      <Button variant="outline" onclick={markAllRead} disabled={unreadCount === 0}>
+      <Button
+        variant="outline"
+        onclick={() => state.markAllRead()}
+        disabled={state.unreadCount === 0}
+      >
         <CheckIcon class="size-4" />
         {$t('notifications.inbox.mark_all_read')}
       </Button>
-      <Button variant="outline" onclick={() => loadNotifications()} disabled={isLoading}>
-        <RefreshCwIcon class={`size-4${isLoading ? ' animate-spin' : ''}`} />
+      <Button
+        variant="outline"
+        onclick={() => state.loadNotifications()}
+        disabled={state.isLoading}
+      >
+        <RefreshCwIcon class={`size-4${state.isLoading ? ' animate-spin' : ''}`} />
         {$t('common.refresh')}
       </Button>
     </div>
   </header>
 
-  {#if error}
+  {#if state.error}
     <Card.Root>
-      <Card.Content class="py-4 text-sm text-destructive">{error}</Card.Content>
+      <Card.Content class="py-4 text-sm text-destructive">{state.error}</Card.Content>
     </Card.Root>
   {/if}
 
   <div class="flex flex-col gap-3">
-    {#if isLoading && notifications.length === 0}
+    {#if state.isLoading && state.notifications.length === 0}
       <Card.Root>
         <Card.Content class="py-8 text-center text-sm text-muted-foreground">
           {$t('common.loading')}
         </Card.Content>
       </Card.Root>
-    {:else if notifications.length === 0}
+    {:else if state.notifications.length === 0}
       <Card.Root>
         <Card.Content class="py-10 text-center text-sm text-muted-foreground">
           {$t('notifications.inbox.empty')}
         </Card.Content>
       </Card.Root>
     {:else}
-      {#each notifications as notification (notification.id)}
+      {#each state.notifications as notification (notification.id)}
         <Card.Root class={notification.read_at ? '' : 'border-primary/40'}>
           <Card.Header class="gap-2">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div class="min-w-0">
                 <Card.Title class="text-base leading-6">{notification.title}</Card.Title>
                 <Card.Description>
-                  {formatDateTime(notification.created_at)} · {notification.event_key}
+                  {state.formatDateTime(notification.created_at)} · {notification.event_key}
                 </Card.Description>
               </div>
               {#if !notification.read_at}
-                <Button variant="outline" size="sm" onclick={() => markRead(notification)}>
+                <Button variant="outline" size="sm" onclick={() => state.markRead(notification)}>
                   <CheckIcon class="size-4" />
                   {$t('notifications.inbox.mark_read')}
                 </Button>
@@ -167,18 +117,18 @@
   <footer class="flex items-center justify-between">
     <Button
       variant="outline"
-      disabled={page <= 1 || isLoading}
-      onclick={() => loadNotifications(page - 1)}
+      disabled={state.page <= 1 || state.isLoading}
+      onclick={() => state.loadNotifications(state.page - 1)}
     >
       {$t('common.previous')}
     </Button>
     <span class="text-sm text-muted-foreground">
-      {$t('messages.page_of', { page, total: totalPages })}
+      {$t('messages.page_of', { page: state.page, total: state.totalPages })}
     </span>
     <Button
       variant="outline"
-      disabled={page >= totalPages || isLoading}
-      onclick={() => loadNotifications(page + 1)}
+      disabled={state.page >= state.totalPages || state.isLoading}
+      onclick={() => state.loadNotifications(state.page + 1)}
     >
       {$t('common.next')}
     </Button>

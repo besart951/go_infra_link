@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { UserRole } from '$lib/api/users.js';
+  import type { UserRole } from '$lib/infrastructure/api/userRepository.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import { ShieldCheck, UserCircle } from '@lucide/svelte';
 

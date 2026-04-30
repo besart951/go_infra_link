@@ -2,6 +2,7 @@ package project
 
 import (
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/url"
 	"sort"
@@ -61,9 +62,9 @@ type ProjectCollaboratorPresence struct {
 }
 
 type ProjectFieldDeviceByFields struct {
-	DeviceID      string                 `json:"device_id"`
-	ChangedFields []string               `json:"changed_fields"`
-	FieldValues   map[string]interface{} `json:"field_values,omitempty"`
+	DeviceID      string         `json:"device_id"`
+	ChangedFields []string       `json:"changed_fields"`
+	FieldValues   map[string]any `json:"field_values,omitempty"`
 }
 
 type ProjectFieldDeviceEditState struct {
@@ -134,7 +135,7 @@ type projectCollaborationEntityDeltaMessage struct {
 	ActorID         string                               `json:"actor_id,omitempty"`
 	ControlCabinets []projectCollaborationControlCabinet `json:"control_cabinets,omitempty"`
 	SPSControllers  []projectCollaborationSPSController  `json:"sps_controllers,omitempty"`
-	FieldDevices    []map[string]interface{}             `json:"field_devices,omitempty"`
+	FieldDevices    []map[string]any                     `json:"field_devices,omitempty"`
 	At              time.Time                            `json:"at"`
 }
 
@@ -146,7 +147,7 @@ type projectCollaborationClientMessage struct {
 	DeviceIDs       []string                             `json:"device_ids,omitempty"`
 	ControlCabinets []projectCollaborationControlCabinet `json:"control_cabinets,omitempty"`
 	SPSControllers  []projectCollaborationSPSController  `json:"sps_controllers,omitempty"`
-	FieldDevices    []map[string]interface{}             `json:"field_devices,omitempty"`
+	FieldDevices    []map[string]any                     `json:"field_devices,omitempty"`
 }
 
 type projectCollaborationClient struct {
@@ -345,7 +346,7 @@ func (h *ProjectCollaborationHub) BroadcastSPSControllerDelta(projectID uuid.UUI
 	})
 }
 
-func (h *ProjectCollaborationHub) BroadcastFieldDeviceDelta(projectID uuid.UUID, actorID *uuid.UUID, fieldDevices []map[string]interface{}) {
+func (h *ProjectCollaborationHub) BroadcastFieldDeviceDelta(projectID uuid.UUID, actorID *uuid.UUID, fieldDevices []map[string]any) {
 	if len(fieldDevices) == 0 {
 		return
 	}
@@ -520,21 +521,19 @@ func refreshDeviceIDs(scope string, entityIDs []string) []string {
 	return entityIDs
 }
 
-func cloneFieldDeviceDeltas(fieldDevices []map[string]interface{}) []map[string]interface{} {
+func cloneFieldDeviceDeltas(fieldDevices []map[string]any) []map[string]any {
 	if len(fieldDevices) == 0 {
 		return nil
 	}
 
-	cloned := make([]map[string]interface{}, 0, len(fieldDevices))
+	cloned := make([]map[string]any, 0, len(fieldDevices))
 	for _, item := range fieldDevices {
 		if item == nil {
 			continue
 		}
 
-		copied := make(map[string]interface{}, len(item))
-		for key, value := range item {
-			copied[key] = value
-		}
+		copied := make(map[string]any, len(item))
+		maps.Copy(copied, item)
 		cloned = append(cloned, copied)
 	}
 
@@ -572,12 +571,12 @@ func toProjectCollaborationSPSController(spsController domainFacility.SPSControl
 	}
 }
 
-func normalizeFieldValues(values map[string]interface{}) map[string]interface{} {
+func normalizeFieldValues(values map[string]any) map[string]any {
 	if len(values) == 0 {
 		return nil
 	}
 
-	result := make(map[string]interface{}, len(values))
+	result := make(map[string]any, len(values))
 	for key, value := range values {
 		trimmedKey := strings.TrimSpace(key)
 		if trimmedKey == "" {

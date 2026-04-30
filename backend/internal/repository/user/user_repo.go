@@ -9,6 +9,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"gorm.io/gorm"
 )
 
@@ -18,12 +19,7 @@ type userRepo struct {
 }
 
 func NewUserRepository(db *gorm.DB) domainUser.UserRepository {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where("LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ? OR LOWER(email) LIKE ?", pattern, pattern, pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainUser.User](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository(db, userSearchCallback())
 	return &userRepo{
 		BaseRepository: baseRepo,
 		db:             db,
@@ -73,8 +69,7 @@ func (r *userRepo) GetPaginatedList(ctx context.Context, params domain.Paginatio
 
 	query := r.db.WithContext(ctx).Model(&domainUser.User{})
 	if strings.TrimSpace(params.Search) != "" {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(params.Search)) + "%"
-		query = query.Where("LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ? OR LOWER(email) LIKE ?", pattern, pattern, pattern)
+		query = userSearchCallback()(query, params.Search)
 	}
 
 	allowedColumns := map[string]string{
@@ -113,3 +108,7 @@ func (r *userRepo) GetPaginatedList(ctx context.Context, params domain.Paginatio
 }
 
 var _ domainUser.UserEmailRepository = (*userRepo)(nil)
+
+func userSearchCallback() gormbase.SearchCallback[*domainUser.User] {
+	return gormbase.TrigramSearchCallback[*domainUser.User](searchspec.Users.SearchColumns("")...)
+}

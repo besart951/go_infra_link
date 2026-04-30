@@ -14,8 +14,7 @@
   import ControlCabinetListView from '$lib/components/facility/control-cabinets/ControlCabinetListView.svelte';
   import SPSControllerListView from '$lib/components/facility/sps-controllers/SPSControllerListView.svelte';
   import FieldDeviceListView from '$lib/components/facility/field-device/FieldDeviceListView.svelte';
-  import { getProject } from '$lib/infrastructure/api/project.adapter.js';
-  import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
+  import { projectDetailService } from '$lib/components/project/ProjectDetailService.js';
   import type { ControlCabinet, FieldDevice, SPSController } from '$lib/domain/facility/index.js';
   import type { Project } from '$lib/domain/project/index.js';
   import type { User } from '$lib/domain/user/index.js';
@@ -297,7 +296,7 @@
     error = null;
 
     try {
-      project = await getProject(projectId);
+      project = await projectDetailService.getProject(projectId);
     } catch (loadError) {
       const message =
         loadError instanceof Error ? loadError.message : translate('projects.errors.load_failed');
@@ -312,7 +311,7 @@
     if (!projectId) return;
 
     try {
-      const response = await projectRepository.listUsers(projectId);
+      const response = await projectDetailService.listUsers(projectId);
       projectUsers = response.items;
     } catch (loadError) {
       console.error('Failed to load project users', loadError);

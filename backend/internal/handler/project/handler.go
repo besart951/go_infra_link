@@ -163,12 +163,12 @@ func (h *ProjectHandler) ensureProjectAccess(c *gin.Context, projectID uuid.UUID
 	return projectshared.EnsureProjectAccess(c, h.access, projectID)
 }
 
-func projectFieldDeviceDeltaPayload(fieldDevices []domainFacility.FieldDevice) []map[string]interface{} {
-	items := make([]map[string]interface{}, 0, len(fieldDevices))
+func projectFieldDeviceDeltaPayload(fieldDevices []domainFacility.FieldDevice) []map[string]any {
+	items := make([]map[string]any, 0, len(fieldDevices))
 	for _, item := range fieldDevices {
 		apparatNr := item.ApparatNr
 		systemPartID := item.SystemPartID
-		items = append(items, map[string]interface{}{
+		items = append(items, map[string]any{
 			"id":                            item.ID,
 			"bmk":                           item.BMK,
 			"description":                   item.Description,

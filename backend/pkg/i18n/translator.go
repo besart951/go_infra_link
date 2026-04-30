@@ -25,7 +25,7 @@ func NewTranslator(defaultLang string) *Translator {
 // LoadLanguage adds translations for a specific language.
 // translations should be a nested map where first level keys are namespaces
 // (e.g., "auth", "validation") and second level keys are message keys.
-func (t *Translator) LoadLanguage(lang string, translations map[string]interface{}) error {
+func (t *Translator) LoadLanguage(lang string, translations map[string]any) error {
 	if t.translations[lang] == nil {
 		t.translations[lang] = make(map[string]string)
 	}
@@ -78,7 +78,7 @@ func (t *Translator) GetPlural(lang, key string, count int) string {
 }
 
 // flatten converts nested maps into dot-separated keys
-func flatten(data map[string]interface{}, prefix string, result map[string]string) {
+func flatten(data map[string]any, prefix string, result map[string]string) {
 	for k, v := range data {
 		key := k
 		if prefix != "" {
@@ -86,7 +86,7 @@ func flatten(data map[string]interface{}, prefix string, result map[string]strin
 		}
 
 		switch val := v.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			flatten(val, key, result)
 		case string:
 			result[key] = val

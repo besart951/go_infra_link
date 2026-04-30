@@ -7,6 +7,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -29,10 +30,15 @@ func (r *spsControllerSystemTypeRepo) queryWithFieldDeviceCounts(ctx context.Con
 }
 
 func applySPSControllerSystemTypeSearch(query *gorm.DB, search string) *gorm.DB {
-	pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
+	columns := searchspec.SPSControllerSystemTypes.SearchColumns("sps_controller_system_types.")
+	columns = append(columns, searchspec.SPSControllers.NamedSearchColumns("sps_controllers.", "device_name")...)
+	columns = append(columns, searchspec.SystemTypes.SearchColumns("system_types.")...)
+
 	return query.Joins("LEFT JOIN sps_controllers ON sps_controllers.id = sps_controller_system_types.sps_controller_id").
 		Joins("LEFT JOIN system_types ON system_types.id = sps_controller_system_types.system_type_id").
-		Where("LOWER(sps_controller_system_types.document_name) LIKE ? OR LOWER(sps_controllers.device_name) LIKE ? OR LOWER(system_types.name) LIKE ?", pattern, pattern, pattern)
+		Scopes(func(db *gorm.DB) *gorm.DB {
+			return gormbase.ApplyTrigramSearch(db, search, columns...)
+		})
 }
 
 func NewSPSControllerSystemTypeRepository(db *gorm.DB) domainFacility.SPSControllerSystemTypeStore {

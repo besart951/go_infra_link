@@ -2,11 +2,11 @@ package facilitysql
 
 import (
 	"context"
-	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
+	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -17,12 +17,9 @@ type specificationRepo struct {
 }
 
 func NewSpecificationRepository(db *gorm.DB) domainFacility.SpecificationStore {
-	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
-		pattern := "%" + strings.ToLower(strings.TrimSpace(search)) + "%"
-		return query.Where("LOWER(specification_supplier) LIKE ? OR LOWER(specification_brand) LIKE ? OR LOWER(specification_type) LIKE ?", pattern, pattern, pattern)
-	}
-
-	baseRepo := gormbase.NewBaseRepository[*domainFacility.Specification](db, searchCallback)
+	baseRepo := gormbase.NewBaseRepository(db,
+		gormbase.TrigramSearchCallback[*domainFacility.Specification](searchspec.Specifications.SearchColumns("")...),
+	)
 	return &specificationRepo{
 		BaseRepository: baseRepo,
 		db:             db,

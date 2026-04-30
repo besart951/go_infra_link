@@ -45,8 +45,8 @@ func extractLocale(acceptLanguage, defaultLocale string) string {
 
 	// Extract language-region part (before quality parameter)
 	langPart := part
-	if idx := strings.Index(part, ";"); idx != -1 {
-		langPart = part[:idx]
+	if before, _, found := strings.Cut(part, ";"); found {
+		langPart = before
 	}
 
 	langPart = strings.TrimSpace(langPart)

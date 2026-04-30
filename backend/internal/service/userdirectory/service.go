@@ -205,13 +205,9 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 	page, limit = domain.NormalizePagination(page, limit, 10)
 	total := int64(len(visible))
 	offset := (page - 1) * limit
-	if offset > len(visible) {
-		offset = len(visible)
-	}
+	offset = min(offset, len(visible))
 	end := offset + limit
-	if end > len(visible) {
-		end = len(visible)
-	}
+	end = min(end, len(visible))
 
 	filters := make([]TeamFilter, 0, len(teamCounts))
 	for id, count := range teamCounts {
