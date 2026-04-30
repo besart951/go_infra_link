@@ -4,6 +4,7 @@ import type {
   SpreadsheetWorkbook,
   WorksheetPreview
 } from '$lib/domain/excel/index.js';
+import { t as translate } from '$lib/i18n/index.js';
 
 const SUPPORTED_EXTENSIONS = ['.xlsx', '.xlsm', '.csv'];
 
@@ -53,13 +54,15 @@ export class WorkbookService {
       this.workbook = workbook;
 
       if (workbook.sheetNames.length === 0) {
-        this.errorMessage = 'Die Arbeitsmappe enthält keine Arbeitsblätter.';
+        this.errorMessage = translate('excel.worksheet_preview.errors.no_worksheets');
       }
     } catch (error) {
       this.workbook = null;
       this.selectedWorksheetName = '';
       this.errorMessage =
-        error instanceof Error ? error.message : 'Excel-Datei konnte nicht gelesen werden.';
+        error instanceof Error
+          ? error.message
+          : translate('excel.worksheet_preview.errors.read_failed');
     } finally {
       this.isLoading = false;
     }
@@ -78,16 +81,14 @@ export class WorkbookService {
 
   private validateFile(file: File): void {
     if (!file) {
-      throw new Error('Keine Datei ausgewählt.');
+      throw new Error(translate('excel.worksheet_preview.errors.no_file'));
     }
 
     const fileName = file.name.toLowerCase();
     const supported = SUPPORTED_EXTENSIONS.some((extension) => fileName.endsWith(extension));
 
     if (!supported) {
-      throw new Error(
-        'Für die Arbeitsblatt-Vorschau werden nur .xlsx-, .xlsm- und .csv-Dateien unterstützt.'
-      );
+      throw new Error(translate('excel.worksheet_preview.errors.unsupported_file'));
     }
   }
 

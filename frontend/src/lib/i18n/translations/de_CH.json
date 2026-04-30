@@ -983,6 +983,59 @@
     "share_project": "Projekt teilen",
     "new_project": "Neues Projekt"
   },
+  "excel": {
+    "import": {
+      "title": "Excel-Import",
+      "description": "Laden Sie eine Excel-Datei hoch, um Objektdaten und BACnet-Objekte direkt im Browser zu prüfen.",
+      "tabs": {
+        "object_importer": "Objektdaten-Importer",
+        "worksheet_preview": "Arbeitsblatt-Vorschau"
+      },
+      "progress": {
+        "waiting": "Warten auf Datei...",
+        "preparing": "Scanner wird vorbereitet...",
+        "ready": "Scanner-Ergebnis bereit.",
+        "cancelled": "Lesevorgang abgebrochen."
+      },
+      "toasts": {
+        "loaded_prepared": "Excel-Datei geladen und Objekt-/BACnet-Daten vorbereitet."
+      },
+      "errors": {
+        "read_failed": "Excel-Datei konnte nicht gelesen werden.",
+        "preview_load_failed": "Arbeitsblatt-Vorschau konnte nicht geladen werden.",
+        "no_permission": "Sie haben keine Berechtigung, Excel-Daten zu importieren."
+      }
+    },
+    "worksheet_preview": {
+      "loading_workbook": "Arbeitsmappe wird gelesen...",
+      "toasts": {
+        "workbook_loaded": "Excel-Arbeitsmappe geladen."
+      },
+      "errors": {
+        "no_worksheets": "Die Arbeitsmappe enthält keine Arbeitsblätter.",
+        "read_failed": "Excel-Datei konnte nicht gelesen werden.",
+        "no_file": "Keine Datei ausgewählt.",
+        "unsupported_file": "Für die Arbeitsblatt-Vorschau werden nur .xlsx-, .xlsm- und .csv-Dateien unterstützt."
+      },
+      "dropzone": {
+        "aria_label": "Tabellendatei ablegen oder Dateiauswahl öffnen",
+        "title": "Excel- oder CSV-Datei hier ablegen",
+        "supported_formats": "Unterstützte Formate: .xlsx, .xlsm, .csv",
+        "choose_file": "Datei auswählen"
+      },
+      "selector": {
+        "title": "Arbeitsblätter",
+        "count": "{count} Arbeitsblätter gefunden",
+        "active": "Aktives Arbeitsblatt"
+      },
+      "grid": {
+        "no_workbook": "Noch keine Arbeitsmappe geladen.",
+        "empty_worksheet": "Das ausgewählte Arbeitsblatt enthält keine Werte.",
+        "dimensions": "{rows} Zeilen | {columns} Spalten",
+        "truncated": "Vorschau auf die ersten {count} Zeilen"
+      }
+    }
+  },
   "roles": {
     "page": {
       "title": "Rollen & Berechtigungen",
@@ -1804,6 +1857,103 @@
         "started": "Export gestartet. Status wird aktualisiert...",
         "completed": "Export abgeschlossen. Bereit zum Download.",
         "start_failed": "Export konnte nicht gestartet werden"
+      }
+    },
+    "importer": {
+      "title": "Feldgeräte-Importer",
+      "no_worksheet": "Kein Arbeitsblatt ausgewählt",
+      "empty_prompt": "Nach der Arbeitsblatt-Auswahl transformieren, um Schaltschrank, SPS, Systemtypen, Feldgeräte und BACnet-Objekte als Baum zu prüfen.",
+      "actions": {
+        "transform": "Transformieren",
+        "import": "Import starten"
+      },
+      "summary": {
+        "control_cabinet": "Schaltschrank",
+        "system_types": "SPS-Systemtypen",
+        "field_devices": "Feldgeräte",
+        "bacnet_objects": "BACnet-Objekte",
+        "validation": "Validierung",
+        "validation_counts": "{errors} Fehler / {warnings} Warnungen"
+      },
+      "report": {
+        "success": "{count} Feldgeräte erfolgreich importiert.",
+        "partial": "{success} Feldgeräte importiert, {failed} fehlgeschlagen.",
+        "failed": "Import fehlgeschlagen.",
+        "created_entities": "Schaltschrank: {controlCabinet} · SPS: {spsController}"
+      },
+      "diagnostics": {
+        "title": "Fundstellen"
+      },
+      "tree": {
+        "title": "Objektbaum",
+        "root": "Schaltschrank {controlCabinet} · SPS {sps}",
+        "device_meta": " · Zeile {row} · {count} BACnet",
+        "no_text_fix": "(kein Text-Fix)"
+      },
+      "entities": {
+        "worksheet": "Arbeitsblatt",
+        "building": "Gebäude",
+        "control_cabinet": "Schaltschrank",
+        "sps_controller": "SPS-Regler",
+        "sps_controller_system_type": "SPS-Systemtyp",
+        "field_device": "Feldgerät",
+        "bacnet_object": "BACnet-Objekt"
+      },
+      "errors": {
+        "transform_prepare_failed": "Transformation konnte nicht vorbereitet werden.",
+        "incomplete_plan": "Importplan ist unvollständig. Bitte erneut transformieren.",
+        "created_system_type_missing": "SPS-Controller-Systemtyp wurde nach der Erstellung nicht gefunden.",
+        "system_types_unresolved": "SPS-Controller-Systemtypen konnten nicht vollständig aufgelöst werden.",
+        "field_device_create_failed": "Feldgerät konnte nicht erstellt werden."
+      },
+      "validation": {
+        "header_missing": "Die Export-Kopfzeile mit \"BACnet Object Name\" wurde nicht gefunden.",
+        "no_field_device_rows": "Im ausgewählten Arbeitsblatt wurden keine Feldgeräte-Zeilen gefunden.",
+        "object_name_format": "Der BACnet Object Name passt nicht zum Exportformat.",
+        "iws_missing": "Der IWS-Code konnte nicht aus dem BACnet Object Name gelesen werden.",
+        "building_group_missing": "Die Gebäudegruppe konnte nicht aus dem BACnet Object Name gelesen werden.",
+        "building_not_found": "Kein bestehendes Gebäude für IWS \"{iws}\" und Gruppe \"{group}\" gefunden.",
+        "control_cabinet_required": "Die Schaltschrank-Nr. ist erforderlich.",
+        "control_cabinet_exists": "Der Schaltschrank \"{value}\" existiert für dieses Gebäude bereits.",
+        "ga_device_required": "Das GA-Gerät ist erforderlich.",
+        "ga_device_format": "Das GA-Gerät muss aus genau 3 Grossbuchstaben bestehen.",
+        "device_name_required": "Der Device Name ist erforderlich.",
+        "device_name_max": "Der Device Name darf maximal 100 Zeichen lang sein.",
+        "ip_invalid": "IP-Adresse muss eine gültige IPv4-Adresse sein.",
+        "gateway_invalid": "Gateway muss eine gültige IPv4-Adresse sein.",
+        "subnet_invalid": "Subnetz muss eine gültige IPv4-Subnetzmaske sein.",
+        "vlan_range": "VLAN muss eine Zahl zwischen 1 und 4094 sein.",
+        "bacnet_without_field_device": "BACnet-Objekt ohne vorherige Feldgeräte-Zeile gefunden.",
+        "unclassified_row": "Diese Zeile enthält Werte, konnte aber keiner Import-Art zugeordnet werden.",
+        "field_device_object_name_format": "Der BACnet Object Name der Feldgeräte-Zeile passt nicht zum Exportformat.",
+        "iws_mismatch": "IWS-Code \"{value}\" passt nicht zum Arbeitsblatt-IWS \"{expected}\".",
+        "building_group_mismatch": "Gebäudegruppe \"{value}\" passt nicht zur Arbeitsblatt-Gruppe \"{expected}\".",
+        "ga_device_mismatch": "GA-Gerät \"{value}\" passt nicht zum Arbeitsblatt-GA \"{expected}\".",
+        "sps_system_type_number_missing": "Die SPS-Systemtyp-Nummer konnte nicht aus dem BACnet Object Name gelesen werden.",
+        "apparat_nr_missing_or_range": "Die Apparatnummer konnte nicht aus dem Geräteanteil gelesen werden oder liegt ausserhalb 1-99.",
+        "empty_value": "(leer)",
+        "system_part_not_found": "Anlageteil \"{value}\" wurde nicht gefunden.",
+        "apparat_not_found": "Apparat \"{value}\" wurde nicht gefunden.",
+        "apparat_system_part_unlinked": "Apparat \"{apparat}\" ist nicht mit Anlageteil \"{systemPart}\" verknüpft.",
+        "bmk_max": "BMK darf maximal 10 Zeichen lang sein.",
+        "remark_max": "Bemerkung darf maximal 250 Zeichen lang sein.",
+        "row_label": "Zeile {row}",
+        "bacnet_object_name_format": "Der BACnet Object Name der BACnet-Zeile passt nicht zum Exportformat.",
+        "bacnet_address_format": "Die BACnet-Adresse muss aus Softwaretyp und Nummer bestehen, z.B. AI01.",
+        "software_type_unsupported": "Softwaretyp \"{type}\" wird nicht unterstützt.",
+        "text_fix_required": "Text-Fix ist für BACnet-Objekte erforderlich.",
+        "text_fix_max": "Text-Fix darf maximal 250 Zeichen lang sein.",
+        "system_type_definition_missing": "Keine Systemtyp-Definition mit Nummernbereich für {number} gefunden.",
+        "sps_system_type": "SPS-Systemtyp",
+        "sps_system_type_with_number": "SPS-Systemtyp {number}",
+        "field_device_exists": "Feldgerät existiert bereits im Ziel-Controller ({systemType}, {systemPart}/{apparat}{apparatNr}).",
+        "duplicate_apparat_nr": "Doppelte Apparatnummer: dieselbe Kombination kommt bereits in Zeile {row} vor.",
+        "notification_not_numeric": "Notification \"{value}\" ist keine Zahl und wird ohne Referenz importiert.",
+        "notification_class_not_found": "Notification Class NC {value} wurde nicht gefunden und wird leer importiert.",
+        "state_text_not_found": "State Text \"{value}\" wurde nicht gefunden und wird leer importiert.",
+        "alarm_type_not_found": "Alarmtyp \"{value}\" wurde nicht gefunden und wird leer importiert.",
+        "hardware_quantity_range": "Hardware-Anzahl muss eine Zahl zwischen 0 und 255 sein.",
+        "multiple_hardware_columns": "Mehrere Hardware-Spalten sind gesetzt. Import verwendet den ersten Wert."
       }
     },
     "search": {

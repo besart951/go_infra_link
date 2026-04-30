@@ -2,12 +2,25 @@
   import Dropzone from './Dropzone.svelte';
   import WorksheetSelector from './WorksheetSelector.svelte';
   import DataGrid from './DataGrid.svelte';
+  import FieldDeviceImportPanel from './FieldDeviceImportPanel.svelte';
   import { WorkbookService } from './WorkbookService.svelte.js';
+  import { FieldDeviceImportService } from './FieldDeviceImportService.svelte.js';
   import { SheetJsWorkbookParser } from '$lib/infrastructure/excel/sheetJsWorkbookParser.js';
   import { addToast } from '$lib/components/toast.svelte';
+  import { createTranslator } from '$lib/i18n/translator.js';
 
+  const t = createTranslator();
   const workbookService = new WorkbookService(new SheetJsWorkbookParser(), {
     visibleRowLimit: 500
+  });
+  const fieldDeviceImportService = new FieldDeviceImportService();
+  let lastImportSelectionKey = $state('');
+
+  $effect(() => {
+    const nextKey = `${workbookService.workbook?.fileName ?? ''}|${workbookService.selectedWorksheetName}`;
+    if (nextKey === lastImportSelectionKey) return;
+    lastImportSelectionKey = nextKey;
+    fieldDeviceImportService.clearTransform();
   });
 
   async function handleFileSelected(file: File): Promise<void> {
@@ -19,7 +32,7 @@
     }
 
     if (workbookService.workbook) {
-      addToast('Excel-Arbeitsmappe geladen.', 'success');
+      addToast($t('excel.worksheet_preview.toasts.workbook_loaded'), 'success');
     }
   }
 </script>
@@ -41,7 +54,7 @@
 
   {#if workbookService.isLoading}
     <div class="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
-      Arbeitsmappe wird gelesen...
+      {$t('excel.worksheet_preview.loading_workbook')}
     </div>
   {/if}
 
@@ -54,11 +67,17 @@
     />
   {/if}
 
+  <FieldDeviceImportPanel
+    worksheet={workbookService.selectedWorksheet}
+    service={fieldDeviceImportService}
+  />
+
   <DataGrid
     worksheet={workbookService.selectedWorksheet}
     rows={workbookService.displayRows}
     columnLabels={workbookService.columnLabels}
     isTruncated={workbookService.isPreviewTruncated}
     visibleRowLimit={workbookService.visibleRowLimit}
+    cellMarkers={fieldDeviceImportService.cellMarkers}
   />
 </div>

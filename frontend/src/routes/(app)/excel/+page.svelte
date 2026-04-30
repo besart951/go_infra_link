@@ -6,6 +6,8 @@
   import ExcelSessionSummary from '$lib/components/excel/ExcelSessionSummary.svelte';
   import * as Tabs from '$lib/components/ui/tabs/index.js';
   import { addToast } from '$lib/components/toast.svelte';
+  import { createTranslator } from '$lib/i18n/translator.js';
+  import { t as translate } from '$lib/i18n/index.js';
   import type { StartExcelReadSessionUseCase } from '$lib/application/useCases/excel/startExcelReadSessionUseCase.js';
   import type { ExcelReadSession } from '$lib/domain/excel/index.js';
   import { FileSpreadsheet, Table2 } from '@lucide/svelte';
@@ -13,15 +15,19 @@
   type SpreadsheetPreviewerModule =
     typeof import('$lib/components/excel/spreadsheet-preview/SpreadsheetPreviewer.svelte');
 
+  const t = createTranslator();
+
   let readSessionUseCase: StartExcelReadSessionUseCase | null = null;
   let readSessionGeneration = 0;
   let spreadsheetPreviewerModule = $state<SpreadsheetPreviewerModule | null>(null);
-  let spreadsheetPreviewerLoad = $state<Promise<SpreadsheetPreviewerModule> | null>(null);
+  let spreadsheetPreviewerLoad: Promise<void> | null = null;
+  let isSpreadsheetPreviewerLoading = $state(false);
+  let spreadsheetPreviewerLoadFailed = $state(false);
 
   let activeImporterTab = $state('object-importer');
   let isReading = $state(false);
   let progressPercent = $state(0);
-  let progressMessage = $state('Warten auf Datei...');
+  let progressMessage = $state(translate('excel.import.progress.waiting'));
   let errorMessage = $state<string | null>(null);
   let preparedSession = $state<ExcelReadSession | null>(null);
 
@@ -38,19 +44,25 @@
     return readSessionUseCase;
   }
 
-  function loadSpreadsheetPreviewer(): Promise<SpreadsheetPreviewerModule> {
-    if (spreadsheetPreviewerModule) {
-      return Promise.resolve(spreadsheetPreviewerModule);
-    }
+  function loadSpreadsheetPreviewer(): void {
+    if (spreadsheetPreviewerModule || spreadsheetPreviewerLoad) return;
 
-    spreadsheetPreviewerLoad ??=
-      import('$lib/components/excel/spreadsheet-preview/SpreadsheetPreviewer.svelte').then(
-        (module) => {
-          spreadsheetPreviewerModule = module;
-          return module;
-        }
-      );
-    return spreadsheetPreviewerLoad;
+    isSpreadsheetPreviewerLoading = true;
+    spreadsheetPreviewerLoadFailed = false;
+    spreadsheetPreviewerLoad = import(
+      '$lib/components/excel/spreadsheet-preview/SpreadsheetPreviewer.svelte'
+    )
+      .then((module) => {
+        spreadsheetPreviewerModule = module;
+      })
+      .catch((error) => {
+        console.error('Failed to load spreadsheet previewer:', error);
+        spreadsheetPreviewerLoadFailed = true;
+      })
+      .finally(() => {
+        isSpreadsheetPreviewerLoading = false;
+        spreadsheetPreviewerLoad = null;
+      });
   }
 
   async function startReadSession(file: File): Promise<void> {
@@ -59,7 +71,7 @@
     errorMessage = null;
     preparedSession = null;
     progressPercent = 0;
-    progressMessage = 'Scanner wird vorbereitet...';
+    progressMessage = translate('excel.import.progress.preparing');
 
     try {
       const useCase = await getReadSessionUseCase();
@@ -74,13 +86,13 @@
 
       preparedSession = session;
       progressPercent = 100;
-      progressMessage = 'Scanner-Ergebnis bereit.';
-      addToast('Excel-Datei geladen und Objekt-/BACnet-Daten vorbereitet.', 'success');
+      progressMessage = translate('excel.import.progress.ready');
+      addToast(translate('excel.import.toasts.loaded_prepared'), 'success');
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Excel-Datei konnte nicht gelesen werden.';
-      if (message === 'Lesevorgang abgebrochen.') {
-        progressMessage = 'Lesevorgang abgebrochen.';
+        error instanceof Error ? error.message : translate('excel.import.errors.read_failed');
+      if (message === translate('excel.import.progress.cancelled')) {
+        progressMessage = translate('excel.import.progress.cancelled');
         return;
       }
 
@@ -99,25 +111,30 @@
     readSessionGeneration += 1;
     readSessionUseCase?.cancel();
     isReading = false;
-    progressMessage = 'Lesevorgang abgebrochen.';
+    progressMessage = translate('excel.import.progress.cancelled');
     progressPercent = 0;
   }
 
   onDestroy(() => {
     readSessionUseCase?.cancel();
   });
+
+  $effect(() => {
+    if (activeImporterTab === 'worksheet-preview') {
+      loadSpreadsheetPreviewer();
+    }
+  });
 </script>
 
 <svelte:head>
-  <title>Excel-Import | Infra Link</title>
+  <title>{$t('excel.import.title')} | Infra Link</title>
 </svelte:head>
 
 <div class="flex flex-col gap-6">
   <div>
-    <h1 class="text-2xl font-semibold tracking-tight">Excel-Import</h1>
+    <h1 class="text-2xl font-semibold tracking-tight">{$t('excel.import.title')}</h1>
     <p class="text-sm text-muted-foreground">
-      Laden Sie eine Excel-Datei hoch, um Objektdaten und BACnet-Objekte direkt im Browser zu
-      prüfen.
+      {$t('excel.import.description')}
     </p>
   </div>
 
@@ -126,11 +143,11 @@
       <Tabs.List class="w-full justify-start overflow-x-auto sm:w-fit">
         <Tabs.Trigger value="object-importer" class="gap-2">
           <FileSpreadsheet class="size-4" />
-          Objektdaten-Importer
+          {$t('excel.import.tabs.object_importer')}
         </Tabs.Trigger>
         <Tabs.Trigger value="worksheet-preview" class="gap-2">
           <Table2 class="size-4" />
-          Arbeitsblatt-Vorschau
+          {$t('excel.import.tabs.worksheet_preview')}
         </Tabs.Trigger>
       </Tabs.List>
 
@@ -161,26 +178,26 @@
 
       <Tabs.Content value="worksheet-preview" class="mt-4">
         {#if activeImporterTab === 'worksheet-preview'}
-          {#await loadSpreadsheetPreviewer()}
+          {#if isSpreadsheetPreviewerLoading}
             <div class="rounded-lg border bg-muted/20 p-4">
               <div class="h-10 animate-pulse rounded bg-muted"></div>
             </div>
-          {:then module}
-            {@const Previewer = module.default}
-            <Previewer />
-          {:catch}
+          {:else if spreadsheetPreviewerLoadFailed}
             <div
               class="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
             >
-              Arbeitsblatt-Vorschau konnte nicht geladen werden.
+              {$t('excel.import.errors.preview_load_failed')}
             </div>
-          {/await}
+          {:else if spreadsheetPreviewerModule}
+            {@const Previewer = spreadsheetPreviewerModule.default}
+            <Previewer />
+          {/if}
         {/if}
       </Tabs.Content>
     </Tabs.Root>
   {:else}
     <div class="rounded-lg border bg-muted p-4 text-center text-sm text-muted-foreground">
-      Sie haben keine Berechtigung, Excel-Daten zu importieren.
+      {$t('excel.import.errors.no_permission')}
     </div>
   {/if}
 </div>
