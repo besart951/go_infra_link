@@ -2,11 +2,13 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { Button } from '$lib/components/ui/button/index.js';
+  import * as Dialog from '$lib/components/ui/dialog/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
-  import { ArrowLeft, Plus, Trash2 } from '@lucide/svelte';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
+  import { Trash2 } from '@lucide/svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import { teamsStore } from '$lib/stores/list/entityStores.js';
   import type { Team } from '$lib/domain/entities/team.js';
@@ -34,61 +36,17 @@
 </svelte:head>
 
 <div class="flex flex-col gap-6">
-  <div class="flex items-start justify-between gap-4">
-    <div>
-      <h1 class="text-3xl font-bold tracking-tight">{$t('navigation.teams')}</h1>
-      <p class="mt-1 text-muted-foreground">{$t('pages.teams_desc')}</p>
-    </div>
-    <div class="flex flex-col gap-2 sm:flex-row">
-      <Button variant="outline" href="/users">
-        <ArrowLeft class="size-4" />
-        {$t('hub.back_to_overview')}
-      </Button>
-      {#if canPerform('create', 'team')}
-        <Button variant="outline" onclick={() => (state.createOpen = !state.createOpen)}>
-          <Plus class="mr-2 h-4 w-4" />
-          {$t('pages.create_team')}
-        </Button>
-      {/if}
-    </div>
-  </div>
-
-  {#if state.createOpen}
-    <div class="rounded-lg border bg-background p-4">
-      <div class="grid gap-3 md:grid-cols-3">
-        <div class="md:col-span-1">
-          <label class="text-sm font-medium" for="team_name">{$t('common.name')}</label>
-          <Input
-            id="team_name"
-            placeholder={$t('messages.team_name_placeholder')}
-            bind:value={state.form.name}
-            disabled={state.createBusy}
-          />
-        </div>
-        <div class="md:col-span-2">
-          <label class="text-sm font-medium" for="team_desc"
-            >{$t('messages.team_description')}</label
-          >
-          <Input
-            id="team_desc"
-            placeholder={$t('pages.optional')}
-            bind:value={state.form.description}
-            disabled={state.createBusy}
-          />
-        </div>
-      </div>
-      <div class="mt-4 flex items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          onclick={() => (state.createOpen = false)}
-          disabled={state.createBusy}>{$t('common.cancel')}</Button
-        >
-        <Button onclick={() => state.submitCreate()} disabled={!state.canSubmitCreate()}
-          >{$t('common.create')}</Button
-        >
-      </div>
-    </div>
-  {/if}
+  <EntityListHeader
+    title={$t('navigation.teams')}
+    description={$t('pages.teams_desc')}
+    infoLabel={$t('common.info')}
+    backHref="/users"
+    backLabel={$t('hub.back_to_overview')}
+    createLabel={$t('pages.create_team')}
+    canCreate={canPerform('create', 'team')}
+    createActive={state.createOpen}
+    onCreateClick={() => (state.createOpen = true)}
+  />
 
   <PaginatedList
     state={$teamsStore}
@@ -130,5 +88,44 @@
     {/snippet}
   </PaginatedList>
 </div>
+
+<Dialog.Root bind:open={state.createOpen}>
+  <Dialog.Content class="sm:max-w-2xl">
+    <Dialog.Header>
+      <Dialog.Title>{$t('pages.create_team')}</Dialog.Title>
+      <Dialog.Description>{$t('pages.teams_desc')}</Dialog.Description>
+    </Dialog.Header>
+
+    <div class="grid gap-3 md:grid-cols-3">
+      <div class="md:col-span-1">
+        <label class="text-sm font-medium" for="team_name">{$t('common.name')}</label>
+        <Input
+          id="team_name"
+          placeholder={$t('messages.team_name_placeholder')}
+          bind:value={state.form.name}
+          disabled={state.createBusy}
+        />
+      </div>
+      <div class="md:col-span-2">
+        <label class="text-sm font-medium" for="team_desc">{$t('messages.team_description')}</label>
+        <Input
+          id="team_desc"
+          placeholder={$t('pages.optional')}
+          bind:value={state.form.description}
+          disabled={state.createBusy}
+        />
+      </div>
+    </div>
+
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (state.createOpen = false)} disabled={state.createBusy}>
+        {$t('common.cancel')}
+      </Button>
+      <Button onclick={() => state.submitCreate()} disabled={!state.canSubmitCreate()}>
+        {$t('common.create')}
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
 
 <ConfirmDialog />

@@ -13,22 +13,24 @@ import (
 )
 
 type Config struct {
-	AppEnv            string
-	LogLevel          string
-	HTTPAddr          string
-	SwaggerEnabled    bool
-	JWTSecret         string
-	AccessTokenTTL    time.Duration
-	RefreshTokenTTL   time.Duration
-	CookieDomain      string
-	CookieSecure      bool
-	TrustedProxies    []string
-	SeedUserEnabled   bool
-	SeedUserFirstName string
-	SeedUserLastName  string
-	SeedUserEmail     string
-	SeedUserPassword  string
-	DBConfig          DBConfig
+	AppEnv                        string
+	LogLevel                      string
+	HTTPAddr                      string
+	SwaggerEnabled                bool
+	JWTSecret                     string
+	AccessTokenTTL                time.Duration
+	RefreshTokenTTL               time.Duration
+	CookieDomain                  string
+	CookieSecure                  bool
+	TrustedProxies                []string
+	SeedUserEnabled               bool
+	SeedUserFirstName             string
+	SeedUserLastName              string
+	SeedUserEmail                 string
+	SeedUserPassword              string
+	SeedDummyNotificationsEnabled bool
+	SeedDummyNotificationsEmail   string
+	DBConfig                      DBConfig
 }
 
 type DBConfig struct {
@@ -68,6 +70,7 @@ func Load() (Config, error) {
 	}
 
 	applySeedUserConfig(&cfg, env)
+	applySeedDummyNotificationConfig(&cfg, env)
 	cfg.DBConfig.Dsn = resolveDatabaseDSN(env)
 
 	if err := validateConfig(cfg); err != nil {
@@ -163,6 +166,14 @@ func applySeedUserConfig(cfg *Config, env envParser) {
 	cfg.SeedUserPassword = env.String("SEED_USER_PASSWORD", passwordDefault)
 }
 
+func applySeedDummyNotificationConfig(cfg *Config, env envParser) {
+	cfg.SeedDummyNotificationsEnabled = env.Bool("SEED_DUMMY_NOTIFICATIONS", !IsProduction(cfg.AppEnv))
+	cfg.SeedDummyNotificationsEmail = env.String(
+		"SEED_DUMMY_NOTIFICATIONS_EMAIL",
+		cfg.SeedUserEmail,
+	)
+}
+
 func seedUserDefaults(appEnv string) (firstName, lastName, email, password string) {
 	if IsProduction(appEnv) {
 		return "", "", "", ""
@@ -208,6 +219,11 @@ func validateConfig(cfg Config) error {
 			errs = append(errs, fmt.Errorf("SEED_USER_PASSWORD is required when SEED_USER_ENABLED=true in production"))
 		case cfg.SeedUserPassword == "password":
 			errs = append(errs, fmt.Errorf("SEED_USER_PASSWORD must not use the default development password in production"))
+		}
+	}
+	if IsProduction(cfg.AppEnv) && cfg.SeedDummyNotificationsEnabled {
+		if strings.TrimSpace(cfg.SeedDummyNotificationsEmail) == "" {
+			errs = append(errs, fmt.Errorf("SEED_DUMMY_NOTIFICATIONS_EMAIL is required when SEED_DUMMY_NOTIFICATIONS=true in production"))
 		}
 	}
 

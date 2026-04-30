@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
+  import * as Dialog from '$lib/components/ui/dialog/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
-  import { ArrowLeft, Plus, Pencil, Trash2, Eye } from '@lucide/svelte';
+  import { Pencil, Trash2, Eye } from '@lucide/svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { phaseListStore } from '$lib/stores/phases/phaseListStore.js';
   import type { Phase } from '$lib/domain/phase/index.js';
@@ -27,32 +29,17 @@
 </svelte:head>
 
 <div class="flex flex-col gap-6">
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-2xl font-semibold tracking-tight">{$t('phases.page.heading')}</h1>
-      <p class="text-sm text-muted-foreground">{$t('phases.page.description')}</p>
-    </div>
-    <div class="flex flex-col gap-2 sm:flex-row">
-      <Button variant="outline" href="/projects">
-        <ArrowLeft class="size-4" />
-        {$t('hub.back_to_overview')}
-      </Button>
-      {#if !state.showForm && canPerform('create', 'phase')}
-        <Button onclick={() => state.handleCreate()}>
-          <Plus class="mr-2 size-4" />
-          {$t('phases.page.new')}
-        </Button>
-      {/if}
-    </div>
-  </div>
-
-  {#if state.showForm}
-    <PhaseForm
-      initialData={state.editingPhase}
-      onSuccess={() => state.handleSuccess()}
-      onCancel={() => state.handleCancel()}
-    />
-  {/if}
+  <EntityListHeader
+    title={$t('phases.page.heading')}
+    description={$t('phases.page.description')}
+    infoLabel={$t('common.info')}
+    backHref="/projects"
+    backLabel={$t('hub.back_to_overview')}
+    createLabel={$t('phases.page.new')}
+    canCreate={!state.showForm && canPerform('create', 'phase')}
+    createActive={state.showForm && !state.editingPhase}
+    onCreateClick={() => state.handleCreate()}
+  />
 
   <PaginatedList
     state={$phaseListStore}
@@ -103,3 +90,13 @@
     {/snippet}
   </PaginatedList>
 </div>
+
+<Dialog.Root bind:open={state.showForm}>
+  <Dialog.Content class="sm:max-w-lg">
+    <PhaseForm
+      initialData={state.editingPhase}
+      onSuccess={() => state.handleSuccess()}
+      onCancel={() => state.handleCancel()}
+    />
+  </Dialog.Content>
+</Dialog.Root>

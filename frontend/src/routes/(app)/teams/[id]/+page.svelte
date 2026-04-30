@@ -1,15 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
-  import { goto } from '$app/navigation';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import * as Popover from '$lib/components/ui/popover/index.js';
   import * as Command from '$lib/components/ui/command/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import UserAvatar from '$lib/components/user-avatar.svelte';
-  import { ArrowLeft, UserMinus, UserPlus } from '@lucide/svelte';
+  import { UserMinus, UserPlus } from '@lucide/svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { TeamDetailPageState } from '$lib/components/teams/TeamDetailPageState.svelte.js';
 
@@ -36,23 +36,23 @@
 <ConfirmDialog />
 
 <div class="flex flex-col gap-6">
-  <div class="flex items-start justify-between">
-    <div class="flex items-start gap-3">
-      <Button variant="outline" onclick={() => goto('/teams')}>
-        <ArrowLeft class="mr-2 h-4 w-4" />
-        {$t('common.back')}
-      </Button>
-      <div>
-        <h1 class="text-3xl font-bold tracking-tight">{state.team?.name ?? $t('team.team')}</h1>
-        <p class="mt-1 text-muted-foreground">{$t('teams.detail.description')}</p>
-      </div>
-    </div>
+  <EntityListHeader
+    title={state.team?.name ?? $t('team.team')}
+    description={$t('teams.detail.description')}
+    infoLabel={$t('common.info')}
+    backHref="/teams"
+    backLabel={$t('common.back')}
+  >
     <Popover.Root bind:open={state.addMemberOpen}>
       <Popover.Trigger>
         {#snippet child({ props })}
-          <Button {...props}>
-            <UserPlus class="mr-2 h-4 w-4" />
-            {$t('teams.detail.add_member')}
+          <Button
+            {...props}
+            size="icon"
+            class="bg-blue-600 text-white shadow-xs hover:bg-blue-700"
+            aria-label={$t('teams.detail.add_member')}
+          >
+            <UserPlus class="h-4 w-4" />
           </Button>
         {/snippet}
       </Popover.Trigger>
@@ -89,7 +89,7 @@
         </Command.Root>
       </Popover.Content>
     </Popover.Root>
-  </div>
+  </EntityListHeader>
 
   {#if state.team?.description}
     <div class="text-sm text-muted-foreground">{state.team.description}</div>

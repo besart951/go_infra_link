@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
+  import * as Dialog from '$lib/components/ui/dialog/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Textarea } from '$lib/components/ui/textarea/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
-  import { ArrowLeft, Plus } from '@lucide/svelte';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import ProjectPhaseSelect from '$lib/components/project/ProjectPhaseSelect.svelte';
   import { ProjectListPageState } from '$lib/components/project/ProjectListPageState.svelte.js';
@@ -50,106 +51,17 @@
 </svelte:head>
 
 <div class="flex flex-col gap-6">
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-2xl font-semibold tracking-tight">{$t('navigation.projects')}</h1>
-      <p class="text-sm text-muted-foreground">
-        {$t('pages.projects_desc')}
-      </p>
-    </div>
-    <div class="flex flex-col gap-2 sm:flex-row">
-      <Button variant="outline" href="/projects">
-        <ArrowLeft class="size-4" />
-        {$t('hub.back_to_overview')}
-      </Button>
-      {#if canPerform('create', 'project')}
-        <Button onclick={() => (state.createOpen = !state.createOpen)}>
-          <Plus class="mr-2 size-4" />
-          {$t('common.create')}
-        </Button>
-      {/if}
-    </div>
-  </div>
-
-  {#if state.createOpen}
-    <div class="rounded-lg border bg-background p-4">
-      <div class="grid gap-4 md:grid-cols-2">
-        <div class="flex flex-col gap-2">
-          <label class="text-sm font-medium" for="project_name_create">{$t('common.name')}</label>
-          <Input
-            id="project_name_create"
-            placeholder={$t('messages.project_name_placeholder')}
-            bind:value={state.form.name}
-            disabled={state.createBusy}
-          />
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <label class="text-sm font-medium" for="project_status_create"
-            >{$t('common.status')}</label
-          >
-          <select
-            id="project_status_create"
-            class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
-            bind:value={state.form.status}
-            disabled={state.createBusy}
-          >
-            {#each createStatusOptions as opt}
-              <option value={opt.value}>{opt.label}</option>
-            {/each}
-          </select>
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <label class="text-sm font-medium" for="project_start_create"
-            >{$t('messages.start_date')}</label
-          >
-          <Input
-            id="project_start_create"
-            type="date"
-            bind:value={state.form.start_date}
-            disabled={state.createBusy}
-          />
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <label class="text-sm font-medium" for="project_phase_create"
-            >{$t('messages.phase')}</label
-          >
-          <ProjectPhaseSelect
-            id="project_phase_create"
-            bind:value={state.form.phase_id}
-            width="w-full"
-            disabled={state.createBusy}
-          />
-        </div>
-
-        <div class="flex flex-col gap-2 md:col-span-2">
-          <label class="text-sm font-medium" for="project_desc_create"
-            >{$t('common.description')}</label
-          >
-          <Textarea
-            id="project_desc_create"
-            placeholder={$t('messages.project_description_placeholder')}
-            rows={3}
-            bind:value={state.form.description}
-            disabled={state.createBusy}
-          />
-        </div>
-      </div>
-
-      <div class="mt-4 flex items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          onclick={() => (state.createOpen = false)}
-          disabled={state.createBusy}>{$t('common.cancel')}</Button
-        >
-        <Button onclick={() => state.submitCreate()} disabled={!state.canSubmitCreate()}
-          >{$t('common.create')}</Button
-        >
-      </div>
-    </div>
-  {/if}
+  <EntityListHeader
+    title={$t('navigation.projects')}
+    description={$t('pages.projects_desc')}
+    infoLabel={$t('common.info')}
+    backHref="/projects"
+    backLabel={$t('hub.back_to_overview')}
+    createLabel={$t('common.create')}
+    canCreate={canPerform('create', 'project')}
+    createActive={state.createOpen}
+    onCreateClick={() => (state.createOpen = !state.createOpen)}
+  />
 
   <div class="flex flex-wrap items-center gap-3">
     <label class="text-sm font-medium" for="project_status_filter">{$t('common.status')}</label>
@@ -209,3 +121,80 @@
     {/snippet}
   </PaginatedList>
 </div>
+
+<Dialog.Root bind:open={state.createOpen}>
+  <Dialog.Content class="sm:max-w-2xl">
+    <Dialog.Header>
+      <Dialog.Title>{$t('common.create')}</Dialog.Title>
+      <Dialog.Description>{$t('pages.projects_desc')}</Dialog.Description>
+    </Dialog.Header>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-medium" for="project_name_create">{$t('common.name')}</label>
+        <Input
+          id="project_name_create"
+          placeholder={$t('messages.project_name_placeholder')}
+          bind:value={state.form.name}
+          disabled={state.createBusy}
+        />
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-medium" for="project_status_create">{$t('common.status')}</label>
+        <select
+          id="project_status_create"
+          class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
+          bind:value={state.form.status}
+          disabled={state.createBusy}
+        >
+          {#each createStatusOptions as opt}
+            <option value={opt.value}>{opt.label}</option>
+          {/each}
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-medium" for="project_start_create">{$t('messages.start_date')}</label>
+        <Input
+          id="project_start_create"
+          type="date"
+          bind:value={state.form.start_date}
+          disabled={state.createBusy}
+        />
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-medium" for="project_phase_create">{$t('messages.phase')}</label>
+        <ProjectPhaseSelect
+          id="project_phase_create"
+          bind:value={state.form.phase_id}
+          width="w-full"
+          disabled={state.createBusy}
+        />
+      </div>
+
+      <div class="flex flex-col gap-2 md:col-span-2">
+        <label class="text-sm font-medium" for="project_desc_create"
+          >{$t('common.description')}</label
+        >
+        <Textarea
+          id="project_desc_create"
+          placeholder={$t('messages.project_description_placeholder')}
+          rows={3}
+          bind:value={state.form.description}
+          disabled={state.createBusy}
+        />
+      </div>
+    </div>
+
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (state.createOpen = false)} disabled={state.createBusy}>
+        {$t('common.cancel')}
+      </Button>
+      <Button onclick={() => state.submitCreate()} disabled={!state.canSubmitCreate()}>
+        {$t('common.create')}
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>

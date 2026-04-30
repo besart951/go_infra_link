@@ -2,7 +2,7 @@
   import { Input } from '$lib/components/ui/input/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Field from '$lib/components/ui/field/index.js';
-  import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import TrashIcon from '@lucide/svelte/icons/trash-2';
   import type { PageData } from './$types.js';
   import { buildingDetailService } from '$lib/components/facility/buildings/BuildingDetailService.js';
@@ -102,31 +102,24 @@
 </svelte:head>
 
 <div class="mx-auto max-w-2xl space-y-6">
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-4">
-      <Button variant="ghost" size="icon" href="/facility/buildings">
-        <ArrowLeftIcon class="size-4" />
-      </Button>
-      <div>
-        <h1 class="text-2xl font-semibold tracking-tight">{data.building.iws_code}</h1>
-        <p class="text-sm text-muted-foreground">
-          {$t('facility.building_detail.edit_description')}
-        </p>
-      </div>
-    </div>
-    <div>
+  <EntityListHeader
+    title={data.building.iws_code}
+    description={$t('facility.building_detail.edit_description')}
+    infoLabel={$t('common.info')}
+    backHref="/facility/buildings"
+    backLabel={$t('common.back')}
+  >
       <Button
         variant="destructive"
-        size="sm"
+        size="icon"
         type="button"
         onclick={handleDeleteClick}
         disabled={isSubmitting}
+        aria-label={$t('common.delete')}
       >
-        <TrashIcon class="mr-2 size-4" />
-        {$t('common.delete')}
+        <TrashIcon class="size-4" />
       </Button>
-    </div>
-  </div>
+  </EntityListHeader>
 
   {#if errors.form}
     <div class="rounded-md border border-destructive bg-destructive/10 p-4 text-destructive">

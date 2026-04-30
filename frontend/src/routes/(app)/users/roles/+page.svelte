@@ -6,6 +6,7 @@
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import * as Sheet from '$lib/components/ui/sheet/index.js';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
   import {
     RoleCard,
@@ -17,9 +18,7 @@
   } from '$lib/components/roles/index.js';
   import { RolesPageState } from '$lib/components/roles/state/RolesPageState.svelte.js';
   import {
-    ArrowLeft,
     GitBranch,
-    Plus,
     RefreshCw,
     Grid3X3,
     LayoutGrid,
@@ -42,28 +41,21 @@
 <ConfirmDialog />
 
 <div class="flex flex-col gap-6">
-  <div class="flex items-start justify-between">
-    <div>
-      <h1 class="text-3xl font-bold tracking-tight">{$t('roles.page.title')}</h1>
-      <p class="mt-1 text-muted-foreground">{$t('roles.page.description')}</p>
-    </div>
-    <div class="flex items-center gap-2">
-      <Button variant="outline" href="/users">
-        <ArrowLeft class="size-4" />
-        {$t('hub.back_to_overview')}
-      </Button>
-      <Button variant="outline" onclick={state.loadData} disabled={state.isLoading}>
-        <RefreshCw class="mr-2 h-4 w-4 {state.isLoading ? 'animate-spin' : ''}" />
-        {$t('roles.actions.refresh')}
-      </Button>
-      {#if state.canManageRoles}
-        <Button onclick={state.openCreatePermissionDialog}>
-          <Plus class="mr-2 h-4 w-4" />
-          {$t('roles.actions.create_permission')}
-        </Button>
-      {/if}
-    </div>
-  </div>
+  <EntityListHeader
+    title={$t('roles.page.title')}
+    description={$t('roles.page.description')}
+    infoLabel={$t('common.info')}
+    backHref="/users"
+    backLabel={$t('hub.back_to_overview')}
+    createLabel={$t('roles.actions.create_permission')}
+    canCreate={state.canManageRoles}
+    createActive={state.createPermissionDialogOpen}
+    onCreateClick={state.openCreatePermissionDialog}
+  >
+    <Button variant="outline" size="icon" onclick={state.loadData} disabled={state.isLoading} aria-label={$t('roles.actions.refresh')}>
+      <RefreshCw class="h-4 w-4 {state.isLoading ? 'animate-spin' : ''}" />
+    </Button>
+  </EntityListHeader>
 
   <div class="grid gap-4 sm:grid-cols-3">
     <div class="rounded-lg border bg-card p-4">

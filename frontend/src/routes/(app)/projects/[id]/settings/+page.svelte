@@ -1,17 +1,17 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
-  import { goto } from '$app/navigation';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Textarea } from '$lib/components/ui/textarea/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
   import ProjectPhaseSelect from '$lib/components/project/ProjectPhaseSelect.svelte';
   import { ProjectSettingsPageState } from '$lib/components/project/settings/ProjectSettingsPageState.svelte.js';
-  import { ArrowLeft, Pencil } from '@lucide/svelte';
+  import { Pencil } from '@lucide/svelte';
   import ObjectDataForm from '$lib/components/facility/forms/ObjectDataForm.svelte';
 
   const t = createTranslator();
@@ -31,16 +31,13 @@
 <ConfirmDialog />
 
 <div class="flex flex-col gap-6">
-  <div class="flex items-start gap-3">
-    <Button variant="outline" onclick={() => goto(`/projects/${projectId}`)}>
-      <ArrowLeft class="mr-2 h-4 w-4" />
-      {$t('common.back')}
-    </Button>
-    <div>
-      <h1 class="text-3xl font-bold tracking-tight">{$t('projects.settings.title')}</h1>
-      <p class="mt-1 text-muted-foreground">{$t('projects.settings.description')}</p>
-    </div>
-  </div>
+  <EntityListHeader
+    title={$t('projects.settings.title')}
+    description={$t('projects.settings.description')}
+    infoLabel={$t('common.info')}
+    backHref={`/projects/${projectId}`}
+    backLabel={$t('common.back')}
+  />
 
   {#if state.error}
     <div class="rounded-md border bg-muted px-4 py-3 text-muted-foreground">

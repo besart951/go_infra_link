@@ -54,6 +54,11 @@ func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func()
 		cleanup()
 		return nil, func() {}, fmt.Errorf("seed user: %w", err)
 	}
+	if err := ensureSeedSystemNotifications(cfg, log, repos.UserEmail, repos.SystemNotifications); err != nil {
+		log.Error("Failed seeding dummy notifications", "err", err)
+		cleanup()
+		return nil, func() {}, fmt.Errorf("seed notifications: %w", err)
+	}
 
 	translator, loader := initializeTranslator(log)
 	handlers := wire.NewHandlers(

@@ -2,11 +2,10 @@
   import ModuleCardGrid, {
     type ModuleCardItem
   } from '$lib/components/navigation/ModuleCardGrid.svelte';
-  import { Button } from '$lib/components/ui/button/index.js';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { canPerform } from '$lib/utils/permissions.js';
   import AlarmClockIcon from '@lucide/svelte/icons/alarm-clock';
-  import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
   import BellRingIcon from '@lucide/svelte/icons/bell-ring';
   import BoxesIcon from '@lucide/svelte/icons/boxes';
   import Building2Icon from '@lucide/svelte/icons/building-2';
@@ -136,20 +135,13 @@
 </svelte:head>
 
 <div class="flex flex-col gap-6">
-  <header class="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
-    <div class="min-w-0 space-y-1">
-      <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">
-        {$t('facility.facility_overview')}
-      </h1>
-      <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
-        {$t('hub.facility.description')}
-      </p>
-    </div>
-    <Button variant="outline" href="/" class="w-full sm:w-auto">
-      <ArrowLeftIcon class="size-4" />
-      {$t('hub.back_to_dashboard')}
-    </Button>
-  </header>
+  <EntityListHeader
+    title={$t('facility.facility_overview')}
+    description={$t('hub.facility.description')}
+    infoLabel={$t('common.info')}
+    backHref="/"
+    backLabel={$t('hub.back_to_dashboard')}
+  />
 
   <ModuleCardGrid
     items={facilityCards}

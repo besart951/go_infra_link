@@ -7,6 +7,7 @@
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import RoleBadge from '$lib/components/role-badge.svelte';
   import UserAvatar from '$lib/components/user-avatar.svelte';
   import UserManagementForm from '$lib/components/user-management-form.svelte';
@@ -18,9 +19,7 @@
     Trash2,
     BadgeCheck,
     BadgeX,
-    KeyRound,
-    UserPlus,
-    ArrowLeft
+    KeyRound
   } from '@lucide/svelte';
   import { createTranslator } from '$lib/i18n/translator';
 
@@ -37,25 +36,17 @@
 </svelte:head>
 
 <div class="flex flex-col gap-6">
-  <!-- Header -->
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-3xl font-bold tracking-tight">{$t('pages.user_management')}</h1>
-      <p class="mt-1 text-muted-foreground">{$t('pages.user_management_desc')}</p>
-    </div>
-    <div class="flex flex-col gap-2 sm:flex-row">
-      <Button variant="outline" href="/users">
-        <ArrowLeft class="size-4" />
-        {$t('hub.back_to_overview')}
-      </Button>
-      {#if state.pageCapabilities.can_create_user}
-        <Button onclick={() => (state.createDialogOpen = true)}>
-          <UserPlus class="mr-2 h-4 w-4" />
-          {$t('common.create_user')}
-        </Button>
-      {/if}
-    </div>
-  </div>
+  <EntityListHeader
+    title={$t('pages.user_management')}
+    description={$t('pages.user_management_desc')}
+    infoLabel={$t('common.info')}
+    backHref="/users"
+    backLabel={$t('hub.back_to_overview')}
+    createLabel={$t('common.create_user')}
+    canCreate={state.pageCapabilities.can_create_user}
+    createActive={state.createDialogOpen}
+    onCreateClick={() => (state.createDialogOpen = true)}
+  />
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div class="flex flex-1 items-center gap-3">

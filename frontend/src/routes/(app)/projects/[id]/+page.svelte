@@ -1,13 +1,13 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import { page } from '$app/stores';
-  import { goto } from '$app/navigation';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import * as Collapsible from '$lib/components/ui/collapsible/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
   import { addToast } from '$lib/components/toast.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import UserAvatar from '$lib/components/user-avatar.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { t as translate } from '$lib/i18n/index.js';
@@ -25,7 +25,7 @@
     EntityRefreshRequest
   } from '$lib/components/facility/shared/entityRefresh.js';
   import { ProjectCollaborationState } from '$lib/services/projectCollaboration.svelte.js';
-  import { ArrowLeft, ChevronDown, Settings, Wifi, WifiOff } from '@lucide/svelte';
+  import { ChevronDown, Settings, Wifi, WifiOff } from '@lucide/svelte';
 
   const t = createTranslator();
   const projectId = $derived($page.params.id ?? '');
@@ -332,16 +332,13 @@
 <ConfirmDialog />
 
 <div class="flex min-w-0 flex-col gap-6 overflow-x-hidden">
-  <div class="flex min-w-0 items-start gap-3">
-    <Button variant="outline" onclick={() => goto('/projects')}>
-      <ArrowLeft class="mr-2 h-4 w-4" />
-      {$t('common.back')}
-    </Button>
-    <div class="min-w-0">
-      <h1 class="text-3xl font-bold tracking-tight">{project?.name ?? $t('project.project')}</h1>
-      <p class="mt-1 text-muted-foreground">{$t('projects.detail.description')}</p>
-    </div>
-    <div class="ml-auto">
+  <EntityListHeader
+    title={project?.name ?? $t('project.project')}
+    description={$t('projects.detail.description')}
+    infoLabel={$t('common.info')}
+    backHref="/projects"
+    backLabel={$t('common.back')}
+  >
       <div class="flex items-center gap-3">
         <div
           class="flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-sm text-muted-foreground"
@@ -385,8 +382,7 @@
           </Tooltip.Content>
         </Tooltip.Root>
       </div>
-    </div>
-  </div>
+  </EntityListHeader>
 
   {#if error}
     <div class="rounded-md border bg-muted px-4 py-3 text-muted-foreground">

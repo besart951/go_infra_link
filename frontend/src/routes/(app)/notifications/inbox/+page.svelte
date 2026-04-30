@@ -1,14 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
-  import { Badge } from '$lib/components/ui/badge/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
+  import NotificationInboxHeader from '$lib/components/notifications/NotificationInboxHeader.svelte';
   import { NotificationInboxPageState } from '$lib/components/notifications/NotificationInboxPageState.svelte.js';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
-  import BellIcon from '@lucide/svelte/icons/bell';
   import CheckIcon from '@lucide/svelte/icons/check';
-  import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 
   const t = createTranslator();
   const state = new NotificationInboxPageState();
@@ -23,48 +20,22 @@
 </svelte:head>
 
 <div class="mx-auto flex w-full max-w-5xl flex-col gap-5">
-  <header class="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
-    <div class="space-y-1">
-      <div class="flex items-center gap-2">
-        <BellIcon class="size-5 text-muted-foreground" />
-        <h1 class="text-2xl font-semibold tracking-tight">
-          {$t('notifications.inbox.page_title')}
-        </h1>
-      </div>
-      <p class="text-sm text-muted-foreground">{$t('notifications.inbox.page_description')}</p>
-    </div>
-    <div class="flex flex-wrap items-center gap-2">
-      <Button variant="outline" href="/notifications">
-        <ArrowLeftIcon class="size-4" />
-        {$t('hub.back_to_overview')}
-      </Button>
-      <Badge variant={state.unreadCount > 0 ? 'default' : 'secondary'}>
-        {$t('notifications.inbox.unread_count', { count: state.unreadCount })}
-      </Badge>
-      <Button
-        variant={state.unreadOnly ? 'default' : 'outline'}
-        onclick={() => state.toggleUnreadOnly()}
-      >
-        {$t('notifications.inbox.unread_only')}
-      </Button>
-      <Button
-        variant="outline"
-        onclick={() => state.markAllRead()}
-        disabled={state.unreadCount === 0}
-      >
-        <CheckIcon class="size-4" />
-        {$t('notifications.inbox.mark_all_read')}
-      </Button>
-      <Button
-        variant="outline"
-        onclick={() => state.loadNotifications()}
-        disabled={state.isLoading}
-      >
-        <RefreshCwIcon class={`size-4${state.isLoading ? ' animate-spin' : ''}`} />
-        {$t('common.refresh')}
-      </Button>
-    </div>
-  </header>
+  <NotificationInboxHeader
+    title={$t('notifications.inbox.page_title')}
+    description={$t('notifications.inbox.page_description')}
+    backLabel={$t('hub.back_to_overview')}
+    unreadCountLabel={$t('notifications.inbox.unread_count', { count: state.unreadCount })}
+    unreadOnlyLabel={$t('notifications.inbox.unread_only')}
+    markAllReadLabel={$t('notifications.inbox.mark_all_read')}
+    refreshLabel={$t('common.refresh')}
+    infoLabel={$t('common.info')}
+    unreadCount={state.unreadCount}
+    unreadOnly={state.unreadOnly}
+    isLoading={state.isLoading}
+    onToggleUnreadOnly={() => state.toggleUnreadOnly()}
+    onMarkAllRead={() => state.markAllRead()}
+    onRefresh={() => state.loadNotifications()}
+  />
 
   {#if state.error}
     <Card.Root>
