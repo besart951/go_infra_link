@@ -24,7 +24,7 @@
   };
 
   onMount(() => {
-    initAppearance();
+    initAppearance(user.id);
   });
 </script>
 

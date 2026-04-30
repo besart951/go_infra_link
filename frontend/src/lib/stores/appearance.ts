@@ -34,33 +34,45 @@ function normalizeContrastPreference(value: unknown): number {
   if (!Number.isFinite(numeric)) return DEFAULT_CONTRAST_PREFERENCE;
 
   const clamped = Math.min(MAX_CONTRAST_PREFERENCE, Math.max(MIN_CONTRAST_PREFERENCE, numeric));
-
   return Math.round(clamped / CONTRAST_PREFERENCE_STEP) * CONTRAST_PREFERENCE_STEP;
 }
 
-function readStoredThemePreference(): ThemePreference {
+function userScopedKey(base: string, userId: string | null): string {
+  return userId ? `${base}:${userId}` : base;
+}
+
+function hasStoredValue(base: string, userId: string | null): boolean {
+  if (!browser) return false;
+  try {
+    return localStorage.getItem(userScopedKey(base, userId)) !== null;
+  } catch {
+    return false;
+  }
+}
+
+function readStoredThemePreference(userId: string | null): ThemePreference {
   if (!browser) return 'system';
   try {
-    const raw = localStorage.getItem(THEME_STORAGE_KEY);
+    const raw = localStorage.getItem(userScopedKey(THEME_STORAGE_KEY, userId));
     return isThemePreference(raw) ? raw : 'system';
   } catch {
     return 'system';
   }
 }
 
-function readStoredContrastPreference(): number {
+function readStoredContrastPreference(userId: string | null): number {
   if (!browser) return DEFAULT_CONTRAST_PREFERENCE;
   try {
-    return normalizeContrastPreference(localStorage.getItem(CONTRAST_STORAGE_KEY));
+    return normalizeContrastPreference(localStorage.getItem(userScopedKey(CONTRAST_STORAGE_KEY, userId)));
   } catch {
     return DEFAULT_CONTRAST_PREFERENCE;
   }
 }
 
-function readStoredFontPreference(): FontPreference {
+function readStoredFontPreference(userId: string | null): FontPreference {
   if (!browser) return DEFAULT_FONT_PREFERENCE;
   try {
-    const raw = localStorage.getItem(FONT_STORAGE_KEY);
+    const raw = localStorage.getItem(userScopedKey(FONT_STORAGE_KEY, userId));
     return isFontPreference(raw) ? raw : DEFAULT_FONT_PREFERENCE;
   } catch {
     return DEFAULT_FONT_PREFERENCE;
@@ -95,6 +107,7 @@ export const fontPreference = writable<FontPreference>(DEFAULT_FONT_PREFERENCE);
 let initialized = false;
 let mediaQuery: MediaQueryList | null = null;
 let currentThemePreference: ThemePreference = 'system';
+let currentUserId: string | null = null;
 
 export function setThemePreference(preference: ThemePreference) {
   themePreference.set(preference);
@@ -108,22 +121,44 @@ export function setFontPreference(preference: FontPreference) {
   fontPreference.set(preference);
 }
 
-export function initAppearance() {
-  if (!browser || initialized) return;
+export function setCurrentAppearanceUserId(userId: string | null) {
+  currentUserId = userId;
+}
+
+function syncToDefaultsForNewUser(userId: string | null) {
+  if (!userId) return;
+
+  const hasTheme = hasStoredValue(THEME_STORAGE_KEY, userId);
+  const hasContrast = hasStoredValue(CONTRAST_STORAGE_KEY, userId);
+  const hasFont = hasStoredValue(FONT_STORAGE_KEY, userId);
+  if (hasTheme && hasContrast && hasFont) return;
+
+  // First login for this user: keep readable defaults unless they already changed a setting.
+  if (!hasTheme) {
+    setCurrentAppearanceUserId(userId);
+    setThemePreference('system');
+  }
+  if (!hasContrast) {
+    setCurrentAppearanceUserId(userId);
+    setContrastPreference(DEFAULT_CONTRAST_PREFERENCE);
+  }
+  if (!hasFont) {
+    setCurrentAppearanceUserId(userId);
+    setFontPreference(DEFAULT_FONT_PREFERENCE);
+  }
+}
+
+export function initAppearance(userId: string | null = null) {
+  currentUserId = userId;
+  if (!browser || initialized) {
+    syncToDefaultsForNewUser(userId);
+    applyStoredAppearanceForUser(userId);
+    return;
+  }
   initialized = true;
 
-  const storedThemePreference = readStoredThemePreference();
-  const storedContrastPreference = readStoredContrastPreference();
-  const storedFontPreference = readStoredFontPreference();
-
-  currentThemePreference = storedThemePreference;
-  themePreference.set(storedThemePreference);
-  contrastPreference.set(storedContrastPreference);
-  fontPreference.set(storedFontPreference);
-
-  applyThemePreferenceToDom(storedThemePreference);
-  applyContrastPreferenceToDom(storedContrastPreference);
-  applyFontPreferenceToDom(storedFontPreference);
+  syncToDefaultsForNewUser(userId);
+  applyStoredAppearanceForUser(userId);
 
   mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)') ?? null;
   mediaQuery?.addEventListener('change', () => {
@@ -134,7 +169,7 @@ export function initAppearance() {
     currentThemePreference = pref;
     applyThemePreferenceToDom(pref);
     try {
-      localStorage.setItem(THEME_STORAGE_KEY, pref);
+      localStorage.setItem(userScopedKey(THEME_STORAGE_KEY, currentUserId), pref);
     } catch {
       // ignore
     }
@@ -144,7 +179,10 @@ export function initAppearance() {
     const normalized = normalizeContrastPreference(pref);
     applyContrastPreferenceToDom(normalized);
     try {
-      localStorage.setItem(CONTRAST_STORAGE_KEY, String(normalized));
+      localStorage.setItem(
+        userScopedKey(CONTRAST_STORAGE_KEY, currentUserId),
+        String(normalized)
+      );
     } catch {
       // ignore
     }
@@ -153,11 +191,28 @@ export function initAppearance() {
   fontPreference.subscribe((pref) => {
     applyFontPreferenceToDom(pref);
     try {
-      localStorage.setItem(FONT_STORAGE_KEY, pref);
+      localStorage.setItem(userScopedKey(FONT_STORAGE_KEY, currentUserId), pref);
     } catch {
       // ignore
     }
   });
+}
+
+function applyStoredAppearanceForUser(userId: string | null) {
+  setCurrentAppearanceUserId(userId);
+
+  const storedTheme = readStoredThemePreference(userId);
+  const storedContrast = normalizeContrastPreference(readStoredContrastPreference(userId));
+  const storedFont = readStoredFontPreference(userId);
+
+  currentThemePreference = storedTheme;
+  applyThemePreferenceToDom(storedTheme);
+  applyContrastPreferenceToDom(storedContrast);
+  applyFontPreferenceToDom(storedFont);
+
+  themePreference.set(storedTheme);
+  contrastPreference.set(storedContrast);
+  fontPreference.set(storedFont);
 }
 
 export const initTheme = initAppearance;

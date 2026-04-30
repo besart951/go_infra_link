@@ -13,6 +13,7 @@
   import { t } from '$lib/i18n/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { initNetworkStatus, networkStatus } from '$lib/stores/network.js';
+  import { initAppearance, setCurrentAppearanceUserId } from '$lib/stores/appearance.js';
 
   const translator = createTranslator();
 
@@ -21,6 +22,8 @@
   onMount(async () => {
     initNetworkStatus();
     await loadAuth();
+    setCurrentAppearanceUserId(data.user?.id ?? null);
+    initAppearance(data.user?.id ?? null);
   });
 
   $effect(() => {
