@@ -1,1 +1,1 @@
-pg_trgm 
+pg_trgm

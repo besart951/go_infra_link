@@ -76,7 +76,13 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 	if err != nil {
 		return nil, fmt.Errorf("export file store: %w", err)
 	}
-	dataProvider := exportinfra.NewDataProvider(repos.FacilityFieldDevices, repos.FacilitySPSControllers, repos.FacilityControlCabinet)
+	dataProvider := exportinfra.NewDataProvider(
+		repos.FacilityFieldDevices,
+		repos.FacilitySpecifications,
+		repos.FacilityBacnetObjects,
+		repos.FacilitySPSControllers,
+		repos.FacilityControlCabinet,
+	)
 	excelGenerator := exportinfra.NewExcelizeGenerator()
 	exportSvc := exportservice.NewService(
 		dataProvider,

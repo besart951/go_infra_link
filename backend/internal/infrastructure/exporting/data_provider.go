@@ -15,17 +15,23 @@ import (
 
 type DataProvider struct {
 	fieldDevices    domainFacility.FieldDeviceStore
+	specifications  domainFacility.SpecificationStore
+	bacnetObjects   domainFacility.BacnetObjectStore
 	spsControllers  domainFacility.SPSControllerRepository
 	controlCabinets domainFacility.ControlCabinetRepository
 }
 
 func NewDataProvider(
 	fieldDevices domainFacility.FieldDeviceStore,
+	specifications domainFacility.SpecificationStore,
+	bacnetObjects domainFacility.BacnetObjectStore,
 	spsControllers domainFacility.SPSControllerRepository,
 	controlCabinets domainFacility.ControlCabinetRepository,
 ) *DataProvider {
 	return &DataProvider{
 		fieldDevices:    fieldDevices,
+		specifications:  specifications,
+		bacnetObjects:   bacnetObjects,
 		spsControllers:  spsControllers,
 		controlCabinets: controlCabinets,
 	}
@@ -105,7 +111,61 @@ func (p *DataProvider) ListFieldDevicesByController(ctx context.Context, control
 		return nil, 0, err
 	}
 
-	return result.Items, result.Total, nil
+	items, err := p.hydrateFieldDevicesForExport(ctx, result.Items)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return items, result.Total, nil
+}
+
+func (p *DataProvider) hydrateFieldDevicesForExport(ctx context.Context, items []domainFacility.FieldDevice) ([]domainFacility.FieldDevice, error) {
+	if len(items) == 0 {
+		return items, nil
+	}
+
+	fieldDeviceIDs := make([]uuid.UUID, 0, len(items))
+	for _, item := range items {
+		fieldDeviceIDs = append(fieldDeviceIDs, item.ID)
+	}
+
+	specifications, err := p.specifications.GetByFieldDeviceIDs(ctx, fieldDeviceIDs)
+	if err != nil {
+		return nil, err
+	}
+	specificationsByFieldDeviceID := make(map[uuid.UUID]*domainFacility.Specification, len(specifications))
+	for _, specification := range specifications {
+		if specification == nil || specification.FieldDeviceID == nil {
+			continue
+		}
+		specificationsByFieldDeviceID[*specification.FieldDeviceID] = specification
+	}
+
+	bacnetObjects, err := p.bacnetObjects.GetByFieldDeviceIDs(ctx, fieldDeviceIDs)
+	if err != nil {
+		return nil, err
+	}
+	bacnetObjectsByFieldDeviceID := make(map[uuid.UUID][]domainFacility.BacnetObject, len(items))
+	for _, bacnetObject := range bacnetObjects {
+		if bacnetObject == nil || bacnetObject.FieldDeviceID == nil {
+			continue
+		}
+		bacnetObjectsByFieldDeviceID[*bacnetObject.FieldDeviceID] = append(
+			bacnetObjectsByFieldDeviceID[*bacnetObject.FieldDeviceID],
+			*bacnetObject,
+		)
+	}
+
+	for i := range items {
+		item := &items[i]
+		if specification, ok := specificationsByFieldDeviceID[item.ID]; ok {
+			item.Specification = specification
+			item.SpecificationID = &specification.ID
+		}
+		item.BacnetObjects = bacnetObjectsByFieldDeviceID[item.ID]
+	}
+
+	return items, nil
 }
 
 func buildExportController(c domainFacility.SPSController) domainExport.Controller {

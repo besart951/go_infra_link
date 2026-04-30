@@ -46,7 +46,12 @@ func (r *bacnetObjectRepo) GetByFieldDeviceIDs(ctx context.Context, ids []uuid.U
 		return []*domainFacility.BacnetObject{}, nil
 	}
 	var items []*domainFacility.BacnetObject
-	err := r.db.WithContext(ctx).Where("field_device_id IN ?", ids).Find(&items).Error
+	err := r.db.WithContext(ctx).
+		Where("field_device_id IN ?", ids).
+		Preload("StateText").
+		Preload("NotificationClass").
+		Preload("AlarmType").
+		Find(&items).Error
 	return items, err
 }
 
