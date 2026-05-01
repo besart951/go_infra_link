@@ -1,6 +1,7 @@
 <script lang="ts">
   import { FileSpreadsheet, Upload } from '@lucide/svelte';
   import { Button } from '$lib/components/ui/button/index.js';
+  import { Input } from '$lib/components/ui/input/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
 
   interface Props {
@@ -12,7 +13,7 @@
   let { disabled = false, fileName = null, onFileSelected }: Props = $props();
   const t = createTranslator();
 
-  let fileInput: HTMLInputElement | null = null;
+  let fileInput = $state<HTMLInputElement | null>(null);
   let isDragActive = $state(false);
 
   function openFileDialog(): void {
@@ -82,11 +83,11 @@
       <Upload class="mr-2 size-4" />
       {$t('excel.worksheet_preview.dropzone.choose_file')}
     </Button>
-    <input
+    <Input
       class="hidden"
       type="file"
       accept=".xlsx,.xlsm,.csv"
-      bind:this={fileInput}
+      bind:ref={fileInput}
       onchange={handleInputChange}
       {disabled}
     />

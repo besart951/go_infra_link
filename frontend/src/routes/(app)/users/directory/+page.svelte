@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
+  import { Input } from '$lib/components/ui/input/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
@@ -49,8 +50,8 @@
 
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div class="flex flex-1 items-center gap-3">
-      <input
-        class="h-9 min-w-55 flex-1 rounded-md border bg-background px-3 text-sm"
+      <Input
+        class="min-w-55 flex-1"
         bind:value={state.searchText}
         placeholder={$t('messages.search_users')}
         onkeydown={(event) => {

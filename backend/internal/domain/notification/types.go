@@ -120,6 +120,9 @@ type SystemNotificationRepository interface {
 	CountUnreadForUser(ctx context.Context, userID uuid.UUID) (int64, error)
 	MarkReadForUser(ctx context.Context, notificationID, userID uuid.UUID) (*SystemNotification, error)
 	MarkAllReadForUser(ctx context.Context, userID uuid.UUID) error
+	ToggleReadForUser(ctx context.Context, notificationID, userID uuid.UUID) (*SystemNotification, error)
+	ToggleImportantForUser(ctx context.Context, notificationID, userID uuid.UUID) (*SystemNotification, error)
+	DeleteForUser(ctx context.Context, notificationID, userID uuid.UUID) error
 }
 
 type EmailOutboxRepository interface {

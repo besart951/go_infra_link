@@ -493,7 +493,11 @@
       "back_to_controller": "Zurück zum SPS-Regler",
       "edit": "Bearbeiten",
       "overview_title": "Systemtyp-Informationen",
-      "overview_desc": "Verknüpfung, Nummer und Feldgeräteanzahl auf einen Blick."
+      "overview_desc": "Verknüpfung, Nummer und Feldgeräteanzahl auf einen Blick.",
+      "field_devices_title": "Zugeordnete Feldgeräte",
+      "field_devices_desc": "Feldgeräte, die diesem SPS-Systemtyp zugeordnet sind.",
+      "field_devices_limited": "Zeigt {shown} von {total} Feldgeräten.",
+      "no_field_devices": "Diesem SPS-Systemtyp sind noch keine Feldgeräte zugeordnet."
     },
     "cabinet_type": "Schranktyp",
     "cabinet_location": "Standort",
@@ -1357,7 +1361,11 @@
       "unread_count": "{count} ungelesen",
       "unread_only": "Nur ungelesene",
       "mark_read": "Als gelesen markieren",
-      "mark_all_read": "Alle gelesen"
+      "mark_unread": "Als ungelesen markieren",
+      "mark_all_read": "Alle gelesen",
+      "mark_important": "Als wichtig markieren",
+      "unmark_important": "Nicht mehr wichtig",
+      "delete": "Benachrichtigung löschen"
     },
     "rules": {
       "title": "Benachrichtigungsregeln",

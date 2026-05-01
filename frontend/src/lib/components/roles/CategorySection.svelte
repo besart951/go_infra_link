@@ -2,6 +2,7 @@
   import type { Component } from 'svelte';
   import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
+  import { Button } from '$lib/components/ui/button/index.js';
   import { ChevronDown, ChevronRight } from '@lucide/svelte';
   import ResourceSection from './ResourceSection.svelte';
   import { useRolePermissionEditorState } from './state/context.svelte.js';
@@ -45,8 +46,9 @@
         aria-label={`Select all ${label} permissions`}
       />
 
-      <button
+      <Button
         type="button"
+        variant="ghost"
         class="flex flex-1 items-center gap-2 text-left"
         onclick={handleToggleExpand}
       >
@@ -60,7 +62,7 @@
         <Badge variant="outline" class="ml-auto">
           {selectedCount}/{totalCount}
         </Badge>
-      </button>
+      </Button>
     </div>
 
     <!-- Resources within Category -->

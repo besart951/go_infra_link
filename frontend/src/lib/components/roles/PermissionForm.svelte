@@ -224,13 +224,14 @@
       <Label>{$t('roles.permission_form.category_label')}</Label>
       <div class="grid grid-cols-3 gap-2">
         {#each categoryConfig as cat}
-          <button
+          <Button
             type="button"
+            variant="outline"
             class={cn(
-              'flex flex-col items-center gap-1.5 rounded-lg border p-3 text-center transition-all',
+              'h-auto flex-col gap-1.5 rounded-lg p-3 text-center whitespace-normal',
               category === cat.id
-                ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary hover:bg-primary/5'
+                : 'hover:border-primary/50 hover:bg-muted/50'
             )}
             onclick={() => selectCategory(cat.id)}
           >
@@ -240,7 +241,7 @@
             <span class="text-sm font-medium">{$t(cat.label)}</span>
             <span class="text-xs text-muted-foreground">{$t(cat.description)}</span>
             <code class="mt-1 rounded-md bg-muted px-1.5 py-0.5 text-xs">{cat.example}</code>
-          </button>
+          </Button>
         {/each}
       </div>
     </div>
@@ -261,18 +262,18 @@
       {#if !isEditMode}
         <div class="flex flex-wrap gap-1.5">
           {#each availableResources as res}
-            <button
+            <Button
               type="button"
+              variant={resource === res ? 'default' : 'secondary'}
+              size="sm"
               class={cn(
-                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                resource === res
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted hover:bg-muted/80'
+                'h-auto rounded-md px-2.5 py-1 text-xs',
+                resource !== res && 'bg-muted hover:bg-muted/80'
               )}
               onclick={() => selectResource(res)}
             >
               {res}
-            </button>
+            </Button>
           {/each}
         </div>
       {/if}
@@ -297,18 +298,18 @@
       {#if !isEditMode}
         <div class="flex flex-wrap gap-1.5">
           {#each PROJECT_SUB_RESOURCES as sub}
-            <button
+            <Button
               type="button"
+              variant={subResource === sub ? 'default' : 'secondary'}
+              size="sm"
               class={cn(
-                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                subResource === sub
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted hover:bg-muted/80'
+                'h-auto rounded-md px-2.5 py-1 text-xs',
+                subResource !== sub && 'bg-muted hover:bg-muted/80'
               )}
               onclick={() => selectSubResource(sub)}
             >
               {sub}
-            </button>
+            </Button>
           {/each}
         </div>
       {/if}
@@ -329,16 +330,18 @@
     {#if !isEditMode}
       <div class="flex flex-wrap gap-1.5">
         {#each availableActions as act}
-          <button
+          <Button
             type="button"
+            variant={action === act ? 'default' : 'secondary'}
+            size="sm"
             class={cn(
-              'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-              action === act ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'
+              'h-auto rounded-md px-2.5 py-1 text-xs',
+              action !== act && 'bg-muted hover:bg-muted/80'
             )}
             onclick={() => selectAction(act)}
           >
             {act}
-          </button>
+          </Button>
         {/each}
       </div>
     {/if}

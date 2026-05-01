@@ -42,9 +42,10 @@
         </Table.Head>
         <Table.Head class="w-10"></Table.Head>
         <Table.Head>
-          <button
+          <Button
             type="button"
-            class="inline-flex cursor-pointer items-center gap-1 text-left underline-offset-4 hover:underline"
+            variant="ghost"
+            class="h-auto cursor-pointer p-0 text-left underline-offset-4 hover:underline"
             onclick={() => void state.toggleSort('sps_system_type')}
           >
             <span>{$t('field_device.table.sps_system_type')}</span>
@@ -53,12 +54,13 @@
             {:else if state.sortState('sps_system_type') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
-          </button>
+          </Button>
         </Table.Head>
         <Table.Head>
-          <button
+          <Button
             type="button"
-            class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+            variant="ghost"
+            class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
             onclick={() => void state.toggleSort('bmk')}
           >
             <span>{$t('field_device.table.bmk')}</span>
@@ -67,12 +69,13 @@
             {:else if state.sortState('bmk') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
-          </button>
+          </Button>
         </Table.Head>
         <Table.Head>
-          <button
+          <Button
             type="button"
-            class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+            variant="ghost"
+            class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
             onclick={() => void state.toggleSort('description')}
           >
             <span>{$t('field_device.table.description')}</span>
@@ -81,12 +84,13 @@
             {:else if state.sortState('description') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
-          </button>
+          </Button>
         </Table.Head>
         <Table.Head>
-          <button
+          <Button
             type="button"
-            class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+            variant="ghost"
+            class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
             onclick={() => void state.toggleSort('text_fix')}
           >
             <span>{$t('field_device.table.text_fix')}</span>
@@ -95,12 +99,13 @@
             {:else if state.sortState('text_fix') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
-          </button>
+          </Button>
         </Table.Head>
         <Table.Head class="w-24">
-          <button
+          <Button
             type="button"
-            class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+            variant="ghost"
+            class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
             onclick={() => void state.toggleSort('apparat_nr')}
           >
             <span>{$t('field_device.table.apparat_nr')}</span>
@@ -109,12 +114,13 @@
             {:else if state.sortState('apparat_nr') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
-          </button>
+          </Button>
         </Table.Head>
         <Table.Head class="w-48">
-          <button
+          <Button
             type="button"
-            class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+            variant="ghost"
+            class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
             onclick={() => void state.toggleSort('apparat')}
           >
             <span>{$t('field_device.table.apparat')}</span>
@@ -123,12 +129,13 @@
             {:else if state.sortState('apparat') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
-          </button>
+          </Button>
         </Table.Head>
         <Table.Head class="w-48">
-          <button
+          <Button
             type="button"
-            class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+            variant="ghost"
+            class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
             onclick={() => void state.toggleSort('system_part')}
           >
             <span>{$t('field_device.table.system_part')}</span>
@@ -137,7 +144,7 @@
             {:else if state.sortState('system_part') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
-          </button>
+          </Button>
         </Table.Head>
         <Table.Head class="w-10">
           <Button
@@ -154,9 +161,10 @@
         </Table.Head>
         {#if state.showSpecifications}
           <Table.Head class="text-xs">
-            <button
+            <Button
               type="button"
-              class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+              variant="ghost"
+              class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
               onclick={() => void state.toggleSort('spec_supplier')}
             >
               <span>{$t('field_device.table.supplier')}</span>
@@ -165,12 +173,13 @@
               {:else if state.sortState('spec_supplier') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
-            </button>
+            </Button>
           </Table.Head>
           <Table.Head class="text-xs">
-            <button
+            <Button
               type="button"
-              class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+              variant="ghost"
+              class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
               onclick={() => void state.toggleSort('spec_brand')}
             >
               <span>{$t('field_device.table.brand')}</span>
@@ -179,12 +188,13 @@
               {:else if state.sortState('spec_brand') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
-            </button>
+            </Button>
           </Table.Head>
           <Table.Head class="text-xs">
-            <button
+            <Button
               type="button"
-              class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+              variant="ghost"
+              class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
               onclick={() => void state.toggleSort('spec_type')}
             >
               <span>{$t('field_device.table.type')}</span>
@@ -193,12 +203,13 @@
               {:else if state.sortState('spec_type') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
-            </button>
+            </Button>
           </Table.Head>
           <Table.Head class="text-xs">
-            <button
+            <Button
               type="button"
-              class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+              variant="ghost"
+              class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
               onclick={() => void state.toggleSort('spec_motor_valve')}
             >
               <span>{$t('field_device.table.motor_valve')}</span>
@@ -207,12 +218,13 @@
               {:else if state.sortState('spec_motor_valve') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
-            </button>
+            </Button>
           </Table.Head>
           <Table.Head class="text-xs">
-            <button
+            <Button
               type="button"
-              class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+              variant="ghost"
+              class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
               onclick={() => void state.toggleSort('spec_size')}
             >
               <span>{$t('field_device.table.size')}</span>
@@ -221,12 +233,13 @@
               {:else if state.sortState('spec_size') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
-            </button>
+            </Button>
           </Table.Head>
           <Table.Head class="text-xs">
-            <button
+            <Button
               type="button"
-              class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+              variant="ghost"
+              class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
               onclick={() => void state.toggleSort('spec_install_loc')}
             >
               <span>{$t('field_device.table.install_location')}</span>
@@ -235,12 +248,13 @@
               {:else if state.sortState('spec_install_loc') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
-            </button>
+            </Button>
           </Table.Head>
           <Table.Head class="text-xs">
-            <button
+            <Button
               type="button"
-              class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+              variant="ghost"
+              class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
               onclick={() => void state.toggleSort('spec_ph')}
             >
               <span>{$t('field_device.table.ph')}</span>
@@ -249,12 +263,13 @@
               {:else if state.sortState('spec_ph') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
-            </button>
+            </Button>
           </Table.Head>
           <Table.Head class="text-xs">
-            <button
+            <Button
               type="button"
-              class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+              variant="ghost"
+              class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
               onclick={() => void state.toggleSort('spec_acdc')}
             >
               <span>{$t('field_device.table.acdc')}</span>
@@ -263,12 +278,13 @@
               {:else if state.sortState('spec_acdc') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
-            </button>
+            </Button>
           </Table.Head>
           <Table.Head class="text-xs">
-            <button
+            <Button
               type="button"
-              class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+              variant="ghost"
+              class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
               onclick={() => void state.toggleSort('spec_amperage')}
             >
               <span>{$t('field_device.table.amperage')}</span>
@@ -277,12 +293,13 @@
               {:else if state.sortState('spec_amperage') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
-            </button>
+            </Button>
           </Table.Head>
           <Table.Head class="text-xs">
-            <button
+            <Button
               type="button"
-              class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+              variant="ghost"
+              class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
               onclick={() => void state.toggleSort('spec_power')}
             >
               <span>{$t('field_device.table.power')}</span>
@@ -291,12 +308,13 @@
               {:else if state.sortState('spec_power') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
-            </button>
+            </Button>
           </Table.Head>
           <Table.Head class="text-xs">
-            <button
+            <Button
               type="button"
-              class="inline-flex cursor-pointer items-center gap-1 underline-offset-4 hover:underline"
+              variant="ghost"
+              class="h-auto cursor-pointer p-0 underline-offset-4 hover:underline"
               onclick={() => void state.toggleSort('spec_rotation')}
             >
               <span>{$t('field_device.table.rotation')}</span>
@@ -305,7 +323,7 @@
               {:else if state.sortState('spec_rotation') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
-            </button>
+            </Button>
           </Table.Head>
         {/if}
       </Table.Row>
@@ -342,9 +360,10 @@
       {#snippet renderGroup(group: TableGroupNode<FieldDevice, FieldDeviceGroupKey>)}
         <Table.Row class="bg-muted/35 hover:bg-muted/50">
           <Table.Cell colspan={columnCount} class="p-0">
-            <button
+            <Button
               type="button"
-              class="flex w-full items-center gap-2 px-3 py-2 text-left font-medium"
+              variant="ghost"
+              class="flex h-auto w-full justify-start gap-2 px-3 py-2 text-left font-medium"
               style={`padding-left: ${0.75 + group.level * 1.25}rem`}
               aria-expanded={state.view.grouping.isGroupExpanded(group.id)}
               onclick={() => state.view.grouping.toggleGroupExpansion(group.id)}
@@ -363,7 +382,7 @@
               >
                 {$t('field_device.view.group_count', { count: group.count })}
               </span>
-            </button>
+            </Button>
           </Table.Cell>
         </Table.Row>
 

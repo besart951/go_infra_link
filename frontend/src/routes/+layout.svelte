@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import './layout.css';
   import { initAppearance } from '$lib/stores/appearance.js';
+  import { Button } from '$lib/components/ui/button/index.js';
   import { i18n } from '$lib/i18n/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
 
@@ -39,12 +40,9 @@
     <div class="text-center text-destructive">
       <p class="mb-2 text-lg font-semibold">{$t('app.translation_error_title')}</p>
       <p class="text-sm">{translationError}</p>
-      <button
-        onclick={() => i18n.reload()}
-        class="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
-      >
+      <Button onclick={() => i18n.reload()} class="mt-4">
         {$t('app.retry')}
-      </button>
+      </Button>
     </div>
   </div>
 {:else}

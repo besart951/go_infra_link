@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
+  import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+  import { Label } from '$lib/components/ui/label/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
   import AsyncMultiSelect from '$lib/components/ui/combobox/AsyncMultiSelect.svelte';
   import { addToast } from '$lib/components/toast.svelte';
@@ -262,9 +264,9 @@
   <Card.Content class="space-y-4">
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div class="space-y-2">
-        <label class="text-sm font-medium" for="export-projects">
+        <Label class="text-sm font-medium" for="export-projects">
           {$t('field_device.export.projects')}
-        </label>
+        </Label>
         <AsyncMultiSelect
           id="export-projects"
           bind:value={selectedProjectIds}
@@ -277,9 +279,9 @@
         />
       </div>
       <div class="space-y-2">
-        <label class="text-sm font-medium" for="export-buildings">
+        <Label class="text-sm font-medium" for="export-buildings">
           {$t('field_device.export.buildings')}
-        </label>
+        </Label>
         <AsyncMultiSelect
           id="export-buildings"
           bind:value={selectedBuildingIds}
@@ -292,9 +294,9 @@
         />
       </div>
       <div class="space-y-2">
-        <label class="text-sm font-medium" for="export-cabinets">
+        <Label class="text-sm font-medium" for="export-cabinets">
           {$t('field_device.export.control_cabinets')}
-        </label>
+        </Label>
         <AsyncMultiSelect
           id="export-cabinets"
           bind:value={selectedControlCabinetIds}
@@ -307,9 +309,9 @@
         />
       </div>
       <div class="space-y-2">
-        <label class="text-sm font-medium" for="export-controllers">
+        <Label class="text-sm font-medium" for="export-controllers">
           {$t('field_device.export.sps_controllers')}
-        </label>
+        </Label>
         <AsyncMultiSelect
           id="export-controllers"
           bind:value={selectedSPSControllerIds}
@@ -324,8 +326,8 @@
     </div>
 
     <div class="flex items-center gap-2">
-      <input id="force-async" type="checkbox" bind:checked={forceAsync} class="h-4 w-4" />
-      <label for="force-async" class="text-sm">{$t('field_device.export.force_async')}</label>
+      <Checkbox id="force-async" bind:checked={forceAsync} />
+      <Label for="force-async" class="text-sm">{$t('field_device.export.force_async')}</Label>
     </div>
 
     <div class="flex gap-2">

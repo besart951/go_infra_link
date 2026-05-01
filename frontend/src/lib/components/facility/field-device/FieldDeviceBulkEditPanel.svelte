@@ -178,8 +178,9 @@
 
     <div class="mb-4">
       {#if canEditSpecificationFields}
-        <button
+        <Button
           type="button"
+          variant="ghost"
           class="mb-2 flex items-center gap-1 text-sm font-medium hover:underline"
           onclick={() => (showBulkSpecFields = !showBulkSpecFields)}
         >
@@ -189,7 +190,7 @@
             <ChevronRight class="h-4 w-4" />
           {/if}
           {$t('field_device.bulk_edit.spec_fields')}
-        </button>
+        </Button>
       {/if}
       {#if showBulkSpecFields && canEditSpecificationFields}
         <fieldset>

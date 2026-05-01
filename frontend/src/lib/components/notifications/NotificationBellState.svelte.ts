@@ -2,28 +2,20 @@ import { getErrorMessage } from '$lib/api/client.js';
 import type { SystemNotification } from '$lib/domain/notification/index.js';
 import { systemNotificationRepository } from '$lib/infrastructure/api/systemNotificationRepository.js';
 
-export class NotificationInboxPageState {
-  notifications = $state<SystemNotification[]>([]);
+export class NotificationBellState {
+  items = $state<SystemNotification[]>([]);
   unreadCount = $state(0);
-  page = $state(1);
-  totalPages = $state(1);
-  unreadOnly = $state(false);
-  isLoading = $state(true);
+  isLoading = $state(false);
   error = $state<string | null>(null);
+  refreshTimer: ReturnType<typeof setInterval> | undefined;
 
-  async loadNotifications(nextPage = this.page): Promise<void> {
+  async loadNotifications(): Promise<void> {
     this.isLoading = true;
     this.error = null;
     try {
-      const result = await systemNotificationRepository.list({
-        page: nextPage,
-        limit: 20,
-        unread_only: this.unreadOnly
-      });
-      this.notifications = result.items;
+      const result = await systemNotificationRepository.list({ page: 1, limit: 5 });
+      this.items = result.items;
       this.unreadCount = result.unread_count;
-      this.page = result.page;
-      this.totalPages = result.total_pages || 1;
     } catch (error) {
       this.error = getErrorMessage(error);
     } finally {
@@ -44,36 +36,9 @@ export class NotificationInboxPageState {
   async toggleRead(notification: SystemNotification): Promise<void> {
     try {
       const updated = await systemNotificationRepository.toggleRead(notification.id);
-      this.notifications = this.notifications.map((item) =>
-        item.id === updated.id ? updated : item
-      );
+      this.items = this.items.map((item) => (item.id === updated.id ? updated : item));
       this.unreadCount += updated.read_at ? -1 : 1;
       if (this.unreadCount < 0) this.unreadCount = 0;
-      if (this.unreadOnly && updated.read_at) {
-        await this.loadNotifications();
-      }
-    } catch (error) {
-      this.error = getErrorMessage(error);
-    }
-  }
-
-  async toggleImportant(notification: SystemNotification): Promise<void> {
-    try {
-      const updated = await systemNotificationRepository.toggleImportant(notification.id);
-      this.notifications = this.notifications.map((item) =>
-        item.id === updated.id ? updated : item
-      );
-    } catch (error) {
-      this.error = getErrorMessage(error);
-    }
-  }
-
-  async deleteNotification(notification: SystemNotification): Promise<void> {
-    try {
-      await systemNotificationRepository.delete(notification.id);
-      await this.loadNotifications(
-        this.notifications.length === 1 && this.page > 1 ? this.page - 1 : this.page
-      );
     } catch (error) {
       this.error = getErrorMessage(error);
     }
@@ -82,20 +47,44 @@ export class NotificationInboxPageState {
   async markAllRead(): Promise<void> {
     try {
       await systemNotificationRepository.markAllRead();
-      await this.loadNotifications(1);
+      await this.loadNotifications();
     } catch (error) {
       this.error = getErrorMessage(error);
     }
   }
 
-  toggleUnreadOnly(): void {
-    this.unreadOnly = !this.unreadOnly;
-    void this.loadNotifications(1);
+  async toggleImportant(notification: SystemNotification): Promise<void> {
+    try {
+      const updated = await systemNotificationRepository.toggleImportant(notification.id);
+      this.items = this.items.map((item) => (item.id === updated.id ? updated : item));
+    } catch (error) {
+      this.error = getErrorMessage(error);
+    }
+  }
+
+  async deleteNotification(notification: SystemNotification): Promise<void> {
+    try {
+      await systemNotificationRepository.delete(notification.id);
+      await this.loadNotifications();
+    } catch (error) {
+      this.error = getErrorMessage(error);
+    }
+  }
+
+  startPolling(): void {
+    void this.loadNotifications();
+    this.refreshTimer = setInterval(() => {
+      void this.loadNotifications();
+    }, 60000);
+  }
+
+  stopPolling(): void {
+    if (this.refreshTimer) clearInterval(this.refreshTimer);
   }
 
   formatDateTime(value: string): string {
     return new Intl.DateTimeFormat('de-CH', {
-      dateStyle: 'medium',
+      dateStyle: 'short',
       timeStyle: 'short'
     }).format(new Date(value));
   }

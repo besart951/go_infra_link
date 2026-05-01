@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button/index.js';
+  import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
   import { Textarea } from '$lib/components/ui/textarea/index.js';
@@ -157,12 +158,7 @@
       {/if}
     </div>
     <div class="flex items-center gap-2">
-      <input
-        id="nc_ack_not_normal"
-        type="checkbox"
-        bind:checked={ack_required_not_normal}
-        class="h-4 w-4"
-      />
+      <Checkbox id="nc_ack_not_normal" bind:checked={ack_required_not_normal} />
       <Label for="nc_ack_not_normal">{$t('facility.forms.notification_class.ack_not_normal')}</Label
       >
     </div>
@@ -170,19 +166,14 @@
       <p class="text-sm text-destructive md:col-span-2">{fieldError('ack_required_not_normal')}</p>
     {/if}
     <div class="flex items-center gap-2">
-      <input id="nc_ack_error" type="checkbox" bind:checked={ack_required_error} class="h-4 w-4" />
+      <Checkbox id="nc_ack_error" bind:checked={ack_required_error} />
       <Label for="nc_ack_error">{$t('facility.forms.notification_class.ack_error')}</Label>
     </div>
     {#if fieldError('ack_required_error')}
       <p class="text-sm text-destructive md:col-span-2">{fieldError('ack_required_error')}</p>
     {/if}
     <div class="flex items-center gap-2">
-      <input
-        id="nc_ack_normal"
-        type="checkbox"
-        bind:checked={ack_required_normal}
-        class="h-4 w-4"
-      />
+      <Checkbox id="nc_ack_normal" bind:checked={ack_required_normal} />
       <Label for="nc_ack_normal">{$t('facility.forms.notification_class.ack_normal')}</Label>
     </div>
     {#if fieldError('ack_required_normal')}

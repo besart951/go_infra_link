@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
+  import { Button } from '$lib/components/ui/button/index.js';
   import { ChevronDown, ChevronRight } from '@lucide/svelte';
   import PermissionItem from './PermissionItem.svelte';
   import { useRolePermissionEditorState } from './state/context.svelte.js';
@@ -43,8 +44,9 @@
       aria-label={`Select all ${resource} permissions`}
     />
 
-    <button
+    <Button
       type="button"
+      variant="ghost"
       class="flex flex-1 items-center gap-2 rounded-md px-1 py-0.5 text-left hover:bg-accent/50"
       onclick={handleToggleExpand}
     >
@@ -57,7 +59,7 @@
       <Badge variant="secondary" class="ml-auto text-xs">
         {selectedCount}/{totalCount}
       </Badge>
-    </button>
+    </Button>
   </div>
 
   <!-- Permission List -->

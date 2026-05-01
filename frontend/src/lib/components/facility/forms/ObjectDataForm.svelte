@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button/index.js';
+  import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
   import { ManageObjectDataUseCase } from '$lib/application/useCases/facility/manageObjectDataUseCase.js';
@@ -290,7 +291,7 @@
       {/if}
     </div>
     <div class="flex items-center gap-2 md:col-span-3">
-      <input id="object_data_active" type="checkbox" bind:checked={is_active} class="h-4 w-4" />
+      <Checkbox id="object_data_active" bind:checked={is_active} />
       <Label for="object_data_active">{$t('common.active')}</Label>
     </div>
     {#if fieldError('is_active')}

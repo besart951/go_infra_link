@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { Button } from '$lib/components/ui/button/index.js';
+  import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
+  import * as ButtonGroup from '$lib/components/ui/button-group/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
   import BellIcon from '@lucide/svelte/icons/bell';
@@ -64,49 +65,42 @@
         {unreadCountLabel}
       </Badge>
 
-      <Tooltip.Root>
-        <Tooltip.Trigger>
-          <Button
-            variant={unreadOnly ? 'default' : 'outline'}
-            size="icon"
+      <ButtonGroup.Root>
+        <Tooltip.Root>
+          <Tooltip.Trigger
+            class={buttonVariants({ variant: unreadOnly ? 'default' : 'outline', size: 'icon' })}
             onclick={onToggleUnreadOnly}
             aria-label={unreadOnlyLabel}
           >
             <BellIcon class="size-4" />
-          </Button>
-        </Tooltip.Trigger>
-        <Tooltip.Content>{unreadOnlyLabel}</Tooltip.Content>
-      </Tooltip.Root>
+          </Tooltip.Trigger>
+          <Tooltip.Content>{unreadOnlyLabel}</Tooltip.Content>
+        </Tooltip.Root>
 
-      <Tooltip.Root>
-        <Tooltip.Trigger>
-          <Button
-            variant="outline"
-            size="icon"
+        <Tooltip.Root>
+          <Tooltip.Trigger
+            class={buttonVariants({ variant: 'outline', size: 'icon' })}
             onclick={onMarkAllRead}
             disabled={unreadCount === 0}
             aria-label={markAllReadLabel}
           >
             <CheckIcon class="size-4" />
-          </Button>
-        </Tooltip.Trigger>
-        <Tooltip.Content>{markAllReadLabel}</Tooltip.Content>
-      </Tooltip.Root>
+          </Tooltip.Trigger>
+          <Tooltip.Content>{markAllReadLabel}</Tooltip.Content>
+        </Tooltip.Root>
 
-      <Tooltip.Root>
-        <Tooltip.Trigger>
-          <Button
-            variant="outline"
-            size="icon"
+        <Tooltip.Root>
+          <Tooltip.Trigger
+            class={buttonVariants({ variant: 'outline', size: 'icon' })}
             onclick={onRefresh}
             disabled={isLoading}
             aria-label={refreshLabel}
           >
             <RefreshCwIcon class={`size-4${isLoading ? ' animate-spin' : ''}`} />
-          </Button>
-        </Tooltip.Trigger>
-        <Tooltip.Content>{refreshLabel}</Tooltip.Content>
-      </Tooltip.Root>
+          </Tooltip.Trigger>
+          <Tooltip.Content>{refreshLabel}</Tooltip.Content>
+        </Tooltip.Root>
+      </ButtonGroup.Root>
     </div>
   </header>
 </Tooltip.Provider>

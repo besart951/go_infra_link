@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { MailCheck, RefreshCw, ServerCog, ShieldCheck } from '@lucide/svelte';
+  import { MailCheck, RefreshCw, ShieldCheck } from '@lucide/svelte';
   import {
     NotificationRulesCard,
     SMTPOverviewCard,
@@ -8,9 +8,12 @@
     SMTPTestEmailCard
   } from '$lib/components/notifications/index.js';
   import { SMTPManagementPageState } from '$lib/components/notifications/SMTPManagementPageState.svelte.js';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import * as Alert from '$lib/components/ui/alert/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
-  import { Button } from '$lib/components/ui/button/index.js';
+  import { buttonVariants } from '$lib/components/ui/button/index.js';
+  import * as ButtonGroup from '$lib/components/ui/button-group/index.js';
+  import * as Tooltip from '$lib/components/ui/tooltip/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import type { PageData } from './$types.js';
 
@@ -29,61 +32,34 @@
 </svelte:head>
 
 <div class="mx-auto flex w-full max-w-7xl flex-col gap-5">
-  <header class="flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-end lg:justify-between">
-    <div class="min-w-0 space-y-3">
-      <div class="flex flex-wrap items-center gap-2">
-        <Badge variant="outline" class="gap-1.5">
-          <ShieldCheck class="size-3.5" />
-          {$t('notifications.hero.scope')}
-        </Badge>
-        <Badge variant={state.statusVariant()} class="gap-1.5">
-          <MailCheck class="size-3.5" />
-          {state.serviceStatus}
-        </Badge>
-      </div>
-
-      <div class="space-y-1">
-        <h1 class="text-2xl leading-8 font-semibold tracking-tight sm:text-3xl">
-          {$t('notifications.page.title')}
-        </h1>
-        <p class="max-w-3xl text-sm leading-6 text-muted-foreground">
-          {$t('notifications.page.description')}
-        </p>
-      </div>
-    </div>
-
-    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <div
-        class="flex min-w-0 items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm"
-      >
-        <ServerCog class="size-4 shrink-0 text-muted-foreground" />
-        <div class="min-w-0">
-          <p class="text-xs text-muted-foreground">{$t('notifications.hero.delivery_channel')}</p>
-          <p class="truncate font-medium">{state.connectionLabel}</p>
-        </div>
-      </div>
-
-      <div
-        class="flex min-w-0 items-center gap-2 rounded-lg border bg-background px-3 py-2 text-sm"
-      >
-        <RefreshCw class="size-4 shrink-0 text-muted-foreground" />
-        <div class="min-w-0">
-          <p class="text-xs text-muted-foreground">{$t('notifications.hero.last_sync')}</p>
-          <p class="truncate font-medium">{state.formatDateTime(state.lastLoadedAt)}</p>
-        </div>
-      </div>
-
-      <Button
-        variant="outline"
-        class="w-full sm:w-auto"
-        onclick={() => state.loadSettings('refresh')}
-        disabled={state.isLoading || state.isRefreshing || state.isSaving || state.isSendingTest}
-      >
-        <RefreshCw class={`size-4${state.isRefreshing ? ' animate-spin' : ''}`} />
-        {$t('common.refresh')}
-      </Button>
-    </div>
-  </header>
+  <EntityListHeader
+    title={$t('notifications.page.title')}
+    description={$t('notifications.page.description')}
+    backHref="/notifications"
+    backLabel={$t('hub.back_to_overview')}
+  >
+    <Badge variant="outline" class="hidden gap-1.5 sm:inline-flex">
+      <ShieldCheck class="size-3.5" />
+      {$t('notifications.hero.scope')}
+    </Badge>
+    <Badge variant={state.statusVariant()} class="gap-1.5">
+      <MailCheck class="size-3.5" />
+      {state.serviceStatus}
+    </Badge>
+    <ButtonGroup.Root>
+      <Tooltip.Root>
+        <Tooltip.Trigger
+          class={buttonVariants({ variant: 'outline', size: 'icon' })}
+          onclick={() => state.loadSettings('refresh')}
+          disabled={state.isLoading || state.isRefreshing || state.isSaving || state.isSendingTest}
+          aria-label={$t('common.refresh')}
+        >
+          <RefreshCw class={`size-4${state.isRefreshing ? ' animate-spin' : ''}`} />
+        </Tooltip.Trigger>
+        <Tooltip.Content>{$t('common.refresh')}</Tooltip.Content>
+      </Tooltip.Root>
+    </ButtonGroup.Root>
+  </EntityListHeader>
 
   {#if state.loadError}
     <Alert.Root variant="destructive">

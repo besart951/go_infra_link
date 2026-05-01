@@ -297,6 +297,27 @@ func (s *Service) MarkAllSystemNotificationsRead(ctx context.Context, userID uui
 	return s.systemRepo.MarkAllReadForUser(ctx, userID)
 }
 
+func (s *Service) ToggleSystemNotificationRead(ctx context.Context, notificationID, userID uuid.UUID) (*domainNotification.SystemNotification, error) {
+	if notificationID == uuid.Nil || userID == uuid.Nil {
+		return nil, domain.ErrInvalidArgument
+	}
+	return s.systemRepo.ToggleReadForUser(ctx, notificationID, userID)
+}
+
+func (s *Service) ToggleSystemNotificationImportant(ctx context.Context, notificationID, userID uuid.UUID) (*domainNotification.SystemNotification, error) {
+	if notificationID == uuid.Nil || userID == uuid.Nil {
+		return nil, domain.ErrInvalidArgument
+	}
+	return s.systemRepo.ToggleImportantForUser(ctx, notificationID, userID)
+}
+
+func (s *Service) DeleteSystemNotification(ctx context.Context, notificationID, userID uuid.UUID) error {
+	if notificationID == uuid.Nil || userID == uuid.Nil {
+		return domain.ErrInvalidArgument
+	}
+	return s.systemRepo.DeleteForUser(ctx, notificationID, userID)
+}
+
 func (s *Service) ListNotificationRules(ctx context.Context, filter domainNotification.NotificationRuleFilter) ([]domainNotification.NotificationRule, error) {
 	if s.ruleRepo == nil {
 		return []domainNotification.NotificationRule{}, nil

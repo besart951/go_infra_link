@@ -91,6 +91,7 @@ type SystemNotificationResponse struct {
 	ResourceID   *uuid.UUID        `json:"resource_id,omitempty"`
 	Metadata     map[string]string `json:"metadata,omitempty"`
 	ReadAt       *time.Time        `json:"read_at,omitempty"`
+	IsImportant  bool              `json:"is_important"`
 	CreatedAt    time.Time         `json:"created_at"`
 	UpdatedAt    time.Time         `json:"updated_at"`
 }

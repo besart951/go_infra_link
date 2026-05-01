@@ -9,6 +9,7 @@ export interface SystemNotification {
   resource_id?: string | null;
   metadata?: Record<string, string>;
   read_at?: string | null;
+  is_important: boolean;
   created_at: string;
   updated_at: string;
 }

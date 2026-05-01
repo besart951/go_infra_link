@@ -34,6 +34,7 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
   import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from '@lucide/svelte';
+  import { Button } from '$lib/components/ui/button/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
 
   const t = createTranslator();
@@ -75,13 +76,16 @@
       >
         <Icon class="mt-0.5 h-5 w-5 shrink-0" />
         <p class="flex-1 text-sm">{toast.message}</p>
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
           onclick={() => removeToast(toast.id)}
-          class="shrink-0 rounded-sm opacity-70 transition-opacity hover:opacity-100"
+          class="size-6 shrink-0 opacity-70 hover:opacity-100"
           aria-label={$t('common.close')}
         >
           <X class="h-4 w-4" />
-        </button>
+        </Button>
       </div>
     {/each}
   </div>

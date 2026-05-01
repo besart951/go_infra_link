@@ -2,6 +2,7 @@
   import * as Card from '$lib/components/ui/card/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+  import * as ButtonGroup from '$lib/components/ui/button-group/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
   import CpuIcon from '@lucide/svelte/icons/cpu';
   import NetworkIcon from '@lucide/svelte/icons/network';
@@ -107,11 +108,12 @@
                   </div>
                 </div>
 
-                <div class="flex items-center gap-1">
+                <ButtonGroup.Root class="shrink-0">
                   <Tooltip.Root>
                     <Tooltip.Trigger
-                      class={buttonVariants({ variant: 'ghost', size: 'sm' })}
+                      class={buttonVariants({ variant: 'outline', size: 'icon-sm' })}
                       onclick={createViewHandler(controller.id)}
+                      aria-label={$t('facility.view')}
                     >
                       <ArrowRightIcon class="size-4" />
                     </Tooltip.Trigger>
@@ -121,8 +123,9 @@
                   {#if state.canUpdateSps}
                     <Tooltip.Root>
                       <Tooltip.Trigger
-                        class={buttonVariants({ variant: 'ghost', size: 'sm' })}
+                        class={buttonVariants({ variant: 'outline', size: 'icon-sm' })}
                         onclick={createEditHandler(controller)}
+                        aria-label={$t('common.edit')}
                       >
                         <PencilIcon class="size-4" />
                       </Tooltip.Trigger>
@@ -131,8 +134,9 @@
 
                     <Tooltip.Root>
                       <Tooltip.Trigger
-                        class={buttonVariants({ variant: 'ghost', size: 'sm' })}
+                        class={buttonVariants({ variant: 'outline', size: 'icon-sm' })}
                         onclick={createCopyHandler(controller)}
+                        aria-label={$t('common.copy')}
                       >
                         <CopyIcon class="size-4" />
                       </Tooltip.Trigger>
@@ -143,15 +147,19 @@
                   {#if state.canDeleteSps}
                     <Tooltip.Root>
                       <Tooltip.Trigger
-                        class={`${buttonVariants({ variant: 'ghost', size: 'sm' })} text-destructive`}
+                        class={`${buttonVariants({
+                          variant: 'outline',
+                          size: 'icon-sm'
+                        })} text-destructive hover:bg-destructive/10 hover:text-destructive`}
                         onclick={createDeleteHandler(controller)}
+                        aria-label={$t('common.delete')}
                       >
                         <Trash2Icon class="size-4" />
                       </Tooltip.Trigger>
                       <Tooltip.Content>{$t('common.delete')}</Tooltip.Content>
                     </Tooltip.Root>
                   {/if}
-                </div>
+                </ButtonGroup.Root>
               </div>
 
               <div class="mt-4 rounded-md border border-border/70 bg-background/60 p-3">

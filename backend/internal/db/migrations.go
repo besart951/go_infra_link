@@ -79,6 +79,11 @@ var migrations = []migration{
 		description: "control_cabinet_search_and_list_indexes",
 		apply:       migrateControlCabinetPerformance,
 	},
+	{
+		version:     "202605010003",
+		description: "system_notification_importance",
+		apply:       migrateSystemNotificationImportance,
+	},
 }
 
 func ApplyMigrations(db *gorm.DB) error {

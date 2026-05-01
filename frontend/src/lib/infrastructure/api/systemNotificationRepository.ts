@@ -35,5 +35,26 @@ export const systemNotificationRepository: SystemNotificationRepository = {
       method: 'POST',
       signal
     });
+  },
+
+  toggleRead(id: string, signal?: AbortSignal): Promise<SystemNotification> {
+    return api<SystemNotification>(`/account/notifications/${id}/read-toggle`, {
+      method: 'POST',
+      signal
+    });
+  },
+
+  toggleImportant(id: string, signal?: AbortSignal): Promise<SystemNotification> {
+    return api<SystemNotification>(`/account/notifications/${id}/important`, {
+      method: 'POST',
+      signal
+    });
+  },
+
+  delete(id: string, signal?: AbortSignal): Promise<void> {
+    return api<void>(`/account/notifications/${id}`, {
+      method: 'DELETE',
+      signal
+    });
   }
 };

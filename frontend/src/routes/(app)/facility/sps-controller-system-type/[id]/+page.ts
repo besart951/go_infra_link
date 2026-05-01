@@ -4,6 +4,7 @@ import type { PageLoad } from './$types';
 import type {
   Building,
   ControlCabinet,
+  FieldDeviceListResponse,
   SPSController,
   SPSControllerSystemType
 } from '$lib/domain/facility/index.js';
@@ -34,11 +35,18 @@ export const load: PageLoad = async ({ params, fetch, url }) => {
       ? api<Building>(`/facility/buildings/${cabinet.building_id}`, { customFetch: fetch })
       : Promise.resolve(null);
 
+    const fieldDevicesResponse = await api<FieldDeviceListResponse>(
+      `/facility/field-devices?page=1&limit=300&order_by=apparat_nr&order=asc&sps_controller_system_type_id=${systemType.id}`,
+      { customFetch: fetch }
+    );
+
     return {
       systemType,
       controller,
       cabinet,
       building: await buildingPromise,
+      fieldDevices: fieldDevicesResponse.items ?? [],
+      fieldDevicesTotal: fieldDevicesResponse.total ?? 0,
       editRequested: url.searchParams.get('edit') === '1'
     };
   } catch (e: any) {

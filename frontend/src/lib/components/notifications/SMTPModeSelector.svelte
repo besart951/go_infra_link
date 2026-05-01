@@ -1,6 +1,7 @@
 <script lang="ts">
   import CheckIcon from '@lucide/svelte/icons/check';
   import { Badge } from '$lib/components/ui/badge/index.js';
+  import { Button } from '$lib/components/ui/button/index.js';
   import { cn } from '$lib/utils.js';
 
   export interface SMTPModeOption {
@@ -47,13 +48,16 @@
   <div role="radiogroup" aria-label={label} class={cn('grid gap-3', columnsClass)}>
     {#each options as option (option.value)}
       {@const isSelected = value === option.value}
-      <button
+      <Button
         type="button"
+        variant="outline"
         role="radio"
         aria-checked={isSelected}
         class={cn(
-          'grid h-full min-h-28 grid-cols-[1.25rem_minmax(0,1fr)] gap-3 rounded-lg border bg-background p-3 text-left transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:p-4',
-          isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'hover:bg-accent/60'
+          'grid h-full min-h-28 grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-3 rounded-lg bg-background p-3 text-left whitespace-normal sm:p-4',
+          isSelected
+            ? 'border-primary bg-primary/5 text-foreground shadow-sm'
+            : 'hover:bg-accent/60'
         )}
         onclick={() => selectOption(option.value)}
       >
@@ -88,7 +92,7 @@
 
           <p class="text-sm leading-6 text-muted-foreground">{option.description}</p>
         </div>
-      </button>
+      </Button>
     {/each}
   </div>
 </div>

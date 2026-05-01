@@ -7,6 +7,7 @@
   import PencilIcon from '@lucide/svelte/icons/pencil';
   import { createTranslator } from '$lib/i18n/translator.js';
   import SPSControllerForm from '$lib/components/facility/forms/SPSControllerForm.svelte';
+  import SPSControllerSystemTypeFieldDevicesCard from '$lib/components/facility/sps-controller-system-type-detail/SPSControllerSystemTypeFieldDevicesCard.svelte';
   import { SPSControllerSystemTypeDetailState } from '$lib/components/facility/sps-controller-system-type-detail/state/SPSControllerSystemTypeDetailState.svelte.js';
 
   let { data }: { data: PageData } = $props();
@@ -83,4 +84,9 @@
       </div>
     </Card.Content>
   </Card.Root>
+
+  <SPSControllerSystemTypeFieldDevicesCard
+    fieldDevices={state.fieldDevices}
+    total={state.fieldDevicesTotal}
+  />
 </div>

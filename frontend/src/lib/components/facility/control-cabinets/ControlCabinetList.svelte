@@ -83,9 +83,13 @@
   >
     {#snippet rowSnippet(cabinet: ControlCabinet)}
       <Table.Cell class="font-medium">
-        <button class="hover:underline" type="button" onclick={() => void handleView(cabinet)}>
+        <Button
+          variant="link"
+          class="h-auto p-0 font-medium"
+          onclick={() => void handleView(cabinet)}
+        >
           {cabinet.control_cabinet_nr ?? $t('common.not_available')}
-        </button>
+        </Button>
       </Table.Cell>
       <Table.Cell>{state.getBuildingLabel(cabinet.building_id)}</Table.Cell>
       <Table.Cell class="text-right">

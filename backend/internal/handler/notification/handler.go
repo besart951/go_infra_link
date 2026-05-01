@@ -389,6 +389,115 @@ func (h *NotificationSettingsHandler) MarkAllSystemNotificationsRead(c *gin.Cont
 	c.Status(http.StatusNoContent)
 }
 
+// ToggleSystemNotificationRead godoc
+// @Summary Toggle read state for one system notification
+// @Tags notifications
+// @Produce json
+// @Param id path string true "Notification ID"
+// @Success 200 {object} dto.SystemNotificationResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/account/notifications/{id}/read-toggle [post]
+func (h *NotificationSettingsHandler) ToggleSystemNotificationRead(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondError(c, http.StatusUnauthorized, "unauthorized", "Unauthorized")
+		return
+	}
+
+	notificationID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	notification, err := h.service.ToggleSystemNotificationRead(c.Request.Context(), notificationID, userID)
+	if err != nil {
+		handlerutil.RespondDomainError(
+			c,
+			err,
+			handlerutil.PlainError(http.StatusInternalServerError, "update_failed", "Failed to update notification"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.PlainError(http.StatusNotFound, "not_found", "Notification not found")),
+		)
+		return
+	}
+
+	c.JSON(http.StatusOK, mapSystemNotificationResponse(notification))
+}
+
+// ToggleSystemNotificationImportant godoc
+// @Summary Toggle important state for one system notification
+// @Tags notifications
+// @Produce json
+// @Param id path string true "Notification ID"
+// @Success 200 {object} dto.SystemNotificationResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/account/notifications/{id}/important [post]
+func (h *NotificationSettingsHandler) ToggleSystemNotificationImportant(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondError(c, http.StatusUnauthorized, "unauthorized", "Unauthorized")
+		return
+	}
+
+	notificationID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	notification, err := h.service.ToggleSystemNotificationImportant(c.Request.Context(), notificationID, userID)
+	if err != nil {
+		handlerutil.RespondDomainError(
+			c,
+			err,
+			handlerutil.PlainError(http.StatusInternalServerError, "update_failed", "Failed to update notification"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.PlainError(http.StatusNotFound, "not_found", "Notification not found")),
+		)
+		return
+	}
+
+	c.JSON(http.StatusOK, mapSystemNotificationResponse(notification))
+}
+
+// DeleteSystemNotification godoc
+// @Summary Delete one system notification
+// @Tags notifications
+// @Param id path string true "Notification ID"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/account/notifications/{id} [delete]
+func (h *NotificationSettingsHandler) DeleteSystemNotification(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondError(c, http.StatusUnauthorized, "unauthorized", "Unauthorized")
+		return
+	}
+
+	notificationID, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if err := h.service.DeleteSystemNotification(c.Request.Context(), notificationID, userID); err != nil {
+		handlerutil.RespondDomainError(
+			c,
+			err,
+			handlerutil.PlainError(http.StatusInternalServerError, "delete_failed", "Failed to delete notification"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.PlainError(http.StatusNotFound, "not_found", "Notification not found")),
+		)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
 func (h *NotificationSettingsHandler) ListNotificationRules(c *gin.Context) {
 	var query struct {
 		EventKey string `form:"event_key"`
@@ -544,6 +653,7 @@ func mapSystemNotificationResponse(notification *domainNotification.SystemNotifi
 		ResourceID:   notification.ResourceID,
 		Metadata:     notification.Metadata,
 		ReadAt:       notification.ReadAt,
+		IsImportant:  notification.IsImportant,
 		CreatedAt:    notification.CreatedAt,
 		UpdatedAt:    notification.UpdatedAt,
 	}

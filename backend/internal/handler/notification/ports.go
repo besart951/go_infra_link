@@ -20,6 +20,9 @@ type NotificationSettingsService interface {
 	CountUnreadSystemNotifications(ctx context.Context, userID uuid.UUID) (int64, error)
 	MarkSystemNotificationRead(ctx context.Context, notificationID, userID uuid.UUID) (*domainNotification.SystemNotification, error)
 	MarkAllSystemNotificationsRead(ctx context.Context, userID uuid.UUID) error
+	ToggleSystemNotificationRead(ctx context.Context, notificationID, userID uuid.UUID) (*domainNotification.SystemNotification, error)
+	ToggleSystemNotificationImportant(ctx context.Context, notificationID, userID uuid.UUID) (*domainNotification.SystemNotification, error)
+	DeleteSystemNotification(ctx context.Context, notificationID, userID uuid.UUID) error
 	ListNotificationRules(ctx context.Context, filter domainNotification.NotificationRuleFilter) ([]domainNotification.NotificationRule, error)
 	UpsertNotificationRule(ctx context.Context, input domainNotification.UpsertNotificationRuleInput) (*domainNotification.NotificationRule, error)
 	DeleteNotificationRule(ctx context.Context, id uuid.UUID) error

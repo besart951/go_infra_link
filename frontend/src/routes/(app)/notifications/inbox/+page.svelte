@@ -2,10 +2,10 @@
   import { onMount } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
+  import NotificationInboxCard from '$lib/components/notifications/NotificationInboxCard.svelte';
   import NotificationInboxHeader from '$lib/components/notifications/NotificationInboxHeader.svelte';
   import { NotificationInboxPageState } from '$lib/components/notifications/NotificationInboxPageState.svelte.js';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import CheckIcon from '@lucide/svelte/icons/check';
 
   const t = createTranslator();
   const state = new NotificationInboxPageState();
@@ -57,29 +57,13 @@
       </Card.Root>
     {:else}
       {#each state.notifications as notification (notification.id)}
-        <Card.Root class={notification.read_at ? '' : 'border-primary/40'}>
-          <Card.Header class="gap-2">
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div class="min-w-0">
-                <Card.Title class="text-base leading-6">{notification.title}</Card.Title>
-                <Card.Description>
-                  {state.formatDateTime(notification.created_at)} · {notification.event_key}
-                </Card.Description>
-              </div>
-              {#if !notification.read_at}
-                <Button variant="outline" size="sm" onclick={() => state.markRead(notification)}>
-                  <CheckIcon class="size-4" />
-                  {$t('notifications.inbox.mark_read')}
-                </Button>
-              {/if}
-            </div>
-          </Card.Header>
-          {#if notification.body}
-            <Card.Content class="text-sm leading-6 text-muted-foreground">
-              {notification.body}
-            </Card.Content>
-          {/if}
-        </Card.Root>
+        <NotificationInboxCard
+          {notification}
+          dateLabel={state.formatDateTime(notification.created_at)}
+          onToggleRead={(item) => state.toggleRead(item)}
+          onToggleImportant={(item) => state.toggleImportant(item)}
+          onDelete={(item) => state.deleteNotification(item)}
+        />
       {/each}
     {/if}
   </div>

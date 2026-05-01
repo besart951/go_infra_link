@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Button } from '$lib/components/ui/button/index.js';
+
   type PrepareFilterKey =
     | 'all'
     | 'missingApparats'
@@ -38,67 +40,87 @@
 
 {#if preparedSummary}
   <div class="mb-4 rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground">
-    <button type="button" onclick={() => onSetPrepareFilter('all')} class={filterClass('all')}>
+    <Button
+      variant="link"
+      class={filterClass('all', 'h-auto p-0 text-xs ')}
+      onclick={() => onSetPrepareFilter('all')}
+    >
       {preparedSummary.objectDataCount} Objektdaten vorbereitet
-    </button>
-    <button type="button" onclick={() => onSetPrepareFilter('all')} class="ml-3 cursor-pointer">
+    </Button>
+    <Button
+      variant="link"
+      class="ml-3 h-auto p-0 text-xs text-muted-foreground"
+      onclick={() => onSetPrepareFilter('all')}
+    >
       {preparedSummary.bacnetCount} BACnet-Objekte
-    </button>
-    <button
-      type="button"
+    </Button>
+    <Button
+      variant="link"
       onclick={() => onSetPrepareFilter('missingApparats')}
-      class={filterClass('missingApparats', 'ml-3 ')}
+      class={filterClass('missingApparats', 'ml-3 h-auto p-0 text-xs text-muted-foreground ')}
     >
       Fehlende Apparate: {preparedSummary.missingApparats}
-    </button>
-    <button
-      type="button"
+    </Button>
+    <Button
+      variant="link"
       onclick={() => onSetPrepareFilter('missingStateTexts')}
-      class={filterClass('missingStateTexts', 'ml-3 ')}
+      class={filterClass('missingStateTexts', 'ml-3 h-auto p-0 text-xs text-muted-foreground ')}
     >
       Fehlende Statustexte: {preparedSummary.missingStateTexts}
-    </button>
-    <button
-      type="button"
+    </Button>
+    <Button
+      variant="link"
       onclick={() => onSetPrepareFilter('missingNotificationClasses')}
-      class={filterClass('missingNotificationClasses', 'ml-3 ')}
+      class={filterClass(
+        'missingNotificationClasses',
+        'ml-3 h-auto p-0 text-xs text-muted-foreground '
+      )}
     >
       Fehlende Benachrichtigungsklassen: {preparedSummary.missingNotificationClasses}
-    </button>
-    <button
-      type="button"
+    </Button>
+    <Button
+      variant="link"
       onclick={() => onSetPrepareFilter('missingSoftwareReferences')}
-      class={filterClass('missingSoftwareReferences', 'ml-3 ')}
+      class={filterClass(
+        'missingSoftwareReferences',
+        'ml-3 h-auto p-0 text-xs text-muted-foreground '
+      )}
     >
       Fehlende Software-Referenzen: {preparedSummary.missingSoftwareReferences}
-    </button>
-    <button
-      type="button"
+    </Button>
+    <Button
+      variant="link"
       onclick={() => onSetPrepareFilter('missingHardware')}
-      class={filterClass('missingHardware', 'ml-3 ')}
+      class={filterClass('missingHardware', 'ml-3 h-auto p-0 text-xs text-muted-foreground ')}
     >
       Fehlende Hardware: {preparedSummary.missingHardware}
-    </button>
-    <button
-      type="button"
+    </Button>
+    <Button
+      variant="link"
       onclick={() => onSetPrepareFilter('missingSoftwareNumbers')}
-      class={filterClass('missingSoftwareNumbers', 'ml-3 ')}
+      class={filterClass(
+        'missingSoftwareNumbers',
+        'ml-3 h-auto p-0 text-xs text-muted-foreground '
+      )}
     >
       Fehlende Softwarenummern: {preparedSummary.missingSoftwareNumbers}
-    </button>
-    <button
-      type="button"
+    </Button>
+    <Button
+      variant="link"
       onclick={() => onSetPrepareFilter('plannedAlarmDefinitions')}
-      class={filterClass('plannedAlarmDefinitions', 'ml-3 ')}
+      class={filterClass(
+        'plannedAlarmDefinitions',
+        'ml-3 h-auto p-0 text-xs text-muted-foreground '
+      )}
     >
       Geplante Alarmtyp-Zuordnungen: {preparedSummary.plannedAlarmDefinitionCreates}
-    </button>
-    <button
-      type="button"
+    </Button>
+    <Button
+      variant="link"
       onclick={() => onSetPrepareFilter('plannedSoftwareLinks')}
-      class={filterClass('plannedSoftwareLinks', 'ml-3 ')}
+      class={filterClass('plannedSoftwareLinks', 'ml-3 h-auto p-0 text-xs text-muted-foreground ')}
     >
       Geplante Software-Verknüpfungen: {preparedSummary.plannedSoftwareReferenceLinks}
-    </button>
+    </Button>
   </div>
 {/if}

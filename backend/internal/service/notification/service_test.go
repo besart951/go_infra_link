@@ -81,6 +81,18 @@ func (r *systemNotificationRepoStub) MarkAllReadForUser(context.Context, uuid.UU
 	return nil
 }
 
+func (r *systemNotificationRepoStub) ToggleReadForUser(context.Context, uuid.UUID, uuid.UUID) (*domainNotification.SystemNotification, error) {
+	return nil, domain.ErrNotFound
+}
+
+func (r *systemNotificationRepoStub) ToggleImportantForUser(context.Context, uuid.UUID, uuid.UUID) (*domainNotification.SystemNotification, error) {
+	return nil, domain.ErrNotFound
+}
+
+func (r *systemNotificationRepoStub) DeleteForUser(context.Context, uuid.UUID, uuid.UUID) error {
+	return domain.ErrNotFound
+}
+
 type emailOutboxRepoStub struct {
 	created        []domainNotification.EmailOutbox
 	due            []domainNotification.EmailOutbox

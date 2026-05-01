@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { buttonVariants } from '$lib/components/ui/button/index.js';
+  import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
   import * as Popover from '$lib/components/ui/popover/index.js';
   import { Separator } from '$lib/components/ui/separator/index.js';
   import { ToggleButton } from '$lib/components/ui/toggle-button/index.js';
@@ -41,10 +41,11 @@
       </p>
       <div class="grid grid-cols-3 gap-1 rounded-md bg-muted p-1">
         {#each fieldDeviceState.view.density.options as option (option.value)}
-          <button
+          <Button
             type="button"
+            variant="ghost"
             class={[
-              'rounded-md px-2 py-1.5 text-sm font-medium transition-colors',
+              'h-auto rounded-md px-2 py-1.5 text-sm font-medium transition-colors',
               fieldDeviceState.view.density.value === option.value
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:bg-background/70 hover:text-foreground'
@@ -55,7 +56,7 @@
             onclick={() => fieldDeviceState.view.density.set(option.value)}
           >
             {$t(option.labelKey)}
-          </button>
+          </Button>
         {/each}
       </div>
     </div>
