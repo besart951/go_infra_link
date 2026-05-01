@@ -1,53 +1,27 @@
 import type { ControlCabinet } from '$lib/domain/facility/index.js';
-import type { DataTableFetchStrategy, DataTableQuery } from '$lib/state/table/contracts.js';
+import { ContextualDataTableFetchStrategy } from '$lib/state/table/ContextualDataTableFetchStrategy.js';
 import type { ControlCabinetFilters } from '../types.js';
 import { FacilityControlCabinetFetchStrategy } from './FacilityControlCabinetFetchStrategy.js';
 import { ProjectControlCabinetFetchStrategy } from './ProjectControlCabinetFetchStrategy.js';
 
-export class ContextualControlCabinetFetchStrategy implements DataTableFetchStrategy<
+export class ContextualControlCabinetFetchStrategy extends ContextualDataTableFetchStrategy<
   ControlCabinet,
-  ControlCabinetFilters
+  ControlCabinetFilters,
+  ProjectControlCabinetFetchStrategy
 > {
-  private readonly facilityStrategy = new FacilityControlCabinetFetchStrategy();
-  private projectStrategy: ProjectControlCabinetFetchStrategy | null = null;
-  private readonly resolveProjectId: () => string | undefined;
-
   constructor(resolveProjectId: () => string | undefined) {
-    this.resolveProjectId = resolveProjectId;
-  }
-
-  async fetch(query: DataTableQuery<ControlCabinetFilters>, signal?: AbortSignal) {
-    return this.getActiveStrategy().fetch(query, signal);
+    super(
+      resolveProjectId,
+      new FacilityControlCabinetFetchStrategy(),
+      (projectId) => new ProjectControlCabinetFetchStrategy(projectId)
+    );
   }
 
   getBuildingLabels(): Map<string, string> {
-    if (!this.projectStrategy) {
-      return new Map();
-    }
-
-    return this.projectStrategy.getBuildingLabels();
+    return this.getActiveProjectStrategy()?.getBuildingLabels() ?? new Map();
   }
 
   getLinkId(controlCabinetId: string): string | undefined {
-    if (!this.projectStrategy) {
-      return undefined;
-    }
-
-    return this.projectStrategy.getLinkId(controlCabinetId);
-  }
-
-  private getActiveStrategy():
-    | FacilityControlCabinetFetchStrategy
-    | ProjectControlCabinetFetchStrategy {
-    const projectId = this.resolveProjectId();
-    if (!projectId) {
-      return this.facilityStrategy;
-    }
-
-    if (!this.projectStrategy || this.projectStrategy.getProjectId() !== projectId) {
-      this.projectStrategy = new ProjectControlCabinetFetchStrategy(projectId);
-    }
-
-    return this.projectStrategy;
+    return this.getActiveProjectStrategy()?.getLinkId(controlCabinetId);
   }
 }

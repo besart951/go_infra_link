@@ -106,7 +106,7 @@ describe('/projects/list permission surface', () => {
     render(ProjectsPage);
 
     expect(screen.getByText('navigation.projects')).toBeInTheDocument();
-    expect(screen.queryByText('common.create')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'common.create' })).not.toBeInTheDocument();
   });
 
   it('still renders for a logged-in user with an unrelated permission set', () => {
@@ -115,7 +115,7 @@ describe('/projects/list permission surface', () => {
     render(ProjectsPage);
 
     expect(screen.getByText('navigation.projects')).toBeInTheDocument();
-    expect(screen.queryByText('common.create')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'common.create' })).not.toBeInTheDocument();
   });
 
   it('shows the create CTA when project.create is granted', () => {
@@ -123,6 +123,6 @@ describe('/projects/list permission surface', () => {
 
     render(ProjectsPage);
 
-    expect(screen.getByText('common.create')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'common.create' })).toBeInTheDocument();
   });
 });

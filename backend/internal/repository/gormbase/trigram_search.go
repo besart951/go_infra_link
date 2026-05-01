@@ -47,9 +47,8 @@ func applyTrigramSearchTerm(query *gorm.DB, term string, columns ...TrigramSearc
 
 func buildTrigramSearchCondition(query *gorm.DB, term string, columns ...TrigramSearchColumn) (string, []any) {
 	conditions := make([]string, 0, len(columns))
-	args := make([]any, 0, len(columns)*2)
-	pattern := "%" + term + "%"
-	postgres := isPostgresDialect(query)
+	args := make([]any, 0, len(columns))
+	pattern := SearchLikePattern(query, term)
 
 	for _, column := range columns {
 		expression := strings.TrimSpace(column.Expression)
@@ -58,12 +57,6 @@ func buildTrigramSearchCondition(query *gorm.DB, term string, columns ...Trigram
 		}
 
 		lowerExpression := fmt.Sprintf("LOWER(%s)", expression)
-		if postgres {
-			conditions = append(conditions, fmt.Sprintf("(%s LIKE ? OR %s %% ?)", lowerExpression, lowerExpression))
-			args = append(args, pattern, term)
-			continue
-		}
-
 		conditions = append(conditions, fmt.Sprintf("%s LIKE ?", lowerExpression))
 		args = append(args, pattern)
 	}
@@ -72,6 +65,17 @@ func buildTrigramSearchCondition(query *gorm.DB, term string, columns ...Trigram
 		return "", nil
 	}
 	return "(" + strings.Join(conditions, " OR ") + ")", args
+}
+
+func SearchLikePattern(query *gorm.DB, term string) string {
+	return trigramSearchPattern(term, isPostgresDialect(query))
+}
+
+func trigramSearchPattern(term string, postgres bool) string {
+	if postgres && len([]rune(term)) < 3 {
+		return term + "%"
+	}
+	return "%" + term + "%"
 }
 
 func isPostgresDialect(query *gorm.DB) bool {

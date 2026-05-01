@@ -1,26 +1,19 @@
 import type { FieldDevice } from '$lib/domain/facility/index.js';
-import type { DataTableFetchStrategy, DataTableQuery } from '$lib/state/table/contracts.js';
+import { ContextualDataTableFetchStrategy } from '$lib/state/table/ContextualDataTableFetchStrategy.js';
 import type { FieldDeviceFilters } from '../types.js';
 import { FacilityFieldDeviceFetchStrategy } from './FacilityFieldDeviceFetchStrategy.js';
 import { ProjectFieldDeviceFetchStrategy } from './ProjectFieldDeviceFetchStrategy.js';
 
-export class ContextualFieldDeviceFetchStrategy implements DataTableFetchStrategy<
+export class ContextualFieldDeviceFetchStrategy extends ContextualDataTableFetchStrategy<
   FieldDevice,
-  FieldDeviceFilters
+  FieldDeviceFilters,
+  ProjectFieldDeviceFetchStrategy
 > {
-  private readonly facilityStrategy = new FacilityFieldDeviceFetchStrategy();
-  private readonly resolveProjectId: () => string | undefined;
-
   constructor(resolveProjectId: () => string | undefined) {
-    this.resolveProjectId = resolveProjectId;
-  }
-
-  fetch(query: DataTableQuery<FieldDeviceFilters>, signal?: AbortSignal) {
-    const projectId = this.resolveProjectId();
-    if (!projectId) {
-      return this.facilityStrategy.fetch(query, signal);
-    }
-
-    return new ProjectFieldDeviceFetchStrategy(projectId).fetch(query, signal);
+    super(
+      resolveProjectId,
+      new FacilityFieldDeviceFetchStrategy(),
+      (projectId) => new ProjectFieldDeviceFetchStrategy(projectId)
+    );
   }
 }

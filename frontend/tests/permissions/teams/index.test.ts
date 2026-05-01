@@ -110,7 +110,7 @@ describe('/teams permission surface', () => {
     render(TeamsPage);
 
     expect(screen.getByText('navigation.teams')).toBeInTheDocument();
-    expect(screen.queryByText('pages.create_team')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'pages.create_team' })).not.toBeInTheDocument();
   });
 
   it('still renders for a logged-in user with an unrelated permission set', () => {
@@ -119,7 +119,7 @@ describe('/teams permission surface', () => {
     render(TeamsPage);
 
     expect(screen.getByText('navigation.teams')).toBeInTheDocument();
-    expect(screen.queryByText('pages.create_team')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'pages.create_team' })).not.toBeInTheDocument();
   });
 
   it('shows the create CTA when team.create is granted', () => {
@@ -127,6 +127,6 @@ describe('/teams permission surface', () => {
 
     render(TeamsPage);
 
-    expect(screen.getByText('pages.create_team')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'pages.create_team' })).toBeInTheDocument();
   });
 });

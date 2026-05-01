@@ -59,6 +59,26 @@ func (r *bacnetObjectRepo) DeleteByFieldDeviceIDs(ctx context.Context, ids []uui
 	return r.db.WithContext(ctx).Where("field_device_id IN ?", ids).Delete(&domainFacility.BacnetObject{}).Error
 }
 
+func (r *bacnetObjectRepo) DeleteBySPSControllerSystemTypeIDs(ctx context.Context, systemTypeIDs []uuid.UUID) error {
+	if len(systemTypeIDs) == 0 {
+		return nil
+	}
+
+	const statement = `
+		DELETE FROM bacnet_objects
+		USING field_devices
+		WHERE bacnet_objects.field_device_id = field_devices.id
+			AND field_devices.sps_controller_system_type_id IN ?
+	`
+
+	for _, chunk := range uuidFilterChunks(systemTypeIDs, uuidFilterChunkSize) {
+		if err := r.db.WithContext(ctx).Exec(statement, chunk).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *bacnetObjectRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil

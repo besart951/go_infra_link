@@ -73,35 +73,18 @@ func (r *BaseRepository[T]) DeleteByIds(ctx context.Context, ids []uuid.UUID) er
 
 // GetPaginatedList retrieves a paginated list of entities with search support
 func (r *BaseRepository[T]) GetPaginatedList(ctx context.Context, params domain.PaginationParams, defaultLimit int) (*domain.PaginatedList[T], error) {
-	page, limit := domain.NormalizePagination(params.Page, params.Limit, defaultLimit)
-	offset := (page - 1) * limit
-
 	var model T
 	query := r.db.WithContext(ctx).Model(&model)
 
-	// Apply custom search if callback is provided and search term is not empty
 	if r.searchCallback != nil && params.Search != "" {
 		query = r.searchCallback(query, params.Search)
 	}
 
-	// Count total items
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
-
-	// Retrieve paginated items
-	var items []T
-	if err := query.Order(defaultCreatedAtOrder(query)).Limit(limit).Offset(offset).Find(&items).Error; err != nil {
-		return nil, err
-	}
-
-	return &domain.PaginatedList[T]{
-		Items:      items,
-		Total:      total,
-		Page:       page,
-		TotalPages: domain.CalculateTotalPages(total, limit),
-	}, nil
+	return ExactOffsetPage[T](
+		query,
+		NormalizeOffsetPage(params, defaultLimit),
+		defaultCreatedAtOrder(query),
+	)
 }
 
 // BulkCreate creates multiple entities in batches
@@ -152,16 +135,8 @@ func (r *BaseRepository[T]) DB() *gorm.DB {
 }
 
 func defaultCreatedAtOrder(query *gorm.DB) clause.OrderByColumn {
-	table := ""
-	if query != nil && query.Statement != nil {
-		table = query.Statement.Table
-		if table == "" && query.Statement.Schema != nil {
-			table = query.Statement.Schema.Table
-		}
-	}
-
 	return clause.OrderByColumn{
-		Column: clause.Column{Table: table, Name: "created_at"},
+		Column: clause.Column{Table: clause.CurrentTable, Name: "created_at"},
 		Desc:   true,
 	}
 }

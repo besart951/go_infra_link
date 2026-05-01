@@ -108,6 +108,43 @@ func TestFieldDeviceRepo_ProjectFilteredListMapsAggregateRelations(t *testing.T)
 	}
 }
 
+func TestFieldDeviceRepo_ShortSearchFindsBMKSubstring(t *testing.T) {
+	ctx := context.Background()
+	db := newFieldDeviceRepoTestDB(t)
+	repo := NewFieldDeviceRepository(db)
+
+	systemType := seedFacilityRecord(t, db, &domainFacility.SystemType{Name: "HVAC", NumberMin: 1, NumberMax: 99})
+	controller := seedFacilityRecord(t, db, &domainFacility.SPSController{ControlCabinetID: uuid.New(), DeviceName: "SPS-A"})
+	number := 7
+	spsSystemType := seedFacilityRecord(t, db, &domainFacility.SPSControllerSystemType{
+		Number:          &number,
+		SPSControllerID: controller.ID,
+		SystemTypeID:    systemType.ID,
+	})
+	systemPart := seedFacilityRecord(t, db, &domainFacility.SystemPart{ShortName: "AIR", Name: "Air"})
+	apparat := seedFacilityRecord(t, db, &domainFacility.Apparat{ShortName: "PMP", Name: "Pump"})
+
+	bmk := "PERF-FD-064753"
+	fieldDevice := &domainFacility.FieldDevice{
+		BMK:                       &bmk,
+		ApparatNr:                 11,
+		SPSControllerSystemTypeID: spsSystemType.ID,
+		SystemPartID:              systemPart.ID,
+		ApparatID:                 apparat.ID,
+	}
+	if err := repo.Create(ctx, fieldDevice); err != nil {
+		t.Fatalf("expected field device create to succeed, got %v", err)
+	}
+
+	list, err := repo.GetPaginatedList(ctx, domain.PaginationParams{Page: 1, Limit: 10, Search: "53"})
+	if err != nil {
+		t.Fatalf("expected short bmk search to succeed, got %v", err)
+	}
+	if len(list.Items) != 1 || list.Items[0].ID != fieldDevice.ID {
+		t.Fatalf("expected short search to find bmk suffix, got %+v", list.Items)
+	}
+}
+
 func newFieldDeviceRepoTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 

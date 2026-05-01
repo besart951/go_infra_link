@@ -30,6 +30,7 @@ import type {
 } from './types.js';
 import { resolvePageSize, toProjectIdResolver } from './types.js';
 import { FieldDeviceFetchStrategyFactory } from './strategies/FieldDeviceFetchStrategyFactory.js';
+import { FieldDevicePanelState } from './FieldDevicePanelState.svelte.js';
 import {
   FieldDeviceTableViewState,
   type FieldDeviceGroupKey
@@ -48,17 +49,13 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   groupingSPSControllers = $state<Map<string, SPSController>>(new Map());
   groupingControlCabinets = $state<Map<string, ControlCabinet>>(new Map());
   groupingBuildings = $state<Map<string, Building>>(new Map());
-  showMultiCreateForm = $state(false);
-  bulkEditPanelOpen = $state(false);
-  showExportPanel = $state(false);
-  showFilterPanel = $state(false);
-  showSpecifications = $state(false);
-  expandedBacnetRows = $state<Set<string>>(new Set());
-  loadingBacnetRows = $state<Set<string>>(new Set());
+  readonly panels = new FieldDevicePanelState();
   loadingSpecifications = $state(false);
   loadingGroupingLookups = $state(false);
 
-  readonly showBulkEditPanel = $derived.by(() => this.bulkEditPanelOpen && this.selectedCount > 0);
+  readonly showBulkEditPanel = $derived.by(
+    () => this.panels.bulkEditPanelOpen && this.selectedCount > 0
+  );
   readonly tableGroups = $derived.by(() => this.view.groupItems(this.items));
 
   private readonly resolveProjectId: () => string | undefined;
@@ -97,6 +94,46 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   get isProjectContext(): boolean {
     return Boolean(this.projectId);
+  }
+
+  get showMultiCreateForm(): boolean {
+    return this.panels.showMultiCreateForm;
+  }
+
+  set showMultiCreateForm(value: boolean) {
+    this.panels.showMultiCreateForm = value;
+  }
+
+  get bulkEditPanelOpen(): boolean {
+    return this.panels.bulkEditPanelOpen;
+  }
+
+  set bulkEditPanelOpen(value: boolean) {
+    this.panels.bulkEditPanelOpen = value;
+  }
+
+  get showExportPanel(): boolean {
+    return this.panels.showExportPanel;
+  }
+
+  set showExportPanel(value: boolean) {
+    this.panels.showExportPanel = value;
+  }
+
+  get showFilterPanel(): boolean {
+    return this.panels.showFilterPanel;
+  }
+
+  set showFilterPanel(value: boolean) {
+    this.panels.showFilterPanel = value;
+  }
+
+  get showSpecifications(): boolean {
+    return this.panels.showSpecifications;
+  }
+
+  set showSpecifications(value: boolean) {
+    this.panels.showSpecifications = value;
   }
 
   canCreateFieldDevice(): boolean {
@@ -138,7 +175,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   protected override onSelectionChanged() {
     if (this.selectedIds.size === 0) {
-      this.bulkEditPanelOpen = false;
+      this.panels.closeBulkEditPanel();
     }
   }
 
@@ -179,25 +216,25 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   }
 
   openMultiCreateForm(): void {
-    this.showMultiCreateForm = true;
+    this.panels.openMultiCreateForm();
   }
 
   closeMultiCreateForm(): void {
-    this.showMultiCreateForm = false;
+    this.panels.closeMultiCreateForm();
   }
 
   toggleBulkEditPanel(): void {
     if (this.selectedCount === 0) return;
     if (!this.canOpenBulkEditPanel()) return;
-    this.bulkEditPanelOpen = !this.bulkEditPanelOpen;
+    this.panels.toggleBulkEditPanel();
   }
 
   toggleExportPanel(): void {
-    this.showExportPanel = !this.showExportPanel;
+    this.panels.toggleExportPanel();
   }
 
   toggleFilterPanel(): void {
-    this.showFilterPanel = !this.showFilterPanel;
+    this.panels.toggleFilterPanel();
   }
 
   async toggleGrouping(key: FieldDeviceGroupKey): Promise<void> {
@@ -209,8 +246,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   }
 
   async toggleSpecifications(): Promise<void> {
-    const nextShowSpecifications = !this.showSpecifications;
-    this.showSpecifications = nextShowSpecifications;
+    const nextShowSpecifications = this.panels.toggleSpecifications();
 
     if (nextShowSpecifications) {
       await this.loadSpecificationDetailsForVisibleDevices();
@@ -218,26 +254,17 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   }
 
   async toggleBacnetExpansion(deviceId: string): Promise<void> {
-    const nextExpanded = new Set(this.expandedBacnetRows);
-    if (nextExpanded.has(deviceId)) {
-      nextExpanded.delete(deviceId);
-    } else {
-      nextExpanded.add(deviceId);
-    }
-
-    this.expandedBacnetRows = nextExpanded;
-
-    if (nextExpanded.has(deviceId)) {
+    if (this.panels.toggleBacnetExpansion(deviceId)) {
       await this.loadBacnetObjectsForDevice(deviceId);
     }
   }
 
   isBacnetExpanded(deviceId: string): boolean {
-    return this.expandedBacnetRows.has(deviceId);
+    return this.panels.isBacnetExpanded(deviceId);
   }
 
   isBacnetLoading(deviceId: string): boolean {
-    return this.loadingBacnetRows.has(deviceId);
+    return this.panels.isBacnetLoading(deviceId);
   }
 
   async copyToClipboard(value: string): Promise<void> {
@@ -318,7 +345,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   }
 
   async handleMultiCreateSuccess(_createdDevices: FieldDevice[]): Promise<void> {
-    this.showMultiCreateForm = false;
+    this.panels.closeMultiCreateForm();
 
     await this.reload();
   }
@@ -485,13 +512,11 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   private async loadBacnetObjectsForDevice(deviceId: string): Promise<void> {
     const device = this.items.find((item) => item.id === deviceId);
-    if (!device || device.bacnet_objects || this.loadingBacnetRows.has(deviceId)) {
+    if (!device || device.bacnet_objects || this.panels.isBacnetLoading(deviceId)) {
       return;
     }
 
-    const nextLoading = new Set(this.loadingBacnetRows);
-    nextLoading.add(deviceId);
-    this.loadingBacnetRows = nextLoading;
+    this.panels.markBacnetLoading(deviceId);
 
     try {
       const bacnetObjects = await fieldDeviceRepository.listBacnetObjects(deviceId);
@@ -501,9 +526,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
       console.error('Failed to load BACnet objects:', error);
       addToast('BACnet-Objekte konnten nicht geladen werden.', 'error');
     } finally {
-      const nextLoading = new Set(this.loadingBacnetRows);
-      nextLoading.delete(deviceId);
-      this.loadingBacnetRows = nextLoading;
+      this.panels.clearBacnetLoading(deviceId);
     }
   }
 

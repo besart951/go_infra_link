@@ -69,6 +69,16 @@ var migrations = []migration{
 		description: "enable_pg_trgm_search_indexes",
 		apply:       migratePGTrgmSearch,
 	},
+	{
+		version:     "202605010001",
+		description: "performance_indexes_for_large_project_data",
+		apply:       migratePerformanceIndexes,
+	},
+	{
+		version:     "202605010002",
+		description: "control_cabinet_search_and_list_indexes",
+		apply:       migrateControlCabinetPerformance,
+	},
 }
 
 func ApplyMigrations(db *gorm.DB) error {

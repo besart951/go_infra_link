@@ -66,6 +66,54 @@ func (r *projectFieldDeviceRepo) BulkCreate(ctx context.Context, entities []*pro
 		CreateInBatches(records, batchSize).Error
 }
 
+func (r *projectFieldDeviceRepo) BulkCreateByFieldDeviceIDs(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) error {
+	if len(fieldDeviceIDs) == 0 {
+		return nil
+	}
+
+	now := time.Now().UTC()
+	seed := projectLinkSeed("project-field-device", projectID)
+	const statement = `
+		INSERT INTO project_field_devices (id, created_at, updated_at, project_id, field_device_id)
+		SELECT ` + deterministicProjectLinkIDExpression + `, ?, ?, ?, field_devices.id
+		FROM field_devices
+		CROSS JOIN LATERAL (SELECT md5(? || field_devices.id::text) AS value) AS link_hash
+		WHERE field_devices.id IN ?
+		ON CONFLICT (project_id, field_device_id) DO NOTHING
+	`
+
+	for _, chunk := range uuidChunks(fieldDeviceIDs, projectLinkIDFilterChunkSize) {
+		if err := r.db.WithContext(ctx).Exec(statement, now, now, projectID, seed, chunk).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *projectFieldDeviceRepo) BulkCreateBySPSControllerSystemTypeIDs(ctx context.Context, projectID uuid.UUID, systemTypeIDs []uuid.UUID) error {
+	if len(systemTypeIDs) == 0 {
+		return nil
+	}
+
+	now := time.Now().UTC()
+	seed := projectLinkSeed("project-field-device", projectID)
+	const statement = `
+		INSERT INTO project_field_devices (id, created_at, updated_at, project_id, field_device_id)
+		SELECT ` + deterministicProjectLinkIDExpression + `, ?, ?, ?, field_devices.id
+		FROM field_devices
+		CROSS JOIN LATERAL (SELECT md5(? || field_devices.id::text) AS value) AS link_hash
+		WHERE field_devices.sps_controller_system_type_id IN ?
+		ON CONFLICT (project_id, field_device_id) DO NOTHING
+	`
+
+	for _, chunk := range uuidChunks(systemTypeIDs, projectFieldDeviceSystemTypeFilterChunkSize) {
+		if err := r.db.WithContext(ctx).Exec(statement, now, now, projectID, seed, chunk).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *projectFieldDeviceRepo) Update(ctx context.Context, entity *project.ProjectFieldDevice) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
 	return r.db.WithContext(ctx).Model(&ProjectFieldDeviceRecord{}).
@@ -161,6 +209,26 @@ func (r *projectFieldDeviceRepo) DeleteByFieldDeviceIDs(ctx context.Context, fie
 	return r.db.WithContext(ctx).
 		Where("field_device_id IN ?", fieldDeviceIDs).
 		Delete(&ProjectFieldDeviceRecord{}).Error
+}
+
+func (r *projectFieldDeviceRepo) DeleteBySPSControllerSystemTypeIDs(ctx context.Context, systemTypeIDs []uuid.UUID) error {
+	if len(systemTypeIDs) == 0 {
+		return nil
+	}
+
+	const statement = `
+		DELETE FROM project_field_devices
+		USING field_devices
+		WHERE project_field_devices.field_device_id = field_devices.id
+			AND field_devices.sps_controller_system_type_id IN ?
+	`
+
+	for _, chunk := range uuidChunks(systemTypeIDs, projectLinkIDFilterChunkSize) {
+		if err := r.db.WithContext(ctx).Exec(statement, chunk).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *projectFieldDeviceRepo) DeleteByProjectAndFieldDevice(ctx context.Context, projectID, fieldDeviceID uuid.UUID) error {

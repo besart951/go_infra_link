@@ -51,3 +51,23 @@ func (r *specificationRepo) DeleteByFieldDeviceIDs(ctx context.Context, fieldDev
 		Where("field_device_id IN ?", fieldDeviceIDs).
 		Delete(&domainFacility.Specification{}).Error
 }
+
+func (r *specificationRepo) DeleteBySPSControllerSystemTypeIDs(ctx context.Context, systemTypeIDs []uuid.UUID) error {
+	if len(systemTypeIDs) == 0 {
+		return nil
+	}
+
+	const statement = `
+		DELETE FROM specifications
+		USING field_devices
+		WHERE specifications.field_device_id = field_devices.id
+			AND field_devices.sps_controller_system_type_id IN ?
+	`
+
+	for _, chunk := range uuidFilterChunks(systemTypeIDs, uuidFilterChunkSize) {
+		if err := r.db.WithContext(ctx).Exec(statement, chunk).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}

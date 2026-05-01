@@ -66,6 +66,30 @@ func (r *projectSPSControllerRepo) BulkCreate(ctx context.Context, entities []*p
 		CreateInBatches(records, batchSize).Error
 }
 
+func (r *projectSPSControllerRepo) BulkCreateBySPSControllerIDs(ctx context.Context, projectID uuid.UUID, spsControllerIDs []uuid.UUID) error {
+	if len(spsControllerIDs) == 0 {
+		return nil
+	}
+
+	now := time.Now().UTC()
+	seed := projectLinkSeed("project-sps-controller", projectID)
+	const statement = `
+		INSERT INTO project_sps_controllers (id, created_at, updated_at, project_id, sps_controller_id)
+		SELECT ` + deterministicProjectLinkIDExpression + `, ?, ?, ?, sps_controllers.id
+		FROM sps_controllers
+		CROSS JOIN LATERAL (SELECT md5(? || sps_controllers.id::text) AS value) AS link_hash
+		WHERE sps_controllers.id IN ?
+		ON CONFLICT (project_id, sps_controller_id) DO NOTHING
+	`
+
+	for _, chunk := range uuidChunks(spsControllerIDs, projectLinkIDFilterChunkSize) {
+		if err := r.db.WithContext(ctx).Exec(statement, now, now, projectID, seed, chunk).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *projectSPSControllerRepo) Update(ctx context.Context, entity *project.ProjectSPSController) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
 	return r.db.WithContext(ctx).Model(&ProjectSPSControllerRecord{}).

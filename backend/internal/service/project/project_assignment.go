@@ -2,12 +2,10 @@ package project
 
 import (
 	"context"
-	"errors"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type projectAssignment struct {
@@ -32,14 +30,6 @@ type projectAssignmentResult struct {
 	controlCabinet *domainProject.ProjectControlCabinet
 	spsController  *domainProject.ProjectSPSController
 	fieldDevice    *domainProject.ProjectFieldDevice
-}
-
-type projectSPSControllerBulkCreator interface {
-	BulkCreate(ctx context.Context, entities []*domainProject.ProjectSPSController, batchSize int) error
-}
-
-type projectFieldDeviceBulkCreator interface {
-	BulkCreate(ctx context.Context, entities []*domainProject.ProjectFieldDevice, batchSize int) error
 }
 
 func (a projectAssignment) assignControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
@@ -109,6 +99,10 @@ func (a projectAssignment) removeFieldDevice(ctx context.Context, linkID, projec
 
 func (s *ProjectFacilityLinkService) assignments() projectAssignment {
 	return projectAssignment{service: s}
+}
+
+func (a projectAssignment) store() projectAssignmentStore {
+	return newProjectAssignmentStore(a.service)
 }
 
 func (a projectAssignment) assign(ctx context.Context, projectID uuid.UUID, target projectAssignmentTarget) (*projectAssignmentResult, error) {
@@ -211,7 +205,11 @@ func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UU
 		}
 
 		controlCabinetID := entity.ControlCabinetID
-		spsControllerIDs, _, fieldDeviceIDs, err := a.collectDescendantIDsForControlCabinet(ctx, controlCabinetID)
+		spsControllerIDs, err := a.service.spsControllerRepo.GetIDsByControlCabinetID(ctx, controlCabinetID)
+		if err != nil {
+			return err
+		}
+		systemTypeIDs, err := a.collectSystemTypeIDsForSPSControllers(ctx, spsControllerIDs)
 		if err != nil {
 			return err
 		}
@@ -222,11 +220,7 @@ func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UU
 		if err := a.deleteSPSControllerAssignments(ctx, spsControllerIDs); err != nil {
 			return err
 		}
-		if err := a.deleteFieldDeviceAssignments(ctx, fieldDeviceIDs); err != nil {
-			return err
-		}
-
-		if err := a.deleteFieldDevicesWithChildren(ctx, fieldDeviceIDs); err != nil {
+		if err := a.deleteFieldDeviceHierarchyForSystemTypes(ctx, systemTypeIDs); err != nil {
 			return err
 		}
 		if len(spsControllerIDs) > 0 {
@@ -249,7 +243,7 @@ func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UU
 		}
 
 		spsControllerID := entity.SPSControllerID
-		_, fieldDeviceIDs, err := a.collectDescendantIDsForSPSControllers(ctx, []uuid.UUID{spsControllerID})
+		systemTypeIDs, err := a.collectSystemTypeIDsForSPSControllers(ctx, []uuid.UUID{spsControllerID})
 		if err != nil {
 			return err
 		}
@@ -257,11 +251,7 @@ func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UU
 		if err := a.deleteSPSControllerAssignments(ctx, []uuid.UUID{spsControllerID}); err != nil {
 			return err
 		}
-		if err := a.deleteFieldDeviceAssignments(ctx, fieldDeviceIDs); err != nil {
-			return err
-		}
-
-		if err := a.deleteFieldDevicesWithChildren(ctx, fieldDeviceIDs); err != nil {
+		if err := a.deleteFieldDeviceHierarchyForSystemTypes(ctx, systemTypeIDs); err != nil {
 			return err
 		}
 		if err := a.service.spsControllerSystemRepo.DeleteBySPSControllerIDs(ctx, []uuid.UUID{spsControllerID}); err != nil {
@@ -307,25 +297,7 @@ func (a projectAssignment) multiAssignFieldDevices(ctx context.Context, projectI
 }
 
 func (a projectAssignment) assignFieldDeviceIDs(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) error {
-	if len(fieldDeviceIDs) == 0 {
-		return nil
-	}
-
-	existingFieldDevices, err := a.listProjectFieldDeviceIDSet(ctx, projectID)
-	if err != nil {
-		return err
-	}
-
-	toCreate := make([]uuid.UUID, 0, len(fieldDeviceIDs))
-	for _, fieldDeviceID := range fieldDeviceIDs {
-		if _, ok := existingFieldDevices[fieldDeviceID]; ok {
-			continue
-		}
-		toCreate = append(toCreate, fieldDeviceID)
-		existingFieldDevices[fieldDeviceID] = struct{}{}
-	}
-
-	return a.createProjectFieldDeviceAssignments(ctx, projectID, toCreate)
+	return a.store().assignFieldDeviceIDs(ctx, projectID, fieldDeviceIDs)
 }
 
 func (a projectAssignment) assignControlCabinetDescendants(ctx context.Context, projectID, controlCabinetID uuid.UUID) error {
@@ -337,224 +309,36 @@ func (a projectAssignment) assignControlCabinetDescendants(ctx context.Context, 
 }
 
 func (a projectAssignment) assignSPSControllerDescendants(ctx context.Context, projectID uuid.UUID, spsControllerIDs []uuid.UUID) error {
-	if len(spsControllerIDs) == 0 {
-		return nil
-	}
-
-	existingSPS, err := a.listProjectSPSControllerIDSet(ctx, projectID)
-	if err != nil {
-		return err
-	}
-	missingSPS := make([]uuid.UUID, 0, len(spsControllerIDs))
-	for _, spsID := range spsControllerIDs {
-		if _, ok := existingSPS[spsID]; ok {
-			continue
-		}
-		missingSPS = append(missingSPS, spsID)
-		existingSPS[spsID] = struct{}{}
-	}
-	if err := a.createProjectSPSControllerAssignments(ctx, projectID, missingSPS); err != nil {
-		return err
-	}
-
-	systemTypeIDs, err := a.service.spsControllerSystemRepo.GetIDsBySPSControllerIDs(ctx, spsControllerIDs)
-	if err != nil {
-		return err
-	}
-	return a.assignFieldDevicesForSystemTypes(ctx, projectID, systemTypeIDs)
+	return a.store().assignSPSControllerDescendants(ctx, projectID, spsControllerIDs)
 }
 
 func (a projectAssignment) assignFieldDevicesForSystemTypes(ctx context.Context, projectID uuid.UUID, systemTypeIDs []uuid.UUID) error {
-	if len(systemTypeIDs) == 0 {
-		return nil
-	}
-
-	fieldDeviceIDs, err := a.service.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(ctx, systemTypeIDs)
-	if err != nil {
-		return err
-	}
-	if len(fieldDeviceIDs) == 0 {
-		return nil
-	}
-
-	existingFieldDevices, err := a.listProjectFieldDeviceIDSet(ctx, projectID)
-	if err != nil {
-		return err
-	}
-	missingFieldDeviceIDs := make([]uuid.UUID, 0, len(fieldDeviceIDs))
-	for _, fieldDeviceID := range fieldDeviceIDs {
-		if _, ok := existingFieldDevices[fieldDeviceID]; ok {
-			continue
-		}
-		missingFieldDeviceIDs = append(missingFieldDeviceIDs, fieldDeviceID)
-		existingFieldDevices[fieldDeviceID] = struct{}{}
-	}
-
-	return a.createProjectFieldDeviceAssignments(ctx, projectID, missingFieldDeviceIDs)
+	return a.store().assignFieldDevicesForSystemTypes(ctx, projectID, systemTypeIDs)
 }
 
-func (a projectAssignment) collectDescendantIDsForControlCabinet(ctx context.Context, controlCabinetID uuid.UUID) ([]uuid.UUID, []uuid.UUID, []uuid.UUID, error) {
-	spsControllerIDs, err := a.service.spsControllerRepo.GetIDsByControlCabinetID(ctx, controlCabinetID)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	systemTypeIDs, fieldDeviceIDs, err := a.collectDescendantIDsForSPSControllers(ctx, spsControllerIDs)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	return spsControllerIDs, systemTypeIDs, fieldDeviceIDs, nil
-}
-
-func (a projectAssignment) collectDescendantIDsForSPSControllers(ctx context.Context, spsControllerIDs []uuid.UUID) ([]uuid.UUID, []uuid.UUID, error) {
+func (a projectAssignment) collectSystemTypeIDsForSPSControllers(ctx context.Context, spsControllerIDs []uuid.UUID) ([]uuid.UUID, error) {
 	if len(spsControllerIDs) == 0 {
-		return nil, nil, nil
+		return nil, nil
 	}
+	return a.service.spsControllerSystemRepo.GetIDsBySPSControllerIDs(ctx, spsControllerIDs)
+}
 
-	systemTypeIDs, err := a.service.spsControllerSystemRepo.GetIDsBySPSControllerIDs(ctx, spsControllerIDs)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(systemTypeIDs) == 0 {
-		return nil, nil, nil
-	}
-
-	fieldDeviceIDs, err := a.service.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(ctx, systemTypeIDs)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return systemTypeIDs, fieldDeviceIDs, nil
+func (a projectAssignment) deleteFieldDeviceHierarchyForSystemTypes(ctx context.Context, systemTypeIDs []uuid.UUID) error {
+	return a.store().deleteFieldDeviceHierarchyForSystemTypes(ctx, systemTypeIDs)
 }
 
 func (a projectAssignment) deleteFieldDevicesWithChildren(ctx context.Context, fieldDeviceIDs []uuid.UUID) error {
-	if len(fieldDeviceIDs) == 0 {
-		return nil
-	}
-
-	if err := a.service.bacnetObjectRepo.DeleteByFieldDeviceIDs(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	if err := a.service.specificationRepo.DeleteByFieldDeviceIDs(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	return a.service.fieldDeviceRepo.DeleteByIds(ctx, fieldDeviceIDs)
+	return a.store().deleteFieldDevicesWithChildren(ctx, fieldDeviceIDs)
 }
 
 func (a projectAssignment) deleteControlCabinetAssignments(ctx context.Context, controlCabinetIDs []uuid.UUID) error {
-	if len(controlCabinetIDs) == 0 {
-		return nil
-	}
-	return a.service.projectControlCabinetRepo.DeleteByControlCabinetIDs(ctx, controlCabinetIDs)
+	return a.store().deleteControlCabinetAssignments(ctx, controlCabinetIDs)
 }
 
 func (a projectAssignment) deleteSPSControllerAssignments(ctx context.Context, spsControllerIDs []uuid.UUID) error {
-	if len(spsControllerIDs) == 0 {
-		return nil
-	}
-	return a.service.projectSPSControllerRepo.DeleteBySPSControllerIDs(ctx, spsControllerIDs)
+	return a.store().deleteSPSControllerAssignments(ctx, spsControllerIDs)
 }
 
 func (a projectAssignment) deleteFieldDeviceAssignments(ctx context.Context, fieldDeviceIDs []uuid.UUID) error {
-	if len(fieldDeviceIDs) == 0 {
-		return nil
-	}
-	return a.service.projectFieldDeviceRepo.DeleteByFieldDeviceIDs(ctx, fieldDeviceIDs)
-}
-
-func (a projectAssignment) listProjectSPSControllerIDSet(ctx context.Context, projectID uuid.UUID) (map[uuid.UUID]struct{}, error) {
-	result := make(map[uuid.UUID]struct{})
-	page := 1
-
-	for {
-		items, err := a.service.projectSPSControllerRepo.GetPaginatedListByProjectID(ctx, projectID, domain.PaginationParams{Page: page, Limit: 500})
-		if err != nil {
-			return nil, err
-		}
-
-		for _, item := range items.Items {
-			result[item.SPSControllerID] = struct{}{}
-		}
-
-		if page >= items.TotalPages || len(items.Items) == 0 {
-			break
-		}
-		page++
-	}
-
-	return result, nil
-}
-
-func (a projectAssignment) listProjectFieldDeviceIDSet(ctx context.Context, projectID uuid.UUID) (map[uuid.UUID]struct{}, error) {
-	result := make(map[uuid.UUID]struct{})
-	page := 1
-
-	for {
-		items, err := a.service.projectFieldDeviceRepo.GetPaginatedListByProjectID(ctx, projectID, domain.PaginationParams{Page: page, Limit: 500})
-		if err != nil {
-			return nil, err
-		}
-
-		for _, item := range items.Items {
-			result[item.FieldDeviceID] = struct{}{}
-		}
-
-		if page >= items.TotalPages || len(items.Items) == 0 {
-			break
-		}
-		page++
-	}
-
-	return result, nil
-}
-
-func (a projectAssignment) createProjectSPSControllerAssignments(ctx context.Context, projectID uuid.UUID, spsControllerIDs []uuid.UUID) error {
-	if len(spsControllerIDs) == 0 {
-		return nil
-	}
-
-	entities := make([]*domainProject.ProjectSPSController, 0, len(spsControllerIDs))
-	for _, spsControllerID := range spsControllerIDs {
-		entities = append(entities, &domainProject.ProjectSPSController{ProjectID: projectID, SPSControllerID: spsControllerID})
-	}
-
-	if repo, ok := a.service.projectSPSControllerRepo.(projectSPSControllerBulkCreator); ok {
-		return repo.BulkCreate(ctx, entities, 200)
-	}
-
-	for _, entity := range entities {
-		if err := a.service.projectSPSControllerRepo.Create(ctx, entity); err != nil {
-			if errors.Is(err, gorm.ErrDuplicatedKey) {
-				continue
-			}
-			return err
-		}
-	}
-	return nil
-}
-
-func (a projectAssignment) createProjectFieldDeviceAssignments(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) error {
-	if len(fieldDeviceIDs) == 0 {
-		return nil
-	}
-
-	entities := make([]*domainProject.ProjectFieldDevice, 0, len(fieldDeviceIDs))
-	for _, fieldDeviceID := range fieldDeviceIDs {
-		entities = append(entities, &domainProject.ProjectFieldDevice{ProjectID: projectID, FieldDeviceID: fieldDeviceID})
-	}
-
-	if repo, ok := a.service.projectFieldDeviceRepo.(projectFieldDeviceBulkCreator); ok {
-		return repo.BulkCreate(ctx, entities, 200)
-	}
-
-	for _, entity := range entities {
-		if err := a.service.projectFieldDeviceRepo.Create(ctx, entity); err != nil {
-			if errors.Is(err, gorm.ErrDuplicatedKey) {
-				continue
-			}
-			return err
-		}
-	}
-	return nil
+	return a.store().deleteFieldDeviceAssignments(ctx, fieldDeviceIDs)
 }

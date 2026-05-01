@@ -17,16 +17,10 @@ type spsControllerSystemTypeRepo struct {
 	db *gorm.DB
 }
 
-func (r *spsControllerSystemTypeRepo) queryWithFieldDeviceCounts(ctx context.Context) *gorm.DB {
-	fieldDeviceCounts := r.db.WithContext(ctx).
-		Model(&FieldDeviceRecord{}).
-		Select("sps_controller_system_type_id, COUNT(*) AS field_devices_count").
-		Group("sps_controller_system_type_id")
-
+func (r *spsControllerSystemTypeRepo) querySystemTypes(ctx context.Context) *gorm.DB {
 	return r.db.WithContext(ctx).
 		Model(&domainFacility.SPSControllerSystemType{}).
-		Select("sps_controller_system_types.*, COALESCE(fd_counts.field_devices_count, 0) AS field_devices_count").
-		Joins("LEFT JOIN (?) AS fd_counts ON fd_counts.sps_controller_system_type_id = sps_controller_system_types.id", fieldDeviceCounts)
+		Omit("FieldDevicesCount")
 }
 
 func applySPSControllerSystemTypeSearch(query *gorm.DB, search string) *gorm.DB {
@@ -58,33 +52,39 @@ func (r *spsControllerSystemTypeRepo) GetByIds(ctx context.Context, ids []uuid.U
 		return []*domainFacility.SPSControllerSystemType{}, nil
 	}
 	var items []*domainFacility.SPSControllerSystemType
-	err := r.queryWithFieldDeviceCounts(ctx).
-		Where("id IN ?", ids).
+	err := r.querySystemTypes(ctx).
+		Where("sps_controller_system_types.id IN ?", ids).
 		Preload("SPSController").
 		Preload("SystemType").
 		Find(&items).Error
-	return items, err
+	if err != nil {
+		return nil, err
+	}
+	return items, r.attachFieldDeviceCounts(ctx, items)
 }
 
 func (r *spsControllerSystemTypeRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.queryWithFieldDeviceCounts(ctx)
+	query := r.querySystemTypes(ctx)
 
 	if strings.TrimSpace(params.Search) != "" {
 		query = applySPSControllerSystemTypeSearch(query, params.Search)
 	}
 
 	var total int64
-	if err := query.Count(&total).Error; err != nil {
+	if err := query.Session(&gorm.Session{}).Count(&total).Error; err != nil {
 		return nil, err
 	}
 
 	var items []domainFacility.SPSControllerSystemType
-	if err := query.Preload("SPSController").Preload("SystemType").
+	if err := query.Session(&gorm.Session{}).Preload("SPSController").Preload("SystemType").
 		Order("sps_controller_system_types.created_at DESC").
 		Limit(limit).Offset(offset).Find(&items).Error; err != nil {
+		return nil, err
+	}
+	if err := r.attachFieldDeviceCountsToValues(ctx, items); err != nil {
 		return nil, err
 	}
 
@@ -100,7 +100,7 @@ func (r *spsControllerSystemTypeRepo) GetPaginatedListBySPSControllerID(ctx cont
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.queryWithFieldDeviceCounts(ctx).
+	query := r.querySystemTypes(ctx).
 		Where("sps_controller_system_types.sps_controller_id = ?", spsControllerID)
 
 	if strings.TrimSpace(params.Search) != "" {
@@ -108,14 +108,17 @@ func (r *spsControllerSystemTypeRepo) GetPaginatedListBySPSControllerID(ctx cont
 	}
 
 	var total int64
-	if err := query.Count(&total).Error; err != nil {
+	if err := query.Session(&gorm.Session{}).Count(&total).Error; err != nil {
 		return nil, err
 	}
 
 	var items []domainFacility.SPSControllerSystemType
-	if err := query.Preload("SPSController").Preload("SystemType").
+	if err := query.Session(&gorm.Session{}).Preload("SPSController").Preload("SystemType").
 		Order("sps_controller_system_types.created_at DESC").
 		Limit(limit).Offset(offset).Find(&items).Error; err != nil {
+		return nil, err
+	}
+	if err := r.attachFieldDeviceCountsToValues(ctx, items); err != nil {
 		return nil, err
 	}
 
@@ -131,7 +134,7 @@ func (r *spsControllerSystemTypeRepo) GetPaginatedListByProjectID(ctx context.Co
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
-	query := r.queryWithFieldDeviceCounts(ctx).
+	query := r.querySystemTypes(ctx).
 		Joins("INNER JOIN project_sps_controllers ON project_sps_controllers.sps_controller_id = sps_controller_system_types.sps_controller_id").
 		Where("project_sps_controllers.project_id = ?", projectID)
 
@@ -140,14 +143,17 @@ func (r *spsControllerSystemTypeRepo) GetPaginatedListByProjectID(ctx context.Co
 	}
 
 	var total int64
-	if err := query.Count(&total).Error; err != nil {
+	if err := query.Session(&gorm.Session{}).Count(&total).Error; err != nil {
 		return nil, err
 	}
 
 	var items []domainFacility.SPSControllerSystemType
-	if err := query.Preload("SPSController").Preload("SystemType").
+	if err := query.Session(&gorm.Session{}).Preload("SPSController").Preload("SystemType").
 		Order("sps_controller_system_types.created_at DESC").
 		Limit(limit).Offset(offset).Find(&items).Error; err != nil {
+		return nil, err
+	}
+	if err := r.attachFieldDeviceCountsToValues(ctx, items); err != nil {
 		return nil, err
 	}
 
@@ -157,6 +163,63 @@ func (r *spsControllerSystemTypeRepo) GetPaginatedListByProjectID(ctx context.Co
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
+}
+
+type systemTypeFieldDeviceCountRow struct {
+	SPSControllerSystemTypeID uuid.UUID `gorm:"column:sps_controller_system_type_id"`
+	FieldDevicesCount         int64     `gorm:"column:field_devices_count"`
+}
+
+func (r *spsControllerSystemTypeRepo) attachFieldDeviceCountsToValues(ctx context.Context, items []domainFacility.SPSControllerSystemType) error {
+	ptrs := make([]*domainFacility.SPSControllerSystemType, 0, len(items))
+	for i := range items {
+		ptrs = append(ptrs, &items[i])
+	}
+	return r.attachFieldDeviceCounts(ctx, ptrs)
+}
+
+func (r *spsControllerSystemTypeRepo) attachFieldDeviceCounts(ctx context.Context, items []*domainFacility.SPSControllerSystemType) error {
+	if len(items) == 0 {
+		return nil
+	}
+
+	ids := make([]uuid.UUID, 0, len(items))
+	seen := make(map[uuid.UUID]struct{}, len(items))
+	for _, item := range items {
+		if item == nil || item.ID == uuid.Nil {
+			continue
+		}
+		item.FieldDevicesCount = 0
+		if _, ok := seen[item.ID]; ok {
+			continue
+		}
+		seen[item.ID] = struct{}{}
+		ids = append(ids, item.ID)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+
+	var rows []systemTypeFieldDeviceCountRow
+	if err := r.db.WithContext(ctx).
+		Model(&FieldDeviceRecord{}).
+		Select("sps_controller_system_type_id, COUNT(*) AS field_devices_count").
+		Where("sps_controller_system_type_id IN ?", ids).
+		Group("sps_controller_system_type_id").
+		Scan(&rows).Error; err != nil {
+		return err
+	}
+
+	counts := make(map[uuid.UUID]int, len(rows))
+	for _, row := range rows {
+		counts[row.SPSControllerSystemTypeID] = int(row.FieldDevicesCount)
+	}
+	for _, item := range items {
+		if item != nil {
+			item.FieldDevicesCount = counts[item.ID]
+		}
+	}
+	return nil
 }
 
 func (r *spsControllerSystemTypeRepo) ListBySPSControllerID(ctx context.Context, spsControllerID uuid.UUID) ([]*domainFacility.SPSControllerSystemType, error) {
