@@ -13,6 +13,7 @@ import type {
 } from '$lib/domain/facility/index.js';
 import {
   buildImportCellMarkers,
+  collectFieldDeviceImportLookupCriteria,
   transformWorksheetToFieldDeviceImport,
   type FieldDeviceImportLookups
 } from './fieldDeviceExportImporter.js';
@@ -150,6 +151,8 @@ function lookups(overrides: Partial<FieldDeviceImportLookups> = {}): FieldDevice
   return {
     buildings: [building],
     controlCabinets: [],
+    spsControllers: [],
+    spsControllerSystemTypes: [],
     fieldDevices: [],
     systemTypes: [systemType],
     systemParts: [systemPart],
@@ -162,6 +165,24 @@ function lookups(overrides: Partial<FieldDeviceImportLookups> = {}): FieldDevice
 }
 
 describe('field device export importer', () => {
+  it('collects lookup criteria from the worksheet before validation lookups are loaded', () => {
+    const criteria = collectFieldDeviceImportLookupCriteria(worksheet(baseRows()));
+
+    expect(criteria).toEqual({
+      iwsCode: 'IWS',
+      buildingGroup: 1,
+      controlCabinetNr: '1_0100_00',
+      gaDevice: 'ABC',
+      deviceName: 'IWS_1_0100_ABC',
+      systemTypeNumbers: [100],
+      systemPartLabels: ['Heating', 'HV'],
+      apparatLabels: ['PMP', 'Pump'],
+      notificationNumbers: [7],
+      stateTextLabels: ['Off', 'Off, On'],
+      alarmTypeLabels: ['Alarm']
+    });
+  });
+
   it('transforms an exported worksheet into a controller tree and create payloads', () => {
     const plan = transformWorksheetToFieldDeviceImport(worksheet(baseRows()), lookups());
 
@@ -210,7 +231,7 @@ describe('field device export importer', () => {
     expect(markers['14:9'].severity).toBe('error');
   });
 
-  it('marks existing cabinet conflicts on the header source cell', () => {
+  it('marks existing cabinets as reusable on the header source cell', () => {
     const cabinet: ControlCabinet = {
       id: 'cabinet-1',
       building_id: 'building-1',
@@ -223,17 +244,18 @@ describe('field device export importer', () => {
       lookups({ controlCabinets: [cabinet] })
     );
 
-    expect(plan.canImport).toBe(false);
+    expect(plan.canImport).toBe(true);
     expect(plan.diagnostics).toContainEqual(
       expect.objectContaining({
-        severity: 'error',
+        severity: 'warning',
         entity: 'control_cabinet',
         cell: expect.objectContaining({ address: 'B3' })
       })
     );
+    expect(plan.controller.existingControlCabinet?.id).toBe('cabinet-1');
   });
 
-  it('marks already existing field devices on the source object name cell', () => {
+  it('marks already existing field devices as reusable on the source object name cell', () => {
     const existingFieldDevice: FieldDevice = {
       id: 'field-device-1',
       apparat_nr: '1',
@@ -258,10 +280,11 @@ describe('field device export importer', () => {
       lookups({ fieldDevices: [existingFieldDevice] })
     );
 
-    expect(plan.canImport).toBe(false);
+    expect(plan.canImport).toBe(true);
+    expect(plan.controller.fieldDevices[0].existingFieldDeviceId).toBe('field-device-1');
     expect(plan.diagnostics).toContainEqual(
       expect.objectContaining({
-        severity: 'error',
+        severity: 'warning',
         entity: 'field_device',
         cell: expect.objectContaining({ address: 'A14' }),
         message: expect.stringContaining('existiert bereits')

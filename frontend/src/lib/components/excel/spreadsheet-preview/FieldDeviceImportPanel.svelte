@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button/index.js';
+  import { Input } from '$lib/components/ui/input/index.js';
   import type { WorksheetPreview } from '$lib/domain/excel/index.js';
   import {
     AlertTriangle,
@@ -11,7 +12,12 @@
     XCircle
   } from '@lucide/svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import type { FieldDeviceImportService } from './FieldDeviceImportService.svelte.js';
+  import {
+    CONTROL_CABINET_IMPORT_NODE_KEY,
+    SPS_CONTROLLER_IMPORT_NODE_KEY,
+    type FieldDeviceImportService,
+    type ImportNodeStatus
+  } from './FieldDeviceImportService.svelte.js';
   import type {
     FieldDeviceImportDevicePlan,
     ImportDiagnostic
@@ -78,6 +84,41 @@
     const label = $t(key);
     return label === key ? diagnostic.entity : label;
   }
+
+  function nodeStatus(key: string): ImportNodeStatus {
+    return service.nodeState(key)?.status ?? 'pending';
+  }
+
+  function nodeClass(key: string): string {
+    const status = nodeStatus(key);
+    if (status === 'success' || status === 'existing') {
+      return 'border-success-border bg-success-muted/70';
+    }
+    if (status === 'failed') return 'border-destructive/40 bg-destructive/10';
+    return 'border-border bg-background';
+  }
+
+  function nodeBadgeClass(key: string): string {
+    const status = nodeStatus(key);
+    if (status === 'success' || status === 'existing') {
+      return 'border-success-border bg-success-muted text-success-muted-foreground';
+    }
+    if (status === 'failed') return 'border-destructive/40 bg-destructive/10 text-destructive';
+    return 'border-border bg-muted text-muted-foreground';
+  }
+
+  function nodeStatusLabel(key: string): string {
+    return $t(`field_device.importer.tree.status.${nodeStatus(key)}`);
+  }
+
+  function nodeMessage(key: string): string {
+    const diagnostics = service.diagnosticsForNode(key);
+    return diagnostics[0]?.message ?? service.nodeState(key)?.message ?? '';
+  }
+
+  function inputValue(event: Event): string {
+    return (event.currentTarget as HTMLInputElement).value;
+  }
 </script>
 
 <div class="rounded-lg border bg-background p-4">
@@ -117,7 +158,9 @@
         {:else}
           <Play class="mr-2 size-4" />
         {/if}
-        {$t('field_device.importer.actions.import')}
+        {service.importReport?.status === 'partial' || service.importReport?.status === 'failed'
+          ? $t('field_device.importer.actions.retry')
+          : $t('field_device.importer.actions.import')}
       </Button>
     </div>
   </div>
@@ -209,48 +252,181 @@
     {#if service.plan.controller.systemTypes.length > 0}
       <div class="mt-4 space-y-2">
         <h4 class="text-sm font-medium">{$t('field_device.importer.tree.title')}</h4>
-        <details class="rounded-md border p-3" open>
+        <details class={`rounded-md border p-3 ${nodeClass(CONTROL_CABINET_IMPORT_NODE_KEY)}`} open>
           <summary class="cursor-pointer text-sm font-medium">
-            {$t('field_device.importer.tree.root', {
-              controlCabinet:
-                service.plan.controller.controlCabinetNr || $t('common.not_available'),
-              sps:
-                service.plan.controller.spsControllerRequest?.ga_device ??
-                $t('common.not_available')
-            })}
+            <span class="flex min-w-0 flex-wrap items-center gap-2">
+              <span class="min-w-0 truncate">
+                {$t('field_device.importer.tree.root', {
+                  controlCabinet:
+                    service.plan.controller.controlCabinetNr || $t('common.not_available'),
+                  sps:
+                    service.plan.controller.spsControllerRequest?.ga_device ??
+                    $t('common.not_available')
+                })}
+              </span>
+              <span
+                class={`shrink-0 rounded border px-2 py-0.5 text-[11px] font-medium ${nodeBadgeClass(
+                  CONTROL_CABINET_IMPORT_NODE_KEY
+                )}`}
+              >
+                {nodeStatusLabel(CONTROL_CABINET_IMPORT_NODE_KEY)}
+              </span>
+              {#if nodeMessage(CONTROL_CABINET_IMPORT_NODE_KEY)}
+                <span class="min-w-0 flex-1 text-xs text-destructive">
+                  {nodeMessage(CONTROL_CABINET_IMPORT_NODE_KEY)}
+                </span>
+              {/if}
+            </span>
           </summary>
           <div class="mt-3 space-y-3">
+            <div
+              class={`rounded-md border px-3 py-2 text-xs ${nodeClass(SPS_CONTROLLER_IMPORT_NODE_KEY)}`}
+            >
+              <div class="flex min-w-0 flex-wrap items-center gap-2">
+                <span class="font-medium">
+                  {service.plan.controller.spsControllerRequest?.device_name ??
+                    $t('common.not_available')}
+                </span>
+                <span
+                  class={`rounded border px-2 py-0.5 text-[11px] font-medium ${nodeBadgeClass(
+                    SPS_CONTROLLER_IMPORT_NODE_KEY
+                  )}`}
+                >
+                  {nodeStatusLabel(SPS_CONTROLLER_IMPORT_NODE_KEY)}
+                </span>
+                {#if nodeMessage(SPS_CONTROLLER_IMPORT_NODE_KEY)}
+                  <span class="min-w-0 flex-1 text-destructive">
+                    {nodeMessage(SPS_CONTROLLER_IMPORT_NODE_KEY)}
+                  </span>
+                {/if}
+              </div>
+            </div>
             {#each service.plan.controller.systemTypes as systemType (systemType.key)}
-              <details class="rounded-md border p-3" open>
+              <details class={`rounded-md border p-3 ${nodeClass(systemType.key)}`} open>
                 <summary class="cursor-pointer text-sm">
-                  {systemType.number} · {systemType.systemTypeName}
-                  <span class="text-muted-foreground">({systemType.fieldDeviceCount})</span>
+                  <span class="flex min-w-0 flex-wrap items-center gap-2">
+                    <span class="font-medium">
+                      {systemType.number} · {systemType.systemTypeName}
+                    </span>
+                    <span class="text-muted-foreground">({systemType.fieldDeviceCount})</span>
+                    <span
+                      class={`rounded border px-2 py-0.5 text-[11px] font-medium ${nodeBadgeClass(
+                        systemType.key
+                      )}`}
+                    >
+                      {nodeStatusLabel(systemType.key)}
+                    </span>
+                    {#if nodeMessage(systemType.key)}
+                      <span class="min-w-0 flex-1 text-xs text-destructive">
+                        {nodeMessage(systemType.key)}
+                      </span>
+                    {/if}
+                  </span>
                 </summary>
                 <div class="mt-2 space-y-2">
                   {#each devicesForSystemType(systemType.key) as device (device.key)}
-                    <details class="rounded-md border bg-muted/20 p-2">
+                    <details class={`rounded-md border p-2 ${nodeClass(device.key)}`}>
                       <summary class="cursor-pointer text-xs font-medium">
-                        {device.systemPartLabel}{device.apparatLabel}{String(
-                          device.apparatNr ?? ''
-                        ).padStart(2, '0')}
-                        <span class="text-muted-foreground">
-                          {$t('field_device.importer.tree.device_meta', {
-                            row: device.sourceRowNumber,
-                            count: device.bacnetObjects.length
-                          })}
+                        <span class="flex min-w-0 flex-wrap items-center gap-2">
+                          <span>
+                            {device.systemPartLabel}{device.apparatLabel}{String(
+                              device.apparatNr ?? ''
+                            ).padStart(2, '0')}
+                          </span>
+                          <span class="text-muted-foreground">
+                            {$t('field_device.importer.tree.device_meta', {
+                              row: device.sourceRowNumber,
+                              count: device.bacnetObjects.length
+                            })}
+                          </span>
+                          <span
+                            class={`rounded border px-2 py-0.5 text-[11px] font-medium ${nodeBadgeClass(
+                              device.key
+                            )}`}
+                          >
+                            {nodeStatusLabel(device.key)}
+                          </span>
+                          {#if nodeMessage(device.key)}
+                            <span class="min-w-0 flex-1 text-destructive">
+                              {nodeMessage(device.key)}
+                            </span>
+                          {/if}
                         </span>
                       </summary>
+                      <div class="mt-2 grid gap-2 md:grid-cols-[120px_1fr_110px]">
+                        <Input
+                          value={device.request.bmk ?? ''}
+                          aria-label={$t('field_device.importer.tree.fields.bmk')}
+                          placeholder={$t('field_device.importer.tree.fields.bmk')}
+                          class="h-8 text-xs"
+                          oninput={(event) =>
+                            service.updateFieldDeviceBmk(device.key, inputValue(event))}
+                        />
+                        <Input
+                          value={device.request.description ?? ''}
+                          aria-label={$t('field_device.importer.tree.fields.description')}
+                          placeholder={$t('field_device.importer.tree.fields.description')}
+                          class="h-8 text-xs"
+                          oninput={(event) =>
+                            service.updateFieldDeviceDescription(device.key, inputValue(event))}
+                        />
+                        <Input
+                          type="number"
+                          min="1"
+                          max="99"
+                          value={String(device.request.apparat_nr || '')}
+                          aria-label={$t('field_device.importer.tree.fields.apparat_nr')}
+                          placeholder={$t('field_device.importer.tree.fields.apparat_nr')}
+                          class="h-8 text-xs"
+                          oninput={(event) =>
+                            service.updateFieldDeviceApparatNr(device.key, inputValue(event))}
+                        />
+                      </div>
                       <div class="mt-2 grid gap-1 text-xs text-muted-foreground">
                         {#each device.bacnetObjects as object (object.key)}
                           <div
-                            class="flex min-w-0 items-center justify-between gap-3 rounded-md border bg-background px-2 py-1"
+                            class={`grid min-w-0 gap-2 rounded-md border px-2 py-1 md:grid-cols-[1fr_110px_1fr] ${nodeClass(
+                              object.key
+                            )}`}
                           >
-                            <span class="truncate">
-                              {object.textFix || $t('field_device.importer.tree.no_text_fix')}
-                            </span>
-                            <span class="shrink-0 font-mono"
-                              >{object.address || object.sourceCell.address}</span
-                            >
+                            <Input
+                              value={object.textFix}
+                              aria-label={$t('field_device.importer.tree.fields.text_fix')}
+                              placeholder={$t('field_device.importer.tree.no_text_fix')}
+                              class="h-8 text-xs"
+                              oninput={(event) =>
+                                service.updateBacnetTextFix(
+                                  device.key,
+                                  object.key,
+                                  inputValue(event)
+                                )}
+                            />
+                            <Input
+                              value={object.address}
+                              aria-label={$t('field_device.importer.tree.fields.address')}
+                              placeholder={object.sourceCell.address}
+                              class="h-8 font-mono text-xs"
+                              oninput={(event) =>
+                                service.updateBacnetAddress(
+                                  device.key,
+                                  object.key,
+                                  inputValue(event)
+                                )}
+                            />
+                            <div class="flex min-w-0 items-center gap-2">
+                              <span
+                                class={`shrink-0 rounded border px-2 py-0.5 text-[11px] font-medium ${nodeBadgeClass(
+                                  object.key
+                                )}`}
+                              >
+                                {nodeStatusLabel(object.key)}
+                              </span>
+                              {#if nodeMessage(object.key)}
+                                <span class="min-w-0 text-destructive">
+                                  {nodeMessage(object.key)}
+                                </span>
+                              {/if}
+                            </div>
                           </div>
                         {/each}
                       </div>

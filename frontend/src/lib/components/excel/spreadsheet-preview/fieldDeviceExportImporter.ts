@@ -10,6 +10,8 @@ import type {
   CreateSPSControllerRequest,
   FieldDevice,
   NotificationClass,
+  SPSController,
+  SPSControllerSystemType,
   StateText,
   SystemPart,
   SystemType
@@ -51,6 +53,8 @@ export interface ImportCellMarker {
 export interface FieldDeviceImportLookups {
   buildings: Building[];
   controlCabinets: ControlCabinet[];
+  spsControllers: SPSController[];
+  spsControllerSystemTypes: SPSControllerSystemType[];
   fieldDevices: FieldDevice[];
   systemTypes: SystemType[];
   systemParts: SystemPart[];
@@ -58,6 +62,20 @@ export interface FieldDeviceImportLookups {
   stateTexts: StateText[];
   notificationClasses: NotificationClass[];
   alarmTypes: AlarmType[];
+}
+
+export interface FieldDeviceImportLookupCriteria {
+  iwsCode: string;
+  buildingGroup?: number;
+  controlCabinetNr: string;
+  gaDevice: string;
+  deviceName: string;
+  systemTypeNumbers: number[];
+  systemPartLabels: string[];
+  apparatLabels: string[];
+  notificationNumbers: number[];
+  stateTextLabels: string[];
+  alarmTypeLabels: string[];
 }
 
 export interface ParsedObjectName {
@@ -95,6 +113,7 @@ export interface FieldDeviceImportDevicePlan {
   displayName: string;
   spsControllerSystemTypeKey: string;
   spsSystemTypeNumber?: number;
+  existingFieldDeviceId?: string;
   systemPartLabel: string;
   apparatLabel: string;
   apparatNr?: number;
@@ -118,6 +137,7 @@ export interface FieldDeviceImportSystemTypePlan {
   systemTypeName: string;
   sourceCell: ImportSourceCell;
   fieldDeviceCount: number;
+  existingSpsControllerSystemTypeId?: string;
 }
 
 export interface FieldDeviceImportControllerPlan {
@@ -128,6 +148,8 @@ export interface FieldDeviceImportControllerPlan {
   controlCabinetNr: string;
   controlCabinetSourceCell: ImportSourceCell;
   spsControllerSourceCell: ImportSourceCell;
+  existingControlCabinet?: ControlCabinet;
+  existingSpsController?: SPSController;
   controlCabinetRequest?: CreateControlCabinetRequest;
   spsControllerRequest?: Omit<CreateSPSControllerRequest, 'control_cabinet_id'>;
   systemTypes: FieldDeviceImportSystemTypePlan[];
@@ -267,6 +289,85 @@ export function parseExportObjectName(value: string): ParsedObjectName | null {
   };
 }
 
+export function collectFieldDeviceImportLookupCriteria(
+  worksheet: WorksheetPreview
+): FieldDeviceImportLookupCriteria {
+  const rows = worksheet.rows;
+  const headerRowIndex = findHeaderRowIndex(rows);
+  const firstDataRowIndex = headerRowIndex === -1 ? 0 : headerRowIndex + 1;
+  const firstObjectNameCell = findFirstObjectNameCell(rows, firstDataRowIndex);
+  const firstParsedName = firstObjectNameCell
+    ? parseExportObjectName(cellString(rows[firstObjectNameCell.rowIndex], COLUMNS.objectName))
+    : null;
+  const headerValues = readControllerHeader(rows, headerRowIndex);
+
+  const systemTypeNumbers = new Set<number>();
+  const systemPartLabels = new Set<string>();
+  const apparatLabels = new Set<string>();
+  const notificationNumbers = new Set<number>();
+  const stateTextLabels = new Set<string>();
+  const alarmTypeLabels = new Set<string>();
+
+  for (let rowIndex = firstDataRowIndex; rowIndex < rows.length; rowIndex += 1) {
+    const row = rows[rowIndex];
+    if (isBlankRow(row)) continue;
+
+    if (isFieldDeviceRow(row)) {
+      const parsedName = parseExportObjectName(cellString(row, COLUMNS.objectName));
+      if (parsedName?.spsSystemTypeNumber) {
+        systemTypeNumbers.add(parsedName.spsSystemTypeNumber);
+      }
+
+      addMeaningfulLabels(
+        systemPartLabels,
+        cellString(row, COLUMNS.systemPartShortName),
+        cellString(row, COLUMNS.systemPartName)
+      );
+      addMeaningfulLabels(
+        apparatLabels,
+        cellString(row, COLUMNS.apparatShortName),
+        cellString(row, COLUMNS.apparatName)
+      );
+      continue;
+    }
+
+    if (isBacnetObjectRow(row)) {
+      const parsedName = parseExportObjectName(cellString(row, COLUMNS.objectName));
+      if (parsedName?.spsSystemTypeNumber) {
+        systemTypeNumbers.add(parsedName.spsSystemTypeNumber);
+      }
+
+      const notificationNumber = parseInteger(cellString(row, COLUMNS.notification));
+      if (notificationNumber !== undefined) {
+        notificationNumbers.add(notificationNumber);
+      }
+
+      addMeaningfulLabels(
+        stateTextLabels,
+        cellString(row, COLUMNS.stateText),
+        cellString(row, COLUMNS.stateTextAggregate)
+      );
+      addMeaningfulLabels(alarmTypeLabels, cellString(row, COLUMNS.alarmDefinition));
+    }
+  }
+
+  return {
+    iwsCode: firstParsedName?.iwsCode ?? parseIwsFromDeviceName(headerValues.deviceName.value),
+    buildingGroup:
+      firstParsedName?.buildingGroup ??
+      parseBuildingGroupFromDeviceName(headerValues.deviceName.value),
+    controlCabinetNr: headerValues.controlCabinetNr.value.trim(),
+    gaDevice: normalizeGADevice(headerValues.gaDevice.value || firstParsedName?.gaDevice || ''),
+    deviceName: headerValues.deviceName.value.trim(),
+    systemTypeNumbers: sortedNumbers(systemTypeNumbers),
+    systemPartLabels: sortedLabels(systemPartLabels),
+    apparatLabels: sortedLabels(apparatLabels),
+    notificationNumbers: sortedNumbers(notificationNumbers),
+    stateTextLabels: sortedLabels(stateTextLabels),
+    alarmTypeLabels: sortedLabels(alarmTypeLabels)
+  };
+}
+
 export function transformWorksheetToFieldDeviceImport(
   worksheet: WorksheetPreview,
   lookups: FieldDeviceImportLookups
@@ -362,20 +463,24 @@ export function transformWorksheetToFieldDeviceImport(
       'error',
       translate('field_device.importer.validation.control_cabinet_required'),
       'control_cabinet',
-      headerValues.controlCabinetNr.cell
+      headerValues.controlCabinetNr.cell,
+      'control-cabinet'
     );
   }
 
+  let existingControlCabinet: ControlCabinet | undefined;
   if (building && controlCabinetNr) {
     const cabinetKey = scopedKey(building.id, controlCabinetNr);
-    if (lookupIndex.controlCabinetByBuildingAndNr.has(cabinetKey)) {
+    existingControlCabinet = lookupIndex.controlCabinetByBuildingAndNr.get(cabinetKey);
+    if (existingControlCabinet) {
       addDiagnostic(
-        'error',
+        'warning',
         translate('field_device.importer.validation.control_cabinet_exists', {
           value: controlCabinetNr
         }),
         'control_cabinet',
-        headerValues.controlCabinetNr.cell
+        headerValues.controlCabinetNr.cell,
+        'control-cabinet'
       );
     }
   }
@@ -385,14 +490,16 @@ export function transformWorksheetToFieldDeviceImport(
       'error',
       translate('field_device.importer.validation.ga_device_required'),
       'sps_controller',
-      headerValues.gaDevice.cell
+      headerValues.gaDevice.cell,
+      'sps-controller'
     );
   } else if (!/^[A-Z]{3}$/.test(gaDevice)) {
     addDiagnostic(
       'error',
       translate('field_device.importer.validation.ga_device_format'),
       'sps_controller',
-      headerValues.gaDevice.cell
+      headerValues.gaDevice.cell,
+      'sps-controller'
     );
   }
 
@@ -401,14 +508,31 @@ export function transformWorksheetToFieldDeviceImport(
       'error',
       translate('field_device.importer.validation.device_name_required'),
       'sps_controller',
-      headerValues.deviceName.cell
+      headerValues.deviceName.cell,
+      'sps-controller'
     );
   } else if (deviceName.length > 100) {
     addDiagnostic(
       'error',
       translate('field_device.importer.validation.device_name_max'),
       'sps_controller',
-      headerValues.deviceName.cell
+      headerValues.deviceName.cell,
+      'sps-controller'
+    );
+  }
+
+  const existingSpsController = existingControlCabinet
+    ? resolveExistingSpsController(lookupIndex, existingControlCabinet.id, deviceName, gaDevice)
+    : undefined;
+  if (existingSpsController) {
+    addDiagnostic(
+      'warning',
+      translate('field_device.importer.validation.sps_controller_exists', {
+        value: existingSpsController.device_name || existingSpsController.ga_device || deviceName
+      }),
+      'sps_controller',
+      headerValues.deviceName.cell,
+      'sps-controller'
     );
   }
 
@@ -448,6 +572,7 @@ export function transformWorksheetToFieldDeviceImport(
   );
 
   const systemTypes = buildSystemTypePlans(fieldDevices, lookupIndex, addDiagnostic);
+  markExistingSystemTypePlans(systemTypes, existingSpsController?.id, lookupIndex, addDiagnostic);
   validateExistingFieldDevices(fieldDevices, deviceName, lookupIndex, addDiagnostic);
   validateDuplicateFieldDevices(fieldDevices, addDiagnostic);
 
@@ -494,6 +619,8 @@ export function transformWorksheetToFieldDeviceImport(
       controlCabinetNr,
       controlCabinetSourceCell: headerValues.controlCabinetNr.cell,
       spsControllerSourceCell: headerValues.deviceName.cell,
+      existingControlCabinet,
+      existingSpsController,
       controlCabinetRequest,
       spsControllerRequest,
       systemTypes,
@@ -666,7 +793,10 @@ function parseFieldDeviceRow(
     addDiagnostic(
       'error',
       translate('field_device.importer.validation.system_part_not_found', {
-        value: systemPartShort || systemPartName || translate('field_device.importer.validation.empty_value')
+        value:
+          systemPartShort ||
+          systemPartName ||
+          translate('field_device.importer.validation.empty_value')
       }),
       'field_device',
       sourceCell(rowIndex, systemPartShort ? COLUMNS.systemPartShortName : COLUMNS.systemPartName),
@@ -681,7 +811,8 @@ function parseFieldDeviceRow(
     addDiagnostic(
       'error',
       translate('field_device.importer.validation.apparat_not_found', {
-        value: apparatShort || apparatName || translate('field_device.importer.validation.empty_value')
+        value:
+          apparatShort || apparatName || translate('field_device.importer.validation.empty_value')
       }),
       'field_device',
       sourceCell(rowIndex, apparatShort ? COLUMNS.apparatShortName : COLUMNS.apparatName),
@@ -921,6 +1052,34 @@ function buildSystemTypePlans(
   return Array.from(byKey.values()).sort((a, b) => a.number - b.number);
 }
 
+function markExistingSystemTypePlans(
+  systemTypes: FieldDeviceImportSystemTypePlan[],
+  spsControllerId: string | undefined,
+  lookupIndex: LookupIndex,
+  addDiagnostic: AddDiagnostic
+): void {
+  if (!spsControllerId) return;
+
+  for (const systemType of systemTypes) {
+    const existing = lookupIndex.spsControllerSystemTypeByControllerTypeAndNumber.get(
+      spsControllerSystemTypeKey(spsControllerId, systemType.systemTypeId, systemType.number)
+    );
+    if (!existing) continue;
+
+    systemType.existingSpsControllerSystemTypeId = existing.id;
+    addDiagnostic(
+      'warning',
+      translate('field_device.importer.validation.sps_controller_system_type_exists', {
+        number: systemType.number,
+        name: systemType.systemTypeName
+      }),
+      'sps_controller_system_type',
+      systemType.sourceCell,
+      systemType.key
+    );
+  }
+}
+
 function validateExistingFieldDevices(
   fieldDevices: FieldDeviceImportDevicePlan[],
   controllerDeviceName: string,
@@ -940,13 +1099,14 @@ function validateExistingFieldDevices(
     const existing = lookupIndex.existingFieldDeviceByBusinessKey.get(key);
     if (!existing) continue;
 
+    fieldDevice.existingFieldDeviceId = existing.id;
     const systemTypeNumber = fieldDevice.spsSystemTypeNumber
       ? translate('field_device.importer.validation.sps_system_type_with_number', {
           number: fieldDevice.spsSystemTypeNumber
         })
       : translate('field_device.importer.validation.sps_system_type');
     addDiagnostic(
-      'error',
+      'warning',
       translate('field_device.importer.validation.field_device_exists', {
         systemType: systemTypeNumber,
         systemPart: fieldDevice.systemPartLabel,
@@ -1237,6 +1397,9 @@ function findHeaderValue(
 interface LookupIndex {
   buildingsByScope: Map<string, Building>;
   controlCabinetByBuildingAndNr: Map<string, ControlCabinet>;
+  spsControllerByCabinetAndDeviceName: Map<string, SPSController>;
+  spsControllerByCabinetAndGADevice: Map<string, SPSController>;
+  spsControllerSystemTypeByControllerTypeAndNumber: Map<string, SPSControllerSystemType>;
   existingFieldDeviceByBusinessKey: Map<string, FieldDevice>;
   systemTypes: SystemType[];
   systemPartByLookup: Map<string, SystemPart>;
@@ -1258,6 +1421,33 @@ function createLookupIndex(lookups: FieldDeviceImportLookups): LookupIndex {
     controlCabinetByBuildingAndNr.set(
       scopedKey(cabinet.building_id, cabinet.control_cabinet_nr),
       cabinet
+    );
+  }
+
+  const spsControllerByCabinetAndDeviceName = new Map<string, SPSController>();
+  const spsControllerByCabinetAndGADevice = new Map<string, SPSController>();
+  for (const controller of lookups.spsControllers) {
+    spsControllerByCabinetAndDeviceName.set(
+      scopedKey(controller.control_cabinet_id, controller.device_name),
+      controller
+    );
+    if (controller.ga_device) {
+      spsControllerByCabinetAndGADevice.set(
+        scopedKey(controller.control_cabinet_id, controller.ga_device),
+        controller
+      );
+    }
+  }
+
+  const spsControllerSystemTypeByControllerTypeAndNumber = new Map<
+    string,
+    SPSControllerSystemType
+  >();
+  for (const item of lookups.spsControllerSystemTypes) {
+    if (item.number === undefined || item.number === null) continue;
+    spsControllerSystemTypeByControllerTypeAndNumber.set(
+      spsControllerSystemTypeKey(item.sps_controller_id, item.system_type_id, item.number),
+      item
     );
   }
 
@@ -1310,6 +1500,9 @@ function createLookupIndex(lookups: FieldDeviceImportLookups): LookupIndex {
   return {
     buildingsByScope,
     controlCabinetByBuildingAndNr,
+    spsControllerByCabinetAndDeviceName,
+    spsControllerByCabinetAndGADevice,
+    spsControllerSystemTypeByControllerTypeAndNumber,
     existingFieldDeviceByBusinessKey,
     systemTypes: [...lookups.systemTypes].sort((a, b) => a.number_min - b.number_min),
     systemPartByLookup,
@@ -1369,6 +1562,30 @@ function scopedKey(scopeId: string, value: string): string {
   return `${scopeId}|${normalizeLookupKey(value)}`;
 }
 
+function spsControllerSystemTypeKey(
+  spsControllerId: string,
+  systemTypeId: string,
+  number: number
+): string {
+  return `${spsControllerId}|${systemTypeId}|${number}`;
+}
+
+function resolveExistingSpsController(
+  lookupIndex: LookupIndex,
+  controlCabinetId: string,
+  deviceName: string,
+  gaDevice: string
+): SPSController | undefined {
+  const byDeviceName = deviceName
+    ? lookupIndex.spsControllerByCabinetAndDeviceName.get(scopedKey(controlCabinetId, deviceName))
+    : undefined;
+  if (byDeviceName) return byDeviceName;
+
+  return gaDevice
+    ? lookupIndex.spsControllerByCabinetAndGADevice.get(scopedKey(controlCabinetId, gaDevice))
+    : undefined;
+}
+
 function fieldDeviceBusinessKey(
   controllerDeviceName: string | undefined,
   spsSystemTypeNumber: number | undefined,
@@ -1376,13 +1593,7 @@ function fieldDeviceBusinessKey(
   apparatId: string | undefined,
   apparatNr: number | undefined
 ): string | undefined {
-  if (
-    !controllerDeviceName ||
-    !spsSystemTypeNumber ||
-    !systemPartId ||
-    !apparatId ||
-    !apparatNr
-  ) {
+  if (!controllerDeviceName || !spsSystemTypeNumber || !systemPartId || !apparatId || !apparatNr) {
     return undefined;
   }
 
@@ -1483,6 +1694,22 @@ function createDiagnosticCollector(diagnostics: ImportDiagnostic[]): AddDiagnost
 function isMeaningfulLabel(value: string): boolean {
   const trimmed = value.trim();
   return trimmed.length > 0 && trimmed !== '-';
+}
+
+function addMeaningfulLabels(target: Set<string>, ...values: string[]): void {
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (!isMeaningfulLabel(trimmed)) continue;
+    target.add(trimmed);
+  }
+}
+
+function sortedLabels(values: Set<string>): string[] {
+  return Array.from(values).sort((a, b) => a.localeCompare(b));
+}
+
+function sortedNumbers(values: Set<number>): number[] {
+  return Array.from(values).sort((a, b) => a - b);
 }
 
 function emptyToUndefined(value: string): string | undefined {

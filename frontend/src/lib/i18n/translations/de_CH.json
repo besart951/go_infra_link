@@ -1866,7 +1866,8 @@
       "empty_prompt": "Nach der Arbeitsblatt-Auswahl transformieren, um Schaltschrank, SPS, Systemtypen, Feldgeräte und BACnet-Objekte als Baum zu prüfen.",
       "actions": {
         "transform": "Transformieren",
-        "import": "Import starten"
+        "import": "Import starten",
+        "retry": "Fehler erneut migrieren"
       },
       "summary": {
         "control_cabinet": "Schaltschrank",
@@ -1877,8 +1878,8 @@
         "validation_counts": "{errors} Fehler / {warnings} Warnungen"
       },
       "report": {
-        "success": "{count} Feldgeräte erfolgreich importiert.",
-        "partial": "{success} Feldgeräte importiert, {failed} fehlgeschlagen.",
+        "success": "{count} Feldgeräte erfolgreich migriert.",
+        "partial": "{success} Feldgeräte migriert, {failed} fehlgeschlagen.",
         "failed": "Import fehlgeschlagen.",
         "created_entities": "Schaltschrank: {controlCabinet} · SPS: {spsController}"
       },
@@ -1889,7 +1890,20 @@
         "title": "Objektbaum",
         "root": "Schaltschrank {controlCabinet} · SPS {sps}",
         "device_meta": " · Zeile {row} · {count} BACnet",
-        "no_text_fix": "(kein Text-Fix)"
+        "no_text_fix": "(kein Text-Fix)",
+        "status": {
+          "pending": "Bereit",
+          "existing": "Existiert",
+          "success": "Migriert",
+          "failed": "Fehler"
+        },
+        "fields": {
+          "bmk": "BMK",
+          "description": "Beschreibung",
+          "apparat_nr": "Apparat-Nr.",
+          "text_fix": "Text-Fix",
+          "address": "Adresse"
+        }
       },
       "entities": {
         "worksheet": "Arbeitsblatt",
@@ -1915,7 +1929,9 @@
         "building_group_missing": "Die Gebäudegruppe konnte nicht aus dem BACnet Object Name gelesen werden.",
         "building_not_found": "Kein bestehendes Gebäude für IWS \"{iws}\" und Gruppe \"{group}\" gefunden.",
         "control_cabinet_required": "Die Schaltschrank-Nr. ist erforderlich.",
-        "control_cabinet_exists": "Der Schaltschrank \"{value}\" existiert für dieses Gebäude bereits.",
+        "control_cabinet_exists": "Der Schaltschrank \"{value}\" existiert bereits und wird als Ziel verwendet.",
+        "sps_controller_exists": "Die SPS \"{value}\" existiert bereits und wird als Ziel verwendet.",
+        "sps_controller_system_type_exists": "SPS-Systemtyp {number} ({name}) existiert bereits und wird verwendet.",
         "ga_device_required": "Das GA-Gerät ist erforderlich.",
         "ga_device_format": "Das GA-Gerät muss aus genau 3 Grossbuchstaben bestehen.",
         "device_name_required": "Der Device Name ist erforderlich.",
@@ -1947,7 +1963,7 @@
         "system_type_definition_missing": "Keine Systemtyp-Definition mit Nummernbereich für {number} gefunden.",
         "sps_system_type": "SPS-Systemtyp",
         "sps_system_type_with_number": "SPS-Systemtyp {number}",
-        "field_device_exists": "Feldgerät existiert bereits im Ziel-Controller ({systemType}, {systemPart}/{apparat}{apparatNr}).",
+        "field_device_exists": "Feldgerät existiert bereits im Ziel-Controller ({systemType}, {systemPart}/{apparat}{apparatNr}); BACnet-Objekte werden dort migriert.",
         "duplicate_apparat_nr": "Doppelte Apparatnummer: dieselbe Kombination kommt bereits in Zeile {row} vor.",
         "notification_not_numeric": "Notification \"{value}\" ist keine Zahl und wird ohne Referenz importiert.",
         "notification_class_not_found": "Notification Class NC {value} wurde nicht gefunden und wird leer importiert.",
