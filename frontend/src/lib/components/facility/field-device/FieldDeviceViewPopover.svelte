@@ -24,7 +24,7 @@
     <SlidersHorizontal />
     {#if fieldDeviceState.view.isCustomized}
       <span
-        class="pointer-events-none absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background"
+        class="pointer-events-none absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-success ring-2 ring-background"
       ></span>
     {/if}
   </Popover.Trigger>
@@ -44,7 +44,7 @@
           <button
             type="button"
             class={[
-              'rounded px-2 py-1.5 text-sm font-medium transition-colors',
+              'rounded-md px-2 py-1.5 text-sm font-medium transition-colors',
               fieldDeviceState.view.density.value === option.value
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:bg-background/70 hover:text-foreground'

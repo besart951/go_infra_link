@@ -359,7 +359,7 @@
               </span>
               <span class="truncate">{group.label}</span>
               <span
-                class="ml-auto rounded bg-background px-1.5 py-0.5 text-xs font-medium text-muted-foreground"
+                class="ml-auto rounded-md bg-background px-1.5 py-0.5 text-xs font-medium text-muted-foreground"
               >
                 {$t('field_device.view.group_count', { count: group.count })}
               </span>

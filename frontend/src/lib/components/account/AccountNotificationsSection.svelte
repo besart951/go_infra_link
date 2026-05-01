@@ -223,7 +223,7 @@
           </div>
         {:else if notificationEmailVerified}
           <div class="flex items-center gap-2 text-sm text-muted-foreground">
-            <CircleCheck class="size-4 text-emerald-600" />
+            <CircleCheck class="size-4 text-success" />
             <span>{$t('notifications.preferences.email.ready')}</span>
           </div>
         {/if}

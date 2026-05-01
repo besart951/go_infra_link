@@ -36,12 +36,12 @@
   </div>
 {:else if translationError}
   <div class="flex h-screen items-center justify-center">
-    <div class="text-center text-red-600">
+    <div class="text-center text-destructive">
       <p class="mb-2 text-lg font-semibold">{$t('app.translation_error_title')}</p>
       <p class="text-sm">{translationError}</p>
       <button
         onclick={() => i18n.reload()}
-        class="mt-4 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+        class="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
       >
         {$t('app.retry')}
       </button>

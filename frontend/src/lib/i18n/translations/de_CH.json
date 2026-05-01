@@ -874,6 +874,7 @@
     "creation_failed": "Phase konnte nicht erstellt werden.",
     "update_failed": "Phase konnte nicht aktualisiert werden.",
     "deletion_failed": "Phase konnte nicht gelöscht werden.",
+    "deletion_blocked": "Die Aktion konnte nicht ausgeführt werden, da ein Konflikt mit bestehenden Daten vorliegt. Die Phase ist bereits einem Projekt zugewiesen.",
     "fetch_failed": "Phasen konnten nicht abgerufen werden."
   },
   "phase_permission": {

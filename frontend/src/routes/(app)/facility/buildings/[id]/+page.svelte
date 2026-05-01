@@ -134,7 +134,7 @@
 
   {#if successMessage}
     <div
-      class="rounded-md border border-green-500 bg-green-500/10 p-4 text-green-700 dark:text-green-400"
+      class="rounded-md border border-success bg-success/10 p-4 text-success-muted-foreground dark:text-success"
     >
       {successMessage}
     </div>

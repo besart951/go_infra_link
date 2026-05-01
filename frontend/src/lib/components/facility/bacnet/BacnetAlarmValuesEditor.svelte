@@ -124,7 +124,7 @@
     <div class="flex items-center gap-1.5 text-xs">
       <span class="font-medium">{$t('field_device.bacnet.alarm_editor.title')}</span>
       <span
-        class={`ml-auto rounded-full px-1.5 py-0.5 text-[11px] font-medium ${requiredFilled === requiredTotal ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}
+        class={`ml-auto rounded-full px-1.5 py-0.5 text-[11px] font-medium ${requiredFilled === requiredTotal ? 'bg-success-muted text-success-muted-foreground' : 'bg-warning-muted text-warning-muted-foreground'}`}
       >
         {$t('field_device.bacnet.alarm_editor.completeness', {
           filled: requiredFilled,
@@ -238,7 +238,7 @@
     {/each}
 
     {#if saveError}
-      <p class="text-xs text-red-500">{saveError}</p>
+      <p class="text-xs text-destructive">{saveError}</p>
     {/if}
 
     <div class="flex justify-end">

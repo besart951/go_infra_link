@@ -45,7 +45,7 @@
 
     <button
       type="button"
-      class="flex flex-1 items-center gap-2 rounded px-1 py-0.5 text-left hover:bg-accent/50"
+      class="flex flex-1 items-center gap-2 rounded-md px-1 py-0.5 text-left hover:bg-accent/50"
       onclick={handleToggleExpand}
     >
       {#if state.isResourceExpanded(resource)}

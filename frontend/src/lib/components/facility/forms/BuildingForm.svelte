@@ -97,7 +97,7 @@
       />
       <p class="text-xs text-muted-foreground">{$t('facility.forms.building.iws_exact')}</p>
       {#if getError('iws_code')}
-        <p class="text-sm text-red-500">{getError('iws_code')}</p>
+        <p class="text-sm text-destructive">{getError('iws_code')}</p>
       {/if}
     </div>
 
@@ -112,13 +112,13 @@
         oninput={triggerValidation}
       />
       {#if getError('building_group')}
-        <p class="text-sm text-red-500">{getError('building_group')}</p>
+        <p class="text-sm text-destructive">{getError('building_group')}</p>
       {/if}
     </div>
   </div>
 
   {#if formState.error || liveValidation.error}
-    <p class="text-sm text-red-500">{formState.error || liveValidation.error}</p>
+    <p class="text-sm text-destructive">{formState.error || liveValidation.error}</p>
   {/if}
 
   <div class="flex justify-end gap-2 pt-2">

@@ -71,7 +71,7 @@
 
   function getEditingFieldClass(fieldName: string): string {
     return getEditorsForField(fieldName).length > 0
-      ? 'bg-yellow-100/40 dark:bg-yellow-900/20 cursor-help'
+      ? 'bg-warning-muted/60 dark:bg-warning-muted/60 cursor-help'
       : '';
   }
 </script>
@@ -202,12 +202,12 @@
   <Table.Cell class="text-center">
     {#if device.specification_id || device.specification}
       <span
-        class="inline-block h-2 w-2 rounded-full bg-green-500"
+        class="inline-block h-2 w-2 rounded-full bg-success"
         title={$t('field_device.table.spec_available')}
       ></span>
     {:else}
       <span
-        class="inline-block h-2 w-2 rounded-full bg-gray-300"
+        class="inline-block h-2 w-2 rounded-full bg-muted-foreground/40"
         title={$t('field_device.table.spec_missing')}
       ></span>
     {/if}

@@ -116,7 +116,7 @@
           {#each Array(5) as _, rowIndex (rowIndex)}
             <Table.Row>
               {#each Array(7) as _, colIndex (colIndex)}
-                <Table.Cell><div class="h-8 w-full rounded bg-muted/40"></div></Table.Cell>
+                <Table.Cell><div class="h-8 w-full rounded-md bg-muted/40"></div></Table.Cell>
               {/each}
             </Table.Row>
           {/each}

@@ -136,7 +136,7 @@
 
   function getCollaborationClass(objectId: string, field: string): string {
     return getEditorsForField(objectId, field).length > 0
-      ? 'rounded-md bg-yellow-100/40 dark:bg-yellow-900/20 cursor-help'
+      ? 'rounded-md bg-warning-muted/60 dark:bg-warning-muted/60 cursor-help'
       : '';
   }
 
@@ -299,7 +299,9 @@
                 />
               </div>
               {#if getFieldError(obj.id, 'state_text_id')}
-                <p class="mt-1 text-xs text-red-500">{getFieldError(obj.id, 'state_text_id')}</p>
+                <p class="mt-1 text-xs text-destructive">
+                  {getFieldError(obj.id, 'state_text_id')}
+                </p>
               {/if}
             </td>
             <td class="py-1 pr-1 align-top">
@@ -331,7 +333,7 @@
                 />
               </div>
               {#if getFieldError(obj.id, 'notification_class_id')}
-                <p class="mt-1 text-xs text-red-500">
+                <p class="mt-1 text-xs text-destructive">
                   {getFieldError(obj.id, 'notification_class_id')}
                 </p>
               {/if}

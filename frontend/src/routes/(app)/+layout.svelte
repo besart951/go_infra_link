@@ -71,7 +71,7 @@
       {#if !$networkStatus.browserOnline}
         <div class="px-4">
           <div
-            class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            class="rounded-md border border-warning-border bg-warning-muted px-3 py-2 text-sm text-warning-muted-foreground"
           >
             {$translator('pages.connection.offline')}
           </div>
@@ -79,7 +79,7 @@
       {:else if $networkStatus.retrying}
         <div class="px-4">
           <div
-            class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            class="rounded-md border border-warning-border bg-warning-muted px-3 py-2 text-sm text-warning-muted-foreground"
           >
             {$translator('pages.connection.retrying', {
               attempt: $networkStatus.retryAttempt,
@@ -90,7 +90,7 @@
       {:else if $networkStatus.apiUnavailable || data.backendAvailable === false}
         <div class="px-4">
           <div
-            class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            class="rounded-md border border-warning-border bg-warning-muted px-3 py-2 text-sm text-warning-muted-foreground"
           >
             {$translator('pages.connection.backend_unavailable_stale')}
           </div>

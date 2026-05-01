@@ -119,7 +119,7 @@
             <Filter />
             {#if fieldDeviceState.hasActiveFilters}
               <span
-                class="pointer-events-none absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background"
+                class="pointer-events-none absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-success ring-2 ring-background"
               ></span>
             {/if}
           </Tooltip.Trigger>

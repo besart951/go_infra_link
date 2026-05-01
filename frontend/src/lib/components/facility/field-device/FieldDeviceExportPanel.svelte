@@ -357,12 +357,12 @@
           </div>
           <div>{activeJob.progress}%</div>
         </div>
-        <div class="h-2 w-full overflow-hidden rounded bg-muted">
+        <div class="h-2 w-full overflow-hidden rounded-md bg-muted">
           <div class="h-full bg-primary transition-all" style={`width: ${progressWidth};`}></div>
         </div>
         <p class="text-xs text-muted-foreground">{activeJob.message}</p>
         {#if pollingError && isRunning}
-          <p class="text-xs text-amber-700">{pollingError}</p>
+          <p class="text-xs text-warning-muted-foreground">{pollingError}</p>
         {/if}
         {#if isFailed && activeJob.error}
           <p class="text-sm text-destructive">{activeJob.error}</p>

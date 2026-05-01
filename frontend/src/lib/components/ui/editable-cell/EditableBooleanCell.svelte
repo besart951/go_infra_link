@@ -29,7 +29,7 @@
 <div
   class={[
     'flex items-center justify-center rounded-sm px-2 py-1',
-    isDirty ? 'bg-yellow-50 dark:bg-yellow-950/30' : '',
+    isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
     hasError ? 'bg-destructive/10' : ''
   ]
     .filter(Boolean)
@@ -45,7 +45,7 @@
             </div>
           {/snippet}
         </Tooltip.Trigger>
-        <Tooltip.Content side="top" class="text-destructive-foreground max-w-xs bg-destructive">
+        <Tooltip.Content side="top" class="max-w-xs bg-destructive text-destructive-foreground">
           <p>{error}</p>
         </Tooltip.Content>
       </Tooltip.Root>

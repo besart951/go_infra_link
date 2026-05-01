@@ -22,7 +22,7 @@
 
 <label
   class={cn(
-    'flex items-center gap-2 rounded px-2 py-1.5 transition-colors',
+    'flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors',
     'cursor-pointer hover:bg-accent/50'
   )}
 >

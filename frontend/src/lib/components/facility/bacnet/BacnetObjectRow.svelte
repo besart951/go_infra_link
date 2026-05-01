@@ -162,7 +162,7 @@
       disabled={readOnly}
     />
     {#if errors.text_fix}
-      <p class="text-xs text-red-500">{errors.text_fix}</p>
+      <p class="text-xs text-destructive">{errors.text_fix}</p>
     {/if}
   </div>
 
@@ -204,7 +204,7 @@
           {/each}
         </select>
         {#if errors.software_type}
-          <p class="text-xs text-red-500">{errors.software_type}</p>
+          <p class="text-xs text-destructive">{errors.software_type}</p>
         {/if}
       </div>
       <div class="space-y-1">
@@ -224,7 +224,7 @@
           disabled={readOnly}
         />
         {#if errors.software_number}
-          <p class="text-xs text-red-500">{errors.software_number}</p>
+          <p class="text-xs text-destructive">{errors.software_number}</p>
         {/if}
       </div>
     </div>
@@ -251,7 +251,7 @@
           {/each}
         </select>
         {#if errors.hardware_type}
-          <p class="text-xs text-red-500">{errors.hardware_type}</p>
+          <p class="text-xs text-destructive">{errors.hardware_type}</p>
         {/if}
       </div>
       <div class="space-y-1">
@@ -270,7 +270,7 @@
           disabled={readOnly}
         />
         {#if errors.hardware_quantity}
-          <p class="text-xs text-red-500">{errors.hardware_quantity}</p>
+          <p class="text-xs text-destructive">{errors.hardware_quantity}</p>
         {/if}
       </div>
     </div>
@@ -338,7 +338,7 @@
         {$t('field_device.bacnet.row.alarm_type_fields_loading')}
       </p>
     {:else if alarmTypeFieldsError}
-      <p class="text-xs text-red-500">{alarmTypeFieldsError}</p>
+      <p class="text-xs text-destructive">{alarmTypeFieldsError}</p>
     {:else if requiredAlarmTypeFields.length > 0}
       <div class="rounded-md border bg-muted/30 p-2">
         <p class="mb-1 text-xs font-medium text-muted-foreground">

@@ -39,6 +39,32 @@ func TestDeletePhaseReturnsAfterErrorResponse(t *testing.T) {
 	}
 }
 
+func TestDeletePhaseReturnsConflictIfAssignedToProject(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	phaseID := uuid.New()
+	handler := NewHandler(&fakePhaseService{deleteErr: domain.ErrConflict})
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	tracker := &statusTrackingWriter{ResponseWriter: context.Writer}
+	context.Writer = tracker
+	context.Request = httptest.NewRequest(http.MethodDelete, "/phases/"+phaseID.String(), nil)
+	context.Params = gin.Params{{Key: "id", Value: phaseID.String()}}
+
+	handler.DeletePhase(context)
+
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("expected status 409, got %d", recorder.Code)
+	}
+	if len(tracker.statusWrites) != 1 {
+		t.Fatalf("expected exactly one status write, got %v", tracker.statusWrites)
+	}
+	if tracker.statusWrites[0] != http.StatusConflict {
+		t.Fatalf("expected only status write to be 409, got %v", tracker.statusWrites)
+	}
+}
+
 type statusTrackingWriter struct {
 	gin.ResponseWriter
 	statusWrites []int

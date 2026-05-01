@@ -104,7 +104,9 @@
       <Label for="alarm_name">{$t('common.name')}</Label>
       <Input id="alarm_name" bind:value={name} required />
       {#if formState.getFieldError('name', ['alarmdefinition'])}
-        <p class="text-sm text-red-500">{formState.getFieldError('name', ['alarmdefinition'])}</p>
+        <p class="text-sm text-destructive">
+          {formState.getFieldError('name', ['alarmdefinition'])}
+        </p>
       {/if}
     </div>
     <div class="space-y-2">
@@ -122,7 +124,7 @@
       <Label for="alarm_note">{$t('facility.forms.alarm_definition.note_label')}</Label>
       <Textarea id="alarm_note" bind:value={alarm_note} rows={3} />
       {#if formState.getFieldError('alarm_note', ['alarmdefinition'])}
-        <p class="text-sm text-red-500">
+        <p class="text-sm text-destructive">
           {formState.getFieldError('alarm_note', ['alarmdefinition'])}
         </p>
       {/if}
@@ -142,7 +144,7 @@
             <span class="ml-auto text-xs text-muted-foreground">{field.alarm_field?.data_type}</span
             >
             {#if field.is_required}
-              <span class="rounded bg-destructive/10 px-1 text-xs text-destructive"
+              <span class="rounded-md bg-destructive/10 px-1 text-xs text-destructive"
                 >{$t('common.required')}</span
               >
             {/if}
@@ -153,7 +155,7 @@
   {/if}
 
   {#if formState.error}
-    <p class="text-sm text-red-500">{formState.error}</p>
+    <p class="text-sm text-destructive">{formState.error}</p>
   {/if}
 
   <div class="flex justify-end gap-2 pt-2">

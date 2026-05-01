@@ -95,7 +95,7 @@
           <Table.Cell>{controller.ga_device ?? '-'}</Table.Cell>
           <Table.Cell>
             {#if controller.ip_address}
-              <code class="rounded bg-muted px-1.5 py-0.5 text-sm">
+              <code class="rounded-md bg-muted px-1.5 py-0.5 text-sm">
                 {controller.ip_address}
               </code>
             {:else}
@@ -109,7 +109,7 @@
           <Table.Cell>{controller.ga_device ?? '-'}</Table.Cell>
           <Table.Cell>
             {#if controller.ip_address}
-              <code class="rounded bg-muted px-1.5 py-0.5 text-sm">
+              <code class="rounded-md bg-muted px-1.5 py-0.5 text-sm">
                 {controller.ip_address}
               </code>
             {:else}

@@ -90,9 +90,9 @@
       <Label for="apparat_short">{$t('facility.forms.apparat.short_name_label')}</Label>
       <Input id="apparat_short" bind:value={short_name} required minlength={3} maxlength={3} />
       {#if shortNameError}
-        <p class="text-sm text-red-500">{shortNameError}</p>
+        <p class="text-sm text-destructive">{shortNameError}</p>
       {:else if formState.getFieldError('short_name', ['apparat'])}
-        <p class="text-sm text-red-500">
+        <p class="text-sm text-destructive">
           {formState.getFieldError('short_name', ['apparat'])}
         </p>
       {/if}
@@ -101,21 +101,23 @@
       <Label for="apparat_name">{$t('common.name')}</Label>
       <Input id="apparat_name" bind:value={name} required maxlength={250} />
       {#if formState.getFieldError('name', ['apparat'])}
-        <p class="text-sm text-red-500">{formState.getFieldError('name', ['apparat'])}</p>
+        <p class="text-sm text-destructive">{formState.getFieldError('name', ['apparat'])}</p>
       {/if}
     </div>
     <div class="space-y-2 md:col-span-2">
       <Label for="apparat_desc">{$t('common.description')}</Label>
       <Textarea id="apparat_desc" bind:value={description} rows={3} maxlength={250} />
       {#if formState.getFieldError('description', ['apparat'])}
-        <p class="text-sm text-red-500">{formState.getFieldError('description', ['apparat'])}</p>
+        <p class="text-sm text-destructive">
+          {formState.getFieldError('description', ['apparat'])}
+        </p>
       {/if}
     </div>
     <div class="space-y-2 md:col-span-2">
       <Label for="apparat_system_parts">{$t('facility.forms.apparat.system_parts_label')}</Label>
       <SystemPartMultiSelect id="apparat_system_parts" bind:value={system_part_ids} />
       {#if formState.getFieldError('system_part_ids', ['apparat'])}
-        <p class="text-sm text-red-500">
+        <p class="text-sm text-destructive">
           {formState.getFieldError('system_part_ids', ['apparat'])}
         </p>
       {/if}
@@ -123,7 +125,7 @@
   </div>
 
   {#if formState.error}
-    <p class="text-sm text-red-500">{formState.error}</p>
+    <p class="text-sm text-destructive">{formState.error}</p>
   {/if}
 
   <div class="flex justify-end gap-2 pt-2">

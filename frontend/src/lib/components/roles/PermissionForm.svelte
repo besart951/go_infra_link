@@ -239,7 +239,7 @@
             />
             <span class="text-sm font-medium">{$t(cat.label)}</span>
             <span class="text-xs text-muted-foreground">{$t(cat.description)}</span>
-            <code class="mt-1 rounded bg-muted px-1.5 py-0.5 text-xs">{cat.example}</code>
+            <code class="mt-1 rounded-md bg-muted px-1.5 py-0.5 text-xs">{cat.example}</code>
           </button>
         {/each}
       </div>
@@ -351,15 +351,15 @@
       <div class="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
         <code class="flex-1 font-mono text-sm">{permissionName}</code>
         {#if category === 'project'}
-          <span class="rounded bg-blue-500/10 px-2 py-0.5 text-xs text-blue-600"
+          <span class="rounded-md bg-info/10 px-2 py-0.5 text-xs text-info"
             >{$t('roles.permission_form.project_badge')}</span
           >
         {:else if category === 'facility'}
-          <span class="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600">
+          <span class="rounded-md bg-warning/10 px-2 py-0.5 text-xs text-warning">
             {$t('roles.categories.facility')}
           </span>
         {:else}
-          <span class="rounded bg-green-500/10 px-2 py-0.5 text-xs text-green-600">
+          <span class="rounded-md bg-success/10 px-2 py-0.5 text-xs text-success">
             {$t('roles.categories.general')}
           </span>
         {/if}

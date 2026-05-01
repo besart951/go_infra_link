@@ -48,7 +48,7 @@
           <Button
             {...props}
             size="icon"
-            class="bg-blue-600 text-white shadow-xs hover:bg-blue-700"
+            class="bg-primary text-primary-foreground shadow-xs hover:bg-primary/90"
             aria-label={$t('teams.detail.add_member')}
           >
             <UserPlus class="h-4 w-4" />

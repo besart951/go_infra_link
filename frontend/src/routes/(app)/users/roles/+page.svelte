@@ -74,8 +74,8 @@
 
     <div class="rounded-lg border bg-card p-4">
       <div class="flex items-center gap-3">
-        <div class="rounded-md bg-green-500/10 p-2">
-          <Shield class="h-5 w-5 text-green-600" />
+        <div class="rounded-md bg-success/10 p-2">
+          <Shield class="h-5 w-5 text-success" />
         </div>
         <div>
           <p class="text-sm text-muted-foreground">{$t('roles.stats.total_permissions')}</p>
@@ -90,8 +90,8 @@
 
     <div class="rounded-lg border bg-card p-4">
       <div class="flex items-center gap-3">
-        <div class="rounded-md bg-blue-500/10 p-2">
-          <Grid3X3 class="h-5 w-5 text-blue-600" />
+        <div class="rounded-md bg-info/10 p-2">
+          <Grid3X3 class="h-5 w-5 text-info" />
         </div>
         <div>
           <p class="text-sm text-muted-foreground">{$t('roles.stats.resources')}</p>

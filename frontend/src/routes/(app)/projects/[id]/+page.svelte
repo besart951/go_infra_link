@@ -343,9 +343,9 @@
         class="flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-sm text-muted-foreground"
       >
         {#if collaboration.socketStatus === 'connected'}
-          <Wifi class="h-4 w-4 text-emerald-600" />
+          <Wifi class="h-4 w-4 text-success" />
         {:else}
-          <WifiOff class="h-4 w-4 text-amber-600" />
+          <WifiOff class="h-4 w-4 text-warning" />
         {/if}
         <span>{onlineCollaborators.length}</span>
         <div class="flex -space-x-2">
@@ -407,7 +407,7 @@
       <div class="min-w-0 rounded-lg border bg-card p-6">
         <Collapsible.Root bind:open={controlCabinetOpen} class="group/collapsible">
           <div class="flex items-center gap-3">
-            <Collapsible.Trigger class="rounded px-2 py-1 hover:bg-accent">
+            <Collapsible.Trigger class="rounded-md px-2 py-1 hover:bg-accent">
               <ChevronDown
                 class="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180"
               />
@@ -430,7 +430,7 @@
       <div class="min-w-0 rounded-lg border bg-card p-6">
         <Collapsible.Root bind:open={spsControllerOpen} class="group/collapsible">
           <div class="flex items-center gap-3">
-            <Collapsible.Trigger class="rounded px-2 py-1 hover:bg-accent">
+            <Collapsible.Trigger class="rounded-md px-2 py-1 hover:bg-accent">
               <ChevronDown
                 class="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180"
               />

@@ -85,9 +85,9 @@
       <Label for="system_part_short">{$t('facility.forms.system_part.short_name_label')}</Label>
       <Input id="system_part_short" bind:value={short_name} required minlength={3} maxlength={3} />
       {#if shortNameError}
-        <p class="text-sm text-red-500">{shortNameError}</p>
+        <p class="text-sm text-destructive">{shortNameError}</p>
       {:else if formState.getFieldError('short_name', ['systempart'])}
-        <p class="text-sm text-red-500">
+        <p class="text-sm text-destructive">
           {formState.getFieldError('short_name', ['systempart'])}
         </p>
       {/if}
@@ -96,20 +96,22 @@
       <Label for="system_part_name">{$t('common.name')}</Label>
       <Input id="system_part_name" bind:value={name} required maxlength={250} />
       {#if formState.getFieldError('name', ['systempart'])}
-        <p class="text-sm text-red-500">{formState.getFieldError('name', ['systempart'])}</p>
+        <p class="text-sm text-destructive">{formState.getFieldError('name', ['systempart'])}</p>
       {/if}
     </div>
     <div class="space-y-2 md:col-span-2">
       <Label for="system_part_desc">{$t('common.description')}</Label>
       <Textarea id="system_part_desc" bind:value={description} rows={3} maxlength={250} />
       {#if formState.getFieldError('description', ['systempart'])}
-        <p class="text-sm text-red-500">{formState.getFieldError('description', ['systempart'])}</p>
+        <p class="text-sm text-destructive">
+          {formState.getFieldError('description', ['systempart'])}
+        </p>
       {/if}
     </div>
   </div>
 
   {#if formState.error}
-    <p class="text-sm text-red-500">{formState.error}</p>
+    <p class="text-sm text-destructive">{formState.error}</p>
   {/if}
 
   <div class="flex justify-end gap-2 pt-2">

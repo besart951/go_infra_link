@@ -262,7 +262,7 @@
         oninput={clearLocalErrors}
       />
       {#if getError('name')}
-        <p class="text-sm text-red-500">{getError('name')}</p>
+        <p class="text-sm text-destructive">{getError('name')}</p>
       {/if}
     </div>
     <div class="space-y-2">
@@ -282,7 +282,7 @@
         onblur={() => handleNumberBlur('min')}
       />
       {#if getError('number_min')}
-        <p class="text-sm text-red-500">{getError('number_min')}</p>
+        <p class="text-sm text-destructive">{getError('number_min')}</p>
       {/if}
     </div>
     <div class="space-y-2">
@@ -302,7 +302,7 @@
         onblur={() => handleNumberBlur('max')}
       />
       {#if getError('number_max')}
-        <p class="text-sm text-red-500">{getError('number_max')}</p>
+        <p class="text-sm text-destructive">{getError('number_max')}</p>
       {/if}
     </div>
   </div>
@@ -310,7 +310,7 @@
   {#if availableRangesLoading}
     <p class="text-xs text-muted-foreground">{$t('facility.forms.system_type.loading_ranges')}</p>
   {:else if availableRangesError}
-    <p class="text-xs text-red-500">{availableRangesError}</p>
+    <p class="text-xs text-destructive">{availableRangesError}</p>
   {:else if availableRanges.length > 0}
     <p class="text-xs text-muted-foreground">
       {$t('facility.forms.system_type.available_ranges', {
@@ -327,7 +327,7 @@
   {/if}
 
   {#if formState.error}
-    <p class="text-sm text-red-500">{formState.error}</p>
+    <p class="text-sm text-destructive">{formState.error}</p>
   {/if}
 
   <div class="flex justify-end gap-2 pt-2">

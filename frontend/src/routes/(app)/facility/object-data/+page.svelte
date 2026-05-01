@@ -37,13 +37,13 @@
   {#snippet rowSnippet(item: ObjectData)}
     <Table.Cell class="font-medium">{item.description}</Table.Cell>
     <Table.Cell>
-      <code class="rounded bg-muted px-1.5 py-0.5 text-sm">{item.version}</code>
+      <code class="rounded-md bg-muted px-1.5 py-0.5 text-sm">{item.version}</code>
     </Table.Cell>
     <Table.Cell>
       <span
         class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium {item.is_active
-          ? 'bg-green-50 text-green-700'
-          : 'bg-gray-50 text-gray-700'}"
+          ? 'bg-success-muted text-success-muted-foreground'
+          : 'bg-muted/50 text-muted-foreground'}"
       >
         {item.is_active ? $t('common.active') : $t('common.inactive')}
       </span>

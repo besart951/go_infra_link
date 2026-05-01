@@ -59,7 +59,7 @@
             <Button
               variant="default"
               size="icon"
-              class={`bg-blue-600 text-white shadow-xs hover:bg-blue-700 ${createActive ? 'ring-2 ring-blue-500/30' : ''}`}
+              class={`bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 ${createActive ? 'ring-2 ring-primary/30' : ''}`}
               onclick={onCreateClick}
               aria-label={createLabel}
             >

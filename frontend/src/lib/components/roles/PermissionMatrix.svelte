@@ -144,7 +144,7 @@
                 {#each sortedRoles as role}
                   <Table.Cell class="text-center">
                     {#if hasPermission(role, perm.name)}
-                      <Check class="mx-auto h-4 w-4 text-green-600" />
+                      <Check class="mx-auto h-4 w-4 text-success" />
                     {:else}
                       <Minus class="mx-auto h-4 w-4 text-muted-foreground/40" />
                     {/if}

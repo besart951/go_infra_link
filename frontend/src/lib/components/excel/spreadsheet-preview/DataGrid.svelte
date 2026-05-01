@@ -30,7 +30,7 @@
     if (!marker) return '';
     return marker.severity === 'error'
       ? 'bg-destructive/15 text-destructive ring-1 ring-inset ring-destructive/40'
-      : 'bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-300';
+      : 'bg-warning-muted text-warning-muted-foreground ring-1 ring-inset ring-warning-border';
   }
 
   function cellTitle(cell: string, marker: ImportCellMarker | undefined): string {

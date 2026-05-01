@@ -45,12 +45,14 @@
   function diagnosticClass(diagnostic: ImportDiagnostic): string {
     return diagnostic.severity === 'error'
       ? 'border-destructive/40 bg-destructive/10 text-destructive'
-      : 'border-amber-300 bg-amber-50 text-amber-800';
+      : 'border-warning-border bg-warning-muted text-warning-muted-foreground';
   }
 
   function reportClass(status: string): string {
-    if (status === 'success') return 'border-emerald-300 bg-emerald-50 text-emerald-800';
-    if (status === 'partial') return 'border-amber-300 bg-amber-50 text-amber-800';
+    if (status === 'success')
+      return 'border-success-border bg-success-muted text-success-muted-foreground';
+    if (status === 'partial')
+      return 'border-warning-border bg-warning-muted text-warning-muted-foreground';
     return 'border-destructive/40 bg-destructive/10 text-destructive';
   }
 
@@ -131,7 +133,9 @@
   {#if service.plan}
     <div class="mt-4 grid grid-cols-2 gap-2 text-xs md:grid-cols-5">
       <div class="rounded-md border p-2">
-        <div class="text-muted-foreground">{$t('field_device.importer.summary.control_cabinet')}</div>
+        <div class="text-muted-foreground">
+          {$t('field_device.importer.summary.control_cabinet')}
+        </div>
         <div class="truncate font-medium">
           {service.plan.controller.controlCabinetNr || $t('common.not_available')}
         </div>
@@ -145,7 +149,9 @@
         <div class="font-medium">{service.plan.fieldDeviceCount}</div>
       </div>
       <div class="rounded-md border p-2">
-        <div class="text-muted-foreground">{$t('field_device.importer.summary.bacnet_objects')}</div>
+        <div class="text-muted-foreground">
+          {$t('field_device.importer.summary.bacnet_objects')}
+        </div>
         <div class="font-medium">{service.plan.bacnetObjectCount}</div>
       </div>
       <div class="rounded-md border p-2">
@@ -206,8 +212,11 @@
         <details class="rounded-md border p-3" open>
           <summary class="cursor-pointer text-sm font-medium">
             {$t('field_device.importer.tree.root', {
-              controlCabinet: service.plan.controller.controlCabinetNr || $t('common.not_available'),
-              sps: service.plan.controller.spsControllerRequest?.ga_device ?? $t('common.not_available')
+              controlCabinet:
+                service.plan.controller.controlCabinetNr || $t('common.not_available'),
+              sps:
+                service.plan.controller.spsControllerRequest?.ga_device ??
+                $t('common.not_available')
             })}
           </summary>
           <div class="mt-3 space-y-3">
@@ -234,7 +243,7 @@
                       <div class="mt-2 grid gap-1 text-xs text-muted-foreground">
                         {#each device.bacnetObjects as object (object.key)}
                           <div
-                            class="flex min-w-0 items-center justify-between gap-3 rounded border bg-background px-2 py-1"
+                            class="flex min-w-0 items-center justify-between gap-3 rounded-md border bg-background px-2 py-1"
                           >
                             <span class="truncate">
                               {object.textFix || $t('field_device.importer.tree.no_text_fix')}

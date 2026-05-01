@@ -78,13 +78,13 @@
         placeholder={$t('phases.form.name_placeholder')}
       />
       {#if formState.getFieldError('name')}
-        <p class="text-sm text-red-500">{formState.getFieldError('name')}</p>
+        <p class="text-sm text-destructive">{formState.getFieldError('name')}</p>
       {/if}
     </div>
   </div>
 
   {#if formState.error}
-    <p class="text-sm text-red-500">{formState.error}</p>
+    <p class="text-sm text-destructive">{formState.error}</p>
   {/if}
 
   <div class="flex justify-end gap-2 pt-2">

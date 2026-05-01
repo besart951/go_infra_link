@@ -121,7 +121,7 @@
         <BuildingSelect bind:value={building_id} width="w-full" />
       </div>
       {#if combinedFieldError('building_id')}
-        <p class="text-sm text-red-500">{combinedFieldError('building_id')}</p>
+        <p class="text-sm text-destructive">{combinedFieldError('building_id')}</p>
       {/if}
     </div>
 
@@ -135,13 +135,13 @@
         oninput={triggerValidation}
       />
       {#if combinedFieldError('control_cabinet_nr')}
-        <p class="text-sm text-red-500">{combinedFieldError('control_cabinet_nr')}</p>
+        <p class="text-sm text-destructive">{combinedFieldError('control_cabinet_nr')}</p>
       {/if}
     </div>
   </div>
 
   {#if error || liveValidation.error}
-    <p class="text-sm text-red-500">{error || liveValidation.error}</p>
+    <p class="text-sm text-destructive">{error || liveValidation.error}</p>
   {/if}
 
   <div class="flex justify-end gap-2 pt-2">

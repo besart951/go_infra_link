@@ -126,7 +126,7 @@
           >
             {#if displayValue}
               {#if type === 'number'}
-                <code class="rounded bg-muted px-1.5 py-0.5 text-sm">{displayValue}</code>
+                <code class="rounded-md bg-muted px-1.5 py-0.5 text-sm">{displayValue}</code>
               {:else}
                 <span class="truncate">{displayValue}</span>
               {/if}
@@ -136,7 +136,7 @@
           </button>
         {/snippet}
       </Tooltip.Trigger>
-      <Tooltip.Content side="top" class="text-destructive-foreground max-w-xs bg-destructive">
+      <Tooltip.Content side="top" class="max-w-xs bg-destructive text-destructive-foreground">
         <p>{error}</p>
       </Tooltip.Content>
     </Tooltip.Root>
@@ -149,7 +149,7 @@
     class={[
       'flex h-7 min-h-7 w-full cursor-pointer items-center rounded-sm px-2 py-1 text-left text-sm transition-colors',
       'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
-      isDirty ? 'bg-yellow-50 dark:bg-yellow-950/30' : '',
+      isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
       disabled ? 'cursor-not-allowed opacity-50' : ''
     ]
       .filter(Boolean)
@@ -157,7 +157,7 @@
   >
     {#if displayValue}
       {#if type === 'number'}
-        <code class="rounded bg-muted px-1.5 py-0.5 text-sm">{displayValue}</code>
+        <code class="rounded-md bg-muted px-1.5 py-0.5 text-sm">{displayValue}</code>
       {:else}
         <span class="truncate">{displayValue}</span>
       {/if}

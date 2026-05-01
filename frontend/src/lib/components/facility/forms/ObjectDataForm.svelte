@@ -279,14 +279,14 @@
       <Label for="object_data_description">{$t('common.description')}</Label>
       <Input id="object_data_description" bind:value={description} required maxlength={250} />
       {#if fieldError('description')}
-        <p class="text-sm text-red-500">{fieldError('description')}</p>
+        <p class="text-sm text-destructive">{fieldError('description')}</p>
       {/if}
     </div>
     <div class="space-y-2">
       <Label for="object_data_version">{$t('facility.forms.object_data.version_label')}</Label>
       <Input id="object_data_version" bind:value={version} required maxlength={100} />
       {#if fieldError('version')}
-        <p class="text-sm text-red-500">{fieldError('version')}</p>
+        <p class="text-sm text-destructive">{fieldError('version')}</p>
       {/if}
     </div>
     <div class="flex items-center gap-2 md:col-span-3">
@@ -294,13 +294,13 @@
       <Label for="object_data_active">{$t('common.active')}</Label>
     </div>
     {#if fieldError('is_active')}
-      <p class="text-sm text-red-500 md:col-span-3">{fieldError('is_active')}</p>
+      <p class="text-sm text-destructive md:col-span-3">{fieldError('is_active')}</p>
     {/if}
     <div class="space-y-2 md:col-span-3">
       <Label for="object_data_apparats">{$t('facility.forms.object_data.apparats_label')}</Label>
       <ApparatMultiSelect id="object_data_apparats" bind:value={apparat_ids} />
       {#if fieldError('apparat_ids')}
-        <p class="text-sm text-red-500">{fieldError('apparat_ids')}</p>
+        <p class="text-sm text-destructive">{fieldError('apparat_ids')}</p>
       {/if}
     </div>
   </div>
@@ -343,7 +343,7 @@
   </div>
 
   {#if error}
-    <p class="text-sm text-red-500">{error}</p>
+    <p class="text-sm text-destructive">{error}</p>
   {/if}
 
   <div class="flex justify-end gap-2 pt-2">

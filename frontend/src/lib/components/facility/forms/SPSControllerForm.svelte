@@ -597,7 +597,7 @@
       </div>
     {/if}
     {#if combinedFieldError('control_cabinet_id')}
-      <p class="text-sm text-red-500">{combinedFieldError('control_cabinet_id')}</p>
+      <p class="text-sm text-destructive">{combinedFieldError('control_cabinet_id')}</p>
     {:else if !control_cabinet_id}
       <p class="text-sm text-muted-foreground">
         {$t('facility.forms.sps_controller.control_cabinet_help')}
@@ -625,7 +625,7 @@
             maxlength={3}
             class={`flex-1 ${
               gaDeviceIsSuboptimal
-                ? 'border-yellow-400 bg-yellow-50/60 focus-visible:ring-yellow-300'
+                ? 'border-warning-border bg-warning-muted/60 focus-visible:ring-warning-border'
                 : ''
             }`}
             oninput={(e) => {
@@ -648,7 +648,7 @@
           {/if}
         </div>
         {#if gaDeviceIsSuboptimal && nextGADevice}
-          <p class="text-xs text-yellow-700">
+          <p class="text-xs text-warning-muted-foreground">
             {$t('facility.forms.sps_controller.ga_device_lowest', { value: nextGADevice })}
           </p>
         {/if}
@@ -658,7 +658,7 @@
           </p>
         {/if}
         {#if combinedFieldError('ga_device')}
-          <p class="text-sm text-red-500">{combinedFieldError('ga_device')}</p>
+          <p class="text-sm text-destructive">{combinedFieldError('ga_device')}</p>
         {/if}
       </div>
       <div class="space-y-2">
@@ -677,35 +677,35 @@
           </p>
         {/if}
         {#if combinedFieldError('device_name')}
-          <p class="text-sm text-red-500">{combinedFieldError('device_name')}</p>
+          <p class="text-sm text-destructive">{combinedFieldError('device_name')}</p>
         {/if}
       </div>
       <div class="space-y-2">
         <Label for="ip_address">{$t('facility.forms.sps_controller.ip_address_label')}</Label>
         <Input id="ip_address" bind:value={ip_address} maxlength={50} oninput={triggerValidation} />
         {#if combinedFieldError('ip_address')}
-          <p class="text-sm text-red-500">{combinedFieldError('ip_address')}</p>
+          <p class="text-sm text-destructive">{combinedFieldError('ip_address')}</p>
         {/if}
       </div>
       <div class="space-y-2">
         <Label for="subnet">{$t('facility.forms.sps_controller.subnet_label')}</Label>
         <Input id="subnet" bind:value={subnet} maxlength={50} oninput={triggerValidation} />
         {#if combinedFieldError('subnet')}
-          <p class="text-sm text-red-500">{combinedFieldError('subnet')}</p>
+          <p class="text-sm text-destructive">{combinedFieldError('subnet')}</p>
         {/if}
       </div>
       <div class="space-y-2">
         <Label for="gateway">{$t('facility.forms.sps_controller.gateway_label')}</Label>
         <Input id="gateway" bind:value={gateway} maxlength={50} oninput={triggerValidation} />
         {#if combinedFieldError('gateway')}
-          <p class="text-sm text-red-500">{combinedFieldError('gateway')}</p>
+          <p class="text-sm text-destructive">{combinedFieldError('gateway')}</p>
         {/if}
       </div>
       <div class="space-y-2">
         <Label for="vlan">{$t('facility.forms.sps_controller.vlan_label')}</Label>
         <Input id="vlan" bind:value={vlan} maxlength={50} oninput={triggerValidation} />
         {#if combinedFieldError('vlan')}
-          <p class="text-sm text-red-500">{combinedFieldError('vlan')}</p>
+          <p class="text-sm text-destructive">{combinedFieldError('vlan')}</p>
         {/if}
       </div>
     </div>
@@ -808,7 +808,7 @@
                       onclick={() => removeSystemType(index)}
                       aria-label={$t('common.remove')}
                       title={$t('common.remove')}
-                      class="pointer-events-auto h-7 w-7 text-muted-foreground hover:text-red-500"
+                      class="pointer-events-auto h-7 w-7 text-muted-foreground hover:text-destructive"
                     >
                       <Trash2Icon class="h-4 w-4" />
                       <span class="sr-only">{$t('common.remove')}</span>
@@ -821,13 +821,13 @@
         </div>
       {/if}
       {#if combinedFieldError('system_types')}
-        <p class="text-sm text-red-500">{combinedFieldError('system_types')}</p>
+        <p class="text-sm text-destructive">{combinedFieldError('system_types')}</p>
       {/if}
     </div>
   {/if}
 
   {#if error || liveValidation.error}
-    <p class="text-sm text-red-500">{error || liveValidation.error}</p>
+    <p class="text-sm text-destructive">{error || liveValidation.error}</p>
   {/if}
 
   <div class="flex justify-end gap-2 pt-2">

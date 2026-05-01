@@ -20,11 +20,11 @@
   function getStatusClass(status: string): string {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        return 'bg-success-muted text-success-muted-foreground dark:bg-success-muted dark:text-success-muted-foreground';
       case 'ongoing':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+        return 'bg-info-muted text-info-muted-foreground dark:bg-info-muted dark:text-info-muted-foreground';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+        return 'bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground';
     }
   }
 

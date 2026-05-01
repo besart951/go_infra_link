@@ -77,11 +77,11 @@
   function getCategoryBadgeClass(cat: string): string {
     switch (cat) {
       case 'general':
-        return 'bg-green-500/10 text-green-600';
+        return 'bg-success/10 text-success';
       case 'facility':
-        return 'bg-amber-500/10 text-amber-600';
+        return 'bg-warning/10 text-warning';
       case 'project':
-        return 'bg-blue-500/10 text-blue-600';
+        return 'bg-info/10 text-info';
       default:
         return 'bg-muted text-muted-foreground';
     }
@@ -137,7 +137,7 @@
     {/if}
     <span class="text-muted-foreground/50">|</span>
     {#each categories as cat}
-      <span class={getCategoryBadgeClass(cat) + ' rounded px-2 py-0.5 text-xs'}>
+      <span class={getCategoryBadgeClass(cat) + ' rounded-md px-2 py-0.5 text-xs'}>
         {$t('roles.permissions.category_badge', {
           category: getCategoryLabel(cat),
           count: groupedByCategory()[cat].length
@@ -185,7 +185,7 @@
               </Table.Cell>
               <Table.Cell>
                 <span
-                  class={getCategoryBadgeClass(parsed.category) + ' rounded px-2 py-0.5 text-xs'}
+                  class={getCategoryBadgeClass(parsed.category) + ' rounded-md px-2 py-0.5 text-xs'}
                 >
                   {getCategoryLabel(parsed.category)}
                 </span>

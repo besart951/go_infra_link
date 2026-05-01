@@ -49,20 +49,19 @@
 
     isSpreadsheetPreviewerLoading = true;
     spreadsheetPreviewerLoadFailed = false;
-    spreadsheetPreviewerLoad = import(
-      '$lib/components/excel/spreadsheet-preview/SpreadsheetPreviewer.svelte'
-    )
-      .then((module) => {
-        spreadsheetPreviewerModule = module;
-      })
-      .catch((error) => {
-        console.error('Failed to load spreadsheet previewer:', error);
-        spreadsheetPreviewerLoadFailed = true;
-      })
-      .finally(() => {
-        isSpreadsheetPreviewerLoading = false;
-        spreadsheetPreviewerLoad = null;
-      });
+    spreadsheetPreviewerLoad =
+      import('$lib/components/excel/spreadsheet-preview/SpreadsheetPreviewer.svelte')
+        .then((module) => {
+          spreadsheetPreviewerModule = module;
+        })
+        .catch((error) => {
+          console.error('Failed to load spreadsheet previewer:', error);
+          spreadsheetPreviewerLoadFailed = true;
+        })
+        .finally(() => {
+          isSpreadsheetPreviewerLoading = false;
+          spreadsheetPreviewerLoad = null;
+        });
   }
 
   async function startReadSession(file: File): Promise<void> {
@@ -180,7 +179,7 @@
         {#if activeImporterTab === 'worksheet-preview'}
           {#if isSpreadsheetPreviewerLoading}
             <div class="rounded-lg border bg-muted/20 p-4">
-              <div class="h-10 animate-pulse rounded bg-muted"></div>
+              <div class="h-10 animate-pulse rounded-md bg-muted"></div>
             </div>
           {:else if spreadsheetPreviewerLoadFailed}
             <div
