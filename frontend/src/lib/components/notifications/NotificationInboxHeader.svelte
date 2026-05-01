@@ -5,7 +5,6 @@
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
   import BellIcon from '@lucide/svelte/icons/bell';
   import CheckIcon from '@lucide/svelte/icons/check';
-  import InfoIcon from '@lucide/svelte/icons/info';
   import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 
   interface Props {
@@ -16,7 +15,6 @@
     unreadOnlyLabel: string;
     markAllReadLabel: string;
     refreshLabel: string;
-    infoLabel: string;
     unreadCount: number;
     unreadOnly: boolean;
     isLoading: boolean;
@@ -33,7 +31,6 @@
     unreadOnlyLabel,
     markAllReadLabel,
     refreshLabel,
-    infoLabel,
     unreadCount,
     unreadOnly,
     isLoading,
@@ -49,20 +46,16 @@
       <Button variant="ghost" size="icon" href="/notifications" aria-label={backLabel}>
         <ArrowLeftIcon class="size-4" />
       </Button>
-      <div class="flex min-w-0 items-center gap-2">
+      <div class="flex min-w-0 items-start gap-2">
         <BellIcon class="size-5 shrink-0 text-muted-foreground" />
-        <h1 class="truncate text-2xl font-semibold tracking-tight">
-          {title}
-        </h1>
-        <Tooltip.Root>
-          <Tooltip.Trigger class="inline-flex shrink-0 text-muted-foreground hover:text-foreground">
-            <InfoIcon class="size-4" />
-            <span class="sr-only">{infoLabel}</span>
-          </Tooltip.Trigger>
-          <Tooltip.Content class="max-w-xs">
+        <div class="min-w-0">
+          <h1 class="truncate text-2xl font-semibold tracking-tight">
+            {title}
+          </h1>
+          <p class="text-sm text-muted-foreground">
             {description}
-          </Tooltip.Content>
-        </Tooltip.Root>
+          </p>
+        </div>
       </div>
     </div>
 

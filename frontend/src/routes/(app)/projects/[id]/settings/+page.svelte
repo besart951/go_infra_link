@@ -34,7 +34,6 @@
   <EntityListHeader
     title={$t('projects.settings.title')}
     description={$t('projects.settings.description')}
-    infoLabel={$t('common.info')}
     backHref={`/projects/${projectId}`}
     backLabel={$t('common.back')}
   />

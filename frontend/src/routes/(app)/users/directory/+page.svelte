@@ -39,7 +39,6 @@
   <EntityListHeader
     title={$t('pages.user_management')}
     description={$t('pages.user_management_desc')}
-    infoLabel={$t('common.info')}
     backHref="/users"
     backLabel={$t('hub.back_to_overview')}
     createLabel={$t('common.create_user')}

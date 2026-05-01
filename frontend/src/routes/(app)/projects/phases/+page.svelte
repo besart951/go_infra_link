@@ -32,7 +32,6 @@
   <EntityListHeader
     title={$t('phases.page.heading')}
     description={$t('phases.page.description')}
-    infoLabel={$t('common.info')}
     backHref="/projects"
     backLabel={$t('hub.back_to_overview')}
     createLabel={$t('phases.page.new')}

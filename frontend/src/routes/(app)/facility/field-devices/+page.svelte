@@ -1,5 +1,6 @@
 <script lang="ts">
   import FieldDeviceListView from '$lib/components/facility/field-device/FieldDeviceListView.svelte';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
@@ -10,12 +11,12 @@
 </svelte:head>
 
 <div class="flex flex-col gap-6">
-  <div>
-    <h1 class="text-2xl font-semibold tracking-tight">{$t('facility.field_devices_title')}</h1>
-    <p class="text-sm text-muted-foreground">
-      {$t('facility.field_devices_desc')}
-    </p>
-  </div>
+  <EntityListHeader
+    title={$t('facility.field_devices_title')}
+    description={$t('facility.field_devices_desc')}
+    backHref="/facility"
+    backLabel={$t('hub.back_to_overview')}
+  />
 
   <FieldDeviceListView />
 </div>

@@ -335,53 +335,52 @@
   <EntityListHeader
     title={project?.name ?? $t('project.project')}
     description={$t('projects.detail.description')}
-    infoLabel={$t('common.info')}
     backHref="/projects"
     backLabel={$t('common.back')}
   >
-      <div class="flex items-center gap-3">
-        <div
-          class="flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-sm text-muted-foreground"
-        >
-          {#if collaboration.socketStatus === 'connected'}
-            <Wifi class="h-4 w-4 text-emerald-600" />
-          {:else}
-            <WifiOff class="h-4 w-4 text-amber-600" />
-          {/if}
-          <span>{onlineCollaborators.length}</span>
-          <div class="flex -space-x-2">
-            {#each onlineCollaborators.slice(0, 4) as collaborator}
-              {#if collaborator.user}
-                <Tooltip.Root>
-                  <Tooltip.Trigger>
-                    <UserAvatar
-                      firstName={collaborator.user.first_name}
-                      lastName={collaborator.user.last_name}
-                      class="h-7 w-7 border-2 border-background"
-                    />
-                  </Tooltip.Trigger>
-                  <Tooltip.Content>
-                    {collaborator.user.first_name}
-                    {collaborator.user.last_name}
-                  </Tooltip.Content>
-                </Tooltip.Root>
-              {/if}
-            {/each}
-          </div>
+    <div class="flex items-center gap-3">
+      <div
+        class="flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-sm text-muted-foreground"
+      >
+        {#if collaboration.socketStatus === 'connected'}
+          <Wifi class="h-4 w-4 text-emerald-600" />
+        {:else}
+          <WifiOff class="h-4 w-4 text-amber-600" />
+        {/if}
+        <span>{onlineCollaborators.length}</span>
+        <div class="flex -space-x-2">
+          {#each onlineCollaborators.slice(0, 4) as collaborator}
+            {#if collaborator.user}
+              <Tooltip.Root>
+                <Tooltip.Trigger>
+                  <UserAvatar
+                    firstName={collaborator.user.first_name}
+                    lastName={collaborator.user.last_name}
+                    class="h-7 w-7 border-2 border-background"
+                  />
+                </Tooltip.Trigger>
+                <Tooltip.Content>
+                  {collaborator.user.first_name}
+                  {collaborator.user.last_name}
+                </Tooltip.Content>
+              </Tooltip.Root>
+            {/if}
+          {/each}
         </div>
-
-        <Tooltip.Root>
-          <Tooltip.Trigger>
-            <Button variant="ghost" href={`/projects/${projectId}/settings`} size="icon">
-              <Settings />
-            </Button>
-          </Tooltip.Trigger>
-
-          <Tooltip.Content>
-            {$t('projects.detail.settings')}
-          </Tooltip.Content>
-        </Tooltip.Root>
       </div>
+
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          <Button variant="ghost" href={`/projects/${projectId}/settings`} size="icon">
+            <Settings />
+          </Button>
+        </Tooltip.Trigger>
+
+        <Tooltip.Content>
+          {$t('projects.detail.settings')}
+        </Tooltip.Content>
+      </Tooltip.Root>
+    </div>
   </EntityListHeader>
 
   {#if error}

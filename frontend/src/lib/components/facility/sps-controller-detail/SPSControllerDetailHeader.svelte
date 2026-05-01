@@ -21,29 +21,28 @@
 <EntityListHeader
   title={state.title}
   description={state.subtitle}
-  infoLabel={$t('common.info')}
   backHref={state.backHref}
   backLabel={$t('common.back')}
 >
-    {#if state.canUpdateSps}
-      <Button
-        variant="outline"
-        size="icon"
-        onclick={handleEditClick}
-        aria-label={$t('facility.sps_controller_detail.edit_controller')}
-      >
-        <PencilIcon class="size-4" />
-      </Button>
-    {/if}
+  {#if state.canUpdateSps}
+    <Button
+      variant="outline"
+      size="icon"
+      onclick={handleEditClick}
+      aria-label={$t('facility.sps_controller_detail.edit_controller')}
+    >
+      <PencilIcon class="size-4" />
+    </Button>
+  {/if}
 
-    {#if state.canDeleteSps}
-      <Button
-        variant="destructive"
-        size="icon"
-        onclick={handleDeleteClick}
-        aria-label={$t('facility.sps_controller_detail.delete_controller')}
-      >
-        <Trash2Icon class="size-4" />
-      </Button>
-    {/if}
+  {#if state.canDeleteSps}
+    <Button
+      variant="destructive"
+      size="icon"
+      onclick={handleDeleteClick}
+      aria-label={$t('facility.sps_controller_detail.delete_controller')}
+    >
+      <Trash2Icon class="size-4" />
+    </Button>
+  {/if}
 </EntityListHeader>

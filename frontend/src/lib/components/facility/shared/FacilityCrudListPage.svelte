@@ -1,13 +1,15 @@
 <script lang="ts" generics="TItem">
   import { onMount } from 'svelte';
   import type { Component, Snippet } from 'svelte';
-  import { Plus } from '@lucide/svelte';
-  import { Button } from '$lib/components/ui/button/index.js';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import type { ListState } from '$lib/application/useCases/listUseCase.js';
   import { canPerform } from '$lib/utils/permissions.js';
+  import { createTranslator } from '$lib/i18n/translator.js';
   import type { CrudPageActions } from './crudPageActions.svelte.js';
+
+  const t = createTranslator();
 
   interface ListStore<T> {
     subscribe: (run: (value: ListState<T>) => void) => () => void;
@@ -59,18 +61,16 @@
 <ConfirmDialog />
 
 <div class="flex flex-col gap-6">
-  <div class="flex items-center justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-semibold tracking-tight">{title}</h1>
-      <p class="text-sm text-muted-foreground">{description}</p>
-    </div>
-    {#if !actions.showForm && canPerform('create', permissionResource)}
-      <Button onclick={() => actions.create()}>
-        <Plus class="mr-2 size-4" />
-        {createLabel}
-      </Button>
-    {/if}
-  </div>
+  <EntityListHeader
+    {title}
+    {description}
+    backHref="/facility"
+    backLabel={$t('hub.back_to_overview')}
+    {createLabel}
+    canCreate={!actions.showForm && canPerform('create', permissionResource)}
+    createActive={actions.showForm}
+    onCreateClick={() => actions.create()}
+  />
 
   {#if actions.showForm}
     <Form

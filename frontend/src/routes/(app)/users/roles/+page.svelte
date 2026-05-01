@@ -17,14 +17,7 @@
     PhasePermissionRules
   } from '$lib/components/roles/index.js';
   import { RolesPageState } from '$lib/components/roles/state/RolesPageState.svelte.js';
-  import {
-    GitBranch,
-    RefreshCw,
-    Grid3X3,
-    LayoutGrid,
-    Shield,
-    Users
-  } from '@lucide/svelte';
+  import { GitBranch, RefreshCw, Grid3X3, LayoutGrid, Shield, Users } from '@lucide/svelte';
 
   const t = createTranslator();
   const state = new RolesPageState();
@@ -44,7 +37,6 @@
   <EntityListHeader
     title={$t('roles.page.title')}
     description={$t('roles.page.description')}
-    infoLabel={$t('common.info')}
     backHref="/users"
     backLabel={$t('hub.back_to_overview')}
     createLabel={$t('roles.actions.create_permission')}
@@ -52,7 +44,13 @@
     createActive={state.createPermissionDialogOpen}
     onCreateClick={state.openCreatePermissionDialog}
   >
-    <Button variant="outline" size="icon" onclick={state.loadData} disabled={state.isLoading} aria-label={$t('roles.actions.refresh')}>
+    <Button
+      variant="outline"
+      size="icon"
+      onclick={state.loadData}
+      disabled={state.isLoading}
+      aria-label={$t('roles.actions.refresh')}
+    >
       <RefreshCw class="h-4 w-4 {state.isLoading ? 'animate-spin' : ''}" />
     </Button>
   </EntityListHeader>

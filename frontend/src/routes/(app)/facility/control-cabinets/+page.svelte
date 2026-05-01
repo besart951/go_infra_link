@@ -1,6 +1,7 @@
 <script lang="ts">
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
   import ControlCabinetListView from '$lib/components/facility/control-cabinets/ControlCabinetListView.svelte';
+  import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
 
   const t = createTranslator();
@@ -13,10 +14,12 @@
 <ConfirmDialog />
 
 <div class="flex flex-col gap-6">
-  <div>
-    <h1 class="text-2xl font-semibold tracking-tight">{$t('facility.control_cabinets_title')}</h1>
-    <p class="text-sm text-muted-foreground">{$t('facility.control_cabinets_desc')}</p>
-  </div>
+  <EntityListHeader
+    title={$t('facility.control_cabinets_title')}
+    description={$t('facility.control_cabinets_desc')}
+    backHref="/facility"
+    backLabel={$t('hub.back_to_overview')}
+  />
 
   <ControlCabinetListView />
 </div>

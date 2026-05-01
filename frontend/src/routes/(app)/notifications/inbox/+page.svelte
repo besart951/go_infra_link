@@ -28,7 +28,6 @@
     unreadOnlyLabel={$t('notifications.inbox.unread_only')}
     markAllReadLabel={$t('notifications.inbox.mark_all_read')}
     refreshLabel={$t('common.refresh')}
-    infoLabel={$t('common.info')}
     unreadCount={state.unreadCount}
     unreadOnly={state.unreadOnly}
     isLoading={state.isLoading}

@@ -24,7 +24,6 @@
   <EntityListHeader
     title={state.phase?.name ?? $t('phases.detail.fallback')}
     description={$t('phases.detail.description')}
-    infoLabel={$t('common.info')}
     backHref="/projects/phases"
     backLabel={$t('common.back')}
   >

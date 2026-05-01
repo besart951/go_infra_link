@@ -30,7 +30,6 @@
   <EntityListHeader
     title={state.title}
     description={state.subtitle}
-    infoLabel={$t('common.info')}
     backHref={state.backHref}
     backLabel={$t('common.back')}
   >

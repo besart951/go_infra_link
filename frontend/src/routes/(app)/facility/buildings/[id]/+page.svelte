@@ -105,20 +105,19 @@
   <EntityListHeader
     title={data.building.iws_code}
     description={$t('facility.building_detail.edit_description')}
-    infoLabel={$t('common.info')}
     backHref="/facility/buildings"
     backLabel={$t('common.back')}
   >
-      <Button
-        variant="destructive"
-        size="icon"
-        type="button"
-        onclick={handleDeleteClick}
-        disabled={isSubmitting}
-        aria-label={$t('common.delete')}
-      >
-        <TrashIcon class="size-4" />
-      </Button>
+    <Button
+      variant="destructive"
+      size="icon"
+      type="button"
+      onclick={handleDeleteClick}
+      disabled={isSubmitting}
+      aria-label={$t('common.delete')}
+    >
+      <TrashIcon class="size-4" />
+    </Button>
   </EntityListHeader>
 
   {#if errors.form}

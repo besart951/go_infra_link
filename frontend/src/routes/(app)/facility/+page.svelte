@@ -138,7 +138,6 @@
   <EntityListHeader
     title={$t('facility.facility_overview')}
     description={$t('hub.facility.description')}
-    infoLabel={$t('common.info')}
     backHref="/"
     backLabel={$t('hub.back_to_dashboard')}
   />

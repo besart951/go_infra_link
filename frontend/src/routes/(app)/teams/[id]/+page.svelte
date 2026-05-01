@@ -39,7 +39,6 @@
   <EntityListHeader
     title={state.team?.name ?? $t('team.team')}
     description={$t('teams.detail.description')}
-    infoLabel={$t('common.info')}
     backHref="/teams"
     backLabel={$t('common.back')}
   >

@@ -40,7 +40,6 @@
   <EntityListHeader
     title={$t('hub.notifications.title')}
     description={$t('hub.notifications.description')}
-    infoLabel={$t('common.info')}
     backHref="/"
     backLabel={$t('hub.back_to_dashboard')}
   />

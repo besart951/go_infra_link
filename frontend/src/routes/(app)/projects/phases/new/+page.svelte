@@ -19,7 +19,6 @@
   <EntityListHeader
     title={$t('phases.new.title')}
     description={$t('phases.new.description')}
-    infoLabel={$t('common.info')}
     backHref="/projects/phases"
     backLabel={$t('common.back')}
   />

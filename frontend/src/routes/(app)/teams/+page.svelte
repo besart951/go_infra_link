@@ -39,7 +39,6 @@
   <EntityListHeader
     title={$t('navigation.teams')}
     description={$t('pages.teams_desc')}
-    infoLabel={$t('common.info')}
     backHref="/users"
     backLabel={$t('hub.back_to_overview')}
     createLabel={$t('pages.create_team')}
@@ -118,7 +117,11 @@
     </div>
 
     <Dialog.Footer>
-      <Button variant="outline" onclick={() => (state.createOpen = false)} disabled={state.createBusy}>
+      <Button
+        variant="outline"
+        onclick={() => (state.createOpen = false)}
+        disabled={state.createBusy}
+      >
         {$t('common.cancel')}
       </Button>
       <Button onclick={() => state.submitCreate()} disabled={!state.canSubmitCreate()}>

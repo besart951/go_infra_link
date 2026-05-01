@@ -40,7 +40,6 @@
   <EntityListHeader
     title={$t('hub.projects.title')}
     description={$t('hub.projects.description')}
-    infoLabel={$t('common.info')}
     backHref="/"
     backLabel={$t('hub.back_to_dashboard')}
   />

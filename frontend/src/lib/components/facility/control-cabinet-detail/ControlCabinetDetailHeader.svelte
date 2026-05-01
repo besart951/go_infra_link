@@ -21,28 +21,27 @@
 <EntityListHeader
   title={`${$t('facility.control_cabinet_detail.title')} #${state.cabinet.control_cabinet_nr}`}
   description={$t('facility.control_cabinet_detail.subtitle')}
-  infoLabel={$t('common.info')}
   backHref="/facility/control-cabinets"
   backLabel={$t('common.back')}
 >
-    {#if state.canUpdateCabinet}
-      <Button
-        variant="outline"
-        size="icon"
-        onclick={handleEditClick}
-        aria-label={$t('facility.control_cabinet_detail.edit_cabinet')}
-      >
-        <PencilIcon class="size-4" />
-      </Button>
-    {/if}
-    {#if state.canDeleteCabinet}
-      <Button
-        variant="destructive"
-        size="icon"
-        onclick={handleDeleteClick}
-        aria-label={$t('facility.control_cabinet_detail.delete_cabinet')}
-      >
-        <Trash2Icon class="size-4" />
-      </Button>
-    {/if}
+  {#if state.canUpdateCabinet}
+    <Button
+      variant="outline"
+      size="icon"
+      onclick={handleEditClick}
+      aria-label={$t('facility.control_cabinet_detail.edit_cabinet')}
+    >
+      <PencilIcon class="size-4" />
+    </Button>
+  {/if}
+  {#if state.canDeleteCabinet}
+    <Button
+      variant="destructive"
+      size="icon"
+      onclick={handleDeleteClick}
+      aria-label={$t('facility.control_cabinet_detail.delete_cabinet')}
+    >
+      <Trash2Icon class="size-4" />
+    </Button>
+  {/if}
 </EntityListHeader>

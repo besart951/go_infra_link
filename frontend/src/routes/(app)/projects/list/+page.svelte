@@ -54,7 +54,6 @@
   <EntityListHeader
     title={$t('navigation.projects')}
     description={$t('pages.projects_desc')}
-    infoLabel={$t('common.info')}
     backHref="/projects"
     backLabel={$t('hub.back_to_overview')}
     createLabel={$t('common.create')}
@@ -155,7 +154,9 @@
       </div>
 
       <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium" for="project_start_create">{$t('messages.start_date')}</label>
+        <label class="text-sm font-medium" for="project_start_create"
+          >{$t('messages.start_date')}</label
+        >
         <Input
           id="project_start_create"
           type="date"
@@ -189,7 +190,11 @@
     </div>
 
     <Dialog.Footer>
-      <Button variant="outline" onclick={() => (state.createOpen = false)} disabled={state.createBusy}>
+      <Button
+        variant="outline"
+        onclick={() => (state.createOpen = false)}
+        disabled={state.createBusy}
+      >
         {$t('common.cancel')}
       </Button>
       <Button onclick={() => state.submitCreate()} disabled={!state.canSubmitCreate()}>
