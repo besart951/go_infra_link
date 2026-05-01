@@ -7,7 +7,7 @@
   import PencilIcon from '@lucide/svelte/icons/pencil';
   import { createTranslator } from '$lib/i18n/translator.js';
   import SPSControllerForm from '$lib/components/facility/forms/SPSControllerForm.svelte';
-  import SPSControllerSystemTypeFieldDevicesCard from '$lib/components/facility/sps-controller-system-type-detail/SPSControllerSystemTypeFieldDevicesCard.svelte';
+  import FieldDeviceListView from '$lib/components/facility/field-device/FieldDeviceListView.svelte';
   import { SPSControllerSystemTypeDetailState } from '$lib/components/facility/sps-controller-system-type-detail/state/SPSControllerSystemTypeDetailState.svelte.js';
 
   let { data }: { data: PageData } = $props();
@@ -85,8 +85,26 @@
     </Card.Content>
   </Card.Root>
 
-  <SPSControllerSystemTypeFieldDevicesCard
-    fieldDevices={state.fieldDevices}
-    total={state.fieldDevicesTotal}
-  />
+  <section class="space-y-3">
+    <div class="space-y-1">
+      <h2 class="text-xl font-semibold tracking-tight">
+        {$t('facility.sps_controller_system_type_detail.field_devices_title')}
+      </h2>
+      <p class="text-sm text-muted-foreground">
+        {$t('facility.sps_controller_system_type_detail.field_devices_desc')}
+      </p>
+    </div>
+
+    {#key data.systemType.id}
+      <FieldDeviceListView
+        initialFilters={{
+          buildingId: data.building?.id,
+          controlCabinetId: data.cabinet?.id,
+          spsControllerId: data.controller.id,
+          spsControllerSystemTypeId: data.systemType.id
+        }}
+        systemTypeRefreshKey={data.systemType.id}
+      />
+    {/key}
+  </section>
 </div>

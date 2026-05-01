@@ -158,6 +158,28 @@ describe('FieldDeviceListView', () => {
     });
   });
 
+  it('applies initial filters on first load', async () => {
+    render(FieldDeviceListView, {
+      initialFilters: {
+        buildingId: 'building-1',
+        controlCabinetId: 'cabinet-1',
+        spsControllerId: 'sps-1',
+        spsControllerSystemTypeId: 'system-type-1'
+      }
+    });
+
+    await waitFor(() => {
+      expect(mockList).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockList.mock.calls[0][0].filters).toMatchObject({
+      building_id: 'building-1',
+      control_cabinet_id: 'cabinet-1',
+      sps_controller_id: 'sps-1',
+      sps_controller_system_type_id: 'system-type-1'
+    });
+  });
+
   it('renders populated state when existing devices are provided', async () => {
     resetDevices([buildFieldDevice()]);
     render(FieldDeviceListView, {});

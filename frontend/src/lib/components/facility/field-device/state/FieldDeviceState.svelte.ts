@@ -5,6 +5,7 @@ import { ManageFieldDeviceUseCase } from '$lib/application/useCases/facility/man
 import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 import { canPerform } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
+import { sanitizeFilters } from '$lib/state/table/sanitizeFilters.js';
 import { createFieldDevicePermissionPolicy } from './fieldDevicePermissionPolicy.js';
 import { FieldDeviceGroupingLookupService } from './fieldDeviceGroupingLookupService.js';
 import { FieldDeviceLookupService } from './fieldDeviceLookupService.js';
@@ -28,7 +29,7 @@ import type {
   FieldDeviceStateProps,
   SharedFieldDeviceEditorsByDevice
 } from './types.js';
-import { resolvePageSize, toProjectIdResolver } from './types.js';
+import { resolveFieldDeviceFilters, resolvePageSize, toProjectIdResolver } from './types.js';
 import { FieldDeviceFetchStrategyFactory } from './strategies/FieldDeviceFetchStrategyFactory.js';
 import { FieldDevicePanelState } from './FieldDevicePanelState.svelte.js';
 import {
@@ -59,6 +60,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   readonly tableGroups = $derived.by(() => this.view.groupItems(this.items));
 
   private readonly resolveProjectId: () => string | undefined;
+  private readonly fixedFilters: FieldDeviceFilters;
   private readonly resolveSharedFieldDeviceEditors: () => SharedFieldDeviceEditorsByDevice;
   private readonly onFieldDevicesSaved?: (devices: FieldDevice[]) => void;
   private readonly manageFieldDeviceUseCase = new ManageFieldDeviceUseCase(fieldDeviceRepository);
@@ -71,9 +73,15 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     const resolveProjectId = toProjectIdResolver(props.projectId);
     const strategyFactory = new FieldDeviceFetchStrategyFactory(resolveProjectId);
 
-    super(strategyFactory.create(), { pageSize: resolvePageSize(props.pageSize) ?? 300 });
+    const initialFilters = sanitizeFilters(resolveFieldDeviceFilters(props.initialFilters) ?? {});
+
+    super(strategyFactory.create(), {
+      pageSize: resolvePageSize(props.pageSize) ?? 300,
+      initialFilters
+    });
 
     this.resolveProjectId = resolveProjectId;
+    this.fixedFilters = initialFilters;
     this.resolveSharedFieldDeviceEditors = props.sharedFieldDeviceEditors ?? (() => ({}));
     this.onFieldDevicesSaved = props.onFieldDevicesSaved;
     this.permissionPolicy = createFieldDevicePermissionPolicy({
@@ -90,6 +98,22 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   get projectId() {
     return this.resolveProjectId();
+  }
+
+  get effectiveProjectId(): string | undefined {
+    return this.projectId ?? this.fixedFilters.projectId ?? this.filters.projectId;
+  }
+
+  fixedFilterValue(key: keyof FieldDeviceFilters): string | undefined {
+    if (key === 'projectId') {
+      return this.projectId ?? this.fixedFilters.projectId;
+    }
+
+    return this.fixedFilters[key];
+  }
+
+  isFilterFixed(key: keyof FieldDeviceFilters): boolean {
+    return Boolean(this.fixedFilterValue(key));
   }
 
   get isProjectContext(): boolean {
@@ -208,7 +232,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   }
 
   async applyFilters(filters: FieldDeviceFilters): Promise<void> {
-    await this.setFilters(filters);
+    await this.setFilters({ ...sanitizeFilters(filters), ...this.fixedFilters });
   }
 
   async clearFilters(): Promise<void> {

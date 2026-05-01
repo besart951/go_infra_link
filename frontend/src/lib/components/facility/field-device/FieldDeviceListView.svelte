@@ -14,6 +14,7 @@
   import FieldDeviceFloatingSaveBar from './FieldDeviceFloatingSaveBar.svelte';
   import FieldDeviceExportPanel from './FieldDeviceExportPanel.svelte';
   import { provideFieldDeviceState } from './state/context.svelte.js';
+  import type { FieldDeviceFilters } from './state/types.js';
 
   const t = createTranslator();
 
@@ -22,6 +23,7 @@
     refreshKey?: string | number;
     refreshRequest?: import('./state/types.js').FieldDeviceRefreshRequest;
     pageSize?: number;
+    initialFilters?: FieldDeviceFilters;
     systemTypeRefreshKey?: string | number;
     sharedFieldDeviceEditors?: import('./state/types.js').SharedFieldDeviceEditorsByDevice;
     onSharedFieldDeviceStateChange?: (
@@ -36,6 +38,7 @@
     refreshKey,
     refreshRequest,
     pageSize = 300,
+    initialFilters,
     systemTypeRefreshKey,
     sharedFieldDeviceEditors,
     onSharedFieldDeviceStateChange,
@@ -46,6 +49,7 @@
   const fieldDeviceState = provideFieldDeviceState({
     projectId: () => projectId,
     pageSize: () => pageSize,
+    initialFilters: () => initialFilters,
     sharedFieldDeviceEditors: () => sharedFieldDeviceEditors ?? {},
     onSharedFieldDeviceStateChange: (state) => onSharedFieldDeviceStateChange?.(state),
     onFieldDevicesSaved: (devices) => onFieldDevicesSaved?.(devices)

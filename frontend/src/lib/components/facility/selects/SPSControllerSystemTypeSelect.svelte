@@ -8,16 +8,37 @@
     value?: string;
     width?: string;
     refreshKey?: string | number;
+    projectId?: string;
+    spsControllerId?: string;
+    disabled?: boolean;
+    onValueChange?: (value: string) => void;
   };
 
-  let { value = $bindable(''), width = 'w-[250px]', refreshKey }: Props = $props();
+  let {
+    value = $bindable(''),
+    width = 'w-[250px]',
+    refreshKey,
+    projectId,
+    spsControllerId,
+    disabled = false,
+    onValueChange
+  }: Props = $props();
 
   const t = createTranslator();
+  const effectiveRefreshKey = $derived(
+    projectId !== undefined || spsControllerId !== undefined || refreshKey !== undefined
+      ? `${projectId ?? ''}|${spsControllerId ?? ''}|${refreshKey ?? ''}`
+      : undefined
+  );
 
   async function fetcher(search: string): Promise<SPSControllerSystemType[]> {
     const res = await spsControllerSystemTypeRepository.list({
       pagination: { page: 1, pageSize: 20 },
-      search: { text: search }
+      search: { text: search },
+      filters: {
+        ...(projectId ? { project_id: projectId } : {}),
+        ...(spsControllerId ? { sps_controller_id: spsControllerId } : {})
+      }
     });
     return res.items;
   }
@@ -37,9 +58,11 @@
   bind:value
   {fetcher}
   {fetchById}
-  {refreshKey}
+  refreshKey={effectiveRefreshKey}
   labelKey="document_name"
   labelFormatter={formatLabel}
   placeholder={$t('facility.selects.sps_controller_system_type')}
+  {disabled}
   {width}
+  {onValueChange}
 />

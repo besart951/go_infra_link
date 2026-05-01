@@ -11,6 +11,10 @@ export interface FieldDeviceFilters extends TableFilterRecord {
 
 export type ProjectIdInput = string | undefined | (() => string | undefined);
 export type PageSizeInput = number | undefined | (() => number | undefined);
+export type FieldDeviceFiltersInput =
+  | FieldDeviceFilters
+  | undefined
+  | (() => FieldDeviceFilters | undefined);
 
 export interface SharedFieldDeviceDraftState {
   devices: Array<{
@@ -42,6 +46,7 @@ export type SharedFieldDeviceEditorsByDevice = Record<string, SharedFieldDeviceE
 export interface FieldDeviceStateProps {
   projectId?: ProjectIdInput;
   pageSize?: PageSizeInput;
+  initialFilters?: FieldDeviceFiltersInput;
   sharedFieldDeviceEditors?: () => SharedFieldDeviceEditorsByDevice;
   onSharedFieldDeviceStateChange?: (state: SharedFieldDeviceDraftState) => void;
   onFieldDevicesSaved?: (devices: FieldDevice[]) => void;
@@ -61,4 +66,14 @@ export function resolvePageSize(pageSize?: PageSizeInput): number | undefined {
   }
 
   return pageSize;
+}
+
+export function resolveFieldDeviceFilters(
+  filters?: FieldDeviceFiltersInput
+): FieldDeviceFilters | undefined {
+  if (typeof filters === 'function') {
+    return filters();
+  }
+
+  return filters;
 }

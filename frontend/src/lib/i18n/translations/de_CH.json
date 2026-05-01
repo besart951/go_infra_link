@@ -220,6 +220,7 @@
     "management": "Projektverwaltung",
     "projects": "Projekte",
     "project": "Projekt",
+    "select_placeholder": "Projekt auswählen...",
     "name": "Projektname",
     "project_name": "Projektname",
     "description": "Beschreibung",
@@ -495,9 +496,7 @@
       "overview_title": "Systemtyp-Informationen",
       "overview_desc": "Verknüpfung, Nummer und Feldgeräteanzahl auf einen Blick.",
       "field_devices_title": "Zugeordnete Feldgeräte",
-      "field_devices_desc": "Feldgeräte, die diesem SPS-Systemtyp zugeordnet sind.",
-      "field_devices_limited": "Zeigt {shown} von {total} Feldgeräten.",
-      "no_field_devices": "Diesem SPS-Systemtyp sind noch keine Feldgeräte zugeordnet."
+      "field_devices_desc": "Feldgeräte, die diesem SPS-Systemtyp zugeordnet sind."
     },
     "cabinet_type": "Schranktyp",
     "cabinet_location": "Standort",

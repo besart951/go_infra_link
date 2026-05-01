@@ -4,7 +4,6 @@ import { t as translate } from '$lib/i18n/index.js';
 import type {
   Building,
   ControlCabinet,
-  FieldDevice,
   SPSController,
   SPSControllerSystemType
 } from '$lib/domain/facility/index.js';
@@ -20,8 +19,6 @@ export interface SPSControllerSystemTypeDetailData {
   controller: SPSController;
   cabinet?: ControlCabinet | null;
   building?: Building | null;
-  fieldDevices?: FieldDevice[];
-  fieldDevicesTotal?: number;
   editRequested?: boolean;
 }
 
@@ -60,14 +57,6 @@ export class SPSControllerSystemTypeDetailState {
 
   get building(): Building | null {
     return this.data.building ?? null;
-  }
-
-  get fieldDevices(): FieldDevice[] {
-    return this.data.fieldDevices ?? [];
-  }
-
-  get fieldDevicesTotal(): number {
-    return this.data.fieldDevicesTotal ?? this.fieldDevices.length;
   }
 
   get canEdit(): boolean {
