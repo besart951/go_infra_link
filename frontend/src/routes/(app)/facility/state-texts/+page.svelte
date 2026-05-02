@@ -9,12 +9,25 @@
   import StateTextForm from '$lib/components/facility/forms/StateTextForm.svelte';
   import { createStateTextActions } from '$lib/components/facility/shared/facilityCrudPageActions.svelte.js';
   import FacilityCrudListPage from '$lib/components/facility/shared/FacilityCrudListPage.svelte';
+  import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
   const actions = createStateTextActions();
+  let historyItem = $state<StateText | null>(null);
+  let historyOpen = $state(false);
 </script>
+
+{#if historyItem}
+  <HistoryTimelineDialog
+    bind:open={historyOpen}
+    title={`${$t('history.title')}: ${historyItem.ref_number}`}
+    entityTable="state_texts"
+    entityId={historyItem.id}
+    onRestored={() => stateTextsStore.reload()}
+  />
+{/if}
 
 <FacilityCrudListPage
   title={$t('facility.state_texts_title')}
@@ -51,6 +64,14 @@
           </DropdownMenu.Item>
           <DropdownMenu.Item onclick={() => goto(`/facility/state-texts/${item.id}`)}>
             {$t('facility.view')}
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            onclick={() => {
+              historyItem = item;
+              historyOpen = true;
+            }}
+          >
+            {$t('history.open')}
           </DropdownMenu.Item>
           {#if canPerform('update', 'statetext')}
             <DropdownMenu.Item onclick={() => actions.edit(item)}

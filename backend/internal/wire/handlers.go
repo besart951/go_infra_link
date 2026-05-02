@@ -6,6 +6,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/handler"
 	authhandler "github.com/besart951/go_infra_link/backend/internal/handler/auth"
 	dashboardhandler "github.com/besart951/go_infra_link/backend/internal/handler/dashboard"
+	historyhandler "github.com/besart951/go_infra_link/backend/internal/handler/history"
 	i18nhandler "github.com/besart951/go_infra_link/backend/internal/handler/i18n"
 	notificationhandler "github.com/besart951/go_infra_link/backend/internal/handler/notification"
 	teamhandler "github.com/besart951/go_infra_link/backend/internal/handler/team"
@@ -38,5 +39,6 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 		Team:         teamhandler.NewTeamHandler(services.Team),
 		User:         userHandlers,
 		Facility:     facilityHandlers,
+		History:      historyhandler.NewHandler(services.History),
 	}
 }

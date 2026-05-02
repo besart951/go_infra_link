@@ -4,18 +4,32 @@
   import { Label } from '$lib/components/ui/label/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
-  import { Trash2 } from '@lucide/svelte';
+  import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
+  import { History, Trash2 } from '@lucide/svelte';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator';
+  import type { Unit } from '$lib/domain/facility/alarm-type.js';
   import type { AlarmCatalogState } from './AlarmCatalogState.svelte.js';
 
   interface Props {
     state: AlarmCatalogState;
   }
 
-  let { state }: Props = $props();
+  let { state: catalogState }: Props = $props();
   const t = createTranslator();
+  let historyItem = $state<Unit | null>(null);
+  let historyOpen = $state(false);
 </script>
+
+{#if historyItem}
+  <HistoryTimelineDialog
+    bind:open={historyOpen}
+    title={`${$t('history.title')}: ${historyItem.code}`}
+    entityTable="units"
+    entityId={historyItem.id}
+    onRestored={() => catalogState.loadAll()}
+  />
+{/if}
 
 <Card.Root>
   <Card.Header class="border-b">
@@ -26,22 +40,24 @@
     <div class="grid gap-3 md:grid-cols-3">
       <div class="space-y-2">
         <Label for="unit-code">{$t('facility.alarm_catalog_page.labels.code')}</Label>
-        <Input id="unit-code" bind:value={state.unitForm.code} />
+        <Input id="unit-code" bind:value={catalogState.unitForm.code} />
       </div>
       <div class="space-y-2">
         <Label for="unit-symbol">{$t('facility.alarm_catalog_page.labels.symbol')}</Label>
-        <Input id="unit-symbol" bind:value={state.unitForm.symbol} />
+        <Input id="unit-symbol" bind:value={catalogState.unitForm.symbol} />
       </div>
       <div class="space-y-2">
         <Label for="unit-name">{$t('common.name')}</Label>
-        <Input id="unit-name" bind:value={state.unitForm.name} />
+        <Input id="unit-name" bind:value={catalogState.unitForm.name} />
       </div>
     </div>
     <div class="flex justify-end">
       {#if canPerform('create', 'alarmtype')}
         <Button
-          onclick={() => state.createUnit()}
-          disabled={!state.unitForm.code || !state.unitForm.symbol || !state.unitForm.name}
+          onclick={() => catalogState.createUnit()}
+          disabled={!catalogState.unitForm.code ||
+            !catalogState.unitForm.symbol ||
+            !catalogState.unitForm.name}
         >
           {$t('facility.alarm_catalog_page.units.create')}
         </Button>
@@ -61,31 +77,45 @@
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {#if state.units.length === 0}
+            {#if catalogState.units.length === 0}
               <Table.Row>
                 <Table.Cell colspan={4} class="py-8 text-center text-sm text-muted-foreground">
                   {$t('facility.alarm_catalog_page.units.empty')}
                 </Table.Cell>
               </Table.Row>
             {:else}
-              {#each state.units as unit}
+              {#each catalogState.units as unit}
                 <Table.Row>
                   <Table.Cell class="font-medium">{unit.code}</Table.Cell>
                   <Table.Cell>{unit.symbol}</Table.Cell>
                   <Table.Cell>{unit.name}</Table.Cell>
                   <Table.Cell class="text-right">
-                    {#if canPerform('delete', 'alarmtype')}
+                    <div class="flex justify-end gap-1">
                       <Button
                         size="icon-sm"
                         variant="ghost"
-                        class="text-destructive hover:text-destructive"
-                        onclick={() => state.deleteUnit(unit.id)}
-                        aria-label={$t('facility.alarm_catalog_page.units.delete')}
-                        title={$t('facility.alarm_catalog_page.units.delete')}
+                        onclick={() => {
+                          historyItem = unit;
+                          historyOpen = true;
+                        }}
+                        aria-label={$t('history.open')}
+                        title={$t('history.open')}
                       >
-                        <Trash2 class="size-4" />
+                        <History class="size-4" />
                       </Button>
-                    {/if}
+                      {#if canPerform('delete', 'alarmtype')}
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          class="text-destructive hover:text-destructive"
+                          onclick={() => catalogState.deleteUnit(unit.id)}
+                          aria-label={$t('facility.alarm_catalog_page.units.delete')}
+                          title={$t('facility.alarm_catalog_page.units.delete')}
+                        >
+                          <Trash2 class="size-4" />
+                        </Button>
+                      {/if}
+                    </div>
                   </Table.Cell>
                 </Table.Row>
               {/each}

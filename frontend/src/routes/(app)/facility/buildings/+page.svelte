@@ -9,13 +9,26 @@
   import BuildingForm from '$lib/components/facility/forms/BuildingForm.svelte';
   import { createBuildingActions } from '$lib/components/facility/shared/facilityCrudPageActions.svelte.js';
   import FacilityCrudListPage from '$lib/components/facility/shared/FacilityCrudListPage.svelte';
+  import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
 
   const actions = createBuildingActions();
+  let historyItem = $state<Building | null>(null);
+  let historyOpen = $state(false);
 </script>
+
+{#if historyItem}
+  <HistoryTimelineDialog
+    bind:open={historyOpen}
+    title={`${$t('history.title')}: ${historyItem.iws_code}`}
+    entityTable="buildings"
+    entityId={historyItem.id}
+    onRestored={() => buildingsStore.reload()}
+  />
+{/if}
 
 <FacilityCrudListPage
   title={$t('facility.buildings_title')}
@@ -55,6 +68,14 @@
           </DropdownMenu.Item>
           <DropdownMenu.Item onclick={() => goto(`/facility/buildings/${building.id}`)}>
             {$t('facility.view')}
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            onclick={() => {
+              historyItem = building;
+              historyOpen = true;
+            }}
+          >
+            {$t('history.open')}
           </DropdownMenu.Item>
           {#if canPerform('update', 'building')}
             <DropdownMenu.Item onclick={() => actions.edit(building)}

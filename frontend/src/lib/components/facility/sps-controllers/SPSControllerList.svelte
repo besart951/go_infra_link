@@ -7,6 +7,7 @@
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import SPSControllerForm from '$lib/components/facility/forms/SPSControllerForm.svelte';
+  import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import type { SPSController } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { Plus } from '@lucide/svelte';
@@ -14,10 +15,12 @@
   import { useSPSControllerState } from './state/context.svelte.js';
 
   const t = createTranslator();
-  const state = useSPSControllerState();
+  const listState = useSPSControllerState();
+  let historyController = $state<SPSController | null>(null);
+  let historyOpen = $state(false);
 
   const columns = $derived.by(() =>
-    state.isProjectContext
+    listState.isProjectContext
       ? [
           { key: 'device_name', label: $t('projects.sps_controllers.columns.device_name') },
           { key: 'ga_device', label: $t('projects.sps_controllers.columns.ga_device') },
@@ -37,61 +40,79 @@
   );
 
   const searchPlaceholder = $derived.by(() =>
-    state.isProjectContext
+    listState.isProjectContext
       ? $t('projects.sps_controllers.search_placeholder')
       : $t('facility.search_sps_controllers')
   );
 
   const emptyMessage = $derived.by(() =>
-    state.isProjectContext
+    listState.isProjectContext
       ? $t('projects.sps_controllers.empty')
       : $t('facility.no_sps_controllers_found')
   );
 
   const newLabel = $derived.by(() =>
-    state.isProjectContext ? $t('projects.sps_controllers.new') : $t('facility.new_sps_controller')
+    listState.isProjectContext
+      ? $t('projects.sps_controllers.new')
+      : $t('facility.new_sps_controller')
   );
+
+  async function handleHistoryRestored(): Promise<void> {
+    await listState.reload();
+    listState.notifyHistoryRestored();
+  }
 </script>
 
 <div class="flex flex-col gap-4">
+  {#if historyController}
+    <HistoryTimelineDialog
+      bind:open={historyOpen}
+      title={`${$t('history.title')}: ${historyController.device_name ?? historyController.id}`}
+      scopeType="sps_controller"
+      scopeId={historyController.id}
+      projectId={listState.projectId}
+      onRestored={handleHistoryRestored}
+    />
+  {/if}
+
   <div class="flex flex-wrap items-center justify-end gap-2">
-    {#if !state.showForm && state.canCreateSPSController()}
-      <Button onclick={() => state.openCreateForm()}>
+    {#if !listState.showForm && listState.canCreateSPSController()}
+      <Button onclick={() => listState.openCreateForm()}>
         <Plus class="mr-2 size-4" />
         {newLabel}
       </Button>
     {/if}
   </div>
 
-  {#if state.showForm}
+  {#if listState.showForm}
     <SPSControllerForm
-      initialData={state.editingItem}
-      projectId={state.projectId}
-      controlCabinetRefreshKey={state.controlCabinetRefreshKey}
-      onSuccess={(controller) => void state.handleFormSuccess(controller)}
-      onCancel={() => state.cancelForm()}
+      initialData={listState.editingItem}
+      projectId={listState.projectId}
+      controlCabinetRefreshKey={listState.controlCabinetRefreshKey}
+      onSuccess={(controller) => void listState.handleFormSuccess(controller)}
+      onCancel={() => listState.cancelForm()}
     />
   {/if}
 
   <Tooltip.Provider>
     <PaginatedList
-      {state}
+      state={listState}
       {columns}
       {searchPlaceholder}
       {emptyMessage}
-      onSearch={(text) => void state.search(text)}
-      onPageChange={(page) => void state.goToPage(page)}
-      onReload={() => void state.reload()}
+      onSearch={(text) => void listState.search(text)}
+      onPageChange={(page) => void listState.goToPage(page)}
+      onReload={() => void listState.reload()}
     >
       {#snippet rowSnippet(controller: SPSController)}
-        {@const systemTypes = state.getSystemTypes(controller.id)}
+        {@const systemTypes = listState.getSystemTypes(controller.id)}
         <Table.Cell class="font-medium">
           <a href="/facility/sps-controllers/{controller.id}" class="hover:underline">
             {controller.device_name}
           </a>
         </Table.Cell>
 
-        {#if state.isProjectContext}
+        {#if listState.isProjectContext}
           <Table.Cell>{controller.ga_device ?? '-'}</Table.Cell>
           <Table.Cell>
             {#if controller.ip_address}
@@ -102,10 +123,10 @@
               -
             {/if}
           </Table.Cell>
-          <Table.Cell>{state.getCabinetLabel(controller.control_cabinet_id)}</Table.Cell>
+          <Table.Cell>{listState.getCabinetLabel(controller.control_cabinet_id)}</Table.Cell>
           <Table.Cell>{new Date(controller.created_at).toLocaleDateString()}</Table.Cell>
         {:else}
-          <Table.Cell>{state.getCabinetLabel(controller.control_cabinet_id)}</Table.Cell>
+          <Table.Cell>{listState.getCabinetLabel(controller.control_cabinet_id)}</Table.Cell>
           <Table.Cell>{controller.ga_device ?? '-'}</Table.Cell>
           <Table.Cell>
             {#if controller.ip_address}
@@ -117,7 +138,7 @@
             {/if}
           </Table.Cell>
           <Table.Cell>
-            {#if !state.hasLoadedSystemTypes(controller.id)}
+            {#if !listState.hasLoadedSystemTypes(controller.id)}
               <Badge variant="outline">...</Badge>
             {:else if systemTypes.length === 0}
               <Badge variant="outline">0</Badge>
@@ -143,11 +164,11 @@
                           class="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm"
                         >
                           <p class="font-medium text-foreground">
-                            {state.formatSystemTypeTitle(systemType)}
+                            {listState.formatSystemTypeTitle(systemType)}
                           </p>
-                          {#if state.formatSystemTypeMeta(systemType)}
+                          {#if listState.formatSystemTypeMeta(systemType)}
                             <p class="text-xs text-muted-foreground">
-                              {state.formatSystemTypeMeta(systemType)}
+                              {listState.formatSystemTypeMeta(systemType)}
                             </p>
                           {/if}
                         </div>
@@ -170,36 +191,46 @@
               {/snippet}
             </DropdownMenu.Trigger>
             <DropdownMenu.Content align="end" class="w-44">
-              {#if !state.isProjectContext}
+              {#if !listState.isProjectContext}
                 <DropdownMenu.Item
                   onclick={() =>
-                    void state.copyToClipboard(controller.device_name ?? controller.id)}
+                    void listState.copyToClipboard(controller.device_name ?? controller.id)}
                 >
                   {$t('facility.copy')}
                 </DropdownMenu.Item>
               {/if}
-              {#if state.canCreateSPSController()}
-                <DropdownMenu.Item onclick={() => void state.duplicateSPSController(controller)}>
+              {#if listState.canCreateSPSController()}
+                <DropdownMenu.Item
+                  onclick={() => void listState.duplicateSPSController(controller)}
+                >
                   {$t('facility.duplicate')}
                 </DropdownMenu.Item>
               {/if}
-              {#if state.canReadSPSController()}
+              {#if listState.canReadSPSController()}
                 <DropdownMenu.Item
                   onclick={() => goto(`/facility/sps-controllers/${controller.id}`)}
                 >
                   {$t('common.view')}
                 </DropdownMenu.Item>
               {/if}
-              {#if state.canUpdateSPSController()}
-                <DropdownMenu.Item onclick={() => state.editSPSController(controller)}>
+              <DropdownMenu.Item
+                onclick={() => {
+                  historyController = controller;
+                  historyOpen = true;
+                }}
+              >
+                {$t('history.open')}
+              </DropdownMenu.Item>
+              {#if listState.canUpdateSPSController()}
+                <DropdownMenu.Item onclick={() => listState.editSPSController(controller)}>
                   {$t('common.edit')}
                 </DropdownMenu.Item>
               {/if}
-              {#if state.canDeleteSPSController()}
+              {#if listState.canDeleteSPSController()}
                 <DropdownMenu.Separator />
                 <DropdownMenu.Item
                   variant="destructive"
-                  onclick={() => void state.deleteSPSController(controller)}
+                  onclick={() => void listState.deleteSPSController(controller)}
                 >
                   {$t('common.delete')}
                 </DropdownMenu.Item>

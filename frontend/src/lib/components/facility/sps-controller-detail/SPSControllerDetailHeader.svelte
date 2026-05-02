@@ -1,30 +1,50 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button/index.js';
   import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
+  import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
+  import HistoryIcon from '@lucide/svelte/icons/history';
   import PencilIcon from '@lucide/svelte/icons/pencil';
   import Trash2Icon from '@lucide/svelte/icons/trash-2';
   import { useSPSControllerDetailState } from './state/context.svelte.js';
 
-  const state = useSPSControllerDetailState();
+  const detailState = useSPSControllerDetailState();
   const t = createTranslator();
+  let historyOpen = $state(false);
 
   function handleEditClick(): void {
-    state.startEdit();
+    detailState.startEdit();
   }
 
   async function handleDeleteClick(): Promise<void> {
-    await state.deleteController();
+    await detailState.deleteController();
   }
 </script>
 
+<HistoryTimelineDialog
+  bind:open={historyOpen}
+  title={`${$t('history.title')}: ${detailState.controller.device_name}`}
+  scopeType="sps_controller"
+  scopeId={detailState.controller.id}
+  onRestored={() => detailState.refreshAfterChange()}
+/>
+
 <EntityListHeader
-  title={state.title}
-  description={state.subtitle}
-  backHref={state.backHref}
+  title={detailState.title}
+  description={detailState.subtitle}
+  backHref={detailState.backHref}
   backLabel={$t('common.back')}
 >
-  {#if state.canUpdateSps}
+  <Button
+    variant="outline"
+    size="icon"
+    onclick={() => (historyOpen = true)}
+    aria-label={$t('history.open')}
+  >
+    <HistoryIcon class="size-4" />
+  </Button>
+
+  {#if detailState.canUpdateSps}
     <Button
       variant="outline"
       size="icon"
@@ -35,7 +55,7 @@
     </Button>
   {/if}
 
-  {#if state.canDeleteSps}
+  {#if detailState.canDeleteSps}
     <Button
       variant="destructive"
       size="icon"

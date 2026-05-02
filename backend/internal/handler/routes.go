@@ -5,6 +5,7 @@ import (
 	authhandler "github.com/besart951/go_infra_link/backend/internal/handler/auth"
 	dashboardhandler "github.com/besart951/go_infra_link/backend/internal/handler/dashboard"
 	facilityhandler "github.com/besart951/go_infra_link/backend/internal/handler/facility"
+	historyhandler "github.com/besart951/go_infra_link/backend/internal/handler/history"
 	i18nhandler "github.com/besart951/go_infra_link/backend/internal/handler/i18n"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	notificationhandler "github.com/besart951/go_infra_link/backend/internal/handler/notification"
@@ -35,4 +36,5 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 	notificationhandler.RegisterRoutes(protectedV1, handlers.Notification, authChecker)
 	authhandler.RegisterProtectedRoutes(protectedV1, handlers.Auth)
 	facilityhandler.RegisterRoutes(protectedV1, handlers.Facility)
+	historyhandler.RegisterRoutes(protectedV1, handlers.History)
 }

@@ -9,16 +9,29 @@
   import SystemTypeForm from '$lib/components/facility/forms/SystemTypeForm.svelte';
   import { createSystemTypeActions } from '$lib/components/facility/shared/facilityCrudPageActions.svelte.js';
   import FacilityCrudListPage from '$lib/components/facility/shared/FacilityCrudListPage.svelte';
+  import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
   const actions = createSystemTypeActions();
+  let historyItem = $state<SystemType | null>(null);
+  let historyOpen = $state(false);
 
   function formatNumber(value: number) {
     return String(value).padStart(4, '0');
   }
 </script>
+
+{#if historyItem}
+  <HistoryTimelineDialog
+    bind:open={historyOpen}
+    title={`${$t('history.title')}: ${historyItem.name}`}
+    entityTable="system_types"
+    entityId={historyItem.id}
+    onRestored={() => systemTypesStore.reload()}
+  />
+{/if}
 
 <FacilityCrudListPage
   title={$t('facility.system_types_title')}
@@ -56,6 +69,14 @@
           </DropdownMenu.Item>
           <DropdownMenu.Item onclick={() => goto(`/facility/system-types/${item.id}`)}>
             {$t('facility.view')}
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            onclick={() => {
+              historyItem = item;
+              historyOpen = true;
+            }}
+          >
+            {$t('history.open')}
           </DropdownMenu.Item>
           {#if canPerform('update', 'systemtype')}
             <DropdownMenu.Item onclick={() => actions.edit(item)}

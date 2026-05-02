@@ -84,6 +84,11 @@ var migrations = []migration{
 		description: "system_notification_importance",
 		apply:       migrateSystemNotificationImportance,
 	},
+	{
+		version:     "202605020001",
+		description: "facility_project_change_history",
+		apply:       migrateHistory,
+	},
 }
 
 func ApplyMigrations(db *gorm.DB) error {

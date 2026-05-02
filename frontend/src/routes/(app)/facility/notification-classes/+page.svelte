@@ -9,12 +9,25 @@
   import NotificationClassForm from '$lib/components/facility/forms/NotificationClassForm.svelte';
   import { createNotificationClassActions } from '$lib/components/facility/shared/facilityCrudPageActions.svelte.js';
   import FacilityCrudListPage from '$lib/components/facility/shared/FacilityCrudListPage.svelte';
+  import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
   const actions = createNotificationClassActions();
+  let historyItem = $state<NotificationClass | null>(null);
+  let historyOpen = $state(false);
 </script>
+
+{#if historyItem}
+  <HistoryTimelineDialog
+    bind:open={historyOpen}
+    title={`${$t('history.title')}: ${historyItem.event_category}`}
+    entityTable="notification_classes"
+    entityId={historyItem.id}
+    onRestored={() => notificationClassesStore.reload()}
+  />
+{/if}
 
 <FacilityCrudListPage
   title={$t('facility.notification_classes_title')}
@@ -55,6 +68,14 @@
           </DropdownMenu.Item>
           <DropdownMenu.Item onclick={() => goto(`/facility/notification-classes/${item.id}`)}>
             {$t('facility.view')}
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            onclick={() => {
+              historyItem = item;
+              historyOpen = true;
+            }}
+          >
+            {$t('history.open')}
           </DropdownMenu.Item>
           {#if canPerform('update', 'notificationclass')}
             <DropdownMenu.Item onclick={() => actions.edit(item)}

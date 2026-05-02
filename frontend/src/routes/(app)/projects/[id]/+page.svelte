@@ -14,6 +14,7 @@
   import ControlCabinetListView from '$lib/components/facility/control-cabinets/ControlCabinetListView.svelte';
   import SPSControllerListView from '$lib/components/facility/sps-controllers/SPSControllerListView.svelte';
   import FieldDeviceListView from '$lib/components/facility/field-device/FieldDeviceListView.svelte';
+  import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { projectDetailService } from '$lib/components/project/ProjectDetailService.js';
   import type { ControlCabinet, FieldDevice, SPSController } from '$lib/domain/facility/index.js';
   import type { Project } from '$lib/domain/project/index.js';
@@ -25,7 +26,7 @@
     EntityRefreshRequest
   } from '$lib/components/facility/shared/entityRefresh.js';
   import { ProjectCollaborationState } from '$lib/services/projectCollaboration.svelte.js';
-  import { ChevronDown, Settings, Wifi, WifiOff } from '@lucide/svelte';
+  import { ChevronDown, History, Settings, Wifi, WifiOff } from '@lucide/svelte';
 
   const t = createTranslator();
   const projectId = $derived($page.params.id ?? '');
@@ -37,6 +38,7 @@
 
   let controlCabinetOpen = $state(true);
   let spsControllerOpen = $state(true);
+  let projectHistoryOpen = $state(false);
 
   let controlCabinetViewRefreshKey = $state(0);
   let controlCabinetOptionsRefreshKey = $state(0);
@@ -330,6 +332,15 @@
 </script>
 
 <ConfirmDialog />
+<HistoryTimelineDialog
+  bind:open={projectHistoryOpen}
+  title={$t('history.project_title')}
+  {projectId}
+  onRestored={async () => {
+    refreshProjectFacilityViews();
+    await loadProject();
+  }}
+/>
 
 <div class="flex min-w-0 flex-col gap-6 overflow-x-hidden">
   <EntityListHeader
@@ -368,6 +379,18 @@
           {/each}
         </div>
       </div>
+
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          <Button variant="ghost" size="icon" onclick={() => (projectHistoryOpen = true)}>
+            <History />
+          </Button>
+        </Tooltip.Trigger>
+
+        <Tooltip.Content>
+          {$t('history.open')}
+        </Tooltip.Content>
+      </Tooltip.Root>
 
       <Tooltip.Root>
         <Tooltip.Trigger>

@@ -3,6 +3,7 @@ package db
 import (
 	"github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	"github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	"github.com/besart951/go_infra_link/backend/internal/domain/history"
 	"github.com/besart951/go_infra_link/backend/internal/domain/notification"
 	"github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/besart951/go_infra_link/backend/internal/domain/team"
@@ -63,6 +64,9 @@ func currentSchemaModels() []any {
 		&facility.AlarmTypeField{},
 		&facility.AlarmDefinitionFieldOverride{},
 		&facility.BacnetObjectAlarmValue{},
+		&history.ChangeEvent{},
+		&history.ChangeEventScope{},
+		&history.EntityVersion{},
 
 		&projectrepo.ProjectRecord{},
 		&projectrepo.ProjectUserRecord{},

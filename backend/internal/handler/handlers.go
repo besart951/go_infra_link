@@ -4,6 +4,7 @@ import (
 	authhandler "github.com/besart951/go_infra_link/backend/internal/handler/auth"
 	dashboardhandler "github.com/besart951/go_infra_link/backend/internal/handler/dashboard"
 	facilityhandler "github.com/besart951/go_infra_link/backend/internal/handler/facility"
+	historyhandler "github.com/besart951/go_infra_link/backend/internal/handler/history"
 	i18nhandler "github.com/besart951/go_infra_link/backend/internal/handler/i18n"
 	notificationhandler "github.com/besart951/go_infra_link/backend/internal/handler/notification"
 	projecthandler "github.com/besart951/go_infra_link/backend/internal/handler/project"
@@ -20,4 +21,5 @@ type Handlers struct {
 	Team         *teamhandler.TeamHandler
 	User         *userhandler.Handlers
 	Facility     *facilityhandler.Handlers
+	History      *historyhandler.Handler
 }

@@ -4,6 +4,8 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
   import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
+  import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
+  import HistoryIcon from '@lucide/svelte/icons/history';
   import PencilIcon from '@lucide/svelte/icons/pencil';
   import { createTranslator } from '$lib/i18n/translator.js';
   import SPSControllerForm from '$lib/components/facility/forms/SPSControllerForm.svelte';
@@ -13,32 +15,50 @@
   let { data }: { data: PageData } = $props();
 
   const t = createTranslator();
-  const state = new SPSControllerSystemTypeDetailState({
+  const detailState = new SPSControllerSystemTypeDetailState({
     data: () => data,
     invalidateAllAction: invalidateAll
   });
+  let historyOpen = $state(false);
 
   async function handleRefreshAfterChange(): Promise<void> {
-    await state.refreshAfterChange();
+    await detailState.refreshAfterChange();
   }
 </script>
 
 <svelte:head>
-  <title>{state.title} | {$t('facility.sps_controller')} | Infra Link</title>
+  <title>{detailState.title} | {$t('facility.sps_controller')} | Infra Link</title>
 </svelte:head>
+
+<HistoryTimelineDialog
+  bind:open={historyOpen}
+  title={`${$t('history.title')}: ${detailState.title}`}
+  scopeType="sps_controller_system_type"
+  scopeId={data.systemType.id}
+  controlCabinetId={data.cabinet?.id}
+  onRestored={handleRefreshAfterChange}
+/>
 
 <div class="space-y-6">
   <EntityListHeader
-    title={state.title}
-    description={state.subtitle}
-    backHref={state.backHref}
+    title={detailState.title}
+    description={detailState.subtitle}
+    backHref={detailState.backHref}
     backLabel={$t('common.back')}
   >
-    {#if state.canEdit}
+    <Button
+      variant="outline"
+      size="icon"
+      onclick={() => (historyOpen = true)}
+      aria-label={$t('history.open')}
+    >
+      <HistoryIcon class="size-4" />
+    </Button>
+    {#if detailState.canEdit}
       <Button
         variant="outline"
         size="icon"
-        onclick={() => state.startEdit()}
+        onclick={() => detailState.startEdit()}
         aria-label={$t('facility.sps_controller_system_type_detail.edit')}
       >
         <PencilIcon class="size-4" />
@@ -46,12 +66,12 @@
     {/if}
   </EntityListHeader>
 
-  {#if state.showEdit}
+  {#if detailState.showEdit}
     <SPSControllerForm
       initialData={data.controller}
       fixedControlCabinetId={data.controller.control_cabinet_id}
       onSuccess={handleRefreshAfterChange}
-      onCancel={() => state.cancelEdit()}
+      onCancel={() => detailState.cancelEdit()}
     />
   {/if}
 
@@ -67,9 +87,9 @@
 
     <Card.Content>
       <div class="space-y-4">
-        {#each state.overviewItems as item, index (item.label)}
+        {#each detailState.overviewItems as item, index (item.label)}
           <div
-            class={`grid gap-3 ${index < state.overviewItems.length - 1 ? 'border-b border-border/50 pb-4' : ''} sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]`}
+            class={`grid gap-3 ${index < detailState.overviewItems.length - 1 ? 'border-b border-border/50 pb-4' : ''} sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]`}
           >
             <div class="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
               {item.label}

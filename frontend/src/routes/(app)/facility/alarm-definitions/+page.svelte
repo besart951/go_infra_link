@@ -9,12 +9,25 @@
   import AlarmDefinitionForm from '$lib/components/facility/forms/AlarmDefinitionForm.svelte';
   import { createAlarmDefinitionActions } from '$lib/components/facility/shared/facilityCrudPageActions.svelte.js';
   import FacilityCrudListPage from '$lib/components/facility/shared/FacilityCrudListPage.svelte';
+  import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
   const actions = createAlarmDefinitionActions();
+  let historyItem = $state<AlarmDefinition | null>(null);
+  let historyOpen = $state(false);
 </script>
+
+{#if historyItem}
+  <HistoryTimelineDialog
+    bind:open={historyOpen}
+    title={`${$t('history.title')}: ${historyItem.name}`}
+    entityTable="alarm_definitions"
+    entityId={historyItem.id}
+    onRestored={() => alarmDefinitionsStore.reload()}
+  />
+{/if}
 
 <FacilityCrudListPage
   title={$t('facility.alarm_definitions_title')}
@@ -51,6 +64,14 @@
           </DropdownMenu.Item>
           <DropdownMenu.Item onclick={() => goto(`/facility/alarm-definitions/${item.id}`)}>
             {$t('facility.view')}
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            onclick={() => {
+              historyItem = item;
+              historyOpen = true;
+            }}
+          >
+            {$t('history.open')}
           </DropdownMenu.Item>
           {#if canPerform('update', 'alarmdefinition')}
             <DropdownMenu.Item onclick={() => actions.edit(item)}

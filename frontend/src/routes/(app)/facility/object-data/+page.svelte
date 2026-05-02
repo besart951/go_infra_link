@@ -8,13 +8,26 @@
   import type { ObjectData } from '$lib/domain/facility/index.js';
   import { createObjectDataActions } from '$lib/components/facility/shared/facilityCrudPageActions.svelte.js';
   import FacilityCrudListPage from '$lib/components/facility/shared/FacilityCrudListPage.svelte';
+  import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { canPerform } from '$lib/utils/permissions.js';
   import ObjectDataForm from '$lib/components/facility/forms/ObjectDataForm.svelte';
   import { createTranslator } from '$lib/i18n/translator';
 
   const t = createTranslator();
   const actions = createObjectDataActions();
+  let historyItem = $state<ObjectData | null>(null);
+  let historyOpen = $state(false);
 </script>
+
+{#if historyItem}
+  <HistoryTimelineDialog
+    bind:open={historyOpen}
+    title={`${$t('history.title')}: ${historyItem.description ?? historyItem.id}`}
+    scopeType="object_data"
+    scopeId={historyItem.id}
+    onRestored={() => objectDataStore.reload()}
+  />
+{/if}
 
 <FacilityCrudListPage
   title={$t('facility.object_data_title')}
@@ -63,6 +76,14 @@
           </DropdownMenu.Item>
           <DropdownMenu.Item onclick={() => goto(`/facility/object-data/${item.id}`)}>
             {$t('facility.view')}
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            onclick={() => {
+              historyItem = item;
+              historyOpen = true;
+            }}
+          >
+            {$t('history.open')}
           </DropdownMenu.Item>
           {#if canPerform('update', 'objectdata')}
             <DropdownMenu.Item onclick={() => actions.editFresh(item)}

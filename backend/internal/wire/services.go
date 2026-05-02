@@ -38,6 +38,7 @@ type Services struct {
 	Notification    *notificationservice.Service
 	Password        domainUser.PasswordHasher
 	Export          *exportservice.Service
+	History         HistoryRepository
 
 	Facility *facilityservice.Services
 }
@@ -91,6 +92,7 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 			cfg.Issuer,
 		),
 		Export:   exportSvc,
+		History:  repos.History,
 		Facility: facilityServices,
 	}, nil
 }

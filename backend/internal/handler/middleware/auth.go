@@ -7,6 +7,7 @@ import (
 
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	"github.com/besart951/go_infra_link/backend/internal/service/auditctx"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -40,6 +41,7 @@ func AuthGuard(tokenValidator domainAuth.TokenValidator) gin.HandlerFunc {
 		}
 
 		c.Set(ContextUserIDKey, userID)
+		c.Request = c.Request.WithContext(auditctx.WithActorID(c.Request.Context(), userID))
 		c.Next()
 	}
 }

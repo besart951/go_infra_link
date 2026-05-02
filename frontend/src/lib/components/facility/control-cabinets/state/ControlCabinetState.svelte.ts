@@ -221,6 +221,10 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
     }
   }
 
+  notifyHistoryRestored(): void {
+    this.notifyChanged();
+  }
+
   getBuildingLabel(buildingId: string | undefined | null): string {
     if (!buildingId) return '-';
     return this.buildingMap.get(buildingId) ?? buildingId;

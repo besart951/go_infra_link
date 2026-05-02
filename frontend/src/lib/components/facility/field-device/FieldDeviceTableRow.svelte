@@ -4,6 +4,7 @@
   import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { EditableCell } from '$lib/components/ui/editable-cell/index.js';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+  import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { ChevronDown, ChevronRight } from '@lucide/svelte';
   import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
   import TableApparatSelect from '../table-selects/TableApparatSelect.svelte';
@@ -21,7 +22,8 @@
   let { device }: Props = $props();
 
   const t = createTranslator();
-  const state = useFieldDeviceState();
+  const rowState = useFieldDeviceState();
+  let historyOpen = $state(false);
 
   function toDisplayString(value: unknown, isNumeric = false): string {
     if (value === null || value === undefined || value === '') return '';
@@ -31,20 +33,20 @@
 
   function handleApparatChange(newApparatId: string) {
     if (!newApparatId || newApparatId === device.apparat_id) return;
-    state.editing.queueEdit(device.id, 'apparat_id', newApparatId);
+    rowState.editing.queueEdit(device.id, 'apparat_id', newApparatId);
   }
 
   function handleSystemPartChange(newSystemPartId: string) {
     if (!newSystemPartId || newSystemPartId === device.system_part_id) return;
-    state.editing.queueEdit(device.id, 'system_part_id', newSystemPartId);
+    rowState.editing.queueEdit(device.id, 'system_part_id', newSystemPartId);
   }
 
   const hasBacnetErrors = $derived.by(
     () =>
-      state.editing.getBacnetFieldErrors(device.id).size > 0 ||
-      state.editing.getBacnetClientErrors(device.id).size > 0
+      rowState.editing.getBacnetFieldErrors(device.id).size > 0 ||
+      rowState.editing.getBacnetClientErrors(device.id).size > 0
   );
-  const collaborators = $derived(state.getEditorsForDevice(device.id));
+  const collaborators = $derived(rowState.getEditorsForDevice(device.id));
 
   function getEditorsForField(fieldName: string): SharedFieldDeviceEditor[] {
     return collaborators.filter(
@@ -77,14 +79,14 @@
 </script>
 
 <Table.Row
-  class={[state.loading ? 'opacity-60' : '', state.isSelected(device.id) ? 'bg-muted/50' : '']
+  class={[rowState.loading ? 'opacity-60' : '', rowState.isSelected(device.id) ? 'bg-muted/50' : '']
     .filter(Boolean)
     .join(' ')}
 >
   <Table.Cell class="p-2">
     <Checkbox
-      checked={state.isSelected(device.id)}
-      onCheckedChange={() => state.toggleSelection(device.id)}
+      checked={rowState.isSelected(device.id)}
+      onCheckedChange={() => rowState.toggleSelection(device.id)}
       aria-label={$t('field_device.table.select_aria', { label: device.bmk || device.id })}
     />
   </Table.Cell>
@@ -98,10 +100,10 @@
       ]
         .filter(Boolean)
         .join(' ')}
-      onclick={() => void state.toggleBacnetExpansion(device.id)}
+      onclick={() => void rowState.toggleBacnetExpansion(device.id)}
       title={$t('field_device.table.bacnet_expand')}
     >
-      {#if state.isBacnetExpanded(device.id)}
+      {#if rowState.isBacnetExpanded(device.id)}
         <ChevronDown class="h-4 w-4" />
       {:else}
         <ChevronRight class="h-4 w-4" />
@@ -115,14 +117,14 @@
     <div class={getEditingFieldClass('bmk')} title={getFieldPreviewTitle('bmk')}>
       <EditableCell
         value={device.bmk ?? ''}
-        pendingValue={state.editing.getPendingValue(device.id, 'bmk')}
+        pendingValue={rowState.editing.getPendingValue(device.id, 'bmk')}
         type="text"
         maxlength={10}
-        disabled={!state.canUpdateFieldDevice()}
-        isDirty={state.editing.isFieldDirty(device.id, 'bmk')}
-        error={state.editing.getFieldError(device.id, 'bmk')}
+        disabled={!rowState.canUpdateFieldDevice()}
+        isDirty={rowState.editing.isFieldDirty(device.id, 'bmk')}
+        error={rowState.editing.getFieldError(device.id, 'bmk')}
         onSave={(value) => {
-          state.editing.queueEdit(device.id, 'bmk', value === '' ? null : value);
+          rowState.editing.queueEdit(device.id, 'bmk', value === '' ? null : value);
         }}
       />
     </div>
@@ -131,14 +133,14 @@
     <div class={getEditingFieldClass('description')} title={getFieldPreviewTitle('description')}>
       <EditableCell
         value={device.description ?? ''}
-        pendingValue={state.editing.getPendingValue(device.id, 'description')}
+        pendingValue={rowState.editing.getPendingValue(device.id, 'description')}
         type="text"
         maxlength={250}
-        disabled={!state.canUpdateFieldDevice()}
-        isDirty={state.editing.isFieldDirty(device.id, 'description')}
-        error={state.editing.getFieldError(device.id, 'description')}
+        disabled={!rowState.canUpdateFieldDevice()}
+        isDirty={rowState.editing.isFieldDirty(device.id, 'description')}
+        error={rowState.editing.getFieldError(device.id, 'description')}
         onSave={(value) => {
-          state.editing.queueEdit(device.id, 'description', value === '' ? null : value);
+          rowState.editing.queueEdit(device.id, 'description', value === '' ? null : value);
         }}
       />
     </div>
@@ -147,14 +149,14 @@
     <div class={getEditingFieldClass('text_fix')} title={getFieldPreviewTitle('text_fix')}>
       <EditableCell
         value={device.text_fix ?? ''}
-        pendingValue={state.editing.getPendingValue(device.id, 'text_fix')}
+        pendingValue={rowState.editing.getPendingValue(device.id, 'text_fix')}
         type="text"
         maxlength={250}
-        disabled={!state.canUpdateFieldDevice()}
-        isDirty={state.editing.isFieldDirty(device.id, 'text_fix')}
-        error={state.editing.getFieldError(device.id, 'text_fix')}
+        disabled={!rowState.canUpdateFieldDevice()}
+        isDirty={rowState.editing.isFieldDirty(device.id, 'text_fix')}
+        error={rowState.editing.getFieldError(device.id, 'text_fix')}
         onSave={(value) => {
-          state.editing.queueEdit(device.id, 'text_fix', value === '' ? null : value);
+          rowState.editing.queueEdit(device.id, 'text_fix', value === '' ? null : value);
         }}
       />
     </div>
@@ -163,26 +165,30 @@
     <div class={getEditingFieldClass('apparat_nr')} title={getFieldPreviewTitle('apparat_nr')}>
       <EditableCell
         value={device.apparat_nr}
-        pendingValue={state.editing.getPendingValue(device.id, 'apparat_nr')}
+        pendingValue={rowState.editing.getPendingValue(device.id, 'apparat_nr')}
         type="number"
         min={1}
         max={99}
-        disabled={!state.canUpdateFieldDevice()}
-        isDirty={state.editing.isFieldDirty(device.id, 'apparat_nr')}
-        error={state.editing.getFieldError(device.id, 'apparat_nr')}
+        disabled={!rowState.canUpdateFieldDevice()}
+        isDirty={rowState.editing.isFieldDirty(device.id, 'apparat_nr')}
+        error={rowState.editing.getFieldError(device.id, 'apparat_nr')}
         onSave={(value) => {
-          state.editing.queueEdit(device.id, 'apparat_nr', value ? parseInt(value, 10) : undefined);
+          rowState.editing.queueEdit(
+            device.id,
+            'apparat_nr',
+            value ? parseInt(value, 10) : undefined
+          );
         }}
       />
     </div>
   </Table.Cell>
   <Table.Cell class={getEditingFieldClass('apparat_id')} title={getFieldPreviewTitle('apparat_id')}>
     <TableApparatSelect
-      items={state.allApparats}
+      items={rowState.allApparats}
       value={device.apparat_id}
       width="w-full"
-      disabled={!state.canUpdateFieldDevice()}
-      error={state.editing.getFieldError(device.id, 'apparat_id')}
+      disabled={!rowState.canUpdateFieldDevice()}
+      error={rowState.editing.getFieldError(device.id, 'apparat_id')}
       onValueChange={handleApparatChange}
     />
   </Table.Cell>
@@ -191,11 +197,11 @@
     title={getFieldPreviewTitle('system_part_id')}
   >
     <TableSystemPartSelect
-      items={state.allSystemParts}
+      items={rowState.allSystemParts}
       value={device.system_part_id || ''}
       width="w-full"
-      disabled={!state.canUpdateFieldDevice()}
-      error={state.editing.getFieldError(device.id, 'system_part_id')}
+      disabled={!rowState.canUpdateFieldDevice()}
+      error={rowState.editing.getFieldError(device.id, 'system_part_id')}
       onValueChange={handleSystemPartChange}
     />
   </Table.Cell>
@@ -212,20 +218,20 @@
       ></span>
     {/if}
   </Table.Cell>
-  {#if state.showSpecifications}
+  {#if rowState.showSpecifications}
     <Table.Cell
       class={`text-xs ${getEditingFieldClass('specification.specification_supplier')}`}
       title={getFieldPreviewTitle('specification.specification_supplier')}
     >
       <EditableCell
         value={toDisplayString(device.specification?.specification_supplier)}
-        pendingValue={state.editing.getPendingSpecValue(device.id, 'specification_supplier')}
-        disabled={!state.canUpdateFieldDeviceSpecification()}
-        isDirty={state.editing.isSpecFieldDirty(device.id, 'specification_supplier')}
-        error={state.editing.getFieldError(device.id, 'specification_supplier')}
+        pendingValue={rowState.editing.getPendingSpecValue(device.id, 'specification_supplier')}
+        disabled={!rowState.canUpdateFieldDeviceSpecification()}
+        isDirty={rowState.editing.isSpecFieldDirty(device.id, 'specification_supplier')}
+        error={rowState.editing.getFieldError(device.id, 'specification_supplier')}
         maxlength={250}
         onSave={(value) => {
-          state.editing.queueSpecEdit(
+          rowState.editing.queueSpecEdit(
             device.id,
             'specification_supplier',
             value === '' ? null : value
@@ -239,13 +245,13 @@
     >
       <EditableCell
         value={toDisplayString(device.specification?.specification_brand)}
-        pendingValue={state.editing.getPendingSpecValue(device.id, 'specification_brand')}
-        disabled={!state.canUpdateFieldDeviceSpecification()}
-        isDirty={state.editing.isSpecFieldDirty(device.id, 'specification_brand')}
-        error={state.editing.getFieldError(device.id, 'specification_brand')}
+        pendingValue={rowState.editing.getPendingSpecValue(device.id, 'specification_brand')}
+        disabled={!rowState.canUpdateFieldDeviceSpecification()}
+        isDirty={rowState.editing.isSpecFieldDirty(device.id, 'specification_brand')}
+        error={rowState.editing.getFieldError(device.id, 'specification_brand')}
         maxlength={250}
         onSave={(value) => {
-          state.editing.queueSpecEdit(
+          rowState.editing.queueSpecEdit(
             device.id,
             'specification_brand',
             value === '' ? null : value
@@ -259,13 +265,17 @@
     >
       <EditableCell
         value={toDisplayString(device.specification?.specification_type)}
-        pendingValue={state.editing.getPendingSpecValue(device.id, 'specification_type')}
-        disabled={!state.canUpdateFieldDeviceSpecification()}
-        isDirty={state.editing.isSpecFieldDirty(device.id, 'specification_type')}
-        error={state.editing.getFieldError(device.id, 'specification_type')}
+        pendingValue={rowState.editing.getPendingSpecValue(device.id, 'specification_type')}
+        disabled={!rowState.canUpdateFieldDeviceSpecification()}
+        isDirty={rowState.editing.isSpecFieldDirty(device.id, 'specification_type')}
+        error={rowState.editing.getFieldError(device.id, 'specification_type')}
         maxlength={250}
         onSave={(value) => {
-          state.editing.queueSpecEdit(device.id, 'specification_type', value === '' ? null : value);
+          rowState.editing.queueSpecEdit(
+            device.id,
+            'specification_type',
+            value === '' ? null : value
+          );
         }}
       />
     </Table.Cell>
@@ -275,13 +285,16 @@
     >
       <EditableCell
         value={toDisplayString(device.specification?.additional_info_motor_valve)}
-        pendingValue={state.editing.getPendingSpecValue(device.id, 'additional_info_motor_valve')}
-        disabled={!state.canUpdateFieldDeviceSpecification()}
-        isDirty={state.editing.isSpecFieldDirty(device.id, 'additional_info_motor_valve')}
-        error={state.editing.getFieldError(device.id, 'additional_info_motor_valve')}
+        pendingValue={rowState.editing.getPendingSpecValue(
+          device.id,
+          'additional_info_motor_valve'
+        )}
+        disabled={!rowState.canUpdateFieldDeviceSpecification()}
+        isDirty={rowState.editing.isSpecFieldDirty(device.id, 'additional_info_motor_valve')}
+        error={rowState.editing.getFieldError(device.id, 'additional_info_motor_valve')}
         maxlength={250}
         onSave={(value) => {
-          state.editing.queueSpecEdit(
+          rowState.editing.queueSpecEdit(
             device.id,
             'additional_info_motor_valve',
             value === '' ? null : value
@@ -295,13 +308,13 @@
     >
       <EditableCell
         value={toDisplayString(device.specification?.additional_info_size, true)}
-        pendingValue={state.editing.getPendingSpecValue(device.id, 'additional_info_size')}
-        disabled={!state.canUpdateFieldDeviceSpecification()}
-        isDirty={state.editing.isSpecFieldDirty(device.id, 'additional_info_size')}
-        error={state.editing.getFieldError(device.id, 'additional_info_size')}
+        pendingValue={rowState.editing.getPendingSpecValue(device.id, 'additional_info_size')}
+        disabled={!rowState.canUpdateFieldDeviceSpecification()}
+        isDirty={rowState.editing.isSpecFieldDirty(device.id, 'additional_info_size')}
+        error={rowState.editing.getFieldError(device.id, 'additional_info_size')}
         type="number"
         onSave={(value) => {
-          state.editing.queueSpecEdit(
+          rowState.editing.queueSpecEdit(
             device.id,
             'additional_info_size',
             value === '' ? null : value ? parseInt(value, 10) : null
@@ -315,22 +328,22 @@
     >
       <EditableCell
         value={toDisplayString(device.specification?.additional_information_installation_location)}
-        pendingValue={state.editing.getPendingSpecValue(
+        pendingValue={rowState.editing.getPendingSpecValue(
           device.id,
           'additional_information_installation_location'
         )}
-        disabled={!state.canUpdateFieldDeviceSpecification()}
-        isDirty={state.editing.isSpecFieldDirty(
+        disabled={!rowState.canUpdateFieldDeviceSpecification()}
+        isDirty={rowState.editing.isSpecFieldDirty(
           device.id,
           'additional_information_installation_location'
         )}
-        error={state.editing.getFieldError(
+        error={rowState.editing.getFieldError(
           device.id,
           'additional_information_installation_location'
         )}
         maxlength={250}
         onSave={(value) => {
-          state.editing.queueSpecEdit(
+          rowState.editing.queueSpecEdit(
             device.id,
             'additional_information_installation_location',
             value === '' ? null : value
@@ -344,13 +357,13 @@
     >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_ph, true)}
-        pendingValue={state.editing.getPendingSpecValue(device.id, 'electrical_connection_ph')}
-        disabled={!state.canUpdateFieldDeviceSpecification()}
-        isDirty={state.editing.isSpecFieldDirty(device.id, 'electrical_connection_ph')}
-        error={state.editing.getFieldError(device.id, 'electrical_connection_ph')}
+        pendingValue={rowState.editing.getPendingSpecValue(device.id, 'electrical_connection_ph')}
+        disabled={!rowState.canUpdateFieldDeviceSpecification()}
+        isDirty={rowState.editing.isSpecFieldDirty(device.id, 'electrical_connection_ph')}
+        error={rowState.editing.getFieldError(device.id, 'electrical_connection_ph')}
         type="number"
         onSave={(value) => {
-          state.editing.queueSpecEdit(
+          rowState.editing.queueSpecEdit(
             device.id,
             'electrical_connection_ph',
             value === '' ? null : value ? parseInt(value, 10) : null
@@ -364,14 +377,14 @@
     >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_acdc)}
-        pendingValue={state.editing.getPendingSpecValue(device.id, 'electrical_connection_acdc')}
-        disabled={!state.canUpdateFieldDeviceSpecification()}
-        isDirty={state.editing.isSpecFieldDirty(device.id, 'electrical_connection_acdc')}
-        error={state.editing.getFieldError(device.id, 'electrical_connection_acdc')}
+        pendingValue={rowState.editing.getPendingSpecValue(device.id, 'electrical_connection_acdc')}
+        disabled={!rowState.canUpdateFieldDeviceSpecification()}
+        isDirty={rowState.editing.isSpecFieldDirty(device.id, 'electrical_connection_acdc')}
+        error={rowState.editing.getFieldError(device.id, 'electrical_connection_acdc')}
         maxlength={2}
         placeholder={$t('field_device.table.acdc_placeholder')}
         onSave={(value) => {
-          state.editing.queueSpecEdit(
+          rowState.editing.queueSpecEdit(
             device.id,
             'electrical_connection_acdc',
             value === '' ? null : value
@@ -385,17 +398,17 @@
     >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_amperage, true)}
-        pendingValue={state.editing.getPendingSpecValue(
+        pendingValue={rowState.editing.getPendingSpecValue(
           device.id,
           'electrical_connection_amperage'
         )}
-        disabled={!state.canUpdateFieldDeviceSpecification()}
-        isDirty={state.editing.isSpecFieldDirty(device.id, 'electrical_connection_amperage')}
-        error={state.editing.getFieldError(device.id, 'electrical_connection_amperage')}
+        disabled={!rowState.canUpdateFieldDeviceSpecification()}
+        isDirty={rowState.editing.isSpecFieldDirty(device.id, 'electrical_connection_amperage')}
+        error={rowState.editing.getFieldError(device.id, 'electrical_connection_amperage')}
         type="number"
         placeholder={$t('field_device.table.amperage_placeholder')}
         onSave={(value) => {
-          state.editing.queueSpecEdit(
+          rowState.editing.queueSpecEdit(
             device.id,
             'electrical_connection_amperage',
             value === '' ? null : value ? parseFloat(value) : null
@@ -409,14 +422,17 @@
     >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_power, true)}
-        pendingValue={state.editing.getPendingSpecValue(device.id, 'electrical_connection_power')}
-        disabled={!state.canUpdateFieldDeviceSpecification()}
-        isDirty={state.editing.isSpecFieldDirty(device.id, 'electrical_connection_power')}
-        error={state.editing.getFieldError(device.id, 'electrical_connection_power')}
+        pendingValue={rowState.editing.getPendingSpecValue(
+          device.id,
+          'electrical_connection_power'
+        )}
+        disabled={!rowState.canUpdateFieldDeviceSpecification()}
+        isDirty={rowState.editing.isSpecFieldDirty(device.id, 'electrical_connection_power')}
+        error={rowState.editing.getFieldError(device.id, 'electrical_connection_power')}
         type="number"
         placeholder={$t('field_device.table.power_placeholder')}
         onSave={(value) => {
-          state.editing.queueSpecEdit(
+          rowState.editing.queueSpecEdit(
             device.id,
             'electrical_connection_power',
             value === '' ? null : value ? parseFloat(value) : null
@@ -430,17 +446,17 @@
     >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_rotation, true)}
-        pendingValue={state.editing.getPendingSpecValue(
+        pendingValue={rowState.editing.getPendingSpecValue(
           device.id,
           'electrical_connection_rotation'
         )}
-        disabled={!state.canUpdateFieldDeviceSpecification()}
-        isDirty={state.editing.isSpecFieldDirty(device.id, 'electrical_connection_rotation')}
-        error={state.editing.getFieldError(device.id, 'electrical_connection_rotation')}
+        disabled={!rowState.canUpdateFieldDeviceSpecification()}
+        isDirty={rowState.editing.isSpecFieldDirty(device.id, 'electrical_connection_rotation')}
+        error={rowState.editing.getFieldError(device.id, 'electrical_connection_rotation')}
         type="number"
         placeholder={$t('field_device.table.rotation_placeholder')}
         onSave={(value) => {
-          state.editing.queueSpecEdit(
+          rowState.editing.queueSpecEdit(
             device.id,
             'electrical_connection_rotation',
             value === '' ? null : value ? parseInt(value, 10) : null
@@ -461,15 +477,21 @@
       <DropdownMenu.Content align="end" class="w-40">
         <DropdownMenu.Item
           onclick={() =>
-            void state.copyToClipboard(
+            void rowState.copyToClipboard(
               device.bmk?.trim() || (device.apparat_nr ? String(device.apparat_nr) : device.id)
             )}
         >
           {$t('facility.copy')}
         </DropdownMenu.Item>
-        {#if state.canDeleteFieldDevice()}
+        <DropdownMenu.Item onclick={() => (historyOpen = true)}>
+          {$t('history.open')}
+        </DropdownMenu.Item>
+        {#if rowState.canDeleteFieldDevice()}
           <DropdownMenu.Separator />
-          <DropdownMenu.Item variant="destructive" onclick={() => void state.deleteDevice(device)}>
+          <DropdownMenu.Item
+            variant="destructive"
+            onclick={() => void rowState.deleteDevice(device)}
+          >
             {$t('common.delete')}
           </DropdownMenu.Item>
         {/if}
@@ -477,3 +499,12 @@
     </DropdownMenu.Root>
   </Table.Cell>
 </Table.Row>
+
+<HistoryTimelineDialog
+  bind:open={historyOpen}
+  title={`${$t('history.title')}: ${device.bmk ?? device.id}`}
+  scopeType="field_device"
+  scopeId={device.id}
+  projectId={rowState.effectiveProjectId}
+  onRestored={() => rowState.reload()}
+/>

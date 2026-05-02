@@ -302,6 +302,10 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
     }
   }
 
+  notifyHistoryRestored(): void {
+    this.notifyChanged();
+  }
+
   getCabinetLabel(cabinetId: string | undefined | null): string {
     if (!cabinetId) return '-';
     return this.cabinetMap.get(cabinetId) ?? cabinetId;
