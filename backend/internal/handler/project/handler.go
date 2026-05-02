@@ -143,7 +143,7 @@ func (h *ProjectHandler) notifyProjectControlCabinetDelta(c *gin.Context, projec
 		actorID = &userID
 	}
 
-	h.collaboration.BroadcastControlCabinetDelta(projectID, actorID, toProjectCollaborationControlCabinet(controlCabinet))
+	h.collaboration.BroadcastControlCabinetDelta(projectID, actorID, controlCabinet)
 }
 
 func (h *ProjectHandler) notifyProjectSPSControllerDelta(c *gin.Context, projectID uuid.UUID, spsController domainFacility.SPSController) {
@@ -156,7 +156,7 @@ func (h *ProjectHandler) notifyProjectSPSControllerDelta(c *gin.Context, project
 		actorID = &userID
 	}
 
-	h.collaboration.BroadcastSPSControllerDelta(projectID, actorID, toProjectCollaborationSPSController(spsController))
+	h.collaboration.BroadcastSPSControllerDelta(projectID, actorID, spsController)
 }
 
 func (h *ProjectHandler) ensureProjectAccess(c *gin.Context, projectID uuid.UUID) bool {

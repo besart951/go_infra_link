@@ -1,6 +1,6 @@
 export type RealtimeSocketStatus = 'disconnected' | 'connecting' | 'connected';
 
-interface ReconnectingWebSocketOptions {
+export interface ReconnectingWebSocketOptions {
   url: () => string | null;
   onMessage: (data: string) => void;
   onOpen?: (event: { wasReconnect: boolean }) => void;
@@ -10,7 +10,13 @@ interface ReconnectingWebSocketOptions {
   maxQueuedMessages?: number;
 }
 
-export class ReconnectingWebSocket {
+export interface RealtimeSocketConnection {
+  connect(): void;
+  disconnect(options?: { clearQueue?: boolean }): void;
+  send(payload: Record<string, unknown>, options?: { queueWhenClosed?: boolean }): void;
+}
+
+export class ReconnectingWebSocket implements RealtimeSocketConnection {
   private readonly url: ReconnectingWebSocketOptions['url'];
   private readonly onMessage: ReconnectingWebSocketOptions['onMessage'];
   private readonly onOpen?: ReconnectingWebSocketOptions['onOpen'];

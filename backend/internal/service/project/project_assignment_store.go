@@ -42,15 +42,15 @@ type projectAssignmentStore struct {
 	bacnetObjectRepo          domainFacility.BacnetObjectStore
 }
 
-func newProjectAssignmentStore(service *ProjectFacilityLinkService) projectAssignmentStore {
+func newProjectAssignmentStore(deps projectAssignmentDependencies) projectAssignmentStore {
 	return projectAssignmentStore{
-		projectControlCabinetRepo: service.projectControlCabinetRepo,
-		projectSPSControllerRepo:  service.projectSPSControllerRepo,
-		projectFieldDeviceRepo:    service.projectFieldDeviceRepo,
-		spsControllerSystemRepo:   service.spsControllerSystemRepo,
-		fieldDeviceRepo:           service.fieldDeviceRepo,
-		specificationRepo:         service.specificationRepo,
-		bacnetObjectRepo:          service.bacnetObjectRepo,
+		projectControlCabinetRepo: deps.projectControlCabinetRepo,
+		projectSPSControllerRepo:  deps.projectSPSControllerRepo,
+		projectFieldDeviceRepo:    deps.projectFieldDeviceRepo,
+		spsControllerSystemRepo:   deps.spsControllerSystemRepo,
+		fieldDeviceRepo:           deps.fieldDeviceRepo,
+		specificationRepo:         deps.specificationRepo,
+		bacnetObjectRepo:          deps.bacnetObjectRepo,
 	}
 }
 

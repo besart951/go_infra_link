@@ -1,13 +1,10 @@
 package wire
 
 import (
-	"fmt"
-	"path/filepath"
 	"time"
 
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
-	exportinfra "github.com/besart951/go_infra_link/backend/internal/infrastructure/exporting"
 	adminservice "github.com/besart951/go_infra_link/backend/internal/service/admin"
 	authservice "github.com/besart951/go_infra_link/backend/internal/service/auth"
 	dashboardservice "github.com/besart951/go_infra_link/backend/internal/service/dashboard"
@@ -59,70 +56,19 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 	passwordService := passwordsvc.New()
 	jwtService := authservice.NewJWTService(cfg.JWTSecret, cfg.Issuer)
 	rbacSvc := rbacservice.New(repos.User, repos.TeamMember, repos.Permissions, repos.RolePermissions)
-	facilityTxRunner := facilityservice.TxRunner(func(run func(tx *gorm.DB) error) error {
-		return gormDB.Transaction(run)
-	})
-	facilityTxRepositories := func(tx *gorm.DB) (facilityservice.Repositories, error) {
-		txRepos, err := NewRepositories(tx)
-		if err != nil {
-			return facilityservice.Repositories{}, fmt.Errorf("transaction repositories: %w", err)
-		}
-		return buildFacilityRepositories(txRepos), nil
-	}
-	facilityServices := facilityservice.NewServices(buildFacilityRepositories(repos), facilityservice.Config{
-		TxRunner:       facilityTxRunner,
-		TxRepositories: facilityTxRepositories,
-	})
+	facilityServices := newFacilityServices(gormDB, repos)
 
-	jobStore := exportinfra.NewMemoryJobStore()
-	fileStore, err := exportinfra.NewLocalFileStore(filepath.Join("data", "exports"))
+	exportSvc, err := newExportService(repos)
 	if err != nil {
-		return nil, fmt.Errorf("export file store: %w", err)
+		return nil, err
 	}
-	dataProvider := exportinfra.NewDataProvider(
-		repos.FacilityFieldDevices,
-		repos.FacilitySpecifications,
-		repos.FacilityBacnetObjects,
-		repos.FacilitySPSControllers,
-		repos.FacilityControlCabinet,
-	)
-	excelGenerator := exportinfra.NewExcelizeGenerator()
-	exportSvc := exportservice.NewService(
-		dataProvider,
-		excelGenerator,
-		excelGenerator,
-		jobStore,
-		fileStore,
-		exportservice.Config{
-			QueueSize:             200,
-			MaxConcurrent:         1,
-			SingleFileDeviceLimit: 5000,
-			PageSize:              1000,
-		},
-	)
-	secretCipher, err := notificationservice.NewAESCipher(cfg.JWTSecret)
+	notificationSvc, err := newNotificationService(repos, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("notification secret cipher: %w", err)
-	}
-	notificationSvc := notificationservice.New(
-		repos.NotificationSMTPSettings,
-		repos.NotificationPreferences,
-		repos.SystemNotifications,
-		repos.NotificationEmailOutbox,
-		repos.NotificationRules,
-		repos.Project,
-		repos.TeamMember,
-		repos.User,
-		secretCipher,
-		cfg.JWTSecret,
-		notificationservice.NewSMTPStrategy(),
-	)
-	if cfg.Runtime != nil && cfg.Runtime.SystemNotificationStream != nil {
-		notificationSvc.SetSystemNotificationPublisher(cfg.Runtime.SystemNotificationStream)
+		return nil, err
 	}
 
 	return &Services{
-		Project:         buildProjectServices(gormDB, repos, facilityServices),
+		Project:         newProjectServices(gormDB, repos, facilityServices),
 		Dashboard:       dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
 		Phase:           phaseservice.NewPhaseService(repos.Phase),
 		PhasePermission: phasepermissionservice.New(repos.PhasePermissions, repos.Phase, repos.Permissions),
@@ -147,71 +93,4 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 		Export:   exportSvc,
 		Facility: facilityServices,
 	}, nil
-}
-
-func buildFacilityRepositories(repos *Repositories) facilityservice.Repositories {
-	return facilityservice.Repositories{
-		Buildings:                repos.FacilityBuildings,
-		SystemTypes:              repos.FacilitySystemTypes,
-		SystemParts:              repos.FacilitySystemParts,
-		Specifications:           repos.FacilitySpecifications,
-		Apparats:                 repos.FacilityApparats,
-		ControlCabinets:          repos.FacilityControlCabinet,
-		FieldDevices:             repos.FacilityFieldDevices,
-		SPSControllers:           repos.FacilitySPSControllers,
-		SPSControllerSystemTypes: repos.FacilitySPSControllerSystemTypes,
-		BacnetObjects:            repos.FacilityBacnetObjects,
-		ObjectData:               repos.FacilityObjectData,
-		ObjectDataBacnetObjects:  repos.FacilityObjectDataBacnetObjects,
-		StateTexts:               repos.FacilityStateTexts,
-		NotificationClasses:      repos.FacilityNotificationClasses,
-		AlarmDefinitions:         repos.FacilityAlarmDefinitions,
-		Units:                    repos.FacilityUnits,
-		AlarmFields:              repos.FacilityAlarmFields,
-		AlarmTypes:               repos.FacilityAlarmTypes,
-		AlarmTypeFields:          repos.FacilityAlarmTypeFields,
-		BacnetObjectAlarmValues:  repos.FacilityBacnetObjectAlarmValues,
-	}
-}
-
-func buildProjectDependencies(repos *Repositories, facilityServices *facilityservice.Services) projectservice.Dependencies {
-	return projectservice.Dependencies{
-		Projects:                 repos.Project,
-		PhasePermissions:         repos.PhasePermissions,
-		ProjectControlCabinets:   repos.ProjectControlCabinets,
-		ProjectSPSControllers:    repos.ProjectSPSControllers,
-		ProjectFieldDevices:      repos.ProjectFieldDevices,
-		Users:                    repos.User,
-		RolePermissions:          repos.RolePermissions,
-		ObjectData:               repos.FacilityObjectData,
-		BacnetObjects:            repos.FacilityBacnetObjects,
-		Specifications:           repos.FacilitySpecifications,
-		ControlCabinets:          repos.FacilityControlCabinet,
-		SPSControllers:           repos.FacilitySPSControllers,
-		SPSControllerSystemTypes: repos.FacilitySPSControllerSystemTypes,
-		FieldDevices:             repos.FacilityFieldDevices,
-		HierarchyCopier:          facilityServices.HierarchyCopier,
-		FieldDeviceCreator:       facilityServices.FieldDevice,
-	}
-}
-
-func buildProjectServices(gormDB *gorm.DB, repos *Repositories, facilityServices *facilityservice.Services) *projectservice.Services {
-	txRunner := projectservice.TxRunner(func(run func(tx *gorm.DB) error) error {
-		return gormDB.Transaction(run)
-	})
-
-	txDependencies := func(tx *gorm.DB) (projectservice.Dependencies, error) {
-		txRepos, err := NewRepositories(tx)
-		if err != nil {
-			return projectservice.Dependencies{}, fmt.Errorf("transaction repositories: %w", err)
-		}
-
-		txFacilityServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return buildProjectDependencies(txRepos, txFacilityServices), nil
-	}
-
-	return projectservice.NewServices(buildProjectDependencies(repos, facilityServices), projectservice.Config{
-		TxRunner:       txRunner,
-		TxDependencies: txDependencies,
-	})
 }

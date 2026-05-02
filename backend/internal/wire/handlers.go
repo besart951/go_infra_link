@@ -6,12 +6,9 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/handler"
 	authhandler "github.com/besart951/go_infra_link/backend/internal/handler/auth"
 	dashboardhandler "github.com/besart951/go_infra_link/backend/internal/handler/dashboard"
-	facilityhandler "github.com/besart951/go_infra_link/backend/internal/handler/facility"
 	i18nhandler "github.com/besart951/go_infra_link/backend/internal/handler/i18n"
 	notificationhandler "github.com/besart951/go_infra_link/backend/internal/handler/notification"
-	projecthandler "github.com/besart951/go_infra_link/backend/internal/handler/project"
 	teamhandler "github.com/besart951/go_infra_link/backend/internal/handler/team"
-	userhandler "github.com/besart951/go_infra_link/backend/internal/handler/user"
 	"github.com/besart951/go_infra_link/backend/pkg/i18n"
 )
 
@@ -20,42 +17,10 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 	if runtime == nil {
 		runtime = NewRuntimeAdapters()
 	}
-	projectHandlers := projecthandler.NewHandlers(projecthandler.ServiceDeps{
-		Lifecycle:          services.Project.Lifecycle,
-		AccessPolicy:       services.Project.AccessPolicy,
-		Membership:         services.Project.Membership,
-		Workflow:           services.Project.Workflow,
-		FacilityLink:       services.Project.FacilityLink,
-		Phase:              services.Phase,
-		PhasePermission:    services.PhasePermission,
-		FieldDeviceOptions: services.Facility.FieldDevice,
-		Notifications:      services.Notification,
-		Collaboration:      runtime.ProjectCollaboration,
-	})
+	projectHandlers := newProjectHandlers(services, runtime)
 
-	facilityHandlers := facilityhandler.NewHandlers(facilityhandler.ServiceDeps{
-		Building:                services.Facility.Building,
-		SystemType:              services.Facility.SystemType,
-		SystemPart:              services.Facility.SystemPart,
-		Apparat:                 services.Facility.Apparat,
-		ControlCabinet:          services.Facility.ControlCabinet,
-		FieldDevice:             services.Facility.FieldDevice,
-		BacnetObject:            services.Facility.BacnetObject,
-		SPSController:           services.Facility.SPSController,
-		StateText:               services.Facility.StateText,
-		NotificationClass:       services.Facility.NotificationClass,
-		AlarmDefinition:         services.Facility.AlarmDefinition,
-		ObjectData:              services.Facility.ObjectData,
-		SPSControllerSystemType: services.Facility.SPSControllerSystemType,
-		Export:                  services.Export,
-		AlarmType:               services.Facility.AlarmType,
-		Unit:                    services.Facility.Unit,
-		AlarmField:              services.Facility.AlarmField,
-		AlarmTypeField:          services.Facility.AlarmTypeField,
-		BacnetAlarm:             services.Facility.BacnetAlarmValue,
-		Collaboration:           projectHandlers.RefreshBroadcaster,
-	})
-	userHandlers := userhandler.NewHandlers(services.User, services.Admin, services.RBAC, services.UserDirectory, services.RBAC, services.RBAC)
+	facilityHandlers := newFacilityHandlers(services, projectHandlers.RefreshBroadcaster)
+	userHandlers := newUserHandlers(services)
 
 	return &handler.Handlers{
 		Auth: authhandler.NewAuthHandler(

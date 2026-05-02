@@ -4,16 +4,24 @@
   import { Label } from '$lib/components/ui/label/index.js';
   import ControlCabinetSelect from '../selects/ControlCabinetSelect.svelte';
   import SystemTypeSelect from '../selects/SystemTypeSelect.svelte';
+  import { spsControllerFormService } from './state/SPSControllerFormService.js';
   import {
-    spsControllerFormService,
-    type SPSControllerSystemTypeEntry
-  } from './state/SPSControllerFormService.js';
+    buildSPSControllerDeviceName,
+    buildSPSControllerSystemTypeLabel,
+    collectSystemTypeLabelFallbacks,
+    collectUniqueSystemTypeIds,
+    getNextAvailableSystemTypeNumber,
+    getSPSControllerSystemTypeAddState,
+    toSPSControllerSystemTypeEntries,
+    toSPSControllerSystemTypeInput,
+    type SPSControllerSystemTypeEntry,
+    updateSPSControllerSystemTypeEntry
+  } from './state/SPSControllerFormDraft.js';
   import { getErrorMessage, getFieldError, getFieldErrors } from '$lib/api/client.js';
   import type {
     Building,
     ControlCabinet,
     SPSController,
-    SPSControllerSystemType,
     SPSControllerSystemTypeInput,
     SystemType
   } from '$lib/domain/facility/index.js';
@@ -153,7 +161,7 @@
   });
 
   $effect(() => {
-    const nextName = buildDeviceName(controlCabinet, building, ga_device);
+    const nextName = buildSPSControllerDeviceName(controlCabinet, building, ga_device);
     if (nextName === null) return;
     if (nextName !== device_name) {
       device_name = nextName;
@@ -245,21 +253,9 @@
         filters: { sps_controller_id: initialData.id }
       });
       const items = res.items;
-      const labelFallbacks: Record<string, string> = {};
-      const uniqueIds = Array.from(
-        new Set(items.map((item) => item.system_type_id).filter(Boolean))
-      );
-      items.forEach((item) => {
-        if (item.system_type_name) {
-          labelFallbacks[item.system_type_id] = item.system_type_name;
-        }
-      });
-      systemTypes = items.map((item: SPSControllerSystemType) => ({
-        id: item.id,
-        system_type_id: item.system_type_id,
-        number: item.number ?? undefined,
-        document_name: item.document_name ?? undefined
-      }));
+      const labelFallbacks = collectSystemTypeLabelFallbacks(items);
+      const uniqueIds = collectUniqueSystemTypeIds(items);
+      systemTypes = toSPSControllerSystemTypeEntries(items);
       systemTypeLabels = await buildSystemTypeLabels(uniqueIds, labelFallbacks);
       await Promise.all(uniqueIds.map((id) => ensureSystemTypeDetails(id)));
     } catch (e) {
@@ -284,13 +280,14 @@
       if (!systemType) return;
       systemTypeLabels = {
         ...systemTypeLabels,
-        [system_type_id]: buildSystemTypeLabel(
+        [system_type_id]: buildSPSControllerSystemTypeLabel(
           systemType.name,
           systemType.number_min,
           systemType.number_max
         )
       };
       const nextNumber = getNextAvailableSystemTypeNumber(
+        systemTypes,
         system_type_id,
         systemType.number_min,
         systemType.number_max
@@ -310,14 +307,6 @@
     }
   }
 
-  function formatNumber(value: number): string {
-    return String(value).padStart(4, '0');
-  }
-
-  function buildSystemTypeLabel(name: string, min: number, max: number): string {
-    return `${name} (${formatNumber(min)}-${formatNumber(max)})`;
-  }
-
   async function ensureSystemTypeDetails(id: string): Promise<SystemType | null> {
     if (systemTypeDetails[id]) return systemTypeDetails[id];
     systemTypeDetailsLoading = true;
@@ -331,19 +320,6 @@
     } finally {
       systemTypeDetailsLoading = false;
     }
-  }
-
-  function buildDeviceName(
-    cabinet: ControlCabinet | null,
-    cabinetBuilding: Building | null,
-    gaDeviceValue: string
-  ): string | null {
-    const ga = gaDeviceValue.trim();
-    if (!ga) return '';
-    const iwsCode = cabinetBuilding?.iws_code?.trim();
-    const cabinetNr = cabinet?.control_cabinet_nr?.trim();
-    if (!iwsCode || !cabinetNr) return null;
-    return `${iwsCode}_${cabinetNr}_${ga}`;
   }
 
   async function loadCabinetAndBuilding(cabinetId: string) {
@@ -380,7 +356,11 @@
           const systemType = await spsControllerFormService.getSystemType(id);
           return [
             id,
-            buildSystemTypeLabel(systemType.name, systemType.number_min, systemType.number_max)
+            buildSPSControllerSystemTypeLabel(
+              systemType.name,
+              systemType.number_min,
+              systemType.number_max
+            )
           ] as const;
         } catch (error) {
           console.error('Failed to load system type details:', error);
@@ -412,14 +392,9 @@
     field: keyof SPSControllerSystemTypeInput,
     value: string
   ) {
-    systemTypes = systemTypes.map((item, i) => {
-      if (i !== index) return item;
-      if (field === 'number') {
-        const parsed = value === '' ? undefined : Number(value);
-        return { ...item, number: Number.isNaN(parsed) ? undefined : parsed };
-      }
-      return { ...item, document_name: value || undefined };
-    });
+    systemTypes = systemTypes.map((item, i) =>
+      i === index ? updateSPSControllerSystemTypeEntry(item, field, value) : item
+    );
   }
 
   async function copySystemType(index: number) {
@@ -435,7 +410,7 @@
         if (details) {
           systemTypeLabels = {
             ...systemTypeLabels,
-            [systemTypeId]: buildSystemTypeLabel(
+            [systemTypeId]: buildSPSControllerSystemTypeLabel(
               details.name,
               details.number_min,
               details.number_max
@@ -458,61 +433,14 @@
     }
   }
 
-  function getNextAvailableSystemTypeNumber(
-    systemTypeId: string,
-    min: number,
-    max: number
-  ): number | null {
-    const usedNumbers = new Set(
-      systemTypes
-        .filter((item) => item.system_type_id === systemTypeId)
-        .map((item) => item.number)
-        .filter((value): value is number => typeof value === 'number')
-    );
-    for (let number = min; number <= max; number += 1) {
-      if (!usedNumbers.has(number)) return number;
-    }
-    return null;
-  }
-
   const systemTypeAddState = $derived.by(() => {
-    if (!system_type_id) {
-      return {
-        disabled: true,
-        tooltip: translate('facility.forms.sps_controller.system_type_select_first')
-      };
-    }
-    const details = systemTypeDetails[system_type_id];
-    if (!details) {
-      return {
-        disabled: true,
-        tooltip: systemTypeDetailsLoading
-          ? translate('facility.forms.sps_controller.system_type_loading_details')
-          : translate('facility.forms.sps_controller.system_type_loading')
-      };
-    }
-    const rangeSize = details.number_max - details.number_min + 1;
-    const usedNumbers = new Set(
-      systemTypes
-        .filter(
-          (item) =>
-            item.system_type_id === system_type_id &&
-            typeof item.number === 'number' &&
-            item.number >= details.number_min &&
-            item.number <= details.number_max
-        )
-        .map((item) => item.number as number)
+    return getSPSControllerSystemTypeAddState(
+      system_type_id,
+      systemTypeDetails,
+      systemTypes,
+      systemTypeDetailsLoading,
+      translate
     );
-    if (usedNumbers.size >= rangeSize) {
-      return {
-        disabled: true,
-        tooltip: translate('facility.forms.sps_controller.system_type_all_used')
-      };
-    }
-    return {
-      disabled: false,
-      tooltip: translate('facility.forms.sps_controller.system_type_add_next')
-    };
   });
 
   async function handleSubmit(event: SubmitEvent) {
@@ -538,12 +466,7 @@
           gateway: gateway || undefined,
           vlan: vlan || undefined,
           control_cabinet_id,
-          system_types: systemTypes.map(({ id, system_type_id, number, document_name }) => ({
-            id,
-            system_type_id,
-            number,
-            document_name
-          }))
+          system_types: toSPSControllerSystemTypeInput(systemTypes)
         });
         onSuccess?.(res);
       } else {
@@ -555,12 +478,7 @@
           gateway: gateway || undefined,
           vlan: vlan || undefined,
           control_cabinet_id,
-          system_types: systemTypes.map(({ id, system_type_id, number, document_name }) => ({
-            id,
-            system_type_id,
-            number,
-            document_name
-          }))
+          system_types: toSPSControllerSystemTypeInput(systemTypes)
         });
         onSuccess?.(res);
       }

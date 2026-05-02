@@ -129,9 +129,9 @@ func (f *fakeFacilityProjectLookup) ListProjectIDsBySPSControllerID(context.Cont
 
 type fakeProjectRefreshPublisher struct {
 	calls                       []projectRefreshCall
-	controlCabinetDeltas        []projectCollaborationControlCabinet
+	controlCabinetDeltas        []domainFacility.ControlCabinet
 	controlCabinetDeltaProjects []uuid.UUID
-	spsControllerDeltas         []projectCollaborationSPSController
+	spsControllerDeltas         []domainFacility.SPSController
 	spsControllerDeltaProjects  []uuid.UUID
 }
 
@@ -145,12 +145,12 @@ func (f *fakeProjectRefreshPublisher) BroadcastRefreshRequest(projectID uuid.UUI
 	f.calls = append(f.calls, projectRefreshCall{projectID: projectID, scope: scope, entityIDs: append([]string(nil), entityIDs...)})
 }
 
-func (f *fakeProjectRefreshPublisher) BroadcastControlCabinetDelta(projectID uuid.UUID, _ *uuid.UUID, controlCabinet projectCollaborationControlCabinet) {
+func (f *fakeProjectRefreshPublisher) BroadcastControlCabinetDelta(projectID uuid.UUID, _ *uuid.UUID, controlCabinet domainFacility.ControlCabinet) {
 	f.controlCabinetDeltaProjects = append(f.controlCabinetDeltaProjects, projectID)
 	f.controlCabinetDeltas = append(f.controlCabinetDeltas, controlCabinet)
 }
 
-func (f *fakeProjectRefreshPublisher) BroadcastSPSControllerDelta(projectID uuid.UUID, _ *uuid.UUID, spsController projectCollaborationSPSController) {
+func (f *fakeProjectRefreshPublisher) BroadcastSPSControllerDelta(projectID uuid.UUID, _ *uuid.UUID, spsController domainFacility.SPSController) {
 	f.spsControllerDeltaProjects = append(f.spsControllerDeltaProjects, projectID)
 	f.spsControllerDeltas = append(f.spsControllerDeltas, spsController)
 }

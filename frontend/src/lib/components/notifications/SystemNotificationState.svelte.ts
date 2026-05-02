@@ -6,17 +6,18 @@ import type {
 import { reduceSystemNotificationStreamEvent } from '$lib/domain/notification/index.js';
 import type { SystemNotificationRepository } from '$lib/domain/ports/notification/systemNotificationRepository.js';
 import { systemNotificationRepository } from '$lib/infrastructure/api/systemNotificationRepository.js';
+import type { RealtimeSocketStatus } from '$lib/infrastructure/realtime/reconnectingWebSocket.js';
 import {
-  ReconnectingWebSocket,
-  type RealtimeSocketStatus
-} from '$lib/infrastructure/realtime/reconnectingWebSocket.js';
+  buildSameOriginWebSocketUrl,
+  RealtimeJsonStream
+} from '$lib/infrastructure/realtime/realtimeJsonStream.js';
 
 const PREVIEW_LIMIT = 5;
 const INBOX_LIMIT = 20;
 
 interface SystemNotificationStateDeps {
   repository?: SystemNotificationRepository;
-  stream?: ReconnectingWebSocket;
+  stream?: RealtimeJsonStream<SystemNotificationStreamEvent>;
 }
 
 export class SystemNotificationState {
@@ -33,7 +34,7 @@ export class SystemNotificationState {
   socketStatus = $state<RealtimeSocketStatus>('disconnected');
 
   private readonly repository: SystemNotificationRepository;
-  private readonly stream: ReconnectingWebSocket;
+  private readonly stream: RealtimeJsonStream<SystemNotificationStreamEvent>;
   private connectionRefs = 0;
   private inboxLoaded = false;
 
@@ -41,9 +42,9 @@ export class SystemNotificationState {
     this.repository = deps.repository ?? systemNotificationRepository;
     this.stream =
       deps.stream ??
-      new ReconnectingWebSocket({
+      new RealtimeJsonStream<SystemNotificationStreamEvent>({
         url: buildSystemNotificationStreamUrl,
-        onMessage: (raw) => this.handleMessage(raw),
+        onMessage: (event) => this.handleMessage(event),
         onOpen: () => void this.refreshVisible(),
         onStatusChange: (status) => {
           this.socketStatus = status;
@@ -177,15 +178,7 @@ export class SystemNotificationState {
     }).format(new Date(value));
   }
 
-  private handleMessage(raw: string): void {
-    let event: SystemNotificationStreamEvent;
-
-    try {
-      event = JSON.parse(raw) as SystemNotificationStreamEvent;
-    } catch {
-      return;
-    }
-
+  private handleMessage(event: SystemNotificationStreamEvent): void {
     const next = reduceSystemNotificationStreamEvent(
       {
         previewItems: this.previewItems,
@@ -215,10 +208,7 @@ export class SystemNotificationState {
 }
 
 function buildSystemNotificationStreamUrl(): string | null {
-  if (typeof window === 'undefined') return null;
-
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}/api/v1/account/notifications/stream`;
+  return buildSameOriginWebSocketUrl('/api/v1/account/notifications/stream');
 }
 
 export const systemNotificationState = new SystemNotificationState();

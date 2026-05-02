@@ -1,15 +1,11 @@
 import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
-import { api } from '$lib/api/client.js';
-import type { Building } from '$lib/domain/facility/index.js';
+import { loadBuildingDetailData } from '$lib/application/useCases/facility/loadFacilityDetailData.js';
 import { t } from '$lib/i18n/index.js';
 
 export const load: PageLoad = async ({ params, fetch }) => {
   try {
-    const building = await api<Building>(`/facility/buildings/${params.id}`, {
-      customFetch: fetch
-    });
-    return { building };
+    return await loadBuildingDetailData(params.id, { customFetch: fetch });
   } catch (e: any) {
     console.error('Failed to load building:', e);
     if (e.status === 404) {

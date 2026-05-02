@@ -9,7 +9,6 @@ import type {
   CreateSPSControllerRequest,
   SPSController,
   SPSControllerSystemType,
-  SPSControllerSystemTypeInput,
   UpdateSPSControllerRequest
 } from '$lib/domain/facility/index.js';
 import type { ListParams, PaginatedResponse } from '$lib/domain/ports/listRepository.js';
@@ -61,5 +60,3 @@ export const spsControllerFormService = {
     return buildingRepository.get(id);
   }
 };
-
-export type SPSControllerSystemTypeEntry = SPSControllerSystemTypeInput & { id?: string };

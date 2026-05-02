@@ -6,7 +6,7 @@ interface ConfirmOptions {
   variant?: 'default' | 'destructive';
 }
 
-interface CrudPageActionsOptions<TItem> {
+export interface CrudPageActionsOptions<TItem> {
   reload: () => void | Promise<void>;
   deleteItem: (item: TItem) => Promise<void>;
   confirmDelete: (options: ConfirmOptions) => Promise<boolean>;

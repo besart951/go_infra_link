@@ -4,14 +4,19 @@ import type {
   Apparat,
   Building,
   ControlCabinet,
+  CreateControlCabinetRequest,
   CreateFieldDeviceRequest,
+  CreateSPSControllerRequest,
   FieldDevice,
+  MultiCreateFieldDeviceRequest,
+  MultiCreateFieldDeviceResponse,
   NotificationClass,
   SPSController,
   SPSControllerSystemTypeInput,
   SPSControllerSystemType,
   StateText,
   SystemPart,
+  UpdateSPSControllerRequest,
   UpdateFieldDeviceRequest
 } from '$lib/domain/facility/index.js';
 import { getErrorMessage, getFieldErrors } from '$lib/api/client.js';
@@ -65,6 +70,34 @@ export interface FieldDeviceImportReport {
   errorMessage?: string;
 }
 
+export interface FieldDeviceImportBackend {
+  loadLookups(criteria: FieldDeviceImportLookupCriteria): Promise<FieldDeviceImportLookups>;
+  getControlCabinet(id: string): Promise<ControlCabinet>;
+  createControlCabinet(data: CreateControlCabinetRequest): Promise<ControlCabinet>;
+  getSpsController(id: string): Promise<SPSController>;
+  createSpsController(data: CreateSPSControllerRequest): Promise<SPSController>;
+  updateSpsController(id: string, data: UpdateSPSControllerRequest): Promise<SPSController>;
+  multiCreateFieldDevices(
+    data: MultiCreateFieldDeviceRequest
+  ): Promise<MultiCreateFieldDeviceResponse>;
+  updateFieldDevice(id: string, data: UpdateFieldDeviceRequest): Promise<FieldDevice>;
+}
+
+export interface FieldDeviceImportServiceDeps {
+  backend?: Partial<FieldDeviceImportBackend>;
+}
+
+const defaultFieldDeviceImportBackend: FieldDeviceImportBackend = {
+  loadLookups: loadTargetedLookups,
+  getControlCabinet: (id) => controlCabinetRepository.get(id),
+  createControlCabinet: (data) => controlCabinetRepository.create(data),
+  getSpsController: (id) => spsControllerRepository.get(id),
+  createSpsController: (data) => spsControllerRepository.create(data),
+  updateSpsController: (id, data) => spsControllerRepository.update(id, data),
+  multiCreateFieldDevices: (data) => fieldDeviceRepository.multiCreate(data),
+  updateFieldDevice: (id, data) => fieldDeviceRepository.update(id, data)
+};
+
 const PAGE_SIZE = 500;
 const TARGETED_PAGE_SIZE = 100;
 
@@ -95,6 +128,14 @@ export class FieldDeviceImportService {
 
   private lookups: FieldDeviceImportLookups | null = null;
   private lookupLoad: Promise<FieldDeviceImportLookups> | null = null;
+  private readonly backend: FieldDeviceImportBackend;
+
+  constructor(deps: FieldDeviceImportServiceDeps = {}) {
+    this.backend = {
+      ...defaultFieldDeviceImportBackend,
+      ...deps.backend
+    };
+  }
 
   clearTransform(): void {
     this.plan = null;
@@ -238,7 +279,7 @@ export class FieldDeviceImportService {
       const controlCabinet =
         plan.controller.existingControlCabinet?.id === state.id
           ? plan.controller.existingControlCabinet
-          : await controlCabinetRepository.get(state.id);
+          : await this.backend.getControlCabinet(state.id);
       this.setNodeState(CONTROL_CABINET_IMPORT_NODE_KEY, {
         entity: 'control_cabinet',
         status,
@@ -260,7 +301,7 @@ export class FieldDeviceImportService {
       throw new Error(translate('field_device.importer.errors.incomplete_plan'));
     }
 
-    const controlCabinet = await controlCabinetRepository.create(
+    const controlCabinet = await this.backend.createControlCabinet(
       plan.controller.controlCabinetRequest
     );
     this.setNodeState(CONTROL_CABINET_IMPORT_NODE_KEY, {
@@ -281,7 +322,7 @@ export class FieldDeviceImportService {
       const spsController =
         plan.controller.existingSpsController?.id === state.id
           ? plan.controller.existingSpsController
-          : await spsControllerRepository.get(state.id);
+          : await this.backend.getSpsController(state.id);
       this.setNodeState(SPS_CONTROLLER_IMPORT_NODE_KEY, {
         entity: 'sps_controller',
         status,
@@ -303,7 +344,7 @@ export class FieldDeviceImportService {
       throw new Error(translate('field_device.importer.errors.incomplete_plan'));
     }
 
-    const spsController = await spsControllerRepository.create({
+    const spsController = await this.backend.createSpsController({
       ...plan.controller.spsControllerRequest,
       control_cabinet_id: controlCabinetId
     });
@@ -328,7 +369,7 @@ export class FieldDeviceImportService {
     if (missing.length > 0) {
       try {
         const mergedInputs = mergeSystemTypeInputs(current, missing);
-        await spsControllerRepository.update(spsController.id, {
+        await this.backend.updateSpsController(spsController.id, {
           id: spsController.id,
           control_cabinet_id: spsController.control_cabinet_id,
           ga_device: spsController.ga_device,
@@ -414,7 +455,7 @@ export class FieldDeviceImportService {
       return { successCount, failureCount };
     }
 
-    const response = await fieldDeviceRepository.multiCreate({
+    const response = await this.backend.multiCreateFieldDevices({
       field_devices: newDevices.map((fieldDevice) =>
         toCreateFieldDeviceRequest(fieldDevice, systemTypeMap)
       )
@@ -449,7 +490,7 @@ export class FieldDeviceImportService {
     if (!targetId) return false;
 
     try {
-      const updated = await fieldDeviceRepository.update(
+      const updated = await this.backend.updateFieldDevice(
         targetId,
         toUpdateFieldDeviceRequest(fieldDevice, systemTypeMap)
       );
@@ -651,7 +692,7 @@ export class FieldDeviceImportService {
     if (this.lookups) return this.lookups;
     if (this.lookupLoad) return this.lookupLoad;
 
-    this.lookupLoad = loadTargetedLookups(criteria).then((lookups) => {
+    this.lookupLoad = this.backend.loadLookups(criteria).then((lookups) => {
       this.lookups = lookups;
       return lookups;
     });

@@ -4,12 +4,26 @@ import (
 	"context"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
 type projectAssignment struct {
-	service *ProjectFacilityLinkService
+	deps projectAssignmentDependencies
+}
+
+type projectAssignmentDependencies struct {
+	projectRepo               domainProject.ProjectRepository
+	projectControlCabinetRepo domainProject.ProjectControlCabinetRepository
+	projectSPSControllerRepo  domainProject.ProjectSPSControllerRepository
+	projectFieldDeviceRepo    domainProject.ProjectFieldDeviceRepository
+	controlCabinetRepo        domainFacility.ControlCabinetRepository
+	spsControllerRepo         domainFacility.SPSControllerRepository
+	spsControllerSystemRepo   domainFacility.SPSControllerSystemTypeStore
+	fieldDeviceRepo           domainFacility.FieldDeviceStore
+	specificationRepo         domainFacility.SpecificationStore
+	bacnetObjectRepo          domainFacility.BacnetObjectStore
 }
 
 type projectAssignmentKind int
@@ -98,18 +112,29 @@ func (a projectAssignment) removeFieldDevice(ctx context.Context, linkID, projec
 }
 
 func (s *ProjectFacilityLinkService) assignments() projectAssignment {
-	return projectAssignment{service: s}
+	return projectAssignment{deps: projectAssignmentDependencies{
+		projectRepo:               s.projectRepo,
+		projectControlCabinetRepo: s.projectControlCabinetRepo,
+		projectSPSControllerRepo:  s.projectSPSControllerRepo,
+		projectFieldDeviceRepo:    s.projectFieldDeviceRepo,
+		controlCabinetRepo:        s.controlCabinetRepo,
+		spsControllerRepo:         s.spsControllerRepo,
+		spsControllerSystemRepo:   s.spsControllerSystemRepo,
+		fieldDeviceRepo:           s.fieldDeviceRepo,
+		specificationRepo:         s.specificationRepo,
+		bacnetObjectRepo:          s.bacnetObjectRepo,
+	}}
 }
 
 func (a projectAssignment) store() projectAssignmentStore {
-	return newProjectAssignmentStore(a.service)
+	return newProjectAssignmentStore(a.deps)
 }
 
 func (a projectAssignment) assign(ctx context.Context, projectID uuid.UUID, target projectAssignmentTarget) (*projectAssignmentResult, error) {
 	switch target.kind {
 	case projectAssignmentControlCabinet:
 		entity := &domainProject.ProjectControlCabinet{ProjectID: projectID, ControlCabinetID: target.id}
-		if err := a.service.projectControlCabinetRepo.Create(ctx, entity); err != nil {
+		if err := a.deps.projectControlCabinetRepo.Create(ctx, entity); err != nil {
 			return nil, err
 		}
 		if err := a.assignControlCabinetDescendants(ctx, projectID, target.id); err != nil {
@@ -118,7 +143,7 @@ func (a projectAssignment) assign(ctx context.Context, projectID uuid.UUID, targ
 		return &projectAssignmentResult{controlCabinet: entity}, nil
 	case projectAssignmentSPSController:
 		entity := &domainProject.ProjectSPSController{ProjectID: projectID, SPSControllerID: target.id}
-		if err := a.service.projectSPSControllerRepo.Create(ctx, entity); err != nil {
+		if err := a.deps.projectSPSControllerRepo.Create(ctx, entity); err != nil {
 			return nil, err
 		}
 		if err := a.assignSPSControllerDescendants(ctx, projectID, []uuid.UUID{target.id}); err != nil {
@@ -132,7 +157,7 @@ func (a projectAssignment) assign(ctx context.Context, projectID uuid.UUID, targ
 		return &projectAssignmentResult{}, nil
 	case projectAssignmentFieldDevice:
 		entity := &domainProject.ProjectFieldDevice{ProjectID: projectID, FieldDeviceID: target.id}
-		if err := a.service.projectFieldDeviceRepo.Create(ctx, entity); err != nil {
+		if err := a.deps.projectFieldDeviceRepo.Create(ctx, entity); err != nil {
 			return nil, err
 		}
 		return &projectAssignmentResult{fieldDevice: entity}, nil
@@ -144,7 +169,7 @@ func (a projectAssignment) assign(ctx context.Context, projectID uuid.UUID, targ
 func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UUID, target projectAssignmentTarget) (*projectAssignmentResult, error) {
 	switch target.kind {
 	case projectAssignmentControlCabinet:
-		entity, err := domain.GetByID(ctx, a.service.projectControlCabinetRepo, linkID)
+		entity, err := domain.GetByID(ctx, a.deps.projectControlCabinetRepo, linkID)
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +177,7 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 			return nil, domain.ErrNotFound
 		}
 		entity.ControlCabinetID = target.id
-		if err := a.service.projectControlCabinetRepo.Update(ctx, entity); err != nil {
+		if err := a.deps.projectControlCabinetRepo.Update(ctx, entity); err != nil {
 			return nil, err
 		}
 		if err := a.assignControlCabinetDescendants(ctx, projectID, target.id); err != nil {
@@ -160,7 +185,7 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 		}
 		return &projectAssignmentResult{controlCabinet: entity}, nil
 	case projectAssignmentSPSController:
-		entity, err := domain.GetByID(ctx, a.service.projectSPSControllerRepo, linkID)
+		entity, err := domain.GetByID(ctx, a.deps.projectSPSControllerRepo, linkID)
 		if err != nil {
 			return nil, err
 		}
@@ -168,7 +193,7 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 			return nil, domain.ErrNotFound
 		}
 		entity.SPSControllerID = target.id
-		if err := a.service.projectSPSControllerRepo.Update(ctx, entity); err != nil {
+		if err := a.deps.projectSPSControllerRepo.Update(ctx, entity); err != nil {
 			return nil, err
 		}
 		if err := a.assignSPSControllerDescendants(ctx, projectID, []uuid.UUID{target.id}); err != nil {
@@ -176,7 +201,7 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 		}
 		return &projectAssignmentResult{spsController: entity}, nil
 	case projectAssignmentFieldDevice:
-		entity, err := domain.GetByID(ctx, a.service.projectFieldDeviceRepo, linkID)
+		entity, err := domain.GetByID(ctx, a.deps.projectFieldDeviceRepo, linkID)
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +209,7 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 			return nil, domain.ErrNotFound
 		}
 		entity.FieldDeviceID = target.id
-		if err := a.service.projectFieldDeviceRepo.Update(ctx, entity); err != nil {
+		if err := a.deps.projectFieldDeviceRepo.Update(ctx, entity); err != nil {
 			return nil, err
 		}
 		return &projectAssignmentResult{fieldDevice: entity}, nil
@@ -196,7 +221,7 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UUID, kind projectAssignmentKind) error {
 	switch kind {
 	case projectAssignmentControlCabinet:
-		entity, err := domain.GetByID(ctx, a.service.projectControlCabinetRepo, linkID)
+		entity, err := domain.GetByID(ctx, a.deps.projectControlCabinetRepo, linkID)
 		if err != nil {
 			return err
 		}
@@ -205,7 +230,7 @@ func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UU
 		}
 
 		controlCabinetID := entity.ControlCabinetID
-		spsControllerIDs, err := a.service.spsControllerRepo.GetIDsByControlCabinetID(ctx, controlCabinetID)
+		spsControllerIDs, err := a.deps.spsControllerRepo.GetIDsByControlCabinetID(ctx, controlCabinetID)
 		if err != nil {
 			return err
 		}
@@ -224,17 +249,17 @@ func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UU
 			return err
 		}
 		if len(spsControllerIDs) > 0 {
-			if err := a.service.spsControllerSystemRepo.DeleteBySPSControllerIDs(ctx, spsControllerIDs); err != nil {
+			if err := a.deps.spsControllerSystemRepo.DeleteBySPSControllerIDs(ctx, spsControllerIDs); err != nil {
 				return err
 			}
-			if err := a.service.spsControllerRepo.DeleteByIds(ctx, spsControllerIDs); err != nil {
+			if err := a.deps.spsControllerRepo.DeleteByIds(ctx, spsControllerIDs); err != nil {
 				return err
 			}
 		}
 
-		return a.service.controlCabinetRepo.DeleteByIds(ctx, []uuid.UUID{controlCabinetID})
+		return a.deps.controlCabinetRepo.DeleteByIds(ctx, []uuid.UUID{controlCabinetID})
 	case projectAssignmentSPSController:
-		entity, err := domain.GetByID(ctx, a.service.projectSPSControllerRepo, linkID)
+		entity, err := domain.GetByID(ctx, a.deps.projectSPSControllerRepo, linkID)
 		if err != nil {
 			return err
 		}
@@ -254,12 +279,12 @@ func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UU
 		if err := a.deleteFieldDeviceHierarchyForSystemTypes(ctx, systemTypeIDs); err != nil {
 			return err
 		}
-		if err := a.service.spsControllerSystemRepo.DeleteBySPSControllerIDs(ctx, []uuid.UUID{spsControllerID}); err != nil {
+		if err := a.deps.spsControllerSystemRepo.DeleteBySPSControllerIDs(ctx, []uuid.UUID{spsControllerID}); err != nil {
 			return err
 		}
-		return a.service.spsControllerRepo.DeleteByIds(ctx, []uuid.UUID{spsControllerID})
+		return a.deps.spsControllerRepo.DeleteByIds(ctx, []uuid.UUID{spsControllerID})
 	case projectAssignmentFieldDevice:
-		entity, err := domain.GetByID(ctx, a.service.projectFieldDeviceRepo, linkID)
+		entity, err := domain.GetByID(ctx, a.deps.projectFieldDeviceRepo, linkID)
 		if err != nil {
 			return err
 		}
@@ -278,7 +303,7 @@ func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UU
 }
 
 func (a projectAssignment) multiAssignFieldDevices(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) ([]uuid.UUID, []string) {
-	if _, err := domain.GetByID(ctx, a.service.projectRepo, projectID); err != nil {
+	if _, err := domain.GetByID(ctx, a.deps.projectRepo, projectID); err != nil {
 		return nil, []string{"project not found"}
 	}
 
@@ -301,7 +326,7 @@ func (a projectAssignment) assignFieldDeviceIDs(ctx context.Context, projectID u
 }
 
 func (a projectAssignment) assignControlCabinetDescendants(ctx context.Context, projectID, controlCabinetID uuid.UUID) error {
-	spsControllerIDs, err := a.service.spsControllerRepo.GetIDsByControlCabinetID(ctx, controlCabinetID)
+	spsControllerIDs, err := a.deps.spsControllerRepo.GetIDsByControlCabinetID(ctx, controlCabinetID)
 	if err != nil {
 		return err
 	}
@@ -320,7 +345,7 @@ func (a projectAssignment) collectSystemTypeIDsForSPSControllers(ctx context.Con
 	if len(spsControllerIDs) == 0 {
 		return nil, nil
 	}
-	return a.service.spsControllerSystemRepo.GetIDsBySPSControllerIDs(ctx, spsControllerIDs)
+	return a.deps.spsControllerSystemRepo.GetIDsBySPSControllerIDs(ctx, spsControllerIDs)
 }
 
 func (a projectAssignment) deleteFieldDeviceHierarchyForSystemTypes(ctx context.Context, systemTypeIDs []uuid.UUID) error {

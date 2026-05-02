@@ -14,8 +14,8 @@ type facilityProjectLookup interface {
 
 type projectRefreshPublisher interface {
 	BroadcastRefreshRequest(projectID uuid.UUID, actorID *uuid.UUID, scope string, entityIDs []string)
-	BroadcastControlCabinetDelta(projectID uuid.UUID, actorID *uuid.UUID, controlCabinet projectCollaborationControlCabinet)
-	BroadcastSPSControllerDelta(projectID uuid.UUID, actorID *uuid.UUID, spsController projectCollaborationSPSController)
+	BroadcastControlCabinetDelta(projectID uuid.UUID, actorID *uuid.UUID, controlCabinet domainFacility.ControlCabinet)
+	BroadcastSPSControllerDelta(projectID uuid.UUID, actorID *uuid.UUID, spsController domainFacility.SPSController)
 }
 
 type FacilityRefreshBroadcaster struct {
@@ -70,9 +70,8 @@ func (b *FacilityRefreshBroadcaster) BroadcastControlCabinetDelta(ctx context.Co
 		return
 	}
 
-	payload := toProjectCollaborationControlCabinet(controlCabinet)
 	for _, projectID := range projectIDs {
-		b.publisher.BroadcastControlCabinetDelta(projectID, actorID, payload)
+		b.publisher.BroadcastControlCabinetDelta(projectID, actorID, controlCabinet)
 	}
 
 }
@@ -87,8 +86,7 @@ func (b *FacilityRefreshBroadcaster) BroadcastSPSControllerDelta(ctx context.Con
 		return
 	}
 
-	payload := toProjectCollaborationSPSController(spsController)
 	for _, projectID := range projectIDs {
-		b.publisher.BroadcastSPSControllerDelta(projectID, actorID, payload)
+		b.publisher.BroadcastSPSControllerDelta(projectID, actorID, spsController)
 	}
 }

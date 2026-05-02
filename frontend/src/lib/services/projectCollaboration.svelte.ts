@@ -1,9 +1,10 @@
 import type { ControlCabinet, FieldDevice, SPSController } from '$lib/domain/facility/index.js';
 import type { User } from '$lib/domain/user/index.js';
+import type { RealtimeSocketStatus } from '$lib/infrastructure/realtime/reconnectingWebSocket.js';
 import {
-  ReconnectingWebSocket,
-  type RealtimeSocketStatus
-} from '$lib/infrastructure/realtime/reconnectingWebSocket.js';
+  buildSameOriginWebSocketUrl,
+  RealtimeJsonStream
+} from '$lib/infrastructure/realtime/realtimeJsonStream.js';
 
 export interface ProjectCollaboratorPresence {
   user_id: string;
@@ -98,7 +99,7 @@ export class ProjectCollaborationState {
   private readonly onRefreshRequest?: (message: ProjectCollaborationRefreshRequest) => void;
   private readonly onEntityDelta?: (message: ProjectCollaborationEntityDeltaMessage) => void;
   private readonly onReconnect?: () => void;
-  private readonly connection: ReconnectingWebSocket;
+  private readonly connection: RealtimeJsonStream<ProjectCollaborationInboundMessage>;
 
   private projectId: string | null = null;
   private destroyed = false;
@@ -110,9 +111,9 @@ export class ProjectCollaborationState {
     this.onRefreshRequest = options.onRefreshRequest;
     this.onEntityDelta = options.onEntityDelta;
     this.onReconnect = options.onReconnect;
-    this.connection = new ReconnectingWebSocket({
+    this.connection = new RealtimeJsonStream<ProjectCollaborationInboundMessage>({
       url: () => buildProjectCollaborationUrl(this.projectId),
-      onMessage: (raw) => this.handleMessage(raw),
+      onMessage: (message) => this.handleMessage(message),
       onOpen: ({ wasReconnect }) => {
         this.publishFieldDeviceDraftState(this.desiredEditState);
         if (wasReconnect) {
@@ -217,15 +218,7 @@ export class ProjectCollaborationState {
     return editors;
   }
 
-  private handleMessage(raw: string): void {
-    let message: ProjectCollaborationInboundMessage;
-
-    try {
-      message = JSON.parse(raw) as ProjectCollaborationInboundMessage;
-    } catch {
-      return;
-    }
-
+  private handleMessage(message: ProjectCollaborationInboundMessage): void {
     switch (message.type) {
       case 'snapshot':
         this.onlineUsers = message.presence ?? [];
@@ -256,8 +249,6 @@ export class ProjectCollaborationState {
 }
 
 function buildProjectCollaborationUrl(projectId: string | null): string | null {
-  if (!projectId || typeof window === 'undefined') return null;
-
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}/api/v1/projects/${projectId}/collaboration`;
+  if (!projectId) return null;
+  return buildSameOriginWebSocketUrl(`/api/v1/projects/${projectId}/collaboration`);
 }

@@ -34,6 +34,24 @@ type Service struct {
 	strategies       map[domainNotification.Provider]EmailStrategy
 }
 
+type Dependencies struct {
+	SMTPSettings    domainNotification.SMTPSettingsRepository
+	Preferences     domainNotification.UserPreferenceRepository
+	SystemInbox     domainNotification.SystemNotificationRepository
+	EmailOutbox     domainNotification.EmailOutboxRepository
+	Rules           domainNotification.NotificationRuleRepository
+	Projects        domainNotification.ProjectMembershipReader
+	TeamMembers     domainNotification.TeamMemberReader
+	Users           domainUser.UserRepository
+	Cipher          SecretCipher
+	EmailStrategies []EmailStrategy
+}
+
+type Config struct {
+	VerificationSecret string
+	SystemPublisher    domainNotification.SystemNotificationPublisher
+}
+
 func New(
 	smtpSettingsRepo domainNotification.SMTPSettingsRepository,
 	preferenceRepo domainNotification.UserPreferenceRepository,
@@ -47,24 +65,43 @@ func New(
 	verificationSecret string,
 	strategies ...EmailStrategy,
 ) *Service {
-	registry := make(map[domainNotification.Provider]EmailStrategy, len(strategies))
-	for _, strategy := range strategies {
+	return NewFromDependencies(Dependencies{
+		SMTPSettings:    smtpSettingsRepo,
+		Preferences:     preferenceRepo,
+		SystemInbox:     systemRepo,
+		EmailOutbox:     emailOutboxRepo,
+		Rules:           ruleRepo,
+		Projects:        projectReader,
+		TeamMembers:     teamMemberReader,
+		Users:           userRepo,
+		Cipher:          cipher,
+		EmailStrategies: strategies,
+	}, Config{VerificationSecret: verificationSecret})
+}
+
+func NewFromDependencies(deps Dependencies, cfg Config) *Service {
+	registry := make(map[domainNotification.Provider]EmailStrategy, len(deps.EmailStrategies))
+	for _, strategy := range deps.EmailStrategies {
+		if strategy == nil {
+			continue
+		}
 		registry[strategy.Provider()] = strategy
 	}
 
-	keySeed := "notification-email-verification:" + verificationSecret
+	keySeed := "notification-email-verification:" + cfg.VerificationSecret
 	key := sha256.Sum256([]byte(keySeed))
 
 	return &Service{
-		smtpSettingsRepo: smtpSettingsRepo,
-		preferenceRepo:   preferenceRepo,
-		systemRepo:       systemRepo,
-		emailOutboxRepo:  emailOutboxRepo,
-		ruleRepo:         ruleRepo,
-		projectReader:    projectReader,
-		teamMemberReader: teamMemberReader,
-		userRepo:         userRepo,
-		cipher:           cipher,
+		smtpSettingsRepo: deps.SMTPSettings,
+		preferenceRepo:   deps.Preferences,
+		systemRepo:       deps.SystemInbox,
+		emailOutboxRepo:  deps.EmailOutbox,
+		ruleRepo:         deps.Rules,
+		projectReader:    deps.Projects,
+		teamMemberReader: deps.TeamMembers,
+		userRepo:         deps.Users,
+		systemPublisher:  cfg.SystemPublisher,
+		cipher:           deps.Cipher,
 		verificationKey:  key[:],
 		strategies:       registry,
 	}

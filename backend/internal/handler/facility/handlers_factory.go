@@ -64,26 +64,38 @@ type Handlers struct {
 
 // NewHandlers creates facility handlers using service dependencies.
 func NewHandlers(deps ServiceDeps) *Handlers {
-	return &Handlers{
-		Building:                NewBuildingHandler(deps.Building),
-		SystemType:              NewSystemTypeHandler(deps.SystemType),
-		SystemPart:              NewSystemPartHandler(deps.SystemPart, deps.Apparat, deps.ObjectData),
-		Apparat:                 NewApparatHandler(deps.Apparat),
-		ControlCabinet:          NewControlCabinetHandler(deps.ControlCabinet, deps.Collaboration),
-		FieldDevice:             NewFieldDeviceHandler(deps.FieldDevice),
-		BacnetObject:            NewBacnetObjectHandler(deps.BacnetObject),
-		SPSController:           NewSPSControllerHandler(deps.SPSController, deps.Collaboration),
-		StateText:               NewStateTextHandler(deps.StateText),
-		NotificationClass:       NewNotificationClassHandler(deps.NotificationClass),
-		AlarmDefinition:         NewAlarmDefinitionHandler(deps.AlarmDefinition),
-		ObjectData:              NewObjectDataHandler(deps.ObjectData, deps.BacnetObject, deps.Apparat),
-		SPSControllerSystemType: NewSPSControllerSystemTypeHandler(deps.SPSControllerSystemType),
-		Export:                  NewExportHandler(deps.Export),
-		Validation:              NewValidationHandler(deps.Building, deps.ControlCabinet, deps.SPSController),
-		AlarmType:               NewAlarmTypeHandler(deps.AlarmType),
-		Unit:                    NewUnitHandler(deps.Unit),
-		AlarmField:              NewAlarmFieldHandler(deps.AlarmField),
-		AlarmTypeField:          NewAlarmTypeFieldHandler(deps.AlarmTypeField),
-		BacnetAlarm:             NewBacnetAlarmHandler(deps.BacnetAlarm),
-	}
+	handlers := &Handlers{}
+	registerFacilityHierarchyHandlers(handlers, deps)
+	registerFacilityLookupHandlers(handlers, deps)
+	registerFacilityAlarmHandlers(handlers, deps)
+	handlers.Export = NewExportHandler(deps.Export)
+	return handlers
+}
+
+func registerFacilityHierarchyHandlers(handlers *Handlers, deps ServiceDeps) {
+	handlers.Building = NewBuildingHandler(deps.Building)
+	handlers.ControlCabinet = NewControlCabinetHandler(deps.ControlCabinet, deps.Collaboration)
+	handlers.SPSController = NewSPSControllerHandler(deps.SPSController, deps.Collaboration)
+	handlers.SPSControllerSystemType = NewSPSControllerSystemTypeHandler(deps.SPSControllerSystemType)
+	handlers.FieldDevice = NewFieldDeviceHandler(deps.FieldDevice)
+	handlers.BacnetObject = NewBacnetObjectHandler(deps.BacnetObject)
+	handlers.ObjectData = NewObjectDataHandler(deps.ObjectData, deps.BacnetObject, deps.Apparat)
+	handlers.Validation = NewValidationHandler(deps.Building, deps.ControlCabinet, deps.SPSController)
+}
+
+func registerFacilityLookupHandlers(handlers *Handlers, deps ServiceDeps) {
+	handlers.SystemType = NewSystemTypeHandler(deps.SystemType)
+	handlers.SystemPart = NewSystemPartHandler(deps.SystemPart, deps.Apparat, deps.ObjectData)
+	handlers.Apparat = NewApparatHandler(deps.Apparat)
+	handlers.StateText = NewStateTextHandler(deps.StateText)
+	handlers.NotificationClass = NewNotificationClassHandler(deps.NotificationClass)
+}
+
+func registerFacilityAlarmHandlers(handlers *Handlers, deps ServiceDeps) {
+	handlers.AlarmDefinition = NewAlarmDefinitionHandler(deps.AlarmDefinition)
+	handlers.AlarmType = NewAlarmTypeHandler(deps.AlarmType)
+	handlers.Unit = NewUnitHandler(deps.Unit)
+	handlers.AlarmField = NewAlarmFieldHandler(deps.AlarmField)
+	handlers.AlarmTypeField = NewAlarmTypeFieldHandler(deps.AlarmTypeField)
+	handlers.BacnetAlarm = NewBacnetAlarmHandler(deps.BacnetAlarm)
 }

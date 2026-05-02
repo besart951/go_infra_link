@@ -57,10 +57,6 @@ describe('route import boundaries', () => {
     expect(findMatchingImports(/\$lib\/api\/client/)).toEqual([
       'src/routes/(app)/+layout.ts',
       'src/routes/(app)/facility/buildings/[id]/+page.svelte',
-      'src/routes/(app)/facility/buildings/[id]/+page.ts',
-      'src/routes/(app)/facility/control-cabinets/[id]/+page.ts',
-      'src/routes/(app)/facility/sps-controller-system-type/[id]/+page.ts',
-      'src/routes/(app)/facility/sps-controllers/[id]/+page.ts',
       'src/routes/(app)/logout/+page.svelte',
       'src/routes/(auth)/login/+page.svelte'
     ]);
