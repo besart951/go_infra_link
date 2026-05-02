@@ -2,6 +2,7 @@ package notification
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainNotification "github.com/besart951/go_infra_link/backend/internal/domain/notification"
@@ -26,4 +27,8 @@ type NotificationSettingsService interface {
 	ListNotificationRules(ctx context.Context, filter domainNotification.NotificationRuleFilter) ([]domainNotification.NotificationRule, error)
 	UpsertNotificationRule(ctx context.Context, input domainNotification.UpsertNotificationRuleInput) (*domainNotification.NotificationRule, error)
 	DeleteNotificationRule(ctx context.Context, id uuid.UUID) error
+}
+
+type SystemNotificationStreamer interface {
+	Stream(w http.ResponseWriter, r *http.Request, recipientID uuid.UUID)
 }

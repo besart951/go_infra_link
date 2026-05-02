@@ -10,6 +10,7 @@ func RegisterRoutes(protectedV1 *gin.RouterGroup, handler *NotificationSettingsH
 	accountNotifications := protectedV1.Group("/account/notifications")
 	{
 		accountNotifications.GET("", handler.ListSystemNotifications)
+		accountNotifications.GET("/stream", handler.StreamSystemNotifications)
 		accountNotifications.POST("/read-all", handler.MarkAllSystemNotificationsRead)
 		accountNotifications.POST("/:id/read", handler.MarkSystemNotificationRead)
 		accountNotifications.POST("/:id/read-toggle", handler.ToggleSystemNotificationRead)

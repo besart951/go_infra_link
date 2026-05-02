@@ -33,10 +33,14 @@ type ServiceDeps struct {
 	PhasePermission    PhasePermissionService
 	FieldDeviceOptions FieldDeviceOptionsService
 	Notifications      NotificationEventDispatcher
+	Collaboration      *ProjectCollaborationHub
 }
 
 func NewHandlers(deps ServiceDeps) *Handlers {
-	collaboration := NewProjectCollaborationHub()
+	collaboration := deps.Collaboration
+	if collaboration == nil {
+		collaboration = NewProjectCollaborationHub()
+	}
 	workflow := deps.Workflow
 	if workflow == nil {
 		workflow = newWorkflowFromServices(deps.Lifecycle, deps.Membership)

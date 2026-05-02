@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"maps"
 	"net/http"
-	"net/url"
 	"sort"
 	"strings"
 	"sync"
@@ -13,9 +12,9 @@ import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
+	"github.com/besart951/go_infra_link/backend/internal/infrastructure/realtime"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 )
 
 const (
@@ -32,27 +31,11 @@ const (
 	projectCollaborationMessageEditState      = "edit_state"
 )
 
-var projectCollaborationUpgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		origin := r.Header.Get("Origin")
-		if origin == "" {
-			return true
-		}
-
-		originURL, err := url.Parse(origin)
-		if err != nil {
-			return false
-		}
-
-		requestHost := r.Host
-		if parsedHost, err := url.Parse("http://" + r.Host); err == nil && parsedHost.Hostname() != "" {
-			requestHost = parsedHost.Hostname()
-		}
-
-		return strings.EqualFold(originURL.Hostname(), requestHost)
-	},
+var projectCollaborationSocketConfig = realtime.WebSocketConfig{
+	WriteWait:       projectCollaborationWriteWait,
+	PongWait:        projectCollaborationPongWait,
+	PingPeriod:      projectCollaborationPingPeriod,
+	MaxMessageBytes: projectCollaborationMaxMessage,
 }
 
 type ProjectCollaboratorPresence struct {
@@ -154,9 +137,7 @@ type projectCollaborationClient struct {
 	hub       *ProjectCollaborationHub
 	projectID uuid.UUID
 	userID    uuid.UUID
-	conn      *websocket.Conn
-	send      chan []byte
-	closed    sync.Once
+	socket    *realtime.WebSocketClient
 }
 
 type projectCollaborationRoom struct {
@@ -259,7 +240,9 @@ func (h *ProjectCollaborationHub) Unregister(client *projectCollaborationClient)
 		})
 	}
 
-	client.closeSend()
+	if client.socket != nil {
+		client.socket.CloseSend()
+	}
 }
 
 func (h *ProjectCollaborationHub) UpdateEditState(projectID, userID uuid.UUID, devices []ProjectFieldDeviceByFields) {
@@ -404,9 +387,7 @@ func (h *ProjectCollaborationHub) broadcast(projectID uuid.UUID, payload any) {
 	h.mu.RUnlock()
 
 	for _, client := range clients {
-		select {
-		case client.send <- b:
-		default:
+		if client.socket == nil || !client.socket.SendBytes(b) {
 			go h.Unregister(client)
 		}
 	}
@@ -417,9 +398,7 @@ func (h *ProjectCollaborationHub) sendToClient(client *projectCollaborationClien
 	if err != nil {
 		return
 	}
-	select {
-	case client.send <- b:
-	default:
+	if client.socket == nil || !client.socket.SendBytes(b) {
 		go h.Unregister(client)
 	}
 }
@@ -592,92 +571,31 @@ func normalizeFieldValues(values map[string]any) map[string]any {
 	return result
 }
 
-func (c *projectCollaborationClient) closeSend() {
-	c.closed.Do(func() {
-		close(c.send)
-	})
-}
+func (c *projectCollaborationClient) handleMessage(data []byte) {
+	var message projectCollaborationClientMessage
+	if err := json.Unmarshal(data, &message); err != nil {
+		return
+	}
 
-func (c *projectCollaborationClient) readPump() {
-	defer func() {
-		c.hub.Unregister(c)
-		_ = c.conn.Close()
-	}()
-
-	c.conn.SetReadLimit(projectCollaborationMaxMessage)
-	_ = c.conn.SetReadDeadline(time.Now().Add(projectCollaborationPongWait))
-	c.conn.SetPongHandler(func(string) error {
-		return c.conn.SetReadDeadline(time.Now().Add(projectCollaborationPongWait))
-	})
-
-	for {
-		_, data, err := c.conn.ReadMessage()
-		if err != nil {
+	switch message.Type {
+	case projectCollaborationMessageEditState:
+		c.hub.UpdateEditState(c.projectID, c.userID, message.Devices)
+	case projectCollaborationMessageEntityDelta:
+		if strings.TrimSpace(message.Scope) != projectRefreshScopeFieldDevice || len(message.FieldDevices) == 0 {
 			return
 		}
-
-		var message projectCollaborationClientMessage
-		if err := json.Unmarshal(data, &message); err != nil {
-			continue
+		c.hub.BroadcastFieldDeviceDelta(c.projectID, &c.userID, message.FieldDevices)
+	case projectCollaborationMessageRefreshRequest:
+		scope := strings.TrimSpace(message.Scope)
+		if scope == "" {
+			scope = projectRefreshScopeFieldDevice
 		}
-
-		switch message.Type {
-		case projectCollaborationMessageEditState:
-			c.hub.UpdateEditState(c.projectID, c.userID, message.Devices)
-		case projectCollaborationMessageEntityDelta:
-			if strings.TrimSpace(message.Scope) != projectRefreshScopeFieldDevice || len(message.FieldDevices) == 0 {
-				continue
-			}
-
-			c.hub.BroadcastFieldDeviceDelta(c.projectID, &c.userID, message.FieldDevices)
-		case projectCollaborationMessageRefreshRequest:
-			scope := strings.TrimSpace(message.Scope)
-			if scope == "" {
-				scope = projectRefreshScopeFieldDevice
-			}
-			c.hub.BroadcastRefreshRequest(
-				c.projectID,
-				&c.userID,
-				scope,
-				normalizeRefreshEntityIDs(scope, message.EntityIDs, message.DeviceIDs),
-			)
-		}
-	}
-}
-
-func (c *projectCollaborationClient) writePump() {
-	ticker := time.NewTicker(projectCollaborationPingPeriod)
-	defer func() {
-		ticker.Stop()
-		_ = c.conn.Close()
-	}()
-
-	for {
-		select {
-		case message, ok := <-c.send:
-			_ = c.conn.SetWriteDeadline(time.Now().Add(projectCollaborationWriteWait))
-			if !ok {
-				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-
-			writer, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
-			if _, err := writer.Write(message); err != nil {
-				_ = writer.Close()
-				return
-			}
-			if err := writer.Close(); err != nil {
-				return
-			}
-		case <-ticker.C:
-			_ = c.conn.SetWriteDeadline(time.Now().Add(projectCollaborationWriteWait))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				return
-			}
-		}
+		c.hub.BroadcastRefreshRequest(
+			c.projectID,
+			&c.userID,
+			scope,
+			normalizeRefreshEntityIDs(scope, message.EntityIDs, message.DeviceIDs),
+		)
 	}
 }
 
@@ -697,20 +615,19 @@ func (h *ProjectHandler) StreamProjectCollaboration(c *gin.Context) {
 		return
 	}
 
-	conn, err := projectCollaborationUpgrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		return
-	}
-
 	client := &projectCollaborationClient{
 		hub:       h.collaboration,
 		projectID: projectID,
 		userID:    userID,
-		conn:      conn,
-		send:      make(chan []byte, 16),
 	}
+	socket, err := realtime.AcceptWebSocket(c.Writer, c.Request, projectCollaborationSocketConfig, client.handleMessage, func() {
+		h.collaboration.Unregister(client)
+	})
+	if err != nil {
+		return
+	}
+	client.socket = socket
 
 	h.collaboration.Register(client)
-	go client.writePump()
-	client.readPump()
+	socket.Run()
 }

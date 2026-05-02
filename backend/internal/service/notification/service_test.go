@@ -57,7 +57,8 @@ func (r *userPreferenceRepoStub) Save(_ context.Context, preference *domainNotif
 }
 
 type systemNotificationRepoStub struct {
-	created []domainNotification.SystemNotification
+	created     []domainNotification.SystemNotification
+	unreadCount int64
 }
 
 func (r *systemNotificationRepoStub) Create(_ context.Context, notification *domainNotification.SystemNotification) error {
@@ -70,7 +71,7 @@ func (r *systemNotificationRepoStub) GetPaginatedListForUser(context.Context, uu
 }
 
 func (r *systemNotificationRepoStub) CountUnreadForUser(context.Context, uuid.UUID) (int64, error) {
-	return 0, nil
+	return r.unreadCount, nil
 }
 
 func (r *systemNotificationRepoStub) MarkReadForUser(context.Context, uuid.UUID, uuid.UUID) (*domainNotification.SystemNotification, error) {
@@ -91,6 +92,34 @@ func (r *systemNotificationRepoStub) ToggleImportantForUser(context.Context, uui
 
 func (r *systemNotificationRepoStub) DeleteForUser(context.Context, uuid.UUID, uuid.UUID) error {
 	return domain.ErrNotFound
+}
+
+type systemNotificationPublisherStub struct {
+	created      []domainNotification.SystemNotification
+	updated      []domainNotification.SystemNotification
+	deleted      []uuid.UUID
+	readAllCount int
+	unreadCounts []int64
+	changes      []domainNotification.SystemNotificationChange
+}
+
+func (p *systemNotificationPublisherStub) PublishSystemNotificationChange(_ context.Context, change domainNotification.SystemNotificationChange) {
+	p.changes = append(p.changes, change)
+	p.unreadCounts = append(p.unreadCounts, change.UnreadCount)
+	switch change.Type {
+	case domainNotification.SystemNotificationChangeCreated:
+		if change.Notification != nil {
+			p.created = append(p.created, *change.Notification)
+		}
+	case domainNotification.SystemNotificationChangeUpdated:
+		if change.Notification != nil {
+			p.updated = append(p.updated, *change.Notification)
+		}
+	case domainNotification.SystemNotificationChangeDeleted:
+		p.deleted = append(p.deleted, change.NotificationID)
+	case domainNotification.SystemNotificationChangeReadAll:
+		p.readAllCount += 1
+	}
 }
 
 type emailOutboxRepoStub struct {
@@ -317,14 +346,16 @@ func TestDispatchQueuesSystemNotificationAndEmailOutbox(t *testing.T) {
 			Frequency:                   domainNotification.DeliveryFrequencyHourly,
 		},
 	}
-	systemRepo := &systemNotificationRepoStub{}
+	systemRepo := &systemNotificationRepoStub{unreadCount: 3}
 	outboxRepo := &emailOutboxRepoStub{}
+	publisher := &systemNotificationPublisherStub{}
 	userRepo := &userRepoStub{
 		users: map[uuid.UUID]*domainUser.User{
 			userID: {Base: domain.Base{ID: userID}, Email: "login@example.com"},
 		},
 	}
 	service := New(nil, preferenceRepo, systemRepo, outboxRepo, nil, nil, nil, userRepo, secretCipherStub{}, "test-secret")
+	service.SetSystemNotificationPublisher(publisher)
 
 	err := service.Dispatch(context.Background(), domainNotification.DispatchNotificationInput{
 		RecipientIDs: []uuid.UUID{userID},
@@ -344,6 +375,12 @@ func TestDispatchQueuesSystemNotificationAndEmailOutbox(t *testing.T) {
 	}
 	if systemRepo.created[0].Title != "Projektphase geändert" {
 		t.Fatalf("expected localized title, got %q", systemRepo.created[0].Title)
+	}
+	if len(publisher.created) != 1 {
+		t.Fatalf("expected one realtime notification event, got %d", len(publisher.created))
+	}
+	if publisher.unreadCounts[0] != 3 {
+		t.Fatalf("expected unread count to be published, got %d", publisher.unreadCounts[0])
 	}
 	if len(outboxRepo.created) != 1 {
 		t.Fatalf("expected one email outbox item, got %d", len(outboxRepo.created))

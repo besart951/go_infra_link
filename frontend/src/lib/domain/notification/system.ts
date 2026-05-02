@@ -27,3 +27,21 @@ export interface ListSystemNotificationsParams {
   limit?: number;
   unread_only?: boolean;
 }
+
+export const SYSTEM_NOTIFICATION_STREAM_EVENT = {
+  Created: 'notification.created',
+  Updated: 'notification.updated',
+  Deleted: 'notification.deleted',
+  ReadAll: 'notification.read_all'
+} as const;
+
+export type SystemNotificationStreamEventType =
+  (typeof SYSTEM_NOTIFICATION_STREAM_EVENT)[keyof typeof SYSTEM_NOTIFICATION_STREAM_EVENT];
+
+export interface SystemNotificationStreamEvent {
+  type: SystemNotificationStreamEventType;
+  notification?: SystemNotification;
+  notification_id?: string;
+  unread_count: number;
+  at: string;
+}

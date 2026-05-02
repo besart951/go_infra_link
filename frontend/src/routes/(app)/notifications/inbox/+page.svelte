@@ -1,17 +1,21 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
   import NotificationInboxCard from '$lib/components/notifications/NotificationInboxCard.svelte';
   import NotificationInboxHeader from '$lib/components/notifications/NotificationInboxHeader.svelte';
-  import { NotificationInboxPageState } from '$lib/components/notifications/NotificationInboxPageState.svelte.js';
+  import { systemNotificationState } from '$lib/components/notifications/SystemNotificationState.svelte.js';
   import { createTranslator } from '$lib/i18n/translator.js';
 
   const t = createTranslator();
-  const state = new NotificationInboxPageState();
+  const state = systemNotificationState;
 
   onMount(() => {
-    void state.loadNotifications(1);
+    void state.loadInbox(1);
+  });
+
+  onDestroy(() => {
+    state.deactivateInbox();
   });
 </script>
 
@@ -29,37 +33,37 @@
     markAllReadLabel={$t('notifications.inbox.mark_all_read')}
     refreshLabel={$t('common.refresh')}
     unreadCount={state.unreadCount}
-    unreadOnly={state.unreadOnly}
-    isLoading={state.isLoading}
-    onToggleUnreadOnly={() => state.toggleUnreadOnly()}
+    unreadOnly={state.inboxUnreadOnly}
+    isLoading={state.isInboxLoading}
+    onToggleUnreadOnly={() => state.toggleInboxUnreadOnly()}
     onMarkAllRead={() => state.markAllRead()}
-    onRefresh={() => state.loadNotifications()}
+    onRefresh={() => state.loadInbox()}
   />
 
-  {#if state.error}
+  {#if state.inboxError}
     <Card.Root>
-      <Card.Content class="py-4 text-sm text-destructive">{state.error}</Card.Content>
+      <Card.Content class="py-4 text-sm text-destructive">{state.inboxError}</Card.Content>
     </Card.Root>
   {/if}
 
   <div class="flex flex-col gap-3">
-    {#if state.isLoading && state.notifications.length === 0}
+    {#if state.isInboxLoading && state.inboxItems.length === 0}
       <Card.Root>
         <Card.Content class="py-8 text-center text-sm text-muted-foreground">
           {$t('common.loading')}
         </Card.Content>
       </Card.Root>
-    {:else if state.notifications.length === 0}
+    {:else if state.inboxItems.length === 0}
       <Card.Root>
         <Card.Content class="py-10 text-center text-sm text-muted-foreground">
           {$t('notifications.inbox.empty')}
         </Card.Content>
       </Card.Root>
     {:else}
-      {#each state.notifications as notification (notification.id)}
+      {#each state.inboxItems as notification (notification.id)}
         <NotificationInboxCard
           {notification}
-          dateLabel={state.formatDateTime(notification.created_at)}
+          dateLabel={state.formatInboxDateTime(notification.created_at)}
           onToggleRead={(item) => state.toggleRead(item)}
           onToggleImportant={(item) => state.toggleImportant(item)}
           onDelete={(item) => state.deleteNotification(item)}
@@ -71,18 +75,18 @@
   <footer class="flex items-center justify-between">
     <Button
       variant="outline"
-      disabled={state.page <= 1 || state.isLoading}
-      onclick={() => state.loadNotifications(state.page - 1)}
+      disabled={state.inboxPage <= 1 || state.isInboxLoading}
+      onclick={() => state.loadInbox(state.inboxPage - 1)}
     >
       {$t('common.previous')}
     </Button>
     <span class="text-sm text-muted-foreground">
-      {$t('messages.page_of', { page: state.page, total: state.totalPages })}
+      {$t('messages.page_of', { page: state.inboxPage, total: state.inboxTotalPages })}
     </span>
     <Button
       variant="outline"
-      disabled={state.page >= state.totalPages || state.isLoading}
-      onclick={() => state.loadNotifications(state.page + 1)}
+      disabled={state.inboxPage >= state.inboxTotalPages || state.isInboxLoading}
+      onclick={() => state.loadInbox(state.inboxPage + 1)}
     >
       {$t('common.next')}
     </Button>

@@ -28,6 +28,7 @@ type Service struct {
 	projectReader    domainNotification.ProjectMembershipReader
 	teamMemberReader domainNotification.TeamMemberReader
 	userRepo         domainUser.UserRepository
+	systemPublisher  domainNotification.SystemNotificationPublisher
 	cipher           SecretCipher
 	verificationKey  []byte
 	strategies       map[domainNotification.Provider]EmailStrategy
@@ -67,6 +68,10 @@ func New(
 		verificationKey:  key[:],
 		strategies:       registry,
 	}
+}
+
+func (s *Service) SetSystemNotificationPublisher(publisher domainNotification.SystemNotificationPublisher) {
+	s.systemPublisher = publisher
 }
 
 func (s *Service) GetSMTPSettings(ctx context.Context) (*domainNotification.SMTPSettings, error) {
@@ -287,35 +292,120 @@ func (s *Service) MarkSystemNotificationRead(ctx context.Context, notificationID
 	if notificationID == uuid.Nil || userID == uuid.Nil {
 		return nil, domain.ErrInvalidArgument
 	}
-	return s.systemRepo.MarkReadForUser(ctx, notificationID, userID)
+	notification, err := s.systemRepo.MarkReadForUser(ctx, notificationID, userID)
+	if err != nil {
+		return nil, err
+	}
+	s.publishSystemNotificationUpdated(ctx, notification)
+	return notification, nil
 }
 
 func (s *Service) MarkAllSystemNotificationsRead(ctx context.Context, userID uuid.UUID) error {
 	if userID == uuid.Nil {
 		return domain.ErrInvalidArgument
 	}
-	return s.systemRepo.MarkAllReadForUser(ctx, userID)
+	if err := s.systemRepo.MarkAllReadForUser(ctx, userID); err != nil {
+		return err
+	}
+	s.publishSystemNotificationsReadAll(ctx, userID)
+	return nil
 }
 
 func (s *Service) ToggleSystemNotificationRead(ctx context.Context, notificationID, userID uuid.UUID) (*domainNotification.SystemNotification, error) {
 	if notificationID == uuid.Nil || userID == uuid.Nil {
 		return nil, domain.ErrInvalidArgument
 	}
-	return s.systemRepo.ToggleReadForUser(ctx, notificationID, userID)
+	notification, err := s.systemRepo.ToggleReadForUser(ctx, notificationID, userID)
+	if err != nil {
+		return nil, err
+	}
+	s.publishSystemNotificationUpdated(ctx, notification)
+	return notification, nil
 }
 
 func (s *Service) ToggleSystemNotificationImportant(ctx context.Context, notificationID, userID uuid.UUID) (*domainNotification.SystemNotification, error) {
 	if notificationID == uuid.Nil || userID == uuid.Nil {
 		return nil, domain.ErrInvalidArgument
 	}
-	return s.systemRepo.ToggleImportantForUser(ctx, notificationID, userID)
+	notification, err := s.systemRepo.ToggleImportantForUser(ctx, notificationID, userID)
+	if err != nil {
+		return nil, err
+	}
+	s.publishSystemNotificationUpdated(ctx, notification)
+	return notification, nil
 }
 
 func (s *Service) DeleteSystemNotification(ctx context.Context, notificationID, userID uuid.UUID) error {
 	if notificationID == uuid.Nil || userID == uuid.Nil {
 		return domain.ErrInvalidArgument
 	}
-	return s.systemRepo.DeleteForUser(ctx, notificationID, userID)
+	if err := s.systemRepo.DeleteForUser(ctx, notificationID, userID); err != nil {
+		return err
+	}
+	s.publishSystemNotificationDeleted(ctx, userID, notificationID)
+	return nil
+}
+
+func (s *Service) publishSystemNotificationCreated(ctx context.Context, notification *domainNotification.SystemNotification) {
+	if notification == nil {
+		return
+	}
+	s.publishSystemNotificationChange(ctx, domainNotification.SystemNotificationChange{
+		Type:         domainNotification.SystemNotificationChangeCreated,
+		RecipientID:  notification.RecipientID,
+		Notification: notification,
+	})
+}
+
+func (s *Service) publishSystemNotificationUpdated(ctx context.Context, notification *domainNotification.SystemNotification) {
+	if notification == nil {
+		return
+	}
+	s.publishSystemNotificationChange(ctx, domainNotification.SystemNotificationChange{
+		Type:         domainNotification.SystemNotificationChangeUpdated,
+		RecipientID:  notification.RecipientID,
+		Notification: notification,
+	})
+}
+
+func (s *Service) publishSystemNotificationDeleted(ctx context.Context, recipientID, notificationID uuid.UUID) {
+	s.publishSystemNotificationChange(ctx, domainNotification.SystemNotificationChange{
+		Type:           domainNotification.SystemNotificationChangeDeleted,
+		RecipientID:    recipientID,
+		NotificationID: notificationID,
+	})
+}
+
+func (s *Service) publishSystemNotificationsReadAll(ctx context.Context, recipientID uuid.UUID) {
+	s.publishSystemNotificationChange(ctx, domainNotification.SystemNotificationChange{
+		Type:        domainNotification.SystemNotificationChangeReadAll,
+		RecipientID: recipientID,
+		UnreadCount: 0,
+	})
+}
+
+func (s *Service) publishSystemNotificationChange(ctx context.Context, change domainNotification.SystemNotificationChange) {
+	if s.systemPublisher == nil || change.Type == "" {
+		return
+	}
+	if change.Notification != nil {
+		change.RecipientID = change.Notification.RecipientID
+		change.NotificationID = change.Notification.ID
+	}
+	if change.RecipientID == uuid.Nil {
+		return
+	}
+	if change.OccurredAt.IsZero() {
+		change.OccurredAt = time.Now().UTC()
+	}
+	if s.systemRepo != nil && change.Type != domainNotification.SystemNotificationChangeReadAll {
+		unreadCount, err := s.systemRepo.CountUnreadForUser(ctx, change.RecipientID)
+		if err != nil {
+			return
+		}
+		change.UnreadCount = unreadCount
+	}
+	s.systemPublisher.PublishSystemNotificationChange(ctx, change)
 }
 
 func (s *Service) ListNotificationRules(ctx context.Context, filter domainNotification.NotificationRuleFilter) ([]domainNotification.NotificationRule, error) {
@@ -456,7 +546,7 @@ func (s *Service) Dispatch(ctx context.Context, input domainNotification.Dispatc
 		}
 
 		if preference.Channel.AllowsSystem() {
-			if err := s.systemRepo.Create(ctx, &domainNotification.SystemNotification{
+			notification := &domainNotification.SystemNotification{
 				RecipientID:  recipientID,
 				ActorID:      input.ActorID,
 				EventKey:     strings.TrimSpace(input.EventKey),
@@ -465,9 +555,11 @@ func (s *Service) Dispatch(ctx context.Context, input domainNotification.Dispatc
 				ResourceType: strings.TrimSpace(input.ResourceType),
 				ResourceID:   input.ResourceID,
 				Metadata:     input.Metadata,
-			}); err != nil {
+			}
+			if err := s.systemRepo.Create(ctx, notification); err != nil {
 				return err
 			}
+			s.publishSystemNotificationCreated(ctx, notification)
 		}
 
 		if preference.Channel.AllowsEmail() && preference.NotificationEmailVerified() {

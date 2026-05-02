@@ -1,5 +1,9 @@
 import type { ControlCabinet, FieldDevice, SPSController } from '$lib/domain/facility/index.js';
 import type { User } from '$lib/domain/user/index.js';
+import {
+  ReconnectingWebSocket,
+  type RealtimeSocketStatus
+} from '$lib/infrastructure/realtime/reconnectingWebSocket.js';
 
 export interface ProjectCollaboratorPresence {
   user_id: string;
@@ -61,8 +65,6 @@ type ProjectCollaborationInboundMessage =
   | ProjectCollaborationEntityDeltaMessage
   | ProjectCollaborationRefreshRequest;
 
-type SocketStatus = 'disconnected' | 'connecting' | 'connected';
-
 export interface SharedFieldDeviceDraftState {
   devices: Array<{
     device_id: string;
@@ -91,18 +93,14 @@ interface ProjectCollaborationStateOptions {
 export class ProjectCollaborationState {
   onlineUsers = $state<ProjectCollaboratorPresence[]>([]);
   fieldDeviceEditStates = $state<ProjectFieldDeviceEditState[]>([]);
-  socketStatus = $state<SocketStatus>('disconnected');
+  socketStatus = $state<RealtimeSocketStatus>('disconnected');
 
   private readonly onRefreshRequest?: (message: ProjectCollaborationRefreshRequest) => void;
   private readonly onEntityDelta?: (message: ProjectCollaborationEntityDeltaMessage) => void;
   private readonly onReconnect?: () => void;
+  private readonly connection: ReconnectingWebSocket;
 
   private projectId: string | null = null;
-  private socket: WebSocket | null = null;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private reconnectDelayMs = 2000;
-  private hasConnectedOnce = false;
-  private pendingMessages: Array<Record<string, unknown>> = [];
   private destroyed = false;
   private desiredEditState: SharedFieldDeviceDraftState = {
     devices: []
@@ -112,39 +110,40 @@ export class ProjectCollaborationState {
     this.onRefreshRequest = options.onRefreshRequest;
     this.onEntityDelta = options.onEntityDelta;
     this.onReconnect = options.onReconnect;
+    this.connection = new ReconnectingWebSocket({
+      url: () => buildProjectCollaborationUrl(this.projectId),
+      onMessage: (raw) => this.handleMessage(raw),
+      onOpen: ({ wasReconnect }) => {
+        this.publishFieldDeviceDraftState(this.desiredEditState);
+        if (wasReconnect) {
+          this.onReconnect?.();
+        }
+      },
+      onStatusChange: (status) => {
+        this.socketStatus = status;
+      }
+    });
   }
 
   connect(projectId: string): void {
     if (!projectId) return;
 
-    if (this.projectId === projectId && this.socket) {
+    if (this.projectId === projectId && !this.destroyed) {
       return;
     }
 
     this.projectId = projectId;
     this.destroyed = false;
-    this.clearReconnectTimer();
-    if (this.socket) {
-      this.socket.close();
-      this.socket = null;
-    }
-    this.openSocket();
+    this.connection.disconnect({ clearQueue: true });
+    this.connection.connect();
   }
 
   disconnect(): void {
     this.destroyed = true;
     this.projectId = null;
-    this.clearReconnectTimer();
-    this.socketStatus = 'disconnected';
     this.onlineUsers = [];
     this.fieldDeviceEditStates = [];
-    this.hasConnectedOnce = false;
-    this.pendingMessages = [];
-
-    if (this.socket) {
-      this.socket.close();
-      this.socket = null;
-    }
+    this.connection.disconnect();
   }
 
   publishFieldDeviceDraftState(state: SharedFieldDeviceDraftState): void {
@@ -218,49 +217,6 @@ export class ProjectCollaborationState {
     return editors;
   }
 
-  private openSocket(): void {
-    if (!this.projectId || this.destroyed) return;
-
-    this.socketStatus = 'connecting';
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const socket = new WebSocket(
-      `${protocol}//${window.location.host}/api/v1/projects/${this.projectId}/collaboration`
-    );
-    this.socket = socket;
-
-    socket.addEventListener('open', () => {
-      if (this.socket !== socket) return;
-      const wasReconnect = this.hasConnectedOnce;
-      this.hasConnectedOnce = true;
-      this.socketStatus = 'connected';
-      this.reconnectDelayMs = 2000;
-      this.publishFieldDeviceDraftState(this.desiredEditState);
-      this.flushPendingMessages();
-      if (wasReconnect) {
-        this.onReconnect?.();
-      }
-    });
-
-    socket.addEventListener('message', (event) => {
-      if (this.socket !== socket) return;
-      this.handleMessage(event.data);
-    });
-
-    socket.addEventListener('close', () => {
-      if (this.socket === socket) {
-        this.socket = null;
-      }
-      if (this.destroyed) return;
-
-      this.socketStatus = 'disconnected';
-      this.scheduleReconnect();
-    });
-
-    socket.addEventListener('error', () => {
-      socket.close();
-    });
-  }
-
   private handleMessage(raw: string): void {
     let message: ProjectCollaborationInboundMessage;
 
@@ -294,44 +250,14 @@ export class ProjectCollaborationState {
     payload: Record<string, unknown>,
     options: { queueWhenClosed?: boolean } = {}
   ): void {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      if (options.queueWhenClosed) {
-        this.queuePendingMessage(payload);
-      }
-      return;
-    }
-
-    this.socket.send(JSON.stringify(payload));
+    if (this.destroyed) return;
+    this.connection.send(payload, options);
   }
+}
 
-  private queuePendingMessage(payload: Record<string, unknown>): void {
-    this.pendingMessages = [...this.pendingMessages, payload].slice(-50);
-  }
+function buildProjectCollaborationUrl(projectId: string | null): string | null {
+  if (!projectId || typeof window === 'undefined') return null;
 
-  private flushPendingMessages(): void {
-    if (this.pendingMessages.length === 0) return;
-
-    const messages = this.pendingMessages;
-    this.pendingMessages = [];
-    for (const message of messages) {
-      this.send(message);
-    }
-  }
-
-  private scheduleReconnect(): void {
-    if (this.reconnectTimer || !this.projectId) return;
-
-    this.reconnectTimer = setTimeout(() => {
-      this.reconnectTimer = null;
-      this.openSocket();
-    }, this.reconnectDelayMs);
-    this.reconnectDelayMs = Math.min(this.reconnectDelayMs * 2, 10000);
-  }
-
-  private clearReconnectTimer(): void {
-    if (!this.reconnectTimer) return;
-
-    clearTimeout(this.reconnectTimer);
-    this.reconnectTimer = null;
-  }
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}/api/v1/projects/${projectId}/collaboration`;
 }

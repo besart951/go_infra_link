@@ -14,11 +14,12 @@ import (
 )
 
 type NotificationSettingsHandler struct {
-	service NotificationSettingsService
+	service  NotificationSettingsService
+	streamer SystemNotificationStreamer
 }
 
-func NewNotificationSettingsHandler(service NotificationSettingsService) *NotificationSettingsHandler {
-	return &NotificationSettingsHandler{service: service}
+func NewNotificationSettingsHandler(service NotificationSettingsService, streamer SystemNotificationStreamer) *NotificationSettingsHandler {
+	return &NotificationSettingsHandler{service: service, streamer: streamer}
 }
 
 // GetSMTPSettings godoc
@@ -324,6 +325,20 @@ func (h *NotificationSettingsHandler) ListSystemNotifications(c *gin.Context) {
 		TotalPages:  result.TotalPages,
 		UnreadCount: unreadCount,
 	})
+}
+
+func (h *NotificationSettingsHandler) StreamSystemNotifications(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondError(c, http.StatusUnauthorized, "unauthorized", "Unauthorized")
+		return
+	}
+	if h.streamer == nil {
+		handlerutil.RespondError(c, http.StatusNotFound, "not_found", "Notification stream not configured")
+		return
+	}
+
+	h.streamer.Stream(c.Writer, c.Request, userID)
 }
 
 // MarkSystemNotificationRead godoc

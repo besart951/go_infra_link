@@ -51,6 +51,7 @@ type ServiceConfig struct {
 	Issuer          string
 	AccessTokenTTL  time.Duration
 	RefreshTokenTTL time.Duration
+	Runtime         *RuntimeAdapters
 }
 
 // NewServices creates all service instances from repositories and configuration.
@@ -116,6 +117,9 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 		cfg.JWTSecret,
 		notificationservice.NewSMTPStrategy(),
 	)
+	if cfg.Runtime != nil && cfg.Runtime.SystemNotificationStream != nil {
+		notificationSvc.SetSystemNotificationPublisher(cfg.Runtime.SystemNotificationStream)
+	}
 
 	return &Services{
 		Project:         buildProjectServices(gormDB, repos, facilityServices),

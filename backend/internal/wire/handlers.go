@@ -16,7 +16,10 @@ import (
 )
 
 // NewHandlers creates all HTTP handler instances from services.
-func NewHandlers(services *Services, cookieSettings authhandler.CookieSettings, i18nLoader *i18n.Loader, accessTokenTTL, refreshTokenTTL time.Duration) *handler.Handlers {
+func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings authhandler.CookieSettings, i18nLoader *i18n.Loader, accessTokenTTL, refreshTokenTTL time.Duration) *handler.Handlers {
+	if runtime == nil {
+		runtime = NewRuntimeAdapters()
+	}
 	projectHandlers := projecthandler.NewHandlers(projecthandler.ServiceDeps{
 		Lifecycle:          services.Project.Lifecycle,
 		AccessPolicy:       services.Project.AccessPolicy,
@@ -27,6 +30,7 @@ func NewHandlers(services *Services, cookieSettings authhandler.CookieSettings, 
 		PhasePermission:    services.PhasePermission,
 		FieldDeviceOptions: services.Facility.FieldDevice,
 		Notifications:      services.Notification,
+		Collaboration:      runtime.ProjectCollaboration,
 	})
 
 	facilityHandlers := facilityhandler.NewHandlers(facilityhandler.ServiceDeps{
@@ -64,7 +68,7 @@ func NewHandlers(services *Services, cookieSettings authhandler.CookieSettings, 
 		),
 		Dashboard:    dashboardhandler.NewDashboardHandler(services.Dashboard),
 		I18n:         i18nhandler.NewI18nHandler(i18nLoader),
-		Notification: notificationhandler.NewNotificationSettingsHandler(services.Notification),
+		Notification: notificationhandler.NewNotificationSettingsHandler(services.Notification, runtime.SystemNotificationStream),
 		Project:      projectHandlers,
 		Team:         teamhandler.NewTeamHandler(services.Team),
 		User:         userHandlers,

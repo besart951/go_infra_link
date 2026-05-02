@@ -37,11 +37,13 @@ func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func()
 		return nil, func() {}, fmt.Errorf("repositories: %w", err)
 	}
 
+	runtimeAdapters := wire.NewRuntimeAdapters()
 	services, err := wire.NewServices(gormDB, repos, wire.ServiceConfig{
 		JWTSecret:       cfg.JWTSecret,
 		Issuer:          config.DefaultIssuer,
 		AccessTokenTTL:  cfg.AccessTokenTTL,
 		RefreshTokenTTL: cfg.RefreshTokenTTL,
+		Runtime:         runtimeAdapters,
 	})
 	if err != nil {
 		log.Error("Failed to initialize services", "err", err)
@@ -63,6 +65,7 @@ func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func()
 	translator, loader := initializeTranslator(log)
 	handlers := wire.NewHandlers(
 		services,
+		runtimeAdapters,
 		cookieSettingsFromConfig(cfg),
 		loader,
 		cfg.AccessTokenTTL,

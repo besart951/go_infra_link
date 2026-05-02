@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { NotificationBellState } from '$lib/components/notifications/NotificationBellState.svelte.js';
   import NotificationPreviewItem from '$lib/components/notifications/NotificationPreviewItem.svelte';
+  import { systemNotificationState } from '$lib/components/notifications/SystemNotificationState.svelte.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Popover from '$lib/components/ui/popover/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
@@ -12,16 +12,17 @@
   import { onDestroy, onMount } from 'svelte';
 
   const t = createTranslator();
-  const bellState = new NotificationBellState();
+  const notifications = systemNotificationState;
 
   let open = $state(false);
 
   onMount(() => {
-    bellState.startPolling();
+    notifications.connect();
+    void notifications.loadPreview();
   });
 
   onDestroy(() => {
-    bellState.stopPolling();
+    notifications.disconnect();
   });
 </script>
 
@@ -36,11 +37,11 @@
         aria-label={$t('notifications.inbox.open')}
       >
         <BellIcon class="size-5" />
-        {#if bellState.unreadCount > 0}
+        {#if notifications.unreadCount > 0}
           <span
             class="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-4 font-semibold text-destructive-foreground"
           >
-            {bellState.unreadCount > 99 ? '99+' : bellState.unreadCount}
+            {notifications.unreadCount > 99 ? '99+' : notifications.unreadCount}
           </span>
         {/if}
       </Button>
@@ -52,32 +53,32 @@
       <div class="min-w-0">
         <h2 class="text-sm font-semibold">{$t('notifications.inbox.title')}</h2>
         <p class="text-xs text-muted-foreground">
-          {$t('notifications.inbox.unread_count', { count: bellState.unreadCount })}
+          {$t('notifications.inbox.unread_count', { count: notifications.unreadCount })}
         </p>
       </div>
       <div class="flex items-center gap-1">
         <Button
           variant="ghost"
           size="icon-sm"
-          onclick={() => bellState.loadNotifications()}
-          disabled={bellState.isLoading}
+          onclick={() => notifications.loadPreview()}
+          disabled={notifications.isPreviewLoading}
         >
-          <RefreshCwIcon class={`size-4${bellState.isLoading ? ' animate-spin' : ''}`} />
+          <RefreshCwIcon class={`size-4${notifications.isPreviewLoading ? ' animate-spin' : ''}`} />
         </Button>
         <Button
           variant="ghost"
           size="icon-sm"
-          onclick={() => bellState.markAllRead()}
-          disabled={bellState.unreadCount === 0}
+          onclick={() => notifications.markAllRead()}
+          disabled={notifications.unreadCount === 0}
         >
           <CheckIcon class="size-4" />
         </Button>
       </div>
     </div>
 
-    {#if bellState.error}
-      <div class="px-3 py-2 text-sm text-destructive">{bellState.error}</div>
-    {:else if bellState.items.length === 0}
+    {#if notifications.previewError}
+      <div class="px-3 py-2 text-sm text-destructive">{notifications.previewError}</div>
+    {:else if notifications.previewItems.length === 0}
       <div
         class="flex flex-col items-center gap-2 px-4 py-8 text-center text-sm text-muted-foreground"
       >
@@ -86,14 +87,14 @@
       </div>
     {:else}
       <div class="max-h-96 overflow-y-auto">
-        {#each bellState.items as notification (notification.id)}
+        {#each notifications.previewItems as notification (notification.id)}
           <NotificationPreviewItem
             {notification}
-            dateLabel={bellState.formatDateTime(notification.created_at)}
-            onOpen={(item) => bellState.markRead(item)}
-            onToggleRead={(item) => bellState.toggleRead(item)}
-            onToggleImportant={(item) => bellState.toggleImportant(item)}
-            onDelete={(item) => bellState.deleteNotification(item)}
+            dateLabel={notifications.formatDateTime(notification.created_at)}
+            onOpen={(item) => notifications.markRead(item)}
+            onToggleRead={(item) => notifications.toggleRead(item)}
+            onToggleImportant={(item) => notifications.toggleImportant(item)}
+            onDelete={(item) => notifications.deleteNotification(item)}
           />
         {/each}
       </div>

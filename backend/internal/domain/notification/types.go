@@ -83,6 +83,24 @@ type DispatchEventInput struct {
 	Metadata     map[string]string
 }
 
+type SystemNotificationChangeType string
+
+const (
+	SystemNotificationChangeCreated SystemNotificationChangeType = "notification.created"
+	SystemNotificationChangeUpdated SystemNotificationChangeType = "notification.updated"
+	SystemNotificationChangeDeleted SystemNotificationChangeType = "notification.deleted"
+	SystemNotificationChangeReadAll SystemNotificationChangeType = "notification.read_all"
+)
+
+type SystemNotificationChange struct {
+	Type           SystemNotificationChangeType
+	RecipientID    uuid.UUID
+	Notification   *SystemNotification
+	NotificationID uuid.UUID
+	UnreadCount    int64
+	OccurredAt     time.Time
+}
+
 type UpsertNotificationRuleInput struct {
 	ID               uuid.UUID
 	ActorID          uuid.UUID
@@ -123,6 +141,10 @@ type SystemNotificationRepository interface {
 	ToggleReadForUser(ctx context.Context, notificationID, userID uuid.UUID) (*SystemNotification, error)
 	ToggleImportantForUser(ctx context.Context, notificationID, userID uuid.UUID) (*SystemNotification, error)
 	DeleteForUser(ctx context.Context, notificationID, userID uuid.UUID) error
+}
+
+type SystemNotificationPublisher interface {
+	PublishSystemNotificationChange(ctx context.Context, change SystemNotificationChange)
 }
 
 type EmailOutboxRepository interface {

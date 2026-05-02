@@ -27,7 +27,7 @@ export const routeAudits = [
   {
     path: '/login',
     domain: 'auth',
-    files: ['src/routes/(auth)/login/+page.svelte'],
+    files: ['src/routes/(auth)/login/+page.svelte', 'src/routes/(auth)/login/+page.ts'],
     auth: 'public',
     authorization: 'none',
     status: 'configured',
