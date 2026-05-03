@@ -4,6 +4,7 @@
   import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Settings2 } from '@lucide/svelte';
+  import { keyboardTableNavigation } from '$lib/actions/keyboardTableNavigation.js';
   import BacnetObjectsEditor from '../bacnet/BacnetObjectsEditor.svelte';
   import FieldDeviceTableRow from './FieldDeviceTableRow.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
@@ -28,7 +29,7 @@
   }
 </script>
 
-<div class="max-w-full min-w-0 rounded-lg border bg-background">
+<div use:keyboardTableNavigation class="max-w-full min-w-0 rounded-lg border bg-background">
   <Table.Root class={state.view.tableClass}>
     <Table.Header>
       <Table.Row>

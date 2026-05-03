@@ -11,6 +11,7 @@
   import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Popover from '$lib/components/ui/popover/index.js';
+  import { keyboardTableCell } from '$lib/actions/keyboardTableNavigation.js';
   import BacnetAlarmValuesEditor from './BacnetAlarmValuesEditor.svelte';
   import { stateTextRepository } from '$lib/infrastructure/api/stateTextRepository.js';
   import { notificationClassRepository } from '$lib/infrastructure/api/notificationClassRepository.js';
@@ -140,6 +141,14 @@
       : '';
   }
 
+  function editCell(objectId: string, column: string): Record<string, string> {
+    return keyboardTableCell(`bacnet:${objectId}`, `bacnet.${column}`, { activate: 'edit' });
+  }
+
+  function focusCell(objectId: string, column: string): Record<string, string> {
+    return keyboardTableCell(`bacnet:${objectId}`, `bacnet.${column}`, { activate: 'focus' });
+  }
+
   function hasAlarmType(obj: BacnetObject): boolean {
     const pendingAlarmTypeId = getPendingTextValue(
       obj.id,
@@ -229,6 +238,7 @@
               <div
                 class={getCollaborationClass(obj.id, 'text_fix')}
                 title={getPreviewTitle(obj.id, 'text_fix')}
+                {...editCell(obj.id, 'text_fix')}
               >
                 <EditableCell
                   value={obj.text_fix}
@@ -241,7 +251,7 @@
                 />
               </div>
             </td>
-            <td class="py-1 pr-1 text-center align-top">
+            <td class="py-1 pr-1 text-center align-top" {...focusCell(obj.id, 'alarms')}>
               <Popover.Root>
                 <Popover.Trigger>
                   {#snippet child({ props })}
@@ -283,6 +293,7 @@
                   .filter(Boolean)
                   .join(' ')}
                 title={getPreviewTitle(obj.id, 'state_text_id')}
+                {...focusCell(obj.id, 'state_text_id')}
               >
                 <AsyncCombobox
                   value={getPendingIdValue(obj.id, 'state_text_id', obj.state_text_id)}
@@ -313,6 +324,7 @@
                   .filter(Boolean)
                   .join(' ')}
                 title={getPreviewTitle(obj.id, 'notification_class_id')}
+                {...focusCell(obj.id, 'notification_class_id')}
               >
                 <AsyncCombobox
                   value={getPendingIdValue(
@@ -342,6 +354,7 @@
               <div
                 class={getCollaborationClass(obj.id, 'description')}
                 title={getPreviewTitle(obj.id, 'description')}
+                {...editCell(obj.id, 'description')}
               >
                 <EditableCell
                   value={obj.description || ''}
@@ -364,33 +377,37 @@
                   .filter(Boolean)
                   .join('\n') || undefined}
               >
-                <EditableSelectCell
-                  value={obj.software_type}
-                  options={softwareTypeOptions}
-                  pendingValue={getPendingTextValue(obj.id, 'software_type', obj.software_type)}
-                  isDirty={isDirty(obj.id, 'software_type')}
-                  error={getFieldError(obj.id, 'software_type')}
-                  {disabled}
-                  onSave={(v) => onEdit(obj.id, 'software_type', v)}
-                />
-                <EditableCell
-                  value={String(obj.software_number).padStart(2, '0')}
-                  pendingValue={getPendingTextValue(
-                    obj.id,
-                    'software_number',
-                    String(obj.software_number).padStart(2, '0')
-                  )}
-                  type="number"
-                  min={1}
-                  max={99}
-                  isDirty={isDirty(obj.id, 'software_number')}
-                  error={getFieldError(obj.id, 'software_number')}
-                  {disabled}
-                  onSave={(v) => {
-                    const n = v ? Math.max(1, Math.min(99, parseInt(v))) : 1;
-                    onEdit(obj.id, 'software_number', n);
-                  }}
-                />
+                <div class="min-w-0 flex-1" {...focusCell(obj.id, 'software_type')}>
+                  <EditableSelectCell
+                    value={obj.software_type}
+                    options={softwareTypeOptions}
+                    pendingValue={getPendingTextValue(obj.id, 'software_type', obj.software_type)}
+                    isDirty={isDirty(obj.id, 'software_type')}
+                    error={getFieldError(obj.id, 'software_type')}
+                    {disabled}
+                    onSave={(v) => onEdit(obj.id, 'software_type', v)}
+                  />
+                </div>
+                <div class="min-w-0 flex-1" {...editCell(obj.id, 'software_number')}>
+                  <EditableCell
+                    value={String(obj.software_number).padStart(2, '0')}
+                    pendingValue={getPendingTextValue(
+                      obj.id,
+                      'software_number',
+                      String(obj.software_number).padStart(2, '0')
+                    )}
+                    type="number"
+                    min={1}
+                    max={99}
+                    isDirty={isDirty(obj.id, 'software_number')}
+                    error={getFieldError(obj.id, 'software_number')}
+                    {disabled}
+                    onSave={(v) => {
+                      const n = v ? Math.max(1, Math.min(99, parseInt(v))) : 1;
+                      onEdit(obj.id, 'software_number', n);
+                    }}
+                  />
+                </div>
               </div>
             </td>
             <td class="py-1 pr-1">
@@ -403,39 +420,44 @@
                   .filter(Boolean)
                   .join('\n') || undefined}
               >
-                <EditableSelectCell
-                  value={obj.hardware_type}
-                  options={hardwareTypeOptions}
-                  pendingValue={getPendingTextValue(obj.id, 'hardware_type', obj.hardware_type)}
-                  isDirty={isDirty(obj.id, 'hardware_type')}
-                  error={getFieldError(obj.id, 'hardware_type')}
-                  {disabled}
-                  onSave={(v) => onEdit(obj.id, 'hardware_type', v)}
-                />
-                <EditableCell
-                  value={String(obj.hardware_quantity).padStart(2, '0')}
-                  pendingValue={getPendingTextValue(
-                    obj.id,
-                    'hardware_quantity',
-                    String(obj.hardware_quantity).padStart(2, '0')
-                  )}
-                  type="number"
-                  min={1}
-                  max={99}
-                  isDirty={isDirty(obj.id, 'hardware_quantity')}
-                  error={getFieldError(obj.id, 'hardware_quantity')}
-                  {disabled}
-                  onSave={(v) => {
-                    const n = v ? Math.max(1, Math.min(99, parseInt(v))) : 1;
-                    onEdit(obj.id, 'hardware_quantity', n);
-                  }}
-                />
+                <div class="min-w-0 flex-1" {...focusCell(obj.id, 'hardware_type')}>
+                  <EditableSelectCell
+                    value={obj.hardware_type}
+                    options={hardwareTypeOptions}
+                    pendingValue={getPendingTextValue(obj.id, 'hardware_type', obj.hardware_type)}
+                    isDirty={isDirty(obj.id, 'hardware_type')}
+                    error={getFieldError(obj.id, 'hardware_type')}
+                    {disabled}
+                    onSave={(v) => onEdit(obj.id, 'hardware_type', v)}
+                  />
+                </div>
+                <div class="min-w-0 flex-1" {...editCell(obj.id, 'hardware_quantity')}>
+                  <EditableCell
+                    value={String(obj.hardware_quantity).padStart(2, '0')}
+                    pendingValue={getPendingTextValue(
+                      obj.id,
+                      'hardware_quantity',
+                      String(obj.hardware_quantity).padStart(2, '0')
+                    )}
+                    type="number"
+                    min={1}
+                    max={99}
+                    isDirty={isDirty(obj.id, 'hardware_quantity')}
+                    error={getFieldError(obj.id, 'hardware_quantity')}
+                    {disabled}
+                    onSave={(v) => {
+                      const n = v ? Math.max(1, Math.min(99, parseInt(v))) : 1;
+                      onEdit(obj.id, 'hardware_quantity', n);
+                    }}
+                  />
+                </div>
               </div>
             </td>
             <td class="py-1 pr-1">
               <div
                 class={getCollaborationClass(obj.id, 'gms_visible')}
                 title={getPreviewTitle(obj.id, 'gms_visible')}
+                {...focusCell(obj.id, 'gms_visible')}
               >
                 <EditableBooleanCell
                   value={obj.gms_visible}
@@ -451,6 +473,7 @@
               <div
                 class={getCollaborationClass(obj.id, 'optional')}
                 title={getPreviewTitle(obj.id, 'optional')}
+                {...focusCell(obj.id, 'optional')}
               >
                 <EditableBooleanCell
                   value={obj.optional}
@@ -474,6 +497,7 @@
                 <div
                   class={getCollaborationClass(obj.id, 'text_individual')}
                   title={getPreviewTitle(obj.id, 'text_individual')}
+                  {...editCell(obj.id, 'text_individual')}
                 >
                   <EditableCell
                     value={obj.text_individual || ''}

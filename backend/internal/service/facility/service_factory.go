@@ -159,12 +159,24 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 	spsControllerService := NewSPSControllerService(
 		repos.SPSControllers,
 		repos.ControlCabinets,
+		repos.Buildings,
 		repos.SystemTypes,
 		repos.SPSControllerSystemTypes,
 		repos.FieldDevices,
 		hierarchyCopier,
 	)
 	spsControllerService.bindTransactions(tx)
+	controlCabinetService := NewControlCabinetService(
+		repos.ControlCabinets,
+		repos.Buildings,
+		repos.SPSControllers,
+		repos.SPSControllerSystemTypes,
+		repos.FieldDevices,
+		repos.BacnetObjects,
+		repos.Specifications,
+		hierarchyCopier,
+	)
+	controlCabinetService.bindTransactions(tx)
 
 	return &Services{
 		HierarchyCopier: hierarchyCopier,
@@ -172,16 +184,7 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 		SystemType:      NewSystemTypeService(repos.SystemTypes),
 		SystemPart:      NewSystemPartService(repos.SystemParts),
 		Apparat:         NewApparatService(repos.Apparats, repos.SystemParts, repos.ObjectData),
-		ControlCabinet: NewControlCabinetService(
-			repos.ControlCabinets,
-			repos.Buildings,
-			repos.SPSControllers,
-			repos.SPSControllerSystemTypes,
-			repos.FieldDevices,
-			repos.BacnetObjects,
-			repos.Specifications,
-			hierarchyCopier,
-		),
+		ControlCabinet:   controlCabinetService,
 		FieldDevice:       fieldDeviceService,
 		BacnetObject:      bacnetObjectService,
 		SPSController:     spsControllerService,

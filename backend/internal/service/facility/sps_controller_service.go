@@ -14,6 +14,7 @@ import (
 type SPSControllerService struct {
 	repo                     domainFacility.SPSControllerRepository
 	controlCabinetRepo       domainFacility.ControlCabinetRepository
+	buildingRepo             domainFacility.BuildingRepository
 	systemTypeRepo           domainFacility.SystemTypeRepository
 	spsControllerSystemTyper domainFacility.SPSControllerSystemTypeStore
 	fieldDeviceRepo          domainFacility.FieldDeviceStore
@@ -24,6 +25,7 @@ type SPSControllerService struct {
 func NewSPSControllerService(
 	repo domainFacility.SPSControllerRepository,
 	controlCabinetRepo domainFacility.ControlCabinetRepository,
+	buildingRepo domainFacility.BuildingRepository,
 	systemTypeRepo domainFacility.SystemTypeRepository,
 	spsControllerSystemTypeStore domainFacility.SPSControllerSystemTypeStore,
 	fieldDeviceRepo domainFacility.FieldDeviceStore,
@@ -32,6 +34,7 @@ func NewSPSControllerService(
 	return &SPSControllerService{
 		repo:                     repo,
 		controlCabinetRepo:       controlCabinetRepo,
+		buildingRepo:             buildingRepo,
 		systemTypeRepo:           systemTypeRepo,
 		spsControllerSystemTyper: spsControllerSystemTypeStore,
 		fieldDeviceRepo:          fieldDeviceRepo,
@@ -273,7 +276,7 @@ func (s *SPSControllerService) GetNextGADevice(ctx context.Context, controlCabin
 	return s.nextAvailableGADevice(ctx, controlCabinetID)
 }
 
-func (s *SPSControllerService) ensureGADeviceAssigned(ctx context.Context, spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
+func (s *SPSControllerService) ensureGADeviceAssigned(ctx context.Context, spsController *domainFacility.SPSController, _ *uuid.UUID) error {
 	if spsController.GADevice != nil && strings.TrimSpace(*spsController.GADevice) != "" {
 		return nil
 	}
@@ -289,10 +292,29 @@ func (s *SPSControllerService) ensureGADeviceAssigned(ctx context.Context, spsCo
 		return domain.NewValidationError().Add("spscontroller.ga_device", "no available ga_device for control cabinet")
 	}
 	spsController.GADevice = &next
+	return nil
+}
 
-	// Always ensure uniqueness, not just when updating
-	if err := s.ensureUnique(ctx, spsController, excludeID); err != nil {
+func (s *SPSControllerService) assignGeneratedDeviceName(ctx context.Context, spsController *domainFacility.SPSController) error {
+	if spsController.ControlCabinetID == uuid.Nil {
+		return nil
+	}
+
+	controlCabinet, err := domain.GetByID(ctx, s.controlCabinetRepo, spsController.ControlCabinetID)
+	if err != nil {
 		return err
+	}
+
+	var building *domainFacility.Building
+	if controlCabinet.BuildingID != uuid.Nil {
+		building, err = domain.GetByID(ctx, s.buildingRepo, controlCabinet.BuildingID)
+		if err != nil {
+			return err
+		}
+	}
+
+	if deviceName, ok := generatedSPSControllerDeviceName(controlCabinet, building, spsController.GADevice); ok {
+		spsController.DeviceName = deviceName
 	}
 	return nil
 }
@@ -337,6 +359,9 @@ func (s *SPSControllerService) validateRequiredFields(spsController *domainFacil
 }
 
 func (s *SPSControllerService) Validate(ctx context.Context, spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
+	if err := s.assignGeneratedDeviceName(ctx, spsController); err != nil {
+		return err
+	}
 	if err := s.validateRequiredFields(spsController); err != nil {
 		return err
 	}

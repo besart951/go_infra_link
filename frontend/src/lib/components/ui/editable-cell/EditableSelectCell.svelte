@@ -70,6 +70,7 @@
 {#if isEditing}
   <select
     bind:this={selectElement}
+    data-keyboard-table-ignore
     value={displayValue}
     onchange={handleChange}
     onblur={handleBlur}

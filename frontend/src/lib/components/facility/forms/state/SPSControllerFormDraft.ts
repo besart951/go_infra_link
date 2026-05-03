@@ -33,7 +33,7 @@ export function buildSPSControllerDeviceName(
   const cabinetNr = cabinet?.control_cabinet_nr?.trim();
   if (!iwsCode || !cabinetNr) return null;
 
-  return `${iwsCode}_${cabinetNr}_${ga}`;
+  return `${iwsCode}_${cabinetNr}_${ga}`.toUpperCase();
 }
 
 export function collectUniqueSystemTypeIds(items: SPSControllerSystemType[]): string[] {

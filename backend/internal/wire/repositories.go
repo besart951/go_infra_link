@@ -14,6 +14,7 @@ import (
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	authrepo "github.com/besart951/go_infra_link/backend/internal/repository/auth"
+	facilitycache "github.com/besart951/go_infra_link/backend/internal/repository/facilitycache"
 	facilityrepo "github.com/besart951/go_infra_link/backend/internal/repository/facilitysql"
 	historycapture "github.com/besart951/go_infra_link/backend/internal/repository/historycapture"
 	historyrepo "github.com/besart951/go_infra_link/backend/internal/repository/historysql"
@@ -89,6 +90,9 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 	if !ok {
 		return nil, ErrUserRepoMissingEmailLookup
 	}
+	facilitySystemParts := historycapture.WrapSystemPart(facilityrepo.NewSystemPartRepository(gormDB), historyStore)
+	facilityApparats := historycapture.WrapApparat(facilityrepo.NewApparatRepository(gormDB), historyStore)
+	facilityApparats, facilitySystemParts = facilitycache.WrapReferenceData(facilityApparats, facilitySystemParts)
 
 	return &Repositories{
 		Project:                  historycapture.WrapProject(projectrepo.NewProjectRepository(gormDB), historyStore),
@@ -113,9 +117,9 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 
 		FacilityBuildings:                historycapture.WrapBuilding(facilityrepo.NewBuildingRepository(gormDB), historyStore),
 		FacilitySystemTypes:              historycapture.WrapSystemType(facilityrepo.NewSystemTypeRepository(gormDB), historyStore),
-		FacilitySystemParts:              historycapture.WrapSystemPart(facilityrepo.NewSystemPartRepository(gormDB), historyStore),
+		FacilitySystemParts:              facilitySystemParts,
 		FacilitySpecifications:           historycapture.WrapSpecification(facilityrepo.NewSpecificationRepository(gormDB), historyStore),
-		FacilityApparats:                 historycapture.WrapApparat(facilityrepo.NewApparatRepository(gormDB), historyStore),
+		FacilityApparats:                 facilityApparats,
 		FacilityControlCabinet:           historycapture.WrapControlCabinet(facilityrepo.NewControlCabinetRepository(gormDB), historyStore),
 		FacilityFieldDevices:             historycapture.WrapFieldDevice(facilityrepo.NewFieldDeviceRepository(gormDB), historyStore),
 		FacilitySPSControllers:           historycapture.WrapSPSController(facilityrepo.NewSPSControllerRepository(gormDB), historyStore),

@@ -51,7 +51,10 @@
     editValue = displayValue;
     isEditing = true;
     // Focus after DOM update
-    setTimeout(() => inputElement?.focus(), 0);
+    setTimeout(() => {
+      inputElement?.focus();
+      inputElement?.select();
+    }, 0);
   }
 
   function handleSave() {

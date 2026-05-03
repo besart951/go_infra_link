@@ -71,6 +71,9 @@
             requestControlCabinetDelta(message.control_cabinets);
             requestSPSControllerCabinetLabelDelta(message.control_cabinets);
             bumpControlCabinetOptionsRefresh();
+            bumpSPSControllerRefresh();
+            bumpFieldDeviceRefresh();
+            bumpSystemTypeRefresh();
           }
           break;
         case 'sps_controller':
@@ -268,6 +271,9 @@
 
   function handleControlCabinetsChanged(event?: EntityChangeEvent<ControlCabinet>): void {
     bumpControlCabinetOptionsRefresh();
+    bumpSPSControllerRefresh();
+    bumpFieldDeviceRefresh();
+    bumpSystemTypeRefresh();
 
     if (event?.items && event.items.length > 0) {
       requestSPSControllerCabinetLabelDelta(event.items);

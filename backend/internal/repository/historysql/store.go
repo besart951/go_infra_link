@@ -319,6 +319,12 @@ func (s *Store) ListTimeline(ctx context.Context, filter domainHistory.TimelineF
 	if err := query.Order("occurred_at DESC, id DESC").Limit(limit).Offset(offset).Find(&items).Error; err != nil {
 		return nil, err
 	}
+	if err := s.enrichActorNames(ctx, items); err != nil {
+		return nil, err
+	}
+	if err := s.enrichScopeSummaries(ctx, items); err != nil {
+		return nil, err
+	}
 
 	return &domain.PaginatedList[domainHistory.ChangeEvent]{
 		Items:      items,
@@ -336,6 +342,14 @@ func (s *Store) GetEvent(ctx context.Context, id uuid.UUID) (*domainHistory.Chan
 		}
 		return nil, err
 	}
+	events := []domainHistory.ChangeEvent{event}
+	if err := s.enrichActorNames(ctx, events); err != nil {
+		return nil, err
+	}
+	if err := s.enrichScopeSummaries(ctx, events); err != nil {
+		return nil, err
+	}
+	event = events[0]
 	return &event, nil
 }
 

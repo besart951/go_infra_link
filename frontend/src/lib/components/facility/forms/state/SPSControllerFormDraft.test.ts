@@ -14,8 +14,8 @@ const translate = (key: string) => key;
 
 describe('SPSControllerFormDraft', () => {
   it('builds generated device names from building, cabinet, and GA device', () => {
-    const cabinet = { control_cabinet_nr: 'AK01' } as ControlCabinet;
-    const building = { iws_code: 'IWS' } as Building;
+    const cabinet = { control_cabinet_nr: 'ak01' } as ControlCabinet;
+    const building = { iws_code: 'iws' } as Building;
 
     expect(buildSPSControllerDeviceName(cabinet, building, 'A01')).toBe('IWS_AK01_A01');
     expect(buildSPSControllerDeviceName(cabinet, building, '')).toBe('');

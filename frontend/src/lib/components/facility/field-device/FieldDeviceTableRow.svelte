@@ -5,6 +5,7 @@
   import { EditableCell } from '$lib/components/ui/editable-cell/index.js';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
   import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
+  import { keyboardTableCell } from '$lib/actions/keyboardTableNavigation.js';
   import { ChevronDown, ChevronRight } from '@lucide/svelte';
   import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
   import TableApparatSelect from '../table-selects/TableApparatSelect.svelte';
@@ -76,6 +77,14 @@
       ? 'bg-warning-muted/60 dark:bg-warning-muted/60 cursor-help'
       : '';
   }
+
+  function editCell(column: string): Record<string, string> {
+    return keyboardTableCell(device.id, column, { activate: 'edit' });
+  }
+
+  function focusCell(column: string): Record<string, string> {
+    return keyboardTableCell(device.id, column, { activate: 'focus' });
+  }
 </script>
 
 <Table.Row
@@ -114,7 +123,11 @@
     {formatFieldDeviceSPSControllerSystemType(device)}
   </Table.Cell>
   <Table.Cell class="p-1">
-    <div class={getEditingFieldClass('bmk')} title={getFieldPreviewTitle('bmk')}>
+    <div
+      class={getEditingFieldClass('bmk')}
+      title={getFieldPreviewTitle('bmk')}
+      {...editCell('bmk')}
+    >
       <EditableCell
         value={device.bmk ?? ''}
         pendingValue={rowState.editing.getPendingValue(device.id, 'bmk')}
@@ -130,7 +143,11 @@
     </div>
   </Table.Cell>
   <Table.Cell class="max-w-48 p-1">
-    <div class={getEditingFieldClass('description')} title={getFieldPreviewTitle('description')}>
+    <div
+      class={getEditingFieldClass('description')}
+      title={getFieldPreviewTitle('description')}
+      {...editCell('description')}
+    >
       <EditableCell
         value={device.description ?? ''}
         pendingValue={rowState.editing.getPendingValue(device.id, 'description')}
@@ -146,7 +163,11 @@
     </div>
   </Table.Cell>
   <Table.Cell class="p-1">
-    <div class={getEditingFieldClass('text_fix')} title={getFieldPreviewTitle('text_fix')}>
+    <div
+      class={getEditingFieldClass('text_fix')}
+      title={getFieldPreviewTitle('text_fix')}
+      {...editCell('text_fix')}
+    >
       <EditableCell
         value={device.text_fix ?? ''}
         pendingValue={rowState.editing.getPendingValue(device.id, 'text_fix')}
@@ -162,7 +183,11 @@
     </div>
   </Table.Cell>
   <Table.Cell class="p-1">
-    <div class={getEditingFieldClass('apparat_nr')} title={getFieldPreviewTitle('apparat_nr')}>
+    <div
+      class={getEditingFieldClass('apparat_nr')}
+      title={getFieldPreviewTitle('apparat_nr')}
+      {...editCell('apparat_nr')}
+    >
       <EditableCell
         value={device.apparat_nr}
         pendingValue={rowState.editing.getPendingValue(device.id, 'apparat_nr')}
@@ -182,7 +207,11 @@
       />
     </div>
   </Table.Cell>
-  <Table.Cell class={getEditingFieldClass('apparat_id')} title={getFieldPreviewTitle('apparat_id')}>
+  <Table.Cell
+    class={getEditingFieldClass('apparat_id')}
+    title={getFieldPreviewTitle('apparat_id')}
+    {...focusCell('apparat_id')}
+  >
     <TableApparatSelect
       items={rowState.allApparats}
       value={device.apparat_id}
@@ -195,6 +224,7 @@
   <Table.Cell
     class={getEditingFieldClass('system_part_id')}
     title={getFieldPreviewTitle('system_part_id')}
+    {...focusCell('system_part_id')}
   >
     <TableSystemPartSelect
       items={rowState.allSystemParts}
@@ -222,6 +252,7 @@
     <Table.Cell
       class={`text-xs ${getEditingFieldClass('specification.specification_supplier')}`}
       title={getFieldPreviewTitle('specification.specification_supplier')}
+      {...editCell('specification_supplier')}
     >
       <EditableCell
         value={toDisplayString(device.specification?.specification_supplier)}
@@ -242,6 +273,7 @@
     <Table.Cell
       class={`text-xs ${getEditingFieldClass('specification.specification_brand')}`}
       title={getFieldPreviewTitle('specification.specification_brand')}
+      {...editCell('specification_brand')}
     >
       <EditableCell
         value={toDisplayString(device.specification?.specification_brand)}
@@ -262,6 +294,7 @@
     <Table.Cell
       class={`text-xs ${getEditingFieldClass('specification.specification_type')}`}
       title={getFieldPreviewTitle('specification.specification_type')}
+      {...editCell('specification_type')}
     >
       <EditableCell
         value={toDisplayString(device.specification?.specification_type)}
@@ -282,6 +315,7 @@
     <Table.Cell
       class={`text-xs ${getEditingFieldClass('specification.additional_info_motor_valve')}`}
       title={getFieldPreviewTitle('specification.additional_info_motor_valve')}
+      {...editCell('additional_info_motor_valve')}
     >
       <EditableCell
         value={toDisplayString(device.specification?.additional_info_motor_valve)}
@@ -305,6 +339,7 @@
     <Table.Cell
       class={`text-xs ${getEditingFieldClass('specification.additional_info_size')}`}
       title={getFieldPreviewTitle('specification.additional_info_size')}
+      {...editCell('additional_info_size')}
     >
       <EditableCell
         value={toDisplayString(device.specification?.additional_info_size, true)}
@@ -325,6 +360,7 @@
     <Table.Cell
       class={`text-xs ${getEditingFieldClass('specification.additional_information_installation_location')}`}
       title={getFieldPreviewTitle('specification.additional_information_installation_location')}
+      {...editCell('additional_information_installation_location')}
     >
       <EditableCell
         value={toDisplayString(device.specification?.additional_information_installation_location)}
@@ -354,6 +390,7 @@
     <Table.Cell
       class={`text-xs ${getEditingFieldClass('specification.electrical_connection_ph')}`}
       title={getFieldPreviewTitle('specification.electrical_connection_ph')}
+      {...editCell('electrical_connection_ph')}
     >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_ph, true)}
@@ -374,6 +411,7 @@
     <Table.Cell
       class={`text-xs ${getEditingFieldClass('specification.electrical_connection_acdc')}`}
       title={getFieldPreviewTitle('specification.electrical_connection_acdc')}
+      {...editCell('electrical_connection_acdc')}
     >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_acdc)}
@@ -395,6 +433,7 @@
     <Table.Cell
       class={`text-xs ${getEditingFieldClass('specification.electrical_connection_amperage')}`}
       title={getFieldPreviewTitle('specification.electrical_connection_amperage')}
+      {...editCell('electrical_connection_amperage')}
     >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_amperage, true)}
@@ -419,6 +458,7 @@
     <Table.Cell
       class={`text-xs ${getEditingFieldClass('specification.electrical_connection_power')}`}
       title={getFieldPreviewTitle('specification.electrical_connection_power')}
+      {...editCell('electrical_connection_power')}
     >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_power, true)}
@@ -443,6 +483,7 @@
     <Table.Cell
       class={`text-xs ${getEditingFieldClass('specification.electrical_connection_rotation')}`}
       title={getFieldPreviewTitle('specification.electrical_connection_rotation')}
+      {...editCell('electrical_connection_rotation')}
     >
       <EditableCell
         value={toDisplayString(device.specification?.electrical_connection_rotation, true)}

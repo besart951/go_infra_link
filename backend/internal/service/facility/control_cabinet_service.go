@@ -17,7 +17,10 @@ type ControlCabinetService struct {
 	bacnetObjectRepo        domainFacility.BacnetObjectStore
 	specificationRepo       domainFacility.SpecificationStore
 	hierarchyCopier         *HierarchyCopier
+	tx                      txCoordinator
 }
+
+const controlCabinetSPSControllerPageLimit = 500
 
 func NewControlCabinetService(
 	repo domainFacility.ControlCabinetRepository,
@@ -39,6 +42,16 @@ func NewControlCabinetService(
 		specificationRepo:       specificationRepo,
 		hierarchyCopier:         hierarchyCopier,
 	}
+}
+
+func (s *ControlCabinetService) bindTransactions(tx txCoordinator) {
+	s.tx = tx
+}
+
+func (s *ControlCabinetService) transaction() facilityTx[*ControlCabinetService] {
+	return newFacilityTx(s.tx, s, func(services *Services) *ControlCabinetService {
+		return services.ControlCabinet
+	})
 }
 
 func (s *ControlCabinetService) Create(ctx context.Context, controlCabinet *domainFacility.ControlCabinet) error {
@@ -124,10 +137,15 @@ func (s *ControlCabinetService) ListByBuildingID(ctx context.Context, buildingID
 }
 
 func (s *ControlCabinetService) Update(ctx context.Context, controlCabinet *domainFacility.ControlCabinet) error {
-	if err := s.Validate(ctx, controlCabinet, &controlCabinet.ID); err != nil {
-		return err
-	}
-	return s.repo.Update(ctx, controlCabinet)
+	return s.transaction().run(func(txService *ControlCabinetService) error {
+		if err := txService.Validate(ctx, controlCabinet, &controlCabinet.ID); err != nil {
+			return err
+		}
+		if err := txService.repo.Update(ctx, controlCabinet); err != nil {
+			return err
+		}
+		return txService.regenerateSPSControllerDeviceNames(ctx, controlCabinet)
+	})
 }
 
 func (s *ControlCabinetService) Validate(ctx context.Context, controlCabinet *domainFacility.ControlCabinet, excludeID *uuid.UUID) error {
@@ -145,6 +163,41 @@ func (s *ControlCabinetService) Validate(ctx context.Context, controlCabinet *do
 
 func (s *ControlCabinetService) DeleteByID(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
+}
+
+func (s *ControlCabinetService) regenerateSPSControllerDeviceNames(ctx context.Context, controlCabinet *domainFacility.ControlCabinet) error {
+	building, err := domain.GetByID(ctx, s.buildingRepo, controlCabinet.BuildingID)
+	if err != nil {
+		return err
+	}
+
+	for page := 1; ; page++ {
+		result, err := s.spsControllerRepo.GetPaginatedListByControlCabinetID(ctx, controlCabinet.ID, domain.PaginationParams{
+			Page:  page,
+			Limit: controlCabinetSPSControllerPageLimit,
+		})
+		if err != nil {
+			return err
+		}
+
+		for i := range result.Items {
+			controller := result.Items[i]
+			deviceName, ok := generatedSPSControllerDeviceName(controlCabinet, building, controller.GADevice)
+			if !ok || controller.DeviceName == deviceName {
+				continue
+			}
+			controller.DeviceName = deviceName
+			if err := s.spsControllerRepo.Update(ctx, &controller); err != nil {
+				return err
+			}
+		}
+
+		if page >= result.TotalPages || len(result.Items) == 0 {
+			break
+		}
+	}
+
+	return nil
 }
 
 func (s *ControlCabinetService) ensureBuildingExists(ctx context.Context, buildingID uuid.UUID) error {

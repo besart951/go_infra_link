@@ -24,8 +24,8 @@
   <HistoryTimelineDialog
     bind:open={historyOpen}
     title={`${$t('history.title')}: ${historyItem.iws_code}`}
-    entityTable="buildings"
-    entityId={historyItem.id}
+    scopeType="building"
+    scopeId={historyItem.id}
     onRestored={() => buildingsStore.reload()}
   />
 {/if}

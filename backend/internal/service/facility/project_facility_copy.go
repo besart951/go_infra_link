@@ -118,15 +118,9 @@ func (c projectFacilityCopy) copySPSControllerByID(ctx context.Context, id uuid.
 		return nil, domain.NewValidationError().Add("spscontroller.ga_device", "no available ga_device for control cabinet")
 	}
 
-	iwsCode := strings.TrimSpace(building.IWSCode)
-	cabinetNr := ""
-	if controlCabinet.ControlCabinetNr != nil {
-		cabinetNr = strings.TrimSpace(*controlCabinet.ControlCabinetNr)
-	}
-
 	deviceName := nextGADevice
-	if iwsCode != "" && cabinetNr != "" {
-		deviceName = strings.ToUpper(iwsCode + "_" + cabinetNr + "_" + nextGADevice)
+	if generatedName, ok := generatedSPSControllerDeviceName(controlCabinet, building, &nextGADevice); ok {
+		deviceName = generatedName
 	}
 
 	copyEntity := &domainFacility.SPSController{
@@ -209,12 +203,6 @@ func (c projectFacilityCopy) copySPSControllersForControlCabinet(ctx context.Con
 		return err
 	}
 
-	newCabinetNr := ""
-	if newControlCabinet.ControlCabinetNr != nil {
-		newCabinetNr = strings.TrimSpace(*newControlCabinet.ControlCabinetNr)
-	}
-	buildingIWSCode := strings.TrimSpace(building.IWSCode)
-
 	originalSPSControllers, err := c.listSPSControllersByControlCabinetID(ctx, originalControlCabinetID)
 	if err != nil {
 		return err
@@ -242,8 +230,8 @@ func (c projectFacilityCopy) copySPSControllersForControlCabinet(ctx context.Con
 		}
 
 		deviceName := strings.TrimSpace(originalSPS.DeviceName)
-		if buildingIWSCode != "" && newCabinetNr != "" && gaDevice != "" {
-			deviceName = strings.ToUpper(buildingIWSCode + "_" + newCabinetNr + "_" + gaDevice)
+		if generatedName, ok := generatedSPSControllerDeviceName(newControlCabinet, building, gaDevicePtr); ok {
+			deviceName = generatedName
 		}
 
 		spsCopy := &domainFacility.SPSController{
