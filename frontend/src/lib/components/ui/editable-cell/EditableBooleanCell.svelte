@@ -5,6 +5,7 @@
    */
   import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+  import InlineUndoButton from './InlineUndoButton.svelte';
 
   interface Props {
     value: boolean;
@@ -12,13 +13,25 @@
     isDirty?: boolean;
     error?: string;
     disabled?: boolean;
+    undoTitle?: string;
     onToggle: (value: boolean) => void;
+    onUndo?: () => void;
   }
 
-  let { value, pendingValue, isDirty = false, error, disabled = false, onToggle }: Props = $props();
+  let {
+    value,
+    pendingValue,
+    isDirty = false,
+    error,
+    disabled = false,
+    undoTitle = 'Undo field change',
+    onToggle,
+    onUndo
+  }: Props = $props();
 
   const displayValue = $derived(pendingValue !== undefined ? pendingValue : value);
   const hasError = $derived(!!error);
+  const canUndo = $derived(isDirty && !!onUndo);
 
   function handleChange(checked: boolean | 'indeterminate') {
     if (checked === 'indeterminate') return;
@@ -28,7 +41,7 @@
 
 <div
   class={[
-    'flex items-center justify-center rounded-sm px-2 py-1',
+    'group/undo relative flex items-center justify-center rounded-sm px-2 py-1',
     isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
     hasError ? 'bg-destructive/10' : ''
   ]
@@ -52,5 +65,8 @@
     </Tooltip.Provider>
   {:else}
     <Checkbox checked={displayValue} onCheckedChange={handleChange} {disabled} />
+  {/if}
+  {#if canUndo}
+    <InlineUndoButton title={undoTitle} onclick={() => onUndo?.()} />
   {/if}
 </div>

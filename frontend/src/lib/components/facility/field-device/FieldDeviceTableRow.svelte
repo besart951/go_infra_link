@@ -7,10 +7,11 @@
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
   import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { keyboardTableCell } from '$lib/actions/keyboardTableNavigation.js';
-  import { ChevronDown, ChevronRight } from '@lucide/svelte';
+  import { ChevronDown, ChevronRight, RotateCcw, Undo2 } from '@lucide/svelte';
   import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
   import TableApparatSelect from '../table-selects/TableApparatSelect.svelte';
   import TableSystemPartSelect from '../table-selects/TableSystemPartSelect.svelte';
+  import { InlineUndoButton } from '$lib/components/ui/editable-cell/index.js';
   import type { FieldDevice } from '$lib/domain/facility/index.js';
   import type { SharedFieldDeviceEditor } from '$lib/services/projectCollaboration.svelte.js';
   import { createTranslator } from '$lib/i18n/translator.js';
@@ -103,10 +104,32 @@
   }
 
   const spsControllerSystemTypeLabel = $derived(formatFieldDeviceSPSControllerSystemType(device));
+  const apparatSelectValue = $derived(
+    rowState.editing.getPendingValue(device.id, 'apparat_id') ?? device.apparat_id
+  );
+  const systemPartSelectValue = $derived(
+    rowState.editing.getPendingValue(device.id, 'system_part_id') ?? device.system_part_id ?? ''
+  );
+  const apparatSelectDirty = $derived(rowState.editing.isFieldDirty(device.id, 'apparat_id'));
+  const systemPartSelectDirty = $derived(
+    rowState.editing.isFieldDirty(device.id, 'system_part_id')
+  );
+  const hasFieldDevicePendingEdits = $derived(
+    rowState.editing.hasPendingFieldDeviceEditsForDevice(device.id)
+  );
+  const hasDevicePendingEdits = $derived(rowState.editing.hasPendingEditsForDevice(device.id));
+
+  const undoFieldTitle = $derived($t('field_device.editing.undo_field'));
+  const undoFieldDeviceTitle = $derived($t('field_device.editing.undo_field_device'));
+  const undoDeviceTitle = $derived($t('field_device.editing.undo_device'));
 </script>
 
 <Table.Row
-  class={[rowState.loading ? 'opacity-60' : '', rowState.isSelected(device.id) ? 'bg-muted/50' : '']
+  class={[
+    'group/fd-row',
+    rowState.loading ? 'opacity-60' : '',
+    rowState.isSelected(device.id) ? 'bg-muted/50' : ''
+  ]
     .filter(Boolean)
     .join(' ')}
 >
@@ -175,9 +198,11 @@
         disabled={!rowState.canUpdateFieldDevice()}
         isDirty={rowState.editing.isFieldDirty(device.id, 'bmk')}
         error={rowState.editing.getFieldError(device.id, 'bmk')}
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueEdit(device.id, 'bmk', value === '' ? null : value);
         }}
+        onUndo={() => rowState.editing.discardFieldEdit(device.id, 'bmk')}
       />
     </div>
   </Table.Cell>
@@ -195,9 +220,11 @@
         disabled={!rowState.canUpdateFieldDevice()}
         isDirty={rowState.editing.isFieldDirty(device.id, 'description')}
         error={rowState.editing.getFieldError(device.id, 'description')}
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueEdit(device.id, 'description', value === '' ? null : value);
         }}
+        onUndo={() => rowState.editing.discardFieldEdit(device.id, 'description')}
       />
     </div>
   </Table.Cell>
@@ -215,9 +242,11 @@
         disabled={!rowState.canUpdateFieldDevice()}
         isDirty={rowState.editing.isFieldDirty(device.id, 'text_fix')}
         error={rowState.editing.getFieldError(device.id, 'text_fix')}
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueEdit(device.id, 'text_fix', value === '' ? null : value);
         }}
+        onUndo={() => rowState.editing.discardFieldEdit(device.id, 'text_fix')}
       />
     </div>
   </Table.Cell>
@@ -236,6 +265,7 @@
         disabled={!rowState.canUpdateFieldDevice()}
         isDirty={rowState.editing.isFieldDirty(device.id, 'apparat_nr')}
         error={rowState.editing.getFieldError(device.id, 'apparat_nr')}
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueEdit(
             device.id,
@@ -243,6 +273,7 @@
             value ? parseInt(value, 10) : undefined
           );
         }}
+        onUndo={() => rowState.editing.discardFieldEdit(device.id, 'apparat_nr')}
       />
     </div>
   </Table.Cell>
@@ -251,28 +282,52 @@
     title={getFieldPreviewTitle('apparat_id')}
     {...focusCell('apparat_id')}
   >
-    <TableApparatSelect
-      items={rowState.allApparats}
-      value={device.apparat_id}
-      width="w-full"
-      disabled={!rowState.canUpdateFieldDevice()}
-      error={rowState.editing.getFieldError(device.id, 'apparat_id')}
-      onValueChange={handleApparatChange}
-    />
+    <div
+      class={['group/undo relative rounded-md', apparatSelectDirty ? 'ring-1 ring-ring' : '']
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <TableApparatSelect
+        items={rowState.allApparats}
+        value={apparatSelectValue}
+        width="w-full"
+        disabled={!rowState.canUpdateFieldDevice()}
+        error={rowState.editing.getFieldError(device.id, 'apparat_id')}
+        onValueChange={handleApparatChange}
+      />
+      {#if apparatSelectDirty}
+        <InlineUndoButton
+          title={undoFieldTitle}
+          onclick={() => rowState.editing.discardFieldEdit(device.id, 'apparat_id')}
+        />
+      {/if}
+    </div>
   </Table.Cell>
   <Table.Cell
     class={cellClass('w-48 max-w-48', 'p-1', 'system_part_id')}
     title={getFieldPreviewTitle('system_part_id')}
     {...focusCell('system_part_id')}
   >
-    <TableSystemPartSelect
-      items={rowState.allSystemParts}
-      value={device.system_part_id || ''}
-      width="w-full"
-      disabled={!rowState.canUpdateFieldDevice()}
-      error={rowState.editing.getFieldError(device.id, 'system_part_id')}
-      onValueChange={handleSystemPartChange}
-    />
+    <div
+      class={['group/undo relative rounded-md', systemPartSelectDirty ? 'ring-1 ring-ring' : '']
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <TableSystemPartSelect
+        items={rowState.allSystemParts}
+        value={systemPartSelectValue}
+        width="w-full"
+        disabled={!rowState.canUpdateFieldDevice()}
+        error={rowState.editing.getFieldError(device.id, 'system_part_id')}
+        onValueChange={handleSystemPartChange}
+      />
+      {#if systemPartSelectDirty}
+        <InlineUndoButton
+          title={undoFieldTitle}
+          onclick={() => rowState.editing.discardFieldEdit(device.id, 'system_part_id')}
+        />
+      {/if}
+    </div>
   </Table.Cell>
   <Table.Cell class="w-12 max-w-12 text-center">
     {#if device.specification_id || device.specification}
@@ -300,6 +355,7 @@
         isDirty={rowState.editing.isSpecFieldDirty(device.id, 'specification_supplier')}
         error={rowState.editing.getFieldError(device.id, 'specification_supplier')}
         maxlength={250}
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueSpecEdit(
             device.id,
@@ -307,6 +363,7 @@
             value === '' ? null : value
           );
         }}
+        onUndo={() => rowState.editing.discardSpecEdit(device.id, 'specification_supplier')}
       />
     </Table.Cell>
     <Table.Cell
@@ -321,6 +378,7 @@
         isDirty={rowState.editing.isSpecFieldDirty(device.id, 'specification_brand')}
         error={rowState.editing.getFieldError(device.id, 'specification_brand')}
         maxlength={250}
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueSpecEdit(
             device.id,
@@ -328,6 +386,7 @@
             value === '' ? null : value
           );
         }}
+        onUndo={() => rowState.editing.discardSpecEdit(device.id, 'specification_brand')}
       />
     </Table.Cell>
     <Table.Cell
@@ -342,6 +401,7 @@
         isDirty={rowState.editing.isSpecFieldDirty(device.id, 'specification_type')}
         error={rowState.editing.getFieldError(device.id, 'specification_type')}
         maxlength={250}
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueSpecEdit(
             device.id,
@@ -349,6 +409,7 @@
             value === '' ? null : value
           );
         }}
+        onUndo={() => rowState.editing.discardSpecEdit(device.id, 'specification_type')}
       />
     </Table.Cell>
     <Table.Cell
@@ -366,6 +427,7 @@
         isDirty={rowState.editing.isSpecFieldDirty(device.id, 'additional_info_motor_valve')}
         error={rowState.editing.getFieldError(device.id, 'additional_info_motor_valve')}
         maxlength={250}
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueSpecEdit(
             device.id,
@@ -373,6 +435,7 @@
             value === '' ? null : value
           );
         }}
+        onUndo={() => rowState.editing.discardSpecEdit(device.id, 'additional_info_motor_valve')}
       />
     </Table.Cell>
     <Table.Cell
@@ -387,6 +450,7 @@
         isDirty={rowState.editing.isSpecFieldDirty(device.id, 'additional_info_size')}
         error={rowState.editing.getFieldError(device.id, 'additional_info_size')}
         type="number"
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueSpecEdit(
             device.id,
@@ -394,6 +458,7 @@
             value === '' ? null : value ? parseInt(value, 10) : null
           );
         }}
+        onUndo={() => rowState.editing.discardSpecEdit(device.id, 'additional_info_size')}
       />
     </Table.Cell>
     <Table.Cell
@@ -421,6 +486,7 @@
           'additional_information_installation_location'
         )}
         maxlength={250}
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueSpecEdit(
             device.id,
@@ -428,6 +494,11 @@
             value === '' ? null : value
           );
         }}
+        onUndo={() =>
+          rowState.editing.discardSpecEdit(
+            device.id,
+            'additional_information_installation_location'
+          )}
       />
     </Table.Cell>
     <Table.Cell
@@ -442,6 +513,7 @@
         isDirty={rowState.editing.isSpecFieldDirty(device.id, 'electrical_connection_ph')}
         error={rowState.editing.getFieldError(device.id, 'electrical_connection_ph')}
         type="number"
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueSpecEdit(
             device.id,
@@ -449,6 +521,7 @@
             value === '' ? null : value ? parseInt(value, 10) : null
           );
         }}
+        onUndo={() => rowState.editing.discardSpecEdit(device.id, 'electrical_connection_ph')}
       />
     </Table.Cell>
     <Table.Cell
@@ -464,6 +537,7 @@
         error={rowState.editing.getFieldError(device.id, 'electrical_connection_acdc')}
         maxlength={2}
         placeholder={$t('field_device.table.acdc_placeholder')}
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueSpecEdit(
             device.id,
@@ -471,6 +545,7 @@
             value === '' ? null : value
           );
         }}
+        onUndo={() => rowState.editing.discardSpecEdit(device.id, 'electrical_connection_acdc')}
       />
     </Table.Cell>
     <Table.Cell
@@ -493,6 +568,7 @@
         error={rowState.editing.getFieldError(device.id, 'electrical_connection_amperage')}
         type="number"
         placeholder={$t('field_device.table.amperage_placeholder')}
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueSpecEdit(
             device.id,
@@ -500,6 +576,7 @@
             value === '' ? null : value ? parseFloat(value) : null
           );
         }}
+        onUndo={() => rowState.editing.discardSpecEdit(device.id, 'electrical_connection_amperage')}
       />
     </Table.Cell>
     <Table.Cell
@@ -518,6 +595,7 @@
         error={rowState.editing.getFieldError(device.id, 'electrical_connection_power')}
         type="number"
         placeholder={$t('field_device.table.power_placeholder')}
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueSpecEdit(
             device.id,
@@ -525,6 +603,7 @@
             value === '' ? null : value ? parseFloat(value) : null
           );
         }}
+        onUndo={() => rowState.editing.discardSpecEdit(device.id, 'electrical_connection_power')}
       />
     </Table.Cell>
     <Table.Cell
@@ -547,6 +626,7 @@
         error={rowState.editing.getFieldError(device.id, 'electrical_connection_rotation')}
         type="number"
         placeholder={$t('field_device.table.rotation_placeholder')}
+        undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueSpecEdit(
             device.id,
@@ -554,41 +634,68 @@
             value === '' ? null : value ? parseInt(value, 10) : null
           );
         }}
+        onUndo={() => rowState.editing.discardSpecEdit(device.id, 'electrical_connection_rotation')}
       />
     </Table.Cell>
   {/if}
-  <Table.Cell class="w-16 max-w-16 text-right">
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger>
-        {#snippet child({ props })}
-          <Button variant="ghost" size="icon" {...props}>
-            <EllipsisIcon class="size-4" />
-          </Button>
-        {/snippet}
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Content align="end" class="w-40">
-        <DropdownMenu.Item
-          onclick={() =>
-            void rowState.copyToClipboard(
-              device.bmk?.trim() || (device.apparat_nr ? String(device.apparat_nr) : device.id)
-            )}
+  <Table.Cell class="w-24 max-w-24 text-right">
+    <div class="flex items-center justify-end gap-1">
+      {#if hasFieldDevicePendingEdits}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          class="h-7 w-7 opacity-0 transition-opacity group-hover/fd-row:opacity-100 focus-visible:opacity-100"
+          title={undoFieldDeviceTitle}
+          onclick={() => rowState.editing.discardDeviceFieldEdits(device.id)}
         >
-          {$t('facility.copy')}
-        </DropdownMenu.Item>
-        <DropdownMenu.Item onclick={() => (historyOpen = true)}>
-          {$t('history.open')}
-        </DropdownMenu.Item>
-        {#if rowState.canDeleteFieldDevice()}
-          <DropdownMenu.Separator />
+          <Undo2 class="size-4" />
+        </Button>
+      {/if}
+      {#if hasDevicePendingEdits}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          class="h-7 w-7 opacity-0 transition-opacity group-hover/fd-row:opacity-100 focus-visible:opacity-100"
+          title={undoDeviceTitle}
+          onclick={() => rowState.editing.discardDeviceEdits(device.id)}
+        >
+          <RotateCcw class="size-4" />
+        </Button>
+      {/if}
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger>
+          {#snippet child({ props })}
+            <Button variant="ghost" size="icon" {...props}>
+              <EllipsisIcon class="size-4" />
+            </Button>
+          {/snippet}
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Content align="end" class="w-40">
           <DropdownMenu.Item
-            variant="destructive"
-            onclick={() => void rowState.deleteDevice(device)}
+            onclick={() =>
+              void rowState.copyToClipboard(
+                device.bmk?.trim() || (device.apparat_nr ? String(device.apparat_nr) : device.id)
+              )}
           >
-            {$t('common.delete')}
+            {$t('facility.copy')}
           </DropdownMenu.Item>
-        {/if}
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+          <DropdownMenu.Item onclick={() => (historyOpen = true)}>
+            {$t('history.open')}
+          </DropdownMenu.Item>
+          {#if rowState.canDeleteFieldDevice()}
+            <DropdownMenu.Separator />
+            <DropdownMenu.Item
+              variant="destructive"
+              onclick={() => void rowState.deleteDevice(device)}
+            >
+              {$t('common.delete')}
+            </DropdownMenu.Item>
+          {/if}
+        </DropdownMenu.Content>
+      </DropdownMenu.Root>
+    </div>
   </Table.Cell>
 </Table.Row>
 

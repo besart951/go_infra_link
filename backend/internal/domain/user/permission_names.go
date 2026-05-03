@@ -70,4 +70,7 @@ const (
 	PermissionProjectFieldDeviceBacnetObjectsEdit   = "project.fielddevice.bacnetobjects.edit"
 
 	PermissionNotificationSMTPManage = "notification.smtp.manage"
+
+	PermissionTimelineRead    = "timeline.read"
+	PermissionTimelineRestore = "timeline.restore"
 )

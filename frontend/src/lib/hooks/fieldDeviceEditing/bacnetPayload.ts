@@ -1,15 +1,11 @@
 import type {
   BacnetObjectInput,
-  BacnetObjectPatchInput,
-  FieldDevice
+  BacnetObjectPatchInput
 } from '$lib/domain/facility/index.js';
 
 export function buildBacnetObjectsPayload(
-  device: FieldDevice,
   deviceEdits: Map<string, Partial<BacnetObjectInput>>
 ): BacnetObjectPatchInput[] {
-  if (!device.bacnet_objects) return [];
-
   const patches: BacnetObjectPatchInput[] = [];
   for (const [objectId, edits] of deviceEdits.entries()) {
     const patch: BacnetObjectPatchInput = { id: objectId };

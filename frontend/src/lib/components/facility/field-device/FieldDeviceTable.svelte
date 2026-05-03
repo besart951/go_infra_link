@@ -25,7 +25,7 @@
     [
       state.view.tableClass,
       'table-fixed',
-      state.showSpecifications ? 'min-w-[2776px]' : 'min-w-[1320px]'
+      state.showSpecifications ? 'min-w-[2808px]' : 'min-w-[1352px]'
     ].join(' ')
   );
   const sortableButtonClass =
@@ -65,7 +65,7 @@
         <col class="w-28" />
         <col class="w-28" />
       {/if}
-      <col class="w-16" />
+      <col class="w-24" />
     </colgroup>
     <Table.Header>
       <Table.Row>
@@ -365,7 +365,7 @@
             </Button>
           </Table.Head>
         {/if}
-        <Table.Head class="w-16 max-w-16"></Table.Head>
+        <Table.Head class="w-24 max-w-24"></Table.Head>
       </Table.Row>
     </Table.Header>
     <Table.Body>
@@ -389,6 +389,12 @@
                   disabled={!state.canUpdateFieldDeviceBacnetObjects()}
                   onEdit={(objectId, field, value) => {
                     state.editing.queueBacnetEdit(device.id, objectId, field, value);
+                  }}
+                  onUndoField={(objectId, field) => {
+                    state.editing.discardBacnetObjectFieldEdit(device.id, objectId, field);
+                  }}
+                  onUndoRow={(objectId) => {
+                    state.editing.discardBacnetObjectEdits(device.id, objectId);
                   }}
                 />
               {/if}

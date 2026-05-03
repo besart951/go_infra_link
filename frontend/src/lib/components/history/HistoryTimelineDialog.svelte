@@ -8,6 +8,7 @@
   import { createTranslator } from '$lib/i18n/translator.js';
   import { t as translate } from '$lib/i18n/index.js';
   import { historyRepository } from '$lib/infrastructure/api/historyRepository.js';
+  import { canPerform } from '$lib/utils/permissions.js';
   import type { ChangeEvent } from '$lib/domain/history.js';
   import {
     formatHistoryDate,
@@ -71,6 +72,7 @@
   const timelineView = $derived.by(() =>
     buildHistoryTimelineView(events, { scopeType, scopeId, controlCabinetId })
   );
+  const canRestoreTimeline = $derived(canPerform('restore', 'timeline'));
   const visibleRowsEmpty = $derived.by(() =>
     timelineView.isHierarchicalView
       ? timelineView.directRows.length === 0 && timelineView.childGroups.length === 0
@@ -320,7 +322,7 @@
                 (directSectionOpen = (event.currentTarget as HTMLDetailsElement).open)}
             >
               <summary
-                class="flex cursor-pointer select-none items-center justify-between gap-3 bg-muted/40 px-3 py-2 text-sm font-medium"
+                class="flex cursor-pointer items-center justify-between gap-3 bg-muted/40 px-3 py-2 text-sm font-medium select-none"
               >
                 <span>{directTableTitle()}</span>
                 <Badge variant="secondary">
@@ -341,7 +343,7 @@
                 (childSectionOpen = (event.currentTarget as HTMLDetailsElement).open)}
             >
               <summary
-                class="flex cursor-pointer select-none items-center justify-between gap-3 bg-muted/40 px-3 py-2 text-sm font-medium"
+                class="flex cursor-pointer items-center justify-between gap-3 bg-muted/40 px-3 py-2 text-sm font-medium select-none"
               >
                 <span>{groupTableTitle(timelineView.childGroups)}</span>
                 <Badge variant="secondary">
@@ -434,7 +436,8 @@
               {historyActionLabel(row.event.action)}
             </Badge>
           </div>
-          <span class="truncate text-muted-foreground" title={rowBefore(row)}>{rowBefore(row)}</span>
+          <span class="truncate text-muted-foreground" title={rowBefore(row)}>{rowBefore(row)}</span
+          >
           <div class="min-w-0 text-xs text-muted-foreground">
             <div class="truncate" title={formatHistoryDate(row.event.occurred_at)}>
               {formatHistoryDate(row.event.occurred_at)}
@@ -443,7 +446,7 @@
           </div>
           <span class="truncate font-medium" title={rowAfter(row)}>{rowAfter(row)}</span>
           <div class="flex justify-end gap-1.5">
-            {#if controlCabinetId}
+            {#if canRestoreTimeline && controlCabinetId}
               <Tooltip.Root>
                 <Tooltip.Trigger
                   class={buttonVariants({ variant: 'outline', size: 'sm' })}
@@ -459,20 +462,22 @@
                 </Tooltip.Content>
               </Tooltip.Root>
             {/if}
-            <Tooltip.Root>
-              <Tooltip.Trigger
-                class={buttonVariants({ variant: 'outline', size: 'sm' })}
-                disabled={restoringEventId !== null}
-                aria-label={$t('history.restore_tooltip')}
-                onclick={() => void restoreEvent(row.event)}
-              >
-                <RotateCcwIcon class="size-3.5" />
-                {$t('history.restore')}
-              </Tooltip.Trigger>
-              <Tooltip.Content class="max-w-xs">
-                {$t('history.restore_tooltip')}
-              </Tooltip.Content>
-            </Tooltip.Root>
+            {#if canRestoreTimeline}
+              <Tooltip.Root>
+                <Tooltip.Trigger
+                  class={buttonVariants({ variant: 'outline', size: 'sm' })}
+                  disabled={restoringEventId !== null}
+                  aria-label={$t('history.restore_tooltip')}
+                  onclick={() => void restoreEvent(row.event)}
+                >
+                  <RotateCcwIcon class="size-3.5" />
+                  {$t('history.restore')}
+                </Tooltip.Trigger>
+                <Tooltip.Content class="max-w-xs">
+                  {$t('history.restore_tooltip')}
+                </Tooltip.Content>
+              </Tooltip.Root>
+            {/if}
           </div>
         </div>
       {/each}
@@ -504,7 +509,7 @@
               setGroupOpen(group, (event.currentTarget as HTMLDetailsElement).open)}
           >
             <summary
-              class="grid cursor-pointer select-none grid-cols-[minmax(16rem,1fr)_10rem_9rem] items-center gap-3 px-3 py-2 text-sm hover:bg-muted/30"
+              class="grid cursor-pointer grid-cols-[minmax(16rem,1fr)_10rem_9rem] items-center gap-3 px-3 py-2 text-sm select-none hover:bg-muted/30"
             >
               <span class="min-w-0 truncate font-medium">{groupLabel(group)}</span>
               <span class="truncate text-xs text-muted-foreground">{groupLatestDate(group)}</span>

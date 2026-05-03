@@ -9,7 +9,17 @@ type PermissionGroups = Record<CategoryId, Record<string, Permission[]>>;
 const CATEGORY_IDS: CategoryId[] = ['users', 'facility', 'projects'];
 
 const CATEGORY_RESOURCE_MAP: Record<CategoryId, string[]> = {
-  users: ['user', 'team', 'project', 'phase', 'phase_permission', 'role', 'permission'],
+  users: [
+    'user',
+    'team',
+    'project',
+    'phase',
+    'phase_permission',
+    'role',
+    'permission',
+    'timeline',
+    'notification.smtp'
+  ],
   facility: [
     'building',
     'controlcabinet',
@@ -24,6 +34,9 @@ const CATEGORY_RESOURCE_MAP: Record<CategoryId, string[]> = {
     'specification',
     'statetext',
     'alarmdefinition',
+    'alarmtype',
+    'alarmfield',
+    'unit',
     'notificationclass'
   ],
   projects: []
@@ -37,6 +50,8 @@ const RESOURCE_DISPLAY_NAMES: Record<string, string> = {
   phase: 'roles.resources.phase',
   phase_permission: 'roles.resources.phase_permission',
   project: 'roles.resources.project_self',
+  timeline: 'roles.resources.timeline',
+  'notification.smtp': 'roles.resources.notification_smtp',
   building: 'roles.resources.building',
   controlcabinet: 'roles.resources.controlcabinet',
   spscontroller: 'roles.resources.spscontroller',
@@ -50,6 +65,9 @@ const RESOURCE_DISPLAY_NAMES: Record<string, string> = {
   specification: 'roles.resources.specification',
   statetext: 'roles.resources.statetext',
   alarmdefinition: 'roles.resources.alarmdefinition',
+  alarmtype: 'roles.resources.alarmtype',
+  alarmfield: 'roles.resources.alarmfield',
+  unit: 'roles.resources.unit',
   notificationclass: 'roles.resources.notificationclass',
   'project.controlcabinet': 'roles.resources.project.controlcabinet',
   'project.spscontroller': 'roles.resources.project.spscontroller',

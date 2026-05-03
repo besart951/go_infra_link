@@ -276,7 +276,8 @@ const navDefinitions: NavDefinition[] = [
   {
     titleKey: 'navigation.timeline',
     url: '/timeline',
-    icon: HistoryIcon
+    icon: HistoryIcon,
+    hasAccess: ({ canPerform }) => canPerform('read', 'timeline')
   },
   {
     titleKey: 'navigation.notifications',

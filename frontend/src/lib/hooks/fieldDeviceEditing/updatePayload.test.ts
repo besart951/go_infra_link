@@ -91,4 +91,31 @@ describe('field-device update payload construction', () => {
       bacnet_objects: [{ id: 'bo-1', software_number: 42 }]
     });
   });
+
+  it('builds BACnet patches even when the device BACnet objects were not hydrated', () => {
+    expect(
+      buildFieldDeviceUpdatePayload({
+        deviceId: 'fd-1',
+        storeItems: [buildFieldDevice({ bacnet_objects: undefined })],
+        pendingEdits: new Map(),
+        pendingBacnetEdits: new Map([
+          [
+            'fd-1',
+            new Map([
+              [
+                'bo-1',
+                {
+                  software_number: 42
+                }
+              ]
+            ])
+          ]
+        ]),
+        includeBacnet: true
+      })
+    ).toEqual({
+      id: 'fd-1',
+      bacnet_objects: [{ id: 'bo-1', software_number: 42 }]
+    });
+  });
 });

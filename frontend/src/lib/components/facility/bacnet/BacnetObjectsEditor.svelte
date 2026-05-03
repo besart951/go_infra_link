@@ -6,7 +6,8 @@
   import {
     EditableCell,
     EditableSelectCell,
-    EditableBooleanCell
+    EditableBooleanCell,
+    InlineUndoButton
   } from '$lib/components/ui/editable-cell/index.js';
   import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
   import { Button } from '$lib/components/ui/button/index.js';
@@ -25,7 +26,7 @@
   import type { StateText, NotificationClass } from '$lib/domain/facility/index.js';
   import type { SharedFieldDeviceEditor } from '$lib/services/projectCollaboration.svelte.js';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import { BellRing } from '@lucide/svelte';
+  import { BellRing, Undo2 } from '@lucide/svelte';
 
   interface Props {
     bacnetObjects: BacnetObject[];
@@ -35,6 +36,8 @@
     sharedEditors?: SharedFieldDeviceEditor[];
     disabled?: boolean;
     onEdit: (objectId: string, field: string, value: unknown) => void;
+    onUndoField?: (objectId: string, field: string) => void;
+    onUndoRow?: (objectId: string) => void;
   }
 
   let {
@@ -44,7 +47,9 @@
     clientErrors,
     sharedEditors = [],
     disabled = false,
-    onEdit
+    onEdit,
+    onUndoField,
+    onUndoRow
   }: Props = $props();
 
   const t = createTranslator();
@@ -67,6 +72,10 @@
   function isDirty(objectId: string, field: string): boolean {
     const edits = pendingEdits.get(objectId);
     return edits ? field in edits : false;
+  }
+
+  function hasObjectEdits(objectId: string): boolean {
+    return Object.keys(pendingEdits.get(objectId) ?? {}).length > 0;
   }
 
   function getPendingTextValue(
@@ -210,11 +219,13 @@
       return a.software_number - b.software_number;
     })
   );
+  const undoFieldTitle = $derived($t('field_device.editing.undo_field'));
+  const undoBacnetRowTitle = $derived($t('field_device.editing.undo_bacnet_object'));
 </script>
 
 {#if bacnetObjects.length > 0}
   <div class="max-w-full min-w-0 overflow-x-auto">
-    <table class="w-323 table-fixed text-sm">
+    <table class="w-335 table-fixed text-sm">
       <colgroup>
         <col class="w-55" />
         <col class="w-13" />
@@ -226,6 +237,7 @@
         <col class="w-18" />
         <col class="w-18" />
         <col class="w-55" />
+        <col class="w-12" />
       </colgroup>
       <thead>
         <tr class="border-b text-left text-xs text-muted-foreground">
@@ -246,11 +258,12 @@
           <th class="pr-2 pb-2 text-center">
             {$t('field_device.bacnet.table.text_individual')}
           </th>
+          <th class="pr-2 pb-2"></th>
         </tr>
       </thead>
       <tbody>
         {#each sortedBacnetObjects as obj (obj.id)}
-          <tr class="border-b border-border/60 last:border-0">
+          <tr class="group/bacnet-row border-b border-border/60 last:border-0">
             <td class="py-1 pr-1">
               <div
                 class={getCollaborationClass(obj.id, 'text_fix')}
@@ -265,6 +278,8 @@
                   error={getFieldError(obj.id, 'text_fix')}
                   {disabled}
                   onSave={(v) => onEdit(obj.id, 'text_fix', v)}
+                  undoTitle={undoFieldTitle}
+                  onUndo={() => onUndoField?.(obj.id, 'text_fix')}
                 />
               </div>
             </td>
@@ -304,6 +319,7 @@
             <td class="w-24 max-w-24 overflow-hidden py-1 pr-1 align-top">
               <div
                 class={[
+                  'group/undo relative',
                   isDirty(obj.id, 'state_text_id') ? 'rounded-md ring-1 ring-ring' : '',
                   getCollaborationClass(obj.id, 'state_text_id')
                 ]
@@ -325,6 +341,12 @@
                   {disabled}
                   onValueChange={(value) => onEdit(obj.id, 'state_text_id', value || undefined)}
                 />
+                {#if isDirty(obj.id, 'state_text_id')}
+                  <InlineUndoButton
+                    title={undoFieldTitle}
+                    onclick={() => onUndoField?.(obj.id, 'state_text_id')}
+                  />
+                {/if}
               </div>
               {#if getFieldError(obj.id, 'state_text_id')}
                 <p class="mt-1 text-xs text-destructive">
@@ -335,6 +357,7 @@
             <td class="w-30 max-w-30 overflow-hidden py-1 pr-1 align-top">
               <div
                 class={[
+                  'group/undo relative',
                   isDirty(obj.id, 'notification_class_id') ? 'rounded-md ring-1 ring-ring' : '',
                   getCollaborationClass(obj.id, 'notification_class_id')
                 ]
@@ -361,6 +384,12 @@
                   onValueChange={(value) =>
                     onEdit(obj.id, 'notification_class_id', value || undefined)}
                 />
+                {#if isDirty(obj.id, 'notification_class_id')}
+                  <InlineUndoButton
+                    title={undoFieldTitle}
+                    onclick={() => onUndoField?.(obj.id, 'notification_class_id')}
+                  />
+                {/if}
               </div>
               {#if getFieldError(obj.id, 'notification_class_id')}
                 <p class="mt-1 text-xs text-destructive">
@@ -382,6 +411,8 @@
                   error={getFieldError(obj.id, 'description')}
                   {disabled}
                   onSave={(v) => onEdit(obj.id, 'description', v || undefined)}
+                  undoTitle={undoFieldTitle}
+                  onUndo={() => onUndoField?.(obj.id, 'description')}
                 />
               </div>
             </td>
@@ -404,6 +435,8 @@
                     error={getFieldError(obj.id, 'software_type')}
                     {disabled}
                     onSave={(v) => onEdit(obj.id, 'software_type', v)}
+                    undoTitle={undoFieldTitle}
+                    onUndo={() => onUndoField?.(obj.id, 'software_type')}
                   />
                 </div>
                 <div class="bacnet-inline-number min-w-0" {...editCell(obj.id, 'software_number')}>
@@ -424,6 +457,8 @@
                       const n = v ? Math.max(1, Math.min(99, parseInt(v))) : 1;
                       onEdit(obj.id, 'software_number', n);
                     }}
+                    undoTitle={undoFieldTitle}
+                    onUndo={() => onUndoField?.(obj.id, 'software_number')}
                   />
                 </div>
               </div>
@@ -447,6 +482,8 @@
                     error={getFieldError(obj.id, 'hardware_type')}
                     {disabled}
                     onSave={(v) => onEdit(obj.id, 'hardware_type', v)}
+                    undoTitle={undoFieldTitle}
+                    onUndo={() => onUndoField?.(obj.id, 'hardware_type')}
                   />
                 </div>
                 <div
@@ -470,6 +507,8 @@
                       const n = v ? Math.max(1, Math.min(99, parseInt(v))) : 1;
                       onEdit(obj.id, 'hardware_quantity', n);
                     }}
+                    undoTitle={undoFieldTitle}
+                    onUndo={() => onUndoField?.(obj.id, 'hardware_quantity')}
                   />
                 </div>
               </div>
@@ -487,6 +526,8 @@
                   error={getFieldError(obj.id, 'gms_visible')}
                   {disabled}
                   onToggle={(v) => onEdit(obj.id, 'gms_visible', v)}
+                  undoTitle={undoFieldTitle}
+                  onUndo={() => onUndoField?.(obj.id, 'gms_visible')}
                 />
               </div>
             </td>
@@ -503,6 +544,8 @@
                   error={getFieldError(obj.id, 'optional')}
                   {disabled}
                   onToggle={(v) => onEdit(obj.id, 'optional', v)}
+                  undoTitle={undoFieldTitle}
+                  onUndo={() => onUndoField?.(obj.id, 'optional')}
                 />
               </div>
             </td>
@@ -539,8 +582,24 @@
                           : normalized
                       );
                     }}
+                    undoTitle={undoFieldTitle}
+                    onUndo={() => onUndoField?.(obj.id, 'text_individual')}
                   />
                 </div>
+              {/if}
+            </td>
+            <td class="py-1 pr-1 text-right align-top">
+              {#if hasObjectEdits(obj.id)}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  class="h-7 w-7 opacity-0 transition-opacity group-hover/bacnet-row:opacity-100 focus-visible:opacity-100"
+                  title={undoBacnetRowTitle}
+                  onclick={() => onUndoRow?.(obj.id)}
+                >
+                  <Undo2 class="size-4" />
+                </Button>
               {/if}
             </td>
           </tr>

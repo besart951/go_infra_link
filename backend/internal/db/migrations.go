@@ -89,6 +89,11 @@ var migrations = []migration{
 		description: "facility_project_change_history",
 		apply:       migrateHistory,
 	},
+	{
+		version:     "202605030001",
+		description: "timeline_permissions",
+		apply:       ensureTimelinePermissions,
+	},
 }
 
 func ApplyMigrations(db *gorm.DB) error {

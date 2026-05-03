@@ -76,7 +76,8 @@ export const PERMISSION_ACTIONS = [
   'update',
   'delete',
   'manage',
-  'listAll'
+  'listAll',
+  'restore'
 ] as const;
 export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
 
@@ -100,7 +101,10 @@ export const FACILITY_RESOURCES = [
   'notificationclass',
   'statetext',
   'objectdata',
-  'alarmdefinition'
+  'alarmdefinition',
+  'alarmtype',
+  'alarmfield',
+  'unit'
 ] as const;
 export type FacilityResource = (typeof FACILITY_RESOURCES)[number];
 
@@ -127,7 +131,9 @@ export const GENERAL_RESOURCES = [
   'phase',
   'phase_permission',
   'role',
-  'permission'
+  'permission',
+  'timeline',
+  'notification.smtp'
 ] as const;
 export type GeneralResource = (typeof GENERAL_RESOURCES)[number];
 

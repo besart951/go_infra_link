@@ -347,6 +347,40 @@ describe('useFieldDeviceEditing', () => {
     expect(editing.hasPendingBacnetEdits).toBe(true);
   });
 
+  it('discards field, row, and BACnet draft edits independently', async () => {
+    const device = buildFieldDevice();
+    const editing = await createEditing();
+
+    editing.queueEdit(device.id, 'bmk', 'FD-UPDATED');
+    editing.queueEdit(device.id, 'description', 'Updated description');
+    editing.queueSpecEdit(device.id, 'specification_brand', 'Brand X');
+    editing.queueBacnetEdit(device.id, 'bo-1', 'text_fix', 'TF-UPDATED');
+    editing.queueBacnetEdit(device.id, 'bo-1', 'software_number', 42);
+
+    expect(editing.hasPendingFieldDeviceEditsForDevice(device.id)).toBe(true);
+    expect(editing.hasPendingBacnetEditsForDevice(device.id)).toBe(true);
+    expect(editing.hasPendingEditsForDevice(device.id)).toBe(true);
+
+    editing.discardFieldEdit(device.id, 'bmk');
+    expect(editing.isFieldDirty(device.id, 'bmk')).toBe(false);
+    expect(editing.isFieldDirty(device.id, 'description')).toBe(true);
+
+    editing.discardSpecEdit(device.id, 'specification_brand');
+    expect(editing.isSpecFieldDirty(device.id, 'specification_brand')).toBe(false);
+
+    editing.discardBacnetObjectFieldEdit(device.id, 'bo-1', 'text_fix');
+    expect(editing.getBacnetPendingEdits(device.id).get('bo-1')?.text_fix).toBeUndefined();
+    expect(editing.getBacnetPendingEdits(device.id).get('bo-1')?.software_number).toBe(42);
+
+    editing.discardDeviceFieldEdits(device.id);
+    expect(editing.hasPendingFieldDeviceEditsForDevice(device.id)).toBe(false);
+    expect(editing.hasPendingBacnetEditsForDevice(device.id)).toBe(true);
+
+    editing.discardDeviceEdits(device.id);
+    expect(editing.hasPendingEditsForDevice(device.id)).toBe(false);
+    expect(editing.hasUnsavedChanges).toBe(false);
+  });
+
   it('keeps all base field edits pending when apparat number validation rejects the base update', async () => {
     const device = buildFieldDevice({
       apparat_id: 'app-krg',

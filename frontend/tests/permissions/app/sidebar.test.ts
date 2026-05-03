@@ -124,6 +124,7 @@ describe('permission-aware sidebar navigation', () => {
     expect(screen.getByTestId('nav-link:/projects/list')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/notifications')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/notifications/inbox')).toBeInTheDocument();
+    expect(screen.queryByTestId('nav-link:/timeline')).not.toBeInTheDocument();
     expect(screen.queryByTestId('nav-link:/facility/buildings')).not.toBeInTheDocument();
     expect(screen.queryByTestId('nav-link:/admin/notifications/smtp')).not.toBeInTheDocument();
   });
@@ -136,6 +137,7 @@ describe('permission-aware sidebar navigation', () => {
       permission('project'),
       permission('phase'),
       permission('building'),
+      permission('timeline'),
       permission('notification.smtp', 'manage')
     ]);
 
@@ -152,6 +154,7 @@ describe('permission-aware sidebar navigation', () => {
     expect(screen.getByTestId('nav-link:/projects')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/projects/list')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/projects/phases')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-link:/timeline')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/facility/buildings')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/admin/notifications/smtp')).toBeInTheDocument();
     expect(screen.getByTestId('project-link:project-1')).toBeInTheDocument();

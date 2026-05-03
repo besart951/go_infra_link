@@ -36,5 +36,5 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 	notificationhandler.RegisterRoutes(protectedV1, handlers.Notification, authChecker)
 	authhandler.RegisterProtectedRoutes(protectedV1, handlers.Auth)
 	facilityhandler.RegisterRoutes(protectedV1, handlers.Facility)
-	historyhandler.RegisterRoutes(protectedV1, handlers.History)
+	historyhandler.RegisterRoutes(protectedV1, handlers.History, authChecker)
 }

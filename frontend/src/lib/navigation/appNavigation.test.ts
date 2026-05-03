@@ -54,11 +54,23 @@ describe('app navigation', () => {
       pathname: '/timeline',
       user: baseUser,
       translate,
-      canPerform: (action, resource) => action === 'read' && resource === 'objectdata'
+      canPerform: (action, resource) =>
+        action === 'read' && ['objectdata', 'timeline'].includes(resource)
     });
 
     const urls = items.map((item) => item.url);
     expect(urls[urls.indexOf('/excel') + 1]).toBe('/timeline');
     expect(items.find((item) => item.url === '/timeline')?.isActive).toBe(true);
+  });
+
+  it('hides the global timeline without timeline.read', () => {
+    const items = buildAppNavItems({
+      pathname: '/timeline',
+      user: baseUser,
+      translate,
+      canPerform: (action, resource) => action === 'read' && resource === 'objectdata'
+    });
+
+    expect(items.find((item) => item.url === '/timeline')).toBeUndefined();
   });
 });

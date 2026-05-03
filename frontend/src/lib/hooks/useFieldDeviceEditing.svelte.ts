@@ -166,6 +166,122 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
     setEditError(deviceId);
   }
 
+  function hasPendingFieldDeviceEditsForDevice(deviceId: string): boolean {
+    const changes = pendingEdits.get(deviceId);
+    if (!changes) return false;
+
+    for (const [key, value] of Object.entries(changes)) {
+      if (key === 'specification') {
+        if (value && Object.keys(value).length > 0) return true;
+        continue;
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  function hasPendingBacnetEditsForDevice(deviceId: string): boolean {
+    return (pendingBacnetEdits.get(deviceId)?.size ?? 0) > 0;
+  }
+
+  function hasPendingEditsForDevice(deviceId: string): boolean {
+    return (
+      hasPendingFieldDeviceEditsForDevice(deviceId) || hasPendingBacnetEditsForDevice(deviceId)
+    );
+  }
+
+  function discardFieldEdit(deviceId: string, field: keyof BulkUpdateFieldDeviceItem): void {
+    const changes = pendingEdits.get(deviceId);
+    if (!changes || !(field in changes)) return;
+
+    const { [field]: _removed, ...remaining } = changes;
+    setPendingEditsForDevice(deviceId, remaining);
+    clearEditErrorFields(deviceId, [
+      String(field),
+      `fielddevice.${String(field)}`,
+      `data.fielddevice.${String(field)}`,
+      `error.fielddevice.${String(field)}`
+    ]);
+  }
+
+  function discardSpecEdit(deviceId: string, field: keyof SpecificationInput): void {
+    const changes = pendingEdits.get(deviceId);
+    const specChanges = changes?.specification;
+    if (!changes || !specChanges || !(field in specChanges)) return;
+
+    const { [field]: _removed, ...remainingSpec } = specChanges;
+    const remaining: Partial<BulkUpdateFieldDeviceItem> = { ...changes };
+    if (Object.keys(remainingSpec).length > 0) {
+      remaining.specification = remainingSpec;
+    } else {
+      delete remaining.specification;
+    }
+
+    setPendingEditsForDevice(deviceId, remaining);
+    clearEditErrorFields(deviceId, [
+      String(field),
+      `specification.${String(field)}`,
+      `data.specification.${String(field)}`,
+      `error.specification.${String(field)}`
+    ]);
+  }
+
+  function discardDeviceFieldEdits(deviceId: string): void {
+    if (!pendingEdits.has(deviceId)) return;
+    const remaining = new Map(pendingEdits);
+    remaining.delete(deviceId);
+    pendingEdits = remaining;
+    setEditError(deviceId);
+  }
+
+  function discardDeviceEdits(deviceId: string): void {
+    discardDeviceFieldEdits(deviceId);
+    discardDeviceBacnetEdits(deviceId);
+  }
+
+  function setPendingEditsForDevice(
+    deviceId: string,
+    changes: Partial<BulkUpdateFieldDeviceItem>
+  ): void {
+    const next = new Map(pendingEdits);
+    if (hasFieldDeviceChangePayload(changes)) {
+      next.set(deviceId, changes);
+    } else {
+      next.delete(deviceId);
+    }
+    pendingEdits = next;
+  }
+
+  function hasFieldDeviceChangePayload(changes: Partial<BulkUpdateFieldDeviceItem>): boolean {
+    for (const [key, value] of Object.entries(changes)) {
+      if (key === 'specification') {
+        if (value && Object.keys(value).length > 0) return true;
+        continue;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function clearEditErrorFields(deviceId: string, fieldKeys: string[]): void {
+    const info = editErrors.get(deviceId);
+    if (!info?.fields) return;
+
+    const fields = { ...info.fields };
+    for (const key of fieldKeys) {
+      delete fields[key];
+    }
+
+    const next = new Map(editErrors);
+    if (Object.keys(fields).length > 0) {
+      next.set(deviceId, { ...info, fields });
+    } else {
+      next.delete(deviceId);
+    }
+    editErrors = next;
+  }
+
   function buildUpdateForDevice(
     deviceId: string,
     storeItems: FieldDevice[],
@@ -444,34 +560,113 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
   }
 
   function clearBacnetFieldError(deviceId: string, objectId: string, field: string) {
-    const deviceServerErrs = bacnetFieldErrors.get(deviceId);
-    if (deviceServerErrs) {
-      const objErrs = deviceServerErrs.get(objectId);
-      if (objErrs && field in objErrs) {
-        const { [field]: _, ...rest } = objErrs;
-        const newDeviceErrs = new Map(deviceServerErrs);
-        if (Object.keys(rest).length > 0) {
-          newDeviceErrs.set(objectId, rest);
-        } else {
-          newDeviceErrs.delete(objectId);
-        }
-        bacnetFieldErrors = new Map(bacnetFieldErrors).set(deviceId, newDeviceErrs);
-      }
+    bacnetFieldErrors = clearNestedBacnetFieldError(bacnetFieldErrors, deviceId, objectId, field);
+    bacnetClientErrors = clearNestedBacnetFieldError(bacnetClientErrors, deviceId, objectId, field);
+  }
+
+  function clearNestedBacnetFieldError(
+    source: Map<string, Map<string, Record<string, string>>>,
+    deviceId: string,
+    objectId: string,
+    field: string
+  ): Map<string, Map<string, Record<string, string>>> {
+    const deviceErrors = source.get(deviceId);
+    if (!deviceErrors) return source;
+
+    const objectErrors = deviceErrors.get(objectId);
+    if (!objectErrors || !(field in objectErrors)) return source;
+
+    const { [field]: _removed, ...remainingObjectErrors } = objectErrors;
+    const nextDeviceErrors = new Map(deviceErrors);
+    if (Object.keys(remainingObjectErrors).length > 0) {
+      nextDeviceErrors.set(objectId, remainingObjectErrors);
+    } else {
+      nextDeviceErrors.delete(objectId);
     }
-    const deviceClientErrs = bacnetClientErrors.get(deviceId);
-    if (deviceClientErrs) {
-      const objErrs = deviceClientErrs.get(objectId);
-      if (objErrs && field in objErrs) {
-        const { [field]: _, ...rest } = objErrs;
-        const newDeviceErrs = new Map(deviceClientErrs);
-        if (Object.keys(rest).length > 0) {
-          newDeviceErrs.set(objectId, rest);
-        } else {
-          newDeviceErrs.delete(objectId);
-        }
-        bacnetClientErrors = new Map(bacnetClientErrors).set(deviceId, newDeviceErrs);
-      }
+
+    const next = new Map(source);
+    if (nextDeviceErrors.size > 0) {
+      next.set(deviceId, nextDeviceErrors);
+    } else {
+      next.delete(deviceId);
     }
+    return next;
+  }
+
+  function discardBacnetObjectFieldEdit(deviceId: string, objectId: string, field: string): void {
+    const deviceEdits = pendingBacnetEdits.get(deviceId);
+    const objectEdits = deviceEdits?.get(objectId);
+    if (!deviceEdits || !objectEdits || !(field in objectEdits)) return;
+
+    const remainingObjectEdits = { ...objectEdits };
+    delete (remainingObjectEdits as Record<string, unknown>)[field];
+    const nextDeviceEdits = new Map(deviceEdits);
+    if (Object.keys(remainingObjectEdits).length > 0) {
+      nextDeviceEdits.set(objectId, remainingObjectEdits);
+    } else {
+      nextDeviceEdits.delete(objectId);
+    }
+
+    const nextPendingBacnetEdits = new Map(pendingBacnetEdits);
+    if (nextDeviceEdits.size > 0) {
+      nextPendingBacnetEdits.set(deviceId, nextDeviceEdits);
+    } else {
+      nextPendingBacnetEdits.delete(deviceId);
+    }
+    pendingBacnetEdits = nextPendingBacnetEdits;
+    clearBacnetFieldError(deviceId, objectId, field);
+  }
+
+  function discardBacnetObjectEdits(deviceId: string, objectId: string): void {
+    const deviceEdits = pendingBacnetEdits.get(deviceId);
+    if (!deviceEdits?.has(objectId)) return;
+
+    const nextDeviceEdits = new Map(deviceEdits);
+    nextDeviceEdits.delete(objectId);
+
+    const nextPendingBacnetEdits = new Map(pendingBacnetEdits);
+    if (nextDeviceEdits.size > 0) {
+      nextPendingBacnetEdits.set(deviceId, nextDeviceEdits);
+    } else {
+      nextPendingBacnetEdits.delete(deviceId);
+    }
+    pendingBacnetEdits = nextPendingBacnetEdits;
+    clearBacnetObjectErrors(deviceId, objectId);
+  }
+
+  function discardDeviceBacnetEdits(deviceId: string): void {
+    if (!pendingBacnetEdits.has(deviceId)) return;
+
+    const remainingBacnet = new Map(pendingBacnetEdits);
+    remainingBacnet.delete(deviceId);
+    pendingBacnetEdits = remainingBacnet;
+
+    const nextFieldErrors = new Map(bacnetFieldErrors);
+    nextFieldErrors.delete(deviceId);
+    bacnetFieldErrors = nextFieldErrors;
+
+    const nextClientErrors = new Map(bacnetClientErrors);
+    nextClientErrors.delete(deviceId);
+    bacnetClientErrors = nextClientErrors;
+  }
+
+  function clearBacnetObjectErrors(deviceId: string, objectId: string): void {
+    const clearObject = (source: Map<string, Map<string, Record<string, string>>>) => {
+      const deviceErrors = source.get(deviceId);
+      if (!deviceErrors?.has(objectId)) return source;
+      const nextDeviceErrors = new Map(deviceErrors);
+      nextDeviceErrors.delete(objectId);
+      const next = new Map(source);
+      if (nextDeviceErrors.size > 0) {
+        next.set(deviceId, nextDeviceErrors);
+      } else {
+        next.delete(deviceId);
+      }
+      return next;
+    };
+
+    bacnetFieldErrors = clearObject(bacnetFieldErrors);
+    bacnetClientErrors = clearObject(bacnetClientErrors);
   }
 
   function validateBacnetEdits(items: FieldDevice[], deviceId: string): boolean {
@@ -839,6 +1034,16 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
     getBacnetFieldErrors,
     getBacnetClientErrors,
     saveDeviceEdits,
-    saveDeviceBacnetEdits
+    saveDeviceBacnetEdits,
+    hasPendingFieldDeviceEditsForDevice,
+    hasPendingBacnetEditsForDevice,
+    hasPendingEditsForDevice,
+    discardFieldEdit,
+    discardSpecEdit,
+    discardDeviceFieldEdits,
+    discardDeviceEdits,
+    discardBacnetObjectFieldEdit,
+    discardBacnetObjectEdits,
+    discardDeviceBacnetEdits
   };
 }

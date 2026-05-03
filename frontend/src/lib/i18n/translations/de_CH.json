@@ -1399,6 +1399,8 @@
       "phase": "Phasen",
       "phase_permission": "Phasenregeln",
       "project_self": "Projekte",
+      "timeline": "Timeline",
+      "notification_smtp": "SMTP-Benachrichtigungen",
       "building": "Gebäude",
       "controlcabinet": "Schaltschränke",
       "spscontroller": "SPS-Regler",
@@ -1412,6 +1414,9 @@
       "specification": "Spezifikationen",
       "statetext": "Statustexte",
       "alarmdefinition": "Alarmdefinitionen",
+      "alarmtype": "Alarmtypen",
+      "alarmfield": "Alarmfelder",
+      "unit": "Einheiten",
       "notificationclass": "Benachrichtigungsklassen",
       "project": {
         "controlcabinet": "Schaltschränke",
@@ -2248,6 +2253,10 @@
       "notice": "Änderungen werden lokal gespeichert und bleiben beim Navigieren erhalten"
     },
     "editing": {
+      "undo_field": "Feldänderung rückgängig machen",
+      "undo_field_device": "Feldgerät-Eingaben rückgängig machen",
+      "undo_device": "Feldgerät- und BACnet-Änderungen rückgängig machen",
+      "undo_bacnet_object": "BACnet-Objekt-Änderungen rückgängig machen",
       "toasts": {
         "fix_validation": "Bitte beheben Sie die Validierungsfehler vor dem Speichern.",
         "partial_success": "{complete} Feldgerät(e) vollständig und {partial} Feldgerät(e) teilweise aktualisiert. Bitte prüfen Sie die fehlgeschlagenen Felder.",

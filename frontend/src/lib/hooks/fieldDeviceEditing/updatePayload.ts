@@ -65,8 +65,8 @@ export function buildFieldDeviceUpdatePayload({
     }
   }
 
-  if (shouldIncludeBacnet && device) {
-    update.bacnet_objects = buildBacnetObjectsPayload(device, bacnetEdits);
+  if (shouldIncludeBacnet) {
+    update.bacnet_objects = buildBacnetObjectsPayload(bacnetEdits);
     hasChanges = true;
   }
 

@@ -28,6 +28,7 @@
     historyFieldFilterOptions
   } from '$lib/components/history/historyTimelineFilters.js';
   import { historyRepository } from '$lib/infrastructure/api/historyRepository.js';
+  import { canPerform } from '$lib/utils/permissions.js';
   import { getUser, listUsers } from '$lib/infrastructure/api/user.adapter.js';
   import type { ChangeEvent, HistoryTimelineParams } from '$lib/domain/history.js';
   import type { User } from '$lib/domain/user/index.js';
@@ -69,6 +70,7 @@
   );
   const hasMore = $derived(page < totalPages);
   const loadedCount = $derived(events.length);
+  const canRestoreTimeline = $derived(canPerform('restore', 'timeline'));
 
   $effect(() => {
     if (!entityTable && selectedFields.length > 0) {
@@ -227,7 +229,7 @@
   }
 
   function eventRestoreDisabled(event: ChangeEvent): boolean {
-    return restoringEventId !== null || event.action === 'restore';
+    return !canRestoreTimeline || restoringEventId !== null || event.action === 'restore';
   }
 
   function eventTooltipDetails(event: ChangeEvent): Array<{ label: string; value: string }> {
@@ -572,24 +574,26 @@
                       </Tooltip.Content>
                     </Tooltip.Root>
 
-                    <Tooltip.Root>
-                      <Tooltip.Trigger
-                        class={buttonVariants({ variant: 'outline', size: 'sm' })}
-                        disabled={eventRestoreDisabled(event)}
-                        aria-label={$t('history.timeline.undo_tooltip')}
-                        onclick={() => void undoEvent(event)}
-                      >
-                        <RotateCcwIcon class="size-3.5" />
-                        {$t('history.timeline.undo')}
-                      </Tooltip.Trigger>
-                      <Tooltip.Content class="max-w-xs">
-                        {$t(
-                          event.action === 'restore'
-                            ? 'history.timeline.undo_restore_disabled'
-                            : 'history.timeline.undo_tooltip'
-                        )}
-                      </Tooltip.Content>
-                    </Tooltip.Root>
+                    {#if canRestoreTimeline}
+                      <Tooltip.Root>
+                        <Tooltip.Trigger
+                          class={buttonVariants({ variant: 'outline', size: 'sm' })}
+                          disabled={eventRestoreDisabled(event)}
+                          aria-label={$t('history.timeline.undo_tooltip')}
+                          onclick={() => void undoEvent(event)}
+                        >
+                          <RotateCcwIcon class="size-3.5" />
+                          {$t('history.timeline.undo')}
+                        </Tooltip.Trigger>
+                        <Tooltip.Content class="max-w-xs">
+                          {$t(
+                            event.action === 'restore'
+                              ? 'history.timeline.undo_restore_disabled'
+                              : 'history.timeline.undo_tooltip'
+                          )}
+                        </Tooltip.Content>
+                      </Tooltip.Root>
+                    {/if}
                   </div>
                 </div>
 

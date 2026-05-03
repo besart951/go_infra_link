@@ -57,7 +57,7 @@
       case 'success':
         return 'bg-success-muted border-success-border text-success-muted-foreground dark:bg-success-muted dark:border-success-border dark:text-success-muted-foreground';
       case 'error':
-        return 'bg-destructive/10 border-destructive/30 text-destructive dark:bg-destructive/20 dark:border-destructive/40 dark:text-destructive';
+        return 'bg-red-50 border-red-200 text-red-700 dark:bg-red-950 dark:border-red-800 dark:text-red-300';
       case 'warning':
         return 'bg-warning-muted border-warning-border text-warning-muted-foreground dark:bg-warning-muted dark:border-warning-border dark:text-warning-muted-foreground';
       default:
@@ -71,7 +71,7 @@
     {#each $toasts as toast (toast.id)}
       {@const Icon = getIcon(toast.type)}
       <div
-        transition:fly={{ y: 50, duration: 200 }}
+        transition:fly={{ y: 50, duration: 200, opacity: 1 }}
         class="flex items-start gap-3 rounded-lg border p-4 shadow-lg {getColorClasses(toast.type)}"
       >
         <Icon class="mt-0.5 h-5 w-5 shrink-0" />

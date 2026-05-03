@@ -6,6 +6,7 @@
    */
   import { Input } from '$lib/components/ui/input/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+  import InlineUndoButton from './InlineUndoButton.svelte';
 
   interface Props {
     value: string;
@@ -19,7 +20,9 @@
     error?: string; // Error message to display
     disabled?: boolean;
     emptyText?: string;
+    undoTitle?: string;
     onSave: (value: string) => void;
+    onUndo?: () => void;
   }
 
   let {
@@ -34,7 +37,9 @@
     error,
     disabled = false,
     emptyText = '-',
-    onSave
+    undoTitle = 'Undo field change',
+    onSave,
+    onUndo
   }: Props = $props();
 
   let isEditing = $state(false);
@@ -45,6 +50,7 @@
   const displayValue = $derived(pendingValue !== undefined ? pendingValue : value);
   const displayTitle = $derived(displayValue ? displayValue : undefined);
   const hasError = $derived(!!error);
+  const canUndo = $derived(isDirty && !!onUndo && !isEditing);
 
   function startEditing() {
     if (disabled) return;
@@ -111,24 +117,67 @@
       .join(' ')}
   />
 {:else if hasError}
-  <Tooltip.Provider>
-    <Tooltip.Root>
-      <Tooltip.Trigger>
-        {#snippet child({ props })}
-          <button
-            {...props}
-            type="button"
-            onclick={startEditing}
-            {disabled}
-            class={[
-              'flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm border px-2 py-1 text-left text-sm transition-colors',
-              'border-destructive bg-destructive/10 hover:bg-destructive/20',
-              disabled ? 'cursor-not-allowed opacity-50' : ''
-            ]
-              .filter(Boolean)
-              .join(' ')}
-          >
-            {#if displayValue}
+  <div class="group/undo relative">
+    <Tooltip.Provider>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          {#snippet child({ props })}
+            <button
+              {...props}
+              type="button"
+              onclick={startEditing}
+              {disabled}
+              class={[
+                'flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm border px-2 py-1 text-left text-sm transition-colors',
+                'border-destructive bg-destructive/10 hover:bg-destructive/20',
+                disabled ? 'cursor-not-allowed opacity-50' : ''
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {#if displayValue}
+                {#if type === 'number'}
+                  <code class="block max-w-full truncate rounded-md bg-muted px-1.5 py-0.5 text-sm">
+                    {displayValue}
+                  </code>
+                {:else}
+                  <span class="min-w-0 truncate">{displayValue}</span>
+                {/if}
+              {:else}
+                <span class="min-w-0 truncate text-muted-foreground">{emptyText}</span>
+              {/if}
+            </button>
+          {/snippet}
+        </Tooltip.Trigger>
+        <Tooltip.Content side="top" class="max-w-xs bg-destructive text-destructive-foreground">
+          <p>{error}</p>
+        </Tooltip.Content>
+      </Tooltip.Root>
+    </Tooltip.Provider>
+    {#if canUndo}
+      <InlineUndoButton title={undoTitle} onclick={() => onUndo?.()} />
+    {/if}
+  </div>
+{:else if displayTitle}
+  <div class="group/undo relative">
+    <Tooltip.Provider>
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          {#snippet child({ props })}
+            <button
+              {...props}
+              type="button"
+              onclick={startEditing}
+              {disabled}
+              class={[
+                'flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
+                'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
+                isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
+                disabled ? 'cursor-not-allowed opacity-50' : ''
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               {#if type === 'number'}
                 <code class="block max-w-full truncate rounded-md bg-muted px-1.5 py-0.5 text-sm">
                   {displayValue}
@@ -136,75 +185,47 @@
               {:else}
                 <span class="min-w-0 truncate">{displayValue}</span>
               {/if}
-            {:else}
-              <span class="min-w-0 truncate text-muted-foreground">{emptyText}</span>
-            {/if}
-          </button>
-        {/snippet}
-      </Tooltip.Trigger>
-      <Tooltip.Content side="top" class="max-w-xs bg-destructive text-destructive-foreground">
-        <p>{error}</p>
-      </Tooltip.Content>
-    </Tooltip.Root>
-  </Tooltip.Provider>
-{:else if displayTitle}
-  <Tooltip.Provider>
-    <Tooltip.Root>
-      <Tooltip.Trigger>
-        {#snippet child({ props })}
-          <button
-            {...props}
-            type="button"
-            onclick={startEditing}
-            {disabled}
-            class={[
-              'flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
-              'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
-              isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
-              disabled ? 'cursor-not-allowed opacity-50' : ''
-            ]
-              .filter(Boolean)
-              .join(' ')}
-          >
-            {#if type === 'number'}
-              <code class="block max-w-full truncate rounded-md bg-muted px-1.5 py-0.5 text-sm">
-                {displayValue}
-              </code>
-            {:else}
-              <span class="min-w-0 truncate">{displayValue}</span>
-            {/if}
-          </button>
-        {/snippet}
-      </Tooltip.Trigger>
-      <Tooltip.Content side="top" class="max-w-xs">
-        <p class="break-words">{displayTitle}</p>
-      </Tooltip.Content>
-    </Tooltip.Root>
-  </Tooltip.Provider>
-{:else}
-  <button
-    type="button"
-    onclick={startEditing}
-    {disabled}
-    class={[
-      'flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
-      'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
-      isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
-      disabled ? 'cursor-not-allowed opacity-50' : ''
-    ]
-      .filter(Boolean)
-      .join(' ')}
-  >
-    {#if displayValue}
-      {#if type === 'number'}
-        <code class="block max-w-full truncate rounded-md bg-muted px-1.5 py-0.5 text-sm">
-          {displayValue}
-        </code>
-      {:else}
-        <span class="min-w-0 truncate">{displayValue}</span>
-      {/if}
-    {:else}
-      <span class="min-w-0 truncate text-muted-foreground">{emptyText}</span>
+            </button>
+          {/snippet}
+        </Tooltip.Trigger>
+        <Tooltip.Content side="top" class="max-w-xs">
+          <p class="break-words">{displayTitle}</p>
+        </Tooltip.Content>
+      </Tooltip.Root>
+    </Tooltip.Provider>
+    {#if canUndo}
+      <InlineUndoButton title={undoTitle} onclick={() => onUndo?.()} />
     {/if}
-  </button>
+  </div>
+{:else}
+  <div class="group/undo relative">
+    <button
+      type="button"
+      onclick={startEditing}
+      {disabled}
+      class={[
+        'flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
+        'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
+        isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
+        disabled ? 'cursor-not-allowed opacity-50' : ''
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {#if displayValue}
+        {#if type === 'number'}
+          <code class="block max-w-full truncate rounded-md bg-muted px-1.5 py-0.5 text-sm">
+            {displayValue}
+          </code>
+        {:else}
+          <span class="min-w-0 truncate">{displayValue}</span>
+        {/if}
+      {:else}
+        <span class="min-w-0 truncate text-muted-foreground">{emptyText}</span>
+      {/if}
+    </button>
+    {#if canUndo}
+      <InlineUndoButton title={undoTitle} onclick={() => onUndo?.()} />
+    {/if}
+  </div>
 {/if}

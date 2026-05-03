@@ -40,7 +40,8 @@ const ADMIN_RESOURCES = [
   'statetext',
   'alarmdefinition',
   'alarmtype',
-  'notificationclass'
+  'notificationclass',
+  'timeline'
 ] as const;
 
 const ADMIN_ACTIONS = ['read', 'create', 'update', 'delete'] as const;
@@ -76,7 +77,8 @@ export function buildAdminUser(overrides: Partial<TestUser> = {}): TestUser {
           ...ADMIN_RESOURCES.flatMap((resource) =>
             ADMIN_ACTIONS.map((action) => permission(resource, action))
           ),
-          permission('notification.smtp', 'manage')
+          permission('notification.smtp', 'manage'),
+          permission('timeline', 'restore')
         ];
 
   return buildUser({
