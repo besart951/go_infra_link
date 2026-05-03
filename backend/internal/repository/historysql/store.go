@@ -77,6 +77,11 @@ func AutoMigrate(db *gorm.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_entity_versions_latest ON entity_versions (entity_table, entity_id, version_at DESC)`,
 		`CREATE INDEX IF NOT EXISTS idx_entity_versions_change_event ON entity_versions (change_event_id)`,
 	}
+	if db.Dialector != nil && db.Dialector.Name() == "postgres" {
+		statements = append(statements,
+			`CREATE INDEX IF NOT EXISTS idx_change_events_diff_json_gin ON change_events USING GIN (diff_json jsonb_ops) WHERE diff_json IS NOT NULL`,
+		)
+	}
 	for _, stmt := range statements {
 		if err := db.Exec(stmt).Error; err != nil {
 			return err
@@ -294,9 +299,25 @@ func (s *Store) ListTimeline(ctx context.Context, filter domainHistory.TimelineF
 	offset := (page - 1) * limit
 
 	query := s.db.WithContext(ctx).Model(&domainHistory.ChangeEvent{})
-	if filter.EntityTable != "" && filter.EntityID != uuid.Nil {
-		query = query.Where("entity_table = ? AND entity_id = ?", filter.EntityTable, filter.EntityID)
+	if filter.EntityTable != "" {
+		if !allowedTable(filter.EntityTable) {
+			return nil, fmt.Errorf("history table not allowed: %s", filter.EntityTable)
+		}
+		query = query.Where("entity_table = ?", filter.EntityTable)
+		if filter.EntityID != uuid.Nil {
+			query = query.Where("entity_id = ?", filter.EntityID)
+		}
 	}
+	if filter.ActorID != uuid.Nil {
+		query = query.Where("actor_id = ?", filter.ActorID)
+	}
+	if filter.OccurredFrom != nil {
+		query = query.Where("occurred_at >= ?", filter.OccurredFrom.UTC())
+	}
+	if filter.OccurredTo != nil {
+		query = query.Where("occurred_at <= ?", filter.OccurredTo.UTC())
+	}
+	query = s.applyFieldFilter(query, filter.Fields)
 	if filter.ScopeType != "" && filter.ScopeID != uuid.Nil {
 		sub := s.db.WithContext(ctx).Model(&domainHistory.ChangeEventScope{}).
 			Select("change_event_id").
@@ -359,6 +380,72 @@ func normalizeTimelinePagination(page, limit int) (int, int) {
 		limit = maxTimelineLimit
 	}
 	return page, limit
+}
+
+func (s *Store) applyFieldFilter(query *gorm.DB, fields []string) *gorm.DB {
+	fields = normalizeFieldFilter(fields)
+	if len(fields) == 0 {
+		return query
+	}
+
+	if s.db.Dialector != nil && s.db.Dialector.Name() == "postgres" {
+		literals := make([]string, 0, len(fields))
+		for _, field := range fields {
+			literals = append(literals, quoteSQLString(field))
+		}
+		return query.Where("diff_json ?| ARRAY[" + strings.Join(literals, ",") + "]::text[]")
+	}
+
+	args := make([]any, 0, len(fields))
+	conditions := make([]string, 0, len(fields))
+	for _, field := range fields {
+		conditions = append(conditions, "CAST(diff_json AS TEXT) LIKE ?")
+		args = append(args, `%"`+field+`"%`)
+	}
+	return query.Where("("+strings.Join(conditions, " OR ")+")", args...)
+}
+
+func normalizeFieldFilter(fields []string) []string {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(fields))
+	for _, field := range fields {
+		trimmed := strings.TrimSpace(field)
+		if trimmed == "" || len(trimmed) > 96 || !validHistoryFieldName(trimmed) {
+			continue
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		out = append(out, trimmed)
+		if len(out) >= 40 {
+			break
+		}
+	}
+	return out
+}
+
+func validHistoryFieldName(field string) bool {
+	for _, r := range field {
+		if r >= 'a' && r <= 'z' {
+			continue
+		}
+		if r >= 'A' && r <= 'Z' {
+			continue
+		}
+		if r >= '0' && r <= '9' {
+			continue
+		}
+		if r == '_' || r == '.' || r == '-' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func quoteSQLString(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "''") + "'"
 }
 
 type rawRow struct {

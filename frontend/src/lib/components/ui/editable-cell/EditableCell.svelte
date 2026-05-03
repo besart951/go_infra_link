@@ -43,6 +43,7 @@
 
   // Display value: use pending value if available, otherwise original value
   const displayValue = $derived(pendingValue !== undefined ? pendingValue : value);
+  const displayTitle = $derived(displayValue ? displayValue : undefined);
   const hasError = $derived(!!error);
 
   function startEditing() {
@@ -103,7 +104,7 @@
     onkeydown={handleKeydown}
     onblur={handleBlur}
     class={[
-      'h-7 w-full min-w-16 px-2 py-1 text-sm',
+      'h-7 w-full min-w-0 px-2 py-1 text-sm',
       hasError ? 'border-destructive focus-visible:ring-destructive' : ''
     ]
       .filter(Boolean)
@@ -120,7 +121,7 @@
             onclick={startEditing}
             {disabled}
             class={[
-              'flex h-7 min-h-7 w-full cursor-pointer items-center rounded-sm border px-2 py-1 text-left text-sm transition-colors',
+              'flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm border px-2 py-1 text-left text-sm transition-colors',
               'border-destructive bg-destructive/10 hover:bg-destructive/20',
               disabled ? 'cursor-not-allowed opacity-50' : ''
             ]
@@ -129,12 +130,14 @@
           >
             {#if displayValue}
               {#if type === 'number'}
-                <code class="rounded-md bg-muted px-1.5 py-0.5 text-sm">{displayValue}</code>
+                <code class="block max-w-full truncate rounded-md bg-muted px-1.5 py-0.5 text-sm">
+                  {displayValue}
+                </code>
               {:else}
-                <span class="truncate">{displayValue}</span>
+                <span class="min-w-0 truncate">{displayValue}</span>
               {/if}
             {:else}
-              <span class="text-muted-foreground">{emptyText}</span>
+              <span class="min-w-0 truncate text-muted-foreground">{emptyText}</span>
             {/if}
           </button>
         {/snippet}
@@ -144,13 +147,47 @@
       </Tooltip.Content>
     </Tooltip.Root>
   </Tooltip.Provider>
+{:else if displayTitle}
+  <Tooltip.Provider>
+    <Tooltip.Root>
+      <Tooltip.Trigger>
+        {#snippet child({ props })}
+          <button
+            {...props}
+            type="button"
+            onclick={startEditing}
+            {disabled}
+            class={[
+              'flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
+              'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
+              isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
+              disabled ? 'cursor-not-allowed opacity-50' : ''
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {#if type === 'number'}
+              <code class="block max-w-full truncate rounded-md bg-muted px-1.5 py-0.5 text-sm">
+                {displayValue}
+              </code>
+            {:else}
+              <span class="min-w-0 truncate">{displayValue}</span>
+            {/if}
+          </button>
+        {/snippet}
+      </Tooltip.Trigger>
+      <Tooltip.Content side="top" class="max-w-xs">
+        <p class="break-words">{displayTitle}</p>
+      </Tooltip.Content>
+    </Tooltip.Root>
+  </Tooltip.Provider>
 {:else}
   <button
     type="button"
     onclick={startEditing}
     {disabled}
     class={[
-      'flex h-7 min-h-7 w-full cursor-pointer items-center rounded-sm px-2 py-1 text-left text-sm transition-colors',
+      'flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
       'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
       isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
       disabled ? 'cursor-not-allowed opacity-50' : ''
@@ -160,12 +197,14 @@
   >
     {#if displayValue}
       {#if type === 'number'}
-        <code class="rounded-md bg-muted px-1.5 py-0.5 text-sm">{displayValue}</code>
+        <code class="block max-w-full truncate rounded-md bg-muted px-1.5 py-0.5 text-sm">
+          {displayValue}
+        </code>
       {:else}
-        <span class="truncate">{displayValue}</span>
+        <span class="min-w-0 truncate">{displayValue}</span>
       {/if}
     {:else}
-      <span class="text-muted-foreground">{emptyText}</span>
+      <span class="min-w-0 truncate text-muted-foreground">{emptyText}</span>
     {/if}
   </button>
 {/if}

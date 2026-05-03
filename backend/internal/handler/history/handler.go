@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -170,6 +171,31 @@ func parseTimelineFilter(c *gin.Context) (domainHistory.TimelineFilter, bool) {
 		}
 		filter.EntityID = id
 	}
+	if actorID := c.Query("actor_id"); actorID != "" {
+		id, err := uuid.Parse(actorID)
+		if err != nil {
+			handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_actor_id", "validation.invalid_uuid_format")
+			return filter, false
+		}
+		filter.ActorID = id
+	}
+	if occurredFrom := c.Query("occurred_from"); occurredFrom != "" {
+		parsed, err := parseTimelineTime(occurredFrom)
+		if err != nil {
+			handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_occurred_from", "validation.invalid_request")
+			return filter, false
+		}
+		filter.OccurredFrom = &parsed
+	}
+	if occurredTo := c.Query("occurred_to"); occurredTo != "" {
+		parsed, err := parseTimelineTime(occurredTo)
+		if err != nil {
+			handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_occurred_to", "validation.invalid_request")
+			return filter, false
+		}
+		filter.OccurredTo = &parsed
+	}
+	filter.Fields = parseStringListQuery(c, "field", 40)
 	page, ok := parseOptionalIntQuery(c, "page")
 	if !ok {
 		return filter, false
@@ -225,4 +251,45 @@ func parseOptionalIntQuery(c *gin.Context, key string) (*int, bool) {
 		return nil, false
 	}
 	return &value, true
+}
+
+func parseTimelineTime(raw string) (time.Time, error) {
+	if parsed, err := time.Parse(time.RFC3339Nano, raw); err == nil {
+		return parsed.UTC(), nil
+	}
+	parsed, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return parsed.UTC(), nil
+}
+
+func parseStringListQuery(c *gin.Context, key string, maxItems int) []string {
+	values := c.QueryArray(key)
+	if raw := c.Query(key); raw != "" && len(values) == 0 {
+		values = []string{raw}
+	}
+
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		for _, part := range strings.Split(value, ",") {
+			trimmed := strings.TrimSpace(part)
+			if trimmed == "" {
+				continue
+			}
+			if len(trimmed) > 96 {
+				continue
+			}
+			if _, ok := seen[trimmed]; ok {
+				continue
+			}
+			seen[trimmed] = struct{}{}
+			out = append(out, trimmed)
+			if maxItems > 0 && len(out) >= maxItems {
+				return out
+			}
+		}
+	}
+	return out
 }

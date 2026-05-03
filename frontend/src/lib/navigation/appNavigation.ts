@@ -3,6 +3,7 @@ import {
   BellRingIcon,
   Building2Icon,
   FolderKanbanIcon,
+  HistoryIcon,
   SheetIcon,
   UsersIcon
 } from '@lucide/svelte';
@@ -95,6 +96,7 @@ const breadcrumbRoutes: RouteEntry[] = [
     parent: notificationParent
   },
   { path: '/notifications', titleKey: 'navigation.notifications' },
+  { path: '/timeline', titleKey: 'navigation.timeline' },
   { path: '/account', titleKey: 'navigation.account' },
   { path: '/errors', titleKey: 'pages.http_error.title' },
   { path: '/facility/buildings', titleKey: 'navigation.buildings', parent: facilityParent },
@@ -270,6 +272,11 @@ const navDefinitions: NavDefinition[] = [
     url: '/excel',
     icon: SheetIcon,
     hasAccess: ({ canPerform }) => canPerform('read', 'objectdata')
+  },
+  {
+    titleKey: 'navigation.timeline',
+    url: '/timeline',
+    icon: HistoryIcon
   },
   {
     titleKey: 'navigation.notifications',

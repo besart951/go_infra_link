@@ -8,7 +8,16 @@
   import { createTranslator } from '$lib/i18n/translator.js';
   import { t as translate } from '$lib/i18n/index.js';
   import { historyRepository } from '$lib/infrastructure/api/historyRepository.js';
-  import type { ChangeEvent, HistoryAction } from '$lib/domain/history.js';
+  import type { ChangeEvent } from '$lib/domain/history.js';
+  import {
+    formatHistoryDate,
+    formatHistoryValue,
+    historyActionLabel,
+    historyActionVariant,
+    historyActorLabel,
+    historyFieldLabel,
+    historyTableLabel
+  } from './historyLabels.js';
   import {
     buildHistoryTimelineView,
     type HistoryTimelineGroup,
@@ -169,77 +178,14 @@
     page -= 1;
   }
 
-  function actionLabel(action: HistoryAction): string {
-    return translate(`history.actions.${action}`);
-  }
-
-  function actionVariant(
-    action: HistoryAction
-  ): 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' {
-    if (action === 'delete') return 'destructive';
-    if (action === 'create') return 'success';
-    if (action === 'restore') return 'warning';
-    return 'secondary';
-  }
-
-  function tableLabel(table: string): string {
-    const key = `history.tables.${table}`;
-    const label = translate(key);
-    return label === key ? table : label;
-  }
-
-  function fieldLabel(field: string): string {
-    if (field === '__record__') return translate('history.record');
-    const key = `history.fields.${field}`;
-    const label = translate(key);
-    if (label !== key) return label;
-
-    const normalizedField = field.split('.').at(-1) ?? field;
-    const normalizedKey = `history.fields.${normalizedField}`;
-    const normalizedLabel = translate(normalizedKey);
-    if (normalizedLabel !== normalizedKey) return normalizedLabel;
-
-    return readableFieldFallback(normalizedField);
-  }
-
-  function readableFieldFallback(field: string): string {
-    return field
-      .replace(/_id$/u, '')
-      .replace(/_/gu, ' ')
-      .replace(/\bid\b/giu, 'ID')
-      .replace(/\bip\b/giu, 'IP')
-      .replace(/\bsps\b/giu, 'SPS')
-      .replace(/\bbacnet\b/giu, 'BACnet')
-      .replace(/\b\p{L}/gu, (char) => char.toLocaleUpperCase('de-CH'));
-  }
-
-  function formatDate(value: string): string {
-    return new Intl.DateTimeFormat('de-CH', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    }).format(new Date(value));
-  }
-
-  function formatValue(value: unknown): string {
-    if (value === null || value === undefined || value === '') return '∅';
-    if (typeof value === 'object') return JSON.stringify(value);
-    return String(value);
-  }
-
-  function actorLabel(event: ChangeEvent): string {
-    if (event.actor_name) return `${translate('history.actor')}: ${event.actor_name}`;
-    if (event.actor_id) return `${translate('history.actor')}: ${event.actor_id}`;
-    return translate('history.system');
-  }
-
   function rowBefore(row: HistoryTimelineRow): string {
-    if (!row.summaryOnly) return formatValue(row.before);
-    return row.event.action === 'create' ? '∅' : actionLabel(row.event.action);
+    if (!row.summaryOnly) return formatHistoryValue(row.before);
+    return row.event.action === 'create' ? '∅' : historyActionLabel(row.event.action);
   }
 
   function rowAfter(row: HistoryTimelineRow): string {
-    if (!row.summaryOnly) return formatValue(row.after);
-    return row.event.action === 'delete' ? '∅' : actionLabel(row.event.action);
+    if (!row.summaryOnly) return formatHistoryValue(row.after);
+    return row.event.action === 'delete' ? '∅' : historyActionLabel(row.event.action);
   }
 
   function groupLabel(group: HistoryTimelineGroup): string {
@@ -316,7 +262,7 @@
 
   function groupLatestDate(group: HistoryTimelineGroup): string {
     const timestamp = groupLatestTimestamp(group);
-    return timestamp > 0 ? formatDate(new Date(timestamp).toISOString()) : '∅';
+    return timestamp > 0 ? formatHistoryDate(new Date(timestamp).toISOString()) : '∅';
   }
 </script>
 
@@ -470,25 +416,30 @@
           class="grid grid-cols-[minmax(10rem,0.85fr)_7rem_minmax(11rem,1fr)_9rem_minmax(11rem,1fr)_16rem] items-center gap-3 px-3 py-2 text-sm"
         >
           <div class="min-w-0">
-            <div class="truncate font-medium" title={fieldLabel(row.field)}>
-              {fieldLabel(row.field)}
+            <div class="truncate font-medium" title={historyFieldLabel(row.field)}>
+              {historyFieldLabel(row.field)}
             </div>
-            <div class="truncate text-xs text-muted-foreground" title={tableLabel(row.event.entity_table)}>
-              {tableLabel(row.event.entity_table)}
+            <div
+              class="truncate text-xs text-muted-foreground"
+              title={historyTableLabel(row.event.entity_table)}
+            >
+              {historyTableLabel(row.event.entity_table)}
               {#if row.moreFields > 0}
                 · {$t('history.more_fields', { count: row.moreFields })}
               {/if}
             </div>
           </div>
           <div>
-            <Badge variant={actionVariant(row.event.action)}>{actionLabel(row.event.action)}</Badge>
+            <Badge variant={historyActionVariant(row.event.action)}>
+              {historyActionLabel(row.event.action)}
+            </Badge>
           </div>
           <span class="truncate text-muted-foreground" title={rowBefore(row)}>{rowBefore(row)}</span>
           <div class="min-w-0 text-xs text-muted-foreground">
-            <div class="truncate" title={formatDate(row.event.occurred_at)}>
-              {formatDate(row.event.occurred_at)}
+            <div class="truncate" title={formatHistoryDate(row.event.occurred_at)}>
+              {formatHistoryDate(row.event.occurred_at)}
             </div>
-            <div class="truncate" title={row.event.actor_id}>{actorLabel(row.event)}</div>
+            <div class="truncate" title={row.event.actor_id}>{historyActorLabel(row.event)}</div>
           </div>
           <span class="truncate font-medium" title={rowAfter(row)}>{rowAfter(row)}</span>
           <div class="flex justify-end gap-1.5">

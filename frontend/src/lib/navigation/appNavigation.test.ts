@@ -48,4 +48,17 @@ describe('app navigation', () => {
     const facility = items.find((item) => item.url === '/facility');
     expect(facility?.items?.map((item) => item.url)).toEqual(['/facility', '/facility/buildings']);
   });
+
+  it('places the global timeline directly below the Excel importer', () => {
+    const items = buildAppNavItems({
+      pathname: '/timeline',
+      user: baseUser,
+      translate,
+      canPerform: (action, resource) => action === 'read' && resource === 'objectdata'
+    });
+
+    const urls = items.map((item) => item.url);
+    expect(urls[urls.indexOf('/excel') + 1]).toBe('/timeline');
+    expect(items.find((item) => item.url === '/timeline')?.isActive).toBe(true);
+  });
 });

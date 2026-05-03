@@ -4,6 +4,7 @@
   import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { EditableCell } from '$lib/components/ui/editable-cell/index.js';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+  import * as Tooltip from '$lib/components/ui/tooltip/index.js';
   import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { keyboardTableCell } from '$lib/actions/keyboardTableNavigation.js';
   import { ChevronDown, ChevronRight } from '@lucide/svelte';
@@ -78,6 +79,21 @@
       : '';
   }
 
+  function cellClass(widthClass: string, extra = '', fieldName?: string): string {
+    return [
+      widthClass,
+      'min-w-0 overflow-hidden',
+      extra,
+      fieldName ? getEditingFieldClass(fieldName) : ''
+    ]
+      .filter(Boolean)
+      .join(' ');
+  }
+
+  function editingWrapperClass(fieldName: string): string {
+    return ['min-w-0', getEditingFieldClass(fieldName)].filter(Boolean).join(' ');
+  }
+
   function editCell(column: string): Record<string, string> {
     return keyboardTableCell(device.id, column, { activate: 'edit' });
   }
@@ -85,6 +101,8 @@
   function focusCell(column: string): Record<string, string> {
     return keyboardTableCell(device.id, column, { activate: 'focus' });
   }
+
+  const spsControllerSystemTypeLabel = $derived(formatFieldDeviceSPSControllerSystemType(device));
 </script>
 
 <Table.Row
@@ -92,14 +110,16 @@
     .filter(Boolean)
     .join(' ')}
 >
-  <Table.Cell class="p-2">
-    <Checkbox
-      checked={rowState.isSelected(device.id)}
-      onCheckedChange={() => rowState.toggleSelection(device.id)}
-      aria-label={$t('field_device.table.select_aria', { label: device.bmk || device.id })}
-    />
+  <Table.Cell class="w-8 max-w-8 !px-0 !py-1">
+    <div class="flex justify-center">
+      <Checkbox
+        checked={rowState.isSelected(device.id)}
+        onCheckedChange={() => rowState.toggleSelection(device.id)}
+        aria-label={$t('field_device.table.select_aria', { label: device.bmk || device.id })}
+      />
+    </div>
   </Table.Cell>
-  <Table.Cell class="p-2">
+  <Table.Cell class="w-6 max-w-6 !px-0 !py-1">
     <Button
       variant="ghost"
       size="sm"
@@ -119,12 +139,31 @@
       {/if}
     </Button>
   </Table.Cell>
-  <Table.Cell class="font-medium">
-    {formatFieldDeviceSPSControllerSystemType(device)}
+  <Table.Cell class="w-48 max-w-48 min-w-0 overflow-hidden text-xs font-medium">
+    {#if spsControllerSystemTypeLabel && spsControllerSystemTypeLabel !== '-'}
+      <Tooltip.Provider>
+        <Tooltip.Root>
+          <Tooltip.Trigger>
+            {#snippet child({ props })}
+              <span {...props} class="block truncate">
+                {spsControllerSystemTypeLabel}
+              </span>
+            {/snippet}
+          </Tooltip.Trigger>
+          <Tooltip.Content side="top" class="max-w-xs">
+            <p class="break-words">{spsControllerSystemTypeLabel}</p>
+          </Tooltip.Content>
+        </Tooltip.Root>
+      </Tooltip.Provider>
+    {:else}
+      <span class="block truncate">
+        {spsControllerSystemTypeLabel}
+      </span>
+    {/if}
   </Table.Cell>
-  <Table.Cell class="p-1">
+  <Table.Cell class="w-16 max-w-16 min-w-0 overflow-hidden p-1">
     <div
-      class={getEditingFieldClass('bmk')}
+      class={editingWrapperClass('bmk')}
       title={getFieldPreviewTitle('bmk')}
       {...editCell('bmk')}
     >
@@ -142,9 +181,9 @@
       />
     </div>
   </Table.Cell>
-  <Table.Cell class="max-w-48 p-1">
+  <Table.Cell class="w-56 max-w-56 min-w-0 overflow-hidden p-1">
     <div
-      class={getEditingFieldClass('description')}
+      class={editingWrapperClass('description')}
       title={getFieldPreviewTitle('description')}
       {...editCell('description')}
     >
@@ -162,9 +201,9 @@
       />
     </div>
   </Table.Cell>
-  <Table.Cell class="p-1">
+  <Table.Cell class="w-56 max-w-56 min-w-0 overflow-hidden p-1">
     <div
-      class={getEditingFieldClass('text_fix')}
+      class={editingWrapperClass('text_fix')}
       title={getFieldPreviewTitle('text_fix')}
       {...editCell('text_fix')}
     >
@@ -182,9 +221,9 @@
       />
     </div>
   </Table.Cell>
-  <Table.Cell class="p-1">
+  <Table.Cell class="w-16 max-w-16 min-w-0 overflow-hidden p-1">
     <div
-      class={getEditingFieldClass('apparat_nr')}
+      class={editingWrapperClass('apparat_nr')}
       title={getFieldPreviewTitle('apparat_nr')}
       {...editCell('apparat_nr')}
     >
@@ -208,7 +247,7 @@
     </div>
   </Table.Cell>
   <Table.Cell
-    class={getEditingFieldClass('apparat_id')}
+    class={cellClass('w-48 max-w-48', 'p-1', 'apparat_id')}
     title={getFieldPreviewTitle('apparat_id')}
     {...focusCell('apparat_id')}
   >
@@ -222,7 +261,7 @@
     />
   </Table.Cell>
   <Table.Cell
-    class={getEditingFieldClass('system_part_id')}
+    class={cellClass('w-48 max-w-48', 'p-1', 'system_part_id')}
     title={getFieldPreviewTitle('system_part_id')}
     {...focusCell('system_part_id')}
   >
@@ -235,7 +274,7 @@
       onValueChange={handleSystemPartChange}
     />
   </Table.Cell>
-  <Table.Cell class="text-center">
+  <Table.Cell class="w-12 max-w-12 text-center">
     {#if device.specification_id || device.specification}
       <span
         class="inline-block h-2 w-2 rounded-full bg-success"
@@ -250,7 +289,7 @@
   </Table.Cell>
   {#if rowState.showSpecifications}
     <Table.Cell
-      class={`text-xs ${getEditingFieldClass('specification.specification_supplier')}`}
+      class={cellClass('w-40 max-w-40', 'p-1 text-xs', 'specification.specification_supplier')}
       title={getFieldPreviewTitle('specification.specification_supplier')}
       {...editCell('specification_supplier')}
     >
@@ -271,7 +310,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={`text-xs ${getEditingFieldClass('specification.specification_brand')}`}
+      class={cellClass('w-40 max-w-40', 'p-1 text-xs', 'specification.specification_brand')}
       title={getFieldPreviewTitle('specification.specification_brand')}
       {...editCell('specification_brand')}
     >
@@ -292,7 +331,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={`text-xs ${getEditingFieldClass('specification.specification_type')}`}
+      class={cellClass('w-40 max-w-40', 'p-1 text-xs', 'specification.specification_type')}
       title={getFieldPreviewTitle('specification.specification_type')}
       {...editCell('specification_type')}
     >
@@ -313,7 +352,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={`text-xs ${getEditingFieldClass('specification.additional_info_motor_valve')}`}
+      class={cellClass('w-40 max-w-40', 'p-1 text-xs', 'specification.additional_info_motor_valve')}
       title={getFieldPreviewTitle('specification.additional_info_motor_valve')}
       {...editCell('additional_info_motor_valve')}
     >
@@ -337,7 +376,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={`text-xs ${getEditingFieldClass('specification.additional_info_size')}`}
+      class={cellClass('w-24 max-w-24', 'p-1 text-xs', 'specification.additional_info_size')}
       title={getFieldPreviewTitle('specification.additional_info_size')}
       {...editCell('additional_info_size')}
     >
@@ -358,7 +397,11 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={`text-xs ${getEditingFieldClass('specification.additional_information_installation_location')}`}
+      class={cellClass(
+        'w-48 max-w-48',
+        'p-1 text-xs',
+        'specification.additional_information_installation_location'
+      )}
       title={getFieldPreviewTitle('specification.additional_information_installation_location')}
       {...editCell('additional_information_installation_location')}
     >
@@ -388,7 +431,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={`text-xs ${getEditingFieldClass('specification.electrical_connection_ph')}`}
+      class={cellClass('w-24 max-w-24', 'p-1 text-xs', 'specification.electrical_connection_ph')}
       title={getFieldPreviewTitle('specification.electrical_connection_ph')}
       {...editCell('electrical_connection_ph')}
     >
@@ -409,7 +452,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={`text-xs ${getEditingFieldClass('specification.electrical_connection_acdc')}`}
+      class={cellClass('w-24 max-w-24', 'p-1 text-xs', 'specification.electrical_connection_acdc')}
       title={getFieldPreviewTitle('specification.electrical_connection_acdc')}
       {...editCell('electrical_connection_acdc')}
     >
@@ -431,7 +474,11 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={`text-xs ${getEditingFieldClass('specification.electrical_connection_amperage')}`}
+      class={cellClass(
+        'w-28 max-w-28',
+        'p-1 text-xs',
+        'specification.electrical_connection_amperage'
+      )}
       title={getFieldPreviewTitle('specification.electrical_connection_amperage')}
       {...editCell('electrical_connection_amperage')}
     >
@@ -456,7 +503,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={`text-xs ${getEditingFieldClass('specification.electrical_connection_power')}`}
+      class={cellClass('w-28 max-w-28', 'p-1 text-xs', 'specification.electrical_connection_power')}
       title={getFieldPreviewTitle('specification.electrical_connection_power')}
       {...editCell('electrical_connection_power')}
     >
@@ -481,7 +528,11 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={`text-xs ${getEditingFieldClass('specification.electrical_connection_rotation')}`}
+      class={cellClass(
+        'w-28 max-w-28',
+        'p-1 text-xs',
+        'specification.electrical_connection_rotation'
+      )}
       title={getFieldPreviewTitle('specification.electrical_connection_rotation')}
       {...editCell('electrical_connection_rotation')}
     >
@@ -506,7 +557,7 @@
       />
     </Table.Cell>
   {/if}
-  <Table.Cell class="text-right">
+  <Table.Cell class="w-16 max-w-16 text-right">
     <DropdownMenu.Root>
       <DropdownMenu.Trigger>
         {#snippet child({ props })}

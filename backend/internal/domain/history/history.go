@@ -75,6 +75,10 @@ type TimelineFilter struct {
 	SecondaryScopeID   uuid.UUID
 	EntityTable        string
 	EntityID           uuid.UUID
+	ActorID            uuid.UUID
+	OccurredFrom       *time.Time
+	OccurredTo         *time.Time
+	Fields             []string
 	Page               int
 	Limit              int
 }

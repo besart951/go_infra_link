@@ -42,6 +42,10 @@ export interface HistoryTimelineParams {
   scopeId?: string;
   entityTable?: string;
   entityId?: string;
+  actorId?: string;
+  occurredFrom?: string;
+  occurredTo?: string;
+  fields?: string[];
   page?: number;
   limit?: number;
 }

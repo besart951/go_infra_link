@@ -45,6 +45,8 @@
 
   const selectedItem = $derived(items.find((i) => String(i[idKey]) === value));
   const selectedLabel = $derived(selectedItem ? String(selectedItem[labelKey] ?? '') : undefined);
+  const triggerLabel = $derived(selectedLabel || (value ? value : placeholder));
+  const triggerTitle = $derived(selectedLabel || (value ? value : undefined));
   const hasError = $derived(!!error);
 
   const filteredItems = $derived(
@@ -62,6 +64,29 @@
     onValueChange?.('');
     open = false;
   }
+
+  function mergeTriggerProps(
+    popoverProps: Record<string, unknown>,
+    tooltipProps: Record<string, unknown>
+  ): Record<string, unknown> {
+    const merged: Record<string, unknown> = { ...tooltipProps, ...popoverProps };
+    for (const key of new Set([...Object.keys(tooltipProps), ...Object.keys(popoverProps)])) {
+      const tooltipHandler = tooltipProps[key];
+      const popoverHandler = popoverProps[key];
+      if (
+        !key.startsWith('on') ||
+        typeof tooltipHandler !== 'function' ||
+        typeof popoverHandler !== 'function'
+      ) {
+        continue;
+      }
+      merged[key] = (...args: unknown[]) => {
+        tooltipHandler(...args);
+        popoverHandler(...args);
+      };
+    }
+    return merged;
+  }
 </script>
 
 <Popover.Root bind:open>
@@ -73,23 +98,50 @@
             <Tooltip.Trigger>
               {#snippet child({ props: tooltipProps })}
                 <Button
-                  {...props}
-                  {...tooltipProps}
+                  {...mergeTriggerProps(props, tooltipProps)}
                   {id}
                   variant="outline"
                   role="combobox"
                   aria-expanded={open}
                   {disabled}
                   aria-disabled={disabled}
-                  class={cn('justify-between border-destructive text-destructive', width)}
+                  class={cn(
+                    'min-w-0 justify-between overflow-hidden border-destructive text-destructive',
+                    width
+                  )}
                 >
-                  {selectedLabel || (value ? value : placeholder)}
+                  <span class="min-w-0 truncate text-left">{triggerLabel}</span>
                   <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               {/snippet}
             </Tooltip.Trigger>
             <Tooltip.Content side="top">
               <p>{error}</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
+      {:else if triggerTitle}
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              {#snippet child({ props: tooltipProps })}
+                <Button
+                  {...mergeTriggerProps(props, tooltipProps)}
+                  {id}
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={open}
+                  {disabled}
+                  aria-disabled={disabled}
+                  class={cn('min-w-0 justify-between overflow-hidden', width)}
+                >
+                  <span class="min-w-0 truncate text-left">{triggerLabel}</span>
+                  <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              {/snippet}
+            </Tooltip.Trigger>
+            <Tooltip.Content side="top" class="max-w-xs">
+              <p class="break-words">{triggerTitle}</p>
             </Tooltip.Content>
           </Tooltip.Root>
         </Tooltip.Provider>
@@ -102,9 +154,9 @@
           aria-expanded={open}
           {disabled}
           aria-disabled={disabled}
-          class={cn('justify-between', width)}
+          class={cn('min-w-0 justify-between overflow-hidden', width)}
         >
-          {selectedLabel || (value ? value : placeholder)}
+          <span class="min-w-0 truncate text-left">{triggerLabel}</span>
           <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       {/if}

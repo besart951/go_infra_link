@@ -214,13 +214,30 @@
 
 {#if bacnetObjects.length > 0}
   <div class="max-w-full min-w-0 overflow-x-auto">
-    <table class="w-full text-sm">
+    <table class="w-323 table-fixed text-sm">
+      <colgroup>
+        <col class="w-55" />
+        <col class="w-13" />
+        <col class="w-24" />
+        <col class="w-30" />
+        <col class="w-65" />
+        <col class="w-22.5" />
+        <col class="w-22.5" />
+        <col class="w-18" />
+        <col class="w-18" />
+        <col class="w-55" />
+      </colgroup>
       <thead>
         <tr class="border-b text-left text-xs text-muted-foreground">
           <th class="pr-2 pb-2">{$t('field_device.bacnet.table.text_fix')}</th>
           <th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.alarms')}</th>
           <th class="pr-2 pb-2">{$t('field_device.bacnet.table.state_text')}</th>
-          <th class="pr-2 pb-2">{$t('field_device.bacnet.table.notification_class')}</th>
+          <th
+            class="w-30 max-w-30 overflow-hidden pr-2 pb-2"
+            title={$t('field_device.bacnet.table.notification_class')}
+          >
+            <span class="block truncate">{$t('field_device.bacnet.table.notification_class')}</span>
+          </th>
           <th class="pr-2 pb-2">{$t('field_device.bacnet.table.description')}</th>
           <th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.software')}</th>
           <th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.hardware')}</th>
@@ -284,7 +301,7 @@
                 </Popover.Content>
               </Popover.Root>
             </td>
-            <td class="py-1 pr-1 align-top">
+            <td class="w-24 max-w-24 overflow-hidden py-1 pr-1 align-top">
               <div
                 class={[
                   isDirty(obj.id, 'state_text_id') ? 'rounded-md ring-1 ring-ring' : '',
@@ -315,7 +332,7 @@
                 </p>
               {/if}
             </td>
-            <td class="py-1 pr-1 align-top">
+            <td class="w-30 max-w-30 overflow-hidden py-1 pr-1 align-top">
               <div
                 class={[
                   isDirty(obj.id, 'notification_class_id') ? 'rounded-md ring-1 ring-ring' : '',
@@ -338,7 +355,8 @@
                   labelFormatter={formatNotificationClassLabel}
                   placeholder={$t('field_device.bacnet.row.select')}
                   searchPlaceholder={$t('common.search')}
-                  width="w-[220px]"
+                  width="w-28"
+                  popupWidth="w-[360px]"
                   {disabled}
                   onValueChange={(value) =>
                     onEdit(obj.id, 'notification_class_id', value || undefined)}
@@ -367,9 +385,9 @@
                 />
               </div>
             </td>
-            <td class="py-1 pr-1">
+            <td class="py-1 pr-1 align-top">
               <div
-                class={`flex ${getCollaborationClass(obj.id, 'software_type')} ${getCollaborationClass(obj.id, 'software_number')}`}
+                class={`bacnet-inline-pair mx-auto inline-flex items-center ${getCollaborationClass(obj.id, 'software_type')} ${getCollaborationClass(obj.id, 'software_number')}`}
                 title={[
                   getPreviewTitle(obj.id, 'software_type'),
                   getPreviewTitle(obj.id, 'software_number')
@@ -377,7 +395,7 @@
                   .filter(Boolean)
                   .join('\n') || undefined}
               >
-                <div class="min-w-0 flex-1" {...focusCell(obj.id, 'software_type')}>
+                <div class="bacnet-inline-type min-w-0" {...focusCell(obj.id, 'software_type')}>
                   <EditableSelectCell
                     value={obj.software_type}
                     options={softwareTypeOptions}
@@ -388,7 +406,7 @@
                     onSave={(v) => onEdit(obj.id, 'software_type', v)}
                   />
                 </div>
-                <div class="min-w-0 flex-1" {...editCell(obj.id, 'software_number')}>
+                <div class="bacnet-inline-number min-w-0" {...editCell(obj.id, 'software_number')}>
                   <EditableCell
                     value={String(obj.software_number).padStart(2, '0')}
                     pendingValue={getPendingTextValue(
@@ -410,9 +428,9 @@
                 </div>
               </div>
             </td>
-            <td class="py-1 pr-1">
+            <td class="py-1 pr-1 align-top">
               <div
-                class={`flex ${getCollaborationClass(obj.id, 'hardware_type')} ${getCollaborationClass(obj.id, 'hardware_quantity')}`}
+                class={`bacnet-inline-pair mx-auto inline-flex items-center ${getCollaborationClass(obj.id, 'hardware_type')} ${getCollaborationClass(obj.id, 'hardware_quantity')}`}
                 title={[
                   getPreviewTitle(obj.id, 'hardware_type'),
                   getPreviewTitle(obj.id, 'hardware_quantity')
@@ -420,7 +438,7 @@
                   .filter(Boolean)
                   .join('\n') || undefined}
               >
-                <div class="min-w-0 flex-1" {...focusCell(obj.id, 'hardware_type')}>
+                <div class="bacnet-inline-type min-w-0" {...focusCell(obj.id, 'hardware_type')}>
                   <EditableSelectCell
                     value={obj.hardware_type}
                     options={hardwareTypeOptions}
@@ -431,7 +449,10 @@
                     onSave={(v) => onEdit(obj.id, 'hardware_type', v)}
                   />
                 </div>
-                <div class="min-w-0 flex-1" {...editCell(obj.id, 'hardware_quantity')}>
+                <div
+                  class="bacnet-inline-number min-w-0"
+                  {...editCell(obj.id, 'hardware_quantity')}
+                >
                   <EditableCell
                     value={String(obj.hardware_quantity).padStart(2, '0')}
                     pendingValue={getPendingTextValue(
@@ -532,3 +553,36 @@
     {$t('field_device.bacnet.empty')}
   </p>
 {/if}
+
+<style>
+  .bacnet-inline-pair {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bacnet-inline-type {
+    width: 2.35rem;
+  }
+
+  .bacnet-inline-number {
+    width: 1.85rem;
+  }
+
+  .bacnet-inline-pair :global(button),
+  .bacnet-inline-pair :global(select) {
+    height: 1.75rem;
+    min-height: 1.75rem;
+    justify-content: flex-start;
+    border-radius: 0.125rem;
+    padding-inline: 0.125rem;
+    font-size: 0.875rem;
+  }
+
+  .bacnet-inline-pair :global(code) {
+    max-width: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+  }
+</style>

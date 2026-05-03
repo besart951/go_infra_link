@@ -11,6 +11,12 @@ function buildTimelineUrl(path: string, params: HistoryTimelineParams = {}): str
   if (params.scopeId) query.set('scope_id', params.scopeId);
   if (params.entityTable) query.set('entity_table', params.entityTable);
   if (params.entityId) query.set('entity_id', params.entityId);
+  if (params.actorId) query.set('actor_id', params.actorId);
+  if (params.occurredFrom) query.set('occurred_from', params.occurredFrom);
+  if (params.occurredTo) query.set('occurred_to', params.occurredTo);
+  for (const field of params.fields ?? []) {
+    if (field) query.append('field', field);
+  }
   if (params.page) query.set('page', String(params.page));
   if (params.limit) query.set('limit', String(params.limit));
   const suffix = query.toString();
