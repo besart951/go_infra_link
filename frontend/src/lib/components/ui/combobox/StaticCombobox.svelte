@@ -10,6 +10,7 @@
     items: T[];
     value?: string;
     labelKey: keyof T;
+    tooltipLabelKey?: keyof T;
     idKey?: keyof T;
     id?: string;
     disabled?: boolean;
@@ -27,6 +28,7 @@
     items,
     value = $bindable(''),
     labelKey,
+    tooltipLabelKey,
     idKey = 'id' as keyof T,
     id,
     disabled = false,
@@ -45,14 +47,20 @@
 
   const selectedItem = $derived(items.find((i) => String(i[idKey]) === value));
   const selectedLabel = $derived(selectedItem ? String(selectedItem[labelKey] ?? '') : undefined);
+  const selectedTooltipLabel = $derived(
+    selectedItem && tooltipLabelKey ? String(selectedItem[tooltipLabelKey] ?? '') : undefined
+  );
   const triggerLabel = $derived(selectedLabel || (value ? value : placeholder));
-  const triggerTitle = $derived(selectedLabel || (value ? value : undefined));
+  const triggerTitle = $derived(
+    selectedTooltipLabel || selectedLabel || (value ? value : undefined)
+  );
   const hasError = $derived(!!error);
 
   const filteredItems = $derived(
     search
       ? items.filter((i) =>
-          String(i[labelKey] ?? '')
+          [String(i[labelKey] ?? ''), tooltipLabelKey ? String(i[tooltipLabelKey] ?? '') : '']
+            .join(' ')
             .toLowerCase()
             .includes(search.toLowerCase())
         )

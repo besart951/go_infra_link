@@ -128,7 +128,7 @@ export class FieldDeviceTableViewState extends TableViewState<FieldDevice, Field
   constructor(lookups: FieldDeviceGroupingLookups) {
     const resolver = new FieldDeviceGroupingResolver(lookups);
     super({
-      defaultDensity: 'medium',
+      defaultDensity: 'small',
       groupingDefinitions: resolver.createDefinitions(),
       storageKey: 'table-view:field-device'
     });

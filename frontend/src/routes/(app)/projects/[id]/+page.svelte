@@ -3,7 +3,7 @@
   import { page } from '$app/stores';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-  import * as Collapsible from '$lib/components/ui/collapsible/index.js';
+  import * as Tabs from '$lib/components/ui/tabs/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
   import { addToast } from '$lib/components/toast.svelte';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
@@ -26,7 +26,7 @@
     EntityRefreshRequest
   } from '$lib/components/facility/shared/entityRefresh.js';
   import { ProjectCollaborationState } from '$lib/services/projectCollaboration.svelte.js';
-  import { ChevronDown, History, Settings, Wifi, WifiOff } from '@lucide/svelte';
+  import { Cpu, History, PanelsTopLeft, Settings, Server, Wifi, WifiOff } from '@lucide/svelte';
 
   const t = createTranslator();
   const projectId = $derived($page.params.id ?? '');
@@ -36,8 +36,7 @@
   let error = $state<string | null>(null);
   let projectUsers = $state<User[]>([]);
 
-  let controlCabinetOpen = $state(true);
-  let spsControllerOpen = $state(true);
+  let activeFacilityTab = $state('control-cabinets');
   let projectHistoryOpen = $state(false);
 
   let controlCabinetViewRefreshKey = $state(0);
@@ -432,75 +431,67 @@
       {$t('projects.errors.not_found')}
     </div>
   {:else}
-    <div class="grid min-w-0 gap-6">
-      <div class="min-w-0 rounded-lg border bg-card p-6">
-        <Collapsible.Root bind:open={controlCabinetOpen} class="group/collapsible">
-          <div class="flex items-center gap-3">
-            <Collapsible.Trigger class="rounded-md px-2 py-1 hover:bg-accent">
-              <ChevronDown
-                class="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180"
-              />
-            </Collapsible.Trigger>
-            <h2 class="text-lg font-semibold">{$t('projects.control_cabinets.title')}</h2>
-          </div>
+    <Tabs.Root bind:value={activeFacilityTab} class="min-w-0">
+      <Tabs.List class="w-full justify-start overflow-x-auto sm:w-fit">
+        <Tabs.Trigger value="control-cabinets" class="gap-2">
+          <PanelsTopLeft class="size-4" />
+          {$t('projects.control_cabinets.title')}
+        </Tabs.Trigger>
+        <Tabs.Trigger value="sps-controllers" class="gap-2">
+          <Cpu class="size-4" />
+          {$t('projects.sps_controllers.title')}
+        </Tabs.Trigger>
+        <Tabs.Trigger value="field-devices" class="gap-2">
+          <Server class="size-4" />
+          {$t('projects.field_devices.title')}
+        </Tabs.Trigger>
+      </Tabs.List>
 
-          <Collapsible.Content class="mt-4">
-            <ControlCabinetListView
-              {projectId}
-              refreshKey={controlCabinetViewRefreshKey}
-              refreshRequest={controlCabinetRefreshRequest}
-              deltaRequest={controlCabinetDeltaRequest}
-              onChanged={handleControlCabinetsChanged}
-            />
-          </Collapsible.Content>
-        </Collapsible.Root>
-      </div>
-
-      <div class="min-w-0 rounded-lg border bg-card p-6">
-        <Collapsible.Root bind:open={spsControllerOpen} class="group/collapsible">
-          <div class="flex items-center gap-3">
-            <Collapsible.Trigger class="rounded-md px-2 py-1 hover:bg-accent">
-              <ChevronDown
-                class="size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180"
-              />
-            </Collapsible.Trigger>
-            <h2 class="text-lg font-semibold">{$t('projects.sps_controllers.title')}</h2>
-          </div>
-
-          <Collapsible.Content class="mt-4">
-            <SPSControllerListView
-              {projectId}
-              refreshKey={spsControllerRefreshKey}
-              refreshRequest={spsControllerRefreshRequest}
-              deltaRequest={spsControllerDeltaRequest}
-              controlCabinetLabelRefreshRequest={spsControllerCabinetLabelRefreshRequest}
-              controlCabinetLabelDeltaRequest={spsControllerCabinetLabelDeltaRequest}
-              controlCabinetRefreshKey={controlCabinetOptionsRefreshKey}
-              onChanged={handleSPSControllersChanged}
-            />
-          </Collapsible.Content>
-        </Collapsible.Root>
-      </div>
-
-      <div class="min-w-0 rounded-lg border bg-card p-6">
-        <div class="mb-4">
-          <h2 class="text-lg font-semibold">{$t('projects.field_devices.title')}</h2>
+      <Tabs.Content value="control-cabinets" class="mt-4 min-w-0">
+        <div class="min-w-0 rounded-lg border bg-card p-6">
+          <ControlCabinetListView
+            {projectId}
+            refreshKey={controlCabinetViewRefreshKey}
+            refreshRequest={controlCabinetRefreshRequest}
+            deltaRequest={controlCabinetDeltaRequest}
+            onChanged={handleControlCabinetsChanged}
+          />
         </div>
-        <FieldDeviceListView
-          {projectId}
-          pageSize={100}
-          refreshKey={fieldDeviceRefreshKey}
-          refreshRequest={fieldDeviceRefreshRequest}
-          {systemTypeRefreshKey}
-          onMultiCreateFormVisibilityChange={(open) => {
-            fieldDeviceMultiCreateFormOpen = open;
-          }}
-          sharedFieldDeviceEditors={fieldDeviceEditorsByDevice}
-          onSharedFieldDeviceStateChange={(state) =>
-            collaboration.publishFieldDeviceDraftState(state)}
-          onFieldDevicesSaved={(devices) => collaboration.publishFieldDeviceDelta(devices)}
-        />
-      </div>
-    </div>
+      </Tabs.Content>
+
+      <Tabs.Content value="sps-controllers" class="mt-4 min-w-0">
+        <div class="min-w-0 rounded-lg border bg-card p-6">
+          <SPSControllerListView
+            {projectId}
+            refreshKey={spsControllerRefreshKey}
+            refreshRequest={spsControllerRefreshRequest}
+            deltaRequest={spsControllerDeltaRequest}
+            controlCabinetLabelRefreshRequest={spsControllerCabinetLabelRefreshRequest}
+            controlCabinetLabelDeltaRequest={spsControllerCabinetLabelDeltaRequest}
+            controlCabinetRefreshKey={controlCabinetOptionsRefreshKey}
+            onChanged={handleSPSControllersChanged}
+          />
+        </div>
+      </Tabs.Content>
+
+      <Tabs.Content value="field-devices" class="mt-4 min-w-0">
+        <div class="min-w-0 rounded-lg border bg-card p-6">
+          <FieldDeviceListView
+            {projectId}
+            pageSize={100}
+            refreshKey={fieldDeviceRefreshKey}
+            refreshRequest={fieldDeviceRefreshRequest}
+            {systemTypeRefreshKey}
+            onMultiCreateFormVisibilityChange={(open) => {
+              fieldDeviceMultiCreateFormOpen = open;
+            }}
+            sharedFieldDeviceEditors={fieldDeviceEditorsByDevice}
+            onSharedFieldDeviceStateChange={(state) =>
+              collaboration.publishFieldDeviceDraftState(state)}
+            onFieldDevicesSaved={(devices) => collaboration.publishFieldDeviceDelta(devices)}
+          />
+        </div>
+      </Tabs.Content>
+    </Tabs.Root>
   {/if}
 </div>

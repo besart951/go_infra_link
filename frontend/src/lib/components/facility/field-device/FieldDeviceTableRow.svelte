@@ -162,7 +162,7 @@
       {/if}
     </Button>
   </Table.Cell>
-  <Table.Cell class="w-48 max-w-48 min-w-0 overflow-hidden text-xs font-medium">
+  <Table.Cell class="w-36 max-w-36 min-w-0 overflow-hidden text-xs font-medium">
     {#if spsControllerSystemTypeLabel && spsControllerSystemTypeLabel !== '-'}
       <Tooltip.Provider>
         <Tooltip.Root>
@@ -184,7 +184,7 @@
       </span>
     {/if}
   </Table.Cell>
-  <Table.Cell class="w-16 max-w-16 min-w-0 overflow-hidden p-1">
+  <Table.Cell class="w-14 max-w-14 min-w-0 overflow-hidden p-1">
     <div
       class={editingWrapperClass('bmk')}
       title={getFieldPreviewTitle('bmk')}
@@ -206,7 +206,7 @@
       />
     </div>
   </Table.Cell>
-  <Table.Cell class="w-56 max-w-56 min-w-0 overflow-hidden p-1">
+  <Table.Cell class="w-40 max-w-40 min-w-0 overflow-hidden p-1">
     <div
       class={editingWrapperClass('description')}
       title={getFieldPreviewTitle('description')}
@@ -228,7 +228,7 @@
       />
     </div>
   </Table.Cell>
-  <Table.Cell class="w-56 max-w-56 min-w-0 overflow-hidden p-1">
+  <Table.Cell class="w-40 max-w-40 min-w-0 overflow-hidden p-1">
     <div
       class={editingWrapperClass('text_fix')}
       title={getFieldPreviewTitle('text_fix')}
@@ -250,7 +250,7 @@
       />
     </div>
   </Table.Cell>
-  <Table.Cell class="w-16 max-w-16 min-w-0 overflow-hidden p-1">
+  <Table.Cell class="w-14 max-w-14 min-w-0 overflow-hidden p-1">
     <div
       class={editingWrapperClass('apparat_nr')}
       title={getFieldPreviewTitle('apparat_nr')}
@@ -278,7 +278,7 @@
     </div>
   </Table.Cell>
   <Table.Cell
-    class={cellClass('w-48 max-w-48', 'p-1', 'apparat_id')}
+    class={cellClass('w-[4.5rem] max-w-[4.5rem]', 'p-1', 'apparat_id')}
     title={getFieldPreviewTitle('apparat_id')}
     {...focusCell('apparat_id')}
   >
@@ -304,7 +304,7 @@
     </div>
   </Table.Cell>
   <Table.Cell
-    class={cellClass('w-48 max-w-48', 'p-1', 'system_part_id')}
+    class={cellClass('w-[4.5rem] max-w-[4.5rem]', 'p-1', 'system_part_id')}
     title={getFieldPreviewTitle('system_part_id')}
     {...focusCell('system_part_id')}
   >
@@ -329,7 +329,7 @@
       {/if}
     </div>
   </Table.Cell>
-  <Table.Cell class="w-12 max-w-12 text-center">
+  <Table.Cell class="w-10 max-w-10 text-center">
     {#if device.specification_id || device.specification}
       <span
         class="inline-block h-2 w-2 rounded-full bg-success"
@@ -344,7 +344,7 @@
   </Table.Cell>
   {#if rowState.showSpecifications}
     <Table.Cell
-      class={cellClass('w-40 max-w-40', 'p-1 text-xs', 'specification.specification_supplier')}
+      class={cellClass('w-32 max-w-32', 'p-1 text-xs', 'specification.specification_supplier')}
       title={getFieldPreviewTitle('specification.specification_supplier')}
       {...editCell('specification_supplier')}
     >
@@ -367,7 +367,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-40 max-w-40', 'p-1 text-xs', 'specification.specification_brand')}
+      class={cellClass('w-32 max-w-32', 'p-1 text-xs', 'specification.specification_brand')}
       title={getFieldPreviewTitle('specification.specification_brand')}
       {...editCell('specification_brand')}
     >
@@ -390,7 +390,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-40 max-w-40', 'p-1 text-xs', 'specification.specification_type')}
+      class={cellClass('w-32 max-w-32', 'p-1 text-xs', 'specification.specification_type')}
       title={getFieldPreviewTitle('specification.specification_type')}
       {...editCell('specification_type')}
     >
@@ -413,7 +413,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-40 max-w-40', 'p-1 text-xs', 'specification.additional_info_motor_valve')}
+      class={cellClass('w-32 max-w-32', 'p-1 text-xs', 'specification.additional_info_motor_valve')}
       title={getFieldPreviewTitle('specification.additional_info_motor_valve')}
       {...editCell('additional_info_motor_valve')}
     >
@@ -439,7 +439,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-24 max-w-24', 'p-1 text-xs', 'specification.additional_info_size')}
+      class={cellClass('w-20 max-w-20', 'p-1 text-xs', 'specification.additional_info_size')}
       title={getFieldPreviewTitle('specification.additional_info_size')}
       {...editCell('additional_info_size')}
     >
@@ -463,7 +463,7 @@
     </Table.Cell>
     <Table.Cell
       class={cellClass(
-        'w-48 max-w-48',
+        'w-40 max-w-40',
         'p-1 text-xs',
         'specification.additional_information_installation_location'
       )}
@@ -502,7 +502,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-24 max-w-24', 'p-1 text-xs', 'specification.electrical_connection_ph')}
+      class={cellClass('w-20 max-w-20', 'p-1 text-xs', 'specification.electrical_connection_ph')}
       title={getFieldPreviewTitle('specification.electrical_connection_ph')}
       {...editCell('electrical_connection_ph')}
     >
@@ -525,7 +525,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-24 max-w-24', 'p-1 text-xs', 'specification.electrical_connection_acdc')}
+      class={cellClass('w-20 max-w-20', 'p-1 text-xs', 'specification.electrical_connection_acdc')}
       title={getFieldPreviewTitle('specification.electrical_connection_acdc')}
       {...editCell('electrical_connection_acdc')}
     >
@@ -550,7 +550,7 @@
     </Table.Cell>
     <Table.Cell
       class={cellClass(
-        'w-28 max-w-28',
+        'w-24 max-w-24',
         'p-1 text-xs',
         'specification.electrical_connection_amperage'
       )}
@@ -580,7 +580,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-28 max-w-28', 'p-1 text-xs', 'specification.electrical_connection_power')}
+      class={cellClass('w-24 max-w-24', 'p-1 text-xs', 'specification.electrical_connection_power')}
       title={getFieldPreviewTitle('specification.electrical_connection_power')}
       {...editCell('electrical_connection_power')}
     >
@@ -608,7 +608,7 @@
     </Table.Cell>
     <Table.Cell
       class={cellClass(
-        'w-28 max-w-28',
+        'w-24 max-w-24',
         'p-1 text-xs',
         'specification.electrical_connection_rotation'
       )}
@@ -638,7 +638,7 @@
       />
     </Table.Cell>
   {/if}
-  <Table.Cell class="w-24 max-w-24 text-right">
+  <Table.Cell class="w-20 max-w-20 text-right">
     <div class="flex items-center justify-end gap-1">
       {#if hasFieldDevicePendingEdits}
         <Button

@@ -23,14 +23,15 @@
 
   const t = createTranslator();
 
-  function formatLabel(item: Apparat): string {
-    return `${item.short_name ?? ''} - ${item.name ?? ''}`.trim();
+  function formatShortName(item: Apparat): string {
+    return item.short_name?.trim() || item.name?.trim() || '';
   }
 
   const formattedItems = $derived(
     items.map((item) => ({
       ...item,
-      display_name: formatLabel(item)
+      display_name: formatShortName(item),
+      tooltip_name: item.name?.trim() || formatShortName(item)
     }))
   );
 </script>
@@ -39,6 +40,7 @@
   items={formattedItems}
   bind:value
   labelKey="display_name"
+  tooltipLabelKey="tooltip_name"
   placeholder={$t('field_device.table_select.apparat')}
   {width}
   {onValueChange}

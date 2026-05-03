@@ -24,9 +24,11 @@
   const tableClass = $derived(
     [
       state.view.tableClass,
-      'table-fixed',
-      state.showSpecifications ? 'min-w-[2808px]' : 'min-w-[1352px]'
-    ].join(' ')
+      'w-max min-w-full table-fixed',
+      state.showSpecifications ? 'min-w-[2192px]' : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
   );
   const sortableButtonClass =
     'h-auto w-full min-w-0 cursor-pointer justify-start overflow-hidden p-0 text-left underline-offset-4 hover:underline';
@@ -44,28 +46,28 @@
     <colgroup>
       <col class="w-8" />
       <col class="w-6" />
-      <col class="w-48" />
-      <col class="w-16" />
-      <col class="w-56" />
-      <col class="w-56" />
-      <col class="w-16" />
-      <col class="w-48" />
-      <col class="w-48" />
-      <col class="w-12" />
+      <col class="w-36" />
+      <col class="w-14" />
+      <col class="w-40" />
+      <col class="w-40" />
+      <col class="w-14" />
+      <col class="w-[4.5rem]" />
+      <col class="w-[4.5rem]" />
+      <col class="w-10" />
       {#if state.showSpecifications}
+        <col class="w-32" />
+        <col class="w-32" />
+        <col class="w-32" />
+        <col class="w-32" />
+        <col class="w-20" />
         <col class="w-40" />
-        <col class="w-40" />
-        <col class="w-40" />
-        <col class="w-40" />
+        <col class="w-20" />
+        <col class="w-20" />
         <col class="w-24" />
-        <col class="w-48" />
         <col class="w-24" />
         <col class="w-24" />
-        <col class="w-28" />
-        <col class="w-28" />
-        <col class="w-28" />
       {/if}
-      <col class="w-24" />
+      <col class="w-20" />
     </colgroup>
     <Table.Header>
       <Table.Row>
@@ -80,7 +82,7 @@
           </div>
         </Table.Head>
         <Table.Head class="w-6 max-w-6 !px-0"></Table.Head>
-        <Table.Head class="w-48 max-w-48 text-xs">
+        <Table.Head class="w-36 max-w-36 text-xs">
           <Button
             type="button"
             variant="ghost"
@@ -95,7 +97,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-16 max-w-16">
+        <Table.Head class="w-14 max-w-14">
           <Button
             type="button"
             variant="ghost"
@@ -110,7 +112,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-56 max-w-56">
+        <Table.Head class="w-40 max-w-40">
           <Button
             type="button"
             variant="ghost"
@@ -125,7 +127,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-56 max-w-56">
+        <Table.Head class="w-40 max-w-40">
           <Button
             type="button"
             variant="ghost"
@@ -140,7 +142,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-16 max-w-16">
+        <Table.Head class="w-14 max-w-14">
           <Button
             type="button"
             variant="ghost"
@@ -155,7 +157,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-48 max-w-48">
+        <Table.Head class="w-[4.5rem] max-w-[4.5rem]">
           <Button
             type="button"
             variant="ghost"
@@ -170,7 +172,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-48 max-w-48">
+        <Table.Head class="w-[4.5rem] max-w-[4.5rem]">
           <Button
             type="button"
             variant="ghost"
@@ -185,7 +187,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-12 max-w-12">
+        <Table.Head class="w-10 max-w-10">
           <Button
             variant={state.showSpecifications ? 'secondary' : 'ghost'}
             size="sm"
@@ -199,7 +201,7 @@
           </Button>
         </Table.Head>
         {#if state.showSpecifications}
-          <Table.Head class="w-40 max-w-40 text-xs">
+          <Table.Head class="w-32 max-w-32 text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -214,7 +216,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-40 max-w-40 text-xs">
+          <Table.Head class="w-32 max-w-32 text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -229,7 +231,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-40 max-w-40 text-xs">
+          <Table.Head class="w-32 max-w-32 text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -244,7 +246,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-40 max-w-40 text-xs">
+          <Table.Head class="w-32 max-w-32 text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -259,7 +261,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-24 max-w-24 text-xs">
+          <Table.Head class="w-20 max-w-20 text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -274,7 +276,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-48 max-w-48 text-xs">
+          <Table.Head class="w-40 max-w-40 text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -289,7 +291,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-24 max-w-24 text-xs">
+          <Table.Head class="w-20 max-w-20 text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -304,7 +306,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-24 max-w-24 text-xs">
+          <Table.Head class="w-20 max-w-20 text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -319,7 +321,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-28 max-w-28 text-xs">
+          <Table.Head class="w-24 max-w-24 text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -334,7 +336,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-28 max-w-28 text-xs">
+          <Table.Head class="w-24 max-w-24 text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -349,7 +351,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-28 max-w-28 text-xs">
+          <Table.Head class="w-24 max-w-24 text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -365,7 +367,7 @@
             </Button>
           </Table.Head>
         {/if}
-        <Table.Head class="w-24 max-w-24"></Table.Head>
+        <Table.Head class="w-20 max-w-20"></Table.Head>
       </Table.Row>
     </Table.Header>
     <Table.Body>
