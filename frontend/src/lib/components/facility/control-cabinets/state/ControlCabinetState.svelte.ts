@@ -7,6 +7,14 @@ import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.j
 import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
 import { canPerform, canPerformAny } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
+import { sanitizeFilters } from '$lib/state/table/sanitizeFilters.js';
+import {
+  decodeMultiFilter,
+  encodeMultiFilter,
+  ProjectFacilityListFilterStore,
+  sanitizeMultiFilterValue,
+  type MultiFilterOption
+} from '$lib/components/facility/shared/projectFacilityListFilters.js';
 import type { Building, ControlCabinet } from '$lib/domain/facility/index.js';
 import type { ControlCabinetFilters, ControlCabinetStateProps } from './types.js';
 import { toProjectIdResolver } from './types.js';
@@ -17,6 +25,7 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
   showForm = $state(false);
   editingItem: ControlCabinet | undefined = $state(undefined);
   buildingMap = $state(new Map<string, string>());
+  buildingFilterOptions = $state<MultiFilterOption[]>([]);
 
   private readonly buildingRequests = new Set<string>();
   private readonly resolveProjectId: () => string | undefined;
@@ -27,6 +36,10 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
     controlCabinetRepository
   );
   private readonly fetchStrategy: ContextualControlCabinetFetchStrategy;
+  private readonly filterStore = new ProjectFacilityListFilterStore<ControlCabinetFilters>(
+    'control-cabinets'
+  );
+  private restoredFilterScope: string | undefined;
 
   constructor(props: ControlCabinetStateProps = {}) {
     const resolveProjectId = toProjectIdResolver(props.projectId);
@@ -46,6 +59,10 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
 
   get isProjectContext(): boolean {
     return Boolean(this.projectId);
+  }
+
+  get selectedBuildingFilterIds(): string[] {
+    return decodeMultiFilter(this.filters.buildingIds);
   }
 
   canCreateControlCabinet(): boolean {
@@ -71,12 +88,33 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
   }
 
   override async load(): Promise<void> {
+    this.restorePersistedFilters();
     await super.load();
 
     if (this.error) return;
 
     this.mergeBuildingLabels(this.fetchStrategy.getBuildingLabels());
+    this.syncBuildingFilterOptions();
     await this.ensureBuildingLabels(this.items);
+  }
+
+  async setBuildingFilterIds(buildingIds: string[]): Promise<void> {
+    const nextFilters = {
+      ...this.filters,
+      buildingIds: encodeMultiFilter(buildingIds)
+    } as ControlCabinetFilters;
+
+    if (nextFilters.buildingIds === this.filters.buildingIds) return;
+
+    await this.setFilters(nextFilters);
+    this.persistFilters();
+  }
+
+  async clearProjectFilters(): Promise<void> {
+    if (!this.hasActiveFilters) return;
+
+    await this.setFilters({} as ControlCabinetFilters);
+    this.persistFilters();
   }
 
   async refreshCabinets(controlCabinetIds: string[]): Promise<void> {
@@ -238,6 +276,37 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
       next.set(buildingId, label);
     }
     this.buildingMap = next;
+  }
+
+  private restorePersistedFilters(): void {
+    const projectId = this.projectId;
+    const scope = projectId ?? 'facility';
+    if (this.restoredFilterScope === scope) return;
+
+    this.restoredFilterScope = scope;
+    this.filters = projectId ? this.filterStore.load(projectId) : ({} as ControlCabinetFilters);
+  }
+
+  private syncBuildingFilterOptions(): void {
+    const options = this.fetchStrategy.getBuildingFilterOptions();
+    this.buildingFilterOptions = options;
+
+    const nextBuildingIds = sanitizeMultiFilterValue(
+      this.filters.buildingIds,
+      new Set(options.map((option) => option.id))
+    );
+
+    if (nextBuildingIds === this.filters.buildingIds) return;
+
+    this.filters = sanitizeFilters({
+      ...this.filters,
+      buildingIds: nextBuildingIds
+    } as ControlCabinetFilters);
+    this.persistFilters();
+  }
+
+  private persistFilters(): void {
+    this.filterStore.save(this.projectId, this.filters);
   }
 
   private async ensureBuildingLabels(controlCabinets: ControlCabinet[]): Promise<void> {

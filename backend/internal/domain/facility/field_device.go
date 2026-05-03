@@ -34,12 +34,16 @@ type FieldDeviceOptions struct {
 
 // FieldDeviceFilterParams contains optional filter parameters for listing field devices
 type FieldDeviceFilterParams struct {
-	BuildingID                *uuid.UUID
-	ControlCabinetID          *uuid.UUID
-	SPSControllerID           *uuid.UUID
-	SPSControllerSystemTypeID *uuid.UUID
-	ProjectID                 *uuid.UUID
-	ProjectIDs                []uuid.UUID
+	BuildingID                 *uuid.UUID
+	BuildingIDs                []uuid.UUID
+	ControlCabinetID           *uuid.UUID
+	ControlCabinetIDs          []uuid.UUID
+	SPSControllerID            *uuid.UUID
+	SPSControllerIDs           []uuid.UUID
+	SPSControllerSystemTypeID  *uuid.UUID
+	SPSControllerSystemTypeIDs []uuid.UUID
+	ProjectID                  *uuid.UUID
+	ProjectIDs                 []uuid.UUID
 }
 
 // FieldDeviceCreateItem represents a single field device to create in a multi-create operation

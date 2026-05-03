@@ -49,6 +49,7 @@
   // Display value: use pending value if available, otherwise original value
   const displayValue = $derived(pendingValue !== undefined ? pendingValue : value);
   const displayTitle = $derived(displayValue ? displayValue : undefined);
+  const displaySizerValue = $derived(displayValue || emptyText);
   const hasError = $derived(!!error);
   const canUndo = $derived(isDirty && !!onUndo && !isEditing);
 
@@ -99,23 +100,44 @@
 </script>
 
 {#if isEditing}
-  <Input
-    bind:ref={inputElement}
-    {type}
-    bind:value={editValue}
-    {placeholder}
-    {maxlength}
-    {min}
-    {max}
-    onkeydown={handleKeydown}
-    onblur={handleBlur}
-    class={[
-      'h-7 w-full min-w-0 px-2 py-1 text-sm',
-      hasError ? 'border-destructive focus-visible:ring-destructive' : ''
-    ]
-      .filter(Boolean)
-      .join(' ')}
-  />
+  <div class="editable-cell-editor relative block w-full max-w-full min-w-0 align-middle">
+    <button
+      type="button"
+      tabindex="-1"
+      aria-hidden="true"
+      class={[
+        'editable-cell-display invisible flex h-7 min-h-7 w-full max-w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
+        hasError ? 'border' : ''
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {#if type === 'number'}
+        <code class="block max-w-full truncate rounded-md bg-muted px-1.5 py-0.5 text-sm">
+          {displaySizerValue}
+        </code>
+      {:else}
+        <span class="min-w-0 truncate">{displaySizerValue}</span>
+      {/if}
+    </button>
+    <Input
+      bind:ref={inputElement}
+      {type}
+      bind:value={editValue}
+      {placeholder}
+      {maxlength}
+      {min}
+      {max}
+      onkeydown={handleKeydown}
+      onblur={handleBlur}
+      class={[
+        'absolute inset-0 h-7 w-full min-w-0 px-2 py-1 text-sm',
+        hasError ? 'border-destructive focus-visible:ring-destructive' : ''
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    />
+  </div>
 {:else if hasError}
   <div class="group/undo relative">
     <Tooltip.Provider>
@@ -128,7 +150,7 @@
               onclick={startEditing}
               {disabled}
               class={[
-                'flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm border px-2 py-1 text-left text-sm transition-colors',
+                'editable-cell-display flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm border px-2 py-1 text-left text-sm transition-colors',
                 'border-destructive bg-destructive/10 hover:bg-destructive/20',
                 disabled ? 'cursor-not-allowed opacity-50' : ''
               ]
@@ -170,7 +192,7 @@
               onclick={startEditing}
               {disabled}
               class={[
-                'flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
+                'editable-cell-display flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
                 'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
                 isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
                 disabled ? 'cursor-not-allowed opacity-50' : ''
@@ -204,7 +226,7 @@
       onclick={startEditing}
       {disabled}
       class={[
-        'flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
+        'editable-cell-display flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
         'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
         isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
         disabled ? 'cursor-not-allowed opacity-50' : ''

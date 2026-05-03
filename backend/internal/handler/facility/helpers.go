@@ -67,6 +67,41 @@ func parseUUIDQueryParam(c *gin.Context, name string) (*uuid.UUID, bool) {
 	return &parsed, true
 }
 
+func parseUUIDListQueryParam(c *gin.Context, name string) ([]uuid.UUID, bool) {
+	values := c.QueryArray(name)
+	if len(values) == 0 {
+		values = []string{c.Query(name)}
+	}
+
+	out := make([]uuid.UUID, 0, len(values))
+	seen := make(map[uuid.UUID]struct{})
+
+	for _, value := range values {
+		for _, part := range strings.FieldsFunc(value, func(r rune) bool {
+			return r == '|' || r == ','
+		}) {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+
+			parsed, err := uuid.Parse(part)
+			if err != nil {
+				respondInvalidArgument(c, name+" is invalid")
+				return nil, false
+			}
+			if _, exists := seen[parsed]; exists {
+				continue
+			}
+
+			seen[parsed] = struct{}{}
+			out = append(out, parsed)
+		}
+	}
+
+	return out, true
+}
+
 func respondValidationOrError(c *gin.Context, err error, fallbackCode string) bool {
 	return handlerutil.RespondDomainError(c, err,
 		handlerutil.PlainError(http.StatusInternalServerError, fallbackCode, errMessage(err)),

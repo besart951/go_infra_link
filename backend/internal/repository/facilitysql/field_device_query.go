@@ -121,17 +121,26 @@ func applyFieldDeviceFilters(query *gorm.DB, filters domainFacility.FieldDeviceF
 
 	if filters.SPSControllerSystemTypeID != nil {
 		query = query.Where("field_devices.sps_controller_system_type_id = ?", *filters.SPSControllerSystemTypeID)
+	} else if len(filters.SPSControllerSystemTypeIDs) > 0 {
+		query = query.Where("field_devices.sps_controller_system_type_id IN ?", filters.SPSControllerSystemTypeIDs)
 	}
 
 	if filters.SPSControllerID != nil {
 		query = query.Joins("JOIN sps_controller_system_types ON sps_controller_system_types.id = field_devices.sps_controller_system_type_id").
 			Where("sps_controller_system_types.sps_controller_id = ?", *filters.SPSControllerID)
+	} else if len(filters.SPSControllerIDs) > 0 {
+		query = query.Joins("JOIN sps_controller_system_types ON sps_controller_system_types.id = field_devices.sps_controller_system_type_id").
+			Where("sps_controller_system_types.sps_controller_id IN ?", filters.SPSControllerIDs)
 	}
 
 	if filters.ControlCabinetID != nil {
 		query = query.Joins("JOIN sps_controller_system_types scts ON scts.id = field_devices.sps_controller_system_type_id").
 			Joins("JOIN sps_controllers sc ON sc.id = scts.sps_controller_id").
 			Where("sc.control_cabinet_id = ?", *filters.ControlCabinetID)
+	} else if len(filters.ControlCabinetIDs) > 0 {
+		query = query.Joins("JOIN sps_controller_system_types scts ON scts.id = field_devices.sps_controller_system_type_id").
+			Joins("JOIN sps_controllers sc ON sc.id = scts.sps_controller_id").
+			Where("sc.control_cabinet_id IN ?", filters.ControlCabinetIDs)
 	}
 
 	if filters.BuildingID != nil {
@@ -139,6 +148,11 @@ func applyFieldDeviceFilters(query *gorm.DB, filters domainFacility.FieldDeviceF
 			Joins("JOIN sps_controllers sc2 ON sc2.id = scts2.sps_controller_id").
 			Joins("JOIN control_cabinets cc ON cc.id = sc2.control_cabinet_id").
 			Where("cc.building_id = ?", *filters.BuildingID)
+	} else if len(filters.BuildingIDs) > 0 {
+		query = query.Joins("JOIN sps_controller_system_types scts2 ON scts2.id = field_devices.sps_controller_system_type_id").
+			Joins("JOIN sps_controllers sc2 ON sc2.id = scts2.sps_controller_id").
+			Joins("JOIN control_cabinets cc ON cc.id = sc2.control_cabinet_id").
+			Where("cc.building_id IN ?", filters.BuildingIDs)
 	}
 
 	if filters.ProjectID != nil {

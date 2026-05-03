@@ -3,9 +3,13 @@ import type { FieldDevice, SPSController } from '$lib/domain/facility/index.js';
 
 export interface FieldDeviceFilters extends TableFilterRecord {
   buildingId?: string;
+  buildingIds?: string;
   controlCabinetId?: string;
+  controlCabinetIds?: string;
   spsControllerId?: string;
+  spsControllerIds?: string;
   spsControllerSystemTypeId?: string;
+  spsControllerSystemTypeIds?: string;
   projectId?: string;
 }
 

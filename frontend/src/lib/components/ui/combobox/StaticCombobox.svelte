@@ -10,6 +10,7 @@
     items: T[];
     value?: string;
     labelKey: keyof T;
+    optionLabelKey?: keyof T;
     tooltipLabelKey?: keyof T;
     idKey?: keyof T;
     id?: string;
@@ -28,6 +29,7 @@
     items,
     value = $bindable(''),
     labelKey,
+    optionLabelKey = labelKey,
     tooltipLabelKey,
     idKey = 'id' as keyof T,
     id,
@@ -59,7 +61,11 @@
   const filteredItems = $derived(
     search
       ? items.filter((i) =>
-          [String(i[labelKey] ?? ''), tooltipLabelKey ? String(i[tooltipLabelKey] ?? '') : '']
+          [
+            String(i[labelKey] ?? ''),
+            String(i[optionLabelKey] ?? ''),
+            tooltipLabelKey ? String(i[tooltipLabelKey] ?? '') : ''
+          ]
             .join(' ')
             .toLowerCase()
             .includes(search.toLowerCase())
@@ -203,7 +209,7 @@
                   value === String(item[idKey]) ? 'opacity-100' : 'opacity-0'
                 )}
               />
-              {String(item[labelKey] ?? '')}
+              {String(item[optionLabelKey] ?? '')}
             </Command.Item>
           {/each}
         </Command.Group>

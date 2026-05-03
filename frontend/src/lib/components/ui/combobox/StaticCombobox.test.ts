@@ -41,4 +41,25 @@ describe('StaticCombobox', () => {
 
     expect(screen.getByRole('combobox')).toHaveTextContent('Apparat 1');
   });
+
+  it('can render a short selected label and a richer popup label', async () => {
+    render(Combobox, {
+      items: [
+        { id: 'app-1', label: 'AHU', optionLabel: 'AHU - Air Handling Unit' },
+        { id: 'app-2', label: 'PMP', optionLabel: 'PMP - Pump' }
+      ],
+      value: 'app-1',
+      labelKey: 'label',
+      optionLabelKey: 'optionLabel',
+      width: 'w-full'
+    });
+
+    expect(screen.getByRole('combobox')).toHaveTextContent('AHU');
+    expect(screen.getByRole('combobox')).not.toHaveTextContent('Air Handling Unit');
+
+    await fireEvent.click(screen.getByRole('combobox'));
+
+    expect(await screen.findByText('AHU - Air Handling Unit')).toBeInTheDocument();
+    expect(screen.getByText('PMP - Pump')).toBeInTheDocument();
+  });
 });

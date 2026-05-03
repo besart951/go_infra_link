@@ -3,6 +3,11 @@ import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinet
 import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
 import type { Building, ControlCabinet } from '$lib/domain/facility/index.js';
 import type { DataTableFetchStrategy, DataTableQuery } from '$lib/state/table/contracts.js';
+import {
+  decodeMultiFilter,
+  sortMultiFilterOptions,
+  type MultiFilterOption
+} from '$lib/components/facility/shared/projectFacilityListFilters.js';
 import type { ControlCabinetFilters } from '../types.js';
 
 export class ProjectControlCabinetFetchStrategy implements DataTableFetchStrategy<
@@ -11,6 +16,7 @@ export class ProjectControlCabinetFetchStrategy implements DataTableFetchStrateg
 > {
   private readonly buildingLabels = new Map<string, string>();
   private readonly linkIdsByCabinetId = new Map<string, string>();
+  private buildingFilterOptions: MultiFilterOption[] = [];
   private readonly projectId: string;
 
   constructor(projectId: string) {
@@ -23,6 +29,10 @@ export class ProjectControlCabinetFetchStrategy implements DataTableFetchStrateg
 
   getBuildingLabels(): Map<string, string> {
     return new Map(this.buildingLabels);
+  }
+
+  getBuildingFilterOptions(): MultiFilterOption[] {
+    return [...this.buildingFilterOptions];
   }
 
   getLinkId(controlCabinetId: string): string | undefined {
@@ -48,8 +58,9 @@ export class ProjectControlCabinetFetchStrategy implements DataTableFetchStrateg
         : [];
 
     await this.loadBuildingLabels(allCabinets, signal);
+    this.updateBuildingFilterOptions(allCabinets);
 
-    const filteredItems = this.filterItems(allCabinets, query.searchText);
+    const filteredItems = this.filterItems(allCabinets, query.searchText, query.filters);
     const total = filteredItems.length;
     const totalPages = total === 0 ? 0 : Math.ceil(total / query.pageSize);
     const page = totalPages === 0 ? 1 : Math.min(query.page, totalPages);
@@ -82,11 +93,40 @@ export class ProjectControlCabinetFetchStrategy implements DataTableFetchStrateg
     }
   }
 
-  private filterItems(items: ControlCabinet[], searchText: string): ControlCabinet[] {
-    const query = searchText.trim().toLowerCase();
-    if (!query) return items;
+  private updateBuildingFilterOptions(controlCabinets: ControlCabinet[]): void {
+    const counts = new Map<string, number>();
+    for (const controlCabinet of controlCabinets) {
+      if (!controlCabinet.building_id) continue;
+      counts.set(controlCabinet.building_id, (counts.get(controlCabinet.building_id) ?? 0) + 1);
+    }
 
-    return items.filter((item) =>
+    this.buildingFilterOptions = sortMultiFilterOptions(
+      [...counts.entries()].map(([id, count]) => ({
+        id,
+        label: this.buildingLabels.get(id) ?? id,
+        count
+      }))
+    );
+  }
+
+  private filterItems(
+    items: ControlCabinet[],
+    searchText: string,
+    filters: ControlCabinetFilters
+  ): ControlCabinet[] {
+    const availableBuildingIds = new Set(items.map((item) => item.building_id).filter(Boolean));
+    const selectedBuildingIds = decodeMultiFilter(filters.buildingIds).filter((id) =>
+      availableBuildingIds.has(id)
+    );
+    const scopedItems =
+      selectedBuildingIds.length > 0
+        ? items.filter((item) => selectedBuildingIds.includes(item.building_id))
+        : items;
+
+    const query = searchText.trim().toLowerCase();
+    if (!query) return scopedItems;
+
+    return scopedItems.filter((item) =>
       [item.control_cabinet_nr, this.buildingLabels.get(item.building_id)]
         .filter(Boolean)
         .some((value) => value!.toLowerCase().includes(query))

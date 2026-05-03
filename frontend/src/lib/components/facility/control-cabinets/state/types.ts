@@ -2,7 +2,9 @@ import type { TableFilterRecord } from '$lib/state/table/contracts.js';
 import type { ControlCabinet } from '$lib/domain/facility/index.js';
 import type { EntityChangeEvent } from '../../shared/entityRefresh.js';
 
-export interface ControlCabinetFilters extends TableFilterRecord {}
+export interface ControlCabinetFilters extends TableFilterRecord {
+  buildingIds?: string;
+}
 
 export type ProjectIdInput = string | undefined | (() => string | undefined);
 

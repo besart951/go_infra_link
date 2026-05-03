@@ -6,6 +6,7 @@ import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceReposi
 import { canPerform } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
 import { sanitizeFilters } from '$lib/state/table/sanitizeFilters.js';
+import { ProjectFacilityListFilterStore } from '$lib/components/facility/shared/projectFacilityListFilters.js';
 import { createFieldDevicePermissionPolicy } from './fieldDevicePermissionPolicy.js';
 import { FieldDeviceGroupingLookupService } from './fieldDeviceGroupingLookupService.js';
 import { FieldDeviceLookupService } from './fieldDeviceLookupService.js';
@@ -68,6 +69,10 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   private readonly groupingLookupService = new FieldDeviceGroupingLookupService();
   private readonly projectAssociationService = new ProjectFieldDeviceAssociationService();
   private readonly permissionPolicy: ReturnType<typeof createFieldDevicePermissionPolicy>;
+  private readonly filterStore = new ProjectFacilityListFilterStore<FieldDeviceFilters>(
+    'field-devices'
+  );
+  private restoredFilterScope: string | undefined;
 
   constructor(props: FieldDeviceStateProps = {}) {
     const resolveProjectId = toProjectIdResolver(props.projectId);
@@ -94,6 +99,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
       onSharedStateChange: props.onSharedFieldDeviceStateChange,
       onSaveSuccess: () => undefined
     });
+    this.restorePersistedFilters();
   }
 
   get projectId() {
@@ -208,6 +214,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   }
 
   override async load(): Promise<void> {
+    this.restorePersistedFilters();
     await super.load();
 
     if (this.view.grouping.isGrouped && !this.error && !this.loading) {
@@ -233,10 +240,12 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   async applyFilters(filters: FieldDeviceFilters): Promise<void> {
     await this.setFilters({ ...sanitizeFilters(filters), ...this.fixedFilters });
+    this.persistFilters();
   }
 
   async clearFilters(): Promise<void> {
     await this.clearAllFilters();
+    this.persistFilters();
   }
 
   openMultiCreateForm(): void {
@@ -455,6 +464,24 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
       order: this.order,
       hasActiveFilters: this.hasActiveFilters
     };
+  }
+
+  private restorePersistedFilters(): void {
+    const projectId = this.projectId;
+    const scope = projectId ?? 'facility';
+    if (this.restoredFilterScope === scope) return;
+
+    this.restoredFilterScope = scope;
+    this.filters = projectId
+      ? sanitizeFilters({
+          ...this.filterStore.load(projectId),
+          ...this.fixedFilters
+        } as FieldDeviceFilters)
+      : ({ ...this.fixedFilters } as FieldDeviceFilters);
+  }
+
+  private persistFilters(): void {
+    this.filterStore.save(this.projectId, this.filters);
   }
 
   private async removeProjectFieldDevice(deviceId: string): Promise<void> {

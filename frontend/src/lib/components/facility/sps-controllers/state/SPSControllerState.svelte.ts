@@ -8,6 +8,14 @@ import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRe
 import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsControllerSystemTypeRepository.js';
 import { canPerform, canPerformAny } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
+import { sanitizeFilters } from '$lib/state/table/sanitizeFilters.js';
+import {
+  decodeMultiFilter,
+  encodeMultiFilter,
+  ProjectFacilityListFilterStore,
+  sanitizeMultiFilterValue,
+  type MultiFilterOption
+} from '$lib/components/facility/shared/projectFacilityListFilters.js';
 import type {
   ControlCabinet,
   SPSController,
@@ -23,6 +31,7 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
   showForm = $state(false);
   editingItem: SPSController | undefined = $state(undefined);
   cabinetMap = $state(new Map<string, string>());
+  cabinetFilterOptions = $state<MultiFilterOption[]>([]);
   systemTypesByController = $state<Record<string, SPSControllerSystemType[]>>({});
 
   private readonly resolveProjectId: () => string | undefined;
@@ -34,6 +43,10 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
     spsControllerRepository
   );
   private readonly fetchStrategy: ContextualSPSControllerFetchStrategy;
+  private readonly filterStore = new ProjectFacilityListFilterStore<SPSControllerFilters>(
+    'sps-controllers'
+  );
+  private restoredFilterScope: string | undefined;
 
   constructor(props: SPSControllerStateProps = {}) {
     const resolveProjectId = toProjectIdResolver(props.projectId);
@@ -58,6 +71,10 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
 
   get isProjectContext(): boolean {
     return Boolean(this.projectId);
+  }
+
+  get selectedControlCabinetFilterIds(): string[] {
+    return decodeMultiFilter(this.filters.controlCabinetIds);
   }
 
   canCreateSPSController(): boolean {
@@ -87,12 +104,33 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
   }
 
   override async load(): Promise<void> {
+    this.restorePersistedFilters();
     await super.load();
 
     if (this.error) return;
 
     this.mergeCabinetLabels(this.fetchStrategy.getCabinetLabels());
+    this.syncCabinetFilterOptions();
     await Promise.all([this.ensureCabinetLabels(this.items), this.loadSystemTypes(this.items)]);
+  }
+
+  async setControlCabinetFilterIds(controlCabinetIds: string[]): Promise<void> {
+    const nextFilters = {
+      ...this.filters,
+      controlCabinetIds: encodeMultiFilter(controlCabinetIds)
+    } as SPSControllerFilters;
+
+    if (nextFilters.controlCabinetIds === this.filters.controlCabinetIds) return;
+
+    await this.setFilters(nextFilters);
+    this.persistFilters();
+  }
+
+  async clearProjectFilters(): Promise<void> {
+    if (!this.hasActiveFilters) return;
+
+    await this.setFilters({} as SPSControllerFilters);
+    this.persistFilters();
   }
 
   async refreshControllers(controllerIds: string[]): Promise<void> {
@@ -342,6 +380,37 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
       next.set(cabinetId, label);
     }
     this.cabinetMap = next;
+  }
+
+  private restorePersistedFilters(): void {
+    const projectId = this.projectId;
+    const scope = projectId ?? 'facility';
+    if (this.restoredFilterScope === scope) return;
+
+    this.restoredFilterScope = scope;
+    this.filters = projectId ? this.filterStore.load(projectId) : ({} as SPSControllerFilters);
+  }
+
+  private syncCabinetFilterOptions(): void {
+    const options = this.fetchStrategy.getCabinetFilterOptions();
+    this.cabinetFilterOptions = options;
+
+    const nextControlCabinetIds = sanitizeMultiFilterValue(
+      this.filters.controlCabinetIds,
+      new Set(options.map((option) => option.id))
+    );
+
+    if (nextControlCabinetIds === this.filters.controlCabinetIds) return;
+
+    this.filters = sanitizeFilters({
+      ...this.filters,
+      controlCabinetIds: nextControlCabinetIds
+    } as SPSControllerFilters);
+    this.persistFilters();
+  }
+
+  private persistFilters(): void {
+    this.filterStore.save(this.projectId, this.filters);
   }
 
   private async ensureCabinetLabels(controllers: SPSController[]): Promise<void> {

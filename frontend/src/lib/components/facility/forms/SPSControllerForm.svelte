@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button/index.js';
+  import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
   import ControlCabinetSelect from '../selects/ControlCabinetSelect.svelte';
@@ -75,6 +76,7 @@
   let nextGADevice = $state<string | null>(null);
   let gaDeviceSuggestionLoading = $state(false);
   let gaDeviceCheckTimer: ReturnType<typeof setTimeout> | null = null;
+  let showNonProjectControlCabinets = $state(false);
 
   let loading = $state(false);
   let error = $state('');
@@ -173,11 +175,26 @@
   const liveFieldError = (name: string) =>
     getFieldError(liveValidation.fieldErrors, name, ['spscontroller']);
   const combinedFieldError = (name: string) => liveFieldError(name) || fieldError(name);
+  const controlCabinetSelectProjectId = $derived(
+    projectId && !showNonProjectControlCabinets ? projectId : undefined
+  );
+  const controlCabinetSelectRefreshKey = $derived(
+    `${controlCabinetRefreshKey ?? ''}|${showNonProjectControlCabinets ? 'all' : 'project'}`
+  );
   const gaDeviceIsSuboptimal = $derived.by(() => {
     if (!gaDeviceTouched || !nextGADevice) return false;
     const current = ga_device.trim().toUpperCase();
     return current !== '' && current !== nextGADevice;
   });
+
+  function handleNonProjectControlCabinetsChange(checked: boolean | 'indeterminate') {
+    if (typeof checked !== 'boolean') {
+      return;
+    }
+
+    showNonProjectControlCabinets = checked;
+    control_cabinet_id = '';
+  }
 
   function triggerValidation() {
     if (!control_cabinet_id) return;
@@ -503,6 +520,22 @@
 
   <div class="space-y-2">
     <Label>{$t('facility.forms.sps_controller.control_cabinet_label')}</Label>
+    {#if projectId && !fixedControlCabinetId}
+      <div class="flex items-center gap-2">
+        <Checkbox
+          id="show-non-project-control-cabinets"
+          checked={showNonProjectControlCabinets}
+          onCheckedChange={handleNonProjectControlCabinetsChange}
+          disabled={loading}
+        />
+        <Label
+          for="show-non-project-control-cabinets"
+          class="cursor-pointer text-xs text-muted-foreground"
+        >
+          {$t('facility.forms.sps_controller.show_non_project_control_cabinets')}
+        </Label>
+      </div>
+    {/if}
     {#if fixedControlCabinetId}
       <Input value={fixedControlCabinetId} readonly disabled />
     {:else}
@@ -510,7 +543,8 @@
         <ControlCabinetSelect
           bind:value={control_cabinet_id}
           width="w-full"
-          refreshKey={controlCabinetRefreshKey}
+          projectId={controlCabinetSelectProjectId}
+          refreshKey={controlCabinetSelectRefreshKey}
         />
       </div>
     {/if}

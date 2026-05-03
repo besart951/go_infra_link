@@ -532,6 +532,14 @@
         "control_cabinet": "Schaltschrank",
         "building": "Gebäude"
       },
+      "filters": {
+        "building": "Gebäude",
+        "all_buildings": "Alle Gebäude",
+        "search_buildings": "Gebäude suchen...",
+        "no_buildings": "Keine Gebäude mit Schaltschrank gefunden.",
+        "buildings_selected": "{count} Gebäude ausgewählt",
+        "clear": "Zurücksetzen"
+      },
       "updated": "Schaltschrank aktualisiert",
       "duplicated": "Schaltschrank inklusive Projektzuordnung dupliziert",
       "duplicate_failed": "Schaltschrank konnte nicht projektbezogen dupliziert werden"
@@ -548,6 +556,14 @@
         "ip_address": "IP-Adresse",
         "cabinet": "Schaltschrank",
         "created": "Erstellt"
+      },
+      "filters": {
+        "control_cabinet": "Schaltschrank",
+        "all_control_cabinets": "Alle Schaltschränke",
+        "search_control_cabinets": "Schaltschränke suchen...",
+        "no_control_cabinets": "Keine Schaltschränke mit SPS-Regler gefunden.",
+        "control_cabinets_selected": "{count} Schaltschränke ausgewählt",
+        "clear": "Zurücksetzen"
       },
       "created": "SPS-Regler erstellt",
       "updated": "SPS-Regler aktualisiert",
@@ -1016,6 +1032,7 @@
         "control_cabinet_label": "Schaltschrank",
         "control_cabinet_help": "Wählen Sie einen Schaltschrank aus, um die übrigen Felder freizuschalten.",
         "control_cabinet_required": "Bitte einen Schaltschrank auswählen",
+        "show_non_project_control_cabinets": "Nicht projektspezifische Schaltschränke anzeigen",
         "ga_device_label": "GA-Gerät",
         "ga_device_tooltip": "Gelb bedeutet, dass ein niedrigeres ungenutztes GA-Gerät verfügbar ist. Sie können den Wert behalten oder \"Nächstes verwenden\" klicken.",
         "ga_device_use_next": "Nächstes verwenden",
@@ -1983,12 +2000,29 @@
       "description_project": ", oder Projekt.",
       "description_end": ".",
       "building": "Gebäude",
+      "all_buildings": "Alle Gebäude",
+      "search_buildings": "Gebäude suchen...",
+      "no_buildings": "Keine Gebäude gefunden.",
+      "buildings_selected": "{count} Gebäude ausgewählt",
       "control_cabinet": "Schaltschrank",
+      "all_control_cabinets": "Alle Schaltschränke",
+      "search_control_cabinets": "Schaltschränke suchen...",
+      "no_control_cabinets": "Keine Schaltschränke gefunden.",
+      "control_cabinets_selected": "{count} Schaltschränke ausgewählt",
       "sps_controller": "SPS-Regler",
+      "all_sps_controllers": "Alle SPS-Regler",
+      "search_sps_controllers": "SPS-Regler suchen...",
+      "no_sps_controllers": "Keine SPS-Regler gefunden.",
+      "sps_controllers_selected": "{count} SPS-Regler ausgewählt",
       "sps_system_type": "SPS-Regler-Systemtyp",
+      "all_sps_system_types": "Alle SPS-Systemtypen",
+      "search_sps_system_types": "SPS-Systemtypen suchen...",
+      "no_sps_system_types": "Keine SPS-Systemtypen gefunden.",
+      "sps_system_types_selected": "{count} SPS-Systemtypen ausgewählt",
       "project": "Projekt",
       "apply": "Filter anwenden",
-      "clear": "Filter löschen"
+      "clear": "Filter löschen",
+      "clear_selection": "Auswahl löschen"
     },
     "multi_create": {
       "title": "Mehrfacherstellung",

@@ -5,6 +5,7 @@
   import * as Table from '$lib/components/ui/table/index.js';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import ControlCabinetForm from '$lib/components/facility/forms/ControlCabinetForm.svelte';
+  import ProjectMultiSelectFilter from '$lib/components/facility/shared/ProjectMultiSelectFilter.svelte';
   import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import type { ControlCabinet } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
@@ -51,6 +52,8 @@
       : $t('facility.new_control_cabinet')
   );
 
+  const selectedBuildingFilterCount = $derived(listState.selectedBuildingFilterIds.length);
+
   async function handleView(cabinet: ControlCabinet): Promise<void> {
     await goto(`/facility/control-cabinets/${cabinet.id}`);
   }
@@ -74,12 +77,30 @@
     />
   {/if}
 
-  <div class="flex flex-wrap items-center justify-end gap-2">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    {#if listState.isProjectContext && (listState.buildingFilterOptions.length > 0 || selectedBuildingFilterCount > 0)}
+      <ProjectMultiSelectFilter
+        items={listState.buildingFilterOptions}
+        value={listState.selectedBuildingFilterIds}
+        label={$t('projects.control_cabinets.filters.building')}
+        placeholder={$t('projects.control_cabinets.filters.all_buildings')}
+        searchPlaceholder={$t('projects.control_cabinets.filters.search_buildings')}
+        emptyText={$t('projects.control_cabinets.filters.no_buildings')}
+        selectedText={$t('projects.control_cabinets.filters.buildings_selected', {
+          count: selectedBuildingFilterCount
+        })}
+        clearText={$t('projects.control_cabinets.filters.clear')}
+        onValueChange={(ids) => void listState.setBuildingFilterIds(ids)}
+      />
+    {/if}
+
     {#if !listState.showForm && listState.canCreateControlCabinet()}
-      <Button onclick={() => listState.openCreateForm()}>
-        <PlusIcon class="mr-2 size-4" />
-        {newLabel}
-      </Button>
+      <div class="ml-auto">
+        <Button onclick={() => listState.openCreateForm()}>
+          <PlusIcon class="mr-2 size-4" />
+          {newLabel}
+        </Button>
+      </div>
     {/if}
   </div>
 

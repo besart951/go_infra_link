@@ -2,7 +2,9 @@ import type { TableFilterRecord } from '$lib/state/table/contracts.js';
 import type { SPSController } from '$lib/domain/facility/index.js';
 import type { EntityChangeEvent } from '../../shared/entityRefresh.js';
 
-export interface SPSControllerFilters extends TableFilterRecord {}
+export interface SPSControllerFilters extends TableFilterRecord {
+  controlCabinetIds?: string;
+}
 
 export type ProjectIdInput = string | undefined | (() => string | undefined);
 export type RefreshKeyInput = string | number | undefined | (() => string | number | undefined);

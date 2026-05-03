@@ -27,10 +27,19 @@
     return item.short_name?.trim() || item.name?.trim() || '';
   }
 
+  function formatOptionName(item: SystemPart): string {
+    const shortName = formatShortName(item);
+    const name = item.name?.trim() || '';
+    if (!shortName) return name;
+    if (!name || name === shortName) return shortName;
+    return `${shortName} - ${name}`;
+  }
+
   const formattedItems = $derived(
     items.map((item) => ({
       ...item,
       display_name: formatShortName(item),
+      option_name: formatOptionName(item),
       tooltip_name: item.name?.trim() || formatShortName(item)
     }))
   );
@@ -40,6 +49,7 @@
   items={formattedItems}
   bind:value
   labelKey="display_name"
+  optionLabelKey="option_name"
   tooltipLabelKey="tooltip_name"
   placeholder={$t('field_device.table_select.system_part')}
   {width}

@@ -92,10 +92,10 @@ func (h *FieldDeviceHandler) GetFieldDevice(c *gin.Context) {
 // @Param search query string false "Search query"
 // @Param order_by query string false "Order by (created_at,sps_system_type,bmk,description,apparat_nr,apparat,system_part,spec_supplier,spec_brand,spec_type,spec_motor_valve,spec_size,spec_install_loc,spec_ph,spec_acdc,spec_amperage,spec_power,spec_rotation)"
 // @Param order query string false "Order direction (asc, desc)"
-// @Param building_id query string false "Filter by building ID"
-// @Param control_cabinet_id query string false "Filter by control cabinet ID"
-// @Param sps_controller_id query string false "Filter by SPS controller ID"
-// @Param sps_controller_system_type_id query string false "Filter by SPS controller system type ID"
+// @Param building_id query string false "Filter by building ID(s), accepts a single UUID or a | separated list"
+// @Param control_cabinet_id query string false "Filter by control cabinet ID(s), accepts a single UUID or a | separated list"
+// @Param sps_controller_id query string false "Filter by SPS controller ID(s), accepts a single UUID or a | separated list"
+// @Param sps_controller_system_type_id query string false "Filter by SPS controller system type ID(s), accepts a single UUID or a | separated list"
 // @Param project_id query string false "Filter by project ID"
 // @Success 200 {object} dto.FieldDeviceListResponse
 // @Failure 400 {object} dto.ErrorResponse
@@ -110,36 +110,44 @@ func (h *FieldDeviceHandler) ListFieldDevices(c *gin.Context) {
 	// Parse optional filter parameters
 	filters := domainFacility.FieldDeviceFilterParams{}
 
-	buildingID, ok := parseUUIDQueryParam(c, "building_id")
+	buildingIDs, ok := parseUUIDListQueryParam(c, "building_id")
 	if !ok {
 		return
 	}
-	if buildingID != nil {
-		filters.BuildingID = buildingID
+	if len(buildingIDs) == 1 {
+		filters.BuildingID = &buildingIDs[0]
+	} else if len(buildingIDs) > 1 {
+		filters.BuildingIDs = buildingIDs
 	}
 
-	controlCabinetID, ok := parseUUIDQueryParam(c, "control_cabinet_id")
+	controlCabinetIDs, ok := parseUUIDListQueryParam(c, "control_cabinet_id")
 	if !ok {
 		return
 	}
-	if controlCabinetID != nil {
-		filters.ControlCabinetID = controlCabinetID
+	if len(controlCabinetIDs) == 1 {
+		filters.ControlCabinetID = &controlCabinetIDs[0]
+	} else if len(controlCabinetIDs) > 1 {
+		filters.ControlCabinetIDs = controlCabinetIDs
 	}
 
-	spsControllerID, ok := parseUUIDQueryParam(c, "sps_controller_id")
+	spsControllerIDs, ok := parseUUIDListQueryParam(c, "sps_controller_id")
 	if !ok {
 		return
 	}
-	if spsControllerID != nil {
-		filters.SPSControllerID = spsControllerID
+	if len(spsControllerIDs) == 1 {
+		filters.SPSControllerID = &spsControllerIDs[0]
+	} else if len(spsControllerIDs) > 1 {
+		filters.SPSControllerIDs = spsControllerIDs
 	}
 
-	spsControllerSystemTypeID, ok := parseUUIDQueryParam(c, "sps_controller_system_type_id")
+	spsControllerSystemTypeIDs, ok := parseUUIDListQueryParam(c, "sps_controller_system_type_id")
 	if !ok {
 		return
 	}
-	if spsControllerSystemTypeID != nil {
-		filters.SPSControllerSystemTypeID = spsControllerSystemTypeID
+	if len(spsControllerSystemTypeIDs) == 1 {
+		filters.SPSControllerSystemTypeID = &spsControllerSystemTypeIDs[0]
+	} else if len(spsControllerSystemTypeIDs) > 1 {
+		filters.SPSControllerSystemTypeIDs = spsControllerSystemTypeIDs
 	}
 
 	projectID, ok := parseUUIDQueryParam(c, "project_id")

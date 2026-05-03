@@ -7,6 +7,7 @@
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
   import SPSControllerForm from '$lib/components/facility/forms/SPSControllerForm.svelte';
+  import ProjectMultiSelectFilter from '$lib/components/facility/shared/ProjectMultiSelectFilter.svelte';
   import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import type { SPSController } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
@@ -57,6 +58,10 @@
       : $t('facility.new_sps_controller')
   );
 
+  const selectedControlCabinetFilterCount = $derived(
+    listState.selectedControlCabinetFilterIds.length
+  );
+
   async function handleHistoryRestored(): Promise<void> {
     await listState.reload();
     listState.notifyHistoryRestored();
@@ -75,12 +80,30 @@
     />
   {/if}
 
-  <div class="flex flex-wrap items-center justify-end gap-2">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    {#if listState.isProjectContext && (listState.cabinetFilterOptions.length > 0 || selectedControlCabinetFilterCount > 0)}
+      <ProjectMultiSelectFilter
+        items={listState.cabinetFilterOptions}
+        value={listState.selectedControlCabinetFilterIds}
+        label={$t('projects.sps_controllers.filters.control_cabinet')}
+        placeholder={$t('projects.sps_controllers.filters.all_control_cabinets')}
+        searchPlaceholder={$t('projects.sps_controllers.filters.search_control_cabinets')}
+        emptyText={$t('projects.sps_controllers.filters.no_control_cabinets')}
+        selectedText={$t('projects.sps_controllers.filters.control_cabinets_selected', {
+          count: selectedControlCabinetFilterCount
+        })}
+        clearText={$t('projects.sps_controllers.filters.clear')}
+        onValueChange={(ids) => void listState.setControlCabinetFilterIds(ids)}
+      />
+    {/if}
+
     {#if !listState.showForm && listState.canCreateSPSController()}
-      <Button onclick={() => listState.openCreateForm()}>
-        <Plus class="mr-2 size-4" />
-        {newLabel}
-      </Button>
+      <div class="ml-auto">
+        <Button onclick={() => listState.openCreateForm()}>
+          <Plus class="mr-2 size-4" />
+          {newLabel}
+        </Button>
+      </div>
     {/if}
   </div>
 

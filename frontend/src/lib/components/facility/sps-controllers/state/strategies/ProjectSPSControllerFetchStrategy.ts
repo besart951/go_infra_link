@@ -3,6 +3,11 @@ import { projectRepository } from '$lib/infrastructure/api/projectRepository.js'
 import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
 import type { ControlCabinet, SPSController } from '$lib/domain/facility/index.js';
 import type { DataTableFetchStrategy, DataTableQuery } from '$lib/state/table/contracts.js';
+import {
+  decodeMultiFilter,
+  sortMultiFilterOptions,
+  type MultiFilterOption
+} from '$lib/components/facility/shared/projectFacilityListFilters.js';
 import type { SPSControllerFilters } from '../types.js';
 
 export class ProjectSPSControllerFetchStrategy implements DataTableFetchStrategy<
@@ -10,6 +15,7 @@ export class ProjectSPSControllerFetchStrategy implements DataTableFetchStrategy
   SPSControllerFilters
 > {
   private readonly cabinetLabels = new Map<string, string>();
+  private cabinetFilterOptions: MultiFilterOption[] = [];
   private readonly projectId: string;
 
   constructor(projectId: string) {
@@ -24,6 +30,10 @@ export class ProjectSPSControllerFetchStrategy implements DataTableFetchStrategy
     return new Map(this.cabinetLabels);
   }
 
+  getCabinetFilterOptions(): MultiFilterOption[] {
+    return [...this.cabinetFilterOptions];
+  }
+
   async fetch(query: DataTableQuery<SPSControllerFilters>, signal?: AbortSignal) {
     const linksResponse = await projectRepository.listSPSControllers(
       this.projectId,
@@ -36,8 +46,9 @@ export class ProjectSPSControllerFetchStrategy implements DataTableFetchStrategy
       controllerIds.length > 0 ? await spsControllerRepository.getBulk(controllerIds, signal) : [];
 
     await this.loadCabinetLabels(controllers, signal);
+    this.updateCabinetFilterOptions(controllers);
 
-    const filteredItems = this.filterItems(controllers, query.searchText);
+    const filteredItems = this.filterItems(controllers, query.searchText, query.filters);
     const total = filteredItems.length;
     const totalPages = total === 0 ? 0 : Math.ceil(total / query.pageSize);
     const page = totalPages === 0 ? 1 : Math.min(query.page, totalPages);
@@ -70,11 +81,45 @@ export class ProjectSPSControllerFetchStrategy implements DataTableFetchStrategy
     }
   }
 
-  private filterItems(items: SPSController[], searchText: string): SPSController[] {
-    const query = searchText.trim().toLowerCase();
-    if (!query) return items;
+  private updateCabinetFilterOptions(controllers: SPSController[]): void {
+    const counts = new Map<string, number>();
+    for (const controller of controllers) {
+      if (!controller.control_cabinet_id) continue;
+      counts.set(
+        controller.control_cabinet_id,
+        (counts.get(controller.control_cabinet_id) ?? 0) + 1
+      );
+    }
 
-    return items.filter((item) =>
+    this.cabinetFilterOptions = sortMultiFilterOptions(
+      [...counts.entries()].map(([id, count]) => ({
+        id,
+        label: this.cabinetLabels.get(id) ?? id,
+        count
+      }))
+    );
+  }
+
+  private filterItems(
+    items: SPSController[],
+    searchText: string,
+    filters: SPSControllerFilters
+  ): SPSController[] {
+    const availableCabinetIds = new Set(
+      items.map((item) => item.control_cabinet_id).filter(Boolean)
+    );
+    const selectedCabinetIds = decodeMultiFilter(filters.controlCabinetIds).filter((id) =>
+      availableCabinetIds.has(id)
+    );
+    const scopedItems =
+      selectedCabinetIds.length > 0
+        ? items.filter((item) => selectedCabinetIds.includes(item.control_cabinet_id))
+        : items;
+
+    const query = searchText.trim().toLowerCase();
+    if (!query) return scopedItems;
+
+    return scopedItems.filter((item) =>
       [
         item.device_name,
         item.ga_device,

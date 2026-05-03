@@ -225,46 +225,49 @@
 
 {#if bacnetObjects.length > 0}
   <div class="max-w-full min-w-0 overflow-x-auto">
-    <table class="w-335 table-fixed text-sm">
-      <colgroup>
-        <col class="w-55" />
-        <col class="w-13" />
-        <col class="w-24" />
-        <col class="w-30" />
-        <col class="w-65" />
-        <col class="w-22.5" />
-        <col class="w-22.5" />
-        <col class="w-18" />
-        <col class="w-18" />
-        <col class="w-55" />
-        <col class="w-12" />
-      </colgroup>
+    <table class="w-max min-w-full table-auto text-sm">
       <thead>
         <tr class="border-b text-left text-xs text-muted-foreground">
-          <th class="pr-2 pb-2">{$t('field_device.bacnet.table.text_fix')}</th>
-          <th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.alarms')}</th>
-          <th class="pr-2 pb-2">{$t('field_device.bacnet.table.state_text')}</th>
+          <th class="w-fit max-w-80 min-w-max pr-2 pb-2">
+            {$t('field_device.bacnet.table.text_fix')}
+          </th>
+          <th class="w-13 min-w-13 pr-2 pb-2 text-center">
+            {$t('field_device.bacnet.table.alarms')}
+          </th>
+          <th class="w-24 min-w-24 pr-2 pb-2">
+            {$t('field_device.bacnet.table.state_text')}
+          </th>
           <th
-            class="w-30 max-w-30 overflow-hidden pr-2 pb-2"
+            class="w-fit max-w-48 min-w-30 overflow-hidden pr-2 pb-2"
             title={$t('field_device.bacnet.table.notification_class')}
           >
             <span class="block truncate">{$t('field_device.bacnet.table.notification_class')}</span>
           </th>
-          <th class="pr-2 pb-2">{$t('field_device.bacnet.table.description')}</th>
-          <th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.software')}</th>
-          <th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.hardware')}</th>
-          <th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.gms_visible')}</th>
-          <th class="pr-2 pb-2 text-center">{$t('field_device.bacnet.table.optional')}</th>
-          <th class="pr-2 pb-2 text-center">
+          <th class="w-fit max-w-96 min-w-max pr-2 pb-2">
+            {$t('field_device.bacnet.table.description')}
+          </th>
+          <th class="w-22.5 min-w-22.5 pr-2 pb-2 text-center">
+            {$t('field_device.bacnet.table.software')}
+          </th>
+          <th class="w-22.5 min-w-22.5 pr-2 pb-2 text-center">
+            {$t('field_device.bacnet.table.hardware')}
+          </th>
+          <th class="w-18 min-w-18 pr-2 pb-2 text-center">
+            {$t('field_device.bacnet.table.gms_visible')}
+          </th>
+          <th class="w-18 min-w-18 pr-2 pb-2 text-center">
+            {$t('field_device.bacnet.table.optional')}
+          </th>
+          <th class="w-fit max-w-80 min-w-max pr-2 pb-2 text-center">
             {$t('field_device.bacnet.table.text_individual')}
           </th>
-          <th class="pr-2 pb-2"></th>
+          <th class="w-12 min-w-12 pr-2 pb-2"></th>
         </tr>
       </thead>
       <tbody>
         {#each sortedBacnetObjects as obj (obj.id)}
           <tr class="group/bacnet-row border-b border-border/60 last:border-0">
-            <td class="py-1 pr-1">
+            <td class="bacnet-content-width-cell w-fit max-w-80 py-1 pr-1">
               <div
                 class={getCollaborationClass(obj.id, 'text_fix')}
                 title={getPreviewTitle(obj.id, 'text_fix')}
@@ -283,7 +286,10 @@
                 />
               </div>
             </td>
-            <td class="py-1 pr-1 text-center align-top" {...focusCell(obj.id, 'alarms')}>
+            <td
+              class="w-13 min-w-13 py-1 pr-1 text-center align-top"
+              {...focusCell(obj.id, 'alarms')}
+            >
               <Popover.Root>
                 <Popover.Trigger>
                   {#snippet child({ props })}
@@ -316,7 +322,7 @@
                 </Popover.Content>
               </Popover.Root>
             </td>
-            <td class="w-24 max-w-24 overflow-hidden py-1 pr-1 align-top">
+            <td class="w-fit max-w-24 min-w-24 overflow-hidden py-1 pr-1 align-top">
               <div
                 class={[
                   'group/undo relative',
@@ -337,7 +343,7 @@
                   itemTitleFormatter={formatStateTextTooltip}
                   placeholder={$t('field_device.bacnet.row.select')}
                   searchPlaceholder={$t('common.search')}
-                  width="w-[90px]"
+                  width="w-fit max-w-24 min-w-[90px]"
                   {disabled}
                   onValueChange={(value) => onEdit(obj.id, 'state_text_id', value || undefined)}
                 />
@@ -354,7 +360,7 @@
                 </p>
               {/if}
             </td>
-            <td class="w-30 max-w-30 overflow-hidden py-1 pr-1 align-top">
+            <td class="w-fit max-w-48 min-w-30 overflow-hidden py-1 pr-1 align-top">
               <div
                 class={[
                   'group/undo relative',
@@ -378,7 +384,7 @@
                   labelFormatter={formatNotificationClassLabel}
                   placeholder={$t('field_device.bacnet.row.select')}
                   searchPlaceholder={$t('common.search')}
-                  width="w-28"
+                  width="w-fit max-w-48 min-w-28"
                   popupWidth="w-[360px]"
                   {disabled}
                   onValueChange={(value) =>
@@ -397,7 +403,7 @@
                 </p>
               {/if}
             </td>
-            <td class="max-w-sm py-1 pr-1">
+            <td class="bacnet-content-width-cell w-fit max-w-96 py-1 pr-1">
               <div
                 class={getCollaborationClass(obj.id, 'description')}
                 title={getPreviewTitle(obj.id, 'description')}
@@ -416,7 +422,7 @@
                 />
               </div>
             </td>
-            <td class="py-1 pr-1 align-top">
+            <td class="w-22.5 min-w-22.5 py-1 pr-1 align-top">
               <div
                 class={`bacnet-inline-pair mx-auto inline-flex items-center ${getCollaborationClass(obj.id, 'software_type')} ${getCollaborationClass(obj.id, 'software_number')}`}
                 title={[
@@ -426,7 +432,7 @@
                   .filter(Boolean)
                   .join('\n') || undefined}
               >
-                <div class="bacnet-inline-type min-w-0" {...focusCell(obj.id, 'software_type')}>
+                <div class="bacnet-inline-type" {...focusCell(obj.id, 'software_type')}>
                   <EditableSelectCell
                     value={obj.software_type}
                     options={softwareTypeOptions}
@@ -439,7 +445,7 @@
                     onUndo={() => onUndoField?.(obj.id, 'software_type')}
                   />
                 </div>
-                <div class="bacnet-inline-number min-w-0" {...editCell(obj.id, 'software_number')}>
+                <div class="bacnet-inline-number" {...editCell(obj.id, 'software_number')}>
                   <EditableCell
                     value={String(obj.software_number).padStart(2, '0')}
                     pendingValue={getPendingTextValue(
@@ -463,7 +469,7 @@
                 </div>
               </div>
             </td>
-            <td class="py-1 pr-1 align-top">
+            <td class="w-22.5 min-w-22.5 py-1 pr-1 align-top">
               <div
                 class={`bacnet-inline-pair mx-auto inline-flex items-center ${getCollaborationClass(obj.id, 'hardware_type')} ${getCollaborationClass(obj.id, 'hardware_quantity')}`}
                 title={[
@@ -473,7 +479,7 @@
                   .filter(Boolean)
                   .join('\n') || undefined}
               >
-                <div class="bacnet-inline-type min-w-0" {...focusCell(obj.id, 'hardware_type')}>
+                <div class="bacnet-inline-type" {...focusCell(obj.id, 'hardware_type')}>
                   <EditableSelectCell
                     value={obj.hardware_type}
                     options={hardwareTypeOptions}
@@ -486,10 +492,7 @@
                     onUndo={() => onUndoField?.(obj.id, 'hardware_type')}
                   />
                 </div>
-                <div
-                  class="bacnet-inline-number min-w-0"
-                  {...editCell(obj.id, 'hardware_quantity')}
-                >
+                <div class="bacnet-inline-number" {...editCell(obj.id, 'hardware_quantity')}>
                   <EditableCell
                     value={String(obj.hardware_quantity).padStart(2, '0')}
                     pendingValue={getPendingTextValue(
@@ -513,7 +516,7 @@
                 </div>
               </div>
             </td>
-            <td class="py-1 pr-1">
+            <td class="w-18 min-w-18 py-1 pr-1">
               <div
                 class={getCollaborationClass(obj.id, 'gms_visible')}
                 title={getPreviewTitle(obj.id, 'gms_visible')}
@@ -531,7 +534,7 @@
                 />
               </div>
             </td>
-            <td class="py-1 pr-1">
+            <td class="w-18 min-w-18 py-1 pr-1">
               <div
                 class={getCollaborationClass(obj.id, 'optional')}
                 title={getPreviewTitle(obj.id, 'optional')}
@@ -549,7 +552,7 @@
                 />
               </div>
             </td>
-            <td class="py-1">
+            <td class="bacnet-content-width-cell w-fit max-w-80 py-1">
               {#if hasTextIndividual(obj)}
                 {@const pendingTextIndividual = getPendingTextValue(
                   obj.id,
@@ -588,7 +591,7 @@
                 </div>
               {/if}
             </td>
-            <td class="py-1 pr-1 text-right align-top">
+            <td class="w-12 min-w-12 py-1 pr-1 text-right align-top">
               {#if hasObjectEdits(obj.id)}
                 <Button
                   type="button"
@@ -620,14 +623,38 @@
 
   .bacnet-inline-type {
     width: 2.35rem;
+    min-width: 2.35rem;
   }
 
   .bacnet-inline-number {
     width: 1.85rem;
+    min-width: 1.85rem;
+  }
+
+  .bacnet-content-width-cell :global(button:not(.editable-cell-display)) {
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .bacnet-content-width-cell :global(.editable-cell-display),
+  .bacnet-content-width-cell :global(.editable-cell-editor) {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .bacnet-content-width-cell :global(input) {
+    min-width: 0;
+  }
+
+  .bacnet-content-width-cell :global(span),
+  .bacnet-content-width-cell :global(code) {
+    max-width: 100%;
   }
 
   .bacnet-inline-pair :global(button),
   .bacnet-inline-pair :global(select) {
+    width: 100%;
+    min-width: 0;
     height: 1.75rem;
     min-height: 1.75rem;
     justify-content: flex-start;

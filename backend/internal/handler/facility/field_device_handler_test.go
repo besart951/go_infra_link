@@ -42,6 +42,38 @@ func TestListFieldDevicesReturnsAfterInvalidFilterParam(t *testing.T) {
 	}
 }
 
+func TestListFieldDevicesAcceptsMultiValueFilterParam(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	firstBuildingID := uuid.New()
+	secondBuildingID := uuid.New()
+	service := &fakeFieldDeviceHandlerService{}
+	handler := NewFieldDeviceHandler(service)
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(
+		http.MethodGet,
+		"/field-devices?building_id="+firstBuildingID.String()+"|"+secondBuildingID.String(),
+		nil,
+	)
+
+	handler.ListFieldDevices(context)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if service.listWithFiltersCalls != 1 {
+		t.Fatalf("expected service to be called once, got %d call(s)", service.listWithFiltersCalls)
+	}
+	if len(service.lastFilters.BuildingIDs) != 2 {
+		t.Fatalf("expected two building ids, got %+v", service.lastFilters.BuildingIDs)
+	}
+	if service.lastFilters.BuildingIDs[0] != firstBuildingID || service.lastFilters.BuildingIDs[1] != secondBuildingID {
+		t.Fatalf("unexpected building ids: %+v", service.lastFilters.BuildingIDs)
+	}
+}
+
 func TestToFieldDeviceSpecificationPatchPreservesExplicitNull(t *testing.T) {
 	var req dto.UpdateFieldDeviceSpecificationRequest
 	if err := json.Unmarshal([]byte(`{"specification_supplier":null,"specification_brand":"Replacement"}`), &req); err != nil {
@@ -131,6 +163,7 @@ type fakeFieldDeviceHandlerService struct {
 	listAvailableCalls   int
 	listWithFiltersErr   error
 	listAvailableErr     error
+	lastFilters          domainFacility.FieldDeviceFilterParams
 }
 
 func (s *fakeFieldDeviceHandlerService) Create(context.Context, *domainFacility.FieldDevice) error {
@@ -153,8 +186,9 @@ func (s *fakeFieldDeviceHandlerService) List(context.Context, int, int, string) 
 	return &domain.PaginatedList[domainFacility.FieldDevice]{}, nil
 }
 
-func (s *fakeFieldDeviceHandlerService) ListWithFilters(context.Context, domain.PaginationParams, domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
+func (s *fakeFieldDeviceHandlerService) ListWithFilters(_ context.Context, _ domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error) {
 	s.listWithFiltersCalls++
+	s.lastFilters = filters
 	if s.listWithFiltersErr != nil {
 		return nil, s.listWithFiltersErr
 	}

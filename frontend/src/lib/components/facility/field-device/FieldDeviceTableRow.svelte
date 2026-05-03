@@ -83,7 +83,7 @@
   function cellClass(widthClass: string, extra = '', fieldName?: string): string {
     return [
       widthClass,
-      'min-w-0 overflow-hidden',
+      'content-width-cell overflow-hidden',
       extra,
       fieldName ? getEditingFieldClass(fieldName) : ''
     ]
@@ -133,7 +133,7 @@
     .filter(Boolean)
     .join(' ')}
 >
-  <Table.Cell class="w-8 max-w-8 !px-0 !py-1">
+  <Table.Cell class="w-8 max-w-8 min-w-8 !px-0 !py-1">
     <div class="flex justify-center">
       <Checkbox
         checked={rowState.isSelected(device.id)}
@@ -142,7 +142,7 @@
       />
     </div>
   </Table.Cell>
-  <Table.Cell class="w-6 max-w-6 !px-0 !py-1">
+  <Table.Cell class="w-6 max-w-6 min-w-6 !px-0 !py-1">
     <Button
       variant="ghost"
       size="sm"
@@ -162,13 +162,13 @@
       {/if}
     </Button>
   </Table.Cell>
-  <Table.Cell class="w-36 max-w-36 min-w-0 overflow-hidden text-xs font-medium">
+  <Table.Cell class="w-fit max-w-96 overflow-hidden text-xs font-medium">
     {#if spsControllerSystemTypeLabel && spsControllerSystemTypeLabel !== '-'}
       <Tooltip.Provider>
         <Tooltip.Root>
           <Tooltip.Trigger>
             {#snippet child({ props })}
-              <span {...props} class="block truncate">
+              <span {...props} class="inline-block max-w-full truncate">
                 {spsControllerSystemTypeLabel}
               </span>
             {/snippet}
@@ -179,12 +179,12 @@
         </Tooltip.Root>
       </Tooltip.Provider>
     {:else}
-      <span class="block truncate">
+      <span class="inline-block max-w-full truncate">
         {spsControllerSystemTypeLabel}
       </span>
     {/if}
   </Table.Cell>
-  <Table.Cell class="w-14 max-w-14 min-w-0 overflow-hidden p-1">
+  <Table.Cell class="content-width-cell w-fit max-w-36 overflow-hidden p-1">
     <div
       class={editingWrapperClass('bmk')}
       title={getFieldPreviewTitle('bmk')}
@@ -206,7 +206,7 @@
       />
     </div>
   </Table.Cell>
-  <Table.Cell class="w-40 max-w-40 min-w-0 overflow-hidden p-1">
+  <Table.Cell class="content-width-cell w-fit max-w-80 overflow-hidden p-1">
     <div
       class={editingWrapperClass('description')}
       title={getFieldPreviewTitle('description')}
@@ -228,7 +228,7 @@
       />
     </div>
   </Table.Cell>
-  <Table.Cell class="w-40 max-w-40 min-w-0 overflow-hidden p-1">
+  <Table.Cell class="content-width-cell w-fit max-w-80 overflow-hidden p-1">
     <div
       class={editingWrapperClass('text_fix')}
       title={getFieldPreviewTitle('text_fix')}
@@ -250,7 +250,7 @@
       />
     </div>
   </Table.Cell>
-  <Table.Cell class="w-14 max-w-14 min-w-0 overflow-hidden p-1">
+  <Table.Cell class="content-width-cell w-fit max-w-20 overflow-hidden p-1">
     <div
       class={editingWrapperClass('apparat_nr')}
       title={getFieldPreviewTitle('apparat_nr')}
@@ -278,7 +278,7 @@
     </div>
   </Table.Cell>
   <Table.Cell
-    class={cellClass('w-[4.5rem] max-w-[4.5rem]', 'p-1', 'apparat_id')}
+    class={cellClass('w-fit max-w-40 min-w-[4.5rem]', 'p-1', 'apparat_id')}
     title={getFieldPreviewTitle('apparat_id')}
     {...focusCell('apparat_id')}
   >
@@ -290,7 +290,7 @@
       <TableApparatSelect
         items={rowState.allApparats}
         value={apparatSelectValue}
-        width="w-full"
+        width="w-fit max-w-40 min-w-[4.5rem]"
         disabled={!rowState.canUpdateFieldDevice()}
         error={rowState.editing.getFieldError(device.id, 'apparat_id')}
         onValueChange={handleApparatChange}
@@ -304,7 +304,7 @@
     </div>
   </Table.Cell>
   <Table.Cell
-    class={cellClass('w-[4.5rem] max-w-[4.5rem]', 'p-1', 'system_part_id')}
+    class={cellClass('w-fit max-w-40 min-w-[4.5rem]', 'p-1', 'system_part_id')}
     title={getFieldPreviewTitle('system_part_id')}
     {...focusCell('system_part_id')}
   >
@@ -316,7 +316,7 @@
       <TableSystemPartSelect
         items={rowState.allSystemParts}
         value={systemPartSelectValue}
-        width="w-full"
+        width="w-fit max-w-40 min-w-[4.5rem]"
         disabled={!rowState.canUpdateFieldDevice()}
         error={rowState.editing.getFieldError(device.id, 'system_part_id')}
         onValueChange={handleSystemPartChange}
@@ -329,7 +329,7 @@
       {/if}
     </div>
   </Table.Cell>
-  <Table.Cell class="w-10 max-w-10 text-center">
+  <Table.Cell class="w-10 max-w-10 min-w-10 text-center">
     {#if device.specification_id || device.specification}
       <span
         class="inline-block h-2 w-2 rounded-full bg-success"
@@ -344,7 +344,7 @@
   </Table.Cell>
   {#if rowState.showSpecifications}
     <Table.Cell
-      class={cellClass('w-32 max-w-32', 'p-1 text-xs', 'specification.specification_supplier')}
+      class={cellClass('w-fit max-w-64', 'p-1 text-xs', 'specification.specification_supplier')}
       title={getFieldPreviewTitle('specification.specification_supplier')}
       {...editCell('specification_supplier')}
     >
@@ -367,7 +367,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-32 max-w-32', 'p-1 text-xs', 'specification.specification_brand')}
+      class={cellClass('w-fit max-w-64', 'p-1 text-xs', 'specification.specification_brand')}
       title={getFieldPreviewTitle('specification.specification_brand')}
       {...editCell('specification_brand')}
     >
@@ -390,7 +390,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-32 max-w-32', 'p-1 text-xs', 'specification.specification_type')}
+      class={cellClass('w-fit max-w-64', 'p-1 text-xs', 'specification.specification_type')}
       title={getFieldPreviewTitle('specification.specification_type')}
       {...editCell('specification_type')}
     >
@@ -413,7 +413,11 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-32 max-w-32', 'p-1 text-xs', 'specification.additional_info_motor_valve')}
+      class={cellClass(
+        'w-fit max-w-64',
+        'p-1 text-xs',
+        'specification.additional_info_motor_valve'
+      )}
       title={getFieldPreviewTitle('specification.additional_info_motor_valve')}
       {...editCell('additional_info_motor_valve')}
     >
@@ -439,7 +443,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-20 max-w-20', 'p-1 text-xs', 'specification.additional_info_size')}
+      class={cellClass('w-fit max-w-24', 'p-1 text-xs', 'specification.additional_info_size')}
       title={getFieldPreviewTitle('specification.additional_info_size')}
       {...editCell('additional_info_size')}
     >
@@ -463,7 +467,7 @@
     </Table.Cell>
     <Table.Cell
       class={cellClass(
-        'w-40 max-w-40',
+        'w-fit max-w-80',
         'p-1 text-xs',
         'specification.additional_information_installation_location'
       )}
@@ -502,7 +506,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-20 max-w-20', 'p-1 text-xs', 'specification.electrical_connection_ph')}
+      class={cellClass('w-fit max-w-24', 'p-1 text-xs', 'specification.electrical_connection_ph')}
       title={getFieldPreviewTitle('specification.electrical_connection_ph')}
       {...editCell('electrical_connection_ph')}
     >
@@ -525,7 +529,7 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-20 max-w-20', 'p-1 text-xs', 'specification.electrical_connection_acdc')}
+      class={cellClass('w-fit max-w-24', 'p-1 text-xs', 'specification.electrical_connection_acdc')}
       title={getFieldPreviewTitle('specification.electrical_connection_acdc')}
       {...editCell('electrical_connection_acdc')}
     >
@@ -550,7 +554,7 @@
     </Table.Cell>
     <Table.Cell
       class={cellClass(
-        'w-24 max-w-24',
+        'w-fit max-w-32',
         'p-1 text-xs',
         'specification.electrical_connection_amperage'
       )}
@@ -580,7 +584,11 @@
       />
     </Table.Cell>
     <Table.Cell
-      class={cellClass('w-24 max-w-24', 'p-1 text-xs', 'specification.electrical_connection_power')}
+      class={cellClass(
+        'w-fit max-w-32',
+        'p-1 text-xs',
+        'specification.electrical_connection_power'
+      )}
       title={getFieldPreviewTitle('specification.electrical_connection_power')}
       {...editCell('electrical_connection_power')}
     >
@@ -608,7 +616,7 @@
     </Table.Cell>
     <Table.Cell
       class={cellClass(
-        'w-24 max-w-24',
+        'w-fit max-w-32',
         'p-1 text-xs',
         'specification.electrical_connection_rotation'
       )}
@@ -638,7 +646,7 @@
       />
     </Table.Cell>
   {/if}
-  <Table.Cell class="w-20 max-w-20 text-right">
+  <Table.Cell class="w-20 max-w-20 min-w-20 text-right">
     <div class="flex items-center justify-end gap-1">
       {#if hasFieldDevicePendingEdits}
         <Button
@@ -707,3 +715,25 @@
   projectId={rowState.effectiveProjectId}
   onRestored={() => rowState.reload()}
 />
+
+<style>
+  .content-width-cell :global(button:not(.editable-cell-display)) {
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .content-width-cell :global(.editable-cell-display),
+  .content-width-cell :global(.editable-cell-editor) {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .content-width-cell :global(input) {
+    min-width: 0;
+  }
+
+  .content-width-cell :global(span),
+  .content-width-cell :global(code) {
+    max-width: 100%;
+  }
+</style>
