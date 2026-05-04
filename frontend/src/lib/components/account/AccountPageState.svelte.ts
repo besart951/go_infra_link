@@ -35,6 +35,10 @@ const verifyNotificationEmail = new VerifyNotificationEmailUseCase(
   notificationPreferenceRepository
 );
 
+function hasPermission(user: User, permission: string): boolean {
+  return Boolean(user.permissions?.includes(permission));
+}
+
 export class AccountPageState {
   activeTab = $state<AccountTab>('information');
   currentUser = $state<User | null>(null);
@@ -85,6 +89,10 @@ export class AccountPageState {
   async loadUserTeams(userId: string): Promise<void> {
     this.teamsError = null;
     this.userTeams = [];
+
+    if (!this.currentUser || !hasPermission(this.currentUser, 'team.read')) {
+      return;
+    }
 
     try {
       const teamsResponse = await teamRepository.list({ page: 1, limit: 100, search: '' });
