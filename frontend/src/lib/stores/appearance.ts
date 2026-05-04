@@ -30,6 +30,8 @@ function isFontPreference(value: unknown): value is FontPreference {
 }
 
 function normalizeContrastPreference(value: unknown): number {
+  if (value === null || value === undefined || value === '') return DEFAULT_CONTRAST_PREFERENCE;
+
   const numeric = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(numeric)) return DEFAULT_CONTRAST_PREFERENCE;
 
