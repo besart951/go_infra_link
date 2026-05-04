@@ -26,6 +26,7 @@
             contrast = 100;
           }
           contrast = Math.min(140, Math.max(80, Math.round(contrast / 5) * 5));
+          localStorage.setItem('contrast_preference', String(contrast));
           document.documentElement.style.setProperty('--app-contrast', contrast + '%');
           document.documentElement.style.setProperty(
             '--app-contrast-filter',

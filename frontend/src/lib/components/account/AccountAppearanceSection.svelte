@@ -34,6 +34,11 @@
   };
 
   const t = createTranslator();
+  let contrastDraft = $state(DEFAULT_CONTRAST_PREFERENCE);
+
+  $effect(() => {
+    contrastDraft = $contrastPreference;
+  });
 
   const themeOptions = $derived<ThemeOption[]>([
     {
@@ -84,7 +89,8 @@
   ]);
 
   function handleContrastInput(event: Event) {
-    setContrastPreference(Number((event.currentTarget as HTMLInputElement).value));
+    contrastDraft = Number((event.currentTarget as HTMLInputElement).value);
+    setContrastPreference(contrastDraft);
   }
 </script>
 
@@ -154,7 +160,7 @@
         min={MIN_CONTRAST_PREFERENCE}
         max={MAX_CONTRAST_PREFERENCE}
         step={CONTRAST_PREFERENCE_STEP}
-        value={$contrastPreference}
+        bind:value={contrastDraft}
         class="h-2 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
         oninput={handleContrastInput}
       />
