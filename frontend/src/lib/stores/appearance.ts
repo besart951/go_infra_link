@@ -65,7 +65,9 @@ function readStoredThemePreference(userId: string | null): ThemePreference {
 function readStoredContrastPreference(userId: string | null): number {
   if (!browser) return DEFAULT_CONTRAST_PREFERENCE;
   try {
-    return normalizeContrastPreference(localStorage.getItem(userScopedKey(CONTRAST_STORAGE_KEY, userId)));
+    return normalizeContrastPreference(
+      localStorage.getItem(userScopedKey(CONTRAST_STORAGE_KEY, userId))
+    );
   } catch {
     return DEFAULT_CONTRAST_PREFERENCE;
   }
@@ -181,10 +183,7 @@ export function initAppearance(userId: string | null = null) {
     const normalized = normalizeContrastPreference(pref);
     applyContrastPreferenceToDom(normalized);
     try {
-      localStorage.setItem(
-        userScopedKey(CONTRAST_STORAGE_KEY, currentUserId),
-        String(normalized)
-      );
+      localStorage.setItem(userScopedKey(CONTRAST_STORAGE_KEY, currentUserId), String(normalized));
     } catch {
       // ignore
     }
