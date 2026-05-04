@@ -9,7 +9,7 @@
     updateCurrentUser,
     updateCurrentUserPassword,
     type User,
-    type UpdateUserRequest
+    type UpdateCurrentUserRequest
   } from '$lib/api/users.js';
   import { listTeams, listTeamMembers } from '$lib/api/teams.js';
   import { getErrorMessage } from '$lib/api/client.js';
@@ -121,12 +121,12 @@
 
     isSavingProfile = true;
     try {
-      const payload: UpdateUserRequest = {
+      const payload: UpdateCurrentUserRequest = {
         first_name: firstName,
         last_name: lastName,
         email
       };
-      const updated = await updateCurrentUser(currentUser.id, payload);
+      const updated = await updateCurrentUser(payload);
       currentUser = updated;
       applyUserToForm(updated);
       addToast($t('messages.account_info_saved'), 'success');
@@ -162,7 +162,8 @@
 
     isSavingPassword = true;
     try {
-      await updateCurrentUserPassword(currentUser.id, newPassword);
+      const updated = await updateCurrentUserPassword(newPassword);
+      currentUser = updated;
       newPassword = '';
       confirmPassword = '';
       addToast($t('messages.account_password_saved'), 'success');

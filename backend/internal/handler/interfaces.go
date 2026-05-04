@@ -43,6 +43,7 @@ type ProjectService interface {
 type UserService interface {
 	CreateWithPassword(user *user.User, password string) error
 	UpdateWithPassword(user *user.User, password *string) error
+	UpdateCurrentUser(userID uuid.UUID, update user.CurrentUserUpdate) (*user.User, error)
 	GetByID(id uuid.UUID) (*user.User, error)
 	List(page, limit int, search, orderBy, order string) (*domain.PaginatedList[user.User], error)
 	DeleteByID(id uuid.UUID) error

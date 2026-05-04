@@ -8,6 +8,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	"github.com/besart951/go_infra_link/backend/internal/handler/dto"
+	"github.com/besart951/go_infra_link/backend/internal/handler/mapper"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/modules/auth/domain"
@@ -225,7 +226,58 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.AuthUserResponse{
+	c.JSON(http.StatusOK, h.toAuthUserResponse(usr))
+}
+
+// UpdateMe godoc
+// @Summary Update current user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param user body dto.UpdateCurrentUserRequest true "Current user data"
+// @Success 200 {object} dto.AuthUserResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/auth/me [put]
+func (h *AuthHandler) UpdateMe(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return
+	}
+
+	var req dto.UpdateCurrentUserRequest
+	if !handlerutil.BindJSON(c, &req) {
+		return
+	}
+
+	usr, err := h.userService.UpdateCurrentUser(userID, mapper.ToCurrentUserUpdate(req))
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+			return
+		}
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "user.update_failed")
+		return
+	}
+
+	c.JSON(http.StatusOK, h.toAuthUserResponse(usr))
+}
+
+func (h *AuthHandler) getRolePermissions(role domainUser.Role) []string {
+	if h.permissionSvc == nil {
+		return []string{}
+	}
+	permissions, err := h.permissionSvc.GetRolePermissions(role)
+	if err != nil {
+		return []string{}
+	}
+	return permissions
+}
+
+func (h *AuthHandler) toAuthUserResponse(usr *domainUser.User) dto.AuthUserResponse {
+	return dto.AuthUserResponse{
 		ID:                  usr.ID,
 		FirstName:           usr.FirstName,
 		LastName:            usr.LastName,
@@ -239,18 +291,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		DisabledAt:          usr.DisabledAt,
 		LockedUntil:         usr.LockedUntil,
 		FailedLoginAttempts: usr.FailedLoginAttempts,
-	})
-}
-
-func (h *AuthHandler) getRolePermissions(role domainUser.Role) []string {
-	if h.permissionSvc == nil {
-		return []string{}
 	}
-	permissions, err := h.permissionSvc.GetRolePermissions(role)
-	if err != nil {
-		return []string{}
-	}
-	return permissions
 }
 
 // ConfirmPasswordReset godoc

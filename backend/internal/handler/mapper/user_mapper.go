@@ -42,6 +42,15 @@ func ApplyUserUpdate(target *user.User, req dto.UpdateUserRequest) {
 	}
 }
 
+func ToCurrentUserUpdate(req dto.UpdateCurrentUserRequest) user.CurrentUserUpdate {
+	return user.CurrentUserUpdate{
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Email:     req.Email,
+		Password:  req.Password,
+	}
+}
+
 // ToUserResponse converts a User domain model to a UserResponse DTO
 func ToUserResponse(usr *user.User) dto.UserResponse {
 	return dto.UserResponse{

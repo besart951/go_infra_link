@@ -61,6 +61,29 @@ func (s *Service) UpdateWithPassword(user *domainUser.User, password *string) er
 	return s.repo.Update(user)
 }
 
+func (s *Service) UpdateCurrentUser(userID uuid.UUID, update domainUser.CurrentUserUpdate) (*domainUser.User, error) {
+	usr, err := s.GetByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if update.FirstName != "" {
+		usr.FirstName = update.FirstName
+	}
+	if update.LastName != "" {
+		usr.LastName = update.LastName
+	}
+	if update.Email != "" {
+		usr.Email = update.Email
+	}
+
+	if err := s.UpdateWithPassword(usr, &update.Password); err != nil {
+		return nil, err
+	}
+
+	return usr, nil
+}
+
 func (s *Service) DeleteByID(id uuid.UUID) error {
 	return s.repo.DeleteByIds([]uuid.UUID{id})
 }

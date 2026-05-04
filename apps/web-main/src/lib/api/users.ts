@@ -59,6 +59,13 @@ export interface UpdateUserRequest {
   role?: UserRole;
 }
 
+export interface UpdateCurrentUserRequest {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  password?: string;
+}
+
 export interface AllowedRole {
   role: UserRole;
   display_name: string;
@@ -159,8 +166,8 @@ export async function deleteUser(userId: string): Promise<void> {
 /**
  * Update current user profile fields
  */
-export async function updateCurrentUser(userId: string, data: UpdateUserRequest): Promise<User> {
-  return api<User>(`/users/${userId}`, {
+export async function updateCurrentUser(data: UpdateCurrentUserRequest): Promise<User> {
+  return api<User>('/auth/me', {
     method: 'PUT',
     body: JSON.stringify(data)
   });
@@ -169,8 +176,8 @@ export async function updateCurrentUser(userId: string, data: UpdateUserRequest)
 /**
  * Update current user password
  */
-export async function updateCurrentUserPassword(userId: string, password: string): Promise<User> {
-  return api<User>(`/users/${userId}`, {
+export async function updateCurrentUserPassword(password: string): Promise<User> {
+  return api<User>('/auth/me', {
     method: 'PUT',
     body: JSON.stringify({ password })
   });

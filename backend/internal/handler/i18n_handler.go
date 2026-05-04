@@ -25,9 +25,9 @@ func NewI18nHandler(loader *i18n.Loader) *I18nHandler {
 // @Produce json
 // @Param locale path string true "Locale code (e.g., de_CH, en_US)"
 // @Success 200 {object} map[string]interface{} "Translation data"
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 404 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
 // @Router /api/v1/i18n/{locale} [get]
 func (h *I18nHandler) GetTranslations(c *gin.Context) {
 	locale := c.Param("locale")

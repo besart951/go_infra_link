@@ -27,6 +27,13 @@ type UpdateUserRequest struct {
 	Role      string `json:"role" binding:"omitempty,oneof=superadmin admin_fzag fzag admin_planer planer admin_entrepreneur entrepreneur"`
 }
 
+type UpdateCurrentUserRequest struct {
+	FirstName string `json:"first_name" binding:"omitempty,min=1,max=100"`
+	LastName  string `json:"last_name" binding:"omitempty,min=1,max=100"`
+	Email     string `json:"email" binding:"omitempty,email"`
+	Password  string `json:"password" binding:"omitempty,min=8"`
+}
+
 type UserResponse struct {
 	ID                  uuid.UUID  `json:"id"`
 	FirstName           string     `json:"first_name"`

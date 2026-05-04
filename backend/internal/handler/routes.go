@@ -196,6 +196,7 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 	authProtected := protectedV1.Group("/auth")
 	{
 		authProtected.GET("/me", handlers.AuthHandler.Me)
+		authProtected.PUT("/me", handlers.AuthHandler.UpdateMe)
 	}
 
 	// Facility routes
