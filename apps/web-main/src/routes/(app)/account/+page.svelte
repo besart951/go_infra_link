@@ -14,8 +14,16 @@
   import { listTeams, listTeamMembers } from '$lib/api/teams.js';
   import { getErrorMessage } from '$lib/api/client.js';
   import { createTranslator } from '@i18n/translator.js';
-  import { setThemePreference, themePreference, type ThemePreference } from '@theme/theme.js';
-  import { LaptopMinimal, Moon, Sun } from '@lucide/svelte';
+  import {
+    contrastPreference,
+    initUserPreferences,
+    setContrastPreference,
+    setThemePreference,
+    themePreference,
+    type ContrastPreference,
+    type ThemePreference
+  } from '@theme/theme.js';
+  import { Contrast, LaptopMinimal, Moon, Sun } from '@lucide/svelte';
 
   type AccountTab = 'information' | 'notifications' | 'password' | 'preferences';
   type ThemeOption = {
@@ -64,6 +72,7 @@
       icon: Moon
     }
   ];
+  const contrastOptions: ContrastPreference[] = [100, 110, 120, 130];
 
   const permissions = $derived(currentUser?.permissions ?? []);
 
@@ -106,6 +115,7 @@
     try {
       const user = await getCurrentUser();
       currentUser = user;
+      initUserPreferences(user.id);
       applyUserToForm(user);
       await loadUserTeams(user.id);
     } catch (err) {
@@ -377,6 +387,27 @@
                 </span>
               </Button>
             {/each}
+          </div>
+
+          <div class="mt-6 border-t pt-4">
+            <div class="flex flex-col gap-1">
+              <div class="flex items-center gap-2">
+                <Contrast class="size-4 text-muted-foreground" />
+                <h3 class="text-sm font-medium">{$t('pages.settings_contrast')}</h3>
+              </div>
+              <p class="text-sm text-muted-foreground">{$t('pages.settings_contrast_desc')}</p>
+            </div>
+
+            <div class="mt-3 flex flex-wrap gap-2">
+              {#each contrastOptions as value (value)}
+                <Button
+                  variant={$contrastPreference === value ? 'default' : 'outline'}
+                  onclick={() => setContrastPreference(value)}
+                >
+                  {value}%
+                </Button>
+              {/each}
+            </div>
           </div>
         </div>
       {/if}

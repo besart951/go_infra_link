@@ -542,6 +542,8 @@
     "settings_theme_light_desc": "Verwenden Sie immer das helle Design.",
     "settings_theme_dark": "Dunkel",
     "settings_theme_dark_desc": "Verwenden Sie immer das dunkle Design.",
+    "settings_contrast": "Kontrast",
+    "settings_contrast_desc": "Passen Sie die Lesbarkeit der Oberfläche an.",
     "optional": "optional",
     "teams_desc": "Erstellen Sie Teams und verwalten Sie den Zugriff.",
     "create_team": "Team erstellen",

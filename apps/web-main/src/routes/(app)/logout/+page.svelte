@@ -3,6 +3,7 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { api } from '$lib/api/client';
   import { createTranslator } from '@i18n/translator.js';
+  import { clearUserPreferences } from '@theme/theme.js';
 
   const t = createTranslator();
 
@@ -13,6 +14,7 @@
     } catch (e) {
       console.error('Logout failed', e);
     } finally {
+      clearUserPreferences();
       await goto('/login');
     }
   });

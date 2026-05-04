@@ -11,12 +11,16 @@
   import { goto } from '$app/navigation';
   import { t } from '@i18n/index.js';
   import { createTranslator } from '@i18n/translator.js';
+  import { initUserPreferences } from '@theme/theme.js';
 
   const translator = createTranslator();
 
   const { children, data } = $props<{ children: any; data: LayoutData }>();
 
   onMount(async () => {
+    if (data.user) {
+      initUserPreferences(data.user.id);
+    }
     await loadAuth();
   });
 

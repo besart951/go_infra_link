@@ -121,5 +121,6 @@
   }
   body {
     @apply bg-background text-foreground;
+    filter: contrast(var(--app-contrast, 100%));
   }
 }
