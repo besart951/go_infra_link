@@ -38,7 +38,7 @@
     title={$t('roles.page.title')}
     description={$t('roles.page.description')}
     backHref="/users"
-    backLabel={$t('hub.back_to_overview')}
+    backLabel={$t('common.back')}
     createLabel={$t('roles.actions.create_permission')}
     canCreate={state.canManageRoles}
     createActive={state.createPermissionDialogOpen}

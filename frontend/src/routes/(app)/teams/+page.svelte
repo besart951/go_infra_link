@@ -40,7 +40,7 @@
     title={$t('navigation.teams')}
     description={$t('pages.teams_desc')}
     backHref="/users"
-    backLabel={$t('hub.back_to_overview')}
+    backLabel={$t('common.back')}
     createLabel={$t('pages.create_team')}
     canCreate={canPerform('create', 'team')}
     createActive={state.createOpen}

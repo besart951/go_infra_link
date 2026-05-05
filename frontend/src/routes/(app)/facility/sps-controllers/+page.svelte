@@ -18,7 +18,7 @@
     title={$t('facility.sps_controllers_title')}
     description={$t('facility.sps_controllers_desc')}
     backHref="/facility"
-    backLabel={$t('hub.back_to_overview')}
+    backLabel={$t('common.back')}
   />
 
   <SPSControllerListView />

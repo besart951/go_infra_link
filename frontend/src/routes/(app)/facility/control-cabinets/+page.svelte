@@ -18,7 +18,7 @@
     title={$t('facility.control_cabinets_title')}
     description={$t('facility.control_cabinets_desc')}
     backHref="/facility"
-    backLabel={$t('hub.back_to_overview')}
+    backLabel={$t('common.back')}
   />
 
   <ControlCabinetListView />

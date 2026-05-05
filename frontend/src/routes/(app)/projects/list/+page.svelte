@@ -55,7 +55,7 @@
     title={$t('navigation.projects')}
     description={$t('pages.projects_desc')}
     backHref="/projects"
-    backLabel={$t('hub.back_to_overview')}
+    backLabel={$t('common.back')}
     createLabel={$t('common.create')}
     canCreate={canPerform('create', 'project')}
     createActive={state.createOpen}

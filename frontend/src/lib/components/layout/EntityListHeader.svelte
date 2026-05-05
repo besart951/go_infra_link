@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+  import { navigateBack } from '$lib/navigation/backNavigation.js';
   import type { Snippet } from 'svelte';
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
   import PlusIcon from '@lucide/svelte/icons/plus';
@@ -35,7 +36,12 @@
     <div class="flex min-w-0 items-center gap-3">
       <Tooltip.Root>
         <Tooltip.Trigger>
-          <Button variant="ghost" size="icon" href={backHref} aria-label={backLabel}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onclick={() => navigateBack(backHref)}
+            aria-label={backLabel}
+          >
             <ArrowLeftIcon class="size-4" />
           </Button>
         </Tooltip.Trigger>

@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { browser } from '$app/environment';
-  import { goto } from '$app/navigation';
   import { Button } from '$lib/components/ui/button/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
+  import { navigateBack } from '$lib/navigation/backNavigation.js';
   import { ArrowLeft, FileQuestion, Home, ShieldAlert, TriangleAlert } from '@lucide/svelte';
 
   interface Props {
@@ -37,13 +36,8 @@
         : 'pages.http_error.generic.eyebrow'
   );
 
-  function goBack() {
-    if (browser && window.history.length > 1) {
-      window.history.back();
-      return;
-    }
-
-    void goto(from || '/');
+  function goBack(): void {
+    void navigateBack(from || '/');
   }
 </script>
 

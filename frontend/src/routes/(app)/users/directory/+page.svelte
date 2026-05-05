@@ -41,7 +41,7 @@
     title={$t('pages.user_management')}
     description={$t('pages.user_management_desc')}
     backHref="/users"
-    backLabel={$t('hub.back_to_overview')}
+    backLabel={$t('common.back')}
     createLabel={$t('common.create_user')}
     canCreate={state.pageCapabilities.can_create_user}
     createActive={state.createDialogOpen}

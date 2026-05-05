@@ -65,7 +65,7 @@
     {title}
     {description}
     backHref="/facility"
-    backLabel={$t('hub.back_to_overview')}
+    backLabel={$t('common.back')}
     {createLabel}
     canCreate={!actions.showForm && canPerform('create', permissionResource)}
     createActive={actions.showForm}

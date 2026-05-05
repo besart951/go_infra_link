@@ -15,7 +15,7 @@
     title={$t('facility.field_devices_title')}
     description={$t('facility.field_devices_desc')}
     backHref="/facility"
-    backLabel={$t('hub.back_to_overview')}
+    backLabel={$t('common.back')}
   />
 
   <FieldDeviceListView />

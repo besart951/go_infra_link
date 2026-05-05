@@ -41,7 +41,7 @@
     title={$t('hub.projects.title')}
     description={$t('hub.projects.description')}
     backHref="/"
-    backLabel={$t('hub.back_to_dashboard')}
+    backLabel={$t('common.back')}
   />
 
   <ModuleCardGrid items={projectCards} emptyMessage={$t('hub.no_access')} />

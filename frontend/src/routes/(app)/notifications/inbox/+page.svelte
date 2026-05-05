@@ -27,7 +27,7 @@
   <NotificationInboxHeader
     title={$t('notifications.inbox.page_title')}
     description={$t('notifications.inbox.page_description')}
-    backLabel={$t('hub.back_to_overview')}
+    backLabel={$t('common.back')}
     unreadCountLabel={$t('notifications.inbox.unread_count', { count: state.unreadCount })}
     unreadOnlyLabel={$t('notifications.inbox.unread_only')}
     markAllReadLabel={$t('notifications.inbox.mark_all_read')}

@@ -33,7 +33,7 @@
     title={$t('phases.page.heading')}
     description={$t('phases.page.description')}
     backHref="/projects"
-    backLabel={$t('hub.back_to_overview')}
+    backLabel={$t('common.back')}
     createLabel={$t('phases.page.new')}
     canCreate={!state.showForm && canPerform('create', 'phase')}
     createActive={state.showForm && !state.editingPhase}

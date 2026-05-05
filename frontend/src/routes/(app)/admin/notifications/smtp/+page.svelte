@@ -36,7 +36,7 @@
     title={$t('notifications.page.title')}
     description={$t('notifications.page.description')}
     backHref="/notifications"
-    backLabel={$t('hub.back_to_overview')}
+    backLabel={$t('common.back')}
   >
     <Badge variant="outline" class="hidden gap-1.5 sm:inline-flex">
       <ShieldCheck class="size-3.5" />

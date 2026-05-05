@@ -14,7 +14,7 @@
     title={$t('facility.specifications')}
     description={$t('facility.specifications_desc')}
     backHref="/facility"
-    backLabel={$t('hub.back_to_overview')}
+    backLabel={$t('common.back')}
   />
 
   <a href="/facility/field-devices" class="text-sm font-medium underline">

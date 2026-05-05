@@ -41,7 +41,7 @@
     title={$t('hub.notifications.title')}
     description={$t('hub.notifications.description')}
     backHref="/"
-    backLabel={$t('hub.back_to_dashboard')}
+    backLabel={$t('common.back')}
   />
 
   <ModuleCardGrid items={notificationCards} emptyMessage={$t('hub.no_access')} />

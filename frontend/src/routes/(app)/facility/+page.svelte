@@ -139,7 +139,7 @@
     title={$t('facility.facility_overview')}
     description={$t('hub.facility.description')}
     backHref="/"
-    backLabel={$t('hub.back_to_dashboard')}
+    backLabel={$t('common.back')}
   />
 
   <ModuleCardGrid

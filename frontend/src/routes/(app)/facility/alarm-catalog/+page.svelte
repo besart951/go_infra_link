@@ -27,7 +27,7 @@
     title={$t('facility.alarm_catalog_page.title')}
     description={$t('facility.alarm_catalog_page.description')}
     backHref="/facility"
-    backLabel={$t('hub.back_to_overview')}
+    backLabel={$t('common.back')}
   >
     {#if state.loading}
       <span class="text-sm text-muted-foreground">

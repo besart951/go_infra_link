@@ -3,6 +3,7 @@
   import { Badge } from '$lib/components/ui/badge/index.js';
   import * as ButtonGroup from '$lib/components/ui/button-group/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+  import { navigateBack } from '$lib/navigation/backNavigation.js';
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
   import BellIcon from '@lucide/svelte/icons/bell';
   import CheckIcon from '@lucide/svelte/icons/check';
@@ -44,7 +45,12 @@
 <Tooltip.Provider>
   <header class="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex min-w-0 items-center gap-3">
-      <Button variant="ghost" size="icon" href="/notifications" aria-label={backLabel}>
+      <Button
+        variant="ghost"
+        size="icon"
+        onclick={() => navigateBack('/notifications')}
+        aria-label={backLabel}
+      >
         <ArrowLeftIcon class="size-4" />
       </Button>
       <div class="flex min-w-0 items-start gap-2">

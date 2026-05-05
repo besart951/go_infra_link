@@ -51,7 +51,7 @@
     title={$t('hub.users.title')}
     description={$t('hub.users.description')}
     backHref="/"
-    backLabel={$t('hub.back_to_dashboard')}
+    backLabel={$t('common.back')}
   />
 
   <ModuleCardGrid items={userCards} emptyMessage={$t('hub.no_access')} />
