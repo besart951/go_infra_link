@@ -23,7 +23,7 @@ export async function loadBuildingDetailData(id: string, options: LoadOptions = 
 
 export async function loadControlCabinetDetailData(id: string, options: LoadOptions = {}) {
   const requestOptions = apiOptions(options);
-  const cabinet = await api<ControlCabinet>(`/facility/control-cabinet/${id}`, requestOptions);
+  const cabinet = await api<ControlCabinet>(`/facility/control-cabinets/${id}`, requestOptions);
 
   const buildingPromise = cabinet.building_id
     ? api<Building>(`/facility/buildings/${cabinet.building_id}`, requestOptions)
