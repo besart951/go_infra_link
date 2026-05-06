@@ -23,7 +23,7 @@ export async function loadBuildingDetailData(id: string, options: LoadOptions = 
 
 export async function loadControlCabinetDetailData(id: string, options: LoadOptions = {}) {
   const requestOptions = apiOptions(options);
-  const cabinet = await api<ControlCabinet>(`/facility/control-cabinets/${id}`, requestOptions);
+  const cabinet = await api<ControlCabinet>(`/facility/control-cabinet/${id}`, requestOptions);
 
   const buildingPromise = cabinet.building_id
     ? api<Building>(`/facility/buildings/${cabinet.building_id}`, requestOptions)
@@ -34,24 +34,29 @@ export async function loadControlCabinetDetailData(id: string, options: LoadOpti
     requestOptions
   );
 
-  const systemTypeEntries = await Promise.all(
-    (spsResponse.items ?? []).map(async (controller: SPSController) => {
-      const response = await api<SPSControllerSystemTypeListResponse>(
-        `/facility/sps-controller-system-types?page=1&limit=200&sps_controller_id=${controller.id}`,
-        requestOptions
-      );
-      return [controller.id, response.items ?? []] as const;
-    })
-  );
+  const controllers = spsResponse.items ?? [];
+  const systemTypesByController: Record<string, SPSControllerSystemType[]> = {};
+
+  if (controllers.length > 0) {
+    const controllerIds = controllers.map((controller: SPSController) => controller.id).join('|');
+    const systemTypeResponse = await api<SPSControllerSystemTypeListResponse>(
+      `/facility/sps-controller-system-types?page=1&limit=1000&sps_controller_id=${controllerIds}`,
+      requestOptions
+    );
+
+    for (const systemType of systemTypeResponse.items ?? []) {
+      if (!systemTypesByController[systemType.sps_controller_id]) {
+        systemTypesByController[systemType.sps_controller_id] = [];
+      }
+      systemTypesByController[systemType.sps_controller_id].push(systemType);
+    }
+  }
 
   return {
     cabinet,
     building: await buildingPromise,
-    spsControllers: spsResponse.items ?? [],
-    systemTypesByController: Object.fromEntries(systemTypeEntries) as Record<
-      string,
-      SPSControllerSystemType[]
-    >
+    spsControllers: controllers,
+    systemTypesByController
   };
 }
 
