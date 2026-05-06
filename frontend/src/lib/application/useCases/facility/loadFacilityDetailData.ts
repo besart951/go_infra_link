@@ -39,8 +39,9 @@ export async function loadControlCabinetDetailData(id: string, options: LoadOpti
 
   if (controllers.length > 0) {
     const controllerIds = controllers.map((controller: SPSController) => controller.id).join('|');
+    const limit = Math.max(1000, controllers.length * 200);
     const systemTypeResponse = await api<SPSControllerSystemTypeListResponse>(
-      `/facility/sps-controller-system-types?page=1&limit=1000&sps_controller_id=${controllerIds}`,
+      `/facility/sps-controller-system-types?page=1&limit=${limit}&sps_controller_id=${controllerIds}`,
       requestOptions
     );
 
