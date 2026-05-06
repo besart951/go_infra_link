@@ -3081,7 +3081,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "SPS Controller ID",
+                        "description": "SPS Controller ID(s), accepts a single UUID or a | separated list",
                         "name": "sps_controller_id",
                         "in": "query"
                     },

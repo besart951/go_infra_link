@@ -8,6 +8,7 @@ import {
   sortMultiFilterOptions,
   type MultiFilterOption
 } from '$lib/components/facility/shared/projectFacilityListFilters.js';
+import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
 import type { ControlCabinetFilters } from '../types.js';
 
 export class ProjectControlCabinetFetchStrategy implements DataTableFetchStrategy<
@@ -40,18 +41,22 @@ export class ProjectControlCabinetFetchStrategy implements DataTableFetchStrateg
   }
 
   async fetch(query: DataTableQuery<ControlCabinetFilters>, signal?: AbortSignal) {
-    const linksResponse = await projectRepository.listControlCabinets(
-      this.projectId,
-      { page: 1, limit: 1000 },
+    const links = await fetchAllPages(
+      (page, pageSize, requestSignal) =>
+        projectRepository.listControlCabinets(
+          this.projectId,
+          { page, limit: pageSize },
+          requestSignal
+        ),
       signal
     );
 
     this.linkIdsByCabinetId.clear();
-    for (const link of linksResponse.items) {
+    for (const link of links) {
       this.linkIdsByCabinetId.set(link.control_cabinet_id, link.id);
     }
 
-    const controlCabinetIds = linksResponse.items.map((item) => item.control_cabinet_id);
+    const controlCabinetIds = links.map((item) => item.control_cabinet_id);
     const allCabinets =
       controlCabinetIds.length > 0
         ? await controlCabinetRepository.getBulk([...new Set(controlCabinetIds)], signal)

@@ -11,11 +11,9 @@
   import UserAvatar from '$lib/components/user-avatar.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { t as translate } from '$lib/i18n/index.js';
-  import ControlCabinetListView from '$lib/components/facility/control-cabinets/ControlCabinetListView.svelte';
-  import SPSControllerListView from '$lib/components/facility/sps-controllers/SPSControllerListView.svelte';
-  import FieldDeviceListView from '$lib/components/facility/field-device/FieldDeviceListView.svelte';
   import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { projectDetailService } from '$lib/components/project/ProjectDetailService.js';
+  import { FieldDeviceLookupService } from '$lib/components/facility/field-device/state/fieldDeviceLookupService.js';
   import type { ControlCabinet, FieldDevice, SPSController } from '$lib/domain/facility/index.js';
   import type { Project } from '$lib/domain/project/index.js';
   import type { User } from '$lib/domain/user/index.js';
@@ -59,6 +57,21 @@
   let entityRefreshRequestVersion = 0;
   let entityDeltaRequestVersion = 0;
   let fieldDeviceRefreshRequestVersion = 0;
+
+  type ControlCabinetListViewModule =
+    typeof import('$lib/components/facility/control-cabinets/ControlCabinetListView.svelte');
+  type SPSControllerListViewModule =
+    typeof import('$lib/components/facility/sps-controllers/SPSControllerListView.svelte');
+  type FieldDeviceListViewModule =
+    typeof import('$lib/components/facility/field-device/FieldDeviceListView.svelte');
+
+  let controlCabinetListViewModule = $state<ControlCabinetListViewModule | null>(null);
+  let spsControllerListViewModule = $state<SPSControllerListViewModule | null>(null);
+  let fieldDeviceListViewModule = $state<FieldDeviceListViewModule | null>(null);
+
+  let controlCabinetListViewLoad: Promise<ControlCabinetListViewModule> | null = null;
+  let spsControllerListViewLoad: Promise<SPSControllerListViewModule> | null = null;
+  let fieldDeviceListViewLoad: Promise<FieldDeviceListViewModule> | null = null;
 
   const collaboration = new ProjectCollaborationState({
     onEntityDelta: (message) => {
@@ -163,6 +176,70 @@
   const fieldDeviceEditorsByDevice = $derived.by(() =>
     collaboration.buildFieldDeviceEditorsByDevice(usersById, currentUser?.id)
   );
+
+  function preloadControlCabinetTabView(): void {
+    if (controlCabinetListViewModule || controlCabinetListViewLoad) return;
+
+    controlCabinetListViewLoad =
+      import('$lib/components/facility/control-cabinets/ControlCabinetListView.svelte')
+        .then((module) => {
+          controlCabinetListViewModule = module;
+          return module;
+        })
+        .catch((error) => {
+          console.error('Failed to load control cabinet list view:', error);
+          throw error;
+        })
+        .finally(() => {
+          controlCabinetListViewLoad = null;
+        });
+  }
+
+  function preloadSPSControllerTabView(): void {
+    if (spsControllerListViewModule || spsControllerListViewLoad) return;
+
+    spsControllerListViewLoad =
+      import('$lib/components/facility/sps-controllers/SPSControllerListView.svelte')
+        .then((module) => {
+          spsControllerListViewModule = module;
+          return module;
+        })
+        .catch((error) => {
+          console.error('Failed to load SPS controller list view:', error);
+          throw error;
+        })
+        .finally(() => {
+          spsControllerListViewLoad = null;
+        });
+  }
+
+  function preloadFieldDeviceTabView(): void {
+    if (fieldDeviceListViewModule || fieldDeviceListViewLoad) return;
+
+    fieldDeviceListViewLoad =
+      import('$lib/components/facility/field-device/FieldDeviceListView.svelte')
+        .then((module) => {
+          fieldDeviceListViewModule = module;
+          return module;
+        })
+        .catch((error) => {
+          console.error('Failed to load field device list view:', error);
+          throw error;
+        })
+        .finally(() => {
+          fieldDeviceListViewLoad = null;
+        });
+  }
+
+  $effect(() => {
+    if (activeFacilityTab === 'control-cabinets') {
+      preloadControlCabinetTabView();
+    } else if (activeFacilityTab === 'sps-controllers') {
+      preloadSPSControllerTabView();
+    } else if (activeFacilityTab === 'field-devices') {
+      preloadFieldDeviceTabView();
+    }
+  });
 
   function bumpControlCabinetViewRefresh(): void {
     controlCabinetViewRefreshKey += 1;
@@ -333,6 +410,7 @@
 
   onDestroy(() => {
     collaboration.disconnect();
+    FieldDeviceLookupService.resetAllCachedLookups();
   });
 </script>
 
@@ -449,47 +527,62 @@
 
       <Tabs.Content value="control-cabinets" class="mt-4 min-w-0">
         <div class="min-w-0 rounded-lg border bg-card p-6">
-          <ControlCabinetListView
-            {projectId}
-            refreshKey={controlCabinetViewRefreshKey}
-            refreshRequest={controlCabinetRefreshRequest}
-            deltaRequest={controlCabinetDeltaRequest}
-            onChanged={handleControlCabinetsChanged}
-          />
+          {#if controlCabinetListViewModule}
+            {@const ControlCabinetListView = controlCabinetListViewModule.default}
+            <ControlCabinetListView
+              {projectId}
+              refreshKey={controlCabinetViewRefreshKey}
+              refreshRequest={controlCabinetRefreshRequest}
+              deltaRequest={controlCabinetDeltaRequest}
+              onChanged={handleControlCabinetsChanged}
+            />
+          {:else}
+            <Skeleton class="h-6 w-full" />
+          {/if}
         </div>
       </Tabs.Content>
 
       <Tabs.Content value="sps-controllers" class="mt-4 min-w-0">
         <div class="min-w-0 rounded-lg border bg-card p-6">
-          <SPSControllerListView
-            {projectId}
-            refreshKey={spsControllerRefreshKey}
-            refreshRequest={spsControllerRefreshRequest}
-            deltaRequest={spsControllerDeltaRequest}
-            controlCabinetLabelRefreshRequest={spsControllerCabinetLabelRefreshRequest}
-            controlCabinetLabelDeltaRequest={spsControllerCabinetLabelDeltaRequest}
-            controlCabinetRefreshKey={controlCabinetOptionsRefreshKey}
-            onChanged={handleSPSControllersChanged}
-          />
+          {#if spsControllerListViewModule}
+            {@const SPSControllerListView = spsControllerListViewModule.default}
+            <SPSControllerListView
+              {projectId}
+              refreshKey={spsControllerRefreshKey}
+              refreshRequest={spsControllerRefreshRequest}
+              deltaRequest={spsControllerDeltaRequest}
+              controlCabinetLabelRefreshRequest={spsControllerCabinetLabelRefreshRequest}
+              controlCabinetLabelDeltaRequest={spsControllerCabinetLabelDeltaRequest}
+              controlCabinetRefreshKey={controlCabinetOptionsRefreshKey}
+              onChanged={handleSPSControllersChanged}
+            />
+          {:else}
+            <Skeleton class="h-6 w-full" />
+          {/if}
         </div>
       </Tabs.Content>
 
       <Tabs.Content value="field-devices" class="mt-4 min-w-0">
         <div class="min-w-0 rounded-lg border bg-card p-6">
-          <FieldDeviceListView
-            {projectId}
-            pageSize={100}
-            refreshKey={fieldDeviceRefreshKey}
-            refreshRequest={fieldDeviceRefreshRequest}
-            {systemTypeRefreshKey}
-            onMultiCreateFormVisibilityChange={(open) => {
-              fieldDeviceMultiCreateFormOpen = open;
-            }}
-            sharedFieldDeviceEditors={fieldDeviceEditorsByDevice}
-            onSharedFieldDeviceStateChange={(state) =>
-              collaboration.publishFieldDeviceDraftState(state)}
-            onFieldDevicesSaved={(devices) => collaboration.publishFieldDeviceDelta(devices)}
-          />
+          {#if fieldDeviceListViewModule}
+            {@const FieldDeviceListView = fieldDeviceListViewModule.default}
+            <FieldDeviceListView
+              {projectId}
+              pageSize={100}
+              refreshKey={fieldDeviceRefreshKey}
+              refreshRequest={fieldDeviceRefreshRequest}
+              {systemTypeRefreshKey}
+              onMultiCreateFormVisibilityChange={(open) => {
+                fieldDeviceMultiCreateFormOpen = open;
+              }}
+              sharedFieldDeviceEditors={fieldDeviceEditorsByDevice}
+              onSharedFieldDeviceStateChange={(state) =>
+                collaboration.publishFieldDeviceDraftState(state)}
+              onFieldDevicesSaved={(devices) => collaboration.publishFieldDeviceDelta(devices)}
+            />
+          {:else}
+            <Skeleton class="h-6 w-full" />
+          {/if}
         </div>
       </Tabs.Content>
     </Tabs.Root>

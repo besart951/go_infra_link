@@ -15,7 +15,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := db.Bootstrap(cfg.DBConfig); err != nil {
+	if err := db.Bootstrap(cfg.DBConfig, db.BootstrapOptions{
+		RequireBlueGreenCompatible: config.IsProduction(cfg.AppEnv),
+	}); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "db bootstrap:", err)
 		os.Exit(1)
 	}

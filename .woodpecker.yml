@@ -24,7 +24,7 @@ steps:
       - go build ./cmd/app
 
   frontend_ci:
-    image: node:25-alpine
+    image: node:24-alpine
     environment:
       PNPM_STORE_DIR: /woodpecker/src/.cache/pnpm
     commands:

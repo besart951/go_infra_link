@@ -1,6 +1,7 @@
 :80 {
-	# This container serves only the static SPA bundle.
-	# Same-origin /api/* proxying is handled by the edge Caddy instance in server-setup/Caddyfile.
+	@api path /api/*
+	reverse_proxy @api {$BACKEND_UPSTREAM:backend:8080}
+
 	root * /usr/share/caddy
 	file_server
 	try_files {path} /index.html

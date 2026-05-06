@@ -23,7 +23,7 @@ func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService) *
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
-// @Param sps_controller_id query string false "SPS Controller ID"
+// @Param sps_controller_id query string false "SPS Controller ID(s), accepts a single UUID or a | separated list"
 // @Param project_id query string false "Project ID (filter by project)"
 // @Success 200 {object} SPSControllerSystemTypeListResponse
 // @Failure 400 {object} ErrorResponse
@@ -35,7 +35,7 @@ func (h *SPSControllerSystemTypeHandler) ListSPSControllerSystemTypes(c *gin.Con
 		return
 	}
 
-	spsControllerID, ok := parseUUIDQueryParam(c, "sps_controller_id")
+	spsControllerIDs, ok := parseUUIDListQueryParam(c, "sps_controller_id")
 	if !ok {
 		return
 	}
@@ -49,8 +49,10 @@ func (h *SPSControllerSystemTypeHandler) ListSPSControllerSystemTypes(c *gin.Con
 
 	var result *domain.PaginatedList[domainFacility.SPSControllerSystemType]
 	var err error
-	if spsControllerID != nil {
-		result, err = h.service.ListBySPSControllerID(ctx, *spsControllerID, query.Page, query.Limit, query.Search)
+	if len(spsControllerIDs) == 1 {
+		result, err = h.service.ListBySPSControllerID(ctx, spsControllerIDs[0], query.Page, query.Limit, query.Search)
+	} else if len(spsControllerIDs) > 1 {
+		result, err = h.service.ListBySPSControllerIDs(ctx, spsControllerIDs, query.Page, query.Limit, query.Search)
 	} else if projectID != nil {
 		result, err = h.service.ListByProjectID(ctx, *projectID, query.Page, query.Limit, query.Search)
 	} else {

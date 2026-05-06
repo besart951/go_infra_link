@@ -11,8 +11,18 @@ import type {
   SPSControllerSystemTypeListParams,
   SPSControllerSystemTypeListResponse
 } from '$lib/domain/facility/index.js';
+import { createCachedBulkFetchByIds } from '$lib/infrastructure/api/createCachedBulkFetch.js';
+import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsControllerSystemTypeRepository.js';
 import { api } from '$lib/api/client.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
+
+const getBulkCached = createCachedBulkFetchByIds('facility-sps-controllers', (ids, signal) =>
+  api<SPSControllerBulkResponse>('/facility/sps-controllers/bulk', {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+    signal
+  }).then((response) => response.items)
+);
 
 export const spsControllerRepository: SPSControllerRepository = {
   async list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<SPSController>> {
@@ -29,12 +39,7 @@ export const spsControllerRepository: SPSControllerRepository = {
   },
 
   async getBulk(ids: string[], signal?: AbortSignal): Promise<SPSController[]> {
-    const response = await api<SPSControllerBulkResponse>('/facility/sps-controllers/bulk', {
-      method: 'POST',
-      body: JSON.stringify({ ids }),
-      signal
-    });
-    return response.items;
+    return getBulkCached(ids, signal);
   },
 
   async copy(id: string, signal?: AbortSignal): Promise<SPSController> {
@@ -111,18 +116,35 @@ export const spsControllerRepository: SPSControllerRepository = {
     params?: SPSControllerSystemTypeListParams,
     signal?: AbortSignal
   ): Promise<SPSControllerSystemTypeListResponse> {
-    const searchParams = new URLSearchParams();
-    if (params?.page) searchParams.set('page', String(params.page));
-    if (params?.limit) searchParams.set('limit', String(params.limit));
-    if (params?.search) searchParams.set('search', params.search);
-    if (params?.sps_controller_id) searchParams.set('sps_controller_id', params.sps_controller_id);
-    if (params?.project_id) searchParams.set('project_id', params.project_id);
+    const filters: Record<string, string> = {};
+    if (params?.project_id) {
+      filters.project_id = params.project_id;
+    }
+    if (params?.sps_controller_id) {
+      filters.sps_controller_id = params.sps_controller_id;
+    }
 
-    const query = searchParams.toString();
-    return api<SPSControllerSystemTypeListResponse>(
-      `/facility/sps-controller-system-types${query ? `?${query}` : ''}`,
-      { signal }
+    const listResponse = await spsControllerSystemTypeRepository.list(
+      {
+        pagination: {
+          page: params?.page ?? 1,
+          pageSize: params?.limit ?? 1000
+        },
+        search: {
+          text: params?.search ?? ''
+        },
+        ...(Object.keys(filters).length > 0 ? { filters } : {})
+      },
+      signal
     );
+
+    return {
+      items: listResponse.items,
+      total: listResponse.metadata.total,
+      page: listResponse.metadata.page,
+      limit: listResponse.metadata.pageSize,
+      total_pages: listResponse.metadata.totalPages
+    };
   },
 
   async getSystemType(id: string, signal?: AbortSignal): Promise<SPSControllerSystemType> {

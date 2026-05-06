@@ -64,15 +64,16 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18.3-alpine3.23@sha256:54451ecb8ab38c24c3ec123f2fd501303a3a1856a5c66e98cecf2460d5e1e9d7
     env_file:
       - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-go_infra_link}
+      PGDATA: /var/lib/postgresql/18/docker
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres18_data:/var/lib/postgresql
     command: ["postgres", "-p", "${POSTGRES_CONTAINER_PORT:-5432}"]
     ports:
       - "${POSTGRES_PORT:-5432}:${POSTGRES_CONTAINER_PORT:-5432}"
@@ -84,7 +85,7 @@ services:
     restart: unless-stopped
 
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:latest@sha256:ff557f69d9808085dc3554f56c1b06a36ac8cddabe4485212920b9604261abdb
     env_file:
       - .env
     environment:
@@ -131,6 +132,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  postgres18_data:
   frontend_node_modules:
   pgadmin_data:

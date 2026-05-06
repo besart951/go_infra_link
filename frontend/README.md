@@ -15,6 +15,8 @@ There is no SvelteKit server runtime in production. Do not add `hooks.server.ts`
 
 ## Development
 
+Use Node.js 24.x. The repository includes `.nvmrc` and `.node-version` pinned to 24.15.0, matching the Docker and CI frontend build images.
+
 Install dependencies and start the dev server:
 
 ```sh

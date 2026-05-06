@@ -1446,6 +1446,17 @@ func (r *projectSPSSystemTypeRepoFake) GetPaginatedListBySPSControllerID(_ conte
 	}), nil
 }
 
+func (r *projectSPSSystemTypeRepoFake) GetPaginatedListBySPSControllerIDs(_ context.Context, spsControllerIDs []uuid.UUID, _ domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
+	controllerSet := make(map[uuid.UUID]struct{}, len(spsControllerIDs))
+	for _, id := range spsControllerIDs {
+		controllerSet[id] = struct{}{}
+	}
+	return paginatedFromFilter(r.items, func(item *domainFacility.SPSControllerSystemType) bool {
+		_, ok := controllerSet[item.SPSControllerID]
+		return ok
+	}), nil
+}
+
 func (r *projectSPSSystemTypeRepoFake) GetPaginatedListByProjectID(context.Context, uuid.UUID, domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
 	return paginatedFromMap(r.items), nil
 }

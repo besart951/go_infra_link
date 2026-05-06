@@ -19,6 +19,7 @@ go run ./cmd/app
 ### Prerequisites
 
 - Go 1.25.6 or higher
+- Node.js 24.x with pnpm 10.29.1 for frontend development
 - Docker (optional, for containerized deployment)
 
 ### Running with Docker
@@ -73,9 +74,10 @@ This project follows **Clean/Hexagonal Architecture** principles:
 ### Production deployment contract
 
 - The frontend is built with `@sveltejs/adapter-static`
-- The frontend container serves only static assets
-- The edge reverse proxy must keep `/api/*` on the same origin and forward it to the backend
+- The frontend container serves static assets and can proxy same-origin `/api/*` to the backend for standalone Compose deployments
+- The `server-setup` edge reverse proxy owns live blue/green routing for `/api/*`
 - Backend endpoints remain the only source of truth for auth, cookies, CSRF, and authorization
+- PostgreSQL runs on the official `postgres:18.3-alpine3.23` image; major upgrades must use dump/restore, not an in-place data directory reuse
 
 Do not rely on SvelteKit server hooks or `+server.ts` routes in production unless the frontend is intentionally migrated to a server adapter such as `adapter-node`.
 

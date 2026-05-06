@@ -1,6 +1,7 @@
 package realtime
 
 import (
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -102,12 +103,39 @@ func SameHostOrigin(r *http.Request) bool {
 		return false
 	}
 
-	requestHost := r.Host
-	if parsedHost, err := url.Parse("http://" + r.Host); err == nil && parsedHost.Hostname() != "" {
-		requestHost = parsedHost.Hostname()
+	requestHosts := []string{r.Host}
+	if forwardedHost := r.Header.Get("X-Forwarded-Host"); forwardedHost != "" {
+		requestHosts = append(requestHosts, forwardedHost)
 	}
 
-	return strings.EqualFold(originURL.Hostname(), requestHost)
+	originHost := originURL.Hostname()
+	for _, requestHost := range requestHosts {
+		if sameWebSocketOriginHost(originHost, requestHost) {
+			return true
+		}
+	}
+	return false
+}
+
+func sameWebSocketOriginHost(originHost, requestHost string) bool {
+	parsedHost := requestHost
+	if parsedURL, err := url.Parse("http://" + requestHost); err == nil && parsedURL.Hostname() != "" {
+		parsedHost = parsedURL.Hostname()
+	}
+
+	if strings.EqualFold(originHost, parsedHost) {
+		return true
+	}
+	return isLoopbackHost(originHost) && isLoopbackHost(parsedHost)
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func (config WebSocketConfig) withDefaults() WebSocketConfig {

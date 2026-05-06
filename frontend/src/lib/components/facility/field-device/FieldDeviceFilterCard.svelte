@@ -23,6 +23,7 @@
   import { createTranslator } from '$lib/i18n/translator.js';
   import type { FieldDeviceFilters } from './state/types.js';
   import { useFieldDeviceState } from './state/context.svelte.js';
+  import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
   import { X } from '@lucide/svelte';
 
   interface Props {
@@ -66,6 +67,16 @@
   let spsControllerOptions = $state<MultiFilterOption[]>([]);
   let spsControllerSystemTypeOptions = $state<MultiFilterOption[]>([]);
   let optionsRequestVersion = 0;
+  let lastFilterContext = '';
+  let inFlightFilterContext = $state<string | null>(null);
+
+  interface ProjectScopeData {
+    controlCabinets: ControlCabinet[];
+    spsControllers: SPSController[];
+  }
+
+  const projectScopeCache = new Map<string, Promise<ProjectScopeData>>();
+  const buildingLabelsCache = new Map<string, Promise<Map<string, string>>>();
 
   const showBuildingFilter = $derived(!fieldDeviceState.isFilterFixed('buildingId'));
   const showControlCabinetFilter = $derived(!fieldDeviceState.isFilterFixed('controlCabinetId'));
@@ -105,13 +116,24 @@
   );
 
   $effect(() => {
+    if (!fieldDeviceState.showFilterPanel) {
+      lastFilterContext = '';
+      inFlightFilterContext = null;
+      return;
+    }
+
     const context = {
       projectId: scopedProjectId,
       buildingIds: [...effectiveBuildingIds],
       controlCabinetIds: [...effectiveControlCabinetIds],
       spsControllerIds: [...effectiveSpsControllerIds]
     };
-    void loadFilterOptions(context);
+
+    const contextKey = buildFilterContextKey(context);
+    if (contextKey === lastFilterContext || contextKey === inFlightFilterContext) return;
+
+    inFlightFilterContext = contextKey;
+    void loadFilterOptions(context, contextKey);
   });
 
   function selectedIdsFromFilters(
@@ -134,6 +156,27 @@
 
   function sameIds(a: string[], b: string[]): boolean {
     return a.length === b.length && a.every((id, index) => id === b[index]);
+  }
+
+  function normalizeIdList(ids: string[]): string {
+    return [...new Set(ids)]
+      .filter((id) => id.length > 0)
+      .sort()
+      .join(',');
+  }
+
+  function buildFilterContextKey(context: {
+    projectId?: string;
+    buildingIds: string[];
+    controlCabinetIds: string[];
+    spsControllerIds: string[];
+  }): string {
+    return [
+      context.projectId ?? '',
+      normalizeIdList(context.buildingIds),
+      normalizeIdList(context.controlCabinetIds),
+      normalizeIdList(context.spsControllerIds)
+    ].join('|');
   }
 
   function formatBuildingLabel(building: Building): string {
@@ -161,12 +204,15 @@
       .join(' | ');
   }
 
-  async function loadFilterOptions(context: {
-    projectId?: string;
-    buildingIds: string[];
-    controlCabinetIds: string[];
-    spsControllerIds: string[];
-  }): Promise<void> {
+  async function loadFilterOptions(
+    context: {
+      projectId?: string;
+      buildingIds: string[];
+      controlCabinetIds: string[];
+      spsControllerIds: string[];
+    },
+    contextKey: string
+  ): Promise<void> {
     const requestVersion = ++optionsRequestVersion;
 
     try {
@@ -191,6 +237,13 @@
       syncSelectionsToOptions();
     } catch (error) {
       console.error('Failed to load field device filter options:', error);
+    } finally {
+      if (requestVersion === optionsRequestVersion) {
+        lastFilterContext = contextKey;
+        if (inFlightFilterContext === contextKey) {
+          inFlightFilterContext = null;
+        }
+      }
     }
   }
 
@@ -284,13 +337,14 @@
     controlCabinetIds: string[],
     spsControllerIds: string[]
   ): Promise<MultiFilterOption[]> {
-    const response = await spsControllerSystemTypeRepository.list({
-      pagination: { page: 1, pageSize: OPTION_PAGE_SIZE },
-      search: { text: '' },
-      filters: projectId ? { project_id: projectId } : undefined
-    });
-
-    let systemTypes = response.items;
+    const fetchedSystemTypes = await fetchAllPages((page, pageSize) =>
+      spsControllerSystemTypeRepository.list({
+        pagination: { page, pageSize },
+        search: { text: '' },
+        filters: projectId ? { project_id: projectId } : undefined
+      })
+    );
+    let systemTypes = fetchedSystemTypes;
     if (spsControllerIds.length > 0) {
       systemTypes = systemTypes.filter((item) => spsControllerIds.includes(item.sps_controller_id));
     } else if (buildingIds.length > 0 || controlCabinetIds.length > 0) {
@@ -317,21 +371,50 @@
   }
 
   async function loadProjectControlCabinets(projectId: string): Promise<ControlCabinet[]> {
-    const links = await projectRepository.listControlCabinets(projectId, {
-      page: 1,
-      limit: OPTION_PAGE_SIZE
-    });
-    const ids = [...new Set(links.items.map((link) => link.control_cabinet_id).filter(Boolean))];
-    return ids.length > 0 ? controlCabinetRepository.getBulk(ids) : [];
+    const scope = await loadProjectScope(projectId);
+    return scope.controlCabinets;
   }
 
   async function loadProjectSpsControllers(projectId: string): Promise<SPSController[]> {
-    const links = await projectRepository.listSPSControllers(projectId, {
-      page: 1,
-      limit: OPTION_PAGE_SIZE
+    const scope = await loadProjectScope(projectId);
+    return scope.spsControllers;
+  }
+
+  async function loadProjectScope(projectId: string): Promise<ProjectScopeData> {
+    const cached = projectScopeCache.get(projectId);
+    if (cached) return cached;
+
+    const load = (async () => {
+      const [cabinetLinks, spsLinks] = await Promise.all([
+        fetchAllPages((page, pageSize) =>
+          projectRepository.listControlCabinets(projectId, { page, limit: pageSize })
+        ),
+        fetchAllPages((page, pageSize) =>
+          projectRepository.listSPSControllers(projectId, { page, limit: pageSize })
+        )
+      ]);
+
+      const [controlCabinetIds, spsControllerIds] = [
+        [...new Set(cabinetLinks.map((link) => link.control_cabinet_id).filter(Boolean))],
+        [...new Set(spsLinks.map((link) => link.sps_controller_id).filter(Boolean))]
+      ];
+
+      const [controlCabinets, spsControllers] = await Promise.all([
+        controlCabinetIds.length > 0 ? controlCabinetRepository.getBulk(controlCabinetIds) : [],
+        spsControllerIds.length > 0 ? spsControllerRepository.getBulk(spsControllerIds) : []
+      ]);
+
+      return { controlCabinets, spsControllers };
+    })();
+
+    projectScopeCache.set(projectId, load);
+    load.catch(() => {
+      if (projectScopeCache.get(projectId) === load) {
+        projectScopeCache.delete(projectId);
+      }
     });
-    const ids = [...new Set(links.items.map((link) => link.sps_controller_id).filter(Boolean))];
-    return ids.length > 0 ? spsControllerRepository.getBulk(ids) : [];
+
+    return load;
   }
 
   async function loadBuildingLabels(cabinets: ControlCabinet[]): Promise<Map<string, string>> {
@@ -340,8 +423,23 @@
     ];
     if (buildingIds.length === 0) return new Map();
 
-    const buildings = await buildingRepository.getBulk(buildingIds);
-    return new Map(buildings.map((building) => [building.id, formatBuildingLabel(building)]));
+    const cacheKey = normalizeIdList(buildingIds);
+    const cached = buildingLabelsCache.get(cacheKey);
+    if (cached) return cached;
+
+    const load = (async () => {
+      const buildings = await buildingRepository.getBulk(buildingIds);
+      return new Map(buildings.map((building) => [building.id, formatBuildingLabel(building)]));
+    })();
+
+    buildingLabelsCache.set(cacheKey, load);
+    load.catch(() => {
+      if (buildingLabelsCache.get(cacheKey) === load) {
+        buildingLabelsCache.delete(cacheKey);
+      }
+    });
+
+    return load;
   }
 
   async function filterControllersByAncestors(
