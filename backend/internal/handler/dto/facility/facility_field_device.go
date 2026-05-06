@@ -131,10 +131,12 @@ type BulkUpdateFieldDeviceRequest struct {
 
 // BulkOperationResultItem represents the result of a single item in a bulk operation
 type BulkOperationResultItem struct {
-	ID      uuid.UUID         `json:"id"`
-	Success bool              `json:"success"`
-	Error   string            `json:"error,omitempty"`
-	Fields  map[string]string `json:"fields,omitempty"`
+	ID                uuid.UUID         `json:"id"`
+	Success           bool              `json:"success"`
+	Error             string            `json:"error,omitempty"`
+	Fields            map[string]string `json:"fields,omitempty"`
+	Suggestions       map[string]int    `json:"suggestions,omitempty"`
+	SuggestionOptions map[string][]int  `json:"suggestion_options,omitempty"`
 }
 
 // BulkUpdateFieldDeviceResponse represents the response from a bulk update operation

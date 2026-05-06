@@ -1,10 +1,11 @@
 <script lang="ts" module>
+  import { getPressEffectClasses, type PressEffect } from '$lib/components/ui/press-effect.js';
   import { cn, type WithElementRef } from '$lib/utils.js';
   import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
   import { type VariantProps, tv } from 'tailwind-variants';
 
   export const buttonVariants = tv({
-    base: 'transition-all duration-100 active:scale-[0.98] active:brightness-90 active:shadow-inner ease-in-out focus-visible:border-ring cursor-pointer focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4',
+    base: 'focus-visible:border-ring cursor-pointer focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap outline-none transition-[color,background-color,border-color,transform,filter,box-shadow] duration-100 ease-in-out focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4',
     variants: {
       variant: {
         default: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs',
@@ -38,6 +39,7 @@
     WithElementRef<HTMLAnchorAttributes> & {
       variant?: ButtonVariant;
       size?: ButtonSize;
+      pressEffect?: PressEffect;
     };
 </script>
 
@@ -46,6 +48,7 @@
     class: className,
     variant = 'default',
     size = 'default',
+    pressEffect,
     ref = $bindable(null),
     href = undefined,
     type = 'button',
@@ -53,13 +56,22 @@
     children,
     ...restProps
   }: ButtonProps = $props();
+
+  const resolvedPressEffect = $derived(
+    pressEffect ?? (restProps.role === 'combobox' ? 'subtle' : 'default')
+  );
 </script>
 
 {#if href}
   <a
     bind:this={ref}
     data-slot="button"
-    class={cn(buttonVariants({ variant, size }), className)}
+    data-press-effect={resolvedPressEffect}
+    class={cn(
+      buttonVariants({ variant, size }),
+      getPressEffectClasses(resolvedPressEffect),
+      className
+    )}
     href={disabled ? undefined : href}
     aria-disabled={disabled}
     role={disabled ? 'link' : undefined}
@@ -72,7 +84,12 @@
   <button
     bind:this={ref}
     data-slot="button"
-    class={cn(buttonVariants({ variant, size }), className)}
+    data-press-effect={resolvedPressEffect}
+    class={cn(
+      buttonVariants({ variant, size }),
+      getPressEffectClasses(resolvedPressEffect),
+      className
+    )}
     {type}
     {disabled}
     {...restProps}

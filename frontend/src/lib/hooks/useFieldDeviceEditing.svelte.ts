@@ -266,16 +266,29 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
 
   function clearEditErrorFields(deviceId: string, fieldKeys: string[]): void {
     const info = editErrors.get(deviceId);
-    if (!info?.fields) return;
+    if (!info?.fields && !info?.suggestions && !info?.suggestionOptions) return;
 
-    const fields = { ...info.fields };
+    const fields = { ...(info.fields ?? {}) };
+    const suggestions = { ...(info.suggestions ?? {}) };
+    const suggestionOptions = { ...(info.suggestionOptions ?? {}) };
     for (const key of fieldKeys) {
       delete fields[key];
+      delete suggestions[key];
+      delete suggestionOptions[key];
     }
 
     const next = new Map(editErrors);
-    if (Object.keys(fields).length > 0) {
-      next.set(deviceId, { ...info, fields });
+    if (
+      Object.keys(fields).length > 0 ||
+      Object.keys(suggestions).length > 0 ||
+      Object.keys(suggestionOptions).length > 0
+    ) {
+      next.set(deviceId, {
+        ...info,
+        fields: Object.keys(fields).length > 0 ? fields : undefined,
+        suggestions: Object.keys(suggestions).length > 0 ? suggestions : undefined,
+        suggestionOptions: Object.keys(suggestionOptions).length > 0 ? suggestionOptions : undefined
+      });
     } else {
       next.delete(deviceId);
     }
@@ -533,13 +546,116 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
     return undefined;
   }
 
+  function getFieldPathVariants(field: string): string[] {
+    return [
+      field,
+      `fielddevice.${field}`,
+      `specification.${field}`,
+      `data.fielddevice.${field}`,
+      `error.fielddevice.${field}`,
+      `data.specification.${field}`,
+      `error.specification.${field}`
+    ];
+  }
+
+  function resolveFieldMapValue<T>(
+    values: Record<string, T> | undefined,
+    field: string
+  ): T | undefined {
+    if (!values || Object.keys(values).length === 0) return undefined;
+    for (const key of getFieldPathVariants(field)) {
+      if (values[key] !== undefined) return values[key];
+    }
+    return undefined;
+  }
+
+  function getFieldSuggestion(
+    deviceId: string,
+    field: string,
+    storeItems: FieldDevice[] = []
+  ): number | undefined {
+    const errorInfo = editErrors.get(deviceId);
+    const staticSuggestion = resolveFieldMapValue(errorInfo?.suggestions, field);
+    const options = resolveFieldMapValue(errorInfo?.suggestionOptions, field);
+
+    if (field !== 'apparat_nr' || !options || options.length === 0) {
+      return staticSuggestion;
+    }
+
+    return getDynamicApparatNrSuggestion(deviceId, options, storeItems) ?? staticSuggestion;
+  }
+
+  function getDynamicApparatNrSuggestion(
+    deviceId: string,
+    options: number[],
+    storeItems: FieldDevice[]
+  ): number | undefined {
+    const targetDevice = storeItems.find((item) => item.id === deviceId);
+    if (!targetDevice) return undefined;
+
+    const targetScope = getEffectiveApparatNrScope(targetDevice);
+    const occupied = new Set<number>();
+
+    for (const device of storeItems) {
+      if (device.id === deviceId) continue;
+      if (!isSameApparatNrScope(targetScope, getEffectiveApparatNrScope(device))) continue;
+
+      const changes = pendingEdits.get(device.id);
+      if (!changes || !hasApparatNrConstraintDraft(changes)) continue;
+
+      const nr = Number('apparat_nr' in changes ? changes.apparat_nr : device.apparat_nr);
+      if (Number.isInteger(nr) && nr >= 1 && nr <= 99) {
+        occupied.add(nr);
+      }
+    }
+
+    return [...options].sort((a, b) => a - b).find((candidate) => !occupied.has(candidate));
+  }
+
+  function hasApparatNrConstraintDraft(changes: Partial<BulkUpdateFieldDeviceItem>): boolean {
+    return 'apparat_nr' in changes || 'apparat_id' in changes || 'system_part_id' in changes;
+  }
+
+  function getEffectiveApparatNrScope(device: FieldDevice) {
+    const changes = pendingEdits.get(device.id);
+    return {
+      spsControllerSystemTypeId: device.sps_controller_system_type_id,
+      apparatId:
+        typeof changes?.apparat_id === 'string' && changes.apparat_id
+          ? changes.apparat_id
+          : device.apparat_id,
+      systemPartId:
+        typeof changes?.system_part_id === 'string' && changes.system_part_id
+          ? changes.system_part_id
+          : (device.system_part_id ?? '')
+    };
+  }
+
+  function isSameApparatNrScope(
+    a: ReturnType<typeof getEffectiveApparatNrScope>,
+    b: ReturnType<typeof getEffectiveApparatNrScope>
+  ): boolean {
+    return (
+      a.spsControllerSystemTypeId === b.spsControllerSystemTypeId &&
+      a.apparatId === b.apparatId &&
+      a.systemPartId === b.systemPartId
+    );
+  }
+
   function localizeEditErrorInfo(info?: EditErrorInfo): EditErrorInfo | undefined {
     if (!info) return undefined;
     const localized = {
       message: info.message ? localizeErrorText(info.message) : info.message,
-      fields: info.fields ? localizeFieldErrorMap(info.fields) : info.fields
+      fields: info.fields ? localizeFieldErrorMap(info.fields) : info.fields,
+      suggestions: info.suggestions,
+      suggestionOptions: info.suggestionOptions
     };
-    if (!localized.message && (!localized.fields || Object.keys(localized.fields).length === 0)) {
+    if (
+      !localized.message &&
+      (!localized.fields || Object.keys(localized.fields).length === 0) &&
+      (!localized.suggestions || Object.keys(localized.suggestions).length === 0) &&
+      (!localized.suggestionOptions || Object.keys(localized.suggestionOptions).length === 0)
+    ) {
       return undefined;
     }
     return localized;
@@ -840,7 +956,12 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
 
       setEditError(
         device.id,
-        localizeEditErrorInfo({ message: item?.error, fields: item?.fields })
+        localizeEditErrorInfo({
+          message: item?.error,
+          fields: item?.fields,
+          suggestions: item?.suggestions,
+          suggestionOptions: item?.suggestion_options
+        })
       );
       addToast(
         getFirstFieldValidationToast(
@@ -918,7 +1039,9 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
       const nextErrors = new Map(editErrors);
       nextErrors.set(device.id, {
         message: item?.error ? localizeErrorText(item.error) : item?.error,
-        fields: errorFields
+        fields: errorFields,
+        suggestions: item?.suggestions,
+        suggestionOptions: item?.suggestion_options
       });
       editErrors = nextErrors;
 
@@ -1024,6 +1147,7 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
     getPendingValue,
     getPendingSpecValue,
     getFieldError,
+    getFieldSuggestion,
     queueBacnetEdit,
     clearBacnetFieldError,
     validateBacnetEdits,

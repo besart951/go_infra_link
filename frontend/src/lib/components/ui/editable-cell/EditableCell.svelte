@@ -18,11 +18,15 @@
     max?: number;
     isDirty?: boolean;
     error?: string; // Error message to display
+    suggestion?: string;
+    suggestionLabel?: string;
+    suggestionActionLabel?: string;
     disabled?: boolean;
     emptyText?: string;
     undoTitle?: string;
     onSave: (value: string) => void;
     onUndo?: () => void;
+    onApplySuggestion?: (value: string) => void;
   }
 
   let {
@@ -35,11 +39,15 @@
     max,
     isDirty = false,
     error,
+    suggestion,
+    suggestionLabel,
+    suggestionActionLabel,
     disabled = false,
     emptyText = '-',
     undoTitle = 'Undo field change',
     onSave,
-    onUndo
+    onUndo,
+    onApplySuggestion
   }: Props = $props();
 
   let isEditing = $state(false);
@@ -51,7 +59,9 @@
   const displayTitle = $derived(displayValue ? displayValue : undefined);
   const displaySizerValue = $derived(displayValue || emptyText);
   const hasError = $derived(!!error);
+  const hasSuggestion = $derived(!!suggestion);
   const canUndo = $derived(isDirty && !!onUndo && !isEditing);
+  const suggestionTitle = $derived(suggestionLabel || suggestionActionLabel);
 
   function startEditing() {
     if (disabled) return;
@@ -173,9 +183,32 @@
         </Tooltip.Trigger>
         <Tooltip.Content side="top" class="max-w-xs bg-destructive text-destructive-foreground">
           <p>{error}</p>
+          {#if hasSuggestion && suggestionLabel}
+            <p class="mt-1 text-xs opacity-90">{suggestionLabel}</p>
+          {/if}
         </Tooltip.Content>
       </Tooltip.Root>
     </Tooltip.Provider>
+    {#if hasSuggestion}
+      {#if onApplySuggestion}
+        <button
+          type="button"
+          class="mt-1 block max-w-full truncate rounded-sm bg-destructive/10 px-1 py-0.5 text-left text-[10px] font-medium text-destructive underline-offset-2 hover:underline focus:ring-1 focus:ring-destructive focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          title={suggestionTitle}
+          {disabled}
+          onclick={() => suggestion && onApplySuggestion(suggestion)}
+        >
+          {suggestionActionLabel ?? suggestionLabel ?? suggestion}
+        </button>
+      {:else}
+        <span
+          class="mt-1 block max-w-full truncate rounded-sm bg-destructive/10 px-1 py-0.5 text-[10px] font-medium text-destructive"
+          title={suggestionTitle}
+        >
+          {suggestionActionLabel ?? suggestionLabel ?? suggestion}
+        </span>
+      {/if}
+    {/if}
     {#if canUndo}
       <InlineUndoButton title={undoTitle} onclick={() => onUndo?.()} />
     {/if}

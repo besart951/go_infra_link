@@ -3,6 +3,7 @@ package exporting
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -185,7 +186,7 @@ func (s *Service) process(ctx context.Context, jobID uuid.UUID) error {
 		outputType = domainExport.OutputTypeZip
 	}
 
-	filePath, fileName := s.files.BuildOutputPath(jobID, outputType)
+	filePath, fileName := s.files.BuildOutputPath(jobID, outputType, exportDownloadFileName(outputType, controllers))
 	job.OutputType = outputType
 	job.FilePath = filePath
 	job.FileName = fileName
@@ -218,6 +219,20 @@ func (s *Service) process(ctx context.Context, jobID uuid.UUID) error {
 
 	s.deleteRequest(jobID)
 	return nil
+}
+
+func exportDownloadFileName(outputType domainExport.OutputType, controllers []domainExport.Controller) string {
+	if outputType != domainExport.OutputTypeExcel {
+		return ""
+	}
+
+	for _, controller := range controllers {
+		if name := strings.TrimSpace(controller.ControlCabinetNr); name != "" {
+			return name
+		}
+	}
+
+	return ""
 }
 
 func (s *Service) failJob(ctx context.Context, jobID uuid.UUID, processErr error) error {

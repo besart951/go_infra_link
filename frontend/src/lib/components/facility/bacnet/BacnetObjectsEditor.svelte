@@ -12,6 +12,7 @@
   import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Popover from '$lib/components/ui/popover/index.js';
+  import { resizableTableColumns } from '$lib/actions/resizableTableColumns.js';
   import { keyboardTableCell } from '$lib/actions/keyboardTableNavigation.js';
   import BacnetAlarmValuesEditor from './BacnetAlarmValuesEditor.svelte';
   import { stateTextRepository } from '$lib/infrastructure/api/stateTextRepository.js';
@@ -225,19 +226,20 @@
 
 {#if bacnetObjects.length > 0}
   <div class="max-w-full min-w-0 overflow-x-auto">
-    <table class="w-max min-w-full table-auto text-sm">
+    <table use:resizableTableColumns class="w-max min-w-full table-auto text-sm">
       <thead>
         <tr class="border-b text-left text-xs text-muted-foreground">
           <th class="w-fit max-w-80 min-w-max pr-2 pb-2">
             {$t('field_device.bacnet.table.text_fix')}
           </th>
-          <th class="w-13 min-w-13 pr-2 pb-2 text-center">
+          <th data-table-resize-min-width="52" class="w-13 min-w-13 pr-2 pb-2 text-center">
             {$t('field_device.bacnet.table.alarms')}
           </th>
-          <th class="w-24 min-w-24 pr-2 pb-2">
+          <th data-table-resize-min-width="96" class="w-24 min-w-24 pr-2 pb-2">
             {$t('field_device.bacnet.table.state_text')}
           </th>
           <th
+            data-table-resize-min-width="120"
             class="w-fit max-w-48 min-w-30 overflow-hidden pr-2 pb-2"
             title={$t('field_device.bacnet.table.notification_class')}
           >
@@ -246,22 +248,22 @@
           <th class="w-fit max-w-96 min-w-max pr-2 pb-2">
             {$t('field_device.bacnet.table.description')}
           </th>
-          <th class="w-22.5 min-w-22.5 pr-2 pb-2 text-center">
+          <th data-table-resize-min-width="90" class="w-22.5 min-w-22.5 pr-2 pb-2 text-center">
             {$t('field_device.bacnet.table.software')}
           </th>
-          <th class="w-22.5 min-w-22.5 pr-2 pb-2 text-center">
+          <th data-table-resize-min-width="90" class="w-22.5 min-w-22.5 pr-2 pb-2 text-center">
             {$t('field_device.bacnet.table.hardware')}
           </th>
-          <th class="w-18 min-w-18 pr-2 pb-2 text-center">
+          <th data-table-resize-min-width="72" class="w-18 min-w-18 pr-2 pb-2 text-center">
             {$t('field_device.bacnet.table.gms_visible')}
           </th>
-          <th class="w-18 min-w-18 pr-2 pb-2 text-center">
+          <th data-table-resize-min-width="72" class="w-18 min-w-18 pr-2 pb-2 text-center">
             {$t('field_device.bacnet.table.optional')}
           </th>
           <th class="w-fit max-w-80 min-w-max pr-2 pb-2 text-center">
             {$t('field_device.bacnet.table.text_individual')}
           </th>
-          <th class="w-12 min-w-12 pr-2 pb-2"></th>
+          <th data-table-resizable="false" class="w-12 min-w-12 pr-2 pb-2"></th>
         </tr>
       </thead>
       <tbody>

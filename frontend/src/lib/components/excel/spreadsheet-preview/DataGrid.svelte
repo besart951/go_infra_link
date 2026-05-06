@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resizableTableColumns } from '$lib/actions/resizableTableColumns.js';
   import type { SpreadsheetDisplayRow, WorksheetPreview } from '$lib/domain/excel/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import type { ImportCellMarker } from './fieldDeviceExportImporter.js';
@@ -67,14 +68,20 @@
     </div>
 
     <div class="max-h-[560px] overflow-auto border-t">
-      <table class="min-w-max border-separate border-spacing-0 text-xs">
+      <table use:resizableTableColumns class="min-w-max border-separate border-spacing-0 text-xs">
         <thead class="sticky top-0 z-20 bg-muted text-muted-foreground">
           <tr>
-            <th class="sticky left-0 z-30 h-8 w-12 border-r border-b bg-muted px-2 text-right">
+            <th
+              data-table-resizable="false"
+              class="sticky left-0 z-30 h-8 w-12 border-r border-b bg-muted px-2 text-right"
+            >
               #
             </th>
             {#each columnLabels as label}
-              <th class="h-8 min-w-32 border-r border-b px-2 text-left font-medium">
+              <th
+                data-table-resize-min-width="96"
+                class="h-8 min-w-32 border-r border-b px-2 text-left font-medium"
+              >
                 {label}
               </th>
             {/each}

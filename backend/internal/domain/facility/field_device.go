@@ -159,10 +159,12 @@ func (p *SpecificationPatch) HasNonNilValues() bool {
 
 // BulkOperationResultItem represents the result of a single item in a bulk operation
 type BulkOperationResultItem struct {
-	ID      uuid.UUID
-	Success bool
-	Error   string
-	Fields  map[string]string // Per-field validation errors (e.g., "bacnet_objects.0.text_fix" -> "message")
+	ID                uuid.UUID
+	Success           bool
+	Error             string
+	Fields            map[string]string // Per-field validation errors (e.g., "bacnet_objects.0.text_fix" -> "message")
+	Suggestions       map[string]int    // Per-field numeric suggestions, e.g. "fielddevice.apparat_nr" -> 4
+	SuggestionOptions map[string][]int  // Per-field numeric options behind the suggestion, sorted ascending.
 }
 
 // BulkOperationResult represents the result of a bulk operation

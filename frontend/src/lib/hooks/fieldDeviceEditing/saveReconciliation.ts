@@ -11,6 +11,8 @@ import { normalizeSpecificationForDisplay, toDisplayOptionalValue } from './spec
 export interface EditErrorInfo {
   message?: string;
   fields?: Record<string, string>;
+  suggestions?: Record<string, number>;
+  suggestionOptions?: Record<string, number[]>;
 }
 
 interface ReconcileFieldDeviceSaveResultInput {
@@ -64,7 +66,12 @@ export function reconcileFieldDeviceSaveResult({
     if (item.error) {
       editErrors.set(
         item.id,
-        localizeEditErrorInfo({ message: item.error, fields: item.fields }) ?? {}
+        localizeEditErrorInfo({
+          message: item.error,
+          fields: item.fields,
+          suggestions: item.suggestions,
+          suggestionOptions: item.suggestion_options
+        }) ?? {}
       );
     }
 

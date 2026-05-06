@@ -53,6 +53,16 @@ backend/app
 
 # Local pnpm store
 frontend/.pnpm-store/
+.pnpm-store/
+node_modules/
+.cache/
+
+# Frontend app artifacts
+apps/**/node_modules/
+apps/**/.svelte-kit/
+apps/**/.vite-inspect/
+apps/**/build/
+apps/**/dist/
 
 # Accidental connection string files
 backend/host=postgres*

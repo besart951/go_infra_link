@@ -299,7 +299,7 @@ func (s *FieldDeviceService) ensureApparatNrAvailableWithExclusions(ctx context.
 				return err
 			}
 			if exists {
-				fieldDeviceApparatNrField.Add(builder, "apparatnummer ist bereits vergeben")
+				fieldDeviceApparatNrField.Add(builder, apparatNrAlreadyUsedMessage)
 			}
 			return nil
 		},

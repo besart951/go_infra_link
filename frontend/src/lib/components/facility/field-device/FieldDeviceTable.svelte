@@ -37,7 +37,7 @@
   <Table.Root class={tableClass}>
     <Table.Header>
       <Table.Row>
-        <Table.Head class="w-8 max-w-8 min-w-8 !px-0 !py-1">
+        <Table.Head resizable={false} class="w-8 max-w-8 min-w-8 !px-0 !py-1">
           <div class="flex justify-center">
             <Checkbox
               checked={state.allSelected}
@@ -47,8 +47,8 @@
             />
           </div>
         </Table.Head>
-        <Table.Head class="w-6 max-w-6 min-w-6 !px-0"></Table.Head>
-        <Table.Head class="w-fit max-w-96 min-w-max text-xs">
+        <Table.Head resizable={false} class="w-6 max-w-6 min-w-6 !px-0"></Table.Head>
+        <Table.Head minResizeWidth={96} class="w-fit max-w-96 min-w-max text-xs">
           <Button
             type="button"
             variant="ghost"
@@ -63,7 +63,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-fit max-w-36 min-w-max">
+        <Table.Head minResizeWidth={72} class="w-fit max-w-36 min-w-max">
           <Button
             type="button"
             variant="ghost"
@@ -78,7 +78,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-fit max-w-80 min-w-max">
+        <Table.Head minResizeWidth={96} class="w-fit max-w-80 min-w-max">
           <Button
             type="button"
             variant="ghost"
@@ -93,7 +93,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-fit max-w-80 min-w-max">
+        <Table.Head minResizeWidth={96} class="w-fit max-w-80 min-w-max">
           <Button
             type="button"
             variant="ghost"
@@ -108,7 +108,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-14 max-w-14 min-w-14">
+        <Table.Head minResizeWidth={56} class="w-14 max-w-14 min-w-14">
           <Button
             type="button"
             variant="ghost"
@@ -123,7 +123,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-fit max-w-40 min-w-[4.5rem]">
+        <Table.Head minResizeWidth={72} class="w-fit max-w-40 min-w-[4.5rem]">
           <Button
             type="button"
             variant="ghost"
@@ -138,7 +138,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-fit max-w-40 min-w-[4.5rem]">
+        <Table.Head minResizeWidth={72} class="w-fit max-w-40 min-w-[4.5rem]">
           <Button
             type="button"
             variant="ghost"
@@ -153,7 +153,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head class="w-10 max-w-10 min-w-10">
+        <Table.Head resizable={false} class="w-10 max-w-10 min-w-10">
           <Button
             variant={state.showSpecifications ? 'secondary' : 'ghost'}
             size="sm"
@@ -167,7 +167,7 @@
           </Button>
         </Table.Head>
         {#if state.showSpecifications}
-          <Table.Head class="w-fit max-w-64 min-w-max text-xs">
+          <Table.Head minResizeWidth={96} class="w-fit max-w-64 min-w-max text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -182,7 +182,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-fit max-w-64 min-w-max text-xs">
+          <Table.Head minResizeWidth={96} class="w-fit max-w-64 min-w-max text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -197,7 +197,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-fit max-w-64 min-w-max text-xs">
+          <Table.Head minResizeWidth={96} class="w-fit max-w-64 min-w-max text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -212,7 +212,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-fit max-w-64 min-w-max text-xs">
+          <Table.Head minResizeWidth={96} class="w-fit max-w-64 min-w-max text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -227,7 +227,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-fit max-w-24 min-w-max text-xs">
+          <Table.Head minResizeWidth={64} class="w-fit max-w-24 min-w-max text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -242,7 +242,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-fit max-w-80 min-w-max text-xs">
+          <Table.Head minResizeWidth={96} class="w-fit max-w-80 min-w-max text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -257,7 +257,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-fit max-w-24 min-w-max text-xs">
+          <Table.Head minResizeWidth={64} class="w-fit max-w-24 min-w-max text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -272,7 +272,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-fit max-w-24 min-w-max text-xs">
+          <Table.Head minResizeWidth={64} class="w-fit max-w-24 min-w-max text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -287,7 +287,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-fit max-w-32 min-w-max text-xs">
+          <Table.Head minResizeWidth={72} class="w-fit max-w-32 min-w-max text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -302,7 +302,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-fit max-w-32 min-w-max text-xs">
+          <Table.Head minResizeWidth={72} class="w-fit max-w-32 min-w-max text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -317,7 +317,7 @@
               {/if}
             </Button>
           </Table.Head>
-          <Table.Head class="w-fit max-w-32 min-w-max text-xs">
+          <Table.Head minResizeWidth={72} class="w-fit max-w-32 min-w-max text-xs">
             <Button
               type="button"
               variant="ghost"
@@ -333,7 +333,7 @@
             </Button>
           </Table.Head>
         {/if}
-        <Table.Head class="w-20 max-w-20 min-w-20"></Table.Head>
+        <Table.Head resizable={false} class="w-20 max-w-20 min-w-20"></Table.Head>
       </Table.Row>
     </Table.Header>
     <Table.Body>

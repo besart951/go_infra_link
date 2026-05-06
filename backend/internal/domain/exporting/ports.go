@@ -27,5 +27,5 @@ type JobStore interface {
 }
 
 type FileStore interface {
-	BuildOutputPath(jobID uuid.UUID, outputType OutputType) (string, string)
+	BuildOutputPath(jobID uuid.UUID, outputType OutputType, downloadFileName string) (string, string)
 }
