@@ -28,6 +28,7 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 			services.Auth,
 			services.User,
 			services.RBAC,
+			services.JWT,
 			accessTokenTTL,
 			refreshTokenTTL,
 			cookieSettings,

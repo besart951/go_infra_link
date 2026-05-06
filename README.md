@@ -29,6 +29,14 @@ docker compose up --build
 
 The local frontend service uses Vite for developer ergonomics, but the production deployment model is a static SPA served by Caddy.
 
+For Linux or Bash-based local development, use the helper script:
+
+```bash
+./scripts/dev.sh start
+```
+
+Run `./scripts/dev.sh help` to see the available actions.
+
 ### Running Tests
 
 ```bash

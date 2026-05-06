@@ -34,3 +34,7 @@ type AuthResponse struct {
 	RefreshTokenExpiresAt time.Time        `json:"refresh_token_expires_at"`
 	CsrfToken             string           `json:"csrf_token"`
 }
+
+type SessionResponse struct {
+	Authenticated bool `json:"authenticated"`
+}

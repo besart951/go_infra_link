@@ -24,9 +24,9 @@ export interface User {
   permissions?: string[];
   can_access_user_directory?: boolean;
   is_active: boolean;
-  disabled_at?: string;
-  locked_until?: string;
-  last_login_at?: string;
+  disabled_at?: string | null;
+  locked_until?: string | null;
+  last_login_at?: string | null;
   failed_login_attempts: number;
   created_by_id?: string;
   created_at: string;
