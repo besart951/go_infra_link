@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # Base Stage
-FROM node:25-alpine AS base
+FROM node:24-alpine AS base
 WORKDIR /app
 ENV PNPM_STORE_DIR=/pnpm/store
 # Enable the same pinned pnpm version used in CI.

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getErrorMessage } from '$lib/api/client.js';
   import { addToast } from '$lib/components/toast.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { t as translate } from '$lib/i18n/index.js';
@@ -27,10 +26,15 @@
     historyEntityFilterOptions,
     historyFieldFilterOptions
   } from '$lib/components/history/historyTimelineFilters.js';
+  import {
+    fetchTimelineUser,
+    fetchTimelineUsers,
+    loadHistoryTimeline,
+    restoreTimelineEvent,
+    timelineErrorMessage
+  } from '$lib/components/history/historyTimelinePageData.js';
   import { buildTimelineDateTimeISO } from '$lib/components/history/historyTimelineDateTime.js';
-  import { historyRepository } from '$lib/infrastructure/api/historyRepository.js';
   import { canPerform } from '$lib/utils/permissions.js';
-  import { getUser, listUsers } from '$lib/infrastructure/api/user.adapter.js';
   import type { ChangeEvent, HistoryTimelineParams } from '$lib/domain/history.js';
   import type { User } from '$lib/domain/user/index.js';
   import FilterXIcon from '@lucide/svelte/icons/filter-x';
@@ -111,7 +115,7 @@
         occurredTo: occurredTo || undefined,
         fields: selectedFields
       };
-      const response = await historyRepository.listTimeline(params);
+      const response = await loadHistoryTimeline(params);
       if (currentRequest !== requestId) return;
       events = mode === 'append' ? [...events, ...response.items] : response.items;
       total = response.total;
@@ -119,7 +123,7 @@
       totalPages = Math.max(response.total_pages || 1, 1);
     } catch (loadError) {
       if (currentRequest !== requestId) return;
-      error = getErrorMessage(loadError);
+      error = timelineErrorMessage(loadError);
     } finally {
       if (currentRequest === requestId) {
         loading = false;
@@ -167,36 +171,23 @@
   async function undoEvent(event: ChangeEvent): Promise<void> {
     restoringEventId = event.id;
     try {
-      const result = await historyRepository.restoreEvent(event.id, 'before');
+      const result = await restoreTimelineEvent(event.id);
       const changedCount = result.restored_count + result.deleted_count;
       addToast(translate('history.timeline.undo_success', { count: changedCount }), 'success');
       await loadTimeline('reset');
     } catch (restoreError) {
-      addToast(getErrorMessage(restoreError), 'error');
+      addToast(timelineErrorMessage(restoreError), 'error');
     } finally {
       restoringEventId = null;
     }
   }
 
   async function fetchUsers(search: string): Promise<User[]> {
-    try {
-      const response = await listUsers({
-        page: 1,
-        limit: 20,
-        search: search.trim() || undefined
-      });
-      return response.items;
-    } catch {
-      return [];
-    }
+    return fetchTimelineUsers(search);
   }
 
   async function fetchUser(id: string): Promise<User | null> {
-    try {
-      return await getUser(id);
-    } catch {
-      return null;
-    }
+    return fetchTimelineUser(id);
   }
 
   function userLabel(user: User): string {
