@@ -1,6 +1,7 @@
 import { ListEntityUseCase } from '$lib/application/useCases/listEntityUseCase.js';
 import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
 import { systemPartRepository } from '$lib/infrastructure/api/systemPartRepository.js';
+import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
 import type { Apparat, SystemPart } from '$lib/domain/facility/index.js';
 import type { CrudRepository } from '$lib/domain/ports/crudRepository.js';
 
@@ -39,20 +40,24 @@ export class FieldDeviceLookupService {
 
     const request = (async () => {
       const [apparatsResult, systemPartsResult] = await Promise.allSettled([
-        this.listApparatsUseCase.execute({
-          pagination: { page: 1, pageSize: 1000 },
-          search: { text: '' }
-        }),
-        this.listSystemPartsUseCase.execute({
-          pagination: { page: 1, pageSize: 1000 },
-          search: { text: '' }
-        })
+        fetchAllPages((page, pageSize) =>
+          this.listApparatsUseCase.execute({
+            pagination: { page, pageSize },
+            search: { text: '' }
+          })
+        ),
+        fetchAllPages((page, pageSize) =>
+          this.listSystemPartsUseCase.execute({
+            pagination: { page, pageSize },
+            search: { text: '' }
+          })
+        )
       ]);
 
       return {
-        apparats: apparatsResult.status === 'fulfilled' ? apparatsResult.value.items : undefined,
+        apparats: apparatsResult.status === 'fulfilled' ? apparatsResult.value : undefined,
         systemParts:
-          systemPartsResult.status === 'fulfilled' ? systemPartsResult.value.items : undefined,
+          systemPartsResult.status === 'fulfilled' ? systemPartsResult.value : undefined,
         apparatsError: apparatsResult.status === 'rejected' ? apparatsResult.reason : undefined,
         systemPartsError:
           systemPartsResult.status === 'rejected' ? systemPartsResult.reason : undefined

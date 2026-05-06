@@ -23,6 +23,7 @@
   import { createTranslator } from '$lib/i18n/translator.js';
   import type { FieldDeviceFilters } from './state/types.js';
   import { useFieldDeviceState } from './state/context.svelte.js';
+  import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
   import { X } from '@lucide/svelte';
 
   interface Props {
@@ -336,13 +337,14 @@
     controlCabinetIds: string[],
     spsControllerIds: string[]
   ): Promise<MultiFilterOption[]> {
-    const response = await spsControllerSystemTypeRepository.list({
-      pagination: { page: 1, pageSize: OPTION_PAGE_SIZE },
-      search: { text: '' },
-      filters: projectId ? { project_id: projectId } : undefined
-    });
-
-    let systemTypes = response.items;
+    const fetchedSystemTypes = await fetchAllPages((page, pageSize) =>
+      spsControllerSystemTypeRepository.list({
+        pagination: { page, pageSize },
+        search: { text: '' },
+        filters: projectId ? { project_id: projectId } : undefined
+      })
+    );
+    let systemTypes = fetchedSystemTypes;
     if (spsControllerIds.length > 0) {
       systemTypes = systemTypes.filter((item) => spsControllerIds.includes(item.sps_controller_id));
     } else if (buildingIds.length > 0 || controlCabinetIds.length > 0) {
@@ -384,19 +386,17 @@
 
     const load = (async () => {
       const [cabinetLinks, spsLinks] = await Promise.all([
-        projectRepository.listControlCabinets(projectId, {
-          page: 1,
-          limit: OPTION_PAGE_SIZE
-        }),
-        projectRepository.listSPSControllers(projectId, {
-          page: 1,
-          limit: OPTION_PAGE_SIZE
-        })
+        fetchAllPages((page, pageSize) =>
+          projectRepository.listControlCabinets(projectId, { page, limit: pageSize })
+        ),
+        fetchAllPages((page, pageSize) =>
+          projectRepository.listSPSControllers(projectId, { page, limit: pageSize })
+        )
       ]);
 
       const [controlCabinetIds, spsControllerIds] = [
-        [...new Set(cabinetLinks.items.map((link) => link.control_cabinet_id).filter(Boolean))],
-        [...new Set(spsLinks.items.map((link) => link.sps_controller_id).filter(Boolean))]
+        [...new Set(cabinetLinks.map((link) => link.control_cabinet_id).filter(Boolean))],
+        [...new Set(spsLinks.map((link) => link.sps_controller_id).filter(Boolean))]
       ];
 
       const [controlCabinets, spsControllers] = await Promise.all([

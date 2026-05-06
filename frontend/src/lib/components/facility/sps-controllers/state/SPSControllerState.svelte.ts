@@ -9,6 +9,7 @@ import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsCo
 import { canPerform, canPerformAny } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
 import { sanitizeFilters } from '$lib/state/table/sanitizeFilters.js';
+import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
 import {
   decodeMultiFilter,
   encodeMultiFilter,
@@ -458,13 +459,15 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
 
     try {
       const requestedControllerIds = new Set(controllerIds);
-      const response = await spsControllerSystemTypeRepository.list({
-        pagination: { page: 1, pageSize: 1000 },
-        search: { text: '' },
-        filters: { sps_controller_id: controllerIds.join('|') }
-      });
+      const systemTypes = await fetchAllPages((page, pageSize) =>
+        spsControllerSystemTypeRepository.list({
+          pagination: { page, pageSize },
+          search: { text: '' },
+          filters: { sps_controller_id: controllerIds.join('|') }
+        })
+      );
       const grouped = groupSystemTypesByController(
-        response.items.filter((item) => requestedControllerIds.has(item.sps_controller_id))
+        systemTypes.filter((item) => requestedControllerIds.has(item.sps_controller_id))
       );
       const next: Record<string, SPSControllerSystemType[]> = { ...current };
 
@@ -483,11 +486,11 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
       return;
     }
 
-    const links = await projectRepository.listSPSControllers(this.projectId, {
-      page: 1,
-      limit: 1000
-    });
-    const link = links.items.find((item) => item.sps_controller_id === controllerId);
+    const projectId = this.projectId;
+    const links = await fetchAllPages((page, pageSize) =>
+      projectRepository.listSPSControllers(projectId, { page, limit: pageSize })
+    );
+    const link = links.find((item) => item.sps_controller_id === controllerId);
 
     if (!link) {
       throw new Error(translate('projects.sps_controllers.delete_failed'));
