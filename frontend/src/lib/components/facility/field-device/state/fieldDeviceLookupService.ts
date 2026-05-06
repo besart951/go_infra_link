@@ -12,10 +12,12 @@ export interface FieldDeviceStaticLookupResult {
 }
 
 export class FieldDeviceLookupService {
+  private static readonly instances = new Set<FieldDeviceLookupService>();
+
   private readonly listApparatsUseCase: ListEntityUseCase<Apparat>;
   private readonly listSystemPartsUseCase: ListEntityUseCase<SystemPart>;
-  private static cachedLookups: FieldDeviceStaticLookupResult | null = null;
-  private static lookupRequest: Promise<FieldDeviceStaticLookupResult> | null = null;
+  private cachedLookups: FieldDeviceStaticLookupResult | null = null;
+  private lookupRequest: Promise<FieldDeviceStaticLookupResult> | null = null;
 
   constructor(
     apparats: CrudRepository<Apparat, unknown, unknown> = apparatRepository,
@@ -23,15 +25,16 @@ export class FieldDeviceLookupService {
   ) {
     this.listApparatsUseCase = new ListEntityUseCase(apparats);
     this.listSystemPartsUseCase = new ListEntityUseCase(systemParts);
+    FieldDeviceLookupService.instances.add(this);
   }
 
   async loadStaticLookups(): Promise<FieldDeviceStaticLookupResult> {
-    if (FieldDeviceLookupService.cachedLookups) {
-      return FieldDeviceLookupService.cachedLookups;
+    if (this.cachedLookups) {
+      return this.cachedLookups;
     }
 
-    if (FieldDeviceLookupService.lookupRequest) {
-      return FieldDeviceLookupService.lookupRequest;
+    if (this.lookupRequest) {
+      return this.lookupRequest;
     }
 
     const request = (async () => {
@@ -56,21 +59,29 @@ export class FieldDeviceLookupService {
       };
     })();
 
-    FieldDeviceLookupService.lookupRequest = request;
+    this.lookupRequest = request;
 
-    request.then((result) => {
-      FieldDeviceLookupService.cachedLookups = result;
-      FieldDeviceLookupService.lookupRequest = null;
-    }).catch(() => {
-      FieldDeviceLookupService.lookupRequest = null;
-    });
+    request
+      .then((result) => {
+        this.cachedLookups = result;
+        this.lookupRequest = null;
+      })
+      .catch(() => {
+        this.lookupRequest = null;
+      });
 
     return request;
-
   }
 
-  static resetCachedLookups(): void {
+  resetCachedLookups(): void {
     this.cachedLookups = null;
     this.lookupRequest = null;
+  }
+
+  static resetAllCachedLookups(): void {
+    for (const service of FieldDeviceLookupService.instances) {
+      service.resetCachedLookups();
+    }
+    FieldDeviceLookupService.instances.clear();
   }
 }

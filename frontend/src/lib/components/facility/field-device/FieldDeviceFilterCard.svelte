@@ -67,6 +67,7 @@
   let spsControllerSystemTypeOptions = $state<MultiFilterOption[]>([]);
   let optionsRequestVersion = 0;
   let lastFilterContext = '';
+  let inFlightFilterContext = $state<string | null>(null);
 
   interface ProjectScopeData {
     controlCabinets: ControlCabinet[];
@@ -114,7 +115,11 @@
   );
 
   $effect(() => {
-    if (!fieldDeviceState.showFilterPanel) return;
+    if (!fieldDeviceState.showFilterPanel) {
+      lastFilterContext = '';
+      inFlightFilterContext = null;
+      return;
+    }
 
     const context = {
       projectId: scopedProjectId,
@@ -124,10 +129,10 @@
     };
 
     const contextKey = buildFilterContextKey(context);
-    if (contextKey === lastFilterContext) return;
+    if (contextKey === lastFilterContext || contextKey === inFlightFilterContext) return;
 
-    lastFilterContext = contextKey;
-    void loadFilterOptions(context);
+    inFlightFilterContext = contextKey;
+    void loadFilterOptions(context, contextKey);
   });
 
   function selectedIdsFromFilters(
@@ -198,12 +203,15 @@
       .join(' | ');
   }
 
-  async function loadFilterOptions(context: {
-    projectId?: string;
-    buildingIds: string[];
-    controlCabinetIds: string[];
-    spsControllerIds: string[];
-  }): Promise<void> {
+  async function loadFilterOptions(
+    context: {
+      projectId?: string;
+      buildingIds: string[];
+      controlCabinetIds: string[];
+      spsControllerIds: string[];
+    },
+    contextKey: string
+  ): Promise<void> {
     const requestVersion = ++optionsRequestVersion;
 
     try {
@@ -228,6 +236,13 @@
       syncSelectionsToOptions();
     } catch (error) {
       console.error('Failed to load field device filter options:', error);
+    } finally {
+      if (requestVersion === optionsRequestVersion) {
+        lastFilterContext = contextKey;
+        if (inFlightFilterContext === contextKey) {
+          inFlightFilterContext = null;
+        }
+      }
     }
   }
 

@@ -13,6 +13,7 @@
   import { t as translate } from '$lib/i18n/index.js';
   import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { projectDetailService } from '$lib/components/project/ProjectDetailService.js';
+  import { FieldDeviceLookupService } from '$lib/components/facility/field-device/state/fieldDeviceLookupService.js';
   import type { ControlCabinet, FieldDevice, SPSController } from '$lib/domain/facility/index.js';
   import type { Project } from '$lib/domain/project/index.js';
   import type { User } from '$lib/domain/user/index.js';
@@ -409,6 +410,7 @@
 
   onDestroy(() => {
     collaboration.disconnect();
+    FieldDeviceLookupService.resetAllCachedLookups();
   });
 </script>
 
