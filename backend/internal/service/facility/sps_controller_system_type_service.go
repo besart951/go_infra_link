@@ -39,6 +39,14 @@ func (s *SPSControllerSystemTypeService) ListBySPSControllerID(ctx context.Conte
 	})
 }
 
+func (s *SPSControllerSystemTypeService) ListBySPSControllerIDs(ctx context.Context, spsControllerIDs []uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
+	return s.repo.GetPaginatedListBySPSControllerIDs(ctx, spsControllerIDs, domain.PaginationParams{
+		Page:   page,
+		Limit:  limit,
+		Search: search,
+	})
+}
+
 func (s *SPSControllerSystemTypeService) ListByProjectID(ctx context.Context, projectID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
 	return s.repo.GetPaginatedListByProjectID(ctx, projectID, domain.PaginationParams{
 		Page:   page,

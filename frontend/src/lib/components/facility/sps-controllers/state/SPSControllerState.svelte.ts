@@ -445,23 +445,6 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
       return;
     }
 
-    if (this.projectId) {
-      try {
-        const response = await spsControllerSystemTypeRepository.list({
-          pagination: { page: 1, pageSize: 1000 },
-          search: { text: '' },
-          filters: { project_id: this.projectId }
-        });
-
-        this.systemTypesByController = groupSystemTypesByController(response.items);
-      } catch (error) {
-        console.error('Failed to load project SPS controller system types:', error);
-        this.systemTypesByController = {};
-      }
-
-      return;
-    }
-
     await this.loadSystemTypesForControllerIDs(controllerIds, {});
   }
 
@@ -473,40 +456,26 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
       return;
     }
 
-    const results = await Promise.allSettled(
-      controllerIds.map(async (controllerId) => {
-        const response = await spsControllerSystemTypeRepository.list({
-          pagination: { page: 1, pageSize: 1000 },
-          search: { text: '' },
-          filters: this.buildSystemTypeFilters(controllerId)
-        });
+    try {
+      const requestedControllerIds = new Set(controllerIds);
+      const response = await spsControllerSystemTypeRepository.list({
+        pagination: { page: 1, pageSize: 1000 },
+        search: { text: '' },
+        filters: { sps_controller_id: controllerIds.join('|') }
+      });
+      const grouped = groupSystemTypesByController(
+        response.items.filter((item) => requestedControllerIds.has(item.sps_controller_id))
+      );
+      const next: Record<string, SPSControllerSystemType[]> = { ...current };
 
-        return { controllerId, items: response.items };
-      })
-    );
-
-    const next: Record<string, SPSControllerSystemType[]> = { ...current };
-
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        next[result.value.controllerId] = result.value.items;
-        continue;
+      for (const controllerId of controllerIds) {
+        next[controllerId] = grouped[controllerId] ?? [];
       }
 
-      console.error('Failed to load SPS controller system types:', result.reason);
+      this.systemTypesByController = next;
+    } catch (error) {
+      console.error('Failed to load SPS controller system types:', error);
     }
-
-    this.systemTypesByController = next;
-  }
-
-  private buildSystemTypeFilters(controllerId: string): Record<string, string> {
-    const filters: Record<string, string> = { sps_controller_id: controllerId };
-
-    if (this.projectId) {
-      filters.project_id = this.projectId;
-    }
-
-    return filters;
   }
 
   private async removeProjectSPSController(controllerId: string): Promise<void> {

@@ -130,6 +130,48 @@ func (r *spsControllerSystemTypeRepo) GetPaginatedListBySPSControllerID(ctx cont
 	}, nil
 }
 
+func (r *spsControllerSystemTypeRepo) GetPaginatedListBySPSControllerIDs(ctx context.Context, spsControllerIDs []uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
+	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
+	if len(spsControllerIDs) == 0 {
+		return &domain.PaginatedList[domainFacility.SPSControllerSystemType]{
+			Items:      []domainFacility.SPSControllerSystemType{},
+			Total:      0,
+			Page:       page,
+			TotalPages: 0,
+		}, nil
+	}
+	offset := (page - 1) * limit
+
+	query := r.querySystemTypes(ctx).
+		Where("sps_controller_system_types.sps_controller_id IN ?", spsControllerIDs)
+
+	if strings.TrimSpace(params.Search) != "" {
+		query = applySPSControllerSystemTypeSearch(query, params.Search)
+	}
+
+	var total int64
+	if err := query.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	var items []domainFacility.SPSControllerSystemType
+	if err := query.Session(&gorm.Session{}).Preload("SPSController").Preload("SystemType").
+		Order("sps_controller_system_types.created_at DESC").
+		Limit(limit).Offset(offset).Find(&items).Error; err != nil {
+		return nil, err
+	}
+	if err := r.attachFieldDeviceCountsToValues(ctx, items); err != nil {
+		return nil, err
+	}
+
+	return &domain.PaginatedList[domainFacility.SPSControllerSystemType]{
+		Items:      items,
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
+	}, nil
+}
+
 func (r *spsControllerSystemTypeRepo) GetPaginatedListByProjectID(ctx context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
