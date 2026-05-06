@@ -14,6 +14,8 @@ export interface FieldDeviceStaticLookupResult {
 export class FieldDeviceLookupService {
   private readonly listApparatsUseCase: ListEntityUseCase<Apparat>;
   private readonly listSystemPartsUseCase: ListEntityUseCase<SystemPart>;
+  private static cachedLookups: FieldDeviceStaticLookupResult | null = null;
+  private static lookupRequest: Promise<FieldDeviceStaticLookupResult> | null = null;
 
   constructor(
     apparats: CrudRepository<Apparat, unknown, unknown> = apparatRepository,
@@ -24,24 +26,51 @@ export class FieldDeviceLookupService {
   }
 
   async loadStaticLookups(): Promise<FieldDeviceStaticLookupResult> {
-    const [apparatsResult, systemPartsResult] = await Promise.allSettled([
-      this.listApparatsUseCase.execute({
-        pagination: { page: 1, pageSize: 1000 },
-        search: { text: '' }
-      }),
-      this.listSystemPartsUseCase.execute({
-        pagination: { page: 1, pageSize: 1000 },
-        search: { text: '' }
-      })
-    ]);
+    if (FieldDeviceLookupService.cachedLookups) {
+      return FieldDeviceLookupService.cachedLookups;
+    }
 
-    return {
-      apparats: apparatsResult.status === 'fulfilled' ? apparatsResult.value.items : undefined,
-      systemParts:
-        systemPartsResult.status === 'fulfilled' ? systemPartsResult.value.items : undefined,
-      apparatsError: apparatsResult.status === 'rejected' ? apparatsResult.reason : undefined,
-      systemPartsError:
-        systemPartsResult.status === 'rejected' ? systemPartsResult.reason : undefined
-    };
+    if (FieldDeviceLookupService.lookupRequest) {
+      return FieldDeviceLookupService.lookupRequest;
+    }
+
+    const request = (async () => {
+      const [apparatsResult, systemPartsResult] = await Promise.allSettled([
+        this.listApparatsUseCase.execute({
+          pagination: { page: 1, pageSize: 1000 },
+          search: { text: '' }
+        }),
+        this.listSystemPartsUseCase.execute({
+          pagination: { page: 1, pageSize: 1000 },
+          search: { text: '' }
+        })
+      ]);
+
+      return {
+        apparats: apparatsResult.status === 'fulfilled' ? apparatsResult.value.items : undefined,
+        systemParts:
+          systemPartsResult.status === 'fulfilled' ? systemPartsResult.value.items : undefined,
+        apparatsError: apparatsResult.status === 'rejected' ? apparatsResult.reason : undefined,
+        systemPartsError:
+          systemPartsResult.status === 'rejected' ? systemPartsResult.reason : undefined
+      };
+    })();
+
+    FieldDeviceLookupService.lookupRequest = request;
+
+    request.then((result) => {
+      FieldDeviceLookupService.cachedLookups = result;
+      FieldDeviceLookupService.lookupRequest = null;
+    }).catch(() => {
+      FieldDeviceLookupService.lookupRequest = null;
+    });
+
+    return request;
+
+  }
+
+  static resetCachedLookups(): void {
+    this.cachedLookups = null;
+    this.lookupRequest = null;
   }
 }

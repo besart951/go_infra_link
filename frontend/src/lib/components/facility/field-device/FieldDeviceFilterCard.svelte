@@ -66,6 +66,15 @@
   let spsControllerOptions = $state<MultiFilterOption[]>([]);
   let spsControllerSystemTypeOptions = $state<MultiFilterOption[]>([]);
   let optionsRequestVersion = 0;
+  let lastFilterContext = '';
+
+  interface ProjectScopeData {
+    controlCabinets: ControlCabinet[];
+    spsControllers: SPSController[];
+  }
+
+  const projectScopeCache = new Map<string, Promise<ProjectScopeData>>();
+  const buildingLabelsCache = new Map<string, Promise<Map<string, string>>>();
 
   const showBuildingFilter = $derived(!fieldDeviceState.isFilterFixed('buildingId'));
   const showControlCabinetFilter = $derived(!fieldDeviceState.isFilterFixed('controlCabinetId'));
@@ -105,12 +114,19 @@
   );
 
   $effect(() => {
+    if (!fieldDeviceState.showFilterPanel) return;
+
     const context = {
       projectId: scopedProjectId,
       buildingIds: [...effectiveBuildingIds],
       controlCabinetIds: [...effectiveControlCabinetIds],
       spsControllerIds: [...effectiveSpsControllerIds]
     };
+
+    const contextKey = buildFilterContextKey(context);
+    if (contextKey === lastFilterContext) return;
+
+    lastFilterContext = contextKey;
     void loadFilterOptions(context);
   });
 
@@ -134,6 +150,27 @@
 
   function sameIds(a: string[], b: string[]): boolean {
     return a.length === b.length && a.every((id, index) => id === b[index]);
+  }
+
+  function normalizeIdList(ids: string[]): string {
+    return [...new Set(ids)]
+      .filter((id) => id.length > 0)
+      .sort()
+      .join(',');
+  }
+
+  function buildFilterContextKey(context: {
+    projectId?: string;
+    buildingIds: string[];
+    controlCabinetIds: string[];
+    spsControllerIds: string[];
+  }): string {
+    return [
+      context.projectId ?? '',
+      normalizeIdList(context.buildingIds),
+      normalizeIdList(context.controlCabinetIds),
+      normalizeIdList(context.spsControllerIds)
+    ].join('|');
   }
 
   function formatBuildingLabel(building: Building): string {
@@ -317,21 +354,52 @@
   }
 
   async function loadProjectControlCabinets(projectId: string): Promise<ControlCabinet[]> {
-    const links = await projectRepository.listControlCabinets(projectId, {
-      page: 1,
-      limit: OPTION_PAGE_SIZE
-    });
-    const ids = [...new Set(links.items.map((link) => link.control_cabinet_id).filter(Boolean))];
-    return ids.length > 0 ? controlCabinetRepository.getBulk(ids) : [];
+    const scope = await loadProjectScope(projectId);
+    return scope.controlCabinets;
   }
 
   async function loadProjectSpsControllers(projectId: string): Promise<SPSController[]> {
-    const links = await projectRepository.listSPSControllers(projectId, {
-      page: 1,
-      limit: OPTION_PAGE_SIZE
+    const scope = await loadProjectScope(projectId);
+    return scope.spsControllers;
+  }
+
+  async function loadProjectScope(projectId: string): Promise<ProjectScopeData> {
+    const cached = projectScopeCache.get(projectId);
+    if (cached) return cached;
+
+    const load = (async () => {
+      const [cabinetLinks, spsLinks] = await Promise.all([
+        projectRepository.listControlCabinets(projectId, {
+          page: 1,
+          limit: OPTION_PAGE_SIZE
+        }),
+        projectRepository.listSPSControllers(projectId, {
+          page: 1,
+          limit: OPTION_PAGE_SIZE
+        })
+      ]);
+
+      const [controlCabinetIds, spsControllerIds] = [
+        [...new Set(cabinetLinks.items.map((link) => link.control_cabinet_id).filter(Boolean))],
+        [...new Set(spsLinks.items.map((link) => link.sps_controller_id).filter(Boolean))]
+      ];
+
+      const [controlCabinets, spsControllers] = await Promise.all([
+        controlCabinetIds.length > 0 ? controlCabinetRepository.getBulk(controlCabinetIds) : [],
+        spsControllerIds.length > 0 ? spsControllerRepository.getBulk(spsControllerIds) : []
+      ]);
+
+      return { controlCabinets, spsControllers };
+    })();
+
+    projectScopeCache.set(projectId, load);
+    load.catch(() => {
+      if (projectScopeCache.get(projectId) === load) {
+        projectScopeCache.delete(projectId);
+      }
     });
-    const ids = [...new Set(links.items.map((link) => link.sps_controller_id).filter(Boolean))];
-    return ids.length > 0 ? spsControllerRepository.getBulk(ids) : [];
+
+    return load;
   }
 
   async function loadBuildingLabels(cabinets: ControlCabinet[]): Promise<Map<string, string>> {
@@ -340,8 +408,23 @@
     ];
     if (buildingIds.length === 0) return new Map();
 
-    const buildings = await buildingRepository.getBulk(buildingIds);
-    return new Map(buildings.map((building) => [building.id, formatBuildingLabel(building)]));
+    const cacheKey = normalizeIdList(buildingIds);
+    const cached = buildingLabelsCache.get(cacheKey);
+    if (cached) return cached;
+
+    const load = (async () => {
+      const buildings = await buildingRepository.getBulk(buildingIds);
+      return new Map(buildings.map((building) => [building.id, formatBuildingLabel(building)]));
+    })();
+
+    buildingLabelsCache.set(cacheKey, load);
+    load.catch(() => {
+      if (buildingLabelsCache.get(cacheKey) === load) {
+        buildingLabelsCache.delete(cacheKey);
+      }
+    });
+
+    return load;
   }
 
   async function filterControllersByAncestors(
