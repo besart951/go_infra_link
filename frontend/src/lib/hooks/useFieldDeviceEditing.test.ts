@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 
 import { useFieldDeviceEditing } from './useFieldDeviceEditing.svelte.js';
+import { ApiException } from '$lib/api/client.js';
 import { buildFieldDevice } from '$lib/test/fieldDevice.fixtures.js';
 import { render, waitFor } from '@testing-library/svelte';
 import UseFieldDeviceEditingHarness from './__tests__/UseFieldDeviceEditingHarness.svelte';
@@ -248,6 +249,34 @@ describe('useFieldDeviceEditing', () => {
         }
       ]
     });
+  });
+
+  it('maps unified bulk-update field_errors back to specification and BACnet cells', async () => {
+    const device = buildFieldDevice();
+    const editing = await createEditing();
+
+    mockBulkUpdate.mockRejectedValueOnce(
+      new ApiException(400, 'validation_error', 'validation failed', [
+        {
+          path: 'updates[0].specifications.specification_brand',
+          message: 'is required'
+        },
+        {
+          path: 'updates[0].bacnet_objects[0].alarm_type_id',
+          message: 'is required'
+        }
+      ])
+    );
+
+    editing.queueSpecEdit(device.id, 'specification_brand', '');
+    editing.queueBacnetEdit(device.id, 'bo-1', 'alarm_type_id', 'missing');
+
+    await editing.saveAllPendingEdits([device]);
+
+    expect(editing.getFieldError(device.id, 'specification_brand')).toBe('validation.required');
+    expect(editing.getBacnetFieldErrors(device.id).get('bo-1')?.alarm_type_id).toBe(
+      'validation.required'
+    );
   });
 
   it('updates specification independently without including bacnet patches', async () => {

@@ -17,7 +17,8 @@
       | 'software_type'
       | 'software_number'
       | 'hardware_type'
-      | 'hardware_quantity',
+      | 'hardware_quantity'
+      | 'alarm_type_id',
       string
     >
   >;
@@ -180,6 +181,9 @@
       class="h-8 text-sm"
       disabled={readOnly}
     />
+    {#if errors.description}
+      <p class="text-xs text-destructive">{errors.description}</p>
+    {/if}
   </div>
 
   <!-- Software Group: Type + Number -->
@@ -330,6 +334,9 @@
             {$t('field_device.bacnet.row.alarm_type_remove')}
           </Button>
         </div>
+      {/if}
+      {#if errors.alarm_type_id}
+        <p class="text-xs text-destructive">{errors.alarm_type_id}</p>
       {/if}
     </div>
 

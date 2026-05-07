@@ -15,8 +15,12 @@ export { localizeErrorText, localizeFieldErrorMap } from './errorLocalization.js
 
 export interface ApiError {
   error: string;
+  code?: string;
   message?: string;
   details?: unknown;
+  localized_key?: string;
+  field_errors?: unknown;
+  request_id?: string;
   status?: number;
 }
 
@@ -97,10 +101,15 @@ function getCsrfToken(): string | undefined {
 async function parseError(response: Response): Promise<ApiError> {
   try {
     const body = await response.json();
+    const code = typeof body.code === 'string' && body.code ? body.code : body.error;
     return {
-      error: body.error || 'unknown_error',
-      message: body.message || response.statusText,
-      details: body.details || body.fields,
+      error: code || 'unknown_error',
+      code,
+      message: body.message || body.localized_key || response.statusText,
+      localized_key: body.localized_key,
+      field_errors: body.field_errors,
+      details: body.field_errors || body.fields || body.details,
+      request_id: body.request_id,
       status: response.status
     };
   } catch {
@@ -374,10 +383,131 @@ export function getErrorMessage(err: unknown): string {
 export function getFieldErrors(err: unknown): FieldErrorMap {
   if (!(err instanceof ApiException)) return {};
   if (!err.details || typeof err.details !== 'object') return {};
+
+  if (Array.isArray(err.details)) {
+    const mapped = err.details.reduce<FieldErrorMap>((acc, item) => {
+      if (!item || typeof item !== 'object') return acc;
+      const fieldError = item as Record<string, unknown>;
+      const path = typeof fieldError.path === 'string' ? fieldError.path : '';
+      if (!path) return acc;
+      const localizedKey =
+        typeof fieldError.localized_key === 'string' && fieldError.localized_key
+          ? fieldError.localized_key
+          : '';
+      const rawMessage =
+        typeof fieldError.message === 'string' && fieldError.message ? fieldError.message : '';
+      const code = typeof fieldError.code === 'string' && fieldError.code ? fieldError.code : '';
+      const message = localizedKey.startsWith('validation.')
+        ? rawMessage || localizedKey
+        : localizedKey || rawMessage || code;
+      if (message) {
+        acc[path] = message;
+      }
+      return acc;
+    }, {});
+    return localizeFieldErrorMap(mapped);
+  }
+
   const entries = Object.entries(err.details as Record<string, unknown>)
     .filter(([, value]) => typeof value === 'string')
     .map(([key, value]) => [key, value as string]);
   return localizeFieldErrorMap(Object.fromEntries(entries));
+}
+
+const WRAPPER_PATH_SEGMENTS = new Set(['body', 'data', 'error', 'errors', 'payload', 'request']);
+const FIELD_PATH_SEGMENT_ALIASES: Record<string, string> = {
+  alarmtypes: 'alarmtype',
+  bacnetobjects: 'bacnetobject',
+  controlcabinets: 'controlcabinet',
+  fielddevices: 'fielddevice',
+  objectdatas: 'objectdata',
+  spscontrollers: 'spscontroller',
+  spscontrollersystemtypes: 'spscontrollersystemtype',
+  specifications: 'specification',
+  updates: 'update'
+};
+
+const INDEXED_FIELD_PATH_SEGMENTS = new Set([
+  'alarmtype',
+  'alarmtypes',
+  'bacnetobject',
+  'bacnetobjects',
+  'fielddevices',
+  'spscontrollersystemtypes',
+  'updates'
+]);
+
+function canonicalFieldPathSegment(segment: string): string {
+  const normalized = segment
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, '')
+    .replace(/^\[(.*)\]$/, '$1');
+  return FIELD_PATH_SEGMENT_ALIASES[normalized] ?? normalized;
+}
+
+function isIndexOrIdentifierSegment(segment: string): boolean {
+  return (
+    /^\d+$/.test(segment) ||
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment)
+  );
+}
+
+function canonicalFieldPathSegments(path: string): string[] {
+  const rawSegments = path
+    .replace(/\[([^\]]+)\]/g, '.$1')
+    .split('.')
+    .filter(Boolean);
+
+  const segments: string[] = [];
+
+  for (let index = 0; index < rawSegments.length; index += 1) {
+    const rawSegment = rawSegments[index];
+    const segment = canonicalFieldPathSegment(rawSegment);
+    if (!segment || WRAPPER_PATH_SEGMENTS.has(segment)) continue;
+
+    segments.push(segment);
+
+    const rawNormalized = rawSegment
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_-]/g, '');
+    const nextSegment = rawSegments[index + 1];
+    const hasFieldAfterNext = index + 2 < rawSegments.length;
+    const hasIndexedCollection =
+      rawNormalized in FIELD_PATH_SEGMENT_ALIASES || INDEXED_FIELD_PATH_SEGMENTS.has(rawNormalized);
+
+    if (hasIndexedCollection && nextSegment && hasFieldAfterNext) {
+      const next = canonicalFieldPathSegment(nextSegment);
+      if (next && !WRAPPER_PATH_SEGMENTS.has(next)) {
+        index += 1;
+        continue;
+      }
+    }
+
+    const next = nextSegment ? canonicalFieldPathSegment(nextSegment) : '';
+    if (next && isIndexOrIdentifierSegment(next) && hasFieldAfterNext) {
+      index += 1;
+    }
+  }
+
+  return segments;
+}
+
+function canonicalFieldPath(path: string): string {
+  return canonicalFieldPathSegments(path).join('.');
+}
+
+export function fieldErrorPathMatches(errorPath: string, candidatePath: string): boolean {
+  const error = canonicalFieldPath(errorPath);
+  const candidate = canonicalFieldPath(candidatePath);
+  if (!error || !candidate) return false;
+  if (error === candidate) return true;
+
+  const candidateSegments = candidate.split('.');
+  if (candidateSegments.length <= 1) return false;
+
+  return error.endsWith(`.${candidate}`);
 }
 
 /**
@@ -388,11 +518,20 @@ export function getFieldError(
   field: string,
   prefixes: string[] = []
 ): string | undefined {
-  for (const prefix of prefixes) {
-    const key = `${prefix}.${field}`;
-    if (errors[key]) return errors[key];
+  const candidates = [field, ...prefixes.map((prefix) => `${prefix}.${field}`)];
+
+  for (const candidate of candidates) {
+    if (errors[candidate]) return errors[candidate];
   }
-  return errors[field];
+
+  const entries = Object.entries(errors);
+  for (const candidate of candidates) {
+    for (const [path, value] of entries) {
+      if (fieldErrorPathMatches(path, candidate)) return value;
+    }
+  }
+
+  return undefined;
 }
 
 /**

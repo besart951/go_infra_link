@@ -3,6 +3,7 @@ import {
   buildMultiCreatePayload,
   collectCreatedDevices,
   normalizeMultiCreateResponse,
+  reconcileMultiCreateApiFieldErrors,
   reconcileMultiCreateRows
 } from './multiCreateSubmission.js';
 
@@ -94,5 +95,16 @@ describe('multi-create submission helpers', () => {
         failure_count: 0
       })
     ).toEqual([{ id: 'fd-1' }]);
+  });
+
+  it('maps unified field_devices paths to row errors', () => {
+    const result = reconcileMultiCreateApiFieldErrors(rows, {
+      'field_devices[1].text_fix': 'Text fix fehlt'
+    });
+
+    expect(result.get(1)).toEqual({
+      message: 'Text fix fehlt',
+      field: 'text_fix'
+    });
   });
 });

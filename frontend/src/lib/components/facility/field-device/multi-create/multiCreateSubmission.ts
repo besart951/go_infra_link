@@ -93,6 +93,23 @@ export function reconcileMultiCreateRows(
   return { remainingRows, rowErrors };
 }
 
+export function reconcileMultiCreateApiFieldErrors(
+  rows: FieldDeviceRowData[],
+  fieldErrors: Record<string, string>
+): Map<number, FieldDeviceRowError> {
+  const rowErrors = new Map<number, FieldDeviceRowError>();
+  for (const [path, message] of Object.entries(fieldErrors)) {
+    const parsed = parseMultiCreateFieldPath(path);
+    if (!parsed) continue;
+    if (parsed.index < 0 || parsed.index >= rows.length) continue;
+    rowErrors.set(parsed.index, {
+      message,
+      field: parsed.field
+    });
+  }
+  return rowErrors;
+}
+
 export function collectCreatedDevices(response: MultiCreateFieldDeviceResponse): FieldDevice[] {
   return response.results
     .filter((result) => result.success && result.field_device)
@@ -112,4 +129,41 @@ function isMultiCreateFieldDeviceResponse(value: unknown): value is MultiCreateF
     typeof candidate.success_count === 'number' &&
     typeof candidate.failure_count === 'number'
   );
+}
+
+function parseMultiCreateFieldPath(
+  fieldPath: string
+): { index: number; field: FieldDeviceRowError['field'] } | undefined {
+  const segments = fieldPath
+    .replace(/\[([^\]]+)\]/g, '.$1')
+    .split('.')
+    .filter(Boolean);
+  const fieldDevicesIndex = segments.findIndex((segment) => {
+    const normalized = normalizeFieldPathSegment(segment);
+    return normalized === 'fielddevices' || normalized === 'fielddevice';
+  });
+  if (fieldDevicesIndex < 0) return undefined;
+
+  const index = Number(segments[fieldDevicesIndex + 1]);
+  if (!Number.isInteger(index)) return undefined;
+
+  const rawField = segments[fieldDevicesIndex + 2] ?? '';
+  const field = normalizeMultiCreateField(rawField);
+  return field !== undefined ? { index, field } : undefined;
+}
+
+function normalizeFieldPathSegment(segment: string): string {
+  return segment
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
+}
+
+function normalizeMultiCreateField(field: string): FieldDeviceRowError['field'] | undefined {
+  const normalized = normalizeFieldPathSegment(field);
+  if (normalized === 'bmk') return 'bmk';
+  if (normalized === 'description') return 'description';
+  if (normalized === 'textfix') return 'text_fix';
+  if (normalized === 'apparatnr') return 'apparat_nr';
+  return '';
 }

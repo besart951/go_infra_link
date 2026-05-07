@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -39,6 +40,61 @@ func TestListFieldDevicesReturnsAfterInvalidFilterParam(t *testing.T) {
 	}
 	if tracker.statusWrites[0] != http.StatusBadRequest {
 		t.Fatalf("expected only status write to be 400, got %v", tracker.statusWrites)
+	}
+}
+
+func TestMultiCreateFieldDevicesBindJSONReturnsNestedValidationShape(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &fakeFieldDeviceHandlerService{}
+	handler := NewFieldDeviceHandler(service)
+	systemTypeID := uuid.NewString()
+	systemPartID := uuid.NewString()
+	apparatID := uuid.NewString()
+	body := `{
+		"field_devices": [{
+			"apparat_nr": 1,
+			"sps_controller_system_type_id": "` + systemTypeID + `",
+			"system_part_id": "` + systemPartID + `",
+			"apparat_id": "` + apparatID + `",
+			"bacnet_objects": [{
+				"software_type": "AI",
+				"software_number": 1
+			}]
+		}]
+	}`
+
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = httptest.NewRequest(http.MethodPost, "/field-devices/multi-create", strings.NewReader(body))
+	context.Request.Header.Set("Content-Type", "application/json")
+	context.Request.Header.Set("X-Request-ID", "req-fd-1")
+
+	handler.MultiCreateFieldDevices(context)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if service.multiCreateCalls != 0 {
+		t.Fatalf("expected service not to be called after bind failure, got %d", service.multiCreateCalls)
+	}
+
+	var response dto.ErrorResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("expected error response to decode, got %v", err)
+	}
+	path := "field_devices[0].bacnet_objects[0].text_fix"
+	if response.Code != "validation_error" || response.Error != "validation_error" {
+		t.Fatalf("expected validation code and compatibility error, got %+v", response)
+	}
+	if response.Fields[path] != "is required" {
+		t.Fatalf("expected nested compatibility field path %q, got %+v", path, response.Fields)
+	}
+	if len(response.FieldErrors) != 1 || response.FieldErrors[0].Path != path {
+		t.Fatalf("expected nested field_errors path %q, got %+v", path, response.FieldErrors)
+	}
+	if response.RequestID != "req-fd-1" {
+		t.Fatalf("expected request id to be echoed, got %+v", response)
 	}
 }
 
@@ -161,6 +217,7 @@ func (w *fieldDeviceStatusTrackingWriter) WriteHeader(code int) {
 type fakeFieldDeviceHandlerService struct {
 	listWithFiltersCalls int
 	listAvailableCalls   int
+	multiCreateCalls     int
 	listWithFiltersErr   error
 	listAvailableErr     error
 	lastFilters          domainFacility.FieldDeviceFilterParams
@@ -175,6 +232,7 @@ func (s *fakeFieldDeviceHandlerService) CreateWithBacnetObjects(context.Context,
 }
 
 func (s *fakeFieldDeviceHandlerService) MultiCreate(context.Context, []domainFacility.FieldDeviceCreateItem) *domainFacility.FieldDeviceMultiCreateResult {
+	s.multiCreateCalls++
 	return &domainFacility.FieldDeviceMultiCreateResult{}
 }
 

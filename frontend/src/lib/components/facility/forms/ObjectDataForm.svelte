@@ -45,7 +45,8 @@
       | 'software_type'
       | 'software_number'
       | 'hardware_type'
-      | 'hardware_quantity',
+      | 'hardware_quantity'
+      | 'alarm_type_id',
       string
     >
   >;
@@ -80,51 +81,26 @@
   const fieldError = (name: string) => getFieldError(fieldErrors, name, ['objectdata']);
 
   function getBacnetIndexedFieldError(index: number, name: string): string | undefined {
-    const baseCandidates = [
-      `bacnetobjects[${index}].${name}`,
-      `bacnet_objects[${index}].${name}`,
-      `bacnetobjects.${index}.${name}`,
-      `bacnet_objects.${index}.${name}`,
-      `objectdata.bacnetobjects[${index}].${name}`,
-      `objectdata.bacnet_objects[${index}].${name}`,
-      `objectdata.bacnetobjects.${index}.${name}`,
-      `objectdata.bacnet_objects.${index}.${name}`,
-      `error.bacnetobjects[${index}].${name}`,
-      `errors.bacnetobjects[${index}].${name}`
+    const prefixes = [
+      `bacnetobjects[${index}]`,
+      `bacnet_objects[${index}]`,
+      `bacnetobjects.${index}`,
+      `bacnet_objects.${index}`,
+      `data.bacnetobjects[${index}]`,
+      `data.bacnet_objects[${index}]`,
+      `objectdata.bacnetobjects[${index}]`,
+      `objectdata.bacnet_objects[${index}]`,
+      `objectdata.bacnetobjects.${index}`,
+      `objectdata.bacnet_objects.${index}`,
+      `data.objectdata.bacnetobjects[${index}]`,
+      `data.objectdata.bacnet_objects[${index}]`,
+      'objectdata.bacnetobject',
+      'objectdata.bacnetobjects',
+      'bacnetobject',
+      'bacnetobjects'
     ];
 
-    for (const key of baseCandidates) {
-      if (fieldErrors[key]) {
-        return fieldErrors[key];
-      }
-    }
-
-    if (name === 'text_fix') {
-      return (
-        fieldErrors['objectdata.bacnetobject.textfix'] ??
-        fieldErrors['objectdata.bacnetobject.text_fix'] ??
-        fieldErrors['bacnetobject.textfix'] ??
-        fieldErrors['bacnetobject.text_fix']
-      );
-    }
-
-    if (name === 'software_type') {
-      return (
-        fieldErrors['objectdata.bacnetobject.software_type'] ??
-        fieldErrors['bacnetobject.software_type']
-      );
-    }
-
-    if (name === 'software_number') {
-      return (
-        fieldErrors['objectdata.bacnetobject.software_number'] ??
-        fieldErrors['bacnetobject.software_number'] ??
-        fieldErrors['objectdata.bacnetobject.software'] ??
-        fieldErrors['bacnetobject.software']
-      );
-    }
-
-    return undefined;
+    return getFieldError(fieldErrors, name, prefixes);
   }
 
   function getBacnetRowErrors(index: number): BacnetRowErrors {
@@ -133,7 +109,8 @@
       software_type: getBacnetIndexedFieldError(index, 'software_type'),
       software_number: getBacnetIndexedFieldError(index, 'software_number'),
       hardware_type: getBacnetIndexedFieldError(index, 'hardware_type'),
-      hardware_quantity: getBacnetIndexedFieldError(index, 'hardware_quantity')
+      hardware_quantity: getBacnetIndexedFieldError(index, 'hardware_quantity'),
+      alarm_type_id: getBacnetIndexedFieldError(index, 'alarm_type_id')
     };
   }
 

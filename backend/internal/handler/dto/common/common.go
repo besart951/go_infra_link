@@ -13,7 +13,19 @@ type PaginationQuery struct {
 // Error Response
 
 type ErrorResponse struct {
-	Error   string            `json:"error"`
-	Message string            `json:"message,omitempty"`
-	Fields  map[string]string `json:"fields,omitempty"`
+	// Error and Fields are kept as compatibility aliases for existing clients.
+	Error        string               `json:"error"`
+	Code         string               `json:"code,omitempty"`
+	Message      string               `json:"message,omitempty"`
+	LocalizedKey string               `json:"localized_key,omitempty"`
+	Fields       map[string]string    `json:"fields,omitempty"`
+	FieldErrors  []FieldErrorResponse `json:"field_errors,omitempty"`
+	RequestID    string               `json:"request_id,omitempty"`
+}
+
+type FieldErrorResponse struct {
+	Path         string `json:"path"`
+	Code         string `json:"code,omitempty"`
+	Message      string `json:"message"`
+	LocalizedKey string `json:"localized_key,omitempty"`
 }

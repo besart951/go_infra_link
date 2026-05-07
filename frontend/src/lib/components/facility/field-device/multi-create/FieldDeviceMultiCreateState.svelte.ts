@@ -1,5 +1,5 @@
 import { addToast } from '$lib/components/toast.svelte';
-import { ApiException, localizeErrorText } from '$lib/api/client.js';
+import { ApiException, getFieldErrors, localizeErrorText } from '$lib/api/client.js';
 import { t as translate } from '$lib/i18n/index.js';
 import {
   type FieldDeviceRowData,
@@ -31,6 +31,7 @@ import {
   buildMultiCreatePayload,
   collectCreatedDevices,
   normalizeMultiCreateResponse,
+  reconcileMultiCreateApiFieldErrors,
   reconcileMultiCreateRows
 } from './multiCreateSubmission.js';
 import {
@@ -355,6 +356,15 @@ export class FieldDeviceMultiCreateState {
         onSuccess(collectCreatedDevices(response));
       }
     } catch (error) {
+      const fieldErrors = getFieldErrors(error);
+      const rowErrors = reconcileMultiCreateApiFieldErrors(this.rows, fieldErrors);
+      if (rowErrors.size > 0) {
+        this.rowErrors = rowErrors;
+        this.globalError = '';
+        addToast(translate('field_device.multi_create.errors.validation'), 'error');
+        return;
+      }
+
       this.globalError =
         error instanceof Error
           ? error.message

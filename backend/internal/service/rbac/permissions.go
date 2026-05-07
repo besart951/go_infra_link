@@ -73,7 +73,7 @@ func (s *Service) ListRolesWithPermissions(ctx context.Context) ([]domainUser.Ro
 			Description: domainUser.RoleDescription(role),
 			Level:       s.GetRoleLevel(role),
 			Permissions: permissions,
-			CanManage:   manageableRolesForPermissionSet(roles, permissionSets[role], permissionSets),
+			CanManage:   manageableRoles(role, roles, permissionSets),
 		})
 	}
 
@@ -153,7 +153,7 @@ func (s *Service) RemoveRolePermission(ctx context.Context, role domainUser.Role
 
 func (s *Service) HasPermission(ctx context.Context, role domainUser.Role, permission string) (bool, error) {
 	if role == domainUser.RoleSuperAdmin {
-		return s.permissionExists(ctx, permission)
+		return true, nil
 	}
 
 	perms, err := s.rolePermissionRepo.ListByRole(ctx, role)
@@ -188,17 +188,6 @@ func (s *Service) loadRolePermissionSets(ctx context.Context, roles []domainUser
 	}
 
 	return sets, nil
-}
-
-func (s *Service) permissionExists(ctx context.Context, permission string) (bool, error) {
-	if s.permissionRepo == nil {
-		return false, nil
-	}
-	perms, err := s.permissionRepo.ListByNames(ctx, []string{permission})
-	if err != nil {
-		return false, err
-	}
-	return len(perms) > 0, nil
 }
 
 func (s *Service) syncSuperAdminPermissions(ctx context.Context) ([]string, error) {
@@ -262,6 +251,13 @@ func rolePermissionSets(roles []domainUser.Role, rolePerms []domainUser.RolePerm
 		set[rp.Permission] = struct{}{}
 	}
 	return sets
+}
+
+func manageableRoles(role domainUser.Role, roles []domainUser.Role, rolePermissionSets map[domainUser.Role]permissionSet) []domainUser.Role {
+	if role == domainUser.RoleSuperAdmin {
+		return append([]domainUser.Role{}, roles...)
+	}
+	return manageableRolesForPermissionSet(roles, rolePermissionSets[role], rolePermissionSets)
 }
 
 func manageableRolesForPermissionSet(roles []domainUser.Role, requesterPermissions permissionSet, rolePermissionSets map[domainUser.Role]permissionSet) []domainUser.Role {

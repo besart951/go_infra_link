@@ -63,6 +63,10 @@ func (s *Service) GetRoleLevel(role domainUser.Role) int {
 
 func (s *Service) GetAllowedRoles(ctx context.Context, requesterRole domainUser.Role) ([]domainUser.Role, error) {
 	roles := domainUser.AllRoles()
+	if requesterRole == domainUser.RoleSuperAdmin {
+		return roles, nil
+	}
+
 	permissionSets, err := s.loadRolePermissionSets(ctx, roles)
 	if err != nil {
 		return nil, err

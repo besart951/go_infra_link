@@ -107,4 +107,67 @@ describe('field-device save-result reconciliation', () => {
     );
     expect(result.optimisticUpdates[0].bacnet_objects?.[0].text_fix).toBe('TF-PARTIAL');
   });
+
+  it('understands indexed update paths from unified validation errors', () => {
+    const device = buildFieldDevice();
+    const pendingEdits = new Map<string, Partial<BulkUpdateFieldDeviceItem>>([
+      [
+        'fd-1',
+        {
+          bmk: 'FD-PARTIAL',
+          specification: {
+            specification_brand: 'Rejected Brand'
+          }
+        }
+      ]
+    ]);
+    const pendingBacnetEdits = new Map<string, Map<string, Partial<BacnetObjectInput>>>([
+      ['fd-1', new Map([['bo-1', { alarm_type_id: 'alarm-9' }]])]
+    ]);
+
+    const result = reconcileFieldDeviceSaveResult({
+      storeItems: [device],
+      updates: [
+        {
+          id: 'fd-1',
+          bmk: 'FD-PARTIAL',
+          specification: { specification_brand: 'Rejected Brand' },
+          bacnet_objects: [{ id: 'bo-1', alarm_type_id: 'alarm-9' }]
+        }
+      ],
+      result: {
+        results: [
+          {
+            id: 'fd-1',
+            success: false,
+            error: 'validation failed',
+            fields: {
+              'updates[0].specifications.specification_brand': 'brand rejected',
+              'updates[0].bacnet_objects[0].alarm_type_id': 'alarm type rejected'
+            }
+          }
+        ],
+        total_count: 1,
+        success_count: 0,
+        failure_count: 1
+      },
+      pendingEdits,
+      pendingBacnetEdits,
+      pendingEditsSnapshot: new Map(pendingEdits),
+      pendingBacnetEditsSnapshot: new Map(pendingBacnetEdits),
+      existingErrors: new Map(),
+      localizeEditErrorInfo,
+      localizeFieldErrorMap
+    });
+
+    expect(result.remainingEdits.get('fd-1')).toEqual({
+      specification: { specification_brand: 'Rejected Brand' }
+    });
+    expect(result.remainingBacnetEdits.get('fd-1')?.get('bo-1')).toEqual({
+      alarm_type_id: 'alarm-9'
+    });
+    expect(result.bacnetFieldErrors.get('fd-1')?.get('bo-1')?.alarm_type_id).toBe(
+      'alarm type rejected'
+    );
+  });
 });

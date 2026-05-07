@@ -78,12 +78,12 @@ export function reconcileFieldDeviceSaveResult({
     if (!item.fields) continue;
 
     const localizedFields = localizeFieldErrorMap(item.fields);
-    const objectErrors = getBacnetObjectErrors(localizedFields);
+    const update = updates.find((candidate) => candidate.id === item.id);
+    const objectErrors = getBacnetObjectErrors(localizedFields, update);
     if (objectErrors.size > 0) {
       bacnetFieldErrors.set(item.id, objectErrors);
     }
 
-    const update = updates.find((candidate) => candidate.id === item.id);
     if (update && hasPartialPhaseSuccess(update, item.fields)) {
       partialSuccessIds.add(item.id);
     }
@@ -104,7 +104,8 @@ export function reconcileFieldDeviceSaveResult({
     if (!device) continue;
 
     const resultItem = result.results.find((item) => item.id === id);
-    const failed = parseFailedFieldPaths(resultItem?.fields ?? {});
+    const update = updates.find((candidate) => candidate.id === id);
+    const failed = parseFailedFieldPaths(resultItem?.fields ?? {}, update);
     const updated = applyPartialEditsToDevice(
       device,
       pendingEdits,
@@ -134,7 +135,8 @@ export function reconcileFieldDeviceSaveResult({
     const resultItem = result.results.find((item) => item.id === id);
     if (!resultItem?.fields) continue;
 
-    const failed = parseFailedFieldPaths(resultItem.fields);
+    const update = updates.find((candidate) => candidate.id === id);
+    const failed = parseFailedFieldPaths(resultItem.fields, update);
     retainFailedBaseAndSpecificationEdits(remainingEdits, pendingEdits, id, failed);
     retainFailedBacnetEdits(remainingBacnetEdits, pendingBacnetEdits, id, failed);
   }
@@ -151,14 +153,14 @@ export function reconcileFieldDeviceSaveResult({
 }
 
 function getBacnetObjectErrors(
-  fields: Record<string, string>
+  fields: Record<string, string>,
+  update?: BulkUpdateFieldDeviceItem
 ): Map<string, Record<string, string>> {
   const objectErrors = new Map<string, Record<string, string>>();
   for (const [fieldPath, message] of Object.entries(fields)) {
-    const match = fieldPath.match(/(?:^|\.)bacnet_objects\.([0-9a-f-]+)\.(.+)$/i);
-    if (!match) continue;
-    const objectId = match[1];
-    const field = match[2];
+    const parsed = parseBacnetFieldPath(fieldPath, update);
+    if (!parsed) continue;
+    const { objectId, field } = parsed;
     const existing = objectErrors.get(objectId) || {};
     existing[field] = message;
     objectErrors.set(objectId, existing);
@@ -174,7 +176,10 @@ interface FailedFieldPaths {
   entireSpecification: boolean;
 }
 
-function parseFailedFieldPaths(fields: Record<string, string>): FailedFieldPaths {
+function parseFailedFieldPaths(
+  fields: Record<string, string>,
+  update?: BulkUpdateFieldDeviceItem
+): FailedFieldPaths {
   const failed: FailedFieldPaths = {
     base: new Set(),
     specification: new Set(),
@@ -184,23 +189,127 @@ function parseFailedFieldPaths(fields: Record<string, string>): FailedFieldPaths
   };
 
   for (const fieldPath of Object.keys(fields)) {
-    if (fieldPath === 'fielddevice') {
+    const parsed = parseFailedFieldPath(fieldPath, update);
+    if (parsed.phase === 'fielddevice' && !parsed.field) {
       failed.entireBase = true;
-    } else if (fieldPath.startsWith('fielddevice.')) {
+    } else if (parsed.phase === 'fielddevice') {
       failed.entireBase = true;
-      failed.base.add(fieldPath.replace('fielddevice.', ''));
-    } else if (fieldPath === 'specification') {
+      failed.base.add(parsed.field);
+    } else if (parsed.phase === 'specification' && !parsed.field) {
       failed.entireSpecification = true;
-    } else if (fieldPath.startsWith('specification.')) {
+    } else if (parsed.phase === 'specification') {
       failed.entireSpecification = true;
-      failed.specification.add(fieldPath.replace('specification.', ''));
-    } else if (fieldPath.startsWith('bacnet_objects.')) {
-      const match = fieldPath.match(/^bacnet_objects\.([0-9a-f-]+)/);
-      if (match) failed.bacnetObjects.add(match[1]);
+      failed.specification.add(parsed.field);
+    } else if (parsed.phase === 'bacnet_objects' && parsed.objectId) {
+      failed.bacnetObjects.add(parsed.objectId);
     }
   }
 
   return failed;
+}
+
+function parseBacnetFieldPath(
+  fieldPath: string,
+  update?: BulkUpdateFieldDeviceItem
+): { objectId: string; field: string } | undefined {
+  const segments = getRelevantFieldPathSegments(fieldPath);
+  const bacnetIndex = findSegment(segments, ['bacnetobjects', 'bacnetobject']);
+  if (bacnetIndex === undefined) return undefined;
+
+  const objectRef = segments[bacnetIndex + 1];
+  const field = segments.slice(bacnetIndex + 2).join('.');
+  if (!objectRef || !field) return undefined;
+
+  const objectIndex = Number(objectRef);
+  const objectId = Number.isInteger(objectIndex)
+    ? update?.bacnet_objects?.[objectIndex]?.id
+    : objectRef;
+  return objectId ? { objectId, field } : undefined;
+}
+
+function parseFailedFieldPath(
+  fieldPath: string,
+  update?: BulkUpdateFieldDeviceItem
+):
+  | { phase: 'fielddevice'; field: string }
+  | { phase: 'specification'; field: string }
+  | { phase: 'bacnet_objects'; objectId?: string }
+  | { phase: ''; field: '' } {
+  const segments = getRelevantFieldPathSegments(fieldPath);
+  if (segments.length === 0) return { phase: '', field: '' };
+
+  const bacnet = parseBacnetFieldPath(fieldPath, update);
+  if (bacnet) return { phase: 'bacnet_objects', objectId: bacnet.objectId };
+
+  const first = normalizeFieldPathSegment(segments[0]);
+  if (first === 'fielddevice' || first === 'fielddevices') {
+    if (segments.length === 1) return { phase: 'fielddevice', field: '' };
+    const second = normalizeFieldPathSegment(segments[1]);
+    if (second === 'specification' || second === 'specifications') {
+      return { phase: 'specification', field: segments.slice(2).join('.') };
+    }
+    return { phase: 'fielddevice', field: segments.slice(1).join('.') };
+  }
+
+  if (first === 'specification' || first === 'specifications') {
+    return { phase: 'specification', field: segments.slice(1).join('.') };
+  }
+
+  if (isBaseField(first)) {
+    return { phase: 'fielddevice', field: segments.join('.') };
+  }
+
+  return { phase: '', field: '' };
+}
+
+function getRelevantFieldPathSegments(fieldPath: string): string[] {
+  const segments = fieldPath
+    .replace(/\[([^\]]+)\]/g, '.$1')
+    .split('.')
+    .filter(Boolean)
+    .filter((segment) => {
+      const normalized = normalizeFieldPathSegment(segment);
+      return normalized !== 'data' && normalized !== 'error' && normalized !== 'errors';
+    });
+
+  const indexed = findIndexedSegment(segments, ['updates', 'fielddevices']);
+  return indexed ? segments.slice(indexed.segmentIndex + 2) : segments;
+}
+
+function normalizeFieldPathSegment(segment: string): string {
+  return segment
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, '');
+}
+
+function findSegment(segments: string[], names: string[]): number | undefined {
+  const nameSet = new Set(names);
+  const index = segments.findIndex((segment) => nameSet.has(normalizeFieldPathSegment(segment)));
+  return index >= 0 ? index : undefined;
+}
+
+function findIndexedSegment(
+  segments: string[],
+  names: string[]
+): { segmentIndex: number; index: number } | undefined {
+  const segmentIndex = findSegment(segments, names);
+  if (segmentIndex === undefined) return undefined;
+  const rawIndex = Number(segments[segmentIndex + 1]);
+  if (!Number.isInteger(rawIndex) || rawIndex < 0) return undefined;
+  return { segmentIndex, index: rawIndex };
+}
+
+function isBaseField(field: string): boolean {
+  return [
+    'bmk',
+    'description',
+    'textfix',
+    'apparatnr',
+    'apparatid',
+    'systempartid',
+    'spscontrollersystemtypeid'
+  ].includes(field);
 }
 
 function applyAllEditsToDevice(
