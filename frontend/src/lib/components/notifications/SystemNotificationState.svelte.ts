@@ -11,9 +11,72 @@ import {
   buildSameOriginWebSocketUrl,
   RealtimeJsonStream
 } from '$lib/infrastructure/realtime/realtimeJsonStream.js';
+import { z } from 'zod';
 
 const PREVIEW_LIMIT = 5;
 const INBOX_LIMIT = 20;
+const SYSTEM_NOTIFICATION_METADATA_MAX = 50;
+
+const uuidSchema = z.string().uuid();
+const dateTimeSchema = z.string().min(1).max(80);
+const nullableUUIDSchema = uuidSchema.nullable().optional();
+
+const systemNotificationSchema = z
+  .object({
+    id: uuidSchema,
+    recipient_id: uuidSchema,
+    actor_id: nullableUUIDSchema,
+    event_key: z.string().min(1).max(160),
+    title: z.string().min(1).max(500),
+    body: z.string().max(4000),
+    resource_type: z.string().max(120),
+    resource_id: nullableUUIDSchema,
+    metadata: z
+      .record(z.string().max(120), z.string().max(1000))
+      .refine((metadata) => Object.keys(metadata).length <= SYSTEM_NOTIFICATION_METADATA_MAX, {
+        message: 'too many metadata fields'
+      })
+      .optional(),
+    read_at: z.string().nullable().optional(),
+    is_important: z.boolean(),
+    created_at: dateTimeSchema,
+    updated_at: dateTimeSchema
+  })
+  .strict();
+
+const systemNotificationStreamEventSchema = z.discriminatedUnion('type', [
+  z
+    .object({
+      type: z.literal('notification.created'),
+      notification: systemNotificationSchema,
+      unread_count: z.number().int().nonnegative(),
+      at: dateTimeSchema
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('notification.updated'),
+      notification: systemNotificationSchema,
+      unread_count: z.number().int().nonnegative(),
+      at: dateTimeSchema
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('notification.deleted'),
+      notification_id: uuidSchema,
+      unread_count: z.number().int().nonnegative(),
+      at: dateTimeSchema
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('notification.read_all'),
+      unread_count: z.number().int().nonnegative(),
+      at: dateTimeSchema
+    })
+    .strict()
+]);
 
 interface SystemNotificationStateDeps {
   repository?: SystemNotificationRepository;
@@ -44,7 +107,9 @@ export class SystemNotificationState {
       deps.stream ??
       new RealtimeJsonStream<SystemNotificationStreamEvent>({
         url: buildSystemNotificationStreamUrl,
+        parseMessage: parseSystemNotificationStreamEvent,
         onMessage: (event) => this.handleMessage(event),
+        onInvalidMessage: (raw, error) => logInvalidSystemNotificationMessage(raw, error),
         onOpen: () => void this.refreshVisible(),
         onStatusChange: (status) => {
           this.socketStatus = status;
@@ -209,6 +274,19 @@ export class SystemNotificationState {
 
 function buildSystemNotificationStreamUrl(): string | null {
   return buildSameOriginWebSocketUrl('/api/v1/account/notifications/stream');
+}
+
+export function parseSystemNotificationStreamEvent(
+  message: unknown
+): SystemNotificationStreamEvent {
+  return systemNotificationStreamEventSchema.parse(message) as SystemNotificationStreamEvent;
+}
+
+function logInvalidSystemNotificationMessage(raw: string, error: unknown): void {
+  console.warn('Ignored invalid system notification WebSocket message', {
+    reason: error instanceof Error ? error.message : 'invalid realtime message',
+    bytes: raw.length
+  });
 }
 
 export const systemNotificationState = new SystemNotificationState();

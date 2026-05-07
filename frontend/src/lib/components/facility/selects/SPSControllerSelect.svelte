@@ -51,7 +51,9 @@
       const links = await fetchAllPages((page, pageSize) =>
         projectRepository.listSPSControllers(projectId, { page, limit: pageSize })
       );
-      const controllerIds = [...new Set(links.map((link) => link.sps_controller_id).filter(Boolean))];
+      const controllerIds = [
+        ...new Set(links.map((link) => link.sps_controller_id).filter(Boolean))
+      ];
       if (controllerIds.length === 0) return [];
       return spsControllerRepository.getBulk(controllerIds);
     })();

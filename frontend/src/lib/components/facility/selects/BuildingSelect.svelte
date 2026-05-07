@@ -52,7 +52,9 @@
     if (!projectId) return [];
 
     const cabinets = await loadProjectControlCabinets(projectId);
-    const buildingIds = [...new Set(cabinets.map((cabinet) => cabinet.building_id).filter(Boolean))];
+    const buildingIds = [
+      ...new Set(cabinets.map((cabinet) => cabinet.building_id).filter(Boolean))
+    ];
     if (buildingIds.length === 0) return [];
 
     const buildings = await buildingRepository.getBulk(buildingIds);
@@ -67,7 +69,9 @@
       const links = await fetchAllPages((page, pageSize) =>
         projectRepository.listControlCabinets(projectId, { page, limit: pageSize })
       );
-      const controlCabinetIds = [...new Set(links.map((link) => link.control_cabinet_id).filter(Boolean))];
+      const controlCabinetIds = [
+        ...new Set(links.map((link) => link.control_cabinet_id).filter(Boolean))
+      ];
       if (controlCabinetIds.length === 0) return [];
       return controlCabinetRepository.getBulk(controlCabinetIds);
     })();

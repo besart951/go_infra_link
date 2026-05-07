@@ -64,11 +64,26 @@ func (l *loginRateLimiter) cleanup(interval time.Duration) {
 // This is applied only to POST /api/v1/auth/login.
 var loginLimiter = newLoginRateLimiter(rate.Every(6*time.Second), 5)
 
+// AuthSensitiveRateLimit allows short bursts for token refresh/logout endpoints.
+var authSensitiveLimiter = newLoginRateLimiter(rate.Every(3*time.Second), 10)
+
 // LoginRateLimitMiddleware rejects excessive login attempts with 429.
 func LoginRateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
 		if !loginLimiter.get(ip).Allow() {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "too_many_requests"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func AuthSensitiveRateLimitMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ip := c.ClientIP()
+		if !authSensitiveLimiter.get(ip).Allow() {
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": "too_many_requests"})
 			c.Abort()
 			return

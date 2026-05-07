@@ -8,7 +8,9 @@ describe('createCachedBulkFetchByIds', () => {
   });
 
   it('deduplicates ids and reuses cached values', async () => {
-    const fetchByIds = vi.fn(async (ids: string[]) => ids.map((id) => ({ id, label: `item-${id}` })));
+    const fetchByIds = vi.fn(async (ids: string[]) =>
+      ids.map((id) => ({ id, label: `item-${id}` }))
+    );
     const cachedFetch = createCachedBulkFetchByIds('test-items', fetchByIds);
 
     const first = await cachedFetch(['1', '2', '1']);

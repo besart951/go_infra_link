@@ -14,10 +14,7 @@ export function canAccessRoleDirectory(canPerform: CanPerform): boolean {
   return canPerform('read', 'role');
 }
 
-export function canAccessUserHub(
-  user: User | null | undefined,
-  canPerform: CanPerform
-): boolean {
+export function canAccessUserHub(user: User | null | undefined, canPerform: CanPerform): boolean {
   return (
     canAccessUserDirectory(user) ||
     canAccessTeamDirectory(canPerform) ||

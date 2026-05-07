@@ -83,7 +83,5 @@ func Bootstrap(cfg config.DBConfig, options ...BootstrapOptions) error {
 		_ = sqlDB.Close()
 	}()
 
-	return ApplyMigrations(db, MigrationOptions{
-		RequireBlueGreenCompatible: opts.RequireBlueGreenCompatible,
-	})
+	return ApplyMigrations(db, MigrationOptions(opts))
 }

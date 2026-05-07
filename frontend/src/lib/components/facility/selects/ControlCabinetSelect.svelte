@@ -52,10 +52,7 @@
       .some((value) => String(value).toLowerCase().includes(query));
   }
 
-  function formatControlCabinetLabel(
-    cabinet: ControlCabinet,
-    labels: Map<string, string>
-  ): string {
+  function formatControlCabinetLabel(cabinet: ControlCabinet, labels: Map<string, string>): string {
     const buildingLabel = labels.get(cabinet.building_id) ?? cabinet.building_id;
     return `${buildingLabel} ${cabinet.control_cabinet_nr}`.trim();
   }
@@ -63,7 +60,9 @@
   const buildingLabelCache = new Map<string, Promise<Map<string, string>>>();
 
   async function ensureBuildingLabels(cabinets: ControlCabinet[]): Promise<Map<string, string>> {
-    const buildingIds = [...new Set(cabinets.map((cabinet) => cabinet.building_id).filter(Boolean))];
+    const buildingIds = [
+      ...new Set(cabinets.map((cabinet) => cabinet.building_id).filter(Boolean))
+    ];
     const cacheKey = buildingIds.sort().join(',');
     const cached = buildingLabelCache.get(cacheKey);
     if (cached) return cached;

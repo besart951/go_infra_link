@@ -47,6 +47,38 @@ describe('RealtimeJsonStream', () => {
     expect(stream).toBeDefined();
   });
 
+  it('validates parsed JSON with the configured parser', () => {
+    let connection: FakeConnection | undefined;
+    const onMessage = vi.fn();
+    const onInvalidMessage = vi.fn();
+    new RealtimeJsonStream<{ type: 'created' }>({
+      url: () => '/stream',
+      onMessage,
+      onInvalidMessage,
+      parseMessage: (message) => {
+        if (
+          typeof message === 'object' &&
+          message !== null &&
+          'type' in message &&
+          message.type === 'created'
+        ) {
+          return { type: 'created' };
+        }
+        throw new Error('invalid test message');
+      },
+      createConnection: (options) => {
+        connection = new FakeConnection(options);
+        return connection;
+      }
+    });
+
+    connection?.options.onMessage('{"type":"deleted"}');
+    connection?.options.onMessage('{"type":"created"}');
+
+    expect(onInvalidMessage).toHaveBeenCalledOnce();
+    expect(onMessage).toHaveBeenCalledWith({ type: 'created' });
+  });
+
   it('keeps invalid JSON behind the stream interface', () => {
     let connection: FakeConnection | undefined;
     const onMessage = vi.fn();
@@ -64,7 +96,7 @@ describe('RealtimeJsonStream', () => {
     connection?.options.onMessage('not json');
 
     expect(onMessage).not.toHaveBeenCalled();
-    expect(onInvalidMessage).toHaveBeenCalledWith('not json');
+    expect(onInvalidMessage).toHaveBeenCalledWith('not json', expect.anything());
   });
 
   it('delegates lifecycle and outbound messages to the socket connection', () => {

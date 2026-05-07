@@ -13,6 +13,7 @@ func RegisterPublicRoutes(publicV1 *gin.RouterGroup, handler *AuthHandler) {
 	}
 
 	authCsrf := publicV1.Group("/auth")
+	authCsrf.Use(middleware.AuthSensitiveRateLimitMiddleware())
 	authCsrf.Use(middleware.CSRFMiddleware())
 	{
 		authCsrf.POST("/refresh", handler.Refresh)

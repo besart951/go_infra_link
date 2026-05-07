@@ -45,6 +45,26 @@ cd backend
 go test ./...
 ```
 
+### Quality Gates
+
+Run the same checks locally before pushing:
+
+```powershell
+.\scripts\ci.ps1
+.\scripts\ci.ps1 -Target backend
+.\scripts\ci.ps1 -Target frontend
+```
+
+```bash
+bash scripts/ci.sh
+bash scripts/ci.sh backend
+bash scripts/ci.sh frontend
+```
+
+Backend gates run `go test ./...`, targeted `go test -race` for realtime/concurrency-sensitive packages, `go vet ./...`, `staticcheck`, and `govulncheck`. Frontend gates run `pnpm install --frozen-lockfile`, `pnpm check`, `pnpm test`, `pnpm build`, and the Prettier-based `pnpm lint`.
+
+CI is defined for GitHub Actions and Forgejo Actions with separate backend and frontend jobs plus dependency caching. Docker image builds run only on `main` or manual dispatch to keep pull-request feedback focused. Frontend CI requires Node.js 24.x and pnpm 10.29.1.
+
 ## Swagger
 
 ### Generate Swagger docs
@@ -78,6 +98,11 @@ This project follows **Clean/Hexagonal Architecture** principles:
 - The `server-setup` edge reverse proxy owns live blue/green routing for `/api/*`
 - Backend endpoints remain the only source of truth for auth, cookies, CSRF, and authorization
 - PostgreSQL runs on the official `postgres:18.3-alpine3.23` image; major upgrades must use dump/restore, not an in-place data directory reuse
+- Production config is fail-closed: `JWT_SECRET` must be strong and non-default, `COOKIE_SECURE=true`, `TRUSTED_PROXIES` must name the reverse proxy IP/CIDR, and CORS origins must never use `*`
+- Cookie auth is designed for the same-origin SPA: auth cookies are `HttpOnly`, CSRF is a readable double-submit cookie, and `COOKIE_SAME_SITE=strict` is the default
+- `COOKIE_DOMAIN` is optional. Leave it empty for host-only cookies; set it only when cookies must be shared across subdomains
+- Production database SSL must use `sslmode=require`, `verify-ca`, or `verify-full`. For an intentionally private database link, set `POSTGRES_SSLMODE=disable` together with `DB_ALLOW_UNSAFE_SSLMODE=true`
+- HSTS must be emitted by the HTTPS-terminating proxy. The bundled frontend Caddy container listens on `:80`, so it documents HSTS but does not send it there
 
 Do not rely on SvelteKit server hooks or `+server.ts` routes in production unless the frontend is intentionally migrated to a server adapter such as `adapter-node`.
 

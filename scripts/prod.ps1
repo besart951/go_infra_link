@@ -51,7 +51,8 @@ if ($appEnv -ne 'production') {
 }
 
 # Check for unfilled CHANGE_ME placeholders in required vars
-$requiredVars = @('JWT_SECRET', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'COOKIE_DOMAIN',
+$requiredVars = @('JWT_SECRET', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB',
+                  'POSTGRES_SSLMODE', 'TRUSTED_PROXIES', 'COOKIE_SECURE',
                   'DATABASE_URL', 'SEED_USER_EMAIL', 'SEED_USER_PASSWORD')
 foreach ($var in $requiredVars) {
     $val = Get-EnvValue $var
@@ -61,6 +62,25 @@ foreach ($var in $requiredVars) {
     if ($val -match 'CHANGE_ME') {
         Write-Fail "$var still contains 'CHANGE_ME'. Set a real value in .env before deploying."
     }
+}
+
+if ((Get-EnvValue 'COOKIE_SECURE') -ne 'true') {
+    Write-Fail "COOKIE_SECURE must be true in production."
+}
+
+$corsAllowedOrigins = Get-EnvValue 'CORS_ALLOWED_ORIGINS'
+$corsOriginValues = @()
+if ($corsAllowedOrigins) {
+    $corsOriginValues = ($corsAllowedOrigins -split ',') | ForEach-Object { $_.Trim() }
+}
+if ($corsOriginValues -contains '*') {
+    Write-Fail "CORS_ALLOWED_ORIGINS must not contain wildcard '*'."
+}
+
+$sslMode = (Get-EnvValue 'POSTGRES_SSLMODE').ToLowerInvariant()
+$allowUnsafeSSLMode = (Get-EnvValue 'DB_ALLOW_UNSAFE_SSLMODE')
+if (($sslMode -in @('disable', 'allow', 'prefer')) -and ($allowUnsafeSSLMode -ne 'true')) {
+    Write-Fail "POSTGRES_SSLMODE=$sslMode is unsafe. Use require/verify-ca/verify-full or set DB_ALLOW_UNSAFE_SSLMODE=true intentionally."
 }
 
 # ── Actions ───────────────────────────────────────────────────

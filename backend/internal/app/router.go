@@ -21,6 +21,9 @@ func newRouter(appRuntime *runtime) *gin.Engine {
 		panic(fmt.Sprintf("configure trusted proxies: %v", err))
 	}
 
+	if len(appRuntime.cfg.CORSAllowedOrigins) > 0 {
+		router.Use(middleware.CORSMiddleware(appRuntime.cfg.CORSAllowedOrigins))
+	}
 	registerSwaggerRoute(router, appRuntime.cfg)
 	router.Use(middleware.LocaleMiddleware(appRuntime.translator, defaultLocale))
 

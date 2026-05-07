@@ -123,14 +123,12 @@ type projectCollaborationEntityDeltaMessage struct {
 }
 
 type projectCollaborationClientMessage struct {
-	Type            string                               `json:"type"`
-	Devices         []ProjectFieldDeviceByFields         `json:"devices,omitempty"`
-	Scope           string                               `json:"scope,omitempty"`
-	EntityIDs       []string                             `json:"entity_ids,omitempty"`
-	DeviceIDs       []string                             `json:"device_ids,omitempty"`
-	ControlCabinets []projectCollaborationControlCabinet `json:"control_cabinets,omitempty"`
-	SPSControllers  []projectCollaborationSPSController  `json:"sps_controllers,omitempty"`
-	FieldDevices    []map[string]any                     `json:"field_devices,omitempty"`
+	Type         string
+	Devices      []ProjectFieldDeviceByFields
+	Scope        string
+	EntityIDs    []string
+	DeviceIDs    []string
+	FieldDevices []map[string]any
 }
 
 type projectCollaborationClient struct {
@@ -572,8 +570,9 @@ func normalizeFieldValues(values map[string]any) map[string]any {
 }
 
 func (c *projectCollaborationClient) handleMessage(data []byte) {
-	var message projectCollaborationClientMessage
-	if err := json.Unmarshal(data, &message); err != nil {
+	message, err := parseProjectCollaborationClientMessage(data)
+	if err != nil {
+		logInvalidProjectCollaborationMessage(data, err)
 		return
 	}
 

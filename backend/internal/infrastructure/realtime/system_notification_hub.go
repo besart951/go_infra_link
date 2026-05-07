@@ -3,6 +3,7 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -79,7 +80,7 @@ func (h *SystemNotificationHub) Stream(w http.ResponseWriter, r *http.Request, r
 		hub:         h,
 		recipientID: recipientID,
 	}
-	socket, err := AcceptWebSocket(w, r, systemNotificationSocketConfig, nil, func() {
+	socket, err := AcceptWebSocket(w, r, systemNotificationSocketConfig, client.handleMessage, func() {
 		h.unregister(client)
 	})
 	if err != nil {
@@ -89,6 +90,13 @@ func (h *SystemNotificationHub) Stream(w http.ResponseWriter, r *http.Request, r
 
 	h.register(client)
 	socket.Run()
+}
+
+func (c *systemNotificationClient) handleMessage(data []byte) {
+	slog.Debug(
+		"ignored unsupported inbound system notification websocket message",
+		"bytes", len(data),
+	)
 }
 
 func (h *SystemNotificationHub) PublishSystemNotificationChange(_ context.Context, change domainNotification.SystemNotificationChange) {

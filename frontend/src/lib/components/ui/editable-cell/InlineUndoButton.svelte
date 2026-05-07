@@ -26,8 +26,8 @@
   variant="ghost"
   size="icon"
   aria-label={title}
-  title={title}
-  class="absolute top-0 right-0 z-20 h-4 w-4 min-h-0 rounded-full border bg-background p-0 text-muted-foreground opacity-0 shadow-sm transition-opacity group-hover/undo:opacity-100 hover:text-foreground focus-visible:opacity-100"
+  {title}
+  class="absolute top-0 right-0 z-20 h-4 min-h-0 w-4 rounded-full border bg-background p-0 text-muted-foreground opacity-0 shadow-sm transition-opacity group-hover/undo:opacity-100 hover:text-foreground focus-visible:opacity-100"
   onpointerdown={handlePointer}
   onclick={handleClick}
 >

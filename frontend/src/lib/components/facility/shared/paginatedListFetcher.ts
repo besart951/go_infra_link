@@ -11,7 +11,10 @@ export interface LegacyPaginatedResponse<T> {
 
 export const DEFAULT_FACILITY_PAGE_SIZE = 1000;
 
-export function resolveTotalPages<T>(response: LegacyPaginatedResponse<T>, pageSize: number): number | undefined {
+export function resolveTotalPages<T>(
+  response: LegacyPaginatedResponse<T>,
+  pageSize: number
+): number | undefined {
   if (typeof response.total_pages === 'number') return response.total_pages;
   if (typeof response.metadata?.totalPages === 'number') return response.metadata.totalPages;
   if (typeof response.total === 'number' && pageSize > 0) {
@@ -26,7 +29,11 @@ export function resolvePage<T>(response: LegacyPaginatedResponse<T>): number | u
 }
 
 export async function fetchAllPages<T>(
-  fetchPage: (page: number, pageSize: number, signal?: AbortSignal) => Promise<LegacyPaginatedResponse<T>>,
+  fetchPage: (
+    page: number,
+    pageSize: number,
+    signal?: AbortSignal
+  ) => Promise<LegacyPaginatedResponse<T>>,
   signal?: AbortSignal,
   pageSize = DEFAULT_FACILITY_PAGE_SIZE
 ): Promise<T[]> {

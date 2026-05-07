@@ -120,6 +120,17 @@ func cookieSettingsFromConfig(cfg config.Config) authhandler.CookieSettings {
 	return authhandler.CookieSettings{
 		Domain:   cfg.CookieDomain,
 		Secure:   cookieSecure,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: sameSiteFromConfig(cfg.CookieSameSite),
+	}
+}
+
+func sameSiteFromConfig(value string) http.SameSite {
+	switch value {
+	case "lax":
+		return http.SameSiteLaxMode
+	case "none":
+		return http.SameSiteNoneMode
+	default:
+		return http.SameSiteStrictMode
 	}
 }

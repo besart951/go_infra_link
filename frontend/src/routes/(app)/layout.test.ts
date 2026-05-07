@@ -72,7 +72,10 @@ describe('(app) layout load', () => {
     const teams = [{ id: 'team-1', name: 'Team' }];
     const projects = [{ id: 'project-1', name: 'Project' }];
 
-    mockApi.mockResolvedValueOnce(user).mockResolvedValueOnce(teams).mockResolvedValueOnce(projects);
+    mockApi
+      .mockResolvedValueOnce(user)
+      .mockResolvedValueOnce(teams)
+      .mockResolvedValueOnce(projects);
 
     const result = await load(createLoadEvent());
 

@@ -14,6 +14,9 @@ importers:
       '@e965/xlsx':
         specifier: ^0.20.3
         version: 0.20.3
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@fontsource-variable/noto-sans':
         specifier: ^5.2.10
@@ -1575,6 +1578,9 @@ packages:
   zimmerframe@1.1.4:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
 snapshots:
 
   '@adobe/css-tools@4.4.4': {}
@@ -2726,3 +2732,5 @@ snapshots:
   xmlchars@2.2.0: {}
 
   zimmerframe@1.1.4: {}
+
+  zod@4.4.3: {}

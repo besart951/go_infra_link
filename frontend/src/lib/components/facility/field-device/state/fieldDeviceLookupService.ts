@@ -56,8 +56,7 @@ export class FieldDeviceLookupService {
 
       return {
         apparats: apparatsResult.status === 'fulfilled' ? apparatsResult.value : undefined,
-        systemParts:
-          systemPartsResult.status === 'fulfilled' ? systemPartsResult.value : undefined,
+        systemParts: systemPartsResult.status === 'fulfilled' ? systemPartsResult.value : undefined,
         apparatsError: apparatsResult.status === 'rejected' ? apparatsResult.reason : undefined,
         systemPartsError:
           systemPartsResult.status === 'rejected' ? systemPartsResult.reason : undefined

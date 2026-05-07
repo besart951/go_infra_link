@@ -34,16 +34,14 @@ export const load: LayoutLoad = async ({ fetch }) => {
 
     if (user) {
       try {
-        const teamPromise = user.can_access_user_directory || !hasPermission('team.read')
-          ? Promise.resolve([] as Team[])
-          : api<Team[]>('/teams', { customFetch, skipHttpErrorNavigation: true });
+        const teamPromise =
+          user.can_access_user_directory || !hasPermission('team.read')
+            ? Promise.resolve([] as Team[])
+            : api<Team[]>('/teams', { customFetch, skipHttpErrorNavigation: true });
         const projectPromise = hasPermission('project.listAll')
           ? api<Project[]>('/projects', { customFetch, skipHttpErrorNavigation: true })
           : Promise.resolve([] as Project[]);
-        const [t, p] = await Promise.all([
-          teamPromise,
-          projectPromise
-        ]);
+        const [t, p] = await Promise.all([teamPromise, projectPromise]);
         teams = t;
         projects = p;
       } catch (e) {

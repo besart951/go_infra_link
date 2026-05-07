@@ -16,8 +16,8 @@
 		X-Content-Type-Options "nosniff"
 		# Control referrer information
 		Referrer-Policy "strict-origin-when-cross-origin"
-		# Enable HSTS (enforced by the browser once received over HTTPS)
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# HSTS belongs on the HTTPS-terminating proxy. This container listens on :80,
+		# where browsers ignore Strict-Transport-Security.
 		# Disable FLoC / interest-cohort tracking
 		Permissions-Policy "interest-cohort=()"
 		# Restrict executable content and browser integration surfaces for the static SPA
