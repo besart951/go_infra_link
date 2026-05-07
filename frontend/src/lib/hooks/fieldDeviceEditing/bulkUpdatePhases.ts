@@ -1,4 +1,9 @@
 import type { BulkUpdateFieldDeviceItem } from '$lib/domain/facility/index.js';
+import {
+  findFieldPathSegment,
+  getRelevantFieldPathSegments,
+  normalizeFieldPathSegment
+} from '$lib/api/fieldPath.js';
 
 export type BulkUpdatePhase = 'fielddevice' | 'specification' | 'bacnet_objects';
 
@@ -35,20 +40,10 @@ export function getFailedPhases(fields: Record<string, string>): Set<BulkUpdateP
 }
 
 function getFailedPhase(fieldPath: string): BulkUpdatePhase | undefined {
-  const segments = fieldPath
-    .replace(/\[([^\]]+)\]/g, '.$1')
-    .split('.')
-    .filter(Boolean)
-    .filter((segment) => {
-      const normalized = normalizeFieldPathSegment(segment);
-      return normalized !== 'data' && normalized !== 'error' && normalized !== 'errors';
-    });
-
-  const indexed = findIndexedSegment(segments, ['updates', 'fielddevices']);
-  const relevant = indexed ? segments.slice(indexed.segmentIndex + 2) : segments;
+  const relevant = getRelevantFieldPathSegments(fieldPath);
   if (relevant.length === 0) return undefined;
 
-  const bacnetIndex = findSegment(relevant, ['bacnetobjects', 'bacnetobject']);
+  const bacnetIndex = findFieldPathSegment(relevant, ['bacnetobjects', 'bacnetobject']);
   if (bacnetIndex !== undefined) {
     return 'bacnet_objects';
   }
@@ -70,30 +65,6 @@ function getFailedPhase(fieldPath: string): BulkUpdatePhase | undefined {
   }
 
   return undefined;
-}
-
-function normalizeFieldPathSegment(segment: string): string {
-  return segment
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_-]/g, '');
-}
-
-function findSegment(segments: string[], names: string[]): number | undefined {
-  const nameSet = new Set(names);
-  const index = segments.findIndex((segment) => nameSet.has(normalizeFieldPathSegment(segment)));
-  return index >= 0 ? index : undefined;
-}
-
-function findIndexedSegment(
-  segments: string[],
-  names: string[]
-): { segmentIndex: number; index: number } | undefined {
-  const segmentIndex = findSegment(segments, names);
-  if (segmentIndex === undefined) return undefined;
-  const rawIndex = Number(segments[segmentIndex + 1]);
-  if (!Number.isInteger(rawIndex) || rawIndex < 0) return undefined;
-  return { segmentIndex, index: rawIndex };
 }
 
 function isBaseField(field: string): boolean {

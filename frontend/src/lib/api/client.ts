@@ -9,22 +9,14 @@
 
 import { t } from '$lib/i18n/index.js';
 import { reportApiFailure, reportApiRetry, reportApiSuccess } from '$lib/stores/network.js';
-import { localizeErrorText, localizeFieldErrorMap } from './errorLocalization.js';
+import { localizeErrorText } from './errorLocalization.js';
+import { fieldErrorsFromApiDetails, parseApiErrorResponse } from './errorResponse.js';
+import { resolveFieldError } from './fieldPath.js';
+import type { FieldErrorMap } from './errorResponse.js';
 
 export { localizeErrorText, localizeFieldErrorMap } from './errorLocalization.js';
-
-export interface ApiError {
-  error: string;
-  code?: string;
-  message?: string;
-  details?: unknown;
-  localized_key?: string;
-  field_errors?: unknown;
-  request_id?: string;
-  status?: number;
-}
-
-export type FieldErrorMap = Record<string, string>;
+export type { ApiError, FieldErrorMap } from './errorResponse.js';
+export { fieldErrorPathMatches } from './fieldPath.js';
 
 export class ApiException extends Error {
   constructor(
@@ -93,32 +85,6 @@ function getCsrfToken(): string | undefined {
   if (typeof document === 'undefined') return undefined;
   const m = document.cookie.match(new RegExp(`(?:^|; )csrf_token=([^;]*)`));
   return m ? decodeURIComponent(m[1]) : undefined;
-}
-
-/**
- * Parse backend error response
- */
-async function parseError(response: Response): Promise<ApiError> {
-  try {
-    const body = await response.json();
-    const code = typeof body.code === 'string' && body.code ? body.code : body.error;
-    return {
-      error: code || 'unknown_error',
-      code,
-      message: body.message || body.localized_key || response.statusText,
-      localized_key: body.localized_key,
-      field_errors: body.field_errors,
-      details: body.field_errors || body.fields || body.details,
-      request_id: body.request_id,
-      status: response.status
-    };
-  } catch {
-    return {
-      error: 'unknown_error',
-      message: response.statusText || 'unknown_error',
-      status: response.status
-    };
-  }
 }
 
 /**
@@ -275,7 +241,7 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
           reportApiFailure();
         }
 
-        const error = await parseError(response);
+        const error = await parseApiErrorResponse(response);
 
         // 401 Unauthorized: session expired or not logged in → redirect to login
         if (response.status === 401 && typeof window !== 'undefined') {
@@ -382,132 +348,7 @@ export function getErrorMessage(err: unknown): string {
  */
 export function getFieldErrors(err: unknown): FieldErrorMap {
   if (!(err instanceof ApiException)) return {};
-  if (!err.details || typeof err.details !== 'object') return {};
-
-  if (Array.isArray(err.details)) {
-    const mapped = err.details.reduce<FieldErrorMap>((acc, item) => {
-      if (!item || typeof item !== 'object') return acc;
-      const fieldError = item as Record<string, unknown>;
-      const path = typeof fieldError.path === 'string' ? fieldError.path : '';
-      if (!path) return acc;
-      const localizedKey =
-        typeof fieldError.localized_key === 'string' && fieldError.localized_key
-          ? fieldError.localized_key
-          : '';
-      const rawMessage =
-        typeof fieldError.message === 'string' && fieldError.message ? fieldError.message : '';
-      const code = typeof fieldError.code === 'string' && fieldError.code ? fieldError.code : '';
-      const message = localizedKey.startsWith('validation.')
-        ? rawMessage || localizedKey
-        : localizedKey || rawMessage || code;
-      if (message) {
-        acc[path] = message;
-      }
-      return acc;
-    }, {});
-    return localizeFieldErrorMap(mapped);
-  }
-
-  const entries = Object.entries(err.details as Record<string, unknown>)
-    .filter(([, value]) => typeof value === 'string')
-    .map(([key, value]) => [key, value as string]);
-  return localizeFieldErrorMap(Object.fromEntries(entries));
-}
-
-const WRAPPER_PATH_SEGMENTS = new Set(['body', 'data', 'error', 'errors', 'payload', 'request']);
-const FIELD_PATH_SEGMENT_ALIASES: Record<string, string> = {
-  alarmtypes: 'alarmtype',
-  bacnetobjects: 'bacnetobject',
-  controlcabinets: 'controlcabinet',
-  fielddevices: 'fielddevice',
-  objectdatas: 'objectdata',
-  spscontrollers: 'spscontroller',
-  spscontrollersystemtypes: 'spscontrollersystemtype',
-  specifications: 'specification',
-  updates: 'update'
-};
-
-const INDEXED_FIELD_PATH_SEGMENTS = new Set([
-  'alarmtype',
-  'alarmtypes',
-  'bacnetobject',
-  'bacnetobjects',
-  'fielddevices',
-  'spscontrollersystemtypes',
-  'updates'
-]);
-
-function canonicalFieldPathSegment(segment: string): string {
-  const normalized = segment
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_-]/g, '')
-    .replace(/^\[(.*)\]$/, '$1');
-  return FIELD_PATH_SEGMENT_ALIASES[normalized] ?? normalized;
-}
-
-function isIndexOrIdentifierSegment(segment: string): boolean {
-  return (
-    /^\d+$/.test(segment) ||
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment)
-  );
-}
-
-function canonicalFieldPathSegments(path: string): string[] {
-  const rawSegments = path
-    .replace(/\[([^\]]+)\]/g, '.$1')
-    .split('.')
-    .filter(Boolean);
-
-  const segments: string[] = [];
-
-  for (let index = 0; index < rawSegments.length; index += 1) {
-    const rawSegment = rawSegments[index];
-    const segment = canonicalFieldPathSegment(rawSegment);
-    if (!segment || WRAPPER_PATH_SEGMENTS.has(segment)) continue;
-
-    segments.push(segment);
-
-    const rawNormalized = rawSegment
-      .trim()
-      .toLowerCase()
-      .replace(/[\s_-]/g, '');
-    const nextSegment = rawSegments[index + 1];
-    const hasFieldAfterNext = index + 2 < rawSegments.length;
-    const hasIndexedCollection =
-      rawNormalized in FIELD_PATH_SEGMENT_ALIASES || INDEXED_FIELD_PATH_SEGMENTS.has(rawNormalized);
-
-    if (hasIndexedCollection && nextSegment && hasFieldAfterNext) {
-      const next = canonicalFieldPathSegment(nextSegment);
-      if (next && !WRAPPER_PATH_SEGMENTS.has(next)) {
-        index += 1;
-        continue;
-      }
-    }
-
-    const next = nextSegment ? canonicalFieldPathSegment(nextSegment) : '';
-    if (next && isIndexOrIdentifierSegment(next) && hasFieldAfterNext) {
-      index += 1;
-    }
-  }
-
-  return segments;
-}
-
-function canonicalFieldPath(path: string): string {
-  return canonicalFieldPathSegments(path).join('.');
-}
-
-export function fieldErrorPathMatches(errorPath: string, candidatePath: string): boolean {
-  const error = canonicalFieldPath(errorPath);
-  const candidate = canonicalFieldPath(candidatePath);
-  if (!error || !candidate) return false;
-  if (error === candidate) return true;
-
-  const candidateSegments = candidate.split('.');
-  if (candidateSegments.length <= 1) return false;
-
-  return error.endsWith(`.${candidate}`);
+  return fieldErrorsFromApiDetails(err.details);
 }
 
 /**
@@ -518,20 +359,7 @@ export function getFieldError(
   field: string,
   prefixes: string[] = []
 ): string | undefined {
-  const candidates = [field, ...prefixes.map((prefix) => `${prefix}.${field}`)];
-
-  for (const candidate of candidates) {
-    if (errors[candidate]) return errors[candidate];
-  }
-
-  const entries = Object.entries(errors);
-  for (const candidate of candidates) {
-    for (const [path, value] of entries) {
-      if (fieldErrorPathMatches(path, candidate)) return value;
-    }
-  }
-
-  return undefined;
+  return resolveFieldError(errors, field, prefixes);
 }
 
 /**

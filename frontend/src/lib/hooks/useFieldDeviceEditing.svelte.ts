@@ -6,12 +6,18 @@
  */
 
 import {
-  fieldErrorPathMatches,
   getFieldError as resolveFieldError,
   getFieldErrors,
   localizeErrorText,
   localizeFieldErrorMap
 } from '$lib/api/client.js';
+import {
+  fieldErrorPathMatches,
+  findFieldPathSegment,
+  findIndexedFieldPathSegment,
+  normalizeFieldPathSegment,
+  splitFieldPath
+} from '$lib/api/fieldPath.js';
 import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 import { addToast } from '$lib/components/toast.svelte';
 import { sessionStorage } from '$lib/services/sessionStorageService.js';
@@ -899,7 +905,7 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
     });
     if (segments.length === 0) return undefined;
 
-    const updateIndex = findIndexedSegment(segments, ['updates', 'fielddevices']);
+    const updateIndex = findIndexedFieldPathSegment(segments, ['updates', 'fielddevices']);
     const update =
       updateIndex !== undefined
         ? updates[updateIndex.index]
@@ -912,7 +918,7 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
       updateIndex !== undefined ? segments.slice(updateIndex.segmentIndex + 2) : segments;
     const normalizedFirst = normalizeFieldPathSegment(relevantSegments[0] ?? '');
 
-    const bacnetIndex = findSegment(relevantSegments, ['bacnetobjects', 'bacnetobject']);
+    const bacnetIndex = findFieldPathSegment(relevantSegments, ['bacnetobjects', 'bacnetobject']);
     if (bacnetIndex !== undefined) {
       const objectRef = relevantSegments[bacnetIndex + 1];
       const rawField = relevantSegments.slice(bacnetIndex + 2).join('.');
@@ -939,37 +945,6 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
 
     const field = relevantSegments.join('.');
     return field ? { deviceId: update.id, fieldPath: field } : undefined;
-  }
-
-  function splitFieldPath(fieldPath: string): string[] {
-    return fieldPath
-      .replace(/\[([^\]]+)\]/g, '.$1')
-      .split('.')
-      .filter(Boolean);
-  }
-
-  function normalizeFieldPathSegment(segment: string): string {
-    return segment
-      .trim()
-      .toLowerCase()
-      .replace(/[\s_-]/g, '');
-  }
-
-  function findSegment(segments: string[], names: string[]): number | undefined {
-    const nameSet = new Set(names);
-    const index = segments.findIndex((segment) => nameSet.has(normalizeFieldPathSegment(segment)));
-    return index >= 0 ? index : undefined;
-  }
-
-  function findIndexedSegment(
-    segments: string[],
-    names: string[]
-  ): { segmentIndex: number; index: number } | undefined {
-    const segmentIndex = findSegment(segments, names);
-    if (segmentIndex === undefined) return undefined;
-    const rawIndex = Number(segments[segmentIndex + 1]);
-    if (!Number.isInteger(rawIndex) || rawIndex < 0) return undefined;
-    return { segmentIndex, index: rawIndex };
   }
 
   function resolveBacnetObjectId(

@@ -8,6 +8,11 @@ import type {
   FieldDeviceRowError,
   MultiCreateSelection
 } from '$lib/domain/facility/fieldDeviceMultiCreate.js';
+import {
+  findIndexedFieldPathSegment,
+  normalizeFieldPathSegment,
+  splitFieldPath
+} from '$lib/api/fieldPath.js';
 
 export function buildMultiCreatePayload(
   rows: FieldDeviceRowData[],
@@ -134,29 +139,13 @@ function isMultiCreateFieldDeviceResponse(value: unknown): value is MultiCreateF
 function parseMultiCreateFieldPath(
   fieldPath: string
 ): { index: number; field: FieldDeviceRowError['field'] } | undefined {
-  const segments = fieldPath
-    .replace(/\[([^\]]+)\]/g, '.$1')
-    .split('.')
-    .filter(Boolean);
-  const fieldDevicesIndex = segments.findIndex((segment) => {
-    const normalized = normalizeFieldPathSegment(segment);
-    return normalized === 'fielddevices' || normalized === 'fielddevice';
-  });
-  if (fieldDevicesIndex < 0) return undefined;
+  const segments = splitFieldPath(fieldPath);
+  const fieldDevices = findIndexedFieldPathSegment(segments, ['fielddevices', 'fielddevice']);
+  if (!fieldDevices) return undefined;
 
-  const index = Number(segments[fieldDevicesIndex + 1]);
-  if (!Number.isInteger(index)) return undefined;
-
-  const rawField = segments[fieldDevicesIndex + 2] ?? '';
+  const rawField = segments[fieldDevices.segmentIndex + 2] ?? '';
   const field = normalizeMultiCreateField(rawField);
-  return field !== undefined ? { index, field } : undefined;
-}
-
-function normalizeFieldPathSegment(segment: string): string {
-  return segment
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_-]/g, '');
+  return field !== undefined ? { index: fieldDevices.index, field } : undefined;
 }
 
 function normalizeMultiCreateField(field: string): FieldDeviceRowError['field'] | undefined {
