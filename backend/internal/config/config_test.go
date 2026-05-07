@@ -110,6 +110,11 @@ func TestLoadUsesTypedEnvParsing(t *testing.T) {
 	t.Setenv("DB_CONNECT_TIMEOUT", "12s")
 	t.Setenv("ACCESS_TOKEN_TTL", "20m")
 	t.Setenv("REFRESH_TOKEN_TTL", "48h")
+	t.Setenv("REALTIME_BUS", "pg")
+	t.Setenv("REALTIME_NODE_ID", "backend-1")
+	t.Setenv("REALTIME_POSTGRES_CHANNEL", "infra_realtime")
+	t.Setenv("REALTIME_SUBSCRIBER_BUFFER", "128")
+	t.Setenv("REALTIME_EVENT_TTL", "2m")
 	t.Setenv("BACKEND_PORT", "9090")
 	t.Setenv("TRUSTED_PROXIES", "127.0.0.1, 10.0.0.0/8")
 	t.Setenv("COOKIE_SAME_SITE", "lax")
@@ -140,6 +145,21 @@ func TestLoadUsesTypedEnvParsing(t *testing.T) {
 	}
 	if cfg.RefreshTokenTTL != 48*time.Hour {
 		t.Fatalf("expected refresh token TTL 48h, got %s", cfg.RefreshTokenTTL)
+	}
+	if cfg.Realtime.Bus != "postgres" {
+		t.Fatalf("expected realtime bus postgres, got %q", cfg.Realtime.Bus)
+	}
+	if cfg.Realtime.NodeID != "backend-1" {
+		t.Fatalf("expected realtime node id backend-1, got %q", cfg.Realtime.NodeID)
+	}
+	if cfg.Realtime.PostgresChannel != "infra_realtime" {
+		t.Fatalf("expected realtime channel infra_realtime, got %q", cfg.Realtime.PostgresChannel)
+	}
+	if cfg.Realtime.SubscriberBuffer != 128 {
+		t.Fatalf("expected realtime subscriber buffer 128, got %d", cfg.Realtime.SubscriberBuffer)
+	}
+	if cfg.Realtime.EventTTL != 2*time.Minute {
+		t.Fatalf("expected realtime event TTL 2m, got %s", cfg.Realtime.EventTTL)
 	}
 	if cfg.HTTPAddr != ":9090" {
 		t.Fatalf("expected HTTP addr :9090, got %q", cfg.HTTPAddr)

@@ -35,7 +35,7 @@ func (r *projectSPSControllerRepo) Create(ctx context.Context, entity *project.P
 	if err := entity.Base.InitForCreate(time.Now().UTC()); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Create(toProjectSPSControllerRecord(entity)).Error
+	return mapWriteError(r.db.WithContext(ctx).Create(toProjectSPSControllerRecord(entity)).Error)
 }
 
 func (r *projectSPSControllerRepo) BulkCreate(ctx context.Context, entities []*project.ProjectSPSController, batchSize int) error {

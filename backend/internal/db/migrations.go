@@ -109,6 +109,12 @@ var migrations = []migration{
 		blueGreenCompatible: true,
 		apply:               ensureTimelinePermissions,
 	},
+	{
+		version:             "202605070001",
+		description:         "realtime_events_for_cross_instance_fanout",
+		blueGreenCompatible: true,
+		apply:               migrateRealtimeEvents,
+	},
 }
 
 type MigrationOptions struct {

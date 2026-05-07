@@ -30,8 +30,8 @@ func (s fieldDeviceBacnetSelection) validate() error {
 }
 
 func (w fieldDeviceWriter) create(ctx context.Context, fieldDevice *domainFacility.FieldDevice, selection fieldDeviceBacnetSelection) error {
-	return w.service.transaction().run(func(txService *FieldDeviceService) error {
-		return txService.writer().createInTx(ctx, fieldDevice, selection)
+	return w.service.transaction().run(ctx, func(txCtx context.Context, txService *FieldDeviceService) error {
+		return txService.writer().createInTx(txCtx, fieldDevice, selection)
 	})
 }
 
@@ -62,8 +62,8 @@ func (w fieldDeviceWriter) updateBase(ctx context.Context, fieldDevice *domainFa
 }
 
 func (w fieldDeviceWriter) update(ctx context.Context, fieldDevice *domainFacility.FieldDevice, selection fieldDeviceBacnetSelection) error {
-	return w.service.transaction().run(func(txService *FieldDeviceService) error {
-		return txService.writer().updateInTx(ctx, fieldDevice, selection)
+	return w.service.transaction().run(ctx, func(txCtx context.Context, txService *FieldDeviceService) error {
+		return txService.writer().updateInTx(txCtx, fieldDevice, selection)
 	})
 }
 
@@ -94,8 +94,8 @@ func (w fieldDeviceWriter) applyBacnetSelection(ctx context.Context, fieldDevice
 }
 
 func (w fieldDeviceWriter) createSpecification(ctx context.Context, fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error {
-	return w.service.transaction().run(func(txService *FieldDeviceService) error {
-		return txService.writer().createSpecificationInTx(ctx, fieldDeviceID, specification)
+	return w.service.transaction().run(ctx, func(txCtx context.Context, txService *FieldDeviceService) error {
+		return txService.writer().createSpecificationInTx(txCtx, fieldDeviceID, specification)
 	})
 }
 

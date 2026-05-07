@@ -5,18 +5,21 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
+	apprealtime "github.com/besart951/go_infra_link/backend/internal/application/realtime"
 	domainNotification "github.com/besart951/go_infra_link/backend/internal/domain/notification"
 	"github.com/google/uuid"
 )
 
 const (
-	systemNotificationWriteWait  = 10 * time.Second
-	systemNotificationPongWait   = 60 * time.Second
-	systemNotificationPingPeriod = 25 * time.Second
-	systemNotificationMaxMessage = 4096
+	systemNotificationWriteWait   = 10 * time.Second
+	systemNotificationPongWait    = 60 * time.Second
+	systemNotificationPingPeriod  = 25 * time.Second
+	systemNotificationMaxMessage  = 4096
+	systemNotificationPublishWait = 2 * time.Second
 
 	SystemNotificationEventCreated = string(domainNotification.SystemNotificationChangeCreated)
 	SystemNotificationEventUpdated = string(domainNotification.SystemNotificationChangeUpdated)
@@ -55,6 +58,11 @@ type SystemNotificationEvent struct {
 	At             time.Time                                       `json:"at"`
 }
 
+type systemNotificationBusEvent struct {
+	RecipientID uuid.UUID       `json:"recipient_id"`
+	Payload     json.RawMessage `json:"payload"`
+}
+
 type systemNotificationClient struct {
 	hub         *SystemNotificationHub
 	recipientID uuid.UUID
@@ -62,12 +70,89 @@ type systemNotificationClient struct {
 }
 
 type SystemNotificationHub struct {
-	mu      sync.RWMutex
-	clients map[uuid.UUID]map[*systemNotificationClient]struct{}
+	mu             sync.RWMutex
+	clients        map[uuid.UUID]map[*systemNotificationClient]struct{}
+	bus            apprealtime.Bus
+	nodeID         string
+	publishTimeout time.Duration
+	ctx            context.Context
+	cancel         context.CancelFunc
+	closeOnce      sync.Once
 }
 
-func NewSystemNotificationHub() *SystemNotificationHub {
-	return &SystemNotificationHub{clients: make(map[uuid.UUID]map[*systemNotificationClient]struct{})}
+type SystemNotificationHubOption func(*SystemNotificationHub)
+
+func WithSystemNotificationBus(bus apprealtime.Bus, nodeID string) SystemNotificationHubOption {
+	return func(h *SystemNotificationHub) {
+		h.bus = bus
+		h.nodeID = strings.TrimSpace(nodeID)
+	}
+}
+
+func NewSystemNotificationHub(options ...SystemNotificationHubOption) *SystemNotificationHub {
+	ctx, cancel := context.WithCancel(context.Background())
+	h := &SystemNotificationHub{
+		clients:        make(map[uuid.UUID]map[*systemNotificationClient]struct{}),
+		nodeID:         uuid.NewString(),
+		publishTimeout: systemNotificationPublishWait,
+		ctx:            ctx,
+		cancel:         cancel,
+	}
+	for _, option := range options {
+		if option != nil {
+			option(h)
+		}
+	}
+	if h.nodeID == "" {
+		h.nodeID = uuid.NewString()
+	}
+	h.startBusSubscription()
+	return h
+}
+
+func (h *SystemNotificationHub) Close() {
+	h.closeOnce.Do(func() {
+		h.cancel()
+	})
+}
+
+func (h *SystemNotificationHub) startBusSubscription() {
+	if h.bus == nil {
+		return
+	}
+
+	events, err := h.bus.Subscribe(h.ctx, apprealtime.TopicSystemNotifications)
+	if err != nil {
+		slog.Warn("system notification realtime bus subscription disabled", "err", err)
+		return
+	}
+
+	go func() {
+		for {
+			select {
+			case <-h.ctx.Done():
+				return
+			case event, ok := <-events:
+				if !ok {
+					return
+				}
+				h.handleBusEvent(event)
+			}
+		}
+	}()
+}
+
+func (h *SystemNotificationHub) handleBusEvent(event apprealtime.Event) {
+	if event.Source == h.nodeID {
+		return
+	}
+
+	var payload systemNotificationBusEvent
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		slog.Warn("ignored invalid system notification bus event", "err", err)
+		return
+	}
+	h.broadcastBytes(payload.RecipientID, payload.Payload)
 }
 
 func (h *SystemNotificationHub) Stream(w http.ResponseWriter, r *http.Request, recipientID uuid.UUID) {
@@ -122,7 +207,7 @@ func (h *SystemNotificationHub) PublishSystemNotificationChange(_ context.Contex
 	if change.NotificationID != uuid.Nil {
 		event.NotificationID = change.NotificationID.String()
 	}
-	h.broadcast(change.RecipientID, event)
+	h.broadcastDistributed(change.RecipientID, event)
 }
 
 func (h *SystemNotificationHub) PublishSystemNotificationCreated(ctx context.Context, notification domainNotification.SystemNotification, unreadCount int64) {
@@ -190,7 +275,19 @@ func (h *SystemNotificationHub) broadcast(recipientID uuid.UUID, event SystemNot
 	if err != nil {
 		return
 	}
+	h.broadcastBytes(recipientID, b)
+}
 
+func (h *SystemNotificationHub) broadcastDistributed(recipientID uuid.UUID, event SystemNotificationEvent) {
+	b, err := json.Marshal(event)
+	if err != nil {
+		return
+	}
+	h.broadcastBytes(recipientID, b)
+	h.publishPayload(recipientID, b)
+}
+
+func (h *SystemNotificationHub) broadcastBytes(recipientID uuid.UUID, b []byte) {
 	h.mu.RLock()
 	recipientClients := h.clients[recipientID]
 	clients := make([]*systemNotificationClient, 0, len(recipientClients))
@@ -201,8 +298,26 @@ func (h *SystemNotificationHub) broadcast(recipientID uuid.UUID, event SystemNot
 
 	for _, client := range clients {
 		if client.socket == nil || !client.socket.SendBytes(b) {
-			go h.unregister(client)
+			h.unregister(client)
 		}
+	}
+}
+
+func (h *SystemNotificationHub) publishPayload(recipientID uuid.UUID, payload []byte) {
+	if h.bus == nil {
+		return
+	}
+	b, err := json.Marshal(systemNotificationBusEvent{
+		RecipientID: recipientID,
+		Payload:     append(json.RawMessage(nil), payload...),
+	})
+	if err != nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), h.publishTimeout)
+	defer cancel()
+	if err := h.bus.Publish(ctx, apprealtime.NewEvent(apprealtime.TopicSystemNotifications, h.nodeID, b)); err != nil {
+		slog.Warn("system notification realtime bus publish failed", "err", err)
 	}
 }
 

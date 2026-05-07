@@ -26,6 +26,7 @@ type Config struct {
 	CookieSameSite                string
 	CORSAllowedOrigins            []string
 	TrustedProxies                []string
+	Realtime                      RealtimeConfig
 	SeedUserEnabled               bool
 	SeedUserFirstName             string
 	SeedUserLastName              string
@@ -44,6 +45,14 @@ type DBConfig struct {
 	ConnMaxLifetime    time.Duration
 	ConnectTimeout     time.Duration
 	AllowUnsafeSSLMode bool
+}
+
+type RealtimeConfig struct {
+	Bus              string
+	NodeID           string
+	PostgresChannel  string
+	SubscriberBuffer int
+	EventTTL         time.Duration
 }
 
 const DefaultIssuer = "go_infra_link"
@@ -67,6 +76,13 @@ func Load() (Config, error) {
 		CookieSameSite:     normalizeSameSite(env.String("COOKIE_SAME_SITE", "strict")),
 		CORSAllowedOrigins: env.List("CORS_ALLOWED_ORIGINS"),
 		TrustedProxies:     env.List("TRUSTED_PROXIES"),
+		Realtime: RealtimeConfig{
+			Bus:              normalizeRealtimeBus(env.First("memory", "REALTIME_BUS", "REALTIME_ADAPTER")),
+			NodeID:           env.String("REALTIME_NODE_ID", ""),
+			PostgresChannel:  normalizeRealtimePostgresChannel(env.String("REALTIME_POSTGRES_CHANNEL", "go_infra_link_realtime")),
+			SubscriberBuffer: env.Int("REALTIME_SUBSCRIBER_BUFFER", 64),
+			EventTTL:         env.Duration("REALTIME_EVENT_TTL", 10*time.Minute),
+		},
 		DBConfig: DBConfig{
 			Type:               normalizeDBType(env.First("postgres", "DB_TYPE", "DB_DRIVER")),
 			MaxOpenConns:       env.Int("DB_MAX_OPEN_CONNS", 25),
@@ -235,6 +251,9 @@ func validateConfig(cfg Config) error {
 		errs = append(errs, err)
 	}
 	if err := validateDatabaseSSLMode(cfg); err != nil {
+		errs = append(errs, err)
+	}
+	if err := validateRealtimeConfig(cfg.Realtime); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -466,6 +485,62 @@ func normalizeDBType(dbType string) string {
 	default:
 		return dbType
 	}
+}
+
+func normalizeRealtimeBus(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch value {
+	case "", "memory", "inmemory", "in_memory", "local":
+		return "memory"
+	case "postgres", "postgresql", "pg", "listen_notify", "listen-notify":
+		return "postgres"
+	default:
+		return value
+	}
+}
+
+func validateRealtimeConfig(cfg RealtimeConfig) error {
+	var errs []error
+	switch normalizeRealtimeBus(cfg.Bus) {
+	case "memory", "postgres":
+	default:
+		errs = append(errs, fmt.Errorf("REALTIME_BUS must be one of memory or postgres"))
+	}
+	if cfg.SubscriberBuffer < 0 {
+		errs = append(errs, fmt.Errorf("REALTIME_SUBSCRIBER_BUFFER must be >= 0"))
+	}
+	if cfg.EventTTL < 0 {
+		errs = append(errs, fmt.Errorf("REALTIME_EVENT_TTL must be >= 0"))
+	}
+	if normalizeRealtimeBus(cfg.Bus) == "postgres" && !isSafeRealtimePostgresChannel(cfg.PostgresChannel) {
+		errs = append(errs, fmt.Errorf("REALTIME_POSTGRES_CHANNEL contains an invalid PostgreSQL channel name"))
+	}
+	return errors.Join(errs...)
+}
+
+func normalizeRealtimePostgresChannel(channel string) string {
+	channel = strings.TrimSpace(channel)
+	if isSafeRealtimePostgresChannel(channel) {
+		return channel
+	}
+	return "go_infra_link_realtime"
+}
+
+func isSafeRealtimePostgresChannel(channel string) bool {
+	if channel == "" || len(channel) > 63 {
+		return false
+	}
+	for index, r := range channel {
+		switch {
+		case r == '_':
+		case r >= 'a' && r <= 'z':
+		case r >= 'A' && r <= 'Z':
+		case index > 0 && r >= '0' && r <= '9':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func normalizeSameSite(value string) string {

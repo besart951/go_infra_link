@@ -1,15 +1,16 @@
 package project
 
 import (
-	"github.com/besart951/go_infra_link/backend/internal/service/transaction"
-	"gorm.io/gorm"
+	"context"
+
+	"github.com/besart951/go_infra_link/backend/internal/application/transaction"
 )
 
 type TxRunner = transaction.Runner
 
 type Config struct {
 	TxRunner       TxRunner
-	TxDependencies func(tx *gorm.DB) (Dependencies, error)
+	TxDependencies func(tx transaction.UnitOfWork) (Dependencies, error)
 }
 
 type txCoordinator struct {
@@ -19,7 +20,7 @@ type txCoordinator struct {
 func newTxCoordinator(cfg Config) txCoordinator {
 	var factory transaction.Factory[*Services]
 	if cfg.TxDependencies != nil {
-		factory = func(tx *gorm.DB) (*Services, error) {
+		factory = func(tx transaction.UnitOfWork) (*Services, error) {
 			deps, err := cfg.TxDependencies(tx)
 			if err != nil {
 				return nil, err
@@ -47,13 +48,14 @@ func newProjectTx[TService any](
 	}
 }
 
-func (tx projectTx[TService]) run(fn func(TService) error) error {
-	return tx.operation.Run(fn)
+func (tx projectTx[TService]) run(ctx context.Context, fn func(context.Context, TService) error) error {
+	return tx.operation.Run(ctx, fn)
 }
 
 func runProjectTxResult[TResult any, TService any](
+	ctx context.Context,
 	tx projectTx[TService],
-	fn func(TService) (TResult, error),
+	fn func(context.Context, TService) (TResult, error),
 ) (TResult, error) {
-	return transaction.RunResult(tx.operation, fn)
+	return transaction.RunResult(ctx, tx.operation, fn)
 }

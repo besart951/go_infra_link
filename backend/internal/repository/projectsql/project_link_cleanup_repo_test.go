@@ -2,6 +2,7 @@ package projectsql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -54,6 +55,23 @@ func TestProjectControlCabinetRepo_ListAndDeleteByControlCabinetIDs(t *testing.T
 	}
 	if len(items) != 0 {
 		t.Fatalf("expected targeted control cabinet links to be removed, got %+v", items)
+	}
+}
+
+func TestProjectControlCabinetRepo_CreateDuplicateReturnsDomainConflict(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	controlCabinetID := uuid.New()
+	repo := NewProjectControlCabinetRepository(newProjectLinkRepoTestDB(t))
+
+	err := repo.Create(ctx, &domainProject.ProjectControlCabinet{ProjectID: projectID, ControlCabinetID: controlCabinetID})
+	if err != nil {
+		t.Fatalf("expected first create to succeed, got %v", err)
+	}
+
+	err = repo.Create(ctx, &domainProject.ProjectControlCabinet{ProjectID: projectID, ControlCabinetID: controlCabinetID})
+	if !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("expected duplicate create to map to domain conflict, got %v", err)
 	}
 }
 

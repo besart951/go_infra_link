@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
+	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type txFieldDeviceStore struct {
@@ -655,11 +655,11 @@ func (r *fakeHierarchySPSControllerRepo) GetByIdsForExport(_ context.Context, id
 
 func newTxServices(baseRepos, txRepos facility.Repositories, runnerCalls *int) *facility.Services {
 	return facility.NewServices(baseRepos, facility.Config{
-		TxRunner: func(run func(tx *gorm.DB) error) error {
+		TxRunner: func(ctx context.Context, run func(context.Context, apptransaction.UnitOfWork) error) error {
 			*runnerCalls++
-			return run(nil)
+			return run(ctx, nil)
 		},
-		TxRepositories: func(tx *gorm.DB) (facility.Repositories, error) {
+		TxRepositories: func(apptransaction.UnitOfWork) (facility.Repositories, error) {
 			return txRepos, nil
 		},
 	})

@@ -137,14 +137,14 @@ func (s *ControlCabinetService) ListByBuildingID(ctx context.Context, buildingID
 }
 
 func (s *ControlCabinetService) Update(ctx context.Context, controlCabinet *domainFacility.ControlCabinet) error {
-	return s.transaction().run(func(txService *ControlCabinetService) error {
-		if err := txService.Validate(ctx, controlCabinet, &controlCabinet.ID); err != nil {
+	return s.transaction().run(ctx, func(txCtx context.Context, txService *ControlCabinetService) error {
+		if err := txService.Validate(txCtx, controlCabinet, &controlCabinet.ID); err != nil {
 			return err
 		}
-		if err := txService.repo.Update(ctx, controlCabinet); err != nil {
+		if err := txService.repo.Update(txCtx, controlCabinet); err != nil {
 			return err
 		}
-		return txService.regenerateSPSControllerDeviceNames(ctx, controlCabinet)
+		return txService.regenerateSPSControllerDeviceNames(txCtx, controlCabinet)
 	})
 }
 

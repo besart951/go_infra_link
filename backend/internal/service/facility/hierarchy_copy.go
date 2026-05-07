@@ -67,19 +67,19 @@ func (c *HierarchyCopier) projectFacilityCopy() projectFacilityCopy {
 }
 
 func (c *HierarchyCopier) CopyControlCabinetByID(ctx context.Context, id uuid.UUID) (*domainFacility.ControlCabinet, error) {
-	return runWithFacilityTxResult(c.transaction(), func(copier *HierarchyCopier) (*domainFacility.ControlCabinet, error) {
-		return copier.projectFacilityCopy().copyControlCabinetByID(ctx, id)
+	return runWithFacilityTxResult(ctx, c.transaction(), func(txCtx context.Context, copier *HierarchyCopier) (*domainFacility.ControlCabinet, error) {
+		return copier.projectFacilityCopy().copyControlCabinetByID(txCtx, id)
 	})
 }
 
 func (c *HierarchyCopier) CopySPSControllerByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSController, error) {
-	return runWithFacilityTxResult(c.transaction(), func(copier *HierarchyCopier) (*domainFacility.SPSController, error) {
-		return copier.projectFacilityCopy().copySPSControllerByID(ctx, id)
+	return runWithFacilityTxResult(ctx, c.transaction(), func(txCtx context.Context, copier *HierarchyCopier) (*domainFacility.SPSController, error) {
+		return copier.projectFacilityCopy().copySPSControllerByID(txCtx, id)
 	})
 }
 
 func (c *HierarchyCopier) CopySPSControllerSystemTypeByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSControllerSystemType, error) {
-	return runWithFacilityTxResult(c.transaction(), func(copier *HierarchyCopier) (*domainFacility.SPSControllerSystemType, error) {
-		return copier.projectFacilityCopy().copySPSControllerSystemTypeByID(ctx, id)
+	return runWithFacilityTxResult(ctx, c.transaction(), func(txCtx context.Context, copier *HierarchyCopier) (*domainFacility.SPSControllerSystemType, error) {
+		return copier.projectFacilityCopy().copySPSControllerSystemTypeByID(txCtx, id)
 	})
 }

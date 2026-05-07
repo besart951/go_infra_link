@@ -3,16 +3,19 @@ package wire
 import (
 	"fmt"
 
+	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
+	infratransaction "github.com/besart951/go_infra_link/backend/internal/infrastructure/transaction"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	projectservice "github.com/besart951/go_infra_link/backend/internal/service/project"
 	"gorm.io/gorm"
 )
 
 func newFacilityServices(gormDB *gorm.DB, repos *Repositories) *facilityservice.Services {
-	facilityTxRunner := facilityservice.TxRunner(func(run func(tx *gorm.DB) error) error {
-		return gormDB.Transaction(run)
-	})
-	facilityTxRepositories := func(tx *gorm.DB) (facilityservice.Repositories, error) {
+	facilityTxRepositories := func(unit apptransaction.UnitOfWork) (facilityservice.Repositories, error) {
+		tx, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return facilityservice.Repositories{}, fmt.Errorf("facility transaction unit: %w", err)
+		}
 		txRepos, err := NewRepositories(tx)
 		if err != nil {
 			return facilityservice.Repositories{}, fmt.Errorf("transaction repositories: %w", err)
@@ -20,7 +23,7 @@ func newFacilityServices(gormDB *gorm.DB, repos *Repositories) *facilityservice.
 		return buildFacilityRepositories(txRepos), nil
 	}
 	return facilityservice.NewServices(buildFacilityRepositories(repos), facilityservice.Config{
-		TxRunner:       facilityTxRunner,
+		TxRunner:       infratransaction.NewGormRunner(gormDB),
 		TxRepositories: facilityTxRepositories,
 	})
 }
@@ -51,11 +54,11 @@ func buildFacilityRepositories(repos *Repositories) facilityservice.Repositories
 }
 
 func newProjectServices(gormDB *gorm.DB, repos *Repositories, facilityServices *facilityservice.Services) *projectservice.Services {
-	txRunner := projectservice.TxRunner(func(run func(tx *gorm.DB) error) error {
-		return gormDB.Transaction(run)
-	})
-
-	txDependencies := func(tx *gorm.DB) (projectservice.Dependencies, error) {
+	txDependencies := func(unit apptransaction.UnitOfWork) (projectservice.Dependencies, error) {
+		tx, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return projectservice.Dependencies{}, fmt.Errorf("project transaction unit: %w", err)
+		}
 		txRepos, err := NewRepositories(tx)
 		if err != nil {
 			return projectservice.Dependencies{}, fmt.Errorf("transaction repositories: %w", err)
@@ -66,7 +69,7 @@ func newProjectServices(gormDB *gorm.DB, repos *Repositories, facilityServices *
 	}
 
 	return projectservice.NewServices(buildProjectDependencies(repos, facilityServices), projectservice.Config{
-		TxRunner:       txRunner,
+		TxRunner:       infratransaction.NewGormRunner(gormDB),
 		TxDependencies: txDependencies,
 	})
 }
