@@ -133,8 +133,10 @@ describe('permission-aware sidebar navigation', () => {
     state.setPermissions([
       permission('user'),
       permission('team'),
+      permission('team', 'create'),
       permission('role'),
       permission('project'),
+      permission('project', 'create'),
       permission('phase'),
       permission('building'),
       permission('timeline'),
@@ -142,7 +144,7 @@ describe('permission-aware sidebar navigation', () => {
     ]);
 
     render(AppSidebar, {
-      user: buildUser({ can_access_user_directory: true }),
+      user: buildUser({ role: 'admin_fzag', can_access_user_directory: true }),
       teams: [buildTeam()],
       projects: [buildProject()]
     });
@@ -158,6 +160,8 @@ describe('permission-aware sidebar navigation', () => {
     expect(screen.getByTestId('nav-link:/facility/buildings')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link:/admin/notifications/smtp')).toBeInTheDocument();
     expect(screen.getByTestId('project-link:project-1')).toBeInTheDocument();
+    expect(screen.getByTestId('team-switcher-create')).toBeInTheDocument();
+    expect(screen.getByTestId('project-create')).toBeInTheDocument();
   });
 
   it('keeps the roles entry hidden when the user may open the user directory but lacks role.read', () => {
@@ -193,5 +197,19 @@ describe('permission-aware sidebar navigation', () => {
 
     expect(screen.queryByTestId('nav-link:/facility/buildings')).not.toBeInTheDocument();
     expect(screen.queryByTestId('nav-link:/facility/control-cabinets')).not.toBeInTheDocument();
+  });
+
+  it('hides sidebar create actions when the matching create route would be forbidden', () => {
+    state.setPermissions([permission('team'), permission('project', 'listAll')]);
+
+    render(AppSidebar, {
+      user: buildUser({ can_access_user_directory: false }),
+      teams: [buildTeam()],
+      projects: [buildProject()]
+    });
+
+    expect(screen.queryByTestId('team-switcher-create')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('project-create')).not.toBeInTheDocument();
+    expect(screen.getByTestId('project-link:project-1')).toBeInTheDocument();
   });
 });

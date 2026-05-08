@@ -18,7 +18,6 @@ export const APP_ROUTE_ACCESS_RULES: RouteAccessRule[] = [
   { path: '/timeline', permission: 'timeline.read' },
 
   { path: '/users/directory', permission: 'user.read' },
-  { path: '/users/roles', permission: 'role.read' },
   { path: '/teams/new', permission: 'team.create' },
   { path: '/teams', permission: 'team.read' },
 
@@ -96,6 +95,11 @@ export const FACILITY_NAV_ACCESS: FacilityNavAccess[] = [
     titleKey: 'navigation.notification_classes',
     url: '/facility/notification-classes',
     permission: 'notificationclass.read'
+  },
+  {
+    titleKey: 'facility.specifications',
+    url: '/facility/specifications',
+    permission: 'specification.read'
   }
 ];
 

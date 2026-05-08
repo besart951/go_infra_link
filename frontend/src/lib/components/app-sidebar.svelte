@@ -39,6 +39,8 @@
       canPerform
     });
   });
+  const canCreateProject = $derived(canPerform('create', 'project'));
+  const canCreateTeam = $derived(canPerform('create', 'team'));
 
   // Transform projects for NavProjects component
   const projectItems = $derived(
@@ -72,7 +74,11 @@
 
 <Sidebar.Root collapsible="icon">
   <Sidebar.Header>
-    <TeamSwitcher {teams} bind:activeTeam onCreateTeam={handleCreateTeam} />
+    <TeamSwitcher
+      {teams}
+      bind:activeTeam
+      onCreateTeam={canCreateTeam ? handleCreateTeam : undefined}
+    />
   </Sidebar.Header>
 
   <Sidebar.Content>
@@ -81,7 +87,7 @@
       projects={projectItems}
       onViewProject={handleViewProject}
       onShareProject={handleShareProject}
-      onCreate={handleCreateProject}
+      onCreate={canCreateProject ? handleCreateProject : undefined}
     />
   </Sidebar.Content>
 

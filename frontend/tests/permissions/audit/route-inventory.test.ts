@@ -35,17 +35,20 @@ describe('route permission audit inventory', () => {
       '/admin/notifications/smtp',
       '/errors/:status',
       '/facility',
+      '/facility/specifications',
       '/login',
       '/logout',
       '/notifications',
       '/notifications/inbox',
       '/projects',
+      '/projects/:id/settings',
       '/projects/new',
       '/register/:token',
       '/teams/new',
-      '/users'
+      '/users',
+      '/users/roles'
     ]);
-    expect(summary.misconfigured).toHaveLength(29);
-    expect(configuredRoutePaths).toHaveLength(14);
+    expect(summary.misconfigured).toHaveLength(26);
+    expect(configuredRoutePaths).toHaveLength(17);
   });
 });

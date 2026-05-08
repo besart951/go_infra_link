@@ -168,14 +168,15 @@ export const routeAudits = [
   {
     path: '/users/roles',
     domain: 'user',
-    files: ['src/routes/(app)/users/roles/+page.svelte'],
+    files: ['src/routes/(app)/users/roles/+page.svelte', 'src/routes/(app)/users/roles/+page.ts'],
     auth: 'authenticated',
-    authorization: 'ui-only',
-    status: 'misconfigured',
+    authorization: 'route',
+    status: 'configured',
     expectedAccess:
-      'Requires role.read plus role.update or permission.update for management actions.',
+      'Requires superadmin or FZAG admin; FZAG admins cannot edit the superadmin role.',
     protectedUi: ['role and permission editor tabs', 'create permission dialog'],
-    notes: 'The route is reachable without role.read and still reveals the role matrix.'
+    notes:
+      'The page load and navigation both use the role-directory rule instead of the generic role.read permission.'
   },
   {
     path: '/teams',
@@ -250,15 +251,15 @@ export const routeAudits = [
     domain: 'project',
     files: ['src/routes/(app)/projects/[id]/settings/+page.svelte'],
     auth: 'authenticated',
-    authorization: 'none',
-    status: 'misconfigured',
-    expectedAccess: 'Requires project administration or ownership.',
+    authorization: 'route',
+    status: 'configured',
+    expectedAccess: 'Requires project.update.',
     protectedUi: [
       'project settings form',
       'project user management',
       'project object-data assignment'
     ],
-    notes: 'The settings route exposes project administration workflows without a route guard.'
+    notes: 'The app layout route guard and project detail settings CTA both use project.update.'
   },
   {
     path: '/projects/phases',
@@ -519,12 +520,12 @@ export const routeAudits = [
     domain: 'facility',
     files: ['src/routes/(app)/facility/specifications/+page.svelte'],
     auth: 'authenticated',
-    authorization: 'none',
-    status: 'misconfigured',
-    expectedAccess:
-      'Should be tied to a dedicated facility specification permission before exposure.',
+    authorization: 'route',
+    status: 'configured',
+    expectedAccess: 'Requires specification.read.',
     protectedUi: ['facility.specifications'],
-    notes: 'The page has no permission checks at all today.'
+    notes:
+      'The sidebar and hub expose the route only with specification.read; the field-device deep link remains hidden without fielddevice.read.'
   },
   {
     path: '/excel',

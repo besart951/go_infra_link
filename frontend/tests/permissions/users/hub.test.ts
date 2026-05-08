@@ -7,6 +7,17 @@ function createUser(overrides: Parameters<typeof buildUser>[0] = {}) {
   return buildUser(overrides);
 }
 
+function renderUsersHub() {
+  return render(UsersHubPage, {
+    data: {
+      backendAvailable: true,
+      user: state.user,
+      teams: [],
+      projects: []
+    }
+  });
+}
+
 const state = vi.hoisted(() => {
   const grantedPermissions = new Set<string>();
 
@@ -59,17 +70,26 @@ describe('/users hub permission surface', () => {
   it('hides the roles card when the user only has directory access', () => {
     state.user = createUser({ can_access_user_directory: true });
 
-    render(UsersHubPage);
+    renderUsersHub();
 
     expect(screen.getByText('hub.users.directory_title')).toBeInTheDocument();
     expect(screen.queryByText('navigation.roles_permissions')).not.toBeInTheDocument();
   });
 
-  it('shows the roles card when role.read is granted', () => {
-    state.setPermissions([permission('role')]);
+  it('shows the roles card for FZAG admins without relying on role.read', () => {
+    state.user = createUser({ role: 'admin_fzag' });
 
-    render(UsersHubPage);
+    renderUsersHub();
 
     expect(screen.getByText('navigation.roles_permissions')).toBeInTheDocument();
+  });
+
+  it('hides the roles card from non-admin roles even when role.read is granted', () => {
+    state.user = createUser({ role: 'fzag' });
+    state.setPermissions([permission('role')]);
+
+    renderUsersHub();
+
+    expect(screen.queryByText('navigation.roles_permissions')).not.toBeInTheDocument();
   });
 });

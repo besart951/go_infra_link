@@ -23,11 +23,13 @@
     EntityDeltaRequest,
     EntityRefreshRequest
   } from '$lib/components/facility/shared/entityRefresh.js';
+  import { canPerform } from '$lib/utils/permissions.js';
   import { ProjectCollaborationState } from '$lib/services/projectCollaboration.svelte.js';
   import { Cpu, History, PanelsTopLeft, Settings, Server, Wifi, WifiOff } from '@lucide/svelte';
 
   const t = createTranslator();
   const projectId = $derived($page.params.id ?? '');
+  const canOpenProjectSettings = $derived(canPerform('update', 'project'));
 
   let project = $state<Project | null>(null);
   let loading = $state(true);
@@ -475,17 +477,19 @@
         </Tooltip.Content>
       </Tooltip.Root>
 
-      <Tooltip.Root>
-        <Tooltip.Trigger>
-          <Button variant="ghost" href={`/projects/${projectId}/settings`} size="icon">
-            <Settings />
-          </Button>
-        </Tooltip.Trigger>
+      {#if canOpenProjectSettings}
+        <Tooltip.Root>
+          <Tooltip.Trigger>
+            <Button variant="ghost" href={`/projects/${projectId}/settings`} size="icon">
+              <Settings />
+            </Button>
+          </Tooltip.Trigger>
 
-        <Tooltip.Content>
-          {$t('projects.detail.settings')}
-        </Tooltip.Content>
-      </Tooltip.Root>
+          <Tooltip.Content>
+            {$t('projects.detail.settings')}
+          </Tooltip.Content>
+        </Tooltip.Root>
+      {/if}
     </div>
   </EntityListHeader>
 

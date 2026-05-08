@@ -124,7 +124,7 @@
         href: '/facility/specifications',
         icon: FileSlidersIcon,
         tone: 'facility',
-        hasAccess: canPerform('read', 'specification') || canPerform('read', 'fielddevice')
+        hasAccess: canPerform('read', 'specification')
       }
     ].filter((item) => item.hasAccess)
   );

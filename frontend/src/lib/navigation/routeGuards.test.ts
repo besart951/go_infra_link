@@ -26,6 +26,10 @@ describe('route guards', () => {
     expect(canAccessProtectedRoute(user(['team.create']), '/teams/new')).toBe(true);
   });
 
+  it('leaves the role directory to its role-based page guard', () => {
+    expect(getRequiredPermissionForRoute('/users/roles')).toBeUndefined();
+  });
+
   it('maps facility routes to canonical read permissions', () => {
     expect(getRequiredPermissionForRoute('/facility/alarm-catalog')).toBe('alarmtype.read');
     expect(getRequiredPermissionForRoute('/facility/sps-controller-system-type/123')).toBe(
