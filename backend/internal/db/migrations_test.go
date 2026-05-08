@@ -1,6 +1,8 @@
 package db
 
 import (
+	"context"
+	"path/filepath"
 	"slices"
 	"testing"
 	"time"
@@ -8,6 +10,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -84,9 +87,79 @@ func TestUnifyPermissionModelMigratesRemovedEditPermissions(t *testing.T) {
 	}
 }
 
+func TestProjectPhaseMigrationBackfillsAlreadyBaselinedDatabase(t *testing.T) {
+	db := openMigrationTestDB(t)
+	if err := db.AutoMigrate(&schemaMigration{}); err != nil {
+		t.Fatalf("expected migration table setup to succeed, got %v", err)
+	}
+
+	for _, migration := range migrations {
+		if migration.version == "202605080003" {
+			continue
+		}
+		if err := db.Create(&schemaMigration{
+			Version:     migration.version,
+			Description: migration.description,
+			AppliedAt:   time.Now().UTC(),
+		}).Error; err != nil {
+			t.Fatalf("expected migration %s to be marked applied, got %v", migration.version, err)
+		}
+	}
+
+	if err := db.Exec(`
+		CREATE TABLE projects (
+			id text PRIMARY KEY,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			name text NOT NULL,
+			description text,
+			status text NOT NULL,
+			start_date datetime,
+			creator_id text NOT NULL
+		)
+	`).Error; err != nil {
+		t.Fatalf("expected old projects table setup to succeed, got %v", err)
+	}
+
+	projectID := uuid.New()
+	creatorID := uuid.New()
+	now := time.Now().UTC()
+	if err := db.Exec(
+		`INSERT INTO projects (id, created_at, updated_at, name, description, status, creator_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		projectID.String(), now, now, "Legacy Project", "created before phases", string(domainProject.StatusPlanned), creatorID.String(),
+	).Error; err != nil {
+		t.Fatalf("expected old project setup to succeed, got %v", err)
+	}
+
+	if err := ApplyMigrations(db); err != nil {
+		t.Fatalf("expected migrations to backfill project phases, got %v", err)
+	}
+
+	if !db.Migrator().HasTable(&domainProject.Phase{}) {
+		t.Fatal("expected phases table to be created for already-baselined databases")
+	}
+	if !db.Migrator().HasColumn(&projectrepo.ProjectRecord{}, "phase_id") {
+		t.Fatal("expected projects.phase_id to be added for already-baselined databases")
+	}
+
+	repo := projectrepo.NewProjectRepository(db)
+	projects, err := repo.GetPaginatedList(context.Background(), domain.PaginationParams{Page: 1, Limit: 10})
+	if err != nil {
+		t.Fatalf("expected project list to work after migration, got %v", err)
+	}
+	if len(projects.Items) != 1 {
+		t.Fatalf("expected one legacy project, got %d", len(projects.Items))
+	}
+
+	expectedPhaseID := uuid.MustParse("019c780c-f7eb-709a-93dc-5e7458cf4466")
+	if projects.Items[0].PhaseID != expectedPhaseID {
+		t.Fatalf("expected legacy project to be assigned default phase %s, got %s", expectedPhaseID, projects.Items[0].PhaseID)
+	}
+}
+
 func openMigrationTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{DisableForeignKeyConstraintWhenMigrating: true})
+	db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "migration.db")), &gorm.Config{DisableForeignKeyConstraintWhenMigrating: true})
 	if err != nil {
 		t.Fatalf("expected sqlite db to open, got %v", err)
 	}

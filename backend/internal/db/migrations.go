@@ -127,6 +127,12 @@ var migrations = []migration{
 		blueGreenCompatible: true,
 		apply:               migrateUserRegistrations,
 	},
+	{
+		version:             "202605080003",
+		description:         "project_phases_for_existing_databases",
+		blueGreenCompatible: true,
+		apply:               migrateProjectPhases,
+	},
 }
 
 type MigrationOptions struct {

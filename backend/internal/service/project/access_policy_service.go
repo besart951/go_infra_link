@@ -60,7 +60,7 @@ func (s *ProjectAccessPolicyService) CanUseProjectPermissionForProject(ctx conte
 	if err != nil || !ok {
 		return false, err
 	}
-	if role == domainUser.RoleSuperAdmin {
+	if roleCanAccessAllProjects(role) {
 		return true, nil
 	}
 
