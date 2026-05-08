@@ -77,6 +77,7 @@ func newProjectServices(gormDB *gorm.DB, repos *Repositories, facilityServices *
 func buildProjectDependencies(repos *Repositories, facilityServices *facilityservice.Services) projectservice.Dependencies {
 	return projectservice.Dependencies{
 		Projects:                 repos.Project,
+		Phases:                   repos.Phase,
 		PhasePermissions:         repos.PhasePermissions,
 		ProjectControlCabinets:   repos.ProjectControlCabinets,
 		ProjectSPSControllers:    repos.ProjectSPSControllers,

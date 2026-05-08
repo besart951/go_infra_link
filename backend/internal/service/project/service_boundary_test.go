@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -243,6 +244,90 @@ func TestProjectAccessPolicyService_EmptyPhaseRuleDeniesProjectPermissions(t *te
 	}
 }
 
+func TestProjectAccessPolicyService_ExplainDenialReportsMissingGeneralPermission(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	phaseID := uuid.New()
+	role := domainUser.RolePlaner
+
+	projectRepo := newProjectRepo()
+	projectRepo.items[projectID] = &domainProject.Project{Base: domain.Base{ID: projectID}, PhaseID: phaseID}
+
+	rolePermissionRepo := newProjectRolePermissionRepo()
+	rolePermissionRepo.grant(domainUser.RoleAdminPlaner, domainUser.PermissionProjectFieldDeviceUpdate)
+
+	svc := NewServices(Dependencies{
+		Projects:        projectRepo,
+		RolePermissions: rolePermissionRepo,
+	}).AccessPolicy
+
+	details, err := svc.ExplainProjectScopedPermissionDenial(ctx, uuid.New(), projectID, &role, []string{domainUser.PermissionProjectFieldDeviceUpdate})
+	if err != nil {
+		t.Fatalf("expected denial explanation to succeed, got %v", err)
+	}
+	if details.Reason != domainProject.PermissionDenialReasonMissingGeneral {
+		t.Fatalf("expected missing general permission reason, got %q", details.Reason)
+	}
+	if details.MinimumRole != domainUser.RoleAdminPlaner {
+		t.Fatalf("expected minimum role %q, got %q", domainUser.RoleAdminPlaner, details.MinimumRole)
+	}
+	if !strings.Contains(details.Message, "keine allgemeine Berechtigung") {
+		t.Fatalf("expected message to mention missing general permission, got %q", details.Message)
+	}
+	if !strings.Contains(details.Message, "Planner Administrator") {
+		t.Fatalf("expected message to mention required role label, got %q", details.Message)
+	}
+}
+
+func TestProjectAccessPolicyService_ExplainDenialReportsPhaseRestriction(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	phaseID := uuid.New()
+	role := domainUser.RoleAdminPlaner
+
+	projectRepo := newProjectRepo()
+	projectRepo.items[projectID] = &domainProject.Project{Base: domain.Base{ID: projectID}, PhaseID: phaseID}
+
+	phaseRepo := newProjectPhaseRepo()
+	phaseRepo.items[phaseID] = &domainProject.Phase{Base: domain.Base{ID: phaseID}, Name: "SIA 51"}
+
+	rolePermissionRepo := newProjectRolePermissionRepo()
+	rolePermissionRepo.grant(role, domainUser.PermissionProjectFieldDeviceUpdate)
+
+	phasePermissionRepo := newProjectPhasePermissionRepo()
+	if err := phasePermissionRepo.Create(ctx, &domainProject.PhasePermission{
+		PhaseID:     phaseID,
+		Role:        role,
+		Permissions: []string{domainUser.PermissionProjectFieldDeviceRead},
+	}); err != nil {
+		t.Fatalf("expected phase rule setup to succeed, got %v", err)
+	}
+
+	svc := NewServices(Dependencies{
+		Projects:         projectRepo,
+		Phases:           phaseRepo,
+		RolePermissions:  rolePermissionRepo,
+		PhasePermissions: phasePermissionRepo,
+	}).AccessPolicy
+
+	details, err := svc.ExplainProjectScopedPermissionDenial(ctx, uuid.New(), projectID, &role, []string{domainUser.PermissionProjectFieldDeviceUpdate})
+	if err != nil {
+		t.Fatalf("expected denial explanation to succeed, got %v", err)
+	}
+	if details.Reason != domainProject.PermissionDenialReasonPhaseBlocked {
+		t.Fatalf("expected phase blocked reason, got %q", details.Reason)
+	}
+	if details.PhaseName != "SIA 51" {
+		t.Fatalf("expected phase name in details, got %q", details.PhaseName)
+	}
+	if !strings.Contains(details.Message, "Phase \"SIA 51\"") {
+		t.Fatalf("expected message to mention project phase, got %q", details.Message)
+	}
+	if !strings.Contains(details.Message, "keine Berechtigung") {
+		t.Fatalf("expected message to mention missing phase permission, got %q", details.Message)
+	}
+}
+
 func TestProjectMembershipService_InviteListRemoveUser_CharacterizesMembershipBoundary(t *testing.T) {
 	ctx := context.Background()
 	projectID := uuid.New()
@@ -438,6 +523,55 @@ func (r *projectRolePermissionRepoFake) DeleteByPermissionName(_ context.Context
 		r.items[role] = next
 	}
 	return nil
+}
+
+type projectPhaseRepoFake struct {
+	items map[uuid.UUID]*domainProject.Phase
+}
+
+func newProjectPhaseRepo() *projectPhaseRepoFake {
+	return &projectPhaseRepoFake{items: map[uuid.UUID]*domainProject.Phase{}}
+}
+
+func (r *projectPhaseRepoFake) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainProject.Phase, error) {
+	out := make([]*domainProject.Phase, 0, len(ids))
+	for _, id := range ids {
+		if item, ok := r.items[id]; ok {
+			clone := *item
+			out = append(out, &clone)
+		}
+	}
+	return out, nil
+}
+
+func (r *projectPhaseRepoFake) Create(_ context.Context, entity *domainProject.Phase) error {
+	if entity.ID == uuid.Nil {
+		entity.ID = uuid.New()
+	}
+	clone := *entity
+	r.items[entity.ID] = &clone
+	return nil
+}
+
+func (r *projectPhaseRepoFake) Update(_ context.Context, entity *domainProject.Phase) error {
+	clone := *entity
+	r.items[entity.ID] = &clone
+	return nil
+}
+
+func (r *projectPhaseRepoFake) DeleteByIds(_ context.Context, ids []uuid.UUID) error {
+	for _, id := range ids {
+		delete(r.items, id)
+	}
+	return nil
+}
+
+func (r *projectPhaseRepoFake) GetPaginatedList(_ context.Context, _ domain.PaginationParams) (*domain.PaginatedList[domainProject.Phase], error) {
+	items := make([]domainProject.Phase, 0, len(r.items))
+	for _, item := range r.items {
+		items = append(items, *item)
+	}
+	return &domain.PaginatedList[domainProject.Phase]{Items: items, Total: int64(len(items)), Page: 1, TotalPages: 1}, nil
 }
 
 type projectPhasePermissionRepoFake struct {

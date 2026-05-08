@@ -6,6 +6,7 @@ export const load: PageLoad = ({ params, url }) => {
 
   return {
     status,
-    from: url.searchParams.get('from')
+    from: url.searchParams.get('from'),
+    message: url.searchParams.get('message')
   };
 };

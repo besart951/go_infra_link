@@ -48,7 +48,11 @@ export function getHttpErrorPath(status: number): string | null {
   return null;
 }
 
-export function buildHttpErrorRoute(status: number, fromPath: string): string | null {
+export function buildHttpErrorRoute(
+  status: number,
+  fromPath: string,
+  message?: string
+): string | null {
   const path = getHttpErrorPath(status);
   if (!path) return null;
 
@@ -56,10 +60,13 @@ export function buildHttpErrorRoute(status: number, fromPath: string): string | 
   if (fromPath && fromPath !== path) {
     target.searchParams.set('from', fromPath);
   }
+  if (message?.trim()) {
+    target.searchParams.set('message', message.trim());
+  }
   return `${target.pathname}${target.search}`;
 }
 
-async function navigateToHttpErrorPage(status: number): Promise<boolean> {
+async function navigateToHttpErrorPage(status: number, message?: string): Promise<boolean> {
   if (typeof window === 'undefined') return false;
 
   const path = getHttpErrorPath(status);
@@ -70,7 +77,7 @@ async function navigateToHttpErrorPage(status: number): Promise<boolean> {
     return true;
   }
 
-  const route = buildHttpErrorRoute(status, currentPath);
+  const route = buildHttpErrorRoute(status, currentPath, message);
   if (!route) return false;
 
   const { goto } = await import('$app/navigation');
@@ -255,21 +262,15 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
           );
         }
 
-        if (!skipHttpErrorNavigation && (await navigateToHttpErrorPage(response.status))) {
-          throw new HandledApiException(
-            response.status,
-            error.error,
-            localizeErrorText(error.message || response.statusText || `HTTP ${response.status}`),
-            error.details
-          );
+        const message = localizeErrorText(
+          error.message || response.statusText || `HTTP ${response.status}`
+        );
+
+        if (!skipHttpErrorNavigation && (await navigateToHttpErrorPage(response.status, message))) {
+          throw new HandledApiException(response.status, error.error, message, error.details);
         }
 
-        throw new ApiException(
-          response.status,
-          error.error,
-          localizeErrorText(error.message || `HTTP ${response.status}`),
-          error.details
-        );
+        throw new ApiException(response.status, error.error, message, error.details);
       }
 
       reportApiSuccess();

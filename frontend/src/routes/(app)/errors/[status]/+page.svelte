@@ -5,4 +5,4 @@
   let { data }: { data: PageData } = $props();
 </script>
 
-<HttpErrorPage status={data.status} from={data.from} />
+<HttpErrorPage status={data.status} from={data.from} fallbackMessage={data.message ?? undefined} />

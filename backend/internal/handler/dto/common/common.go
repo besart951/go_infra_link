@@ -18,6 +18,7 @@ type ErrorResponse struct {
 	Code         string               `json:"code,omitempty"`
 	Message      string               `json:"message,omitempty"`
 	LocalizedKey string               `json:"localized_key,omitempty"`
+	Details      any                  `json:"details,omitempty"`
 	Fields       map[string]string    `json:"fields,omitempty"`
 	FieldErrors  []FieldErrorResponse `json:"field_errors,omitempty"`
 	RequestID    string               `json:"request_id,omitempty"`

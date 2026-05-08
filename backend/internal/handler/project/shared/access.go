@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
@@ -17,6 +18,11 @@ type AccessPolicyService interface {
 	CanAccessProject(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role) (bool, error)
 	CanUseProjectPermission(ctx context.Context, requesterID uuid.UUID, requesterRole *domainUser.Role, permission string) (bool, error)
 	CanUseProjectPermissionForProject(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role, permission string) (bool, error)
+}
+
+type PermissionDenialExplainer interface {
+	ExplainProjectPermissionDenial(ctx context.Context, requesterID uuid.UUID, requesterRole *domainUser.Role, permissions []string) (*domainProject.PermissionDenialDetails, error)
+	ExplainProjectScopedPermissionDenial(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role, permissions []string) (*domainProject.PermissionDenialDetails, error)
 }
 
 type ProjectChangeNotifier func(*gin.Context, uuid.UUID, string, ...string)
@@ -124,7 +130,7 @@ func EnsureProjectAnyPermission(c *gin.Context, access AccessPolicyService, perm
 		}
 	}
 
-	handlerutil.RespondLocalizedError(c, http.StatusForbidden, "forbidden", "errors.forbidden")
+	respondPermissionDenied(c, access, userID, uuid.Nil, requesterRole, permissions)
 	return false
 }
 
@@ -171,8 +177,33 @@ func EnsureProjectAnyPermissionForProject(c *gin.Context, access AccessPolicySer
 		}
 	}
 
-	handlerutil.RespondLocalizedError(c, http.StatusForbidden, "forbidden", "errors.forbidden")
+	respondPermissionDenied(c, access, userID, projectID, requesterRole, permissions)
 	return false
+}
+
+func respondPermissionDenied(c *gin.Context, access AccessPolicyService, userID, projectID uuid.UUID, requesterRole *domainUser.Role, permissions []string) {
+	message := "Sie haben keine Berechtigung für diese Aktion."
+	var details *domainProject.PermissionDenialDetails
+
+	if explainer, ok := access.(PermissionDenialExplainer); ok {
+		var (
+			explained *domainProject.PermissionDenialDetails
+			err       error
+		)
+		if projectID != uuid.Nil {
+			explained, err = explainer.ExplainProjectScopedPermissionDenial(c.Request.Context(), userID, projectID, requesterRole, permissions)
+		} else {
+			explained, err = explainer.ExplainProjectPermissionDenial(c.Request.Context(), userID, requesterRole, permissions)
+		}
+		if err == nil && explained != nil {
+			details = explained
+			if explained.Message != "" {
+				message = explained.Message
+			}
+		}
+	}
+
+	handlerutil.RespondErrorWithDetails(c, http.StatusForbidden, "authorization_failed", message, "errors.forbidden", details)
 }
 
 func projectAccessCacheKey(userID, projectID uuid.UUID, requesterRole *domainUser.Role) string {

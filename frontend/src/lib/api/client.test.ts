@@ -33,11 +33,22 @@ describe('api client HTTP error navigation', () => {
     expect(buildHttpErrorRoute(403, '/projects/project-1')).toBe(
       '/errors/403?from=%2Fprojects%2Fproject-1'
     );
+    expect(
+      buildHttpErrorRoute(
+        403,
+        '/projects/project-1',
+        'Das Projekt befindet sich in der Phase "SIA 51".'
+      )
+    ).toBe(
+      '/errors/403?from=%2Fprojects%2Fproject-1&message=Das+Projekt+befindet+sich+in+der+Phase+%22SIA+51%22.'
+    );
   });
 
-  it('navigates 403 responses to the forbidden page with replaceState', async () => {
+  it('navigates 403 responses to the forbidden page with the backend message', async () => {
+    const backendMessage =
+      'Das Projekt befindet sich in der Phase "SIA 51". In dieser Phase haben Sie keine Berechtigung.';
     const customFetch = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ error: 'authorization_failed', message: 'Forbidden' }), {
+      new Response(JSON.stringify({ error: 'authorization_failed', message: backendMessage }), {
         status: 403,
         statusText: 'Forbidden',
         headers: { 'Content-Type': 'application/json' }
@@ -48,9 +59,12 @@ describe('api client HTTP error navigation', () => {
       HandledApiException
     );
 
-    expect(mockGoto).toHaveBeenCalledWith('/errors/403?from=%2Fprojects%2Fproject-1', {
-      replaceState: true
-    });
+    expect(mockGoto).toHaveBeenCalledWith(
+      '/errors/403?from=%2Fprojects%2Fproject-1&message=Das+Projekt+befindet+sich+in+der+Phase+%22SIA+51%22.+In+dieser+Phase+haben+Sie+keine+Berechtigung.',
+      {
+        replaceState: true
+      }
+    );
   });
 
   it('navigates 404 responses to the not-found page with replaceState', async () => {
@@ -66,9 +80,12 @@ describe('api client HTTP error navigation', () => {
       HandledApiException
     );
 
-    expect(mockGoto).toHaveBeenCalledWith('/errors/404?from=%2Fprojects%2Fproject-1', {
-      replaceState: true
-    });
+    expect(mockGoto).toHaveBeenCalledWith(
+      '/errors/404?from=%2Fprojects%2Fproject-1&message=errors.not_found',
+      {
+        replaceState: true
+      }
+    );
   });
 
   it('lets callers handle recoverable 404 responses without page navigation', async () => {

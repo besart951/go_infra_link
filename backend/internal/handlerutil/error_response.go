@@ -26,6 +26,16 @@ func RespondErrorWithLocalizedKey(c *gin.Context, status int, code, message, loc
 	})
 }
 
+func RespondErrorWithDetails(c *gin.Context, status int, code, message, localizedKey string, details any) {
+	respondErrorResponse(c, status, dto.ErrorResponse{
+		Error:        code,
+		Code:         code,
+		Message:      message,
+		LocalizedKey: localizedKey,
+		Details:      details,
+	})
+}
+
 func RespondValidationError(c *gin.Context, fields map[string]string) {
 	RespondValidationErrorWithStatus(c, http.StatusBadRequest, fields)
 }
