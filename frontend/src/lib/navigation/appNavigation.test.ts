@@ -64,6 +64,36 @@ describe('app navigation', () => {
     expect(users?.items?.map((item) => item.url)).toEqual(['/users', '/users/directory']);
   });
 
+  it('shows role management to FZAG admins without relying on role.read', () => {
+    const items = buildAppNavItems({
+      pathname: '/users/roles',
+      user: {
+        ...baseUser,
+        role: 'admin_fzag'
+      } as User,
+      translate,
+      canPerform: () => false
+    });
+
+    const users = items.find((item) => item.url === '/users');
+    expect(users?.items?.map((item) => item.url)).toContain('/users/roles');
+  });
+
+  it('hides role management from non-admin FZAG users even with role.read', () => {
+    const items = buildAppNavItems({
+      pathname: '/users',
+      user: {
+        ...baseUser,
+        role: 'fzag'
+      } as User,
+      translate,
+      canPerform: (action, resource) => action === 'read' && resource === 'role'
+    });
+
+    const users = items.find((item) => item.url === '/users');
+    expect(users?.items?.map((item) => item.url) ?? []).not.toContain('/users/roles');
+  });
+
   it('places the global timeline directly below the Excel importer', () => {
     const items = buildAppNavItems({
       pathname: '/timeline',

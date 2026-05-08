@@ -303,11 +303,7 @@
   </div>
 
   <section class="rounded-md border bg-card p-3">
-    <div
-      class={entityTable
-        ? 'grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(13rem,1.2fr)_minmax(13rem,1.1fr)_minmax(15rem,1.4fr)_minmax(12rem,0.85fr)_minmax(12rem,0.85fr)_auto]'
-        : 'grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(13rem,1.2fr)_minmax(13rem,1.1fr)_minmax(12rem,0.85fr)_minmax(12rem,0.85fr)_auto]'}
-    >
+    <div class="timeline-filter-grid">
       <div class="min-w-0 space-y-1.5">
         <Label for="timeline_user">{$t('history.timeline.filters.user')}</Label>
         <AsyncCombobox
@@ -362,7 +358,7 @@
 
       <div class="min-w-0 space-y-1.5">
         <Label for="timeline_from">{$t('history.timeline.filters.from')}</Label>
-        <div class="grid grid-cols-[minmax(0,1fr)_8.5rem] gap-2">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem]">
           <Input
             id="timeline_from"
             type="date"
@@ -383,7 +379,7 @@
 
       <div class="min-w-0 space-y-1.5">
         <Label for="timeline_to">{$t('history.timeline.filters.to')}</Label>
-        <div class="grid grid-cols-[minmax(0,1fr)_8.5rem] gap-2">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_8.5rem]">
           <Input
             id="timeline_to"
             type="date"
@@ -402,8 +398,12 @@
         </div>
       </div>
 
-      <div class="flex items-end gap-2">
-        <Button class="w-full xl:w-auto" onclick={applyFilters} disabled={loading || loadingMore}>
+      <div class="flex min-w-0 flex-wrap items-end gap-2">
+        <Button
+          class="min-w-0 flex-1 whitespace-normal xl:flex-none xl:whitespace-nowrap"
+          onclick={applyFilters}
+          disabled={loading || loadingMore}
+        >
           <SearchIcon class="size-4" />
           {$t('history.timeline.filters.apply')}
         </Button>
@@ -422,8 +422,8 @@
     {#if selectedEntityLabel || selectedFields.length > 0}
       <div class="mt-3 flex flex-wrap items-center gap-1.5 border-t pt-3">
         {#if selectedEntityLabel}
-          <Badge variant="outline" class="group gap-1.5 pr-1">
-            <span>{selectedEntityLabel}</span>
+          <Badge variant="outline" class="group max-w-full gap-1.5 pr-1">
+            <span class="min-w-0 break-words">{selectedEntityLabel}</span>
             <button
               type="button"
               class="grid size-4 place-items-center rounded-full opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
@@ -438,8 +438,8 @@
         {/if}
         {#each selectedFields as field (field)}
           {@const fieldLabel = historyFieldLabel(field)}
-          <Badge variant="secondary" class="group gap-1.5 pr-1">
-            <span>{fieldLabel}</span>
+          <Badge variant="secondary" class="group max-w-full gap-1.5 pr-1">
+            <span class="min-w-0 break-words">{fieldLabel}</span>
             <button
               type="button"
               class="grid size-4 place-items-center rounded-full opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary-foreground/20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
@@ -503,14 +503,14 @@
 
               <div class="min-w-0 space-y-2">
                 <div class="flex flex-wrap items-start justify-between gap-2">
-                  <div class="min-w-0 space-y-1">
+                  <div class="min-w-0 flex-1 basis-64 space-y-1">
                     <div class="flex min-w-0 flex-wrap items-center gap-2">
                       <Badge variant={historyActionVariant(event.action)}>
                         {historyActionLabel(event.action)}
                       </Badge>
                       <Tooltip.Root>
                         <Tooltip.Trigger
-                          class="max-w-full truncate text-left text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          class="max-w-full min-w-0 text-left text-sm font-medium break-words outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           {eventTitle(event)}
                         </Tooltip.Trigger>
@@ -530,11 +530,11 @@
                     <div
                       class="flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"
                     >
-                      <span class="truncate">{historyActorLabel(event)}</span>
+                      <span class="min-w-0 break-words">{historyActorLabel(event)}</span>
                       {#if scopeLabel(event)}
                         <Tooltip.Root>
                           <Tooltip.Trigger
-                            class="max-w-full truncate text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            class="max-w-full min-w-0 text-left break-words outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             {scopeLabel(event)}
                           </Tooltip.Trigger>
@@ -610,7 +610,7 @@
                         <div class="grid grid-cols-[minmax(0,1fr)_1rem_minmax(0,1fr)] gap-2">
                           <Tooltip.Root>
                             <Tooltip.Trigger
-                              class="truncate text-left text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              class="min-w-0 text-left break-words text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
                               {formatHistoryValue(diff.before)}
                             </Tooltip.Trigger>
@@ -622,7 +622,7 @@
                           <span class="text-center text-muted-foreground">-&gt;</span>
                           <Tooltip.Root>
                             <Tooltip.Trigger
-                              class="truncate text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              class="min-w-0 text-left font-medium break-words outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
                               {formatHistoryValue(diff.after)}
                             </Tooltip.Trigger>
@@ -642,7 +642,7 @@
                   {/if}
                 {:else}
                   <div
-                    class="rounded-md border bg-background px-2 py-1.5 text-xs text-muted-foreground"
+                    class="rounded-md border bg-background px-2 py-1.5 text-xs break-words text-muted-foreground"
                   >
                     {event.summary || $t('history.record')}
                   </div>
@@ -701,6 +701,13 @@
 </div>
 
 <style>
+  .timeline-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: 0.75rem;
+    align-items: end;
+  }
+
   :global(html:not(.dark) .timeline-native-picker) {
     color-scheme: light;
   }

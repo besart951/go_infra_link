@@ -18,9 +18,11 @@
   } from '$lib/components/roles/index.js';
   import { RolesPageState } from '$lib/components/roles/state/RolesPageState.svelte.js';
   import { GitBranch, RefreshCw, Grid3X3, LayoutGrid, Shield, Users } from '@lucide/svelte';
+  import type { PageData } from './$types';
 
   const t = createTranslator();
-  const state = new RolesPageState();
+  let { data }: { data: PageData } = $props();
+  const state = new RolesPageState({ user: () => data.user });
 
   onMount(() => {
     state.loadData();
@@ -40,7 +42,7 @@
     backHref="/users"
     backLabel={$t('common.back')}
     createLabel={$t('roles.actions.create_permission')}
-    canCreate={state.canManageRoles}
+    canCreate={state.canManagePermissionDefinitions}
     createActive={state.createPermissionDialogOpen}
     onCreateClick={state.openCreatePermissionDialog}
   >
@@ -157,9 +159,9 @@
           {#each state.roles as role (role.id)}
             <RoleCard
               {role}
-              onEdit={state.canManageRoles ? state.openEditRole : undefined}
+              onEdit={state.canEditRole(role) ? state.openEditRole : undefined}
               onViewPermissions={state.viewRolePermissions}
-              canEdit={state.canManageRoles}
+              canEdit={state.canEditRole(role)}
             />
           {/each}
         </div>
@@ -187,10 +189,10 @@
       {:else}
         <PermissionTable
           permissions={state.permissions}
-          onEdit={state.canManageRoles ? state.openEditPermission : undefined}
-          onDelete={state.canManageRoles ? state.deletePermission : undefined}
-          onCreate={state.canManageRoles ? state.openCreatePermissionDialog : undefined}
-          canManage={state.canManageRoles}
+          onEdit={state.canManagePermissionDefinitions ? state.openEditPermission : undefined}
+          onDelete={state.canManagePermissionDefinitions ? state.deletePermission : undefined}
+          onCreate={state.canManagePermissionDefinitions ? state.openCreatePermissionDialog : undefined}
+          canManage={state.canManagePermissionDefinitions}
         />
       {/if}
     </Tabs.Content>
@@ -268,6 +270,7 @@
         onCancel={state.closeRoleSheet}
         isSubmitting={state.isSubmittingRole}
         error={state.roleError}
+        canEdit={state.canEditSelectedRole}
       />
     {/if}
   </Sheet.Content>

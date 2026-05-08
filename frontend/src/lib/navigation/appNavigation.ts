@@ -179,7 +179,7 @@ const navDefinitions: NavDefinition[] = [
       {
         titleKey: 'navigation.roles_permissions',
         url: '/users/roles',
-        hasAccess: ({ canPerform }) => canAccessRoleDirectory(canPerform)
+        hasAccess: ({ user }) => canAccessRoleDirectory(user)
       }
     ]
   },

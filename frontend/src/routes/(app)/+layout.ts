@@ -2,7 +2,7 @@ import { ApiException, api } from '$lib/api/client';
 import type { LayoutLoad } from './$types';
 import type { User } from '$lib/domain/user';
 import type { Team } from '$lib/domain/team';
-import type { Project } from '$lib/domain/project';
+import type { Project, ProjectListResponse } from '$lib/domain/project';
 import { hasUserPermission } from '$lib/utils/permissions.js';
 
 // Disable SSR for this layout and children
@@ -40,7 +40,10 @@ export const load: LayoutLoad = async ({ fetch }) => {
             ? Promise.resolve([] as Team[])
             : api<Team[]>('/teams', { customFetch, skipHttpErrorNavigation: true });
         const projectPromise = hasPermission('project.listAll')
-          ? api<Project[]>('/projects', { customFetch, skipHttpErrorNavigation: true })
+          ? api<ProjectListResponse>('/projects?page=1&limit=10', {
+              customFetch,
+              skipHttpErrorNavigation: true
+            }).then((response) => response.items ?? [])
           : Promise.resolve([] as Project[]);
         const [t, p] = await Promise.all([teamPromise, projectPromise]);
         teams = t;

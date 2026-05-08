@@ -14,6 +14,9 @@ import {
   updateRolePermissions as apiUpdateRolePermissions
 } from '$lib/infrastructure/api/role.adapter.js';
 import { confirm } from '$lib/stores/confirm-dialog.js';
+import { auth } from '$lib/stores/auth.svelte.js';
+import type { User } from '$lib/domain/user/index.js';
+import { canAccessRoleDirectory, canEditRolePermissions } from '$lib/navigation/userAccess.js';
 import { canPerform } from '$lib/utils/permissions.js';
 
 export interface PermissionFormData {
@@ -21,6 +24,10 @@ export interface PermissionFormData {
   description: string;
   resource: string;
   action: string;
+}
+
+export interface RolesPageStateOptions {
+  user?: () => User | null | undefined;
 }
 
 function emptyPhaseResponse(): PhaseListResponse {
@@ -53,13 +60,31 @@ export class RolesPageState {
   permissionError = $state<string | null>(null);
   roleError = $state<string | null>(null);
 
-  canManageRoles = $derived(canPerform('update', 'role') || canPerform('update', 'permission'));
+  private resolveUser: () => User | null | undefined = () => auth.user;
+
+  constructor(options: RolesPageStateOptions = {}) {
+    this.resolveUser = options.user ?? (() => auth.user);
+  }
+
+  canManageRoles = $derived(canAccessRoleDirectory(this.currentUser));
+  canManagePermissionDefinitions = $derived(this.currentUser?.role === 'superadmin');
   canManagePhaseRules = $derived(canPerform('manage', 'phase_permission'));
   totalPermissions = $derived(this.permissions.length);
   totalRoles = $derived(this.roles.length);
   uniqueResources = $derived(
     new Set(this.permissions.map((permission) => permission.resource)).size
   );
+  canEditSelectedRole = $derived(
+    this.selectedRole ? this.canEditRole(this.selectedRole) : false
+  );
+
+  get currentUser(): User | null | undefined {
+    return this.resolveUser();
+  }
+
+  canEditRole(role: Role): boolean {
+    return canEditRolePermissions(this.currentUser, role.name);
+  }
 
   loadData = async (): Promise<void> => {
     this.isLoading = true;
@@ -117,6 +142,8 @@ export class RolesPageState {
   };
 
   openEditRole = (role: Role): void => {
+    if (!this.canEditRole(role)) return;
+
     this.selectedRole = role;
     this.roleError = null;
     this.editRoleSheetOpen = true;
@@ -188,6 +215,7 @@ export class RolesPageState {
 
   updateSelectedRolePermissions = async (data: { permissions: string[] }): Promise<void> => {
     if (!this.selectedRole) return;
+    if (!this.canEditRole(this.selectedRole)) return;
 
     this.isSubmittingRole = true;
     this.roleError = null;

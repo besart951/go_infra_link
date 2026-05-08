@@ -4,33 +4,64 @@ import (
 	"net/http"
 
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/requestutil"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
+func RequireAnyRole(authz AuthorizationChecker, roles ...domainUser.Role) gin.HandlerFunc {
+	allowed := make(map[domainUser.Role]struct{}, len(roles))
+	for _, role := range roles {
+		allowed[role] = struct{}{}
+	}
+
+	return func(c *gin.Context) {
+		role, ok := requireGlobalRole(c, authz)
+		if !ok {
+			return
+		}
+		if _, allowed := allowed[role]; !allowed {
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func RequireSuperAdminForRoleParam(authz AuthorizationChecker, roleParam string) gin.HandlerFunc {
+	if roleParam == "" {
+		roleParam = "role"
+	}
+
+	return func(c *gin.Context) {
+		if domainUser.Role(c.Param(roleParam)) != domainUser.RoleSuperAdmin {
+			c.Next()
+			return
+		}
+
+		role, ok := requireGlobalRole(c, authz)
+		if !ok {
+			return
+		}
+		if role != domainUser.RoleSuperAdmin {
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
 func RequirePermission(authz AuthorizationChecker, permission string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, ok := GetUserID(c)
+		role, ok := requireGlobalRole(c, authz)
 		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-			c.Abort()
 			return
 		}
 
 		ctx := c.Request.Context()
-		role, err := authz.GetGlobalRole(ctx, userID)
-		if err != nil {
-			if requestutil.ShouldSuppressErrorResponse(ctx, err) {
-				c.Abort()
-				return
-			}
-
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
-			c.Abort()
-			return
-		}
-
 		hasPermission, err := authz.HasPermission(ctx, role, permission)
 		if err != nil {
 			if requestutil.ShouldSuppressErrorResponse(ctx, err) {
@@ -49,6 +80,30 @@ func RequirePermission(authz AuthorizationChecker, permission string) gin.Handle
 		}
 		c.Next()
 	}
+}
+
+func requireGlobalRole(c *gin.Context, authz AuthorizationChecker) (domainUser.Role, bool) {
+	userID, ok := GetUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.Abort()
+		return "", false
+	}
+
+	ctx := c.Request.Context()
+	role, err := authz.GetGlobalRole(ctx, userID)
+	if err != nil {
+		if requestutil.ShouldSuppressErrorResponse(ctx, err) {
+			c.Abort()
+			return "", false
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
+		c.Abort()
+		return "", false
+	}
+
+	return role, true
 }
 
 func RequireTeamPermission(authz AuthorizationChecker, teamIDParam string, permission string) gin.HandlerFunc {

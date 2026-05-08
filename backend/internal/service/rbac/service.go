@@ -72,5 +72,8 @@ func (s *Service) GetAllowedRoles(ctx context.Context, requesterRole domainUser.
 		return nil, err
 	}
 	requesterPermissions := permissionSets[requesterRole]
-	return manageableRolesForPermissionSet(roles, requesterPermissions, permissionSets), nil
+	return withoutRole(
+		manageableRolesForPermissionSet(roles, requesterPermissions, permissionSets),
+		domainUser.RoleSuperAdmin,
+	), nil
 }

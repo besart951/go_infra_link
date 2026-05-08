@@ -80,6 +80,7 @@ const RESOURCE_DISPLAY_NAMES: Record<string, string> = {
 export interface RolePermissionEditorStateOptions {
   role: () => Role;
   allPermissions: () => Permission[];
+  canEdit?: () => boolean;
 }
 
 function createPermissionSet(values?: Iterable<string>): Set<string> {
@@ -102,6 +103,7 @@ export class RolePermissionEditorState {
 
   private readonly resolveRole: () => Role;
   private readonly resolveAllPermissions: () => Permission[];
+  private readonly resolveCanEdit: () => boolean;
   private roleSignature = $state('');
 
   private permissionsByCategoryValue = $derived.by(() => {
@@ -115,6 +117,7 @@ export class RolePermissionEditorState {
   constructor(options: RolePermissionEditorStateOptions) {
     this.resolveRole = options.role;
     this.resolveAllPermissions = options.allPermissions;
+    this.resolveCanEdit = options.canEdit ?? (() => true);
 
     this.setupEffects();
   }
@@ -125,6 +128,10 @@ export class RolePermissionEditorState {
 
   get allPermissions(): Permission[] {
     return this.resolveAllPermissions();
+  }
+
+  get canEdit(): boolean {
+    return this.resolveCanEdit();
   }
 
   get selectedCount(): number {
@@ -222,6 +229,8 @@ export class RolePermissionEditorState {
   }
 
   togglePermission(permissionName: string): void {
+    if (!this.canEdit) return;
+
     const next = createPermissionSet(this.selectedPermissions);
     if (next.has(permissionName)) {
       next.delete(permissionName);
@@ -255,6 +264,8 @@ export class RolePermissionEditorState {
   }
 
   toggleAllInResource(categoryId: CategoryId, resource: string): void {
+    if (!this.canEdit) return;
+
     const permissions = this.permissionsByCategoryValue[categoryId][resource] ?? [];
     const allSelected = this.areAllSelected(permissions);
 
@@ -271,6 +282,8 @@ export class RolePermissionEditorState {
   }
 
   toggleAllInCategory(categoryId: CategoryId): void {
+    if (!this.canEdit) return;
+
     const byResource = this.permissionsByCategoryValue[categoryId];
     const permissions = this.flattenPermissions(byResource);
     const allSelected = this.areAllSelected(permissions);
@@ -288,6 +301,8 @@ export class RolePermissionEditorState {
   }
 
   selectAll(): void {
+    if (!this.canEdit) return;
+
     const next = createPermissionSet();
     for (const permission of this.allPermissions) {
       next.add(permission.name);
@@ -297,6 +312,8 @@ export class RolePermissionEditorState {
   }
 
   deselectAll(): void {
+    if (!this.canEdit) return;
+
     this.selectedPermissions = createPermissionSet();
   }
 

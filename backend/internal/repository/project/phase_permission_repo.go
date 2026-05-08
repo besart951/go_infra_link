@@ -3,12 +3,14 @@ package project
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
 
@@ -23,6 +25,10 @@ func NewPhasePermissionRepository(db *gorm.DB) domainProject.PhasePermissionRepo
 		BaseRepository: baseRepo,
 		db:             db,
 	}
+}
+
+func (r *phasePermissionRepo) Create(ctx context.Context, rule *domainProject.PhasePermission) error {
+	return mapPhasePermissionWriteError(r.BaseRepository.Create(ctx, rule))
 }
 
 func (r *phasePermissionRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainProject.PhasePermission], error) {
@@ -56,4 +62,21 @@ func (r *phasePermissionRepo) List(ctx context.Context, phaseID *uuid.UUID) ([]d
 	var rules []domainProject.PhasePermission
 	err := query.Order("phase_id ASC, role ASC").Find(&rules).Error
 	return rules, err
+}
+
+func mapPhasePermissionWriteError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return domain.ErrConflict
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return domain.ErrConflict
+	}
+	if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+		return domain.ErrConflict
+	}
+	return err
 }

@@ -257,7 +257,20 @@ func manageableRoles(role domainUser.Role, roles []domainUser.Role, rolePermissi
 	if role == domainUser.RoleSuperAdmin {
 		return append([]domainUser.Role{}, roles...)
 	}
-	return manageableRolesForPermissionSet(roles, rolePermissionSets[role], rolePermissionSets)
+	return withoutRole(
+		manageableRolesForPermissionSet(roles, rolePermissionSets[role], rolePermissionSets),
+		domainUser.RoleSuperAdmin,
+	)
+}
+
+func withoutRole(roles []domainUser.Role, excluded domainUser.Role) []domainUser.Role {
+	filtered := make([]domainUser.Role, 0, len(roles))
+	for _, role := range roles {
+		if role != excluded {
+			filtered = append(filtered, role)
+		}
+	}
+	return filtered
 }
 
 func manageableRolesForPermissionSet(roles []domainUser.Role, requesterPermissions permissionSet, rolePermissionSets map[domainUser.Role]permissionSet) []domainUser.Role {

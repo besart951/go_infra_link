@@ -43,6 +43,7 @@
         checked={isFullySelected}
         indeterminate={isPartiallySelected}
         onCheckedChange={handleToggleAll}
+        disabled={!state.canEdit}
         aria-label={`Select all ${label} permissions`}
       />
 

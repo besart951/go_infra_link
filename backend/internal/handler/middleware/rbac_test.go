@@ -96,6 +96,98 @@ func TestRequireTeamPermission_GlobalPermissionBypassesMembershipRole(t *testing
 	}
 }
 
+func TestRequireAnyRole_AllowsConfiguredRole(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	userID := uuid.New()
+	authz := &authCheckerStub{globalRole: domainUser.RoleAdminFZAG}
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(ContextUserIDKey, userID)
+		c.Next()
+	})
+	router.GET("/roles", RequireAnyRole(authz, domainUser.RoleSuperAdmin, domainUser.RoleAdminFZAG), func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/roles", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusNoContent {
+		t.Fatalf("expected configured role to succeed, got status %d", resp.Code)
+	}
+}
+
+func TestRequireAnyRole_RejectsOtherRole(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	userID := uuid.New()
+	authz := &authCheckerStub{globalRole: domainUser.RoleFZAG}
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(ContextUserIDKey, userID)
+		c.Next()
+	})
+	router.GET("/roles", RequireAnyRole(authz, domainUser.RoleSuperAdmin, domainUser.RoleAdminFZAG), func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/roles", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusForbidden {
+		t.Fatalf("expected forbidden, got status %d", resp.Code)
+	}
+}
+
+func TestRequireSuperAdminForRoleParam_AllowsAdminFZAGForOtherRoles(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	userID := uuid.New()
+	authz := &authCheckerStub{globalRole: domainUser.RoleAdminFZAG}
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(ContextUserIDKey, userID)
+		c.Next()
+	})
+	router.PUT("/roles/:role/permissions", RequireSuperAdminForRoleParam(authz, "role"), func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodPut, "/roles/admin_fzag/permissions", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusNoContent {
+		t.Fatalf("expected non-superadmin target to succeed, got status %d", resp.Code)
+	}
+}
+
+func TestRequireSuperAdminForRoleParam_RejectsAdminFZAGForSuperadmin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	userID := uuid.New()
+	authz := &authCheckerStub{globalRole: domainUser.RoleAdminFZAG}
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(ContextUserIDKey, userID)
+		c.Next()
+	})
+	router.PUT("/roles/:role/permissions", RequireSuperAdminForRoleParam(authz, "role"), func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodPut, "/roles/superadmin/permissions", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusForbidden {
+		t.Fatalf("expected forbidden, got status %d", resp.Code)
+	}
+}
+
 type authCheckerStub struct {
 	globalRole            domainUser.Role
 	teamRole              *domainTeam.MemberRole

@@ -24,20 +24,24 @@ func RegisterUserRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authCh
 }
 
 func RegisterRoleRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authChecker middleware.AuthorizationChecker) {
-	roles := protectedV1.Group("/roles")
+	roleAdmins := middleware.RequireAnyRole(authChecker, domainUser.RoleSuperAdmin, domainUser.RoleAdminFZAG)
+	superAdmins := middleware.RequireAnyRole(authChecker, domainUser.RoleSuperAdmin)
+	superAdminRoleTarget := middleware.RequireSuperAdminForRoleParam(authChecker, "role")
+
+	roles := protectedV1.Group("/roles", roleAdmins)
 	{
-		roles.GET("", middleware.RequirePermission(authChecker, domainUser.PermissionRoleRead), handlers.Role.ListRoles)
-		roles.PUT("/:role/permissions", middleware.RequirePermission(authChecker, domainUser.PermissionRoleUpdate), handlers.Role.UpdateRolePermissions)
-		roles.POST("/:role/permissions", middleware.RequirePermission(authChecker, domainUser.PermissionRoleUpdate), handlers.Role.AddRolePermission)
-		roles.DELETE("/:role/permissions/:permission", middleware.RequirePermission(authChecker, domainUser.PermissionRoleUpdate), handlers.Role.RemoveRolePermission)
+		roles.GET("", handlers.Role.ListRoles)
+		roles.PUT("/:role/permissions", superAdminRoleTarget, handlers.Role.UpdateRolePermissions)
+		roles.POST("/:role/permissions", superAdminRoleTarget, handlers.Role.AddRolePermission)
+		roles.DELETE("/:role/permissions/:permission", superAdminRoleTarget, handlers.Role.RemoveRolePermission)
 	}
 
-	permissions := protectedV1.Group("/permissions")
+	permissions := protectedV1.Group("/permissions", roleAdmins)
 	{
-		permissions.GET("", middleware.RequirePermission(authChecker, domainUser.PermissionPermissionRead), handlers.Permission.ListPermissions)
-		permissions.POST("", middleware.RequirePermission(authChecker, domainUser.PermissionPermissionCreate), handlers.Permission.CreatePermission)
-		permissions.PUT("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionPermissionUpdate), handlers.Permission.UpdatePermission)
-		permissions.DELETE("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionPermissionDelete), handlers.Permission.DeletePermission)
+		permissions.GET("", handlers.Permission.ListPermissions)
+		permissions.POST("", superAdmins, handlers.Permission.CreatePermission)
+		permissions.PUT("/:id", superAdmins, handlers.Permission.UpdatePermission)
+		permissions.DELETE("/:id", superAdmins, handlers.Permission.DeletePermission)
 	}
 }
 

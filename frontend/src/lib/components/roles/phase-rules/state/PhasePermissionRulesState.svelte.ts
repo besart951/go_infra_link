@@ -1,4 +1,4 @@
-import { getErrorMessage } from '$lib/api/client.js';
+import { ApiException, getErrorMessage } from '$lib/api/client.js';
 import { addToast } from '$lib/components/toast.svelte';
 import type { Phase, PhasePermission } from '$lib/domain/phase/index.js';
 import type { Permission, Role } from '$lib/domain/role/index.js';
@@ -261,7 +261,7 @@ export class PhasePermissionRulesState {
       if (existingRule) {
         await updatePhasePermission(existingRule.id, { permissions });
       } else {
-        await createPhasePermission({ phase_id: phaseID, role, permissions });
+        await this.createRuleOrUpdateExisting(phaseID, role, permissions);
       }
       await this.refreshRules();
     } catch (err) {
@@ -295,6 +295,29 @@ export class PhasePermissionRulesState {
     return this.phaseRulePermissions
       .filter((permission) => unique.has(permission.name))
       .map((permission) => permission.name);
+  }
+
+  private async createRuleOrUpdateExisting(
+    phaseID: string,
+    role: UserRole,
+    permissions: string[]
+  ): Promise<void> {
+    try {
+      await createPhasePermission({ phase_id: phaseID, role, permissions });
+      return;
+    } catch (err) {
+      if (!(err instanceof ApiException) || err.status !== 409) {
+        throw err;
+      }
+
+      await this.refreshRules();
+      const existingRule = this.getRule(phaseID, role);
+      if (!existingRule) {
+        throw err;
+      }
+
+      await updatePhasePermission(existingRule.id, { permissions });
+    }
   }
 
   private setSaving(phaseID: string, role: UserRole, saving: boolean): void {

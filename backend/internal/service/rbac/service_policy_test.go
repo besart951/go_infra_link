@@ -111,6 +111,40 @@ func TestService_GetAllowedRoles_SuperadminCanManageEveryRoleWithoutStoredGrants
 	}
 }
 
+func TestService_GetAllowedRoles_NonSuperadminCannotManageSuperadmin(t *testing.T) {
+	ctx := context.Background()
+	roleRepo := &rolePermissionRepoStub{items: map[domainUser.Role][]domainUser.RolePermission{
+		domainUser.RoleAdminFZAG: {
+			{Role: domainUser.RoleAdminFZAG, Permission: domainUser.PermissionUserCreate},
+			{Role: domainUser.RoleAdminFZAG, Permission: domainUser.PermissionUserUpdate},
+			{Role: domainUser.RoleAdminFZAG, Permission: domainUser.PermissionUserRead},
+		},
+		domainUser.RoleSuperAdmin: {
+			{Role: domainUser.RoleSuperAdmin, Permission: domainUser.PermissionUserCreate},
+			{Role: domainUser.RoleSuperAdmin, Permission: domainUser.PermissionUserUpdate},
+			{Role: domainUser.RoleSuperAdmin, Permission: domainUser.PermissionUserRead},
+		},
+	}}
+	svc := &Service{
+		rolePermissionRepo: roleRepo,
+		permissionRepo: &permissionRepoStub{items: []domainUser.Permission{
+			{Name: domainUser.PermissionUserCreate},
+			{Name: domainUser.PermissionUserUpdate},
+			{Name: domainUser.PermissionUserRead},
+		}},
+	}
+
+	roles, err := svc.GetAllowedRoles(ctx, domainUser.RoleAdminFZAG)
+	if err != nil {
+		t.Fatalf("expected allowed roles lookup to succeed, got %v", err)
+	}
+	for _, role := range roles {
+		if role == domainUser.RoleSuperAdmin {
+			t.Fatalf("expected superadmin to be excluded, got %+v", roles)
+		}
+	}
+}
+
 func TestService_GetRolePermissions_SuperadminGetsAllPermissions(t *testing.T) {
 	ctx := context.Background()
 	svc := &Service{

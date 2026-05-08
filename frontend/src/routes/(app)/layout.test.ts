@@ -71,11 +71,12 @@ describe('(app) layout load', () => {
     };
     const teams = [{ id: 'team-1', name: 'Team' }];
     const projects = [{ id: 'project-1', name: 'Project' }];
+    const projectResponse = { items: projects, total: 1, page: 1, limit: 10, total_pages: 1 };
 
     mockApi
       .mockResolvedValueOnce(user)
       .mockResolvedValueOnce(teams)
-      .mockResolvedValueOnce(projects);
+      .mockResolvedValueOnce(projectResponse);
 
     const result = await load(createLoadEvent());
 
@@ -84,7 +85,7 @@ describe('(app) layout load', () => {
       customFetch: expect.any(Function),
       skipHttpErrorNavigation: true
     });
-    expect(mockApi).toHaveBeenNthCalledWith(3, '/projects', {
+    expect(mockApi).toHaveBeenNthCalledWith(3, '/projects?page=1&limit=10', {
       customFetch: expect.any(Function),
       skipHttpErrorNavigation: true
     });
@@ -106,11 +107,12 @@ describe('(app) layout load', () => {
     };
     const teams = [{ id: 'team-1', name: 'Team' }];
     const projects = [{ id: 'project-1', name: 'Project' }];
+    const projectResponse = { items: projects, total: 1, page: 1, limit: 10, total_pages: 1 };
 
     mockApi
       .mockResolvedValueOnce(user)
       .mockResolvedValueOnce(teams)
-      .mockResolvedValueOnce(projects);
+      .mockResolvedValueOnce(projectResponse);
 
     const result = await load(createLoadEvent());
 
@@ -119,7 +121,7 @@ describe('(app) layout load', () => {
       customFetch: expect.any(Function),
       skipHttpErrorNavigation: true
     });
-    expect(mockApi).toHaveBeenNthCalledWith(3, '/projects', {
+    expect(mockApi).toHaveBeenNthCalledWith(3, '/projects?page=1&limit=10', {
       customFetch: expect.any(Function),
       skipHttpErrorNavigation: true
     });

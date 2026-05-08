@@ -3,7 +3,6 @@
     type ModuleCardItem
   } from '$lib/components/navigation/ModuleCardGrid.svelte';
   import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
-  import { auth } from '$lib/stores/auth.svelte.js';
   import {
     canAccessRoleDirectory,
     canAccessTeamDirectory,
@@ -14,8 +13,10 @@
   import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
   import UserRoundCogIcon from '@lucide/svelte/icons/user-round-cog';
   import UsersIcon from '@lucide/svelte/icons/users';
+  import type { PageData } from './$types';
 
   const t = createTranslator();
+  let { data }: { data: PageData } = $props();
 
   const userCards = $derived.by<ModuleCardItem[]>(() =>
     [
@@ -25,7 +26,7 @@
         href: '/users/directory',
         icon: UsersIcon,
         tone: 'user',
-        hasAccess: canAccessUserDirectory(auth.user)
+        hasAccess: canAccessUserDirectory(data.user)
       },
       {
         title: $t('navigation.teams'),
@@ -41,7 +42,7 @@
         href: '/users/roles',
         icon: ShieldCheckIcon,
         tone: 'user',
-        hasAccess: canAccessRoleDirectory(canPerform)
+        hasAccess: canAccessRoleDirectory(data.user)
       }
     ].filter((item) => item.hasAccess)
   );

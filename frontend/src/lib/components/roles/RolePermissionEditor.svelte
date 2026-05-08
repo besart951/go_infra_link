@@ -24,6 +24,7 @@
     onCancel: () => void;
     isSubmitting?: boolean;
     error?: string | null;
+    canEdit?: boolean;
   }
 
   let {
@@ -32,7 +33,8 @@
     onSubmit,
     onCancel,
     isSubmitting = false,
-    error = null
+    error = null,
+    canEdit = true
   }: Props = $props();
 
   const t = createTranslator();
@@ -66,19 +68,25 @@
     },
     allPermissions: function (): Permission[] {
       return allPermissions;
+    },
+    canEdit: function (): boolean {
+      return canEdit;
     }
   });
 
   function handleSubmit(e: Event) {
     e.preventDefault();
+    if (!canEdit) return;
     onSubmit(state.buildSubmitPayload());
   }
 
   function handleSelectAll(): void {
+    if (!canEdit) return;
     state.selectAll();
   }
 
   function handleDeselectAll(): void {
+    if (!canEdit) return;
     state.deselectAll();
   }
 </script>
@@ -113,14 +121,16 @@
         bind:value={state.searchQuery}
       />
     </div>
-    <div class="flex gap-2">
-      <Button type="button" variant="outline" size="sm" onclick={handleSelectAll}>
-        {$t('roles.actions.select_all')}
-      </Button>
-      <Button type="button" variant="outline" size="sm" onclick={handleDeselectAll}>
-        {$t('roles.actions.deselect_all')}
-      </Button>
-    </div>
+    {#if canEdit}
+      <div class="flex gap-2">
+        <Button type="button" variant="outline" size="sm" onclick={handleSelectAll}>
+          {$t('roles.actions.select_all')}
+        </Button>
+        <Button type="button" variant="outline" size="sm" onclick={handleDeselectAll}>
+          {$t('roles.actions.deselect_all')}
+        </Button>
+      </div>
+    {/if}
   </div>
 
   <!-- Selected Count -->
@@ -151,13 +161,15 @@
   <!-- Actions -->
   <div class="flex shrink-0 justify-end gap-3 border-t pt-4">
     <Button type="button" variant="outline" onclick={onCancel} disabled={isSubmitting}>
-      {$t('common.cancel')}
+      {canEdit ? $t('common.cancel') : $t('common.close')}
     </Button>
-    <Button type="submit" disabled={isSubmitting}>
-      {#if isSubmitting}
-        <span class="mr-2 h-4 w-4 animate-spin">⟳</span>
-      {/if}
-      {$t('roles.actions.save_changes')}
-    </Button>
+    {#if canEdit}
+      <Button type="submit" disabled={isSubmitting}>
+        {#if isSubmitting}
+          <span class="mr-2 h-4 w-4 animate-spin">⟳</span>
+        {/if}
+        {$t('roles.actions.save_changes')}
+      </Button>
+    {/if}
   </div>
 </form>
