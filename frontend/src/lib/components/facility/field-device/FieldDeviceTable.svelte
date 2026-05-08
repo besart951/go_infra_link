@@ -37,7 +37,7 @@
   <Table.Root class={tableClass}>
     <Table.Header>
       <Table.Row>
-        <Table.Head resizable={false} class="w-8 max-w-8 min-w-8 !px-0 !py-1">
+        <Table.Head resizable={false} class="w-8 max-w-8 min-w-8 px-0! py-1!">
           <div class="flex justify-center">
             <Checkbox
               checked={state.allSelected}
@@ -47,7 +47,7 @@
             />
           </div>
         </Table.Head>
-        <Table.Head resizable={false} class="w-6 max-w-6 min-w-6 !px-0"></Table.Head>
+        <Table.Head resizable={false} class="w-6 max-w-6 min-w-6 px-0!"></Table.Head>
         <Table.Head minResizeWidth={96} class="w-fit max-w-96 min-w-max text-xs">
           <Button
             type="button"
@@ -123,7 +123,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head minResizeWidth={72} class="w-fit max-w-40 min-w-[4.5rem]">
+        <Table.Head minResizeWidth={72} class="w-fit max-w-40 min-w-18">
           <Button
             type="button"
             variant="ghost"
@@ -138,7 +138,7 @@
             {/if}
           </Button>
         </Table.Head>
-        <Table.Head minResizeWidth={72} class="w-fit max-w-40 min-w-[4.5rem]">
+        <Table.Head minResizeWidth={72} class="w-fit max-w-40 min-w-18">
           <Button
             type="button"
             variant="ghost"

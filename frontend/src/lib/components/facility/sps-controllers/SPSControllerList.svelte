@@ -20,25 +20,16 @@
   let historyController = $state<SPSController | null>(null);
   let historyOpen = $state(false);
 
-  const columns = $derived.by(() =>
-    listState.isProjectContext
-      ? [
-          { key: 'device_name', label: $t('projects.sps_controllers.columns.device_name') },
-          { key: 'ga_device', label: $t('projects.sps_controllers.columns.ga_device') },
-          { key: 'ip_address', label: $t('projects.sps_controllers.columns.ip_address') },
-          { key: 'cabinet', label: $t('projects.sps_controllers.columns.cabinet') },
-          { key: 'created', label: $t('projects.sps_controllers.columns.created') },
-          { key: 'actions', label: '', width: 'w-[100px]' }
-        ]
-      : [
-          { key: 'device_name', label: $t('facility.device_name') },
-          { key: 'cabinet', label: 'Cabinet Nr' },
-          { key: 'ga_device', label: $t('facility.ga_device') },
-          { key: 'ip_address', label: $t('facility.ip_address') },
-          { key: 'system_types', label: $t('facility.system_types') },
-          { key: 'actions', label: '', width: 'w-[100px]' }
-        ]
-  );
+  const columns = $derived.by(() => [
+    { key: 'device_name', label: $t('facility.device_name') },
+    { key: 'ga_device', label: $t('facility.ga_device') },
+    { key: 'ip_address', label: $t('facility.ip_address') },
+    { key: 'subnet', label: $t('facility.subnet') },
+    { key: 'gateway', label: $t('facility.gateway') },
+    { key: 'vlan', label: $t('facility.vlan') },
+    { key: 'system_types', label: $t('facility.system_types') },
+    { key: 'actions', label: '', width: 'w-[40px]' }
+  ]);
 
   const searchPlaceholder = $derived.by(() =>
     listState.isProjectContext

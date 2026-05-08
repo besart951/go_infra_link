@@ -20,16 +20,12 @@
 
   const columns = $derived.by(() => [
     {
-      key: 'cabinet_nr',
-      label: listState.isProjectContext
-        ? $t('projects.control_cabinets.table.control_cabinet')
-        : $t('facility.forms.control_cabinet.number_label')
+      key: 'building',
+      label: $t('facility.building')
     },
     {
-      key: 'building',
-      label: listState.isProjectContext
-        ? $t('projects.control_cabinets.table.building')
-        : $t('facility.building')
+      key: 'cabinet_nr',
+      label: $t('facility.forms.control_cabinet.number_label')
     },
     { key: 'actions', label: '', width: 'w-[100px]' }
   ]);
