@@ -107,7 +107,23 @@ func (r *userRepo) GetPaginatedList(ctx context.Context, params domain.Paginatio
 	}, nil
 }
 
+func (r *userRepo) ListByRoles(ctx context.Context, roles []domainUser.Role) ([]domainUser.User, error) {
+	if len(roles) == 0 {
+		return []domainUser.User{}, nil
+	}
+
+	var users []domainUser.User
+	if err := r.db.WithContext(ctx).
+		Where("role IN ?", roles).
+		Order("created_at ASC").
+		Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
 var _ domainUser.UserEmailRepository = (*userRepo)(nil)
+var _ domainUser.UserRoleRepository = (*userRepo)(nil)
 
 func userSearchCallback() gormbase.SearchCallback[*domainUser.User] {
 	return gormbase.TrigramSearchCallback[*domainUser.User](searchspec.Users.SearchColumns("")...)

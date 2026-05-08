@@ -329,6 +329,21 @@ func (r *projectUserRepoFake) GetPaginatedList(_ context.Context, _ domain.Pagin
 	return &domain.PaginatedList[domainUser.User]{Items: items, Total: int64(len(items)), Page: 1, TotalPages: 1}, nil
 }
 
+func (r *projectUserRepoFake) ListByRoles(_ context.Context, roles []domainUser.Role) ([]domainUser.User, error) {
+	roleSet := make(map[domainUser.Role]struct{}, len(roles))
+	for _, role := range roles {
+		roleSet[role] = struct{}{}
+	}
+
+	items := make([]domainUser.User, 0)
+	for _, item := range r.items {
+		if _, ok := roleSet[item.Role]; ok {
+			items = append(items, *item)
+		}
+	}
+	return items, nil
+}
+
 type projectRolePermissionRepoFake struct {
 	items map[domainUser.Role][]domainUser.RolePermission
 }

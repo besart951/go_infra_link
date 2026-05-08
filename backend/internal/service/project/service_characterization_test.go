@@ -120,6 +120,48 @@ func TestProjectService_Create_CharacterizesTemplateCopyAndCreatorMembership(t *
 	}
 }
 
+func TestProjectService_Create_AssignsCreatorAndProjectAdmins(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	creatorID := uuid.New()
+	superadminID := uuid.New()
+	adminFZAGID := uuid.New()
+	fzagID := uuid.New()
+
+	projectRepo := newProjectRepo()
+	userRepo := newProjectUserRepo()
+	userRepo.items[creatorID] = &domainUser.User{Base: domain.Base{ID: creatorID}, Role: domainUser.RolePlaner}
+	userRepo.items[superadminID] = &domainUser.User{Base: domain.Base{ID: superadminID}, Role: domainUser.RoleSuperAdmin}
+	userRepo.items[adminFZAGID] = &domainUser.User{Base: domain.Base{ID: adminFZAGID}, Role: domainUser.RoleAdminFZAG}
+	userRepo.items[fzagID] = &domainUser.User{Base: domain.Base{ID: fzagID}, Role: domainUser.RoleFZAG}
+
+	svc := NewServices(Dependencies{
+		Projects:      projectRepo,
+		Users:         userRepo,
+		ObjectData:    newProjectObjectDataRepo(),
+		BacnetObjects: newProjectBacnetObjectRepo(),
+	}).Lifecycle
+
+	project := &domainProject.Project{
+		Base:      domain.Base{ID: projectID},
+		Name:      "Assigned project",
+		CreatorID: creatorID,
+	}
+
+	if err := svc.Create(ctx, project); err != nil {
+		t.Fatalf("expected create to succeed, got %v", err)
+	}
+
+	for _, userID := range []uuid.UUID{creatorID, superadminID, adminFZAGID} {
+		if !projectRepo.hasUser(projectID, userID) {
+			t.Fatalf("expected user %s to be assigned to project", userID)
+		}
+	}
+	if projectRepo.hasUser(projectID, fzagID) {
+		t.Fatal("expected fzag users not to be globally auto-assigned")
+	}
+}
+
 func TestProjectService_CreateControlCabinet_CharacterizesDescendantLinking(t *testing.T) {
 	ctx := context.Background()
 	projectID := uuid.New()

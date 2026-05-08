@@ -20,6 +20,11 @@ type ProjectLifecycleService struct {
 	tx                 txCoordinator
 }
 
+var autoAssignedProjectRoles = []domainUser.Role{
+	domainUser.RoleSuperAdmin,
+	domainUser.RoleAdminFZAG,
+}
+
 func (s *ProjectLifecycleService) bindTransactions(tx txCoordinator) {
 	s.tx = tx
 }
@@ -45,13 +50,49 @@ func (s *ProjectLifecycleService) createProject(ctx context.Context, project *do
 		return err
 	}
 
-	if project.CreatorID != uuid.Nil {
-		if err := s.repo.AddUser(ctx, project.ID, project.CreatorID); err != nil {
+	userIDs, err := s.autoAssignedProjectUserIDs(ctx, project.CreatorID)
+	if err != nil {
+		return err
+	}
+	for _, userID := range userIDs {
+		if err := s.repo.AddUser(ctx, project.ID, userID); err != nil {
 			return err
 		}
 	}
 
 	return facilityservice.CopyObjectDataTemplatesForProject(ctx, s.objectDataRepo, s.bacnetObjectRepo, project.ID)
+}
+
+func (s *ProjectLifecycleService) autoAssignedProjectUserIDs(ctx context.Context, creatorID uuid.UUID) ([]uuid.UUID, error) {
+	userIDs := make([]uuid.UUID, 0, 3)
+	seen := make(map[uuid.UUID]struct{}, 3)
+	add := func(userID uuid.UUID) {
+		if userID == uuid.Nil {
+			return
+		}
+		if _, ok := seen[userID]; ok {
+			return
+		}
+		seen[userID] = struct{}{}
+		userIDs = append(userIDs, userID)
+	}
+
+	add(creatorID)
+
+	roleReader, ok := s.userRepo.(domainUser.UserRoleRepository)
+	if !ok || roleReader == nil {
+		return userIDs, nil
+	}
+
+	users, err := roleReader.ListByRoles(ctx, autoAssignedProjectRoles)
+	if err != nil {
+		return nil, err
+	}
+	for _, user := range users {
+		add(user.ID)
+	}
+
+	return userIDs, nil
 }
 
 func (s *ProjectLifecycleService) GetByID(ctx context.Context, id uuid.UUID) (*domainProject.Project, error) {
