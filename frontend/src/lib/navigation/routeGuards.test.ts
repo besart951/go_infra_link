@@ -20,6 +20,12 @@ describe('route guards', () => {
     expect(canAccessProtectedRoute(user(['objectdata.create']), '/excel')).toBe(true);
   });
 
+  it('requires team.create for the dedicated team creation route', () => {
+    expect(getRequiredPermissionForRoute('/teams/new')).toBe('team.create');
+    expect(canAccessProtectedRoute(user(['team.read']), '/teams/new')).toBe(false);
+    expect(canAccessProtectedRoute(user(['team.create']), '/teams/new')).toBe(true);
+  });
+
   it('maps facility routes to canonical read permissions', () => {
     expect(getRequiredPermissionForRoute('/facility/alarm-catalog')).toBe('alarmtype.read');
     expect(getRequiredPermissionForRoute('/facility/sps-controller-system-type/123')).toBe(

@@ -6,6 +6,7 @@ import (
 
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	userregistrationservice "github.com/besart951/go_infra_link/backend/internal/service/userregistration"
 	"github.com/google/uuid"
 )
 
@@ -27,4 +28,9 @@ type UserService interface {
 
 type PermissionQueryService interface {
 	GetRolePermissions(ctx context.Context, role domainUser.Role) ([]string, error)
+}
+
+type RegistrationService interface {
+	GetPublicRegistration(ctx context.Context, token string) (*userregistrationservice.PublicRegistrationView, error)
+	CompleteRegistration(ctx context.Context, input userregistrationservice.CompleteInput) (*domainUser.User, error)
 }

@@ -196,7 +196,7 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 		visible = append(visible, Item{
 			User:         *candidate,
 			Teams:        itemTeams,
-			Capabilities: buildCapabilities(requester.ID, requesterPermissions, *candidate, candidatePermissions, len(allUsers)),
+			Capabilities: buildCapabilities(requester.ID, requester.Role, requesterPermissions, *candidate, candidatePermissions, len(allUsers)),
 		})
 	}
 
@@ -229,8 +229,11 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 	}, nil
 }
 
-func buildCapabilities(requesterID uuid.UUID, requesterPermissions permissionSet, target domainUser.User, targetPermissions permissionSet, totalUsers int) Capabilities {
+func buildCapabilities(requesterID uuid.UUID, requesterRole domainUser.Role, requesterPermissions permissionSet, target domainUser.User, targetPermissions permissionSet, totalUsers int) Capabilities {
 	if requesterID == target.ID {
+		return Capabilities{}
+	}
+	if !canMutateRole(requesterRole, target.Role) {
 		return Capabilities{}
 	}
 	if !permissionSetContainsAll(requesterPermissions, targetPermissions) {
@@ -245,6 +248,14 @@ func buildCapabilities(requesterID uuid.UUID, requesterPermissions permissionSet
 		CanEnable:     requesterPermissions.has(domainUser.PermissionUserUpdate) && !target.IsActive,
 		CanChangeRole: requesterPermissions.has(domainUser.PermissionUserUpdate),
 	}
+}
+
+func canMutateRole(requesterRole, targetRole domainUser.Role) bool {
+	if requesterRole == domainUser.RoleSuperAdmin {
+		return true
+	}
+	requesterLevel := domainUser.RoleLevel(requesterRole)
+	return requesterLevel > 0 && domainUser.RoleLevel(targetRole) < requesterLevel
 }
 
 func canSeeUser(requesterID uuid.UUID, requesterPermissions permissionSet, candidate *domainUser.User, visibleTeamIDs map[uuid.UUID]struct{}, candidatePermissions permissionSet) bool {

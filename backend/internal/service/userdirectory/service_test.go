@@ -65,13 +65,14 @@ func TestBuildCapabilitiesSelfAndLastSuperadminProtection(t *testing.T) {
 		{Permission: domainUser.PermissionUserDelete},
 	})
 
-	selfCaps := buildCapabilities(requesterID, requesterPermissions, domainUser.User{Base: mustBaseWithID(requesterID), Role: domainUser.RoleSuperAdmin, IsActive: true}, superadminPermissions, 2)
+	selfCaps := buildCapabilities(requesterID, domainUser.RoleSuperAdmin, requesterPermissions, domainUser.User{Base: mustBaseWithID(requesterID), Role: domainUser.RoleSuperAdmin, IsActive: true}, superadminPermissions, 2)
 	if selfCaps.CanUpdate || selfCaps.CanDelete || selfCaps.CanDisable || selfCaps.CanEnable || selfCaps.CanChangeRole {
 		t.Fatal("expected no self-management capabilities")
 	}
 
 	lastSuperadminCaps := buildCapabilities(
 		requesterID,
+		domainUser.RoleSuperAdmin,
 		requesterPermissions,
 		domainUser.User{Base: mustBase(), Role: domainUser.RoleSuperAdmin, IsActive: true},
 		superadminPermissions,
@@ -82,6 +83,54 @@ func TestBuildCapabilitiesSelfAndLastSuperadminProtection(t *testing.T) {
 	}
 	if lastSuperadminCaps.CanDelete || lastSuperadminCaps.CanDisable {
 		t.Fatal("expected delete/disable blocked for last superadmin")
+	}
+}
+
+func TestBuildCapabilitiesRequiresRoleHierarchy(t *testing.T) {
+	requesterID := uuid.New()
+	requesterPermissions := permissionSetFromRolePermissions([]domainUser.RolePermission{
+		{Permission: domainUser.PermissionUserRead},
+		{Permission: domainUser.PermissionUserUpdate},
+		{Permission: domainUser.PermissionUserDelete},
+	})
+	targetPermissions := permissionSetFromRolePermissions([]domainUser.RolePermission{
+		{Permission: domainUser.PermissionUserRead},
+	})
+
+	lowerCaps := buildCapabilities(
+		requesterID,
+		domainUser.RoleAdminPlaner,
+		requesterPermissions,
+		domainUser.User{Base: mustBase(), Role: domainUser.RolePlaner, IsActive: true},
+		targetPermissions,
+		2,
+	)
+	if !lowerCaps.CanUpdate || !lowerCaps.CanDelete || !lowerCaps.CanDisable || !lowerCaps.CanChangeRole {
+		t.Fatal("expected capabilities for lower role")
+	}
+
+	sameCaps := buildCapabilities(
+		requesterID,
+		domainUser.RoleAdminPlaner,
+		requesterPermissions,
+		domainUser.User{Base: mustBase(), Role: domainUser.RoleAdminPlaner, IsActive: true},
+		targetPermissions,
+		2,
+	)
+	if sameCaps.CanUpdate || sameCaps.CanDelete || sameCaps.CanDisable || sameCaps.CanEnable || sameCaps.CanChangeRole {
+		t.Fatal("expected no capabilities for same-level role")
+	}
+
+	higherCaps := buildCapabilities(
+		requesterID,
+		domainUser.RoleAdminPlaner,
+		requesterPermissions,
+		domainUser.User{Base: mustBase(), Role: domainUser.RoleAdminFZAG, IsActive: true},
+		targetPermissions,
+		2,
+	)
+	if higherCaps.CanUpdate || higherCaps.CanDelete || higherCaps.CanDisable || higherCaps.CanEnable || higherCaps.CanChangeRole {
+		t.Fatal("expected no capabilities for higher role")
 	}
 }
 

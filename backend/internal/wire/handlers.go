@@ -23,23 +23,26 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 	facilityHandlers := newFacilityHandlers(services, projectHandlers.RefreshBroadcaster)
 	userHandlers := newUserHandlers(services)
 
+	authHandler := authhandler.NewAuthHandler(
+		services.Auth,
+		services.User,
+		services.RBAC,
+		services.JWT,
+		accessTokenTTL,
+		refreshTokenTTL,
+		cookieSettings,
+	)
+
 	return &handler.Handlers{
-		Auth: authhandler.NewAuthHandler(
-			services.Auth,
-			services.User,
-			services.RBAC,
-			services.JWT,
-			accessTokenTTL,
-			refreshTokenTTL,
-			cookieSettings,
-		),
-		Dashboard:    dashboardhandler.NewDashboardHandler(services.Dashboard),
-		I18n:         i18nhandler.NewI18nHandler(i18nLoader),
-		Notification: notificationhandler.NewNotificationSettingsHandler(services.Notification, runtime.SystemNotificationStream),
-		Project:      projectHandlers,
-		Team:         teamhandler.NewTeamHandler(services.Team),
-		User:         userHandlers,
-		Facility:     facilityHandlers,
-		History:      historyhandler.NewHandler(services.History),
+		Auth:             authHandler,
+		AuthRegistration: authhandler.NewRegistrationHandler(services.UserRegistration),
+		Dashboard:        dashboardhandler.NewDashboardHandler(services.Dashboard),
+		I18n:             i18nhandler.NewI18nHandler(i18nLoader),
+		Notification:     notificationhandler.NewNotificationSettingsHandler(services.Notification, runtime.SystemNotificationStream),
+		Project:          projectHandlers,
+		Team:             teamhandler.NewTeamHandler(services.Team),
+		User:             userHandlers,
+		Facility:         facilityHandlers,
+		History:          historyhandler.NewHandler(services.History),
 	}
 }

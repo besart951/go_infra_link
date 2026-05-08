@@ -38,3 +38,17 @@ type AuthResponse struct {
 type SessionResponse struct {
 	Authenticated bool `json:"authenticated"`
 }
+
+type PublicRegistrationResponse struct {
+	Email           string    `json:"email"`
+	Role            string    `json:"role"`
+	RoleDisplayName string    `json:"role_display_name"`
+	ExpiresAt       time.Time `json:"expires_at"`
+}
+
+type CompleteRegistrationRequest struct {
+	FirstName  string `json:"first_name" binding:"required,min=1,max=100"`
+	LastName   string `json:"last_name" binding:"required,min=1,max=100"`
+	Password   string `json:"password" binding:"required,min=8"`
+	PrivacyAck bool   `json:"privacy_ack" binding:"required"`
+}

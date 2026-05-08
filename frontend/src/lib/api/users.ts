@@ -55,9 +55,6 @@ export interface UpdateUserRequest {
   first_name?: string;
   last_name?: string;
   email?: string;
-  password?: string;
-  is_active?: boolean;
-  role?: UserRole;
 }
 
 export interface AllowedRole {
@@ -85,6 +82,7 @@ export interface UserDirectoryCapabilities {
 export interface UserDirectoryUser extends User {
   teams: UserDirectoryTeam[];
   capabilities: UserDirectoryCapabilities;
+  registration_process?: RegistrationProcess | null;
 }
 
 export interface UserDirectoryTeamFilter {
@@ -104,6 +102,36 @@ export interface UserDirectoryResponse {
   total_pages: number;
   teams: UserDirectoryTeamFilter[];
   capabilities: UserDirectoryPageCapabilities;
+}
+
+export interface RegistrationProcessStep {
+  key: string;
+  label: string;
+  status: 'completed' | 'current' | 'pending' | 'failed' | 'blocked' | 'skipped';
+  timestamp?: string | null;
+}
+
+export interface RegistrationProcess {
+  status: 'pending' | 'email_failed' | 'expired' | 'registered' | 'first_login';
+  email_status: 'pending' | 'sent' | 'failed' | 'expired' | 'not_applicable';
+  steps: RegistrationProcessStep[];
+  can_resend: boolean;
+  expires_at?: string | null;
+  accepted_at?: string | null;
+  last_sent_at?: string | null;
+  resend_available_at?: string | null;
+  send_count: number;
+  last_error?: string;
+}
+
+export interface CreateUserInvitationRequest {
+  email: string;
+  role: UserRole;
+}
+
+export interface CreateUserInvitationResponse {
+  user: User;
+  registration_process: RegistrationProcess;
 }
 
 /**
@@ -171,6 +199,25 @@ export async function createUser(req: CreateUserRequest): Promise<User> {
   });
 }
 
+export async function inviteUser(
+  req: CreateUserInvitationRequest
+): Promise<CreateUserInvitationResponse> {
+  return api<CreateUserInvitationResponse>('/users/invitations', {
+    method: 'POST',
+    body: JSON.stringify(req)
+  });
+}
+
+export async function getUserRegistration(userId: string): Promise<RegistrationProcess> {
+  return api<RegistrationProcess>(`/users/${userId}/registration`);
+}
+
+export async function resendUserRegistration(userId: string): Promise<RegistrationProcess> {
+  return api<RegistrationProcess>(`/users/${userId}/registration/resend`, {
+    method: 'POST'
+  });
+}
+
 /**
  * Set a user's role (admin only)
  * CSRF token is automatically included
@@ -225,9 +272,13 @@ export async function updateCurrentUser(userId: string, data: UpdateUserRequest)
 /**
  * Update current user password
  */
-export async function updateCurrentUserPassword(userId: string, password: string): Promise<User> {
-  return api<User>(`/users/${userId}`, {
+export async function updateCurrentUserPassword(
+  _userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<User> {
+  return api<User>('/users/me/password', {
     method: 'PUT',
-    body: JSON.stringify({ password })
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
   });
 }

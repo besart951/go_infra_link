@@ -53,7 +53,17 @@ vi.mock('$lib/infrastructure/api/notificationPreferenceRepository.js', () => ({
 
 import { AccountPageState } from './AccountPageState.svelte.js';
 
-function userWithPermissions(permissions: string[] = [], role = 'planer') {
+function userWithPermissions(
+  permissions: string[] = [],
+  role:
+    | 'superadmin'
+    | 'admin_fzag'
+    | 'fzag'
+    | 'admin_planer'
+    | 'planer'
+    | 'admin_entrepreneur'
+    | 'entrepreneur' = 'planer'
+) {
   return {
     id: 'user-1',
     first_name: 'Marc',
@@ -121,5 +131,37 @@ describe('AccountPageState', () => {
     expect(state.userTeams).toEqual(['Core Team']);
     expect(mocks.listTeams).toHaveBeenCalledWith({ page: 1, limit: 100, search: '' });
     expect(mocks.listMembers).toHaveBeenCalledWith('team-1', { page: 1, limit: 1000 });
+  });
+
+  it('requires current password before changing password', async () => {
+    const state = new AccountPageState();
+    state.currentUser = userWithPermissions();
+    state.newPassword = 'new-password';
+    state.confirmPassword = 'new-password';
+
+    await state.handlePasswordSubmit({ preventDefault: vi.fn() } as unknown as SubmitEvent);
+
+    expect(mocks.updateCurrentPassword).not.toHaveBeenCalled();
+    expect(mocks.addToast).toHaveBeenCalledWith('validation.required', 'error');
+  });
+
+  it('passes current and new password to password update endpoint', async () => {
+    const state = new AccountPageState();
+    state.currentUser = userWithPermissions();
+    state.currentPassword = 'old-password';
+    state.newPassword = 'new-password';
+    state.confirmPassword = 'new-password';
+    mocks.updateCurrentPassword.mockResolvedValue(state.currentUser);
+
+    await state.handlePasswordSubmit({ preventDefault: vi.fn() } as unknown as SubmitEvent);
+
+    expect(mocks.updateCurrentPassword).toHaveBeenCalledWith(
+      'user-1',
+      'old-password',
+      'new-password'
+    );
+    expect(state.currentPassword).toBe('');
+    expect(state.newPassword).toBe('');
+    expect(state.confirmPassword).toBe('');
   });
 });

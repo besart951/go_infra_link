@@ -4,6 +4,8 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain/user"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/user"
 	userdirectory "github.com/besart951/go_infra_link/backend/internal/service/userdirectory"
+	userregistration "github.com/besart951/go_infra_link/backend/internal/service/userregistration"
+	"github.com/google/uuid"
 )
 
 // ToUserModel converts a CreateUserRequest to a User domain model
@@ -31,15 +33,6 @@ func ApplyUserUpdate(target *user.User, req dto.UpdateUserRequest) {
 	}
 	if req.Email != "" {
 		target.Email = req.Email
-	}
-	if req.Password != "" {
-		target.Password = req.Password
-	}
-	if req.IsActive != nil {
-		target.IsActive = *req.IsActive
-	}
-	if req.Role != "" {
-		target.Role = user.Role(req.Role)
 	}
 }
 
@@ -71,13 +64,15 @@ func ToUserListResponse(users []user.User) []dto.UserResponse {
 	return items
 }
 
-func ToUserDirectoryListResponse(result *userdirectory.ListResult) dto.UserDirectoryListResponse {
+func ToUserDirectoryListResponse(result *userdirectory.ListResult, registrationProcesses map[uuid.UUID]*userregistration.Process) dto.UserDirectoryListResponse {
 	items := make([]dto.UserDirectoryUserResponse, len(result.Items))
 	for i, item := range result.Items {
 		teams := make([]dto.UserDirectoryTeamResponse, len(item.Teams))
 		for j, team := range item.Teams {
 			teams[j] = dto.UserDirectoryTeamResponse{ID: team.ID, Name: team.Name}
 		}
+		process := registrationProcesses[item.User.ID]
+		capabilities := item.Capabilities
 
 		items[i] = dto.UserDirectoryUserResponse{
 			ID:                  item.User.ID,
@@ -95,12 +90,13 @@ func ToUserDirectoryListResponse(result *userdirectory.ListResult) dto.UserDirec
 			FailedLoginAttempts: item.User.FailedLoginAttempts,
 			Teams:               teams,
 			Capabilities: dto.UserDirectoryCapabilitiesResponse{
-				CanUpdate:     item.Capabilities.CanUpdate,
-				CanDelete:     item.Capabilities.CanDelete,
-				CanDisable:    item.Capabilities.CanDisable,
-				CanEnable:     item.Capabilities.CanEnable,
-				CanChangeRole: item.Capabilities.CanChangeRole,
+				CanUpdate:     capabilities.CanUpdate,
+				CanDelete:     capabilities.CanDelete,
+				CanDisable:    capabilities.CanDisable,
+				CanEnable:     capabilities.CanEnable,
+				CanChangeRole: capabilities.CanChangeRole,
 			},
+			RegistrationProcess: ToRegistrationProcessResponse(process),
 		}
 	}
 
@@ -118,5 +114,32 @@ func ToUserDirectoryListResponse(result *userdirectory.ListResult) dto.UserDirec
 		Capabilities: dto.UserDirectoryPageCapabilitiesResponse{
 			CanCreateUser: result.PageCapabilities.CanCreateUser,
 		},
+	}
+}
+
+func ToRegistrationProcessResponse(process *userregistration.Process) *dto.RegistrationProcessResponse {
+	if process == nil {
+		return nil
+	}
+	steps := make([]dto.RegistrationProcessStepResponse, len(process.Steps))
+	for i, step := range process.Steps {
+		steps[i] = dto.RegistrationProcessStepResponse{
+			Key:       step.Key,
+			Label:     step.Label,
+			Status:    step.Status,
+			Timestamp: step.Timestamp,
+		}
+	}
+	return &dto.RegistrationProcessResponse{
+		Status:            process.Status,
+		EmailStatus:       process.EmailStatus,
+		Steps:             steps,
+		CanResend:         process.CanResend,
+		ExpiresAt:         process.ExpiresAt,
+		AcceptedAt:        process.AcceptedAt,
+		LastSentAt:        process.LastSentAt,
+		ResendAvailableAt: process.ResendAvailableAt,
+		SendCount:         process.SendCount,
+		LastError:         process.LastError,
 	}
 }

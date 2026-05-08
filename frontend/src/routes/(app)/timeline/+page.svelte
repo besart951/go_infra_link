@@ -6,11 +6,11 @@
   import { Badge } from '$lib/components/ui/badge/index.js';
   import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
-  import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
   import StaticCombobox from '$lib/components/ui/combobox/StaticCombobox.svelte';
   import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
   import HistoryFieldMultiSelect from '$lib/components/history/HistoryFieldMultiSelect.svelte';
+  import TimelineDateTimePicker from '$lib/components/history/TimelineDateTimePicker.svelte';
   import {
     formatHistoryDate,
     formatHistoryValue,
@@ -195,28 +195,6 @@
     return name || user.email;
   }
 
-  function handleFromDateChange(): void {
-    if (!occurredFromDate) {
-      occurredFromTime = '';
-      return;
-    }
-
-    if (!occurredFromTime) {
-      occurredFromTime = '00:00';
-    }
-  }
-
-  function handleToDateChange(): void {
-    if (!occurredToDate) {
-      occurredToTime = '';
-      return;
-    }
-
-    if (!occurredToTime) {
-      occurredToTime = '23:59';
-    }
-  }
-
   function eventTime(value: string): string {
     return new Intl.DateTimeFormat('de-CH', { timeStyle: 'short' }).format(new Date(value));
   }
@@ -305,8 +283,8 @@
   <section class="rounded-md border bg-card p-3">
     <div
       class={entityTable
-        ? 'grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(13rem,1.2fr)_minmax(13rem,1.1fr)_minmax(15rem,1.4fr)_minmax(12rem,0.85fr)_minmax(12rem,0.85fr)_auto]'
-        : 'grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(13rem,1.2fr)_minmax(13rem,1.1fr)_minmax(12rem,0.85fr)_minmax(12rem,0.85fr)_auto]'}
+        ? 'grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(13rem,1fr)_minmax(13rem,1fr)_minmax(15rem,1fr)] 2xl:grid-cols-[minmax(13rem,1.1fr)_minmax(13rem,1fr)_minmax(15rem,1.3fr)_minmax(17rem,1fr)_minmax(17rem,1fr)_auto]'
+        : 'grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(13rem,1.2fr)_minmax(13rem,1.1fr)_minmax(17rem,1fr)_minmax(17rem,1fr)_auto]'}
     >
       <div class="min-w-0 space-y-1.5">
         <Label for="timeline_user">{$t('history.timeline.filters.user')}</Label>
@@ -360,47 +338,23 @@
         </div>
       {/if}
 
-      <div class="min-w-0 space-y-1.5">
-        <Label for="timeline_from">{$t('history.timeline.filters.from')}</Label>
-        <div class="grid grid-cols-[minmax(0,1fr)_8.5rem] gap-2">
-          <Input
-            id="timeline_from"
-            type="date"
-            bind:value={occurredFromDate}
-            class="timeline-native-picker h-10 text-sm tabular-nums"
-            onchange={handleFromDateChange}
-          />
-          <Input
-            type="time"
-            bind:value={occurredFromTime}
-            class="timeline-native-picker h-10 text-sm tabular-nums"
-            aria-label={$t('history.timeline.filters.from_time')}
-            step="60"
-            disabled={!occurredFromDate}
-          />
-        </div>
-      </div>
+      <TimelineDateTimePicker
+        id="timeline_from"
+        label={$t('history.timeline.filters.from')}
+        bind:date={occurredFromDate}
+        bind:time={occurredFromTime}
+        timeLabel={$t('history.timeline.filters.from_time')}
+        defaultTime="00:00"
+      />
 
-      <div class="min-w-0 space-y-1.5">
-        <Label for="timeline_to">{$t('history.timeline.filters.to')}</Label>
-        <div class="grid grid-cols-[minmax(0,1fr)_8.5rem] gap-2">
-          <Input
-            id="timeline_to"
-            type="date"
-            bind:value={occurredToDate}
-            class="timeline-native-picker h-10 text-sm tabular-nums"
-            onchange={handleToDateChange}
-          />
-          <Input
-            type="time"
-            bind:value={occurredToTime}
-            class="timeline-native-picker h-10 text-sm tabular-nums"
-            aria-label={$t('history.timeline.filters.to_time')}
-            step="60"
-            disabled={!occurredToDate}
-          />
-        </div>
-      </div>
+      <TimelineDateTimePicker
+        id="timeline_to"
+        label={$t('history.timeline.filters.to')}
+        bind:date={occurredToDate}
+        bind:time={occurredToTime}
+        timeLabel={$t('history.timeline.filters.to_time')}
+        defaultTime="23:59"
+      />
 
       <div class="flex items-end gap-2">
         <Button class="w-full xl:w-auto" onclick={applyFilters} disabled={loading || loadingMore}>
@@ -699,22 +653,3 @@
     </div>
   {/if}
 </div>
-
-<style>
-  :global(html:not(.dark) .timeline-native-picker) {
-    color-scheme: light;
-  }
-
-  :global(html.dark .timeline-native-picker) {
-    color-scheme: dark;
-  }
-
-  :global(.timeline-native-picker::-webkit-date-and-time-value) {
-    text-align: left;
-  }
-
-  :global(.timeline-native-picker::-webkit-datetime-edit),
-  :global(.timeline-native-picker::-webkit-datetime-edit-fields-wrapper) {
-    min-width: 0;
-  }
-</style>

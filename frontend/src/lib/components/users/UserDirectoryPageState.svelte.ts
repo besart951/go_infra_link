@@ -24,13 +24,22 @@ export class UserDirectoryPageState {
   isLoading = $state(true);
   error = $state<string | null>(null);
   createDialogOpen = $state(false);
+  resendClock = $state(Date.now());
 
-  async initialize(): Promise<void> {
-    if (!auth.canAccessUserDirectory) {
+  async initialize(canAccessDirectory = auth.canAccessUserDirectory): Promise<void> {
+    if (!canAccessDirectory) {
       await goto('/');
       return;
     }
     await this.loadDirectory();
+  }
+
+  startResendClock(): () => void {
+    const interval = window.setInterval(() => {
+      this.resendClock = Date.now();
+    }, 1000);
+
+    return () => window.clearInterval(interval);
   }
 
   async loadDirectory(
@@ -114,6 +123,19 @@ export class UserDirectoryPageState {
     }
   }
 
+  async handleResendInvitation(userId: string): Promise<void> {
+    try {
+      await userRepository.resendRegistration(userId);
+      await this.loadDirectory();
+      addToast(translate('user.invitation_resent'), 'success');
+    } catch (error) {
+      addToast(
+        error instanceof Error ? error.message : translate('user.invitation_resend_failed'),
+        'error'
+      );
+    }
+  }
+
   formatDate(dateString: string | null | undefined): string {
     if (!dateString) return translate('messages.never');
     const date = new Date(dateString);
@@ -135,12 +157,38 @@ export class UserDirectoryPageState {
     return translate('messages.years_ago').replace('{count}', String(Math.floor(diffInDays / 365)));
   }
 
-  authVerified(user: UserDirectoryUser): boolean {
-    return Boolean(user.is_active && !user.disabled_at);
+  hasInvitationResendAction(user: UserDirectoryUser): boolean {
+    const process = user.registration_process;
+    if (!this.pageCapabilities.can_create_user || !process) return false;
+    if (process.email_status === 'not_applicable') return false;
+    return (
+      process.status === 'pending' ||
+      process.status === 'email_failed' ||
+      process.status === 'expired'
+    );
   }
 
-  twoFactorEnabled(_user: UserDirectoryUser): boolean {
-    return false;
+  canResendInvitation(user: UserDirectoryUser, now = Date.now()): boolean {
+    const process = user.registration_process;
+    if (!process) return false;
+    if (process.can_resend) return true;
+
+    const availableAt = timestampMs(process.resend_available_at);
+    return availableAt !== null && now >= availableAt;
+  }
+
+  invitationResendDisabledReason(user: UserDirectoryUser, now = Date.now()): string | null {
+    const process = user.registration_process;
+    if (!process || this.canResendInvitation(user, now)) return null;
+
+    const availableAt = timestampMs(process.resend_available_at);
+    if (availableAt !== null && availableAt > now) {
+      return translate('user.invitation_resend_wait', {
+        duration: formatWaitDuration(availableAt - now)
+      });
+    }
+
+    return translate('user.invitation_resend_unavailable');
   }
 
   roleOptionsFor(user: UserDirectoryUser) {
@@ -150,6 +198,26 @@ export class UserDirectoryPageState {
   async handleUserCreated(): Promise<void> {
     this.createDialogOpen = false;
     await this.loadDirectory();
-    addToast(translate('messages.user_created_success'), 'success');
+    addToast(translate('user.invitation_created_and_sent'), 'success');
   }
+}
+
+function timestampMs(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function formatWaitDuration(milliseconds: number): string {
+  const totalSeconds = Math.max(1, Math.ceil(milliseconds / 1000));
+  if (totalSeconds < 60) {
+    return translate(totalSeconds === 1 ? 'user.duration_second' : 'user.duration_seconds', {
+      count: totalSeconds
+    });
+  }
+
+  const totalMinutes = Math.ceil(totalSeconds / 60);
+  return translate(totalMinutes === 1 ? 'user.duration_minute' : 'user.duration_minutes', {
+    count: totalMinutes
+  });
 }

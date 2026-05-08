@@ -13,61 +13,26 @@ import (
 func TestService_GetAllowedRoles(t *testing.T) {
 	ctx := context.Background()
 	roleRepo := &rolePermissionRepoStub{items: map[domainUser.Role][]domainUser.RolePermission{
-		domainUser.RoleSuperAdmin: {
-			{Role: domainUser.RoleSuperAdmin, Permission: domainUser.PermissionUserCreate},
-			{Role: domainUser.RoleSuperAdmin, Permission: domainUser.PermissionUserUpdate},
-			{Role: domainUser.RoleSuperAdmin, Permission: domainUser.PermissionUserRead},
-			{Role: domainUser.RoleSuperAdmin, Permission: domainUser.PermissionPermissionUpdate},
-		},
-		domainUser.RoleAdminFZAG: {
-			{Role: domainUser.RoleAdminFZAG, Permission: domainUser.PermissionUserCreate},
-			{Role: domainUser.RoleAdminFZAG, Permission: domainUser.PermissionUserUpdate},
-			{Role: domainUser.RoleAdminFZAG, Permission: domainUser.PermissionUserRead},
-			{Role: domainUser.RoleAdminFZAG, Permission: domainUser.PermissionRoleUpdate},
-		},
-		domainUser.RoleFZAG: {
-			{Role: domainUser.RoleFZAG, Permission: domainUser.PermissionUserRead},
-			{Role: domainUser.RoleFZAG, Permission: domainUser.PermissionPermissionRead},
-		},
 		domainUser.RoleAdminPlaner: {
 			{Role: domainUser.RoleAdminPlaner, Permission: domainUser.PermissionUserCreate},
-			{Role: domainUser.RoleAdminPlaner, Permission: domainUser.PermissionUserUpdate},
-			{Role: domainUser.RoleAdminPlaner, Permission: domainUser.PermissionUserRead},
-			{Role: domainUser.RoleAdminPlaner, Permission: domainUser.PermissionTeamRead},
-		},
-		domainUser.RolePlaner: {
-			{Role: domainUser.RolePlaner, Permission: domainUser.PermissionUserRead},
-		},
-		domainUser.RoleAdminEnterpreneur: {
-			{Role: domainUser.RoleAdminEnterpreneur, Permission: domainUser.PermissionUserRead},
-		},
-		domainUser.RoleEnterpreneur: {
-			{Role: domainUser.RoleEnterpreneur, Permission: domainUser.PermissionProjectCreate},
 		},
 	}}
 	svc := &Service{rolePermissionRepo: roleRepo, permissionRepo: &permissionRepoStub{items: []domainUser.Permission{
 		{Name: domainUser.PermissionUserCreate},
-		{Name: domainUser.PermissionUserUpdate},
-		{Name: domainUser.PermissionUserRead},
-		{Name: domainUser.PermissionPermissionUpdate},
-		{Name: domainUser.PermissionRoleUpdate},
-		{Name: domainUser.PermissionPermissionRead},
-		{Name: domainUser.PermissionTeamRead},
-		{Name: domainUser.PermissionProjectCreate},
 	}}}
 	roles, err := svc.GetAllowedRoles(ctx, domainUser.RoleAdminPlaner)
 	if err != nil {
 		t.Fatalf("expected allowed roles lookup to succeed, got %v", err)
 	}
 
-	if len(roles) != 3 {
-		t.Fatalf("expected three manageable roles, got %d (%+v)", len(roles), roles)
+	want := []domainUser.Role{domainUser.RolePlaner, domainUser.RoleAdminEnterpreneur, domainUser.RoleEnterpreneur}
+	if len(roles) != len(want) {
+		t.Fatalf("expected manageable roles, got %+v want %+v", roles, want)
 	}
-	if roles[0] != domainUser.RoleAdminPlaner {
-		t.Fatalf("expected same-permission role to be manageable first, got %+v", roles)
-	}
-	if roles[1] != domainUser.RolePlaner || roles[2] != domainUser.RoleAdminEnterpreneur {
-		t.Fatalf("unexpected manageable roles order/content: %+v", roles)
+	for i := range want {
+		if roles[i] != want[i] {
+			t.Fatalf("unexpected manageable roles order/content: got %+v want %+v", roles, want)
+		}
 	}
 }
 

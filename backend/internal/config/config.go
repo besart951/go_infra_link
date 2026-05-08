@@ -16,6 +16,7 @@ import (
 type Config struct {
 	AppEnv                        string
 	LogLevel                      string
+	AppPublicURL                  string
 	HTTPAddr                      string
 	SwaggerEnabled                bool
 	JWTSecret                     string
@@ -66,6 +67,7 @@ func Load() (Config, error) {
 	cfg := Config{
 		AppEnv:             appEnv,
 		LogLevel:           env.First("info", "APP_LOG_LEVEL", "LOG_LEVEL"),
+		AppPublicURL:       normalizePublicURL(env.First("http://localhost:5173", "APP_PUBLIC_URL", "PUBLIC_APP_URL", "FRONTEND_PUBLIC_URL")),
 		HTTPAddr:           resolveHTTPAddr(env),
 		SwaggerEnabled:     env.Bool("SWAGGER_ENABLED", !IsProduction(appEnv)),
 		JWTSecret:          env.String("JWT_SECRET", defaultJWTSecret),
@@ -250,6 +252,9 @@ func validateConfig(cfg Config) error {
 	if err := validateCORSAllowedOrigins(cfg.CORSAllowedOrigins, IsProduction(cfg.AppEnv)); err != nil {
 		errs = append(errs, err)
 	}
+	if err := validateAppPublicURL(cfg.AppPublicURL, IsProduction(cfg.AppEnv)); err != nil {
+		errs = append(errs, err)
+	}
 	if err := validateDatabaseSSLMode(cfg); err != nil {
 		errs = append(errs, err)
 	}
@@ -365,6 +370,21 @@ func validateCORSAllowedOrigins(origins []string, production bool) error {
 		}
 	}
 	return errors.Join(errs...)
+}
+
+func validateAppPublicURL(value string, production bool) error {
+	trimmed := strings.TrimSpace(value)
+	parsed, err := url.Parse(trimmed)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return fmt.Errorf("APP_PUBLIC_URL must be an absolute URL without query or fragment")
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return fmt.Errorf("APP_PUBLIC_URL contains unsupported scheme %q", parsed.Scheme)
+	}
+	if production && parsed.Scheme != "https" {
+		return fmt.Errorf("APP_PUBLIC_URL must use https in production")
+	}
+	return nil
 }
 
 func validateDatabaseSSLMode(cfg Config) error {
@@ -545,4 +565,8 @@ func isSafeRealtimePostgresChannel(channel string) bool {
 
 func normalizeSameSite(value string) string {
 	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func normalizePublicURL(value string) string {
+	return strings.TrimRight(strings.TrimSpace(value), "/")
 }

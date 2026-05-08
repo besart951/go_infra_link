@@ -157,7 +157,7 @@
               {/snippet}
             </Tooltip.Trigger>
             <Tooltip.Content side="top" class="max-w-xs">
-              <p class="break-words">{triggerTitle}</p>
+              <p class="wrap-break-word">{triggerTitle}</p>
             </Tooltip.Content>
           </Tooltip.Root>
         </Tooltip.Provider>

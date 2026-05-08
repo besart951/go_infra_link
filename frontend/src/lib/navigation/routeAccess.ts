@@ -19,6 +19,7 @@ export const APP_ROUTE_ACCESS_RULES: RouteAccessRule[] = [
 
   { path: '/users/directory', permission: 'user.read' },
   { path: '/users/roles', permission: 'role.read' },
+  { path: '/teams/new', permission: 'team.create' },
   { path: '/teams', permission: 'team.read' },
 
   { path: '/projects/new', permission: 'project.create' },

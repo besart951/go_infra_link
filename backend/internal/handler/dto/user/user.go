@@ -19,12 +19,17 @@ type CreateUserRequest struct {
 }
 
 type UpdateUserRequest struct {
-	FirstName string `json:"first_name" binding:"omitempty,min=1,max=100"`
-	LastName  string `json:"last_name" binding:"omitempty,min=1,max=100"`
-	Email     string `json:"email" binding:"omitempty,email"`
-	Password  string `json:"password" binding:"omitempty,min=8"`
-	IsActive  *bool  `json:"is_active"`
-	Role      string `json:"role" binding:"omitempty,oneof=superadmin admin_fzag fzag admin_planer planer admin_entrepreneur entrepreneur"`
+	FirstName string  `json:"first_name" binding:"omitempty,min=1,max=100"`
+	LastName  string  `json:"last_name" binding:"omitempty,min=1,max=100"`
+	Email     string  `json:"email" binding:"omitempty,email"`
+	Password  *string `json:"password" binding:"omitempty,min=8"`
+	IsActive  *bool   `json:"is_active"`
+	Role      *string `json:"role" binding:"omitempty,oneof=superadmin admin_fzag fzag admin_planer planer admin_entrepreneur entrepreneur"`
+}
+
+type UpdateOwnPasswordRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required,min=8"`
 }
 
 type UserResponse struct {
@@ -63,6 +68,26 @@ type UserDirectoryCapabilitiesResponse struct {
 	CanChangeRole bool `json:"can_change_role"`
 }
 
+type RegistrationProcessStepResponse struct {
+	Key       string     `json:"key"`
+	Label     string     `json:"label"`
+	Status    string     `json:"status"`
+	Timestamp *time.Time `json:"timestamp,omitempty"`
+}
+
+type RegistrationProcessResponse struct {
+	Status            string                            `json:"status"`
+	EmailStatus       string                            `json:"email_status"`
+	Steps             []RegistrationProcessStepResponse `json:"steps"`
+	CanResend         bool                              `json:"can_resend"`
+	ExpiresAt         *time.Time                        `json:"expires_at,omitempty"`
+	AcceptedAt        *time.Time                        `json:"accepted_at,omitempty"`
+	LastSentAt        *time.Time                        `json:"last_sent_at,omitempty"`
+	ResendAvailableAt *time.Time                        `json:"resend_available_at,omitempty"`
+	SendCount         int                               `json:"send_count"`
+	LastError         string                            `json:"last_error,omitempty"`
+}
+
 type UserDirectoryPageCapabilitiesResponse struct {
 	CanCreateUser bool `json:"can_create_user"`
 }
@@ -83,6 +108,7 @@ type UserDirectoryUserResponse struct {
 	FailedLoginAttempts int                               `json:"failed_login_attempts"`
 	Teams               []UserDirectoryTeamResponse       `json:"teams"`
 	Capabilities        UserDirectoryCapabilitiesResponse `json:"capabilities"`
+	RegistrationProcess *RegistrationProcessResponse      `json:"registration_process,omitempty"`
 }
 
 type UserDirectoryTeamFilterResponse struct {
@@ -112,4 +138,14 @@ type AllowedRolesResponse struct {
 type AddUserToTeamRequest struct {
 	UserID uuid.UUID `json:"user_id" binding:"required"`
 	TeamID uuid.UUID `json:"team_id" binding:"required"`
+}
+
+type CreateUserInvitationRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	Role  string `json:"role" binding:"required,oneof=superadmin admin_fzag fzag admin_planer planer admin_entrepreneur entrepreneur"`
+}
+
+type CreateUserInvitationResponse struct {
+	User                UserResponse                `json:"user"`
+	RegistrationProcess RegistrationProcessResponse `json:"registration_process"`
 }

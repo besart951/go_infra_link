@@ -13,13 +13,14 @@ import (
 )
 
 type Handlers struct {
-	Auth         *authhandler.AuthHandler
-	Dashboard    *dashboardhandler.DashboardHandler
-	I18n         *i18nhandler.I18nHandler
-	Notification *notificationhandler.NotificationSettingsHandler
-	Project      *projecthandler.Handlers
-	Team         *teamhandler.TeamHandler
-	User         *userhandler.Handlers
-	Facility     *facilityhandler.Handlers
-	History      *historyhandler.Handler
+	Auth             *authhandler.AuthHandler
+	AuthRegistration *authhandler.RegistrationHandler
+	Dashboard        *dashboardhandler.DashboardHandler
+	I18n             *i18nhandler.I18nHandler
+	Notification     *notificationhandler.NotificationSettingsHandler
+	Project          *projecthandler.Handlers
+	Team             *teamhandler.TeamHandler
+	User             *userhandler.Handlers
+	Facility         *facilityhandler.Handlers
+	History          *historyhandler.Handler
 }

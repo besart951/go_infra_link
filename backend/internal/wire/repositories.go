@@ -26,6 +26,7 @@ import (
 	projectsqlrepo "github.com/besart951/go_infra_link/backend/internal/repository/projectsql"
 	teamrepo "github.com/besart951/go_infra_link/backend/internal/repository/team"
 	userrepo "github.com/besart951/go_infra_link/backend/internal/repository/user"
+	userregistrationrepo "github.com/besart951/go_infra_link/backend/internal/repository/userregistration"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -41,6 +42,7 @@ type Repositories struct {
 	History                  HistoryRepository
 	User                     domainUser.UserRepository
 	UserEmail                domainUser.UserEmailRepository
+	UserRegistration         *userregistrationrepo.Store
 	Permissions              domainUser.PermissionRepository
 	RolePermissions          domainUser.RolePermissionRepository
 	RefreshToken             domainAuth.RefreshTokenRepository
@@ -107,6 +109,7 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 		History:                  historyStore,
 		User:                     userRepo,
 		UserEmail:                userEmailRepo,
+		UserRegistration:         userregistrationrepo.NewStore(gormDB),
 		Permissions:              permissionRepo,
 		RolePermissions:          rolePermissionRepo,
 		RefreshToken:             authrepo.NewRefreshTokenRepository(gormDB),

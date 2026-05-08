@@ -19,26 +19,29 @@ import (
 	teamservice "github.com/besart951/go_infra_link/backend/internal/service/team"
 	userservice "github.com/besart951/go_infra_link/backend/internal/service/user"
 	userdirectoryservice "github.com/besart951/go_infra_link/backend/internal/service/userdirectory"
+	usermutationpolicy "github.com/besart951/go_infra_link/backend/internal/service/usermutationpolicy"
+	userregistrationservice "github.com/besart951/go_infra_link/backend/internal/service/userregistration"
 	"gorm.io/gorm"
 )
 
 // Services holds all service instances.
 type Services struct {
-	Project         *projectservice.Services
-	Dashboard       *dashboardservice.Service
-	Phase           *phaseservice.Service
-	PhasePermission *phasepermissionservice.Service
-	User            *userservice.Service
-	Auth            *authservice.Service
-	JWT             domainAuth.TokenService
-	RBAC            *rbacservice.Service
-	Team            *teamservice.Service
-	Admin           *adminservice.Service
-	UserDirectory   *userdirectoryservice.Service
-	Notification    *notificationservice.Service
-	Password        domainUser.PasswordHasher
-	Export          *exportservice.Service
-	History         HistoryRepository
+	Project          *projectservice.Services
+	Dashboard        *dashboardservice.Service
+	Phase            *phaseservice.Service
+	PhasePermission  *phasepermissionservice.Service
+	User             *userservice.Service
+	UserRegistration *userregistrationservice.Service
+	Auth             *authservice.Service
+	JWT              domainAuth.TokenService
+	RBAC             *rbacservice.Service
+	Team             *teamservice.Service
+	Admin            *adminservice.Service
+	UserDirectory    *userdirectoryservice.Service
+	Notification     *notificationservice.Service
+	Password         domainUser.PasswordHasher
+	Export           *exportservice.Service
+	History          HistoryRepository
 
 	Facility *facilityservice.Services
 }
@@ -50,6 +53,7 @@ type ServiceConfig struct {
 	AccessTokenTTL  time.Duration
 	RefreshTokenTTL time.Duration
 	Runtime         *RuntimeAdapters
+	AppPublicURL    string
 }
 
 // NewServices creates all service instances from repositories and configuration.
@@ -57,6 +61,7 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 	passwordService := passwordsvc.New()
 	jwtService := authservice.NewJWTService(cfg.JWTSecret, cfg.Issuer)
 	rbacSvc := rbacservice.New(repos.User, repos.TeamMember, repos.Permissions, repos.RolePermissions)
+	userMutationPolicy := usermutationpolicy.New(rbacSvc, repos.UserRegistration)
 	facilityServices := newFacilityServices(gormDB, repos)
 
 	exportSvc, err := newExportService(repos)
@@ -69,18 +74,19 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 	}
 
 	return &Services{
-		Project:         newProjectServices(gormDB, repos, facilityServices),
-		Dashboard:       dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
-		Phase:           phaseservice.NewPhaseService(repos.Phase),
-		PhasePermission: phasepermissionservice.New(repos.PhasePermissions, repos.Phase, repos.Permissions),
-		User:            userservice.New(repos.User, passwordService),
-		Password:        passwordService,
-		JWT:             jwtService,
-		RBAC:            rbacSvc,
-		Team:            teamservice.New(repos.Team, repos.TeamMember),
-		Admin:           adminservice.New(repos.User),
-		UserDirectory:   userdirectoryservice.New(repos.User, repos.Team, repos.TeamMember, repos.RolePermissions),
-		Notification:    notificationSvc,
+		Project:          newProjectServices(gormDB, repos, facilityServices),
+		Dashboard:        dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
+		Phase:            phaseservice.NewPhaseService(repos.Phase),
+		PhasePermission:  phasepermissionservice.New(repos.PhasePermissions, repos.Phase, repos.Permissions),
+		User:             userservice.New(repos.User, passwordService, userMutationPolicy),
+		UserRegistration: userregistrationservice.New(repos.UserRegistration, userMutationPolicy, passwordService, cfg.AppPublicURL),
+		Password:         passwordService,
+		JWT:              jwtService,
+		RBAC:             rbacSvc,
+		Team:             teamservice.New(repos.Team, repos.TeamMember),
+		Admin:            adminservice.New(repos.User, userMutationPolicy),
+		UserDirectory:    userdirectoryservice.New(repos.User, repos.Team, repos.TeamMember, repos.RolePermissions),
+		Notification:     notificationSvc,
 		Auth: authservice.NewService(
 			jwtService,
 			repos.User,

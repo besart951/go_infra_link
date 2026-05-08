@@ -4,7 +4,6 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
-  import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import * as Popover from '$lib/components/ui/popover/index.js';
   import * as Command from '$lib/components/ui/command/index.js';
   import { Check } from '@lucide/svelte';
@@ -22,11 +21,7 @@
 
   const t = createTranslator();
 
-  let firstName = $state('');
-  let lastName = $state('');
   let email = $state('');
-  let password = $state('');
-  let isActive = $state(true);
   let selectedRole = $state<AllowedRole | null>(null);
   let openCombobox = $state(false);
 
@@ -49,20 +44,12 @@
     fieldErrors = {};
 
     try {
-      await userRepository.create({
-        first_name: firstName,
-        last_name: lastName,
+      await userRepository.invite({
         email,
-        password,
-        is_active: isActive,
         role: selectedRole.role
       });
 
-      firstName = '';
-      lastName = '';
       email = '';
-      password = '';
-      isActive = true;
       selectedRole = null;
 
       if (onSuccess) onSuccess();
@@ -84,36 +71,6 @@
     </div>
   {/if}
 
-  <div class="grid grid-cols-2 gap-4">
-    <div class="space-y-2">
-      <Label for="firstName">{$t('user.firstname')}</Label>
-      <Input
-        type="text"
-        id="firstName"
-        bind:value={firstName}
-        required
-        class={fieldErrors.first_name ? 'border-destructive' : ''}
-      />
-      {#if fieldErrors.first_name}
-        <p class="text-sm text-destructive">{fieldErrors.first_name}</p>
-      {/if}
-    </div>
-
-    <div class="space-y-2">
-      <Label for="lastName">{$t('user.lastname')}</Label>
-      <Input
-        type="text"
-        id="lastName"
-        bind:value={lastName}
-        required
-        class={fieldErrors.last_name ? 'border-destructive' : ''}
-      />
-      {#if fieldErrors.last_name}
-        <p class="text-sm text-destructive">{fieldErrors.last_name}</p>
-      {/if}
-    </div>
-  </div>
-
   <div class="space-y-2">
     <Label for="email">{$t('auth.email')}</Label>
     <Input
@@ -125,21 +82,6 @@
     />
     {#if fieldErrors.email}
       <p class="text-sm text-destructive">{fieldErrors.email}</p>
-    {/if}
-  </div>
-
-  <div class="space-y-2">
-    <Label for="password">{$t('auth.password')}</Label>
-    <Input
-      type="password"
-      id="password"
-      bind:value={password}
-      required
-      minlength={8}
-      class={fieldErrors.password ? 'border-destructive' : ''}
-    />
-    {#if fieldErrors.password}
-      <p class="text-sm text-destructive">{fieldErrors.password}</p>
     {/if}
   </div>
 
@@ -212,11 +154,6 @@
     </p>
   </div>
 
-  <div class="flex items-center gap-2">
-    <Checkbox id="isActive" checked={isActive} onCheckedChange={(v) => (isActive = !!v)} />
-    <Label for="isActive" class="text-sm font-normal">{$t('users.form.user_active')}</Label>
-  </div>
-
   <div class="flex justify-end gap-2 pt-2">
     {#if onCancel}
       <Button type="button" variant="outline" onclick={onCancel} disabled={isSubmitting}>
@@ -224,7 +161,7 @@
       </Button>
     {/if}
     <Button type="submit" disabled={isSubmitting}>
-      {isSubmitting ? $t('users.form.creating_user') : $t('common.create_user')}
+      {isSubmitting ? $t('users.form.creating_user') : $t('user.send_invitation')}
     </Button>
   </div>
 </form>

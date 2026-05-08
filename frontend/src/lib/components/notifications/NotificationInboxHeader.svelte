@@ -53,7 +53,7 @@
       >
         <ArrowLeftIcon class="size-4" />
       </Button>
-      <div class="flex min-w-0 items-start gap-2">
+      <div class="flex min-w-0 items-center gap-2">
         <BellIcon class="size-5 shrink-0 text-muted-foreground" />
         <div class="min-w-0">
           <h1 class="truncate text-2xl font-semibold tracking-tight">

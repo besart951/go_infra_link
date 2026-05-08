@@ -136,7 +136,7 @@
     .filter(Boolean)
     .join(' ')}
 >
-  <Table.Cell class="w-8 max-w-8 min-w-8 !px-0 !py-1">
+  <Table.Cell class="w-8 max-w-8 min-w-8 px-0! py-1!">
     <div class="flex justify-center">
       <Checkbox
         checked={rowState.isSelected(device.id)}
@@ -145,7 +145,7 @@
       />
     </div>
   </Table.Cell>
-  <Table.Cell class="w-6 max-w-6 min-w-6 !px-0 !py-1">
+  <Table.Cell class="w-6 max-w-6 min-w-6 px-0! py-1!">
     <Button
       variant="ghost"
       size="sm"
@@ -177,7 +177,7 @@
             {/snippet}
           </Tooltip.Trigger>
           <Tooltip.Content side="top" class="max-w-xs">
-            <p class="break-words">{spsControllerSystemTypeLabel}</p>
+            <p class="wrap-break-word">{spsControllerSystemTypeLabel}</p>
           </Tooltip.Content>
         </Tooltip.Root>
       </Tooltip.Provider>
@@ -295,7 +295,7 @@
     </div>
   </Table.Cell>
   <Table.Cell
-    class={cellClass('w-fit max-w-40 min-w-[4.5rem]', 'p-1', 'apparat_id')}
+    class={cellClass('w-fit max-w-40 min-w-18', 'p-1', 'apparat_id')}
     title={getFieldPreviewTitle('apparat_id')}
     {...focusCell('apparat_id')}
   >
@@ -322,7 +322,7 @@
     </div>
   </Table.Cell>
   <Table.Cell
-    class={cellClass('w-fit max-w-40 min-w-[4.5rem]', 'p-1', 'system_part_id')}
+    class={cellClass('w-fit max-w-40 min-w-18', 'p-1', 'system_part_id')}
     title={getFieldPreviewTitle('system_part_id')}
     {...focusCell('system_part_id')}
   >

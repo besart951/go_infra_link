@@ -414,15 +414,7 @@
       {/snippet}
 
       {#if state.loading && state.items.length === 0}
-        {#each Array(5) as _}
-          <Table.Row>
-            {#each Array(columnCount) as _}
-              <Table.Cell>
-                <Skeleton class="h-8 w-full" />
-              </Table.Cell>
-            {/each}
-          </Table.Row>
-        {/each}
+        <Table.LoadingRows loading {columnCount} />
       {:else if state.items.length === 0}
         <Table.Row>
           <Table.Cell colspan={columnCount} class="h-24 text-center">

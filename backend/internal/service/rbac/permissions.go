@@ -78,9 +78,9 @@ func (s *Service) ListRolesWithPermissions(ctx context.Context) ([]domainUser.Ro
 			Name:        role,
 			DisplayName: domainUser.RoleDisplayName(role),
 			Description: domainUser.RoleDescription(role),
-			Level:       s.GetRoleLevel(role),
+			Level:       domainUser.RoleLevel(role),
 			Permissions: permissions,
-			CanManage:   manageableRoles(role, roles, permissionSets),
+			CanManage:   manageableRoles(role, permissionSets),
 		})
 	}
 
@@ -260,34 +260,15 @@ func rolePermissionSets(roles []domainUser.Role, rolePerms []domainUser.RolePerm
 	return sets
 }
 
-func manageableRoles(role domainUser.Role, roles []domainUser.Role, rolePermissionSets map[domainUser.Role]permissionSet) []domainUser.Role {
+func manageableRoles(role domainUser.Role, rolePermissionSets map[domainUser.Role]permissionSet) []domainUser.Role {
 	if role == domainUser.RoleSuperAdmin {
-		return append([]domainUser.Role{}, roles...)
+		return domainUser.AssignableRoles(role)
 	}
-	return manageableRolesForPermissionSet(roles, rolePermissionSets[role], rolePermissionSets)
-}
-
-func manageableRolesForPermissionSet(roles []domainUser.Role, requesterPermissions permissionSet, rolePermissionSets map[domainUser.Role]permissionSet) []domainUser.Role {
+	requesterPermissions := rolePermissionSets[role]
 	if !requesterPermissions.hasAny(domainUser.PermissionUserCreate, domainUser.PermissionUserUpdate) {
 		return []domainUser.Role{}
 	}
-
-	allowed := make([]domainUser.Role, 0, len(roles))
-	for _, role := range roles {
-		if permissionSetContainsAll(requesterPermissions, rolePermissionSets[role]) {
-			allowed = append(allowed, role)
-		}
-	}
-	return allowed
-}
-
-func permissionSetContainsAll(granted permissionSet, required permissionSet) bool {
-	for permission := range required {
-		if _, ok := granted[permission]; !ok {
-			return false
-		}
-	}
-	return true
+	return domainUser.AssignableRoles(role)
 }
 
 func (s permissionSet) has(permission string) bool {

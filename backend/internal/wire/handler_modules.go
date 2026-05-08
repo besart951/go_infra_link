@@ -52,6 +52,7 @@ func newUserHandlers(services *Services) *userhandler.Handlers {
 		services.Admin,
 		services.RBAC,
 		services.UserDirectory,
+		services.UserRegistration,
 		services.RBAC,
 		services.RBAC,
 	)

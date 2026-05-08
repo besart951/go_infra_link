@@ -36,6 +36,20 @@ export const routeAudits = [
     notes: 'Authentication happens through the login API, not through route guards.'
   },
   {
+    path: '/register/:token',
+    domain: 'auth',
+    files: [
+      'src/routes/(auth)/register/[token]/+page.svelte',
+      'src/routes/(auth)/register/[token]/+page.ts'
+    ],
+    auth: 'public',
+    authorization: 'none',
+    status: 'configured',
+    expectedAccess: 'Invited users with a valid single-use registration token.',
+    protectedUi: ['registration form'],
+    notes: 'Backend validates the token and keeps the account inactive until completion.'
+  },
+  {
     path: '/',
     domain: 'app',
     files: ['src/routes/(app)/+page.svelte', 'src/routes/(app)/+page.ts'],
@@ -173,6 +187,17 @@ export const routeAudits = [
     expectedAccess: 'Requires team.read for the route and team.create/delete for actions.',
     protectedUi: ['pages.create_team', 'common.delete_team'],
     notes: 'Any authenticated user can load the team listing today.'
+  },
+  {
+    path: '/teams/new',
+    domain: 'team',
+    files: ['src/routes/(app)/teams/new/+page.svelte'],
+    auth: 'authenticated',
+    authorization: 'route',
+    status: 'configured',
+    expectedAccess: 'Requires team.create.',
+    protectedUi: ['team creation form'],
+    notes: 'The app layout maps this dedicated creation route to team.create before the generic /teams rule.'
   },
   {
     path: '/teams/:id',
