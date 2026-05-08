@@ -7,6 +7,8 @@
   import { BACNET_SOFTWARE_TYPES, BACNET_HARDWARE_TYPES } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import AlarmTypeSelect from '$lib/components/facility/selects/AlarmTypeSelect.svelte';
+  import NotificationClassSelect from '$lib/components/facility/selects/NotificationClassSelect.svelte';
+  import StateTextSelect from '$lib/components/facility/selects/StateTextSelect.svelte';
   import { alarmTypeRepository } from '$lib/infrastructure/api/alarmTypeRepository.js';
   import type { AlarmTypeField, BacnetObjectInput } from '$lib/domain/facility/index.js';
 
@@ -18,6 +20,8 @@
       | 'software_number'
       | 'hardware_type'
       | 'hardware_quantity'
+      | 'state_text_id'
+      | 'notification_class_id'
       | 'alarm_type_id',
       string
     >
@@ -303,6 +307,53 @@
       <Label for="text_individual_{index}" class="cursor-pointer text-xs">
         {$t('field_device.bacnet.row.text_individual')}
       </Label>
+    </div>
+  </div>
+
+  <!-- State Text and Notification Class -->
+  <div class="col-span-12 grid gap-2 border-t pt-2 md:grid-cols-2">
+    <div class="space-y-1">
+      <Label class="text-xs">{$t('field_device.bacnet.table.state_text')}</Label>
+      {#if readOnly}
+        <Input
+          value={obj.state_text_id || ''}
+          disabled
+          placeholder={$t('field_device.bacnet.row.select')}
+          class="h-8 text-sm"
+        />
+      {:else}
+        <StateTextSelect
+          bind:value={obj.state_text_id}
+          width="w-full"
+          popupWidth="w-[320px]"
+          onValueChange={(value) => onUpdate('state_text_id', value || null)}
+        />
+      {/if}
+      {#if errors.state_text_id}
+        <p class="text-xs text-destructive">{errors.state_text_id}</p>
+      {/if}
+    </div>
+
+    <div class="space-y-1">
+      <Label class="text-xs">{$t('field_device.bacnet.table.notification_class')}</Label>
+      {#if readOnly}
+        <Input
+          value={obj.notification_class_id || ''}
+          disabled
+          placeholder={$t('field_device.bacnet.row.select')}
+          class="h-8 text-sm"
+        />
+      {:else}
+        <NotificationClassSelect
+          bind:value={obj.notification_class_id}
+          width="w-full"
+          popupWidth="w-[360px]"
+          onValueChange={(value) => onUpdate('notification_class_id', value || null)}
+        />
+      {/if}
+      {#if errors.notification_class_id}
+        <p class="text-xs text-destructive">{errors.notification_class_id}</p>
+      {/if}
     </div>
   </div>
 

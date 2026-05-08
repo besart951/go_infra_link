@@ -7,6 +7,7 @@
     items: Apparat[];
     value?: string;
     width?: string;
+    popupWidth?: string;
     onValueChange?: (value: string) => void;
     disabled?: boolean;
     error?: string;
@@ -16,6 +17,7 @@
     items,
     value = $bindable(''),
     width = 'w-full',
+    popupWidth = width,
     onValueChange,
     disabled = false,
     error
@@ -53,6 +55,7 @@
   tooltipLabelKey="tooltip_name"
   placeholder={$t('field_device.table_select.apparat')}
   {width}
+  {popupWidth}
   {onValueChange}
   {disabled}
   {error}

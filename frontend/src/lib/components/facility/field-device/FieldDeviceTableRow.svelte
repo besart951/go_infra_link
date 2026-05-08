@@ -308,6 +308,7 @@
         items={rowState.allApparats}
         value={apparatSelectValue}
         width="w-fit max-w-40 min-w-[4.5rem]"
+        popupWidth="w-52"
         disabled={!rowState.canUpdateFieldDevice()}
         error={rowState.editing.getFieldError(device.id, 'apparat_id')}
         onValueChange={handleApparatChange}
@@ -334,6 +335,7 @@
         items={rowState.allSystemParts}
         value={systemPartSelectValue}
         width="w-fit max-w-40 min-w-[4.5rem]"
+        popupWidth="w-52"
         disabled={!rowState.canUpdateFieldDevice()}
         error={rowState.editing.getFieldError(device.id, 'system_part_id')}
         onValueChange={handleSystemPartChange}
