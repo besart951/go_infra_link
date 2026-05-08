@@ -119,6 +119,7 @@
     onReload={() => void listState.reload()}
   >
     {#snippet rowSnippet(cabinet: ControlCabinet)}
+      <Table.Cell>{listState.getBuildingLabel(cabinet.building_id)}</Table.Cell>
       <Table.Cell class="font-medium">
         <Button
           variant="link"
@@ -128,7 +129,6 @@
           {cabinet.control_cabinet_nr ?? $t('common.not_available')}
         </Button>
       </Table.Cell>
-      <Table.Cell>{listState.getBuildingLabel(cabinet.building_id)}</Table.Cell>
       <Table.Cell class="text-right">
         <DropdownMenu.Root>
           <DropdownMenu.Trigger>

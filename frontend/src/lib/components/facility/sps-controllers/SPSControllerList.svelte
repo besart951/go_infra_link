@@ -57,6 +57,11 @@
     await listState.reload();
     listState.notifyHistoryRestored();
   }
+
+  function optionalCodeValue(value: string | null | undefined): string | null {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : null;
+  }
 </script>
 
 <div class="flex flex-col gap-4">
@@ -126,74 +131,75 @@
           </a>
         </Table.Cell>
 
-        {#if listState.isProjectContext}
-          <Table.Cell>{controller.ga_device ?? '-'}</Table.Cell>
-          <Table.Cell>
-            {#if controller.ip_address}
-              <code class="rounded-md bg-muted px-1.5 py-0.5 text-sm">
-                {controller.ip_address}
-              </code>
-            {:else}
-              -
-            {/if}
-          </Table.Cell>
-          <Table.Cell>{listState.getCabinetLabel(controller.control_cabinet_id)}</Table.Cell>
-          <Table.Cell>{new Date(controller.created_at).toLocaleDateString()}</Table.Cell>
-        {:else}
-          <Table.Cell>{listState.getCabinetLabel(controller.control_cabinet_id)}</Table.Cell>
-          <Table.Cell>{controller.ga_device ?? '-'}</Table.Cell>
-          <Table.Cell>
-            {#if controller.ip_address}
-              <code class="rounded-md bg-muted px-1.5 py-0.5 text-sm">
-                {controller.ip_address}
-              </code>
-            {:else}
-              -
-            {/if}
-          </Table.Cell>
-          <Table.Cell>
-            {#if !listState.hasLoadedSystemTypes(controller.id)}
-              <Badge variant="outline">...</Badge>
-            {:else if systemTypes.length === 0}
-              <Badge variant="outline">0</Badge>
-            {:else}
-              <Tooltip.Root>
-                <Tooltip.Trigger class="inline-flex">
-                  <Badge variant="secondary" class="cursor-help">
-                    {systemTypes.length}
-                  </Badge>
-                </Tooltip.Trigger>
-                <Tooltip.Content class="max-h-80 max-w-sm overflow-y-auto">
-                  <div class="space-y-3">
-                    <div>
-                      <p class="font-medium">{controller.device_name}</p>
-                      <p class="text-xs text-muted-foreground">
-                        {systemTypes.length}
-                        {$t('facility.system_types')}
-                      </p>
-                    </div>
-                    <div class="space-y-2">
-                      {#each systemTypes as systemType (systemType.id)}
-                        <div
-                          class="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm"
-                        >
-                          <p class="font-medium text-foreground">
-                            {listState.formatSystemTypeTitle(systemType)}
-                          </p>
-                          {#if listState.formatSystemTypeMeta(systemType)}
-                            <p class="text-xs text-muted-foreground">
-                              {listState.formatSystemTypeMeta(systemType)}
-                            </p>
-                          {/if}
-                        </div>
-                      {/each}
-                    </div>
+        <Table.Cell>{controller.ga_device ?? '-'}</Table.Cell>
+        <Table.Cell>
+          {#if optionalCodeValue(controller.ip_address)}
+            <code class="rounded-md bg-muted px-1.5 py-0.5 text-sm">
+              {optionalCodeValue(controller.ip_address)}
+            </code>
+          {:else}
+            -
+          {/if}
+        </Table.Cell>
+        <Table.Cell>
+          {#if optionalCodeValue(controller.subnet)}
+            <code class="rounded-md bg-muted px-1.5 py-0.5 text-sm">
+              {optionalCodeValue(controller.subnet)}
+            </code>
+          {:else}
+            -
+          {/if}
+        </Table.Cell>
+        <Table.Cell>
+          {#if optionalCodeValue(controller.gateway)}
+            <code class="rounded-md bg-muted px-1.5 py-0.5 text-sm">
+              {optionalCodeValue(controller.gateway)}
+            </code>
+          {:else}
+            -
+          {/if}
+        </Table.Cell>
+        <Table.Cell>{optionalCodeValue(controller.vlan) ?? '-'}</Table.Cell>
+        <Table.Cell>
+          {#if !listState.hasLoadedSystemTypes(controller.id)}
+            <Badge variant="outline">...</Badge>
+          {:else if systemTypes.length === 0}
+            <Badge variant="outline">0</Badge>
+          {:else}
+            <Tooltip.Root>
+              <Tooltip.Trigger class="inline-flex">
+                <Badge variant="secondary" class="cursor-help">
+                  {systemTypes.length}
+                </Badge>
+              </Tooltip.Trigger>
+              <Tooltip.Content class="max-h-80 max-w-sm overflow-y-auto">
+                <div class="space-y-3">
+                  <div>
+                    <p class="font-medium">{controller.device_name}</p>
+                    <p class="text-xs text-muted-foreground">
+                      {systemTypes.length}
+                      {$t('facility.system_types')}
+                    </p>
                   </div>
-                </Tooltip.Content>
-              </Tooltip.Root>
-            {/if}
-          </Table.Cell>
-        {/if}
+                  <div class="space-y-2">
+                    {#each systemTypes as systemType (systemType.id)}
+                      <div class="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+                        <p class="font-medium text-foreground">
+                          {listState.formatSystemTypeTitle(systemType)}
+                        </p>
+                        {#if listState.formatSystemTypeMeta(systemType)}
+                          <p class="text-xs text-muted-foreground">
+                            {listState.formatSystemTypeMeta(systemType)}
+                          </p>
+                        {/if}
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              </Tooltip.Content>
+            </Tooltip.Root>
+          {/if}
+        </Table.Cell>
 
         <Table.Cell class="text-right">
           <DropdownMenu.Root>
