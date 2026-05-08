@@ -126,7 +126,10 @@ function isDirectContextEvent(
     return hasScope(event, 'field_device', contextScopeId);
   }
 
-  return eventScopeForTable(event.entity_table) === contextScopeType && event.entity_id === contextScopeId;
+  return (
+    eventScopeForTable(event.entity_table) === contextScopeType &&
+    event.entity_id === contextScopeId
+  );
 }
 
 function groupPath(
@@ -198,13 +201,17 @@ function hierarchyIndex(scopeType: HierarchyScopeType): number {
   return HIERARCHY_SCOPE_ORDER.indexOf(scopeType);
 }
 
-function findScope(event: ChangeEvent, scopeType: HierarchyScopeType): ChangeEventScope | undefined {
+function findScope(
+  event: ChangeEvent,
+  scopeType: HierarchyScopeType
+): ChangeEventScope | undefined {
   return event.scopes?.find((scope) => scope.scope_type === scopeType);
 }
 
 function hasScope(event: ChangeEvent, scopeType: HierarchyScopeType, scopeId: string): boolean {
   return (
-    event.scopes?.some((scope) => scope.scope_type === scopeType && scope.scope_id === scopeId) === true
+    event.scopes?.some((scope) => scope.scope_type === scopeType && scope.scope_id === scopeId) ===
+    true
   );
 }
 

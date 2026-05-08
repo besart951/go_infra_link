@@ -9,18 +9,14 @@
 
 import { t } from '$lib/i18n/index.js';
 import { reportApiFailure, reportApiRetry, reportApiSuccess } from '$lib/stores/network.js';
-import { localizeErrorText, localizeFieldErrorMap } from './errorLocalization.js';
+import { localizeErrorText } from './errorLocalization.js';
+import { fieldErrorsFromApiDetails, parseApiErrorResponse } from './errorResponse.js';
+import { resolveFieldError } from './fieldPath.js';
+import type { FieldErrorMap } from './errorResponse.js';
 
 export { localizeErrorText, localizeFieldErrorMap } from './errorLocalization.js';
-
-export interface ApiError {
-  error: string;
-  message?: string;
-  details?: unknown;
-  status?: number;
-}
-
-export type FieldErrorMap = Record<string, string>;
+export type { ApiError, FieldErrorMap } from './errorResponse.js';
+export { fieldErrorPathMatches } from './fieldPath.js';
 
 export class ApiException extends Error {
   constructor(
@@ -89,27 +85,6 @@ function getCsrfToken(): string | undefined {
   if (typeof document === 'undefined') return undefined;
   const m = document.cookie.match(new RegExp(`(?:^|; )csrf_token=([^;]*)`));
   return m ? decodeURIComponent(m[1]) : undefined;
-}
-
-/**
- * Parse backend error response
- */
-async function parseError(response: Response): Promise<ApiError> {
-  try {
-    const body = await response.json();
-    return {
-      error: body.error || 'unknown_error',
-      message: body.message || response.statusText,
-      details: body.details || body.fields,
-      status: response.status
-    };
-  } catch {
-    return {
-      error: 'unknown_error',
-      message: response.statusText || 'unknown_error',
-      status: response.status
-    };
-  }
 }
 
 /**
@@ -266,7 +241,7 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
           reportApiFailure();
         }
 
-        const error = await parseError(response);
+        const error = await parseApiErrorResponse(response);
 
         // 401 Unauthorized: session expired or not logged in → redirect to login
         if (response.status === 401 && typeof window !== 'undefined') {
@@ -373,11 +348,7 @@ export function getErrorMessage(err: unknown): string {
  */
 export function getFieldErrors(err: unknown): FieldErrorMap {
   if (!(err instanceof ApiException)) return {};
-  if (!err.details || typeof err.details !== 'object') return {};
-  const entries = Object.entries(err.details as Record<string, unknown>)
-    .filter(([, value]) => typeof value === 'string')
-    .map(([key, value]) => [key, value as string]);
-  return localizeFieldErrorMap(Object.fromEntries(entries));
+  return fieldErrorsFromApiDetails(err.details);
 }
 
 /**
@@ -388,11 +359,7 @@ export function getFieldError(
   field: string,
   prefixes: string[] = []
 ): string | undefined {
-  for (const prefix of prefixes) {
-    const key = `${prefix}.${field}`;
-    if (errors[key]) return errors[key];
-  }
-  return errors[field];
+  return resolveFieldError(errors, field, prefixes);
 }
 
 /**

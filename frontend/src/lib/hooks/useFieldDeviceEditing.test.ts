@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 
 import { useFieldDeviceEditing } from './useFieldDeviceEditing.svelte.js';
+import { ApiException } from '$lib/api/client.js';
 import { buildFieldDevice } from '$lib/test/fieldDevice.fixtures.js';
 import { render, waitFor } from '@testing-library/svelte';
 import UseFieldDeviceEditingHarness from './__tests__/UseFieldDeviceEditingHarness.svelte';
@@ -250,6 +251,34 @@ describe('useFieldDeviceEditing', () => {
     });
   });
 
+  it('maps unified bulk-update field_errors back to specification and BACnet cells', async () => {
+    const device = buildFieldDevice();
+    const editing = await createEditing();
+
+    mockBulkUpdate.mockRejectedValueOnce(
+      new ApiException(400, 'validation_error', 'validation failed', [
+        {
+          path: 'updates[0].specifications.specification_brand',
+          message: 'is required'
+        },
+        {
+          path: 'updates[0].bacnet_objects[0].alarm_type_id',
+          message: 'is required'
+        }
+      ])
+    );
+
+    editing.queueSpecEdit(device.id, 'specification_brand', '');
+    editing.queueBacnetEdit(device.id, 'bo-1', 'alarm_type_id', 'missing');
+
+    await editing.saveAllPendingEdits([device]);
+
+    expect(editing.getFieldError(device.id, 'specification_brand')).toBe('validation.required');
+    expect(editing.getBacnetFieldErrors(device.id).get('bo-1')?.alarm_type_id).toBe(
+      'validation.required'
+    );
+  });
+
   it('updates specification independently without including bacnet patches', async () => {
     const device = buildFieldDevice();
     const editing = await createEditing();
@@ -398,6 +427,12 @@ describe('useFieldDeviceEditing', () => {
           error: 'apparatnummer ist bereits vergeben',
           fields: {
             'fielddevice.apparat_nr': 'apparatnummer ist bereits vergeben'
+          },
+          suggestions: {
+            'fielddevice.apparat_nr': 1
+          },
+          suggestion_options: {
+            'fielddevice.apparat_nr': [1, 3, 4]
           }
         }
       ],
@@ -414,6 +449,7 @@ describe('useFieldDeviceEditing', () => {
     expect(onSuccess).not.toHaveBeenCalled();
     expect(editing.isFieldDirty(device.id, 'apparat_id')).toBe(true);
     expect(editing.isFieldDirty(device.id, 'apparat_nr')).toBe(true);
+    expect(editing.getFieldSuggestion(device.id, 'apparat_nr')).toBe(1);
 
     mockBulkUpdate.mockResolvedValueOnce({
       results: [{ id: device.id, success: true }],
@@ -423,6 +459,7 @@ describe('useFieldDeviceEditing', () => {
     });
 
     editing.queueEdit(device.id, 'apparat_nr', 1);
+    expect(editing.getFieldSuggestion(device.id, 'apparat_nr')).toBeUndefined();
 
     await editing.saveAllPendingEdits([device], onSuccess);
 
@@ -437,5 +474,85 @@ describe('useFieldDeviceEditing', () => {
     });
     expect(editing.isFieldDirty(device.id, 'apparat_id')).toBe(false);
     expect(editing.isFieldDirty(device.id, 'apparat_nr')).toBe(false);
+  });
+
+  it('recalculates failed apparat number suggestions from current pending edits', async () => {
+    const devices = [
+      buildFieldDevice({
+        id: 'fd-1',
+        apparat_id: 'app-1',
+        apparat_nr: '1',
+        system_part_id: 'sp-1',
+        sps_controller_system_type_id: 'sps-1'
+      }),
+      buildFieldDevice({
+        id: 'fd-2',
+        apparat_id: 'app-1',
+        apparat_nr: '2',
+        system_part_id: 'sp-1',
+        sps_controller_system_type_id: 'sps-1'
+      }),
+      buildFieldDevice({
+        id: 'fd-3',
+        apparat_id: 'app-1',
+        apparat_nr: '3',
+        system_part_id: 'sp-1',
+        sps_controller_system_type_id: 'sps-1'
+      })
+    ];
+    const editing = await createEditing();
+
+    mockBulkUpdate.mockResolvedValueOnce({
+      results: [
+        {
+          id: 'fd-1',
+          success: false,
+          error: 'apparatnummer ist bereits vergeben',
+          fields: {
+            'fielddevice.apparat_nr': 'apparatnummer ist bereits vergeben'
+          },
+          suggestions: {
+            'fielddevice.apparat_nr': 1
+          },
+          suggestion_options: {
+            'fielddevice.apparat_nr': [1, 2, 4]
+          }
+        },
+        {
+          id: 'fd-2',
+          success: false,
+          error: 'apparatnummer ist bereits vergeben',
+          fields: {
+            'fielddevice.apparat_nr': 'apparatnummer ist bereits vergeben'
+          },
+          suggestions: {
+            'fielddevice.apparat_nr': 1
+          },
+          suggestion_options: {
+            'fielddevice.apparat_nr': [1, 2, 4]
+          }
+        }
+      ],
+      total_count: 2,
+      success_count: 0,
+      failure_count: 2
+    });
+
+    editing.queueEdit('fd-1', 'apparat_nr', 3);
+    editing.queueEdit('fd-2', 'apparat_nr', 3);
+
+    await editing.saveAllPendingEdits(devices);
+
+    expect(editing.getFieldSuggestion('fd-1', 'apparat_nr', devices)).toBe(1);
+    expect(editing.getFieldSuggestion('fd-2', 'apparat_nr', devices)).toBe(1);
+
+    editing.queueEdit('fd-1', 'apparat_nr', 1);
+
+    expect(editing.getFieldSuggestion('fd-1', 'apparat_nr', devices)).toBeUndefined();
+    expect(editing.getFieldSuggestion('fd-2', 'apparat_nr', devices)).toBe(2);
+
+    editing.queueEdit('fd-1', 'apparat_nr', 2);
+
+    expect(editing.getFieldSuggestion('fd-2', 'apparat_nr', devices)).toBe(1);
   });
 });

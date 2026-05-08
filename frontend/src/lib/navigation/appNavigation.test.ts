@@ -49,6 +49,21 @@ describe('app navigation', () => {
     expect(facility?.items?.map((item) => item.url)).toEqual(['/facility', '/facility/buildings']);
   });
 
+  it('keeps the roles child hidden when the user hub is visible through directory access only', () => {
+    const items = buildAppNavItems({
+      pathname: '/users',
+      user: {
+        ...baseUser,
+        can_access_user_directory: true
+      },
+      translate,
+      canPerform: () => false
+    });
+
+    const users = items.find((item) => item.url === '/users');
+    expect(users?.items?.map((item) => item.url)).toEqual(['/users', '/users/directory']);
+  });
+
   it('places the global timeline directly below the Excel importer', () => {
     const items = buildAppNavItems({
       pathname: '/timeline',

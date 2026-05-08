@@ -7,10 +7,26 @@
 
 import { auth } from '$lib/stores/auth.svelte';
 
+interface PermissionedUser {
+  role?: string;
+  permissions?: string[];
+}
+
+export function isSuperAdminUser(user: PermissionedUser | null | undefined): boolean {
+  return user?.role === 'superadmin';
+}
+
+export function hasUserPermission(
+  user: PermissionedUser | null | undefined,
+  permission: string
+): boolean {
+  if (!user) return false;
+  if (isSuperAdminUser(user)) return true;
+  return Boolean(user.permissions?.includes(permission));
+}
+
 function hasPermission(permission: string): boolean {
-  if (!auth.user) return false;
-  const rolePerms = auth.user.permissions || [];
-  return rolePerms.includes(permission);
+  return hasUserPermission(auth.user, permission);
 }
 
 export function canPerform(action: string, resource: string): boolean {

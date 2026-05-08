@@ -5,6 +5,7 @@
   import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
   import type { Building, ControlCabinet } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
+  import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
 
   type BuildingOption = Building & { display_name: string };
 
@@ -27,6 +28,7 @@
   }: Props = $props();
 
   const t = createTranslator();
+  const projectControlCabinetsCache = new Map<string, Promise<ControlCabinet[]>>();
   const effectiveRefreshKey = $derived(
     projectId !== undefined || refreshKey !== undefined
       ? `${projectId ?? ''}|${refreshKey ?? ''}`
@@ -49,23 +51,39 @@
   async function fetchProjectBuildings(search: string): Promise<BuildingOption[]> {
     if (!projectId) return [];
 
-    const links = await projectRepository.listControlCabinets(projectId, {
-      page: 1,
-      limit: 1000
-    });
-    const cabinetIds = Array.from(
-      new Set(links.items.map((link) => link.control_cabinet_id).filter(Boolean))
-    );
-    if (cabinetIds.length === 0) return [];
-
-    const cabinets = await controlCabinetRepository.getBulk(cabinetIds);
-    const buildingIds = Array.from(
-      new Set(cabinets.map((cabinet: ControlCabinet) => cabinet.building_id).filter(Boolean))
-    );
+    const cabinets = await loadProjectControlCabinets(projectId);
+    const buildingIds = [
+      ...new Set(cabinets.map((cabinet) => cabinet.building_id).filter(Boolean))
+    ];
     if (buildingIds.length === 0) return [];
 
     const buildings = await buildingRepository.getBulk(buildingIds);
     return buildings.map(toOption).filter((item) => matchesSearch(item, search));
+  }
+
+  async function loadProjectControlCabinets(projectId: string): Promise<ControlCabinet[]> {
+    const cached = projectControlCabinetsCache.get(projectId);
+    if (cached) return cached;
+
+    const load = (async () => {
+      const links = await fetchAllPages((page, pageSize) =>
+        projectRepository.listControlCabinets(projectId, { page, limit: pageSize })
+      );
+      const controlCabinetIds = [
+        ...new Set(links.map((link) => link.control_cabinet_id).filter(Boolean))
+      ];
+      if (controlCabinetIds.length === 0) return [];
+      return controlCabinetRepository.getBulk(controlCabinetIds);
+    })();
+
+    projectControlCabinetsCache.set(projectId, load);
+    load.catch(() => {
+      if (projectControlCabinetsCache.get(projectId) === load) {
+        projectControlCabinetsCache.delete(projectId);
+      }
+    });
+
+    return load;
   }
 
   async function fetcher(search: string): Promise<BuildingOption[]> {

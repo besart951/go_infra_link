@@ -114,6 +114,9 @@
   const systemPartSelectDirty = $derived(
     rowState.editing.isFieldDirty(device.id, 'system_part_id')
   );
+  const apparatNrSuggestion = $derived(
+    rowState.editing.getFieldSuggestion(device.id, 'apparat_nr', rowState.items)
+  );
   const hasFieldDevicePendingEdits = $derived(
     rowState.editing.hasPendingFieldDeviceEditsForDevice(device.id)
   );
@@ -265,6 +268,17 @@
         disabled={!rowState.canUpdateFieldDevice()}
         isDirty={rowState.editing.isFieldDirty(device.id, 'apparat_nr')}
         error={rowState.editing.getFieldError(device.id, 'apparat_nr')}
+        suggestion={apparatNrSuggestion !== undefined ? String(apparatNrSuggestion) : undefined}
+        suggestionLabel={apparatNrSuggestion !== undefined
+          ? $t('field_device.editing.apparat_nr_lowest_available', {
+              value: apparatNrSuggestion
+            })
+          : undefined}
+        suggestionActionLabel={apparatNrSuggestion !== undefined
+          ? $t('field_device.editing.apparat_nr_use_available_short', {
+              value: apparatNrSuggestion
+            })
+          : undefined}
         undoTitle={undoFieldTitle}
         onSave={(value) => {
           rowState.editing.queueEdit(
@@ -272,6 +286,9 @@
             'apparat_nr',
             value ? parseInt(value, 10) : undefined
           );
+        }}
+        onApplySuggestion={(value) => {
+          rowState.editing.queueEdit(device.id, 'apparat_nr', parseInt(value, 10));
         }}
         onUndo={() => rowState.editing.discardFieldEdit(device.id, 'apparat_nr')}
       />

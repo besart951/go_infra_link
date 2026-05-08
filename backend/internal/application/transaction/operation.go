@@ -1,10 +1,14 @@
 package transaction
 
-import "gorm.io/gorm"
+import "context"
 
-type Runner func(func(tx *gorm.DB) error) error
+// UnitOfWork is intentionally opaque to application services.
+// Infrastructure adapters decide which concrete handle backs a transaction.
+type UnitOfWork interface{}
 
-type Factory[TBundle any] func(tx *gorm.DB) (TBundle, error)
+type Runner func(context.Context, func(context.Context, UnitOfWork) error) error
+
+type Factory[TBundle any] func(UnitOfWork) (TBundle, error)
 
 type Boundary[TBundle any] struct {
 	runner  Runner
@@ -36,30 +40,34 @@ func Bind[TBundle any, TService any](
 	}
 }
 
-func (op Operation[TBundle, TService]) Run(fn func(TService) error) error {
-	_, err := RunResult(op, func(service TService) (struct{}, error) {
-		return struct{}{}, fn(service)
+func (op Operation[TBundle, TService]) Run(ctx context.Context, fn func(context.Context, TService) error) error {
+	_, err := RunResult(ctx, op, func(runCtx context.Context, service TService) (struct{}, error) {
+		return struct{}{}, fn(runCtx, service)
 	})
 	return err
 }
 
 func RunResult[TBundle any, TService any, TResult any](
+	ctx context.Context,
 	op Operation[TBundle, TService],
-	fn func(TService) (TResult, error),
+	fn func(context.Context, TService) (TResult, error),
 ) (TResult, error) {
 	var zero TResult
 	if op.boundary.runner == nil || op.boundary.factory == nil {
-		return fn(op.current)
+		return fn(ctx, op.current)
 	}
 
 	var result TResult
-	err := op.boundary.runner(func(gormTx *gorm.DB) error {
-		txBundle, buildErr := op.boundary.factory(gormTx)
+	err := op.boundary.runner(ctx, func(runCtx context.Context, unit UnitOfWork) error {
+		if runCtx == nil {
+			runCtx = ctx
+		}
+		txBundle, buildErr := op.boundary.factory(unit)
 		if buildErr != nil {
 			return buildErr
 		}
 
-		value, runErr := fn(op.selectService(txBundle))
+		value, runErr := fn(runCtx, op.selectService(txBundle))
 		if runErr != nil {
 			return runErr
 		}

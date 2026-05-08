@@ -5,12 +5,12 @@ import (
 	"errors"
 	"testing"
 
+	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 func TestProjectTransaction_CopyControlCabinetFailureDoesNotUseRollbackDeletes(t *testing.T) {
@@ -565,11 +565,11 @@ func (r *failingProjectFieldDeviceLinkRepo) Create(_ context.Context, entity *do
 
 func newProjectTxServices(baseDeps Dependencies, txDeps Dependencies, runnerCalls *int) *Services {
 	return NewServices(baseDeps, Config{
-		TxRunner: func(run func(tx *gorm.DB) error) error {
+		TxRunner: func(ctx context.Context, run func(context.Context, apptransaction.UnitOfWork) error) error {
 			*runnerCalls = *runnerCalls + 1
-			return run(&gorm.DB{})
+			return run(ctx, nil)
 		},
-		TxDependencies: func(_ *gorm.DB) (Dependencies, error) {
+		TxDependencies: func(apptransaction.UnitOfWork) (Dependencies, error) {
 			return txDeps, nil
 		},
 	})

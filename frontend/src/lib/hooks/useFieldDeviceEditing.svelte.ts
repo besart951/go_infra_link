@@ -5,7 +5,19 @@
  * Pattern follows useFormState.svelte.ts (getter-based for Svelte 5 reactivity).
  */
 
-import { localizeErrorText, localizeFieldErrorMap } from '$lib/api/client.js';
+import {
+  getFieldError as resolveFieldError,
+  getFieldErrors,
+  localizeErrorText,
+  localizeFieldErrorMap
+} from '$lib/api/client.js';
+import {
+  fieldErrorPathMatches,
+  findFieldPathSegment,
+  findIndexedFieldPathSegment,
+  normalizeFieldPathSegment,
+  splitFieldPath
+} from '$lib/api/fieldPath.js';
 import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
 import { addToast } from '$lib/components/toast.svelte';
 import { sessionStorage } from '$lib/services/sessionStorageService.js';
@@ -65,6 +77,25 @@ function createBacnetObjectEditMap(
 ): Map<string, Partial<BacnetObjectInput>> {
   return new Map(entries);
 }
+
+const FIELD_DEVICE_ERROR_PREFIXES = [
+  'fielddevice',
+  'field_device',
+  'field_devices',
+  'specification',
+  'specifications',
+  'fielddevice.specification',
+  'fielddevice.specifications',
+  'field_device.specification',
+  'field_device.specifications',
+  'field_devices.specification',
+  'field_devices.specifications',
+  'updates.fielddevice',
+  'updates.field_device',
+  'updates.field_devices',
+  'updates.specification',
+  'updates.specifications'
+];
 
 export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}) {
   const resolvedProjectId =
@@ -266,16 +297,44 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
 
   function clearEditErrorFields(deviceId: string, fieldKeys: string[]): void {
     const info = editErrors.get(deviceId);
-    if (!info?.fields) return;
+    if (!info?.fields && !info?.suggestions && !info?.suggestionOptions) return;
 
-    const fields = { ...info.fields };
+    const fields = { ...(info.fields ?? {}) };
+    const suggestions = { ...(info.suggestions ?? {}) };
+    const suggestionOptions = { ...(info.suggestionOptions ?? {}) };
     for (const key of fieldKeys) {
       delete fields[key];
+      delete suggestions[key];
+      delete suggestionOptions[key];
+    }
+    for (const key of Object.keys(fields)) {
+      if (fieldKeys.some((candidate) => fieldErrorPathMatches(key, candidate))) {
+        delete fields[key];
+      }
+    }
+    for (const key of Object.keys(suggestions)) {
+      if (fieldKeys.some((candidate) => fieldErrorPathMatches(key, candidate))) {
+        delete suggestions[key];
+      }
+    }
+    for (const key of Object.keys(suggestionOptions)) {
+      if (fieldKeys.some((candidate) => fieldErrorPathMatches(key, candidate))) {
+        delete suggestionOptions[key];
+      }
     }
 
     const next = new Map(editErrors);
-    if (Object.keys(fields).length > 0) {
-      next.set(deviceId, { ...info, fields });
+    if (
+      Object.keys(fields).length > 0 ||
+      Object.keys(suggestions).length > 0 ||
+      Object.keys(suggestionOptions).length > 0
+    ) {
+      next.set(deviceId, {
+        ...info,
+        fields: Object.keys(fields).length > 0 ? fields : undefined,
+        suggestions: Object.keys(suggestions).length > 0 ? suggestions : undefined,
+        suggestionOptions: Object.keys(suggestionOptions).length > 0 ? suggestionOptions : undefined
+      });
     } else {
       next.delete(deviceId);
     }
@@ -510,36 +569,136 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
     if (!errorInfo) return undefined;
 
     if (errorInfo.fields && Object.keys(errorInfo.fields).length > 0) {
-      if (errorInfo.fields[field]) return errorInfo.fields[field];
-      if (errorInfo.fields[`fielddevice.${field}`]) return errorInfo.fields[`fielddevice.${field}`];
-      if (errorInfo.fields[`specification.${field}`]) {
-        return errorInfo.fields[`specification.${field}`];
-      }
-      if (errorInfo.fields[`data.fielddevice.${field}`]) {
-        return errorInfo.fields[`data.fielddevice.${field}`];
-      }
-      if (errorInfo.fields[`error.fielddevice.${field}`]) {
-        return errorInfo.fields[`error.fielddevice.${field}`];
-      }
-      if (errorInfo.fields[`data.specification.${field}`]) {
-        return errorInfo.fields[`data.specification.${field}`];
-      }
-      if (errorInfo.fields[`error.specification.${field}`]) {
-        return errorInfo.fields[`error.specification.${field}`];
-      }
-      return undefined;
+      return resolveFieldError(errorInfo.fields, field, FIELD_DEVICE_ERROR_PREFIXES);
     }
 
     return undefined;
+  }
+
+  function getFieldPathVariants(field: string): string[] {
+    return [
+      field,
+      `fielddevice.${field}`,
+      `field_device.${field}`,
+      `field_devices.${field}`,
+      `specification.${field}`,
+      `specifications.${field}`,
+      `fielddevice.specification.${field}`,
+      `fielddevice.specifications.${field}`,
+      `field_device.specification.${field}`,
+      `field_device.specifications.${field}`,
+      `field_devices.specification.${field}`,
+      `field_devices.specifications.${field}`,
+      `data.fielddevice.${field}`,
+      `error.fielddevice.${field}`,
+      `data.specification.${field}`,
+      `error.specification.${field}`
+    ];
+  }
+
+  function resolveFieldMapValue<T>(
+    values: Record<string, T> | undefined,
+    field: string
+  ): T | undefined {
+    if (!values || Object.keys(values).length === 0) return undefined;
+    for (const key of getFieldPathVariants(field)) {
+      if (values[key] !== undefined) return values[key];
+    }
+    for (const [key, value] of Object.entries(values)) {
+      for (const candidate of getFieldPathVariants(field)) {
+        if (fieldErrorPathMatches(key, candidate)) return value;
+      }
+    }
+    return undefined;
+  }
+
+  function getFieldSuggestion(
+    deviceId: string,
+    field: string,
+    storeItems: FieldDevice[] = []
+  ): number | undefined {
+    const errorInfo = editErrors.get(deviceId);
+    const staticSuggestion = resolveFieldMapValue(errorInfo?.suggestions, field);
+    const options = resolveFieldMapValue(errorInfo?.suggestionOptions, field);
+
+    if (field !== 'apparat_nr' || !options || options.length === 0) {
+      return staticSuggestion;
+    }
+
+    return getDynamicApparatNrSuggestion(deviceId, options, storeItems) ?? staticSuggestion;
+  }
+
+  function getDynamicApparatNrSuggestion(
+    deviceId: string,
+    options: number[],
+    storeItems: FieldDevice[]
+  ): number | undefined {
+    const targetDevice = storeItems.find((item) => item.id === deviceId);
+    if (!targetDevice) return undefined;
+
+    const targetScope = getEffectiveApparatNrScope(targetDevice);
+    const occupied = new Set<number>();
+
+    for (const device of storeItems) {
+      if (device.id === deviceId) continue;
+      if (!isSameApparatNrScope(targetScope, getEffectiveApparatNrScope(device))) continue;
+
+      const changes = pendingEdits.get(device.id);
+      if (!changes || !hasApparatNrConstraintDraft(changes)) continue;
+
+      const nr = Number('apparat_nr' in changes ? changes.apparat_nr : device.apparat_nr);
+      if (Number.isInteger(nr) && nr >= 1 && nr <= 99) {
+        occupied.add(nr);
+      }
+    }
+
+    return [...options].sort((a, b) => a - b).find((candidate) => !occupied.has(candidate));
+  }
+
+  function hasApparatNrConstraintDraft(changes: Partial<BulkUpdateFieldDeviceItem>): boolean {
+    return 'apparat_nr' in changes || 'apparat_id' in changes || 'system_part_id' in changes;
+  }
+
+  function getEffectiveApparatNrScope(device: FieldDevice) {
+    const changes = pendingEdits.get(device.id);
+    return {
+      spsControllerSystemTypeId: device.sps_controller_system_type_id,
+      apparatId:
+        typeof changes?.apparat_id === 'string' && changes.apparat_id
+          ? changes.apparat_id
+          : device.apparat_id,
+      systemPartId:
+        typeof changes?.system_part_id === 'string' && changes.system_part_id
+          ? changes.system_part_id
+          : (device.system_part_id ?? '')
+    };
+  }
+
+  function isSameApparatNrScope(
+    a: ReturnType<typeof getEffectiveApparatNrScope>,
+    b: ReturnType<typeof getEffectiveApparatNrScope>
+  ): boolean {
+    return (
+      a.spsControllerSystemTypeId === b.spsControllerSystemTypeId &&
+      a.apparatId === b.apparatId &&
+      a.systemPartId === b.systemPartId
+    );
   }
 
   function localizeEditErrorInfo(info?: EditErrorInfo): EditErrorInfo | undefined {
     if (!info) return undefined;
     const localized = {
       message: info.message ? localizeErrorText(info.message) : info.message,
-      fields: info.fields ? localizeFieldErrorMap(info.fields) : info.fields
+      fields: info.fields ? localizeFieldErrorMap(info.fields) : info.fields,
+      suggestions: info.suggestions,
+      suggestionOptions: info.suggestionOptions
     };
-    if (!localized.message && (!localized.fields || Object.keys(localized.fields).length === 0)) {
+    if (
+      !localized.message &&
+      (!localized.fields || Object.keys(localized.fields).length === 0) &&
+      (!localized.suggestions || Object.keys(localized.suggestions).length === 0) &&
+      (!localized.suggestionOptions || Object.keys(localized.suggestionOptions).length === 0)
+    ) {
       return undefined;
     }
     return localized;
@@ -685,6 +844,121 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
     return true;
   }
 
+  function applyBulkApiFieldErrors(
+    updates: BulkUpdateFieldDeviceItem[],
+    fieldErrors: Record<string, string>
+  ): boolean {
+    if (Object.keys(fieldErrors).length === 0) return false;
+
+    const nextEditErrors = new Map(editErrors);
+    const nextBacnetErrors = new Map(bacnetFieldErrors);
+    let applied = false;
+
+    for (const [path, message] of Object.entries(fieldErrors)) {
+      const target = resolveBulkUpdateFieldError(updates, path);
+      if (!target) continue;
+
+      const existing = nextEditErrors.get(target.deviceId) ?? {
+        message: 'validation_error'
+      };
+      nextEditErrors.set(target.deviceId, {
+        ...existing,
+        fields: {
+          ...(existing.fields ?? {}),
+          [target.fieldPath]: message
+        }
+      });
+
+      if (target.bacnetObjectId && target.bacnetField) {
+        const objectErrors = new Map(nextBacnetErrors.get(target.deviceId) ?? new Map());
+        objectErrors.set(target.bacnetObjectId, {
+          ...(objectErrors.get(target.bacnetObjectId) ?? {}),
+          [target.bacnetField]: message
+        });
+        nextBacnetErrors.set(target.deviceId, objectErrors);
+      }
+
+      applied = true;
+    }
+
+    if (!applied) return false;
+
+    editErrors = nextEditErrors;
+    bacnetFieldErrors = nextBacnetErrors;
+    return true;
+  }
+
+  function resolveBulkUpdateFieldError(
+    updates: BulkUpdateFieldDeviceItem[],
+    fieldPath: string
+  ):
+    | {
+        deviceId: string;
+        fieldPath: string;
+        bacnetObjectId?: string;
+        bacnetField?: string;
+      }
+    | undefined {
+    const segments = splitFieldPath(fieldPath).filter((segment) => {
+      const normalized = normalizeFieldPathSegment(segment);
+      return normalized !== 'data' && normalized !== 'error' && normalized !== 'errors';
+    });
+    if (segments.length === 0) return undefined;
+
+    const updateIndex = findIndexedFieldPathSegment(segments, ['updates', 'fielddevices']);
+    const update =
+      updateIndex !== undefined
+        ? updates[updateIndex.index]
+        : updates.length === 1
+          ? updates[0]
+          : undefined;
+    if (!update) return undefined;
+
+    const relevantSegments =
+      updateIndex !== undefined ? segments.slice(updateIndex.segmentIndex + 2) : segments;
+    const normalizedFirst = normalizeFieldPathSegment(relevantSegments[0] ?? '');
+
+    const bacnetIndex = findFieldPathSegment(relevantSegments, ['bacnetobjects', 'bacnetobject']);
+    if (bacnetIndex !== undefined) {
+      const objectRef = relevantSegments[bacnetIndex + 1];
+      const rawField = relevantSegments.slice(bacnetIndex + 2).join('.');
+      const objectId = resolveBacnetObjectId(update, objectRef);
+      if (!objectId || !rawField) return undefined;
+
+      return {
+        deviceId: update.id,
+        fieldPath: `bacnet_objects.${objectId}.${rawField}`,
+        bacnetObjectId: objectId,
+        bacnetField: rawField
+      };
+    }
+
+    if (normalizedFirst === 'fielddevice' || normalizedFirst === 'fielddevices') {
+      const field = relevantSegments.slice(1).join('.');
+      return field ? { deviceId: update.id, fieldPath: `fielddevice.${field}` } : undefined;
+    }
+
+    if (normalizedFirst === 'specification' || normalizedFirst === 'specifications') {
+      const field = relevantSegments.slice(1).join('.');
+      return field ? { deviceId: update.id, fieldPath: `specification.${field}` } : undefined;
+    }
+
+    const field = relevantSegments.join('.');
+    return field ? { deviceId: update.id, fieldPath: field } : undefined;
+  }
+
+  function resolveBacnetObjectId(
+    update: BulkUpdateFieldDeviceItem,
+    objectRef: string | undefined
+  ): string | undefined {
+    if (!objectRef) return undefined;
+    const objectIndex = Number(objectRef);
+    if (Number.isInteger(objectIndex)) {
+      return update.bacnet_objects?.[objectIndex]?.id;
+    }
+    return objectRef;
+  }
+
   async function saveAllPendingEdits(
     storeItems: FieldDevice[],
     onSuccess?: (updated: FieldDevice[]) => void
@@ -789,6 +1063,12 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
       }
     } catch (error: unknown) {
       const err = error as Error;
+      const fieldErrors = getFieldErrors(error);
+      if (applyBulkApiFieldErrors(updates, fieldErrors)) {
+        addToast(getFirstFieldValidationToast(fieldErrors), 'error');
+        return;
+      }
+
       addToast(
         translate('field_device.editing.toasts.bulk_update_failed', {
           message: localizeErrorText(err.message)
@@ -840,7 +1120,12 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
 
       setEditError(
         device.id,
-        localizeEditErrorInfo({ message: item?.error, fields: item?.fields })
+        localizeEditErrorInfo({
+          message: item?.error,
+          fields: item?.fields,
+          suggestions: item?.suggestions,
+          suggestionOptions: item?.suggestion_options
+        })
       );
       addToast(
         getFirstFieldValidationToast(
@@ -853,6 +1138,12 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
       );
     } catch (error: unknown) {
       const err = error as Error;
+      const fieldErrors = getFieldErrors(error);
+      if (applyBulkApiFieldErrors([update], fieldErrors)) {
+        addToast(getFirstFieldValidationToast(fieldErrors), 'error');
+        return;
+      }
+
       addToast(
         translate('field_device.editing.toasts.update_failed', {
           message: localizeErrorText(err.message)
@@ -918,19 +1209,19 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
       const nextErrors = new Map(editErrors);
       nextErrors.set(device.id, {
         message: item?.error ? localizeErrorText(item.error) : item?.error,
-        fields: errorFields
+        fields: errorFields,
+        suggestions: item?.suggestions,
+        suggestionOptions: item?.suggestion_options
       });
       editErrors = nextErrors;
 
       const objErrors = new Map<string, Record<string, string>>();
       for (const [fieldPath, msg] of Object.entries(errorFields)) {
-        const match = fieldPath.match(/(?:^|\.)bacnet_objects\.([0-9a-f-]+)\.(.+)$/i);
-        if (!match) continue;
-        const objId = match[1];
-        const field = match[2];
-        const existing = objErrors.get(objId) || {};
-        existing[field] = msg;
-        objErrors.set(objId, existing);
+        const target = resolveBulkUpdateFieldError([update], fieldPath);
+        if (!target?.bacnetObjectId || !target.bacnetField) continue;
+        const existing = objErrors.get(target.bacnetObjectId) || {};
+        existing[target.bacnetField] = msg;
+        objErrors.set(target.bacnetObjectId, existing);
       }
       if (objErrors.size > 0) {
         const nextBacnetErrors = new Map(bacnetFieldErrors);
@@ -949,6 +1240,12 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
       );
     } catch (error: unknown) {
       const err = error as Error;
+      const fieldErrors = getFieldErrors(error);
+      if (applyBulkApiFieldErrors([update], fieldErrors)) {
+        addToast(getFirstFieldValidationToast(fieldErrors), 'error');
+        return;
+      }
+
       addToast(
         translate('field_device.editing.toasts.update_failed', {
           message: localizeErrorText(err.message)
@@ -1024,6 +1321,7 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
     getPendingValue,
     getPendingSpecValue,
     getFieldError,
+    getFieldSuggestion,
     queueBacnetEdit,
     clearBacnetFieldError,
     validateBacnetEdits,

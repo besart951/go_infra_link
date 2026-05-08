@@ -1,7 +1,4 @@
-import type {
-  BacnetObjectInput,
-  BacnetObjectPatchInput
-} from '$lib/domain/facility/index.js';
+import type { BacnetObjectInput, BacnetObjectPatchInput } from '$lib/domain/facility/index.js';
 
 export function buildBacnetObjectsPayload(
   deviceEdits: Map<string, Partial<BacnetObjectInput>>

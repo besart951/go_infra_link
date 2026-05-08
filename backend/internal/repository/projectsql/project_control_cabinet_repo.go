@@ -34,7 +34,7 @@ func (r *projectControlCabinetRepo) Create(ctx context.Context, entity *project.
 	if err := entity.Base.InitForCreate(time.Now().UTC()); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Create(toProjectControlCabinetRecord(entity)).Error
+	return mapWriteError(r.db.WithContext(ctx).Create(toProjectControlCabinetRecord(entity)).Error)
 }
 
 func (r *projectControlCabinetRepo) Update(ctx context.Context, entity *project.ProjectControlCabinet) error {

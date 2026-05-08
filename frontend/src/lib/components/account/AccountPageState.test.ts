@@ -53,14 +53,14 @@ vi.mock('$lib/infrastructure/api/notificationPreferenceRepository.js', () => ({
 
 import { AccountPageState } from './AccountPageState.svelte.js';
 
-function userWithPermissions(permissions: string[] = []) {
+function userWithPermissions(permissions: string[] = [], role = 'planer') {
   return {
     id: 'user-1',
     first_name: 'Marc',
     last_name: 'Dahinden',
     email: 'marc.dahinden@gmail.com',
     is_active: true,
-    role: 'planer',
+    role,
     role_display_name: 'Planer',
     permissions,
     can_access_user_directory: false,
@@ -102,5 +102,24 @@ describe('AccountPageState', () => {
     expect(mocks.listTeams).not.toHaveBeenCalled();
     expect(mocks.listMembers).not.toHaveBeenCalled();
     expect(mocks.addToast).not.toHaveBeenCalled();
+  });
+
+  it('loads teams for superadmin even when team.read is not listed', async () => {
+    const user = userWithPermissions([], 'superadmin');
+    mocks.getCurrent.mockResolvedValue(user);
+    mocks.listTeams.mockResolvedValue({
+      items: [{ id: 'team-1', name: 'Core Team' }]
+    });
+    mocks.listMembers.mockResolvedValue({
+      items: [{ user_id: 'user-1' }]
+    });
+
+    const state = new AccountPageState();
+
+    await state.loadAccount();
+
+    expect(state.userTeams).toEqual(['Core Team']);
+    expect(mocks.listTeams).toHaveBeenCalledWith({ page: 1, limit: 100, search: '' });
+    expect(mocks.listMembers).toHaveBeenCalledWith('team-1', { page: 1, limit: 1000 });
   });
 });

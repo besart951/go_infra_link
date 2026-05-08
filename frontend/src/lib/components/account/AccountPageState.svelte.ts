@@ -20,6 +20,7 @@ import {
   type UpdateUserRequest,
   type User
 } from '$lib/infrastructure/api/userRepository.js';
+import { hasUserPermission } from '$lib/utils/permissions.js';
 import type { AccountTab } from './types.js';
 
 const getNotificationPreference = new GetNotificationPreferenceUseCase(
@@ -34,10 +35,6 @@ const sendNotificationEmailVerification = new SendNotificationEmailVerificationU
 const verifyNotificationEmail = new VerifyNotificationEmailUseCase(
   notificationPreferenceRepository
 );
-
-function hasPermission(user: User, permission: string): boolean {
-  return Boolean(user.permissions?.includes(permission));
-}
 
 export class AccountPageState {
   activeTab = $state<AccountTab>('information');
@@ -90,7 +87,7 @@ export class AccountPageState {
     this.teamsError = null;
     this.userTeams = [];
 
-    if (!this.currentUser || !hasPermission(this.currentUser, 'team.read')) {
+    if (!this.currentUser || !hasUserPermission(this.currentUser, 'team.read')) {
       return;
     }
 

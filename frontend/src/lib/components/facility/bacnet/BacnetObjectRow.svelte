@@ -7,8 +7,6 @@
   import { BACNET_SOFTWARE_TYPES, BACNET_HARDWARE_TYPES } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import AlarmTypeSelect from '$lib/components/facility/selects/AlarmTypeSelect.svelte';
-  import NotificationClassSelect from '$lib/components/facility/selects/NotificationClassSelect.svelte';
-  import StateTextSelect from '$lib/components/facility/selects/StateTextSelect.svelte';
   import { alarmTypeRepository } from '$lib/infrastructure/api/alarmTypeRepository.js';
   import type { AlarmTypeField, BacnetObjectInput } from '$lib/domain/facility/index.js';
 
@@ -20,8 +18,7 @@
       | 'software_number'
       | 'hardware_type'
       | 'hardware_quantity'
-      | 'state_text_id'
-      | 'notification_class_id',
+      | 'alarm_type_id',
       string
     >
   >;
@@ -184,6 +181,9 @@
       class="h-8 text-sm"
       disabled={readOnly}
     />
+    {#if errors.description}
+      <p class="text-xs text-destructive">{errors.description}</p>
+    {/if}
   </div>
 
   <!-- Software Group: Type + Number -->
@@ -306,36 +306,6 @@
     </div>
   </div>
 
-  <!-- BACnet references -->
-  <div class="col-span-12 space-y-1 md:col-span-6">
-    <Label for="state_text_id_{index}" class="text-xs">{$t('facility.state_text')}</Label>
-    <StateTextSelect
-      id="state_text_id_{index}"
-      bind:value={obj.state_text_id}
-      width="w-full"
-      disabled={readOnly}
-      onValueChange={(value) => onUpdate('state_text_id', value || '')}
-    />
-    {#if errors.state_text_id}
-      <p class="text-xs text-destructive">{errors.state_text_id}</p>
-    {/if}
-  </div>
-  <div class="col-span-12 space-y-1 md:col-span-6">
-    <Label for="notification_class_id_{index}" class="text-xs">
-      {$t('facility.notification_class')}
-    </Label>
-    <NotificationClassSelect
-      id="notification_class_id_{index}"
-      bind:value={obj.notification_class_id}
-      width="w-full"
-      disabled={readOnly}
-      onValueChange={(value) => onUpdate('notification_class_id', value || '')}
-    />
-    {#if errors.notification_class_id}
-      <p class="text-xs text-destructive">{errors.notification_class_id}</p>
-    {/if}
-  </div>
-
   <!-- Alarm Type Section -->
   <div class="col-span-12 space-y-1 border-t pt-2 md:col-span-12">
     <Label class="text-xs">{$t('field_device.bacnet.row.alarm_type')}</Label>
@@ -364,6 +334,9 @@
             {$t('field_device.bacnet.row.alarm_type_remove')}
           </Button>
         </div>
+      {/if}
+      {#if errors.alarm_type_id}
+        <p class="text-xs text-destructive">{errors.alarm_type_id}</p>
       {/if}
     </div>
 

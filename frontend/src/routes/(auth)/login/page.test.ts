@@ -17,13 +17,15 @@ function createLoadEvent(responseOrError: Response | Error) {
 
 describe('/login load', () => {
   it('redirects authenticated users to the dashboard', async () => {
-    const { event, fetch } = createLoadEvent(new Response('{}', { status: 200 }));
+    const { event, fetch } = createLoadEvent(
+      new Response(JSON.stringify({ authenticated: true }), { status: 200 })
+    );
 
     await expect(load(event)).rejects.toMatchObject({
       status: 302,
       location: '/'
     });
-    expect(fetch).toHaveBeenCalledWith('/api/v1/auth/me', {
+    expect(fetch).toHaveBeenCalledWith('/api/v1/auth/session', {
       credentials: 'include',
       headers: {
         Accept: 'application/json'
@@ -32,7 +34,9 @@ describe('/login load', () => {
   });
 
   it('keeps unauthenticated users on the login page', async () => {
-    const { event } = createLoadEvent(new Response('{}', { status: 401 }));
+    const { event } = createLoadEvent(
+      new Response(JSON.stringify({ authenticated: false }), { status: 200 })
+    );
 
     await expect(load(event)).resolves.toBeUndefined();
   });

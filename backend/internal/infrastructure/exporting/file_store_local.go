@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	domainExport "github.com/besart951/go_infra_link/backend/internal/domain/exporting"
 	"github.com/google/uuid"
@@ -20,11 +21,44 @@ func NewLocalFileStore(baseDir string) (*LocalFileStore, error) {
 	return &LocalFileStore{baseDir: baseDir}, nil
 }
 
-func (s *LocalFileStore) BuildOutputPath(jobID uuid.UUID, outputType domainExport.OutputType) (string, string) {
+func (s *LocalFileStore) BuildOutputPath(jobID uuid.UUID, outputType domainExport.OutputType, downloadFileName string) (string, string) {
 	ext := ".xlsx"
 	if outputType == domainExport.OutputTypeZip {
 		ext = ".zip"
 	}
-	fileName := fmt.Sprintf("field-device-export-%s%s", jobID.String(), ext)
-	return filepath.Join(s.baseDir, fileName), fileName
+
+	storageFileName := fmt.Sprintf("field-device-export-%s%s", jobID.String(), ext)
+	fileName := sanitizeDownloadFileName(downloadFileName, ext)
+	if fileName == "" {
+		fileName = storageFileName
+	}
+
+	return filepath.Join(s.baseDir, storageFileName), fileName
+}
+
+func sanitizeDownloadFileName(name string, ext string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return ""
+	}
+
+	if currentExt := filepath.Ext(name); currentExt != "" {
+		name = strings.TrimSuffix(name, currentExt)
+	}
+
+	invalid := []string{"\\", "/", "*", "?", ":", "[", "]", "<", ">", "|", "\""}
+	for _, ch := range invalid {
+		name = strings.ReplaceAll(name, ch, "-")
+	}
+
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return ""
+	}
+
+	if len(name) > 120 {
+		name = name[:120]
+	}
+
+	return name + ext
 }

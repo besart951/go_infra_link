@@ -15,6 +15,7 @@ import (
 type SPSControllerSystemTypeStore interface {
 	SPSControllerSystemTypeRepository
 	GetPaginatedListBySPSControllerID(ctx context.Context, spsControllerID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[SPSControllerSystemType], error)
+	GetPaginatedListBySPSControllerIDs(ctx context.Context, spsControllerIDs []uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[SPSControllerSystemType], error)
 	GetPaginatedListByProjectID(ctx context.Context, projectID uuid.UUID, params domain.PaginationParams) (*domain.PaginatedList[SPSControllerSystemType], error)
 	ListBySPSControllerID(ctx context.Context, spsControllerID uuid.UUID) ([]*SPSControllerSystemType, error)
 	GetIDsBySPSControllerIDs(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error)

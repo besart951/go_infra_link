@@ -8,7 +8,6 @@ import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type projectSPSControllerBulkCreator interface {
@@ -276,7 +275,7 @@ func (s projectAssignmentStore) createProjectSPSControllerAssignments(ctx contex
 
 	for _, entity := range entities {
 		if err := s.projectSPSControllerRepo.Create(ctx, entity); err != nil {
-			if errors.Is(err, gorm.ErrDuplicatedKey) {
+			if errors.Is(err, domain.ErrConflict) {
 				continue
 			}
 			return err
@@ -301,7 +300,7 @@ func (s projectAssignmentStore) createProjectFieldDeviceAssignments(ctx context.
 
 	for _, entity := range entities {
 		if err := s.projectFieldDeviceRepo.Create(ctx, entity); err != nil {
-			if errors.Is(err, gorm.ErrDuplicatedKey) {
+			if errors.Is(err, domain.ErrConflict) {
 				continue
 			}
 			return err

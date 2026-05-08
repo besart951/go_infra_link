@@ -31,8 +31,8 @@ func (s *ProjectLifecycleService) transaction() projectTx[*ProjectLifecycleServi
 }
 
 func (s *ProjectLifecycleService) Create(ctx context.Context, project *domainProject.Project) error {
-	return s.transaction().run(func(txService *ProjectLifecycleService) error {
-		return txService.createProject(ctx, project)
+	return s.transaction().run(ctx, func(txCtx context.Context, txService *ProjectLifecycleService) error {
+		return txService.createProject(txCtx, project)
 	})
 }
 

@@ -160,6 +160,18 @@ describe('permission-aware sidebar navigation', () => {
     expect(screen.getByTestId('project-link:project-1')).toBeInTheDocument();
   });
 
+  it('keeps the roles entry hidden when the user may open the user directory but lacks role.read', () => {
+    render(AppSidebar, {
+      user: buildUser({ can_access_user_directory: true }),
+      teams: [],
+      projects: []
+    });
+
+    expect(screen.getByTestId('nav-link:/users')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-link:/users/directory')).toBeInTheDocument();
+    expect(screen.queryByTestId('nav-link:/users/roles')).not.toBeInTheDocument();
+  });
+
   it('shows the admin notifications link only with the SMTP manage permission', () => {
     state.setPermissions([permission('notification.smtp', 'manage')]);
 

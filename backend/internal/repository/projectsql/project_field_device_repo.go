@@ -35,7 +35,7 @@ func (r *projectFieldDeviceRepo) Create(ctx context.Context, entity *project.Pro
 	if err := entity.Base.InitForCreate(time.Now().UTC()); err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Create(toProjectFieldDeviceRecord(entity)).Error
+	return mapWriteError(r.db.WithContext(ctx).Create(toProjectFieldDeviceRecord(entity)).Error)
 }
 
 func (r *projectFieldDeviceRepo) BulkCreate(ctx context.Context, entities []*project.ProjectFieldDevice, batchSize int) error {

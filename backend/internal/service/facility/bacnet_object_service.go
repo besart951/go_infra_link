@@ -104,7 +104,7 @@ func (s *BacnetObjectService) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]
 // CreateWithParent creates a bacnet object either for a field device (fieldDeviceID)
 // or for an object data template (objectDataID). Exactly one must be provided.
 func (s *BacnetObjectService) CreateWithParent(ctx context.Context, bacnetObject *domainFacility.BacnetObject, fieldDeviceID *uuid.UUID, objectDataID *uuid.UUID) error {
-	return s.transaction().run(func(txService *BacnetObjectService) error {
+	return s.transaction().run(ctx, func(txCtx context.Context, txService *BacnetObjectService) error {
 		if (fieldDeviceID == nil && objectDataID == nil) || (fieldDeviceID != nil && objectDataID != nil) {
 			return domain.ErrInvalidArgument
 		}
@@ -123,29 +123,29 @@ func (s *BacnetObjectService) CreateWithParent(ctx context.Context, bacnetObject
 		}
 
 		if fieldDeviceID != nil {
-			if _, err := domain.GetByID(ctx, txService.fieldDeviceRepo, *fieldDeviceID); err != nil {
+			if _, err := domain.GetByID(txCtx, txService.fieldDeviceRepo, *fieldDeviceID); err != nil {
 				return err
 			}
-			if err := txService.ensureTextFixUniqueForFieldDevice(ctx, *fieldDeviceID, bacnetObject.TextFix, nil); err != nil {
+			if err := txService.ensureTextFixUniqueForFieldDevice(txCtx, *fieldDeviceID, bacnetObject.TextFix, nil); err != nil {
 				return err
 			}
-			if err := txService.resolveAlarmBindingForTemplate(ctx, bacnetObject); err != nil {
+			if err := txService.resolveAlarmBindingForTemplate(txCtx, bacnetObject); err != nil {
 				return err
 			}
 			bacnetObject.FieldDeviceID = fieldDeviceID
-			return txService.repo.Create(ctx, bacnetObject)
+			return txService.repo.Create(txCtx, bacnetObject)
 		}
 
-		return txService.objectDataTemplate().createBacnetObject(ctx, *objectDataID, bacnetObject)
+		return txService.objectDataTemplate().createBacnetObject(txCtx, *objectDataID, bacnetObject)
 	})
 }
 
 // Update updates a bacnet object. If objectDataID is provided, it will also attach
 // the bacnet object to that object data (template) after validating the object data.
 func (s *BacnetObjectService) Update(ctx context.Context, bacnetObject *domainFacility.BacnetObject, objectDataID *uuid.UUID) error {
-	return s.transaction().run(func(txService *BacnetObjectService) error {
+	return s.transaction().run(ctx, func(txCtx context.Context, txService *BacnetObjectService) error {
 		if objectDataID != nil {
-			return txService.objectDataTemplate().updateBacnetObject(ctx, *objectDataID, bacnetObject)
+			return txService.objectDataTemplate().updateBacnetObject(txCtx, *objectDataID, bacnetObject)
 		}
 
 		bacnetObject.TextFix = normalizeBacnetTextFix(bacnetObject.TextFix)
@@ -156,20 +156,20 @@ func (s *BacnetObjectService) Update(ctx context.Context, bacnetObject *domainFa
 			}
 		}
 
-		if _, err := domain.GetByID(ctx, txService.repo, bacnetObject.ID); err != nil {
+		if _, err := domain.GetByID(txCtx, txService.repo, bacnetObject.ID); err != nil {
 			return err
 		}
 		if bacnetObject.FieldDeviceID != nil {
-			if err := txService.ensureTextFixUniqueForFieldDevice(ctx, *bacnetObject.FieldDeviceID, bacnetObject.TextFix, &bacnetObject.ID); err != nil {
+			if err := txService.ensureTextFixUniqueForFieldDevice(txCtx, *bacnetObject.FieldDeviceID, bacnetObject.TextFix, &bacnetObject.ID); err != nil {
 				return err
 			}
 		}
 
-		if err := txService.resolveAlarmBindingForTemplate(ctx, bacnetObject); err != nil {
+		if err := txService.resolveAlarmBindingForTemplate(txCtx, bacnetObject); err != nil {
 			return err
 		}
 
-		if err := txService.repo.Update(ctx, bacnetObject); err != nil {
+		if err := txService.repo.Update(txCtx, bacnetObject); err != nil {
 			return err
 		}
 
@@ -180,7 +180,7 @@ func (s *BacnetObjectService) Update(ctx context.Context, bacnetObject *domainFa
 // ReplaceForObjectData replaces all bacnet objects for an object data template.
 // Existing links are removed and the provided list is created and attached.
 func (s *BacnetObjectService) ReplaceForObjectData(ctx context.Context, objectDataID uuid.UUID, inputs []domainFacility.BacnetObject) error {
-	return s.transaction().run(func(txService *BacnetObjectService) error {
-		return txService.objectDataTemplate().replaceBacnetObjects(ctx, objectDataID, inputs)
+	return s.transaction().run(ctx, func(txCtx context.Context, txService *BacnetObjectService) error {
+		return txService.objectDataTemplate().replaceBacnetObjects(txCtx, objectDataID, inputs)
 	})
 }

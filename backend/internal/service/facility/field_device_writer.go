@@ -20,6 +20,8 @@ type fieldDeviceBacnetSelection struct {
 	objectsSet   bool
 }
 
+const apparatNrAlreadyUsedMessage = "apparatnummer ist bereits vergeben"
+
 func (s fieldDeviceBacnetSelection) validate() error {
 	if s.objectDataID != nil && s.objectsSet {
 		return domain.ErrInvalidArgument
@@ -28,8 +30,8 @@ func (s fieldDeviceBacnetSelection) validate() error {
 }
 
 func (w fieldDeviceWriter) create(ctx context.Context, fieldDevice *domainFacility.FieldDevice, selection fieldDeviceBacnetSelection) error {
-	return w.service.transaction().run(func(txService *FieldDeviceService) error {
-		return txService.writer().createInTx(ctx, fieldDevice, selection)
+	return w.service.transaction().run(ctx, func(txCtx context.Context, txService *FieldDeviceService) error {
+		return txService.writer().createInTx(txCtx, fieldDevice, selection)
 	})
 }
 
@@ -60,8 +62,8 @@ func (w fieldDeviceWriter) updateBase(ctx context.Context, fieldDevice *domainFa
 }
 
 func (w fieldDeviceWriter) update(ctx context.Context, fieldDevice *domainFacility.FieldDevice, selection fieldDeviceBacnetSelection) error {
-	return w.service.transaction().run(func(txService *FieldDeviceService) error {
-		return txService.writer().updateInTx(ctx, fieldDevice, selection)
+	return w.service.transaction().run(ctx, func(txCtx context.Context, txService *FieldDeviceService) error {
+		return txService.writer().updateInTx(txCtx, fieldDevice, selection)
 	})
 }
 
@@ -92,8 +94,8 @@ func (w fieldDeviceWriter) applyBacnetSelection(ctx context.Context, fieldDevice
 }
 
 func (w fieldDeviceWriter) createSpecification(ctx context.Context, fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error {
-	return w.service.transaction().run(func(txService *FieldDeviceService) error {
-		return txService.writer().createSpecificationInTx(ctx, fieldDeviceID, specification)
+	return w.service.transaction().run(ctx, func(txCtx context.Context, txService *FieldDeviceService) error {
+		return txService.writer().createSpecificationInTx(txCtx, fieldDeviceID, specification)
 	})
 }
 
@@ -338,7 +340,7 @@ func (w fieldDeviceWriter) multiCreate(ctx context.Context, items []domainFacili
 			usedApparatNumbersCache[key] = usedSet
 		}
 		if _, exists := usedSet[item.FieldDevice.ApparatNr]; exists {
-			createResult.Error = "apparatnummer ist bereits vergeben"
+			createResult.Error = apparatNrAlreadyUsedMessage
 			createResult.ErrorField = "fielddevice.apparat_nr"
 			result.FailureCount++
 			continue
@@ -428,11 +430,23 @@ func (w fieldDeviceWriter) bulkUpdate(ctx context.Context, updates []domainFacil
 		}
 
 		phaseErrors := make(map[string]string)
+		phaseSuggestions := make(map[string]int)
+		phaseSuggestionOptions := make(map[string][]int)
 		totalPhases := 0
 
 		if hasBaseFieldDeviceUpdates(update) {
 			totalPhases++
-			w.applyBulkBaseUpdate(ctx, proposed, update, ids, proposedMap, phaseErrors)
+			w.applyBulkBaseUpdate(
+				ctx,
+				proposed,
+				update,
+				ids,
+				existingMap,
+				proposedMap,
+				phaseErrors,
+				phaseSuggestions,
+				phaseSuggestionOptions,
+			)
 		}
 
 		if update.Specification != nil && update.Specification.HasChanges() {
@@ -454,6 +468,12 @@ func (w fieldDeviceWriter) bulkUpdate(ctx context.Context, updates []domainFacil
 			result.SuccessCount++
 		} else {
 			resultItem.Fields = phaseErrors
+			if len(phaseSuggestions) > 0 {
+				resultItem.Suggestions = phaseSuggestions
+			}
+			if len(phaseSuggestionOptions) > 0 {
+				resultItem.SuggestionOptions = phaseSuggestionOptions
+			}
 			for _, msg := range phaseErrors {
 				resultItem.Error = msg
 				break
@@ -470,8 +490,11 @@ func (w fieldDeviceWriter) applyBulkBaseUpdate(
 	proposed *domainFacility.FieldDevice,
 	update domainFacility.BulkFieldDeviceUpdate,
 	batchIDs []uuid.UUID,
+	existingMap map[uuid.UUID]*domainFacility.FieldDevice,
 	proposedMap map[uuid.UUID]*domainFacility.FieldDevice,
 	phaseErrors map[string]string,
+	phaseSuggestions map[string]int,
+	phaseSuggestionOptions map[string][]int,
 ) {
 	if err := w.service.validateRequiredFields(proposed); err != nil {
 		addBulkUpdateError(phaseErrors, "fielddevice", "", err)
@@ -493,12 +516,32 @@ func (w fieldDeviceWriter) applyBulkBaseUpdate(
 				continue
 			}
 			if isApparatNrConflict(proposed, otherProposed) {
-				phaseErrors["fielddevice.apparat_nr"] = "apparatnummer ist bereits vergeben"
+				phaseErrors["fielddevice.apparat_nr"] = apparatNrAlreadyUsedMessage
+				w.addAvailableApparatNrSuggestions(
+					ctx,
+					proposed,
+					update.ID,
+					existingMap,
+					proposedMap,
+					phaseSuggestions,
+					phaseSuggestionOptions,
+				)
 				return
 			}
 		}
 
 		if err := w.service.ensureApparatNrAvailableWithExclusions(ctx, proposed, batchIDs); err != nil {
+			if isApparatNrAlreadyUsedError(err) {
+				w.addAvailableApparatNrSuggestions(
+					ctx,
+					proposed,
+					update.ID,
+					existingMap,
+					proposedMap,
+					phaseSuggestions,
+					phaseSuggestionOptions,
+				)
+			}
 			addBulkUpdateError(phaseErrors, "fielddevice.apparat_nr", "", err)
 			return
 		}
@@ -560,6 +603,82 @@ func isApparatNrConflict(a, b *domainFacility.FieldDevice) bool {
 		return false
 	}
 	return a.SystemPartID == b.SystemPartID
+}
+
+func sameApparatNrScope(a, b *domainFacility.FieldDevice) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	return a.SPSControllerSystemTypeID == b.SPSControllerSystemTypeID &&
+		a.ApparatID == b.ApparatID &&
+		a.SystemPartID == b.SystemPartID
+}
+
+func isApparatNrAlreadyUsedError(err error) bool {
+	ve, ok := domain.AsValidationError(err)
+	if !ok {
+		return false
+	}
+	return ve.Fields[fieldDeviceApparatNrField.Key] == apparatNrAlreadyUsedMessage
+}
+
+func (w fieldDeviceWriter) addAvailableApparatNrSuggestions(
+	ctx context.Context,
+	scope *domainFacility.FieldDevice,
+	updateID uuid.UUID,
+	existingMap map[uuid.UUID]*domainFacility.FieldDevice,
+	proposedMap map[uuid.UUID]*domainFacility.FieldDevice,
+	suggestions map[string]int,
+	suggestionOptions map[string][]int,
+) {
+	if scope == nil || suggestions == nil || suggestionOptions == nil {
+		return
+	}
+
+	usedNumbers, err := w.service.repo.GetUsedApparatNumbers(
+		ctx,
+		scope.SPSControllerSystemTypeID,
+		scope.SystemPartID,
+		scope.ApparatID,
+	)
+	if err != nil {
+		return
+	}
+
+	usedSet := make(map[int]struct{}, len(usedNumbers))
+	for _, n := range usedNumbers {
+		if n >= 1 && n <= 99 {
+			usedSet[n] = struct{}{}
+		}
+	}
+
+	// Bulk validation excludes batch IDs, so mirror that final-state view for suggestions.
+	for _, existing := range existingMap {
+		if sameApparatNrScope(existing, scope) {
+			delete(usedSet, existing.ApparatNr)
+		}
+	}
+	for id, proposed := range proposedMap {
+		if id == updateID || !sameApparatNrScope(proposed, scope) {
+			continue
+		}
+		if proposed.ApparatNr >= 1 && proposed.ApparatNr <= 99 {
+			usedSet[proposed.ApparatNr] = struct{}{}
+		}
+	}
+
+	available := make([]int, 0, 99-len(usedSet))
+	for n := 1; n <= 99; n++ {
+		if _, exists := usedSet[n]; !exists {
+			available = append(available, n)
+		}
+	}
+	if len(available) == 0 {
+		return
+	}
+
+	suggestions[fieldDeviceApparatNrField.Key] = available[0]
+	suggestionOptions[fieldDeviceApparatNrField.Key] = available
 }
 
 func addBulkUpdateError(fields map[string]string, fallbackField string, prefix string, err error) {

@@ -17,6 +17,10 @@
   },
   "type": "module",
   "packageManager": "pnpm@10.29.1",
+  "engines": {
+    "node": "^24.0.0",
+    "pnpm": "10.29.1"
+  },
   "devDependencies": {
     "@fontsource-variable/noto-sans": "^5.2.10",
     "@internationalized/date": "^3.12.0",
@@ -27,7 +31,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "@testing-library/jest-dom": "latest",
     "@testing-library/svelte": "^5.2.8",
-    "@types/node": "^25.6.0",
+    "@types/node": "^24.12.2",
     "bits-ui": "^2.17.2",
     "clsx": "^2.1.1",
     "jsdom": "^26.0.0",
@@ -47,7 +51,8 @@
     "vitest": "^4.1.5"
   },
   "dependencies": {
-    "@e965/xlsx": "^0.20.3"
+    "@e965/xlsx": "^0.20.3",
+    "zod": "^4.4.3"
   },
   "pnpm": {
     "overrides": {

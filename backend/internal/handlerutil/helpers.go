@@ -4,33 +4,14 @@ import (
 	"errors"
 	"net/http"
 	"reflect"
+	"sort"
 	"strings"
 
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/common"
-	"github.com/besart951/go_infra_link/backend/internal/requestutil"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
-
-func RespondError(c *gin.Context, status int, code, message string) {
-	if c.Request != nil && requestutil.IsRequestCanceled(c.Request.Context()) {
-		c.Abort()
-		return
-	}
-
-	c.JSON(status, dto.ErrorResponse{
-		Error:   code,
-		Message: message,
-	})
-}
-
-func RespondValidationError(c *gin.Context, fields map[string]string) {
-	c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-		Error:  "validation_error",
-		Fields: fields,
-	})
-}
 
 func RespondNotFound(c *gin.Context, message string) {
 	RespondError(c, http.StatusNotFound, "not_found", message)
@@ -39,7 +20,7 @@ func RespondNotFound(c *gin.Context, message string) {
 func BindJSON(c *gin.Context, dst any) bool {
 	if err := c.ShouldBindJSON(dst); err != nil {
 		if verr := asValidationErrors(err); verr != nil {
-			RespondValidationError(c, validationErrorFields(dst, verr))
+			RespondValidationErrorWithFieldErrors(c, http.StatusBadRequest, validationErrorFields(dst, verr), validationFieldErrors(dst, verr))
 			return false
 		}
 		RespondError(c, http.StatusBadRequest, "validation_error", err.Error())
@@ -51,7 +32,7 @@ func BindJSON(c *gin.Context, dst any) bool {
 func BindQuery(c *gin.Context, dst any) bool {
 	if err := c.ShouldBindQuery(dst); err != nil {
 		if verr := asValidationErrors(err); verr != nil {
-			RespondValidationError(c, validationErrorFields(dst, verr))
+			RespondValidationErrorWithFieldErrors(c, http.StatusBadRequest, validationErrorFields(dst, verr), validationFieldErrors(dst, verr))
 			return false
 		}
 		RespondError(c, http.StatusBadRequest, "validation_error", err.Error())
@@ -87,41 +68,116 @@ func asValidationErrors(err error) validator.ValidationErrors {
 
 func validationErrorFields(dst any, verr validator.ValidationErrors) map[string]string {
 	fields := make(map[string]string, len(verr))
-	fieldNames := structJSONFieldMap(dst)
 	for _, fe := range verr {
-		name := fe.StructField()
-		if mapped, ok := fieldNames[name]; ok && mapped != "" {
-			name = mapped
+		name := validationFieldPath(dst, fe)
+		if name == "" {
+			name = fe.Field()
 		}
 		fields[name] = validationMessage(fe)
 	}
 	return fields
 }
 
-func structJSONFieldMap(dst any) map[string]string {
-	result := map[string]string{}
-	if dst == nil {
-		return result
+func validationFieldErrors(dst any, verr validator.ValidationErrors) []dto.FieldErrorResponse {
+	if len(verr) == 0 {
+		return nil
 	}
-	t := reflect.TypeOf(dst)
-	if t.Kind() == reflect.Pointer {
-		t = t.Elem()
+	fieldErrors := make([]dto.FieldErrorResponse, 0, len(verr))
+	for _, fe := range verr {
+		path := validationFieldPath(dst, fe)
+		if path == "" {
+			path = fe.Field()
+		}
+		fieldErrors = append(fieldErrors, dto.FieldErrorResponse{
+			Path:         path,
+			Code:         fe.Tag(),
+			Message:      validationMessage(fe),
+			LocalizedKey: validationLocalizedKey(fe),
+		})
 	}
-	if t.Kind() != reflect.Struct {
-		return result
+	sort.Slice(fieldErrors, func(i, j int) bool {
+		return fieldErrors[i].Path < fieldErrors[j].Path
+	})
+	return fieldErrors
+}
+
+func validationFieldPath(dst any, fe validator.FieldError) string {
+	namespace := fe.StructNamespace()
+	if namespace == "" {
+		namespace = fe.Namespace()
 	}
-	for field := range t.Fields() {
-		jsonTag := field.Tag.Get("json")
-		if jsonTag == "-" {
+	if namespace == "" {
+		return jsonFieldName(reflect.TypeOf(dst), fe.StructField())
+	}
+
+	root := indirectType(reflect.TypeOf(dst))
+	parts := strings.Split(namespace, ".")
+	if len(parts) > 0 && root != nil && parts[0] == root.Name() {
+		parts = parts[1:]
+	}
+	if len(parts) == 0 {
+		return jsonFieldName(root, fe.StructField())
+	}
+
+	current := root
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		fieldName, indexes := splitNamespacePart(part)
+		jsonName := jsonFieldName(current, fieldName)
+		if jsonName == "" {
+			jsonName = fieldName
+		}
+		out = append(out, jsonName+indexes)
+
+		if current == nil {
 			continue
 		}
-		name, _, _ := strings.Cut(jsonTag, ",")
-		if name == "" {
-			name = field.Name
+		if field, ok := current.FieldByName(fieldName); ok {
+			current = indirectType(field.Type)
+			for current != nil && (current.Kind() == reflect.Slice || current.Kind() == reflect.Array) {
+				current = indirectType(current.Elem())
+			}
+			continue
 		}
-		result[field.Name] = name
+		current = nil
 	}
-	return result
+
+	return strings.Join(out, ".")
+}
+
+func splitNamespacePart(part string) (string, string) {
+	index := strings.Index(part, "[")
+	if index < 0 {
+		return part, ""
+	}
+	return part[:index], part[index:]
+}
+
+func jsonFieldName(t reflect.Type, fieldName string) string {
+	t = indirectType(t)
+	if t == nil || t.Kind() != reflect.Struct || fieldName == "" {
+		return ""
+	}
+	field, ok := t.FieldByName(fieldName)
+	if !ok {
+		return ""
+	}
+	jsonTag := field.Tag.Get("json")
+	if jsonTag == "-" {
+		return ""
+	}
+	name, _, _ := strings.Cut(jsonTag, ",")
+	if name == "" {
+		name = field.Name
+	}
+	return name
+}
+
+func indirectType(t reflect.Type) reflect.Type {
+	for t != nil && t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	return t
 }
 
 func validationMessage(fe validator.FieldError) string {
@@ -141,4 +197,11 @@ func validationMessage(fe validator.FieldError) string {
 	default:
 		return "invalid"
 	}
+}
+
+func validationLocalizedKey(fe validator.FieldError) string {
+	if fe == nil || fe.Tag() == "" {
+		return ""
+	}
+	return "validation." + fe.Tag()
 }

@@ -145,6 +145,8 @@
         "to": "Bis",
         "open_from_picker": "Von-Datum auswählen",
         "open_to_picker": "Bis-Datum auswählen",
+        "from_time": "Von-Zeit auswählen",
+        "to_time": "Bis-Zeit auswählen",
         "apply": "Suchen",
         "reset": "Filter zurücksetzen",
         "remove_entity": "Entitätsfilter {name} entfernen",
@@ -2308,6 +2310,8 @@
       "undo_field_device": "Feldgerät-Eingaben rückgängig machen",
       "undo_device": "Feldgerät- und BACnet-Änderungen rückgängig machen",
       "undo_bacnet_object": "BACnet-Objekt-Änderungen rückgängig machen",
+      "apparat_nr_lowest_available": "Niedrigste freie Apparat-Nr.: {value}.",
+      "apparat_nr_use_available_short": "Frei: {value}",
       "toasts": {
         "fix_validation": "Bitte beheben Sie die Validierungsfehler vor dem Speichern.",
         "partial_success": "{complete} Feldgerät(e) vollständig und {partial} Feldgerät(e) teilweise aktualisiert. Bitte prüfen Sie die fehlgeschlagenen Felder.",

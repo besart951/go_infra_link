@@ -1,3 +1,4 @@
+import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
 import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
 
 export interface ProjectFieldDeviceRemovalResult {
@@ -58,10 +59,9 @@ export class ProjectFieldDeviceAssociationService {
   }
 
   async loadFieldDeviceLinkIds(projectId: string): Promise<Map<string, string>> {
-    const links = await projectRepository.listFieldDevices(projectId, {
-      page: 1,
-      limit: 1000
-    });
-    return new Map(links.items.map((item) => [item.field_device_id, item.id]));
+    const links = await fetchAllPages((page, pageSize) =>
+      projectRepository.listFieldDevices(projectId, { page, limit: pageSize })
+    );
+    return new Map(links.map((item) => [item.field_device_id, item.id]));
   }
 }

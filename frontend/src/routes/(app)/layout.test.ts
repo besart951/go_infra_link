@@ -72,7 +72,45 @@ describe('(app) layout load', () => {
     const teams = [{ id: 'team-1', name: 'Team' }];
     const projects = [{ id: 'project-1', name: 'Project' }];
 
-    mockApi.mockResolvedValueOnce(user).mockResolvedValueOnce(teams).mockResolvedValueOnce(projects);
+    mockApi
+      .mockResolvedValueOnce(user)
+      .mockResolvedValueOnce(teams)
+      .mockResolvedValueOnce(projects);
+
+    const result = await load(createLoadEvent());
+
+    expect(result).toMatchObject({ user, teams, projects });
+    expect(mockApi).toHaveBeenNthCalledWith(2, '/teams', {
+      customFetch: expect.any(Function),
+      skipHttpErrorNavigation: true
+    });
+    expect(mockApi).toHaveBeenNthCalledWith(3, '/projects', {
+      customFetch: expect.any(Function),
+      skipHttpErrorNavigation: true
+    });
+  });
+
+  it('treats superadmin as having every preload permission even when the permission list is empty', async () => {
+    const user = {
+      id: 'user-1',
+      first_name: 'Super',
+      last_name: 'Admin',
+      email: 'superadmin@example.com',
+      is_active: true,
+      role: 'superadmin',
+      permissions: [],
+      can_access_user_directory: false,
+      created_at: '2026-04-30T00:00:00Z',
+      updated_at: '2026-04-30T00:00:00Z',
+      failed_login_attempts: 0
+    };
+    const teams = [{ id: 'team-1', name: 'Team' }];
+    const projects = [{ id: 'project-1', name: 'Project' }];
+
+    mockApi
+      .mockResolvedValueOnce(user)
+      .mockResolvedValueOnce(teams)
+      .mockResolvedValueOnce(projects);
 
     const result = await load(createLoadEvent());
 

@@ -508,10 +508,12 @@ func toBulkOperationResponse(result *domainFacility.BulkOperationResult) dto.Bul
 	results := make([]dto.BulkOperationResultItem, len(result.Results))
 	for i, r := range result.Results {
 		results[i] = dto.BulkOperationResultItem{
-			ID:      r.ID,
-			Success: r.Success,
-			Error:   r.Error,
-			Fields:  r.Fields,
+			ID:                r.ID,
+			Success:           r.Success,
+			Error:             r.Error,
+			Fields:            r.Fields,
+			Suggestions:       r.Suggestions,
+			SuggestionOptions: r.SuggestionOptions,
 		}
 	}
 	return dto.BulkUpdateFieldDeviceResponse{

@@ -9,7 +9,11 @@
  * - Automatic toast notifications for errors
  */
 
-import { getErrorMessage, getFieldErrors } from '$lib/api/client.js';
+import {
+  getErrorMessage,
+  getFieldError as resolveFieldError,
+  getFieldErrors
+} from '$lib/api/client.js';
 import { addToast } from '$lib/components/toast.svelte';
 import { t } from '$lib/i18n/index.js';
 
@@ -57,20 +61,7 @@ export function useFormState<T = unknown>(options: UseFormStateOptions<T> = {}) 
    * Get error for a specific field
    */
   function getFieldError(name: string, prefixes: string[] = []): string | undefined {
-    // Try direct field name
-    if (state.fieldErrors[name]) {
-      return state.fieldErrors[name];
-    }
-
-    // Try with prefixes
-    for (const prefix of prefixes) {
-      const key = `${prefix}.${name}`;
-      if (state.fieldErrors[key]) {
-        return state.fieldErrors[key];
-      }
-    }
-
-    return undefined;
+    return resolveFieldError(state.fieldErrors, name, prefixes);
   }
 
   /**

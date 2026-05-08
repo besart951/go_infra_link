@@ -1,7 +1,9 @@
 package realtime
 
 import (
+	"context"
 	"encoding/json"
+	"log/slog"
 	"maps"
 	"net/http"
 	"sort"
@@ -9,15 +11,17 @@ import (
 	"sync"
 	"time"
 
+	apprealtime "github.com/besart951/go_infra_link/backend/internal/application/realtime"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
 )
 
 const (
-	projectCollaborationWriteWait  = 10 * time.Second
-	projectCollaborationPongWait   = 60 * time.Second
-	projectCollaborationPingPeriod = 25 * time.Second
-	projectCollaborationMaxMessage = 32 * 1024
+	projectCollaborationWriteWait   = 10 * time.Second
+	projectCollaborationPongWait    = 60 * time.Second
+	projectCollaborationPingPeriod  = 25 * time.Second
+	projectCollaborationMaxMessage  = 32 * 1024
+	projectCollaborationPublishWait = 2 * time.Second
 
 	projectCollaborationMessageSnapshot       = "snapshot"
 	projectCollaborationMessagePresence       = "presence"
@@ -29,6 +33,9 @@ const (
 	projectCollaborationRefreshScopeControlCabinet = "control_cabinet"
 	projectCollaborationRefreshScopeSPSController  = "sps_controller"
 	projectCollaborationRefreshScopeFieldDevice    = "field_device"
+
+	projectCollaborationBusKindPayload   = "payload"
+	projectCollaborationBusKindEditState = "edit_state"
 )
 
 var projectCollaborationSocketConfig = WebSocketConfig{
@@ -123,14 +130,20 @@ type projectCollaborationEntityDeltaMessage struct {
 }
 
 type projectCollaborationClientMessage struct {
-	Type            string                               `json:"type"`
-	Devices         []ProjectFieldDeviceByFields         `json:"devices,omitempty"`
-	Scope           string                               `json:"scope,omitempty"`
-	EntityIDs       []string                             `json:"entity_ids,omitempty"`
-	DeviceIDs       []string                             `json:"device_ids,omitempty"`
-	ControlCabinets []projectCollaborationControlCabinet `json:"control_cabinets,omitempty"`
-	SPSControllers  []projectCollaborationSPSController  `json:"sps_controllers,omitempty"`
-	FieldDevices    []map[string]any                     `json:"field_devices,omitempty"`
+	Type         string
+	Devices      []ProjectFieldDeviceByFields
+	Scope        string
+	EntityIDs    []string
+	DeviceIDs    []string
+	FieldDevices []map[string]any
+}
+
+type projectCollaborationBusEvent struct {
+	Kind      string                       `json:"kind"`
+	ProjectID uuid.UUID                    `json:"project_id"`
+	UserID    uuid.UUID                    `json:"user_id,omitempty"`
+	Devices   []ProjectFieldDeviceByFields `json:"devices,omitempty"`
+	Payload   json.RawMessage              `json:"payload,omitempty"`
 }
 
 type projectCollaborationClient struct {
@@ -148,12 +161,95 @@ type projectCollaborationRoom struct {
 }
 
 type ProjectCollaborationHub struct {
-	mu    sync.RWMutex
-	rooms map[uuid.UUID]*projectCollaborationRoom
+	mu             sync.RWMutex
+	rooms          map[uuid.UUID]*projectCollaborationRoom
+	bus            apprealtime.Bus
+	nodeID         string
+	publishTimeout time.Duration
+	ctx            context.Context
+	cancel         context.CancelFunc
+	closeOnce      sync.Once
 }
 
-func NewProjectCollaborationHub() *ProjectCollaborationHub {
-	return &ProjectCollaborationHub{rooms: make(map[uuid.UUID]*projectCollaborationRoom)}
+type ProjectCollaborationHubOption func(*ProjectCollaborationHub)
+
+func WithProjectCollaborationBus(bus apprealtime.Bus, nodeID string) ProjectCollaborationHubOption {
+	return func(h *ProjectCollaborationHub) {
+		h.bus = bus
+		h.nodeID = strings.TrimSpace(nodeID)
+	}
+}
+
+func NewProjectCollaborationHub(options ...ProjectCollaborationHubOption) *ProjectCollaborationHub {
+	ctx, cancel := context.WithCancel(context.Background())
+	h := &ProjectCollaborationHub{
+		rooms:          make(map[uuid.UUID]*projectCollaborationRoom),
+		nodeID:         uuid.NewString(),
+		publishTimeout: projectCollaborationPublishWait,
+		ctx:            ctx,
+		cancel:         cancel,
+	}
+	for _, option := range options {
+		if option != nil {
+			option(h)
+		}
+	}
+	if h.nodeID == "" {
+		h.nodeID = uuid.NewString()
+	}
+	h.startBusSubscription()
+	return h
+}
+
+func (h *ProjectCollaborationHub) Close() {
+	h.closeOnce.Do(func() {
+		h.cancel()
+	})
+}
+
+func (h *ProjectCollaborationHub) startBusSubscription() {
+	if h.bus == nil {
+		return
+	}
+
+	events, err := h.bus.Subscribe(h.ctx, apprealtime.TopicProjectCollaboration)
+	if err != nil {
+		slog.Warn("project collaboration realtime bus subscription disabled", "err", err)
+		return
+	}
+
+	go func() {
+		for {
+			select {
+			case <-h.ctx.Done():
+				return
+			case event, ok := <-events:
+				if !ok {
+					return
+				}
+				h.handleBusEvent(event)
+			}
+		}
+	}()
+}
+
+func (h *ProjectCollaborationHub) handleBusEvent(event apprealtime.Event) {
+	if event.Source == h.nodeID {
+		return
+	}
+
+	var payload projectCollaborationBusEvent
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		slog.Warn("ignored invalid project collaboration bus event", "err", err)
+		return
+	}
+
+	switch payload.Kind {
+	case projectCollaborationBusKindPayload:
+		h.broadcastBytes(payload.ProjectID, payload.Payload)
+	case projectCollaborationBusKindEditState:
+		h.applyRemoteEditState(payload.ProjectID, payload.UserID, payload.Devices)
+	}
 }
 
 func (h *ProjectCollaborationHub) Register(client *projectCollaborationClient) {
@@ -194,10 +290,11 @@ func (h *ProjectCollaborationHub) Register(client *projectCollaborationClient) {
 
 func (h *ProjectCollaborationHub) Unregister(client *projectCollaborationClient) {
 	var (
-		presence   []ProjectCollaboratorPresence
-		editStates []ProjectFieldDeviceEditState
-		now        = time.Now().UTC()
-		shouldSend bool
+		presence             []ProjectCollaboratorPresence
+		editStates           []ProjectFieldDeviceEditState
+		now                  = time.Now().UTC()
+		shouldSend           bool
+		shouldClearEditState bool
 	)
 
 	h.mu.Lock()
@@ -212,6 +309,7 @@ func (h *ProjectCollaborationHub) Unregister(client *projectCollaborationClient)
 		} else {
 			delete(room.connectionByID, client.userID)
 			delete(room.presence, client.userID)
+			_, shouldClearEditState = room.editStates[client.userID]
 			delete(room.editStates, client.userID)
 		}
 
@@ -239,6 +337,9 @@ func (h *ProjectCollaborationHub) Unregister(client *projectCollaborationClient)
 			At:         now,
 		})
 	}
+	if shouldClearEditState {
+		h.publishEditState(client.projectID, client.userID, nil)
+	}
 
 	if client.socket != nil {
 		client.socket.CloseSend()
@@ -246,6 +347,8 @@ func (h *ProjectCollaborationHub) Unregister(client *projectCollaborationClient)
 }
 
 func (h *ProjectCollaborationHub) UpdateEditState(projectID, userID uuid.UUID, devices []ProjectFieldDeviceByFields) {
+	var currentUserDevices []ProjectFieldDeviceByFields
+
 	h.mu.Lock()
 	room, ok := h.rooms[projectID]
 	if !ok {
@@ -287,6 +390,7 @@ func (h *ProjectCollaborationHub) UpdateEditState(projectID, userID uuid.UUID, d
 		}
 	}
 
+	currentUserDevices = cloneProjectFieldDeviceByFields(room.editStates[userID])
 	editStates := snapshotEditStates(room)
 	h.mu.Unlock()
 
@@ -296,6 +400,7 @@ func (h *ProjectCollaborationHub) UpdateEditState(projectID, userID uuid.UUID, d
 		EditStates: editStates,
 		At:         now,
 	})
+	h.publishEditState(projectID, userID, currentUserDevices)
 }
 
 func (h *ProjectCollaborationHub) BroadcastRefreshRequest(projectID uuid.UUID, actorID *uuid.UUID, scope string, entityIDs []string) {
@@ -306,7 +411,7 @@ func (h *ProjectCollaborationHub) BroadcastRefreshRequest(projectID uuid.UUID, a
 
 	normalizedEntityIDs := normalizeIDs(entityIDs)
 
-	h.broadcast(projectID, ProjectCollaborationRefreshMessage{
+	h.broadcastDistributed(projectID, ProjectCollaborationRefreshMessage{
 		Type:      projectCollaborationMessageRefreshRequest,
 		ProjectID: projectID,
 		Scope:     scope,
@@ -351,7 +456,7 @@ func (h *ProjectCollaborationHub) broadcastEntityDelta(projectID uuid.UUID, acto
 	payload.ActorID = actor
 	payload.At = time.Now().UTC()
 
-	h.broadcast(projectID, payload)
+	h.broadcastDistributed(projectID, payload)
 }
 
 func (h *ProjectCollaborationHub) ensureRoomLocked(projectID uuid.UUID) *projectCollaborationRoom {
@@ -373,7 +478,19 @@ func (h *ProjectCollaborationHub) broadcast(projectID uuid.UUID, payload any) {
 	if err != nil {
 		return
 	}
+	h.broadcastBytes(projectID, b)
+}
 
+func (h *ProjectCollaborationHub) broadcastDistributed(projectID uuid.UUID, payload any) {
+	b, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	h.broadcastBytes(projectID, b)
+	h.publishPayload(projectID, b)
+}
+
+func (h *ProjectCollaborationHub) broadcastBytes(projectID uuid.UUID, b []byte) {
 	h.mu.RLock()
 	room, ok := h.rooms[projectID]
 	if !ok {
@@ -388,7 +505,7 @@ func (h *ProjectCollaborationHub) broadcast(projectID uuid.UUID, payload any) {
 
 	for _, client := range clients {
 		if client.socket == nil || !client.socket.SendBytes(b) {
-			go h.Unregister(client)
+			h.Unregister(client)
 		}
 	}
 }
@@ -399,8 +516,68 @@ func (h *ProjectCollaborationHub) sendToClient(client *projectCollaborationClien
 		return
 	}
 	if client.socket == nil || !client.socket.SendBytes(b) {
-		go h.Unregister(client)
+		h.Unregister(client)
 	}
+}
+
+func (h *ProjectCollaborationHub) publishPayload(projectID uuid.UUID, payload []byte) {
+	h.publishBusEvent(projectCollaborationBusEvent{
+		Kind:      projectCollaborationBusKindPayload,
+		ProjectID: projectID,
+		Payload:   append(json.RawMessage(nil), payload...),
+	})
+}
+
+func (h *ProjectCollaborationHub) publishEditState(projectID, userID uuid.UUID, devices []ProjectFieldDeviceByFields) {
+	h.publishBusEvent(projectCollaborationBusEvent{
+		Kind:      projectCollaborationBusKindEditState,
+		ProjectID: projectID,
+		UserID:    userID,
+		Devices:   cloneProjectFieldDeviceByFields(devices),
+	})
+}
+
+func (h *ProjectCollaborationHub) publishBusEvent(payload projectCollaborationBusEvent) {
+	if h.bus == nil {
+		return
+	}
+	b, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), h.publishTimeout)
+	defer cancel()
+	if err := h.bus.Publish(ctx, apprealtime.NewEvent(apprealtime.TopicProjectCollaboration, h.nodeID, b)); err != nil {
+		slog.Warn("project collaboration realtime bus publish failed", "err", err)
+	}
+}
+
+func (h *ProjectCollaborationHub) applyRemoteEditState(projectID, userID uuid.UUID, devices []ProjectFieldDeviceByFields) {
+	if projectID == uuid.Nil || userID == uuid.Nil {
+		return
+	}
+
+	now := time.Now().UTC()
+	h.mu.Lock()
+	room, ok := h.rooms[projectID]
+	if !ok {
+		h.mu.Unlock()
+		return
+	}
+	if len(devices) == 0 {
+		delete(room.editStates, userID)
+	} else {
+		room.editStates[userID] = cloneProjectFieldDeviceByFields(devices)
+	}
+	editStates := snapshotEditStates(room)
+	h.mu.Unlock()
+
+	h.broadcast(projectID, projectCollaborationEditStatesMessage{
+		Type:       projectCollaborationMessageEditStates,
+		ProjectID:  projectID,
+		EditStates: editStates,
+		At:         now,
+	})
 }
 
 func snapshotPresence(room *projectCollaborationRoom) []ProjectCollaboratorPresence {
@@ -523,6 +700,22 @@ func cloneFieldDeviceDeltas(fieldDevices []map[string]any) []map[string]any {
 	return cloned
 }
 
+func cloneProjectFieldDeviceByFields(devices []ProjectFieldDeviceByFields) []ProjectFieldDeviceByFields {
+	if len(devices) == 0 {
+		return nil
+	}
+
+	cloned := make([]ProjectFieldDeviceByFields, 0, len(devices))
+	for _, device := range devices {
+		cloned = append(cloned, ProjectFieldDeviceByFields{
+			DeviceID:      device.DeviceID,
+			ChangedFields: append([]string(nil), device.ChangedFields...),
+			FieldValues:   normalizeFieldValues(device.FieldValues),
+		})
+	}
+	return cloned
+}
+
 func toProjectCollaborationControlCabinet(controlCabinet domainFacility.ControlCabinet) projectCollaborationControlCabinet {
 	return projectCollaborationControlCabinet{
 		ID:               controlCabinet.ID,
@@ -572,8 +765,9 @@ func normalizeFieldValues(values map[string]any) map[string]any {
 }
 
 func (c *projectCollaborationClient) handleMessage(data []byte) {
-	var message projectCollaborationClientMessage
-	if err := json.Unmarshal(data, &message); err != nil {
+	message, err := parseProjectCollaborationClientMessage(data)
+	if err != nil {
+		logInvalidProjectCollaborationMessage(data, err)
 		return
 	}
 

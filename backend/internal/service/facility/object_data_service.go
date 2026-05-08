@@ -74,14 +74,14 @@ func (s *ObjectDataService) Update(ctx context.Context, objectData *domainFacili
 }
 
 func (s *ObjectDataService) CreateTemplate(ctx context.Context, input domainFacility.ObjectDataTemplateCreate) (*domainFacility.ObjectData, error) {
-	return runWithFacilityTxResult(s.transaction(), func(txService *ObjectDataService) (*domainFacility.ObjectData, error) {
-		return txService.template().create(ctx, input)
+	return runWithFacilityTxResult(ctx, s.transaction(), func(txCtx context.Context, txService *ObjectDataService) (*domainFacility.ObjectData, error) {
+		return txService.template().create(txCtx, input)
 	})
 }
 
 func (s *ObjectDataService) UpdateTemplate(ctx context.Context, id uuid.UUID, input domainFacility.ObjectDataTemplateUpdate) (*domainFacility.ObjectData, error) {
-	return runWithFacilityTxResult(s.transaction(), func(txService *ObjectDataService) (*domainFacility.ObjectData, error) {
-		return txService.template().update(ctx, id, input)
+	return runWithFacilityTxResult(ctx, s.transaction(), func(txCtx context.Context, txService *ObjectDataService) (*domainFacility.ObjectData, error) {
+		return txService.template().update(txCtx, id, input)
 	})
 }
 

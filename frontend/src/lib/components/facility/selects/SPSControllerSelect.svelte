@@ -4,6 +4,7 @@
   import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
   import type { SPSController } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
+  import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
 
   interface Props {
     value?: string;
@@ -31,6 +32,7 @@
       ? `${projectId ?? ''}|${controlCabinetId ?? ''}|${refreshKey ?? ''}`
       : undefined
   );
+  const projectSpsControllersCache = new Map<string, Promise<SPSController[]>>();
 
   function matchesSearch(controller: SPSController, search: string): boolean {
     const query = search.trim().toLowerCase();
@@ -41,26 +43,40 @@
       .some((value) => String(value).toLowerCase().includes(query));
   }
 
+  async function loadProjectSPSControllers(projectId: string): Promise<SPSController[]> {
+    const cached = projectSpsControllersCache.get(projectId);
+    if (cached) return cached;
+
+    const load = (async () => {
+      const links = await fetchAllPages((page, pageSize) =>
+        projectRepository.listSPSControllers(projectId, { page, limit: pageSize })
+      );
+      const controllerIds = [
+        ...new Set(links.map((link) => link.sps_controller_id).filter(Boolean))
+      ];
+      if (controllerIds.length === 0) return [];
+      return spsControllerRepository.getBulk(controllerIds);
+    })();
+
+    projectSpsControllersCache.set(projectId, load);
+    load.catch(() => {
+      if (projectSpsControllersCache.get(projectId) === load) {
+        projectSpsControllersCache.delete(projectId);
+      }
+    });
+
+    return load;
+  }
+
   async function fetchProjectSpsControllers(search: string): Promise<SPSController[]> {
     if (!projectId) return [];
 
-    const links = await projectRepository.listSPSControllers(projectId, {
-      page: 1,
-      limit: 1000
-    });
-    const controllerIds = Array.from(
-      new Set(links.items.map((link) => link.sps_controller_id).filter(Boolean))
-    );
-    if (controllerIds.length === 0) return [];
+    const controllers = await loadProjectSPSControllers(projectId);
+    const scopedControllers = controlCabinetId
+      ? controllers.filter((controller) => controller.control_cabinet_id === controlCabinetId)
+      : controllers;
 
-    let controllers = await spsControllerRepository.getBulk(controllerIds);
-    if (controlCabinetId) {
-      controllers = controllers.filter(
-        (controller) => controller.control_cabinet_id === controlCabinetId
-      );
-    }
-
-    return controllers.filter((controller) => matchesSearch(controller, search));
+    return scopedControllers.filter((controller) => matchesSearch(controller, search));
   }
 
   async function fetcher(search: string): Promise<SPSController[]> {
@@ -73,7 +89,7 @@
       search: { text: search },
       filters: controlCabinetId ? { control_cabinet_id: controlCabinetId } : undefined
     });
-    return res.items;
+    return res.items.filter((controller) => matchesSearch(controller, search));
   }
 
   async function fetchById(id: string): Promise<SPSController> {

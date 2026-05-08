@@ -8,7 +8,8 @@ import {
 export interface RealtimeJsonStreamOptions<TMessage> {
   url: () => string | null;
   onMessage: (message: TMessage) => void;
-  onInvalidMessage?: (raw: string) => void;
+  parseMessage?: (message: unknown) => TMessage;
+  onInvalidMessage?: (raw: string, error?: unknown) => void;
   onOpen?: (event: { wasReconnect: boolean }) => void;
   onStatusChange?: (status: RealtimeSocketStatus) => void;
   reconnectBaseDelayMs?: number;
@@ -20,10 +21,12 @@ export interface RealtimeJsonStreamOptions<TMessage> {
 export class RealtimeJsonStream<TMessage> implements RealtimeSocketConnection {
   private readonly connection: RealtimeSocketConnection;
   private readonly onMessage: (message: TMessage) => void;
-  private readonly onInvalidMessage?: (raw: string) => void;
+  private readonly parseMessage: (message: unknown) => TMessage;
+  private readonly onInvalidMessage?: (raw: string, error?: unknown) => void;
 
   constructor(options: RealtimeJsonStreamOptions<TMessage>) {
     this.onMessage = options.onMessage;
+    this.parseMessage = options.parseMessage ?? ((message) => message as TMessage);
     this.onInvalidMessage = options.onInvalidMessage;
 
     const createConnection =
@@ -55,9 +58,9 @@ export class RealtimeJsonStream<TMessage> implements RealtimeSocketConnection {
 
   private handleRawMessage(raw: string): void {
     try {
-      this.onMessage(JSON.parse(raw) as TMessage);
-    } catch {
-      this.onInvalidMessage?.(raw);
+      this.onMessage(this.parseMessage(JSON.parse(raw)));
+    } catch (error) {
+      this.onInvalidMessage?.(raw, error);
     }
   }
 }

@@ -69,7 +69,8 @@ export default defineConfig(({ mode }) => {
       }
     },
     build: {
-      sourcemap: buildSourcemap
+      sourcemap: buildSourcemap,
+      chunkSizeWarningLimit: 2_000
     }
   };
 });

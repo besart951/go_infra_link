@@ -148,6 +148,7 @@ type ObjectDataService interface {
 type SPSControllerSystemTypeService interface {
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
 	ListBySPSControllerID(ctx context.Context, spsControllerID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
+	ListBySPSControllerIDs(ctx context.Context, spsControllerIDs []uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
 	ListByProjectID(ctx context.Context, projectID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
 	CopyByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSControllerSystemType, error)

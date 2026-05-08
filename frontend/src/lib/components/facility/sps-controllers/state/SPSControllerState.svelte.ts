@@ -9,6 +9,7 @@ import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsCo
 import { canPerform, canPerformAny } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
 import { sanitizeFilters } from '$lib/state/table/sanitizeFilters.js';
+import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
 import {
   decodeMultiFilter,
   encodeMultiFilter,
@@ -445,23 +446,6 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
       return;
     }
 
-    if (this.projectId) {
-      try {
-        const response = await spsControllerSystemTypeRepository.list({
-          pagination: { page: 1, pageSize: 1000 },
-          search: { text: '' },
-          filters: { project_id: this.projectId }
-        });
-
-        this.systemTypesByController = groupSystemTypesByController(response.items);
-      } catch (error) {
-        console.error('Failed to load project SPS controller system types:', error);
-        this.systemTypesByController = {};
-      }
-
-      return;
-    }
-
     await this.loadSystemTypesForControllerIDs(controllerIds, {});
   }
 
@@ -473,40 +457,28 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
       return;
     }
 
-    const results = await Promise.allSettled(
-      controllerIds.map(async (controllerId) => {
-        const response = await spsControllerSystemTypeRepository.list({
-          pagination: { page: 1, pageSize: 1000 },
+    try {
+      const requestedControllerIds = new Set(controllerIds);
+      const systemTypes = await fetchAllPages((page, pageSize) =>
+        spsControllerSystemTypeRepository.list({
+          pagination: { page, pageSize },
           search: { text: '' },
-          filters: this.buildSystemTypeFilters(controllerId)
-        });
+          filters: { sps_controller_id: controllerIds.join('|') }
+        })
+      );
+      const grouped = groupSystemTypesByController(
+        systemTypes.filter((item) => requestedControllerIds.has(item.sps_controller_id))
+      );
+      const next: Record<string, SPSControllerSystemType[]> = { ...current };
 
-        return { controllerId, items: response.items };
-      })
-    );
-
-    const next: Record<string, SPSControllerSystemType[]> = { ...current };
-
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        next[result.value.controllerId] = result.value.items;
-        continue;
+      for (const controllerId of controllerIds) {
+        next[controllerId] = grouped[controllerId] ?? [];
       }
 
-      console.error('Failed to load SPS controller system types:', result.reason);
+      this.systemTypesByController = next;
+    } catch (error) {
+      console.error('Failed to load SPS controller system types:', error);
     }
-
-    this.systemTypesByController = next;
-  }
-
-  private buildSystemTypeFilters(controllerId: string): Record<string, string> {
-    const filters: Record<string, string> = { sps_controller_id: controllerId };
-
-    if (this.projectId) {
-      filters.project_id = this.projectId;
-    }
-
-    return filters;
   }
 
   private async removeProjectSPSController(controllerId: string): Promise<void> {
@@ -514,11 +486,11 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
       return;
     }
 
-    const links = await projectRepository.listSPSControllers(this.projectId, {
-      page: 1,
-      limit: 1000
-    });
-    const link = links.items.find((item) => item.sps_controller_id === controllerId);
+    const projectId = this.projectId;
+    const links = await fetchAllPages((page, pageSize) =>
+      projectRepository.listSPSControllers(projectId, { page, limit: pageSize })
+    );
+    const link = links.find((item) => item.sps_controller_id === controllerId);
 
     if (!link) {
       throw new Error(translate('projects.sps_controllers.delete_failed'));

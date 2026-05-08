@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -37,7 +38,24 @@ func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func()
 		return nil, func() {}, fmt.Errorf("repositories: %w", err)
 	}
 
-	runtimeAdapters := wire.NewRuntimeAdapters()
+	runtimeAdapters, runtimeCleanup, err := wire.NewRuntimeAdaptersFromConfig(context.Background(), wire.RuntimeConfig{
+		Bus:              cfg.Realtime.Bus,
+		NodeID:           cfg.Realtime.NodeID,
+		PostgresDSN:      cfg.DBConfig.Dsn,
+		PostgresChannel:  cfg.Realtime.PostgresChannel,
+		SubscriberBuffer: cfg.Realtime.SubscriberBuffer,
+		EventTTL:         cfg.Realtime.EventTTL,
+	})
+	if err != nil {
+		log.Error("Failed to initialize runtime adapters", "err", err)
+		cleanup()
+		return nil, func() {}, fmt.Errorf("runtime adapters: %w", err)
+	}
+	cleanupAll := func() {
+		runtimeCleanup()
+		cleanup()
+	}
+
 	services, err := wire.NewServices(gormDB, repos, wire.ServiceConfig{
 		JWTSecret:       cfg.JWTSecret,
 		Issuer:          config.DefaultIssuer,
@@ -47,18 +65,18 @@ func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func()
 	})
 	if err != nil {
 		log.Error("Failed to initialize services", "err", err)
-		cleanup()
+		cleanupAll()
 		return nil, func() {}, fmt.Errorf("services: %w", err)
 	}
 
 	if err := ensureSeedUser(cfg, log, services.User, repos.UserEmail); err != nil {
 		log.Error("Failed seeding initial user", "err", err)
-		cleanup()
+		cleanupAll()
 		return nil, func() {}, fmt.Errorf("seed user: %w", err)
 	}
 	if err := ensureSeedSystemNotifications(cfg, log, repos.UserEmail, repos.SystemNotifications); err != nil {
 		log.Error("Failed seeding dummy notifications", "err", err)
-		cleanup()
+		cleanupAll()
 		return nil, func() {}, fmt.Errorf("seed notifications: %w", err)
 	}
 
@@ -78,7 +96,7 @@ func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func()
 		services:   services,
 		handlers:   handlers,
 		translator: translator,
-	}, cleanup, nil
+	}, cleanupAll, nil
 }
 
 func openDatabase(cfg config.DBConfig, log applogger.Logger) (*gorm.DB, func(), error) {
@@ -120,6 +138,17 @@ func cookieSettingsFromConfig(cfg config.Config) authhandler.CookieSettings {
 	return authhandler.CookieSettings{
 		Domain:   cfg.CookieDomain,
 		Secure:   cookieSecure,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: sameSiteFromConfig(cfg.CookieSameSite),
+	}
+}
+
+func sameSiteFromConfig(value string) http.SameSite {
+	switch value {
+	case "lax":
+		return http.SameSiteLaxMode
+	case "none":
+		return http.SameSiteNoneMode
+	default:
+		return http.SameSiteStrictMode
 	}
 }

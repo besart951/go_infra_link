@@ -20,16 +20,18 @@ type AuthHandler struct {
 	service         AuthService
 	userService     UserService
 	permissionSvc   PermissionQueryService
+	tokenValidator  domainAuth.TokenValidator
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
 	cookieSettings  CookieSettings
 }
 
-func NewAuthHandler(service AuthService, userService UserService, permissionSvc PermissionQueryService, accessTokenTTL, refreshTokenTTL time.Duration, cookieSettings CookieSettings) *AuthHandler {
+func NewAuthHandler(service AuthService, userService UserService, permissionSvc PermissionQueryService, tokenValidator domainAuth.TokenValidator, accessTokenTTL, refreshTokenTTL time.Duration, cookieSettings CookieSettings) *AuthHandler {
 	return &AuthHandler{
 		service:         service,
 		userService:     userService,
 		permissionSvc:   permissionSvc,
+		tokenValidator:  tokenValidator,
 		accessTokenTTL:  accessTokenTTL,
 		refreshTokenTTL: refreshTokenTTL,
 		cookieSettings:  cookieSettings,
@@ -83,6 +85,16 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	h.setAuthCookies(c, result)
 
 	c.JSON(http.StatusOK, h.buildAuthResponse(c.Request.Context(), result))
+}
+
+// Session godoc
+// @Summary Get current auth session status
+// @Tags auth
+// @Produce json
+// @Success 200 {object} dto.SessionResponse
+// @Router /api/v1/auth/session [get]
+func (h *AuthHandler) Session(c *gin.Context) {
+	c.JSON(http.StatusOK, dto.SessionResponse{Authenticated: h.hasAuthenticatedSession(c)})
 }
 
 // handleRefreshError centralizes error handling for refresh operations
@@ -159,7 +171,7 @@ func (h *AuthHandler) buildAuthResponse(ctx context.Context, result *domainAuth.
 			IsActive:               result.User.IsActive,
 			Role:                   string(result.User.Role),
 			Permissions:            permissions,
-			CanAccessUserDirectory: hasPermission(permissions, domainUser.PermissionUserRead),
+			CanAccessUserDirectory: hasRolePermission(result.User.Role, permissions, domainUser.PermissionUserRead),
 			CreatedAt:              result.User.CreatedAt,
 			UpdatedAt:              result.User.UpdatedAt,
 			LastLoginAt:            result.User.LastLoginAt,
@@ -208,7 +220,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		IsActive:               usr.IsActive,
 		Role:                   string(usr.Role),
 		Permissions:            permissions,
-		CanAccessUserDirectory: hasPermission(permissions, domainUser.PermissionUserRead),
+		CanAccessUserDirectory: hasRolePermission(usr.Role, permissions, domainUser.PermissionUserRead),
 		CreatedAt:              usr.CreatedAt,
 		UpdatedAt:              usr.UpdatedAt,
 		LastLoginAt:            usr.LastLoginAt,
@@ -229,8 +241,37 @@ func (h *AuthHandler) getRolePermissions(ctx context.Context, role domainUser.Ro
 	return permissions
 }
 
-func hasPermission(permissions []string, permission string) bool {
+func hasRolePermission(role domainUser.Role, permissions []string, permission string) bool {
+	if role == domainUser.RoleSuperAdmin {
+		return true
+	}
 	return slices.Contains(permissions, permission)
+}
+
+func (h *AuthHandler) hasAuthenticatedSession(c *gin.Context) bool {
+	if h.tokenValidator == nil || h.userService == nil {
+		return false
+	}
+
+	accessToken, err := c.Cookie("access_token")
+	if err != nil || strings.TrimSpace(accessToken) == "" {
+		return false
+	}
+
+	userID, err := h.tokenValidator.ValidateToken(accessToken)
+	if err != nil {
+		return false
+	}
+
+	usr, err := h.userService.GetByID(c.Request.Context(), userID)
+	if err != nil || usr == nil {
+		return false
+	}
+
+	if !usr.IsActive || usr.DisabledAt != nil {
+		return false
+	}
+	return usr.LockedUntil == nil || !usr.LockedUntil.After(time.Now().UTC())
 }
 
 func (h *AuthHandler) setAuthCookies(c *gin.Context, result *domainAuth.LoginResult) {

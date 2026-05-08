@@ -60,7 +60,16 @@ func Connect(cfg config.DBConfig) (*gorm.DB, error) {
 
 // Bootstrap prepares the database schema explicitly.
 // Use this from a dedicated bootstrap or migration command, not normal app startup.
-func Bootstrap(cfg config.DBConfig) error {
+type BootstrapOptions struct {
+	RequireBlueGreenCompatible bool
+}
+
+func Bootstrap(cfg config.DBConfig, options ...BootstrapOptions) error {
+	opts := BootstrapOptions{}
+	if len(options) > 0 {
+		opts = options[0]
+	}
+
 	db, err := Connect(cfg)
 	if err != nil {
 		return err
@@ -74,5 +83,5 @@ func Bootstrap(cfg config.DBConfig) error {
 		_ = sqlDB.Close()
 	}()
 
-	return ApplyMigrations(db)
+	return ApplyMigrations(db, MigrationOptions(opts))
 }

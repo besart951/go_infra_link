@@ -88,6 +88,29 @@ func TestService_GetAllowedRoles_RequiresUserMutationPermission(t *testing.T) {
 	}
 }
 
+func TestService_GetAllowedRoles_SuperadminCanManageEveryRoleWithoutStoredGrants(t *testing.T) {
+	ctx := context.Background()
+	svc := &Service{
+		rolePermissionRepo: &rolePermissionRepoStub{},
+		permissionRepo:     &permissionRepoStub{},
+	}
+
+	roles, err := svc.GetAllowedRoles(ctx, domainUser.RoleSuperAdmin)
+	if err != nil {
+		t.Fatalf("expected allowed roles lookup to succeed, got %v", err)
+	}
+
+	want := domainUser.AllRoles()
+	if len(roles) != len(want) {
+		t.Fatalf("expected all roles, got %+v want %+v", roles, want)
+	}
+	for i := range want {
+		if roles[i] != want[i] {
+			t.Fatalf("unexpected role order/content: got %+v want %+v", roles, want)
+		}
+	}
+}
+
 func TestService_GetRolePermissions_SuperadminGetsAllPermissions(t *testing.T) {
 	ctx := context.Background()
 	svc := &Service{
@@ -116,7 +139,33 @@ func TestService_GetRolePermissions_SuperadminGetsAllPermissions(t *testing.T) {
 	}
 }
 
-func TestService_HasPermission_SuperadminChecksDefinedPermissions(t *testing.T) {
+func TestService_ListRolesWithPermissions_SuperadminCanManageEveryRoleWithoutPermissionGrants(t *testing.T) {
+	ctx := context.Background()
+	svc := &Service{
+		permissionRepo:     &permissionRepoStub{},
+		rolePermissionRepo: &rolePermissionRepoStub{},
+	}
+
+	roles, err := svc.ListRolesWithPermissions(ctx)
+	if err != nil {
+		t.Fatalf("expected role list to succeed, got %v", err)
+	}
+	if len(roles) == 0 || roles[0].Name != domainUser.RoleSuperAdmin {
+		t.Fatalf("expected superadmin role first, got %+v", roles)
+	}
+
+	want := domainUser.AllRoles()
+	if len(roles[0].CanManage) != len(want) {
+		t.Fatalf("expected superadmin to manage all roles, got %+v want %+v", roles[0].CanManage, want)
+	}
+	for i := range want {
+		if roles[0].CanManage[i] != want[i] {
+			t.Fatalf("unexpected manageable roles: got %+v want %+v", roles[0].CanManage, want)
+		}
+	}
+}
+
+func TestService_HasPermission_SuperadminBypassesPermissionRegistry(t *testing.T) {
 	ctx := context.Background()
 	svc := &Service{
 		permissionRepo:     &permissionRepoStub{items: []domainUser.Permission{{Name: domainUser.PermissionUserRead}}},
@@ -135,8 +184,8 @@ func TestService_HasPermission_SuperadminChecksDefinedPermissions(t *testing.T) 
 	if err != nil {
 		t.Fatalf("expected undefined permission check to succeed, got %v", err)
 	}
-	if hasPermission {
-		t.Fatal("expected undefined permission to be rejected")
+	if !hasPermission {
+		t.Fatal("expected superadmin to bypass undefined permissions")
 	}
 }
 

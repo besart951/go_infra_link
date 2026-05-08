@@ -1,4 +1,9 @@
 import type { BulkUpdateFieldDeviceItem } from '$lib/domain/facility/index.js';
+import {
+  findFieldPathSegment,
+  getRelevantFieldPathSegments,
+  normalizeFieldPathSegment
+} from '$lib/api/fieldPath.js';
 
 export type BulkUpdatePhase = 'fielddevice' | 'specification' | 'bacnet_objects';
 
@@ -26,15 +31,52 @@ export function getUpdatePhases(update: BulkUpdateFieldDeviceItem): Set<BulkUpda
 export function getFailedPhases(fields: Record<string, string>): Set<BulkUpdatePhase> {
   const phases = new Set<BulkUpdatePhase>();
   for (const fieldPath of Object.keys(fields)) {
-    if (fieldPath === 'fielddevice' || fieldPath.startsWith('fielddevice.')) {
-      phases.add('fielddevice');
-    } else if (fieldPath === 'specification' || fieldPath.startsWith('specification.')) {
-      phases.add('specification');
-    } else if (fieldPath === 'bacnet_objects' || fieldPath.startsWith('bacnet_objects.')) {
-      phases.add('bacnet_objects');
+    const phase = getFailedPhase(fieldPath);
+    if (phase) {
+      phases.add(phase);
     }
   }
   return phases;
+}
+
+function getFailedPhase(fieldPath: string): BulkUpdatePhase | undefined {
+  const relevant = getRelevantFieldPathSegments(fieldPath);
+  if (relevant.length === 0) return undefined;
+
+  const bacnetIndex = findFieldPathSegment(relevant, ['bacnetobjects', 'bacnetobject']);
+  if (bacnetIndex !== undefined) {
+    return 'bacnet_objects';
+  }
+
+  const first = normalizeFieldPathSegment(relevant[0]);
+  if (first === 'fielddevice' || first === 'fielddevices') {
+    const second = normalizeFieldPathSegment(relevant[1] ?? '');
+    return second === 'specification' || second === 'specifications'
+      ? 'specification'
+      : 'fielddevice';
+  }
+
+  if (first === 'specification' || first === 'specifications') {
+    return 'specification';
+  }
+
+  if (isBaseField(first)) {
+    return 'fielddevice';
+  }
+
+  return undefined;
+}
+
+function isBaseField(field: string): boolean {
+  return [
+    'bmk',
+    'description',
+    'textfix',
+    'apparatnr',
+    'apparatid',
+    'systempartid',
+    'spscontrollersystemtypeid'
+  ].includes(field);
 }
 
 export function hasPartialPhaseSuccess(

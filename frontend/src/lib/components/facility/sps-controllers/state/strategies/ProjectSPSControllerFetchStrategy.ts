@@ -8,6 +8,7 @@ import {
   sortMultiFilterOptions,
   type MultiFilterOption
 } from '$lib/components/facility/shared/projectFacilityListFilters.js';
+import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
 import type { SPSControllerFilters } from '../types.js';
 
 export class ProjectSPSControllerFetchStrategy implements DataTableFetchStrategy<
@@ -35,13 +36,17 @@ export class ProjectSPSControllerFetchStrategy implements DataTableFetchStrategy
   }
 
   async fetch(query: DataTableQuery<SPSControllerFilters>, signal?: AbortSignal) {
-    const linksResponse = await projectRepository.listSPSControllers(
-      this.projectId,
-      { page: 1, limit: 1000 },
+    const links = await fetchAllPages(
+      (page, pageSize, requestSignal) =>
+        projectRepository.listSPSControllers(
+          this.projectId,
+          { page, limit: pageSize },
+          requestSignal
+        ),
       signal
     );
 
-    const controllerIds = [...new Set(linksResponse.items.map((item) => item.sps_controller_id))];
+    const controllerIds = [...new Set(links.map((item) => item.sps_controller_id))];
     const controllers =
       controllerIds.length > 0 ? await spsControllerRepository.getBulk(controllerIds, signal) : [];
 

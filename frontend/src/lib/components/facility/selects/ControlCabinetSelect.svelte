@@ -5,6 +5,7 @@
   import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
   import type { Building, ControlCabinet } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
+  import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
 
   type Props = {
     value?: string;
@@ -27,69 +28,102 @@
   }: Props = $props();
 
   const t = createTranslator();
-  let buildingLabels = $state(new Map<string, string>());
   const effectiveRefreshKey = $derived(
     projectId !== undefined || buildingId !== undefined || refreshKey !== undefined
       ? `${projectId ?? ''}|${buildingId ?? ''}|${refreshKey ?? ''}`
       : undefined
   );
+  const projectControlCabinetsCache = new Map<string, Promise<ControlCabinet[]>>();
 
   function formatBuildingLabel(building: Building): string {
     return `${building.iws_code}-${building.building_group}`;
   }
 
-  async function ensureBuildingLabels(cabinets: ControlCabinet[]) {
-    const missingIds = Array.from(
-      new Set(cabinets.map((cabinet) => cabinet.building_id).filter(Boolean))
-    ).filter((id) => !buildingLabels.has(id));
-
-    if (missingIds.length === 0) return;
-
-    try {
-      const buildings = await buildingRepository.getBulk(missingIds);
-      const next = new Map(buildingLabels);
-      for (const building of buildings) {
-        next.set(building.id, formatBuildingLabel(building));
-      }
-      buildingLabels = next;
-    } catch (error) {
-      console.error('Failed to load building labels for control cabinets:', error);
-    }
-  }
-
-  function formatControlCabinetLabel(cabinet: ControlCabinet): string {
-    const buildingLabel = buildingLabels.get(cabinet.building_id) ?? cabinet.building_id;
-    return `${buildingLabel} ${cabinet.control_cabinet_nr}`.trim();
-  }
-
-  function matchesSearch(cabinet: ControlCabinet, search: string): boolean {
+  function matchesSearch(
+    cabinet: ControlCabinet,
+    search: string,
+    buildingLabels: Map<string, string>
+  ): boolean {
     const query = search.trim().toLowerCase();
     if (!query) return true;
 
-    return [cabinet.control_cabinet_nr, formatControlCabinetLabel(cabinet)]
+    return [cabinet.control_cabinet_nr, formatControlCabinetLabel(cabinet, buildingLabels)]
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(query));
+  }
+
+  function formatControlCabinetLabel(cabinet: ControlCabinet, labels: Map<string, string>): string {
+    const buildingLabel = labels.get(cabinet.building_id) ?? cabinet.building_id;
+    return `${buildingLabel} ${cabinet.control_cabinet_nr}`.trim();
+  }
+
+  const buildingLabelCache = new Map<string, Promise<Map<string, string>>>();
+
+  async function ensureBuildingLabels(cabinets: ControlCabinet[]): Promise<Map<string, string>> {
+    const buildingIds = [
+      ...new Set(cabinets.map((cabinet) => cabinet.building_id).filter(Boolean))
+    ];
+    const cacheKey = buildingIds.sort().join(',');
+    const cached = buildingLabelCache.get(cacheKey);
+    if (cached) return cached;
+
+    const load = (async () => {
+      if (buildingIds.length === 0) return new Map<string, string>();
+      const buildings = await buildingRepository.getBulk(buildingIds);
+      const next = new Map<string, string>();
+      for (const building of buildings) {
+        next.set(building.id, formatBuildingLabel(building));
+      }
+      return next;
+    })();
+
+    buildingLabelCache.set(cacheKey, load);
+    load.catch(() => {
+      if (buildingLabelCache.get(cacheKey) === load) {
+        buildingLabelCache.delete(cacheKey);
+      }
+    });
+
+    return load;
   }
 
   async function fetchProjectControlCabinets(search: string): Promise<ControlCabinet[]> {
     if (!projectId) return [];
 
-    const links = await projectRepository.listControlCabinets(projectId, {
-      page: 1,
-      limit: 1000
+    const cabinets = await loadProjectControlCabinets(projectId);
+    const buildingLabels = await ensureBuildingLabels(cabinets);
+    const scoped = buildingId
+      ? cabinets.filter((cabinet) => cabinet.building_id === buildingId)
+      : cabinets;
+    return scoped.filter((cabinet) => {
+      const label = formatControlCabinetLabel(cabinet, buildingLabels);
+      return [cabinet.control_cabinet_nr, label]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(search.trim().toLowerCase()));
     });
-    const cabinetIds = Array.from(
-      new Set(links.items.map((link) => link.control_cabinet_id).filter(Boolean))
-    );
-    if (cabinetIds.length === 0) return [];
+  }
 
-    let cabinets = await controlCabinetRepository.getBulk(cabinetIds);
-    if (buildingId) {
-      cabinets = cabinets.filter((cabinet) => cabinet.building_id === buildingId);
-    }
+  async function loadProjectControlCabinets(projectId: string): Promise<ControlCabinet[]> {
+    const cached = projectControlCabinetsCache.get(projectId);
+    if (cached) return cached;
 
-    await ensureBuildingLabels(cabinets);
-    return cabinets.filter((cabinet) => matchesSearch(cabinet, search));
+    const load = (async () => {
+      const links = await fetchAllPages((page, pageSize) =>
+        projectRepository.listControlCabinets(projectId, { page, limit: pageSize })
+      );
+      const cabinetIds = [...new Set(links.map((link) => link.control_cabinet_id).filter(Boolean))];
+      if (cabinetIds.length === 0) return [];
+      return controlCabinetRepository.getBulk(cabinetIds);
+    })();
+
+    projectControlCabinetsCache.set(projectId, load);
+    load.catch(() => {
+      if (projectControlCabinetsCache.get(projectId) === load) {
+        projectControlCabinetsCache.delete(projectId);
+      }
+    });
+
+    return load;
   }
 
   async function fetcher(search: string): Promise<ControlCabinet[]> {
@@ -99,17 +133,19 @@
 
     const res = await controlCabinetRepository.list({
       pagination: { page: 1, pageSize: 20 },
-      search: { text: search },
-      filters: buildingId ? { building_id: buildingId } : undefined
+      search: { text: search }
     });
-
-    await ensureBuildingLabels(res.items);
-    return res.items;
+    const labels = await ensureBuildingLabels(res.items);
+    return res.items.filter((cabinet) => {
+      const label = formatControlCabinetLabel(cabinet, labels);
+      return [cabinet.control_cabinet_nr, label]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search.trim().toLowerCase()));
+    });
   }
 
   async function fetchById(id: string): Promise<ControlCabinet> {
     const cabinet = await controlCabinetRepository.get(id);
-    await ensureBuildingLabels([cabinet]);
     return cabinet;
   }
 </script>
@@ -120,7 +156,7 @@
   {fetchById}
   refreshKey={effectiveRefreshKey}
   labelKey="control_cabinet_nr"
-  labelFormatter={formatControlCabinetLabel}
+  labelFormatter={(cabinet) => cabinet.control_cabinet_nr}
   placeholder={$t('facility.selects.control_cabinet')}
   {disabled}
   {width}

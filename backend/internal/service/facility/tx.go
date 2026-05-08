@@ -1,16 +1,17 @@
 package facility
 
 import (
+	"context"
+
+	"github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/service/changecapture"
-	"github.com/besart951/go_infra_link/backend/internal/service/transaction"
-	"gorm.io/gorm"
 )
 
 type TxRunner = transaction.Runner
 
 type Config struct {
 	TxRunner       TxRunner
-	TxRepositories func(tx *gorm.DB) (Repositories, error)
+	TxRepositories func(tx transaction.UnitOfWork) (Repositories, error)
 	ChangeRecorder changecapture.Recorder
 }
 
@@ -21,7 +22,7 @@ type txCoordinator struct {
 func newTxCoordinator(cfg Config) txCoordinator {
 	var factory transaction.Factory[*Services]
 	if cfg.TxRepositories != nil {
-		factory = func(tx *gorm.DB) (*Services, error) {
+		factory = func(tx transaction.UnitOfWork) (*Services, error) {
 			repos, err := cfg.TxRepositories(tx)
 			if err != nil {
 				return nil, err
@@ -49,13 +50,14 @@ func newFacilityTx[TService any](
 	}
 }
 
-func (tx facilityTx[TService]) run(fn func(TService) error) error {
-	return tx.operation.Run(fn)
+func (tx facilityTx[TService]) run(ctx context.Context, fn func(context.Context, TService) error) error {
+	return tx.operation.Run(ctx, fn)
 }
 
 func runWithFacilityTxResult[TResult any, TService any](
+	ctx context.Context,
 	tx facilityTx[TService],
-	fn func(TService) (TResult, error),
+	fn func(context.Context, TService) (TResult, error),
 ) (TResult, error) {
-	return transaction.RunResult(tx.operation, fn)
+	return transaction.RunResult(ctx, tx.operation, fn)
 }

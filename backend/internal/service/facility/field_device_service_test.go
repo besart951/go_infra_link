@@ -317,6 +317,29 @@ func (r *fakeSpsControllerSystemTypeRepo) GetPaginatedListBySPSControllerID(
 	}, nil
 }
 
+func (r *fakeSpsControllerSystemTypeRepo) GetPaginatedListBySPSControllerIDs(
+	_ context.Context,
+	spsControllerIDs []uuid.UUID,
+	params domain.PaginationParams,
+) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error) {
+	controllerSet := make(map[uuid.UUID]struct{}, len(spsControllerIDs))
+	for _, id := range spsControllerIDs {
+		controllerSet[id] = struct{}{}
+	}
+	items := make([]domainFacility.SPSControllerSystemType, 0)
+	for _, item := range r.items {
+		if _, ok := controllerSet[item.SPSControllerID]; ok {
+			items = append(items, *item)
+		}
+	}
+	return &domain.PaginatedList[domainFacility.SPSControllerSystemType]{
+		Items:      items,
+		Total:      int64(len(items)),
+		Page:       1,
+		TotalPages: 1,
+	}, nil
+}
+
 func (r *fakeSpsControllerSystemTypeRepo) GetPaginatedListByProjectID(
 	_ context.Context,
 	projectID uuid.UUID,
@@ -1156,6 +1179,12 @@ func TestFieldDeviceService_BulkUpdate_DetectsApparatNrConflict(t *testing.T) {
 	if result.Results[0].Fields["fielddevice.apparat_nr"] == "" {
 		t.Fatalf("expected fielddevice.apparat_nr error, got %+v", result.Results[0].Fields)
 	}
+	if got := result.Results[0].Suggestions["fielddevice.apparat_nr"]; got != 1 {
+		t.Fatalf("expected suggested apparat_nr 1, got %d (suggestions=%+v)", got, result.Results[0].Suggestions)
+	}
+	if got := result.Results[0].SuggestionOptions["fielddevice.apparat_nr"]; len(got) < 3 || got[0] != 1 || got[1] != 2 || got[2] != 4 {
+		t.Fatalf("expected available apparat_nr options to start with [1 2 4], got %+v", got)
+	}
 
 	if fieldDeviceRepo.items[fd1ID].ApparatNr != 1 {
 		t.Fatalf("expected fd1 apparat_nr unchanged, got %d", fieldDeviceRepo.items[fd1ID].ApparatNr)
@@ -1293,6 +1322,12 @@ func TestFieldDeviceService_BulkUpdate_PartialUpdate_ApparatNr_Conflict(t *testi
 	}
 	if result.Results[0].Fields["fielddevice.apparat_nr"] == "" {
 		t.Fatalf("expected fielddevice.apparat_nr error, got %+v", result.Results[0].Fields)
+	}
+	if got := result.Results[0].Suggestions["fielddevice.apparat_nr"]; got != 1 {
+		t.Fatalf("expected suggested apparat_nr 1, got %d (suggestions=%+v)", got, result.Results[0].Suggestions)
+	}
+	if got := result.Results[0].SuggestionOptions["fielddevice.apparat_nr"]; len(got) < 3 || got[0] != 1 || got[1] != 3 || got[2] != 4 {
+		t.Fatalf("expected available apparat_nr options to start with [1 3 4], got %+v", got)
 	}
 	if fieldDeviceRepo.items[fd1ID].ApparatNr != 1 {
 		t.Fatalf("expected apparat_nr unchanged, got %d", fieldDeviceRepo.items[fd1ID].ApparatNr)

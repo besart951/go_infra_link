@@ -2,12 +2,14 @@ package handlerutil
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/common"
 	"github.com/gin-gonic/gin"
 )
 
@@ -85,6 +87,55 @@ func TestRespondMappedDomainErrorWritesMappedError(t *testing.T) {
 	}
 	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("expected status 404, got %d", recorder.Code)
+	}
+}
+
+func TestRespondMappedDomainErrorUsesDefaultDomainMapping(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+
+	handled := RespondMappedDomainError(context, fmtWrapped(domain.ErrConflict))
+
+	if !handled {
+		t.Fatal("expected default conflict mapping to be handled")
+	}
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("expected status 409, got %d", recorder.Code)
+	}
+
+	var response dto.ErrorResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("expected response json to decode, got %v", err)
+	}
+	if response.Code != "conflict" || response.Error != "conflict" || response.LocalizedKey != "errors.conflict" {
+		t.Fatalf("expected unified conflict response, got %+v", response)
+	}
+}
+
+func TestRespondMappedDomainErrorLetsCustomMappingOverrideDefault(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+
+	handled := RespondMappedDomainError(
+		context,
+		fmtWrapped(domain.ErrNotFound),
+		MapError(domain.ErrNotFound, PlainError(http.StatusBadRequest, "invalid_reference", "invalid reference")),
+	)
+
+	if !handled {
+		t.Fatal("expected custom mapping to be handled")
+	}
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+	var response dto.ErrorResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("expected response json to decode, got %v", err)
+	}
+	if response.Code != "invalid_reference" {
+		t.Fatalf("expected custom code, got %+v", response)
 	}
 }
 

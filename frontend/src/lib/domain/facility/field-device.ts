@@ -194,6 +194,8 @@ export interface BulkOperationResultItem {
   success: boolean;
   error?: string;
   fields?: Record<string, string>;
+  suggestions?: Record<string, number>;
+  suggestion_options?: Record<string, number[]>;
 }
 
 /**

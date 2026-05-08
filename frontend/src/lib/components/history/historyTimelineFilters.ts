@@ -202,9 +202,11 @@ export function historyEntityFilterOptions(): HistoryEntityFilterOption[] {
   })).sort((a, b) => a.label.localeCompare(b.label, 'de-CH'));
 }
 
-export function historyFieldFilterOptions(entityTable?: string): Array<{ id: string; label: string }> {
+export function historyFieldFilterOptions(
+  entityTable?: string
+): Array<{ id: string; label: string }> {
   const fields = entityTable
-    ? ENTITY_FIELDS.find((option) => option.id === entityTable)?.fields ?? []
+    ? (ENTITY_FIELDS.find((option) => option.id === entityTable)?.fields ?? [])
     : [...new Set(ENTITY_FIELDS.flatMap((option) => option.fields))];
 
   return fields

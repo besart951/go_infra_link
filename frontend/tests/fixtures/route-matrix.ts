@@ -513,6 +513,18 @@ export const routeAudits = [
     protectedUi: ['ExcelUploadDropzone', 'ExcelReadProgressCard', 'ExcelSessionSummary'],
     notes:
       'The page hides the uploader without objectdata.create, but the route still resolves and the sidebar uses objectdata.read instead.'
+  },
+  {
+    path: '/timeline',
+    domain: 'app',
+    files: ['src/routes/(app)/timeline/+page.svelte'],
+    auth: 'authenticated',
+    authorization: 'ui-only',
+    status: 'misconfigured',
+    expectedAccess: 'Requires timeline.read for the route and timeline.restore for undo actions.',
+    protectedUi: ['history.timeline.restore', 'timeline sidebar item'],
+    notes:
+      'Sidebar visibility and restore controls are permission-aware, but the page route itself is still reachable without timeline.read.'
   }
 ] satisfies RouteAudit[];
 

@@ -9,6 +9,7 @@
   } from '$lib/components/navigation/ModuleCardGrid.svelte';
   import type { DashboardSnapshot } from '$lib/domain/dashboard/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
+  import { canAccessUserHub } from '$lib/navigation/userAccess.js';
   import { auth } from '$lib/stores/auth.svelte.js';
   import { canPerform } from '$lib/utils/permissions.js';
   import BellRingIcon from '@lucide/svelte/icons/bell-ring';
@@ -46,8 +47,7 @@
         href: '/users',
         icon: UsersIcon,
         tone: 'user',
-        hasAccess:
-          auth.canAccessUserDirectory || canPerform('read', 'team') || canPerform('read', 'role')
+        hasAccess: canAccessUserHub(auth.user, canPerform)
       },
       {
         title: $t('navigation.facility'),

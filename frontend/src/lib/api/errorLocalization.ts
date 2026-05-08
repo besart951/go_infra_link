@@ -4,11 +4,20 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   apparat: 'facility.apparat',
   apparat_id: 'facility.apparat',
   apparat_nr: 'field_device.table.apparat_nr',
+  alarm_type: 'history.fields.alarm_type_id',
+  alarm_type_id: 'history.fields.alarm_type_id',
+  alarmtypes: 'history.tables.alarm_types',
+  bacnet_object: 'facility.bacnet_object',
   bacnet_objects: 'facility.bacnet_object',
+  bacnetobjects: 'facility.bacnet_object',
   bacnetobject: 'facility.bacnet_object',
   bmk: 'field_device.table.bmk',
+  building: 'facility.building',
+  buildings: 'facility.building',
   building_group: 'facility.building_group',
   building_id: 'facility.building',
+  control_cabinet: 'facility.control_cabinet',
+  control_cabinets: 'facility.control_cabinet',
   controlcabinet: 'facility.control_cabinet',
   control_cabinet_id: 'facility.control_cabinet',
   control_cabinet_nr: 'facility.forms.control_cabinet.number_label',
@@ -17,11 +26,17 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   channel: 'notifications.preferences.channel_title',
   code: 'notifications.preferences.email.code_label',
   event_key: 'notifications.rules.event_key',
+  field_device: 'facility.field_device',
+  field_devices: 'facility.field_device',
   fielddevice: 'facility.field_device',
+  fielddevices: 'facility.field_device',
   frequency: 'notifications.preferences.frequency_title',
   from_email: 'notifications.form.from_email',
   ga_device: 'facility.ga_device',
   gateway: 'facility.forms.sps_controller.gateway_label',
+  gms_visible: 'history.fields.gms_visible',
+  hardware_quantity: 'history.fields.hardware_quantity',
+  hardware_type: 'history.fields.hardware_type',
   host: 'notifications.form.host',
   ip_address: 'facility.ip_address',
   iws_code: 'facility.iws_code',
@@ -40,13 +55,37 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   recipient_user_ids: 'notifications.rules.user_ids',
   resource_id: 'notifications.rules.resource_id',
   resource_type: 'notifications.rules.resource_type',
+  software_number: 'history.fields.software_number',
+  software_type: 'history.fields.software_type',
+  sps_controller: 'facility.sps_controller',
+  sps_controllers: 'facility.sps_controller',
+  sps_controller_system_type: 'facility.sps_controller_system_type',
+  sps_controller_systemtype: 'facility.sps_controller_system_type',
+  sps_controller_system_type_id: 'history.fields.sps_controller_system_type_id',
   spscontroller: 'facility.sps_controller',
+  spscontrollers: 'facility.sps_controller',
+  spscontrollersystemtype: 'facility.sps_controller_system_type',
   specification: 'facility.specifications',
+  specifications: 'facility.specifications',
+  specification_supplier: 'history.fields.specification_supplier',
+  specification_brand: 'history.fields.specification_brand',
+  specification_type: 'history.fields.specification_type',
+  additional_info_motor_valve: 'history.fields.additional_info_motor_valve',
+  additional_info_size: 'history.fields.additional_info_size',
+  additional_information_installation_location:
+    'history.fields.additional_information_installation_location',
+  electrical_connection_ph: 'history.fields.electrical_connection_ph',
+  electrical_connection_acdc: 'history.fields.electrical_connection_acdc',
+  electrical_connection_amperage: 'history.fields.electrical_connection_amperage',
+  electrical_connection_power: 'history.fields.electrical_connection_power',
+  electrical_connection_rotation: 'history.fields.electrical_connection_rotation',
   subnet: 'facility.forms.sps_controller.subnet_label',
   system_part: 'facility.system_part',
   system_part_id: 'facility.system_part',
   system_types: 'facility.forms.sps_controller.system_types_title',
+  text_individual: 'history.fields.text_individual',
   text_fix: 'field_device.table.text_fix',
+  textfix: 'field_device.table.text_fix',
   to: 'notifications.test.to',
   username: 'notifications.form.username',
   vlan: 'facility.forms.sps_controller.vlan_label'
@@ -107,10 +146,22 @@ function translateIfExists(key: string, params?: Record<string, string | number>
   return translated !== key ? translated : null;
 }
 
+const VALIDATION_KEYS_WITH_FIELD = new Set([
+  'validation.required',
+  'validation.email_invalid',
+  'validation.invalid',
+  'validation.numeric',
+  'validation.alphanumeric',
+  'validation.unique',
+  'validation.pattern'
+]);
+
 function extractFieldSegment(fieldPath?: string): string | undefined {
   if (!fieldPath) return undefined;
-  const segments = fieldPath.split('.').filter(Boolean);
-  return segments.length > 0 ? segments[segments.length - 1] : fieldPath;
+  const normalizedPath = fieldPath.replace(/\[([^\]]+)\]/g, '.$1');
+  const segments = normalizedPath.split('.').filter(Boolean);
+  const last = segments.length > 0 ? segments[segments.length - 1] : fieldPath;
+  return last.replace(/\[.*\]$/, '');
 }
 
 function humanizeFieldName(field?: string): string {
@@ -140,6 +191,10 @@ function getScopeLabel(scope: string): string {
 export function localizeErrorText(message: string, fieldPath?: string): string {
   const trimmed = message.trim();
   if (!trimmed) return trimmed;
+
+  if (VALIDATION_KEYS_WITH_FIELD.has(trimmed)) {
+    return t(trimmed, { field: getFieldLabel(fieldPath) });
+  }
 
   const translatedByKey = translateIfExists(trimmed);
   if (translatedByKey) {

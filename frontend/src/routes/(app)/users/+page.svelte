@@ -4,6 +4,11 @@
   } from '$lib/components/navigation/ModuleCardGrid.svelte';
   import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import { auth } from '$lib/stores/auth.svelte.js';
+  import {
+    canAccessRoleDirectory,
+    canAccessTeamDirectory,
+    canAccessUserDirectory
+  } from '$lib/navigation/userAccess.js';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import ShieldCheckIcon from '@lucide/svelte/icons/shield-check';
@@ -20,7 +25,7 @@
         href: '/users/directory',
         icon: UsersIcon,
         tone: 'user',
-        hasAccess: auth.canAccessUserDirectory
+        hasAccess: canAccessUserDirectory(auth.user)
       },
       {
         title: $t('navigation.teams'),
@@ -28,7 +33,7 @@
         href: '/teams',
         icon: UserRoundCogIcon,
         tone: 'user',
-        hasAccess: canPerform('read', 'team')
+        hasAccess: canAccessTeamDirectory(canPerform)
       },
       {
         title: $t('navigation.roles_permissions'),
@@ -36,7 +41,7 @@
         href: '/users/roles',
         icon: ShieldCheckIcon,
         tone: 'user',
-        hasAccess: canPerform('read', 'role')
+        hasAccess: canAccessRoleDirectory(canPerform)
       }
     ].filter((item) => item.hasAccess)
   );

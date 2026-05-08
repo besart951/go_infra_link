@@ -8,6 +8,11 @@ import {
   UsersIcon
 } from '@lucide/svelte';
 import type { User } from '$lib/domain/user/index.js';
+import {
+  canAccessRoleDirectory,
+  canAccessTeamDirectory,
+  canAccessUserDirectory
+} from '$lib/navigation/userAccess.js';
 
 type Translate = (key: string) => string;
 type CanPerform = (action: string, resource: string) => boolean;
@@ -164,17 +169,17 @@ const navDefinitions: NavDefinition[] = [
       {
         titleKey: 'navigation.all_users',
         url: '/users/directory',
-        hasAccess: ({ user }) => Boolean(user.can_access_user_directory)
+        hasAccess: ({ user }) => canAccessUserDirectory(user)
       },
       {
         titleKey: 'navigation.teams',
         url: '/teams',
-        hasAccess: ({ canPerform }) => canPerform('read', 'team')
+        hasAccess: ({ canPerform }) => canAccessTeamDirectory(canPerform)
       },
       {
         titleKey: 'navigation.roles_permissions',
         url: '/users/roles',
-        hasAccess: ({ canPerform }) => canPerform('read', 'role')
+        hasAccess: ({ canPerform }) => canAccessRoleDirectory(canPerform)
       }
     ]
   },

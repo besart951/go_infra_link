@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getErrorMessage } from '$lib/api/client.js';
   import { addToast } from '$lib/components/toast.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { t as translate } from '$lib/i18n/index.js';
@@ -27,12 +26,17 @@
     historyEntityFilterOptions,
     historyFieldFilterOptions
   } from '$lib/components/history/historyTimelineFilters.js';
-  import { historyRepository } from '$lib/infrastructure/api/historyRepository.js';
+  import {
+    fetchTimelineUser,
+    fetchTimelineUsers,
+    loadHistoryTimeline,
+    restoreTimelineEvent,
+    timelineErrorMessage
+  } from '$lib/components/history/historyTimelinePageData.js';
+  import { buildTimelineDateTimeISO } from '$lib/components/history/historyTimelineDateTime.js';
   import { canPerform } from '$lib/utils/permissions.js';
-  import { getUser, listUsers } from '$lib/infrastructure/api/user.adapter.js';
   import type { ChangeEvent, HistoryTimelineParams } from '$lib/domain/history.js';
   import type { User } from '$lib/domain/user/index.js';
-  import CalendarIcon from '@lucide/svelte/icons/calendar';
   import FilterXIcon from '@lucide/svelte/icons/filter-x';
   import InfoIcon from '@lucide/svelte/icons/info';
   import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
@@ -47,8 +51,10 @@
   let actorId = $state('');
   let entityTable = $state('');
   let selectedFields = $state<string[]>([]);
-  let occurredFrom = $state('');
-  let occurredTo = $state('');
+  let occurredFromDate = $state('');
+  let occurredFromTime = $state('');
+  let occurredToDate = $state('');
+  let occurredToTime = $state('');
   let events = $state<ChangeEvent[]>([]);
   let loading = $state(false);
   let loadingMore = $state(false);
@@ -57,11 +63,13 @@
   let total = $state(0);
   let totalPages = $state(1);
   let restoringEventId = $state<string | null>(null);
-  let timelineFromInput = $state<HTMLInputElement | null>(null);
-  let timelineToInput = $state<HTMLInputElement | null>(null);
   let requestId = 0;
 
   const fieldOptions = $derived(historyFieldFilterOptions(entityTable || undefined));
+  const occurredFrom = $derived(
+    buildTimelineDateTimeISO(occurredFromDate, occurredFromTime, 'start')
+  );
+  const occurredTo = $derived(buildTimelineDateTimeISO(occurredToDate, occurredToTime, 'end'));
   const activeFilterCount = $derived(
     [actorId, entityTable, occurredFrom, occurredTo].filter(Boolean).length + selectedFields.length
   );
@@ -103,11 +111,11 @@
         limit,
         actorId: actorId || undefined,
         entityTable: entityTable || undefined,
-        occurredFrom: dateTimeLocalToISO(occurredFrom),
-        occurredTo: dateTimeLocalToISO(occurredTo),
+        occurredFrom: occurredFrom || undefined,
+        occurredTo: occurredTo || undefined,
         fields: selectedFields
       };
-      const response = await historyRepository.listTimeline(params);
+      const response = await loadHistoryTimeline(params);
       if (currentRequest !== requestId) return;
       events = mode === 'append' ? [...events, ...response.items] : response.items;
       total = response.total;
@@ -115,7 +123,7 @@
       totalPages = Math.max(response.total_pages || 1, 1);
     } catch (loadError) {
       if (currentRequest !== requestId) return;
-      error = getErrorMessage(loadError);
+      error = timelineErrorMessage(loadError);
     } finally {
       if (currentRequest === requestId) {
         loading = false;
@@ -132,8 +140,10 @@
     actorId = '';
     entityTable = '';
     selectedFields = [];
-    occurredFrom = '';
-    occurredTo = '';
+    occurredFromDate = '';
+    occurredFromTime = '';
+    occurredToDate = '';
+    occurredToTime = '';
     void loadTimeline('reset');
   }
 
@@ -161,36 +171,23 @@
   async function undoEvent(event: ChangeEvent): Promise<void> {
     restoringEventId = event.id;
     try {
-      const result = await historyRepository.restoreEvent(event.id, 'before');
+      const result = await restoreTimelineEvent(event.id);
       const changedCount = result.restored_count + result.deleted_count;
       addToast(translate('history.timeline.undo_success', { count: changedCount }), 'success');
       await loadTimeline('reset');
     } catch (restoreError) {
-      addToast(getErrorMessage(restoreError), 'error');
+      addToast(timelineErrorMessage(restoreError), 'error');
     } finally {
       restoringEventId = null;
     }
   }
 
   async function fetchUsers(search: string): Promise<User[]> {
-    try {
-      const response = await listUsers({
-        page: 1,
-        limit: 20,
-        search: search.trim() || undefined
-      });
-      return response.items;
-    } catch {
-      return [];
-    }
+    return fetchTimelineUsers(search);
   }
 
   async function fetchUser(id: string): Promise<User | null> {
-    try {
-      return await getUser(id);
-    } catch {
-      return null;
-    }
+    return fetchTimelineUser(id);
   }
 
   function userLabel(user: User): string {
@@ -198,16 +195,26 @@
     return name || user.email;
   }
 
-  function dateTimeLocalToISO(value: string): string | undefined {
-    if (!value) return undefined;
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return undefined;
-    return parsed.toISOString();
+  function handleFromDateChange(): void {
+    if (!occurredFromDate) {
+      occurredFromTime = '';
+      return;
+    }
+
+    if (!occurredFromTime) {
+      occurredFromTime = '00:00';
+    }
   }
 
-  function openDateTimePicker(input: HTMLInputElement | null): void {
-    input?.focus();
-    (input as (HTMLInputElement & { showPicker?: () => void }) | null)?.showPicker?.();
+  function handleToDateChange(): void {
+    if (!occurredToDate) {
+      occurredToTime = '';
+      return;
+    }
+
+    if (!occurredToTime) {
+      occurredToTime = '23:59';
+    }
   }
 
   function eventTime(value: string): string {
@@ -355,45 +362,43 @@
 
       <div class="min-w-0 space-y-1.5">
         <Label for="timeline_from">{$t('history.timeline.filters.from')}</Label>
-        <div class="relative">
+        <div class="grid grid-cols-[minmax(0,1fr)_8.5rem] gap-2">
           <Input
             id="timeline_from"
-            type="datetime-local"
-            bind:ref={timelineFromInput}
-            bind:value={occurredFrom}
-            class="timeline-datetime-input h-10 pr-11 text-sm tabular-nums"
+            type="date"
+            bind:value={occurredFromDate}
+            class="timeline-native-picker h-10 text-sm tabular-nums"
+            onchange={handleFromDateChange}
           />
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            class="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:bg-input/60"
-            onclick={() => openDateTimePicker(timelineFromInput)}
-            aria-label={$t('history.timeline.filters.open_from_picker')}
-          >
-            <CalendarIcon class="size-4" />
-          </Button>
+          <Input
+            type="time"
+            bind:value={occurredFromTime}
+            class="timeline-native-picker h-10 text-sm tabular-nums"
+            aria-label={$t('history.timeline.filters.from_time')}
+            step="60"
+            disabled={!occurredFromDate}
+          />
         </div>
       </div>
 
       <div class="min-w-0 space-y-1.5">
         <Label for="timeline_to">{$t('history.timeline.filters.to')}</Label>
-        <div class="relative">
+        <div class="grid grid-cols-[minmax(0,1fr)_8.5rem] gap-2">
           <Input
             id="timeline_to"
-            type="datetime-local"
-            bind:ref={timelineToInput}
-            bind:value={occurredTo}
-            class="timeline-datetime-input h-10 pr-11 text-sm tabular-nums"
+            type="date"
+            bind:value={occurredToDate}
+            class="timeline-native-picker h-10 text-sm tabular-nums"
+            onchange={handleToDateChange}
           />
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            class="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:bg-input/60"
-            onclick={() => openDateTimePicker(timelineToInput)}
-            aria-label={$t('history.timeline.filters.open_to_picker')}
-          >
-            <CalendarIcon class="size-4" />
-          </Button>
+          <Input
+            type="time"
+            bind:value={occurredToTime}
+            class="timeline-native-picker h-10 text-sm tabular-nums"
+            aria-label={$t('history.timeline.filters.to_time')}
+            step="60"
+            disabled={!occurredToDate}
+          />
         </div>
       </div>
 
@@ -696,18 +701,20 @@
 </div>
 
 <style>
-  :global(.timeline-datetime-input) {
-    color-scheme: light dark;
+  :global(html:not(.dark) .timeline-native-picker) {
+    color-scheme: light;
   }
 
-  :global(.timeline-datetime-input::-webkit-date-and-time-value) {
+  :global(html.dark .timeline-native-picker) {
+    color-scheme: dark;
+  }
+
+  :global(.timeline-native-picker::-webkit-date-and-time-value) {
     text-align: left;
   }
 
-  :global(.timeline-datetime-input::-webkit-calendar-picker-indicator) {
-    width: 0;
-    margin: 0;
-    padding: 0;
-    opacity: 0;
+  :global(.timeline-native-picker::-webkit-datetime-edit),
+  :global(.timeline-native-picker::-webkit-datetime-edit-fields-wrapper) {
+    min-width: 0;
   }
 </style>

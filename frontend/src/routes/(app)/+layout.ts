@@ -3,6 +3,7 @@ import type { LayoutLoad } from './$types';
 import type { User } from '$lib/domain/user';
 import type { Team } from '$lib/domain/team';
 import type { Project } from '$lib/domain/project';
+import { hasUserPermission } from '$lib/utils/permissions.js';
 
 // Disable SSR for this layout and children
 export const ssr = false;
@@ -19,7 +20,7 @@ export const load: LayoutLoad = async ({ fetch }) => {
 
   const customFetch = fetch;
 
-  const hasPermission = (permission: string) => Boolean(user?.permissions?.includes(permission));
+  const hasPermission = (permission: string) => hasUserPermission(user, permission);
 
   try {
     try {
@@ -34,16 +35,14 @@ export const load: LayoutLoad = async ({ fetch }) => {
 
     if (user) {
       try {
-        const teamPromise = user.can_access_user_directory || !hasPermission('team.read')
-          ? Promise.resolve([] as Team[])
-          : api<Team[]>('/teams', { customFetch, skipHttpErrorNavigation: true });
+        const teamPromise =
+          user.can_access_user_directory || !hasPermission('team.read')
+            ? Promise.resolve([] as Team[])
+            : api<Team[]>('/teams', { customFetch, skipHttpErrorNavigation: true });
         const projectPromise = hasPermission('project.listAll')
           ? api<Project[]>('/projects', { customFetch, skipHttpErrorNavigation: true })
           : Promise.resolve([] as Project[]);
-        const [t, p] = await Promise.all([
-          teamPromise,
-          projectPromise
-        ]);
+        const [t, p] = await Promise.all([teamPromise, projectPromise]);
         teams = t;
         projects = p;
       } catch (e) {

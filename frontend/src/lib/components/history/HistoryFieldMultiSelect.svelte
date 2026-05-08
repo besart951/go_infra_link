@@ -42,9 +42,7 @@
 
   const selectedItems = $derived(items.filter((item) => value.includes(item.id)));
   const filteredItems = $derived(
-    search
-      ? items.filter((item) => item.label.toLowerCase().includes(search.toLowerCase()))
-      : items
+    search ? items.filter((item) => item.label.toLowerCase().includes(search.toLowerCase())) : items
   );
 
   $effect(() => {

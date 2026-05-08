@@ -2,8 +2,10 @@ package handlerutil
 
 import (
 	"errors"
+	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/gin-gonic/gin"
 )
 
@@ -48,6 +50,11 @@ func RespondMappedDomainError(c *gin.Context, err error, mappings ...ErrorMappin
 		}
 	}
 
+	if mapping, ok := defaultDomainErrorMapping(err); ok {
+		respondWithSpec(c, mapping.Spec)
+		return true
+	}
+
 	return false
 }
 
@@ -71,4 +78,19 @@ func respondWithSpec(c *gin.Context, spec ErrorSpec) {
 	}
 
 	RespondError(c, spec.Status, spec.Code, spec.Message)
+}
+
+func defaultDomainErrorMapping(err error) (ErrorMapping, bool) {
+	switch {
+	case errors.Is(err, domain.ErrNotFound):
+		return MapError(domain.ErrNotFound, LocalizedError(http.StatusNotFound, "not_found", "errors.not_found")), true
+	case errors.Is(err, domain.ErrConflict):
+		return MapError(domain.ErrConflict, LocalizedError(http.StatusConflict, "conflict", "errors.conflict")), true
+	case errors.Is(err, domain.ErrInvalidArgument):
+		return MapError(domain.ErrInvalidArgument, LocalizedError(http.StatusBadRequest, "validation_error", "errors.validation_error")), true
+	case errors.Is(err, domainUser.ErrForbiddenUserDirectory):
+		return MapError(domainUser.ErrForbiddenUserDirectory, LocalizedError(http.StatusForbidden, "forbidden", "errors.forbidden")), true
+	default:
+		return ErrorMapping{}, false
+	}
 }

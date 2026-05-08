@@ -155,6 +155,48 @@ describe('SPSControllerListView', () => {
     expect(mockListControllers).toHaveBeenCalledTimes(1);
   });
 
+  it('loads facility controller system types with one bulk request', async () => {
+    resetControllers([
+      {
+        id: 'controller-1',
+        control_cabinet_id: 'cabinet-1',
+        device_name: 'SPS 1',
+        ga_device: 'GA-1',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z'
+      },
+      {
+        id: 'controller-2',
+        control_cabinet_id: 'cabinet-1',
+        device_name: 'SPS 2',
+        ga_device: 'GA-2',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z'
+      },
+      {
+        id: 'controller-3',
+        control_cabinet_id: 'cabinet-2',
+        device_name: 'SPS 3',
+        ga_device: 'GA-3',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z'
+      }
+    ]);
+
+    render(SPSControllerListView, {});
+
+    await waitFor(() => {
+      expect(mockGetBulkCabinets).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockListSystemTypes).toHaveBeenCalledTimes(1);
+    expect(mockListSystemTypes).toHaveBeenCalledWith({
+      pagination: { page: 1, pageSize: 1000 },
+      search: { text: '' },
+      filters: { sps_controller_id: 'controller-1|controller-2|controller-3' }
+    });
+  });
+
   it('applies controller delta without follow-up fetch', async () => {
     const controller = {
       id: 'controller-1',

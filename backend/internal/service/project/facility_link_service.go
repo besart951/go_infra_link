@@ -41,12 +41,12 @@ func (s *ProjectFacilityLinkService) transaction() projectTx[*ProjectFacilityLin
 	})
 }
 
-func (s *ProjectFacilityLinkService) withTx(fn func(*ProjectFacilityLinkService) error) error {
-	return s.transaction().run(fn)
+func (s *ProjectFacilityLinkService) withTx(ctx context.Context, fn func(context.Context, *ProjectFacilityLinkService) error) error {
+	return s.transaction().run(ctx, fn)
 }
 
-func withProjectFacilityLinkTxResult[T any](s *ProjectFacilityLinkService, fn func(*ProjectFacilityLinkService) (T, error)) (T, error) {
-	return runProjectTxResult(s.transaction(), fn)
+func withProjectFacilityLinkTxResult[T any](ctx context.Context, s *ProjectFacilityLinkService, fn func(context.Context, *ProjectFacilityLinkService) (T, error)) (T, error) {
+	return runProjectTxResult(ctx, s.transaction(), fn)
 }
 
 func (s *ProjectFacilityLinkService) ListProjectIDsByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]uuid.UUID, error) {
@@ -92,14 +92,14 @@ func (s *ProjectFacilityLinkService) ListProjectIDsBySPSControllerID(ctx context
 }
 
 func (s *ProjectFacilityLinkService) CreateControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
-	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
-		return txService.assignments().assignControlCabinet(ctx, projectID, controlCabinetID)
+	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
+		return txService.assignments().assignControlCabinet(txCtx, projectID, controlCabinetID)
 	})
 }
 
 func (s *ProjectFacilityLinkService) CopyControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainFacility.ControlCabinet, error) {
-	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainFacility.ControlCabinet, error) {
-		return txService.copyControlCabinet(ctx, projectID, controlCabinetID)
+	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainFacility.ControlCabinet, error) {
+		return txService.copyControlCabinet(txCtx, projectID, controlCabinetID)
 	})
 }
 
@@ -117,26 +117,26 @@ func (s *ProjectFacilityLinkService) copyControlCabinet(ctx context.Context, pro
 }
 
 func (s *ProjectFacilityLinkService) UpdateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
-	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
-		return txService.assignments().updateControlCabinet(ctx, linkID, projectID, controlCabinetID)
+	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
+		return txService.assignments().updateControlCabinet(txCtx, linkID, projectID, controlCabinetID)
 	})
 }
 
 func (s *ProjectFacilityLinkService) DeleteControlCabinet(ctx context.Context, linkID, projectID uuid.UUID) error {
-	return s.withTx(func(txService *ProjectFacilityLinkService) error {
-		return txService.assignments().removeControlCabinet(ctx, linkID, projectID)
+	return s.withTx(ctx, func(txCtx context.Context, txService *ProjectFacilityLinkService) error {
+		return txService.assignments().removeControlCabinet(txCtx, linkID, projectID)
 	})
 }
 
 func (s *ProjectFacilityLinkService) CreateSPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
-	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainProject.ProjectSPSController, error) {
-		return txService.assignments().assignSPSController(ctx, projectID, spsControllerID)
+	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectSPSController, error) {
+		return txService.assignments().assignSPSController(txCtx, projectID, spsControllerID)
 	})
 }
 
 func (s *ProjectFacilityLinkService) CopySPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainFacility.SPSController, error) {
-	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainFacility.SPSController, error) {
-		return txService.copySPSController(ctx, projectID, spsControllerID)
+	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainFacility.SPSController, error) {
+		return txService.copySPSController(txCtx, projectID, spsControllerID)
 	})
 }
 
@@ -154,8 +154,8 @@ func (s *ProjectFacilityLinkService) copySPSController(ctx context.Context, proj
 }
 
 func (s *ProjectFacilityLinkService) CopySPSControllerSystemType(ctx context.Context, projectID, systemTypeID uuid.UUID) (*domainFacility.SPSControllerSystemType, error) {
-	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainFacility.SPSControllerSystemType, error) {
-		return txService.copySPSControllerSystemType(ctx, projectID, systemTypeID)
+	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainFacility.SPSControllerSystemType, error) {
+		return txService.copySPSControllerSystemType(txCtx, projectID, systemTypeID)
 	})
 }
 
@@ -173,30 +173,32 @@ func (s *ProjectFacilityLinkService) copySPSControllerSystemType(ctx context.Con
 }
 
 func (s *ProjectFacilityLinkService) UpdateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
-	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainProject.ProjectSPSController, error) {
-		return txService.assignments().updateSPSController(ctx, linkID, projectID, spsControllerID)
+	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectSPSController, error) {
+		return txService.assignments().updateSPSController(txCtx, linkID, projectID, spsControllerID)
 	})
 }
 
 func (s *ProjectFacilityLinkService) DeleteSPSController(ctx context.Context, linkID, projectID uuid.UUID) error {
-	return s.withTx(func(txService *ProjectFacilityLinkService) error {
-		return txService.assignments().removeSPSController(ctx, linkID, projectID)
+	return s.withTx(ctx, func(txCtx context.Context, txService *ProjectFacilityLinkService) error {
+		return txService.assignments().removeSPSController(txCtx, linkID, projectID)
 	})
 }
 
 func (s *ProjectFacilityLinkService) CreateFieldDevice(ctx context.Context, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
-	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainProject.ProjectFieldDevice, error) {
-		return txService.assignments().assignFieldDevice(ctx, projectID, fieldDeviceID)
+	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectFieldDevice, error) {
+		return txService.assignments().assignFieldDevice(txCtx, projectID, fieldDeviceID)
 	})
 }
 
 func (s *ProjectFacilityLinkService) UpdateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
-	return s.assignments().updateFieldDevice(ctx, linkID, projectID, fieldDeviceID)
+	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectFieldDevice, error) {
+		return txService.assignments().updateFieldDevice(txCtx, linkID, projectID, fieldDeviceID)
+	})
 }
 
 func (s *ProjectFacilityLinkService) DeleteFieldDevice(ctx context.Context, linkID, projectID uuid.UUID) error {
-	return s.withTx(func(txService *ProjectFacilityLinkService) error {
-		return txService.assignments().removeFieldDevice(ctx, linkID, projectID)
+	return s.withTx(ctx, func(txCtx context.Context, txService *ProjectFacilityLinkService) error {
+		return txService.assignments().removeFieldDevice(txCtx, linkID, projectID)
 	})
 }
 
@@ -269,8 +271,8 @@ func (s *ProjectFacilityLinkService) MultiCreateFieldDevices(ctx context.Context
 }
 
 func (s *ProjectFacilityLinkService) MultiCreateAndAssignFieldDevices(ctx context.Context, projectID uuid.UUID, items []domainFacility.FieldDeviceCreateItem) (*domainFacility.FieldDeviceMultiCreateResult, error) {
-	return withProjectFacilityLinkTxResult(s, func(txService *ProjectFacilityLinkService) (*domainFacility.FieldDeviceMultiCreateResult, error) {
-		return txService.multiCreateAndAssignFieldDevices(ctx, projectID, items)
+	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainFacility.FieldDeviceMultiCreateResult, error) {
+		return txService.multiCreateAndAssignFieldDevices(txCtx, projectID, items)
 	})
 }
 

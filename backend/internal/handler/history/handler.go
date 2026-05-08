@@ -66,8 +66,7 @@ func (h *Handler) RestoreEntity(c *gin.Context) {
 		return
 	}
 	var req domainHistory.RestoreEntityRequest
-	if err := c.ShouldBindJSON(&req); err != nil && c.Request.ContentLength > 0 {
-		handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_request", "validation.invalid_request")
+	if c.Request.ContentLength > 0 && !handlerutil.BindJSON(c, &req) {
 		return
 	}
 	mode := req.Mode
@@ -216,8 +215,7 @@ func parseTimelineFilter(c *gin.Context) (domainHistory.TimelineFilter, bool) {
 func parseControlCabinetRestoreRequest(c *gin.Context) (domainHistory.RestoreControlCabinetRequest, bool) {
 	var req domainHistory.RestoreControlCabinetRequest
 	if c.Request.ContentLength > 0 {
-		if err := c.ShouldBindJSON(&req); err != nil {
-			handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_request", "validation.invalid_request")
+		if !handlerutil.BindJSON(c, &req) {
 			return req, false
 		}
 	}

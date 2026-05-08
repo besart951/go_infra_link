@@ -25,5 +25,5 @@ func RespondLocalizedError(c *gin.Context, status int, code string, keyOrMessage
 		}
 	}
 
-	RespondError(c, status, code, message)
+	RespondErrorWithLocalizedKey(c, status, code, message, keyOrMessage)
 }

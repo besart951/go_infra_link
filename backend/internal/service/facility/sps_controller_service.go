@@ -57,14 +57,14 @@ func (s *SPSControllerService) Create(ctx context.Context, spsController *domain
 }
 
 func (s *SPSControllerService) CreateWithSystemTypes(ctx context.Context, spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
-	return s.transaction().run(func(txService *SPSControllerService) error {
-		if err := txService.ensureGADeviceAssigned(ctx, spsController, nil); err != nil {
+	return s.transaction().run(ctx, func(txCtx context.Context, txService *SPSControllerService) error {
+		if err := txService.ensureGADeviceAssigned(txCtx, spsController, nil); err != nil {
 			return err
 		}
-		if err := txService.Validate(ctx, spsController, nil); err != nil {
+		if err := txService.Validate(txCtx, spsController, nil); err != nil {
 			return err
 		}
-		systemTypeMap, err := txService.loadSystemTypes(ctx, systemTypes)
+		systemTypeMap, err := txService.loadSystemTypes(txCtx, systemTypes)
 		if err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ func (s *SPSControllerService) CreateWithSystemTypes(ctx context.Context, spsCon
 			return err
 		}
 
-		if err := txService.repo.Create(ctx, spsController); err != nil {
+		if err := txService.repo.Create(txCtx, spsController); err != nil {
 			return err
 		}
 		for _, st := range systemTypes {
@@ -82,7 +82,7 @@ func (s *SPSControllerService) CreateWithSystemTypes(ctx context.Context, spsCon
 				SPSControllerID: spsController.ID,
 				SystemTypeID:    st.SystemTypeID,
 			}
-			if err := txService.spsControllerSystemTyper.Create(ctx, entity); err != nil {
+			if err := txService.spsControllerSystemTyper.Create(txCtx, entity); err != nil {
 				return err
 			}
 		}
@@ -132,11 +132,11 @@ func (s *SPSControllerService) Update(ctx context.Context, spsController *domain
 }
 
 func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsController *domainFacility.SPSController, systemTypes []domainFacility.SPSControllerSystemType) error {
-	return s.transaction().run(func(txService *SPSControllerService) error {
-		if err := txService.Validate(ctx, spsController, &spsController.ID); err != nil {
+	return s.transaction().run(ctx, func(txCtx context.Context, txService *SPSControllerService) error {
+		if err := txService.Validate(txCtx, spsController, &spsController.ID); err != nil {
 			return err
 		}
-		systemTypeMap, err := txService.loadSystemTypes(ctx, systemTypes)
+		systemTypeMap, err := txService.loadSystemTypes(txCtx, systemTypes)
 		if err != nil {
 			return err
 		}
@@ -144,11 +144,11 @@ func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsCon
 			return err
 		}
 
-		if err := txService.repo.Update(ctx, spsController); err != nil {
+		if err := txService.repo.Update(txCtx, spsController); err != nil {
 			return err
 		}
 
-		existing, err := txService.spsControllerSystemTyper.ListBySPSControllerID(ctx, spsController.ID)
+		existing, err := txService.spsControllerSystemTyper.ListBySPSControllerID(txCtx, spsController.ID)
 		if err != nil {
 			return err
 		}
@@ -183,7 +183,7 @@ func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsCon
 					existingItem.SystemTypeID = st.SystemTypeID
 					existingItem.Number = st.Number
 					existingItem.DocumentName = st.DocumentName
-					if err := txService.spsControllerSystemTyper.Update(ctx, existingItem); err != nil {
+					if err := txService.spsControllerSystemTyper.Update(txCtx, existingItem); err != nil {
 						return err
 					}
 					continue
@@ -194,7 +194,7 @@ func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsCon
 				if existingItem, ok := existingBySystemType[st.SystemTypeID]; ok {
 					existingItem.Number = st.Number
 					existingItem.DocumentName = st.DocumentName
-					if err := txService.spsControllerSystemTyper.Update(ctx, existingItem); err != nil {
+					if err := txService.spsControllerSystemTyper.Update(txCtx, existingItem); err != nil {
 						return err
 					}
 					continue
@@ -207,7 +207,7 @@ func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsCon
 				SPSControllerID: spsController.ID,
 				SystemTypeID:    st.SystemTypeID,
 			}
-			if err := txService.spsControllerSystemTyper.Create(ctx, entity); err != nil {
+			if err := txService.spsControllerSystemTyper.Create(txCtx, entity); err != nil {
 				return err
 			}
 		}
@@ -231,14 +231,14 @@ func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsCon
 			return nil
 		}
 
-		fieldDeviceIDs, err := txService.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(ctx, deleteIDs)
+		fieldDeviceIDs, err := txService.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(txCtx, deleteIDs)
 		if err != nil {
 			return err
 		}
 		if len(fieldDeviceIDs) > 0 {
 			return domain.NewValidationError().Add("spscontroller.system_types", "referenced_entity_in_use")
 		}
-		return txService.spsControllerSystemTyper.DeleteByIds(ctx, deleteIDs)
+		return txService.spsControllerSystemTyper.DeleteByIds(txCtx, deleteIDs)
 	})
 }
 

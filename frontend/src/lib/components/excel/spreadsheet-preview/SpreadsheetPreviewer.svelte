@@ -84,6 +84,5 @@
     isTruncated={workbookService.isPreviewTruncated}
     visibleRowLimit={workbookService.visibleRowLimit}
     cellMarkers={fieldDeviceImportService.cellMarkers}
-    rowMarkers={fieldDeviceImportService.rowMarkers}
   />
 </div>

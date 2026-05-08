@@ -1,4 +1,5 @@
 import { redirect } from '@sveltejs/kit';
+import { hasUserPermission } from '$lib/utils/permissions.js';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ parent }) => {
@@ -8,7 +9,7 @@ export const load: PageLoad = async ({ parent }) => {
     throw redirect(302, '/login');
   }
 
-  if (!user.permissions?.includes('notification.smtp.manage')) {
+  if (!hasUserPermission(user, 'notification.smtp.manage')) {
     throw redirect(302, '/');
   }
 
