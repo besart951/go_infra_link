@@ -11,6 +11,7 @@ func TestLoadProductionValidation(t *testing.T) {
 	t.Setenv("JWT_SECRET", "change-me")
 	t.Setenv("COOKIE_SECURE", "false")
 	t.Setenv("TRUSTED_PROXIES", "")
+	t.Setenv("APP_PUBLIC_URL", "http://app.example.com")
 	t.Setenv("DATABASE_URL", "host=postgres user=postgres password=postgres dbname=go_infra_link port=5432 sslmode=disable")
 	t.Setenv("SEED_USER_ENABLED", "true")
 	t.Setenv("SEED_USER_EMAIL", "")
@@ -33,6 +34,9 @@ func TestLoadProductionValidation(t *testing.T) {
 	}
 	if !strings.Contains(message, "database sslmode=disable is unsafe in production") {
 		t.Fatalf("expected database sslmode validation error, got %q", message)
+	}
+	if !strings.Contains(message, "APP_PUBLIC_URL must use https in production") {
+		t.Fatalf("expected public app URL validation error, got %q", message)
 	}
 	if !strings.Contains(message, "SEED_USER_EMAIL is required") {
 		t.Fatalf("expected seed email validation error, got %q", message)
@@ -197,6 +201,7 @@ func setValidProductionEnv(t *testing.T) {
 	t.Setenv("COOKIE_SAME_SITE", "strict")
 	t.Setenv("COOKIE_DOMAIN", "")
 	t.Setenv("CORS_ALLOWED_ORIGINS", "https://app.example.com")
+	t.Setenv("APP_PUBLIC_URL", "https://app.example.com")
 	t.Setenv("TRUSTED_PROXIES", "10.0.0.10")
 	t.Setenv("DATABASE_URL", "host=postgres user=app password=secret dbname=go_infra_link port=5432 sslmode=require")
 	t.Setenv("SEED_USER_ENABLED", "false")

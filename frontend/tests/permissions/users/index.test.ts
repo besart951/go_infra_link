@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => {
@@ -23,6 +23,33 @@ const defaultDirectoryResponse = {
   teams: [],
   capabilities: { can_create_user: false }
 };
+
+function directoryUser(overrides: Record<string, unknown> = {}) {
+  return {
+    id: '00000000-0000-0000-0000-000000000001',
+    first_name: 'Ada',
+    last_name: 'Lovelace',
+    email: 'ada@example.com',
+    is_active: false,
+    role: 'planer',
+    role_display_name: 'Planer',
+    created_at: '2026-05-08T10:00:00.000Z',
+    updated_at: '2026-05-08T10:00:00.000Z',
+    last_login_at: null,
+    disabled_at: null,
+    locked_until: null,
+    failed_login_attempts: 0,
+    teams: [],
+    capabilities: {
+      can_update: false,
+      can_delete: false,
+      can_disable: false,
+      can_enable: false,
+      can_change_role: false
+    },
+    ...overrides
+  };
+}
 
 vi.mock('$app/navigation', () => ({
   goto: state.gotoMock
@@ -52,8 +79,11 @@ vi.mock('$lib/api/users.js', () => ({
   enableUser: state.enableUserMock,
   getAllowedRoles: vi.fn().mockResolvedValue({ roles: [] }),
   getCurrentUser: vi.fn(),
+  getUserRegistration: vi.fn(),
+  inviteUser: vi.fn(),
   listUsers: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, total_pages: 1 }),
   listUserDirectory: state.listUserDirectoryMock,
+  resendUserRegistration: vi.fn(),
   setUserRole: state.setUserRoleMock,
   updateCurrentUser: vi.fn(),
   updateCurrentUserPassword: vi.fn()
@@ -135,6 +165,23 @@ describe('/users/directory permission surface', () => {
     expect(state.listUserDirectoryMock).not.toHaveBeenCalled();
   });
 
+  it('uses layout user data on hard reload before the auth store hydrates', async () => {
+    state.canAccessUserDirectory = false;
+
+    render(UsersPage, {
+      data: {
+        user: {
+          can_access_user_directory: true
+        }
+      }
+    });
+
+    await waitFor(() => {
+      expect(state.listUserDirectoryMock).toHaveBeenCalled();
+    });
+    expect(state.gotoMock).not.toHaveBeenCalled();
+  });
+
   it('loads data from /users/directory and keeps create CTA hidden when capability is false', async () => {
     state.listUserDirectoryMock.mockResolvedValue({
       ...defaultDirectoryResponse,
@@ -162,5 +209,39 @@ describe('/users/directory permission surface', () => {
       expect(state.listUserDirectoryMock).toHaveBeenCalled();
     });
     expect(screen.getByRole('button', { name: 'common.create_user' })).toBeInTheDocument();
+  });
+
+  it('keeps the row action menu visible when invitation resend is cooling down', async () => {
+    state.listUserDirectoryMock.mockResolvedValue({
+      ...defaultDirectoryResponse,
+      items: [
+        directoryUser({
+          registration_process: {
+            status: 'pending',
+            email_status: 'sent',
+            steps: [
+              { key: 'created', label: 'Angelegt', status: 'completed' },
+              { key: 'email_sent', label: 'E-Mail versendet', status: 'completed' },
+              { key: 'registered', label: 'Registriert', status: 'current' },
+              { key: 'first_login', label: 'Erste Anmeldung', status: 'pending' }
+            ],
+            can_resend: false,
+            resend_available_at: new Date(Date.now() + 60_000).toISOString(),
+            send_count: 1
+          }
+        })
+      ],
+      total: 1,
+      capabilities: { can_create_user: true }
+    });
+
+    render(UsersPage);
+
+    await waitFor(() => {
+      expect(state.listUserDirectoryMock).toHaveBeenCalled();
+    });
+    await fireEvent.click(screen.getByRole('button', { name: 'common.actions' }));
+
+    expect(await screen.findByText('user.resend_invitation')).toBeInTheDocument();
   });
 });

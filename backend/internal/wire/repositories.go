@@ -4,6 +4,9 @@ package wire
 
 import (
 	"context"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
@@ -23,6 +26,7 @@ import (
 	projectsqlrepo "github.com/besart951/go_infra_link/backend/internal/repository/projectsql"
 	teamrepo "github.com/besart951/go_infra_link/backend/internal/repository/team"
 	userrepo "github.com/besart951/go_infra_link/backend/internal/repository/user"
+	userregistrationrepo "github.com/besart951/go_infra_link/backend/internal/repository/userregistration"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -38,6 +42,7 @@ type Repositories struct {
 	History                  HistoryRepository
 	User                     domainUser.UserRepository
 	UserEmail                domainUser.UserEmailRepository
+	UserRegistration         *userregistrationrepo.Store
 	Permissions              domainUser.PermissionRepository
 	RolePermissions          domainUser.RolePermissionRepository
 	RefreshToken             domainAuth.RefreshTokenRepository
@@ -52,15 +57,15 @@ type Repositories struct {
 	FacilityBuildings                domainFacility.BuildingRepository
 	FacilitySystemTypes              domainFacility.SystemTypeRepository
 	FacilitySystemParts              domainFacility.SystemPartRepository
-	FacilitySpecifications           domainFacility.SpecificationStore
+	FacilitySpecifications           domainFieldDevice.SpecificationStore
 	FacilityApparats                 domainFacility.ApparatRepository
 	FacilityControlCabinet           domainFacility.ControlCabinetRepository
-	FacilityFieldDevices             domainFacility.FieldDeviceStore
+	FacilityFieldDevices             domainFieldDevice.FieldDeviceStore
 	FacilitySPSControllers           domainFacility.SPSControllerRepository
-	FacilitySPSControllerSystemTypes domainFacility.SPSControllerSystemTypeStore
-	FacilityBacnetObjects            domainFacility.BacnetObjectStore
-	FacilityObjectData               domainFacility.ObjectDataStore
-	FacilityObjectDataBacnetObjects  domainFacility.ObjectDataBacnetObjectStore
+	FacilitySPSControllerSystemTypes domainHierarchy.SPSControllerSystemTypeStore
+	FacilityBacnetObjects            domainObjectData.BacnetObjectStore
+	FacilityObjectData               domainObjectData.ObjectDataStore
+	FacilityObjectDataBacnetObjects  domainObjectData.ObjectDataBacnetObjectStore
 
 	FacilityStateTexts          domainFacility.StateTextRepository
 	FacilityNotificationClasses domainFacility.NotificationClassRepository
@@ -104,6 +109,7 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 		History:                  historyStore,
 		User:                     userRepo,
 		UserEmail:                userEmailRepo,
+		UserRegistration:         userregistrationrepo.NewStore(gormDB),
 		Permissions:              permissionRepo,
 		RolePermissions:          rolePermissionRepo,
 		RefreshToken:             authrepo.NewRefreshTokenRepository(gormDB),

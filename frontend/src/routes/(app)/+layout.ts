@@ -4,6 +4,8 @@ import type { User } from '$lib/domain/user';
 import type { Team } from '$lib/domain/team';
 import type { Project, ProjectListResponse } from '$lib/domain/project';
 import { hasUserPermission } from '$lib/utils/permissions.js';
+import { redirect } from '@sveltejs/kit';
+import { canAccessProtectedRoute, forbiddenRouteRedirect } from '$lib/navigation/routeGuards.js';
 
 // Disable SSR for this layout and children
 export const ssr = false;
@@ -12,7 +14,7 @@ function isNetworkUnavailable(error: unknown): boolean {
   return error instanceof ApiException && error.status === 0 && error.error === 'network_error';
 }
 
-export const load: LayoutLoad = async ({ fetch }) => {
+export const load: LayoutLoad = async ({ fetch, url }) => {
   let backendAvailable = true;
   let user: User | null = null;
   let teams: Team[] = [];
@@ -58,6 +60,10 @@ export const load: LayoutLoad = async ({ fetch }) => {
   } catch (e) {
     // If /auth/me failed with network error, backend might be down.
     backendAvailable = false;
+  }
+
+  if (user && !canAccessProtectedRoute(user, url.pathname)) {
+    throw redirect(302, forbiddenRouteRedirect(url));
   }
 
   return {

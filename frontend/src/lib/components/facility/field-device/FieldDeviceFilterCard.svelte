@@ -550,7 +550,7 @@
 
 <Card.Root>
   <Card.Content>
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div class="grid grid-cols-1 gap-x-6 gap-y-4 lg:grid-cols-2">
       {#if showProjectSelect}
         <div class="flex flex-col gap-2">
           <label for="project-filter" class="text-sm font-medium">
@@ -575,6 +575,8 @@
             count: buildingIds.length
           })}
           clearText={$t('field_device.filters.clear_selection')}
+          width="w-full"
+          popupWidth="w-(--bits-popover-anchor-width)"
           onValueChange={handleBuildingChange}
         />
       {/if}
@@ -590,6 +592,8 @@
             count: controlCabinetIds.length
           })}
           clearText={$t('field_device.filters.clear_selection')}
+          width="w-full"
+          popupWidth="w-(--bits-popover-anchor-width)"
           onValueChange={handleControlCabinetChange}
         />
       {/if}
@@ -605,6 +609,8 @@
             count: spsControllerIds.length
           })}
           clearText={$t('field_device.filters.clear_selection')}
+          width="w-full"
+          popupWidth="w-(--bits-popover-anchor-width)"
           onValueChange={handleSpsControllerChange}
         />
       {/if}
@@ -620,6 +626,8 @@
             count: spsControllerSystemTypeIds.length
           })}
           clearText={$t('field_device.filters.clear_selection')}
+          width="w-full"
+          popupWidth="w-(--bits-popover-anchor-width)"
           onValueChange={(ids) => (spsControllerSystemTypeIds = ids)}
         />
       {/if}

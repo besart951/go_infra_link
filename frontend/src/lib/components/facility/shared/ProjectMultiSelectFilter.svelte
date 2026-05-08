@@ -19,6 +19,7 @@
     selectedText: string;
     clearText: string;
     width?: string;
+    popupWidth?: string;
     disabled?: boolean;
     onValueChange?: (value: string[]) => void;
   }
@@ -33,6 +34,7 @@
     selectedText,
     clearText,
     width = 'w-full sm:w-72',
+    popupWidth = width,
     disabled = false,
     onValueChange
   }: Props = $props();
@@ -61,7 +63,7 @@
   }
 </script>
 
-<div class={cn('space-y-2', width)}>
+<div class={cn('min-w-0 space-y-2', width)}>
   <div class="flex items-center justify-between gap-2">
     <span class="text-sm font-medium">{label}</span>
     {#if value.length > 0}
@@ -107,15 +109,17 @@
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          class={cn('justify-between', width)}
+          class={cn('min-w-0 justify-between', width)}
           disabled={disabled || items.length === 0}
         >
-          <span class="truncate">{selectedItems.length > 0 ? selectedText : placeholder}</span>
+          <span class="min-w-0 flex-1 truncate text-left">
+            {selectedItems.length > 0 ? selectedText : placeholder}
+          </span>
           <ChevronsUpDownIcon class="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       {/snippet}
     </Popover.Trigger>
-    <Popover.Content class={cn('p-0', width)}>
+    <Popover.Content class={cn('p-0', popupWidth)}>
       <Command.Root shouldFilter={false}>
         <Command.Input placeholder={searchPlaceholder} bind:value={search} />
         <Command.List>

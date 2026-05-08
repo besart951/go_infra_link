@@ -2,6 +2,7 @@ package facilitysql
 
 import (
 	"context"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -16,7 +17,7 @@ type fieldDeviceRepo struct {
 	db *gorm.DB
 }
 
-func NewFieldDeviceRepository(db *gorm.DB) domainFacility.FieldDeviceStore {
+func NewFieldDeviceRepository(db *gorm.DB) domainFieldDevice.FieldDeviceStore {
 	return &fieldDeviceRepo{
 		db: db,
 	}

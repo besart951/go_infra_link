@@ -11,13 +11,17 @@ func RegisterUserRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authCh
 	{
 		users.GET("/allowed-roles", handlers.User.GetAllowedRoles)
 		users.GET("/directory", handlers.User.ListDirectory)
+		users.PUT("/me/password", handlers.User.UpdateOwnPassword)
 	}
 
 	usersAdmin := protectedV1.Group("/users")
 	{
 		usersAdmin.POST("", middleware.RequirePermission(authChecker, domainUser.PermissionUserCreate), handlers.User.CreateUser)
+		usersAdmin.POST("/invitations", middleware.RequirePermission(authChecker, domainUser.PermissionUserCreate), handlers.Registration.CreateInvitation)
 		usersAdmin.GET("", middleware.RequirePermission(authChecker, domainUser.PermissionUserRead), handlers.User.ListUsers)
 		usersAdmin.GET("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionUserRead), handlers.User.GetUser)
+		usersAdmin.GET("/:id/registration", middleware.RequirePermission(authChecker, domainUser.PermissionUserRead), handlers.Registration.GetProcess)
+		usersAdmin.POST("/:id/registration/resend", middleware.RequirePermission(authChecker, domainUser.PermissionUserCreate), handlers.Registration.ResendInvitation)
 		usersAdmin.PUT("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionUserUpdate), handlers.User.UpdateUser)
 		usersAdmin.DELETE("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionUserDelete), handlers.User.DeleteUser)
 	}

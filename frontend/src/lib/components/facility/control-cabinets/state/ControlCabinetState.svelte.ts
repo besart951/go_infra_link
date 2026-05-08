@@ -5,7 +5,7 @@ import { ManageControlCabinetUseCase } from '$lib/application/useCases/facility/
 import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
 import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
 import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
-import { canPerform, canPerformAny } from '$lib/utils/permissions.js';
+import { canPerform } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
 import { sanitizeFilters } from '$lib/state/table/sanitizeFilters.js';
 import {
@@ -67,19 +67,19 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
 
   canCreateControlCabinet(): boolean {
     return this.isProjectContext
-      ? canPerformAny(['create', 'edit'], 'project.controlcabinet')
+      ? canPerform('create', 'project.controlcabinet')
       : canPerform('create', 'controlcabinet');
   }
 
   canUpdateControlCabinet(): boolean {
     return this.isProjectContext
-      ? canPerformAny(['update', 'edit'], 'project.controlcabinet')
+      ? canPerform('update', 'project.controlcabinet')
       : canPerform('update', 'controlcabinet');
   }
 
   canDeleteControlCabinet(): boolean {
     return this.isProjectContext
-      ? canPerformAny(['delete', 'edit'], 'project.controlcabinet')
+      ? canPerform('delete', 'project.controlcabinet')
       : canPerform('delete', 'controlcabinet');
   }
 

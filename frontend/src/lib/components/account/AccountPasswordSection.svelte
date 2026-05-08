@@ -4,6 +4,7 @@
   import { createTranslator } from '$lib/i18n/translator';
 
   interface Props {
+    currentPassword: string;
     newPassword: string;
     confirmPassword: string;
     isSavingPassword: boolean;
@@ -11,6 +12,7 @@
   }
 
   let {
+    currentPassword = $bindable(),
     newPassword = $bindable(),
     confirmPassword = $bindable(),
     isSavingPassword,
@@ -27,6 +29,10 @@
   </div>
 
   <div class="grid gap-4 sm:max-w-md">
+    <div class="flex flex-col gap-2">
+      <label for="current_password" class="text-sm font-medium">{$t('auth.current_password')}</label>
+      <Input id="current_password" type="password" bind:value={currentPassword} required />
+    </div>
     <div class="flex flex-col gap-2">
       <label for="new_password" class="text-sm font-medium">{$t('auth.new_password')}</label>
       <Input id="new_password" type="password" bind:value={newPassword} required minlength={8} />

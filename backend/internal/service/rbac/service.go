@@ -39,41 +39,18 @@ func (s *Service) GetTeamRole(ctx context.Context, teamID, userID uuid.UUID) (*d
 	return s.memberRepo.GetUserRole(ctx, teamID, userID)
 }
 
-// GetRoleLevel returns the hierarchical level of a role (higher = more privileged)
-func (s *Service) GetRoleLevel(role domainUser.Role) int {
-	switch role {
-	case domainUser.RoleSuperAdmin:
-		return 100
-	case domainUser.RoleAdminFZAG:
-		return 90
-	case domainUser.RoleFZAG:
-		return 80
-	case domainUser.RoleAdminPlaner:
-		return 70
-	case domainUser.RolePlaner:
-		return 60
-	case domainUser.RoleAdminEnterpreneur:
-		return 50
-	case domainUser.RoleEnterpreneur:
-		return 40
-	default:
-		return 0
-	}
-}
-
 func (s *Service) GetAllowedRoles(ctx context.Context, requesterRole domainUser.Role) ([]domainUser.Role, error) {
-	roles := domainUser.AllRoles()
 	if requesterRole == domainUser.RoleSuperAdmin {
-		return roles, nil
+		return domainUser.AssignableRoles(requesterRole), nil
 	}
 
-	permissionSets, err := s.loadRolePermissionSets(ctx, roles)
+	permissionSets, err := s.loadRolePermissionSets(ctx, []domainUser.Role{requesterRole})
 	if err != nil {
 		return nil, err
 	}
 	requesterPermissions := permissionSets[requesterRole]
-	return withoutRole(
-		manageableRolesForPermissionSet(roles, requesterPermissions, permissionSets),
-		domainUser.RoleSuperAdmin,
-	), nil
+	if !requesterPermissions.hasAny(domainUser.PermissionUserCreate, domainUser.PermissionUserUpdate) {
+		return []domainUser.Role{}, nil
+	}
+	return domainUser.AssignableRoles(requesterRole), nil
 }

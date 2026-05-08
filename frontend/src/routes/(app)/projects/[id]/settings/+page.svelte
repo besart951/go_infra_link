@@ -195,14 +195,14 @@
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {#if state.usersLoading}
-                {#each Array(5) as _}
-                  <Table.Row>
+              {#if state.usersLoading && state.availableUsers.length === 0}
+                <Table.LoadingRows loading rowCount={5}>
+                  {#snippet children(_rowIndex)}
                     <Table.Cell><Skeleton class="h-4 w-40" /></Table.Cell>
                     <Table.Cell><Skeleton class="h-4 w-60" /></Table.Cell>
                     <Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
-                  </Table.Row>
-                {/each}
+                  {/snippet}
+                </Table.LoadingRows>
               {:else if state.availableUsers.length === 0}
                 <Table.Row>
                   <Table.Cell colspan={4} class="h-20 text-center text-sm text-muted-foreground">
@@ -293,23 +293,24 @@
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {#if state.objectDataLoading}
-                {#each Array(5) as _}
-                  <Table.Row>
+              {@const filteredObjectData = state.getFilteredObjectData()}
+              {#if state.objectDataLoading && filteredObjectData.length === 0}
+                <Table.LoadingRows loading rowCount={5}>
+                  {#snippet children(_rowIndex)}
                     <Table.Cell><Skeleton class="h-4 w-60" /></Table.Cell>
                     <Table.Cell><Skeleton class="h-4 w-24" /></Table.Cell>
                     <Table.Cell><Skeleton class="h-4 w-16" /></Table.Cell>
                     <Table.Cell><Skeleton class="h-8 w-20" /></Table.Cell>
-                  </Table.Row>
-                {/each}
-              {:else if state.getFilteredObjectData().length === 0}
+                  {/snippet}
+                </Table.LoadingRows>
+              {:else if filteredObjectData.length === 0}
                 <Table.Row>
                   <Table.Cell colspan={4} class="h-20 text-center text-sm text-muted-foreground">
                     {$t('projects.object_data.empty')}
                   </Table.Cell>
                 </Table.Row>
               {:else}
-                {#each state.getFilteredObjectData() as obj (obj.id)}
+                {#each filteredObjectData as obj (obj.id)}
                   <Table.Row>
                     <Table.Cell class="font-medium">{obj.description}</Table.Cell>
                     <Table.Cell class="text-muted-foreground">{obj.version}</Table.Cell>

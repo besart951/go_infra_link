@@ -78,6 +78,7 @@
         />
       {:else if state.activeTab === 'password'}
         <AccountPasswordSection
+          bind:currentPassword={state.currentPassword}
           bind:newPassword={state.newPassword}
           bind:confirmPassword={state.confirmPassword}
           isSavingPassword={state.isSavingPassword}

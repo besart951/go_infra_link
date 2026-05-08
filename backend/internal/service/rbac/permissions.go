@@ -5,6 +5,7 @@ import (
 	"errors"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
@@ -30,6 +31,9 @@ func (s *Service) CreatePermission(ctx context.Context, permission *domainUser.P
 	if permission == nil {
 		return errors.New("permission_required")
 	}
+	if isDisallowedEditPermission(permission) {
+		return domain.ErrInvalidArgument
+	}
 	if err := s.permissionRepo.Create(ctx, permission); err != nil {
 		return err
 	}
@@ -42,6 +46,9 @@ func (s *Service) CreatePermission(ctx context.Context, permission *domainUser.P
 func (s *Service) UpdatePermission(ctx context.Context, permission *domainUser.Permission) error {
 	if permission == nil {
 		return errors.New("permission_required")
+	}
+	if isDisallowedEditPermission(permission) {
+		return domain.ErrInvalidArgument
 	}
 	return s.permissionRepo.Update(ctx, permission)
 }
@@ -71,9 +78,9 @@ func (s *Service) ListRolesWithPermissions(ctx context.Context) ([]domainUser.Ro
 			Name:        role,
 			DisplayName: domainUser.RoleDisplayName(role),
 			Description: domainUser.RoleDescription(role),
-			Level:       s.GetRoleLevel(role),
+			Level:       domainUser.RoleLevel(role),
 			Permissions: permissions,
-			CanManage:   manageableRoles(role, roles, permissionSets),
+			CanManage:   manageableRoles(role, permissionSets),
 		})
 	}
 
@@ -253,47 +260,15 @@ func rolePermissionSets(roles []domainUser.Role, rolePerms []domainUser.RolePerm
 	return sets
 }
 
-func manageableRoles(role domainUser.Role, roles []domainUser.Role, rolePermissionSets map[domainUser.Role]permissionSet) []domainUser.Role {
+func manageableRoles(role domainUser.Role, rolePermissionSets map[domainUser.Role]permissionSet) []domainUser.Role {
 	if role == domainUser.RoleSuperAdmin {
-		return append([]domainUser.Role{}, roles...)
+		return domainUser.AssignableRoles(role)
 	}
-	return withoutRole(
-		manageableRolesForPermissionSet(roles, rolePermissionSets[role], rolePermissionSets),
-		domainUser.RoleSuperAdmin,
-	)
-}
-
-func withoutRole(roles []domainUser.Role, excluded domainUser.Role) []domainUser.Role {
-	filtered := make([]domainUser.Role, 0, len(roles))
-	for _, role := range roles {
-		if role != excluded {
-			filtered = append(filtered, role)
-		}
-	}
-	return filtered
-}
-
-func manageableRolesForPermissionSet(roles []domainUser.Role, requesterPermissions permissionSet, rolePermissionSets map[domainUser.Role]permissionSet) []domainUser.Role {
+	requesterPermissions := rolePermissionSets[role]
 	if !requesterPermissions.hasAny(domainUser.PermissionUserCreate, domainUser.PermissionUserUpdate) {
 		return []domainUser.Role{}
 	}
-
-	allowed := make([]domainUser.Role, 0, len(roles))
-	for _, role := range roles {
-		if permissionSetContainsAll(requesterPermissions, rolePermissionSets[role]) {
-			allowed = append(allowed, role)
-		}
-	}
-	return allowed
-}
-
-func permissionSetContainsAll(granted permissionSet, required permissionSet) bool {
-	for permission := range required {
-		if _, ok := granted[permission]; !ok {
-			return false
-		}
-	}
-	return true
+	return domainUser.AssignableRoles(role)
 }
 
 func (s permissionSet) has(permission string) bool {
@@ -312,4 +287,8 @@ func (s permissionSet) sortedValues() []string {
 	}
 	sort.Strings(values)
 	return values
+}
+
+func isDisallowedEditPermission(permission *domainUser.Permission) bool {
+	return permission.Action == "edit" || strings.HasSuffix(permission.Name, ".edit")
 }

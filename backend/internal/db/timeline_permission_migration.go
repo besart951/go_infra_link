@@ -21,7 +21,7 @@ func ensureTimelinePermissions(db *gorm.DB) error {
 			name:        user.PermissionTimelineRead,
 			action:      "read",
 			description: "View the change timeline",
-			grantRoles:  user.AllRoles(),
+			grantRoles:  []user.Role{user.RoleSuperAdmin},
 		},
 		{
 			name:        user.PermissionTimelineRestore,

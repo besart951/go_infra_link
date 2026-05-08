@@ -2,10 +2,10 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { Button } from '$lib/components/ui/button/index.js';
+  import StaticCombobox from '$lib/components/ui/combobox/StaticCombobox.svelte';
   import * as Table from '$lib/components/ui/table/index.js';
   import * as Popover from '$lib/components/ui/popover/index.js';
   import * as Command from '$lib/components/ui/command/index.js';
-  import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import ConfirmDialog from '$lib/components/confirm-dialog.svelte';
   import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import UserAvatar from '$lib/components/user-avatar.svelte';
@@ -17,6 +17,14 @@
   const state = new TeamDetailPageState(() => teamId);
 
   const t = createTranslator();
+
+  type TeamRole = 'member' | 'manager' | 'owner';
+
+  const roleOptions = $derived([
+    { id: 'member' satisfies TeamRole, label: $t('teams.roles.member') },
+    { id: 'manager' satisfies TeamRole, label: $t('teams.roles.manager') },
+    { id: 'owner' satisfies TeamRole, label: $t('teams.roles.owner') }
+  ]);
 
   $effect(() => {
     state.scheduleUserSearch();
@@ -111,14 +119,14 @@
         </Table.Row>
       </Table.Header>
       <Table.Body>
-        {#if state.loading}
-          {#each Array(6) as _}
-            <Table.Row>
-              <Table.Cell><Skeleton class="h-4 w-70" /></Table.Cell>
-              <Table.Cell><Skeleton class="h-4 w-30" /></Table.Cell>
-              <Table.Cell><Skeleton class="h-8 w-24" /></Table.Cell>
-            </Table.Row>
-          {/each}
+        {#if state.loading && state.members.length === 0}
+          <Table.LoadingRows loading rowCount={6}>
+            {#snippet children(_rowIndex)}
+              <Table.Cell><div class="h-4 w-70 rounded-md bg-muted/40"></div></Table.Cell>
+              <Table.Cell><div class="h-4 w-30 rounded-md bg-muted/40"></div></Table.Cell>
+              <Table.Cell><div class="h-8 w-24 rounded-md bg-muted/40"></div></Table.Cell>
+            {/snippet}
+          </Table.LoadingRows>
         {:else if state.members.length === 0}
           <Table.Row>
             <Table.Cell colspan={3}>
@@ -151,22 +159,20 @@
                 {/if}
               </Table.Cell>
               <Table.Cell>
-                <select
-                  class="flex h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
-                  onchange={(e) =>
-                    state.changeRole(m.user_id, (e.target as HTMLSelectElement).value as any)}
+                <StaticCombobox
+                  items={roleOptions}
+                  value={m.role}
+                  labelKey="label"
+                  width="h-8 w-32 px-2"
+                  popupWidth="w-40"
+                  searchPlaceholder={$t('teams.detail.search_roles_placeholder')}
+                  emptyText={$t('teams.detail.no_roles_found')}
                   disabled={state.busy}
-                >
-                  <option value="member" selected={m.role === 'member'}
-                    >{$t('teams.roles.member')}</option
-                  >
-                  <option value="manager" selected={m.role === 'manager'}
-                    >{$t('teams.roles.manager')}</option
-                  >
-                  <option value="owner" selected={m.role === 'owner'}
-                    >{$t('teams.roles.owner')}</option
-                  >
-                </select>
+                  onValueChange={(role) => {
+                    if (role === m.role) return;
+                    void state.changeRole(m.user_id, role as TeamRole);
+                  }}
+                />
               </Table.Cell>
               <Table.Cell class="text-right">
                 <Button

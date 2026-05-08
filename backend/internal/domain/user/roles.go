@@ -13,6 +13,28 @@ func AllRoles() []Role {
 	}
 }
 
+// AssignableRoles returns roles that requesterRole may assign by hierarchy.
+// Superadmin may assign every role; other roles may assign only roles below them.
+func AssignableRoles(requesterRole Role) []Role {
+	roles := AllRoles()
+	if requesterRole == RoleSuperAdmin {
+		return append([]Role{}, roles...)
+	}
+
+	requesterLevel := RoleLevel(requesterRole)
+	if requesterLevel == 0 {
+		return []Role{}
+	}
+
+	assignable := make([]Role, 0, len(roles))
+	for _, role := range roles {
+		if RoleLevel(role) < requesterLevel {
+			assignable = append(assignable, role)
+		}
+	}
+	return assignable
+}
+
 // IsValidRole reports whether the role is a known role constant.
 func IsValidRole(role Role) bool {
 	switch role {

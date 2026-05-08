@@ -21,6 +21,8 @@ func Run() error {
 	defer cleanup()
 	stopNotificationWorker := runtimeDeps.services.Notification.StartEmailOutboxWorker(time.Minute, 100)
 	defer stopNotificationWorker()
+	stopRegistrationCleanup := runtimeDeps.services.UserRegistration.StartCleanupWorker(24 * time.Hour)
+	defer stopRegistrationCleanup()
 
 	router := newRouter(runtimeDeps)
 	return serveHTTP(runtimeDeps.cfg, runtimeDeps.log, router)

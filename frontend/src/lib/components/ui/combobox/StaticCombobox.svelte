@@ -21,6 +21,7 @@
     searchPlaceholder?: string;
     emptyText?: string;
     width?: string;
+    popupWidth?: string;
     onValueChange?: (value: string) => void;
     error?: string;
   }
@@ -40,6 +41,7 @@
     searchPlaceholder = 'Search...',
     emptyText = 'No results found.',
     width = 'w-[200px]',
+    popupWidth = width,
     onValueChange,
     error
   }: StaticComboboxProps<T> = $props();
@@ -155,7 +157,7 @@
               {/snippet}
             </Tooltip.Trigger>
             <Tooltip.Content side="top" class="max-w-xs">
-              <p class="break-words">{triggerTitle}</p>
+              <p class="wrap-break-word">{triggerTitle}</p>
             </Tooltip.Content>
           </Tooltip.Root>
         </Tooltip.Provider>
@@ -176,7 +178,7 @@
       {/if}
     {/snippet}
   </Popover.Trigger>
-  <Popover.Content class={cn('p-0', width)}>
+  <Popover.Content class={cn('p-0', popupWidth)}>
     <Command.Root shouldFilter={false}>
       <Command.Input placeholder={searchPlaceholder} bind:value={search} />
       <Command.List>

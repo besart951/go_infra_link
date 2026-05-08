@@ -2,6 +2,9 @@ package historycapture
 
 import (
 	"context"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -149,12 +152,12 @@ func (r *SPSControllerRepository) DeleteByIds(ctx context.Context, ids []uuid.UU
 }
 
 type SPSControllerSystemTypeStore struct {
-	domainFacility.SPSControllerSystemTypeStore
+	domainHierarchy.SPSControllerSystemTypeStore
 	audit audit[domainFacility.SPSControllerSystemType]
 	store *historysql.Store
 }
 
-func WrapSPSControllerSystemType(next domainFacility.SPSControllerSystemTypeStore, store *historysql.Store) domainFacility.SPSControllerSystemTypeStore {
+func WrapSPSControllerSystemType(next domainHierarchy.SPSControllerSystemTypeStore, store *historysql.Store) domainHierarchy.SPSControllerSystemTypeStore {
 	return &SPSControllerSystemTypeStore{SPSControllerSystemTypeStore: next, audit: newAudit[domainFacility.SPSControllerSystemType]("sps_controller_system_types", store), store: store}
 }
 
@@ -182,12 +185,12 @@ func (r *SPSControllerSystemTypeStore) DeleteBySPSControllerIDs(ctx context.Cont
 }
 
 type FieldDeviceStore struct {
-	domainFacility.FieldDeviceStore
+	domainFieldDevice.FieldDeviceStore
 	audit audit[domainFacility.FieldDevice]
 	store *historysql.Store
 }
 
-func WrapFieldDevice(next domainFacility.FieldDeviceStore, store *historysql.Store) domainFacility.FieldDeviceStore {
+func WrapFieldDevice(next domainFieldDevice.FieldDeviceStore, store *historysql.Store) domainFieldDevice.FieldDeviceStore {
 	return &FieldDeviceStore{FieldDeviceStore: next, audit: newAudit[domainFacility.FieldDevice]("field_devices", store), store: store}
 }
 
@@ -231,12 +234,12 @@ func (r *FieldDeviceStore) DeleteBySPSControllerSystemTypeIDs(ctx context.Contex
 }
 
 type SpecificationStore struct {
-	domainFacility.SpecificationStore
+	domainFieldDevice.SpecificationStore
 	audit audit[domainFacility.Specification]
 	store *historysql.Store
 }
 
-func WrapSpecification(next domainFacility.SpecificationStore, store *historysql.Store) domainFacility.SpecificationStore {
+func WrapSpecification(next domainFieldDevice.SpecificationStore, store *historysql.Store) domainFieldDevice.SpecificationStore {
 	return &SpecificationStore{SpecificationStore: next, audit: newAudit[domainFacility.Specification]("specifications", store), store: store}
 }
 
@@ -290,12 +293,12 @@ func (r *SpecificationStore) DeleteBySPSControllerSystemTypeIDs(ctx context.Cont
 }
 
 type BacnetObjectStore struct {
-	domainFacility.BacnetObjectStore
+	domainObjectData.BacnetObjectStore
 	audit audit[domainFacility.BacnetObject]
 	store *historysql.Store
 }
 
-func WrapBacnetObject(next domainFacility.BacnetObjectStore, store *historysql.Store) domainFacility.BacnetObjectStore {
+func WrapBacnetObject(next domainObjectData.BacnetObjectStore, store *historysql.Store) domainObjectData.BacnetObjectStore {
 	return &BacnetObjectStore{BacnetObjectStore: next, audit: newAudit[domainFacility.BacnetObject]("bacnet_objects", store), store: store}
 }
 
@@ -349,11 +352,11 @@ func (r *BacnetObjectStore) DeleteBySPSControllerSystemTypeIDs(ctx context.Conte
 }
 
 type ObjectDataStore struct {
-	domainFacility.ObjectDataStore
+	domainObjectData.ObjectDataStore
 	audit audit[domainFacility.ObjectData]
 }
 
-func WrapObjectData(next domainFacility.ObjectDataStore, store *historysql.Store) domainFacility.ObjectDataStore {
+func WrapObjectData(next domainObjectData.ObjectDataStore, store *historysql.Store) domainObjectData.ObjectDataStore {
 	return &ObjectDataStore{ObjectDataStore: next, audit: newAudit[domainFacility.ObjectData]("object_data", store)}
 }
 

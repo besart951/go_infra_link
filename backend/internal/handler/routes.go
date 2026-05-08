@@ -19,7 +19,7 @@ import (
 func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth.TokenValidator, authChecker middleware.AuthorizationChecker, userStatusSvc middleware.UserStatusService) {
 	publicV1 := r.Group("/api/v1")
 	i18nhandler.RegisterRoutes(publicV1, handlers.I18n)
-	authhandler.RegisterPublicRoutes(publicV1, handlers.Auth)
+	authhandler.RegisterPublicRoutes(publicV1, handlers.Auth, handlers.AuthRegistration)
 
 	protectedV1 := r.Group("/api/v1")
 	protectedV1.Use(middleware.AuthGuard(tokenValidator))
@@ -35,6 +35,6 @@ func RegisterRoutes(r *gin.Engine, handlers *Handlers, tokenValidator domainAuth
 	userhandler.RegisterAdminRoutes(protectedV1, handlers.User, authChecker)
 	notificationhandler.RegisterRoutes(protectedV1, handlers.Notification, authChecker)
 	authhandler.RegisterProtectedRoutes(protectedV1, handlers.Auth)
-	facilityhandler.RegisterRoutes(protectedV1, handlers.Facility)
+	facilityhandler.RegisterRoutes(protectedV1, handlers.Facility, authChecker)
 	historyhandler.RegisterRoutes(protectedV1, handlers.History, authChecker)
 }

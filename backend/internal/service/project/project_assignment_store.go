@@ -5,7 +5,9 @@ import (
 	"errors"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
-	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
@@ -35,10 +37,10 @@ type projectAssignmentStore struct {
 	projectControlCabinetRepo domainProject.ProjectControlCabinetRepository
 	projectSPSControllerRepo  domainProject.ProjectSPSControllerRepository
 	projectFieldDeviceRepo    domainProject.ProjectFieldDeviceRepository
-	spsControllerSystemRepo   domainFacility.SPSControllerSystemTypeStore
-	fieldDeviceRepo           domainFacility.FieldDeviceStore
-	specificationRepo         domainFacility.SpecificationStore
-	bacnetObjectRepo          domainFacility.BacnetObjectStore
+	spsControllerSystemRepo   domainHierarchy.SPSControllerSystemTypeStore
+	fieldDeviceRepo           domainFieldDevice.FieldDeviceStore
+	specificationRepo         domainFieldDevice.SpecificationStore
+	bacnetObjectRepo          domainObjectData.BacnetObjectStore
 }
 
 func newProjectAssignmentStore(deps projectAssignmentDependencies) projectAssignmentStore {

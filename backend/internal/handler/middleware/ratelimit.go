@@ -67,6 +67,9 @@ var loginLimiter = newLoginRateLimiter(rate.Every(6*time.Second), 5)
 // AuthSensitiveRateLimit allows short bursts for token refresh/logout endpoints.
 var authSensitiveLimiter = newLoginRateLimiter(rate.Every(3*time.Second), 10)
 
+// RegistrationRateLimit allows moderate bursts for public invitation-link checks.
+var registrationLimiter = newLoginRateLimiter(rate.Every(2*time.Second), 20)
+
 // LoginRateLimitMiddleware rejects excessive login attempts with 429.
 func LoginRateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -84,6 +87,18 @@ func AuthSensitiveRateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
 		if !authSensitiveLimiter.get(ip).Allow() {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "too_many_requests"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func RegistrationRateLimitMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ip := c.ClientIP()
+		if !registrationLimiter.get(ip).Allow() {
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": "too_many_requests"})
 			c.Abort()
 			return

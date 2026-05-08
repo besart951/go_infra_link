@@ -2,6 +2,7 @@ import type { SpreadsheetRow, WorksheetPreview } from '$lib/domain/excel/index.j
 import type {
   AlarmType,
   Apparat,
+  BacnetObject,
   BacnetObjectInput,
   Building,
   ControlCabinet,
@@ -20,6 +21,7 @@ import { toSpreadsheetColumnLabel } from '$lib/domain/excel/index.js';
 import { t as translate } from '$lib/i18n/index.js';
 
 export type ImportDiagnosticSeverity = 'error' | 'warning';
+export type ImportRowMarkerKind = 'error' | 'info' | 'delta' | 'success';
 export type ImportEntityKind =
   | 'worksheet'
   | 'building'
@@ -47,6 +49,33 @@ export interface ImportDiagnostic {
 
 export interface ImportCellMarker {
   severity: ImportDiagnosticSeverity;
+  messages: string[];
+}
+
+export interface ImportRowMarker {
+  kind: ImportRowMarkerKind;
+  messages: string[];
+}
+
+export type NotificationClassResolutionStatus =
+  | 'empty'
+  | 'matched'
+  | 'invalid'
+  | 'missing'
+  | 'manual'
+  | 'create';
+
+export interface ImportNotificationClassResolution {
+  raw: string;
+  number?: number;
+  id?: string;
+  status: NotificationClassResolutionStatus;
+}
+
+export type ImportExistingComparisonKind = 'identical' | 'delta';
+
+export interface ImportExistingComparison {
+  kind: ImportExistingComparisonKind;
   messages: string[];
 }
 
@@ -98,10 +127,12 @@ export interface FieldDeviceImportBacnetObjectPlan {
   sourceCells: {
     objectName: ImportSourceCell;
     address: ImportSourceCell;
+    notification: ImportSourceCell;
     textFix: ImportSourceCell;
   };
   address: string;
   textFix: string;
+  notificationClass: ImportNotificationClassResolution;
   request: BacnetObjectInput;
 }
 
@@ -114,6 +145,7 @@ export interface FieldDeviceImportDevicePlan {
   spsControllerSystemTypeKey: string;
   spsSystemTypeNumber?: number;
   existingFieldDeviceId?: string;
+  existingComparison?: ImportExistingComparison;
   systemPartLabel: string;
   apparatLabel: string;
   apparatNr?: number;
@@ -150,6 +182,7 @@ export interface FieldDeviceImportControllerPlan {
   spsControllerSourceCell: ImportSourceCell;
   existingControlCabinet?: ControlCabinet;
   existingSpsController?: SPSController;
+  existingSpsControllerComparison?: ImportExistingComparison;
   controlCabinetRequest?: CreateControlCabinetRequest;
   spsControllerRequest?: Omit<CreateSPSControllerRequest, 'control_cabinet_id'>;
   systemTypes: FieldDeviceImportSystemTypePlan[];
@@ -254,8 +287,109 @@ export function buildImportCellMarkers(
   return markers;
 }
 
+export function buildImportRowMarkers(
+  diagnostics: readonly ImportDiagnostic[],
+  plan: FieldDeviceImportPlan | null,
+  nodeStates: Record<string, { status?: string; message?: string }> = {},
+  hiddenNodeKeys: ReadonlySet<string> = new Set()
+): Record<number, ImportRowMarker> {
+  const markers: Record<number, ImportRowMarker> = {};
+
+  for (const diagnostic of diagnostics) {
+    if (!diagnostic.cell || diagnostic.severity !== 'error') continue;
+    addRowMarker(markers, diagnostic.cell.rowNumber, 'error', diagnostic.message);
+  }
+
+  if (!plan) return markers;
+
+  for (const fieldDevice of plan.controller.fieldDevices) {
+    if (hiddenNodeKeys.has(fieldDevice.key)) continue;
+    const state = nodeStates[fieldDevice.key];
+    addNodeRowMarker(markers, fieldDevice.sourceRowNumber, state, fieldDevice.existingComparison);
+
+    for (const object of fieldDevice.bacnetObjects) {
+      if (hiddenNodeKeys.has(object.key)) continue;
+      const objectState = nodeStates[object.key];
+      addNodeRowMarker(markers, object.sourceRowNumber, objectState);
+    }
+  }
+
+  return markers;
+}
+
 export function sourceCellKey(rowNumber: number, columnIndex: number): string {
   return `${rowNumber}:${columnIndex}`;
+}
+
+export function parseNotificationClassNumber(value: unknown): number | undefined {
+  const raw = String(value ?? '')
+    .normalize('NFKC')
+    .trim();
+  if (!raw) return undefined;
+
+  const direct = raw.match(/^0*(\d{1,4})$/);
+  const prefixed = raw.match(/(?:^|[^a-z0-9])n\s*c[\s:._-]*0*(\d{1,4})(?=$|[^0-9])/i);
+  const match = direct ?? prefixed;
+  if (!match) return undefined;
+
+  const parsed = Number.parseInt(match[1], 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function addNodeRowMarker(
+  markers: Record<number, ImportRowMarker>,
+  rowNumber: number,
+  state: { status?: string; message?: string } | undefined,
+  comparison?: ImportExistingComparison
+): void {
+  const status = state?.status;
+  if (status === 'failed') {
+    addRowMarker(markers, rowNumber, 'error', state?.message);
+    return;
+  }
+  if (status === 'success') {
+    addRowMarker(markers, rowNumber, 'success', state?.message);
+    return;
+  }
+  if (status === 'delta') {
+    addRowMarker(markers, rowNumber, 'delta', state?.message ?? comparison?.messages[0]);
+    return;
+  }
+  if (status === 'identical' || status === 'existing') {
+    addRowMarker(markers, rowNumber, 'info', state?.message ?? comparison?.messages[0]);
+  }
+}
+
+function addRowMarker(
+  markers: Record<number, ImportRowMarker>,
+  rowNumber: number,
+  kind: ImportRowMarkerKind,
+  message?: string
+): void {
+  const existing = markers[rowNumber];
+  const nextMessage = message?.trim();
+
+  if (!existing) {
+    markers[rowNumber] = {
+      kind,
+      messages: nextMessage ? [nextMessage] : []
+    };
+    return;
+  }
+
+  if (rowMarkerPriority(kind) > rowMarkerPriority(existing.kind)) {
+    existing.kind = kind;
+  }
+  if (nextMessage && !existing.messages.includes(nextMessage)) {
+    existing.messages.push(nextMessage);
+  }
+}
+
+function rowMarkerPriority(kind: ImportRowMarkerKind): number {
+  if (kind === 'error') return 4;
+  if (kind === 'delta') return 3;
+  if (kind === 'success') return 2;
+  return 1;
 }
 
 export function parseExportObjectName(value: string): ParsedObjectName | null {
@@ -337,7 +471,9 @@ export function collectFieldDeviceImportLookupCriteria(
         systemTypeNumbers.add(parsedName.spsSystemTypeNumber);
       }
 
-      const notificationNumber = parseInteger(cellString(row, COLUMNS.notification));
+      const notificationNumber = parseNotificationClassNumber(
+        cellString(row, COLUMNS.notification)
+      );
       if (notificationNumber !== undefined) {
         notificationNumbers.add(notificationNumber);
       }
@@ -524,12 +660,35 @@ export function transformWorksheetToFieldDeviceImport(
   const existingSpsController = existingControlCabinet
     ? resolveExistingSpsController(lookupIndex, existingControlCabinet.id, deviceName, gaDevice)
     : undefined;
+  const spsControllerRequest =
+    deviceName && gaDevice
+      ? {
+          ga_device: gaDevice,
+          device_name: deviceName,
+          device_description: emptyToUndefined(headerValues.deviceDescription.value),
+          device_location: emptyToUndefined(headerValues.deviceLocation.value),
+          ip_address: emptyToUndefined(headerValues.ipAddress.value),
+          subnet: emptyToUndefined(headerValues.subnet.value),
+          gateway: emptyToUndefined(headerValues.gateway.value),
+          vlan: emptyToUndefined(headerValues.vlan.value)
+        }
+      : undefined;
+  const existingSpsControllerComparison =
+    existingSpsController && spsControllerRequest
+      ? compareExistingSpsController(existingSpsController, spsControllerRequest)
+      : undefined;
   if (existingSpsController) {
     addDiagnostic(
       'warning',
-      translate('field_device.importer.validation.sps_controller_exists', {
-        value: existingSpsController.device_name || existingSpsController.ga_device || deviceName
-      }),
+      existingSpsControllerComparison?.kind === 'delta'
+        ? translate('field_device.importer.validation.sps_controller_exists_delta', {
+            value:
+              existingSpsController.device_name || existingSpsController.ga_device || deviceName
+          })
+        : translate('field_device.importer.validation.sps_controller_exists_identical', {
+            value:
+              existingSpsController.device_name || existingSpsController.ga_device || deviceName
+          }),
       'sps_controller',
       headerValues.deviceName.cell,
       'sps-controller'
@@ -584,23 +743,15 @@ export function transformWorksheetToFieldDeviceImport(
         }
       : undefined;
 
-  const spsControllerRequest =
-    deviceName && gaDevice
-      ? {
-          ga_device: gaDevice,
-          device_name: deviceName,
-          device_description: emptyToUndefined(headerValues.deviceDescription.value),
-          device_location: emptyToUndefined(headerValues.deviceLocation.value),
-          ip_address: emptyToUndefined(headerValues.ipAddress.value),
-          subnet: emptyToUndefined(headerValues.subnet.value),
-          gateway: emptyToUndefined(headerValues.gateway.value),
-          vlan: emptyToUndefined(headerValues.vlan.value),
-          system_types: systemTypes.map((item) => ({
-            system_type_id: item.systemTypeId,
-            number: item.number
-          }))
-        }
-      : undefined;
+  const fullSpsControllerRequest = spsControllerRequest
+    ? {
+        ...spsControllerRequest,
+        system_types: systemTypes.map((item) => ({
+          system_type_id: item.systemTypeId,
+          number: item.number
+        }))
+      }
+    : undefined;
 
   const errorCount = diagnostics.filter((item) => item.severity === 'error').length;
   const warningCount = diagnostics.filter((item) => item.severity === 'warning').length;
@@ -621,8 +772,9 @@ export function transformWorksheetToFieldDeviceImport(
       spsControllerSourceCell: headerValues.deviceName.cell,
       existingControlCabinet,
       existingSpsController,
+      existingSpsControllerComparison,
       controlCabinetRequest,
-      spsControllerRequest,
+      spsControllerRequest: fullSpsControllerRequest,
       systemTypes,
       fieldDevices
     },
@@ -634,7 +786,7 @@ export function transformWorksheetToFieldDeviceImport(
     canImport:
       errorCount === 0 &&
       Boolean(controlCabinetRequest) &&
-      Boolean(spsControllerRequest) &&
+      Boolean(fullSpsControllerRequest) &&
       fieldDevices.length > 0
   };
 }
@@ -965,7 +1117,7 @@ function parseBacnetObjectRow(
   }
 
   const hardware = parseHardware(row, rowIndex, addDiagnostic, key);
-  const notificationClassId = resolveNotificationClass(
+  const notificationClass = resolveNotificationClass(
     row,
     rowIndex,
     lookupIndex,
@@ -984,7 +1136,7 @@ function parseBacnetObjectRow(
     software_number: software?.number ?? 0,
     hardware_type: hardware.type,
     hardware_quantity: hardware.quantity,
-    notification_class_id: notificationClassId,
+    notification_class_id: notificationClass.id,
     state_text_id: stateTextId,
     alarm_type_id: alarmTypeId
   };
@@ -996,10 +1148,12 @@ function parseBacnetObjectRow(
     sourceCells: {
       objectName: source,
       address: addressCell,
+      notification: sourceCell(rowIndex, COLUMNS.notification),
       textFix: sourceCell(rowIndex, COLUMNS.textFix)
     },
     address,
     textFix,
+    notificationClass,
     request
   };
 }
@@ -1100,6 +1254,7 @@ function validateExistingFieldDevices(
     if (!existing) continue;
 
     fieldDevice.existingFieldDeviceId = existing.id;
+    fieldDevice.existingComparison = compareExistingFieldDevice(existing, fieldDevice);
     const systemTypeNumber = fieldDevice.spsSystemTypeNumber
       ? translate('field_device.importer.validation.sps_system_type_with_number', {
           number: fieldDevice.spsSystemTypeNumber
@@ -1107,12 +1262,19 @@ function validateExistingFieldDevices(
       : translate('field_device.importer.validation.sps_system_type');
     addDiagnostic(
       'warning',
-      translate('field_device.importer.validation.field_device_exists', {
-        systemType: systemTypeNumber,
-        systemPart: fieldDevice.systemPartLabel,
-        apparat: fieldDevice.apparatLabel,
-        apparatNr: fieldDevice.apparatNr
-      }),
+      fieldDevice.existingComparison.kind === 'delta'
+        ? translate('field_device.importer.validation.field_device_exists_delta', {
+            systemType: systemTypeNumber,
+            systemPart: fieldDevice.systemPartLabel,
+            apparat: fieldDevice.apparatLabel,
+            apparatNr: fieldDevice.apparatNr
+          })
+        : translate('field_device.importer.validation.field_device_exists_identical', {
+            systemType: systemTypeNumber,
+            systemPart: fieldDevice.systemPartLabel,
+            apparat: fieldDevice.apparatLabel,
+            apparatNr: fieldDevice.apparatNr
+          }),
       'field_device',
       fieldDevice.sourceCells.apparatNr,
       fieldDevice.key
@@ -1151,34 +1313,218 @@ function validateDuplicateFieldDevices(
   }
 }
 
+function compareExistingSpsController(
+  existing: SPSController,
+  request: Omit<CreateSPSControllerRequest, 'control_cabinet_id' | 'system_types'>
+): ImportExistingComparison {
+  const differences: string[] = [];
+  addStringDifference(differences, 'GA-Gerät', request.ga_device, existing.ga_device);
+  addStringDifference(differences, 'Device Name', request.device_name, existing.device_name);
+  addStringDifference(
+    differences,
+    'Beschreibung',
+    request.device_description,
+    existing.device_description
+  );
+  addStringDifference(differences, 'Standort', request.device_location, existing.device_location);
+  addStringDifference(differences, 'IP-Adresse', request.ip_address, existing.ip_address);
+  addStringDifference(differences, 'Subnetz', request.subnet, existing.subnet);
+  addStringDifference(differences, 'Gateway', request.gateway, existing.gateway);
+  addStringDifference(differences, 'VLAN', request.vlan, existing.vlan);
+
+  return existingComparison(differences);
+}
+
+function compareExistingFieldDevice(
+  existing: FieldDevice,
+  fieldDevice: FieldDeviceImportDevicePlan
+): ImportExistingComparison {
+  const differences: string[] = [];
+  addStringDifference(differences, 'BMK', fieldDevice.request.bmk, existing.bmk);
+  addStringDifference(
+    differences,
+    'Beschreibung',
+    fieldDevice.request.description,
+    existing.description
+  );
+  addNumberDifference(
+    differences,
+    'Apparat-Nr.',
+    fieldDevice.request.apparat_nr,
+    parseInteger(existing.apparat_nr)
+  );
+  addStringDifference(
+    differences,
+    'Anlageteil',
+    fieldDevice.request.system_part_id,
+    existing.system_part_id
+  );
+  addStringDifference(differences, 'Apparat', fieldDevice.request.apparat_id, existing.apparat_id);
+  addBacnetDifferences(differences, existing.bacnet_objects ?? [], fieldDevice.bacnetObjects);
+
+  return existingComparison(differences);
+}
+
+function addBacnetDifferences(
+  differences: string[],
+  existingObjects: readonly BacnetObject[],
+  plannedObjects: readonly FieldDeviceImportBacnetObjectPlan[]
+): void {
+  const existingBySoftware = new Map<string, BacnetObject>();
+  for (const existing of existingObjects) {
+    const key = bacnetSoftwareKey(existing.software_type, existing.software_number);
+    if (key && !existingBySoftware.has(key)) {
+      existingBySoftware.set(key, existing);
+    }
+  }
+
+  for (const planned of plannedObjects) {
+    const key = bacnetSoftwareKey(planned.request.software_type, planned.request.software_number);
+    if (!key) continue;
+
+    const existing = existingBySoftware.get(key);
+    if (!existing) {
+      differences.push(`BACnet ${planned.address} fehlt`);
+      continue;
+    }
+
+    addStringDifference(
+      differences,
+      `BACnet ${planned.address} Text-Fix`,
+      planned.request.text_fix,
+      existing.text_fix
+    );
+    addStringDifference(
+      differences,
+      `BACnet ${planned.address} Beschreibung`,
+      planned.request.description,
+      existing.description
+    );
+    addBooleanDifference(
+      differences,
+      `BACnet ${planned.address} GMS`,
+      planned.request.gms_visible,
+      existing.gms_visible
+    );
+    addStringDifference(
+      differences,
+      `BACnet ${planned.address} Hardwaretyp`,
+      planned.request.hardware_type,
+      existing.hardware_type
+    );
+    addNumberDifference(
+      differences,
+      `BACnet ${planned.address} Hardware-Anzahl`,
+      planned.request.hardware_quantity,
+      existing.hardware_quantity
+    );
+    addStringDifference(
+      differences,
+      `BACnet ${planned.address} NC`,
+      planned.request.notification_class_id,
+      existing.notification_class_id
+    );
+    addStringDifference(
+      differences,
+      `BACnet ${planned.address} State Text`,
+      planned.request.state_text_id,
+      existing.state_text_id
+    );
+    addStringDifference(
+      differences,
+      `BACnet ${planned.address} Alarmtyp`,
+      planned.request.alarm_type_id,
+      existing.alarm_type_id
+    );
+  }
+}
+
+function existingComparison(differences: string[]): ImportExistingComparison {
+  return {
+    kind: differences.length > 0 ? 'delta' : 'identical',
+    messages: differences
+  };
+}
+
+function addStringDifference(
+  differences: string[],
+  label: string,
+  planned: string | undefined,
+  existing: string | undefined
+): void {
+  const plannedValue = normalizeOptionalComparisonValue(planned);
+  const existingValue = normalizeOptionalComparisonValue(existing);
+  if (plannedValue === existingValue) return;
+  differences.push(label);
+}
+
+function addNumberDifference(
+  differences: string[],
+  label: string,
+  planned: number | undefined,
+  existing: number | undefined
+): void {
+  const plannedValue = Number.isFinite(planned) ? planned : undefined;
+  const existingValue = Number.isFinite(existing) ? existing : undefined;
+  if (plannedValue === existingValue) return;
+  differences.push(label);
+}
+
+function addBooleanDifference(
+  differences: string[],
+  label: string,
+  planned: boolean,
+  existing: boolean
+): void {
+  if (planned === existing) return;
+  differences.push(label);
+}
+
+function normalizeOptionalComparisonValue(value: string | undefined): string {
+  return (value ?? '').trim();
+}
+
+function bacnetSoftwareKey(type: string | undefined, number: number | undefined): string {
+  if (!type || !Number.isFinite(number)) return '';
+  return `${type.toLowerCase()}|${number}`;
+}
+
 function resolveNotificationClass(
   row: SpreadsheetRow,
   rowIndex: number,
   lookupIndex: LookupIndex,
   addDiagnostic: AddDiagnostic,
   key: string
-): string | undefined {
+): ImportNotificationClassResolution {
   const value = cellString(row, COLUMNS.notification);
-  if (!isMeaningfulLabel(value)) return undefined;
+  if (!isMeaningfulLabel(value)) {
+    return {
+      raw: value,
+      status: 'empty'
+    };
+  }
 
-  const notificationNumber = parseInteger(value);
+  const notificationNumber = parseNotificationClassNumber(value);
   if (notificationNumber === undefined) {
     addDiagnostic(
-      'warning',
-      translate('field_device.importer.validation.notification_not_numeric', {
+      'error',
+      translate('field_device.importer.validation.notification_no_match', {
         value
       }),
       'bacnet_object',
       sourceCell(rowIndex, COLUMNS.notification),
       key
     );
-    return undefined;
+    return {
+      raw: value,
+      status: 'invalid'
+    };
   }
 
   const notification = lookupIndex.notificationClassByNc.get(notificationNumber);
   if (!notification) {
     addDiagnostic(
-      'warning',
+      'error',
       translate('field_device.importer.validation.notification_class_not_found', {
         value: notificationNumber
       }),
@@ -1186,10 +1532,19 @@ function resolveNotificationClass(
       sourceCell(rowIndex, COLUMNS.notification),
       key
     );
-    return undefined;
+    return {
+      raw: value,
+      number: notificationNumber,
+      status: 'missing'
+    };
   }
 
-  return notification.id;
+  return {
+    raw: value,
+    number: notificationNumber,
+    id: notification.id,
+    status: 'matched'
+  };
 }
 
 function resolveStateText(

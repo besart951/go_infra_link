@@ -42,6 +42,7 @@ export class AccountPageState {
   firstName = $state('');
   lastName = $state('');
   email = $state('');
+  currentPassword = $state('');
   newPassword = $state('');
   confirmPassword = $state('');
   isSavingProfile = $state(false);
@@ -162,6 +163,16 @@ export class AccountPageState {
     event.preventDefault();
     if (!this.currentUser) return;
 
+    if (!this.currentPassword) {
+      addToast(
+        translate('validation.required', {
+          field: translate('auth.current_password')
+        }),
+        'error'
+      );
+      return;
+    }
+
     if (this.newPassword.length < 8) {
       addToast(
         translate('validation.password_too_short', {
@@ -186,7 +197,12 @@ export class AccountPageState {
 
     this.isSavingPassword = true;
     try {
-      await userRepository.updateCurrentPassword(this.currentUser.id, this.newPassword);
+      await userRepository.updateCurrentPassword(
+        this.currentUser.id,
+        this.currentPassword,
+        this.newPassword
+      );
+      this.currentPassword = '';
       this.newPassword = '';
       this.confirmPassword = '';
       addToast(translate('messages.account_password_saved'), 'success');

@@ -61,6 +61,7 @@ func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func()
 		Issuer:          config.DefaultIssuer,
 		AccessTokenTTL:  cfg.AccessTokenTTL,
 		RefreshTokenTTL: cfg.RefreshTokenTTL,
+		AppPublicURL:    cfg.AppPublicURL,
 		Runtime:         runtimeAdapters,
 	})
 	if err != nil {

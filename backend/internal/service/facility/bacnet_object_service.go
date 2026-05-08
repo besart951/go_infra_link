@@ -2,6 +2,8 @@ package facility
 
 import (
 	"context"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -10,10 +12,10 @@ import (
 )
 
 type BacnetObjectService struct {
-	repo                  domainFacility.BacnetObjectStore
-	fieldDeviceRepo       domainFacility.FieldDeviceStore
-	objectDataRepo        domainFacility.ObjectDataStore
-	objectDataBacnetStore domainFacility.ObjectDataBacnetObjectStore
+	repo                  domainObjectData.BacnetObjectStore
+	fieldDeviceRepo       domainFieldDevice.FieldDeviceStore
+	objectDataRepo        domainObjectData.ObjectDataStore
+	objectDataBacnetStore domainObjectData.ObjectDataBacnetObjectStore
 	alarmDefinitionRepo   domainFacility.AlarmDefinitionRepository
 	alarmTypeRepo         domainFacility.AlarmTypeRepository
 	tx                    txCoordinator
@@ -56,10 +58,10 @@ func (s *BacnetObjectService) validateRequiredFields(bacnetObject *domainFacilit
 }
 
 func NewBacnetObjectService(
-	repo domainFacility.BacnetObjectStore,
-	fieldDeviceRepo domainFacility.FieldDeviceStore,
-	objectDataRepo domainFacility.ObjectDataStore,
-	objectDataBacnetStore domainFacility.ObjectDataBacnetObjectStore,
+	repo domainObjectData.BacnetObjectStore,
+	fieldDeviceRepo domainFieldDevice.FieldDeviceStore,
+	objectDataRepo domainObjectData.ObjectDataStore,
+	objectDataBacnetStore domainObjectData.ObjectDataBacnetObjectStore,
 	alarmDefinitionRepo domainFacility.AlarmDefinitionRepository,
 	alarmTypeRepo domainFacility.AlarmTypeRepository,
 ) *BacnetObjectService {

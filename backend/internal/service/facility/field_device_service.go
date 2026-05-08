@@ -3,6 +3,9 @@ package facility
 import (
 	"context"
 	"fmt"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -17,14 +20,14 @@ const (
 )
 
 type FieldDeviceService struct {
-	repo                        domainFacility.FieldDeviceStore
-	spsControllerSystemTypeRepo domainFacility.SPSControllerSystemTypeStore
+	repo                        domainFieldDevice.FieldDeviceStore
+	spsControllerSystemTypeRepo domainHierarchy.SPSControllerSystemTypeStore
 	systemTypeRepo              domainFacility.SystemTypeRepository
 	apparatRepo                 domainFacility.ApparatRepository
 	systemPartRepo              domainFacility.SystemPartRepository
-	specificationRepo           domainFacility.SpecificationStore
-	bacnetObjectRepo            domainFacility.BacnetObjectStore
-	objectDataRepo              domainFacility.ObjectDataStore
+	specificationRepo           domainFieldDevice.SpecificationStore
+	bacnetObjectRepo            domainObjectData.BacnetObjectStore
+	objectDataRepo              domainObjectData.ObjectDataStore
 	alarmTypeRepo               domainFacility.AlarmTypeRepository
 	bacnetAlarmValueRepo        domainFacility.BacnetObjectAlarmValueRepository
 	fieldDeviceOptionsCache     *fieldDeviceOptionsCache
@@ -41,14 +44,14 @@ func normalizeFieldDeviceListPagination(page, limit int) (int, int) {
 }
 
 func NewFieldDeviceService(
-	repo domainFacility.FieldDeviceStore,
-	spsControllerSystemTypeRepo domainFacility.SPSControllerSystemTypeStore,
+	repo domainFieldDevice.FieldDeviceStore,
+	spsControllerSystemTypeRepo domainHierarchy.SPSControllerSystemTypeStore,
 	systemTypeRepo domainFacility.SystemTypeRepository,
 	apparatRepo domainFacility.ApparatRepository,
 	systemPartRepo domainFacility.SystemPartRepository,
-	specificationRepo domainFacility.SpecificationStore,
-	bacnetObjectRepo domainFacility.BacnetObjectStore,
-	objectDataRepo domainFacility.ObjectDataStore,
+	specificationRepo domainFieldDevice.SpecificationStore,
+	bacnetObjectRepo domainObjectData.BacnetObjectStore,
+	objectDataRepo domainObjectData.ObjectDataStore,
 	alarmTypeRepo domainFacility.AlarmTypeRepository,
 	bacnetAlarmValueRepo domainFacility.BacnetObjectAlarmValueRepository,
 ) *FieldDeviceService {

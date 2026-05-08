@@ -28,6 +28,7 @@ func autoMigrateCurrentSchema(db *gorm.DB) error {
 func currentSchemaModels() []any {
 	models := []any{
 		&user.User{},
+		&user.UserInvitation{},
 		&user.BusinessDetails{},
 		&user.Permission{},
 		&user.RolePermission{},

@@ -91,8 +91,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     this.onFieldDevicesSaved = props.onFieldDevicesSaved;
     this.permissionPolicy = createFieldDevicePermissionPolicy({
       isProjectContext: () => this.isProjectContext,
-      canPerform,
-      canPerformAny: (actions, resource) => actions.some((action) => canPerform(action, resource))
+      canPerform
     });
     this.editing = useFieldDeviceEditing({
       projectId: () => this.projectId,

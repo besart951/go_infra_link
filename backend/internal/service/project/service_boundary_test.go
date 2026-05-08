@@ -185,7 +185,7 @@ func TestProjectAccessPolicyService_PhaseRulesRestrictProjectScopedPermissions(t
 	}
 }
 
-func TestProjectAccessPolicyService_MissingPhaseRuleKeepsRolePermissions(t *testing.T) {
+func TestProjectAccessPolicyService_MissingPhaseRuleDeniesProjectScopedPermissions(t *testing.T) {
 	ctx := context.Background()
 	projectID := uuid.New()
 	role := domainUser.RoleAdminPlaner
@@ -206,8 +206,8 @@ func TestProjectAccessPolicyService_MissingPhaseRuleKeepsRolePermissions(t *test
 	if err != nil {
 		t.Fatalf("expected project-scoped permission check to succeed, got %v", err)
 	}
-	if !hasPermission {
-		t.Fatal("expected missing phase rule to keep existing role permission")
+	if hasPermission {
+		t.Fatal("expected missing phase rule to deny project-scoped permission")
 	}
 }
 

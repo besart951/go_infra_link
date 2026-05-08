@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
-	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
@@ -15,8 +15,8 @@ type ProjectLifecycleService struct {
 	repo               domainProject.ProjectRepository
 	userRepo           domainUser.UserRepository
 	rolePermissionRepo domainUser.RolePermissionRepository
-	objectDataRepo     domainFacility.ObjectDataStore
-	bacnetObjectRepo   domainFacility.BacnetObjectStore
+	objectDataRepo     domainObjectData.ObjectDataStore
+	bacnetObjectRepo   domainObjectData.BacnetObjectStore
 	tx                 txCoordinator
 }
 

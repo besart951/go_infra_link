@@ -23,61 +23,38 @@ func migrateProjectPermissions(db *gorm.DB) error {
 			action:      "listAll",
 			description: "List all projects",
 		},
-		{
-			name:        user.PermissionProjectControlCabinetEdit,
-			resource:    "project.controlcabinet",
-			action:      "edit",
-			description: "Edit project control cabinets",
-		},
-		{
-			name:        user.PermissionProjectSPSControllerEdit,
-			resource:    "project.spscontroller",
-			action:      "edit",
-			description: "Edit project SPS controllers",
-		},
-		{
-			name:        user.PermissionProjectFieldDeviceEdit,
-			resource:    "project.fielddevice",
-			action:      "edit",
-			description: "Edit project field devices",
-		},
 	}
 
 	grantMigrations := map[string][]string{
-		user.PermissionProjectListAll:            {"project.read"},
-		user.PermissionProjectControlCabinetEdit: {"project.controlcabinet.create", "project.controlcabinet.update", "project.controlcabinet.delete"},
-		user.PermissionProjectSPSControllerEdit: {
-			"project.spscontroller.create",
-			"project.spscontroller.update",
-			"project.spscontroller.delete",
+		user.PermissionProjectListAll: {"project.read"},
+		user.PermissionProjectSPSControllerSystemTypeCreate: {
 			"project.spscontrollersystemtype.create",
-			"project.spscontrollersystemtype.update",
-			"project.spscontrollersystemtype.delete",
 			"project.systemtype.create",
+		},
+		user.PermissionProjectSPSControllerSystemTypeRead: {
+			"project.spscontrollersystemtype.read",
+			"project.systemtype.read",
+		},
+		user.PermissionProjectSPSControllerSystemTypeUpdate: {
+			"project.spscontrollersystemtype.update",
 			"project.systemtype.update",
+		},
+		user.PermissionProjectSPSControllerSystemTypeDelete: {
+			"project.spscontrollersystemtype.delete",
 			"project.systemtype.delete",
 		},
-		user.PermissionProjectFieldDeviceEdit: {"project.fielddevice.create", "project.fielddevice.update", "project.fielddevice.delete"},
+		user.PermissionProjectFieldDeviceBacnetObjectsCreate: {"project.bacnetobject.create"},
+		user.PermissionProjectFieldDeviceBacnetObjectsRead:   {"project.bacnetobject.read"},
+		user.PermissionProjectFieldDeviceBacnetObjectsUpdate: {"project.bacnetobject.update"},
+		user.PermissionProjectFieldDeviceBacnetObjectsDelete: {"project.bacnetobject.delete"},
 	}
 
 	obsoletePermissions := []string{
 		"project.read",
-		"project.controlcabinet.create",
-		"project.controlcabinet.read",
-		"project.controlcabinet.update",
-		"project.controlcabinet.delete",
-		"project.spscontroller.create",
-		"project.spscontroller.read",
-		"project.spscontroller.update",
-		"project.spscontroller.delete",
 		"project.spscontrollersystemtype.create",
 		"project.spscontrollersystemtype.read",
 		"project.spscontrollersystemtype.update",
 		"project.spscontrollersystemtype.delete",
-		"project.fielddevice.create",
-		"project.fielddevice.read",
-		"project.fielddevice.update",
-		"project.fielddevice.delete",
 		"project.bacnetobject.create",
 		"project.bacnetobject.read",
 		"project.bacnetobject.update",
@@ -142,6 +119,15 @@ func ensureProjectPermissionDefinition(tx *gorm.DB, definition projectPermission
 		return nil
 	}
 	return tx.Model(&permission).Updates(updates).Error
+}
+
+func projectPermissionDefinitionFromDomain(definition user.PermissionDefinition) projectPermissionDefinition {
+	return projectPermissionDefinition{
+		name:        definition.Name,
+		resource:    definition.Resource,
+		action:      definition.Action,
+		description: definition.Description,
+	}
 }
 
 func migrateProjectPermissionGrants(tx *gorm.DB, targetPermission string, sourcePermissions []string) error {

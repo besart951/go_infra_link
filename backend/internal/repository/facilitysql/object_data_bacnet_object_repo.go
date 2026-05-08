@@ -3,7 +3,7 @@ package facilitysql
 import (
 	"context"
 
-	"github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -12,7 +12,7 @@ type objectDataBacnetObjectRepo struct {
 	db *gorm.DB
 }
 
-func NewObjectDataBacnetObjectRepository(db *gorm.DB) facility.ObjectDataBacnetObjectStore {
+func NewObjectDataBacnetObjectRepository(db *gorm.DB) domainObjectData.ObjectDataBacnetObjectStore {
 	return &objectDataBacnetObjectRepo{db: db}
 }
 

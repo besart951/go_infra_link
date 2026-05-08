@@ -3,6 +3,8 @@ package exporting
 import (
 	"context"
 	"fmt"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"math"
 	"strings"
 	"unicode"
@@ -14,17 +16,17 @@ import (
 )
 
 type DataProvider struct {
-	fieldDevices    domainFacility.FieldDeviceStore
-	specifications  domainFacility.SpecificationStore
-	bacnetObjects   domainFacility.BacnetObjectStore
+	fieldDevices    domainFieldDevice.FieldDeviceStore
+	specifications  domainFieldDevice.SpecificationStore
+	bacnetObjects   domainObjectData.BacnetObjectStore
 	spsControllers  domainFacility.SPSControllerRepository
 	controlCabinets domainFacility.ControlCabinetRepository
 }
 
 func NewDataProvider(
-	fieldDevices domainFacility.FieldDeviceStore,
-	specifications domainFacility.SpecificationStore,
-	bacnetObjects domainFacility.BacnetObjectStore,
+	fieldDevices domainFieldDevice.FieldDeviceStore,
+	specifications domainFieldDevice.SpecificationStore,
+	bacnetObjects domainObjectData.BacnetObjectStore,
 	spsControllers domainFacility.SPSControllerRepository,
 	controlCabinets domainFacility.ControlCabinetRepository,
 ) *DataProvider {

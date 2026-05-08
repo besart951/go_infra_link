@@ -2,6 +2,7 @@ package facility_test
 
 import (
 	"context"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"sort"
 	"strings"
 	"testing"
@@ -685,7 +686,7 @@ func (r *fakeObjectDataStore) GetForProjectLite(_ context.Context, projectID uui
 	return sortedObjectDataSlice(r.projectTemplates[projectID]), nil
 }
 
-func (r *fakeObjectDataStore) GetPaginatedListWithFilters(_ context.Context, params domain.PaginationParams, filters domainFacility.ObjectDataFilterParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+func (r *fakeObjectDataStore) GetPaginatedListWithFilters(_ context.Context, params domain.PaginationParams, filters domainObjectData.ObjectDataFilterParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	if filters.ProjectID != nil {
 		items := derefObjectDatas(sortedObjectDataSlice(r.projectTemplates[*filters.ProjectID]))
 		return &domain.PaginatedList[domainFacility.ObjectData]{

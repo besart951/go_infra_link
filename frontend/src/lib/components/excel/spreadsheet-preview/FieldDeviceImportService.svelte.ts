@@ -4,6 +4,7 @@ import type {
   Apparat,
   Building,
   ControlCabinet,
+  CreateNotificationClassRequest,
   CreateControlCabinetRequest,
   CreateFieldDeviceRequest,
   CreateSPSControllerRequest,
@@ -35,6 +36,7 @@ import type { ListParams, PaginatedResponse } from '$lib/domain/ports/listReposi
 import type { ListRepository } from '$lib/domain/ports/listRepository.js';
 import {
   buildImportCellMarkers,
+  buildImportRowMarkers,
   collectFieldDeviceImportLookupCriteria,
   type FieldDeviceImportDevicePlan,
   type FieldDeviceImportLookupCriteria,
@@ -42,6 +44,7 @@ import {
   type FieldDeviceImportPlan,
   type ImportDiagnostic,
   type ImportEntityKind,
+  type ImportNotificationClassResolution,
   type ImportSourceCell,
   normalizeLookupKey,
   transformWorksheetToFieldDeviceImport
@@ -50,7 +53,7 @@ import {
 export const CONTROL_CABINET_IMPORT_NODE_KEY = 'control-cabinet';
 export const SPS_CONTROLLER_IMPORT_NODE_KEY = 'sps-controller';
 
-export type ImportNodeStatus = 'pending' | 'existing' | 'success' | 'failed';
+export type ImportNodeStatus = 'pending' | 'identical' | 'delta' | 'success' | 'failed';
 
 export interface ImportNodeState {
   entity: ImportEntityKind;
@@ -77,6 +80,7 @@ export interface FieldDeviceImportBackend {
   getSpsController(id: string): Promise<SPSController>;
   createSpsController(data: CreateSPSControllerRequest): Promise<SPSController>;
   updateSpsController(id: string, data: UpdateSPSControllerRequest): Promise<SPSController>;
+  createNotificationClass(data: CreateNotificationClassRequest): Promise<NotificationClass>;
   multiCreateFieldDevices(
     data: MultiCreateFieldDeviceRequest
   ): Promise<MultiCreateFieldDeviceResponse>;
@@ -94,12 +98,16 @@ const defaultFieldDeviceImportBackend: FieldDeviceImportBackend = {
   getSpsController: (id) => spsControllerRepository.get(id),
   createSpsController: (data) => spsControllerRepository.create(data),
   updateSpsController: (id, data) => spsControllerRepository.update(id, data),
+  createNotificationClass: (data) => notificationClassRepository.create(data),
   multiCreateFieldDevices: (data) => fieldDeviceRepository.multiCreate(data),
   updateFieldDevice: (id, data) => fieldDeviceRepository.update(id, data)
 };
 
 const PAGE_SIZE = 500;
 const TARGETED_PAGE_SIZE = 100;
+const BACNET_OBJECT_LOOKUP_CONCURRENCY = 10;
+export const CREATE_NOTIFICATION_CLASS_VALUE = '__create_notification_class__';
+const SUCCESS_REMOVAL_DELAY_MS = 5000;
 
 export class FieldDeviceImportService {
   plan = $state<FieldDeviceImportPlan | null>(null);
@@ -109,6 +117,8 @@ export class FieldDeviceImportService {
   importReport = $state<FieldDeviceImportReport | null>(null);
   backendDiagnostics = $state<ImportDiagnostic[]>([]);
   nodeStates = $state<Record<string, ImportNodeState>>({});
+  notificationClassOptions = $state<NotificationClass[]>([]);
+  hiddenNodeKeys = $state<Set<string>>(new Set());
 
   allDiagnostics = $derived.by(() => [
     ...(this.plan?.diagnostics ?? []),
@@ -116,19 +126,63 @@ export class FieldDeviceImportService {
   ]);
 
   cellMarkers = $derived.by(() => buildImportCellMarkers(this.allDiagnostics));
+  rowMarkers = $derived.by(() =>
+    buildImportRowMarkers(this.allDiagnostics, this.plan, this.nodeStates, this.hiddenNodeKeys)
+  );
+  visibleFieldDevicesBySystemType = $derived.by(() => {
+    const bySystemType = new Map<string, FieldDeviceImportDevicePlan[]>();
+    for (const fieldDevice of this.plan?.controller.fieldDevices ?? []) {
+      if (this.hiddenNodeKeys.has(fieldDevice.key)) continue;
+      const current = bySystemType.get(fieldDevice.spsControllerSystemTypeKey) ?? [];
+      current.push(fieldDevice);
+      bySystemType.set(fieldDevice.spsControllerSystemTypeKey, current);
+    }
+    return bySystemType;
+  });
+  visibleSystemTypes = $derived.by(
+    () =>
+      this.plan?.controller.systemTypes.filter((systemType) => {
+        const childCount = this.visibleFieldDevicesBySystemType.get(systemType.key)?.length ?? 0;
+        return childCount > 0 || this.nodeNeedsAttention(systemType.key);
+      }) ?? []
+  );
   hasFieldDevicesToMigrate = $derived.by(
     () =>
-      this.plan?.controller.fieldDevices.some(
-        (fieldDevice) => this.nodeStates[fieldDevice.key]?.status !== 'success'
+      this.plan?.controller.fieldDevices.some((fieldDevice) =>
+        this.isFieldDeviceImportCandidate(fieldDevice)
+      ) ?? false
+  );
+  hasStructuralWork = $derived.by(() => {
+    if (!this.plan) return false;
+    if (this.nodeNeedsAttention(CONTROL_CABINET_IMPORT_NODE_KEY)) return true;
+    if (this.nodeNeedsAttention(SPS_CONTROLLER_IMPORT_NODE_KEY)) return true;
+    return this.plan.controller.systemTypes.some((systemType) =>
+      this.nodeNeedsAttention(systemType.key)
+    );
+  });
+  hasImportWork = $derived.by(() => this.hasFieldDevicesToMigrate || this.hasStructuralWork);
+  hasUnresolvedNotificationClasses = $derived.by(
+    () =>
+      this.plan?.controller.fieldDevices.some((fieldDevice) =>
+        this.isFieldDeviceImportCandidate(fieldDevice)
+          ? fieldDevice.bacnetObjects.some((object) =>
+              ['invalid', 'missing'].includes(object.notificationClass.status)
+            )
+          : false
       ) ?? false
   );
   canImport = $derived.by(
-    () => Boolean(this.plan?.canImport) && !this.isImporting && this.hasFieldDevicesToMigrate
+    () =>
+      Boolean(this.plan?.canImport) &&
+      !this.isImporting &&
+      this.hasImportWork &&
+      !this.hasUnresolvedNotificationClasses
   );
 
   private lookups: FieldDeviceImportLookups | null = null;
   private lookupLoad: Promise<FieldDeviceImportLookups> | null = null;
   private readonly backend: FieldDeviceImportBackend;
+  private readonly removalTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(deps: FieldDeviceImportServiceDeps = {}) {
     this.backend = {
@@ -138,11 +192,14 @@ export class FieldDeviceImportService {
   }
 
   clearTransform(): void {
+    this.clearRemovalTimers();
     this.plan = null;
     this.transformError = null;
     this.importReport = null;
     this.backendDiagnostics = [];
     this.nodeStates = {};
+    this.notificationClassOptions = [];
+    this.hiddenNodeKeys = new Set();
   }
 
   async transform(worksheet: WorksheetPreview | null): Promise<void> {
@@ -159,11 +216,13 @@ export class FieldDeviceImportService {
       this.lookupLoad = null;
       const criteria = collectFieldDeviceImportLookupCriteria(worksheet);
       const lookups = await this.loadLookups(criteria);
+      this.notificationClassOptions = lookups.notificationClasses;
       this.plan = transformWorksheetToFieldDeviceImport(worksheet, lookups);
       this.nodeStates = buildInitialNodeStates(this.plan);
     } catch (error) {
       this.plan = null;
       this.nodeStates = {};
+      this.notificationClassOptions = [];
       this.transformError =
         error instanceof Error
           ? error.message
@@ -174,7 +233,7 @@ export class FieldDeviceImportService {
   }
 
   async importPlan(): Promise<void> {
-    if (!this.plan || !this.plan.canImport || !this.hasFieldDevicesToMigrate || this.isImporting) {
+    if (!this.plan || !this.plan.canImport || !this.hasImportWork || this.isImporting) {
       return;
     }
 
@@ -223,6 +282,13 @@ export class FieldDeviceImportService {
         entityKey: plan.controller.systemTypes[0]?.key
       };
       const systemTypeMap = await this.ensureSystemTypeMap(spsController, plan);
+
+      currentStep = {
+        entity: 'bacnet_object',
+        cell: plan.controller.fieldDevices[0]?.bacnetObjects[0]?.sourceCells.notification,
+        entityKey: plan.controller.fieldDevices[0]?.bacnetObjects[0]?.key
+      };
+      await this.ensureNotificationClassAssignments(plan);
 
       currentStep = {
         entity: 'field_device',
@@ -275,7 +341,7 @@ export class FieldDeviceImportService {
   private async resolveControlCabinet(plan: FieldDeviceImportPlan): Promise<ControlCabinet> {
     const state = this.nodeStates[CONTROL_CABINET_IMPORT_NODE_KEY];
     if (state?.id) {
-      const status = state.status === 'success' ? 'success' : 'existing';
+      const status = state.status === 'success' ? 'success' : 'identical';
       const controlCabinet =
         plan.controller.existingControlCabinet?.id === state.id
           ? plan.controller.existingControlCabinet
@@ -291,7 +357,7 @@ export class FieldDeviceImportService {
     if (plan.controller.existingControlCabinet) {
       this.setNodeState(CONTROL_CABINET_IMPORT_NODE_KEY, {
         entity: 'control_cabinet',
-        status: 'existing',
+        status: 'identical',
         id: plan.controller.existingControlCabinet.id
       });
       return plan.controller.existingControlCabinet;
@@ -318,7 +384,8 @@ export class FieldDeviceImportService {
   ): Promise<SPSController> {
     const state = this.nodeStates[SPS_CONTROLLER_IMPORT_NODE_KEY];
     if (state?.id) {
-      const status = state.status === 'success' ? 'success' : 'existing';
+      const status =
+        state.status === 'success' || state.status === 'delta' ? state.status : 'identical';
       const spsController =
         plan.controller.existingSpsController?.id === state.id
           ? plan.controller.existingSpsController
@@ -334,7 +401,7 @@ export class FieldDeviceImportService {
     if (plan.controller.existingSpsController) {
       this.setNodeState(SPS_CONTROLLER_IMPORT_NODE_KEY, {
         entity: 'sps_controller',
-        status: 'existing',
+        status: plan.controller.existingSpsControllerComparison?.kind ?? 'identical',
         id: plan.controller.existingSpsController.id
       });
       return plan.controller.existingSpsController;
@@ -365,25 +432,45 @@ export class FieldDeviceImportService {
     const missing = plan.controller.systemTypes.filter(
       (item) => !existingBefore.has(systemTypePlanSignature(item.systemTypeId, item.number))
     );
+    const controllerHasDelta = this.nodeStates[SPS_CONTROLLER_IMPORT_NODE_KEY]?.status === 'delta';
 
-    if (missing.length > 0) {
+    if (missing.length > 0 || controllerHasDelta) {
       try {
         const mergedInputs = mergeSystemTypeInputs(current, missing);
         await this.backend.updateSpsController(spsController.id, {
           id: spsController.id,
           control_cabinet_id: spsController.control_cabinet_id,
-          ga_device: spsController.ga_device,
-          device_name: spsController.device_name,
-          device_description: spsController.device_description,
-          device_location: spsController.device_location,
-          ip_address: spsController.ip_address,
-          subnet: spsController.subnet,
-          gateway: spsController.gateway,
-          vlan: spsController.vlan,
+          ga_device: plan.controller.spsControllerRequest?.ga_device ?? spsController.ga_device,
+          device_name:
+            plan.controller.spsControllerRequest?.device_name ?? spsController.device_name,
+          device_description:
+            plan.controller.spsControllerRequest?.device_description ??
+            spsController.device_description,
+          device_location:
+            plan.controller.spsControllerRequest?.device_location ?? spsController.device_location,
+          ip_address: plan.controller.spsControllerRequest?.ip_address ?? spsController.ip_address,
+          subnet: plan.controller.spsControllerRequest?.subnet ?? spsController.subnet,
+          gateway: plan.controller.spsControllerRequest?.gateway ?? spsController.gateway,
+          vlan: plan.controller.spsControllerRequest?.vlan ?? spsController.vlan,
           system_types: mergedInputs
         });
+        if (controllerHasDelta) {
+          this.setNodeState(SPS_CONTROLLER_IMPORT_NODE_KEY, {
+            entity: 'sps_controller',
+            status: 'success',
+            id: spsController.id
+          });
+        }
         current = await fetchSpsControllerSystemTypes(spsController.id);
       } catch (error) {
+        if (controllerHasDelta) {
+          this.addApiDiagnostics(
+            error,
+            'sps_controller',
+            plan.controller.spsControllerSourceCell,
+            SPS_CONTROLLER_IMPORT_NODE_KEY
+          );
+        }
         for (const item of missing) {
           this.addApiDiagnostics(error, 'sps_controller_system_type', item.sourceCell, item.key);
         }
@@ -415,7 +502,7 @@ export class FieldDeviceImportService {
         status:
           !controllerWasCreated &&
           (item.existingSpsControllerSystemTypeId || existingBefore.has(signature))
-            ? 'existing'
+            ? 'identical'
             : 'success',
         id: existing.id
       });
@@ -428,12 +515,73 @@ export class FieldDeviceImportService {
     return out;
   }
 
+  private async ensureNotificationClassAssignments(plan: FieldDeviceImportPlan): Promise<void> {
+    const byNumber = new Map(this.notificationClassOptions.map((item) => [item.nc, item]));
+
+    for (const fieldDevice of plan.controller.fieldDevices) {
+      if (!this.isFieldDeviceImportCandidate(fieldDevice)) continue;
+
+      for (const bacnetObject of fieldDevice.bacnetObjects) {
+        if (bacnetObject.notificationClass.status !== 'create') continue;
+
+        const number = bacnetObject.notificationClass.number;
+        if (!number) {
+          this.addBackendDiagnostic(
+            translate('field_device.importer.validation.notification_no_match', {
+              value: bacnetObject.notificationClass.raw
+            }),
+            'bacnet_object',
+            bacnetObject.sourceCells.notification,
+            bacnetObject.key
+          );
+          continue;
+        }
+
+        const cached = byNumber.get(number);
+        if (cached) {
+          this.applyNotificationClass(bacnetObject, cached, 'manual');
+          continue;
+        }
+
+        try {
+          const created = await this.backend.createNotificationClass(
+            createNotificationClassRequest(number, bacnetObject.notificationClass.raw)
+          );
+          byNumber.set(created.nc, created);
+          this.notificationClassOptions = uniqueById([...this.notificationClassOptions, created]);
+          this.applyNotificationClass(bacnetObject, created, 'manual');
+        } catch (error) {
+          this.addApiDiagnostics(
+            error,
+            'bacnet_object',
+            bacnetObject.sourceCells.notification,
+            bacnetObject.key
+          );
+        }
+      }
+    }
+
+    const unresolved = plan.controller.fieldDevices.some((fieldDevice) =>
+      this.isFieldDeviceImportCandidate(fieldDevice)
+        ? fieldDevice.bacnetObjects.some(
+            (object) =>
+              object.notificationClass.status === 'create' ||
+              object.notificationClass.status === 'missing' ||
+              object.notificationClass.status === 'invalid'
+          )
+        : false
+    );
+    if (unresolved) {
+      throw new Error(translate('field_device.importer.errors.notification_classes_unresolved'));
+    }
+  }
+
   private async importFieldDevices(
     plan: FieldDeviceImportPlan,
     systemTypeMap: Map<string, string>
   ): Promise<{ successCount: number; failureCount: number }> {
-    const candidates = plan.controller.fieldDevices.filter(
-      (fieldDevice) => this.nodeStates[fieldDevice.key]?.status !== 'success'
+    const candidates = plan.controller.fieldDevices.filter((fieldDevice) =>
+      this.isFieldDeviceImportCandidate(fieldDevice)
     );
     let successCount = 0;
     let failureCount = 0;
@@ -510,6 +658,55 @@ export class FieldDeviceImportService {
     return this.allDiagnostics.filter((diagnostic) => diagnostic.entityKey === key);
   }
 
+  visibleDevicesForSystemType(key: string): FieldDeviceImportDevicePlan[] {
+    return this.visibleFieldDevicesBySystemType.get(key) ?? [];
+  }
+
+  isNodeHidden(key: string): boolean {
+    return this.hiddenNodeKeys.has(key);
+  }
+
+  notificationClassSelectionValue(
+    bacnetObject: FieldDeviceImportDevicePlan['bacnetObjects'][number]
+  ): string {
+    if (bacnetObject.notificationClass.status === 'create') return CREATE_NOTIFICATION_CLASS_VALUE;
+    return bacnetObject.request.notification_class_id ?? '';
+  }
+
+  updateBacnetNotificationClass(
+    fieldDeviceKey: string,
+    bacnetObjectKey: string,
+    value: string
+  ): void {
+    const bacnetObject = this.findBacnetObject(fieldDeviceKey, bacnetObjectKey);
+    if (!bacnetObject) return;
+
+    if (value === CREATE_NOTIFICATION_CLASS_VALUE && bacnetObject.notificationClass.number) {
+      bacnetObject.notificationClass = {
+        ...bacnetObject.notificationClass,
+        id: undefined,
+        status: 'create'
+      };
+      bacnetObject.request.notification_class_id = undefined;
+      this.resetBacnetNode(fieldDeviceKey, bacnetObjectKey);
+      return;
+    }
+
+    const notificationClass = this.notificationClassOptions.find((item) => item.id === value);
+    bacnetObject.notificationClass = {
+      raw: bacnetObject.notificationClass.raw,
+      number: notificationClass?.nc ?? bacnetObject.notificationClass.number,
+      id: notificationClass?.id,
+      status: notificationClass ? 'manual' : 'missing'
+    };
+    bacnetObject.request.notification_class_id = notificationClass?.id;
+    this.resetBacnetNode(fieldDeviceKey, bacnetObjectKey);
+  }
+
+  dispose(): void {
+    this.clearRemovalTimers();
+  }
+
   updateFieldDeviceBmk(fieldDeviceKey: string, value: string): void {
     const fieldDevice = this.findFieldDevice(fieldDeviceKey);
     if (!fieldDevice) return;
@@ -565,6 +762,20 @@ export class FieldDeviceImportService {
     );
   }
 
+  private applyNotificationClass(
+    bacnetObject: FieldDeviceImportDevicePlan['bacnetObjects'][number],
+    notificationClass: NotificationClass,
+    status: Extract<ImportNotificationClassResolution['status'], 'matched' | 'manual'>
+  ): void {
+    bacnetObject.notificationClass = {
+      raw: bacnetObject.notificationClass.raw,
+      number: notificationClass.nc,
+      id: notificationClass.id,
+      status
+    };
+    bacnetObject.request.notification_class_id = notificationClass.id;
+  }
+
   private fieldDeviceTargetId(fieldDevice: FieldDeviceImportDevicePlan): string | undefined {
     return this.nodeStates[fieldDevice.key]?.id ?? fieldDevice.existingFieldDeviceId;
   }
@@ -582,6 +793,10 @@ export class FieldDeviceImportService {
         status: 'success'
       });
     }
+    this.scheduleSuccessfulNodeRemoval([
+      fieldDevice.key,
+      ...fieldDevice.bacnetObjects.map((object) => object.key)
+    ]);
   }
 
   private addFieldDeviceApiDiagnostics(
@@ -617,10 +832,11 @@ export class FieldDeviceImportService {
 
   private resetFieldDeviceNode(fieldDevice: FieldDeviceImportDevicePlan): void {
     const keys = [fieldDevice.key, ...fieldDevice.bacnetObjects.map((object) => object.key)];
+    this.cancelNodeRemoval(keys);
     this.clearDiagnosticsForNodes(keys);
     this.setNodeState(fieldDevice.key, {
       entity: 'field_device',
-      status: fieldDevice.existingFieldDeviceId ? 'existing' : 'pending',
+      status: fieldDevice.existingFieldDeviceId ? 'delta' : 'pending',
       id: fieldDevice.existingFieldDeviceId
     });
     for (const object of fieldDevice.bacnetObjects) {
@@ -633,10 +849,11 @@ export class FieldDeviceImportService {
   }
 
   private resetBacnetNode(fieldDeviceKey: string, bacnetObjectKey: string): void {
+    this.cancelNodeRemoval([fieldDeviceKey, bacnetObjectKey]);
     this.clearDiagnosticsForNodes([fieldDeviceKey, bacnetObjectKey]);
     this.setNodeState(fieldDeviceKey, {
       entity: 'field_device',
-      status: this.findFieldDevice(fieldDeviceKey)?.existingFieldDeviceId ? 'existing' : 'pending',
+      status: this.findFieldDevice(fieldDeviceKey)?.existingFieldDeviceId ? 'delta' : 'pending',
       id: this.findFieldDevice(fieldDeviceKey)?.existingFieldDeviceId
     });
     this.setNodeState(bacnetObjectKey, {
@@ -644,6 +861,61 @@ export class FieldDeviceImportService {
       status: 'pending'
     });
     this.touchPlan();
+  }
+
+  private isFieldDeviceImportCandidate(fieldDevice: FieldDeviceImportDevicePlan): boolean {
+    if (this.hiddenNodeKeys.has(fieldDevice.key)) return false;
+    const status = this.nodeStates[fieldDevice.key]?.status ?? 'pending';
+    return status !== 'success' && status !== 'identical';
+  }
+
+  private nodeNeedsAttention(key: string): boolean {
+    if (this.hiddenNodeKeys.has(key)) return false;
+    const status = this.nodeStates[key]?.status;
+    return status === 'failed' || status === 'pending' || status === 'delta';
+  }
+
+  private scheduleSuccessfulNodeRemoval(keys: string[]): void {
+    for (const key of keys) {
+      const existing = this.removalTimers.get(key);
+      if (existing) {
+        clearTimeout(existing);
+      }
+
+      const timer = setTimeout(() => {
+        this.removalTimers.delete(key);
+        this.hiddenNodeKeys = new Set([...this.hiddenNodeKeys, key]);
+      }, SUCCESS_REMOVAL_DELAY_MS);
+
+      this.removalTimers.set(key, timer);
+    }
+  }
+
+  private cancelNodeRemoval(keys: string[]): void {
+    let changed = false;
+    const nextHidden = new Set(this.hiddenNodeKeys);
+
+    for (const key of keys) {
+      const timer = this.removalTimers.get(key);
+      if (timer) {
+        clearTimeout(timer);
+        this.removalTimers.delete(key);
+      }
+      if (nextHidden.delete(key)) {
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      this.hiddenNodeKeys = nextHidden;
+    }
+  }
+
+  private clearRemovalTimers(): void {
+    for (const timer of this.removalTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.removalTimers.clear();
   }
 
   private clearDiagnosticsForNodes(keys: string[]): void {
@@ -784,12 +1056,14 @@ function buildInitialNodeStates(plan: FieldDeviceImportPlan): Record<string, Imp
   const states: Record<string, ImportNodeState> = {
     [CONTROL_CABINET_IMPORT_NODE_KEY]: {
       entity: 'control_cabinet',
-      status: plan.controller.existingControlCabinet ? 'existing' : 'pending',
+      status: plan.controller.existingControlCabinet ? 'identical' : 'pending',
       id: plan.controller.existingControlCabinet?.id
     },
     [SPS_CONTROLLER_IMPORT_NODE_KEY]: {
       entity: 'sps_controller',
-      status: plan.controller.existingSpsController ? 'existing' : 'pending',
+      status: plan.controller.existingSpsController
+        ? (plan.controller.existingSpsControllerComparison?.kind ?? 'identical')
+        : 'pending',
       id: plan.controller.existingSpsController?.id
     }
   };
@@ -797,7 +1071,7 @@ function buildInitialNodeStates(plan: FieldDeviceImportPlan): Record<string, Imp
   for (const systemType of plan.controller.systemTypes) {
     states[systemType.key] = {
       entity: 'sps_controller_system_type',
-      status: systemType.existingSpsControllerSystemTypeId ? 'existing' : 'pending',
+      status: systemType.existingSpsControllerSystemTypeId ? 'identical' : 'pending',
       id: systemType.existingSpsControllerSystemTypeId
     };
   }
@@ -805,7 +1079,9 @@ function buildInitialNodeStates(plan: FieldDeviceImportPlan): Record<string, Imp
   for (const fieldDevice of plan.controller.fieldDevices) {
     states[fieldDevice.key] = {
       entity: 'field_device',
-      status: fieldDevice.existingFieldDeviceId ? 'existing' : 'pending',
+      status: fieldDevice.existingFieldDeviceId
+        ? (fieldDevice.existingComparison?.kind ?? 'delta')
+        : 'pending',
       id: fieldDevice.existingFieldDeviceId
     };
     for (const object of fieldDevice.bacnetObjects) {
@@ -831,9 +1107,11 @@ function diagnosticTargetForFieldDeviceError(
     if (bacnet) {
       const cell = bacnetField.includes('text_fix')
         ? bacnet.sourceCells.textFix
-        : bacnetField.includes('software')
-          ? bacnet.sourceCells.address
-          : bacnet.sourceCell;
+        : bacnetField.includes('notification_class')
+          ? bacnet.sourceCells.notification
+          : bacnetField.includes('software')
+            ? bacnet.sourceCells.address
+            : bacnet.sourceCell;
       return {
         entity: 'bacnet_object',
         cell,
@@ -912,6 +1190,26 @@ function emptyToUndefined(value: string): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function createNotificationClassRequest(
+  number: number,
+  raw: string
+): CreateNotificationClassRequest {
+  const label = raw.trim() || `NC ${number}`;
+  return {
+    event_category: `NC ${number}`,
+    nc: number,
+    object_description: label,
+    internal_description: label,
+    meaning: label,
+    ack_required_not_normal: false,
+    ack_required_error: false,
+    ack_required_normal: false,
+    norm_not_normal: 0,
+    norm_error: 0,
+    norm_normal: 0
+  };
+}
+
 async function loadTargetedLookups(
   criteria: FieldDeviceImportLookupCriteria
 ): Promise<FieldDeviceImportLookups> {
@@ -929,7 +1227,7 @@ async function loadTargetedLookups(
     fetchMatchingSystemParts(criteria.systemPartLabels),
     fetchMatchingApparats(criteria.apparatLabels),
     fetchMatchingStateTexts(criteria.stateTextLabels),
-    fetchMatchingNotificationClasses(criteria.notificationNumbers),
+    fetchNotificationClassesForImport(),
     fetchMatchingAlarmTypes(criteria.alarmTypeLabels)
   ]);
 
@@ -940,13 +1238,14 @@ async function loadTargetedLookups(
     spsControllers
   );
   const fieldDevices = await fetchFieldDevicesForCriteria(criteria, spsControllerSystemTypes);
+  const fieldDevicesWithBacnetObjects = await attachBacnetObjectsToFieldDevices(fieldDevices);
 
   return {
     buildings,
     controlCabinets,
     spsControllers,
     spsControllerSystemTypes,
-    fieldDevices,
+    fieldDevices: fieldDevicesWithBacnetObjects,
     systemTypes,
     systemParts,
     apparats,
@@ -1117,12 +1416,10 @@ async function fetchMatchingStateTexts(labels: string[]): Promise<StateText[]> {
   });
 }
 
-async function fetchMatchingNotificationClasses(numbers: number[]): Promise<NotificationClass[]> {
-  return fetchMatchingListItems(
-    notificationClassRepository,
-    numbers.map((number) => String(number)),
-    (notificationClass, _normalizedTerm, term) => notificationClass.nc === parseNumberTerm(term)
-  );
+async function fetchNotificationClassesForImport(): Promise<NotificationClass[]> {
+  return fetchAllListPages(notificationClassRepository, {
+    pageSize: PAGE_SIZE
+  });
 }
 
 async function fetchMatchingAlarmTypes(labels: string[]): Promise<AlarmType[]> {
@@ -1140,6 +1437,43 @@ async function fetchMatchingAlarmTypes(labels: string[]): Promise<AlarmType[]> {
   );
 
   return uniqueById(batches.flat());
+}
+
+async function attachBacnetObjectsToFieldDevices(
+  fieldDevices: FieldDevice[]
+): Promise<FieldDevice[]> {
+  if (fieldDevices.length === 0) return [];
+
+  const rows = await mapWithConcurrency(
+    fieldDevices,
+    BACNET_OBJECT_LOOKUP_CONCURRENCY,
+    async (fieldDevice) => ({
+      ...fieldDevice,
+      bacnet_objects: await fieldDeviceRepository.listBacnetObjects(fieldDevice.id)
+    })
+  );
+
+  return rows;
+}
+
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  mapper: (item: T) => Promise<R>
+): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  async function worker(): Promise<void> {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      out[index] = await mapper(items[index]);
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return out;
 }
 
 async function fetchMatchingListItems<T extends { id: string }>(

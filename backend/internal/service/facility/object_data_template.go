@@ -2,6 +2,7 @@ package facility
 
 import (
 	"context"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"strconv"
 	"strings"
 
@@ -11,9 +12,9 @@ import (
 )
 
 type objectDataTemplate struct {
-	objectDataRepo        domainFacility.ObjectDataStore
-	bacnetObjectRepo      domainFacility.BacnetObjectStore
-	objectDataBacnetStore domainFacility.ObjectDataBacnetObjectStore
+	objectDataRepo        domainObjectData.ObjectDataStore
+	bacnetObjectRepo      domainObjectData.BacnetObjectStore
+	objectDataBacnetStore domainObjectData.ObjectDataBacnetObjectStore
 	apparatRepo           domainFacility.ApparatRepository
 	alarmDefinitionRepo   domainFacility.AlarmDefinitionRepository
 	alarmTypeRepo         domainFacility.AlarmTypeRepository

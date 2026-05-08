@@ -45,9 +45,6 @@ export interface UpdateUserRequest {
   first_name?: string;
   last_name?: string;
   email?: string;
-  password?: string;
-  role?: UserRole;
-  is_active?: boolean;
 }
 
 export interface UserListParams {

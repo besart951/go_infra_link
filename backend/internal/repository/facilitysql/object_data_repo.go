@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"hash"
 	"sort"
 	"strings"
@@ -66,7 +67,7 @@ func (r *objectDataRepo) withObjectDataLitePreloads(query *gorm.DB) *gorm.DB {
 	})
 }
 
-func (r *objectDataRepo) GetPaginatedListWithFilters(ctx context.Context, params domain.PaginationParams, filters domainFacility.ObjectDataFilterParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+func (r *objectDataRepo) GetPaginatedListWithFilters(ctx context.Context, params domain.PaginationParams, filters domainObjectData.ObjectDataFilterParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
@@ -118,7 +119,7 @@ func (r *objectDataRepo) GetPaginatedListWithFilters(ctx context.Context, params
 	}, nil
 }
 
-func NewObjectDataRepository(db *gorm.DB) domainFacility.ObjectDataStore {
+func NewObjectDataRepository(db *gorm.DB) domainObjectData.ObjectDataStore {
 	baseRepo := gormbase.NewBaseRepository(db,
 		gormbase.TrigramSearchCallback[*domainFacility.ObjectData](searchspec.ObjectData.SearchColumns("")...),
 	)
@@ -180,7 +181,7 @@ func (r *objectDataRepo) Update(ctx context.Context, entity *domainFacility.Obje
 }
 
 func (r *objectDataRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
-	return r.GetPaginatedListWithFilters(ctx, params, domainFacility.ObjectDataFilterParams{})
+	return r.GetPaginatedListWithFilters(ctx, params, domainObjectData.ObjectDataFilterParams{})
 }
 
 func applyObjectDataSearch(query *gorm.DB, search string) *gorm.DB {

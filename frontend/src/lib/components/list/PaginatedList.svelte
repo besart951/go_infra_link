@@ -2,7 +2,6 @@
   import { Input } from '$lib/components/ui/input/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
-  import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import { Search, ChevronLeft, ChevronRight } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
   import type { ListState } from '$lib/application/useCases/listUseCase.js';
@@ -94,15 +93,7 @@
       </Table.Header>
       <Table.Body>
         {#if state.loading && state.items.length === 0}
-          {#each Array(5) as _}
-            <Table.Row>
-              {#each columns as _}
-                <Table.Cell>
-                  <Skeleton class="h-8 w-full" />
-                </Table.Cell>
-              {/each}
-            </Table.Row>
-          {/each}
+          <Table.LoadingRows loading columnCount={columns.length} />
         {:else if state.items.length === 0}
           <Table.Row>
             <Table.Cell colspan={columns.length} class="h-24 text-center">

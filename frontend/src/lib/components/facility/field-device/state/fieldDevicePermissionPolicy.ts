@@ -1,6 +1,5 @@
 export interface FieldDevicePermissionChecks {
   canPerform: (action: string, resource: string) => boolean;
-  canPerformAny: (actions: string[], resource: string) => boolean;
 }
 
 export interface FieldDevicePendingEditState {
@@ -16,31 +15,29 @@ interface FieldDevicePermissionPolicyOptions extends FieldDevicePermissionChecks
 
 export function createFieldDevicePermissionPolicy({
   isProjectContext,
-  canPerform,
-  canPerformAny
+  canPerform
 }: FieldDevicePermissionPolicyOptions) {
-  const canPerformProjectFieldDevice = (...actions: string[]) =>
-    canPerformAny(actions, 'project.fielddevice');
-  const canPerformProjectFieldDeviceSpecification = (...actions: string[]) =>
-    canPerformAny(actions, 'project.fielddevice_specification');
-  const canPerformProjectFieldDeviceBacnetObjects = (...actions: string[]) =>
-    canPerformAny(actions, 'project.fielddevice.bacnetobjects');
+  const canPerformProjectFieldDevice = (action: string) => canPerform(action, 'project.fielddevice');
+  const canPerformProjectFieldDeviceSpecification = (action: string) =>
+    canPerform(action, 'project.fielddevice_specification');
+  const canPerformProjectFieldDeviceBacnetObjects = (action: string) =>
+    canPerform(action, 'project.fielddevice.bacnetobjects');
 
   function canCreateFieldDevice(): boolean {
     return isProjectContext()
-      ? canPerformProjectFieldDevice('create', 'edit')
+      ? canPerformProjectFieldDevice('create')
       : canPerform('create', 'fielddevice');
   }
 
   function canUpdateFieldDevice(): boolean {
     return isProjectContext()
-      ? canPerformProjectFieldDevice('update', 'edit')
+      ? canPerformProjectFieldDevice('update')
       : canPerform('update', 'fielddevice');
   }
 
   function canDeleteFieldDevice(): boolean {
     return isProjectContext()
-      ? canPerformProjectFieldDevice('delete', 'edit')
+      ? canPerformProjectFieldDevice('delete')
       : canPerform('delete', 'fielddevice');
   }
 
@@ -50,8 +47,8 @@ export function createFieldDevicePermissionPolicy({
     }
 
     return (
-      canPerformProjectFieldDeviceSpecification('update', 'edit') ||
-      canPerformProjectFieldDevice('edit')
+      canPerformProjectFieldDeviceSpecification('update') ||
+      canPerformProjectFieldDevice('update')
     );
   }
 
@@ -61,8 +58,8 @@ export function createFieldDevicePermissionPolicy({
     }
 
     return (
-      canPerformProjectFieldDeviceBacnetObjects('update', 'edit') ||
-      canPerformProjectFieldDevice('edit')
+      canPerformProjectFieldDeviceBacnetObjects('update') ||
+      canPerformProjectFieldDevice('update')
     );
   }
 

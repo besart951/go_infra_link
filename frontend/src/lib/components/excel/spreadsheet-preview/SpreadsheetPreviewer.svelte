@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import Dropzone from './Dropzone.svelte';
   import WorksheetSelector from './WorksheetSelector.svelte';
   import DataGrid from './DataGrid.svelte';
@@ -15,6 +16,10 @@
   });
   const fieldDeviceImportService = new FieldDeviceImportService();
   let lastImportSelectionKey = $state('');
+
+  onDestroy(() => {
+    fieldDeviceImportService.dispose();
+  });
 
   $effect(() => {
     const nextKey = `${workbookService.workbook?.fileName ?? ''}|${workbookService.selectedWorksheetName}`;

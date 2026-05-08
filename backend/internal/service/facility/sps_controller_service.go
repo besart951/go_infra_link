@@ -2,6 +2,8 @@ package facility
 
 import (
 	"context"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
 	"net"
 	"strconv"
 	"strings"
@@ -16,8 +18,8 @@ type SPSControllerService struct {
 	controlCabinetRepo       domainFacility.ControlCabinetRepository
 	buildingRepo             domainFacility.BuildingRepository
 	systemTypeRepo           domainFacility.SystemTypeRepository
-	spsControllerSystemTyper domainFacility.SPSControllerSystemTypeStore
-	fieldDeviceRepo          domainFacility.FieldDeviceStore
+	spsControllerSystemTyper domainHierarchy.SPSControllerSystemTypeStore
+	fieldDeviceRepo          domainFieldDevice.FieldDeviceStore
 	hierarchyCopier          *HierarchyCopier
 	tx                       txCoordinator
 }
@@ -27,8 +29,8 @@ func NewSPSControllerService(
 	controlCabinetRepo domainFacility.ControlCabinetRepository,
 	buildingRepo domainFacility.BuildingRepository,
 	systemTypeRepo domainFacility.SystemTypeRepository,
-	spsControllerSystemTypeStore domainFacility.SPSControllerSystemTypeStore,
-	fieldDeviceRepo domainFacility.FieldDeviceStore,
+	spsControllerSystemTypeStore domainHierarchy.SPSControllerSystemTypeStore,
+	fieldDeviceRepo domainFieldDevice.FieldDeviceStore,
 	hierarchyCopier *HierarchyCopier,
 ) *SPSControllerService {
 	return &SPSControllerService{
