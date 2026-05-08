@@ -814,7 +814,12 @@
       "sps_controller_system_type": "SPS-Regler-Systemtyp auswählen...",
       "system_part": "Systemteil auswählen...",
       "system_type": "Systemtyp auswählen...",
-      "alarm_definition": "Alarmdefinition auswählen..."
+      "alarm_definition": "Alarmdefinition auswählen...",
+      "state_text": "Statustextgruppe auswählen...",
+      "state_text_empty": "Keine Statustextgruppen gefunden.",
+      "notification_class": "Benachrichtigungsklasse auswählen...",
+      "notification_class_empty": "Keine Benachrichtigungsklassen gefunden.",
+      "clear": "Auswahl aufheben"
     },
     "multi_selects": {
       "apparats_placeholder": "Apparate auswählen...",
@@ -2190,7 +2195,8 @@
         "no_text_fix": "(kein Text-Fix)",
         "status": {
           "pending": "Bereit",
-          "existing": "Existiert",
+          "identical": "Identisch",
+          "delta": "Ergänzen",
           "success": "Migriert",
           "failed": "Fehler"
         },
@@ -2199,7 +2205,15 @@
           "description": "Beschreibung",
           "apparat_nr": "Apparat-Nr.",
           "text_fix": "Text-Fix",
-          "address": "Adresse"
+          "address": "Adresse",
+          "notification_class": "Notification Class"
+        },
+        "notification": {
+          "manual_assign": "Manuell zuweisen",
+          "create_new": "Neu erstellen (NC {value})",
+          "invalid": "Keine NC in \"{value}\" erkannt.",
+          "missing": "NC {value} wurde nicht gefunden.",
+          "create_pending": "NC {value} wird beim Import erstellt."
         }
       },
       "entities": {
@@ -2216,6 +2230,7 @@
         "incomplete_plan": "Importplan ist unvollständig. Bitte erneut transformieren.",
         "created_system_type_missing": "SPS-Controller-Systemtyp wurde nach der Erstellung nicht gefunden.",
         "system_types_unresolved": "SPS-Controller-Systemtypen konnten nicht vollständig aufgelöst werden.",
+        "notification_classes_unresolved": "Notification Classes konnten nicht vollständig aufgelöst werden.",
         "field_device_create_failed": "Feldgerät konnte nicht erstellt werden."
       },
       "validation": {
@@ -2227,7 +2242,8 @@
         "building_not_found": "Kein bestehendes Gebäude für IWS \"{iws}\" und Gruppe \"{group}\" gefunden.",
         "control_cabinet_required": "Die Schaltschrank-Nr. ist erforderlich.",
         "control_cabinet_exists": "Der Schaltschrank \"{value}\" existiert bereits und wird als Ziel verwendet.",
-        "sps_controller_exists": "Die SPS \"{value}\" existiert bereits und wird als Ziel verwendet.",
+        "sps_controller_exists_identical": "Die SPS \"{value}\" existiert bereits identisch und wird als Ziel verwendet.",
+        "sps_controller_exists_delta": "Die SPS \"{value}\" existiert bereits; zusätzliche Excel-Informationen werden ergänzt.",
         "sps_controller_system_type_exists": "SPS-Systemtyp {number} ({name}) existiert bereits und wird verwendet.",
         "ga_device_required": "Das GA-Gerät ist erforderlich.",
         "ga_device_format": "Das GA-Gerät muss aus genau 3 Grossbuchstaben bestehen.",
@@ -2260,10 +2276,11 @@
         "system_type_definition_missing": "Keine Systemtyp-Definition mit Nummernbereich für {number} gefunden.",
         "sps_system_type": "SPS-Systemtyp",
         "sps_system_type_with_number": "SPS-Systemtyp {number}",
-        "field_device_exists": "Feldgerät existiert bereits im Ziel-Controller ({systemType}, {systemPart}/{apparat}{apparatNr}); BACnet-Objekte werden dort migriert.",
+        "field_device_exists_identical": "Feldgerät existiert bereits identisch im Ziel-Controller ({systemType}, {systemPart}/{apparat}{apparatNr}).",
+        "field_device_exists_delta": "Feldgerät existiert bereits im Ziel-Controller ({systemType}, {systemPart}/{apparat}{apparatNr}); zusätzliche Excel-Informationen werden ergänzt.",
         "duplicate_apparat_nr": "Doppelte Apparatnummer: dieselbe Kombination kommt bereits in Zeile {row} vor.",
-        "notification_not_numeric": "Notification \"{value}\" ist keine Zahl und wird ohne Referenz importiert.",
-        "notification_class_not_found": "Notification Class NC {value} wurde nicht gefunden und wird leer importiert.",
+        "notification_no_match": "Notification \"{value}\" enthält keine erkennbare NC. Bitte neu erstellen oder manuell zuweisen.",
+        "notification_class_not_found": "Notification Class NC {value} wurde nicht gefunden. Bitte neu erstellen oder manuell zuweisen.",
         "state_text_not_found": "State Text \"{value}\" wurde nicht gefunden und wird leer importiert.",
         "alarm_type_not_found": "Alarmtyp \"{value}\" wurde nicht gefunden und wird leer importiert.",
         "hardware_quantity_range": "Hardware-Anzahl muss eine Zahl zwischen 0 und 255 sein.",

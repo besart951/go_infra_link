@@ -14,6 +14,7 @@ import type {
 import {
   buildImportCellMarkers,
   collectFieldDeviceImportLookupCriteria,
+  parseNotificationClassNumber,
   transformWorksheetToFieldDeviceImport,
   type FieldDeviceImportLookups
 } from './fieldDeviceExportImporter.js';
@@ -68,7 +69,7 @@ function baseRows(): TestCell[][] {
       0: 'IWS_1_0100_ABC_HVPMP01_AI01',
       1: 'Heating Pump - HVPMP Status',
       2: 'Off, On',
-      3: 7,
+      3: 'NC07',
       4: 'B001',
       5: true,
       6: 'Heating',
@@ -165,6 +166,14 @@ function lookups(overrides: Partial<FieldDeviceImportLookups> = {}): FieldDevice
 }
 
 describe('field device export importer', () => {
+  it('normalizes Notification Class values with NC prefixes', () => {
+    expect(parseNotificationClassNumber('NC07')).toBe(7);
+    expect(parseNotificationClassNumber('nc 01')).toBe(1);
+    expect(parseNotificationClassNumber('NC 2')).toBe(2);
+    expect(parseNotificationClassNumber('7')).toBe(7);
+    expect(parseNotificationClassNumber('no nc')).toBeUndefined();
+  });
+
   it('collects lookup criteria from the worksheet before validation lookups are loaded', () => {
     const criteria = collectFieldDeviceImportLookupCriteria(worksheet(baseRows()));
 
@@ -180,6 +189,25 @@ describe('field device export importer', () => {
       notificationNumbers: [7],
       stateTextLabels: ['Off', 'Off, On'],
       alarmTypeLabels: ['Alarm']
+    });
+  });
+
+  it('requires unresolved Notification Classes to be fixed before import', () => {
+    const plan = transformWorksheetToFieldDeviceImport(
+      worksheet(baseRows()),
+      lookups({ notificationClasses: [] })
+    );
+
+    expect(plan.canImport).toBe(false);
+    expect(plan.errorCount).toBe(1);
+    expect(plan.diagnostics[0]).toMatchObject({
+      severity: 'error',
+      entity: 'bacnet_object',
+      cell: { address: 'D15' }
+    });
+    expect(plan.controller.fieldDevices[0].bacnetObjects[0].notificationClass).toMatchObject({
+      number: 7,
+      status: 'missing'
     });
   });
 

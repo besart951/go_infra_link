@@ -45,7 +45,9 @@
       | 'software_type'
       | 'software_number'
       | 'hardware_type'
-      | 'hardware_quantity',
+      | 'hardware_quantity'
+      | 'state_text_id'
+      | 'notification_class_id',
       string
     >
   >;
@@ -66,6 +68,8 @@
         software_number: obj.software_number ?? 1,
         hardware_type: obj.hardware_type ?? 'ai',
         hardware_quantity: obj.hardware_quantity ?? 1,
+        state_text_id: obj.state_text_id ?? '',
+        notification_class_id: obj.notification_class_id ?? '',
         alarm_type_id: obj.alarm_type_id ?? ''
       }));
     } else {
@@ -133,7 +137,9 @@
       software_type: getBacnetIndexedFieldError(index, 'software_type'),
       software_number: getBacnetIndexedFieldError(index, 'software_number'),
       hardware_type: getBacnetIndexedFieldError(index, 'hardware_type'),
-      hardware_quantity: getBacnetIndexedFieldError(index, 'hardware_quantity')
+      hardware_quantity: getBacnetIndexedFieldError(index, 'hardware_quantity'),
+      state_text_id: getBacnetIndexedFieldError(index, 'state_text_id'),
+      notification_class_id: getBacnetIndexedFieldError(index, 'notification_class_id')
     };
   }
 
@@ -190,6 +196,8 @@
         software_number: 1,
         hardware_type: 'ai',
         hardware_quantity: 1,
+        state_text_id: '',
+        notification_class_id: '',
         alarm_type_id: ''
       }
     ];
