@@ -28686,83 +28686,218 @@
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create user",
+        "description": "Create users",
         "id": "019c780c-f7de-7217-b3ce-7eaf63dd9964",
         "name": "user.create",
         "resource": "user",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read user",
+        "description": "Read users",
         "id": "019c780c-f7de-7218-a6bf-953cadad682a",
         "name": "user.read",
         "resource": "user",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update user",
+        "description": "Update users",
         "id": "019c780c-f7de-7219-87be-f5d4d1a961ee",
         "name": "user.update",
         "resource": "user",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete user",
+        "description": "Delete users",
         "id": "019c780c-f7de-721a-a804-7ec9e170139d",
         "name": "user.delete",
         "resource": "user",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create team",
+        "description": "Create teams",
         "id": "019c780c-f7de-721b-b959-771cb083cce8",
         "name": "team.create",
         "resource": "team",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read team",
+        "description": "Read teams",
         "id": "019c780c-f7de-721c-a175-95337f1dc773",
         "name": "team.read",
         "resource": "team",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update team",
+        "description": "Update teams",
         "id": "019c780c-f7de-721d-bab6-ed92625a7bf8",
         "name": "team.update",
         "resource": "team",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete team",
+        "description": "Delete teams",
         "id": "019c780c-f7de-721e-a55e-185548ff3f70",
         "name": "team.delete",
         "resource": "team",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create project",
+        "description": "Create phases",
+        "id": "019c780c-f7de-7223-bb5d-8b34755397ff",
+        "name": "phase.create",
+        "resource": "phase",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "read",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Read phases",
+        "id": "019c780c-f7de-7224-be11-32642d9026f0",
+        "name": "phase.read",
+        "resource": "phase",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "update",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Update phases",
+        "id": "019c780c-f7de-7225-bead-7743abe8d8d2",
+        "name": "phase.update",
+        "resource": "phase",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "delete",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Delete phases",
+        "id": "019c780c-f7de-7226-8f2a-4d4dbbfd49f4",
+        "name": "phase.delete",
+        "resource": "phase",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "manage",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Manage phase-based project permission rules",
+        "id": "28f93632-7687-4b30-968c-9da449517d6f",
+        "name": "phase_permission.manage",
+        "resource": "phase_permission",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "create",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Create roles",
+        "id": "019c780c-f7de-7227-ad5b-bd9d4df63f15",
+        "name": "role.create",
+        "resource": "role",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "read",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Read roles",
+        "id": "019c780c-f7de-7228-a2ea-422a1599cc94",
+        "name": "role.read",
+        "resource": "role",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "update",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Update roles",
+        "id": "019c780c-f7de-7229-b406-f233673a0b18",
+        "name": "role.update",
+        "resource": "role",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "delete",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Delete roles",
+        "id": "019c780c-f7de-722a-99bc-a524224c8cb6",
+        "name": "role.delete",
+        "resource": "role",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "create",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Create permissions",
+        "id": "019c780c-f7de-722b-b218-f94765d3f645",
+        "name": "permission.create",
+        "resource": "permission",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "read",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Read permissions",
+        "id": "019c780c-f7de-722c-8938-fb2c75460abd",
+        "name": "permission.read",
+        "resource": "permission",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "update",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Update permissions",
+        "id": "019c780c-f7de-722d-8e3e-7d9ec3308c8f",
+        "name": "permission.update",
+        "resource": "permission",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "delete",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Delete permissions",
+        "id": "019c780c-f7de-722e-9ae0-6b34fded5820",
+        "name": "permission.delete",
+        "resource": "permission",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "create",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Create projects",
         "id": "019c780c-f7de-721f-b229-198a6fb2e83e",
         "name": "project.create",
         "resource": "project",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "update",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Update projects",
+        "id": "019c780c-f7de-7221-a06a-0db80bb68758",
+        "name": "project.update",
+        "resource": "project",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "delete",
+        "created_at": "2026-02-19T22:37:21.758137Z",
+        "description": "Delete projects",
+        "id": "019c780c-f7de-7222-876e-4af6d317f589",
+        "name": "project.delete",
+        "resource": "project",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "listAll",
@@ -28774,661 +28909,859 @@
         "updated_at": "2026-02-19T22:37:21.758137Z"
       },
       {
-        "action": "update",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update project",
-        "id": "019c780c-f7de-7221-a06a-0db80bb68758",
-        "name": "project.update",
-        "resource": "project",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
-        "action": "delete",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete project",
-        "id": "019c780c-f7de-7222-876e-4af6d317f589",
-        "name": "project.delete",
-        "resource": "project",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
-      },
-      {
         "action": "create",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create phase",
-        "id": "019c780c-f7de-7223-bb5d-8b34755397ff",
-        "name": "phase.create",
-        "resource": "phase",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Create project control cabinets",
+        "id": "0e6f2d17-6e3c-4ac5-ac26-a8a71e959904",
+        "name": "project.controlcabinet.create",
+        "resource": "project.controlcabinet",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read phase",
-        "id": "019c780c-f7de-7224-be11-32642d9026f0",
-        "name": "phase.read",
-        "resource": "phase",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Read project control cabinets",
+        "id": "fe1e6032-de90-458e-8968-a4888235d076",
+        "name": "project.controlcabinet.read",
+        "resource": "project.controlcabinet",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update phase",
-        "id": "019c780c-f7de-7225-bead-7743abe8d8d2",
-        "name": "phase.update",
-        "resource": "phase",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Update project control cabinets",
+        "id": "1e35196b-e18f-441a-be88-ba52d9d3b528",
+        "name": "project.controlcabinet.update",
+        "resource": "project.controlcabinet",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete phase",
-        "id": "019c780c-f7de-7226-8f2a-4d4dbbfd49f4",
-        "name": "phase.delete",
-        "resource": "phase",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Delete project control cabinets",
+        "id": "8da35868-92f6-4e61-ba7a-d903023678c7",
+        "name": "project.controlcabinet.delete",
+        "resource": "project.controlcabinet",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create role",
-        "id": "019c780c-f7de-7227-ad5b-bd9d4df63f15",
-        "name": "role.create",
-        "resource": "role",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Create project SPS controllers",
+        "id": "f3dbdf2d-9111-4628-b7eb-3cb7b2337c6b",
+        "name": "project.spscontroller.create",
+        "resource": "project.spscontroller",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read role",
-        "id": "019c780c-f7de-7228-a2ea-422a1599cc94",
-        "name": "role.read",
-        "resource": "role",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Read project SPS controllers",
+        "id": "357566e3-e8a8-4e03-92ac-fcb0e4ac7795",
+        "name": "project.spscontroller.read",
+        "resource": "project.spscontroller",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update role",
-        "id": "019c780c-f7de-7229-b406-f233673a0b18",
-        "name": "role.update",
-        "resource": "role",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Update project SPS controllers",
+        "id": "16a33141-36f8-48d7-9b60-9872d50ec705",
+        "name": "project.spscontroller.update",
+        "resource": "project.spscontroller",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete role",
-        "id": "019c780c-f7de-722a-99bc-a524224c8cb6",
-        "name": "role.delete",
-        "resource": "role",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Delete project SPS controllers",
+        "id": "d3e4b439-db86-4183-adb8-8db00a387cd7",
+        "name": "project.spscontroller.delete",
+        "resource": "project.spscontroller",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create permission",
-        "id": "019c780c-f7de-722b-b218-f94765d3f645",
-        "name": "permission.create",
-        "resource": "permission",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Create project SPS controller system types",
+        "id": "0c376926-f6c2-4216-99e6-61429b9784e0",
+        "name": "project.spscontroller.systemtype.create",
+        "resource": "project.spscontroller.systemtype",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read permission",
-        "id": "019c780c-f7de-722c-8938-fb2c75460abd",
-        "name": "permission.read",
-        "resource": "permission",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Read project SPS controller system types",
+        "id": "f9047684-a790-4e9c-ab5d-f6a18686cf29",
+        "name": "project.spscontroller.systemtype.read",
+        "resource": "project.spscontroller.systemtype",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update permission",
-        "id": "019c780c-f7de-722d-8e3e-7d9ec3308c8f",
-        "name": "permission.update",
-        "resource": "permission",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Update project SPS controller system types",
+        "id": "197ae5a6-e7e1-4f33-af2c-772e4df1bd2a",
+        "name": "project.spscontroller.systemtype.update",
+        "resource": "project.spscontroller.systemtype",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete permission",
-        "id": "019c780c-f7de-722e-9ae0-6b34fded5820",
-        "name": "permission.delete",
-        "resource": "permission",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Delete project SPS controller system types",
+        "id": "765983c1-2db7-4e76-84e2-bf8760592905",
+        "name": "project.spscontroller.systemtype.delete",
+        "resource": "project.spscontroller.systemtype",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "create",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Create project field devices",
+        "id": "921ae318-5999-4132-8c88-3da4297c0a15",
+        "name": "project.fielddevice.create",
+        "resource": "project.fielddevice",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "read",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Read project field devices",
+        "id": "ba8828b5-b729-418c-a4f6-935cd208b3f8",
+        "name": "project.fielddevice.read",
+        "resource": "project.fielddevice",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "update",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Update project field devices",
+        "id": "dca70fd5-628b-468d-a7d7-3712b0000bcd",
+        "name": "project.fielddevice.update",
+        "resource": "project.fielddevice",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "delete",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Delete project field devices",
+        "id": "af88e0ed-c1cb-4b38-8fe7-ef30f37346fd",
+        "name": "project.fielddevice.delete",
+        "resource": "project.fielddevice",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "create",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Create project field device specifications",
+        "id": "cccf7b8c-e716-42cf-81a4-4508b5083b3e",
+        "name": "project.fielddevice_specification.create",
+        "resource": "project.fielddevice_specification",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "read",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Read project field device specifications",
+        "id": "06163c24-a2ac-4720-b558-6ee26744d5fa",
+        "name": "project.fielddevice_specification.read",
+        "resource": "project.fielddevice_specification",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "update",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Update project field device specifications",
+        "id": "f90fb840-ea8c-49b3-b221-983bc67fda1a",
+        "name": "project.fielddevice_specification.update",
+        "resource": "project.fielddevice_specification",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "delete",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Delete project field device specifications",
+        "id": "754911e5-f57b-41cd-b839-19445313191b",
+        "name": "project.fielddevice_specification.delete",
+        "resource": "project.fielddevice_specification",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "create",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Create project field device BACnet objects",
+        "id": "a4004e55-966f-46a0-9cf0-73a1b2aa97e1",
+        "name": "project.fielddevice.bacnetobjects.create",
+        "resource": "project.fielddevice.bacnetobjects",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "read",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Read project field device BACnet objects",
+        "id": "72d4a3ae-69ba-4aa7-81f2-eafa454ebff3",
+        "name": "project.fielddevice.bacnetobjects.read",
+        "resource": "project.fielddevice.bacnetobjects",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "update",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Update project field device BACnet objects",
+        "id": "7ab939d4-1e61-4150-b96d-13e74faf703d",
+        "name": "project.fielddevice.bacnetobjects.update",
+        "resource": "project.fielddevice.bacnetobjects",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "delete",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Delete project field device BACnet objects",
+        "id": "3dbf932d-940c-4490-a5d4-e126ae0db6a2",
+        "name": "project.fielddevice.bacnetobjects.delete",
+        "resource": "project.fielddevice.bacnetobjects",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create building",
+        "description": "Create buildings",
         "id": "019c780c-f7de-722f-8e84-17423c8641b0",
         "name": "building.create",
         "resource": "building",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read building",
+        "description": "Read buildings",
         "id": "019c780c-f7de-7230-8bee-7c8fdc0092fc",
         "name": "building.read",
         "resource": "building",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update building",
+        "description": "Update buildings",
         "id": "019c780c-f7de-7231-9a3b-9a06528b9fee",
         "name": "building.update",
         "resource": "building",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete building",
+        "description": "Delete buildings",
         "id": "019c780c-f7de-7232-b879-7fe240871a50",
         "name": "building.delete",
         "resource": "building",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create controlcabinet",
+        "description": "Create control cabinets",
         "id": "019c780c-f7de-7233-a4a2-38dbf7c0018c",
         "name": "controlcabinet.create",
         "resource": "controlcabinet",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read controlcabinet",
+        "description": "Read control cabinets",
         "id": "019c780c-f7de-7234-9328-ff594c534399",
         "name": "controlcabinet.read",
         "resource": "controlcabinet",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update controlcabinet",
+        "description": "Update control cabinets",
         "id": "019c780c-f7de-7235-a23a-3dd71a57ab9a",
         "name": "controlcabinet.update",
         "resource": "controlcabinet",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete controlcabinet",
+        "description": "Delete control cabinets",
         "id": "019c780c-f7de-7236-9c59-a5dc87e10f3e",
         "name": "controlcabinet.delete",
         "resource": "controlcabinet",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create spscontroller",
+        "description": "Create SPS controllers",
         "id": "019c780c-f7de-7237-aae9-915e2aa2b108",
         "name": "spscontroller.create",
         "resource": "spscontroller",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read spscontroller",
+        "description": "Read SPS controllers",
         "id": "019c780c-f7de-7238-be5f-6ced4d6b4b1e",
         "name": "spscontroller.read",
         "resource": "spscontroller",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update spscontroller",
+        "description": "Update SPS controllers",
         "id": "019c780c-f7de-7239-ac34-b0cb05b7cfea",
         "name": "spscontroller.update",
         "resource": "spscontroller",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete spscontroller",
+        "description": "Delete SPS controllers",
         "id": "019c780c-f7de-723a-a904-e960e08ba6a4",
         "name": "spscontroller.delete",
         "resource": "spscontroller",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create spscontrollersystemtype",
+        "description": "Create SPS controller system types",
         "id": "019c780c-f7de-723b-adba-341130e36263",
         "name": "spscontrollersystemtype.create",
         "resource": "spscontrollersystemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read spscontrollersystemtype",
+        "description": "Read SPS controller system types",
         "id": "019c780c-f7de-723c-8804-4d869fe33f66",
         "name": "spscontrollersystemtype.read",
         "resource": "spscontrollersystemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update spscontrollersystemtype",
+        "description": "Update SPS controller system types",
         "id": "019c780c-f7de-723d-acd8-66cc82d7b1a2",
         "name": "spscontrollersystemtype.update",
         "resource": "spscontrollersystemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete spscontrollersystemtype",
+        "description": "Delete SPS controller system types",
         "id": "019c780c-f7de-723e-8701-d99b287aeabe",
         "name": "spscontrollersystemtype.delete",
         "resource": "spscontrollersystemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create fielddevice",
+        "description": "Create field devices",
         "id": "019c780c-f7de-723f-8c39-28a422b7e89d",
         "name": "fielddevice.create",
         "resource": "fielddevice",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read fielddevice",
+        "description": "Read field devices",
         "id": "019c780c-f7de-7240-9c95-62be3c526732",
         "name": "fielddevice.read",
         "resource": "fielddevice",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update fielddevice",
+        "description": "Update field devices",
         "id": "019c780c-f7de-7241-87b9-e95a74b127c6",
         "name": "fielddevice.update",
         "resource": "fielddevice",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete fielddevice",
+        "description": "Delete field devices",
         "id": "019c780c-f7de-7242-a624-1ebf1392b15d",
         "name": "fielddevice.delete",
         "resource": "fielddevice",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create bacnetobject",
+        "description": "Create BACnet objects",
         "id": "019c780c-f7de-7243-81d0-b460fe554ce7",
         "name": "bacnetobject.create",
         "resource": "bacnetobject",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read bacnetobject",
+        "description": "Read BACnet objects",
         "id": "019c780c-f7de-7244-9db4-f70d80cfcced",
         "name": "bacnetobject.read",
         "resource": "bacnetobject",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update bacnetobject",
+        "description": "Update BACnet objects",
         "id": "019c780c-f7de-7245-81ed-8577f4799059",
         "name": "bacnetobject.update",
         "resource": "bacnetobject",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete bacnetobject",
+        "description": "Delete BACnet objects",
         "id": "019c780c-f7de-7246-a723-2068f8990f7b",
         "name": "bacnetobject.delete",
         "resource": "bacnetobject",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create systempart",
+        "description": "Create system parts",
         "id": "019c780c-f7de-7247-b862-c47c296464e3",
         "name": "systempart.create",
         "resource": "systempart",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read systempart",
+        "description": "Read system parts",
         "id": "019c780c-f7de-7248-b00f-fd9eceaab642",
         "name": "systempart.read",
         "resource": "systempart",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update systempart",
+        "description": "Update system parts",
         "id": "019c780c-f7de-7249-af42-3fca6d44086d",
         "name": "systempart.update",
         "resource": "systempart",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete systempart",
+        "description": "Delete system parts",
         "id": "019c780c-f7de-724a-92ea-9f63eab855bc",
         "name": "systempart.delete",
         "resource": "systempart",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create systemtype",
+        "description": "Create system types",
         "id": "019c780c-f7de-724b-b1a9-da00fc6aea59",
         "name": "systemtype.create",
         "resource": "systemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read systemtype",
+        "description": "Read system types",
         "id": "019c780c-f7de-724c-8880-6da83a972a9d",
         "name": "systemtype.read",
         "resource": "systemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update systemtype",
+        "description": "Update system types",
         "id": "019c780c-f7de-724d-bf69-178c35929c14",
         "name": "systemtype.update",
         "resource": "systemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete systemtype",
+        "description": "Delete system types",
         "id": "019c780c-f7de-724e-9576-3e08b2728441",
         "name": "systemtype.delete",
         "resource": "systemtype",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create specification",
+        "description": "Create specifications",
         "id": "019c780c-f7de-724f-b396-a77b76440d4e",
         "name": "specification.create",
         "resource": "specification",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read specification",
+        "description": "Read specifications",
         "id": "019c780c-f7de-7250-8a38-8e0b4e4a180c",
         "name": "specification.read",
         "resource": "specification",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update specification",
+        "description": "Update specifications",
         "id": "019c780c-f7de-7251-b9b0-5738dbd25089",
         "name": "specification.update",
         "resource": "specification",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete specification",
+        "description": "Delete specifications",
         "id": "019c780c-f7de-7252-807a-9034b67d1e96",
         "name": "specification.delete",
         "resource": "specification",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create apparat",
+        "description": "Create apparats",
         "id": "019c780c-f7de-7253-a935-924e666da16f",
         "name": "apparat.create",
         "resource": "apparat",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read apparat",
+        "description": "Read apparats",
         "id": "019c780c-f7de-7254-9d42-4962fc53446f",
         "name": "apparat.read",
         "resource": "apparat",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update apparat",
+        "description": "Update apparats",
         "id": "019c780c-f7de-7255-9a47-71d1ff51e056",
         "name": "apparat.update",
         "resource": "apparat",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete apparat",
+        "description": "Delete apparats",
         "id": "019c780c-f7de-7256-8e69-d6ec2fcfe7d1",
         "name": "apparat.delete",
         "resource": "apparat",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create notificationclass",
+        "description": "Create notification classes",
         "id": "019c780c-f7de-7257-a5d5-ce21c415b3ed",
         "name": "notificationclass.create",
         "resource": "notificationclass",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read notificationclass",
+        "description": "Read notification classes",
         "id": "019c780c-f7de-7258-9a60-472afb8b0d5a",
         "name": "notificationclass.read",
         "resource": "notificationclass",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update notificationclass",
+        "description": "Update notification classes",
         "id": "019c780c-f7de-7259-9896-5dc782e21595",
         "name": "notificationclass.update",
         "resource": "notificationclass",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete notificationclass",
+        "description": "Delete notification classes",
         "id": "019c780c-f7de-725a-a8cd-c7488a1ff261",
         "name": "notificationclass.delete",
         "resource": "notificationclass",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create statetext",
+        "description": "Create state texts",
         "id": "019c780c-f7de-725b-ad67-cb4fbfda56e8",
         "name": "statetext.create",
         "resource": "statetext",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read statetext",
+        "description": "Read state texts",
         "id": "019c780c-f7de-725c-85fe-8b843ec4a978",
         "name": "statetext.read",
         "resource": "statetext",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update statetext",
+        "description": "Update state texts",
         "id": "019c780c-f7de-725d-96c0-82069c6d6c86",
         "name": "statetext.update",
         "resource": "statetext",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete statetext",
+        "description": "Delete state texts",
         "id": "019c780c-f7de-725e-86f0-cef7b72eeae3",
         "name": "statetext.delete",
         "resource": "statetext",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create objectdata",
+        "description": "Create object data",
         "id": "019c780c-f7de-725f-9f91-ea8559969bb7",
         "name": "objectdata.create",
         "resource": "objectdata",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read objectdata",
+        "description": "Read object data",
         "id": "019c780c-f7de-7260-8d83-9597bc3393ed",
         "name": "objectdata.read",
         "resource": "objectdata",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update objectdata",
+        "description": "Update object data",
         "id": "019c780c-f7de-7261-b580-9b01a32bf416",
         "name": "objectdata.update",
         "resource": "objectdata",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete objectdata",
+        "description": "Delete object data",
         "id": "019c780c-f7de-7262-b3cf-0e7ebddcc976",
         "name": "objectdata.delete",
         "resource": "objectdata",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "create",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Create alarmdefinition",
+        "description": "Create alarm definitions",
         "id": "019c780c-f7de-7263-a100-3c43229119f3",
         "name": "alarmdefinition.create",
         "resource": "alarmdefinition",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "read",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Read alarmdefinition",
+        "description": "Read alarm definitions",
         "id": "019c780c-f7de-7264-97c4-ceb95be85c3c",
         "name": "alarmdefinition.read",
         "resource": "alarmdefinition",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "update",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Update alarmdefinition",
+        "description": "Update alarm definitions",
         "id": "019c780c-f7de-7265-90f1-bffbe194eabc",
         "name": "alarmdefinition.update",
         "resource": "alarmdefinition",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
         "action": "delete",
         "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Delete alarmdefinition",
+        "description": "Delete alarm definitions",
         "id": "019c780c-f7de-7266-93de-6abe58ec8388",
         "name": "alarmdefinition.delete",
         "resource": "alarmdefinition",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
-        "action": "edit",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Edit project control cabinets",
-        "id": "019c780c-f7de-7267-b0fd-be138b4d6323",
-        "name": "project.controlcabinet.edit",
-        "resource": "project.controlcabinet",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "action": "create",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Create alarm types",
+        "id": "7fcb6446-051c-4909-a8c9-bbd539ec45d7",
+        "name": "alarmtype.create",
+        "resource": "alarmtype",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
-        "action": "edit",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Edit project SPS controllers",
-        "id": "019c780c-f7de-726b-b0e9-c02f82bb8882",
-        "name": "project.spscontroller.edit",
-        "resource": "project.spscontroller",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "action": "read",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Read alarm types",
+        "id": "57985b6a-7df8-4a68-843f-5a31ff39b3ae",
+        "name": "alarmtype.read",
+        "resource": "alarmtype",
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
-        "action": "edit",
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "description": "Edit project field devices",
-        "id": "019c780c-f7de-7273-a55b-1c91d834d4e7",
-        "name": "project.fielddevice.edit",
-        "resource": "project.fielddevice",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "action": "update",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Update alarm types",
+        "id": "2f013675-d076-469a-b899-fcde394925b3",
+        "name": "alarmtype.update",
+        "resource": "alarmtype",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "delete",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Delete alarm types",
+        "id": "3b119080-0764-4ec6-85b0-4df554951e66",
+        "name": "alarmtype.delete",
+        "resource": "alarmtype",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "create",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Create alarm fields",
+        "id": "47d3e352-d79d-43a9-b5b3-7d84fccf0e9c",
+        "name": "alarmfield.create",
+        "resource": "alarmfield",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "read",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Read alarm fields",
+        "id": "3b331b24-545e-4a39-bb16-afa41dc98c48",
+        "name": "alarmfield.read",
+        "resource": "alarmfield",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "update",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Update alarm fields",
+        "id": "c8f9de55-e96e-486e-8823-40c342f00694",
+        "name": "alarmfield.update",
+        "resource": "alarmfield",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "delete",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Delete alarm fields",
+        "id": "64f7cdfd-6d2d-402e-ba5c-df5124d43001",
+        "name": "alarmfield.delete",
+        "resource": "alarmfield",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "create",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Create units",
+        "id": "c4f4bd69-cbc1-417d-96ff-415d5b748578",
+        "name": "unit.create",
+        "resource": "unit",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "read",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Read units",
+        "id": "30cae765-af1a-4aa1-9798-7ad4919e4dfb",
+        "name": "unit.read",
+        "resource": "unit",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "update",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Update units",
+        "id": "b3719f2b-27ad-4d6d-ac5f-3c6e4d72acef",
+        "name": "unit.update",
+        "resource": "unit",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "delete",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Delete units",
+        "id": "fde202be-e423-47c7-88c8-149b44801e43",
+        "name": "unit.delete",
+        "resource": "unit",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "manage",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Manage SMTP notification settings",
+        "id": "7552d432-98fd-420f-a595-5921073bffdb",
+        "name": "notification.smtp.manage",
+        "resource": "notification.smtp",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "read",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Read timeline entries",
+        "id": "a59a1bdd-91b9-4a85-82c4-fcd799dba568",
+        "name": "timeline.read",
+        "resource": "timeline",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "action": "restore",
+        "created_at": "2026-05-08T00:00:00Z",
+        "description": "Restore timeline entries",
+        "id": "cf8dad58-605c-4222-9b82-ed3b17cf3add",
+        "name": "timeline.restore",
+        "resource": "timeline",
+        "updated_at": "2026-05-08T00:00:00Z"
       }
     ],
     "phase_permissions": [],
@@ -30038,25 +30371,284 @@
         "updated_at": "2026-02-19T22:37:21.758137Z"
       },
       {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a6c-9c8f-3bbf7c0e67ac",
-        "permission": "project.controlcabinet.edit",
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "8f622fbb-5e44-4565-b1bf-e758ccdf539f",
+        "permission": "phase_permission.manage",
         "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a70-a061-3e7845236ac4",
-        "permission": "project.spscontroller.edit",
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "491e29f6-7172-41ca-bbe6-d912c10a042b",
+        "permission": "project.controlcabinet.create",
         "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
       },
       {
-        "created_at": "2026-02-19T22:37:21.758137Z",
-        "id": "019c780c-f7e3-7a78-b0aa-27c74721a424",
-        "permission": "project.fielddevice.edit",
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "0c3509ea-3a98-41e2-9e2a-13b4d4d93957",
+        "permission": "project.controlcabinet.read",
         "role": "superadmin",
-        "updated_at": "2026-02-19T22:37:21.758137Z"
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "ceaada7c-c30b-4b1a-a330-12dfbf3584b2",
+        "permission": "project.controlcabinet.update",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "bd483f4c-b935-43f1-9b15-5b335495979e",
+        "permission": "project.controlcabinet.delete",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "3eba983d-c417-4834-97f5-67448c51ed87",
+        "permission": "project.spscontroller.create",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "ff539594-76d9-4d71-bee2-4fb7930cd890",
+        "permission": "project.spscontroller.read",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "6b3eba15-7449-47ea-82c0-716da7b7c8f8",
+        "permission": "project.spscontroller.update",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "800ec116-871b-4fc9-ac2b-7257d009a24f",
+        "permission": "project.spscontroller.delete",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "34066f7a-a7e0-4b84-9de2-2cd1d4a3b586",
+        "permission": "project.spscontroller.systemtype.create",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "eaaeee56-fe48-4dbf-9ad5-52fd910ff034",
+        "permission": "project.spscontroller.systemtype.read",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "18394b70-32af-48b0-bd9c-304180eb880d",
+        "permission": "project.spscontroller.systemtype.update",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "868581fb-d9db-40f7-8b2f-0f463d5280f3",
+        "permission": "project.spscontroller.systemtype.delete",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "a8251165-7cb7-43cc-9acd-d36a1022f862",
+        "permission": "project.fielddevice.create",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "17ab4f55-3e55-4756-b928-d006d63cacf1",
+        "permission": "project.fielddevice.read",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "5ec3a58a-1d63-489a-9db8-25b0dcd1cb15",
+        "permission": "project.fielddevice.update",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "d0fa2569-7629-4c82-ba0b-7d7c429b616a",
+        "permission": "project.fielddevice.delete",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "8f29815e-5124-4b54-a614-8d226c546dc9",
+        "permission": "project.fielddevice_specification.create",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "75a2a325-055d-4a50-a5c1-2f27d25e47df",
+        "permission": "project.fielddevice_specification.read",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "48fd264b-9dae-481a-9f85-9d286baf4b0b",
+        "permission": "project.fielddevice_specification.update",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "c40768af-3c1d-48a8-8eef-cb11e202ae7b",
+        "permission": "project.fielddevice_specification.delete",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "10b4a0b1-2d2d-4fff-b858-73006152a876",
+        "permission": "project.fielddevice.bacnetobjects.create",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "3bfbefd9-3bb2-4e34-a896-7217252b60ac",
+        "permission": "project.fielddevice.bacnetobjects.read",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "54e0a84b-4b75-4ba6-a6a8-02385a414652",
+        "permission": "project.fielddevice.bacnetobjects.update",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "7a190c3a-5fcd-4643-9231-a3dd4eda6d44",
+        "permission": "project.fielddevice.bacnetobjects.delete",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "9081ea52-d334-4333-9ada-2a218bcacab0",
+        "permission": "alarmtype.create",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "f18dff2e-1f6d-4a51-87b7-b2360c4723db",
+        "permission": "alarmtype.read",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "7b65d924-a60b-4eb5-9d0f-d4eb7c3be3ea",
+        "permission": "alarmtype.update",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "daf1dc01-3b6d-4955-8908-ec7abd3a73b5",
+        "permission": "alarmtype.delete",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "9986da37-a1f3-4755-9ca9-19298e3ce400",
+        "permission": "alarmfield.create",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "a364cc34-b49d-43a5-8b8e-273ab100839a",
+        "permission": "alarmfield.read",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "1e6c7f1b-f6d4-45e2-a585-7c85dfd19d0c",
+        "permission": "alarmfield.update",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "b3921d84-4c02-4341-9869-c2973df86b0a",
+        "permission": "alarmfield.delete",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "d6588706-62b4-4609-995d-1f51476b85c5",
+        "permission": "unit.create",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "cd97a257-c499-4fca-b08f-814a6a1561e7",
+        "permission": "unit.read",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "8784380a-e4dc-4b06-8f1e-e3c0ba6ac667",
+        "permission": "unit.update",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "055cbc2d-ae31-4a8c-a41a-04d217a80ac7",
+        "permission": "unit.delete",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "fca8006b-1148-4e94-ba5c-95067c8bef22",
+        "permission": "notification.smtp.manage",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "946d914c-db26-4170-b5c7-eccb1caabbae",
+        "permission": "timeline.read",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
+      },
+      {
+        "created_at": "2026-05-08T00:00:00Z",
+        "id": "59380c32-b3a4-40c0-9f53-fcee75bd8ea2",
+        "permission": "timeline.restore",
+        "role": "superadmin",
+        "updated_at": "2026-05-08T00:00:00Z"
       }
     ],
     "specifications": [],
@@ -77015,7 +77607,7 @@
     "object_data_apparats": 119,
     "object_data_bacnet_objects": 1080,
     "password_reset_tokens": 0,
-    "permissions": 83,
+    "permissions": 120,
     "phase_permissions": 0,
     "phases": 4,
     "project_control_cabinets": 0,
@@ -77024,7 +77616,7 @@
     "project_users": 0,
     "projects": 0,
     "refresh_tokens": 1,
-    "role_permissions": 83,
+    "role_permissions": 120,
     "specifications": 0,
     "sps_controller_system_types": 0,
     "sps_controllers": 0,

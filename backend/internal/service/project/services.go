@@ -2,6 +2,9 @@ package project
 
 import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
@@ -15,13 +18,13 @@ type Dependencies struct {
 	ProjectFieldDevices      domainProject.ProjectFieldDeviceRepository
 	Users                    domainUser.UserRepository
 	RolePermissions          domainUser.RolePermissionRepository
-	ObjectData               domainFacility.ObjectDataStore
-	BacnetObjects            domainFacility.BacnetObjectStore
-	Specifications           domainFacility.SpecificationStore
+	ObjectData               domainObjectData.ObjectDataStore
+	BacnetObjects            domainObjectData.BacnetObjectStore
+	Specifications           domainFieldDevice.SpecificationStore
 	ControlCabinets          domainFacility.ControlCabinetRepository
 	SPSControllers           domainFacility.SPSControllerRepository
-	SPSControllerSystemTypes domainFacility.SPSControllerSystemTypeStore
-	FieldDevices             domainFacility.FieldDeviceStore
+	SPSControllerSystemTypes domainHierarchy.SPSControllerSystemTypeStore
+	FieldDevices             domainFieldDevice.FieldDeviceStore
 	HierarchyCopier          *facilityservice.HierarchyCopier
 	FieldDeviceCreator       fieldDeviceCreator
 }

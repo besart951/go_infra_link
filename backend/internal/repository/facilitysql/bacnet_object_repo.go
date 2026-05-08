@@ -2,6 +2,7 @@ package facilitysql
 
 import (
 	"context"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -16,7 +17,7 @@ type bacnetObjectRepo struct {
 	db *gorm.DB
 }
 
-func NewBacnetObjectRepository(db *gorm.DB) domainFacility.BacnetObjectStore {
+func NewBacnetObjectRepository(db *gorm.DB) domainObjectData.BacnetObjectStore {
 	baseRepo := gormbase.NewBaseRepository(db,
 		gormbase.TrigramSearchCallback[*domainFacility.BacnetObject](searchspec.BacnetObjects.SearchColumns("")...),
 	)

@@ -103,8 +103,11 @@ func (s *ProjectAccessPolicyService) roleHasPermission(ctx context.Context, role
 }
 
 func (s *ProjectAccessPolicyService) phaseAllowsProjectPermission(ctx context.Context, role domainUser.Role, projectID uuid.UUID, permission string) (bool, error) {
-	if s.phasePermissionRepo == nil || s.repo == nil || !isPhaseScopedProjectPermission(permission) {
+	if !isPhaseScopedProjectPermission(permission) {
 		return true, nil
+	}
+	if s.repo == nil {
+		return false, nil
 	}
 
 	project, err := domain.GetByID(ctx, s.repo, projectID)
@@ -114,10 +117,13 @@ func (s *ProjectAccessPolicyService) phaseAllowsProjectPermission(ctx context.Co
 	if project.PhaseID == uuid.Nil {
 		return true, nil
 	}
+	if s.phasePermissionRepo == nil {
+		return false, nil
+	}
 
 	rule, err := s.phasePermissionRepo.GetByPhaseAndRole(ctx, project.PhaseID, role)
 	if errors.Is(err, domain.ErrNotFound) {
-		return true, nil
+		return false, nil
 	}
 	if err != nil {
 		return false, err
@@ -130,10 +136,13 @@ func isPhaseScopedProjectPermission(permission string) bool {
 	if !strings.HasPrefix(permission, "project.") {
 		return false
 	}
+	if strings.HasSuffix(permission, ".edit") {
+		return false
+	}
 	switch permission {
 	case domainUser.PermissionProjectCreate, domainUser.PermissionProjectListAll:
 		return false
 	default:
-		return !strings.HasSuffix(permission, ".edit")
+		return true
 	}
 }

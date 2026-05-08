@@ -5,6 +5,7 @@ import (
 	"errors"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
@@ -30,6 +31,9 @@ func (s *Service) CreatePermission(ctx context.Context, permission *domainUser.P
 	if permission == nil {
 		return errors.New("permission_required")
 	}
+	if isDisallowedEditPermission(permission) {
+		return domain.ErrInvalidArgument
+	}
 	if err := s.permissionRepo.Create(ctx, permission); err != nil {
 		return err
 	}
@@ -42,6 +46,9 @@ func (s *Service) CreatePermission(ctx context.Context, permission *domainUser.P
 func (s *Service) UpdatePermission(ctx context.Context, permission *domainUser.Permission) error {
 	if permission == nil {
 		return errors.New("permission_required")
+	}
+	if isDisallowedEditPermission(permission) {
+		return domain.ErrInvalidArgument
 	}
 	return s.permissionRepo.Update(ctx, permission)
 }
@@ -299,4 +306,8 @@ func (s permissionSet) sortedValues() []string {
 	}
 	sort.Strings(values)
 	return values
+}
+
+func isDisallowedEditPermission(permission *domainUser.Permission) bool {
+	return permission.Action == "edit" || strings.HasSuffix(permission.Name, ".edit")
 }

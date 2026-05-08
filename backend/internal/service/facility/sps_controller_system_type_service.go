@@ -2,6 +2,7 @@ package facility
 
 import (
 	"context"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -9,12 +10,12 @@ import (
 )
 
 type SPSControllerSystemTypeService struct {
-	repo            domainFacility.SPSControllerSystemTypeStore
+	repo            domainHierarchy.SPSControllerSystemTypeStore
 	hierarchyCopier *HierarchyCopier
 }
 
 func NewSPSControllerSystemTypeService(
-	repo domainFacility.SPSControllerSystemTypeStore,
+	repo domainHierarchy.SPSControllerSystemTypeStore,
 	hierarchyCopier *HierarchyCopier,
 ) *SPSControllerSystemTypeService {
 	return &SPSControllerSystemTypeService{

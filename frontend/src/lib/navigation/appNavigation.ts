@@ -13,6 +13,11 @@ import {
   canAccessTeamDirectory,
   canAccessUserDirectory
 } from '$lib/navigation/userAccess.js';
+import {
+  canPerformPermission,
+  FACILITY_NAV_ACCESS,
+  NAV_PERMISSION
+} from '$lib/navigation/routeAccess.js';
 
 type Translate = (key: string) => string;
 type CanPerform = (action: string, resource: string) => boolean;
@@ -140,10 +145,6 @@ const breadcrumbRoutes: RouteEntry[] = [
   { path: '/facility', titleKey: 'navigation.facility' }
 ];
 
-function canReadFacility(context: NavContext, resource: string): boolean {
-  return context.canPerform('read', resource);
-}
-
 function isPathActive(pathname: string, url: string): boolean {
   return pathname === url || pathname.startsWith(`${url}/`);
 }
@@ -190,67 +191,13 @@ const navDefinitions: NavDefinition[] = [
     hideWhenOnlyOverview: true,
     children: [
       { titleKey: 'hub.overview', url: '/facility' },
-      {
-        titleKey: 'navigation.buildings',
-        url: '/facility/buildings',
-        hasAccess: (context) => canReadFacility(context, 'building')
-      },
-      {
-        titleKey: 'navigation.control_cabinets',
-        url: '/facility/control-cabinets',
-        hasAccess: (context) => canReadFacility(context, 'controlcabinet')
-      },
-      {
-        titleKey: 'navigation.sps_controllers',
-        url: '/facility/sps-controllers',
-        hasAccess: (context) => canReadFacility(context, 'spscontroller')
-      },
-      {
-        titleKey: 'navigation.field_devices',
-        url: '/facility/field-devices',
-        dividerAfter: true,
-        hasAccess: (context) => canReadFacility(context, 'fielddevice')
-      },
-      {
-        titleKey: 'navigation.system_types',
-        url: '/facility/system-types',
-        hasAccess: (context) => canReadFacility(context, 'systemtype')
-      },
-      {
-        titleKey: 'navigation.system_parts',
-        url: '/facility/system-parts',
-        hasAccess: (context) => canReadFacility(context, 'systempart')
-      },
-      {
-        titleKey: 'navigation.apparats',
-        url: '/facility/apparats',
-        hasAccess: (context) => canReadFacility(context, 'apparat')
-      },
-      {
-        titleKey: 'navigation.object_data',
-        url: '/facility/object-data',
-        hasAccess: (context) => canReadFacility(context, 'objectdata')
-      },
-      {
-        titleKey: 'navigation.state_texts',
-        url: '/facility/state-texts',
-        hasAccess: (context) => canReadFacility(context, 'statetext')
-      },
-      {
-        titleKey: 'navigation.alarm_definitions',
-        url: '/facility/alarm-definitions',
-        hasAccess: (context) => canReadFacility(context, 'alarmdefinition')
-      },
-      {
-        titleKey: 'navigation.alarm_catalog',
-        url: '/facility/alarm-catalog',
-        hasAccess: (context) => canReadFacility(context, 'alarmtype')
-      },
-      {
-        titleKey: 'navigation.notification_classes',
-        url: '/facility/notification-classes',
-        hasAccess: (context) => canReadFacility(context, 'notificationclass')
-      }
+      ...FACILITY_NAV_ACCESS.map((item) => ({
+        titleKey: item.titleKey,
+        url: item.url,
+        dividerAfter: item.dividerAfter,
+        hasAccess: (context: NavContext) =>
+          canPerformPermission(context.canPerform, item.permission)
+      }))
     ]
   },
   {
@@ -268,7 +215,7 @@ const navDefinitions: NavDefinition[] = [
       {
         titleKey: 'phase.phases',
         url: '/projects/phases',
-        hasAccess: ({ canPerform }) => canPerform('read', 'phase')
+        hasAccess: ({ canPerform }) => canPerformPermission(canPerform, NAV_PERMISSION.phaseList)
       }
     ]
   },
@@ -276,13 +223,13 @@ const navDefinitions: NavDefinition[] = [
     titleKey: 'navigation.excel_importer',
     url: '/excel',
     icon: SheetIcon,
-    hasAccess: ({ canPerform }) => canPerform('read', 'objectdata')
+    hasAccess: ({ canPerform }) => canPerformPermission(canPerform, NAV_PERMISSION.excelImporter)
   },
   {
     titleKey: 'navigation.timeline',
     url: '/timeline',
     icon: HistoryIcon,
-    hasAccess: ({ canPerform }) => canPerform('read', 'timeline')
+    hasAccess: ({ canPerform }) => canPerformPermission(canPerform, NAV_PERMISSION.timeline)
   },
   {
     titleKey: 'navigation.notifications',
@@ -296,7 +243,8 @@ const navDefinitions: NavDefinition[] = [
         titleKey: 'notifications.page.title',
         url: '/admin/notifications/smtp',
         activePaths: ['/admin/notifications'],
-        hasAccess: ({ canPerform }) => canPerform('manage', 'notification.smtp')
+        hasAccess: ({ canPerform }) =>
+          canPerformPermission(canPerform, NAV_PERMISSION.notificationSMTP)
       }
     ]
   }

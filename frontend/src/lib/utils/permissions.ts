@@ -32,7 +32,3 @@ function hasPermission(permission: string): boolean {
 export function canPerform(action: string, resource: string): boolean {
   return hasPermission(`${resource}.${action}`);
 }
-
-export function canPerformAny(actions: string[], resource: string): boolean {
-  return actions.some((action) => canPerform(action, resource));
-}

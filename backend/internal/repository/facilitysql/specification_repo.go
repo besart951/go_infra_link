@@ -2,6 +2,7 @@ package facilitysql
 
 import (
 	"context"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -16,7 +17,7 @@ type specificationRepo struct {
 	db *gorm.DB
 }
 
-func NewSpecificationRepository(db *gorm.DB) domainFacility.SpecificationStore {
+func NewSpecificationRepository(db *gorm.DB) domainFieldDevice.SpecificationStore {
 	baseRepo := gormbase.NewBaseRepository(db,
 		gormbase.TrigramSearchCallback[*domainFacility.Specification](searchspec.Specifications.SearchColumns("")...),
 	)

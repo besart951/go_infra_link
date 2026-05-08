@@ -115,6 +115,12 @@ var migrations = []migration{
 		blueGreenCompatible: true,
 		apply:               migrateRealtimeEvents,
 	},
+	{
+		version:             "202605080001",
+		description:         "unify_permission_model",
+		blueGreenCompatible: true,
+		apply:               unifyPermissionModel,
+	},
 }
 
 type MigrationOptions struct {

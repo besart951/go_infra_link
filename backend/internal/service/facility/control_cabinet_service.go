@@ -2,6 +2,9 @@ package facility
 
 import (
 	"context"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -12,10 +15,10 @@ type ControlCabinetService struct {
 	repo                    domainFacility.ControlCabinetRepository
 	buildingRepo            domainFacility.BuildingRepository
 	spsControllerRepo       domainFacility.SPSControllerRepository
-	spsControllerSystemRepo domainFacility.SPSControllerSystemTypeStore
-	fieldDeviceRepo         domainFacility.FieldDeviceStore
-	bacnetObjectRepo        domainFacility.BacnetObjectStore
-	specificationRepo       domainFacility.SpecificationStore
+	spsControllerSystemRepo domainHierarchy.SPSControllerSystemTypeStore
+	fieldDeviceRepo         domainFieldDevice.FieldDeviceStore
+	bacnetObjectRepo        domainObjectData.BacnetObjectStore
+	specificationRepo       domainFieldDevice.SpecificationStore
 	hierarchyCopier         *HierarchyCopier
 	tx                      txCoordinator
 }
@@ -26,10 +29,10 @@ func NewControlCabinetService(
 	repo domainFacility.ControlCabinetRepository,
 	buildingRepo domainFacility.BuildingRepository,
 	spsControllerRepo domainFacility.SPSControllerRepository,
-	spsControllerSystemRepo domainFacility.SPSControllerSystemTypeStore,
-	fieldDeviceRepo domainFacility.FieldDeviceStore,
-	bacnetObjectRepo domainFacility.BacnetObjectStore,
-	specificationRepo domainFacility.SpecificationStore,
+	spsControllerSystemRepo domainHierarchy.SPSControllerSystemTypeStore,
+	fieldDeviceRepo domainFieldDevice.FieldDeviceStore,
+	bacnetObjectRepo domainObjectData.BacnetObjectStore,
+	specificationRepo domainFieldDevice.SpecificationStore,
 	hierarchyCopier *HierarchyCopier,
 ) *ControlCabinetService {
 	return &ControlCabinetService{

@@ -18,7 +18,10 @@ vi.mock('$lib/api/client', () => ({
 import { load } from './+layout.js';
 
 function createLoadEvent() {
-  return { fetch: vi.fn() as unknown as typeof fetch } as Parameters<typeof load>[0];
+  return {
+    fetch: vi.fn() as unknown as typeof fetch,
+    url: new URL('https://app.test/')
+  } as Parameters<typeof load>[0];
 }
 
 describe('(app) layout load', () => {

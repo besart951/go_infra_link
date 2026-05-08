@@ -208,7 +208,7 @@ func (h *Handler) ListProjectFieldDevices(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectFieldDeviceRead) {
 		return
 	}
 
@@ -350,7 +350,7 @@ func (h *OptionsHandler) GetFieldDeviceOptionsForProject(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectFieldDeviceRead) {
 		return
 	}
 

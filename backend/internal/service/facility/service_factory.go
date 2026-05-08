@@ -5,6 +5,14 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
+	serviceAlarm "github.com/besart951/go_infra_link/backend/internal/service/facility/alarm"
+	serviceFieldDevice "github.com/besart951/go_infra_link/backend/internal/service/facility/fielddevice"
+	serviceHierarchy "github.com/besart951/go_infra_link/backend/internal/service/facility/hierarchy"
+	serviceObjectData "github.com/besart951/go_infra_link/backend/internal/service/facility/objectdata"
+	serviceReference "github.com/besart951/go_infra_link/backend/internal/service/facility/reference"
 	"github.com/google/uuid"
 )
 
@@ -62,15 +70,15 @@ type Repositories struct {
 	Buildings                domainFacility.BuildingRepository
 	SystemTypes              domainFacility.SystemTypeRepository
 	SystemParts              domainFacility.SystemPartRepository
-	Specifications           domainFacility.SpecificationStore
+	Specifications           domainFieldDevice.SpecificationStore
 	Apparats                 domainFacility.ApparatRepository
 	ControlCabinets          domainFacility.ControlCabinetRepository
-	FieldDevices             domainFacility.FieldDeviceStore
+	FieldDevices             domainFieldDevice.FieldDeviceStore
 	SPSControllers           domainFacility.SPSControllerRepository
-	SPSControllerSystemTypes domainFacility.SPSControllerSystemTypeStore
-	BacnetObjects            domainFacility.BacnetObjectStore
-	ObjectData               domainFacility.ObjectDataStore
-	ObjectDataBacnetObjects  domainFacility.ObjectDataBacnetObjectStore
+	SPSControllerSystemTypes domainHierarchy.SPSControllerSystemTypeStore
+	BacnetObjects            domainObjectData.BacnetObjectStore
+	ObjectData               domainObjectData.ObjectDataStore
+	ObjectDataBacnetObjects  domainObjectData.ObjectDataBacnetObjectStore
 	StateTexts               domainFacility.StateTextRepository
 	NotificationClasses      domainFacility.NotificationClassRepository
 	AlarmDefinitions         domainFacility.AlarmDefinitionRepository
@@ -79,6 +87,69 @@ type Repositories struct {
 	AlarmTypes               domainFacility.AlarmTypeRepository
 	AlarmTypeFields          domainFacility.AlarmTypeFieldRepository
 	BacnetObjectAlarmValues  domainFacility.BacnetObjectAlarmValueRepository
+}
+
+func (r Repositories) FieldDeviceModule() serviceFieldDevice.Repositories {
+	return serviceFieldDevice.Repositories{
+		FieldDevices:             r.FieldDevices,
+		SPSControllerSystemTypes: r.SPSControllerSystemTypes,
+		SystemTypes:              r.SystemTypes,
+		Apparats:                 r.Apparats,
+		SystemParts:              r.SystemParts,
+		Specifications:           r.Specifications,
+		BacnetObjects:            r.BacnetObjects,
+		ObjectData:               r.ObjectData,
+		AlarmTypes:               r.AlarmTypes,
+		BacnetObjectAlarmValues:  r.BacnetObjectAlarmValues,
+	}
+}
+
+func (r Repositories) ObjectDataModule() serviceObjectData.Repositories {
+	return serviceObjectData.Repositories{
+		ObjectData:              r.ObjectData,
+		BacnetObjects:           r.BacnetObjects,
+		ObjectDataBacnetObjects: r.ObjectDataBacnetObjects,
+		Apparats:                r.Apparats,
+		FieldDevices:            r.FieldDevices,
+		AlarmDefinitions:        r.AlarmDefinitions,
+		AlarmTypes:              r.AlarmTypes,
+	}
+}
+
+func (r Repositories) HierarchyModule() serviceHierarchy.Repositories {
+	return serviceHierarchy.Repositories{
+		Buildings:                r.Buildings,
+		ControlCabinets:          r.ControlCabinets,
+		SPSControllers:           r.SPSControllers,
+		SystemTypes:              r.SystemTypes,
+		SPSControllerSystemTypes: r.SPSControllerSystemTypes,
+		FieldDevices:             r.FieldDevices,
+		Specifications:           r.Specifications,
+		BacnetObjects:            r.BacnetObjects,
+	}
+}
+
+func (r Repositories) ReferenceModule() serviceReference.Repositories {
+	return serviceReference.Repositories{
+		SystemTypes:         r.SystemTypes,
+		SystemParts:         r.SystemParts,
+		Apparats:            r.Apparats,
+		ObjectData:          r.ObjectData,
+		StateTexts:          r.StateTexts,
+		NotificationClasses: r.NotificationClasses,
+	}
+}
+
+func (r Repositories) AlarmModule() serviceAlarm.Repositories {
+	return serviceAlarm.Repositories{
+		AlarmDefinitions:        r.AlarmDefinitions,
+		Units:                   r.Units,
+		AlarmFields:             r.AlarmFields,
+		AlarmTypes:              r.AlarmTypes,
+		AlarmTypeFields:         r.AlarmTypeFields,
+		BacnetObjectAlarmValues: r.BacnetObjectAlarmValues,
+		BacnetObjects:           r.BacnetObjects,
+	}
 }
 
 // Services bundles all facility services.
@@ -111,99 +182,104 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 		cfg = cfgs[0]
 	}
 	tx := newTxCoordinator(cfg)
+	hierarchyRepos := repos.HierarchyModule()
+	referenceRepos := repos.ReferenceModule()
+	fieldDeviceRepos := repos.FieldDeviceModule()
+	objectDataRepos := repos.ObjectDataModule()
+	alarmRepos := repos.AlarmModule()
 
 	hierarchyCopier := NewHierarchyCopier(
-		repos.ControlCabinets,
-		repos.Buildings,
-		repos.SPSControllers,
-		repos.SystemTypes,
-		repos.SPSControllerSystemTypes,
-		repos.FieldDevices,
-		repos.Specifications,
-		repos.BacnetObjects,
+		hierarchyRepos.ControlCabinets,
+		hierarchyRepos.Buildings,
+		hierarchyRepos.SPSControllers,
+		hierarchyRepos.SystemTypes,
+		hierarchyRepos.SPSControllerSystemTypes,
+		hierarchyRepos.FieldDevices,
+		hierarchyRepos.Specifications,
+		hierarchyRepos.BacnetObjects,
 	)
 	hierarchyCopier.bindTransactions(tx)
 
 	fieldDeviceService := NewFieldDeviceService(
-		repos.FieldDevices,
-		repos.SPSControllerSystemTypes,
-		repos.SystemTypes,
-		repos.Apparats,
-		repos.SystemParts,
-		repos.Specifications,
-		repos.BacnetObjects,
-		repos.ObjectData,
-		repos.AlarmTypes,
-		repos.BacnetObjectAlarmValues,
+		fieldDeviceRepos.FieldDevices,
+		fieldDeviceRepos.SPSControllerSystemTypes,
+		fieldDeviceRepos.SystemTypes,
+		fieldDeviceRepos.Apparats,
+		fieldDeviceRepos.SystemParts,
+		fieldDeviceRepos.Specifications,
+		fieldDeviceRepos.BacnetObjects,
+		fieldDeviceRepos.ObjectData,
+		fieldDeviceRepos.AlarmTypes,
+		fieldDeviceRepos.BacnetObjectAlarmValues,
 	)
 	fieldDeviceService.bindTransactions(tx)
 	fieldDeviceService.bindChangeRecorder(cfg.ChangeRecorder)
 	objectDataService := NewObjectDataService(
-		repos.ObjectData,
-		repos.BacnetObjects,
-		repos.ObjectDataBacnetObjects,
-		repos.Apparats,
-		repos.AlarmDefinitions,
-		repos.AlarmTypes,
+		objectDataRepos.ObjectData,
+		objectDataRepos.BacnetObjects,
+		objectDataRepos.ObjectDataBacnetObjects,
+		objectDataRepos.Apparats,
+		objectDataRepos.AlarmDefinitions,
+		objectDataRepos.AlarmTypes,
 	)
 	objectDataService.bindTransactions(tx)
 	bacnetObjectService := NewBacnetObjectService(
-		repos.BacnetObjects,
-		repos.FieldDevices,
-		repos.ObjectData,
-		repos.ObjectDataBacnetObjects,
-		repos.AlarmDefinitions,
-		repos.AlarmTypes,
+		objectDataRepos.BacnetObjects,
+		objectDataRepos.FieldDevices,
+		objectDataRepos.ObjectData,
+		objectDataRepos.ObjectDataBacnetObjects,
+		objectDataRepos.AlarmDefinitions,
+		objectDataRepos.AlarmTypes,
 	)
 	bacnetObjectService.bindTransactions(tx)
 	spsControllerService := NewSPSControllerService(
-		repos.SPSControllers,
-		repos.ControlCabinets,
-		repos.Buildings,
-		repos.SystemTypes,
-		repos.SPSControllerSystemTypes,
-		repos.FieldDevices,
+		hierarchyRepos.SPSControllers,
+		hierarchyRepos.ControlCabinets,
+		hierarchyRepos.Buildings,
+		hierarchyRepos.SystemTypes,
+		hierarchyRepos.SPSControllerSystemTypes,
+		hierarchyRepos.FieldDevices,
 		hierarchyCopier,
 	)
 	spsControllerService.bindTransactions(tx)
 	controlCabinetService := NewControlCabinetService(
-		repos.ControlCabinets,
-		repos.Buildings,
-		repos.SPSControllers,
-		repos.SPSControllerSystemTypes,
-		repos.FieldDevices,
-		repos.BacnetObjects,
-		repos.Specifications,
+		hierarchyRepos.ControlCabinets,
+		hierarchyRepos.Buildings,
+		hierarchyRepos.SPSControllers,
+		hierarchyRepos.SPSControllerSystemTypes,
+		hierarchyRepos.FieldDevices,
+		hierarchyRepos.BacnetObjects,
+		hierarchyRepos.Specifications,
 		hierarchyCopier,
 	)
 	controlCabinetService.bindTransactions(tx)
 
 	return &Services{
-		HierarchyCopier: hierarchyCopier,
-		Building:        NewBuildingService(repos.Buildings),
-		SystemType:      NewSystemTypeService(repos.SystemTypes),
-		SystemPart:      NewSystemPartService(repos.SystemParts),
-		Apparat:         NewApparatService(repos.Apparats, repos.SystemParts, repos.ObjectData),
-		ControlCabinet:   controlCabinetService,
+		HierarchyCopier:   hierarchyCopier,
+		Building:          NewBuildingService(hierarchyRepos.Buildings),
+		SystemType:        NewSystemTypeService(referenceRepos.SystemTypes),
+		SystemPart:        NewSystemPartService(referenceRepos.SystemParts),
+		Apparat:           NewApparatService(referenceRepos.Apparats, referenceRepos.SystemParts, referenceRepos.ObjectData),
+		ControlCabinet:    controlCabinetService,
 		FieldDevice:       fieldDeviceService,
 		BacnetObject:      bacnetObjectService,
 		SPSController:     spsControllerService,
-		StateText:         NewStateTextService(repos.StateTexts),
-		NotificationClass: NewNotificationClassService(repos.NotificationClasses),
-		AlarmDefinition:   NewAlarmDefinitionService(repos.AlarmDefinitions),
+		StateText:         NewStateTextService(referenceRepos.StateTexts),
+		NotificationClass: NewNotificationClassService(referenceRepos.NotificationClasses),
+		AlarmDefinition:   NewAlarmDefinitionService(alarmRepos.AlarmDefinitions),
 		ObjectData:        objectDataService,
-		Unit:              NewUnitService(repos.Units),
-		AlarmField:        NewAlarmFieldService(repos.AlarmFields),
-		AlarmTypeField:    NewAlarmTypeFieldService(repos.AlarmTypeFields),
+		Unit:              NewUnitService(alarmRepos.Units),
+		AlarmField:        NewAlarmFieldService(alarmRepos.AlarmFields),
+		AlarmTypeField:    NewAlarmTypeFieldService(alarmRepos.AlarmTypeFields),
 		SPSControllerSystemType: NewSPSControllerSystemTypeService(
-			repos.SPSControllerSystemTypes,
+			hierarchyRepos.SPSControllerSystemTypes,
 			hierarchyCopier,
 		),
-		AlarmType: NewAlarmTypeService(repos.AlarmTypes),
+		AlarmType: NewAlarmTypeService(alarmRepos.AlarmTypes),
 		BacnetAlarmValue: NewBacnetAlarmValueService(
-			repos.BacnetObjectAlarmValues,
-			repos.AlarmTypes,
-			repos.BacnetObjects,
+			alarmRepos.BacnetObjectAlarmValues,
+			alarmRepos.AlarmTypes,
+			alarmRepos.BacnetObjects,
 		),
 	}
 }

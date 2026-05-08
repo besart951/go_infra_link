@@ -4,6 +4,9 @@ package wire
 
 import (
 	"context"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
@@ -52,15 +55,15 @@ type Repositories struct {
 	FacilityBuildings                domainFacility.BuildingRepository
 	FacilitySystemTypes              domainFacility.SystemTypeRepository
 	FacilitySystemParts              domainFacility.SystemPartRepository
-	FacilitySpecifications           domainFacility.SpecificationStore
+	FacilitySpecifications           domainFieldDevice.SpecificationStore
 	FacilityApparats                 domainFacility.ApparatRepository
 	FacilityControlCabinet           domainFacility.ControlCabinetRepository
-	FacilityFieldDevices             domainFacility.FieldDeviceStore
+	FacilityFieldDevices             domainFieldDevice.FieldDeviceStore
 	FacilitySPSControllers           domainFacility.SPSControllerRepository
-	FacilitySPSControllerSystemTypes domainFacility.SPSControllerSystemTypeStore
-	FacilityBacnetObjects            domainFacility.BacnetObjectStore
-	FacilityObjectData               domainFacility.ObjectDataStore
-	FacilityObjectDataBacnetObjects  domainFacility.ObjectDataBacnetObjectStore
+	FacilitySPSControllerSystemTypes domainHierarchy.SPSControllerSystemTypeStore
+	FacilityBacnetObjects            domainObjectData.BacnetObjectStore
+	FacilityObjectData               domainObjectData.ObjectDataStore
+	FacilityObjectDataBacnetObjects  domainObjectData.ObjectDataBacnetObjectStore
 
 	FacilityStateTexts          domainFacility.StateTextRepository
 	FacilityNotificationClasses domainFacility.NotificationClassRepository

@@ -70,7 +70,8 @@ describe('app navigation', () => {
       user: baseUser,
       translate,
       canPerform: (action, resource) =>
-        action === 'read' && ['objectdata', 'timeline'].includes(resource)
+        (action === 'create' && resource === 'objectdata') ||
+        (action === 'read' && resource === 'timeline')
     });
 
     const urls = items.map((item) => item.url);
@@ -83,7 +84,7 @@ describe('app navigation', () => {
       pathname: '/timeline',
       user: baseUser,
       translate,
-      canPerform: (action, resource) => action === 'read' && resource === 'objectdata'
+      canPerform: () => false
     });
 
     expect(items.find((item) => item.url === '/timeline')).toBeUndefined();

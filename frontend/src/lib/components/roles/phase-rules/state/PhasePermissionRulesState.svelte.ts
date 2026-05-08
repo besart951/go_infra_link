@@ -55,8 +55,7 @@ function isPhaseRulePermission(permission: Permission): boolean {
   return (
     permission.name.startsWith('project.') &&
     permission.name !== 'project.create' &&
-    permission.name !== 'project.listAll' &&
-    permission.action !== 'edit'
+    permission.name !== 'project.listAll'
   );
 }
 

@@ -134,10 +134,13 @@ func isPhaseScopedProjectPermission(permission string) bool {
 	if !strings.HasPrefix(permission, "project.") {
 		return false
 	}
+	if strings.HasSuffix(permission, ".edit") {
+		return false
+	}
 	switch permission {
 	case domainUser.PermissionProjectCreate, domainUser.PermissionProjectListAll:
 		return false
 	default:
-		return !strings.HasSuffix(permission, ".edit")
+		return true
 	}
 }

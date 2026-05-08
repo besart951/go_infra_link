@@ -2,6 +2,9 @@ package facility
 
 import (
 	"context"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
@@ -14,10 +17,10 @@ type HierarchyCopier struct {
 	buildingRepo            domainFacility.BuildingRepository
 	spsControllerRepo       domainFacility.SPSControllerRepository
 	systemTypeRepo          domainFacility.SystemTypeRepository
-	spsControllerSystemRepo domainFacility.SPSControllerSystemTypeStore
-	fieldDeviceRepo         domainFacility.FieldDeviceStore
-	specificationRepo       domainFacility.SpecificationStore
-	bacnetObjectRepo        domainFacility.BacnetObjectStore
+	spsControllerSystemRepo domainHierarchy.SPSControllerSystemTypeStore
+	fieldDeviceRepo         domainFieldDevice.FieldDeviceStore
+	specificationRepo       domainFieldDevice.SpecificationStore
+	bacnetObjectRepo        domainObjectData.BacnetObjectStore
 	tx                      txCoordinator
 }
 
@@ -26,10 +29,10 @@ func NewHierarchyCopier(
 	buildingRepo domainFacility.BuildingRepository,
 	spsControllerRepo domainFacility.SPSControllerRepository,
 	systemTypeRepo domainFacility.SystemTypeRepository,
-	spsControllerSystemRepo domainFacility.SPSControllerSystemTypeStore,
-	fieldDeviceRepo domainFacility.FieldDeviceStore,
-	specificationRepo domainFacility.SpecificationStore,
-	bacnetObjectRepo domainFacility.BacnetObjectStore,
+	spsControllerSystemRepo domainHierarchy.SPSControllerSystemTypeStore,
+	fieldDeviceRepo domainFieldDevice.FieldDeviceStore,
+	specificationRepo domainFieldDevice.SpecificationStore,
+	bacnetObjectRepo domainObjectData.BacnetObjectStore,
 ) *HierarchyCopier {
 	return &HierarchyCopier{
 		controlCabinetRepo:      controlCabinetRepo,

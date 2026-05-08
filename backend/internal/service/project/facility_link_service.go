@@ -2,6 +2,9 @@ package project
 
 import (
 	"context"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -15,13 +18,13 @@ type ProjectFacilityLinkService struct {
 	projectControlCabinetRepo domainProject.ProjectControlCabinetRepository
 	projectSPSControllerRepo  domainProject.ProjectSPSControllerRepository
 	projectFieldDeviceRepo    domainProject.ProjectFieldDeviceRepository
-	objectDataRepo            domainFacility.ObjectDataStore
-	bacnetObjectRepo          domainFacility.BacnetObjectStore
-	specificationRepo         domainFacility.SpecificationStore
+	objectDataRepo            domainObjectData.ObjectDataStore
+	bacnetObjectRepo          domainObjectData.BacnetObjectStore
+	specificationRepo         domainFieldDevice.SpecificationStore
 	controlCabinetRepo        domainFacility.ControlCabinetRepository
 	spsControllerRepo         domainFacility.SPSControllerRepository
-	spsControllerSystemRepo   domainFacility.SPSControllerSystemTypeStore
-	fieldDeviceRepo           domainFacility.FieldDeviceStore
+	spsControllerSystemRepo   domainHierarchy.SPSControllerSystemTypeStore
+	fieldDeviceRepo           domainFieldDevice.FieldDeviceStore
 	hierarchyCopier           *facilityservice.HierarchyCopier
 	fieldDeviceCreator        fieldDeviceCreator
 	tx                        txCoordinator
@@ -259,7 +262,7 @@ func (s *ProjectFacilityLinkService) ListFieldDevices(ctx context.Context, proje
 func (s *ProjectFacilityLinkService) ListObjectData(ctx context.Context, projectID uuid.UUID, page, limit int, search string, apparatID, systemPartID *uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
 	params := domain.PaginationParams{Page: page, Limit: limit, Search: search}
-	return s.objectDataRepo.GetPaginatedListWithFilters(ctx, params, domainFacility.ObjectDataFilterParams{
+	return s.objectDataRepo.GetPaginatedListWithFilters(ctx, params, domainObjectData.ObjectDataFilterParams{
 		ProjectID:    &projectID,
 		ApparatID:    apparatID,
 		SystemPartID: systemPartID,

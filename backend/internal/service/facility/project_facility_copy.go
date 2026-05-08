@@ -2,6 +2,9 @@ package facility
 
 import (
 	"context"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -14,11 +17,11 @@ type projectFacilityCopy struct {
 	buildingRepo            domainFacility.BuildingRepository
 	spsControllerRepo       domainFacility.SPSControllerRepository
 	systemTypeRepo          domainFacility.SystemTypeRepository
-	spsControllerSystemRepo domainFacility.SPSControllerSystemTypeStore
-	fieldDeviceRepo         domainFacility.FieldDeviceStore
-	specificationRepo       domainFacility.SpecificationStore
-	bacnetObjectRepo        domainFacility.BacnetObjectStore
-	objectDataRepo          domainFacility.ObjectDataStore
+	spsControllerSystemRepo domainHierarchy.SPSControllerSystemTypeStore
+	fieldDeviceRepo         domainFieldDevice.FieldDeviceStore
+	specificationRepo       domainFieldDevice.SpecificationStore
+	bacnetObjectRepo        domainObjectData.BacnetObjectStore
+	objectDataRepo          domainObjectData.ObjectDataStore
 	alarmTypeRepo           domainFacility.AlarmTypeRepository
 	bacnetAlarmValueRepo    domainFacility.BacnetObjectAlarmValueRepository
 }
@@ -53,8 +56,8 @@ func (s *FieldDeviceService) projectFacilityCopy() projectFacilityCopy {
 // and remaps internal BACnet Object software references.
 func CopyObjectDataTemplatesForProject(
 	ctx context.Context,
-	objectDataRepo domainFacility.ObjectDataStore,
-	bacnetObjectRepo domainFacility.BacnetObjectStore,
+	objectDataRepo domainObjectData.ObjectDataStore,
+	bacnetObjectRepo domainObjectData.BacnetObjectStore,
 	projectID uuid.UUID,
 ) error {
 	return projectFacilityCopy{

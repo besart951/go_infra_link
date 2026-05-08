@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"sort"
 	"strings"
 	"testing"
@@ -1067,7 +1068,7 @@ func (r *projectObjectDataRepoFake) GetForProjectLite(ctx context.Context, proje
 	return r.GetForProject(ctx, projectID)
 }
 
-func (r *projectObjectDataRepoFake) GetPaginatedListWithFilters(_ context.Context, params domain.PaginationParams, filters domainFacility.ObjectDataFilterParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
+func (r *projectObjectDataRepoFake) GetPaginatedListWithFilters(_ context.Context, params domain.PaginationParams, filters domainObjectData.ObjectDataFilterParams) (*domain.PaginatedList[domainFacility.ObjectData], error) {
 	r.lastPagination = params
 	switch {
 	case filters.ProjectID != nil && filters.ApparatID != nil && filters.SystemPartID != nil:

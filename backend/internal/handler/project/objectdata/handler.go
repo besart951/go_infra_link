@@ -51,7 +51,7 @@ func (h *Handler) ListProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	if !projectshared.EnsureProjectAccess(c, h.access, projectID) {
+	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectUpdate) {
 		return
 	}
 

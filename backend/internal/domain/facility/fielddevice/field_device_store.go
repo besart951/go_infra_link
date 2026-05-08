@@ -1,16 +1,17 @@
-package facility
+package fielddevice
 
 import (
 	"context"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
 )
 
 // FieldDeviceStore extends the base repository with helper methods
 // needed for high-volume uniqueness checks.
 type FieldDeviceStore interface {
-	FieldDeviceRepository
+	domainFacility.FieldDeviceRepository
 
 	// GetIDsBySPSControllerSystemTypeIDs returns IDs of non-deleted field devices
 	// that belong to the given SPS controller system type IDs.
@@ -25,8 +26,8 @@ type FieldDeviceStore interface {
 	GetUsedApparatNumbers(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID uuid.UUID, apparatID uuid.UUID) ([]int, error)
 
 	// GetPaginatedListWithFilters returns paginated field devices with optional filtering
-	GetPaginatedListWithFilters(ctx context.Context, params domain.PaginationParams, filters FieldDeviceFilterParams) (*domain.PaginatedList[FieldDevice], error)
+	GetPaginatedListWithFilters(ctx context.Context, params domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error)
 
 	// BulkCreate creates multiple field devices in batches.
-	BulkCreate(ctx context.Context, entities []*FieldDevice, batchSize int) error
+	BulkCreate(ctx context.Context, entities []*domainFacility.FieldDevice, batchSize int) error
 }

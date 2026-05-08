@@ -2,6 +2,7 @@ package facility
 
 import (
 	"context"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -10,9 +11,9 @@ import (
 
 type ObjectDataService struct {
 	baseService[domainFacility.ObjectData]
-	extRepo               domainFacility.ObjectDataStore
-	bacnetObjectRepo      domainFacility.BacnetObjectStore
-	objectDataBacnetStore domainFacility.ObjectDataBacnetObjectStore
+	extRepo               domainObjectData.ObjectDataStore
+	bacnetObjectRepo      domainObjectData.BacnetObjectStore
+	objectDataBacnetStore domainObjectData.ObjectDataBacnetObjectStore
 	apparatRepo           domainFacility.ApparatRepository
 	alarmDefinitionRepo   domainFacility.AlarmDefinitionRepository
 	alarmTypeRepo         domainFacility.AlarmTypeRepository
@@ -20,9 +21,9 @@ type ObjectDataService struct {
 }
 
 func NewObjectDataService(
-	repo domainFacility.ObjectDataStore,
-	bacnetObjectRepo domainFacility.BacnetObjectStore,
-	objectDataBacnetStore domainFacility.ObjectDataBacnetObjectStore,
+	repo domainObjectData.ObjectDataStore,
+	bacnetObjectRepo domainObjectData.BacnetObjectStore,
+	objectDataBacnetStore domainObjectData.ObjectDataBacnetObjectStore,
 	apparatRepo domainFacility.ApparatRepository,
 	alarmDefinitionRepo domainFacility.AlarmDefinitionRepository,
 	alarmTypeRepo domainFacility.AlarmTypeRepository,
@@ -89,7 +90,7 @@ func (s *ObjectDataService) ListByApparatID(ctx context.Context, page, limit int
 	page, limit = domain.NormalizePagination(page, limit, s.defaultLimit)
 	return s.extRepo.GetPaginatedListWithFilters(ctx,
 		domain.PaginationParams{Page: page, Limit: limit, Search: search},
-		domainFacility.ObjectDataFilterParams{ApparatID: &apparatID},
+		domainObjectData.ObjectDataFilterParams{ApparatID: &apparatID},
 	)
 }
 
@@ -97,7 +98,7 @@ func (s *ObjectDataService) ListBySystemPartID(ctx context.Context, page, limit 
 	page, limit = domain.NormalizePagination(page, limit, s.defaultLimit)
 	return s.extRepo.GetPaginatedListWithFilters(ctx,
 		domain.PaginationParams{Page: page, Limit: limit, Search: search},
-		domainFacility.ObjectDataFilterParams{SystemPartID: &systemPartID},
+		domainObjectData.ObjectDataFilterParams{SystemPartID: &systemPartID},
 	)
 }
 
@@ -105,7 +106,7 @@ func (s *ObjectDataService) ListByApparatAndSystemPartID(ctx context.Context, pa
 	page, limit = domain.NormalizePagination(page, limit, s.defaultLimit)
 	return s.extRepo.GetPaginatedListWithFilters(ctx,
 		domain.PaginationParams{Page: page, Limit: limit, Search: search},
-		domainFacility.ObjectDataFilterParams{ApparatID: &apparatID, SystemPartID: &systemPartID},
+		domainObjectData.ObjectDataFilterParams{ApparatID: &apparatID, SystemPartID: &systemPartID},
 	)
 }
 

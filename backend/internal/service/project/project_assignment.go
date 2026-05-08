@@ -2,6 +2,9 @@ package project
 
 import (
 	"context"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -20,10 +23,10 @@ type projectAssignmentDependencies struct {
 	projectFieldDeviceRepo    domainProject.ProjectFieldDeviceRepository
 	controlCabinetRepo        domainFacility.ControlCabinetRepository
 	spsControllerRepo         domainFacility.SPSControllerRepository
-	spsControllerSystemRepo   domainFacility.SPSControllerSystemTypeStore
-	fieldDeviceRepo           domainFacility.FieldDeviceStore
-	specificationRepo         domainFacility.SpecificationStore
-	bacnetObjectRepo          domainFacility.BacnetObjectStore
+	spsControllerSystemRepo   domainHierarchy.SPSControllerSystemTypeStore
+	fieldDeviceRepo           domainFieldDevice.FieldDeviceStore
+	specificationRepo         domainFieldDevice.SpecificationStore
+	bacnetObjectRepo          domainObjectData.BacnetObjectStore
 }
 
 type projectAssignmentKind int

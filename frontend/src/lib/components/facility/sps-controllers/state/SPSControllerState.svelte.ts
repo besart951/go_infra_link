@@ -6,7 +6,7 @@ import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinet
 import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
 import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
 import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsControllerSystemTypeRepository.js';
-import { canPerform, canPerformAny } from '$lib/utils/permissions.js';
+import { canPerform } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
 import { sanitizeFilters } from '$lib/state/table/sanitizeFilters.js';
 import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
@@ -80,7 +80,7 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
 
   canCreateSPSController(): boolean {
     return this.isProjectContext
-      ? canPerformAny(['create', 'edit'], 'project.spscontroller')
+      ? canPerform('create', 'project.spscontroller')
       : canPerform('create', 'spscontroller');
   }
 
@@ -90,13 +90,13 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
 
   canUpdateSPSController(): boolean {
     return this.isProjectContext
-      ? canPerformAny(['update', 'edit'], 'project.spscontroller')
+      ? canPerform('update', 'project.spscontroller')
       : canPerform('update', 'spscontroller');
   }
 
   canDeleteSPSController(): boolean {
     return this.isProjectContext
-      ? canPerformAny(['delete', 'edit'], 'project.spscontroller')
+      ? canPerform('delete', 'project.spscontroller')
       : canPerform('delete', 'spscontroller');
   }
 

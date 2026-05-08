@@ -2,6 +2,7 @@ package facilitysql
 
 import (
 	"context"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -35,7 +36,7 @@ func applySPSControllerSystemTypeSearch(query *gorm.DB, search string) *gorm.DB 
 		})
 }
 
-func NewSPSControllerSystemTypeRepository(db *gorm.DB) domainFacility.SPSControllerSystemTypeStore {
+func NewSPSControllerSystemTypeRepository(db *gorm.DB) domainHierarchy.SPSControllerSystemTypeStore {
 	searchCallback := func(query *gorm.DB, search string) *gorm.DB {
 		return applySPSControllerSystemTypeSearch(query, search)
 	}
