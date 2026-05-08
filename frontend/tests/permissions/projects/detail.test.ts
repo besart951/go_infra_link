@@ -1,4 +1,4 @@
-import { render } from '@testing-library/svelte';
+import { render, screen, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { permission } from '../../helpers/permissions.js';
@@ -139,11 +139,48 @@ describe('/projects/:id permission surface', () => {
     expect(container.querySelector('a[href="/projects/project-1/settings"]')).toBeNull();
   });
 
+  it('does not open project subareas that would be forbidden for a project.listAll-only user', () => {
+    state.setPermissions([permission('project', 'listAll')]);
+
+    render(ProjectDetailPage);
+
+    expect(state.projectDetailService.listUsers).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('history.open')).not.toBeInTheDocument();
+    expect(screen.queryByText('projects.control_cabinets.title')).not.toBeInTheDocument();
+    expect(screen.queryByText('projects.sps_controllers.title')).not.toBeInTheDocument();
+    expect(screen.queryByText('projects.field_devices.title')).not.toBeInTheDocument();
+  });
+
   it('shows the settings link when project.update is granted', () => {
     state.setPermissions([permission('project', 'listAll'), permission('project', 'update')]);
 
     const { container } = render(ProjectDetailPage);
 
     expect(container.querySelector('a[href="/projects/project-1/settings"]')).not.toBeNull();
+    expect(state.projectDetailService.listUsers).toHaveBeenCalledWith('project-1');
+  });
+
+  it('shows only the project facility tabs backed by granted read permissions', async () => {
+    state.setPermissions([
+      permission('project', 'listAll'),
+      permission('project.controlcabinet'),
+      permission('project.fielddevice')
+    ]);
+
+    render(ProjectDetailPage);
+
+    await waitFor(() =>
+      expect(screen.getByText('projects.control_cabinets.title')).toBeInTheDocument()
+    );
+    expect(screen.queryByText('projects.sps_controllers.title')).not.toBeInTheDocument();
+    expect(screen.getByText('projects.field_devices.title')).toBeInTheDocument();
+  });
+
+  it('shows the project history action only when timeline.read is granted', () => {
+    state.setPermissions([permission('project', 'listAll'), permission('timeline')]);
+
+    render(ProjectDetailPage);
+
+    expect(screen.getByLabelText('history.open')).toBeInTheDocument();
   });
 });

@@ -27,16 +27,29 @@
   import { ProjectCollaborationState } from '$lib/services/projectCollaboration.svelte.js';
   import { Cpu, History, PanelsTopLeft, Settings, Server, Wifi, WifiOff } from '@lucide/svelte';
 
+  type FacilityTabId = 'control-cabinets' | 'sps-controllers' | 'field-devices';
+
   const t = createTranslator();
   const projectId = $derived($page.params.id ?? '');
   const canOpenProjectSettings = $derived(canPerform('update', 'project'));
+  const canReadProjectControlCabinets = $derived(canPerform('read', 'project.controlcabinet'));
+  const canReadProjectSPSControllers = $derived(canPerform('read', 'project.spscontroller'));
+  const canReadProjectFieldDevices = $derived(canPerform('read', 'project.fielddevice'));
+  const canReadTimeline = $derived(canPerform('read', 'timeline'));
+  const availableFacilityTabs = $derived.by((): FacilityTabId[] => {
+    const tabs: FacilityTabId[] = [];
+    if (canReadProjectControlCabinets) tabs.push('control-cabinets');
+    if (canReadProjectSPSControllers) tabs.push('sps-controllers');
+    if (canReadProjectFieldDevices) tabs.push('field-devices');
+    return tabs;
+  });
 
   let project = $state<Project | null>(null);
   let loading = $state(true);
   let error = $state<string | null>(null);
   let projectUsers = $state<User[]>([]);
 
-  let activeFacilityTab = $state('control-cabinets');
+  let activeFacilityTab = $state<FacilityTabId | ''>('control-cabinets');
   let projectHistoryOpen = $state(false);
 
   let controlCabinetViewRefreshKey = $state(0);
@@ -234,6 +247,15 @@
   }
 
   $effect(() => {
+    if (availableFacilityTabs.length === 0) return;
+    if (!availableFacilityTabs.includes(activeFacilityTab as FacilityTabId)) {
+      activeFacilityTab = availableFacilityTabs[0] ?? '';
+    }
+  });
+
+  $effect(() => {
+    if (!availableFacilityTabs.includes(activeFacilityTab as FacilityTabId)) return;
+
     if (activeFacilityTab === 'control-cabinets') {
       preloadControlCabinetTabView();
     } else if (activeFacilityTab === 'sps-controllers') {
@@ -394,7 +416,10 @@
   }
 
   async function loadProjectUsers(): Promise<void> {
-    if (!projectId) return;
+    if (!projectId || !canOpenProjectSettings) {
+      projectUsers = [];
+      return;
+    }
 
     try {
       const response = await projectDetailService.listUsers(projectId);
@@ -465,17 +490,24 @@
         </div>
       </div>
 
-      <Tooltip.Root>
-        <Tooltip.Trigger>
-          <Button variant="ghost" size="icon" onclick={() => (projectHistoryOpen = true)}>
-            <History />
-          </Button>
-        </Tooltip.Trigger>
+      {#if canReadTimeline}
+        <Tooltip.Root>
+          <Tooltip.Trigger>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={$t('history.open')}
+              onclick={() => (projectHistoryOpen = true)}
+            >
+              <History />
+            </Button>
+          </Tooltip.Trigger>
 
-        <Tooltip.Content>
-          {$t('history.open')}
-        </Tooltip.Content>
-      </Tooltip.Root>
+          <Tooltip.Content>
+            {$t('history.open')}
+          </Tooltip.Content>
+        </Tooltip.Root>
+      {/if}
 
       {#if canOpenProjectSettings}
         <Tooltip.Root>
@@ -512,83 +544,99 @@
     <div class="min-w-0 rounded-lg border bg-card p-6 text-sm text-muted-foreground">
       {$t('projects.errors.not_found')}
     </div>
+  {:else if availableFacilityTabs.length === 0}
+    <div class="min-w-0 rounded-lg border bg-card p-6 text-sm text-muted-foreground">
+      {$t('errors.forbidden')}
+    </div>
   {:else}
     <Tabs.Root bind:value={activeFacilityTab} class="min-w-0">
       <Tabs.List class="w-full justify-start overflow-x-auto sm:w-fit">
-        <Tabs.Trigger value="control-cabinets" class="gap-2">
-          <PanelsTopLeft class="size-4" />
-          {$t('projects.control_cabinets.title')}
-        </Tabs.Trigger>
-        <Tabs.Trigger value="sps-controllers" class="gap-2">
-          <Cpu class="size-4" />
-          {$t('projects.sps_controllers.title')}
-        </Tabs.Trigger>
-        <Tabs.Trigger value="field-devices" class="gap-2">
-          <Server class="size-4" />
-          {$t('projects.field_devices.title')}
-        </Tabs.Trigger>
+        {#if canReadProjectControlCabinets}
+          <Tabs.Trigger value="control-cabinets" class="gap-2">
+            <PanelsTopLeft class="size-4" />
+            {$t('projects.control_cabinets.title')}
+          </Tabs.Trigger>
+        {/if}
+        {#if canReadProjectSPSControllers}
+          <Tabs.Trigger value="sps-controllers" class="gap-2">
+            <Cpu class="size-4" />
+            {$t('projects.sps_controllers.title')}
+          </Tabs.Trigger>
+        {/if}
+        {#if canReadProjectFieldDevices}
+          <Tabs.Trigger value="field-devices" class="gap-2">
+            <Server class="size-4" />
+            {$t('projects.field_devices.title')}
+          </Tabs.Trigger>
+        {/if}
       </Tabs.List>
 
-      <Tabs.Content value="control-cabinets" class="mt-4 min-w-0">
-        <div class="min-w-0 rounded-lg border bg-card p-6">
-          {#if controlCabinetListViewModule}
-            {@const ControlCabinetListView = controlCabinetListViewModule.default}
-            <ControlCabinetListView
-              {projectId}
-              refreshKey={controlCabinetViewRefreshKey}
-              refreshRequest={controlCabinetRefreshRequest}
-              deltaRequest={controlCabinetDeltaRequest}
-              onChanged={handleControlCabinetsChanged}
-            />
-          {:else}
-            <Skeleton class="h-6 w-full" />
-          {/if}
-        </div>
-      </Tabs.Content>
+      {#if canReadProjectControlCabinets}
+        <Tabs.Content value="control-cabinets" class="mt-4 min-w-0">
+          <div class="min-w-0 rounded-lg border bg-card p-6">
+            {#if controlCabinetListViewModule}
+              {@const ControlCabinetListView = controlCabinetListViewModule.default}
+              <ControlCabinetListView
+                {projectId}
+                refreshKey={controlCabinetViewRefreshKey}
+                refreshRequest={controlCabinetRefreshRequest}
+                deltaRequest={controlCabinetDeltaRequest}
+                onChanged={handleControlCabinetsChanged}
+              />
+            {:else}
+              <Skeleton class="h-6 w-full" />
+            {/if}
+          </div>
+        </Tabs.Content>
+      {/if}
 
-      <Tabs.Content value="sps-controllers" class="mt-4 min-w-0">
-        <div class="min-w-0 rounded-lg border bg-card p-6">
-          {#if spsControllerListViewModule}
-            {@const SPSControllerListView = spsControllerListViewModule.default}
-            <SPSControllerListView
-              {projectId}
-              refreshKey={spsControllerRefreshKey}
-              refreshRequest={spsControllerRefreshRequest}
-              deltaRequest={spsControllerDeltaRequest}
-              controlCabinetLabelRefreshRequest={spsControllerCabinetLabelRefreshRequest}
-              controlCabinetLabelDeltaRequest={spsControllerCabinetLabelDeltaRequest}
-              controlCabinetRefreshKey={controlCabinetOptionsRefreshKey}
-              onChanged={handleSPSControllersChanged}
-            />
-          {:else}
-            <Skeleton class="h-6 w-full" />
-          {/if}
-        </div>
-      </Tabs.Content>
+      {#if canReadProjectSPSControllers}
+        <Tabs.Content value="sps-controllers" class="mt-4 min-w-0">
+          <div class="min-w-0 rounded-lg border bg-card p-6">
+            {#if spsControllerListViewModule}
+              {@const SPSControllerListView = spsControllerListViewModule.default}
+              <SPSControllerListView
+                {projectId}
+                refreshKey={spsControllerRefreshKey}
+                refreshRequest={spsControllerRefreshRequest}
+                deltaRequest={spsControllerDeltaRequest}
+                controlCabinetLabelRefreshRequest={spsControllerCabinetLabelRefreshRequest}
+                controlCabinetLabelDeltaRequest={spsControllerCabinetLabelDeltaRequest}
+                controlCabinetRefreshKey={controlCabinetOptionsRefreshKey}
+                onChanged={handleSPSControllersChanged}
+              />
+            {:else}
+              <Skeleton class="h-6 w-full" />
+            {/if}
+          </div>
+        </Tabs.Content>
+      {/if}
 
-      <Tabs.Content value="field-devices" class="mt-4 min-w-0">
-        <div class="min-w-0 rounded-lg border bg-card p-6">
-          {#if fieldDeviceListViewModule}
-            {@const FieldDeviceListView = fieldDeviceListViewModule.default}
-            <FieldDeviceListView
-              {projectId}
-              pageSize={100}
-              refreshKey={fieldDeviceRefreshKey}
-              refreshRequest={fieldDeviceRefreshRequest}
-              {systemTypeRefreshKey}
-              onMultiCreateFormVisibilityChange={(open) => {
-                fieldDeviceMultiCreateFormOpen = open;
-              }}
-              sharedFieldDeviceEditors={fieldDeviceEditorsByDevice}
-              onSharedFieldDeviceStateChange={(state) =>
-                collaboration.publishFieldDeviceDraftState(state)}
-              onFieldDevicesSaved={(devices) => collaboration.publishFieldDeviceDelta(devices)}
-            />
-          {:else}
-            <Skeleton class="h-6 w-full" />
-          {/if}
-        </div>
-      </Tabs.Content>
+      {#if canReadProjectFieldDevices}
+        <Tabs.Content value="field-devices" class="mt-4 min-w-0">
+          <div class="min-w-0 rounded-lg border bg-card p-6">
+            {#if fieldDeviceListViewModule}
+              {@const FieldDeviceListView = fieldDeviceListViewModule.default}
+              <FieldDeviceListView
+                {projectId}
+                pageSize={100}
+                refreshKey={fieldDeviceRefreshKey}
+                refreshRequest={fieldDeviceRefreshRequest}
+                {systemTypeRefreshKey}
+                onMultiCreateFormVisibilityChange={(open) => {
+                  fieldDeviceMultiCreateFormOpen = open;
+                }}
+                sharedFieldDeviceEditors={fieldDeviceEditorsByDevice}
+                onSharedFieldDeviceStateChange={(state) =>
+                  collaboration.publishFieldDeviceDraftState(state)}
+                onFieldDevicesSaved={(devices) => collaboration.publishFieldDeviceDelta(devices)}
+              />
+            {:else}
+              <Skeleton class="h-6 w-full" />
+            {/if}
+          </div>
+        </Tabs.Content>
+      {/if}
     </Tabs.Root>
   {/if}
 </div>
