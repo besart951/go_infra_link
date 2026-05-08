@@ -47,7 +47,7 @@ func TestProjectAccessPolicyService_CanAccessProject_CharacterizesAccessSources(
 	}{
 		{name: "creator without membership", requesterID: creatorID, wantAccess: false},
 		{name: "member", requesterID: memberID, wantAccess: true},
-		{name: "admin without list all", requesterID: adminID, wantAccess: false},
+		{name: "admin_fzag without list all", requesterID: adminID, wantAccess: true},
 		{name: "list all permission", requesterID: listAllID, wantAccess: true},
 		{name: "outsider", requesterID: outsiderID, wantAccess: false},
 	}

@@ -136,7 +136,7 @@ func (s *ProjectLifecycleService) canReadAllProjects(ctx context.Context, reques
 	if len(users) == 0 {
 		return false, nil
 	}
-	if users[0].Role == domainUser.RoleSuperAdmin {
+	if roleCanAccessAllProjects(users[0].Role) {
 		return true, nil
 	}
 

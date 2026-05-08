@@ -644,6 +644,28 @@ func TestProjectLifecycleService_List_CharacterizesPermissionScopedProjectListin
 		}
 	})
 
+	t.Run("admin_fzag can list all projects without stored project.listAll grant", func(t *testing.T) {
+		projectRepo := newProjectRepo()
+		userRepo := newProjectUserRepo()
+		rolePermissionRepo := newProjectRolePermissionRepo()
+
+		userRepo.items[requesterID] = &domainUser.User{Base: domain.Base{ID: requesterID}, Role: domainUser.RoleAdminFZAG}
+
+		svc := NewServices(Dependencies{
+			Projects:        projectRepo,
+			Users:           userRepo,
+			RolePermissions: rolePermissionRepo,
+		}).Lifecycle
+
+		if _, err := svc.List(ctx, requesterID, 1, 10, "pump", &status); err != nil {
+			t.Fatalf("expected list to succeed, got %v", err)
+		}
+
+		if projectRepo.lastListMethod != "with_status" {
+			t.Fatalf("expected unrestricted listing for admin_fzag, got %s", projectRepo.lastListMethod)
+		}
+	})
+
 	t.Run("superadmin can list all projects without stored project.listAll grant", func(t *testing.T) {
 		projectRepo := newProjectRepo()
 		userRepo := newProjectUserRepo()

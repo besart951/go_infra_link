@@ -27,6 +27,10 @@ func (s *ProjectAccessPolicyService) CanAccessProject(ctx context.Context, reque
 	if requesterRole, ok, err := s.resolveRequesterRole(ctx, requesterID, requesterRole); err != nil {
 		return false, err
 	} else if ok {
+		if roleCanAccessAllProjects(requesterRole) {
+			return true, nil
+		}
+
 		canListAll, err := s.roleHasPermission(ctx, requesterRole, domainUser.PermissionProjectListAll)
 		if err != nil {
 			return false, err
@@ -37,6 +41,10 @@ func (s *ProjectAccessPolicyService) CanAccessProject(ctx context.Context, reque
 	}
 
 	return s.repo.HasUser(ctx, projectID, requesterID)
+}
+
+func roleCanAccessAllProjects(role domainUser.Role) bool {
+	return role == domainUser.RoleSuperAdmin || role == domainUser.RoleAdminFZAG
 }
 
 func (s *ProjectAccessPolicyService) CanUseProjectPermission(ctx context.Context, requesterID uuid.UUID, requesterRole *domainUser.Role, permission string) (bool, error) {
