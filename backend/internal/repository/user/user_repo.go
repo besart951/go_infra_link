@@ -7,9 +7,13 @@ import (
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
+	domainNotification "github.com/besart951/go_infra_link/backend/internal/domain/notification"
+	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/besart951/go_infra_link/backend/internal/repository/searchspec"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -61,6 +65,59 @@ func (r *userRepo) Update(ctx context.Context, entity *domainUser.User) error {
 	return r.db.WithContext(ctx).Model(&domainUser.User{}).
 		Where("id = ?", entity.ID).
 		Updates(updates).Error
+}
+
+func (r *userRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&domainUser.User{}).
+			Where("created_by_id IN ?", ids).
+			Update("created_by_id", nil).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&domainUser.UserInvitation{}).
+			Where("created_by_id IN ?", ids).
+			Update("created_by_id", nil).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&domainNotification.SystemNotification{}).
+			Where("actor_id IN ?", ids).
+			Update("actor_id", nil).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&domainNotification.NotificationRule{}).
+			Where("created_by_id IN ?", ids).
+			Update("created_by_id", nil).Error; err != nil {
+			return err
+		}
+
+		deletes := []struct {
+			model  any
+			column string
+		}{
+			{&domainAuth.RefreshToken{}, "user_id"},
+			{&domainUser.BusinessDetails{}, "user_id"},
+			{&domainUser.UserTeam{}, "user_id"},
+			{&domainTeam.TeamMember{}, "user_id"},
+			{&domainUser.UserInvitation{}, "user_id"},
+			{&domainNotification.UserPreference{}, "user_id"},
+			{&domainNotification.SystemNotification{}, "recipient_id"},
+			{&domainNotification.EmailOutbox{}, "recipient_id"},
+		}
+		for _, item := range deletes {
+			if err := tx.Where(fmt.Sprintf("%s IN ?", item.column), ids).Delete(item.model).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Exec("DELETE FROM project_users WHERE user_id IN ?", ids).Error; err != nil {
+			return err
+		}
+
+		return tx.Where("id IN ?", ids).Delete(&domainUser.User{}).Error
+	})
 }
 
 func (r *userRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainUser.User], error) {
