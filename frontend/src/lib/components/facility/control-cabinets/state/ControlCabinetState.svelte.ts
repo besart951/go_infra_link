@@ -265,7 +265,11 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
 
   getBuildingLabel(buildingId: string | undefined | null): string {
     if (!buildingId) return '-';
-    return this.buildingMap.get(buildingId) ?? buildingId;
+    return this.buildingMap.get(buildingId) ?? '';
+  }
+
+  isBuildingLabelLoading(buildingId: string | undefined | null): boolean {
+    return Boolean(buildingId && !this.buildingMap.has(buildingId));
   }
 
   private mergeBuildingLabels(labels: Map<string, string>): void {

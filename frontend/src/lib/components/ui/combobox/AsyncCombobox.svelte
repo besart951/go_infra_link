@@ -85,6 +85,12 @@
     return title || undefined;
   }
 
+  function getTriggerLabel(): string {
+    if (selectedLabel) return selectedLabel;
+    if (value && fetchById) return placeholder;
+    return value ? value : placeholder;
+  }
+
   function clearSelection() {
     value = '';
     selectedLabel = undefined;
@@ -156,11 +162,6 @@
 
   $effect(() => {
     if (initialized && refreshKey !== undefined) {
-      if (value) {
-        selectedLabel = undefined;
-        selectedValue = undefined;
-        selectedData = undefined;
-      }
       loadItems(search);
     }
   });
@@ -237,7 +238,7 @@
         class={cn('min-w-0 justify-between gap-2', width)}
       >
         <span class="min-w-0 flex-1 truncate text-left">
-          {selectedLabel || (value ? value : placeholder)}
+          {getTriggerLabel()}
         </span>
         <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </Button>

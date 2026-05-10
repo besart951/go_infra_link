@@ -7,6 +7,7 @@
   import ControlCabinetForm from '$lib/components/facility/forms/ControlCabinetForm.svelte';
   import ProjectMultiSelectFilter from '$lib/components/facility/shared/ProjectMultiSelectFilter.svelte';
   import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
+  import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import type { ControlCabinet } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
@@ -119,7 +120,13 @@
     onReload={() => void listState.reload()}
   >
     {#snippet rowSnippet(cabinet: ControlCabinet)}
-      <Table.Cell>{listState.getBuildingLabel(cabinet.building_id)}</Table.Cell>
+      <Table.Cell>
+        {#if listState.isBuildingLabelLoading(cabinet.building_id)}
+          <Skeleton class="h-4 w-24" />
+        {:else}
+          {listState.getBuildingLabel(cabinet.building_id)}
+        {/if}
+      </Table.Cell>
       <Table.Cell class="font-medium">
         <Button
           variant="link"
