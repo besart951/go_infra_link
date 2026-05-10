@@ -413,7 +413,7 @@
         {/if}
       {/snippet}
 
-      {#if state.loading && state.items.length === 0}
+      {#if state.loading}
         <Table.LoadingRows loading {columnCount} />
       {:else if state.items.length === 0}
         <Table.Row>
