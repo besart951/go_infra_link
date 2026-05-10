@@ -85,6 +85,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
       initialFilters
     });
 
+    this.loading = true;
     this.resolveProjectId = resolveProjectId;
     this.fixedFilters = initialFilters;
     this.resolveSharedFieldDeviceEditors = props.sharedFieldDeviceEditors ?? (() => ({}));

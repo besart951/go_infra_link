@@ -414,7 +414,7 @@
       {/snippet}
 
       {#if state.loading}
-        <Table.LoadingRows loading {columnCount} />
+        <Table.LoadingRows loading {columnCount} rowCount={8} delayMs={0} />
       {:else if state.items.length === 0}
         <Table.Row>
           <Table.Cell colspan={columnCount} class="h-24 text-center">
