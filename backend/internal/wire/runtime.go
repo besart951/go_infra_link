@@ -32,6 +32,11 @@ type RuntimeConfig struct {
 	EventTTL         time.Duration
 }
 
+const (
+	RuntimeBusMemory   = "memory"
+	RuntimeBusPostgres = "postgres"
+)
+
 func NewRuntimeAdaptersFromConfig(ctx context.Context, cfg RuntimeConfig) (*RuntimeAdapters, func(), error) {
 	bus, err := newRuntimeBus(ctx, cfg)
 	if err != nil {
@@ -61,6 +66,17 @@ func NewRuntimeAdaptersWithBus(bus apprealtime.Bus, nodeID string, ownsBus bool)
 	}
 }
 
+func runtimeOrDefault(runtime *RuntimeAdapters) *RuntimeAdapters {
+	if runtime == nil {
+		return NewRuntimeAdapters()
+	}
+	return runtime
+}
+
+func runtimeOrNil(runtime *RuntimeAdapters) *RuntimeAdapters {
+	return runtime
+}
+
 func (r *RuntimeAdapters) Close() {
 	if r == nil {
 		return
@@ -77,12 +93,12 @@ func (r *RuntimeAdapters) Close() {
 }
 
 func newRuntimeBus(ctx context.Context, cfg RuntimeConfig) (apprealtime.Bus, error) {
-	switch strings.ToLower(strings.TrimSpace(cfg.Bus)) {
-	case "", "memory":
+	switch strings.TrimSpace(strings.ToLower(cfg.Bus)) {
+	case "", RuntimeBusMemory:
 		return realtime.NewInMemoryBus(realtime.InMemoryBusConfig{
 			SubscriberBuffer: cfg.SubscriberBuffer,
 		}), nil
-	case "postgres":
+	case RuntimeBusPostgres:
 		return realtime.NewPostgresBus(ctx, realtime.PostgresBusConfig{
 			DSN:              cfg.PostgresDSN,
 			Channel:          cfg.PostgresChannel,
@@ -90,6 +106,6 @@ func newRuntimeBus(ctx context.Context, cfg RuntimeConfig) (apprealtime.Bus, err
 			EventTTL:         cfg.EventTTL,
 		})
 	default:
-		return nil, fmt.Errorf("unsupported realtime bus %q", cfg.Bus)
+		return nil, fmt.Errorf("unsupported realtime bus %q: expected %q or %q", cfg.Bus, RuntimeBusMemory, RuntimeBusPostgres)
 	}
 }

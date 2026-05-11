@@ -1,6 +1,7 @@
 package wire
 
 import (
+	"fmt"
 	"time"
 
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
@@ -52,25 +53,39 @@ type ServiceConfig struct {
 	Issuer          string
 	AccessTokenTTL  time.Duration
 	RefreshTokenTTL time.Duration
+	Export          exportservice.Config
+	ExportDirectory string
 	Runtime         *RuntimeAdapters
 	AppPublicURL    string
+}
+
+type securityServices struct {
+	jwt                domainAuth.TokenService
+	rbac               *rbacservice.Service
+	userMutationPolicy *usermutationpolicy.Policy
+}
+
+type userServices struct {
+	user             *userservice.Service
+	userRegistration *userregistrationservice.Service
+	userDirectory    *userdirectoryservice.Service
+	admin            *adminservice.Service
 }
 
 // NewServices creates all service instances from repositories and configuration.
 func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Services, error) {
 	passwordService := passwordsvc.New()
-	jwtService := authservice.NewJWTService(cfg.JWTSecret, cfg.Issuer)
-	rbacSvc := rbacservice.New(repos.User, repos.TeamMember, repos.Permissions, repos.RolePermissions)
-	userMutationPolicy := usermutationpolicy.New(rbacSvc, repos.UserRegistration)
+	security := newSecurityServices(repos, cfg)
+	userSvc := newUserServices(repos, passwordService, security.userMutationPolicy, cfg)
 	facilityServices := newFacilityServices(gormDB, repos)
 
-	exportSvc, err := newExportService(repos)
+	exportSvc, err := newExportService(repos, cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new export service: %w", err)
 	}
 	notificationSvc, err := newNotificationService(repos, cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new notification service: %w", err)
 	}
 
 	return &Services{
@@ -78,17 +93,17 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 		Dashboard:        dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
 		Phase:            phaseservice.NewPhaseService(repos.Phase),
 		PhasePermission:  phasepermissionservice.New(repos.PhasePermissions, repos.Phase, repos.Permissions),
-		User:             userservice.New(repos.UserLifecycle, passwordService, userMutationPolicy),
-		UserRegistration: userregistrationservice.New(repos.UserRegistration, userMutationPolicy, passwordService, cfg.AppPublicURL),
+		User:             userSvc.user,
+		UserRegistration: userSvc.userRegistration,
 		Password:         passwordService,
-		JWT:              jwtService,
-		RBAC:             rbacSvc,
+		JWT:              security.jwt,
+		RBAC:             security.rbac,
 		Team:             teamservice.New(repos.Team, repos.TeamMember),
-		Admin:            adminservice.New(repos.User, userMutationPolicy),
-		UserDirectory:    userdirectoryservice.New(repos.User, repos.Team, repos.TeamMember, repos.RolePermissions),
+		Admin:            userSvc.admin,
+		UserDirectory:    userSvc.userDirectory,
 		Notification:     notificationSvc,
 		Auth: authservice.NewService(
-			jwtService,
+			security.jwt,
 			repos.User,
 			repos.UserEmail,
 			repos.RefreshToken,
@@ -101,4 +116,23 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 		History:  repos.History,
 		Facility: facilityServices,
 	}, nil
+}
+
+func newSecurityServices(repos *Repositories, cfg ServiceConfig) securityServices {
+	rbacSvc := rbacservice.New(repos.User, repos.TeamMember, repos.Permissions, repos.RolePermissions)
+
+	return securityServices{
+		jwt:                authservice.NewJWTService(cfg.JWTSecret, cfg.Issuer),
+		rbac:               rbacSvc,
+		userMutationPolicy: usermutationpolicy.New(rbacSvc, repos.UserRegistration),
+	}
+}
+
+func newUserServices(repos *Repositories, password domainUser.PasswordHasher, policy *usermutationpolicy.Policy, cfg ServiceConfig) userServices {
+	return userServices{
+		user:             userservice.New(repos.UserLifecycle, password, policy),
+		userRegistration: userregistrationservice.New(repos.UserRegistration, policy, password, cfg.AppPublicURL),
+		userDirectory:    userdirectoryservice.New(repos.User, repos.Team, repos.TeamMember, repos.RolePermissions),
+		admin:            adminservice.New(repos.User, policy),
+	}
 }

@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -105,4 +106,10 @@ func (u User) DisplayName() string {
 
 type UserRepository interface {
 	domain.Repository[User]
+}
+
+type UserLifecycleRepository interface {
+	UserRepository
+	UserEmailRepository
+	ListDueForAnonymization(ctx context.Context, now time.Time, limit int) ([]*User, error)
 }

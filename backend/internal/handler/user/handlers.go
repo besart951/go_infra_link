@@ -8,12 +8,22 @@ type Handlers struct {
 	Permission   *PermissionHandler
 }
 
-func NewHandlers(userService UserService, adminService AdminService, roleService RoleQueryService, directoryService UserDirectoryService, registrationService UserRegistrationService, permissionService PermissionService, rolePermissionService RolePermissionService) *Handlers {
+type Dependencies struct {
+	Users                 UserService
+	Admin                 AdminService
+	RoleService           RoleQueryService
+	DirectoryService      UserDirectoryService
+	RegistrationService   UserRegistrationService
+	PermissionService     PermissionService
+	RolePermissionService RolePermissionService
+}
+
+func NewHandlers(deps Dependencies) *Handlers {
 	return &Handlers{
-		User:         NewUserHandler(userService, roleService, directoryService, registrationService),
-		Registration: NewRegistrationHandler(registrationService),
-		Admin:        NewAdminHandler(adminService, userService),
-		Role:         NewRoleHandler(rolePermissionService),
-		Permission:   NewPermissionHandler(permissionService),
+		User:         NewUserHandler(deps.Users, deps.RoleService, deps.DirectoryService, deps.RegistrationService),
+		Registration: NewRegistrationHandler(deps.RegistrationService),
+		Admin:        NewAdminHandler(deps.Admin, deps.Users),
+		Role:         NewRoleHandler(deps.RolePermissionService),
+		Permission:   NewPermissionHandler(deps.PermissionService),
 	}
 }

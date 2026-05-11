@@ -47,13 +47,13 @@ func newFacilityHandlers(services *Services, collaboration facilityhandler.Proje
 }
 
 func newUserHandlers(services *Services) *userhandler.Handlers {
-	return userhandler.NewHandlers(
-		services.User,
-		services.Admin,
-		services.RBAC,
-		services.UserDirectory,
-		services.UserRegistration,
-		services.RBAC,
-		services.RBAC,
-	)
+	return userhandler.NewHandlers(userhandler.Dependencies{
+		Users:                 services.User,
+		Admin:                 services.Admin,
+		RoleService:           services.RBAC,
+		DirectoryService:      services.UserDirectory,
+		RegistrationService:   services.UserRegistration,
+		PermissionService:     services.RBAC,
+		RolePermissionService: services.RBAC,
+	})
 }

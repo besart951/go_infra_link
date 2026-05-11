@@ -214,6 +214,7 @@ func (r *userRepo) ListDueForAnonymization(ctx context.Context, now time.Time, l
 }
 
 var _ domainUser.UserEmailRepository = (*userRepo)(nil)
+var _ domainUser.UserLifecycleRepository = (*userRepo)(nil)
 var _ domainUser.UserRoleRepository = (*userRepo)(nil)
 
 func userSearchCallback() gormbase.SearchCallback[*domainUser.User] {

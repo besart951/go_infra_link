@@ -12,13 +12,9 @@ import (
 
 func newFacilityServices(gormDB *gorm.DB, repos *Repositories) *facilityservice.Services {
 	facilityTxRepositories := func(unit apptransaction.UnitOfWork) (facilityservice.Repositories, error) {
-		tx, err := infratransaction.GormDB(unit)
+		txRepos, err := repositoriesFromUnit(unit)
 		if err != nil {
 			return facilityservice.Repositories{}, fmt.Errorf("facility transaction unit: %w", err)
-		}
-		txRepos, err := NewRepositories(tx)
-		if err != nil {
-			return facilityservice.Repositories{}, fmt.Errorf("transaction repositories: %w", err)
 		}
 		return buildFacilityRepositories(txRepos), nil
 	}
@@ -55,13 +51,9 @@ func buildFacilityRepositories(repos *Repositories) facilityservice.Repositories
 
 func newProjectServices(gormDB *gorm.DB, repos *Repositories, facilityServices *facilityservice.Services) *projectservice.Services {
 	txDependencies := func(unit apptransaction.UnitOfWork) (projectservice.Dependencies, error) {
-		tx, err := infratransaction.GormDB(unit)
+		txRepos, err := repositoriesFromUnit(unit)
 		if err != nil {
 			return projectservice.Dependencies{}, fmt.Errorf("project transaction unit: %w", err)
-		}
-		txRepos, err := NewRepositories(tx)
-		if err != nil {
-			return projectservice.Dependencies{}, fmt.Errorf("transaction repositories: %w", err)
 		}
 
 		txFacilityServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
@@ -94,4 +86,12 @@ func buildProjectDependencies(repos *Repositories, facilityServices *facilityser
 		HierarchyCopier:          facilityServices.HierarchyCopier,
 		FieldDeviceCreator:       facilityServices.FieldDevice,
 	}
+}
+
+func repositoriesFromUnit(unit apptransaction.UnitOfWork) (*Repositories, error) {
+	tx, err := infratransaction.GormDB(unit)
+	if err != nil {
+		return nil, fmt.Errorf("resolve transaction unit: %w", err)
+	}
+	return NewRepositories(tx)
 }

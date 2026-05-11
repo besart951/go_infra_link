@@ -2,6 +2,7 @@ package wire
 
 import "errors"
 
-// ErrUserRepoMissingEmailLookup is returned when the user repository
-// does not implement the UserEmailRepository interface.
-var ErrUserRepoMissingEmailLookup = errors.New("user repository does not implement email lookup")
+var (
+	ErrUserRepoMissingEmailLookup = errors.New("user repository does not implement user email lookup")
+	ErrUserRepoMissingLifecycle   = errors.New("user repository does not implement user lifecycle store")
+)

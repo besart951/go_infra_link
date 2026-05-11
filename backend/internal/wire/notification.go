@@ -13,11 +13,6 @@ func newNotificationService(repos *Repositories, cfg ServiceConfig) (*notificati
 		return nil, fmt.Errorf("notification secret cipher: %w", err)
 	}
 
-	var runtime *RuntimeAdapters
-	if cfg.Runtime != nil {
-		runtime = cfg.Runtime
-	}
-
 	return notificationservice.NewFromDependencies(notificationservice.Dependencies{
 		SMTPSettings:    repos.NotificationSMTPSettings,
 		Preferences:     repos.NotificationPreferences,
@@ -31,7 +26,7 @@ func newNotificationService(repos *Repositories, cfg ServiceConfig) (*notificati
 		EmailStrategies: []notificationservice.EmailStrategy{notificationservice.NewSMTPStrategy()},
 	}, notificationservice.Config{
 		VerificationSecret: cfg.JWTSecret,
-		SystemPublisher:    systemNotificationPublisher(runtime),
+		SystemPublisher:    systemNotificationPublisher(runtimeOrNil(cfg.Runtime)),
 	}), nil
 }
 

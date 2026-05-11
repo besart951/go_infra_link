@@ -15,9 +15,8 @@ import (
 
 // NewHandlers creates all HTTP handler instances from services.
 func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings authhandler.CookieSettings, i18nLoader *i18n.Loader, accessTokenTTL, refreshTokenTTL time.Duration) *handler.Handlers {
-	if runtime == nil {
-		runtime = NewRuntimeAdapters()
-	}
+	runtime = runtimeOrDefault(runtime)
+
 	projectHandlers := newProjectHandlers(services, runtime)
 
 	facilityHandlers := newFacilityHandlers(services, projectHandlers.RefreshBroadcaster)
