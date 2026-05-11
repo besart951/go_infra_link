@@ -1,6 +1,5 @@
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
-import inspect from 'vite-plugin-inspect';
 import { defineConfig, loadEnv } from 'vite';
 
 type ProxyListenerHost = {
@@ -30,10 +29,6 @@ export default defineConfig(({ mode }) => {
     plugins: [
       tailwindcss(),
       sveltekit(),
-      inspect({
-        build: false,
-        outputDir: '.vite-inspect'
-      })
     ],
     test: {
       environment: 'jsdom',
