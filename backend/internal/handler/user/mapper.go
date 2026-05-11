@@ -13,7 +13,7 @@ func ToUserModel(req dto.CreateUserRequest) *user.User {
 	usr := &user.User{
 		FirstName:   req.FirstName,
 		LastName:    req.LastName,
-		Email:       req.Email,
+		Email:       user.EmailPtr(req.Email),
 		IsActive:    req.IsActive,
 		CreatedByID: req.CreatedByID,
 	}
@@ -32,17 +32,26 @@ func ApplyUserUpdate(target *user.User, req dto.UpdateUserRequest) {
 		target.LastName = req.LastName
 	}
 	if req.Email != "" {
-		target.Email = req.Email
+		target.SetEmail(req.Email)
 	}
 }
 
 // ToUserResponse converts a User domain model to a UserResponse DTO
 func ToUserResponse(usr *user.User) dto.UserResponse {
+	firstName := usr.FirstName
+	lastName := usr.LastName
+	email := usr.EmailValue()
+	if usr.IsIdentityHidden() {
+		firstName = "Deleted"
+		lastName = "User"
+		email = ""
+	}
+
 	return dto.UserResponse{
 		ID:                  usr.ID,
-		FirstName:           usr.FirstName,
-		LastName:            usr.LastName,
-		Email:               usr.Email,
+		FirstName:           firstName,
+		LastName:            lastName,
+		Email:               email,
 		IsActive:            usr.IsActive,
 		Role:                string(usr.Role),
 		RoleDisplayName:     user.RoleDisplayName(usr.Role),
@@ -52,6 +61,10 @@ func ToUserResponse(usr *user.User) dto.UserResponse {
 		DisabledAt:          usr.DisabledAt,
 		LockedUntil:         usr.LockedUntil,
 		FailedLoginAttempts: usr.FailedLoginAttempts,
+		IsDeleted:           usr.IsDeleted(),
+		IsAnonymized:        usr.IsAnonymized(),
+		DeletedAt:           usr.DeletedAt,
+		RestoreUntil:        usr.RestoreUntil,
 	}
 }
 
@@ -76,9 +89,9 @@ func ToUserDirectoryListResponse(result *userdirectory.ListResult, registrationP
 
 		items[i] = dto.UserDirectoryUserResponse{
 			ID:                  item.User.ID,
-			FirstName:           item.User.FirstName,
-			LastName:            item.User.LastName,
-			Email:               item.User.Email,
+			FirstName:           projectedFirstName(item.User),
+			LastName:            projectedLastName(item.User),
+			Email:               projectedEmail(item.User),
 			IsActive:            item.User.IsActive,
 			Role:                string(item.User.Role),
 			RoleDisplayName:     user.RoleDisplayName(item.User.Role),
@@ -88,12 +101,17 @@ func ToUserDirectoryListResponse(result *userdirectory.ListResult, registrationP
 			DisabledAt:          item.User.DisabledAt,
 			LockedUntil:         item.User.LockedUntil,
 			FailedLoginAttempts: item.User.FailedLoginAttempts,
+			IsDeleted:           item.User.IsDeleted(),
+			IsAnonymized:        item.User.IsAnonymized(),
+			DeletedAt:           item.User.DeletedAt,
+			RestoreUntil:        item.User.RestoreUntil,
 			Teams:               teams,
 			Capabilities: dto.UserDirectoryCapabilitiesResponse{
 				CanUpdate:     capabilities.CanUpdate,
 				CanDelete:     capabilities.CanDelete,
 				CanDisable:    capabilities.CanDisable,
 				CanEnable:     capabilities.CanEnable,
+				CanRestore:    capabilities.CanRestore,
 				CanChangeRole: capabilities.CanChangeRole,
 			},
 			RegistrationProcess: ToRegistrationProcessResponse(process),
@@ -112,9 +130,31 @@ func ToUserDirectoryListResponse(result *userdirectory.ListResult, registrationP
 		TotalPages: result.TotalPages,
 		Teams:      teams,
 		Capabilities: dto.UserDirectoryPageCapabilitiesResponse{
-			CanCreateUser: result.PageCapabilities.CanCreateUser,
+			CanCreateUser:  result.PageCapabilities.CanCreateUser,
+			CanReadDeleted: result.PageCapabilities.CanReadDeleted,
 		},
 	}
+}
+
+func projectedFirstName(usr user.User) string {
+	if usr.IsIdentityHidden() {
+		return "Deleted"
+	}
+	return usr.FirstName
+}
+
+func projectedLastName(usr user.User) string {
+	if usr.IsIdentityHidden() {
+		return "User"
+	}
+	return usr.LastName
+}
+
+func projectedEmail(usr user.User) string {
+	if usr.IsIdentityHidden() {
+		return ""
+	}
+	return usr.EmailValue()
 }
 
 func ToRegistrationProcessResponse(process *userregistration.Process) *dto.RegistrationProcessResponse {

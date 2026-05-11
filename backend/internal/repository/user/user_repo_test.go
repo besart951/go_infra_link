@@ -73,7 +73,7 @@ func TestDeleteByIdsCleansUserDependencies(t *testing.T) {
 	})
 	seedUserRepoRecord(t, db, &domainNotification.EmailOutbox{
 		RecipientID:    target.ID,
-		RecipientEmail: target.Email,
+		RecipientEmail: target.EmailValue(),
 		EventKey:       "user.invited",
 		Subject:        "Invitation",
 		Body:           "Invitation body",
@@ -135,6 +135,33 @@ func TestDeleteByIdsCleansUserDependencies(t *testing.T) {
 	}
 }
 
+func TestUsersAllowMultipleAnonymizedNullEmails(t *testing.T) {
+	db := newUserRepoTestDB(t)
+	now := time.Now().UTC()
+
+	first := &domainUser.User{
+		FirstName:    "Deleted",
+		LastName:     "User",
+		Email:        nil,
+		Password:     "hashed-password",
+		IsActive:     false,
+		Role:         domainUser.RolePlaner,
+		AnonymizedAt: &now,
+	}
+	second := &domainUser.User{
+		FirstName:    "Deleted",
+		LastName:     "User",
+		Email:        nil,
+		Password:     "hashed-password",
+		IsActive:     false,
+		Role:         domainUser.RolePlaner,
+		AnonymizedAt: &now,
+	}
+
+	seedUserRepoRecord(t, db, first)
+	seedUserRepoRecord(t, db, second)
+}
+
 func newUserRepoTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	name := strings.NewReplacer("/", "_", " ", "_", "#", "_").Replace(t.Name())
@@ -173,7 +200,7 @@ func seedUserRepoUser(t *testing.T, db *gorm.DB, email string, createdByID *uuid
 	usr := &domainUser.User{
 		FirstName:   "Test",
 		LastName:    "User",
-		Email:       email,
+		Email:       domainUser.EmailPtr(email),
 		Password:    "hashed-password",
 		IsActive:    true,
 		Role:        domainUser.RolePlaner,

@@ -139,7 +139,7 @@ func (s *Service) CreateInvitation(ctx context.Context, input InviteInput) (*dom
 	usr := &domainUser.User{
 		FirstName:   "",
 		LastName:    "",
-		Email:       email,
+		Email:       domainUser.EmailPtr(email),
 		Password:    pendingPasswordMarker,
 		IsActive:    false,
 		Role:        input.Role,
@@ -263,7 +263,7 @@ func (s *Service) ResendInvitation(ctx context.Context, actorID, userID uuid.UUI
 	invitation.ExpiresAt = expiresAt
 	invitation.SendCount++
 
-	outbox = s.emailBuilder.Build(usr.ID, usr.Email, token, expiresAt, now)
+	outbox = s.emailBuilder.Build(usr.ID, usr.EmailValue(), token, expiresAt, now)
 	if err := s.store.ResendInvitation(ctx, invitation, outbox, now, s.resendCooldown); err != nil {
 		return nil, err
 	}
@@ -276,7 +276,7 @@ func (s *Service) GetPublicRegistration(ctx context.Context, token string) (*Pub
 		return nil, err
 	}
 	return &PublicRegistrationView{
-		Email:     usr.Email,
+		Email:     usr.EmailValue(),
 		Role:      usr.Role,
 		ExpiresAt: invitation.ExpiresAt,
 	}, nil
@@ -390,6 +390,10 @@ func (s *Service) lookupValidInvitation(ctx context.Context, token string) (*dom
 	usr, err := s.store.GetUserByID(ctx, invitation.UserID)
 	if err != nil {
 		return nil, nil, err
+	}
+	// Prevent registration completion if user is deleted
+	if usr.IsDeleted() {
+		return nil, nil, domainUser.ErrRegistrationUserDeleted
 	}
 	return invitation, usr, nil
 }

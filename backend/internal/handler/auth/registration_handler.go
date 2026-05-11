@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"errors"
 	"net/http"
 
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
@@ -12,11 +11,15 @@ import (
 )
 
 type RegistrationHandler struct {
-	service RegistrationService
+	service        RegistrationService
+	errorResponder *handlerutil.ErrorResponder
 }
 
 func NewRegistrationHandler(service RegistrationService) *RegistrationHandler {
-	return &RegistrationHandler{service: service}
+	return &RegistrationHandler{
+		service:        service,
+		errorResponder: handlerutil.NewErrorResponder(),
+	}
 }
 
 func (h *RegistrationHandler) GetRegistration(c *gin.Context) {
@@ -26,7 +29,7 @@ func (h *RegistrationHandler) GetRegistration(c *gin.Context) {
 	}
 	view, err := h.service.GetPublicRegistration(c.Request.Context(), c.Param("token"))
 	if err != nil {
-		handleRegistrationError(c, err)
+		h.errorResponder.RespondRegistrationError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, dto.PublicRegistrationResponse{
@@ -54,21 +57,8 @@ func (h *RegistrationHandler) CompleteRegistration(c *gin.Context) {
 		PrivacyAck: req.PrivacyAck,
 	})
 	if err != nil {
-		handleRegistrationError(c, err)
+		h.errorResponder.RespondRegistrationError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
-}
-
-func handleRegistrationError(c *gin.Context, err error) {
-	switch {
-	case errors.Is(err, domainUser.ErrRegistrationTokenInvalid):
-		handlerutil.RespondLocalizedError(c, http.StatusNotFound, "registration_invalid", "auth.registration_invalid")
-	case errors.Is(err, domainUser.ErrRegistrationTokenExpired):
-		handlerutil.RespondLocalizedError(c, http.StatusGone, "registration_expired", "auth.registration_expired")
-	case errors.Is(err, domainUser.ErrRegistrationAlreadyAccepted):
-		handlerutil.RespondLocalizedError(c, http.StatusConflict, "registration_already_accepted", "auth.registration_already_accepted")
-	default:
-		handlerutil.RespondDomainError(c, err, handlerutil.LocalizedError(http.StatusInternalServerError, "registration_failed", "auth.registration_failed"))
-	}
 }

@@ -134,7 +134,7 @@ func seedProjectRepoUser(t *testing.T, db *gorm.DB, email string) *domainUser.Us
 	user := &domainUser.User{
 		FirstName: "Repo",
 		LastName:  "Tester",
-		Email:     email,
+		Email:     domainUser.EmailPtr(email),
 		Password:  "password",
 	}
 	if err := user.Base.InitForCreate(time.Now().UTC()); err != nil {

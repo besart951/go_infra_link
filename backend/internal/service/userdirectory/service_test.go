@@ -2,6 +2,7 @@ package userdirectory
 
 import (
 	"testing"
+	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
@@ -66,7 +67,7 @@ func TestBuildCapabilitiesSelfAndLastSuperadminProtection(t *testing.T) {
 	})
 
 	selfCaps := buildCapabilities(requesterID, domainUser.RoleSuperAdmin, requesterPermissions, domainUser.User{Base: mustBaseWithID(requesterID), Role: domainUser.RoleSuperAdmin, IsActive: true}, superadminPermissions, 2)
-	if selfCaps.CanUpdate || selfCaps.CanDelete || selfCaps.CanDisable || selfCaps.CanEnable || selfCaps.CanChangeRole {
+	if selfCaps.CanUpdate || selfCaps.CanDelete || selfCaps.CanDisable || selfCaps.CanEnable || selfCaps.CanRestore || selfCaps.CanChangeRole {
 		t.Fatal("expected no self-management capabilities")
 	}
 
@@ -117,7 +118,7 @@ func TestBuildCapabilitiesRequiresRoleHierarchy(t *testing.T) {
 		targetPermissions,
 		2,
 	)
-	if sameCaps.CanUpdate || sameCaps.CanDelete || sameCaps.CanDisable || sameCaps.CanEnable || sameCaps.CanChangeRole {
+	if sameCaps.CanUpdate || sameCaps.CanDelete || sameCaps.CanDisable || sameCaps.CanEnable || sameCaps.CanRestore || sameCaps.CanChangeRole {
 		t.Fatal("expected no capabilities for same-level role")
 	}
 
@@ -129,8 +130,65 @@ func TestBuildCapabilitiesRequiresRoleHierarchy(t *testing.T) {
 		targetPermissions,
 		2,
 	)
-	if higherCaps.CanUpdate || higherCaps.CanDelete || higherCaps.CanDisable || higherCaps.CanEnable || higherCaps.CanChangeRole {
+	if higherCaps.CanUpdate || higherCaps.CanDelete || higherCaps.CanDisable || higherCaps.CanEnable || higherCaps.CanRestore || higherCaps.CanChangeRole {
 		t.Fatal("expected no capabilities for higher role")
+	}
+}
+
+func TestBuildCapabilitiesDeletedUsersUseRestoreCapability(t *testing.T) {
+	requesterID := uuid.New()
+	deletedAt := time.Now().UTC().Add(-time.Hour)
+	restoreUntil := time.Now().UTC().Add(time.Hour)
+	requesterPermissions := permissionSetFromRolePermissions([]domainUser.RolePermission{
+		{Permission: domainUser.PermissionUserRead},
+		{Permission: domainUser.PermissionUserUpdate},
+		{Permission: domainUser.PermissionUserDelete},
+		{Permission: domainUser.PermissionUserReadDeleted},
+	})
+	targetPermissions := permissionSetFromRolePermissions([]domainUser.RolePermission{
+		{Permission: domainUser.PermissionUserRead},
+	})
+
+	caps := buildCapabilities(
+		requesterID,
+		domainUser.RoleAdminPlaner,
+		requesterPermissions,
+		domainUser.User{
+			Base:         mustBase(),
+			Role:         domainUser.RolePlaner,
+			IsActive:     false,
+			DeletedAt:    &deletedAt,
+			RestoreUntil: &restoreUntil,
+		},
+		targetPermissions,
+		2,
+	)
+
+	if !caps.CanRestore {
+		t.Fatal("expected deleted restorable user to expose restore capability")
+	}
+	if caps.CanEnable || caps.CanUpdate || caps.CanDelete || caps.CanDisable || caps.CanChangeRole {
+		t.Fatalf("expected deleted user to hide normal actions, got %+v", caps)
+	}
+
+	withoutReadDeleted := requesterPermissions
+	delete(withoutReadDeleted, domainUser.PermissionUserReadDeleted)
+	caps = buildCapabilities(
+		requesterID,
+		domainUser.RoleAdminPlaner,
+		withoutReadDeleted,
+		domainUser.User{
+			Base:         mustBase(),
+			Role:         domainUser.RolePlaner,
+			IsActive:     false,
+			DeletedAt:    &deletedAt,
+			RestoreUntil: &restoreUntil,
+		},
+		targetPermissions,
+		2,
+	)
+	if caps.CanRestore {
+		t.Fatal("expected restore capability to require user.read_deleted")
 	}
 }
 

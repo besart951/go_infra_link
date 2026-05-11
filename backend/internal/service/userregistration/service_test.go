@@ -30,8 +30,8 @@ func TestCreateInvitationQueuesPendingUserWithHashOnlyToken(t *testing.T) {
 		t.Fatalf("CreateInvitation returned error: %v", err)
 	}
 
-	if usr.Email != "invited.person@example.com" {
-		t.Fatalf("expected normalized email, got %q", usr.Email)
+	if usr.EmailValue() != "invited.person@example.com" {
+		t.Fatalf("expected normalized email, got %q", usr.EmailValue())
 	}
 	if usr.IsActive {
 		t.Fatalf("invited user must stay inactive until registration is completed")
@@ -61,8 +61,8 @@ func TestCreateInvitationQueuesPendingUserWithHashOnlyToken(t *testing.T) {
 	if store.outbox.EventKey != registrationEventKey {
 		t.Fatalf("expected registration outbox event key, got %q", store.outbox.EventKey)
 	}
-	if store.outbox.RecipientEmail != usr.Email {
-		t.Fatalf("expected outbox recipient email %q, got %q", usr.Email, store.outbox.RecipientEmail)
+	if store.outbox.RecipientEmail != usr.EmailValue() {
+		t.Fatalf("expected outbox recipient email %q, got %q", usr.EmailValue(), store.outbox.RecipientEmail)
 	}
 	if process == nil || len(process.Steps) != 4 {
 		t.Fatalf("expected 4-step process, got %#v", process)
@@ -314,7 +314,7 @@ func seededRegistrationStore(now time.Time) *registrationStoreStub {
 	return &registrationStoreStub{
 		user: &domainUser.User{
 			Base:     domain.Base{ID: userID, CreatedAt: now.Add(-time.Hour), UpdatedAt: now.Add(-time.Hour)},
-			Email:    "person@example.com",
+			Email:    domainUser.EmailPtr("person@example.com"),
 			Password: pendingPasswordMarker,
 			IsActive: false,
 			Role:     domainUser.RolePlaner,
@@ -335,6 +335,28 @@ func seededRegistrationStore(now time.Time) *registrationStoreStub {
 			EventKey:       registrationEventKey,
 			Status:         domainNotification.EmailOutboxStatusPending,
 		},
+	}
+}
+
+func TestCompleteRegistrationRejectsDeletedUser(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 5, 8, 10, 30, 0, 0, time.UTC)
+	store := seededRegistrationStore(now)
+	// Mark user as deleted (soft-delete)
+	deletedAt := now.Add(-time.Hour)
+	store.user.DeletedAt = &deletedAt
+	service := newTestService(store, now)
+
+	_, err := service.CompleteRegistration(ctx, CompleteInput{
+		Token:      "valid-token",
+		FirstName:  "Ada",
+		LastName:   "Lovelace",
+		Password:   "CorrectHorse1",
+		PrivacyAck: true,
+	})
+
+	if !errors.Is(err, domainUser.ErrRegistrationUserDeleted) {
+		t.Fatalf("expected ErrRegistrationUserDeleted, got %v", err)
 	}
 }
 
@@ -422,7 +444,7 @@ func (s *registrationStoreStub) GetUserByID(_ context.Context, userID uuid.UUID)
 }
 
 func (s *registrationStoreStub) GetUserByEmail(_ context.Context, email string) (*domainUser.User, error) {
-	if s.user == nil || s.user.Email != email {
+	if s.user == nil || s.user.EmailValue() != email {
 		return nil, domain.ErrNotFound
 	}
 	return s.user, nil

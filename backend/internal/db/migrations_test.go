@@ -157,12 +157,43 @@ func TestProjectPhaseMigrationBackfillsAlreadyBaselinedDatabase(t *testing.T) {
 	}
 }
 
+func TestApplyMigrationsEnsuresUserReadDeletedPermission(t *testing.T) {
+	db := openMigrationTestDB(t)
+
+	if err := ApplyMigrations(db); err != nil {
+		t.Fatalf("expected migrations to succeed, got %v", err)
+	}
+
+	var permission domainUser.Permission
+	if err := db.Where("name = ?", domainUser.PermissionUserReadDeleted).First(&permission).Error; err != nil {
+		t.Fatalf("expected %s permission to exist, got %v", domainUser.PermissionUserReadDeleted, err)
+	}
+	if permission.Resource != "user" {
+		t.Fatalf("expected resource user, got %s", permission.Resource)
+	}
+	if permission.Action != "read_deleted" {
+		t.Fatalf("expected action read_deleted, got %s", permission.Action)
+	}
+
+	var grant domainUser.RolePermission
+	if err := db.Where("role = ? AND permission = ?", domainUser.RoleSuperAdmin, domainUser.PermissionUserReadDeleted).First(&grant).Error; err != nil {
+		t.Fatalf("expected superadmin grant for %s, got %v", domainUser.PermissionUserReadDeleted, err)
+	}
+}
+
 func openMigrationTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "migration.db")), &gorm.Config{DisableForeignKeyConstraintWhenMigrating: true})
 	if err != nil {
 		t.Fatalf("expected sqlite db to open, got %v", err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("expected sqlite db handle, got %v", err)
+	}
+	t.Cleanup(func() {
+		_ = sqlDB.Close()
+	})
 	return db
 }
 

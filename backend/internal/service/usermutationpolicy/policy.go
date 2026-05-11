@@ -60,6 +60,24 @@ func (p *Policy) CanDeleteUser(ctx context.Context, actorID uuid.UUID, target do
 	return p.canMutateRole(ctx, actorID, target.Role, domainUser.PermissionUserDelete)
 }
 
+func (p *Policy) CanRestoreUser(ctx context.Context, actorID uuid.UUID, target domainUser.User) error {
+	if err := p.canMutateRole(ctx, actorID, target.Role, domainUser.PermissionUserDelete); err != nil {
+		return err
+	}
+	actorRole, err := p.actorRole(ctx, actorID)
+	if err != nil {
+		return err
+	}
+	hasPermission, err := p.roles.HasPermission(ctx, actorRole, domainUser.PermissionUserReadDeleted)
+	if err != nil {
+		return err
+	}
+	if !hasPermission {
+		return domainUser.ErrRoleNotAssignable
+	}
+	return nil
+}
+
 func (p *Policy) CanDisableUser(ctx context.Context, actorID uuid.UUID, target domainUser.User) error {
 	return p.canMutateRole(ctx, actorID, target.Role, domainUser.PermissionUserUpdate)
 }

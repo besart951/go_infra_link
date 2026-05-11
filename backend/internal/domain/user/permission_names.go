@@ -1,10 +1,11 @@
 package user
 
 const (
-	PermissionUserCreate = "user.create"
-	PermissionUserRead   = "user.read"
-	PermissionUserUpdate = "user.update"
-	PermissionUserDelete = "user.delete"
+	PermissionUserCreate      = "user.create"
+	PermissionUserRead        = "user.read"
+	PermissionUserReadDeleted = "user.read_deleted"
+	PermissionUserUpdate      = "user.update"
+	PermissionUserDelete      = "user.delete"
 
 	PermissionTeamCreate = "team.create"
 	PermissionTeamRead   = "team.read"

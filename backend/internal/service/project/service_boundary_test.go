@@ -335,10 +335,10 @@ func TestProjectMembershipService_InviteListRemoveUser_CharacterizesMembershipBo
 
 	projectRepo := newProjectRepo()
 	projectRepo.items[projectID] = &domainProject.Project{Base: domain.Base{ID: projectID}}
-	projectRepo.listedUsers[projectID] = []domainUser.User{{Base: domain.Base{ID: userID}, Email: "member@example.com"}}
+	projectRepo.listedUsers[projectID] = []domainUser.User{{Base: domain.Base{ID: userID}, Email: domainUser.EmailPtr("member@example.com")}}
 
 	userRepo := newProjectUserRepo()
-	userRepo.items[userID] = &domainUser.User{Base: domain.Base{ID: userID}, Email: "member@example.com"}
+	userRepo.items[userID] = &domainUser.User{Base: domain.Base{ID: userID}, Email: domainUser.EmailPtr("member@example.com")}
 
 	svc := NewServices(Dependencies{Projects: projectRepo, Users: userRepo}).Membership
 

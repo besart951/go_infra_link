@@ -78,7 +78,7 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 		Dashboard:        dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
 		Phase:            phaseservice.NewPhaseService(repos.Phase),
 		PhasePermission:  phasepermissionservice.New(repos.PhasePermissions, repos.Phase, repos.Permissions),
-		User:             userservice.New(repos.User, passwordService, userMutationPolicy),
+		User:             userservice.New(repos.UserLifecycle, passwordService, userMutationPolicy),
 		UserRegistration: userregistrationservice.New(repos.UserRegistration, userMutationPolicy, passwordService, cfg.AppPublicURL),
 		Password:         passwordService,
 		JWT:              jwtService,

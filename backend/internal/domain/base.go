@@ -38,11 +38,12 @@ func (b *Base) GetBase() *Base {
 }
 
 type PaginationParams struct {
-	Page    int
-	Limit   int
-	Search  string
-	OrderBy string
-	Order   string // "asc" or "desc"
+	Page           int
+	Limit          int
+	Search         string
+	OrderBy        string
+	Order          string // "asc" or "desc"
+	IncludeDeleted bool
 }
 
 type PaginatedList[T any] struct {

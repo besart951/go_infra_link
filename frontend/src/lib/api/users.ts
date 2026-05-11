@@ -23,6 +23,10 @@ export interface User {
   updated_at: string;
   last_login_at?: string | null;
   disabled_at?: string | null;
+  deleted_at?: string | null;
+  restore_until?: string | null;
+  is_deleted?: boolean;
+  is_anonymized?: boolean;
   locked_until?: string | null;
   failed_login_attempts: number;
 }
@@ -40,6 +44,7 @@ export interface ListUsersParams {
   search?: string;
   order_by?: string;
   order?: 'asc' | 'desc';
+  include_deleted?: boolean;
 }
 
 export interface CreateUserRequest {
@@ -76,6 +81,7 @@ export interface UserDirectoryCapabilities {
   can_delete: boolean;
   can_disable: boolean;
   can_enable: boolean;
+  can_restore: boolean;
   can_change_role: boolean;
 }
 
@@ -93,6 +99,7 @@ export interface UserDirectoryTeamFilter {
 
 export interface UserDirectoryPageCapabilities {
   can_create_user: boolean;
+  can_read_deleted: boolean;
 }
 
 export interface UserDirectoryResponse {
@@ -148,6 +155,7 @@ export async function listUsers(
   if (params.search) searchParams.set('search', params.search);
   if (params.order_by) searchParams.set('order_by', params.order_by);
   if (params.order) searchParams.set('order', params.order);
+  if (params.include_deleted) searchParams.set('include_deleted', 'true');
 
   const query = searchParams.toString();
   const endpoint = query ? `/users?${query}` : '/users';
@@ -166,6 +174,7 @@ export async function listUserDirectory(
   if (params.order_by) searchParams.set('order_by', params.order_by);
   if (params.order) searchParams.set('order', params.order);
   if (params.team_id) searchParams.set('team_id', params.team_id);
+  if (params.include_deleted) searchParams.set('include_deleted', 'true');
 
   const query = searchParams.toString();
   const endpoint = query ? `/users/directory?${query}` : '/users/directory';
@@ -245,6 +254,16 @@ export async function disableUser(userId: string): Promise<void> {
  */
 export async function enableUser(userId: string): Promise<void> {
   return api<void>(`/admin/users/${userId}/enable`, {
+    method: 'POST'
+  });
+}
+
+/**
+ * Restore a recently deleted user (admin only)
+ * CSRF token is automatically included
+ */
+export async function restoreUser(userId: string): Promise<void> {
+  return api<void>(`/admin/users/${userId}/restore`, {
     method: 'POST'
   });
 }

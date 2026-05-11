@@ -177,6 +177,58 @@ func TestCanEnableUserAllowsAcceptedRegistration(t *testing.T) {
 	}
 }
 
+func TestCanRestoreUserRequiresDeleteAndReadDeleted(t *testing.T) {
+	ctx := context.Background()
+	actorID := uuid.New()
+	target := domainUser.User{Base: domain.Base{ID: uuid.New()}, Role: domainUser.RolePlaner}
+
+	tests := []struct {
+		name        string
+		permissions map[string]bool
+		wantErr     error
+	}{
+		{
+			name: "allows delete and read deleted",
+			permissions: map[string]bool{
+				domainUser.PermissionUserDelete:      true,
+				domainUser.PermissionUserReadDeleted: true,
+			},
+		},
+		{
+			name: "rejects missing delete",
+			permissions: map[string]bool{
+				domainUser.PermissionUserReadDeleted: true,
+			},
+			wantErr: domainUser.ErrRoleNotAssignable,
+		},
+		{
+			name: "rejects missing read deleted",
+			permissions: map[string]bool{
+				domainUser.PermissionUserDelete: true,
+			},
+			wantErr: domainUser.ErrRoleNotAssignable,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			policy := New(&roleProviderStub{
+				roleByUser: map[uuid.UUID]domainUser.Role{
+					actorID: domainUser.RoleAdminPlaner,
+				},
+				permissionsByRole: map[domainUser.Role]map[string]bool{
+					domainUser.RoleAdminPlaner: tt.permissions,
+				},
+			}, nil)
+
+			err := policy.CanRestoreUser(ctx, actorID, target)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("expected %v, got %v", tt.wantErr, err)
+			}
+		})
+	}
+}
+
 type roleProviderStub struct {
 	roleByUser        map[uuid.UUID]domainUser.Role
 	permissionsByRole map[domainUser.Role]map[string]bool

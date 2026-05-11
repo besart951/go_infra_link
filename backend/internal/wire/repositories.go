@@ -7,6 +7,7 @@ import (
 	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
 	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
+	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
@@ -41,6 +42,7 @@ type Repositories struct {
 	ProjectFieldDevices      domainProject.ProjectFieldDeviceRepository
 	History                  HistoryRepository
 	User                     domainUser.UserRepository
+	UserLifecycle            UserLifecycleStore
 	UserEmail                domainUser.UserEmailRepository
 	UserRegistration         *userregistrationrepo.Store
 	Permissions              domainUser.PermissionRepository
@@ -85,6 +87,12 @@ type HistoryRepository interface {
 	RestoreControlCabinet(ctx context.Context, controlCabinetID uuid.UUID, req domainHistory.RestoreControlCabinetRequest) (*domainHistory.RestoreResult, error)
 }
 
+type UserLifecycleStore interface {
+	domainUser.UserRepository
+	domainUser.UserEmailRepository
+	ListDueForAnonymization(ctx context.Context, now time.Time, limit int) ([]*domainUser.User, error)
+}
+
 // NewRepositories creates all repository instances from the database connection.
 func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 	userRepo := userrepo.NewUserRepository(gormDB)
@@ -92,6 +100,10 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 	rolePermissionRepo := userrepo.NewRolePermissionRepository(gormDB)
 	historyStore := historyrepo.NewStore(gormDB)
 	userEmailRepo, ok := userRepo.(domainUser.UserEmailRepository)
+	if !ok {
+		return nil, ErrUserRepoMissingEmailLookup
+	}
+	userLifecycleStore, ok := userRepo.(UserLifecycleStore)
 	if !ok {
 		return nil, ErrUserRepoMissingEmailLookup
 	}
@@ -108,6 +120,7 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 		ProjectFieldDevices:      historycapture.WrapProjectFieldDevice(projectsqlrepo.NewProjectFieldDeviceRepository(gormDB), historyStore),
 		History:                  historyStore,
 		User:                     userRepo,
+		UserLifecycle:            userLifecycleStore,
 		UserEmail:                userEmailRepo,
 		UserRegistration:         userregistrationrepo.NewStore(gormDB),
 		Permissions:              permissionRepo,

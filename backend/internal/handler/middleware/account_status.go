@@ -42,7 +42,7 @@ func AccountStatusGuard(userService UserStatusService) gin.HandlerFunc {
 			return
 		}
 
-		if !usr.IsActive || usr.DisabledAt != nil {
+		if !usr.IsActive || usr.DisabledAt != nil || usr.DeletedAt != nil || usr.AnonymizedAt != nil {
 			c.JSON(http.StatusForbidden, gin.H{"error": "account_disabled"})
 			c.Abort()
 			return

@@ -188,6 +188,84 @@ func TestRequireSuperAdminForRoleParam_RejectsAdminFZAGForSuperadmin(t *testing.
 	}
 }
 
+func TestRequirePermissionWhenQueryTrue_AllowsWhenQueryFalse(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	userID := uuid.New()
+	authz := &authCheckerStub{globalRole: domainUser.RoleAdminFZAG}
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(ContextUserIDKey, userID)
+		c.Next()
+	})
+	router.GET("/users", RequirePermissionWhenQueryTrue(authz, "include_deleted", domainUser.PermissionUserReadDeleted), func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/users", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusNoContent {
+		t.Fatalf("expected success when include_deleted is false, got %d", resp.Code)
+	}
+	if authz.lastPermission != "" {
+		t.Fatalf("expected no permission check, got %q", authz.lastPermission)
+	}
+}
+
+func TestRequirePermissionWhenQueryTrue_RejectsMissingPermission(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	userID := uuid.New()
+	authz := &authCheckerStub{globalRole: domainUser.RoleAdminFZAG, hasPermissionResponse: false}
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(ContextUserIDKey, userID)
+		c.Next()
+	})
+	router.GET("/users", RequirePermissionWhenQueryTrue(authz, "include_deleted", domainUser.PermissionUserReadDeleted), func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/users?include_deleted=true", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusForbidden {
+		t.Fatalf("expected forbidden, got status %d", resp.Code)
+	}
+	if authz.lastPermission != domainUser.PermissionUserReadDeleted {
+		t.Fatalf("expected check for %q, got %q", domainUser.PermissionUserReadDeleted, authz.lastPermission)
+	}
+}
+
+func TestRequirePermissionWhenQueryTrue_AllowsWhenPermissionGranted(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	userID := uuid.New()
+	authz := &authCheckerStub{globalRole: domainUser.RoleAdminFZAG, hasPermissionResponse: true}
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(ContextUserIDKey, userID)
+		c.Next()
+	})
+	router.GET("/users", RequirePermissionWhenQueryTrue(authz, "include_deleted", domainUser.PermissionUserReadDeleted), func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/users?include_deleted=true", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusNoContent {
+		t.Fatalf("expected success, got status %d", resp.Code)
+	}
+	if authz.lastPermission != domainUser.PermissionUserReadDeleted {
+		t.Fatalf("expected check for %q, got %q", domainUser.PermissionUserReadDeleted, authz.lastPermission)
+	}
+}
+
 type authCheckerStub struct {
 	globalRole            domainUser.Role
 	teamRole              *domainTeam.MemberRole

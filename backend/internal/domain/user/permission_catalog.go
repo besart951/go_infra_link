@@ -22,6 +22,12 @@ func CanonicalPermissionDefinitions() []PermissionDefinition {
 	definitions = append(definitions,
 		crudPermissionDefinitions("user", "users", PermissionUserCreate, PermissionUserRead, PermissionUserUpdate, PermissionUserDelete)...,
 	)
+	definitions = append(definitions, PermissionDefinition{
+		Name:        PermissionUserReadDeleted,
+		Resource:    "user",
+		Action:      "read_deleted",
+		Description: "Read deleted users",
+	})
 	definitions = append(definitions,
 		crudPermissionDefinitions("team", "teams", PermissionTeamCreate, PermissionTeamRead, PermissionTeamUpdate, PermissionTeamDelete)...,
 	)

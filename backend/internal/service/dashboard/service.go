@@ -144,7 +144,7 @@ func (s *Service) GetUserDashboard(ctx context.Context, userID uuid.UUID) (*Dash
 				UserID:      usr.ID,
 				FirstName:   usr.FirstName,
 				LastName:    usr.LastName,
-				Email:       usr.Email,
+				Email:       usr.EmailValue(),
 				Role:        memberRoleByUser[usr.ID],
 				LastLoginAt: usr.LastLoginAt,
 				IsOnline:    isUserOnline(*usr, now),
@@ -181,7 +181,7 @@ func buildOnlineUsers(users map[uuid.UUID]domainUser.User, now time.Time) []Dash
 			ID:          usr.ID,
 			FirstName:   usr.FirstName,
 			LastName:    usr.LastName,
-			Email:       usr.Email,
+			Email:       usr.EmailValue(),
 			LastLoginAt: usr.LastLoginAt,
 			IsOnline:    true,
 		})

@@ -19,7 +19,7 @@ func TestAuthHandler_BuildAuthResponse_SuperadminCanAccessUserDirectoryWithoutSt
 			Base:      domain.Base{ID: userID},
 			FirstName: "Super",
 			LastName:  "Admin",
-			Email:     "superadmin@example.com",
+			Email:     domainUser.EmailPtr("superadmin@example.com"),
 			IsActive:  true,
 			Role:      domainUser.RoleSuperAdmin,
 		},

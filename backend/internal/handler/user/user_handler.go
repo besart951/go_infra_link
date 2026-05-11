@@ -1,7 +1,6 @@
 package user
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -17,18 +16,20 @@ import (
 )
 
 type UserHandler struct {
-	service      UserService
-	roleService  RoleQueryService
-	directory    UserDirectoryService
-	registration UserRegistrationService
+	service        UserService
+	roleService    RoleQueryService
+	directory      UserDirectoryService
+	registration   UserRegistrationService
+	errorResponder *handlerutil.ErrorResponder
 }
 
 func NewUserHandler(service UserService, roleService RoleQueryService, directory UserDirectoryService, registration UserRegistrationService) *UserHandler {
 	return &UserHandler{
-		service:      service,
-		roleService:  roleService,
-		directory:    directory,
-		registration: registration,
+		service:        service,
+		roleService:    roleService,
+		directory:      directory,
+		registration:   registration,
+		errorResponder: handlerutil.NewErrorResponder(),
 	}
 }
 
@@ -56,11 +57,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	usr := ToUserModel(req)
 
 	if err := h.service.CreateWithPasswordForActor(c.Request.Context(), actorID, usr, req.Password); err != nil {
-		if errors.Is(err, domainUser.ErrRoleNotAssignable) {
-			handlerutil.RespondLocalizedError(c, http.StatusForbidden, "role_not_assignable", "user.role_not_assignable")
-			return
-		}
-		handlerutil.RespondDomainError(c, err, handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "user.creation_failed"))
+		h.errorResponder.RespondUserError(c, err)
 		return
 	}
 
@@ -93,6 +90,10 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		)
 		return
 	}
+	if usr.IsIdentityHidden() {
+		handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "user.user_not_found")
+		return
+	}
 
 	c.JSON(http.StatusOK, ToUserResponse(usr))
 }
@@ -114,7 +115,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.List(c.Request.Context(), query.Page, query.Limit, query.Search, query.OrderBy, query.Order)
+	result, err := h.service.List(c.Request.Context(), query.Page, query.Limit, query.Search, query.OrderBy, query.Order, query.IncludeDeleted)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "user.fetch_failed")
 		return
@@ -167,6 +168,7 @@ func (h *UserHandler) ListDirectory(c *gin.Context) {
 		query.TeamID,
 		query.OrderBy,
 		query.Order,
+		query.IncludeDeleted,
 	)
 	if err != nil {
 		if err == domainUser.ErrForbiddenUserDirectory {
@@ -229,15 +231,15 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		)
 		return
 	}
+	if usr.IsIdentityHidden() {
+		handlerutil.RespondLocalizedError(c, http.StatusNotFound, "not_found", "user.user_not_found")
+		return
+	}
 
 	ApplyUserUpdate(usr, req)
 
 	if err := h.service.UpdateProfileForActor(ctx, actorID, usr); err != nil {
-		if errors.Is(err, domainUser.ErrRoleNotAssignable) {
-			handlerutil.RespondLocalizedError(c, http.StatusForbidden, "role_not_assignable", "user.role_not_assignable")
-			return
-		}
-		handlerutil.RespondDomainError(c, err, handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "user.update_failed"))
+		h.errorResponder.RespondUserError(c, err)
 		return
 	}
 
@@ -299,11 +301,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteByIDForActor(c.Request.Context(), actorID, id); err != nil {
-		if errors.Is(err, domainUser.ErrRoleNotAssignable) {
-			handlerutil.RespondLocalizedError(c, http.StatusForbidden, "role_not_assignable", "user.role_not_assignable")
-			return
-		}
-		handlerutil.RespondDomainError(c, err, handlerutil.LocalizedError(http.StatusInternalServerError, "deletion_failed", "user.deletion_failed"))
+		h.errorResponder.RespondUserError(c, err)
 		return
 	}
 

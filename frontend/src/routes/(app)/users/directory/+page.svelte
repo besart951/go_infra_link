@@ -14,7 +14,7 @@
   import UserManagementForm from '$lib/components/user-management-form.svelte';
   import RegistrationProcessStepper from '$lib/components/users/RegistrationProcessStepper.svelte';
   import { UserDirectoryPageState } from '$lib/components/users/UserDirectoryPageState.svelte.js';
-  import { MoreVertical, UserMinus, UserCheck, Trash2, Send } from '@lucide/svelte';
+  import { MoreVertical, UserMinus, UserCheck, Trash2, Send, RotateCcw } from '@lucide/svelte';
   import { createTranslator } from '$lib/i18n/translator';
 
   interface Props {
@@ -82,6 +82,19 @@
           {state.users.length} {$t('common.shown')} • {state.total} {$t('common.total')}
         {/if}
       </div>
+      {#if state.pageCapabilities.can_read_deleted}
+        <div class="flex items-center gap-2">
+          <label class="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              bind:checked={state.showDeletedUsers}
+              disabled={state.isLoading}
+              onchange={() => void state.loadDirectory(1, state.searchText, state.selectedTeamId)}
+            />
+            {$t('common.show_deleted_users')}
+          </label>
+        </div>
+      {/if}
       <div class="flex items-center gap-2">
         <span class="text-sm text-muted-foreground">{$t('common.team')}</span>
         <select
@@ -195,7 +208,8 @@
                     user.capabilities.can_disable || user.capabilities.can_enable}
                   {@const hasInvitationAction = state.hasInvitationResendAction(user)}
                   {@const hasDeleteAction = user.capabilities.can_delete}
-                  {#if hasRoleAction || hasToggleAction || hasInvitationAction || hasDeleteAction}
+                  {@const hasRestoreAction = user.capabilities.can_restore}
+                  {#if hasRoleAction || hasToggleAction || hasInvitationAction || hasDeleteAction || hasRestoreAction}
                     <DropdownMenu.Root>
                       <DropdownMenu.Trigger>
                         {#snippet child({ props })}
@@ -280,7 +294,23 @@
                           {/if}
                         {/if}
 
-                        {#if hasDeleteAction}
+                        {#if hasRestoreAction}
+                          {#if hasRoleAction || hasToggleAction || hasInvitationAction}
+                            <DropdownMenu.Separator />
+                          {/if}
+                          <DropdownMenu.Item
+                            onclick={() =>
+                              state.handleRestoreUser(
+                                user.id,
+                                `${user.first_name} ${user.last_name}`
+                              )}
+                          >
+                            <RotateCcw class="mr-2 h-4 w-4" />
+                            {$t('actions.restore_user')}
+                          </DropdownMenu.Item>
+                        {/if}
+
+                        {#if hasDeleteAction && !user.is_deleted}
                           {#if hasRoleAction || hasToggleAction || hasInvitationAction}
                             <DropdownMenu.Separator />
                           {/if}

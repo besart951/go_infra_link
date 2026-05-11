@@ -178,6 +178,8 @@ func (r *projectRepo) ListUsers(ctx context.Context, projectID uuid.UUID) ([]dom
 		Model(&domainUser.User{}).
 		Joins("JOIN project_users pu ON pu.user_id = users.id").
 		Where("pu.project_id = ?", projectID).
+		Where("users.deleted_at IS NULL").
+		Where("users.anonymized_at IS NULL").
 		Find(&users).Error; err != nil {
 		return nil, err
 	}

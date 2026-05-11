@@ -59,7 +59,7 @@ func TestProjectWorkflowService_DelegatesCreateProject(t *testing.T) {
 
 func TestProjectWorkflowService_DelegatesMembershipOps(t *testing.T) {
 	ctx := context.Background()
-	membership := &workflowMembershipFake{users: []domainUser.User{{Email: "u@example.com"}}}
+	membership := &workflowMembershipFake{users: []domainUser.User{{Email: domainUser.EmailPtr("u@example.com")}}}
 	svc := newProjectWorkflowService(&workflowLifecycleFake{}, membership)
 	id := uuid.New()
 

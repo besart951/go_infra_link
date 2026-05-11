@@ -46,6 +46,10 @@ type UserResponse struct {
 	DisabledAt          *time.Time `json:"disabled_at,omitempty"`
 	LockedUntil         *time.Time `json:"locked_until,omitempty"`
 	FailedLoginAttempts int        `json:"failed_login_attempts"`
+	IsDeleted           bool       `json:"is_deleted"`
+	IsAnonymized        bool       `json:"is_anonymized"`
+	DeletedAt           *time.Time `json:"deleted_at,omitempty"`
+	RestoreUntil        *time.Time `json:"restore_until,omitempty"`
 }
 
 type UserListResponse struct {
@@ -65,6 +69,7 @@ type UserDirectoryCapabilitiesResponse struct {
 	CanDelete     bool `json:"can_delete"`
 	CanDisable    bool `json:"can_disable"`
 	CanEnable     bool `json:"can_enable"`
+	CanRestore    bool `json:"can_restore"`
 	CanChangeRole bool `json:"can_change_role"`
 }
 
@@ -89,7 +94,8 @@ type RegistrationProcessResponse struct {
 }
 
 type UserDirectoryPageCapabilitiesResponse struct {
-	CanCreateUser bool `json:"can_create_user"`
+	CanCreateUser  bool `json:"can_create_user"`
+	CanReadDeleted bool `json:"can_read_deleted"`
 }
 
 type UserDirectoryUserResponse struct {
@@ -106,6 +112,10 @@ type UserDirectoryUserResponse struct {
 	DisabledAt          *time.Time                        `json:"disabled_at,omitempty"`
 	LockedUntil         *time.Time                        `json:"locked_until,omitempty"`
 	FailedLoginAttempts int                               `json:"failed_login_attempts"`
+	IsDeleted           bool                              `json:"is_deleted"`
+	IsAnonymized        bool                              `json:"is_anonymized"`
+	DeletedAt           *time.Time                        `json:"deleted_at,omitempty"`
+	RestoreUntil        *time.Time                        `json:"restore_until,omitempty"`
 	Teams               []UserDirectoryTeamResponse       `json:"teams"`
 	Capabilities        UserDirectoryCapabilitiesResponse `json:"capabilities"`
 	RegistrationProcess *RegistrationProcessResponse      `json:"registration_process,omitempty"`

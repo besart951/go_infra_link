@@ -92,7 +92,7 @@ func seedUserRegistration(t *testing.T, db *gorm.DB, userID, invitationID, outbo
 	t.Helper()
 	user := domainUser.User{
 		Base:     domain.Base{ID: userID, CreatedAt: initialAt, UpdatedAt: initialAt},
-		Email:    "person@example.com",
+		Email:    domainUser.EmailPtr("person@example.com"),
 		Password: "pending_registration",
 		IsActive: false,
 		Role:     domainUser.RolePlaner,

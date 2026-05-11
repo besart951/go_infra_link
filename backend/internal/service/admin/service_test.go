@@ -15,7 +15,7 @@ func TestEnableUserRejectsPendingRegistration(t *testing.T) {
 	actorID := uuid.New()
 	userID := uuid.New()
 	userRepo := &adminUserRepoStub{
-		user: &domainUser.User{Base: domain.Base{ID: userID}, Email: "pending@example.com", IsActive: false},
+		user: &domainUser.User{Base: domain.Base{ID: userID}, Email: domainUser.EmailPtr("pending@example.com"), IsActive: false},
 	}
 	service := New(userRepo, &adminMutationPolicyStub{enableErr: domainUser.ErrRegistrationPending})
 
@@ -34,7 +34,7 @@ func TestEnableUserAllowsAcceptedRegistration(t *testing.T) {
 	actorID := uuid.New()
 	userID := uuid.New()
 	userRepo := &adminUserRepoStub{
-		user: &domainUser.User{Base: domain.Base{ID: userID}, Email: "accepted@example.com", IsActive: false},
+		user: &domainUser.User{Base: domain.Base{ID: userID}, Email: domainUser.EmailPtr("accepted@example.com"), IsActive: false},
 	}
 	service := New(userRepo, &adminMutationPolicyStub{})
 
@@ -53,7 +53,7 @@ func TestSetUserRoleRejectsUnassignableRole(t *testing.T) {
 	actorID := uuid.New()
 	userID := uuid.New()
 	userRepo := &adminUserRepoStub{
-		user: &domainUser.User{Base: domain.Base{ID: userID}, Email: "target@example.com", Role: domainUser.RolePlaner},
+		user: &domainUser.User{Base: domain.Base{ID: userID}, Email: domainUser.EmailPtr("target@example.com"), Role: domainUser.RolePlaner},
 	}
 	service := New(userRepo, &adminMutationPolicyStub{assignErr: domainUser.ErrRoleNotAssignable})
 
@@ -72,7 +72,7 @@ func TestSetUserRoleAllowsLowerHierarchyRole(t *testing.T) {
 	actorID := uuid.New()
 	userID := uuid.New()
 	userRepo := &adminUserRepoStub{
-		user: &domainUser.User{Base: domain.Base{ID: userID}, Email: "target@example.com", Role: domainUser.RolePlaner},
+		user: &domainUser.User{Base: domain.Base{ID: userID}, Email: domainUser.EmailPtr("target@example.com"), Role: domainUser.RolePlaner},
 	}
 	policy := &adminMutationPolicyStub{}
 	service := New(userRepo, policy)
@@ -95,7 +95,7 @@ func TestSetUserRoleRejectsTargetAboveRequesterScope(t *testing.T) {
 	actorID := uuid.New()
 	userID := uuid.New()
 	userRepo := &adminUserRepoStub{
-		user: &domainUser.User{Base: domain.Base{ID: userID}, Email: "target@example.com", Role: domainUser.RoleAdminFZAG},
+		user: &domainUser.User{Base: domain.Base{ID: userID}, Email: domainUser.EmailPtr("target@example.com"), Role: domainUser.RoleAdminFZAG},
 	}
 	service := New(userRepo, &adminMutationPolicyStub{assignErr: domainUser.ErrRoleNotAssignable})
 

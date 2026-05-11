@@ -23,6 +23,8 @@ func Run() error {
 	defer stopNotificationWorker()
 	stopRegistrationCleanup := runtimeDeps.services.UserRegistration.StartCleanupWorker(24 * time.Hour)
 	defer stopRegistrationCleanup()
+	stopDeletedUserPurge := runtimeDeps.services.User.StartDeletedUserPurgeWorker(time.Hour, 100)
+	defer stopDeletedUserPurge()
 
 	router := newRouter(runtimeDeps)
 	return serveHTTP(runtimeDeps.cfg, runtimeDeps.log, router)

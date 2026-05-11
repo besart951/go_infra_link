@@ -59,7 +59,7 @@ func TestEnsureSeedUserSkipsExistingUserMutation(t *testing.T) {
 	service := &seedUserServiceStub{}
 	existing := &domainUser.User{}
 	existing.ID = uuid.New()
-	existing.Email = "test@example.com"
+	existing.Email = domainUser.EmailPtr("test@example.com")
 	existing.Role = domainUser.RoleFZAG
 	existing.IsActive = false
 
@@ -67,7 +67,7 @@ func TestEnsureSeedUserSkipsExistingUserMutation(t *testing.T) {
 		SeedUserEnabled:   true,
 		SeedUserFirstName: "Updated",
 		SeedUserLastName:  "Admin",
-		SeedUserEmail:     existing.Email,
+		SeedUserEmail:     existing.EmailValue(),
 		SeedUserPassword:  "another-secret",
 	}
 

@@ -59,7 +59,7 @@ func (s *Service) Login(ctx context.Context, email, password string, userAgent, 
 		return nil, err
 	}
 
-	if usr.DisabledAt != nil || !usr.IsActive {
+	if usr.DisabledAt != nil || usr.DeletedAt != nil || usr.AnonymizedAt != nil || !usr.IsActive {
 		return nil, domainAuth.ErrAccountDisabled
 	}
 	if usr.LockedUntil != nil && usr.LockedUntil.After(time.Now().UTC()) {
@@ -114,6 +114,9 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string, userAgent, i
 		return nil, domainAuth.ErrInvalidToken
 	}
 	usr := users[0]
+	if usr.DisabledAt != nil || usr.DeletedAt != nil || usr.AnonymizedAt != nil || !usr.IsActive {
+		return nil, domainAuth.ErrAccountDisabled
+	}
 
 	revokedAt := time.Now().UTC()
 	if err := s.refreshTokenRepo.RevokeByTokenHash(ctx, hash, revokedAt); err != nil {

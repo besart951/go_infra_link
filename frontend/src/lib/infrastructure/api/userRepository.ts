@@ -9,6 +9,7 @@ import {
   inviteUser,
   listUserDirectory,
   listUsers,
+  restoreUser,
   resendUserRegistration,
   setUserRole,
   updateCurrentUser,
@@ -47,6 +48,7 @@ export const userRepository = {
   setRole: setUserRole,
   disable: disableUser,
   enable: enableUser,
+  restore: restoreUser,
   delete: deleteUser,
   updateCurrent: updateCurrentUser,
   updateCurrentPassword: updateCurrentUserPassword

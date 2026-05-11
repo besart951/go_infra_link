@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
@@ -79,6 +80,48 @@ func RequirePermission(authz AuthorizationChecker, permission string) gin.Handle
 			return
 		}
 		c.Next()
+	}
+}
+
+func RequirePermissionWhenQueryTrue(authz AuthorizationChecker, queryParam string, permission string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !isTruthyQuery(c.Query(queryParam)) {
+			c.Next()
+			return
+		}
+
+		role, ok := requireGlobalRole(c, authz)
+		if !ok {
+			return
+		}
+
+		ctx := c.Request.Context()
+		hasPermission, err := authz.HasPermission(ctx, role, permission)
+		if err != nil {
+			if requestutil.ShouldSuppressErrorResponse(ctx, err) {
+				c.Abort()
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "authorization_failed"})
+			c.Abort()
+			return
+		}
+		if !hasPermission {
+			c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func isTruthyQuery(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
 	}
 }
 

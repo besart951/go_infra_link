@@ -32,7 +32,10 @@ func NewUserRepository(db *gorm.DB) domainUser.UserRepository {
 
 func (r *userRepo) GetByEmail(ctx context.Context, email string) (*domainUser.User, error) {
 	var user domainUser.User
-	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	err := r.db.WithContext(ctx).
+		Where("email IS NOT NULL").
+		Where("LOWER(email) = ?", domainUser.NormalizeEmail(email)).
+		First(&user).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, domain.ErrNotFound
@@ -53,6 +56,12 @@ func (r *userRepo) Update(ctx context.Context, entity *domainUser.User) error {
 		"is_active":             entity.IsActive,
 		"role":                  entity.Role,
 		"disabled_at":           entity.DisabledAt,
+		"deleted_at":            entity.DeletedAt,
+		"deleted_by_id":         entity.DeletedByID,
+		"restore_until":         entity.RestoreUntil,
+		"scheduled_purge_at":    entity.ScheduledPurgeAt,
+		"anonymized_at":         entity.AnonymizedAt,
+		"deleted_email_hash":    entity.DeletedEmailHash,
 		"locked_until":          entity.LockedUntil,
 		"failed_login_attempts": entity.FailedLoginAttempts,
 		"last_login_at":         entity.LastLoginAt,
@@ -125,6 +134,9 @@ func (r *userRepo) GetPaginatedList(ctx context.Context, params domain.Paginatio
 	offset := (page - 1) * limit
 
 	query := r.db.WithContext(ctx).Model(&domainUser.User{})
+	if !params.IncludeDeleted {
+		query = query.Where("deleted_at IS NULL").Where("anonymized_at IS NULL")
+	}
 	if strings.TrimSpace(params.Search) != "" {
 		query = userSearchCallback()(query, params.Search)
 	}
@@ -171,12 +183,34 @@ func (r *userRepo) ListByRoles(ctx context.Context, roles []domainUser.Role) ([]
 
 	var users []domainUser.User
 	if err := r.db.WithContext(ctx).
+		Where("deleted_at IS NULL").
+		Where("anonymized_at IS NULL").
 		Where("role IN ?", roles).
 		Order("created_at ASC").
 		Find(&users).Error; err != nil {
 		return nil, err
 	}
 	return users, nil
+}
+
+func (r *userRepo) ListDueForAnonymization(ctx context.Context, now time.Time, limit int) ([]*domainUser.User, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	items := make([]*domainUser.User, 0, limit)
+	err := r.db.WithContext(ctx).
+		Model(&domainUser.User{}).
+		Where("deleted_at IS NOT NULL").
+		Where("anonymized_at IS NULL").
+		Where("scheduled_purge_at IS NOT NULL").
+		Where("scheduled_purge_at <= ?", now).
+		Order("scheduled_purge_at ASC").
+		Limit(limit).
+		Find(&items).Error
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 var _ domainUser.UserEmailRepository = (*userRepo)(nil)

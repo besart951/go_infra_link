@@ -190,7 +190,7 @@ func (s *fakeUserService) UpdatePassword(_ context.Context, userID uuid.UUID, _,
 	if s.passwordErr != nil {
 		return nil, s.passwordErr
 	}
-	return &domainUser.User{Base: domain.Base{ID: userID}, Email: "ada@example.com", Password: newPassword, Role: domainUser.RolePlaner}, nil
+	return &domainUser.User{Base: domain.Base{ID: userID}, Email: domainUser.EmailPtr("ada@example.com"), Password: newPassword, Role: domainUser.RolePlaner}, nil
 }
 
 func (s *fakeUserService) GetByID(context.Context, uuid.UUID) (*domainUser.User, error) {
@@ -198,7 +198,7 @@ func (s *fakeUserService) GetByID(context.Context, uuid.UUID) (*domainUser.User,
 	return &domainUser.User{Role: domainUser.RolePlaner}, nil
 }
 
-func (s *fakeUserService) List(context.Context, int, int, string, string, string) (*domain.PaginatedList[domainUser.User], error) {
+func (s *fakeUserService) List(context.Context, int, int, string, string, string, bool) (*domain.PaginatedList[domainUser.User], error) {
 	return &domain.PaginatedList[domainUser.User]{}, nil
 }
 
@@ -207,6 +207,10 @@ func (s *fakeUserService) DeleteByID(context.Context, uuid.UUID) error {
 }
 
 func (s *fakeUserService) DeleteByIDForActor(context.Context, uuid.UUID, uuid.UUID) error {
+	return nil
+}
+
+func (s *fakeUserService) RestoreByIDForActor(context.Context, uuid.UUID, uuid.UUID) error {
 	return nil
 }
 

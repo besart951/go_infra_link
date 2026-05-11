@@ -10,7 +10,11 @@ func RegisterUserRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authCh
 	users := protectedV1.Group("/users")
 	{
 		users.GET("/allowed-roles", handlers.User.GetAllowedRoles)
-		users.GET("/directory", handlers.User.ListDirectory)
+		users.GET(
+			"/directory",
+			middleware.RequirePermissionWhenQueryTrue(authChecker, "include_deleted", domainUser.PermissionUserReadDeleted),
+			handlers.User.ListDirectory,
+		)
 		users.PUT("/me/password", handlers.User.UpdateOwnPassword)
 	}
 
@@ -18,7 +22,12 @@ func RegisterUserRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authCh
 	{
 		usersAdmin.POST("", middleware.RequirePermission(authChecker, domainUser.PermissionUserCreate), handlers.User.CreateUser)
 		usersAdmin.POST("/invitations", middleware.RequirePermission(authChecker, domainUser.PermissionUserCreate), handlers.Registration.CreateInvitation)
-		usersAdmin.GET("", middleware.RequirePermission(authChecker, domainUser.PermissionUserRead), handlers.User.ListUsers)
+		usersAdmin.GET(
+			"",
+			middleware.RequirePermission(authChecker, domainUser.PermissionUserRead),
+			middleware.RequirePermissionWhenQueryTrue(authChecker, "include_deleted", domainUser.PermissionUserReadDeleted),
+			handlers.User.ListUsers,
+		)
 		usersAdmin.GET("/:id", middleware.RequirePermission(authChecker, domainUser.PermissionUserRead), handlers.User.GetUser)
 		usersAdmin.GET("/:id/registration", middleware.RequirePermission(authChecker, domainUser.PermissionUserRead), handlers.Registration.GetProcess)
 		usersAdmin.POST("/:id/registration/resend", middleware.RequirePermission(authChecker, domainUser.PermissionUserCreate), handlers.Registration.ResendInvitation)
@@ -54,6 +63,11 @@ func RegisterAdminRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authC
 	{
 		admin.POST("/users/:id/disable", middleware.RequirePermission(authChecker, domainUser.PermissionUserUpdate), handlers.Admin.DisableUser)
 		admin.POST("/users/:id/enable", middleware.RequirePermission(authChecker, domainUser.PermissionUserUpdate), handlers.Admin.EnableUser)
+		admin.POST("/users/:id/restore",
+			middleware.RequirePermission(authChecker, domainUser.PermissionUserDelete),
+			middleware.RequirePermission(authChecker, domainUser.PermissionUserReadDeleted),
+			handlers.Admin.RestoreUser,
+		)
 		admin.POST("/users/:id/role", middleware.RequirePermission(authChecker, domainUser.PermissionUserUpdate), handlers.Admin.SetUserRole)
 	}
 }

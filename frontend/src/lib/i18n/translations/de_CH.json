@@ -70,6 +70,7 @@
     "disabled": "Deaktiviert",
     "locked": "Gesperrt",
     "delete_user": "Benutzer löschen",
+    "show_deleted_users": "Gelöschte Benutzer anzeigen",
     "delete_team": "Team löschen",
     "members": "Mitglieder",
     "manage": "Verwalten",
@@ -334,7 +335,8 @@
   "actions": {
     "disable_user": "Benutzer deaktivieren",
     "enable_user": "Benutzer aktivieren",
-    "delete_user": "Benutzer löschen"
+    "delete_user": "Benutzer löschen",
+    "restore_user": "Benutzer wiederherstellen"
   },
   "auth": {
     "login": "Anmelden",
@@ -1265,6 +1267,7 @@
     "change_role_failed": "Rollenänderung fehlgeschlagen",
     "toggle_user_status_failed": "Benutzerstatuswechsel fehlgeschlagen",
     "delete_user_failed": "Benutzer löschen fehlgeschlagen",
+    "restore_user_failed": "Benutzer wiederherstellen fehlgeschlagen",
     "create_team_failed": "Team-Erstellung fehlgeschlagen",
     "delete_team_failed": "Team löschen fehlgeschlagen",
     "internal_server_error": "Ein interner Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
@@ -2545,7 +2548,9 @@
     "user_disabled_success": "Benutzer erfolgreich deaktiviert",
     "user_enabled_success": "Benutzer erfolgreich aktiviert",
     "user_deleted_success": "Benutzer erfolgreich gelöscht",
+    "user_restored_success": "Benutzer erfolgreich wiederhergestellt",
     "delete_user_confirm": "Sind Sie sicher, dass Sie {name} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "restore_user_confirm": "Sind Sie sicher, dass Sie {name} wiederherstellen möchten?",
     "add_new_user": "Fügen Sie einen neuen Benutzer zum System hinzu.",
     "user_created_success": "Benutzer erfolgreich erstellt",
     "logout_in_progress": "Abmeldung läuft...",

@@ -16,9 +16,10 @@ type UserService interface {
 	UpdateProfileForActor(ctx context.Context, actorID uuid.UUID, user *domainUser.User) error
 	UpdatePassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) (*domainUser.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*domainUser.User, error)
-	List(ctx context.Context, page, limit int, search, orderBy, order string) (*domain.PaginatedList[domainUser.User], error)
+	List(ctx context.Context, page, limit int, search, orderBy, order string, includeDeleted bool) (*domain.PaginatedList[domainUser.User], error)
 	DeleteByID(ctx context.Context, id uuid.UUID) error
 	DeleteByIDForActor(ctx context.Context, actorID, userID uuid.UUID) error
+	RestoreByIDForActor(ctx context.Context, actorID, userID uuid.UUID) error
 }
 
 type AdminService interface {
@@ -33,7 +34,7 @@ type RoleQueryService interface {
 }
 
 type UserDirectoryService interface {
-	List(ctx context.Context, requesterID uuid.UUID, page, limit int, search, teamID, orderBy, order string) (*userdirectory.ListResult, error)
+	List(ctx context.Context, requesterID uuid.UUID, page, limit int, search, teamID, orderBy, order string, includeDeleted bool) (*userdirectory.ListResult, error)
 }
 
 type UserRegistrationService interface {

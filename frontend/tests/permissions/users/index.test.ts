@@ -11,6 +11,7 @@ const state = vi.hoisted(() => {
     setUserRoleMock: vi.fn(),
     disableUserMock: vi.fn(),
     enableUserMock: vi.fn(),
+    restoreUserMock: vi.fn(),
     deleteUserMock: vi.fn()
   };
 });
@@ -21,7 +22,7 @@ const defaultDirectoryResponse = {
   page: 1,
   total_pages: 1,
   teams: [],
-  capabilities: { can_create_user: false }
+  capabilities: { can_create_user: false, can_read_deleted: false }
 };
 
 function directoryUser(overrides: Record<string, unknown> = {}) {
@@ -45,6 +46,7 @@ function directoryUser(overrides: Record<string, unknown> = {}) {
       can_delete: false,
       can_disable: false,
       can_enable: false,
+      can_restore: false,
       can_change_role: false
     },
     ...overrides
@@ -77,6 +79,7 @@ vi.mock('$lib/api/users.js', () => ({
   deleteUser: state.deleteUserMock,
   disableUser: state.disableUserMock,
   enableUser: state.enableUserMock,
+  restoreUser: state.restoreUserMock,
   getAllowedRoles: vi.fn().mockResolvedValue({ roles: [] }),
   getCurrentUser: vi.fn(),
   getUserRegistration: vi.fn(),
@@ -151,6 +154,7 @@ describe('/users/directory permission surface', () => {
     state.setUserRoleMock.mockReset();
     state.disableUserMock.mockReset();
     state.enableUserMock.mockReset();
+    state.restoreUserMock.mockReset();
     state.deleteUserMock.mockReset();
   });
 
@@ -185,7 +189,7 @@ describe('/users/directory permission surface', () => {
   it('loads data from /users/directory and keeps create CTA hidden when capability is false', async () => {
     state.listUserDirectoryMock.mockResolvedValue({
       ...defaultDirectoryResponse,
-      capabilities: { can_create_user: false }
+      capabilities: { can_create_user: false, can_read_deleted: false }
     });
 
     render(UsersPage);
@@ -200,7 +204,7 @@ describe('/users/directory permission surface', () => {
   it('shows create CTA when directory page capability allows user creation', async () => {
     state.listUserDirectoryMock.mockResolvedValue({
       ...defaultDirectoryResponse,
-      capabilities: { can_create_user: true }
+      capabilities: { can_create_user: true, can_read_deleted: false }
     });
 
     render(UsersPage);
@@ -232,7 +236,7 @@ describe('/users/directory permission surface', () => {
         })
       ],
       total: 1,
-      capabilities: { can_create_user: true }
+      capabilities: { can_create_user: true, can_read_deleted: false }
     });
 
     render(UsersPage);
@@ -243,5 +247,60 @@ describe('/users/directory permission surface', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'common.actions' }));
 
     expect(await screen.findByText('user.resend_invitation')).toBeInTheDocument();
+  });
+
+  it('hides deleted-user toggle without read-deleted capability', async () => {
+    render(UsersPage);
+
+    await waitFor(() => {
+      expect(state.listUserDirectoryMock).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByText('common.show_deleted_users')).not.toBeInTheDocument();
+  });
+
+  it('shows deleted-user toggle when read-deleted capability is present', async () => {
+    state.listUserDirectoryMock.mockResolvedValue({
+      ...defaultDirectoryResponse,
+      capabilities: { can_create_user: false, can_read_deleted: true }
+    });
+
+    render(UsersPage);
+
+    await waitFor(() => {
+      expect(state.listUserDirectoryMock).toHaveBeenCalled();
+    });
+
+    expect(screen.getByText('common.show_deleted_users')).toBeInTheDocument();
+  });
+
+  it('shows restore action from can_restore instead of can_enable', async () => {
+    state.listUserDirectoryMock.mockResolvedValue({
+      ...defaultDirectoryResponse,
+      items: [
+        directoryUser({
+          is_deleted: true,
+          capabilities: {
+            can_update: false,
+            can_delete: false,
+            can_disable: false,
+            can_enable: false,
+            can_restore: true,
+            can_change_role: false
+          }
+        })
+      ],
+      total: 1,
+      capabilities: { can_create_user: false, can_read_deleted: true }
+    });
+
+    render(UsersPage);
+
+    await waitFor(() => {
+      expect(state.listUserDirectoryMock).toHaveBeenCalled();
+    });
+    await fireEvent.click(screen.getByRole('button', { name: 'common.actions' }));
+
+    expect(await screen.findByText('actions.restore_user')).toBeInTheDocument();
   });
 });

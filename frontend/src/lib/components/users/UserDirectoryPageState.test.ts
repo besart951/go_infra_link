@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   setRole: vi.fn(),
   disable: vi.fn(),
   enable: vi.fn(),
+  restore: vi.fn(),
   delete: vi.fn(),
   resendRegistration: vi.fn(),
   confirm: vi.fn()
@@ -54,6 +55,7 @@ vi.mock('$lib/infrastructure/api/userRepository.js', () => ({
     setRole: mocks.setRole,
     disable: mocks.disable,
     enable: mocks.enable,
+    restore: mocks.restore,
     delete: mocks.delete,
     resendRegistration: mocks.resendRegistration
   }
@@ -93,6 +95,7 @@ function invitedUser(resendAvailableAt: string): UserDirectoryUser {
       can_delete: false,
       can_disable: false,
       can_enable: false,
+      can_restore: false,
       can_change_role: false
     },
     registration_process: {
@@ -115,7 +118,7 @@ describe('UserDirectoryPageState invitation resend action', () => {
     const now = Date.parse('2026-05-08T10:30:00.000Z');
     const user = invitedUser('2026-05-08T10:31:00.000Z');
     const state = new UserDirectoryPageState();
-    state.pageCapabilities = { can_create_user: true };
+    state.pageCapabilities = { can_create_user: true, can_read_deleted: false };
 
     expect(state.hasInvitationResendAction(user)).toBe(true);
     expect(state.canResendInvitation(user, now)).toBe(false);
@@ -128,9 +131,64 @@ describe('UserDirectoryPageState invitation resend action', () => {
     const now = Date.parse('2026-05-08T10:31:00.000Z');
     const user = invitedUser('2026-05-08T10:31:00.000Z');
     const state = new UserDirectoryPageState();
-    state.pageCapabilities = { can_create_user: true };
+    state.pageCapabilities = { can_create_user: true, can_read_deleted: false };
 
     expect(state.canResendInvitation(user, now)).toBe(true);
     expect(state.invitationResendDisabledReason(user, now)).toBeNull();
+  });
+});
+
+describe('UserDirectoryPageState deleted-user capability handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.listDirectory.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      total_pages: 1,
+      teams: [],
+      capabilities: { can_create_user: false, can_read_deleted: false }
+    });
+  });
+
+  it('does not request deleted users without read-deleted capability', async () => {
+    const state = new UserDirectoryPageState();
+    state.showDeletedUsers = true;
+
+    await state.loadDirectory();
+
+    expect(mocks.listDirectory).toHaveBeenCalledWith({
+      page: 1,
+      limit: 10,
+      search: undefined,
+      team_id: undefined,
+      include_deleted: false
+    });
+    expect(state.showDeletedUsers).toBe(false);
+  });
+
+  it('requests deleted users when capability and toggle are both enabled', async () => {
+    const state = new UserDirectoryPageState();
+    state.pageCapabilities = { can_create_user: false, can_read_deleted: true };
+    state.showDeletedUsers = true;
+    mocks.listDirectory.mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      page: 1,
+      total_pages: 1,
+      teams: [],
+      capabilities: { can_create_user: false, can_read_deleted: true }
+    });
+
+    await state.loadDirectory();
+
+    expect(mocks.listDirectory).toHaveBeenCalledWith({
+      page: 1,
+      limit: 10,
+      search: undefined,
+      team_id: undefined,
+      include_deleted: true
+    });
+    expect(state.showDeletedUsers).toBe(true);
   });
 });

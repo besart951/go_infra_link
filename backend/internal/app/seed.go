@@ -31,7 +31,7 @@ func ensureSeedUser(cfg config.Config, log applogger.Logger, userService seedUse
 		user = &domainUser.User{
 			FirstName: cfg.SeedUserFirstName,
 			LastName:  cfg.SeedUserLastName,
-			Email:     cfg.SeedUserEmail,
+			Email:     domainUser.EmailPtr(cfg.SeedUserEmail),
 			IsActive:  true,
 			Role:      domainUser.RoleSuperAdmin,
 		}

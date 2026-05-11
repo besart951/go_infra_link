@@ -12,7 +12,7 @@ func NewHandlers(userService UserService, adminService AdminService, roleService
 	return &Handlers{
 		User:         NewUserHandler(userService, roleService, directoryService, registrationService),
 		Registration: NewRegistrationHandler(registrationService),
-		Admin:        NewAdminHandler(adminService),
+		Admin:        NewAdminHandler(adminService, userService),
 		Role:         NewRoleHandler(rolePermissionService),
 		Permission:   NewPermissionHandler(permissionService),
 	}

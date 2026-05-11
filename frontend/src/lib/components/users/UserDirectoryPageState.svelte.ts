@@ -18,9 +18,13 @@ export class UserDirectoryPageState {
   page = $state(1);
   totalPages = $state(1);
   searchText = $state('');
+  showDeletedUsers = $state(false);
   selectedTeamId = $state('all');
   teamFilters = $state<UserDirectoryTeamFilter[]>([]);
-  pageCapabilities = $state<UserDirectoryPageCapabilities>({ can_create_user: false });
+  pageCapabilities = $state<UserDirectoryPageCapabilities>({
+    can_create_user: false,
+    can_read_deleted: false
+  });
   isLoading = $state(true);
   error = $state<string | null>(null);
   createDialogOpen = $state(false);
@@ -54,7 +58,8 @@ export class UserDirectoryPageState {
         page: nextPage,
         limit: 10,
         search: nextSearch || undefined,
-        team_id: nextTeamId === 'all' ? undefined : nextTeamId
+        team_id: nextTeamId === 'all' ? undefined : nextTeamId,
+        include_deleted: this.pageCapabilities.can_read_deleted && this.showDeletedUsers
       });
       this.users = result.items;
       this.total = result.total;
@@ -62,6 +67,9 @@ export class UserDirectoryPageState {
       this.totalPages = result.total_pages;
       this.teamFilters = result.teams;
       this.pageCapabilities = result.capabilities;
+      if (!this.pageCapabilities.can_read_deleted) {
+        this.showDeletedUsers = false;
+      }
     } catch (error) {
       this.error = getErrorMessage(error);
     } finally {
@@ -118,6 +126,28 @@ export class UserDirectoryPageState {
     } catch (error) {
       addToast(
         error instanceof Error ? error.message : translate('errors.delete_user_failed'),
+        'error'
+      );
+    }
+  }
+
+  async handleRestoreUser(userId: string, userName: string): Promise<void> {
+    const confirmed = await confirm({
+      title: translate('actions.restore_user'),
+      message: translate('messages.restore_user_confirm', { name: userName }),
+      confirmText: translate('history.restore'),
+      cancelText: translate('common.cancel')
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await userRepository.restore(userId);
+      await this.loadDirectory();
+      addToast(translate('messages.user_restored_success'), 'success');
+    } catch (error) {
+      addToast(
+        error instanceof Error ? error.message : translate('errors.restore_user_failed'),
         'error'
       );
     }

@@ -4,8 +4,10 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"time"
 
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/google/uuid"
 )
 
@@ -33,7 +35,7 @@ func (s *Store) enrichActorNames(ctx context.Context, events []domainHistory.Cha
 	var actors []actorNameRow
 	if err := s.db.WithContext(ctx).
 		Table("users").
-		Select("id, first_name, last_name, email").
+		Select("id, first_name, last_name, email, deleted_at, anonymized_at").
 		Where("id IN ?", ids).
 		Scan(&actors).Error; err != nil {
 		return err
@@ -286,10 +288,12 @@ func (s *Store) addBacnetObjectLabels(ctx context.Context, labels map[string]str
 }
 
 type actorNameRow struct {
-	ID        uuid.UUID `gorm:"column:id"`
-	FirstName string    `gorm:"column:first_name"`
-	LastName  string    `gorm:"column:last_name"`
-	Email     string    `gorm:"column:email"`
+	ID           uuid.UUID  `gorm:"column:id"`
+	FirstName    string     `gorm:"column:first_name"`
+	LastName     string     `gorm:"column:last_name"`
+	Email        *string    `gorm:"column:email"`
+	DeletedAt    *time.Time `gorm:"column:deleted_at"`
+	AnonymizedAt *time.Time `gorm:"column:anonymized_at"`
 }
 
 type scopeSummaryRow struct {
@@ -299,6 +303,9 @@ type scopeSummaryRow struct {
 }
 
 func (r actorNameRow) displayName() string {
+	if r.DeletedAt != nil || r.AnonymizedAt != nil {
+		return domainUser.DeletedUserDisplayName
+	}
 	name := strings.TrimSpace(strings.Join([]string{
 		strings.TrimSpace(r.FirstName),
 		strings.TrimSpace(r.LastName),
@@ -306,7 +313,7 @@ func (r actorNameRow) displayName() string {
 	if name != "" {
 		return name
 	}
-	return strings.TrimSpace(r.Email)
+	return strings.TrimSpace(domainUser.EmailString(r.Email))
 }
 
 func stringPtr(value string) *string {

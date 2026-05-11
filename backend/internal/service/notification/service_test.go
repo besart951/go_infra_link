@@ -351,7 +351,7 @@ func TestDispatchQueuesSystemNotificationAndEmailOutbox(t *testing.T) {
 	publisher := &systemNotificationPublisherStub{}
 	userRepo := &userRepoStub{
 		users: map[uuid.UUID]*domainUser.User{
-			userID: {Base: domain.Base{ID: userID}, Email: "login@example.com"},
+			userID: {Base: domain.Base{ID: userID}, Email: domainUser.EmailPtr("login@example.com")},
 		},
 	}
 	service := New(nil, preferenceRepo, systemRepo, outboxRepo, nil, nil, nil, userRepo, secretCipherStub{}, "test-secret")

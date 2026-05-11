@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
@@ -15,7 +16,9 @@ import (
 var allowedOrderBy = map[string]func(a, b Item) bool{
 	"first_name": func(a, b Item) bool { return strings.ToLower(a.User.FirstName) < strings.ToLower(b.User.FirstName) },
 	"last_name":  func(a, b Item) bool { return strings.ToLower(a.User.LastName) < strings.ToLower(b.User.LastName) },
-	"email":      func(a, b Item) bool { return strings.ToLower(a.User.Email) < strings.ToLower(b.User.Email) },
+	"email": func(a, b Item) bool {
+		return strings.ToLower(a.User.EmailValue()) < strings.ToLower(b.User.EmailValue())
+	},
 	"role":       func(a, b Item) bool { return domainUser.RoleLevel(a.User.Role) < domainUser.RoleLevel(b.User.Role) },
 	"created_at": func(a, b Item) bool { return a.User.CreatedAt.Before(b.User.CreatedAt) },
 	"last_login_at": func(a, b Item) bool {
@@ -45,11 +48,13 @@ type Capabilities struct {
 	CanDelete     bool
 	CanDisable    bool
 	CanEnable     bool
+	CanRestore    bool
 	CanChangeRole bool
 }
 
 type PageCapabilities struct {
-	CanCreateUser bool
+	CanCreateUser  bool
+	CanReadDeleted bool
 }
 
 type Item struct {
@@ -99,7 +104,7 @@ func New(users UserReader, teams TeamReader, memberships TeamMembershipReader, r
 	return &Service{users: users, teams: teams, memberships: memberships, rolePermissions: rolePermissions}
 }
 
-func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit int, search, teamID, orderBy, order string) (*ListResult, error) {
+func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit int, search, teamID, orderBy, order string, includeDeleted bool) (*ListResult, error) {
 	requester, err := domain.GetByID(ctx, s.users, requesterID)
 	if err != nil {
 		return nil, err
@@ -119,7 +124,7 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 		return nil, err
 	}
 
-	allUsers, err := s.loadAllUsers(ctx)
+	allUsers, err := s.loadAllUsers(ctx, includeDeleted)
 	if err != nil {
 		return nil, err
 	}
@@ -220,12 +225,15 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 	sort.Slice(filters, func(i, j int) bool { return strings.ToLower(filters[i].Name) < strings.ToLower(filters[j].Name) })
 
 	return &ListResult{
-		Items:            visible[offset:end],
-		Total:            total,
-		Page:             page,
-		TotalPages:       domain.CalculateTotalPages(total, limit),
-		Teams:            filters,
-		PageCapabilities: PageCapabilities{CanCreateUser: canCreateUser},
+		Items:      visible[offset:end],
+		Total:      total,
+		Page:       page,
+		TotalPages: domain.CalculateTotalPages(total, limit),
+		Teams:      filters,
+		PageCapabilities: PageCapabilities{
+			CanCreateUser:  canCreateUser,
+			CanReadDeleted: requesterPermissions.has(domainUser.PermissionUserReadDeleted),
+		},
 	}, nil
 }
 
@@ -241,12 +249,21 @@ func buildCapabilities(requesterID uuid.UUID, requesterRole domainUser.Role, req
 	}
 
 	canMutateSuperAdmin := !(target.Role == domainUser.RoleSuperAdmin && totalUsers <= 1)
+	canRestore := target.IsDeleted() &&
+		!target.IsAnonymized() &&
+		target.RestoreUntil != nil &&
+		time.Now().UTC().Before(*target.RestoreUntil) &&
+		requesterPermissions.has(domainUser.PermissionUserDelete) &&
+		requesterPermissions.has(domainUser.PermissionUserReadDeleted) &&
+		canMutateSuperAdmin
+	canUseNormalActions := !target.IsDeleted() && !target.IsAnonymized()
 	return Capabilities{
-		CanUpdate:     requesterPermissions.has(domainUser.PermissionUserUpdate),
-		CanDelete:     requesterPermissions.has(domainUser.PermissionUserDelete) && canMutateSuperAdmin,
-		CanDisable:    requesterPermissions.has(domainUser.PermissionUserUpdate) && target.IsActive && canMutateSuperAdmin,
-		CanEnable:     requesterPermissions.has(domainUser.PermissionUserUpdate) && !target.IsActive,
-		CanChangeRole: requesterPermissions.has(domainUser.PermissionUserUpdate),
+		CanUpdate:     canUseNormalActions && requesterPermissions.has(domainUser.PermissionUserUpdate),
+		CanDelete:     canUseNormalActions && requesterPermissions.has(domainUser.PermissionUserDelete) && canMutateSuperAdmin,
+		CanDisable:    canUseNormalActions && requesterPermissions.has(domainUser.PermissionUserUpdate) && target.IsActive && canMutateSuperAdmin,
+		CanEnable:     canUseNormalActions && requesterPermissions.has(domainUser.PermissionUserUpdate) && !target.IsActive,
+		CanRestore:    canRestore,
+		CanChangeRole: canUseNormalActions && requesterPermissions.has(domainUser.PermissionUserUpdate),
 	}
 }
 
@@ -276,7 +293,7 @@ func matchesSearch(candidate *domainUser.User, search string) bool {
 	fullName := strings.ToLower(strings.TrimSpace(candidate.FirstName + " " + candidate.LastName))
 	return strings.Contains(strings.ToLower(candidate.FirstName), search) ||
 		strings.Contains(strings.ToLower(candidate.LastName), search) ||
-		strings.Contains(strings.ToLower(candidate.Email), search) ||
+		strings.Contains(strings.ToLower(candidate.EmailValue()), search) ||
 		strings.Contains(fullName, search)
 }
 
@@ -339,8 +356,8 @@ func (s permissionSet) has(permission string) bool {
 	return ok
 }
 
-func (s *Service) loadAllUsers(ctx context.Context) ([]*domainUser.User, error) {
-	result, err := s.users.GetPaginatedList(ctx, domain.PaginationParams{Page: 1, Limit: 10000, OrderBy: "last_login_at", Order: "desc"})
+func (s *Service) loadAllUsers(ctx context.Context, includeDeleted bool) ([]*domainUser.User, error) {
+	result, err := s.users.GetPaginatedList(ctx, domain.PaginationParams{Page: 1, Limit: 10000, OrderBy: "last_login_at", Order: "desc", IncludeDeleted: includeDeleted})
 	if err != nil {
 		return nil, err
 	}

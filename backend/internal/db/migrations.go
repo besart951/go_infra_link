@@ -133,6 +133,18 @@ var migrations = []migration{
 		blueGreenCompatible: true,
 		apply:               migrateProjectPhases,
 	},
+	{
+		version:             "202605110001",
+		description:         "user_soft_delete_and_anonymization",
+		blueGreenCompatible: true,
+		apply:               migrateUserSoftDelete,
+	},
+	{
+		version:             "202605110002",
+		description:         "ensure_user_read_deleted_permission",
+		blueGreenCompatible: true,
+		apply:               ensureDeletedUserReadPermission,
+	},
 }
 
 type MigrationOptions struct {
