@@ -78,6 +78,8 @@ func ToUserListResponse(users []user.User) []dto.UserResponse {
 }
 
 func ToUserDirectoryListResponse(result *userdirectory.ListResult, registrationProcesses map[uuid.UUID]*userregistration.Process) dto.UserDirectoryListResponse {
+	showDeletedEmail := result != nil && result.PageCapabilities.CanReadDeleted
+
 	items := make([]dto.UserDirectoryUserResponse, len(result.Items))
 	for i, item := range result.Items {
 		teams := make([]dto.UserDirectoryTeamResponse, len(item.Teams))
@@ -91,7 +93,7 @@ func ToUserDirectoryListResponse(result *userdirectory.ListResult, registrationP
 			ID:                  item.User.ID,
 			FirstName:           projectedFirstName(item.User),
 			LastName:            projectedLastName(item.User),
-			Email:               projectedEmail(item.User),
+			Email:               projectedEmail(item.User, showDeletedEmail),
 			IsActive:            item.User.IsActive,
 			Role:                string(item.User.Role),
 			RoleDisplayName:     user.RoleDisplayName(item.User.Role),
@@ -150,8 +152,11 @@ func projectedLastName(usr user.User) string {
 	return usr.LastName
 }
 
-func projectedEmail(usr user.User) string {
+func projectedEmail(usr user.User, showDeletedEmail bool) string {
 	if usr.IsIdentityHidden() {
+		if showDeletedEmail && usr.IsDeleted() && !usr.IsAnonymized() {
+			return usr.EmailValue()
+		}
 		return ""
 	}
 	return usr.EmailValue()

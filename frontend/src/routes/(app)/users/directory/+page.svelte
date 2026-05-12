@@ -158,7 +158,15 @@
                         {user.first_name}
                         {user.last_name}
                       </div>
-                      <div class="text-sm text-muted-foreground">{user.email}</div>
+                      <div class="text-sm text-muted-foreground">
+                        {#if user.is_deleted && !state.pageCapabilities.can_read_deleted}
+                          &mdash;
+                        {:else if user.email}
+                          {user.email}
+                        {:else}
+                          &mdash;
+                        {/if}
+                      </div>
                     </div>
                   </div>
                 </Table.Cell>
