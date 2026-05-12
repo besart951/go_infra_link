@@ -32,7 +32,9 @@
 </script>
 
 <Tooltip.Provider>
-  <header class="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
+  <header
+    class="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-center sm:justify-between"
+  >
     <div class="flex min-w-0 items-center gap-3">
       <Tooltip.Root>
         <Tooltip.Trigger>
@@ -65,7 +67,7 @@
             <Button
               variant="default"
               size="icon"
-              class={`bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 ${createActive ? 'ring-2 ring-primary/30' : ''}`}
+              class={createActive ? 'ring-2 ring-ring/40' : undefined}
               onclick={onCreateClick}
               aria-label={createLabel}
             >

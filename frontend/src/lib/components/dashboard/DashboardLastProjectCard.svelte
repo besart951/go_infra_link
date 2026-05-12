@@ -1,9 +1,9 @@
 <script lang="ts">
   import * as Card from '$lib/components/ui/card/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
+  import ProjectStatusBadge from '$lib/components/project/ProjectStatusBadge.svelte';
   import type { DashboardProject } from '$lib/domain/dashboard/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import { projectStatusVariant } from './project-status.js';
 
   type Props = {
     project?: DashboardProject;
@@ -29,9 +29,7 @@
           {project.name}
         </a>
         <div class="flex flex-wrap gap-2">
-          <Badge variant={projectStatusVariant(project.status)}
-            >{$t(`messages.${project.status}`)}</Badge
-          >
+          <ProjectStatusBadge status={project.status} label={$t(`messages.${project.status}`)} />
           <Badge variant="outline">{$t('dashboard.phase_label')}: {project.phase}</Badge>
         </div>
         <p class="text-sm text-muted-foreground">

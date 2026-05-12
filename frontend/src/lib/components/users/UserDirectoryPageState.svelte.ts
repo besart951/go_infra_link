@@ -9,15 +9,18 @@ import {
   type UserDirectoryUser,
   type UserRole
 } from '$lib/infrastructure/api/userRepository.js';
+import { PaginatedSearchState } from '$lib/state/PaginatedSearchState.svelte.js';
 import { auth, getAllowedRolesForCreation } from '$lib/stores/auth.svelte.js';
 import { confirm } from '$lib/stores/confirm-dialog.js';
 
 export class UserDirectoryPageState {
+  readonly query = new PaginatedSearchState({
+    pageSize: 10,
+    initialTotalPages: 1,
+    initialLoading: true
+  });
+
   users = $state<UserDirectoryUser[]>([]);
-  total = $state(0);
-  page = $state(1);
-  totalPages = $state(1);
-  searchText = $state('');
   showDeletedUsers = $state(false);
   selectedTeamId = $state('all');
   teamFilters = $state<UserDirectoryTeamFilter[]>([]);
@@ -25,10 +28,56 @@ export class UserDirectoryPageState {
     can_create_user: false,
     can_read_deleted: false
   });
-  isLoading = $state(true);
-  error = $state<string | null>(null);
   createDialogOpen = $state(false);
   resendClock = $state(Date.now());
+
+  get total(): number {
+    return this.query.total;
+  }
+
+  set total(total: number) {
+    this.query.total = total;
+  }
+
+  get page(): number {
+    return this.query.page;
+  }
+
+  set page(page: number) {
+    this.query.goToPage(page);
+  }
+
+  get totalPages(): number {
+    return this.query.totalPages;
+  }
+
+  set totalPages(totalPages: number) {
+    this.query.totalPages = totalPages;
+  }
+
+  get searchText(): string {
+    return this.query.searchText;
+  }
+
+  set searchText(searchText: string) {
+    this.query.setSearchText(searchText);
+  }
+
+  get isLoading(): boolean {
+    return this.query.loading;
+  }
+
+  set isLoading(isLoading: boolean) {
+    this.query.setLoading(isLoading);
+  }
+
+  get error(): string | null {
+    return this.query.error;
+  }
+
+  set error(error: string | null) {
+    this.query.setError(error);
+  }
 
   async initialize(canAccessDirectory = auth.canAccessUserDirectory): Promise<void> {
     if (!canAccessDirectory) {
@@ -46,34 +95,63 @@ export class UserDirectoryPageState {
     return () => window.clearInterval(interval);
   }
 
+  openCreateDialog(): void {
+    this.createDialogOpen = true;
+  }
+
+  closeCreateDialog(): void {
+    this.createDialogOpen = false;
+  }
+
+  async refreshDirectory(): Promise<void> {
+    await this.loadDirectory(1, this.query.searchText, this.selectedTeamId);
+  }
+
+  async goToPage(nextPage: number): Promise<void> {
+    await this.loadDirectory(nextPage, this.query.searchText, this.selectedTeamId);
+  }
+
+  async setTeamFilter(teamId: string): Promise<void> {
+    this.selectedTeamId = teamId;
+    await this.loadDirectory(1, this.query.searchText, teamId);
+  }
+
+  async setShowDeletedUsers(showDeletedUsers: boolean): Promise<void> {
+    this.showDeletedUsers = showDeletedUsers;
+    await this.loadDirectory(1, this.query.searchText, this.selectedTeamId);
+  }
+
   async loadDirectory(
-    nextPage = this.page,
-    nextSearch = this.searchText,
+    nextPage = this.query.page,
+    nextSearch = this.query.searchText,
     nextTeamId = this.selectedTeamId
   ): Promise<void> {
-    this.isLoading = true;
-    this.error = null;
+    this.query.setLoading(true);
+    this.query.clearError();
     try {
       const result = await userRepository.listDirectory({
         page: nextPage,
-        limit: 10,
+        limit: this.query.pageSize,
         search: nextSearch || undefined,
         team_id: nextTeamId === 'all' ? undefined : nextTeamId,
         include_deleted: this.pageCapabilities.can_read_deleted && this.showDeletedUsers
       });
       this.users = result.items;
-      this.total = result.total;
-      this.page = result.page;
-      this.totalPages = result.total_pages;
+      this.query.applyResult({
+        total: result.total,
+        page: result.page,
+        totalPages: result.total_pages,
+        searchText: nextSearch
+      });
       this.teamFilters = result.teams;
       this.pageCapabilities = result.capabilities;
       if (!this.pageCapabilities.can_read_deleted) {
         this.showDeletedUsers = false;
       }
     } catch (error) {
-      this.error = getErrorMessage(error);
+      this.query.setError(getErrorMessage(error));
     } finally {
-      this.isLoading = false;
+      this.query.setLoading(false);
     }
   }
 
@@ -226,7 +304,7 @@ export class UserDirectoryPageState {
   }
 
   async handleUserCreated(): Promise<void> {
-    this.createDialogOpen = false;
+    this.closeCreateDialog();
     await this.loadDirectory();
     addToast(translate('user.invitation_created_and_sent'), 'success');
   }

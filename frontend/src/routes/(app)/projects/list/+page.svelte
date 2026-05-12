@@ -1,14 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
-  import * as Dialog from '$lib/components/ui/dialog/index.js';
-  import { Input } from '$lib/components/ui/input/index.js';
-  import { Textarea } from '$lib/components/ui/textarea/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
-  import ProjectPhaseSelect from '$lib/components/project/ProjectPhaseSelect.svelte';
+  import ProjectCreateDialog from '$lib/components/project/ProjectCreateDialog.svelte';
+  import ProjectListToolbar from '$lib/components/project/ProjectListToolbar.svelte';
   import { ProjectListPageState } from '$lib/components/project/ProjectListPageState.svelte.js';
+  import ProjectStatusBadge from '$lib/components/project/ProjectStatusBadge.svelte';
   import { projectListStore } from '$lib/stores/projects/projectListStore.js';
   import type { Project, ProjectStatus } from '$lib/domain/project/index.js';
   import { canPerform } from '$lib/utils/permissions.js';
@@ -16,17 +15,6 @@
 
   const t = createTranslator();
   const state = new ProjectListPageState();
-
-  function getStatusClass(status: string): string {
-    switch (status) {
-      case 'completed':
-        return 'bg-success-muted text-success-muted-foreground dark:bg-success-muted dark:text-success-muted-foreground';
-      case 'ongoing':
-        return 'bg-info-muted text-info-muted-foreground dark:bg-info-muted dark:text-info-muted-foreground';
-      default:
-        return 'bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground';
-    }
-  }
 
   const statusOptions: Array<{ value: ProjectStatus | 'all'; label: string }> = [
     { value: 'all', label: $t('messages.all_statuses') },
@@ -59,22 +47,16 @@
     createLabel={$t('common.create')}
     canCreate={canPerform('create', 'project')}
     createActive={state.createOpen}
-    onCreateClick={() => (state.createOpen = !state.createOpen)}
+    onCreateClick={() => state.toggleCreateDialog()}
   />
 
-  <div class="flex flex-wrap items-center gap-3">
-    <label class="text-sm font-medium" for="project_status_filter">{$t('common.status')}</label>
-    <select
-      id="project_status_filter"
-      class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
-      value={$projectListStore.status}
-      onchange={(event) => state.handleStatusChange(event)}
-    >
-      {#each statusOptions as opt}
-        <option value={opt.value}>{opt.label}</option>
-      {/each}
-    </select>
-  </div>
+  <ProjectListToolbar
+    label={$t('common.status')}
+    value={$projectListStore.status}
+    options={statusOptions}
+    disabled={$projectListStore.loading}
+    onStatusChange={(status) => state.setStatusFilter(status)}
+  />
 
   <PaginatedList
     state={$projectListStore}
@@ -98,13 +80,7 @@
         </a>
       </Table.Cell>
       <Table.Cell>
-        <span
-          class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {getStatusClass(
-            project.status
-          )}"
-        >
-          {project.status}
-        </span>
+        <ProjectStatusBadge status={project.status} label={$t(`messages.${project.status}`)} />
       </Table.Cell>
       <Table.Cell>
         {project.start_date ? new Date(project.start_date).toLocaleDateString() : '-'}
@@ -121,85 +97,21 @@
   </PaginatedList>
 </div>
 
-<Dialog.Root bind:open={state.createOpen}>
-  <Dialog.Content class="sm:max-w-2xl">
-    <Dialog.Header>
-      <Dialog.Title>{$t('common.create')}</Dialog.Title>
-      <Dialog.Description>{$t('pages.projects_desc')}</Dialog.Description>
-    </Dialog.Header>
-
-    <div class="grid gap-4 md:grid-cols-2">
-      <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium" for="project_name_create">{$t('common.name')}</label>
-        <Input
-          id="project_name_create"
-          placeholder={$t('messages.project_name_placeholder')}
-          bind:value={state.form.name}
-          disabled={state.createBusy}
-        />
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium" for="project_status_create">{$t('common.status')}</label>
-        <select
-          id="project_status_create"
-          class="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs"
-          bind:value={state.form.status}
-          disabled={state.createBusy}
-        >
-          {#each createStatusOptions as opt}
-            <option value={opt.value}>{opt.label}</option>
-          {/each}
-        </select>
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium" for="project_start_create"
-          >{$t('messages.start_date')}</label
-        >
-        <Input
-          id="project_start_create"
-          type="date"
-          bind:value={state.form.start_date}
-          disabled={state.createBusy}
-        />
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium" for="project_phase_create">{$t('messages.phase')}</label>
-        <ProjectPhaseSelect
-          id="project_phase_create"
-          bind:value={state.form.phase_id}
-          width="w-full"
-          disabled={state.createBusy}
-        />
-      </div>
-
-      <div class="flex flex-col gap-2 md:col-span-2">
-        <label class="text-sm font-medium" for="project_desc_create"
-          >{$t('common.description')}</label
-        >
-        <Textarea
-          id="project_desc_create"
-          placeholder={$t('messages.project_description_placeholder')}
-          rows={3}
-          bind:value={state.form.description}
-          disabled={state.createBusy}
-        />
-      </div>
-    </div>
-
-    <Dialog.Footer>
-      <Button
-        variant="outline"
-        onclick={() => (state.createOpen = false)}
-        disabled={state.createBusy}
-      >
-        {$t('common.cancel')}
-      </Button>
-      <Button onclick={() => state.submitCreate()} disabled={!state.canSubmitCreate()}>
-        {$t('common.create')}
-      </Button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
+<ProjectCreateDialog
+  {state}
+  statusOptions={createStatusOptions}
+  labels={{
+    title: $t('common.create'),
+    description: $t('pages.projects_desc'),
+    name: $t('common.name'),
+    status: $t('common.status'),
+    startDate: $t('messages.start_date'),
+    phase: $t('messages.phase'),
+    descriptionField: $t('common.description'),
+    cancel: $t('common.cancel'),
+    create: $t('common.create'),
+    namePlaceholder: $t('messages.project_name_placeholder'),
+    descriptionPlaceholder: $t('messages.project_description_placeholder'),
+    errorTitle: $t('messages.error')
+  }}
+/>

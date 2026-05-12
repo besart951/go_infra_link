@@ -51,21 +51,22 @@
   }
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="space-y-4">
   <!-- Search Bar -->
-  <div class="flex items-center gap-4">
-    <div class="relative flex-1">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div class="relative min-w-0 flex-1">
       <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         type="search"
         placeholder={searchPlaceholder}
+        aria-label={searchPlaceholder}
         class="pl-9"
         value={searchInput}
         oninput={handleSearchInput}
       />
     </div>
     {#if onReload}
-      <Button variant="outline" onclick={onReload} disabled={state.loading}
+      <Button class="w-full sm:w-auto" variant="outline" onclick={onReload} disabled={state.loading}
         >{$t('messages.refresh')}</Button
       >
     {/if}
@@ -74,15 +75,16 @@
   <!-- Error Message -->
   {#if state.error}
     <div
-      class="rounded-md border border-destructive/50 bg-destructive/15 px-4 py-3 text-destructive"
+      role="alert"
+      class="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
     >
       <p class="font-medium">{$t('messages.error')}</p>
-      <p class="text-sm">{state.error}</p>
+      <p>{state.error}</p>
     </div>
   {/if}
 
   <!-- Table -->
-  <div class="rounded-lg border bg-background">
+  <div class="overflow-hidden rounded-xl border bg-card shadow-sm">
     <Table.Root>
       <Table.Header>
         <Table.Row>
@@ -96,7 +98,7 @@
           <Table.LoadingRows loading columnCount={columns.length} />
         {:else if state.items.length === 0}
           <Table.Row>
-            <Table.Cell colspan={columns.length} class="h-24 text-center">
+            <Table.Cell colspan={columns.length} class="h-32 text-center">
               <div class="flex flex-col items-center justify-center gap-2 text-muted-foreground">
                 <p class="font-medium">{emptyMessage}</p>
                 {#if state.searchText}
@@ -118,7 +120,7 @@
 
   <!-- Pagination -->
   {#if state.totalPages > 1}
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div class="text-sm text-muted-foreground">
         {$t('messages.page_of')
           .replace('{page}', String(state.page))
@@ -127,7 +129,7 @@
           String(state.total)
         )}
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 sm:justify-end">
         <Button
           variant="outline"
           size="sm"
