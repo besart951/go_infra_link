@@ -822,9 +822,11 @@ func TestFieldDeviceService_GetFieldDeviceOptions_PreservesRepositoryOrdering(t 
 	apparatZuluID := uuid.New()
 	apparatAlphaID := uuid.New()
 	apparatBetaID := uuid.New()
+	apparatStandaloneID := uuid.New()
 	systemPartZuluID := uuid.New()
 	systemPartAlphaID := uuid.New()
 	systemPartBetaID := uuid.New()
+	systemPartStandaloneID := uuid.New()
 
 	objectDataRepo := &fakeObjectDataStore{
 		templates: []*domainFacility.ObjectData{
@@ -914,6 +916,37 @@ func TestFieldDeviceService_GetFieldDeviceOptions_PreservesRepositoryOrdering(t 
 					{Base: domain.Base{ID: systemPartBetaID}, ShortName: "Beta", Name: "Heat"},
 				},
 			},
+			apparatStandaloneID: {
+				Base:        domain.Base{ID: apparatStandaloneID},
+				ShortName:   "Standalone",
+				Name:        "Sensor",
+				SystemParts: []*domainFacility.SystemPart{},
+			},
+		},
+	}
+
+	systemPartRepo := &fakeSystemPartRepo{
+		items: map[uuid.UUID]*domainFacility.SystemPart{
+			systemPartZuluID: {
+				Base:      domain.Base{ID: systemPartZuluID},
+				ShortName: "Zulu",
+				Name:      "Zone",
+			},
+			systemPartAlphaID: {
+				Base:      domain.Base{ID: systemPartAlphaID},
+				ShortName: "Alpha",
+				Name:      "Air",
+			},
+			systemPartBetaID: {
+				Base:      domain.Base{ID: systemPartBetaID},
+				ShortName: "Beta",
+				Name:      "Heat",
+			},
+			systemPartStandaloneID: {
+				Base:      domain.Base{ID: systemPartStandaloneID},
+				ShortName: "Standalone",
+				Name:      "Space",
+			},
 		},
 	}
 
@@ -922,7 +955,7 @@ func TestFieldDeviceService_GetFieldDeviceOptions_PreservesRepositoryOrdering(t 
 		nil,
 		nil,
 		apparatRepo,
-		nil,
+		systemPartRepo,
 		nil,
 		nil,
 		objectDataRepo,
@@ -939,12 +972,16 @@ func TestFieldDeviceService_GetFieldDeviceOptions_PreservesRepositoryOrdering(t 
 		t.Fatalf("expected object datas in repository order, got %#v", got)
 	}
 
-	if got := []string{options.Apparats[0].ShortName, options.Apparats[1].ShortName, options.Apparats[2].ShortName}; got[0] != "Alpha" || got[1] != "Beta" || got[2] != "Zulu" {
+	if got := []string{options.Apparats[0].ShortName, options.Apparats[1].ShortName, options.Apparats[2].ShortName, options.Apparats[3].ShortName}; got[0] != "Alpha" || got[1] != "Beta" || got[2] != "Standalone" || got[3] != "Zulu" {
 		t.Fatalf("expected apparats in repository order, got %#v", got)
 	}
 
-	if got := []string{options.SystemParts[0].ShortName, options.SystemParts[1].ShortName, options.SystemParts[2].ShortName}; got[0] != "Alpha" || got[1] != "Beta" || got[2] != "Zulu" {
+	if got := []string{options.SystemParts[0].ShortName, options.SystemParts[1].ShortName, options.SystemParts[2].ShortName, options.SystemParts[3].ShortName}; got[0] != "Alpha" || got[1] != "Beta" || got[2] != "Standalone" || got[3] != "Zulu" {
 		t.Fatalf("expected system parts in repository order, got %#v", got)
+	}
+
+	if got := options.ApparatToSystemPart[apparatStandaloneID]; len(got) != 0 {
+		t.Fatalf("expected standalone apparat relation to be present and empty, got %#v", got)
 	}
 
 	projectOptions, err := svc.GetFieldDeviceOptionsForProject(context.Background(), projectID)
@@ -956,7 +993,7 @@ func TestFieldDeviceService_GetFieldDeviceOptions_PreservesRepositoryOrdering(t 
 		t.Fatalf("expected project object datas in repository order, got %#v", got)
 	}
 
-	if got := []string{projectOptions.Apparats[0].ShortName, projectOptions.Apparats[1].ShortName, projectOptions.Apparats[2].ShortName}; got[0] != "Alpha" || got[1] != "Beta" || got[2] != "Zulu" {
+	if got := []string{projectOptions.Apparats[0].ShortName, projectOptions.Apparats[1].ShortName, projectOptions.Apparats[2].ShortName, projectOptions.Apparats[3].ShortName}; got[0] != "Alpha" || got[1] != "Beta" || got[2] != "Standalone" || got[3] != "Zulu" {
 		t.Fatalf("expected project apparats in repository order, got %#v", got)
 	}
 }

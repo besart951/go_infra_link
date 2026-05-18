@@ -12,3 +12,4 @@ export * from './bacnet-object.js';
 export * from './fieldDeviceMultiCreate.js';
 export * from './field-device-export.js';
 export * from './alarm-type.js';
+export * from './bacnet-reference-usage.js';

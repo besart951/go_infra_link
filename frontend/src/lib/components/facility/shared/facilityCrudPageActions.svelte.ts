@@ -50,13 +50,25 @@ function createStandardFacilityCrudActions<TItem>(
     reload: options.reload,
     deleteItem: options.deleteItem,
     confirmDelete: confirm,
+    confirmImpactUpdate: confirm,
     addToast,
+    getItemId: (item) => (item as { id: string }).id,
     getDeleteTitle: options.getDeleteTitle ?? (() => translate('common.delete')),
     getDeleteMessage: options.getDeleteMessage,
     getDeleteConfirmText: () => translate('common.delete'),
     getDeleteCancelText: () => translate('common.cancel'),
     getDeleteSuccessMessage: options.getDeleteSuccessMessage,
-    getDeleteFailureMessage: options.getDeleteFailureMessage
+    getDeleteFailureMessage: options.getDeleteFailureMessage,
+    getBacnetUsageMessage: (count) => translate('facility.bacnet_usage_count', { count }),
+    getBacnetDeleteBlockedMessage: (count) =>
+      translate('facility.bacnet_delete_disabled', { count }),
+    getBacnetUpdateConfirmTitle: () => translate('facility.bacnet_update_confirm_title'),
+    getBacnetUpdateConfirmMessage: (count) =>
+      translate('facility.bacnet_update_confirm_message', { count }),
+    getBacnetUpdateConfirmAgainTitle: () => translate('facility.bacnet_update_confirm_again_title'),
+    getBacnetUpdateConfirmAgainMessage: (count) =>
+      translate('facility.bacnet_update_confirm_again_message', { count }),
+    getBacnetUpdateConfirmText: () => translate('common.update')
   });
 }
 

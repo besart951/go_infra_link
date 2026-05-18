@@ -14,18 +14,21 @@ type ApparatService struct {
 	extRepo          domainFacility.ApparatRepository
 	systemPartReader domain.Reader[domainFacility.SystemPart]
 	objectDataReader domain.Reader[domainFacility.ObjectData]
+	deleteGuard      bacnetReferenceDeleteGuard
 }
 
 func NewApparatService(
 	repo domainFacility.ApparatRepository,
 	systemPartReader domain.Reader[domainFacility.SystemPart],
 	objectDataReader domain.Reader[domainFacility.ObjectData],
+	usageRepos ...domainFacility.BacnetReferenceUsageRepository,
 ) *ApparatService {
 	return &ApparatService{
 		baseService:      newBase(repo, 10),
 		extRepo:          repo,
 		systemPartReader: systemPartReader,
 		objectDataReader: objectDataReader,
+		deleteGuard:      newBacnetReferenceDeleteGuard(domainFacility.BacnetReferenceResourceApparat, usageRepos...),
 	}
 }
 
@@ -86,6 +89,13 @@ func (s *ApparatService) Update(ctx context.Context, apparat *domainFacility.App
 		return s.mapWriteConflict(ctx, apparat, &apparat.ID, err)
 	}
 	return nil
+}
+
+func (s *ApparatService) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
+		return err
+	}
+	return s.baseService.DeleteByID(ctx, id)
 }
 
 func (s *ApparatService) UpdateWithSystemPartIDs(ctx context.Context, apparat *domainFacility.Apparat, systemPartIDs *[]uuid.UUID) error {

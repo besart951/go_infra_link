@@ -293,41 +293,30 @@ func (r *objectDataRepo) GetFieldDeviceOptionsRevision(ctx context.Context, proj
 	}
 	writeObjectDataApparatRevision(h, objectDataApparats)
 
-	apparatIDs := objectDataApparatIDs(objectDataApparats)
 	var apparats []fieldDeviceOptionsRevisionEntity
-	if len(apparatIDs) > 0 {
-		if err := r.db.WithContext(ctx).
-			Model(&domainFacility.Apparat{}).
-			Select("id, updated_at").
-			Where("id IN ?", apparatIDs).
-			Find(&apparats).Error; err != nil {
-			return "", err
-		}
+	if err := r.db.WithContext(ctx).
+		Model(&domainFacility.Apparat{}).
+		Select("id, updated_at").
+		Find(&apparats).Error; err != nil {
+		return "", err
 	}
 	writeRevisionEntities(h, "apparat", apparats)
 
 	systemPartApparats := []fieldDeviceOptionsSystemPartApparatRevision{}
-	if len(apparatIDs) > 0 {
-		if err := r.db.WithContext(ctx).
-			Table("system_part_apparats").
-			Select("system_part_id, apparat_id").
-			Where("apparat_id IN ?", apparatIDs).
-			Scan(&systemPartApparats).Error; err != nil {
-			return "", err
-		}
+	if err := r.db.WithContext(ctx).
+		Table("system_part_apparats").
+		Select("system_part_id, apparat_id").
+		Scan(&systemPartApparats).Error; err != nil {
+		return "", err
 	}
 	writeSystemPartApparatRevision(h, systemPartApparats)
 
-	systemPartIDs := systemPartApparatIDs(systemPartApparats)
 	var systemParts []fieldDeviceOptionsRevisionEntity
-	if len(systemPartIDs) > 0 {
-		if err := r.db.WithContext(ctx).
-			Model(&domainFacility.SystemPart{}).
-			Select("id, updated_at").
-			Where("id IN ?", systemPartIDs).
-			Find(&systemParts).Error; err != nil {
-			return "", err
-		}
+	if err := r.db.WithContext(ctx).
+		Model(&domainFacility.SystemPart{}).
+		Select("id, updated_at").
+		Find(&systemParts).Error; err != nil {
+		return "", err
 	}
 	writeRevisionEntities(h, "system_part", systemParts)
 
@@ -338,32 +327,6 @@ func revisionEntityIDs(rows []fieldDeviceOptionsRevisionEntity) []uuid.UUID {
 	ids := make([]uuid.UUID, 0, len(rows))
 	for _, row := range rows {
 		ids = append(ids, row.ID)
-	}
-	return ids
-}
-
-func objectDataApparatIDs(rows []fieldDeviceOptionsObjectDataApparatRevision) []uuid.UUID {
-	seen := make(map[uuid.UUID]struct{}, len(rows))
-	ids := make([]uuid.UUID, 0, len(rows))
-	for _, row := range rows {
-		if _, ok := seen[row.ApparatID]; ok {
-			continue
-		}
-		seen[row.ApparatID] = struct{}{}
-		ids = append(ids, row.ApparatID)
-	}
-	return ids
-}
-
-func systemPartApparatIDs(rows []fieldDeviceOptionsSystemPartApparatRevision) []uuid.UUID {
-	seen := make(map[uuid.UUID]struct{}, len(rows))
-	ids := make([]uuid.UUID, 0, len(rows))
-	for _, row := range rows {
-		if _, ok := seen[row.SystemPartID]; ok {
-			continue
-		}
-		seen[row.SystemPartID] = struct{}{}
-		ids = append(ids, row.SystemPartID)
 	}
 	return ids
 }

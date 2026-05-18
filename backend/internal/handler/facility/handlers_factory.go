@@ -35,6 +35,7 @@ type ServiceDeps struct {
 	AlarmField              AlarmFieldService
 	AlarmTypeField          AlarmTypeFieldService
 	BacnetAlarm             BacnetAlarmValueService
+	BacnetReferenceUsage    BacnetReferenceUsageService
 	Collaboration           ProjectRefreshBroadcaster
 }
 
@@ -60,6 +61,7 @@ type Handlers struct {
 	AlarmField              *AlarmFieldHandler
 	AlarmTypeField          *AlarmTypeFieldHandler
 	BacnetAlarm             *BacnetAlarmHandler
+	BacnetReferenceUsage    *BacnetReferenceUsageHandler
 }
 
 // NewHandlers creates facility handlers using service dependencies.
@@ -89,6 +91,7 @@ func registerFacilityLookupHandlers(handlers *Handlers, deps ServiceDeps) {
 	handlers.Apparat = NewApparatHandler(deps.Apparat)
 	handlers.StateText = NewStateTextHandler(deps.StateText)
 	handlers.NotificationClass = NewNotificationClassHandler(deps.NotificationClass)
+	handlers.BacnetReferenceUsage = NewBacnetReferenceUsageHandler(deps.BacnetReferenceUsage)
 }
 
 func registerFacilityAlarmHandlers(handlers *Handlers, deps ServiceDeps) {

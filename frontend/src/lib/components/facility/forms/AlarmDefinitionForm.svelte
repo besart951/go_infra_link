@@ -16,9 +16,10 @@
     initialData?: AlarmDefinition;
     onSuccess?: (alarmDefinition: AlarmDefinition) => void;
     onCancel?: () => void;
+    beforeUpdate?: (alarmDefinition: AlarmDefinition) => boolean | Promise<boolean>;
   }
 
-  let { initialData, onSuccess, onCancel }: AlarmDefinitionFormProps = $props();
+  let { initialData, onSuccess, onCancel, beforeUpdate }: AlarmDefinitionFormProps = $props();
 
   const t = createTranslator();
 
@@ -66,6 +67,10 @@
   });
 
   async function handleSubmit() {
+    if (initialData && beforeUpdate && !(await beforeUpdate(initialData))) {
+      return;
+    }
+
     await formState.handleSubmit(async () => {
       if (initialData) {
         return await manageAlarmDefinition.update(initialData.id, {

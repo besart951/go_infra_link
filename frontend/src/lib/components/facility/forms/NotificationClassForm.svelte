@@ -15,9 +15,10 @@
     initialData?: NotificationClass;
     onSuccess?: (nc: NotificationClass) => void;
     onCancel?: () => void;
+    beforeUpdate?: (nc: NotificationClass) => boolean | Promise<boolean>;
   }
 
-  let { initialData, onSuccess, onCancel }: Props = $props();
+  let { initialData, onSuccess, onCancel, beforeUpdate }: Props = $props();
 
   const t = createTranslator();
 
@@ -56,6 +57,10 @@
   const fieldError = (name: string) => getFieldError(fieldErrors, name, ['notificationclass']);
 
   async function handleSubmit() {
+    if (initialData && beforeUpdate && !(await beforeUpdate(initialData))) {
+      return;
+    }
+
     loading = true;
     error = '';
     fieldErrors = {};

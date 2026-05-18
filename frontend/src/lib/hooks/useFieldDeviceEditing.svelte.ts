@@ -455,6 +455,16 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
         fields['fielddevice.apparat_nr'] = translate('field_device.validation.apparat_nr_range');
       }
     }
+    if ('apparat_id' in changes && !String(changes.apparat_id ?? '').trim()) {
+      fields['fielddevice.apparat_id'] = translate('validation.required', {
+        field: translate('field_device.table.apparat')
+      });
+    }
+    if ('system_part_id' in changes && !String(changes.system_part_id ?? '').trim()) {
+      fields['fielddevice.system_part_id'] = translate('validation.required', {
+        field: translate('field_device.table.system_part')
+      });
+    }
 
     const spec = changes.specification;
     if (spec) {

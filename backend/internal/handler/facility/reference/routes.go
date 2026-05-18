@@ -7,32 +7,33 @@ import (
 )
 
 type Handlers struct {
-	CreateSystemType        gin.HandlerFunc
-	ListSystemTypes         gin.HandlerFunc
-	GetSystemType           gin.HandlerFunc
-	UpdateSystemType        gin.HandlerFunc
-	DeleteSystemType        gin.HandlerFunc
-	CreateSystemPart        gin.HandlerFunc
-	ListSystemParts         gin.HandlerFunc
-	GetSystemPart           gin.HandlerFunc
-	UpdateSystemPart        gin.HandlerFunc
-	DeleteSystemPart        gin.HandlerFunc
-	CreateApparat           gin.HandlerFunc
-	GetApparatsByIDs        gin.HandlerFunc
-	ListApparats            gin.HandlerFunc
-	GetApparat              gin.HandlerFunc
-	UpdateApparat           gin.HandlerFunc
-	DeleteApparat           gin.HandlerFunc
-	ListStateTexts          gin.HandlerFunc
-	GetStateText            gin.HandlerFunc
-	CreateStateText         gin.HandlerFunc
-	UpdateStateText         gin.HandlerFunc
-	DeleteStateText         gin.HandlerFunc
-	ListNotificationClasses gin.HandlerFunc
-	GetNotificationClass    gin.HandlerFunc
-	CreateNotificationClass gin.HandlerFunc
-	UpdateNotificationClass gin.HandlerFunc
-	DeleteNotificationClass gin.HandlerFunc
+	CreateSystemType         gin.HandlerFunc
+	ListSystemTypes          gin.HandlerFunc
+	GetSystemType            gin.HandlerFunc
+	UpdateSystemType         gin.HandlerFunc
+	DeleteSystemType         gin.HandlerFunc
+	CreateSystemPart         gin.HandlerFunc
+	ListSystemParts          gin.HandlerFunc
+	GetSystemPart            gin.HandlerFunc
+	UpdateSystemPart         gin.HandlerFunc
+	DeleteSystemPart         gin.HandlerFunc
+	CreateApparat            gin.HandlerFunc
+	GetApparatsByIDs         gin.HandlerFunc
+	ListApparats             gin.HandlerFunc
+	GetApparat               gin.HandlerFunc
+	UpdateApparat            gin.HandlerFunc
+	DeleteApparat            gin.HandlerFunc
+	ListStateTexts           gin.HandlerFunc
+	GetStateText             gin.HandlerFunc
+	CreateStateText          gin.HandlerFunc
+	UpdateStateText          gin.HandlerFunc
+	DeleteStateText          gin.HandlerFunc
+	ListNotificationClasses  gin.HandlerFunc
+	GetNotificationClass     gin.HandlerFunc
+	CreateNotificationClass  gin.HandlerFunc
+	UpdateNotificationClass  gin.HandlerFunc
+	DeleteNotificationClass  gin.HandlerFunc
+	GetBacnetReferenceUsages gin.HandlerFunc
 }
 
 func Routes(handlers Handlers) []routing.Definition {
@@ -63,5 +64,6 @@ func Routes(handlers Handlers) []routing.Definition {
 		routing.Post("/notification-classes", domainUser.PermissionNotificationClassCreate, handlers.CreateNotificationClass),
 		routing.Put("/notification-classes/:id", domainUser.PermissionNotificationClassUpdate, handlers.UpdateNotificationClass),
 		routing.Delete("/notification-classes/:id", domainUser.PermissionNotificationClassDelete, handlers.DeleteNotificationClass),
+		routing.Get("/bacnet-reference-usages", domainUser.PermissionBacnetObjectRead, handlers.GetBacnetReferenceUsages),
 	}
 }

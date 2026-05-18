@@ -10,13 +10,15 @@ import (
 
 type SystemTypeService struct {
 	baseService[domainFacility.SystemType]
-	extRepo domainFacility.SystemTypeRepository
+	extRepo     domainFacility.SystemTypeRepository
+	deleteGuard bacnetReferenceDeleteGuard
 }
 
-func NewSystemTypeService(repo domainFacility.SystemTypeRepository) *SystemTypeService {
+func NewSystemTypeService(repo domainFacility.SystemTypeRepository, usageRepos ...domainFacility.BacnetReferenceUsageRepository) *SystemTypeService {
 	return &SystemTypeService{
 		baseService: newBase(repo, 10),
 		extRepo:     repo,
+		deleteGuard: newBacnetReferenceDeleteGuard(domainFacility.BacnetReferenceResourceSystemType, usageRepos...),
 	}
 }
 
@@ -32,6 +34,13 @@ func (s *SystemTypeService) Update(ctx context.Context, systemType *domainFacili
 		return err
 	}
 	return s.extRepo.Update(ctx, systemType)
+}
+
+func (s *SystemTypeService) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
+		return err
+	}
+	return s.baseService.DeleteByID(ctx, id)
 }
 
 func (s *SystemTypeService) Validate(ctx context.Context, systemType *domainFacility.SystemType, excludeID *uuid.UUID) error {

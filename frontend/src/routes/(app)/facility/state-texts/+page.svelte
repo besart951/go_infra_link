@@ -45,6 +45,7 @@
   searchPlaceholder={$t('facility.search_state_texts')}
   emptyMessage={$t('facility.no_state_texts_found')}
   documentTitle={$t('facility.state_texts')}
+  bacnetUsageResource="state_text"
 >
   {#snippet rowSnippet(item: StateText)}
     <Table.Cell class="font-medium">{item.ref_number}</Table.Cell>
@@ -80,8 +81,13 @@
           {/if}
           {#if canPerform('delete', 'statetext')}
             <DropdownMenu.Separator />
-            <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(item)}>
-              {$t('common.delete')}
+            <DropdownMenu.Item
+              variant="destructive"
+              disabled={actions.isDeleteDisabled(item)}
+              title={actions.getBacnetUsageMessage(item)}
+              onclick={() => actions.delete(item)}
+            >
+              {actions.getDeleteLabel(item, $t('common.delete'))}
             </DropdownMenu.Item>
           {/if}
         </DropdownMenu.Content>

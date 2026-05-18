@@ -3,9 +3,11 @@ import { getErrorMessage } from '$lib/api/client.js';
 import { alarmUnitRepository } from '$lib/infrastructure/api/alarmUnitRepository.js';
 import { alarmFieldRepository } from '$lib/infrastructure/api/alarmFieldRepository.js';
 import { alarmTypeRepository } from '$lib/infrastructure/api/alarmTypeRepository.js';
+import { bacnetReferenceUsageRepository } from '$lib/infrastructure/api/bacnetReferenceUsageRepository.js';
 import type { AlarmFieldRepository } from '$lib/domain/ports/facility/alarmFieldRepository.js';
 import type { AlarmTypeRepository } from '$lib/domain/ports/facility/alarmTypeRepository.js';
 import type { AlarmUnitRepository } from '$lib/domain/ports/facility/alarmUnitRepository.js';
+import type { TranslationParams } from '$lib/i18n/index.js';
 import type {
   AlarmField,
   AlarmType,
@@ -23,7 +25,7 @@ export interface AlarmCatalogStateOptions {
   typeRepository?: AlarmTypeRepository;
   addToast?: AlarmCatalogToast;
   getErrorMessage?: (error: unknown) => string;
-  translate?: (key: string) => string;
+  translate?: (key: string, params?: TranslationParams) => string;
 }
 
 const emptyUnitForm = () => ({ code: '', symbol: '', name: '' });
@@ -49,6 +51,7 @@ export class AlarmCatalogState {
   types = $state<AlarmType[]>([]);
   selectedTypeId = $state('');
   typeFields = $state<AlarmTypeField[]>([]);
+  typeUsageCounts = $state<Record<string, number>>({});
   loading = $state(false);
 
   unitForm = $state(emptyUnitForm());
@@ -75,7 +78,7 @@ export class AlarmCatalogState {
   private readonly typeRepository: AlarmTypeRepository;
   private readonly notify: AlarmCatalogToast;
   private readonly formatError: (error: unknown) => string;
-  private readonly translate: (key: string) => string;
+  private readonly translate: (key: string, params?: TranslationParams) => string;
 
   constructor(options: AlarmCatalogStateOptions = {}) {
     this.unitRepository = options.unitRepository ?? alarmUnitRepository;
@@ -97,6 +100,7 @@ export class AlarmCatalogState {
       this.units = unitsRes.items;
       this.fields = fieldsRes.items;
       this.types = typesRes.items;
+      await this.loadTypeUsageCounts();
       if (!this.selectedTypeId && this.types.length > 0) {
         this.selectedTypeId = this.types[0].id;
       }
@@ -186,6 +190,15 @@ export class AlarmCatalogState {
   }
 
   async deleteType(id: string): Promise<void> {
+    const usageCount = this.getTypeUsageCount(id);
+    if (usageCount > 0) {
+      this.notify(
+        this.translate('facility.bacnet_delete_blocked_toast', { count: usageCount }),
+        'error'
+      );
+      return;
+    }
+
     try {
       await this.typeRepository.delete(id);
       if (this.selectedTypeId === id) {
@@ -195,6 +208,26 @@ export class AlarmCatalogState {
       this.success('facility.alarm_catalog_page.toasts.type_deleted');
     } catch (error) {
       this.notify(this.formatError(error), 'error');
+    }
+  }
+
+  getTypeUsageCount(id: string): number {
+    return this.typeUsageCounts[id] ?? 0;
+  }
+
+  isTypeDeleteDisabled(id: string): boolean {
+    return this.getTypeUsageCount(id) > 0;
+  }
+
+  private async loadTypeUsageCounts(): Promise<void> {
+    try {
+      this.typeUsageCounts = await bacnetReferenceUsageRepository.getCounts(
+        'alarm_type',
+        this.types.map((type) => type.id)
+      );
+    } catch (error) {
+      console.error('Failed to load BACnet alarm type usage:', error);
+      this.typeUsageCounts = {};
     }
   }
 

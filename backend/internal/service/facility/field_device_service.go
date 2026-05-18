@@ -3,13 +3,14 @@ package facility
 import (
 	"context"
 	"fmt"
-	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
-	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
-	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
+	"sort"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"github.com/besart951/go_infra_link/backend/internal/service/changecapture"
 	"github.com/google/uuid"
 )
@@ -379,40 +380,24 @@ func (s *FieldDeviceService) getFieldDeviceOptions(ctx context.Context, projectI
 }
 
 func (s *FieldDeviceService) buildFieldDeviceOptions(ctx context.Context, objectDatas []*domainFacility.ObjectData) (*domainFacility.FieldDeviceOptions, error) {
-	apparatIDs := collectUniqueApparatIDs(objectDatas)
-
-	fullApparats := make([]*domainFacility.Apparat, 0, len(apparatIDs))
-	if len(apparatIDs) > 0 {
-		var err error
-		fullApparats, err = s.apparatRepo.GetByIds(ctx, apparatIDs)
-		if err != nil {
-			return nil, err
-		}
+	allApparats, err := s.loadAllFieldDeviceOptionApparats(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	apparatToSystemPart := make(map[uuid.UUID][]uuid.UUID, len(fullApparats))
-	apparats := make([]domainFacility.Apparat, 0, len(fullApparats))
-	systemParts := make([]domainFacility.SystemPart, 0)
-	seenSystemParts := make(map[uuid.UUID]struct{})
+	allSystemParts, err := s.loadAllFieldDeviceOptionSystemParts(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	for _, app := range fullApparats {
-		if app == nil {
-			continue
-		}
+	apparatToSystemPart := make(map[uuid.UUID][]uuid.UUID, len(allApparats))
+	apparats := make([]domainFacility.Apparat, 0, len(allApparats))
 
-		apparats = append(apparats, *app)
+	for i := range allApparats {
+		app := allApparats[i]
+
+		apparats = append(apparats, app)
 		apparatToSystemPart[app.ID] = extractIDs(app.SystemParts, func(sp *domainFacility.SystemPart) uuid.UUID { return sp.ID })
-
-		for _, sp := range app.SystemParts {
-			if sp == nil {
-				continue
-			}
-			if _, exists := seenSystemParts[sp.ID]; exists {
-				continue
-			}
-			seenSystemParts[sp.ID] = struct{}{}
-			systemParts = append(systemParts, *sp)
-		}
 	}
 
 	objectDataToApparat := make(map[uuid.UUID][]uuid.UUID, len(objectDatas))
@@ -428,32 +413,87 @@ func (s *FieldDeviceService) buildFieldDeviceOptions(ctx context.Context, object
 
 	return &domainFacility.FieldDeviceOptions{
 		Apparats:            apparats,
-		SystemParts:         systemParts,
+		SystemParts:         allSystemParts,
 		ObjectDatas:         objectDataValues,
 		ApparatToSystemPart: apparatToSystemPart,
 		ObjectDataToApparat: objectDataToApparat,
 	}, nil
 }
 
-func collectUniqueApparatIDs(objectDatas []*domainFacility.ObjectData) []uuid.UUID {
-	seen := make(map[uuid.UUID]struct{})
-	ids := make([]uuid.UUID, 0)
-	for _, od := range objectDatas {
-		if od == nil {
-			continue
+func (s *FieldDeviceService) loadAllFieldDeviceOptionApparats(ctx context.Context) ([]domainFacility.Apparat, error) {
+	const pageLimit = 1000
+
+	items := make([]domainFacility.Apparat, 0)
+	for page := 1; ; page++ {
+		result, err := s.apparatRepo.GetPaginatedList(ctx, domain.PaginationParams{
+			Page:  page,
+			Limit: pageLimit,
+		})
+		if err != nil {
+			return nil, err
 		}
-		for _, app := range od.Apparats {
-			if app == nil {
-				continue
-			}
-			if _, exists := seen[app.ID]; exists {
-				continue
-			}
-			seen[app.ID] = struct{}{}
-			ids = append(ids, app.ID)
+
+		items = append(items, result.Items...)
+		if page >= result.TotalPages || len(result.Items) < pageLimit {
+			break
 		}
 	}
-	return ids
+
+	sort.SliceStable(items, func(i, j int) bool {
+		leftShort := strings.ToLower(items[i].ShortName)
+		rightShort := strings.ToLower(items[j].ShortName)
+		if leftShort != rightShort {
+			return leftShort < rightShort
+		}
+
+		leftName := strings.ToLower(items[i].Name)
+		rightName := strings.ToLower(items[j].Name)
+		if leftName != rightName {
+			return leftName < rightName
+		}
+
+		return items[i].ID.String() < items[j].ID.String()
+	})
+
+	return items, nil
+}
+
+func (s *FieldDeviceService) loadAllFieldDeviceOptionSystemParts(ctx context.Context) ([]domainFacility.SystemPart, error) {
+	const pageLimit = 1000
+
+	items := make([]domainFacility.SystemPart, 0)
+	for page := 1; ; page++ {
+		result, err := s.systemPartRepo.GetPaginatedList(ctx, domain.PaginationParams{
+			Page:  page,
+			Limit: pageLimit,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, result.Items...)
+		if page >= result.TotalPages || len(result.Items) < pageLimit {
+			break
+		}
+	}
+
+	sort.SliceStable(items, func(i, j int) bool {
+		leftShort := strings.ToLower(items[i].ShortName)
+		rightShort := strings.ToLower(items[j].ShortName)
+		if leftShort != rightShort {
+			return leftShort < rightShort
+		}
+
+		leftName := strings.ToLower(items[i].Name)
+		rightName := strings.ToLower(items[j].Name)
+		if leftName != rightName {
+			return leftName < rightName
+		}
+
+		return items[i].ID.String() < items[j].ID.String()
+	})
+
+	return items, nil
 }
 
 func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.FieldDevice) error {

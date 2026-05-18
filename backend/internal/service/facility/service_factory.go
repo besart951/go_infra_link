@@ -87,6 +87,7 @@ type Repositories struct {
 	AlarmTypes               domainFacility.AlarmTypeRepository
 	AlarmTypeFields          domainFacility.AlarmTypeFieldRepository
 	BacnetObjectAlarmValues  domainFacility.BacnetObjectAlarmValueRepository
+	BacnetReferenceUsages    domainFacility.BacnetReferenceUsageRepository
 }
 
 func (r Repositories) FieldDeviceModule() serviceFieldDevice.Repositories {
@@ -173,6 +174,7 @@ type Services struct {
 	AlarmField              *AlarmFieldService
 	AlarmTypeField          *AlarmTypeFieldService
 	BacnetAlarmValue        *BacnetAlarmValueService
+	BacnetReferenceUsage    *BacnetReferenceUsageService
 }
 
 // NewServices creates facility services using a factory-style constructor.
@@ -221,6 +223,7 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 		objectDataRepos.Apparats,
 		objectDataRepos.AlarmDefinitions,
 		objectDataRepos.AlarmTypes,
+		repos.BacnetReferenceUsages,
 	)
 	objectDataService.bindTransactions(tx)
 	bacnetObjectService := NewBacnetObjectService(
@@ -257,16 +260,16 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 	return &Services{
 		HierarchyCopier:   hierarchyCopier,
 		Building:          NewBuildingService(hierarchyRepos.Buildings),
-		SystemType:        NewSystemTypeService(referenceRepos.SystemTypes),
-		SystemPart:        NewSystemPartService(referenceRepos.SystemParts),
-		Apparat:           NewApparatService(referenceRepos.Apparats, referenceRepos.SystemParts, referenceRepos.ObjectData),
+		SystemType:        NewSystemTypeService(referenceRepos.SystemTypes, repos.BacnetReferenceUsages),
+		SystemPart:        NewSystemPartService(referenceRepos.SystemParts, repos.BacnetReferenceUsages),
+		Apparat:           NewApparatService(referenceRepos.Apparats, referenceRepos.SystemParts, referenceRepos.ObjectData, repos.BacnetReferenceUsages),
 		ControlCabinet:    controlCabinetService,
 		FieldDevice:       fieldDeviceService,
 		BacnetObject:      bacnetObjectService,
 		SPSController:     spsControllerService,
-		StateText:         NewStateTextService(referenceRepos.StateTexts),
-		NotificationClass: NewNotificationClassService(referenceRepos.NotificationClasses),
-		AlarmDefinition:   NewAlarmDefinitionService(alarmRepos.AlarmDefinitions),
+		StateText:         NewStateTextService(referenceRepos.StateTexts, repos.BacnetReferenceUsages),
+		NotificationClass: NewNotificationClassService(referenceRepos.NotificationClasses, repos.BacnetReferenceUsages),
+		AlarmDefinition:   NewAlarmDefinitionService(alarmRepos.AlarmDefinitions, repos.BacnetReferenceUsages),
 		ObjectData:        objectDataService,
 		Unit:              NewUnitService(alarmRepos.Units),
 		AlarmField:        NewAlarmFieldService(alarmRepos.AlarmFields),
@@ -275,11 +278,12 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 			hierarchyRepos.SPSControllerSystemTypes,
 			hierarchyCopier,
 		),
-		AlarmType: NewAlarmTypeService(alarmRepos.AlarmTypes),
+		AlarmType: NewAlarmTypeService(alarmRepos.AlarmTypes, repos.BacnetReferenceUsages),
 		BacnetAlarmValue: NewBacnetAlarmValueService(
 			alarmRepos.BacnetObjectAlarmValues,
 			alarmRepos.AlarmTypes,
 			alarmRepos.BacnetObjects,
 		),
+		BacnetReferenceUsage: NewBacnetReferenceUsageService(repos.BacnetReferenceUsages),
 	}
 }

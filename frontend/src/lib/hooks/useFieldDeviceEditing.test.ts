@@ -111,6 +111,20 @@ describe('useFieldDeviceEditing', () => {
     );
   });
 
+  it('keeps cleared apparat and system part selections pending until valid values are selected', async () => {
+    const device = buildFieldDevice();
+    const editing = await createEditing();
+
+    editing.queueEdit(device.id, 'apparat_id', '');
+    editing.queueEdit(device.id, 'system_part_id', '');
+
+    await editing.saveAllPendingEdits([device]);
+
+    expect(mockBulkUpdate).not.toHaveBeenCalled();
+    expect(editing.getFieldError(device.id, 'apparat_id')).toBe('validation.required');
+    expect(editing.getFieldError(device.id, 'system_part_id')).toBe('validation.required');
+  });
+
   it('clears successful edit phases while retaining failed phases after partial save success', async () => {
     const device = buildFieldDevice();
     const editing = await createEditing();

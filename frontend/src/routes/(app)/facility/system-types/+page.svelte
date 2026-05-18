@@ -49,6 +49,7 @@
   ]}
   searchPlaceholder={$t('facility.search_system_types')}
   emptyMessage={$t('facility.no_system_types_found')}
+  bacnetUsageResource="system_type"
 >
   {#snippet rowSnippet(item: SystemType)}
     <Table.Cell class="font-medium">{item.name}</Table.Cell>
@@ -85,8 +86,13 @@
           {/if}
           {#if canPerform('delete', 'systemtype')}
             <DropdownMenu.Separator />
-            <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(item)}>
-              {$t('common.delete')}
+            <DropdownMenu.Item
+              variant="destructive"
+              disabled={actions.isDeleteDisabled(item)}
+              title={actions.getBacnetUsageMessage(item)}
+              onclick={() => actions.delete(item)}
+            >
+              {actions.getDeleteLabel(item, $t('common.delete'))}
             </DropdownMenu.Item>
           {/if}
         </DropdownMenu.Content>

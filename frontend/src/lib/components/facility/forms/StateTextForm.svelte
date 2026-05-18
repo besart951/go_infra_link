@@ -13,9 +13,10 @@
     initialData?: StateText;
     onSuccess?: (stateText: StateText) => void;
     onCancel?: () => void;
+    beforeUpdate?: (stateText: StateText) => boolean | Promise<boolean>;
   }
 
-  let { initialData, onSuccess, onCancel }: StateTextFormProps = $props();
+  let { initialData, onSuccess, onCancel, beforeUpdate }: StateTextFormProps = $props();
 
   const t = createTranslator();
 
@@ -66,6 +67,10 @@
   });
 
   async function handleSubmit() {
+    if (initialData && beforeUpdate && !(await beforeUpdate(initialData))) {
+      return;
+    }
+
     await formState.handleSubmit(async () => {
       if (initialData) {
         return await manageStateText.update(initialData.id, {

@@ -6,14 +6,19 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	"github.com/google/uuid"
 )
 
 type AlarmDefinitionService struct {
 	baseService[domainFacility.AlarmDefinition]
+	deleteGuard bacnetReferenceDeleteGuard
 }
 
-func NewAlarmDefinitionService(repo domainFacility.AlarmDefinitionRepository) *AlarmDefinitionService {
-	return &AlarmDefinitionService{baseService: newBase(repo, 10)}
+func NewAlarmDefinitionService(repo domainFacility.AlarmDefinitionRepository, usageRepos ...domainFacility.BacnetReferenceUsageRepository) *AlarmDefinitionService {
+	return &AlarmDefinitionService{
+		baseService: newBase(repo, 10),
+		deleteGuard: newBacnetReferenceDeleteGuard(domainFacility.BacnetReferenceResourceAlarmDefinition, usageRepos...),
+	}
 }
 
 func (s *AlarmDefinitionService) Create(ctx context.Context, ad *domainFacility.AlarmDefinition) error {
@@ -28,6 +33,13 @@ func (s *AlarmDefinitionService) Update(ctx context.Context, ad *domainFacility.
 		return err
 	}
 	return s.repo.Update(ctx, ad)
+}
+
+func (s *AlarmDefinitionService) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
+		return err
+	}
+	return s.baseService.DeleteByID(ctx, id)
 }
 
 func validateAlarmDefinition(ad *domainFacility.AlarmDefinition) error {

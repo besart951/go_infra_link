@@ -57,6 +57,10 @@ type SPSControllerSystemTypeRepository = domain.Repository[SPSControllerSystemTy
 type FieldDeviceRepository = domain.Repository[FieldDevice]
 type BacnetObjectRepository = domain.Repository[BacnetObject]
 
+type BacnetReferenceUsageRepository interface {
+	CountByResource(ctx context.Context, resource BacnetReferenceResource, ids []uuid.UUID) (map[uuid.UUID]int64, error)
+}
+
 type UnitRepository = domain.Repository[Unit]
 type AlarmFieldRepository = domain.Repository[AlarmField]
 type AlarmTypeRepository interface {

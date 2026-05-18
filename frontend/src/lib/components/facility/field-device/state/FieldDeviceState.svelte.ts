@@ -229,7 +229,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   }
 
   private async loadLookups(): Promise<void> {
-    const result = await this.lookupService.loadStaticLookups();
+    const result = await this.lookupService.loadStaticLookups(this.projectId);
     if (result.apparats) this.allApparats = result.apparats;
     if (result.systemParts) this.allSystemParts = result.systemParts;
     if (result.apparatsError) console.error('Failed to load apparats', result.apparatsError);

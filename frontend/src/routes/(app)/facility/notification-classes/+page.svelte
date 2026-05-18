@@ -47,6 +47,7 @@
   searchPlaceholder={$t('facility.search_notification_classes')}
   emptyMessage={$t('facility.no_notification_classes_found')}
   documentTitle={$t('facility.notification_classes')}
+  bacnetUsageResource="notification_class"
 >
   {#snippet rowSnippet(item: NotificationClass)}
     <Table.Cell class="font-medium">{item.event_category}</Table.Cell>
@@ -84,8 +85,13 @@
           {/if}
           {#if canPerform('delete', 'notificationclass')}
             <DropdownMenu.Separator />
-            <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(item)}>
-              {$t('common.delete')}
+            <DropdownMenu.Item
+              variant="destructive"
+              disabled={actions.isDeleteDisabled(item)}
+              title={actions.getBacnetUsageMessage(item)}
+              onclick={() => actions.delete(item)}
+            >
+              {actions.getDeleteLabel(item, $t('common.delete'))}
             </DropdownMenu.Item>
           {/if}
         </DropdownMenu.Content>

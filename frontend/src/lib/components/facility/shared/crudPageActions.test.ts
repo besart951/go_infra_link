@@ -7,12 +7,21 @@ function createActions(overrides: Partial<CrudPageActionsOptions<string>> = {}) 
     deleteItem: vi.fn().mockResolvedValue(undefined),
     confirmDelete: vi.fn().mockResolvedValue(true),
     addToast: vi.fn(),
+    confirmImpactUpdate: vi.fn().mockResolvedValue(true),
+    getItemId: (item) => item,
     getDeleteMessage: (item) => `Delete ${item}?`,
     getDeleteSuccessMessage: () => 'Deleted',
     getDeleteFailureMessage: () => 'Delete failed',
     getDeleteTitle: () => 'Delete',
     getDeleteConfirmText: () => 'Delete',
     getDeleteCancelText: () => 'Cancel',
+    getBacnetUsageMessage: (count) => `${count} uses`,
+    getBacnetDeleteBlockedMessage: (count) => `Used ${count} times`,
+    getBacnetUpdateConfirmTitle: () => 'Used',
+    getBacnetUpdateConfirmMessage: (count) => `Used ${count}`,
+    getBacnetUpdateConfirmAgainTitle: () => 'Confirm again',
+    getBacnetUpdateConfirmAgainMessage: (count) => `Still used ${count}`,
+    getBacnetUpdateConfirmText: () => 'Update',
     ...overrides
   });
 }
@@ -72,5 +81,49 @@ describe('CrudPageActions', () => {
 
     expect(addToast).toHaveBeenCalledWith('Backend said no', 'error');
     expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('blocks delete when the item is used by bacnet objects', async () => {
+    const deleteItem = vi.fn();
+    const addToast = vi.fn();
+    const actions = createActions({ deleteItem, addToast });
+    actions.setBacnetUsageCounts({ 'item-1': 3 });
+
+    await actions.delete('item-1');
+
+    expect(actions.isDeleteDisabled('item-1')).toBe(true);
+    expect(actions.getDeleteLabel('item-1', 'Delete')).toBe('Used 3 times');
+    expect(deleteItem).not.toHaveBeenCalled();
+    expect(addToast).toHaveBeenCalledWith('Used 3 times', 'error');
+  });
+
+  it('asks twice before updating a bacnet-linked item', async () => {
+    const confirmImpactUpdate = vi.fn().mockResolvedValue(true);
+    const actions = createActions({ confirmImpactUpdate });
+    actions.setBacnetUsageCounts({ 'item-1': 2 });
+
+    await expect(actions.confirmBacnetImpactUpdate('item-1')).resolves.toBe(true);
+
+    expect(confirmImpactUpdate).toHaveBeenCalledTimes(2);
+    expect(confirmImpactUpdate).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ title: 'Used', message: 'Used 2', confirmText: 'Update' })
+    );
+    expect(confirmImpactUpdate).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        title: 'Confirm again',
+        message: 'Still used 2',
+        confirmText: 'Update'
+      })
+    );
+  });
+
+  it('cancels the second update confirmation', async () => {
+    const confirmImpactUpdate = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const actions = createActions({ confirmImpactUpdate });
+    actions.setBacnetUsageCounts({ 'item-1': 2 });
+
+    await expect(actions.confirmBacnetImpactUpdate('item-1')).resolves.toBe(false);
   });
 });

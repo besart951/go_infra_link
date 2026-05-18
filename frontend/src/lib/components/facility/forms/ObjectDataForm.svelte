@@ -23,9 +23,10 @@
     initialData?: ObjectData;
     onSuccess?: (objectData: ObjectData) => void;
     onCancel?: () => void;
+    beforeUpdate?: (objectData: ObjectData) => boolean | Promise<boolean>;
   }
 
-  let { initialData, onSuccess, onCancel }: Props = $props();
+  let { initialData, onSuccess, onCancel, beforeUpdate }: Props = $props();
 
   const t = createTranslator();
 
@@ -215,6 +216,11 @@
     fieldErrors = {};
 
     if (!validateBacnetObjects()) {
+      loading = false;
+      return;
+    }
+
+    if (initialData && beforeUpdate && !(await beforeUpdate(initialData))) {
       loading = false;
       return;
     }

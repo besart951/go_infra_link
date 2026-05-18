@@ -17,6 +17,7 @@ type ObjectDataService struct {
 	apparatRepo           domainFacility.ApparatRepository
 	alarmDefinitionRepo   domainFacility.AlarmDefinitionRepository
 	alarmTypeRepo         domainFacility.AlarmTypeRepository
+	deleteGuard           bacnetReferenceDeleteGuard
 	tx                    txCoordinator
 }
 
@@ -27,6 +28,7 @@ func NewObjectDataService(
 	apparatRepo domainFacility.ApparatRepository,
 	alarmDefinitionRepo domainFacility.AlarmDefinitionRepository,
 	alarmTypeRepo domainFacility.AlarmTypeRepository,
+	usageRepos ...domainFacility.BacnetReferenceUsageRepository,
 ) *ObjectDataService {
 	return &ObjectDataService{
 		baseService:           newBase(repo, 10),
@@ -36,6 +38,7 @@ func NewObjectDataService(
 		apparatRepo:           apparatRepo,
 		alarmDefinitionRepo:   alarmDefinitionRepo,
 		alarmTypeRepo:         alarmTypeRepo,
+		deleteGuard:           newBacnetReferenceDeleteGuard(domainFacility.BacnetReferenceResourceObjectData, usageRepos...),
 	}
 }
 
@@ -72,6 +75,13 @@ func (s *ObjectDataService) Update(ctx context.Context, objectData *domainFacili
 		return err
 	}
 	return s.repo.Update(ctx, objectData)
+}
+
+func (s *ObjectDataService) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
+		return err
+	}
+	return s.baseService.DeleteByID(ctx, id)
 }
 
 func (s *ObjectDataService) CreateTemplate(ctx context.Context, input domainFacility.ObjectDataTemplateCreate) (*domainFacility.ObjectData, error) {

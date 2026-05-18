@@ -15,9 +15,10 @@
     initialData?: SystemType;
     onSuccess?: (systemType: SystemType) => void;
     onCancel?: () => void;
+    beforeUpdate?: (systemType: SystemType) => boolean | Promise<boolean>;
   }
 
-  let { initialData, onSuccess, onCancel }: SystemTypeFormProps = $props();
+  let { initialData, onSuccess, onCancel, beforeUpdate }: SystemTypeFormProps = $props();
 
   const t = createTranslator();
 
@@ -214,6 +215,9 @@
     }
     const minValue = Number(number_min);
     const maxValue = Number(number_max);
+    if (initialData && beforeUpdate && !(await beforeUpdate(initialData))) {
+      return;
+    }
     await formState.handleSubmit(async () => {
       if (initialData) {
         return await manageSystemType.update(initialData.id, {

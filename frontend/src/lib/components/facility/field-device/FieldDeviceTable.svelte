@@ -33,7 +33,10 @@
   }
 </script>
 
-<div use:keyboardTableNavigation class="max-w-full min-w-0 rounded-lg border bg-background">
+<div
+  use:keyboardTableNavigation
+  class="max-w-full min-w-0 overflow-hidden rounded-xl border bg-card shadow-sm"
+>
   <Table.Root class={tableClass}>
     <Table.Header>
       <Table.Row>

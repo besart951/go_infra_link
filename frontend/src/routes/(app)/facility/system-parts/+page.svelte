@@ -45,6 +45,7 @@
   ]}
   searchPlaceholder={$t('facility.search_system_parts')}
   emptyMessage={$t('facility.no_system_parts_found')}
+  bacnetUsageResource="system_part"
 >
   {#snippet rowSnippet(item: SystemPart)}
     <Table.Cell class="font-medium">{item.short_name}</Table.Cell>
@@ -81,8 +82,13 @@
           {/if}
           {#if canPerform('delete', 'systempart')}
             <DropdownMenu.Separator />
-            <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(item)}>
-              {$t('common.delete')}
+            <DropdownMenu.Item
+              variant="destructive"
+              disabled={actions.isDeleteDisabled(item)}
+              title={actions.getBacnetUsageMessage(item)}
+              onclick={() => actions.delete(item)}
+            >
+              {actions.getDeleteLabel(item, $t('common.delete'))}
             </DropdownMenu.Item>
           {/if}
         </DropdownMenu.Content>

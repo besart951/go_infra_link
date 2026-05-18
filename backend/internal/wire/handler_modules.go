@@ -42,6 +42,7 @@ func newFacilityHandlers(services *Services, collaboration facilityhandler.Proje
 		AlarmField:              services.Facility.AlarmField,
 		AlarmTypeField:          services.Facility.AlarmTypeField,
 		BacnetAlarm:             services.Facility.BacnetAlarmValue,
+		BacnetReferenceUsage:    services.Facility.BacnetReferenceUsage,
 		Collaboration:           collaboration,
 	})
 }

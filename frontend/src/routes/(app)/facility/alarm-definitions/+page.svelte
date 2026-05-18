@@ -45,6 +45,7 @@
   searchPlaceholder={$t('facility.search_alarm_definitions')}
   emptyMessage={$t('facility.no_alarm_definitions_found')}
   documentTitle={$t('facility.alarm_definitions')}
+  bacnetUsageResource="alarm_definition"
 >
   {#snippet rowSnippet(item: AlarmDefinition)}
     <Table.Cell class="font-medium">{item.name}</Table.Cell>
@@ -80,8 +81,13 @@
           {/if}
           {#if canPerform('delete', 'alarmdefinition')}
             <DropdownMenu.Separator />
-            <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(item)}>
-              {$t('common.delete')}
+            <DropdownMenu.Item
+              variant="destructive"
+              disabled={actions.isDeleteDisabled(item)}
+              title={actions.getBacnetUsageMessage(item)}
+              onclick={() => actions.delete(item)}
+            >
+              {actions.getDeleteLabel(item, $t('common.delete'))}
             </DropdownMenu.Item>
           {/if}
         </DropdownMenu.Content>

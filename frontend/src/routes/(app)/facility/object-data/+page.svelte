@@ -46,6 +46,7 @@
   searchPlaceholder={$t('facility.search_object_data')}
   emptyMessage={$t('facility.no_object_data_found')}
   documentTitle={$t('facility.object_data')}
+  bacnetUsageResource="object_data"
 >
   {#snippet rowSnippet(item: ObjectData)}
     <Table.Cell class="font-medium">{item.description}</Table.Cell>
@@ -92,8 +93,13 @@
           {/if}
           {#if canPerform('delete', 'objectdata')}
             <DropdownMenu.Separator />
-            <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(item)}>
-              {$t('common.delete')}
+            <DropdownMenu.Item
+              variant="destructive"
+              disabled={actions.isDeleteDisabled(item)}
+              title={actions.getBacnetUsageMessage(item)}
+              onclick={() => actions.delete(item)}
+            >
+              {actions.getDeleteLabel(item, $t('common.delete'))}
             </DropdownMenu.Item>
           {/if}
         </DropdownMenu.Content>

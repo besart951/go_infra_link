@@ -45,6 +45,7 @@
   ]}
   searchPlaceholder={$t('facility.search_apparats')}
   emptyMessage={$t('facility.no_apparats_found')}
+  bacnetUsageResource="apparat"
 >
   {#snippet rowSnippet(item: Apparat)}
     <Table.Cell class="font-medium">{item.short_name}</Table.Cell>
@@ -81,8 +82,13 @@
           {/if}
           {#if canPerform('delete', 'apparat')}
             <DropdownMenu.Separator />
-            <DropdownMenu.Item variant="destructive" onclick={() => actions.delete(item)}>
-              {$t('common.delete')}
+            <DropdownMenu.Item
+              variant="destructive"
+              disabled={actions.isDeleteDisabled(item)}
+              title={actions.getBacnetUsageMessage(item)}
+              onclick={() => actions.delete(item)}
+            >
+              {actions.getDeleteLabel(item, $t('common.delete'))}
             </DropdownMenu.Item>
           {/if}
         </DropdownMenu.Content>

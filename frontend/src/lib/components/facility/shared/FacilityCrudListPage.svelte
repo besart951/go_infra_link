@@ -7,6 +7,8 @@
   import type { ListState } from '$lib/application/useCases/listUseCase.js';
   import { canPerform } from '$lib/utils/permissions.js';
   import { createTranslator } from '$lib/i18n/translator.js';
+  import type { BacnetReferenceResource } from '$lib/domain/facility/index.js';
+  import { bacnetReferenceUsageRepository } from '$lib/infrastructure/api/bacnetReferenceUsageRepository.js';
   import type { CrudPageActions } from './crudPageActions.svelte.js';
 
   const t = createTranslator();
@@ -32,6 +34,8 @@
     searchPlaceholder: string;
     emptyMessage: string;
     documentTitle?: string;
+    bacnetUsageResource?: BacnetReferenceResource;
+    getItemId?: (item: TItem) => string;
   }
 
   let {
@@ -46,11 +50,70 @@
     rowSnippet: itemRows,
     searchPlaceholder,
     emptyMessage,
-    documentTitle = title
+    documentTitle = title,
+    bacnetUsageResource,
+    getItemId
   }: Props = $props();
+
+  let usageRequestID = 0;
+
+  function resolveItemId(item: TItem): string {
+    if (getItemId) return getItemId(item);
+    const id = (item as { id?: unknown })?.id;
+    return typeof id === 'string' ? id : '';
+  }
+
+  async function loadBacnetUsage(
+    resource: BacnetReferenceResource,
+    ids: string[],
+    requestID: number
+  ) {
+    try {
+      const counts = await bacnetReferenceUsageRepository.getCounts(resource, ids);
+      if (requestID === usageRequestID) {
+        actions.setBacnetUsageCounts(counts);
+      }
+    } catch (error) {
+      console.error('Failed to load BACnet reference usage:', error);
+      if (requestID === usageRequestID) {
+        actions.setBacnetUsageCounts({});
+      }
+    }
+  }
+
+  async function confirmBacnetImpactUpdate(item: TItem): Promise<boolean> {
+    if (bacnetUsageResource) {
+      const id = resolveItemId(item);
+      if (id) {
+        try {
+          const counts = await bacnetReferenceUsageRepository.getCounts(bacnetUsageResource, [id]);
+          actions.mergeBacnetUsageCounts(counts);
+        } catch (error) {
+          console.error('Failed to refresh BACnet reference usage:', error);
+        }
+      }
+    }
+    return actions.confirmBacnetImpactUpdate(item);
+  }
 
   onMount(() => {
     store.load();
+  });
+
+  $effect(() => {
+    if (!bacnetUsageResource) {
+      actions.setBacnetUsageCounts({});
+      return;
+    }
+
+    const ids = ($store.items ?? []).map(resolveItemId).filter(Boolean);
+    const requestID = ++usageRequestID;
+    if (ids.length === 0) {
+      actions.setBacnetUsageCounts({});
+      return;
+    }
+
+    void loadBacnetUsage(bacnetUsageResource, ids, requestID);
   });
 </script>
 
@@ -77,6 +140,7 @@
       initialData={actions.editingItem}
       onSuccess={() => actions.success()}
       onCancel={() => actions.cancel()}
+      beforeUpdate={confirmBacnetImpactUpdate}
     />
   {/if}
 

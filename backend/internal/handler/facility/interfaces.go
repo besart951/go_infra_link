@@ -197,3 +197,7 @@ type BacnetAlarmValueService interface {
 	GetValues(ctx context.Context, bacnetObjectID uuid.UUID) ([]domainFacility.BacnetObjectAlarmValue, error)
 	PutValues(ctx context.Context, bacnetObjectID uuid.UUID, values []domainFacility.BacnetObjectAlarmValue) error
 }
+
+type BacnetReferenceUsageService interface {
+	CountByResource(ctx context.Context, resource domainFacility.BacnetReferenceResource, ids []uuid.UUID) ([]domainFacility.BacnetReferenceUsage, error)
+}

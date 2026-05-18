@@ -15,9 +15,10 @@
     initialData?: Apparat;
     onSuccess?: (apparat: Apparat) => void;
     onCancel?: () => void;
+    beforeUpdate?: (apparat: Apparat) => boolean | Promise<boolean>;
   }
 
-  let { initialData, onSuccess, onCancel }: ApparatFormProps = $props();
+  let { initialData, onSuccess, onCancel, beforeUpdate }: ApparatFormProps = $props();
 
   const t = createTranslator();
 
@@ -49,6 +50,10 @@
       return;
     }
     shortNameError = '';
+
+    if (initialData && beforeUpdate && !(await beforeUpdate(initialData))) {
+      return;
+    }
 
     await formState.handleSubmit(async () => {
       if (initialData) {

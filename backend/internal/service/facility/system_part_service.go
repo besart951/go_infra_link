@@ -9,13 +9,15 @@ import (
 
 type SystemPartService struct {
 	baseService[domainFacility.SystemPart]
-	extRepo domainFacility.SystemPartRepository
+	extRepo     domainFacility.SystemPartRepository
+	deleteGuard bacnetReferenceDeleteGuard
 }
 
-func NewSystemPartService(repo domainFacility.SystemPartRepository) *SystemPartService {
+func NewSystemPartService(repo domainFacility.SystemPartRepository, usageRepos ...domainFacility.BacnetReferenceUsageRepository) *SystemPartService {
 	return &SystemPartService{
 		baseService: newBase(repo, 10),
 		extRepo:     repo,
+		deleteGuard: newBacnetReferenceDeleteGuard(domainFacility.BacnetReferenceResourceSystemPart, usageRepos...),
 	}
 }
 
@@ -43,6 +45,13 @@ func (s *SystemPartService) Update(ctx context.Context, systemPart *domainFacili
 		return err
 	}
 	return s.repo.Update(ctx, systemPart)
+}
+
+func (s *SystemPartService) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	if err := s.deleteGuard.ensureDeleteAllowed(ctx, id); err != nil {
+		return err
+	}
+	return s.baseService.DeleteByID(ctx, id)
 }
 
 func (s *SystemPartService) Validate(ctx context.Context, systemPart *domainFacility.SystemPart, excludeID *uuid.UUID) error {

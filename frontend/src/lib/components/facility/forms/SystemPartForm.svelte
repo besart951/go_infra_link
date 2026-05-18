@@ -14,9 +14,10 @@
     initialData?: SystemPart;
     onSuccess?: (systemPart: SystemPart) => void;
     onCancel?: () => void;
+    beforeUpdate?: (systemPart: SystemPart) => boolean | Promise<boolean>;
   }
 
-  let { initialData, onSuccess, onCancel }: SystemPartFormProps = $props();
+  let { initialData, onSuccess, onCancel, beforeUpdate }: SystemPartFormProps = $props();
 
   const t = createTranslator();
 
@@ -46,6 +47,10 @@
       return;
     }
     shortNameError = '';
+
+    if (initialData && beforeUpdate && !(await beforeUpdate(initialData))) {
+      return;
+    }
 
     await formState.handleSubmit(async () => {
       if (initialData) {

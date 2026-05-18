@@ -7,6 +7,12 @@
   import { addToast } from '$lib/components/toast.svelte';
   import TableApparatSelect from '../table-selects/TableApparatSelect.svelte';
   import TableSystemPartSelect from '../table-selects/TableSystemPartSelect.svelte';
+  import {
+    filterApparatsForRelationSource,
+    filterSystemPartsForRelationSource,
+    isSystemPartAllowedForApparat
+  } from '../table-selects/relationSelectOptions.js';
+  import type { RelationFilterSource } from '../table-selects/relationSelectOptions.js';
   import type {
     BulkUpdateFieldDeviceItem,
     SpecificationInput
@@ -21,6 +27,7 @@
   let bulkEditValues = $state<Partial<BulkUpdateFieldDeviceItem>>({});
   let bulkSpecValues = $state<Partial<SpecificationInput>>({});
   let showBulkSpecFields = $state(false);
+  let relationFilterSource = $state<RelationFilterSource>(null);
 
   const canEditBaseFields = $derived(fieldDeviceState.canUpdateFieldDevice());
   const canEditSpecificationFields = $derived(fieldDeviceState.canUpdateFieldDeviceSpecification());
@@ -30,6 +37,51 @@
       Object.values(bulkEditValues).some((value) => value !== undefined && value !== '') ||
       Object.values(bulkSpecValues).some((value) => value !== undefined && value !== '')
   );
+  const bulkApparatItems = $derived(
+    filterApparatsForRelationSource(
+      fieldDeviceState.allApparats,
+      bulkEditValues.system_part_id ?? '',
+      relationFilterSource
+    )
+  );
+  const bulkSystemPartItems = $derived(
+    filterSystemPartsForRelationSource(
+      fieldDeviceState.allSystemParts,
+      fieldDeviceState.allApparats,
+      bulkEditValues.apparat_id ?? '',
+      relationFilterSource
+    )
+  );
+
+  function handleBulkApparatChange(value: string) {
+    relationFilterSource = value ? 'apparat_id' : null;
+    const nextValues = { ...bulkEditValues, apparat_id: value || undefined };
+    if (
+      value &&
+      bulkEditValues.system_part_id &&
+      !isSystemPartAllowedForApparat(
+        fieldDeviceState.allApparats,
+        value,
+        bulkEditValues.system_part_id
+      )
+    ) {
+      nextValues.system_part_id = undefined;
+    }
+    bulkEditValues = nextValues;
+  }
+
+  function handleBulkSystemPartChange(value: string) {
+    relationFilterSource = value ? 'system_part_id' : null;
+    const nextValues = { ...bulkEditValues, system_part_id: value || undefined };
+    if (
+      value &&
+      bulkEditValues.apparat_id &&
+      !isSystemPartAllowedForApparat(fieldDeviceState.allApparats, bulkEditValues.apparat_id, value)
+    ) {
+      nextValues.apparat_id = undefined;
+    }
+    bulkEditValues = nextValues;
+  }
 
   function applyBulkEdits() {
     if (fieldDeviceState.selectedIds.size === 0) return;
@@ -78,6 +130,7 @@
   function clearBulkEdit() {
     bulkEditValues = {};
     bulkSpecValues = {};
+    relationFilterSource = null;
   }
 </script>
 
@@ -153,23 +206,21 @@
           <div class="flex flex-col gap-1">
             <Label class="text-xs">{$t('field_device.bulk_edit.apparat')}</Label>
             <TableApparatSelect
-              items={fieldDeviceState.allApparats}
+              items={bulkApparatItems}
               value={bulkEditValues.apparat_id ?? ''}
               width="w-full"
-              onValueChange={(value) => {
-                bulkEditValues = { ...bulkEditValues, apparat_id: value || undefined };
-              }}
+              onValueChange={handleBulkApparatChange}
+              clearable
             />
           </div>
           <div class="flex flex-col gap-1">
             <Label class="text-xs">{$t('field_device.bulk_edit.system_part')}</Label>
             <TableSystemPartSelect
-              items={fieldDeviceState.allSystemParts}
+              items={bulkSystemPartItems}
               value={bulkEditValues.system_part_id ?? ''}
               width="w-full"
-              onValueChange={(value) => {
-                bulkEditValues = { ...bulkEditValues, system_part_id: value || undefined };
-              }}
+              onValueChange={handleBulkSystemPartChange}
+              clearable
             />
           </div>
         </div>

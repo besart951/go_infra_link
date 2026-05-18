@@ -10,7 +10,7 @@
 
   const t = createTranslator();
   const state = new AlarmCatalogState({
-    translate: (key) => $t(key)
+    translate: (key, params) => $t(key, params)
   });
 
   onMount(() => {

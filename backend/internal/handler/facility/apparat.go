@@ -224,6 +224,7 @@ func (h *ApparatHandler) DeleteApparat(c *gin.Context) {
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.apparat_not_found"),
+			localizedBacnetReferenceInUse(),
 		)
 		return
 	}

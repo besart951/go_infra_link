@@ -1017,6 +1017,13 @@
     "notification_class": "Benachrichtigungsklasse",
     "state_text": "Statustextgruppe",
     "alarm_definition": "Alarmdefinition",
+    "bacnet_usage_count": "{count}-mal in BACnet-Objekten verwendet",
+    "bacnet_delete_disabled": "Löschen gesperrt ({count}-mal verwendet)",
+    "bacnet_delete_blocked_toast": "Dieser Eintrag wird {count}-mal in BACnet-Objekten verwendet und kann nicht gelöscht werden.",
+    "bacnet_update_confirm_title": "Änderung betrifft BACnet-Objekte",
+    "bacnet_update_confirm_message": "Dieser Eintrag wird {count}-mal in BACnet-Objekten verwendet. Änderungen wirken sich auf alle verknüpften BACnet-Objekte aus. Möchten Sie fortfahren?",
+    "bacnet_update_confirm_again_title": "Änderung nochmals bestätigen",
+    "bacnet_update_confirm_again_message": "Bitte nochmals bestätigen: Diese Änderung betrifft {count} BACnet-Objekt(e).",
     "no_items": "Keine Einträge gefunden.",
     "created_at": "Erstellt am",
     "updated_at": "Aktualisiert am",
@@ -1054,6 +1061,8 @@
     "validation_error": "Die Eingabe ist ungültig.",
     "object_data_conflict": "Das Objekt ist bereits mit einem anderen Eintrag verknüpft.",
     "referenced_entity_in_use": "Der Eintrag wird noch von anderen Elementen referenziert und kann nicht gelöscht werden.",
+    "bacnet_reference_delete_blocked": "Der Eintrag wird von BACnet-Objekten verwendet und kann nicht gelöscht werden.",
+    "invalid_bacnet_reference_resource": "Ungültige BACnet-Referenz.",
     "ids_required": "IDs erforderlich.",
     "control_cabinet_id_required": "Schaltschrank-ID erforderlich.",
     "no_available_ga_device": "Kein verfügbares GA-Gerät.",
@@ -2389,7 +2398,9 @@
     },
     "table_select": {
       "apparat": "Apparat auswählen...",
-      "system_part": "Systemteil auswählen..."
+      "system_part": "Systemteil auswählen...",
+      "clear_apparat": "Apparat entfernen",
+      "clear_system_part": "Systemteil entfernen"
     },
     "validation": {
       "bmk_max": "BMK darf maximal 10 Zeichen haben.",

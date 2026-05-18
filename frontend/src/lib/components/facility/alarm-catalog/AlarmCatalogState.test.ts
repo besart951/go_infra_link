@@ -6,6 +6,13 @@ import type { AlarmFieldRepository } from '$lib/domain/ports/facility/alarmField
 import type { AlarmTypeRepository } from '$lib/domain/ports/facility/alarmTypeRepository.js';
 import type { AlarmUnitRepository } from '$lib/domain/ports/facility/alarmUnitRepository.js';
 import type { AlarmField, AlarmType, AlarmTypeField, Unit } from '$lib/domain/facility/index.js';
+import { bacnetReferenceUsageRepository } from '$lib/infrastructure/api/bacnetReferenceUsageRepository.js';
+
+vi.mock('$lib/infrastructure/api/bacnetReferenceUsageRepository.js', () => ({
+  bacnetReferenceUsageRepository: {
+    getCounts: vi.fn().mockResolvedValue({})
+  }
+}));
 
 const unit: Unit = {
   id: 'unit-1',
@@ -95,7 +102,7 @@ function createState() {
     ...repositories,
     addToast: toast,
     getErrorMessage: (error) => (error instanceof Error ? error.message : String(error)),
-    translate: (key) => `t:${key}`
+    translate: (key, params) => (params ? `t:${key}:${JSON.stringify(params)}` : `t:${key}`)
   });
 
   return { ...repositories, state, toast };
@@ -191,5 +198,19 @@ describe('AlarmCatalogState', () => {
     expect(typeRepository.delete).toHaveBeenCalledWith('type-1');
     expect(state.selectedTypeId).toBe('type-2');
     expect(typeRepository.getWithFields).toHaveBeenCalledWith('type-2');
+  });
+
+  it('blocks deleting alarm types used by bacnet objects', async () => {
+    vi.mocked(bacnetReferenceUsageRepository.getCounts).mockResolvedValueOnce({ 'type-1': 4 });
+    const { state, toast, typeRepository } = createState();
+
+    await state.loadAll();
+    await state.deleteType('type-1');
+
+    expect(typeRepository.delete).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith(
+      't:facility.bacnet_delete_blocked_toast:{"count":4}',
+      'error'
+    );
   });
 });

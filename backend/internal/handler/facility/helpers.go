@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
@@ -154,6 +155,10 @@ func localizedNotFound(translationKey string) handlerutil.ErrorMapping {
 
 func localizedConflict(translationKey string) handlerutil.ErrorMapping {
 	return handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "conflict", translationKey))
+}
+
+func localizedBacnetReferenceInUse() handlerutil.ErrorMapping {
+	return handlerutil.MapError(domainFacility.ErrBacnetReferenceInUse, handlerutil.LocalizedError(http.StatusConflict, "reference_in_use", "facility.bacnet_reference_delete_blocked"))
 }
 
 func localizedInvalidArgument(translationKey string) handlerutil.ErrorMapping {

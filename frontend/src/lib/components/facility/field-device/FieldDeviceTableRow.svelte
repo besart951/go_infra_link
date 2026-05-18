@@ -11,6 +11,13 @@
   import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
   import TableApparatSelect from '../table-selects/TableApparatSelect.svelte';
   import TableSystemPartSelect from '../table-selects/TableSystemPartSelect.svelte';
+  import {
+    filterApparatsForRelationSource,
+    filterSystemPartsForRelationSource,
+    isSystemPartAllowedForApparat,
+    mergeSelectedRelationOption
+  } from '../table-selects/relationSelectOptions.js';
+  import type { RelationFilterSource } from '../table-selects/relationSelectOptions.js';
   import { InlineUndoButton } from '$lib/components/ui/editable-cell/index.js';
   import type { FieldDevice } from '$lib/domain/facility/index.js';
   import type { SharedFieldDeviceEditor } from '$lib/services/projectCollaboration.svelte.js';
@@ -27,6 +34,7 @@
   const t = createTranslator();
   const rowState = useFieldDeviceState();
   let historyOpen = $state(false);
+  let relationFilterSource = $state<RelationFilterSource>(null);
 
   function toDisplayString(value: unknown, isNumeric = false): string {
     if (value === null || value === undefined || value === '') return '';
@@ -34,14 +42,45 @@
     return String(value);
   }
 
+  function queueRelationEdit(
+    field: 'apparat_id' | 'system_part_id',
+    nextValue: string,
+    originalValue: string
+  ) {
+    if (nextValue && nextValue === originalValue) {
+      rowState.editing.discardFieldEdit(device.id, field);
+      return;
+    }
+
+    rowState.editing.queueEdit(device.id, field, nextValue);
+  }
+
   function handleApparatChange(newApparatId: string) {
-    if (!newApparatId || newApparatId === device.apparat_id) return;
-    rowState.editing.queueEdit(device.id, 'apparat_id', newApparatId);
+    const nextApparatId = newApparatId || '';
+    relationFilterSource = nextApparatId ? 'apparat_id' : null;
+    queueRelationEdit('apparat_id', nextApparatId, device.apparat_id);
+
+    if (
+      nextApparatId &&
+      systemPartSelectValue &&
+      !isSystemPartAllowedForApparat(rowState.allApparats, nextApparatId, systemPartSelectValue)
+    ) {
+      rowState.editing.queueEdit(device.id, 'system_part_id', '');
+    }
   }
 
   function handleSystemPartChange(newSystemPartId: string) {
-    if (!newSystemPartId || newSystemPartId === device.system_part_id) return;
-    rowState.editing.queueEdit(device.id, 'system_part_id', newSystemPartId);
+    const nextSystemPartId = newSystemPartId || '';
+    relationFilterSource = nextSystemPartId ? 'system_part_id' : null;
+    queueRelationEdit('system_part_id', nextSystemPartId, device.system_part_id ?? '');
+
+    if (
+      nextSystemPartId &&
+      apparatSelectValue &&
+      !isSystemPartAllowedForApparat(rowState.allApparats, apparatSelectValue, nextSystemPartId)
+    ) {
+      rowState.editing.queueEdit(device.id, 'apparat_id', '');
+    }
   }
 
   const hasBacnetErrors = $derived.by(
@@ -109,6 +148,33 @@
   );
   const systemPartSelectValue = $derived(
     rowState.editing.getPendingValue(device.id, 'system_part_id') ?? device.system_part_id ?? ''
+  );
+  const selectedApparatFallback = $derived(
+    apparatSelectValue === device.apparat_id ? device.apparat : undefined
+  );
+  const selectedSystemPartFallback = $derived(
+    systemPartSelectValue === (device.system_part_id ?? '') ? device.system_part : undefined
+  );
+  const apparatSelectItems = $derived(
+    mergeSelectedRelationOption(
+      filterApparatsForRelationSource(
+        rowState.allApparats,
+        systemPartSelectValue,
+        relationFilterSource
+      ),
+      selectedApparatFallback
+    )
+  );
+  const systemPartSelectItems = $derived(
+    mergeSelectedRelationOption(
+      filterSystemPartsForRelationSource(
+        rowState.allSystemParts,
+        rowState.allApparats,
+        apparatSelectValue,
+        relationFilterSource
+      ),
+      selectedSystemPartFallback
+    )
   );
   const apparatSelectDirty = $derived(rowState.editing.isFieldDirty(device.id, 'apparat_id'));
   const systemPartSelectDirty = $derived(
@@ -305,18 +371,22 @@
         .join(' ')}
     >
       <TableApparatSelect
-        items={rowState.allApparats}
+        items={apparatSelectItems}
         value={apparatSelectValue}
         width="w-fit max-w-40 min-w-[4.5rem]"
         popupWidth="w-52"
         disabled={!rowState.canUpdateFieldDevice()}
         error={rowState.editing.getFieldError(device.id, 'apparat_id')}
         onValueChange={handleApparatChange}
+        clearable
       />
       {#if apparatSelectDirty}
         <InlineUndoButton
           title={undoFieldTitle}
-          onclick={() => rowState.editing.discardFieldEdit(device.id, 'apparat_id')}
+          onclick={() => {
+            rowState.editing.discardFieldEdit(device.id, 'apparat_id');
+            relationFilterSource = null;
+          }}
         />
       {/if}
     </div>
@@ -332,18 +402,22 @@
         .join(' ')}
     >
       <TableSystemPartSelect
-        items={rowState.allSystemParts}
+        items={systemPartSelectItems}
         value={systemPartSelectValue}
         width="w-fit max-w-40 min-w-[4.5rem]"
         popupWidth="w-52"
         disabled={!rowState.canUpdateFieldDevice()}
         error={rowState.editing.getFieldError(device.id, 'system_part_id')}
         onValueChange={handleSystemPartChange}
+        clearable
       />
       {#if systemPartSelectDirty}
         <InlineUndoButton
           title={undoFieldTitle}
-          onclick={() => rowState.editing.discardFieldEdit(device.id, 'system_part_id')}
+          onclick={() => {
+            rowState.editing.discardFieldEdit(device.id, 'system_part_id');
+            relationFilterSource = null;
+          }}
         />
       {/if}
     </div>
@@ -674,7 +748,10 @@
           size="icon"
           class="h-7 w-7 opacity-0 transition-opacity group-hover/fd-row:opacity-100 focus-visible:opacity-100"
           title={undoFieldDeviceTitle}
-          onclick={() => rowState.editing.discardDeviceFieldEdits(device.id)}
+          onclick={() => {
+            rowState.editing.discardDeviceFieldEdits(device.id);
+            relationFilterSource = null;
+          }}
         >
           <Undo2 class="size-4" />
         </Button>
@@ -686,7 +763,10 @@
           size="icon"
           class="h-7 w-7 opacity-0 transition-opacity group-hover/fd-row:opacity-100 focus-visible:opacity-100"
           title={undoDeviceTitle}
-          onclick={() => rowState.editing.discardDeviceEdits(device.id)}
+          onclick={() => {
+            rowState.editing.discardDeviceEdits(device.id);
+            relationFilterSource = null;
+          }}
         >
           <RotateCcw class="size-4" />
         </Button>

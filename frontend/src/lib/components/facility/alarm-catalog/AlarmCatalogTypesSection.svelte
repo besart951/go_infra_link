@@ -78,6 +78,7 @@
               </Table.Row>
             {:else}
               {#each catalogState.types as type}
+                {@const usageCount = catalogState.getTypeUsageCount(type.id)}
                 <Table.Row>
                   <Table.Cell class="font-medium">{type.code}</Table.Cell>
                   <Table.Cell>{type.name}</Table.Cell>
@@ -100,9 +101,12 @@
                           size="icon-sm"
                           variant="ghost"
                           class="text-destructive hover:text-destructive"
+                          disabled={catalogState.isTypeDeleteDisabled(type.id)}
                           onclick={() => catalogState.deleteType(type.id)}
                           aria-label={$t('facility.alarm_catalog_page.types.delete')}
-                          title={$t('facility.alarm_catalog_page.types.delete')}
+                          title={usageCount > 0
+                            ? $t('facility.bacnet_usage_count', { count: usageCount })
+                            : $t('facility.alarm_catalog_page.types.delete')}
                         >
                           <Trash2 class="size-4" />
                         </Button>
