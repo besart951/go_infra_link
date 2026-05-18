@@ -124,14 +124,17 @@
       {#each selectedItems as item (String(item[idKey]))}
         <Badge variant="secondary" class="pr-1 pl-2">
           {String(item[labelKey] ?? '')}
-          <button
+          <Button
             type="button"
-            class="ml-1 rounded-full p-0.5 hover:bg-secondary-foreground/20"
+            variant="ghost"
+            size="icon-sm"
+            class="ml-1 size-4 rounded-full p-0 hover:bg-secondary-foreground/20"
             onclick={() => handleRemove(String(item[idKey]))}
+            aria-label={String(item[labelKey] ?? '')}
             {disabled}
           >
             <X class="h-3 w-3" />
-          </button>
+          </Button>
         </Badge>
       {/each}
     </div>

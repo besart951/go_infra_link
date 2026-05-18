@@ -5,6 +5,7 @@ import { t as translate } from '$lib/i18n/index.js';
 import {
   userRepository,
   type UserDirectoryPageCapabilities,
+  type UserDirectoryRoleFilter,
   type UserDirectoryTeamFilter,
   type UserDirectoryUser,
   type UserRole
@@ -23,7 +24,9 @@ export class UserDirectoryPageState {
   users = $state<UserDirectoryUser[]>([]);
   showDeletedUsers = $state(false);
   selectedTeamId = $state('all');
+  selectedRole = $state<UserRole | 'all'>('all');
   teamFilters = $state<UserDirectoryTeamFilter[]>([]);
+  roleFilters = $state<UserDirectoryRoleFilter[]>([]);
   pageCapabilities = $state<UserDirectoryPageCapabilities>({
     can_create_user: false,
     can_read_deleted: false
@@ -104,27 +107,38 @@ export class UserDirectoryPageState {
   }
 
   async refreshDirectory(): Promise<void> {
-    await this.loadDirectory(1, this.query.searchText, this.selectedTeamId);
+    await this.loadDirectory(1, this.query.searchText, this.selectedTeamId, this.selectedRole);
   }
 
   async goToPage(nextPage: number): Promise<void> {
-    await this.loadDirectory(nextPage, this.query.searchText, this.selectedTeamId);
+    await this.loadDirectory(
+      nextPage,
+      this.query.searchText,
+      this.selectedTeamId,
+      this.selectedRole
+    );
   }
 
   async setTeamFilter(teamId: string): Promise<void> {
     this.selectedTeamId = teamId;
-    await this.loadDirectory(1, this.query.searchText, teamId);
+    await this.loadDirectory(1, this.query.searchText, teamId, this.selectedRole);
+  }
+
+  async setRoleFilter(role: UserRole | 'all'): Promise<void> {
+    this.selectedRole = role;
+    await this.loadDirectory(1, this.query.searchText, this.selectedTeamId, role);
   }
 
   async setShowDeletedUsers(showDeletedUsers: boolean): Promise<void> {
     this.showDeletedUsers = showDeletedUsers;
-    await this.loadDirectory(1, this.query.searchText, this.selectedTeamId);
+    await this.loadDirectory(1, this.query.searchText, this.selectedTeamId, this.selectedRole);
   }
 
   async loadDirectory(
     nextPage = this.query.page,
     nextSearch = this.query.searchText,
-    nextTeamId = this.selectedTeamId
+    nextTeamId = this.selectedTeamId,
+    nextRole = this.selectedRole
   ): Promise<void> {
     this.query.setLoading(true);
     this.query.clearError();
@@ -134,6 +148,7 @@ export class UserDirectoryPageState {
         limit: this.query.pageSize,
         search: nextSearch || undefined,
         team_id: nextTeamId === 'all' ? undefined : nextTeamId,
+        role: nextRole === 'all' ? undefined : nextRole,
         include_deleted: this.pageCapabilities.can_read_deleted && this.showDeletedUsers
       });
       this.users = result.items;
@@ -143,7 +158,8 @@ export class UserDirectoryPageState {
         totalPages: result.total_pages,
         searchText: nextSearch
       });
-      this.teamFilters = result.teams;
+      this.teamFilters = result.teams ?? [];
+      this.roleFilters = result.roles ?? [];
       this.pageCapabilities = result.capabilities;
       if (!this.pageCapabilities.can_read_deleted) {
         this.showDeletedUsers = false;

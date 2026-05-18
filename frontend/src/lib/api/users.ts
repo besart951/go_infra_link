@@ -97,6 +97,12 @@ export interface UserDirectoryTeamFilter {
   count: number;
 }
 
+export interface UserDirectoryRoleFilter {
+  role: UserRole;
+  display_name: string;
+  count: number;
+}
+
 export interface UserDirectoryPageCapabilities {
   can_create_user: boolean;
   can_read_deleted: boolean;
@@ -108,6 +114,7 @@ export interface UserDirectoryResponse {
   page: number;
   total_pages: number;
   teams: UserDirectoryTeamFilter[];
+  roles: UserDirectoryRoleFilter[];
   capabilities: UserDirectoryPageCapabilities;
 }
 
@@ -164,7 +171,7 @@ export async function listUsers(
 }
 
 export async function listUserDirectory(
-  params: ListUsersParams & { team_id?: string } = {},
+  params: ListUsersParams & { team_id?: string; role?: UserRole } = {},
   options?: RequestInit
 ): Promise<UserDirectoryResponse> {
   const searchParams = new URLSearchParams();
@@ -174,6 +181,7 @@ export async function listUserDirectory(
   if (params.order_by) searchParams.set('order_by', params.order_by);
   if (params.order) searchParams.set('order', params.order);
   if (params.team_id) searchParams.set('team_id', params.team_id);
+  if (params.role) searchParams.set('role', params.role);
   if (params.include_deleted) searchParams.set('include_deleted', 'true');
 
   const query = searchParams.toString();

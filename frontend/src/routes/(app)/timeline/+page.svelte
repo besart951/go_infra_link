@@ -378,30 +378,34 @@
         {#if selectedEntityLabel}
           <Badge variant="outline" class="group max-w-full gap-1.5 pr-1">
             <span class="min-w-0 break-words">{selectedEntityLabel}</span>
-            <button
+            <Button
               type="button"
-              class="grid size-4 place-items-center rounded-full opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
+              variant="ghost"
+              size="icon-sm"
+              class="size-4 rounded-full p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-muted focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
               onclick={clearEntityFilter}
               aria-label={$t('history.timeline.filters.remove_entity', {
                 name: selectedEntityLabel
               })}
             >
               <XIcon class="size-3" />
-            </button>
+            </Button>
           </Badge>
         {/if}
         {#each selectedFields as field (field)}
           {@const fieldLabel = historyFieldLabel(field)}
           <Badge variant="secondary" class="group max-w-full gap-1.5 pr-1">
             <span class="min-w-0 break-words">{fieldLabel}</span>
-            <button
+            <Button
               type="button"
-              class="grid size-4 place-items-center rounded-full opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary-foreground/20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
+              variant="ghost"
+              size="icon-sm"
+              class="size-4 rounded-full p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary-foreground/20 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring"
               onclick={() => removeFieldFilter(field)}
               aria-label={$t('history.timeline.filters.remove_field', { name: fieldLabel })}
             >
               <XIcon class="size-3" />
-            </button>
+            </Button>
           </Badge>
         {/each}
       </div>

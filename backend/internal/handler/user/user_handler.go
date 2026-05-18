@@ -139,6 +139,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
 // @Param team_id query string false "Visible team filter"
+// @Param role query string false "Role filter"
 // @Success 200 {object} dto.UserDirectoryListResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
@@ -154,6 +155,7 @@ func (h *UserHandler) ListDirectory(c *gin.Context) {
 	var query struct {
 		dto.PaginationQuery
 		TeamID string `form:"team_id"`
+		Role   string `form:"role"`
 	}
 	if !handlerutil.BindQuery(c, &query) {
 		return
@@ -166,6 +168,7 @@ func (h *UserHandler) ListDirectory(c *gin.Context) {
 		query.Limit,
 		query.Search,
 		query.TeamID,
+		query.Role,
 		query.OrderBy,
 		query.Order,
 		query.IncludeDeleted,

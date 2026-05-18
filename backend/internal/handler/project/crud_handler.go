@@ -11,6 +11,7 @@ import (
 	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // CreateProject godoc
@@ -94,6 +95,8 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
+// @Param status query string false "Status filter"
+// @Param phase_id query string false "Phase ID filter"
 // @Success 200 {object} dto.ProjectListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -115,7 +118,17 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 		status = &query.Status
 	}
 
-	result, err := h.lifecycle.List(c.Request.Context(), userID, query.Page, query.Limit, query.Search, status)
+	var phaseID *uuid.UUID
+	if query.PhaseID != "" {
+		parsedPhaseID, err := uuid.Parse(query.PhaseID)
+		if err != nil {
+			handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "validation_error", "errors.validation_error")
+			return
+		}
+		phaseID = &parsedPhaseID
+	}
+
+	result, err := h.lifecycle.List(c.Request.Context(), userID, query.Page, query.Limit, query.Search, status, phaseID)
 	if err != nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "project.fetch_failed")
 		return

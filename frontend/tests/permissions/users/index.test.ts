@@ -22,6 +22,7 @@ const defaultDirectoryResponse = {
   page: 1,
   total_pages: 1,
   teams: [],
+  roles: [],
   capabilities: { can_create_user: false, can_read_deleted: false }
 };
 
@@ -272,6 +273,38 @@ describe('/users/directory permission surface', () => {
     });
 
     expect(screen.getByText('common.show_deleted_users')).toBeInTheDocument();
+  });
+
+  it('applies team and role filters from the toolbar', async () => {
+    state.listUserDirectoryMock.mockResolvedValue({
+      ...defaultDirectoryResponse,
+      teams: [{ id: 'team-1', name: 'Team Alpha', count: 1 }],
+      roles: [{ role: 'planer', display_name: 'Planer', count: 1 }]
+    });
+
+    render(UsersPage);
+
+    await waitFor(() => {
+      expect(state.listUserDirectoryMock).toHaveBeenCalled();
+    });
+
+    await fireEvent.change(screen.getByLabelText('common.team'), {
+      target: { value: 'team-1' }
+    });
+    await waitFor(() => {
+      expect(state.listUserDirectoryMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ team_id: 'team-1', role: undefined })
+      );
+    });
+
+    await fireEvent.change(screen.getByLabelText('common.role'), {
+      target: { value: 'planer' }
+    });
+    await waitFor(() => {
+      expect(state.listUserDirectoryMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ team_id: 'team-1', role: 'planer' })
+      );
+    });
   });
 
   it('shows restore action from can_restore instead of can_enable', async () => {

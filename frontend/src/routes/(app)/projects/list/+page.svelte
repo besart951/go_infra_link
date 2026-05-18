@@ -51,11 +51,17 @@
   />
 
   <ProjectListToolbar
-    label={$t('common.status')}
-    value={$projectListStore.status}
+    statusLabel={$t('common.status')}
+    statusValue={$projectListStore.status}
     options={statusOptions}
+    phaseLabel={$t('messages.phase')}
+    phaseValue={$projectListStore.phaseId}
+    allPhasesLabel={$t('messages.all_phases')}
+    phaseSearchPlaceholder={$t('phases.page.search_placeholder')}
+    phaseEmptyText={$t('messages.no_phases_found')}
     disabled={$projectListStore.loading}
     onStatusChange={(status) => state.setStatusFilter(status)}
+    onPhaseChange={(phaseId) => state.setPhaseFilter(phaseId)}
   />
 
   <PaginatedList
@@ -64,7 +70,7 @@
       { key: 'name', label: $t('common.name') },
       { key: 'status', label: $t('common.status') },
       { key: 'start_date', label: $t('messages.start_date') },
-      { key: 'created', label: $t('messages.created') },
+      { key: 'phase', label: $t('messages.phase') },
       { key: 'actions', label: $t('messages.actions'), width: 'w-[100px]' }
     ]}
     searchPlaceholder={$t('messages.search_projects')}
@@ -86,7 +92,7 @@
         {project.start_date ? new Date(project.start_date).toLocaleDateString() : '-'}
       </Table.Cell>
       <Table.Cell>
-        {new Date(project.created_at).toLocaleDateString()}
+        {project.phase?.name?.trim() || $t('common.not_available')}
       </Table.Cell>
       <Table.Cell>
         <Button variant="ghost" size="sm" href="/projects/{project.id}"

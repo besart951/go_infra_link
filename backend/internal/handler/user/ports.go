@@ -34,7 +34,7 @@ type RoleQueryService interface {
 }
 
 type UserDirectoryService interface {
-	List(ctx context.Context, requesterID uuid.UUID, page, limit int, search, teamID, orderBy, order string, includeDeleted bool) (*userdirectory.ListResult, error)
+	List(ctx context.Context, requesterID uuid.UUID, page, limit int, search, teamID, role, orderBy, order string, includeDeleted bool) (*userdirectory.ListResult, error)
 }
 
 type UserRegistrationService interface {

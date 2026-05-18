@@ -159,10 +159,11 @@
           {#each filteredInboxItems as notification (notification.id)}
             {@const isSelected = selectedNotification?.id === notification.id}
             <div class="group/notification relative border-b">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 class={cn(
-                  'flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/70 focus-visible:bg-muted/80 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
+                  'h-auto w-full items-start justify-start gap-3 rounded-none px-4 py-3 text-left font-normal whitespace-normal transition-colors hover:bg-muted/70 focus-visible:bg-muted/80 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none',
                   !notification.read_at && 'bg-primary/5',
                   isSelected && 'bg-muted'
                 )}
@@ -199,7 +200,7 @@
                     </span>
                   {/if}
                 </span>
-              </button>
+              </Button>
 
               <NotificationActions
                 isRead={Boolean(notification.read_at)}

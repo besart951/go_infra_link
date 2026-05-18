@@ -66,16 +66,13 @@ describe('/facility overview', () => {
     expect(screen.queryByRole('link', { name: /facility.specifications/ })).not.toBeInTheDocument();
   });
 
-  it('uses specification.read for the specifications deep link', () => {
+  it('does not render the specifications deep link', () => {
     state.setPermissions(['specification.read']);
 
     render(FacilityOverviewPage);
 
-    expect(
-      screen.getByRole('link', {
-        name: 'facility.specifications facility.specifications_desc'
-      })
-    ).toHaveAttribute('href', '/facility/specifications');
+    expect(screen.getByText('hub.no_access')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /facility.specifications/ })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: /facility.field_devices/ })
     ).not.toBeInTheDocument();

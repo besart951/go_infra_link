@@ -524,8 +524,7 @@ export const routeAudits = [
     status: 'configured',
     expectedAccess: 'Requires specification.read.',
     protectedUi: ['facility.specifications'],
-    notes:
-      'The sidebar and hub expose the route only with specification.read; the field-device deep link remains hidden without fielddevice.read.'
+    notes: 'The route stays guarded by specification.read, but is no longer exposed in navigation.'
   },
   {
     path: '/excel',

@@ -12,7 +12,6 @@
   import ClipboardListIcon from '@lucide/svelte/icons/clipboard-list';
   import CpuIcon from '@lucide/svelte/icons/cpu';
   import DatabaseIcon from '@lucide/svelte/icons/database';
-  import FileSlidersIcon from '@lucide/svelte/icons/file-sliders';
   import HardDriveIcon from '@lucide/svelte/icons/hard-drive';
   import LayersIcon from '@lucide/svelte/icons/layers';
   import ListTreeIcon from '@lucide/svelte/icons/list-tree';
@@ -117,14 +116,6 @@
         icon: BellRingIcon,
         tone: 'facility',
         hasAccess: canPerform('read', 'notificationclass')
-      },
-      {
-        title: $t('facility.specifications'),
-        description: $t('facility.specifications_desc'),
-        href: '/facility/specifications',
-        icon: FileSlidersIcon,
-        tone: 'facility',
-        hasAccess: canPerform('read', 'specification')
       }
     ].filter((item) => item.hasAccess)
   );

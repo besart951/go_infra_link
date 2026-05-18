@@ -42,6 +42,8 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   iws_code: 'facility.iws_code',
   name: 'common.name',
   notification_email: 'notifications.preferences.email.label',
+  number_max: 'history.fields.number_max',
+  number_min: 'history.fields.number_min',
   objectdata: 'facility.object_data',
   object_data_id: 'facility.object_data',
   password: 'notifications.form.password',
@@ -55,6 +57,7 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   recipient_user_ids: 'notifications.rules.user_ids',
   resource_id: 'notifications.rules.resource_id',
   resource_type: 'notifications.rules.resource_type',
+  short_name: 'history.fields.short_name',
   software_number: 'history.fields.software_number',
   software_type: 'history.fields.software_type',
   sps_controller: 'facility.sps_controller',
@@ -93,9 +96,18 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
 
 const SCOPE_LABEL_KEYS: Record<string, string> = {
   building: 'facility.building',
+  building_group: 'facility.building_group',
+  'building group': 'facility.building_group',
   control_cabinet: 'facility.control_cabinet',
   'control cabinet': 'facility.control_cabinet',
+  field_device: 'facility.field_device',
+  'field device': 'facility.field_device',
   ip_address: 'facility.ip_address',
+  objectdata: 'facility.object_data',
+  object_data: 'facility.object_data',
+  'object data': 'facility.object_data',
+  system_type: 'facility.system_type',
+  'system type': 'facility.system_type',
   vlan: 'facility.forms.sps_controller.vlan_label'
 };
 
@@ -132,6 +144,8 @@ const DIRECT_MESSAGE_KEYS: Record<string, string> = {
   'object_data_id and bacnet_objects are mutually exclusive': 'facility.mutually_exclusive_error',
   'one or more parent entities (SPS controller, apparat, system part) not found':
     'field_device.multi_create.validation.parents_not_found',
+  'number_min and number_max range must not overlap existing ranges':
+    'validation.number_range_overlap',
   'apparat_nr is required': 'field_device.multi_create.validation.apparat_nr_required',
   'apparat_nr must be between 1 and 99': 'field_device.validation.apparat_nr_range',
   'apparatnummer ist bereits vergeben': 'field_device.multi_create.validation.apparat_nr_used',
@@ -300,6 +314,11 @@ export function localizeErrorText(message: string, fieldPath?: string): string {
       field: getFieldLabel(match[1]),
       count: match[2]
     });
+  }
+
+  match = trimmed.match(/^([a-z0-9_.-]+) must be unique$/i);
+  if (match) {
+    return t('validation.unique', { field: getFieldLabel(match[1]) });
   }
 
   match = trimmed.match(/^([a-z0-9_.-]+) must be unique within the (.+)$/i);

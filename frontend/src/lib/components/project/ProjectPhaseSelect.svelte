@@ -8,13 +8,25 @@
     width?: string;
     id?: string;
     disabled?: boolean;
+    clearable?: boolean;
+    clearText?: string;
+    placeholder?: string;
+    searchPlaceholder?: string;
+    emptyText?: string;
+    onValueChange?: (value: string) => void;
   }
 
   let {
     value = $bindable(''),
     width = 'w-[260px]',
     id,
-    disabled = false
+    disabled = false,
+    clearable = false,
+    clearText = 'Auswahl aufheben',
+    placeholder = 'Select phase...',
+    searchPlaceholder = 'Search phases...',
+    emptyText = 'No phases found.',
+    onValueChange
   }: ProjectPhaseSelectProps = $props();
 
   const MAX_PHASE_SAMPLES = 100;
@@ -38,9 +50,12 @@
   {fetcher}
   {fetchById}
   labelKey="name"
-  placeholder="Select phase..."
-  searchPlaceholder="Search phases..."
-  emptyText="No phases found."
+  {placeholder}
+  {searchPlaceholder}
+  {emptyText}
+  {clearable}
+  {clearText}
+  {onValueChange}
   {width}
   {id}
   {disabled}

@@ -3,6 +3,7 @@
    * EditableSelectCell Component
    * Inline editable table cell with click-to-edit select dropdown
    */
+  import { Button } from '$lib/components/ui/button/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
   import InlineUndoButton from './InlineUndoButton.svelte';
 
@@ -75,19 +76,21 @@
 
 {#if isEditing}
   <div class="editable-cell-editor relative block w-full max-w-full min-w-0 align-middle">
-    <button
+    <Button
       type="button"
-      tabindex="-1"
+      tabindex={-1}
       aria-hidden="true"
+      variant="ghost"
+      pressEffect="none"
       class={[
-        'editable-cell-display invisible flex h-7 min-h-7 w-full max-w-full min-w-0 cursor-pointer items-center rounded-sm px-2 py-1 text-left text-sm transition-colors',
+        'editable-cell-display invisible h-7 min-h-7 w-full max-w-full min-w-0 shrink cursor-pointer items-center justify-start gap-0 rounded-sm px-2 py-1 text-left text-sm font-normal whitespace-normal transition-colors',
         hasError ? 'border' : ''
       ]
         .filter(Boolean)
         .join(' ')}
     >
       <span class="truncate">{displayLabel}</span>
-    </button>
+    </Button>
     <select
       bind:this={selectElement}
       data-keyboard-table-ignore
@@ -113,13 +116,15 @@
       <Tooltip.Root>
         <Tooltip.Trigger>
           {#snippet child({ props })}
-            <button
+            <Button
               {...props}
               type="button"
+              variant="ghost"
+              pressEffect="none"
               onclick={startEditing}
               {disabled}
               class={[
-                'editable-cell-display flex h-7 min-h-7 w-full cursor-pointer items-center rounded-sm border px-2 py-1 text-left text-sm transition-colors',
+                'editable-cell-display h-7 min-h-7 w-full shrink cursor-pointer items-center justify-start gap-0 rounded-sm border px-2 py-1 text-left text-sm font-normal whitespace-normal transition-colors',
                 'border-destructive bg-destructive/10 hover:bg-destructive/20',
                 disabled ? 'cursor-not-allowed opacity-50' : ''
               ]
@@ -127,7 +132,7 @@
                 .join(' ')}
             >
               <span class="truncate">{displayLabel}</span>
-            </button>
+            </Button>
           {/snippet}
         </Tooltip.Trigger>
         <Tooltip.Content side="top" class="max-w-xs bg-destructive text-destructive-foreground">
@@ -141,12 +146,14 @@
   </div>
 {:else}
   <div class="group/undo relative">
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      pressEffect="none"
       onclick={startEditing}
       {disabled}
       class={[
-        'editable-cell-display flex h-7 min-h-7 w-full cursor-pointer items-center rounded-sm px-2 py-1 text-left text-sm transition-colors',
+        'editable-cell-display h-7 min-h-7 w-full shrink cursor-pointer items-center justify-start gap-0 rounded-sm px-2 py-1 text-left text-sm font-normal whitespace-normal transition-colors',
         'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
         isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
         disabled ? 'cursor-not-allowed opacity-50' : ''
@@ -155,7 +162,7 @@
         .join(' ')}
     >
       <span class="truncate">{displayLabel}</span>
-    </button>
+    </Button>
     {#if canUndo}
       <InlineUndoButton title={undoTitle} onclick={() => onUndo?.()} />
     {/if}

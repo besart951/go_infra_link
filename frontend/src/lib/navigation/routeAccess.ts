@@ -95,11 +95,6 @@ export const FACILITY_NAV_ACCESS: FacilityNavAccess[] = [
     titleKey: 'navigation.notification_classes',
     url: '/facility/notification-classes',
     permission: 'notificationclass.read'
-  },
-  {
-    titleKey: 'facility.specifications',
-    url: '/facility/specifications',
-    permission: 'specification.read'
   }
 ];
 

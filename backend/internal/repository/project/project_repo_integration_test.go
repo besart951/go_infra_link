@@ -22,12 +22,14 @@ func TestProjectRepo_MembershipAndUserScopedListing(t *testing.T) {
 
 	creator := seedProjectRepoUser(t, db, "creator@example.com")
 	member := seedProjectRepoUser(t, db, "member@example.com")
+	executionPhase := seedProjectRepoPhase(t, db, "Ausführung")
+	planningPhase := seedProjectRepoPhase(t, db, "Planung")
 
 	ongoing := &domainProject.Project{
 		Name:        "Ongoing Migration",
 		Description: "mapped via ProjectRecord",
 		Status:      domainProject.StatusOngoing,
-		PhaseID:     uuid.New(),
+		PhaseID:     executionPhase.ID,
 		CreatorID:   creator.ID,
 	}
 	if err := repo.Create(ctx, ongoing); err != nil {
@@ -40,7 +42,7 @@ func TestProjectRepo_MembershipAndUserScopedListing(t *testing.T) {
 	planned := &domainProject.Project{
 		Name:      "Planned Migration",
 		Status:    domainProject.StatusPlanned,
-		PhaseID:   uuid.New(),
+		PhaseID:   planningPhase.ID,
 		CreatorID: creator.ID,
 	}
 	if err := repo.Create(ctx, planned); err != nil {
@@ -64,6 +66,9 @@ func TestProjectRepo_MembershipAndUserScopedListing(t *testing.T) {
 	if len(items) != 1 || items[0].Name != ongoing.Name || items[0].CreatorID != creator.ID || items[0].Status != domainProject.StatusOngoing {
 		t.Fatalf("expected mapped project fields, got %+v", items)
 	}
+	if items[0].Phase == nil || items[0].Phase.Name != executionPhase.Name {
+		t.Fatalf("expected phase to be attached, got %+v", items[0].Phase)
+	}
 
 	hasUser, err := repo.HasUser(ctx, ongoing.ID, member.ID)
 	if err != nil {
@@ -82,12 +87,31 @@ func TestProjectRepo_MembershipAndUserScopedListing(t *testing.T) {
 	}
 
 	status := domainProject.StatusOngoing
-	list, err := repo.GetPaginatedListForUserWithStatus(ctx, domain.PaginationParams{Page: 1, Limit: 10}, member.ID, &status)
+	list, err := repo.GetPaginatedListForUserWithStatus(ctx, domain.PaginationParams{Page: 1, Limit: 10}, member.ID, &status, nil)
 	if err != nil {
 		t.Fatalf("expected user-scoped listing to succeed, got %v", err)
 	}
 	if len(list.Items) != 1 || list.Items[0].ID != ongoing.ID {
 		t.Fatalf("expected only the ongoing project for the member, got %+v", list.Items)
+	}
+	if list.Items[0].Phase == nil || list.Items[0].Phase.Name != executionPhase.Name {
+		t.Fatalf("expected listed project phase to be attached, got %+v", list.Items[0].Phase)
+	}
+
+	phaseFiltered, err := repo.GetPaginatedListWithStatus(ctx, domain.PaginationParams{Page: 1, Limit: 10}, nil, &planningPhase.ID)
+	if err != nil {
+		t.Fatalf("expected phase-filtered listing to succeed, got %v", err)
+	}
+	if len(phaseFiltered.Items) != 1 || phaseFiltered.Items[0].ID != planned.ID {
+		t.Fatalf("expected only the planning project, got %+v", phaseFiltered.Items)
+	}
+
+	phaseSearch, err := repo.GetPaginatedListForUserWithStatus(ctx, domain.PaginationParams{Page: 1, Limit: 10, Search: "Ausführung"}, member.ID, nil, nil)
+	if err != nil {
+		t.Fatalf("expected phase-name search to succeed, got %v", err)
+	}
+	if len(phaseSearch.Items) != 1 || phaseSearch.Items[0].ID != ongoing.ID {
+		t.Fatalf("expected phase-name search to find ongoing project, got %+v", phaseSearch.Items)
 	}
 
 	if err := repo.RemoveUser(ctx, ongoing.ID, member.ID); err != nil {
@@ -121,7 +145,7 @@ func newProjectRepoTestDB(t *testing.T) *gorm.DB {
 		_ = sqlDB.Close()
 	})
 
-	if err := db.AutoMigrate(&ProjectRecord{}, &ProjectUserRecord{}, &domainUser.User{}); err != nil {
+	if err := db.AutoMigrate(&domainProject.Phase{}, &ProjectRecord{}, &ProjectUserRecord{}, &domainUser.User{}); err != nil {
 		t.Fatalf("expected project repo tables to migrate, got %v", err)
 	}
 
@@ -144,6 +168,19 @@ func seedProjectRepoUser(t *testing.T, db *gorm.DB, email string) *domainUser.Us
 		t.Fatalf("expected user seed to succeed, got %v", err)
 	}
 	return user
+}
+
+func seedProjectRepoPhase(t *testing.T, db *gorm.DB, name string) *domainProject.Phase {
+	t.Helper()
+
+	phase := &domainProject.Phase{Name: name}
+	if err := phase.Base.InitForCreate(time.Now().UTC()); err != nil {
+		t.Fatalf("expected phase seed id init to succeed, got %v", err)
+	}
+	if err := db.Create(phase).Error; err != nil {
+		t.Fatalf("expected phase seed to succeed, got %v", err)
+	}
+	return phase
 }
 
 func sameUserSet(users []domainUser.User, want []uuid.UUID) bool {

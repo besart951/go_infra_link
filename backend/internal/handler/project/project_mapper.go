@@ -56,6 +56,7 @@ func ToProjectResponse(p *project.Project) dto.ProjectResponse {
 		Status:      p.Status,
 		StartDate:   p.StartDate,
 		PhaseID:     p.PhaseID,
+		Phase:       ToProjectPhaseResponse(p.Phase),
 		CreatorID:   p.CreatorID,
 		CreatedAt:   p.CreatedAt,
 		UpdatedAt:   p.UpdatedAt,
@@ -69,4 +70,16 @@ func ToProjectListResponse(projects []project.Project) []dto.ProjectResponse {
 		items[i] = ToProjectResponse(&p)
 	}
 	return items
+}
+
+func ToProjectPhaseResponse(phase *project.Phase) *dto.PhaseResponse {
+	if phase == nil {
+		return nil
+	}
+	return &dto.PhaseResponse{
+		ID:        phase.ID,
+		Name:      phase.Name,
+		CreatedAt: phase.CreatedAt,
+		UpdatedAt: phase.UpdatedAt,
+	}
 }

@@ -4,6 +4,7 @@
    * Inline editable table cell with click-to-edit behavior
    * Supports pending values display and error states
    */
+  import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import * as Tooltip from '$lib/components/ui/tooltip/index.js';
   import InlineUndoButton from './InlineUndoButton.svelte';
@@ -111,12 +112,14 @@
 
 {#if isEditing}
   <div class="editable-cell-editor relative block w-full max-w-full min-w-0 align-middle">
-    <button
+    <Button
       type="button"
-      tabindex="-1"
+      tabindex={-1}
       aria-hidden="true"
+      variant="ghost"
+      pressEffect="none"
       class={[
-        'editable-cell-display invisible flex h-7 min-h-7 w-full max-w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
+        'editable-cell-display invisible h-7 min-h-7 w-full max-w-full min-w-0 shrink cursor-pointer items-center justify-start gap-0 overflow-hidden rounded-sm px-2 py-1 text-left text-sm font-normal whitespace-normal transition-colors',
         hasError ? 'border' : ''
       ]
         .filter(Boolean)
@@ -129,7 +132,7 @@
       {:else}
         <span class="min-w-0 truncate">{displaySizerValue}</span>
       {/if}
-    </button>
+    </Button>
     <Input
       bind:ref={inputElement}
       {type}
@@ -154,13 +157,15 @@
       <Tooltip.Root>
         <Tooltip.Trigger>
           {#snippet child({ props })}
-            <button
+            <Button
               {...props}
               type="button"
+              variant="ghost"
+              pressEffect="none"
               onclick={startEditing}
               {disabled}
               class={[
-                'editable-cell-display flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm border px-2 py-1 text-left text-sm transition-colors',
+                'editable-cell-display h-7 min-h-7 w-full min-w-0 shrink cursor-pointer items-center justify-start gap-0 overflow-hidden rounded-sm border px-2 py-1 text-left text-sm font-normal whitespace-normal transition-colors',
                 'border-destructive bg-destructive/10 hover:bg-destructive/20',
                 disabled ? 'cursor-not-allowed opacity-50' : ''
               ]
@@ -178,7 +183,7 @@
               {:else}
                 <span class="min-w-0 truncate text-muted-foreground">{emptyText}</span>
               {/if}
-            </button>
+            </Button>
           {/snippet}
         </Tooltip.Trigger>
         <Tooltip.Content side="top" class="max-w-xs bg-destructive text-destructive-foreground">
@@ -191,15 +196,17 @@
     </Tooltip.Provider>
     {#if hasSuggestion}
       {#if onApplySuggestion}
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          pressEffect="none"
           class="mt-1 block max-w-full truncate rounded-sm bg-destructive/10 px-1 py-0.5 text-left text-[10px] font-medium text-destructive underline-offset-2 hover:underline focus:ring-1 focus:ring-destructive focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           title={suggestionTitle}
           {disabled}
           onclick={() => suggestion && onApplySuggestion(suggestion)}
         >
           {suggestionActionLabel ?? suggestionLabel ?? suggestion}
-        </button>
+        </Button>
       {:else}
         <span
           class="mt-1 block max-w-full truncate rounded-sm bg-destructive/10 px-1 py-0.5 text-[10px] font-medium text-destructive"
@@ -219,13 +226,15 @@
       <Tooltip.Root>
         <Tooltip.Trigger>
           {#snippet child({ props })}
-            <button
+            <Button
               {...props}
               type="button"
+              variant="ghost"
+              pressEffect="none"
               onclick={startEditing}
               {disabled}
               class={[
-                'editable-cell-display flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
+                'editable-cell-display h-7 min-h-7 w-full min-w-0 shrink cursor-pointer items-center justify-start gap-0 overflow-hidden rounded-sm px-2 py-1 text-left text-sm font-normal whitespace-normal transition-colors',
                 'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
                 isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
                 disabled ? 'cursor-not-allowed opacity-50' : ''
@@ -240,7 +249,7 @@
               {:else}
                 <span class="min-w-0 truncate">{displayValue}</span>
               {/if}
-            </button>
+            </Button>
           {/snippet}
         </Tooltip.Trigger>
         <Tooltip.Content side="top" class="max-w-xs">
@@ -254,12 +263,14 @@
   </div>
 {:else}
   <div class="group/undo relative">
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      pressEffect="none"
       onclick={startEditing}
       {disabled}
       class={[
-        'editable-cell-display flex h-7 min-h-7 w-full min-w-0 cursor-pointer items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm transition-colors',
+        'editable-cell-display h-7 min-h-7 w-full min-w-0 shrink cursor-pointer items-center justify-start gap-0 overflow-hidden rounded-sm px-2 py-1 text-left text-sm font-normal whitespace-normal transition-colors',
         'hover:bg-muted/50 focus:bg-muted/50 focus:outline-none',
         isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
         disabled ? 'cursor-not-allowed opacity-50' : ''
@@ -278,7 +289,7 @@
       {:else}
         <span class="min-w-0 truncate text-muted-foreground">{emptyText}</span>
       {/if}
-    </button>
+    </Button>
     {#if canUndo}
       <InlineUndoButton title={undoTitle} onclick={() => onUndo?.()} />
     {/if}

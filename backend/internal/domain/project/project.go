@@ -47,8 +47,8 @@ type PhasePermission struct {
 type ProjectRepository interface {
 	domain.Repository[Project]
 	GetPaginatedListForUser(ctx context.Context, params domain.PaginationParams, userID uuid.UUID) (*domain.PaginatedList[Project], error)
-	GetPaginatedListWithStatus(ctx context.Context, params domain.PaginationParams, status *ProjectStatus) (*domain.PaginatedList[Project], error)
-	GetPaginatedListForUserWithStatus(ctx context.Context, params domain.PaginationParams, userID uuid.UUID, status *ProjectStatus) (*domain.PaginatedList[Project], error)
+	GetPaginatedListWithStatus(ctx context.Context, params domain.PaginationParams, status *ProjectStatus, phaseID *uuid.UUID) (*domain.PaginatedList[Project], error)
+	GetPaginatedListForUserWithStatus(ctx context.Context, params domain.PaginationParams, userID uuid.UUID, status *ProjectStatus, phaseID *uuid.UUID) (*domain.PaginatedList[Project], error)
 	HasUser(ctx context.Context, projectID, userID uuid.UUID) (bool, error)
 	AddUser(ctx context.Context, projectID, userID uuid.UUID) error
 	RemoveUser(ctx context.Context, projectID, userID uuid.UUID) error

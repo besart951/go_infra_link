@@ -43,6 +43,12 @@ type TeamFilter struct {
 	Count int64
 }
 
+type RoleFilter struct {
+	Role        domainUser.Role
+	DisplayName string
+	Count       int64
+}
+
 type Capabilities struct {
 	CanUpdate     bool
 	CanDelete     bool
@@ -69,6 +75,7 @@ type ListResult struct {
 	Page             int
 	TotalPages       int
 	Teams            []TeamFilter
+	Roles            []RoleFilter
 	PageCapabilities PageCapabilities
 }
 
@@ -104,7 +111,7 @@ func New(users UserReader, teams TeamReader, memberships TeamMembershipReader, r
 	return &Service{users: users, teams: teams, memberships: memberships, rolePermissions: rolePermissions}
 }
 
-func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit int, search, teamID, orderBy, order string, includeDeleted bool) (*ListResult, error) {
+func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit int, search, teamID, role, orderBy, order string, includeDeleted bool) (*ListResult, error) {
 	requester, err := domain.GetByID(ctx, s.users, requesterID)
 	if err != nil {
 		return nil, err
@@ -129,8 +136,6 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 		return nil, err
 	}
 
-	visible := make([]Item, 0, len(allUsers))
-	teamCounts := map[uuid.UUID]int64{}
 	requestedTeamID := uuid.Nil
 	if strings.TrimSpace(teamID) != "" {
 		parsed, parseErr := uuid.Parse(teamID)
@@ -138,6 +143,10 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 			return nil, fmt.Errorf("invalid team_id: %w", parseErr)
 		}
 		requestedTeamID = parsed
+	}
+	requestedRole := domainUser.Role(strings.TrimSpace(role))
+	if requestedRole != "" && !domainUser.IsValidRole(requestedRole) {
+		return nil, fmt.Errorf("invalid role: %s", requestedRole)
 	}
 
 	rolePermissionCache := map[domainUser.Role]permissionSet{
@@ -158,6 +167,7 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 
 	canCreateUser := requesterPermissions.has(domainUser.PermissionUserCreate)
 
+	baseVisible := make([]Item, 0, len(allUsers))
 	for _, candidate := range allUsers {
 		candidateTeams, candidateTeamNames, err := s.loadUserTeams(ctx, candidate.ID)
 		if err != nil {
@@ -174,12 +184,6 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 			continue
 		}
 
-		if requestedTeamID != uuid.Nil {
-			if _, ok := visibleTeamIDs[requestedTeamID]; !ok {
-				continue
-			}
-		}
-
 		if !matchesSearch(candidate, search) {
 			continue
 		}
@@ -188,21 +192,41 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 		for id := range visibleTeamIDs {
 			if name, ok := teamNames[id]; ok {
 				itemTeams = append(itemTeams, TeamView{ID: id, Name: name})
-				teamCounts[id]++
 				continue
 			}
 			if name, ok := candidateTeamNames[id]; ok {
 				itemTeams = append(itemTeams, TeamView{ID: id, Name: name})
-				teamCounts[id]++
 			}
 		}
 		sort.Slice(itemTeams, func(i, j int) bool { return strings.ToLower(itemTeams[i].Name) < strings.ToLower(itemTeams[j].Name) })
 
-		visible = append(visible, Item{
+		baseVisible = append(baseVisible, Item{
 			User:         *candidate,
 			Teams:        itemTeams,
 			Capabilities: buildCapabilities(requester.ID, requester.Role, requesterPermissions, *candidate, candidatePermissions, len(allUsers)),
 		})
+	}
+
+	visible := make([]Item, 0, len(baseVisible))
+	teamCounts := map[uuid.UUID]int64{}
+	teamFilterNames := map[uuid.UUID]string{}
+	roleCounts := map[domainUser.Role]int64{}
+	for _, item := range baseVisible {
+		matchesTeam := requestedTeamID == uuid.Nil || itemHasTeam(item, requestedTeamID)
+		matchesRole := requestedRole == "" || item.User.Role == requestedRole
+
+		if matchesRole {
+			for _, team := range item.Teams {
+				teamCounts[team.ID]++
+				teamFilterNames[team.ID] = team.Name
+			}
+		}
+		if matchesTeam {
+			roleCounts[item.User.Role]++
+		}
+		if matchesTeam && matchesRole {
+			visible = append(visible, item)
+		}
 	}
 
 	sortVisible(visible, orderBy, order)
@@ -216,13 +240,21 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 
 	filters := make([]TeamFilter, 0, len(teamCounts))
 	for id, count := range teamCounts {
-		name := teamNames[id]
+		name := teamFilterNames[id]
 		if name == "" {
 			continue
 		}
 		filters = append(filters, TeamFilter{ID: id, Name: name, Count: count})
 	}
 	sort.Slice(filters, func(i, j int) bool { return strings.ToLower(filters[i].Name) < strings.ToLower(filters[j].Name) })
+	roleFilters := make([]RoleFilter, 0, len(roleCounts))
+	for _, role := range domainUser.AllRoles() {
+		count, ok := roleCounts[role]
+		if !ok {
+			continue
+		}
+		roleFilters = append(roleFilters, RoleFilter{Role: role, DisplayName: domainUser.RoleDisplayName(role), Count: count})
+	}
 
 	return &ListResult{
 		Items:      visible[offset:end],
@@ -230,11 +262,21 @@ func (s *Service) List(ctx context.Context, requesterID uuid.UUID, page, limit i
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
 		Teams:      filters,
+		Roles:      roleFilters,
 		PageCapabilities: PageCapabilities{
 			CanCreateUser:  canCreateUser,
 			CanReadDeleted: requesterPermissions.has(domainUser.PermissionUserReadDeleted),
 		},
 	}, nil
+}
+
+func itemHasTeam(item Item, teamID uuid.UUID) bool {
+	for _, team := range item.Teams {
+		if team.ID == teamID {
+			return true
+		}
+	}
+	return false
 }
 
 func buildCapabilities(requesterID uuid.UUID, requesterRole domainUser.Role, requesterPermissions permissionSet, target domainUser.User, targetPermissions permissionSet, totalUsers int) Capabilities {

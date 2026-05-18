@@ -29,8 +29,15 @@ func (r *projectRepo) GetByIds(ctx context.Context, ids []uuid.UUID) ([]*domainP
 	}
 
 	var records []*ProjectRecord
-	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&records).Error
-	return toProjectDomains(records), err
+	if err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&records).Error; err != nil {
+		return nil, err
+	}
+
+	items := toProjectDomains(records)
+	if err := r.attachPhases(ctx, items); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 func (r *projectRepo) Create(ctx context.Context, entity *domainProject.Project) error {
@@ -65,26 +72,19 @@ func (r *projectRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {
 }
 
 func (r *projectRepo) GetPaginatedList(ctx context.Context, params domain.PaginationParams) (*domain.PaginatedList[domainProject.Project], error) {
-	return r.GetPaginatedListWithStatus(ctx, params, nil)
+	return r.GetPaginatedListWithStatus(ctx, params, nil, nil)
 }
 
 func (r *projectRepo) GetPaginatedListForUser(ctx context.Context, params domain.PaginationParams, userID uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
-	return r.GetPaginatedListForUserWithStatus(ctx, params, userID, nil)
+	return r.GetPaginatedListForUserWithStatus(ctx, params, userID, nil, nil)
 }
 
-func (r *projectRepo) GetPaginatedListWithStatus(ctx context.Context, params domain.PaginationParams, status *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error) {
+func (r *projectRepo) GetPaginatedListWithStatus(ctx context.Context, params domain.PaginationParams, status *domainProject.ProjectStatus, phaseID *uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
 	query := r.db.WithContext(ctx).Model(&ProjectRecord{})
-
-	if params.Search != "" {
-		query = projectSearch(query, params.Search, "")
-	}
-
-	if status != nil && *status != "" {
-		query = query.Where("status = ?", *status)
-	}
+	query = applyProjectListFilters(query, params.Search, status, phaseID)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -93,36 +93,34 @@ func (r *projectRepo) GetPaginatedListWithStatus(ctx context.Context, params dom
 
 	var records []ProjectRecord
 	if err := query.
-		Order("created_at DESC").
+		Order("projects.created_at DESC").
 		Limit(limit).
 		Offset(offset).
 		Find(&records).Error; err != nil {
 		return nil, err
 	}
 
+	items := projectDomainValues(records)
+	if err := r.attachPhaseValues(ctx, items); err != nil {
+		return nil, err
+	}
+
 	return &domain.PaginatedList[domainProject.Project]{
-		Items:      projectDomainValues(records),
+		Items:      items,
 		Total:      total,
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
 }
 
-func (r *projectRepo) GetPaginatedListForUserWithStatus(ctx context.Context, params domain.PaginationParams, userID uuid.UUID, status *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error) {
+func (r *projectRepo) GetPaginatedListForUserWithStatus(ctx context.Context, params domain.PaginationParams, userID uuid.UUID, status *domainProject.ProjectStatus, phaseID *uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
 	page, limit := domain.NormalizePagination(params.Page, params.Limit, 10)
 	offset := (page - 1) * limit
 
 	query := r.db.WithContext(ctx).Model(&ProjectRecord{}).
 		Joins("LEFT JOIN project_users pu ON pu.project_id = projects.id").
 		Where("pu.user_id = ?", userID)
-
-	if params.Search != "" {
-		query = projectSearch(query, params.Search, "projects.")
-	}
-
-	if status != nil && *status != "" {
-		query = query.Where("projects.status = ?", *status)
-	}
+	query = applyProjectListFilters(query, params.Search, status, phaseID)
 
 	var total int64
 	if err := query.Distinct("projects.id").Count(&total).Error; err != nil {
@@ -139,16 +137,88 @@ func (r *projectRepo) GetPaginatedListForUserWithStatus(ctx context.Context, par
 		return nil, err
 	}
 
+	items := projectDomainValues(records)
+	if err := r.attachPhaseValues(ctx, items); err != nil {
+		return nil, err
+	}
+
 	return &domain.PaginatedList[domainProject.Project]{
-		Items:      projectDomainValues(records),
+		Items:      items,
 		Total:      total,
 		Page:       page,
 		TotalPages: domain.CalculateTotalPages(total, limit),
 	}, nil
 }
 
-func projectSearch(query *gorm.DB, search string, qualifier string) *gorm.DB {
-	return gormbase.ApplyTrigramSearch(query, search, searchspec.Projects.SearchColumns(qualifier)...)
+func applyProjectListFilters(query *gorm.DB, search string, status *domainProject.ProjectStatus, phaseID *uuid.UUID) *gorm.DB {
+	if search != "" {
+		query = query.Joins("LEFT JOIN phases ON phases.id = projects.phase_id")
+		query = projectSearch(query, search)
+	}
+
+	if status != nil && *status != "" {
+		query = query.Where("projects.status = ?", *status)
+	}
+
+	if phaseID != nil && *phaseID != uuid.Nil {
+		query = query.Where("projects.phase_id = ?", *phaseID)
+	}
+
+	return query
+}
+
+func projectSearch(query *gorm.DB, search string) *gorm.DB {
+	columns := searchspec.Projects.SearchColumns("projects.")
+	columns = append(columns, gormbase.SearchColumn("phases.name"))
+	return gormbase.ApplyTrigramSearch(query, search, columns...)
+}
+
+func (r *projectRepo) attachPhaseValues(ctx context.Context, items []domainProject.Project) error {
+	ptrs := make([]*domainProject.Project, 0, len(items))
+	for i := range items {
+		ptrs = append(ptrs, &items[i])
+	}
+	return r.attachPhases(ctx, ptrs)
+}
+
+func (r *projectRepo) attachPhases(ctx context.Context, items []*domainProject.Project) error {
+	phaseIDs := make([]uuid.UUID, 0, len(items))
+	seen := make(map[uuid.UUID]struct{}, len(items))
+	for _, item := range items {
+		if item == nil || item.PhaseID == uuid.Nil {
+			continue
+		}
+		if _, ok := seen[item.PhaseID]; ok {
+			continue
+		}
+		seen[item.PhaseID] = struct{}{}
+		phaseIDs = append(phaseIDs, item.PhaseID)
+	}
+	if len(phaseIDs) == 0 {
+		return nil
+	}
+
+	var phases []domainProject.Phase
+	if err := r.db.WithContext(ctx).Where("id IN ?", phaseIDs).Find(&phases).Error; err != nil {
+		return err
+	}
+
+	phaseByID := make(map[uuid.UUID]domainProject.Phase, len(phases))
+	for _, phase := range phases {
+		phaseByID[phase.ID] = phase
+	}
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		phase, ok := phaseByID[item.PhaseID]
+		if !ok {
+			continue
+		}
+		phaseCopy := phase
+		item.Phase = &phaseCopy
+	}
+	return nil
 }
 
 func (r *projectRepo) AddUser(ctx context.Context, projectID, userID uuid.UUID) error {

@@ -30,6 +30,7 @@ export type {
   User,
   UserDirectoryPageCapabilities,
   UserDirectoryResponse,
+  UserDirectoryRoleFilter,
   UserDirectoryTeam,
   UserDirectoryTeamFilter,
   UserDirectoryUser,

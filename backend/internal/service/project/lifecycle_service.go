@@ -107,7 +107,7 @@ func (s *ProjectLifecycleService) DeleteByID(ctx context.Context, id uuid.UUID) 
 	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
 }
 
-func (s *ProjectLifecycleService) List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string, status *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error) {
+func (s *ProjectLifecycleService) List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string, status *domainProject.ProjectStatus, phaseID *uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
 
 	params := domain.PaginationParams{Page: page, Limit: limit, Search: search}
@@ -118,10 +118,10 @@ func (s *ProjectLifecycleService) List(ctx context.Context, requesterID uuid.UUI
 	}
 
 	if canReadAllProjects {
-		return s.repo.GetPaginatedListWithStatus(ctx, params, status)
+		return s.repo.GetPaginatedListWithStatus(ctx, params, status, phaseID)
 	}
 
-	return s.repo.GetPaginatedListForUserWithStatus(ctx, params, requesterID, status)
+	return s.repo.GetPaginatedListForUserWithStatus(ctx, params, requesterID, status, phaseID)
 }
 
 func (s *ProjectLifecycleService) canReadAllProjects(ctx context.Context, requesterID uuid.UUID) (bool, error) {

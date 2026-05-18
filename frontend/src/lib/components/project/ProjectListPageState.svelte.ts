@@ -149,6 +149,10 @@ export class ProjectListPageState {
     projectListStore.setStatus(status);
   }
 
+  setPhaseFilter(phaseId: string): void {
+    projectListStore.setPhase(phaseId);
+  }
+
   private clearCreateFeedback(): void {
     this.createErrors = {};
     this.createError = null;

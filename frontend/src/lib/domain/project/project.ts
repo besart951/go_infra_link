@@ -6,6 +6,7 @@
 import type { Pagination } from '../utils/index.ts';
 import type { User } from '../user/index.ts';
 import type { ObjectData } from '../facility/index.ts';
+import type { Phase } from '../phase/index.ts';
 export type ProjectStatus = 'planned' | 'ongoing' | 'completed';
 
 export interface Project {
@@ -15,6 +16,7 @@ export interface Project {
   status: ProjectStatus;
   start_date?: string;
   phase_id: string;
+  phase?: Phase | null;
   creator_id: string;
   created_at: string;
   updated_at: string;
@@ -42,6 +44,7 @@ export interface ProjectListParams {
   limit?: number;
   search?: string;
   status?: ProjectStatus;
+  phase_id?: string;
 }
 
 export interface ProjectListResponse extends Pagination<Project> {}

@@ -32,6 +32,7 @@ type ProjectResponse struct {
 	Status      domainproject.ProjectStatus `json:"status"`
 	StartDate   *time.Time                  `json:"start_date"`
 	PhaseID     uuid.UUID                   `json:"phase_id"`
+	Phase       *PhaseResponse              `json:"phase,omitempty"`
 	CreatorID   uuid.UUID                   `json:"creator_id"`
 	CreatedAt   time.Time                   `json:"created_at"`
 	UpdatedAt   time.Time                   `json:"updated_at"`
@@ -46,5 +47,6 @@ type ProjectListResponse struct {
 
 type ListProjectsQuery struct {
 	PaginationQuery
-	Status domainproject.ProjectStatus `form:"status" binding:"omitempty,oneof=planned ongoing completed"`
+	Status  domainproject.ProjectStatus `form:"status" binding:"omitempty,oneof=planned ongoing completed"`
+	PhaseID string                      `form:"phase_id" binding:"omitempty,uuid"`
 }

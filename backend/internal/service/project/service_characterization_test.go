@@ -612,7 +612,7 @@ func TestProjectLifecycleService_List_CharacterizesPermissionScopedProjectListin
 			RolePermissions: rolePermissionRepo,
 		}).Lifecycle
 
-		if _, err := svc.List(ctx, requesterID, 1, 10, "pump", &status); err != nil {
+		if _, err := svc.List(ctx, requesterID, 1, 10, "pump", &status, nil); err != nil {
 			t.Fatalf("expected list to succeed, got %v", err)
 		}
 
@@ -635,7 +635,7 @@ func TestProjectLifecycleService_List_CharacterizesPermissionScopedProjectListin
 			RolePermissions: rolePermissionRepo,
 		}).Lifecycle
 
-		if _, err := svc.List(ctx, requesterID, 1, 10, "pump", &status); err != nil {
+		if _, err := svc.List(ctx, requesterID, 1, 10, "pump", &status, nil); err != nil {
 			t.Fatalf("expected list to succeed, got %v", err)
 		}
 
@@ -657,7 +657,7 @@ func TestProjectLifecycleService_List_CharacterizesPermissionScopedProjectListin
 			RolePermissions: rolePermissionRepo,
 		}).Lifecycle
 
-		if _, err := svc.List(ctx, requesterID, 1, 10, "pump", &status); err != nil {
+		if _, err := svc.List(ctx, requesterID, 1, 10, "pump", &status, nil); err != nil {
 			t.Fatalf("expected list to succeed, got %v", err)
 		}
 
@@ -679,7 +679,7 @@ func TestProjectLifecycleService_List_CharacterizesPermissionScopedProjectListin
 			RolePermissions: rolePermissionRepo,
 		}).Lifecycle
 
-		if _, err := svc.List(ctx, requesterID, 1, 10, "pump", &status); err != nil {
+		if _, err := svc.List(ctx, requesterID, 1, 10, "pump", &status, nil); err != nil {
 			t.Fatalf("expected list to succeed, got %v", err)
 		}
 
@@ -777,12 +777,12 @@ func (r *projectRepoFake) GetPaginatedListForUser(context.Context, domain.Pagina
 	return paginatedFromMap(r.items), nil
 }
 
-func (r *projectRepoFake) GetPaginatedListWithStatus(context.Context, domain.PaginationParams, *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error) {
+func (r *projectRepoFake) GetPaginatedListWithStatus(context.Context, domain.PaginationParams, *domainProject.ProjectStatus, *uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
 	r.lastListMethod = "with_status"
 	return paginatedFromMap(r.items), nil
 }
 
-func (r *projectRepoFake) GetPaginatedListForUserWithStatus(context.Context, domain.PaginationParams, uuid.UUID, *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error) {
+func (r *projectRepoFake) GetPaginatedListForUserWithStatus(context.Context, domain.PaginationParams, uuid.UUID, *domainProject.ProjectStatus, *uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
 	r.lastListMethod = "for_user_with_status"
 	return paginatedFromMap(r.items), nil
 }

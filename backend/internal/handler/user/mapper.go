@@ -124,6 +124,14 @@ func ToUserDirectoryListResponse(result *userdirectory.ListResult, registrationP
 	for i, team := range result.Teams {
 		teams[i] = dto.UserDirectoryTeamFilterResponse{ID: team.ID, Name: team.Name, Count: team.Count}
 	}
+	roles := make([]dto.UserDirectoryRoleFilterResponse, len(result.Roles))
+	for i, role := range result.Roles {
+		roles[i] = dto.UserDirectoryRoleFilterResponse{
+			Role:        string(role.Role),
+			DisplayName: role.DisplayName,
+			Count:       role.Count,
+		}
+	}
 
 	return dto.UserDirectoryListResponse{
 		Items:      items,
@@ -131,6 +139,7 @@ func ToUserDirectoryListResponse(result *userdirectory.ListResult, registrationP
 		Page:       result.Page,
 		TotalPages: result.TotalPages,
 		Teams:      teams,
+		Roles:      roles,
 		Capabilities: dto.UserDirectoryPageCapabilitiesResponse{
 			CanCreateUser:  result.PageCapabilities.CanCreateUser,
 			CanReadDeleted: result.PageCapabilities.CanReadDeleted,

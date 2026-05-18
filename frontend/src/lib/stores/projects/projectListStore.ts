@@ -16,6 +16,7 @@ export type ProjectStatusFilter = ProjectStatus | 'all';
  */
 export type ProjectListState = ListState<Project> & {
   status: ProjectStatusFilter;
+  phaseId: string;
 };
 
 interface CacheEntry {
@@ -41,7 +42,8 @@ export function createProjectListStore(options: ProjectListStoreOptions = {}) {
     searchText: '',
     loading: false,
     error: null,
-    status: 'all'
+    status: 'all',
+    phaseId: ''
   };
 
   const store = writable<ProjectListState>(initialState);
@@ -49,20 +51,27 @@ export function createProjectListStore(options: ProjectListStoreOptions = {}) {
   let abortController: AbortController | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function getCacheKey(page: number, searchText: string, status: ProjectStatusFilter): string {
-    return JSON.stringify({ page, searchText, status, pageSize });
+  function getCacheKey(
+    page: number,
+    searchText: string,
+    status: ProjectStatusFilter,
+    phaseId: string
+  ): string {
+    return JSON.stringify({ page, searchText, status, phaseId, pageSize });
   }
 
   function toParams(
     page: number,
     searchText: string,
-    status: ProjectStatusFilter
+    status: ProjectStatusFilter,
+    phaseId: string
   ): ProjectListParams {
     return {
       page,
       limit: pageSize,
       search: searchText || undefined,
-      status: status === 'all' ? undefined : status
+      status: status === 'all' ? undefined : status,
+      phase_id: phaseId || undefined
     };
   }
 
@@ -70,9 +79,10 @@ export function createProjectListStore(options: ProjectListStoreOptions = {}) {
     page: number,
     searchText: string,
     status: ProjectStatusFilter,
+    phaseId: string,
     force = false
   ) {
-    const cacheKey = getCacheKey(page, searchText, status);
+    const cacheKey = getCacheKey(page, searchText, status, phaseId);
     if (!force && cacheTTL > 0) {
       const cached = cache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < cacheTTL) {
@@ -86,10 +96,10 @@ export function createProjectListStore(options: ProjectListStoreOptions = {}) {
     }
     abortController = new AbortController();
 
-    store.update((s: ProjectListState) => ({ ...s, loading: true, error: null, status }));
+    store.update((s: ProjectListState) => ({ ...s, loading: true, error: null, status, phaseId }));
 
     try {
-      const response = await listProjects(toParams(page, searchText, status), {
+      const response = await listProjects(toParams(page, searchText, status, phaseId), {
         signal: abortController.signal
       });
 
@@ -112,7 +122,8 @@ export function createProjectListStore(options: ProjectListStoreOptions = {}) {
         searchText,
         loading: false,
         error: null,
-        status
+        status,
+        phaseId
       };
 
       store.set(newState);
@@ -125,7 +136,13 @@ export function createProjectListStore(options: ProjectListStoreOptions = {}) {
       // authorization_failed is already surfaced via toast in the central api client.
       // Avoid showing the error inline in the project table.
       if (error instanceof ApiException && error.error === 'authorization_failed') {
-        store.update((s: ProjectListState) => ({ ...s, loading: false, error: null, status }));
+        store.update((s: ProjectListState) => ({
+          ...s,
+          loading: false,
+          error: null,
+          status,
+          phaseId
+        }));
         return;
       }
 
@@ -134,18 +151,24 @@ export function createProjectListStore(options: ProjectListStoreOptions = {}) {
         ...s,
         loading: false,
         error: errorMessage,
-        status
+        status,
+        phaseId
       }));
     } finally {
       abortController = null;
     }
   }
 
-  function debouncedLoad(page: number, searchText: string, status: ProjectStatusFilter) {
+  function debouncedLoad(
+    page: number,
+    searchText: string,
+    status: ProjectStatusFilter,
+    phaseId: string
+  ) {
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }
-    debounceTimer = setTimeout(() => load(page, searchText, status), debounceMs);
+    debounceTimer = setTimeout(() => load(page, searchText, status, phaseId), debounceMs);
   }
 
   return {
@@ -153,42 +176,48 @@ export function createProjectListStore(options: ProjectListStoreOptions = {}) {
 
     load: () => {
       const state = get(store);
-      load(state.page, state.searchText, state.status);
+      load(state.page, state.searchText, state.status, state.phaseId);
     },
 
     reload: () => {
       const state = get(store);
-      load(state.page, state.searchText, state.status, true);
+      load(state.page, state.searchText, state.status, state.phaseId, true);
     },
 
     goToPage: (page: number) => {
       const state = get(store);
-      load(page, state.searchText, state.status);
+      load(page, state.searchText, state.status, state.phaseId);
     },
 
     nextPage: () => {
       const state = get(store);
       if (state.page < state.totalPages) {
-        load(state.page + 1, state.searchText, state.status);
+        load(state.page + 1, state.searchText, state.status, state.phaseId);
       }
     },
 
     previousPage: () => {
       const state = get(store);
       if (state.page > 1) {
-        load(state.page - 1, state.searchText, state.status);
+        load(state.page - 1, state.searchText, state.status, state.phaseId);
       }
     },
 
     search: (searchText: string) => {
       const state = get(store);
-      debouncedLoad(1, searchText, state.status);
+      debouncedLoad(1, searchText, state.status, state.phaseId);
     },
 
     setStatus: (status: ProjectStatusFilter) => {
       const state = get(store);
       if (state.status === status) return;
-      load(1, state.searchText, status, true);
+      load(1, state.searchText, status, state.phaseId, true);
+    },
+
+    setPhase: (phaseId: string) => {
+      const state = get(store);
+      if (state.phaseId === phaseId) return;
+      load(1, state.searchText, state.status, phaseId, true);
     },
 
     clearCache: () => {

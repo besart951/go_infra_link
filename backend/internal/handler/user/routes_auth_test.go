@@ -194,8 +194,8 @@ func (s *routeAuthCheckerStub) HasPermission(_ context.Context, _ domainUser.Rol
 
 type routeDirectoryServiceStub struct{}
 
-func (s *routeDirectoryServiceStub) List(context.Context, uuid.UUID, int, int, string, string, string, string, bool) (*userdirectory.ListResult, error) {
-	return &userdirectory.ListResult{Items: []userdirectory.Item{}, Total: 0, Page: 1, TotalPages: 1, Teams: []userdirectory.TeamFilter{}}, nil
+func (s *routeDirectoryServiceStub) List(context.Context, uuid.UUID, int, int, string, string, string, string, string, bool) (*userdirectory.ListResult, error) {
+	return &userdirectory.ListResult{Items: []userdirectory.Item{}, Total: 0, Page: 1, TotalPages: 1, Teams: []userdirectory.TeamFilter{}, Roles: []userdirectory.RoleFilter{}}, nil
 }
 
 type routeAdminServiceStub struct{}

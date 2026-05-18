@@ -14,7 +14,7 @@ import (
 type ProjectLifecycleService interface {
 	Create(ctx context.Context, project *domainProject.Project) error
 	GetByID(ctx context.Context, id uuid.UUID) (*domainProject.Project, error)
-	List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string, status *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error)
+	List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string, status *domainProject.ProjectStatus, phaseID *uuid.UUID) (*domain.PaginatedList[domainProject.Project], error)
 	Update(ctx context.Context, project *domainProject.Project) error
 	DeleteByID(ctx context.Context, id uuid.UUID) error
 }

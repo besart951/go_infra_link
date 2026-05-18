@@ -37,12 +37,13 @@ describe('app navigation', () => {
     expect(projects?.items?.find((item) => item.url === '/projects/list')?.isActive).toBe(true);
   });
 
-  it('filters facility entries by the same permission metadata used for navigation', () => {
+  it('omits specifications from facility navigation even with specification.read', () => {
     const items = buildAppNavItems({
       pathname: '/facility/buildings',
       user: baseUser,
       translate,
-      canPerform: (action, resource) => action === 'read' && resource === 'building'
+      canPerform: (action, resource) =>
+        action === 'read' && (resource === 'building' || resource === 'specification')
     });
 
     const facility = items.find((item) => item.url === '/facility');

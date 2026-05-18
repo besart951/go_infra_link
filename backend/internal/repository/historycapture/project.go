@@ -35,12 +35,12 @@ func (r *ProjectRepository) GetPaginatedListForUser(ctx context.Context, params 
 	return r.ProjectRepository.GetPaginatedListForUser(ctx, params, userID)
 }
 
-func (r *ProjectRepository) GetPaginatedListWithStatus(ctx context.Context, params domain.PaginationParams, status *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error) {
-	return r.ProjectRepository.GetPaginatedListWithStatus(ctx, params, status)
+func (r *ProjectRepository) GetPaginatedListWithStatus(ctx context.Context, params domain.PaginationParams, status *domainProject.ProjectStatus, phaseID *uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
+	return r.ProjectRepository.GetPaginatedListWithStatus(ctx, params, status, phaseID)
 }
 
-func (r *ProjectRepository) GetPaginatedListForUserWithStatus(ctx context.Context, params domain.PaginationParams, userID uuid.UUID, status *domainProject.ProjectStatus) (*domain.PaginatedList[domainProject.Project], error) {
-	return r.ProjectRepository.GetPaginatedListForUserWithStatus(ctx, params, userID, status)
+func (r *ProjectRepository) GetPaginatedListForUserWithStatus(ctx context.Context, params domain.PaginationParams, userID uuid.UUID, status *domainProject.ProjectStatus, phaseID *uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
+	return r.ProjectRepository.GetPaginatedListForUserWithStatus(ctx, params, userID, status, phaseID)
 }
 
 type ProjectControlCabinetRepository struct {

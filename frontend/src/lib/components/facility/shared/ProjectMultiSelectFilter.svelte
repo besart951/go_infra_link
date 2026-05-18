@@ -86,15 +86,17 @@
       {#each selectedItems as item (item.id)}
         <Badge variant="secondary" class="max-w-56 gap-1 pr-1 pl-2">
           <span class="truncate">{item.label}</span>
-          <button
+          <Button
             type="button"
-            class="rounded-full p-0.5 hover:bg-secondary-foreground/20"
+            variant="ghost"
+            size="icon-sm"
+            class="size-4 rounded-full p-0 hover:bg-secondary-foreground/20"
             onclick={() => remove(item.id)}
             aria-label={item.label}
             {disabled}
           >
             <XIcon class="size-3" />
-          </button>
+          </Button>
         </Badge>
       {/each}
     </div>

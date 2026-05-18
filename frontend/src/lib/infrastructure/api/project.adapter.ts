@@ -34,6 +34,7 @@ export async function listProjects(
   if (params?.limit) searchParams.set('limit', String(params.limit));
   if (params?.search) searchParams.set('search', params.search);
   if (params?.status) searchParams.set('status', params.status);
+  if (params?.phase_id) searchParams.set('phase_id', params.phase_id);
 
   const query = searchParams.toString();
   const endpoint = `/projects${query ? `?${query}` : ''}`;

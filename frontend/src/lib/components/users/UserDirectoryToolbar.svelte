@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button/index.js';
+  import { Checkbox } from '$lib/components/ui/checkbox/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
@@ -18,11 +19,8 @@
     }
   }
 
-  function handleDeletedUsersChange(event: Event): void {
-    const target = event.currentTarget;
-    if (!(target instanceof HTMLInputElement)) return;
-
-    void state.setShowDeletedUsers(target.checked);
+  function handleDeletedUsersChange(checked: boolean | 'indeterminate'): void {
+    void state.setShowDeletedUsers(checked === true);
   }
 
   function handleTeamChange(event: Event): void {
@@ -30,6 +28,15 @@
     if (!(target instanceof HTMLSelectElement)) return;
 
     void state.setTeamFilter(target.value);
+  }
+
+  function handleRoleChange(event: Event): void {
+    const target = event.currentTarget;
+    if (!(target instanceof HTMLSelectElement)) return;
+
+    void state.setRoleFilter(
+      target.value as Parameters<UserDirectoryPageState['setRoleFilter']>[0]
+    );
   }
 </script>
 
@@ -66,12 +73,10 @@
 
       {#if state.pageCapabilities.can_read_deleted}
         <Label class="inline-flex items-center gap-2 text-muted-foreground">
-          <input
-            type="checkbox"
-            class="size-4 rounded border-input accent-primary"
+          <Checkbox
             checked={state.showDeletedUsers}
             disabled={state.query.loading}
-            onchange={handleDeletedUsersChange}
+            onCheckedChange={handleDeletedUsersChange}
           />
           {$t('common.show_deleted_users')}
         </Label>
@@ -83,12 +88,28 @@
           id="user_team_filter"
           class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-55"
           value={state.selectedTeamId}
-          disabled={state.query.loading || state.teamFilters.length === 0}
+          disabled={state.query.loading}
           onchange={handleTeamChange}
         >
           <option value="all">{$t('common.all_teams')}</option>
           {#each state.teamFilters as teamFilter (teamFilter.id)}
             <option value={teamFilter.id}>{teamFilter.name}</option>
+          {/each}
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Label for="user_role_filter" class="text-muted-foreground">{$t('common.role')}</Label>
+        <select
+          id="user_role_filter"
+          class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-55"
+          value={state.selectedRole}
+          disabled={state.query.loading}
+          onchange={handleRoleChange}
+        >
+          <option value="all">{$t('common.all_roles')}</option>
+          {#each state.roleFilters as roleFilter (roleFilter.role)}
+            <option value={roleFilter.role}>{roleFilter.display_name}</option>
           {/each}
         </select>
       </div>

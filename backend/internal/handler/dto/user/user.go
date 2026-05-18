@@ -127,12 +127,19 @@ type UserDirectoryTeamFilterResponse struct {
 	Count int64     `json:"count"`
 }
 
+type UserDirectoryRoleFilterResponse struct {
+	Role        string `json:"role"`
+	DisplayName string `json:"display_name"`
+	Count       int64  `json:"count"`
+}
+
 type UserDirectoryListResponse struct {
 	Items        []UserDirectoryUserResponse           `json:"items"`
 	Total        int64                                 `json:"total"`
 	Page         int                                   `json:"page"`
 	TotalPages   int                                   `json:"total_pages"`
 	Teams        []UserDirectoryTeamFilterResponse     `json:"teams"`
+	Roles        []UserDirectoryRoleFilterResponse     `json:"roles"`
 	Capabilities UserDirectoryPageCapabilitiesResponse `json:"capabilities"`
 }
 

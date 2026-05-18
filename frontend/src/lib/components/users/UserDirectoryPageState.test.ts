@@ -162,6 +162,7 @@ describe('UserDirectoryPageState deleted-user capability handling', () => {
       limit: 10,
       search: undefined,
       team_id: undefined,
+      role: undefined,
       include_deleted: false
     });
     expect(state.showDeletedUsers).toBe(false);
@@ -187,8 +188,40 @@ describe('UserDirectoryPageState deleted-user capability handling', () => {
       limit: 10,
       search: undefined,
       team_id: undefined,
+      role: undefined,
       include_deleted: true
     });
     expect(state.showDeletedUsers).toBe(true);
+  });
+});
+
+describe('UserDirectoryPageState directory filters', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.listDirectory.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      total_pages: 1,
+      teams: [{ id: 'team-1', name: 'Team Alpha', count: 1 }],
+      roles: [{ role: 'planer', display_name: 'Planer', count: 1 }],
+      capabilities: { can_create_user: false, can_read_deleted: false }
+    });
+  });
+
+  it('sends team and role filters together when loading the directory', async () => {
+    const state = new UserDirectoryPageState();
+
+    await state.setTeamFilter('team-1');
+    await state.setRoleFilter('planer');
+
+    expect(mocks.listDirectory).toHaveBeenLastCalledWith({
+      page: 1,
+      limit: 10,
+      search: undefined,
+      team_id: 'team-1',
+      role: 'planer',
+      include_deleted: false
+    });
   });
 });
