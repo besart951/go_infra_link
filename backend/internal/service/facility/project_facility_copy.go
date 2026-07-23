@@ -36,6 +36,7 @@ type spsControllerSystemTypeBulkCreator interface {
 
 const (
 	copyFieldDeviceSystemTypeChunkSize = 10
+	copyFieldDevicePageSize            = 500
 	copySPSControllerPageLimit         = 500
 )
 

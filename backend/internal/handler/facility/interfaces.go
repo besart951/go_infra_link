@@ -3,6 +3,10 @@ package facility
 import (
 	"context"
 
+	appbacnetobject "github.com/besart951/go_infra_link/backend/internal/application/facility/bacnetobject"
+	appcontrolcabinet "github.com/besart951/go_infra_link/backend/internal/application/facility/controlcabinet"
+	appfielddevice "github.com/besart951/go_infra_link/backend/internal/application/facility/fielddevice"
+	appspscontroller "github.com/besart951/go_infra_link/backend/internal/application/facility/spscontroller"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainExport "github.com/besart951/go_infra_link/backend/internal/domain/exporting"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -58,36 +62,80 @@ type BacnetObjectService interface {
 	ReplaceForObjectData(ctx context.Context, objectDataID uuid.UUID, inputs []domainFacility.BacnetObject) error
 }
 
+type BacnetObjectUpdater interface {
+	Update(ctx context.Context, command appbacnetobject.UpdateCommand) (*domainFacility.BacnetObject, error)
+}
+
+type BacnetObjectCreator interface {
+	CreateForFieldDevice(
+		ctx context.Context,
+		command appbacnetobject.CreateForFieldDeviceCommand,
+	) (*domainFacility.BacnetObject, error)
+	CreateForObjectData(
+		ctx context.Context,
+		command appbacnetobject.CreateForObjectDataCommand,
+	) (*domainFacility.BacnetObject, error)
+}
+
 type FieldDeviceService interface {
-	Create(ctx context.Context, fieldDevice *domainFacility.FieldDevice) error
-	CreateWithBacnetObjects(ctx context.Context, fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects []domainFacility.BacnetObject) error
-	MultiCreate(ctx context.Context, items []domainFacility.FieldDeviceCreateItem) *domainFacility.FieldDeviceMultiCreateResult
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.FieldDevice, error)
-	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.FieldDevice], error)
 	ListWithFilters(ctx context.Context, params domain.PaginationParams, filters domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error)
 	ListAvailableApparatNumbers(ctx context.Context, spsControllerSystemTypeID uuid.UUID, systemPartID uuid.UUID, apparatID uuid.UUID) ([]int, error)
 	GetFieldDeviceOptions(ctx context.Context) (*domainFacility.FieldDeviceOptions, error)
-	Update(ctx context.Context, fieldDevice *domainFacility.FieldDevice) error
-	UpdateWithBacnetObjects(ctx context.Context, fieldDevice *domainFacility.FieldDevice, objectDataID *uuid.UUID, bacnetObjects *[]domainFacility.BacnetObject) error
-	DeleteByID(ctx context.Context, id uuid.UUID) error
 	ListBacnetObjects(ctx context.Context, fieldDeviceID uuid.UUID) ([]domainFacility.BacnetObject, error)
 	CreateSpecification(ctx context.Context, fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error
 	UpdateSpecificationPatch(ctx context.Context, fieldDeviceID uuid.UUID, patch *domainFacility.SpecificationPatch) (*domainFacility.Specification, error)
+}
+
+type FieldDeviceBulkUpdater interface {
 	BulkUpdate(ctx context.Context, updates []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult
-	BulkDelete(ctx context.Context, ids []uuid.UUID) *domainFacility.BulkOperationResult
+}
+
+type FieldDeviceBulkDeleter interface {
+	BulkDelete(
+		ctx context.Context,
+		command appfielddevice.BulkDeleteCommand,
+	) *domainFacility.BulkOperationResult
+}
+
+type FieldDeviceMultiCreator interface {
+	MultiCreate(
+		ctx context.Context,
+		command appfielddevice.MultiCreateCommand,
+	) *domainFacility.FieldDeviceMultiCreateResult
+}
+
+type FieldDeviceUpdater interface {
+	Update(ctx context.Context, command appfielddevice.UpdateCommand) (*domainFacility.FieldDevice, error)
+}
+
+type FieldDeviceDeleter interface {
+	Delete(ctx context.Context, command appfielddevice.DeleteCommand) error
 }
 
 type ControlCabinetService interface {
-	Create(ctx context.Context, controlCabinet *domainFacility.ControlCabinet) error
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.ControlCabinet, error)
 	GetByIDs(ctx context.Context, ids []uuid.UUID) ([]domainFacility.ControlCabinet, error)
-	CopyByID(ctx context.Context, id uuid.UUID) (*domainFacility.ControlCabinet, error)
 	GetDeleteImpact(ctx context.Context, id uuid.UUID) (*domainFacility.ControlCabinetDeleteImpact, error)
 	List(ctx context.Context, page, limit int, search string) (*domain.PaginatedList[domainFacility.ControlCabinet], error)
 	ListByBuildingID(ctx context.Context, buildingID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.ControlCabinet], error)
-	Update(ctx context.Context, controlCabinet *domainFacility.ControlCabinet) error
 	Validate(ctx context.Context, controlCabinet *domainFacility.ControlCabinet, excludeID *uuid.UUID) error
-	DeleteByID(ctx context.Context, id uuid.UUID) error
+}
+
+type ControlCabinetUpdater interface {
+	Update(ctx context.Context, command appcontrolcabinet.UpdateCommand) (*domainFacility.ControlCabinet, error)
+}
+
+type ControlCabinetCreator interface {
+	Create(ctx context.Context, command appcontrolcabinet.CreateCommand) (*domainFacility.ControlCabinet, error)
+}
+
+type ControlCabinetCloner interface {
+	Clone(ctx context.Context, command appcontrolcabinet.CloneCommand) (*domainFacility.ControlCabinet, error)
+}
+
+type ControlCabinetDeleter interface {
+	Delete(ctx context.Context, command appcontrolcabinet.DeleteCommand) error
 }
 
 type SPSControllerService interface {
@@ -103,6 +151,36 @@ type SPSControllerService interface {
 	Validate(ctx context.Context, spsController *domainFacility.SPSController, excludeID *uuid.UUID) error
 	NextAvailableGADevice(ctx context.Context, controlCabinetID uuid.UUID, excludeID *uuid.UUID) (string, error)
 	DeleteByID(ctx context.Context, id uuid.UUID) error
+}
+
+type SPSControllerUpdater interface {
+	Update(ctx context.Context, command appspscontroller.UpdateCommand) (*domainFacility.SPSController, error)
+}
+
+type SPSControllerCreator interface {
+	Create(ctx context.Context, command appspscontroller.CreateCommand) (*domainFacility.SPSController, error)
+}
+
+type SPSControllerCloner interface {
+	Clone(ctx context.Context, command appspscontroller.CloneCommand) (*domainFacility.SPSController, error)
+}
+
+type SPSControllerSystemTypeCloner interface {
+	CloneSystemType(
+		ctx context.Context,
+		command appspscontroller.CloneSystemTypeCommand,
+	) (*domainFacility.SPSControllerSystemType, error)
+}
+
+type SPSControllerSystemTypeDeleter interface {
+	DeleteSystemType(
+		ctx context.Context,
+		command appspscontroller.DeleteSystemTypeCommand,
+	) error
+}
+
+type SPSControllerDeleter interface {
+	Delete(ctx context.Context, command appspscontroller.DeleteCommand) error
 }
 
 type StateTextService interface {
@@ -151,8 +229,6 @@ type SPSControllerSystemTypeService interface {
 	ListBySPSControllerIDs(ctx context.Context, spsControllerIDs []uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
 	ListByProjectID(ctx context.Context, projectID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
-	CopyByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
-	DeleteByID(ctx context.Context, id uuid.UUID) error
 }
 
 type ExportService interface {
@@ -195,7 +271,13 @@ type AlarmTypeFieldService interface {
 type BacnetAlarmValueService interface {
 	GetSchema(ctx context.Context, bacnetObjectID uuid.UUID) (*domainFacility.AlarmType, error)
 	GetValues(ctx context.Context, bacnetObjectID uuid.UUID) ([]domainFacility.BacnetObjectAlarmValue, error)
-	PutValues(ctx context.Context, bacnetObjectID uuid.UUID, values []domainFacility.BacnetObjectAlarmValue) error
+}
+
+type BacnetAlarmValueReplacer interface {
+	ReplaceAlarmValues(
+		ctx context.Context,
+		command appbacnetobject.ReplaceAlarmValuesCommand,
+	) ([]domainFacility.BacnetObjectAlarmValue, error)
 }
 
 type BacnetReferenceUsageService interface {

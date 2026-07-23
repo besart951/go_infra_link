@@ -52,6 +52,92 @@ type BacnetObjectPatch struct {
 	AlarmDefinitionID   *uuid.UUID
 }
 
+// ApplyPatch applies the supported partial state transition to an existing
+// BACnet object. Persistence, parent existence, and cross-object uniqueness
+// remain application/service concerns.
+func (b *BacnetObject) ApplyPatch(patch BacnetObjectPatch) error {
+	if b == nil || b.ID == uuid.Nil {
+		return domain.ErrInvalidArgument
+	}
+	if patch.ID != uuid.Nil && patch.ID != b.ID {
+		return domain.ErrInvalidArgument
+	}
+
+	if patch.TextFix != nil {
+		b.TextFix = *patch.TextFix
+	}
+	if patch.Description != nil {
+		b.Description = cloneBacnetPointer(patch.Description)
+	}
+	if patch.GMSVisible != nil {
+		b.GMSVisible = *patch.GMSVisible
+	}
+	if patch.Optional != nil {
+		b.Optional = *patch.Optional
+	}
+	if patch.TextIndividual != nil {
+		b.TextIndividual = cloneBacnetPointer(patch.TextIndividual)
+	}
+	if patch.SoftwareType != nil {
+		b.SoftwareType = *patch.SoftwareType
+	}
+	if patch.SoftwareNumber != nil {
+		b.SoftwareNumber = *patch.SoftwareNumber
+	}
+	if patch.HardwareType != nil {
+		b.HardwareType = *patch.HardwareType
+	}
+	if patch.HardwareQuantity != nil {
+		b.HardwareQuantity = *patch.HardwareQuantity
+	}
+	if patch.SoftwareReferenceID != nil {
+		b.SoftwareReferenceID = cloneBacnetPointer(patch.SoftwareReferenceID)
+	}
+	if patch.StateTextID != nil {
+		b.StateTextID = cloneBacnetPointer(patch.StateTextID)
+	}
+	if patch.NotificationClassID != nil {
+		b.NotificationClassID = cloneBacnetPointer(patch.NotificationClassID)
+	}
+	if patch.AlarmTypeID != nil {
+		b.AlarmTypeID = cloneBacnetPointer(patch.AlarmTypeID)
+	}
+	if patch.AlarmDefinitionID != nil {
+		b.AlarmDefinitionID = cloneBacnetPointer(patch.AlarmDefinitionID)
+	}
+
+	return nil
+}
+
+// AssignToFieldDevice changes the direct facility owner. Project-link
+// reconciliation and uniqueness validation are deliberately outside the
+// entity because they require repositories.
+func (b *BacnetObject) AssignToFieldDevice(fieldDeviceID uuid.UUID) error {
+	if b == nil || b.ID == uuid.Nil || fieldDeviceID == uuid.Nil {
+		return domain.ErrInvalidArgument
+	}
+	b.FieldDeviceID = &fieldDeviceID
+	return nil
+}
+
+// DetachFromFieldDevice prepares a BACnet object for indirect ownership, such
+// as an ObjectData template association managed by the application service.
+func (b *BacnetObject) DetachFromFieldDevice() error {
+	if b == nil || b.ID == uuid.Nil {
+		return domain.ErrInvalidArgument
+	}
+	b.FieldDeviceID = nil
+	return nil
+}
+
+func cloneBacnetPointer[T any](value *T) *T {
+	if value == nil {
+		return nil
+	}
+	clone := *value
+	return &clone
+}
+
 type BacnetSoftwareType string
 
 const (

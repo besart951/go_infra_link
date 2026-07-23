@@ -1,38 +1,38 @@
 package facility
 
 import (
-	"context"
+	"errors"
 	"net/http"
 
+	appcontrolcabinet "github.com/besart951/go_infra_link/backend/internal/application/facility/controlcabinet"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type ControlCabinetHandler struct {
-	service       ControlCabinetService
-	collaboration ProjectRefreshBroadcaster
+	service ControlCabinetService
+	creator ControlCabinetCreator
+	cloner  ControlCabinetCloner
+	updater ControlCabinetUpdater
+	deleter ControlCabinetDeleter
 }
 
-func NewControlCabinetHandler(service ControlCabinetService, collaboration ProjectRefreshBroadcaster) *ControlCabinetHandler {
-	return &ControlCabinetHandler{service: service, collaboration: collaboration}
-}
-
-func (h *ControlCabinetHandler) broadcastProjectRefresh(ctx context.Context, actorID *uuid.UUID, controlCabinetID uuid.UUID) {
-	if h.collaboration == nil {
-		return
+func NewControlCabinetHandler(
+	service ControlCabinetService,
+	creator ControlCabinetCreator,
+	cloner ControlCabinetCloner,
+	updater ControlCabinetUpdater,
+	deleter ControlCabinetDeleter,
+) *ControlCabinetHandler {
+	return &ControlCabinetHandler{
+		service: service,
+		creator: creator,
+		cloner:  cloner,
+		updater: updater,
+		deleter: deleter,
 	}
-	h.collaboration.BroadcastRefreshForControlCabinet(ctx, actorID, controlCabinetID, "control_cabinet")
-}
-
-func (h *ControlCabinetHandler) broadcastProjectDelta(ctx context.Context, actorID *uuid.UUID, controlCabinet *domainFacility.ControlCabinet) {
-	if h.collaboration == nil || controlCabinet == nil {
-		return
-	}
-
-	h.collaboration.BroadcastControlCabinetDelta(ctx, actorID, *controlCabinet)
 }
 
 // CreateControlCabinet godoc
@@ -51,16 +51,21 @@ func (h *ControlCabinetHandler) CreateControlCabinet(c *gin.Context) {
 		return
 	}
 
-	controlCabinet := toControlCabinetModel(req)
-
-	if err := h.service.Create(c.Request.Context(), controlCabinet); err != nil {
+	if h.creator == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		return
+	}
+	controlCabinet, err := h.creator.Create(
+		c.Request.Context(),
+		toControlCabinetCreateCommand(req),
+	)
+	if err != nil {
 		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
 			localizedInvalidReference(),
 		)
 		return
 	}
 
-	h.broadcastProjectDelta(c.Request.Context(), currentActorID(c), controlCabinet)
 	c.JSON(http.StatusCreated, toControlCabinetResponse(*controlCabinet))
 }
 
@@ -138,7 +143,13 @@ func (h *ControlCabinetHandler) CopyControlCabinet(c *gin.Context) {
 		return
 	}
 
-	copyEntity, err := h.service.CopyByID(c.Request.Context(), id)
+	if h.cloner == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		return
+	}
+	copyEntity, err := h.cloner.Clone(c.Request.Context(), appcontrolcabinet.CloneCommand{
+		SourceControlCabinetID: id,
+	})
 	if err != nil {
 		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
 			localizedNotFound("facility.control_cabinet_not_found"),
@@ -147,7 +158,6 @@ func (h *ControlCabinetHandler) CopyControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectDelta(c.Request.Context(), currentActorID(c), copyEntity)
 	c.JSON(http.StatusCreated, toControlCabinetResponse(*copyEntity))
 }
 
@@ -249,27 +259,30 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-
-	controlCabinet, err := h.service.GetByID(ctx, id)
-	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.control_cabinet_not_found") {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+	if h.updater == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
 		return
 	}
 
-	applyControlCabinetUpdate(controlCabinet, req)
-
-	if err := h.service.Update(ctx, controlCabinet); err != nil {
+	controlCabinet, err := h.updater.Update(
+		c.Request.Context(),
+		toControlCabinetUpdateCommand(id, req),
+	)
+	if err != nil {
+		var loadErr *appcontrolcabinet.LoadError
+		if errors.As(err, &loadErr) {
+			if respondLocalizedNotFoundIf(c, loadErr.Err, "facility.control_cabinet_not_found") {
+				return
+			}
+			respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+			return
+		}
 		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
 			localizedInvalidReference(),
 		)
 		return
 	}
 
-	h.broadcastProjectDelta(ctx, currentActorID(c), controlCabinet)
 	c.JSON(http.StatusOK, toControlCabinetResponse(*controlCabinet))
 }
 
@@ -288,13 +301,18 @@ func (h *ControlCabinetHandler) DeleteControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+	if h.deleter == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		return
+	}
+	if err := h.deleter.Delete(c.Request.Context(), appcontrolcabinet.DeleteCommand{
+		ControlCabinetID: id,
+	}); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.control_cabinet_not_found"),
 		)
 		return
 	}
 
-	h.broadcastProjectRefresh(c.Request.Context(), currentActorID(c), id)
 	c.Status(http.StatusNoContent)
 }

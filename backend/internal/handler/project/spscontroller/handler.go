@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	appspscontroller "github.com/besart951/go_infra_link/backend/internal/application/facility/spscontroller"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
@@ -17,29 +18,69 @@ import (
 )
 
 type FacilityLinkService interface {
-	CreateSPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error)
-	CopySPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainFacility.SPSController, error)
-	CopySPSControllerSystemType(ctx context.Context, projectID, systemTypeID uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
-	UpdateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error)
 	DeleteSPSController(ctx context.Context, linkID, projectID uuid.UUID) error
 	ListSPSControllers(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectSPSController], error)
 }
 
 type Handler struct {
-	access       projectshared.AccessPolicyService
-	facilityLink FacilityLinkService
-	notify       projectshared.ProjectChangeNotifier
-	notifyDelta  ProjectSPSControllerDeltaNotifier
+	access           projectshared.AccessPolicyService
+	facilityLink     FacilityLinkService
+	cloner           ProjectSPSControllerCloner
+	systemTypeCloner ProjectSPSControllerSystemTypeCloner
+	assigner         ProjectSPSControllerAssigner
+	reassigner       ProjectSPSControllerReassigner
+	notify           projectshared.ProjectChangeNotifier
+	notifyEvent      projectshared.ProjectChangeNotifier
 }
 
-type ProjectSPSControllerDeltaNotifier func(*gin.Context, uuid.UUID, domainFacility.SPSController)
+type ProjectSPSControllerCloner interface {
+	CloneForProject(
+		context.Context,
+		appspscontroller.CloneForProjectCommand,
+	) (*domainFacility.SPSController, error)
+}
 
-func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier, notifyDelta ...ProjectSPSControllerDeltaNotifier) *Handler {
-	var delta ProjectSPSControllerDeltaNotifier
-	if len(notifyDelta) > 0 {
-		delta = notifyDelta[0]
+type ProjectSPSControllerSystemTypeCloner interface {
+	CloneSystemTypeForProject(
+		context.Context,
+		appspscontroller.CloneSystemTypeForProjectCommand,
+	) (*domainFacility.SPSControllerSystemType, error)
+}
+
+type ProjectSPSControllerAssigner interface {
+	AssignToProject(
+		context.Context,
+		appspscontroller.AssignToProjectCommand,
+	) (*domainProject.ProjectSPSController, error)
+}
+
+type ProjectSPSControllerReassigner interface {
+	ReassignProjectLink(
+		context.Context,
+		appspscontroller.ReassignProjectLinkCommand,
+	) (*domainProject.ProjectSPSController, error)
+}
+
+func NewHandler(
+	access projectshared.AccessPolicyService,
+	facilityLink FacilityLinkService,
+	cloner ProjectSPSControllerCloner,
+	systemTypeCloner ProjectSPSControllerSystemTypeCloner,
+	assigner ProjectSPSControllerAssigner,
+	reassigner ProjectSPSControllerReassigner,
+	notify projectshared.ProjectChangeNotifier,
+	notifyEvent projectshared.ProjectChangeNotifier,
+) *Handler {
+	return &Handler{
+		access:           access,
+		facilityLink:     facilityLink,
+		cloner:           cloner,
+		systemTypeCloner: systemTypeCloner,
+		assigner:         assigner,
+		reassigner:       reassigner,
+		notify:           notify,
+		notifyEvent:      notifyEvent,
 	}
-	return &Handler{access: access, facilityLink: facilityLink, notify: notify, notifyDelta: delta}
 }
 
 // CreateProjectSPSController godoc
@@ -74,7 +115,17 @@ func (h *Handler) CreateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	created, err := h.facilityLink.CreateSPSController(c.Request.Context(), projectID, req.SPSControllerID)
+	if h.assigner == nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
+		return
+	}
+	created, err := h.assigner.AssignToProject(
+		c.Request.Context(),
+		appspscontroller.AssignToProjectCommand{
+			ProjectID:       projectID,
+			SPSControllerID: req.SPSControllerID,
+		},
+	)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
@@ -84,8 +135,8 @@ func (h *Handler) CreateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.sps_controller.created", created.SPSControllerID.String())
+	if h.notifyEvent != nil {
+		h.notifyEvent(c, projectID, "project.sps_controller.created", created.SPSControllerID.String())
 	}
 
 	c.JSON(http.StatusCreated, toProjectSPSControllerResponse(*created))
@@ -154,7 +205,17 @@ func (h *Handler) CopyProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	copyEntity, err := h.facilityLink.CopySPSController(c.Request.Context(), projectID, spsControllerID)
+	if h.cloner == nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
+		return
+	}
+	copyEntity, err := h.cloner.CloneForProject(
+		c.Request.Context(),
+		appspscontroller.CloneForProjectCommand{
+			ProjectID:             projectID,
+			SourceSPSControllerID: spsControllerID,
+		},
+	)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
@@ -162,12 +223,6 @@ func (h *Handler) CopyProjectSPSController(c *gin.Context) {
 			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "conflict", "project.creation_failed")),
 		)
 		return
-	}
-
-	if h.notifyDelta != nil {
-		h.notifyDelta(c, projectID, *copyEntity)
-	} else if h.notify != nil {
-		h.notify(c, projectID, "project.sps_controller.copied", copyEntity.ID.String())
 	}
 
 	c.JSON(http.StatusCreated, sharedpresenter.ToSPSControllerResponse(*copyEntity))
@@ -193,7 +248,17 @@ func (h *Handler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 		return
 	}
 
-	copyEntity, err := h.facilityLink.CopySPSControllerSystemType(c.Request.Context(), projectID, systemTypeID)
+	if h.systemTypeCloner == nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
+		return
+	}
+	copyEntity, err := h.systemTypeCloner.CloneSystemTypeForProject(
+		c.Request.Context(),
+		appspscontroller.CloneSystemTypeForProjectCommand{
+			ProjectID:                       projectID,
+			SourceSPSControllerSystemTypeID: systemTypeID,
+		},
+	)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
@@ -202,8 +267,8 @@ func (h *Handler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.sps_controller_system_type.copied", copyEntity.SPSControllerID.String())
+	if h.notifyEvent != nil {
+		h.notifyEvent(c, projectID, "project.sps_controller_system_type.copied", copyEntity.SPSControllerID.String())
 	}
 
 	c.JSON(http.StatusCreated, sharedpresenter.ToSPSControllerSystemTypeResponse(*copyEntity))
@@ -247,7 +312,18 @@ func (h *Handler) UpdateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	updated, err := h.facilityLink.UpdateSPSController(c.Request.Context(), linkID, projectID, req.SPSControllerID)
+	if h.reassigner == nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "project.update_failed")
+		return
+	}
+	updated, err := h.reassigner.ReassignProjectLink(
+		c.Request.Context(),
+		appspscontroller.ReassignProjectLinkCommand{
+			ProjectID:       projectID,
+			LinkID:          linkID,
+			SPSControllerID: req.SPSControllerID,
+		},
+	)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
@@ -256,8 +332,8 @@ func (h *Handler) UpdateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.sps_controller.updated", updated.SPSControllerID.String())
+	if h.notifyEvent != nil {
+		h.notifyEvent(c, projectID, "project.sps_controller.updated", updated.SPSControllerID.String())
 	}
 
 	c.JSON(http.StatusOK, toProjectSPSControllerResponse(*updated))

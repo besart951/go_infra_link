@@ -199,6 +199,7 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 		hierarchyRepos.FieldDevices,
 		hierarchyRepos.Specifications,
 		hierarchyRepos.BacnetObjects,
+		alarmRepos.BacnetObjectAlarmValues,
 	)
 	hierarchyCopier.bindTransactions(tx)
 
@@ -215,7 +216,6 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 		fieldDeviceRepos.BacnetObjectAlarmValues,
 	)
 	fieldDeviceService.bindTransactions(tx)
-	fieldDeviceService.bindChangeRecorder(cfg.ChangeRecorder)
 	objectDataService := NewObjectDataService(
 		objectDataRepos.ObjectData,
 		objectDataRepos.BacnetObjects,

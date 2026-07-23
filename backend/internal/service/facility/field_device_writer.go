@@ -6,7 +6,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
-	"github.com/besart951/go_infra_link/backend/internal/service/changecapture"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	"github.com/google/uuid"
 )
 
@@ -48,7 +48,7 @@ func (w fieldDeviceWriter) createInTx(ctx context.Context, fieldDevice *domainFa
 	if err := w.applyBacnetSelection(ctx, fieldDevice.ID, selection); err != nil {
 		return err
 	}
-	return w.service.recordFieldDeviceChange(ctx, changecapture.ActionCreated, fieldDevice.ID)
+	return nil
 }
 
 func (w fieldDeviceWriter) updateBase(ctx context.Context, fieldDevice *domainFacility.FieldDevice) error {
@@ -58,7 +58,7 @@ func (w fieldDeviceWriter) updateBase(ctx context.Context, fieldDevice *domainFa
 	if err := w.service.repo.Update(ctx, fieldDevice); err != nil {
 		return err
 	}
-	return w.service.recordFieldDeviceChange(ctx, changecapture.ActionUpdated, fieldDevice.ID)
+	return nil
 }
 
 func (w fieldDeviceWriter) update(ctx context.Context, fieldDevice *domainFacility.FieldDevice, selection fieldDeviceBacnetSelection) error {
@@ -80,7 +80,7 @@ func (w fieldDeviceWriter) updateInTx(ctx context.Context, fieldDevice *domainFa
 	if err := w.applyBacnetSelection(ctx, fieldDevice.ID, selection); err != nil {
 		return err
 	}
-	return w.service.recordFieldDeviceChange(ctx, changecapture.ActionUpdated, fieldDevice.ID)
+	return nil
 }
 
 func (w fieldDeviceWriter) applyBacnetSelection(ctx context.Context, fieldDeviceID uuid.UUID, selection fieldDeviceBacnetSelection) error {
@@ -374,12 +374,26 @@ func (w fieldDeviceWriter) multiCreate(ctx context.Context, items []domainFacili
 	return result
 }
 
-func (w fieldDeviceWriter) bulkUpdate(ctx context.Context, updates []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult {
+func (w fieldDeviceWriter) executeBulkUpdate(
+	ctx context.Context,
+	updates []domainFacility.BulkFieldDeviceUpdate,
+) domainFieldDevice.BulkUpdateExecution {
 	result := &domainFacility.BulkOperationResult{
 		Results:      make([]domainFacility.BulkOperationResultItem, len(updates)),
 		TotalCount:   len(updates),
 		SuccessCount: 0,
 		FailureCount: 0,
+	}
+	execution := domainFieldDevice.BulkUpdateExecution{
+		Result: result,
+		Items:  make([]domainFieldDevice.BulkUpdateItemExecution, len(updates)),
+	}
+	for i, update := range updates {
+		execution.Items[i] = domainFieldDevice.BulkUpdateItemExecution{
+			Index:  i,
+			ID:     update.ID,
+			Phases: requestedBulkMutationPhases(update),
+		}
 	}
 
 	ids := make([]uuid.UUID, 0, len(updates))
@@ -393,7 +407,7 @@ func (w fieldDeviceWriter) bulkUpdate(ctx context.Context, updates []domainFacil
 			result.Results[i].Error = "failed to fetch existing items: " + err.Error()
 			result.FailureCount++
 		}
-		return result
+		return execution
 	}
 
 	existingMap := make(map[uuid.UUID]*domainFacility.FieldDevice)
@@ -415,6 +429,7 @@ func (w fieldDeviceWriter) bulkUpdate(ctx context.Context, updates []domainFacil
 		resultItem.ID = update.ID
 		resultItem.Success = false
 		resultItem.Fields = make(map[string]string)
+		executionItem := &execution.Items[i]
 
 		if _, ok := existingMap[update.ID]; !ok {
 			resultItem.Error = "field device not found"
@@ -432,11 +447,9 @@ func (w fieldDeviceWriter) bulkUpdate(ctx context.Context, updates []domainFacil
 		phaseErrors := make(map[string]string)
 		phaseSuggestions := make(map[string]int)
 		phaseSuggestionOptions := make(map[string][]int)
-		totalPhases := 0
 
 		if hasBaseFieldDeviceUpdates(update) {
-			totalPhases++
-			w.applyBulkBaseUpdate(
+			succeeded := w.applyBulkBaseUpdate(
 				ctx,
 				proposed,
 				update,
@@ -447,23 +460,48 @@ func (w fieldDeviceWriter) bulkUpdate(ctx context.Context, updates []domainFacil
 				phaseSuggestions,
 				phaseSuggestionOptions,
 			)
+			setBulkMutationPhaseStatus(
+				executionItem.Phases,
+				domainFieldDevice.BulkUpdatePhaseFieldDevice,
+				bulkMutationPhaseStatus(succeeded),
+			)
 		}
 
 		if update.Specification != nil && update.Specification.HasChanges() {
-			totalPhases++
 			if err := w.applySpecificationPatch(ctx, proposed.ID, update.Specification); err != nil {
 				phaseErrors["specification"] = "failed to update specification: " + err.Error()
+				setBulkMutationPhaseStatus(
+					executionItem.Phases,
+					domainFieldDevice.BulkUpdatePhaseSpecification,
+					domainFieldDevice.BulkUpdatePhaseFailed,
+				)
+			} else {
+				setBulkMutationPhaseStatus(
+					executionItem.Phases,
+					domainFieldDevice.BulkUpdatePhaseSpecification,
+					domainFieldDevice.BulkUpdatePhaseSucceeded,
+				)
 			}
 		}
 
 		if update.BacnetObjects != nil {
-			totalPhases++
 			if err := w.service.patchBacnetObjects(ctx, proposed.ID, *update.BacnetObjects); err != nil {
 				addBulkUpdateError(phaseErrors, "bacnet_objects", "failed to update BACnet objects: ", err)
+				setBulkMutationPhaseStatus(
+					executionItem.Phases,
+					domainFieldDevice.BulkUpdatePhaseBacnetObjects,
+					domainFieldDevice.BulkUpdatePhaseFailed,
+				)
+			} else {
+				setBulkMutationPhaseStatus(
+					executionItem.Phases,
+					domainFieldDevice.BulkUpdatePhaseBacnetObjects,
+					domainFieldDevice.BulkUpdatePhaseSucceeded,
+				)
 			}
 		}
 
-		if len(phaseErrors) == 0 && totalPhases > 0 {
+		if len(phaseErrors) == 0 && len(executionItem.Phases) > 0 {
 			resultItem.Success = true
 			result.SuccessCount++
 		} else {
@@ -482,7 +520,52 @@ func (w fieldDeviceWriter) bulkUpdate(ctx context.Context, updates []domainFacil
 		}
 	}
 
-	return result
+	return execution
+}
+
+func requestedBulkMutationPhases(
+	update domainFacility.BulkFieldDeviceUpdate,
+) []domainFieldDevice.BulkUpdatePhaseResult {
+	phases := make([]domainFieldDevice.BulkUpdatePhaseResult, 0, 3)
+	if hasBaseFieldDeviceUpdates(update) {
+		phases = append(phases, domainFieldDevice.BulkUpdatePhaseResult{
+			Phase:  domainFieldDevice.BulkUpdatePhaseFieldDevice,
+			Status: domainFieldDevice.BulkUpdatePhaseNotAttempted,
+		})
+	}
+	if update.Specification != nil && update.Specification.HasChanges() {
+		phases = append(phases, domainFieldDevice.BulkUpdatePhaseResult{
+			Phase:  domainFieldDevice.BulkUpdatePhaseSpecification,
+			Status: domainFieldDevice.BulkUpdatePhaseNotAttempted,
+		})
+	}
+	if update.BacnetObjects != nil {
+		phases = append(phases, domainFieldDevice.BulkUpdatePhaseResult{
+			Phase:  domainFieldDevice.BulkUpdatePhaseBacnetObjects,
+			Status: domainFieldDevice.BulkUpdatePhaseNotAttempted,
+		})
+	}
+	return phases
+}
+
+func setBulkMutationPhaseStatus(
+	phases []domainFieldDevice.BulkUpdatePhaseResult,
+	phase domainFieldDevice.BulkUpdatePhase,
+	status domainFieldDevice.BulkUpdatePhaseStatus,
+) {
+	for i := range phases {
+		if phases[i].Phase == phase {
+			phases[i].Status = status
+			return
+		}
+	}
+}
+
+func bulkMutationPhaseStatus(succeeded bool) domainFieldDevice.BulkUpdatePhaseStatus {
+	if succeeded {
+		return domainFieldDevice.BulkUpdatePhaseSucceeded
+	}
+	return domainFieldDevice.BulkUpdatePhaseFailed
 }
 
 func (w fieldDeviceWriter) applyBulkBaseUpdate(
@@ -495,10 +578,10 @@ func (w fieldDeviceWriter) applyBulkBaseUpdate(
 	phaseErrors map[string]string,
 	phaseSuggestions map[string]int,
 	phaseSuggestionOptions map[string][]int,
-) {
+) bool {
 	if err := w.service.validateRequiredFields(proposed); err != nil {
 		addBulkUpdateError(phaseErrors, "fielddevice", "", err)
-		return
+		return false
 	}
 
 	if err := w.service.ensureParentsExist(ctx, proposed); err != nil {
@@ -507,7 +590,7 @@ func (w fieldDeviceWriter) applyBulkBaseUpdate(
 		} else {
 			phaseErrors["fielddevice"] = err.Error()
 		}
-		return
+		return false
 	}
 
 	if hasApparatNrConstraintUpdates(update) {
@@ -526,7 +609,7 @@ func (w fieldDeviceWriter) applyBulkBaseUpdate(
 					phaseSuggestions,
 					phaseSuggestionOptions,
 				)
-				return
+				return false
 			}
 		}
 
@@ -543,17 +626,15 @@ func (w fieldDeviceWriter) applyBulkBaseUpdate(
 				)
 			}
 			addBulkUpdateError(phaseErrors, "fielddevice.apparat_nr", "", err)
-			return
+			return false
 		}
 	}
 
 	if err := w.service.repo.Update(ctx, proposed); err != nil {
 		phaseErrors["fielddevice"] = err.Error()
-		return
+		return false
 	}
-	if err := w.service.recordFieldDeviceChange(ctx, changecapture.ActionUpdated, proposed.ID); err != nil {
-		phaseErrors["fielddevice"] = err.Error()
-	}
+	return true
 }
 
 func buildProposedFieldDevice(existing *domainFacility.FieldDevice, update domainFacility.BulkFieldDeviceUpdate) *domainFacility.FieldDevice {

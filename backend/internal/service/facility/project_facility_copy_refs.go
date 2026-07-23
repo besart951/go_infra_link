@@ -24,6 +24,7 @@ func (c projectFacilityCopy) remapSoftwareReferences(
 		newIDsByOriginalID[originalID] = clone.ID
 	}
 
+	assignments := make(map[uuid.UUID]uuid.UUID, len(refsByOriginalID))
 	for originalID, referenceID := range refsByOriginalID {
 		if referenceID == nil {
 			continue
@@ -40,10 +41,7 @@ func (c projectFacilityCopy) remapSoftwareReferences(
 		}
 
 		clone.SoftwareReferenceID = &mappedRefID
-		if err := c.bacnetObjectRepo.Update(ctx, clone); err != nil {
-			return err
-		}
+		assignments[clone.ID] = mappedRefID
 	}
-
-	return nil
+	return c.bacnetObjectRepo.AssignSoftwareReferenceIDs(ctx, assignments)
 }

@@ -33,3 +33,32 @@ type ObjectDataTemplateUpdate struct {
 	ApparatIDs    *[]uuid.UUID
 	BacnetObjects *[]BacnetObject
 }
+
+// ActivateForProject applies the local ownership and activation rules for an
+// ObjectData template. Project existence and actor authorization remain
+// application concerns because they require external state.
+func (o *ObjectData) ActivateForProject(projectID uuid.UUID) error {
+	if o == nil || projectID == uuid.Nil {
+		return domain.ErrInvalidArgument
+	}
+	if o.ProjectID != nil && *o.ProjectID != projectID {
+		return domain.ErrConflict
+	}
+	projectIDCopy := projectID
+	o.ProjectID = &projectIDCopy
+	o.IsActive = true
+	return nil
+}
+
+// DeactivateForProject preserves the established HTTP semantics: removing an
+// ObjectData template from a project marks it inactive but retains ProjectID.
+func (o *ObjectData) DeactivateForProject(projectID uuid.UUID) error {
+	if o == nil || projectID == uuid.Nil {
+		return domain.ErrInvalidArgument
+	}
+	if o.ProjectID == nil || *o.ProjectID != projectID {
+		return domain.ErrNotFound
+	}
+	o.IsActive = false
+	return nil
+}

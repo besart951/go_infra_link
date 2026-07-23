@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	appfacility "github.com/besart951/go_infra_link/backend/internal/application/facility"
+	apphistory "github.com/besart951/go_infra_link/backend/internal/application/history"
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	adminservice "github.com/besart951/go_infra_link/backend/internal/service/admin"
@@ -27,24 +29,26 @@ import (
 
 // Services holds all service instances.
 type Services struct {
-	Project          *projectservice.Services
-	Dashboard        *dashboardservice.Service
-	Phase            *phaseservice.Service
-	PhasePermission  *phasepermissionservice.Service
-	User             *userservice.Service
-	UserRegistration *userregistrationservice.Service
-	Auth             *authservice.Service
-	JWT              domainAuth.TokenService
-	RBAC             *rbacservice.Service
-	Team             *teamservice.Service
-	Admin            *adminservice.Service
-	UserDirectory    *userdirectoryservice.Service
-	Notification     *notificationservice.Service
-	Password         domainUser.PasswordHasher
-	Export           *exportservice.Service
-	History          HistoryRepository
+	Project            *projectservice.Services
+	Dashboard          *dashboardservice.Service
+	Phase              *phaseservice.Service
+	PhasePermission    *phasepermissionservice.Service
+	User               *userservice.Service
+	UserRegistration   *userregistrationservice.Service
+	Auth               *authservice.Service
+	JWT                domainAuth.TokenService
+	RBAC               *rbacservice.Service
+	Team               *teamservice.Service
+	Admin              *adminservice.Service
+	UserDirectory      *userdirectoryservice.Service
+	Notification       *notificationservice.Service
+	Password           domainUser.PasswordHasher
+	Export             *exportservice.Service
+	History            HistoryRepository
+	HistoryApplication *apphistory.Services
 
-	Facility *facilityservice.Services
+	Facility            *facilityservice.Services
+	FacilityApplication *appfacility.Services
 }
 
 // ServiceConfig contains configuration for services.
@@ -87,9 +91,21 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 	if err != nil {
 		return nil, fmt.Errorf("new notification service: %w", err)
 	}
+	projectServices := newProjectServices(gormDB, repos, facilityServices)
+	historyApplication := newHistoryApplicationServices(
+		repos,
+		projectServices.AccessPolicy,
+	)
+	facilityApplication := newFacilityApplicationServices(
+		gormDB,
+		repos,
+		facilityServices,
+		projectServices.AccessPolicy,
+		cfg.Runtime,
+	)
 
 	return &Services{
-		Project:          newProjectServices(gormDB, repos, facilityServices),
+		Project:          projectServices,
 		Dashboard:        dashboardservice.New(repos.Project, repos.Phase, repos.Team, repos.TeamMember, repos.User),
 		Phase:            phaseservice.NewPhaseService(repos.Phase),
 		PhasePermission:  phasepermissionservice.New(repos.PhasePermissions, repos.Phase, repos.Permissions),
@@ -112,9 +128,11 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 			cfg.RefreshTokenTTL,
 			cfg.Issuer,
 		),
-		Export:   exportSvc,
-		History:  repos.History,
-		Facility: facilityServices,
+		Export:              exportSvc,
+		History:             repos.History,
+		HistoryApplication:  historyApplication,
+		Facility:            facilityServices,
+		FacilityApplication: facilityApplication,
 	}, nil
 }
 

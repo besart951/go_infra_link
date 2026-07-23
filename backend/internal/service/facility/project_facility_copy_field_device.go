@@ -2,6 +2,8 @@ package facility
 
 import (
 	"context"
+	"fmt"
+	"sort"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -22,6 +24,9 @@ func (c projectFacilityCopy) copyFieldDevicesForSystemTypes(ctx context.Context,
 	for originalSystemTypeID, copySystemTypeID := range newSystemTypeMap {
 		pairs = append(pairs, systemTypeCopyPair{originalID: originalSystemTypeID, copyID: copySystemTypeID})
 	}
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].originalID.String() < pairs[j].originalID.String()
+	})
 
 	for start := 0; start < len(pairs); start += copyFieldDeviceSystemTypeChunkSize {
 		end := start + copyFieldDeviceSystemTypeChunkSize
@@ -36,20 +41,37 @@ func (c projectFacilityCopy) copyFieldDevicesForSystemTypes(ctx context.Context,
 			originalSystemTypeIDs = append(originalSystemTypeIDs, pair.originalID)
 		}
 
-		fieldDeviceIDs, err := c.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(ctx, originalSystemTypeIDs)
-		if err != nil {
-			return err
-		}
-		if len(fieldDeviceIDs) == 0 {
-			continue
-		}
+		var afterID *uuid.UUID
+		for {
+			fieldDeviceIDs, err := c.fieldDeviceRepo.ListIDsBySPSControllerSystemTypeIDsAfter(
+				ctx,
+				originalSystemTypeIDs,
+				afterID,
+				copyFieldDevicePageSize,
+			)
+			if err != nil {
+				return err
+			}
+			if len(fieldDeviceIDs) == 0 {
+				break
+			}
 
-		originalFieldDevices, err := c.fieldDeviceRepo.GetByIds(ctx, fieldDeviceIDs)
-		if err != nil {
-			return err
-		}
-		if err := c.copyFieldDevicesWithChildren(ctx, derefSlice(originalFieldDevices), chunkMap); err != nil {
-			return err
+			originalFieldDevices, err := c.fieldDeviceRepo.GetByIds(ctx, fieldDeviceIDs)
+			if err != nil {
+				return err
+			}
+			if err := c.copyFieldDevicesWithChildren(ctx, derefSlice(originalFieldDevices), chunkMap); err != nil {
+				return err
+			}
+
+			lastID := fieldDeviceIDs[len(fieldDeviceIDs)-1]
+			if afterID != nil && lastID.String() <= afterID.String() {
+				return fmt.Errorf("field device copy cursor did not advance")
+			}
+			afterID = &lastID
+			if len(fieldDeviceIDs) < copyFieldDevicePageSize {
+				break
+			}
 		}
 	}
 
@@ -121,6 +143,25 @@ func (c projectFacilityCopy) copyFieldDevicesWithChildrenDetailed(
 		if err := c.specificationRepo.BulkCreate(ctx, specCopies, 0); err != nil {
 			return nil, err
 		}
+
+		specificationAssignments := make(map[uuid.UUID]uuid.UUID, len(specCopies))
+		copyDevicesByID := make(map[uuid.UUID]*domainFacility.FieldDevice, len(fieldDeviceCopies))
+		for _, copyDevice := range fieldDeviceCopies {
+			copyDevicesByID[copyDevice.ID] = copyDevice
+		}
+		for _, specCopy := range specCopies {
+			if specCopy == nil || specCopy.ID == uuid.Nil || specCopy.FieldDeviceID == nil {
+				return nil, fmt.Errorf("copied specification is missing its identity or field device")
+			}
+			specificationAssignments[*specCopy.FieldDeviceID] = specCopy.ID
+			if copyDevice := copyDevicesByID[*specCopy.FieldDeviceID]; copyDevice != nil {
+				specificationID := specCopy.ID
+				copyDevice.SpecificationID = &specificationID
+			}
+		}
+		if err := c.fieldDeviceRepo.AssignSpecificationIDs(ctx, specificationAssignments); err != nil {
+			return nil, err
+		}
 	}
 
 	bacnetObjects, err := c.bacnetObjectRepo.GetByFieldDeviceIDs(ctx, originalIDs)
@@ -181,6 +222,7 @@ func (c projectFacilityCopy) copyBacnetObjectsWithFieldDeviceMap(
 	boCopies := make([]*domainFacility.BacnetObject, 0, len(originalObjects))
 	oldToNew := make(map[uuid.UUID]*domainFacility.BacnetObject, len(originalObjects))
 	originalByID := make(map[uuid.UUID]*domainFacility.BacnetObject, len(originalObjects))
+	originalObjectIDs := make([]uuid.UUID, 0, len(originalObjects))
 
 	for _, originalObj := range originalObjects {
 		if originalObj == nil || originalObj.FieldDeviceID == nil {
@@ -195,15 +237,24 @@ func (c projectFacilityCopy) copyBacnetObjectsWithFieldDeviceMap(
 		boCopies = append(boCopies, newObj)
 		oldToNew[originalObj.ID] = newObj
 		originalByID[originalObj.ID] = originalObj
+		originalObjectIDs = append(originalObjectIDs, originalObj.ID)
 	}
 
 	if len(boCopies) == 0 {
 		return nil
 	}
+	if c.bacnetAlarmValueRepo == nil {
+		return fmt.Errorf("BACnet alarm value repository is required for hierarchy copy")
+	}
+	originalAlarmValues, err := c.bacnetAlarmValueRepo.GetByBacnetObjectIDs(ctx, originalObjectIDs)
+	if err != nil {
+		return err
+	}
 	if err := c.bacnetObjectRepo.BulkCreate(ctx, boCopies, 0); err != nil {
 		return err
 	}
 
+	softwareReferenceAssignments := make(map[uuid.UUID]uuid.UUID)
 	for originalID, newObj := range oldToNew {
 		originalObj := originalByID[originalID]
 		if originalObj == nil || originalObj.SoftwareReferenceID == nil {
@@ -216,10 +267,39 @@ func (c projectFacilityCopy) copyBacnetObjectsWithFieldDeviceMap(
 
 		targetID := target.ID
 		newObj.SoftwareReferenceID = &targetID
-		if err := c.bacnetObjectRepo.Update(ctx, newObj); err != nil {
+		softwareReferenceAssignments[newObj.ID] = targetID
+	}
+	if err := c.bacnetObjectRepo.AssignSoftwareReferenceIDs(ctx, softwareReferenceAssignments); err != nil {
+		return err
+	}
+
+	alarmValueCopies := make([]*domainFacility.BacnetObjectAlarmValue, 0, len(originalAlarmValues))
+	for i := range originalAlarmValues {
+		originalValue := originalAlarmValues[i]
+		newObject := oldToNew[originalValue.BacnetObjectID]
+		if newObject == nil {
+			continue
+		}
+		alarmValueCopies = append(alarmValueCopies, cloneBacnetAlarmValueForCopy(originalValue, newObject.ID))
+	}
+	if len(alarmValueCopies) > 0 {
+		if err := c.bacnetAlarmValueRepo.BulkCreate(ctx, alarmValueCopies, 0); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func cloneBacnetAlarmValueForCopy(
+	original domainFacility.BacnetObjectAlarmValue,
+	newBacnetObjectID uuid.UUID,
+) *domainFacility.BacnetObjectAlarmValue {
+	clone := original
+	clone.Base = domain.Base{}
+	clone.BacnetObjectID = newBacnetObjectID
+	clone.BacnetObject = nil
+	clone.AlarmTypeField = nil
+	clone.Unit = nil
+	return &clone
 }

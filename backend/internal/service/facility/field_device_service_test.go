@@ -2,6 +2,7 @@ package facility_test
 
 import (
 	"context"
+	"errors"
 	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"sort"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	"github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/google/uuid"
 )
@@ -32,6 +34,10 @@ func (r *fakeFieldDeviceStore) GetByIds(_ context.Context, ids []uuid.UUID) ([]*
 
 func (r *fakeFieldDeviceStore) Create(_ context.Context, entity *domainFacility.FieldDevice) error {
 	clone := *entity
+	if clone.ID == uuid.Nil {
+		clone.ID = uuid.New()
+		entity.ID = clone.ID
+	}
 	r.items[entity.ID] = &clone
 	return nil
 }
@@ -48,6 +54,18 @@ func (r *fakeFieldDeviceStore) BulkCreate(_ context.Context, entities []*domainF
 func (r *fakeFieldDeviceStore) Update(_ context.Context, entity *domainFacility.FieldDevice) error {
 	clone := *entity
 	r.items[entity.ID] = &clone
+	return nil
+}
+
+func (r *fakeFieldDeviceStore) AssignSpecificationIDs(_ context.Context, assignments map[uuid.UUID]uuid.UUID) error {
+	for fieldDeviceID, specificationID := range assignments {
+		item := r.items[fieldDeviceID]
+		if item == nil {
+			continue
+		}
+		assignedID := specificationID
+		item.SpecificationID = &assignedID
+	}
 	return nil
 }
 
@@ -96,6 +114,32 @@ func (r *fakeFieldDeviceStore) GetIDsBySPSControllerSystemTypeIDs(_ context.Cont
 	for id, item := range r.items {
 		if _, ok := idSet[item.SPSControllerSystemTypeID]; ok {
 			out = append(out, id)
+		}
+	}
+	return out, nil
+}
+
+func (r *fakeFieldDeviceStore) ListIDsBySPSControllerSystemTypeIDsAfter(
+	ctx context.Context,
+	ids []uuid.UUID,
+	afterID *uuid.UUID,
+	limit int,
+) ([]uuid.UUID, error) {
+	all, err := r.GetIDsBySPSControllerSystemTypeIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(all, func(i, j int) bool {
+		return all[i].String() < all[j].String()
+	})
+	out := make([]uuid.UUID, 0, limit)
+	for _, id := range all {
+		if afterID != nil && id.String() <= afterID.String() {
+			continue
+		}
+		out = append(out, id)
+		if len(out) == limit {
+			break
 		}
 	}
 	return out, nil
@@ -1014,6 +1058,118 @@ func newFieldDevice(
 	}
 }
 
+func TestFieldDeviceService_UpdateMoveRejectsMissingTargetSystemType(t *testing.T) {
+	fieldDeviceID := uuid.New()
+	oldSPSSystemTypeID := uuid.New()
+	missingSPSSystemTypeID := uuid.New()
+	systemTypeID := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+
+	fieldDeviceRepo := &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{
+		fieldDeviceID: newFieldDevice(fieldDeviceID, oldSPSSystemTypeID, apparatID, systemPartID, 1),
+	}}
+	svc := facility.NewFieldDeviceService(
+		fieldDeviceRepo,
+		&fakeSpsControllerSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+			oldSPSSystemTypeID: {
+				Base:         domain.Base{ID: oldSPSSystemTypeID},
+				SystemTypeID: systemTypeID,
+			},
+		}},
+		&fakeSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SystemType{
+			systemTypeID: {Base: domain.Base{ID: systemTypeID}},
+		}},
+		&fakeApparatRepo{items: map[uuid.UUID]*domainFacility.Apparat{
+			apparatID: {Base: domain.Base{ID: apparatID}},
+		}},
+		&fakeSystemPartRepo{items: map[uuid.UUID]*domainFacility.SystemPart{
+			systemPartID: {Base: domain.Base{ID: systemPartID}},
+		}},
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	err := svc.Update(context.Background(), newFieldDevice(
+		fieldDeviceID,
+		missingSPSSystemTypeID,
+		apparatID,
+		systemPartID,
+		1,
+	))
+
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("expected missing destination to fail with not found, got %v", err)
+	}
+	if got := fieldDeviceRepo.items[fieldDeviceID].SPSControllerSystemTypeID; got != oldSPSSystemTypeID {
+		t.Fatalf("expected failed move to preserve old parent %s, got %s", oldSPSSystemTypeID, got)
+	}
+}
+
+func TestFieldDeviceService_UpdateMoveRejectsDestinationPlacementConflict(t *testing.T) {
+	movingFieldDeviceID := uuid.New()
+	occupyingFieldDeviceID := uuid.New()
+	oldSPSSystemTypeID := uuid.New()
+	newSPSSystemTypeID := uuid.New()
+	systemTypeID := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+
+	fieldDeviceRepo := &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{
+		movingFieldDeviceID:    newFieldDevice(movingFieldDeviceID, oldSPSSystemTypeID, apparatID, systemPartID, 1),
+		occupyingFieldDeviceID: newFieldDevice(occupyingFieldDeviceID, newSPSSystemTypeID, apparatID, systemPartID, 1),
+	}}
+	svc := facility.NewFieldDeviceService(
+		fieldDeviceRepo,
+		&fakeSpsControllerSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+			oldSPSSystemTypeID: {
+				Base:         domain.Base{ID: oldSPSSystemTypeID},
+				SystemTypeID: systemTypeID,
+			},
+			newSPSSystemTypeID: {
+				Base:         domain.Base{ID: newSPSSystemTypeID},
+				SystemTypeID: systemTypeID,
+			},
+		}},
+		&fakeSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SystemType{
+			systemTypeID: {Base: domain.Base{ID: systemTypeID}},
+		}},
+		&fakeApparatRepo{items: map[uuid.UUID]*domainFacility.Apparat{
+			apparatID: {Base: domain.Base{ID: apparatID}},
+		}},
+		&fakeSystemPartRepo{items: map[uuid.UUID]*domainFacility.SystemPart{
+			systemPartID: {Base: domain.Base{ID: systemPartID}},
+		}},
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	err := svc.Update(context.Background(), newFieldDevice(
+		movingFieldDeviceID,
+		newSPSSystemTypeID,
+		apparatID,
+		systemPartID,
+		1,
+	))
+
+	validationErr, ok := domain.AsValidationError(err)
+	if !ok {
+		t.Fatalf("expected destination conflict validation error, got %v", err)
+	}
+	if got := validationErr.Fields["fielddevice.apparat_nr"]; got != "apparatnummer ist bereits vergeben" {
+		t.Fatalf("expected apparat number conflict, got %q", got)
+	}
+	if got := fieldDeviceRepo.items[movingFieldDeviceID].SPSControllerSystemTypeID; got != oldSPSSystemTypeID {
+		t.Fatalf("expected failed move to preserve old parent %s, got %s", oldSPSSystemTypeID, got)
+	}
+}
+
 func TestFieldDeviceService_MultiCreate_CharacterizesPartialSuccessAndBatchConflicts(t *testing.T) {
 	fd1ID := uuid.New()
 	fd2ID := uuid.New()
@@ -1138,7 +1294,8 @@ func TestFieldDeviceService_BulkUpdate_AllowsSwapApparatNr(t *testing.T) {
 		{ID: fd1ID, ApparatNr: new(2)},
 		{ID: fd2ID, ApparatNr: new(1)},
 	}
-	result := svc.BulkUpdate(context.Background(), updates)
+	execution := svc.ExecuteBulkUpdate(context.Background(), updates)
+	result := execution.Result
 
 	if result.FailureCount != 0 {
 		t.Fatalf("expected 0 failures, got %d", result.FailureCount)
@@ -1209,7 +1366,8 @@ func TestFieldDeviceService_BulkUpdate_DetectsApparatNrConflict(t *testing.T) {
 	updates := []domainFacility.BulkFieldDeviceUpdate{
 		{ID: fd1ID, ApparatNr: new(3)},
 	}
-	result := svc.BulkUpdate(context.Background(), updates)
+	execution := svc.ExecuteBulkUpdate(context.Background(), updates)
+	result := execution.Result
 
 	if result.FailureCount != 1 {
 		t.Fatalf("expected 1 failure, got %d", result.FailureCount)
@@ -1226,6 +1384,193 @@ func TestFieldDeviceService_BulkUpdate_DetectsApparatNrConflict(t *testing.T) {
 
 	if fieldDeviceRepo.items[fd1ID].ApparatNr != 1 {
 		t.Fatalf("expected fd1 apparat_nr unchanged, got %d", fieldDeviceRepo.items[fd1ID].ApparatNr)
+	}
+	assertBulkMutationPhases(t, execution.Items[0].Phases,
+		domainFieldDevice.BulkUpdatePhaseResult{
+			Phase:  domainFieldDevice.BulkUpdatePhaseFieldDevice,
+			Status: domainFieldDevice.BulkUpdatePhaseFailed,
+		},
+	)
+}
+
+func TestFieldDeviceService_BulkUpdate_ReportsBaseFailureAndSpecificationSuccess(t *testing.T) {
+	fdID := uuid.New()
+	specID := uuid.New()
+	device := newFieldDevice(fdID, uuid.New(), uuid.New(), uuid.New(), 1)
+	device.SpecificationID = &specID
+	originalSupplier := "Original"
+	replacementSupplier := "Replacement"
+	invalidBMK := strings.Repeat("x", 11)
+
+	fieldDeviceRepo := &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{
+		fdID: device,
+	}}
+	specStore := &fakeSpecificationStore{items: map[uuid.UUID]*domainFacility.Specification{
+		specID: {
+			Base:                  domain.Base{ID: specID},
+			FieldDeviceID:         &fdID,
+			SpecificationSupplier: &originalSupplier,
+		},
+	}}
+	svc := facility.NewFieldDeviceService(
+		fieldDeviceRepo,
+		nil,
+		nil,
+		nil,
+		nil,
+		specStore,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	execution := svc.ExecuteBulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{{
+		ID:     fdID,
+		BMK:    &invalidBMK,
+		HasBMK: true,
+		Specification: &domainFacility.SpecificationPatch{
+			SpecificationSupplier:    &replacementSupplier,
+			HasSpecificationSupplier: true,
+		},
+	}})
+	result := execution.Result
+
+	if result.SuccessCount != 0 || result.FailureCount != 1 || result.Results[0].Success {
+		t.Fatalf("expected item failure with a successful child phase, got %+v", result)
+	}
+	assertBulkMutationPhases(t, execution.Items[0].Phases,
+		domainFieldDevice.BulkUpdatePhaseResult{
+			Phase:  domainFieldDevice.BulkUpdatePhaseFieldDevice,
+			Status: domainFieldDevice.BulkUpdatePhaseFailed,
+		},
+		domainFieldDevice.BulkUpdatePhaseResult{
+			Phase:  domainFieldDevice.BulkUpdatePhaseSpecification,
+			Status: domainFieldDevice.BulkUpdatePhaseSucceeded,
+		},
+	)
+	if fieldDeviceRepo.items[fdID].BMK != nil {
+		t.Fatalf("expected invalid base phase not to persist, got %q", *fieldDeviceRepo.items[fdID].BMK)
+	}
+	if got := specStore.items[specID].SpecificationSupplier; got == nil || *got != replacementSupplier {
+		t.Fatalf("expected successful specification phase to persist %q, got %v", replacementSupplier, got)
+	}
+}
+
+func TestFieldDeviceService_BulkUpdate_ReportsRequestedPhaseNotAttemptedForMissingDevice(t *testing.T) {
+	missingID := uuid.New()
+	bmk := "B-1"
+	svc := facility.NewFieldDeviceService(
+		&fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{}},
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	execution := svc.ExecuteBulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{{
+		ID:     missingID,
+		BMK:    &bmk,
+		HasBMK: true,
+	}})
+
+	if execution.Result.FailureCount != 1 || execution.Result.Results[0].Error != "field device not found" {
+		t.Fatalf("expected missing-device legacy failure, got %+v", execution.Result)
+	}
+	assertBulkMutationPhases(t, execution.Items[0].Phases,
+		domainFieldDevice.BulkUpdatePhaseResult{
+			Phase:  domainFieldDevice.BulkUpdatePhaseFieldDevice,
+			Status: domainFieldDevice.BulkUpdatePhaseNotAttempted,
+		},
+	)
+}
+
+func TestFieldDeviceService_BulkUpdate_ReportsBaseSuccessAndBacnetValidationFailure(t *testing.T) {
+	fdID := uuid.New()
+	bacnetID := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+	spsSystemTypeID := uuid.New()
+	systemTypeID := uuid.New()
+	bmk := "B-1"
+	emptyTextFix := ""
+
+	fieldDeviceRepo := &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{
+		fdID: newFieldDevice(fdID, spsSystemTypeID, apparatID, systemPartID, 1),
+	}}
+	spsSystemTypeRepo := &fakeSpsControllerSystemTypeRepo{
+		items: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+			spsSystemTypeID: {
+				Base:         domain.Base{ID: spsSystemTypeID},
+				SystemTypeID: systemTypeID,
+			},
+		},
+	}
+	systemTypeRepo := &fakeSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SystemType{
+		systemTypeID: {Base: domain.Base{ID: systemTypeID}},
+	}}
+	apparatRepo := &fakeApparatRepo{items: map[uuid.UUID]*domainFacility.Apparat{
+		apparatID: {Base: domain.Base{ID: apparatID}},
+	}}
+	systemPartRepo := &fakeSystemPartRepo{items: map[uuid.UUID]*domainFacility.SystemPart{
+		systemPartID: {Base: domain.Base{ID: systemPartID}},
+	}}
+	bacnetRepo := &fakeBacnetObjectStore{items: map[uuid.UUID]*domainFacility.BacnetObject{
+		bacnetID: {
+			Base:          domain.Base{ID: bacnetID},
+			TextFix:       "Original",
+			SoftwareType:  domainFacility.BacnetSoftwareTypeAI,
+			FieldDeviceID: &fdID,
+		},
+	}}
+	svc := facility.NewFieldDeviceService(
+		fieldDeviceRepo,
+		spsSystemTypeRepo,
+		systemTypeRepo,
+		apparatRepo,
+		systemPartRepo,
+		nil,
+		bacnetRepo,
+		nil,
+		nil,
+		nil,
+	)
+	patches := []domainFacility.BacnetObjectPatch{{
+		ID:      bacnetID,
+		TextFix: &emptyTextFix,
+	}}
+
+	execution := svc.ExecuteBulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{{
+		ID:            fdID,
+		BMK:           &bmk,
+		HasBMK:        true,
+		BacnetObjects: &patches,
+	}})
+	result := execution.Result
+
+	if result.SuccessCount != 0 || result.FailureCount != 1 || result.Results[0].Success {
+		t.Fatalf("expected item failure with a successful base phase, got %+v", result)
+	}
+	assertBulkMutationPhases(t, execution.Items[0].Phases,
+		domainFieldDevice.BulkUpdatePhaseResult{
+			Phase:  domainFieldDevice.BulkUpdatePhaseFieldDevice,
+			Status: domainFieldDevice.BulkUpdatePhaseSucceeded,
+		},
+		domainFieldDevice.BulkUpdatePhaseResult{
+			Phase:  domainFieldDevice.BulkUpdatePhaseBacnetObjects,
+			Status: domainFieldDevice.BulkUpdatePhaseFailed,
+		},
+	)
+	if got := fieldDeviceRepo.items[fdID].BMK; got == nil || *got != bmk {
+		t.Fatalf("expected successful base phase to persist %q, got %v", bmk, got)
+	}
+	if got := bacnetRepo.items[bacnetID].TextFix; got != "Original" {
+		t.Fatalf("expected invalid BACnet phase not to persist, got %q", got)
 	}
 }
 
@@ -1792,5 +2137,21 @@ func TestFieldDeviceService_BulkUpdate_ClearOnlyPatchDoesNotCreateEmptySpecifica
 	}
 	if len(specStore.items) != 0 {
 		t.Fatalf("expected no specification to be created, got %d item(s)", len(specStore.items))
+	}
+}
+
+func assertBulkMutationPhases(
+	t *testing.T,
+	got []domainFieldDevice.BulkUpdatePhaseResult,
+	want ...domainFieldDevice.BulkUpdatePhaseResult,
+) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("phase count: got %+v, want %+v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("phase %d: got %+v, want %+v", i, got[i], want[i])
+		}
 	}
 }

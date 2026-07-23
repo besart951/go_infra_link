@@ -1,9 +1,10 @@
 package facility
 
 import (
-	"context"
+	"errors"
 	"net/http"
 
+	appspscontroller "github.com/besart951/go_infra_link/backend/internal/application/facility/spscontroller"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
@@ -12,27 +13,27 @@ import (
 )
 
 type SPSControllerHandler struct {
-	service       SPSControllerService
-	collaboration ProjectRefreshBroadcaster
+	service SPSControllerService
+	creator SPSControllerCreator
+	cloner  SPSControllerCloner
+	updater SPSControllerUpdater
+	deleter SPSControllerDeleter
 }
 
-func NewSPSControllerHandler(service SPSControllerService, collaboration ProjectRefreshBroadcaster) *SPSControllerHandler {
-	return &SPSControllerHandler{service: service, collaboration: collaboration}
-}
-
-func (h *SPSControllerHandler) broadcastProjectRefresh(ctx context.Context, actorID *uuid.UUID, spsControllerID uuid.UUID) {
-	if h.collaboration == nil {
-		return
+func NewSPSControllerHandler(
+	service SPSControllerService,
+	creator SPSControllerCreator,
+	cloner SPSControllerCloner,
+	updater SPSControllerUpdater,
+	deleter SPSControllerDeleter,
+) *SPSControllerHandler {
+	return &SPSControllerHandler{
+		service: service,
+		creator: creator,
+		cloner:  cloner,
+		updater: updater,
+		deleter: deleter,
 	}
-	h.collaboration.BroadcastRefreshForSPSController(ctx, actorID, spsControllerID, "sps_controller")
-}
-
-func (h *SPSControllerHandler) broadcastProjectDelta(ctx context.Context, actorID *uuid.UUID, spsController *domainFacility.SPSController) {
-	if h.collaboration == nil || spsController == nil {
-		return
-	}
-
-	h.collaboration.BroadcastSPSControllerDelta(ctx, actorID, *spsController)
 }
 
 // CreateSPSController godoc
@@ -51,17 +52,21 @@ func (h *SPSControllerHandler) CreateSPSController(c *gin.Context) {
 		return
 	}
 
-	spsController := toSPSControllerModel(req)
-	systemTypes := toSPSControllerSystemTypes(req.SystemTypes)
-
-	if err := h.service.CreateWithSystemTypes(c.Request.Context(), spsController, systemTypes); err != nil {
+	if h.creator == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		return
+	}
+	spsController, err := h.creator.Create(
+		c.Request.Context(),
+		toSPSControllerCreateCommand(req),
+	)
+	if err != nil {
 		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
 			localizedInvalidReference(),
 		)
 		return
 	}
 
-	h.broadcastProjectDelta(c.Request.Context(), currentActorID(c), spsController)
 	c.JSON(http.StatusCreated, toSPSControllerResponse(*spsController))
 }
 
@@ -139,7 +144,14 @@ func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 		return
 	}
 
-	copyEntity, err := h.service.CopyByID(c.Request.Context(), id)
+	if h.cloner == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		return
+	}
+	copyEntity, err := h.cloner.Clone(
+		c.Request.Context(),
+		appspscontroller.CloneCommand{SourceSPSControllerID: id},
+	)
 	if err != nil {
 		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
 			localizedNotFound("facility.sps_controller_not_found"),
@@ -148,7 +160,6 @@ func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectDelta(c.Request.Context(), currentActorID(c), copyEntity)
 	c.JSON(http.StatusCreated, toSPSControllerResponse(*copyEntity))
 }
 
@@ -214,7 +225,7 @@ func (h *SPSControllerHandler) GetNextAvailableGADevice(c *gin.Context) {
 		return
 	}
 
-	excludeID, ok := parseUUIDQueryParam(c, "exclude_id")
+	excludeID, ok := parseSPSControllerGAExcludeID(c)
 	if !ok {
 		return
 	}
@@ -229,6 +240,18 @@ func (h *SPSControllerHandler) GetNextAvailableGADevice(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.NextAvailableGADeviceResponse{GADevice: gaDevice})
+}
+
+func parseSPSControllerGAExcludeID(c *gin.Context) (*uuid.UUID, bool) {
+	excludeID, ok := parseUUIDQueryParam(c, "exclude_id")
+	if !ok || excludeID != nil {
+		return excludeID, ok
+	}
+
+	// `sps_controller_id` was emitted by the frontend before the backend query
+	// contract was aligned. Keep it as a read-only compatibility alias while
+	// new clients use the documented `exclude_id` parameter.
+	return parseUUIDQueryParam(c, "sps_controller_id")
 }
 
 // UpdateSPSController godoc
@@ -254,34 +277,30 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-
-	spsController, err := h.service.GetByID(ctx, id)
-	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.sps_controller_not_found") {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+	if h.updater == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
 		return
 	}
 
-	applySPSControllerUpdate(spsController, req)
-
-	var updateErr error
-	if req.SystemTypes != nil {
-		systemTypes := toSPSControllerSystemTypes(*req.SystemTypes)
-		updateErr = h.service.UpdateWithSystemTypes(ctx, spsController, systemTypes)
-	} else {
-		updateErr = h.service.Update(ctx, spsController)
-	}
-	if updateErr != nil {
-		respondLocalizedDomainError(c, updateErr, "update_failed", "facility.update_failed",
+	spsController, err := h.updater.Update(
+		c.Request.Context(),
+		toSPSControllerUpdateCommand(id, req),
+	)
+	if err != nil {
+		var loadErr *appspscontroller.LoadError
+		if errors.As(err, &loadErr) {
+			if respondLocalizedNotFoundIf(c, loadErr.Err, "facility.sps_controller_not_found") {
+				return
+			}
+			respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+			return
+		}
+		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
 			localizedInvalidReference(),
 		)
 		return
 	}
 
-	h.broadcastProjectDelta(ctx, currentActorID(c), spsController)
 	c.JSON(http.StatusOK, toSPSControllerResponse(*spsController))
 }
 
@@ -300,13 +319,19 @@ func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+	if h.deleter == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		return
+	}
+	if err := h.deleter.Delete(
+		c.Request.Context(),
+		appspscontroller.DeleteCommand{SPSControllerID: id},
+	); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.sps_controller_not_found"),
 		)
 		return
 	}
 
-	h.broadcastProjectRefresh(c.Request.Context(), currentActorID(c), id)
 	c.Status(http.StatusNoContent)
 }

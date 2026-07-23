@@ -52,7 +52,6 @@ type ProjectFacilityLinkService interface {
 	UpdateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error)
 	DeleteFieldDevice(ctx context.Context, linkID, projectID uuid.UUID) error
 	MultiCreateFieldDevices(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) ([]uuid.UUID, []string)
-	MultiCreateAndAssignFieldDevices(ctx context.Context, projectID uuid.UUID, items []domainFacility.FieldDeviceCreateItem) (*domainFacility.FieldDeviceMultiCreateResult, error)
 	ListControlCabinets(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error)
 	ListSPSControllers(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectSPSController], error)
 	ListFieldDevices(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectFieldDevice], error)

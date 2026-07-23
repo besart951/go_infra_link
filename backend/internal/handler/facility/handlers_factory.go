@@ -1,42 +1,45 @@
 package facility
 
-import (
-	"context"
-
-	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
-	"github.com/google/uuid"
-)
-
-type ProjectRefreshBroadcaster interface {
-	BroadcastRefreshForControlCabinet(ctx context.Context, actorID *uuid.UUID, controlCabinetID uuid.UUID, scope string)
-	BroadcastRefreshForSPSController(ctx context.Context, actorID *uuid.UUID, spsControllerID uuid.UUID, scope string)
-	BroadcastControlCabinetDelta(ctx context.Context, actorID *uuid.UUID, controlCabinet domainFacility.ControlCabinet)
-	BroadcastSPSControllerDelta(ctx context.Context, actorID *uuid.UUID, spsController domainFacility.SPSController)
-}
-
 // ServiceDeps groups service dependencies for facility handler construction.
 type ServiceDeps struct {
-	Building                BuildingService
-	SystemType              SystemTypeService
-	SystemPart              SystemPartService
-	Apparat                 ApparatService
-	ControlCabinet          ControlCabinetService
-	FieldDevice             FieldDeviceService
-	BacnetObject            BacnetObjectService
-	SPSController           SPSControllerService
-	StateText               StateTextService
-	NotificationClass       NotificationClassService
-	AlarmDefinition         AlarmDefinitionService
-	ObjectData              ObjectDataService
-	SPSControllerSystemType SPSControllerSystemTypeService
-	Export                  ExportService
-	AlarmType               AlarmTypeService
-	Unit                    UnitService
-	AlarmField              AlarmFieldService
-	AlarmTypeField          AlarmTypeFieldService
-	BacnetAlarm             BacnetAlarmValueService
-	BacnetReferenceUsage    BacnetReferenceUsageService
-	Collaboration           ProjectRefreshBroadcaster
+	Building                       BuildingService
+	SystemType                     SystemTypeService
+	SystemPart                     SystemPartService
+	Apparat                        ApparatService
+	ControlCabinet                 ControlCabinetService
+	ControlCabinetCreator          ControlCabinetCreator
+	ControlCabinetCloner           ControlCabinetCloner
+	ControlCabinetUpdater          ControlCabinetUpdater
+	ControlCabinetDeleter          ControlCabinetDeleter
+	FieldDevice                    FieldDeviceService
+	FieldDeviceMultiCreator        FieldDeviceMultiCreator
+	FieldDeviceUpdater             FieldDeviceUpdater
+	FieldDeviceDeleter             FieldDeviceDeleter
+	FieldDeviceBulkUpdater         FieldDeviceBulkUpdater
+	FieldDeviceBulkDeleter         FieldDeviceBulkDeleter
+	BacnetObject                   BacnetObjectService
+	BacnetObjectCreator            BacnetObjectCreator
+	BacnetObjectUpdater            BacnetObjectUpdater
+	SPSController                  SPSControllerService
+	SPSControllerCreator           SPSControllerCreator
+	SPSControllerCloner            SPSControllerCloner
+	SPSControllerUpdater           SPSControllerUpdater
+	SPSControllerDeleter           SPSControllerDeleter
+	SPSControllerSystemTypeCloner  SPSControllerSystemTypeCloner
+	SPSControllerSystemTypeDeleter SPSControllerSystemTypeDeleter
+	StateText                      StateTextService
+	NotificationClass              NotificationClassService
+	AlarmDefinition                AlarmDefinitionService
+	ObjectData                     ObjectDataService
+	SPSControllerSystemType        SPSControllerSystemTypeService
+	Export                         ExportService
+	AlarmType                      AlarmTypeService
+	Unit                           UnitService
+	AlarmField                     AlarmFieldService
+	AlarmTypeField                 AlarmTypeFieldService
+	BacnetAlarm                    BacnetAlarmValueService
+	BacnetAlarmReplacer            BacnetAlarmValueReplacer
+	BacnetReferenceUsage           BacnetReferenceUsageService
 }
 
 // Handlers groups all facility HTTP handlers.
@@ -76,11 +79,45 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 
 func registerFacilityHierarchyHandlers(handlers *Handlers, deps ServiceDeps) {
 	handlers.Building = NewBuildingHandler(deps.Building)
-	handlers.ControlCabinet = NewControlCabinetHandler(deps.ControlCabinet, deps.Collaboration)
-	handlers.SPSController = NewSPSControllerHandler(deps.SPSController, deps.Collaboration)
-	handlers.SPSControllerSystemType = NewSPSControllerSystemTypeHandler(deps.SPSControllerSystemType)
-	handlers.FieldDevice = NewFieldDeviceHandler(deps.FieldDevice)
-	handlers.BacnetObject = NewBacnetObjectHandler(deps.BacnetObject)
+	handlers.ControlCabinet = NewControlCabinetHandler(
+		deps.ControlCabinet,
+		deps.ControlCabinetCreator,
+		deps.ControlCabinetCloner,
+		deps.ControlCabinetUpdater,
+		deps.ControlCabinetDeleter,
+	)
+	handlers.SPSController = NewSPSControllerHandler(
+		deps.SPSController,
+		deps.SPSControllerCreator,
+		deps.SPSControllerCloner,
+		deps.SPSControllerUpdater,
+		deps.SPSControllerDeleter,
+	)
+	handlers.SPSControllerSystemType = NewSPSControllerSystemTypeHandler(
+		deps.SPSControllerSystemType,
+		deps.SPSControllerSystemTypeCloner,
+		deps.SPSControllerSystemTypeDeleter,
+	)
+	bulkUpdater := deps.FieldDeviceBulkUpdater
+	if bulkUpdater == nil {
+		bulkUpdater, _ = deps.FieldDevice.(FieldDeviceBulkUpdater)
+	}
+	bulkDeleter := deps.FieldDeviceBulkDeleter
+	if bulkDeleter == nil {
+		bulkDeleter, _ = deps.FieldDevice.(FieldDeviceBulkDeleter)
+	}
+	handlers.FieldDevice = NewFieldDeviceHandler(
+		deps.FieldDevice,
+		deps.FieldDeviceUpdater,
+		deps.FieldDeviceDeleter,
+		bulkUpdater,
+		deps.FieldDeviceMultiCreator,
+		bulkDeleter,
+	)
+	handlers.BacnetObject = NewBacnetObjectHandler(
+		deps.BacnetObjectCreator,
+		deps.BacnetObjectUpdater,
+	)
 	handlers.ObjectData = NewObjectDataHandler(deps.ObjectData, deps.BacnetObject, deps.Apparat)
 	handlers.Validation = NewValidationHandler(deps.Building, deps.ControlCabinet, deps.SPSController)
 }
@@ -100,5 +137,5 @@ func registerFacilityAlarmHandlers(handlers *Handlers, deps ServiceDeps) {
 	handlers.Unit = NewUnitHandler(deps.Unit)
 	handlers.AlarmField = NewAlarmFieldHandler(deps.AlarmField)
 	handlers.AlarmTypeField = NewAlarmTypeFieldHandler(deps.AlarmTypeField)
-	handlers.BacnetAlarm = NewBacnetAlarmHandler(deps.BacnetAlarm)
+	handlers.BacnetAlarm = NewBacnetAlarmHandler(deps.BacnetAlarm, deps.BacnetAlarmReplacer)
 }

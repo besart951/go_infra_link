@@ -66,6 +66,7 @@ type Repositories struct {
 	FacilitySPSControllers           domainFacility.SPSControllerRepository
 	FacilitySPSControllerSystemTypes domainHierarchy.SPSControllerSystemTypeStore
 	FacilityBacnetObjects            domainObjectData.BacnetObjectStore
+	FacilityBacnetObjectOwners       domainObjectData.BacnetObjectOwnerReader
 	FacilityObjectData               domainObjectData.ObjectDataStore
 	FacilityObjectDataBacnetObjects  domainObjectData.ObjectDataBacnetObjectStore
 
@@ -86,6 +87,7 @@ type HistoryRepository interface {
 	GetEvent(ctx context.Context, id uuid.UUID) (*domainHistory.ChangeEvent, error)
 	RestoreEntityToEvent(ctx context.Context, eventID uuid.UUID, mode domainHistory.RestoreMode) (*domainHistory.RestoreResult, error)
 	RestoreControlCabinet(ctx context.Context, controlCabinetID uuid.UUID, req domainHistory.RestoreControlCabinetRequest) (*domainHistory.RestoreResult, error)
+	HasHistoricalProjectControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (bool, error)
 }
 
 type (
@@ -119,6 +121,7 @@ type (
 		FacilitySPSControllers           domainFacility.SPSControllerRepository
 		FacilitySPSControllerSystemTypes domainHierarchy.SPSControllerSystemTypeStore
 		FacilityBacnetObjects            domainObjectData.BacnetObjectStore
+		FacilityBacnetObjectOwners       domainObjectData.BacnetObjectOwnerReader
 		FacilityObjectData               domainObjectData.ObjectDataStore
 		FacilityObjectDataBacnetObjects  domainObjectData.ObjectDataBacnetObjectStore
 		FacilityStateTexts               domainFacility.StateTextRepository
@@ -218,6 +221,7 @@ func newFacilityRepositories(gormDB *gorm.DB, history *historyrepo.Store) facili
 		FacilitySPSControllers:           historycapture.WrapSPSController(facilityrepo.NewSPSControllerRepository(gormDB), history),
 		FacilitySPSControllerSystemTypes: historycapture.WrapSPSControllerSystemType(facilityrepo.NewSPSControllerSystemTypeRepository(gormDB), history),
 		FacilityBacnetObjects:            historycapture.WrapBacnetObject(facilityrepo.NewBacnetObjectRepository(gormDB), history),
+		FacilityBacnetObjectOwners:       facilityrepo.NewBacnetObjectOwnerReader(gormDB),
 		FacilityObjectData:               historycapture.WrapObjectData(facilityrepo.NewObjectDataRepository(gormDB), history),
 		FacilityObjectDataBacnetObjects:  facilityrepo.NewObjectDataBacnetObjectRepository(gormDB),
 		FacilityStateTexts:               historycapture.WrapRepository("state_texts", facilityrepo.NewStateTextRepository(gormDB), history),
@@ -289,6 +293,7 @@ func composeRepositories(
 		FacilitySPSControllers:           facilities.FacilitySPSControllers,
 		FacilitySPSControllerSystemTypes: facilities.FacilitySPSControllerSystemTypes,
 		FacilityBacnetObjects:            facilities.FacilityBacnetObjects,
+		FacilityBacnetObjectOwners:       facilities.FacilityBacnetObjectOwners,
 		FacilityObjectData:               facilities.FacilityObjectData,
 		FacilityObjectDataBacnetObjects:  facilities.FacilityObjectDataBacnetObjects,
 		FacilityStateTexts:               facilities.FacilityStateTexts,

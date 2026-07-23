@@ -26,10 +26,7 @@ export default defineConfig(({ mode }) => {
   const buildSourcemap = env.VITE_BUILD_SOURCEMAP === 'true';
 
   return {
-    plugins: [
-      tailwindcss(),
-      sveltekit(),
-    ],
+    plugins: [tailwindcss(), sveltekit()],
     test: {
       environment: 'jsdom',
       setupFiles: ['./vitest.setup.ts'],

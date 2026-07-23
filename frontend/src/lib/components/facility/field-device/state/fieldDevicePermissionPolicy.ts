@@ -17,7 +17,8 @@ export function createFieldDevicePermissionPolicy({
   isProjectContext,
   canPerform
 }: FieldDevicePermissionPolicyOptions) {
-  const canPerformProjectFieldDevice = (action: string) => canPerform(action, 'project.fielddevice');
+  const canPerformProjectFieldDevice = (action: string) =>
+    canPerform(action, 'project.fielddevice');
   const canPerformProjectFieldDeviceSpecification = (action: string) =>
     canPerform(action, 'project.fielddevice_specification');
   const canPerformProjectFieldDeviceBacnetObjects = (action: string) =>
@@ -47,8 +48,7 @@ export function createFieldDevicePermissionPolicy({
     }
 
     return (
-      canPerformProjectFieldDeviceSpecification('update') ||
-      canPerformProjectFieldDevice('update')
+      canPerformProjectFieldDeviceSpecification('update') || canPerformProjectFieldDevice('update')
     );
   }
 
@@ -58,8 +58,7 @@ export function createFieldDevicePermissionPolicy({
     }
 
     return (
-      canPerformProjectFieldDeviceBacnetObjects('update') ||
-      canPerformProjectFieldDevice('update')
+      canPerformProjectFieldDeviceBacnetObjects('update') || canPerformProjectFieldDevice('update')
     );
   }
 

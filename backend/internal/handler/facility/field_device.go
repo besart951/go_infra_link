@@ -1,8 +1,10 @@
 package facility
 
 import (
+	"errors"
 	"net/http"
 
+	appfielddevice "github.com/besart951/go_infra_link/backend/internal/application/facility/fielddevice"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
@@ -10,11 +12,30 @@ import (
 )
 
 type FieldDeviceHandler struct {
-	service FieldDeviceService
+	service      FieldDeviceService
+	multiCreator FieldDeviceMultiCreator
+	updater      FieldDeviceUpdater
+	deleter      FieldDeviceDeleter
+	bulkUpdater  FieldDeviceBulkUpdater
+	bulkDeleter  FieldDeviceBulkDeleter
 }
 
-func NewFieldDeviceHandler(service FieldDeviceService) *FieldDeviceHandler {
-	return &FieldDeviceHandler{service: service}
+func NewFieldDeviceHandler(
+	service FieldDeviceService,
+	updater FieldDeviceUpdater,
+	deleter FieldDeviceDeleter,
+	bulkUpdater FieldDeviceBulkUpdater,
+	multiCreator FieldDeviceMultiCreator,
+	bulkDeleter FieldDeviceBulkDeleter,
+) *FieldDeviceHandler {
+	return &FieldDeviceHandler{
+		service:      service,
+		multiCreator: multiCreator,
+		updater:      updater,
+		deleter:      deleter,
+		bulkUpdater:  bulkUpdater,
+		bulkDeleter:  bulkDeleter,
+	}
 }
 
 // MultiCreateFieldDevices godoc
@@ -46,8 +67,14 @@ func (h *FieldDeviceHandler) MultiCreateFieldDevices(c *gin.Context) {
 		}
 	}
 
-	// Create field devices
-	result := h.service.MultiCreate(c.Request.Context(), items)
+	if h.multiCreator == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		return
+	}
+	result := h.multiCreator.MultiCreate(
+		c.Request.Context(),
+		appfielddevice.MultiCreateCommand{Items: items},
+	)
 
 	c.JSON(http.StatusOK, toMultiCreateFieldDeviceResponse(result))
 }
@@ -273,26 +300,24 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-
-	fieldDevice, err := h.service.GetByID(ctx, id)
-	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.field_device_not_found") {
-			return
-		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+	if h.updater == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
 		return
 	}
 
-	applyFieldDeviceUpdate(fieldDevice, req)
-
-	var bacnetObjects *[]domainFacility.BacnetObject
-	if req.BacnetObjects != nil {
-		mapped := toFieldDeviceBacnetObjects(*req.BacnetObjects)
-		bacnetObjects = &mapped
-	}
-
-	if err := h.service.UpdateWithBacnetObjects(ctx, fieldDevice, req.ObjectDataID, bacnetObjects); err != nil {
+	fieldDevice, err := h.updater.Update(
+		c.Request.Context(),
+		toFieldDeviceUpdateCommand(id, req),
+	)
+	if err != nil {
+		var loadErr *appfielddevice.LoadError
+		if errors.As(err, &loadErr) {
+			if respondLocalizedNotFoundIf(c, loadErr.Err, "facility.field_device_not_found") {
+				return
+			}
+			respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+			return
+		}
 		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
 			localizedInvalidArgument("facility.mutually_exclusive_error"),
 			localizedInvalidReference(),
@@ -319,7 +344,14 @@ func (h *FieldDeviceHandler) DeleteFieldDevice(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+	if h.deleter == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		return
+	}
+	if err := h.deleter.Delete(
+		c.Request.Context(),
+		appfielddevice.DeleteCommand{FieldDeviceID: id},
+	); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.field_device_not_found"),
 		)
@@ -478,7 +510,7 @@ func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
 		}
 	}
 
-	result := h.service.BulkUpdate(c.Request.Context(), updates)
+	result := h.bulkUpdater.BulkUpdate(c.Request.Context(), updates)
 
 	c.JSON(http.StatusOK, toBulkOperationResponse(result))
 }
@@ -499,7 +531,14 @@ func (h *FieldDeviceHandler) BulkDeleteFieldDevices(c *gin.Context) {
 		return
 	}
 
-	result := h.service.BulkDelete(c.Request.Context(), req.IDs)
+	if h.bulkDeleter == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		return
+	}
+	result := h.bulkDeleter.BulkDelete(
+		c.Request.Context(),
+		appfielddevice.BulkDeleteCommand{FieldDeviceIDs: req.IDs},
+	)
 
 	c.JSON(http.StatusOK, toBulkOperationResponse(result))
 }

@@ -21,6 +21,7 @@ type HierarchyCopier struct {
 	fieldDeviceRepo         domainFieldDevice.FieldDeviceStore
 	specificationRepo       domainFieldDevice.SpecificationStore
 	bacnetObjectRepo        domainObjectData.BacnetObjectStore
+	bacnetAlarmValueRepo    domainFacility.BacnetObjectAlarmValueRepository
 	tx                      txCoordinator
 }
 
@@ -33,7 +34,12 @@ func NewHierarchyCopier(
 	fieldDeviceRepo domainFieldDevice.FieldDeviceStore,
 	specificationRepo domainFieldDevice.SpecificationStore,
 	bacnetObjectRepo domainObjectData.BacnetObjectStore,
+	bacnetAlarmValueRepos ...domainFacility.BacnetObjectAlarmValueRepository,
 ) *HierarchyCopier {
+	var bacnetAlarmValueRepo domainFacility.BacnetObjectAlarmValueRepository
+	if len(bacnetAlarmValueRepos) > 0 {
+		bacnetAlarmValueRepo = bacnetAlarmValueRepos[0]
+	}
 	return &HierarchyCopier{
 		controlCabinetRepo:      controlCabinetRepo,
 		buildingRepo:            buildingRepo,
@@ -43,6 +49,7 @@ func NewHierarchyCopier(
 		fieldDeviceRepo:         fieldDeviceRepo,
 		specificationRepo:       specificationRepo,
 		bacnetObjectRepo:        bacnetObjectRepo,
+		bacnetAlarmValueRepo:    bacnetAlarmValueRepo,
 	}
 }
 
@@ -66,6 +73,7 @@ func (c *HierarchyCopier) projectFacilityCopy() projectFacilityCopy {
 		fieldDeviceRepo:         c.fieldDeviceRepo,
 		specificationRepo:       c.specificationRepo,
 		bacnetObjectRepo:        c.bacnetObjectRepo,
+		bacnetAlarmValueRepo:    c.bacnetAlarmValueRepo,
 	}
 }
 

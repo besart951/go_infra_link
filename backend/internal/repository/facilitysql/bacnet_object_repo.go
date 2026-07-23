@@ -17,6 +17,8 @@ type bacnetObjectRepo struct {
 	db *gorm.DB
 }
 
+var _ domainObjectData.ObjectDataBacnetObjectCreator = (*bacnetObjectRepo)(nil)
+
 func NewBacnetObjectRepository(db *gorm.DB) domainObjectData.BacnetObjectStore {
 	baseRepo := gormbase.NewBaseRepository(db,
 		gormbase.TrigramSearchCallback[*domainFacility.BacnetObject](searchspec.BacnetObjects.SearchColumns("")...),
@@ -37,6 +39,24 @@ func (r *bacnetObjectRepo) GetPaginatedList(ctx context.Context, params domain.P
 
 func (r *bacnetObjectRepo) BulkCreate(ctx context.Context, entities []*domainFacility.BacnetObject, batchSize int) error {
 	return r.BaseRepository.BulkCreate(ctx, entities, batchSize)
+}
+
+func (r *bacnetObjectRepo) AssignSoftwareReferenceIDs(ctx context.Context, assignments map[uuid.UUID]uuid.UUID) error {
+	return assignUUIDColumn(ctx, r.db, &domainFacility.BacnetObject{}, "software_reference_id", assignments)
+}
+
+func (r *bacnetObjectRepo) CreateForObjectData(
+	ctx context.Context,
+	objectDataID uuid.UUID,
+	entity *domainFacility.BacnetObject,
+) error {
+	if err := r.BaseRepository.Create(ctx, entity); err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Table("object_data_bacnet_objects").Create(map[string]any{
+		"object_data_id":   objectDataID,
+		"bacnet_object_id": entity.ID,
+	}).Error
 }
 
 func (r *bacnetObjectRepo) GetByFieldDeviceIDs(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.BacnetObject, error) {

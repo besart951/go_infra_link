@@ -94,6 +94,12 @@ func (s *ProjectFacilityLinkService) ListProjectIDsBySPSControllerID(ctx context
 	return projectIDs, nil
 }
 
+// CreateControlCabinet remains available to compatibility callers and as the
+// transaction-scoped application workflow that materializes descendant links.
+//
+// Deprecated: the project HTTP route uses
+// application/facility/controlcabinet.AssignToProjectHandler so root and
+// descendant link history commits before collaboration publication.
 func (s *ProjectFacilityLinkService) CreateControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
 	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
 		return txService.assignments().assignControlCabinet(txCtx, projectID, controlCabinetID)
@@ -119,6 +125,11 @@ func (s *ProjectFacilityLinkService) copyControlCabinet(ctx context.Context, pro
 	return copyEntity, nil
 }
 
+// UpdateControlCabinet is the transaction-scoped workflow behind
+// application/facility/controlcabinet.ReassignProjectLinkHandler. It
+// materializes links for the new ControlCabinet descendants without pruning
+// links inherited from the old one and remains available to compatibility
+// callers.
 func (s *ProjectFacilityLinkService) UpdateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
 	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
 		return txService.assignments().updateControlCabinet(txCtx, linkID, projectID, controlCabinetID)
@@ -131,6 +142,12 @@ func (s *ProjectFacilityLinkService) DeleteControlCabinet(ctx context.Context, l
 	})
 }
 
+// CreateSPSController remains available to compatibility callers and as the
+// transaction-scoped application workflow that materializes descendant links.
+//
+// Deprecated: the project HTTP route uses
+// application/facility/spscontroller.AssignToProjectHandler so root and
+// descendant link history commits before collaboration publication.
 func (s *ProjectFacilityLinkService) CreateSPSController(ctx context.Context, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
 	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectSPSController, error) {
 		return txService.assignments().assignSPSController(txCtx, projectID, spsControllerID)
@@ -175,6 +192,11 @@ func (s *ProjectFacilityLinkService) copySPSControllerSystemType(ctx context.Con
 	return copyEntity, nil
 }
 
+// UpdateSPSController is the transaction-scoped workflow behind
+// application/facility/spscontroller.ReassignProjectLinkHandler. It
+// materializes links for the new SPSController descendants without pruning
+// links inherited from the old one and remains available to compatibility
+// callers.
 func (s *ProjectFacilityLinkService) UpdateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
 	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectSPSController, error) {
 		return txService.assignments().updateSPSController(txCtx, linkID, projectID, spsControllerID)
@@ -193,6 +215,11 @@ func (s *ProjectFacilityLinkService) CreateFieldDevice(ctx context.Context, proj
 	})
 }
 
+// UpdateFieldDevice remains available to compatibility callers.
+//
+// Deprecated: the project HTTP route uses
+// application/facility/fielddevice.ReassignProjectLinkHandler so link history
+// commits transactionally before collaboration publication.
 func (s *ProjectFacilityLinkService) UpdateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
 	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectFieldDevice, error) {
 		return txService.assignments().updateFieldDevice(txCtx, linkID, projectID, fieldDeviceID)
@@ -213,13 +240,9 @@ func (s *ProjectFacilityLinkService) AddObjectData(ctx context.Context, projectI
 	if err != nil {
 		return nil, err
 	}
-	if obj.ProjectID != nil && *obj.ProjectID != projectID {
-		return nil, domain.ErrConflict
+	if err := obj.ActivateForProject(projectID); err != nil {
+		return nil, err
 	}
-	if obj.ProjectID == nil {
-		obj.ProjectID = &projectID
-	}
-	obj.IsActive = true
 	if err := s.objectDataRepo.Update(ctx, obj); err != nil {
 		return nil, err
 	}
@@ -234,10 +257,9 @@ func (s *ProjectFacilityLinkService) RemoveObjectData(ctx context.Context, proje
 	if err != nil {
 		return nil, err
 	}
-	if obj.ProjectID == nil || *obj.ProjectID != projectID {
-		return nil, domain.ErrNotFound
+	if err := obj.DeactivateForProject(projectID); err != nil {
+		return nil, err
 	}
-	obj.IsActive = false
 	if err := s.objectDataRepo.Update(ctx, obj); err != nil {
 		return nil, err
 	}
@@ -269,6 +291,12 @@ func (s *ProjectFacilityLinkService) ListObjectData(ctx context.Context, project
 	})
 }
 
+// MultiCreateFieldDevices preserves the legacy two-list result for compatibility
+// callers.
+//
+// Deprecated: the project HTTP route uses
+// application/facility/fielddevice.BulkAssignToProjectHandler so every link and
+// its history commit atomically before one bounded collaboration refresh.
 func (s *ProjectFacilityLinkService) MultiCreateFieldDevices(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) ([]uuid.UUID, []string) {
 	return s.assignments().multiAssignFieldDevices(ctx, projectID, fieldDeviceIDs)
 }

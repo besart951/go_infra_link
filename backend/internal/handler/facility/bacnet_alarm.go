@@ -1,20 +1,25 @@
 package facility
 
 import (
+	"errors"
 	"net/http"
 
-	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	appbacnetobject "github.com/besart951/go_infra_link/backend/internal/application/facility/bacnetobject"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type BacnetAlarmHandler struct {
-	service BacnetAlarmValueService
+	service  BacnetAlarmValueService
+	replacer BacnetAlarmValueReplacer
 }
 
-func NewBacnetAlarmHandler(service BacnetAlarmValueService) *BacnetAlarmHandler {
-	return &BacnetAlarmHandler{service: service}
+func NewBacnetAlarmHandler(
+	service BacnetAlarmValueService,
+	replacer BacnetAlarmValueReplacer,
+) *BacnetAlarmHandler {
+	return &BacnetAlarmHandler{service: service, replacer: replacer}
 }
 
 // GetAlarmSchema godoc
@@ -85,33 +90,35 @@ func (h *BacnetAlarmHandler) PutAlarmValues(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-	values := toAlarmValueModels(id, req.Values)
-
-	if err := h.service.PutValues(ctx, id, values); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
+	if h.replacer == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
 		return
 	}
 
-	updated, err := h.service.GetValues(ctx, id)
+	updated, err := h.replacer.ReplaceAlarmValues(
+		c.Request.Context(),
+		toReplaceAlarmValuesCommand(id, req.Values),
+	)
 	if err != nil {
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+		var reloadErr *appbacnetobject.AlarmValuesReloadError
+		if errors.As(err, &reloadErr) {
+			respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
+			return
+		}
+		respondLocalizedValidationOrError(c, err, "facility.update_failed")
 		return
 	}
 
 	c.JSON(http.StatusOK, toAlarmValuesResponse(updated))
 }
 
-// toAlarmValueModels converts DTO alarm value inputs to domain models,
-// setting the bacnetObjectID on each and defaulting source to "user" if empty.
-func toAlarmValueModels(bacnetObjectID uuid.UUID, inputs []dto.AlarmValueInput) []domainFacility.BacnetObjectAlarmValue {
-	values := make([]domainFacility.BacnetObjectAlarmValue, len(inputs))
+func toReplaceAlarmValuesCommand(
+	bacnetObjectID uuid.UUID,
+	inputs []dto.AlarmValueInput,
+) appbacnetobject.ReplaceAlarmValuesCommand {
+	values := make([]appbacnetobject.AlarmValueInput, len(inputs))
 	for i, inp := range inputs {
-		source := inp.Source
-		if source == "" {
-			source = domainFacility.AlarmValueSourceUser
-		}
-		values[i] = domainFacility.BacnetObjectAlarmValue{
-			BacnetObjectID:   bacnetObjectID,
+		values[i] = appbacnetobject.AlarmValueInput{
 			AlarmTypeFieldID: inp.AlarmTypeFieldID,
 			ValueNumber:      inp.ValueNumber,
 			ValueInteger:     inp.ValueInteger,
@@ -119,8 +126,11 @@ func toAlarmValueModels(bacnetObjectID uuid.UUID, inputs []dto.AlarmValueInput) 
 			ValueString:      inp.ValueString,
 			ValueJSON:        inp.ValueJSON,
 			UnitID:           inp.UnitID,
-			Source:           source,
+			Source:           inp.Source,
 		}
 	}
-	return values
+	return appbacnetobject.ReplaceAlarmValuesCommand{
+		BacnetObjectID: bacnetObjectID,
+		Values:         values,
+	}
 }

@@ -6,16 +6,39 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
-	"github.com/besart951/go_infra_link/backend/internal/repository/historysql"
 	"github.com/google/uuid"
 )
+
+type projectSPSControllerSetCreatorWithIDs interface {
+	BulkCreateBySPSControllerIDsReturningIDs(
+		context.Context,
+		uuid.UUID,
+		[]uuid.UUID,
+	) ([]uuid.UUID, error)
+}
+
+type projectFieldDeviceIDSetCreatorWithIDs interface {
+	BulkCreateByFieldDeviceIDsReturningIDs(
+		context.Context,
+		uuid.UUID,
+		[]uuid.UUID,
+	) ([]uuid.UUID, error)
+}
+
+type projectFieldDeviceSystemTypeSetCreatorWithIDs interface {
+	BulkCreateBySPSControllerSystemTypeIDsReturningIDs(
+		context.Context,
+		uuid.UUID,
+		[]uuid.UUID,
+	) ([]uuid.UUID, error)
+}
 
 type ProjectRepository struct {
 	domainProject.ProjectRepository
 	audit audit[domainProject.Project]
 }
 
-func WrapProject(next domainProject.ProjectRepository, store *historysql.Store) domainProject.ProjectRepository {
+func WrapProject(next domainProject.ProjectRepository, store ChangeStore) domainProject.ProjectRepository {
 	return &ProjectRepository{ProjectRepository: next, audit: newAudit[domainProject.Project]("projects", store)}
 }
 
@@ -46,10 +69,10 @@ func (r *ProjectRepository) GetPaginatedListForUserWithStatus(ctx context.Contex
 type ProjectControlCabinetRepository struct {
 	domainProject.ProjectControlCabinetRepository
 	audit audit[domainProject.ProjectControlCabinet]
-	store *historysql.Store
+	store ChangeStore
 }
 
-func WrapProjectControlCabinet(next domainProject.ProjectControlCabinetRepository, store *historysql.Store) domainProject.ProjectControlCabinetRepository {
+func WrapProjectControlCabinet(next domainProject.ProjectControlCabinetRepository, store ChangeStore) domainProject.ProjectControlCabinetRepository {
 	return &ProjectControlCabinetRepository{ProjectControlCabinetRepository: next, audit: newAudit[domainProject.ProjectControlCabinet]("project_control_cabinets", store), store: store}
 }
 
@@ -79,10 +102,10 @@ func (r *ProjectControlCabinetRepository) DeleteByControlCabinetIDs(ctx context.
 type ProjectSPSControllerRepository struct {
 	domainProject.ProjectSPSControllerRepository
 	audit audit[domainProject.ProjectSPSController]
-	store *historysql.Store
+	store ChangeStore
 }
 
-func WrapProjectSPSController(next domainProject.ProjectSPSControllerRepository, store *historysql.Store) domainProject.ProjectSPSControllerRepository {
+func WrapProjectSPSController(next domainProject.ProjectSPSControllerRepository, store ChangeStore) domainProject.ProjectSPSControllerRepository {
 	return &ProjectSPSControllerRepository{ProjectSPSControllerRepository: next, audit: newAudit[domainProject.ProjectSPSController]("project_sps_controllers", store), store: store}
 }
 
@@ -129,6 +152,17 @@ func (r *ProjectSPSControllerRepository) BulkCreateBySPSControllerIDs(ctx contex
 	if len(spsControllerIDs) == 0 {
 		return nil
 	}
+	if creator, ok := r.ProjectSPSControllerRepository.(projectSPSControllerSetCreatorWithIDs); ok {
+		insertedIDs, err := creator.BulkCreateBySPSControllerIDsReturningIDs(
+			ctx,
+			projectID,
+			spsControllerIDs,
+		)
+		if err != nil {
+			return err
+		}
+		return r.audit.recordCreatedIDs(ctx, insertedIDs)
+	}
 	creator, ok := r.ProjectSPSControllerRepository.(interface {
 		BulkCreateBySPSControllerIDs(context.Context, uuid.UUID, []uuid.UUID) error
 	})
@@ -142,21 +176,16 @@ func (r *ProjectSPSControllerRepository) BulkCreateBySPSControllerIDs(ctx contex
 	if err != nil {
 		return err
 	}
-	for id := range rows {
-		if err := r.audit.recordCreated(ctx, id); err != nil {
-			return err
-		}
-	}
-	return nil
+	return r.audit.recordCreatedIDs(ctx, mapKeys(rows))
 }
 
 type ProjectFieldDeviceRepository struct {
 	domainProject.ProjectFieldDeviceRepository
 	audit audit[domainProject.ProjectFieldDevice]
-	store *historysql.Store
+	store ChangeStore
 }
 
-func WrapProjectFieldDevice(next domainProject.ProjectFieldDeviceRepository, store *historysql.Store) domainProject.ProjectFieldDeviceRepository {
+func WrapProjectFieldDevice(next domainProject.ProjectFieldDeviceRepository, store ChangeStore) domainProject.ProjectFieldDeviceRepository {
 	return &ProjectFieldDeviceRepository{ProjectFieldDeviceRepository: next, audit: newAudit[domainProject.ProjectFieldDevice]("project_field_devices", store), store: store}
 }
 
@@ -203,6 +232,17 @@ func (r *ProjectFieldDeviceRepository) BulkCreateByFieldDeviceIDs(ctx context.Co
 	if len(fieldDeviceIDs) == 0 {
 		return nil
 	}
+	if creator, ok := r.ProjectFieldDeviceRepository.(projectFieldDeviceIDSetCreatorWithIDs); ok {
+		insertedIDs, err := creator.BulkCreateByFieldDeviceIDsReturningIDs(
+			ctx,
+			projectID,
+			fieldDeviceIDs,
+		)
+		if err != nil {
+			return err
+		}
+		return r.audit.recordCreatedIDs(ctx, insertedIDs)
+	}
 	creator, ok := r.ProjectFieldDeviceRepository.(interface {
 		BulkCreateByFieldDeviceIDs(context.Context, uuid.UUID, []uuid.UUID) error
 	})
@@ -217,6 +257,17 @@ func (r *ProjectFieldDeviceRepository) BulkCreateByFieldDeviceIDs(ctx context.Co
 func (r *ProjectFieldDeviceRepository) BulkCreateBySPSControllerSystemTypeIDs(ctx context.Context, projectID uuid.UUID, systemTypeIDs []uuid.UUID) error {
 	if len(systemTypeIDs) == 0 {
 		return nil
+	}
+	if creator, ok := r.ProjectFieldDeviceRepository.(projectFieldDeviceSystemTypeSetCreatorWithIDs); ok {
+		insertedIDs, err := creator.BulkCreateBySPSControllerSystemTypeIDsReturningIDs(
+			ctx,
+			projectID,
+			systemTypeIDs,
+		)
+		if err != nil {
+			return err
+		}
+		return r.audit.recordCreatedIDs(ctx, insertedIDs)
 	}
 	creator, ok := r.ProjectFieldDeviceRepository.(interface {
 		BulkCreateBySPSControllerSystemTypeIDs(context.Context, uuid.UUID, []uuid.UUID) error
@@ -235,12 +286,7 @@ func (r *ProjectFieldDeviceRepository) BulkCreateBySPSControllerSystemTypeIDs(ct
 	if err != nil {
 		return err
 	}
-	for id := range rows {
-		if err := r.audit.recordCreated(ctx, id); err != nil {
-			return err
-		}
-	}
-	return nil
+	return r.audit.recordCreatedIDs(ctx, mapKeys(rows))
 }
 func (r *ProjectFieldDeviceRepository) DeleteBySPSControllerSystemTypeIDs(ctx context.Context, systemTypeIDs []uuid.UUID) error {
 	if len(systemTypeIDs) == 0 {
@@ -272,10 +318,5 @@ func (r *ProjectFieldDeviceRepository) recordRowsByFieldDeviceIDs(ctx context.Co
 	if err != nil {
 		return err
 	}
-	for id := range rows {
-		if err := r.audit.recordCreated(ctx, id); err != nil {
-			return err
-		}
-	}
-	return nil
+	return r.audit.recordCreatedIDs(ctx, mapKeys(rows))
 }

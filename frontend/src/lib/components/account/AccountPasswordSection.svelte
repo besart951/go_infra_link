@@ -30,7 +30,8 @@
 
   <div class="grid gap-4 sm:max-w-md">
     <div class="flex flex-col gap-2">
-      <label for="current_password" class="text-sm font-medium">{$t('auth.current_password')}</label>
+      <label for="current_password" class="text-sm font-medium">{$t('auth.current_password')}</label
+      >
       <Input id="current_password" type="password" bind:value={currentPassword} required />
     </div>
     <div class="flex flex-col gap-2">

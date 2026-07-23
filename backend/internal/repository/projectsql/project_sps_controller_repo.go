@@ -67,8 +67,20 @@ func (r *projectSPSControllerRepo) BulkCreate(ctx context.Context, entities []*p
 }
 
 func (r *projectSPSControllerRepo) BulkCreateBySPSControllerIDs(ctx context.Context, projectID uuid.UUID, spsControllerIDs []uuid.UUID) error {
+	_, err := r.BulkCreateBySPSControllerIDsReturningIDs(ctx, projectID, spsControllerIDs)
+	return err
+}
+
+// BulkCreateBySPSControllerIDsReturningIDs returns only rows inserted by this
+// statement. The history decorator uses the exact RETURNING set so an existing
+// project link is never recorded as a new link for the current operation.
+func (r *projectSPSControllerRepo) BulkCreateBySPSControllerIDsReturningIDs(
+	ctx context.Context,
+	projectID uuid.UUID,
+	spsControllerIDs []uuid.UUID,
+) ([]uuid.UUID, error) {
 	if len(spsControllerIDs) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	now := time.Now().UTC()
@@ -80,14 +92,24 @@ func (r *projectSPSControllerRepo) BulkCreateBySPSControllerIDs(ctx context.Cont
 		CROSS JOIN LATERAL (SELECT md5(? || sps_controllers.id::text) AS value) AS link_hash
 		WHERE sps_controllers.id IN ?
 		ON CONFLICT (project_id, sps_controller_id) DO NOTHING
+		RETURNING id
 	`
 
+	insertedIDs := make([]uuid.UUID, 0, len(spsControllerIDs))
 	for _, chunk := range uuidChunks(spsControllerIDs, projectLinkIDFilterChunkSize) {
-		if err := r.db.WithContext(ctx).Exec(statement, now, now, projectID, seed, chunk).Error; err != nil {
-			return err
+		var inserted []struct {
+			ID uuid.UUID `gorm:"column:id"`
+		}
+		if err := r.db.WithContext(ctx).
+			Raw(statement, now, now, projectID, seed, chunk).
+			Scan(&inserted).Error; err != nil {
+			return nil, err
+		}
+		for _, row := range inserted {
+			insertedIDs = append(insertedIDs, row.ID)
 		}
 	}
-	return nil
+	return insertedIDs, nil
 }
 
 func (r *projectSPSControllerRepo) Update(ctx context.Context, entity *project.ProjectSPSController) error {

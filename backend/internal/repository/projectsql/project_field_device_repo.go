@@ -67,8 +67,19 @@ func (r *projectFieldDeviceRepo) BulkCreate(ctx context.Context, entities []*pro
 }
 
 func (r *projectFieldDeviceRepo) BulkCreateByFieldDeviceIDs(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) error {
+	_, err := r.BulkCreateByFieldDeviceIDsReturningIDs(ctx, projectID, fieldDeviceIDs)
+	return err
+}
+
+// BulkCreateByFieldDeviceIDsReturningIDs returns only rows inserted by this
+// statement so transactional history excludes pre-existing project links.
+func (r *projectFieldDeviceRepo) BulkCreateByFieldDeviceIDsReturningIDs(
+	ctx context.Context,
+	projectID uuid.UUID,
+	fieldDeviceIDs []uuid.UUID,
+) ([]uuid.UUID, error) {
 	if len(fieldDeviceIDs) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	now := time.Now().UTC()
@@ -80,19 +91,40 @@ func (r *projectFieldDeviceRepo) BulkCreateByFieldDeviceIDs(ctx context.Context,
 		CROSS JOIN LATERAL (SELECT md5(? || field_devices.id::text) AS value) AS link_hash
 		WHERE field_devices.id IN ?
 		ON CONFLICT (project_id, field_device_id) DO NOTHING
+		RETURNING id
 	`
 
+	insertedIDs := make([]uuid.UUID, 0, len(fieldDeviceIDs))
 	for _, chunk := range uuidChunks(fieldDeviceIDs, projectLinkIDFilterChunkSize) {
-		if err := r.db.WithContext(ctx).Exec(statement, now, now, projectID, seed, chunk).Error; err != nil {
-			return err
+		var inserted []struct {
+			ID uuid.UUID `gorm:"column:id"`
+		}
+		if err := r.db.WithContext(ctx).
+			Raw(statement, now, now, projectID, seed, chunk).
+			Scan(&inserted).Error; err != nil {
+			return nil, err
+		}
+		for _, row := range inserted {
+			insertedIDs = append(insertedIDs, row.ID)
 		}
 	}
-	return nil
+	return insertedIDs, nil
 }
 
 func (r *projectFieldDeviceRepo) BulkCreateBySPSControllerSystemTypeIDs(ctx context.Context, projectID uuid.UUID, systemTypeIDs []uuid.UUID) error {
+	_, err := r.BulkCreateBySPSControllerSystemTypeIDsReturningIDs(ctx, projectID, systemTypeIDs)
+	return err
+}
+
+// BulkCreateBySPSControllerSystemTypeIDsReturningIDs returns the exact
+// successful insert set for history correlation.
+func (r *projectFieldDeviceRepo) BulkCreateBySPSControllerSystemTypeIDsReturningIDs(
+	ctx context.Context,
+	projectID uuid.UUID,
+	systemTypeIDs []uuid.UUID,
+) ([]uuid.UUID, error) {
 	if len(systemTypeIDs) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	now := time.Now().UTC()
@@ -104,14 +136,24 @@ func (r *projectFieldDeviceRepo) BulkCreateBySPSControllerSystemTypeIDs(ctx cont
 		CROSS JOIN LATERAL (SELECT md5(? || field_devices.id::text) AS value) AS link_hash
 		WHERE field_devices.sps_controller_system_type_id IN ?
 		ON CONFLICT (project_id, field_device_id) DO NOTHING
+		RETURNING id
 	`
 
+	insertedIDs := make([]uuid.UUID, 0)
 	for _, chunk := range uuidChunks(systemTypeIDs, projectFieldDeviceSystemTypeFilterChunkSize) {
-		if err := r.db.WithContext(ctx).Exec(statement, now, now, projectID, seed, chunk).Error; err != nil {
-			return err
+		var inserted []struct {
+			ID uuid.UUID `gorm:"column:id"`
+		}
+		if err := r.db.WithContext(ctx).
+			Raw(statement, now, now, projectID, seed, chunk).
+			Scan(&inserted).Error; err != nil {
+			return nil, err
+		}
+		for _, row := range inserted {
+			insertedIDs = append(insertedIDs, row.ID)
 		}
 	}
-	return nil
+	return insertedIDs, nil
 }
 
 func (r *projectFieldDeviceRepo) Update(ctx context.Context, entity *project.ProjectFieldDevice) error {

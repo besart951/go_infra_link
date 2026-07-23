@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	appcontrolcabinet "github.com/besart951/go_infra_link/backend/internal/application/facility/controlcabinet"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
@@ -17,9 +18,6 @@ import (
 )
 
 type FacilityLinkService interface {
-	CreateControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
-	CopyControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainFacility.ControlCabinet, error)
-	UpdateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error)
 	DeleteControlCabinet(ctx context.Context, linkID, projectID uuid.UUID) error
 	ListControlCabinets(ctx context.Context, projectID uuid.UUID, page, limit int) (*domain.PaginatedList[domainProject.ProjectControlCabinet], error)
 }
@@ -27,18 +25,52 @@ type FacilityLinkService interface {
 type Handler struct {
 	access       projectshared.AccessPolicyService
 	facilityLink FacilityLinkService
+	cloner       ProjectControlCabinetCloner
+	assigner     ProjectControlCabinetAssigner
+	reassigner   ProjectControlCabinetReassigner
 	notify       projectshared.ProjectChangeNotifier
-	notifyDelta  ProjectControlCabinetDeltaNotifier
+	notifyEvent  projectshared.ProjectChangeNotifier
 }
 
-type ProjectControlCabinetDeltaNotifier func(*gin.Context, uuid.UUID, domainFacility.ControlCabinet)
+type ProjectControlCabinetCloner interface {
+	CloneForProject(
+		context.Context,
+		appcontrolcabinet.CloneForProjectCommand,
+	) (*domainFacility.ControlCabinet, error)
+}
 
-func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier, notifyDelta ...ProjectControlCabinetDeltaNotifier) *Handler {
-	var delta ProjectControlCabinetDeltaNotifier
-	if len(notifyDelta) > 0 {
-		delta = notifyDelta[0]
+type ProjectControlCabinetAssigner interface {
+	AssignToProject(
+		context.Context,
+		appcontrolcabinet.AssignToProjectCommand,
+	) (*domainProject.ProjectControlCabinet, error)
+}
+
+type ProjectControlCabinetReassigner interface {
+	ReassignProjectLink(
+		context.Context,
+		appcontrolcabinet.ReassignProjectLinkCommand,
+	) (*domainProject.ProjectControlCabinet, error)
+}
+
+func NewHandler(
+	access projectshared.AccessPolicyService,
+	facilityLink FacilityLinkService,
+	cloner ProjectControlCabinetCloner,
+	assigner ProjectControlCabinetAssigner,
+	reassigner ProjectControlCabinetReassigner,
+	notify projectshared.ProjectChangeNotifier,
+	notifyEvent projectshared.ProjectChangeNotifier,
+) *Handler {
+	return &Handler{
+		access:       access,
+		facilityLink: facilityLink,
+		cloner:       cloner,
+		assigner:     assigner,
+		reassigner:   reassigner,
+		notify:       notify,
+		notifyEvent:  notifyEvent,
 	}
-	return &Handler{access: access, facilityLink: facilityLink, notify: notify, notifyDelta: delta}
 }
 
 // CreateProjectControlCabinet godoc
@@ -73,7 +105,17 @@ func (h *Handler) CreateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	created, err := h.facilityLink.CreateControlCabinet(c.Request.Context(), projectID, req.ControlCabinetID)
+	if h.assigner == nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
+		return
+	}
+	created, err := h.assigner.AssignToProject(
+		c.Request.Context(),
+		appcontrolcabinet.AssignToProjectCommand{
+			ProjectID:        projectID,
+			ControlCabinetID: req.ControlCabinetID,
+		},
+	)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
@@ -83,8 +125,8 @@ func (h *Handler) CreateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.control_cabinet.created", created.ControlCabinetID.String())
+	if h.notifyEvent != nil {
+		h.notifyEvent(c, projectID, "project.control_cabinet.created", created.ControlCabinetID.String())
 	}
 
 	c.JSON(http.StatusCreated, toProjectControlCabinetResponse(*created))
@@ -153,7 +195,17 @@ func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	copyEntity, err := h.facilityLink.CopyControlCabinet(c.Request.Context(), projectID, controlCabinetID)
+	if h.cloner == nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "project.creation_failed")
+		return
+	}
+	copyEntity, err := h.cloner.CloneForProject(
+		c.Request.Context(),
+		appcontrolcabinet.CloneForProjectCommand{
+			ProjectID:              projectID,
+			SourceControlCabinetID: controlCabinetID,
+		},
+	)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "creation_failed", "project.creation_failed"),
@@ -161,12 +213,6 @@ func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "conflict", "project.creation_failed")),
 		)
 		return
-	}
-
-	if h.notifyDelta != nil {
-		h.notifyDelta(c, projectID, *copyEntity)
-	} else if h.notify != nil {
-		h.notify(c, projectID, "project.control_cabinet.copied", copyEntity.ID.String())
 	}
 
 	c.JSON(http.StatusCreated, sharedpresenter.ToControlCabinetResponse(*copyEntity))
@@ -210,7 +256,18 @@ func (h *Handler) UpdateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	updated, err := h.facilityLink.UpdateControlCabinet(c.Request.Context(), linkID, projectID, req.ControlCabinetID)
+	if h.reassigner == nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "project.update_failed")
+		return
+	}
+	updated, err := h.reassigner.ReassignProjectLink(
+		c.Request.Context(),
+		appcontrolcabinet.ReassignProjectLinkCommand{
+			ProjectID:        projectID,
+			LinkID:           linkID,
+			ControlCabinetID: req.ControlCabinetID,
+		},
+	)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
@@ -219,8 +276,8 @@ func (h *Handler) UpdateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.control_cabinet.updated", updated.ControlCabinetID.String())
+	if h.notifyEvent != nil {
+		h.notifyEvent(c, projectID, "project.control_cabinet.updated", updated.ControlCabinetID.String())
 	}
 
 	c.JSON(http.StatusOK, toProjectControlCabinetResponse(*updated))

@@ -6,16 +6,15 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
-	"github.com/besart951/go_infra_link/backend/internal/repository/historysql"
 	"github.com/google/uuid"
 )
 
 type audit[T any] struct {
 	table string
-	store *historysql.Store
+	store ChangeStore
 }
 
-func newAudit[T any](table string, store *historysql.Store) audit[T] {
+func newAudit[T any](table string, store ChangeStore) audit[T] {
 	return audit[T]{table: table, store: store}
 }
 
@@ -56,12 +55,10 @@ func (a audit[T]) bulkCreate(ctx context.Context, create func(context.Context) e
 	if err := create(ctx); err != nil {
 		return err
 	}
-	for _, id := range ids() {
-		if err := a.recordCreated(ctx, id); err != nil {
-			return err
-		}
+	if a.store == nil {
+		return nil
 	}
-	return nil
+	return a.store.RecordCreates(ctx, a.table, ids())
 }
 
 func (a audit[T]) deleteRows(ctx context.Context, load func(context.Context) (map[uuid.UUID]domainHistory.JSONB, error), delete func(context.Context) error) error {
@@ -82,16 +79,18 @@ func (a audit[T]) recordCreated(ctx context.Context, id uuid.UUID) error {
 	return a.store.RecordCreate(ctx, a.table, id)
 }
 
+func (a audit[T]) recordCreatedIDs(ctx context.Context, ids []uuid.UUID) error {
+	if a.store == nil || len(ids) == 0 {
+		return nil
+	}
+	return a.store.RecordCreates(ctx, a.table, ids)
+}
+
 func (a audit[T]) recordDeletedRows(ctx context.Context, rows map[uuid.UUID]domainHistory.JSONB) error {
 	if a.store == nil {
 		return nil
 	}
-	for id, snapshot := range rows {
-		if err := a.store.RecordDelete(ctx, a.table, id, snapshot); err != nil {
-			return err
-		}
-	}
-	return nil
+	return a.store.RecordDeletes(ctx, a.table, rows)
 }
 
 func idOf[T any](entity *T) uuid.UUID {
@@ -129,6 +128,14 @@ func idsOf[T any](entities []*T) []uuid.UUID {
 		if id := idOf(entity); id != uuid.Nil {
 			ids = append(ids, id)
 		}
+	}
+	return ids
+}
+
+func mapKeys[T any](items map[uuid.UUID]T) []uuid.UUID {
+	ids := make([]uuid.UUID, 0, len(items))
+	for id := range items {
+		ids = append(ids, id)
 	}
 	return ids
 }

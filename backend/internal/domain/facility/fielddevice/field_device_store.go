@@ -17,6 +17,15 @@ type FieldDeviceStore interface {
 	// that belong to the given SPS controller system type IDs.
 	GetIDsBySPSControllerSystemTypeIDs(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error)
 
+	// ListIDsBySPSControllerSystemTypeIDsAfter returns one deterministic ID page
+	// ordered ascending. afterID is an exclusive cursor; nil starts the scan.
+	ListIDsBySPSControllerSystemTypeIDsAfter(
+		ctx context.Context,
+		ids []uuid.UUID,
+		afterID *uuid.UUID,
+		limit int,
+	) ([]uuid.UUID, error)
+
 	// ExistsApparatNrConflict reports whether apparat_nr is already taken
 	// for the given (sps_controller_system_type_id, system_part_id, apparat_id) tuple.
 	// excludeIDs allows excluding multiple IDs (e.g. for batch updates).
@@ -30,4 +39,9 @@ type FieldDeviceStore interface {
 
 	// BulkCreate creates multiple field devices in batches.
 	BulkCreate(ctx context.Context, entities []*domainFacility.FieldDevice, batchSize int) error
+
+	// AssignSpecificationIDs completes the cyclic FieldDevice/Specification
+	// relationship after both sides have been created. The map key is the field
+	// device ID and the value is its specification ID.
+	AssignSpecificationIDs(ctx context.Context, assignments map[uuid.UUID]uuid.UUID) error
 }

@@ -3,6 +3,7 @@ package facility
 import (
 	"net/http"
 
+	appspscontroller "github.com/besart951/go_infra_link/backend/internal/application/facility/spscontroller"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/gin-gonic/gin"
@@ -10,10 +11,20 @@ import (
 
 type SPSControllerSystemTypeHandler struct {
 	service SPSControllerSystemTypeService
+	cloner  SPSControllerSystemTypeCloner
+	deleter SPSControllerSystemTypeDeleter
 }
 
-func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService) *SPSControllerSystemTypeHandler {
-	return &SPSControllerSystemTypeHandler{service: service}
+func NewSPSControllerSystemTypeHandler(
+	service SPSControllerSystemTypeService,
+	cloner SPSControllerSystemTypeCloner,
+	deleter SPSControllerSystemTypeDeleter,
+) *SPSControllerSystemTypeHandler {
+	return &SPSControllerSystemTypeHandler{
+		service: service,
+		cloner:  cloner,
+		deleter: deleter,
+	}
 }
 
 // ListSPSControllerSystemTypes godoc
@@ -110,7 +121,16 @@ func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Cont
 		return
 	}
 
-	copyEntity, err := h.service.CopyByID(c.Request.Context(), id)
+	if h.cloner == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		return
+	}
+	copyEntity, err := h.cloner.CloneSystemType(
+		c.Request.Context(),
+		appspscontroller.CloneSystemTypeCommand{
+			SourceSPSControllerSystemTypeID: id,
+		},
+	)
 	if err != nil {
 		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
 			localizedNotFound("facility.sps_controller_system_type_not_found"),
@@ -137,7 +157,14 @@ func (h *SPSControllerSystemTypeHandler) DeleteSPSControllerSystemType(c *gin.Co
 		return
 	}
 
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+	if h.deleter == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "deletion_failed", "facility.deletion_failed")
+		return
+	}
+	if err := h.deleter.DeleteSystemType(
+		c.Request.Context(),
+		appspscontroller.DeleteSystemTypeCommand{SPSControllerSystemTypeID: id},
+	); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.sps_controller_system_type_not_found"),
 		)

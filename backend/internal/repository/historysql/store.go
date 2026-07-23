@@ -7,11 +7,9 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
-	"github.com/besart951/go_infra_link/backend/internal/service/auditctx"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -122,7 +120,7 @@ func (s *Store) LoadRows(ctx context.Context, table string, ids []uuid.UUID) (ma
 		return nil, fmt.Errorf("history table not allowed: %s", table)
 	}
 	out := make(map[uuid.UUID]domainHistory.JSONB, len(ids))
-	for _, chunk := range uuidChunks(ids, 500) {
+	for _, chunk := range uuidChunks(ids, historyWriteBatchSize) {
 		var rows []rawRow
 		if err := s.db.WithContext(ctx).
 			Raw(fmt.Sprintf(`SELECT id, to_jsonb(t) AS data FROM (SELECT * FROM %s WHERE id IN ?) AS t`, quoteIdent(table)), chunk).
@@ -142,14 +140,46 @@ func (s *Store) LoadRowsWhere(ctx context.Context, table string, where string, a
 	}
 	out := map[uuid.UUID]domainHistory.JSONB{}
 	query := fmt.Sprintf(`SELECT id, to_jsonb(t) AS data FROM (SELECT * FROM %s WHERE %s) AS t`, quoteIdent(table), where)
-	var rows []rawRow
-	if err := s.db.WithContext(ctx).Raw(query, args...).Scan(&rows).Error; err != nil {
-		return nil, err
-	}
-	for _, row := range rows {
-		out[row.ID] = row.Data
+	for _, argumentBatch := range chunkUUIDArguments(args, historyWriteBatchSize) {
+		var rows []rawRow
+		if err := s.db.WithContext(ctx).
+			Raw(query, argumentBatch...).
+			Scan(&rows).Error; err != nil {
+			return nil, err
+		}
+		for _, row := range rows {
+			out[row.ID] = row.Data
+		}
 	}
 	return out, nil
+}
+
+func chunkUUIDArguments(args []any, size int) [][]any {
+	sliceIndex := -1
+	var ids []uuid.UUID
+	for i, arg := range args {
+		candidate, ok := arg.([]uuid.UUID)
+		if !ok {
+			continue
+		}
+		if sliceIndex >= 0 {
+			return [][]any{args}
+		}
+		sliceIndex = i
+		ids = candidate
+	}
+	if sliceIndex < 0 || len(ids) <= size {
+		return [][]any{args}
+	}
+
+	idChunks := uuidChunks(ids, size)
+	batches := make([][]any, 0, len(idChunks))
+	for _, chunk := range idChunks {
+		batch := append([]any(nil), args...)
+		batch[sliceIndex] = chunk
+		batches = append(batches, batch)
+	}
+	return batches
 }
 
 func (s *Store) RecordCreate(ctx context.Context, table string, id uuid.UUID) error {
@@ -163,6 +193,30 @@ func (s *Store) RecordCreate(ctx context.Context, table string, id uuid.UUID) er
 		EntityID:    id,
 		AfterJSON:   after,
 	})
+}
+
+func (s *Store) RecordCreates(ctx context.Context, table string, ids []uuid.UUID) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	rows, err := s.LoadRows(ctx, table, ids)
+	if err != nil {
+		return err
+	}
+	mutations := make([]Mutation, 0, len(ids))
+	for _, id := range ids {
+		after := rows[id]
+		if id == uuid.Nil || len(after) == 0 {
+			continue
+		}
+		mutations = append(mutations, Mutation{
+			Action:      domainHistory.ActionCreate,
+			EntityTable: table,
+			EntityID:    id,
+			AfterJSON:   after,
+		})
+	}
+	return s.RecordMutations(ctx, mutations)
 }
 
 func (s *Store) RecordUpdate(ctx context.Context, table string, id uuid.UUID, before domainHistory.JSONB) error {
@@ -182,6 +236,44 @@ func (s *Store) RecordUpdate(ctx context.Context, table string, id uuid.UUID, be
 	})
 }
 
+func (s *Store) RecordUpdates(
+	ctx context.Context,
+	table string,
+	beforeRows map[uuid.UUID]domainHistory.JSONB,
+) error {
+	if len(beforeRows) == 0 {
+		return nil
+	}
+
+	ids := make([]uuid.UUID, 0, len(beforeRows))
+	for id := range beforeRows {
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(i, j int) bool {
+		return ids[i].String() < ids[j].String()
+	})
+
+	afterRows, err := s.LoadRows(ctx, table, ids)
+	if err != nil {
+		return err
+	}
+	mutations := make([]Mutation, 0, len(ids))
+	for _, id := range ids {
+		after := afterRows[id]
+		if id == uuid.Nil || len(after) == 0 || jsonEqual(beforeRows[id], after) {
+			continue
+		}
+		mutations = append(mutations, Mutation{
+			Action:      domainHistory.ActionUpdate,
+			EntityTable: table,
+			EntityID:    id,
+			BeforeJSON:  beforeRows[id],
+			AfterJSON:   after,
+		})
+	}
+	return s.RecordMutations(ctx, mutations)
+}
+
 func (s *Store) RecordDelete(ctx context.Context, table string, id uuid.UUID, before domainHistory.JSONB) error {
 	if len(before) == 0 {
 		return nil
@@ -194,104 +286,39 @@ func (s *Store) RecordDelete(ctx context.Context, table string, id uuid.UUID, be
 	})
 }
 
-func (s *Store) RecordMutation(ctx context.Context, mutation Mutation) error {
-	if !allowedTable(mutation.EntityTable) {
-		return fmt.Errorf("history table not allowed: %s", mutation.EntityTable)
-	}
-	if mutation.EntityID == uuid.Nil {
+func (s *Store) RecordDeletes(
+	ctx context.Context,
+	table string,
+	rows map[uuid.UUID]domainHistory.JSONB,
+) error {
+	if len(rows) == 0 {
 		return nil
 	}
-
-	now := time.Now().UTC()
-	eventID, err := uuid.NewV7()
-	if err != nil {
-		return err
+	ids := make([]uuid.UUID, 0, len(rows))
+	for id := range rows {
+		ids = append(ids, id)
 	}
-	actorID := mutation.ActorID
-	if actorID == nil {
-		if actor, ok := auditctx.ActorID(ctx); ok {
-			actorID = actor
+	sort.Slice(ids, func(i, j int) bool {
+		return ids[i].String() < ids[j].String()
+	})
+	mutations := make([]Mutation, 0, len(ids))
+	for _, id := range ids {
+		before := rows[id]
+		if id == uuid.Nil || len(before) == 0 {
+			continue
 		}
+		mutations = append(mutations, Mutation{
+			Action:      domainHistory.ActionDelete,
+			EntityTable: table,
+			EntityID:    id,
+			BeforeJSON:  before,
+		})
 	}
-	metadataJSON, err := marshalJSON(mutation.Metadata)
-	if err != nil {
-		return err
-	}
-	diffJSON, err := diffJSON(mutation.BeforeJSON, mutation.AfterJSON)
-	if err != nil {
-		return err
-	}
+	return s.RecordMutations(ctx, mutations)
+}
 
-	var summary *string
-	if strings.TrimSpace(mutation.Summary) != "" {
-		trimmed := strings.TrimSpace(mutation.Summary)
-		summary = &trimmed
-	}
-
-	event := &domainHistory.ChangeEvent{
-		ID:           eventID,
-		OccurredAt:   now,
-		ActorID:      actorID,
-		Action:       mutation.Action,
-		EntityTable:  mutation.EntityTable,
-		EntityID:     mutation.EntityID,
-		BatchID:      mutation.BatchID,
-		Summary:      summary,
-		BeforeJSON:   mutation.BeforeJSON,
-		AfterJSON:    mutation.AfterJSON,
-		DiffJSON:     diffJSON,
-		MetadataJSON: metadataJSON,
-	}
-	if err := s.db.WithContext(ctx).Create(event).Error; err != nil {
-		return err
-	}
-
-	scopeSnapshot := mutation.AfterJSON
-	if len(scopeSnapshot) == 0 {
-		scopeSnapshot = mutation.BeforeJSON
-	}
-	scopes, err := s.resolveScopes(ctx, mutation.EntityTable, mutation.EntityID, scopeSnapshot)
-	if err != nil {
-		return err
-	}
-	if len(scopes) > 0 {
-		rows := make([]domainHistory.ChangeEventScope, 0, len(scopes))
-		for _, scope := range scopes {
-			scopeID, err := uuid.NewV7()
-			if err != nil {
-				return err
-			}
-			rows = append(rows, domainHistory.ChangeEventScope{
-				ID:            scopeID,
-				ChangeEventID: eventID,
-				ScopeType:     scope.Type,
-				ScopeID:       scope.ID,
-				OccurredAt:    now,
-			})
-		}
-		if err := s.db.WithContext(ctx).CreateInBatches(rows, 500).Error; err != nil {
-			return err
-		}
-	}
-
-	versionID, err := uuid.NewV7()
-	if err != nil {
-		return err
-	}
-	version := &domainHistory.EntityVersion{
-		ID:            versionID,
-		ChangeEventID: eventID,
-		EntityTable:   mutation.EntityTable,
-		EntityID:      mutation.EntityID,
-		VersionAt:     now,
-		Action:        mutation.Action,
-	}
-	if mutation.Action == domainHistory.ActionDelete {
-		version.SnapshotJSON = nil
-	} else {
-		version.SnapshotJSON = mutation.AfterJSON
-	}
-	return s.db.WithContext(ctx).Create(version).Error
+func (s *Store) RecordMutation(ctx context.Context, mutation Mutation) error {
+	return s.RecordMutations(ctx, []Mutation{mutation})
 }
 
 func (s *Store) ListTimeline(ctx context.Context, filter domainHistory.TimelineFilter) (*domain.PaginatedList[domainHistory.ChangeEvent], error) {

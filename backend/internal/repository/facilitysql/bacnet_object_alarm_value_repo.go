@@ -42,6 +42,24 @@ func (r *bacnetObjectAlarmValueRepo) GetByBacnetObjectID(ctx context.Context, ba
 	return values, err
 }
 
+func (r *bacnetObjectAlarmValueRepo) GetByBacnetObjectIDs(ctx context.Context, bacnetObjectIDs []uuid.UUID) ([]domainFacility.BacnetObjectAlarmValue, error) {
+	if len(bacnetObjectIDs) == 0 {
+		return []domainFacility.BacnetObjectAlarmValue{}, nil
+	}
+
+	var values []domainFacility.BacnetObjectAlarmValue
+	for _, chunk := range uuidFilterChunks(bacnetObjectIDs, uuidFilterChunkSize) {
+		var chunkValues []domainFacility.BacnetObjectAlarmValue
+		if err := r.db.WithContext(ctx).
+			Where("bacnet_object_id IN ?", chunk).
+			Find(&chunkValues).Error; err != nil {
+			return nil, err
+		}
+		values = append(values, chunkValues...)
+	}
+	return values, nil
+}
+
 func (r *bacnetObjectAlarmValueRepo) BulkCreate(ctx context.Context, values []*domainFacility.BacnetObjectAlarmValue, batchSize int) error {
 	return r.BaseRepository.BulkCreate(ctx, values, batchSize)
 }

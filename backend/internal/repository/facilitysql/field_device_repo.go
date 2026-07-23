@@ -2,11 +2,11 @@ package facilitysql
 
 import (
 	"context"
-	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	"github.com/besart951/go_infra_link/backend/internal/repository/gormbase"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -66,6 +66,10 @@ func (r *fieldDeviceRepo) BulkCreate(ctx context.Context, entities []*domainFaci
 		CreateInBatches(records, batchSize).Error
 }
 
+func (r *fieldDeviceRepo) AssignSpecificationIDs(ctx context.Context, assignments map[uuid.UUID]uuid.UUID) error {
+	return assignUUIDColumn(ctx, r.db, &FieldDeviceRecord{}, "specification_id", assignments)
+}
+
 func (r *fieldDeviceRepo) Update(ctx context.Context, entity *domainFacility.FieldDevice) error {
 	entity.Base.TouchForUpdate(time.Now().UTC())
 	return r.db.WithContext(ctx).Model(&FieldDeviceRecord{}).
@@ -119,6 +123,36 @@ func (r *fieldDeviceRepo) GetIDsBySPSControllerSystemTypeIDs(ctx context.Context
 		Where("sps_controller_system_type_id IN ?", ids).
 		Pluck("id", &out).Error
 	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (r *fieldDeviceRepo) ListIDsBySPSControllerSystemTypeIDsAfter(
+	ctx context.Context,
+	ids []uuid.UUID,
+	afterID *uuid.UUID,
+	limit int,
+) ([]uuid.UUID, error) {
+	if len(ids) == 0 {
+		return []uuid.UUID{}, nil
+	}
+	if limit <= 0 {
+		limit = gormbase.DefaultBatchSize
+	}
+	if limit > uuidFilterChunkSize {
+		limit = uuidFilterChunkSize
+	}
+
+	query := r.db.WithContext(ctx).
+		Model(&FieldDeviceRecord{}).
+		Where("sps_controller_system_type_id IN ?", ids)
+	if afterID != nil && *afterID != uuid.Nil {
+		query = query.Where("id > ?", *afterID)
+	}
+
+	var out []uuid.UUID
+	if err := query.Order("id ASC").Limit(limit).Pluck("id", &out).Error; err != nil {
 		return nil, err
 	}
 	return out, nil

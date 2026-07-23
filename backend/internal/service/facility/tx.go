@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/besart951/go_infra_link/backend/internal/application/transaction"
-	"github.com/besart951/go_infra_link/backend/internal/service/changecapture"
 )
 
 type TxRunner = transaction.Runner
@@ -12,7 +11,6 @@ type TxRunner = transaction.Runner
 type Config struct {
 	TxRunner       TxRunner
 	TxRepositories func(tx transaction.UnitOfWork) (Repositories, error)
-	ChangeRecorder changecapture.Recorder
 }
 
 type txCoordinator struct {
@@ -27,7 +25,7 @@ func newTxCoordinator(cfg Config) txCoordinator {
 			if err != nil {
 				return nil, err
 			}
-			return NewServices(repos, Config{ChangeRecorder: cfg.ChangeRecorder}), nil
+			return NewServices(repos), nil
 		}
 	}
 

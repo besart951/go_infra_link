@@ -198,7 +198,8 @@ export const routeAudits = [
     status: 'configured',
     expectedAccess: 'Requires team.create.',
     protectedUi: ['team creation form'],
-    notes: 'The app layout maps this dedicated creation route to team.create before the generic /teams rule.'
+    notes:
+      'The app layout maps this dedicated creation route to team.create before the generic /teams rule.'
   },
   {
     path: '/teams/:id',

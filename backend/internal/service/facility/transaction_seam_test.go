@@ -24,6 +24,18 @@ func (r *txFieldDeviceStore) GetIDsBySPSControllerSystemTypeIDs(ctx context.Cont
 	return r.fakeFieldDeviceStore.GetIDsBySPSControllerSystemTypeIDs(ctx, ids)
 }
 
+func (r *txFieldDeviceStore) ListIDsBySPSControllerSystemTypeIDsAfter(
+	ctx context.Context,
+	ids []uuid.UUID,
+	afterID *uuid.UUID,
+	limit int,
+) ([]uuid.UUID, error) {
+	if r.getIDsErr != nil {
+		return nil, r.getIDsErr
+	}
+	return r.fakeFieldDeviceStore.ListIDsBySPSControllerSystemTypeIDsAfter(ctx, ids, afterID, limit)
+}
+
 type txObjectDataStore struct {
 	*fakeObjectDataStore
 	bacnetObjectIDs map[uuid.UUID][]uuid.UUID
@@ -42,6 +54,7 @@ type fakeBacnetObjectStore struct {
 	deleteByFieldDeviceCalls int
 	createdCount             int
 	updatedCount             int
+	steps                    *[]string
 }
 
 func (r *fakeBacnetObjectStore) GetByIds(_ context.Context, ids []uuid.UUID) ([]*domainFacility.BacnetObject, error) {
@@ -84,7 +97,22 @@ func (r *fakeBacnetObjectStore) BulkCreate(_ context.Context, entities []*domain
 	return nil
 }
 
+func (r *fakeBacnetObjectStore) AssignSoftwareReferenceIDs(_ context.Context, assignments map[uuid.UUID]uuid.UUID) error {
+	for objectID, referenceID := range assignments {
+		item := r.items[objectID]
+		if item == nil {
+			continue
+		}
+		assignedID := referenceID
+		item.SoftwareReferenceID = &assignedID
+	}
+	return nil
+}
+
 func (r *fakeBacnetObjectStore) Update(_ context.Context, entity *domainFacility.BacnetObject) error {
+	if r.steps != nil {
+		*r.steps = append(*r.steps, "bacnet:update")
+	}
 	if r.failUpdate != nil {
 		return r.failUpdate
 	}
@@ -158,9 +186,13 @@ type fakeObjectDataBacnetObjectStore struct {
 	addCalls              int
 	deleteByObjectDataIDs []uuid.UUID
 	links                 map[uuid.UUID][]uuid.UUID
+	steps                 *[]string
 }
 
 func (r *fakeObjectDataBacnetObjectStore) Add(_ context.Context, objectDataID uuid.UUID, bacnetObjectID uuid.UUID) error {
+	if r.steps != nil {
+		*r.steps = append(*r.steps, "object_data:attach")
+	}
 	r.addCalls++
 	if r.addErr != nil {
 		return r.addErr
@@ -258,6 +290,7 @@ func (r *fakeAlarmTypeRepo) ListWithFields(_ context.Context, params domain.Pagi
 type fakeBacnetObjectAlarmValueRepo struct {
 	items           map[uuid.UUID]*domainFacility.BacnetObjectAlarmValue
 	failBulkCreate  error
+	batchReadCalls  int
 	bulkCreateCalls int
 }
 
@@ -313,6 +346,21 @@ func (r *fakeBacnetObjectAlarmValueRepo) GetByBacnetObjectID(_ context.Context, 
 	out := make([]domainFacility.BacnetObjectAlarmValue, 0)
 	for _, item := range r.items {
 		if item.BacnetObjectID == bacnetObjectID {
+			out = append(out, *item)
+		}
+	}
+	return out, nil
+}
+
+func (r *fakeBacnetObjectAlarmValueRepo) GetByBacnetObjectIDs(_ context.Context, bacnetObjectIDs []uuid.UUID) ([]domainFacility.BacnetObjectAlarmValue, error) {
+	r.batchReadCalls++
+	idSet := make(map[uuid.UUID]struct{}, len(bacnetObjectIDs))
+	for _, id := range bacnetObjectIDs {
+		idSet[id] = struct{}{}
+	}
+	out := make([]domainFacility.BacnetObjectAlarmValue, 0)
+	for _, item := range r.items {
+		if _, ok := idSet[item.BacnetObjectID]; ok {
 			out = append(out, *item)
 		}
 	}
@@ -663,6 +711,142 @@ func newTxServices(baseRepos, txRepos facility.Repositories, runnerCalls *int) *
 			return txRepos, nil
 		},
 	})
+}
+
+type itemAtomicFieldDeviceStore struct {
+	*fakeFieldDeviceStore
+	history []uuid.UUID
+}
+
+func (r *itemAtomicFieldDeviceStore) Create(
+	ctx context.Context,
+	entity *domainFacility.FieldDevice,
+) error {
+	if err := r.fakeFieldDeviceStore.Create(ctx, entity); err != nil {
+		return err
+	}
+	r.history = append(r.history, entity.ID)
+	return nil
+}
+
+func (r *itemAtomicFieldDeviceStore) snapshot() (map[uuid.UUID]*domainFacility.FieldDevice, []uuid.UUID) {
+	items := make(map[uuid.UUID]*domainFacility.FieldDevice, len(r.items))
+	for id, item := range r.items {
+		clone := *item
+		items[id] = &clone
+	}
+	return items, append([]uuid.UUID(nil), r.history...)
+}
+
+func (r *itemAtomicFieldDeviceStore) restore(
+	items map[uuid.UUID]*domainFacility.FieldDevice,
+	history []uuid.UUID,
+) {
+	r.items = items
+	r.history = history
+}
+
+func TestFieldDeviceMultiCreateItemSavepointRollsBackFailedRootAndHistory(t *testing.T) {
+	spsSystemTypeID := uuid.New()
+	systemTypeID := uuid.New()
+	apparatID := uuid.New()
+	systemPartID := uuid.New()
+	failedID := uuid.New()
+	successID := uuid.New()
+	fieldDevices := &itemAtomicFieldDeviceStore{
+		fakeFieldDeviceStore: &fakeFieldDeviceStore{
+			items: make(map[uuid.UUID]*domainFacility.FieldDevice),
+		},
+	}
+	systemTypes := &fakeSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SystemType{
+		systemTypeID: {Base: domain.Base{ID: systemTypeID}, NumberMin: 1, NumberMax: 99},
+	}}
+	systemParts := &fakeSystemPartRepo{items: map[uuid.UUID]*domainFacility.SystemPart{
+		systemPartID: {Base: domain.Base{ID: systemPartID}, ShortName: "AIR", Name: "Air"},
+	}}
+	apparats := &fakeApparatRepo{items: map[uuid.UUID]*domainFacility.Apparat{
+		apparatID: {Base: domain.Base{ID: apparatID}, ShortName: "PMP", Name: "Pump"},
+	}}
+	spsSystemTypes := &fakeSpsControllerSystemTypeRepo{
+		items: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+			spsSystemTypeID: {
+				Base:         domain.Base{ID: spsSystemTypeID},
+				SystemTypeID: systemTypeID,
+			},
+		},
+	}
+	repos := facility.Repositories{
+		FieldDevices:             fieldDevices,
+		SPSControllerSystemTypes: spsSystemTypes,
+		SystemTypes:              systemTypes,
+		Apparats:                 apparats,
+		SystemParts:              systemParts,
+		BacnetObjects: &fakeBacnetObjectStore{
+			items: make(map[uuid.UUID]*domainFacility.BacnetObject),
+		},
+	}
+	itemTransactions := 0
+	services := facility.NewServices(repos, facility.Config{
+		TxRunner: func(
+			ctx context.Context,
+			run func(context.Context, apptransaction.UnitOfWork) error,
+		) error {
+			itemTransactions++
+			itemsBefore, historyBefore := fieldDevices.snapshot()
+			if err := run(ctx, nil); err != nil {
+				fieldDevices.restore(itemsBefore, historyBefore)
+				return err
+			}
+			return nil
+		},
+		TxRepositories: func(apptransaction.UnitOfWork) (facility.Repositories, error) {
+			return repos, nil
+		},
+	})
+
+	result := services.FieldDevice.MultiCreate(
+		context.Background(),
+		[]domainFacility.FieldDeviceCreateItem{
+			{
+				FieldDevice: newFieldDevice(
+					failedID,
+					spsSystemTypeID,
+					apparatID,
+					systemPartID,
+					1,
+				),
+				BacnetObjects: []domainFacility.BacnetObject{{
+					SoftwareType: domainFacility.BacnetSoftwareTypeAI,
+				}},
+			},
+			{
+				FieldDevice: newFieldDevice(
+					successID,
+					spsSystemTypeID,
+					apparatID,
+					systemPartID,
+					2,
+				),
+			},
+		},
+	)
+
+	if itemTransactions != 2 {
+		t.Fatalf("item transactions: got %d, want 2", itemTransactions)
+	}
+	if result.TotalRequests != 2 || result.SuccessCount != 1 || result.FailureCount != 1 ||
+		result.Results[0].Success || !result.Results[1].Success {
+		t.Fatalf("partial result changed: %+v", result)
+	}
+	if fieldDevices.items[failedID] != nil {
+		t.Fatal("failed FieldDevice root escaped its item savepoint")
+	}
+	if fieldDevices.items[successID] == nil {
+		t.Fatal("successful FieldDevice did not remain staged")
+	}
+	if len(fieldDevices.history) != 1 || fieldDevices.history[0] != successID {
+		t.Fatalf("persisted history: got %v, want only %s", fieldDevices.history, successID)
+	}
 }
 
 func TestFacilityTransaction_FieldDeviceCreateFailureDoesNotCleanupOutsideTransaction(t *testing.T) {
@@ -1165,6 +1349,70 @@ func TestFacilityTransaction_BacnetObjectCreateFailureDoesNotEscapeTransaction(t
 	}
 }
 
+func TestFacilityTransaction_BacnetObjectObjectDataScopeExistsBeforeAuditedUpdate(t *testing.T) {
+	objectID := uuid.New()
+	objectDataID := uuid.New()
+	steps := make([]string, 0, 2)
+
+	baseBacnetObjects := &fakeBacnetObjectStore{items: map[uuid.UUID]*domainFacility.BacnetObject{
+		objectID: {
+			Base:           domain.Base{ID: objectID},
+			TextFix:        "AI1",
+			SoftwareType:   domainFacility.BacnetSoftwareTypeAI,
+			SoftwareNumber: 1,
+		},
+	}}
+	txBacnetObjects := &fakeBacnetObjectStore{
+		items: map[uuid.UUID]*domainFacility.BacnetObject{
+			objectID: {
+				Base:           domain.Base{ID: objectID},
+				TextFix:        "AI1",
+				SoftwareType:   domainFacility.BacnetSoftwareTypeAI,
+				SoftwareNumber: 1,
+			},
+		},
+		steps: &steps,
+	}
+	baseObjectData := &fakeObjectDataStore{items: map[uuid.UUID]*domainFacility.ObjectData{
+		objectDataID: {Base: domain.Base{ID: objectDataID}, IsActive: true},
+	}}
+	txObjectData := &fakeObjectDataStore{items: map[uuid.UUID]*domainFacility.ObjectData{
+		objectDataID: {Base: domain.Base{ID: objectDataID}, IsActive: true},
+	}}
+	txLinks := &fakeObjectDataBacnetObjectStore{steps: &steps}
+
+	baseRepos := facility.Repositories{
+		BacnetObjects: baseBacnetObjects,
+		ObjectData:    baseObjectData,
+	}
+	txRepos := facility.Repositories{
+		BacnetObjects:           txBacnetObjects,
+		ObjectData:              txObjectData,
+		ObjectDataBacnetObjects: txLinks,
+	}
+	runnerCalls := 0
+	services := newTxServices(baseRepos, txRepos, &runnerCalls)
+	updated := *baseBacnetObjects.items[objectID]
+	description := "updated"
+	updated.Description = &description
+
+	if err := services.BacnetObject.Update(context.Background(), &updated, &objectDataID); err != nil {
+		t.Fatalf("update BACnet ObjectData association: %v", err)
+	}
+	want := []string{"object_data:attach", "bacnet:update"}
+	if len(steps) != len(want) || steps[0] != want[0] || steps[1] != want[1] {
+		t.Fatalf("transaction steps: got %v, want %v", steps, want)
+	}
+	if runnerCalls != 1 || txLinks.addCalls != 1 || txBacnetObjects.updatedCount != 1 {
+		t.Fatalf(
+			"transaction calls: runner=%d links=%d updates=%d",
+			runnerCalls,
+			txLinks.addCalls,
+			txBacnetObjects.updatedCount,
+		)
+	}
+}
+
 func TestFacilityTransaction_BacnetObjectReplaceForObjectDataFailureDoesNotEscapeTransaction(t *testing.T) {
 	objectDataID := uuid.New()
 	oldBacnetObjectID := uuid.New()
@@ -1296,6 +1544,170 @@ func TestFacilityTransaction_HierarchyCopySPSControllerFailureDoesNotUseRollback
 	}
 	if len(baseControllers.items) != 1 {
 		t.Fatalf("expected base repository to remain unchanged, got %+v", baseControllers.items)
+	}
+}
+
+func TestFacilityTransaction_HierarchyCopyAlarmValueFailureKeepsBaseHierarchyUnchanged(t *testing.T) {
+	originalSystemTypeID := uuid.New()
+	systemTypeDefinitionID := uuid.New()
+	spsControllerID := uuid.New()
+	originalFieldDeviceID := uuid.New()
+	originalSpecificationID := uuid.New()
+	originalBacnetObjectID := uuid.New()
+	originalAlarmValueID := uuid.New()
+	alarmTypeFieldID := uuid.New()
+	copyErr := errors.New("copy alarm values failed")
+	number := 1
+	value := 7.5
+
+	baseSystemTypes := &fakeSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SystemType{
+		systemTypeDefinitionID: {
+			Base:      domain.Base{ID: systemTypeDefinitionID},
+			NumberMin: 1,
+			NumberMax: 10,
+		},
+	}}
+	txSystemTypes := &fakeSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SystemType{
+		systemTypeDefinitionID: {
+			Base:      domain.Base{ID: systemTypeDefinitionID},
+			NumberMin: 1,
+			NumberMax: 10,
+		},
+	}}
+	baseSPSSystemTypes := &fakeSpsControllerSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+		originalSystemTypeID: {
+			Base:            domain.Base{ID: originalSystemTypeID},
+			Number:          &number,
+			SPSControllerID: spsControllerID,
+			SystemTypeID:    systemTypeDefinitionID,
+		},
+	}}
+	txSPSSystemTypes := &txSPSControllerSystemTypeRepo{fakeSpsControllerSystemTypeRepo: &fakeSpsControllerSystemTypeRepo{items: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+		originalSystemTypeID: {
+			Base:            domain.Base{ID: originalSystemTypeID},
+			Number:          &number,
+			SPSControllerID: spsControllerID,
+			SystemTypeID:    systemTypeDefinitionID,
+		},
+	}}}
+	baseFieldDevices := &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{
+		originalFieldDeviceID: {
+			Base:                      domain.Base{ID: originalFieldDeviceID},
+			SPSControllerSystemTypeID: originalSystemTypeID,
+			SpecificationID:           &originalSpecificationID,
+		},
+	}}
+	txFieldDevices := &txFieldDeviceStore{fakeFieldDeviceStore: &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{
+		originalFieldDeviceID: {
+			Base:                      domain.Base{ID: originalFieldDeviceID},
+			SPSControllerSystemTypeID: originalSystemTypeID,
+			SpecificationID:           &originalSpecificationID,
+		},
+	}}}
+	baseSpecifications := &fakeSpecificationStore{items: map[uuid.UUID]*domainFacility.Specification{
+		originalSpecificationID: {
+			Base:          domain.Base{ID: originalSpecificationID},
+			FieldDeviceID: &originalFieldDeviceID,
+		},
+	}}
+	txSpecifications := &fakeSpecificationStore{items: map[uuid.UUID]*domainFacility.Specification{
+		originalSpecificationID: {
+			Base:          domain.Base{ID: originalSpecificationID},
+			FieldDeviceID: &originalFieldDeviceID,
+		},
+	}}
+	baseBacnetObjects := &fakeBacnetObjectStore{items: map[uuid.UUID]*domainFacility.BacnetObject{
+		originalBacnetObjectID: {
+			Base:           domain.Base{ID: originalBacnetObjectID},
+			TextFix:        "AI-1",
+			SoftwareType:   domainFacility.BacnetSoftwareTypeAI,
+			SoftwareNumber: 1,
+			FieldDeviceID:  &originalFieldDeviceID,
+		},
+	}}
+	txBacnetObjects := &fakeBacnetObjectStore{items: map[uuid.UUID]*domainFacility.BacnetObject{
+		originalBacnetObjectID: {
+			Base:           domain.Base{ID: originalBacnetObjectID},
+			TextFix:        "AI-1",
+			SoftwareType:   domainFacility.BacnetSoftwareTypeAI,
+			SoftwareNumber: 1,
+			FieldDeviceID:  &originalFieldDeviceID,
+		},
+	}}
+	baseAlarmValues := &fakeBacnetObjectAlarmValueRepo{items: map[uuid.UUID]*domainFacility.BacnetObjectAlarmValue{
+		originalAlarmValueID: {
+			Base:             domain.Base{ID: originalAlarmValueID},
+			BacnetObjectID:   originalBacnetObjectID,
+			AlarmTypeFieldID: alarmTypeFieldID,
+			ValueNumber:      &value,
+		},
+	}}
+	txAlarmValues := &fakeBacnetObjectAlarmValueRepo{
+		items: map[uuid.UUID]*domainFacility.BacnetObjectAlarmValue{
+			originalAlarmValueID: {
+				Base:             domain.Base{ID: originalAlarmValueID},
+				BacnetObjectID:   originalBacnetObjectID,
+				AlarmTypeFieldID: alarmTypeFieldID,
+				ValueNumber:      &value,
+			},
+		},
+		failBulkCreate: copyErr,
+	}
+
+	baseRepos := facility.Repositories{
+		SystemTypes:              baseSystemTypes,
+		SPSControllerSystemTypes: baseSPSSystemTypes,
+		FieldDevices:             baseFieldDevices,
+		Specifications:           baseSpecifications,
+		BacnetObjects:            baseBacnetObjects,
+		BacnetObjectAlarmValues:  baseAlarmValues,
+	}
+	txRepos := facility.Repositories{
+		SystemTypes:              txSystemTypes,
+		SPSControllerSystemTypes: txSPSSystemTypes,
+		FieldDevices:             txFieldDevices,
+		Specifications:           txSpecifications,
+		BacnetObjects:            txBacnetObjects,
+		BacnetObjectAlarmValues:  txAlarmValues,
+	}
+	runnerCalls := 0
+	services := newTxServices(baseRepos, txRepos, &runnerCalls)
+
+	_, err := services.SPSControllerSystemType.CopyByID(context.Background(), originalSystemTypeID)
+	if !errors.Is(err, copyErr) {
+		t.Fatalf("copy error: got %v, want %v", err, copyErr)
+	}
+	if runnerCalls != 1 {
+		t.Fatalf("transaction runs: got %d, want 1", runnerCalls)
+	}
+	if txAlarmValues.batchReadCalls != 1 || txAlarmValues.bulkCreateCalls != 1 {
+		t.Fatalf(
+			"alarm copy calls: reads=%d writes=%d, want 1/1",
+			txAlarmValues.batchReadCalls,
+			txAlarmValues.bulkCreateCalls,
+		)
+	}
+	if len(txSPSSystemTypes.items) != 2 || len(txFieldDevices.items) != 2 ||
+		len(txSpecifications.items) != 2 || len(txBacnetObjects.items) != 2 {
+		t.Fatalf(
+			"expected transaction-scoped writes before failure: system_types=%d field_devices=%d specifications=%d bacnet=%d",
+			len(txSPSSystemTypes.items),
+			len(txFieldDevices.items),
+			len(txSpecifications.items),
+			len(txBacnetObjects.items),
+		)
+	}
+	if len(baseSPSSystemTypes.items) != 1 || len(baseFieldDevices.items) != 1 ||
+		len(baseSpecifications.items) != 1 || len(baseBacnetObjects.items) != 1 ||
+		len(baseAlarmValues.items) != 1 {
+		t.Fatalf(
+			"base hierarchy changed after failed transaction: system_types=%d field_devices=%d specifications=%d bacnet=%d alarms=%d",
+			len(baseSPSSystemTypes.items),
+			len(baseFieldDevices.items),
+			len(baseSpecifications.items),
+			len(baseBacnetObjects.items),
+			len(baseAlarmValues.items),
+		)
 	}
 }
 

@@ -65,7 +65,7 @@ func setupHistoryRouter(t *testing.T) (*gin.Engine, *historyAuthzStub) {
 		c.Set(middleware.ContextUserIDKey, uuid.New())
 		c.Next()
 	})
-	RegisterRoutes(group, NewHandler(historyServiceStub{}), authz)
+	RegisterRoutes(group, NewHandler(historyServiceStub{}, nil, nil), authz)
 	return router, authz
 }
 

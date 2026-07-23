@@ -1,6 +1,10 @@
 package facility
 
 import (
+	appbacnetobject "github.com/besart951/go_infra_link/backend/internal/application/facility/bacnetobject"
+	appcontrolcabinet "github.com/besart951/go_infra_link/backend/internal/application/facility/controlcabinet"
+	appfielddevice "github.com/besart951/go_infra_link/backend/internal/application/facility/fielddevice"
+	appspscontroller "github.com/besart951/go_infra_link/backend/internal/application/facility/spscontroller"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/google/uuid"
@@ -15,8 +19,8 @@ func normalizeTextIndividual(s *string) *string {
 	return s
 }
 
-func toBacnetObjectModel(req dto.CreateBacnetObjectRequest) *domainFacility.BacnetObject {
-	return &domainFacility.BacnetObject{
+func toBacnetObjectCreateInput(req dto.CreateBacnetObjectRequest) appbacnetobject.CreateInput {
+	return appbacnetobject.CreateInput{
 		TextFix:             req.TextFix,
 		Description:         req.Description,
 		GMSVisible:          req.GMSVisible,
@@ -34,90 +38,86 @@ func toBacnetObjectModel(req dto.CreateBacnetObjectRequest) *domainFacility.Bacn
 	}
 }
 
-func applyBacnetObjectPatch(target *domainFacility.BacnetObject, req dto.BacnetObjectPatchInput) {
-	if req.TextFix != nil {
-		target.TextFix = *req.TextFix
+func toBacnetObjectCreateForFieldDeviceCommand(
+	fieldDeviceID uuid.UUID,
+	req dto.CreateBacnetObjectRequest,
+) appbacnetobject.CreateForFieldDeviceCommand {
+	return appbacnetobject.CreateForFieldDeviceCommand{
+		FieldDeviceID: fieldDeviceID,
+		Input:         toBacnetObjectCreateInput(req),
 	}
-	if req.Description != nil {
-		target.Description = req.Description
+}
+
+func toBacnetObjectCreateForObjectDataCommand(
+	objectDataID uuid.UUID,
+	req dto.CreateBacnetObjectRequest,
+) appbacnetobject.CreateForObjectDataCommand {
+	return appbacnetobject.CreateForObjectDataCommand{
+		ObjectDataID: objectDataID,
+		Input:        toBacnetObjectCreateInput(req),
 	}
-	if req.GMSVisible != nil {
-		target.GMSVisible = *req.GMSVisible
+}
+
+func toBacnetObjectUpdateCommand(
+	id uuid.UUID,
+	req dto.UpdateBacnetObjectRequest,
+) appbacnetobject.UpdateCommand {
+	return appbacnetobject.UpdateCommand{
+		BacnetObjectID: id,
+		FieldDeviceID:  req.FieldDeviceID,
+		ObjectDataID:   req.ObjectDataID,
+		Patch:          toBacnetObjectPatch(id, req.BacnetObjectPatchInput),
 	}
-	if req.Optional != nil {
-		target.Optional = *req.Optional
+}
+
+func toBacnetObjectPatch(
+	id uuid.UUID,
+	input dto.BacnetObjectPatchInput,
+) domainFacility.BacnetObjectPatch {
+	patch := domainFacility.BacnetObjectPatch{
+		ID:                  id,
+		TextFix:             input.TextFix,
+		Description:         input.Description,
+		GMSVisible:          input.GMSVisible,
+		Optional:            input.Optional,
+		TextIndividual:      normalizeTextIndividual(input.TextIndividual),
+		SoftwareReferenceID: input.SoftwareReferenceID,
+		StateTextID:         input.StateTextID,
+		NotificationClassID: input.NotificationClassID,
+		AlarmDefinitionID:   input.AlarmDefinitionID,
+		AlarmTypeID:         input.AlarmTypeID,
 	}
-	if req.TextIndividual != nil {
-		target.TextIndividual = normalizeTextIndividual(req.TextIndividual)
+	if input.SoftwareType != nil {
+		value := domainFacility.BacnetSoftwareType(*input.SoftwareType)
+		patch.SoftwareType = &value
 	}
-	if req.SoftwareType != nil {
-		target.SoftwareType = domainFacility.BacnetSoftwareType(*req.SoftwareType)
+	if input.SoftwareNumber != nil {
+		value := uint16(*input.SoftwareNumber)
+		patch.SoftwareNumber = &value
 	}
-	if req.SoftwareNumber != nil {
-		target.SoftwareNumber = uint16(*req.SoftwareNumber)
+	if input.HardwareType != nil {
+		value := domainFacility.BacnetHardwareType(*input.HardwareType)
+		patch.HardwareType = &value
 	}
-	if req.HardwareType != nil {
-		target.HardwareType = domainFacility.BacnetHardwareType(*req.HardwareType)
+	if input.HardwareQuantity != nil {
+		value := uint8(*input.HardwareQuantity)
+		patch.HardwareQuantity = &value
 	}
-	if req.HardwareQuantity != nil {
-		target.HardwareQuantity = uint8(*req.HardwareQuantity)
-	}
-	if req.SoftwareReferenceID != nil {
-		target.SoftwareReferenceID = req.SoftwareReferenceID
-	}
-	if req.StateTextID != nil {
-		target.StateTextID = req.StateTextID
-	}
-	if req.NotificationClassID != nil {
-		target.NotificationClassID = req.NotificationClassID
-	}
-	if req.AlarmDefinitionID != nil {
-		target.AlarmDefinitionID = req.AlarmDefinitionID
-	}
-	if req.AlarmTypeID != nil {
-		target.AlarmTypeID = req.AlarmTypeID
-	}
+	return patch
 }
 
 func toBacnetObjectPatches(inputs []dto.BacnetObjectBulkPatchInput) []domainFacility.BacnetObjectPatch {
 	items := make([]domainFacility.BacnetObjectPatch, 0, len(inputs))
 	for _, input := range inputs {
-		patch := domainFacility.BacnetObjectPatch{
-			ID:                  input.ID,
-			TextFix:             input.TextFix,
-			Description:         input.Description,
-			GMSVisible:          input.GMSVisible,
-			Optional:            input.Optional,
-			TextIndividual:      normalizeTextIndividual(input.TextIndividual),
-			SoftwareReferenceID: input.SoftwareReferenceID,
-			StateTextID:         input.StateTextID,
-			NotificationClassID: input.NotificationClassID,
-			AlarmDefinitionID:   input.AlarmDefinitionID,
-			AlarmTypeID:         input.AlarmTypeID,
-		}
-		if input.SoftwareType != nil {
-			st := domainFacility.BacnetSoftwareType(*input.SoftwareType)
-			patch.SoftwareType = &st
-		}
-		if input.SoftwareNumber != nil {
-			num := uint16(*input.SoftwareNumber)
-			patch.SoftwareNumber = &num
-		}
-		if input.HardwareType != nil {
-			ht := domainFacility.BacnetHardwareType(*input.HardwareType)
-			patch.HardwareType = &ht
-		}
-		if input.HardwareQuantity != nil {
-			qty := uint8(*input.HardwareQuantity)
-			patch.HardwareQuantity = &qty
-		}
-		items = append(items, patch)
+		items = append(items, toBacnetObjectPatch(input.ID, input.BacnetObjectPatchInput))
 	}
 	return items
 }
 
-func toSPSControllerModel(req dto.CreateSPSControllerRequest) *domainFacility.SPSController {
-	return &domainFacility.SPSController{
+func toSPSControllerCreateCommand(
+	req dto.CreateSPSControllerRequest,
+) appspscontroller.CreateCommand {
+	return appspscontroller.CreateCommand{
 		ControlCabinetID:  req.ControlCabinetID,
 		GADevice:          req.GADevice,
 		DeviceName:        req.DeviceName,
@@ -126,37 +126,37 @@ func toSPSControllerModel(req dto.CreateSPSControllerRequest) *domainFacility.SP
 		IPAddress:         req.IPAddress,
 		Subnet:            req.Subnet,
 		Gateway:           req.Gateway,
-		Vlan:              req.Vlan,
+		VLAN:              req.Vlan,
+		SystemTypes:       toSPSControllerSystemTypes(req.SystemTypes),
 	}
 }
 
-func applySPSControllerUpdate(target *domainFacility.SPSController, req dto.UpdateSPSControllerRequest) {
-	if req.ControlCabinetID != uuid.Nil {
-		target.ControlCabinetID = req.ControlCabinetID
-	}
-	if req.GADevice != nil {
-		target.GADevice = req.GADevice
-	}
+func toSPSControllerUpdateCommand(
+	id uuid.UUID,
+	req dto.UpdateSPSControllerRequest,
+) appspscontroller.UpdateCommand {
+	var deviceName *string
 	if req.DeviceName != "" {
-		target.DeviceName = req.DeviceName
+		value := req.DeviceName
+		deviceName = &value
 	}
-	if req.DeviceDescription != nil {
-		target.DeviceDescription = req.DeviceDescription
+	var systemTypes *[]domainFacility.SPSControllerSystemType
+	if req.SystemTypes != nil {
+		mapped := toSPSControllerSystemTypes(*req.SystemTypes)
+		systemTypes = &mapped
 	}
-	if req.DeviceLocation != nil {
-		target.DeviceLocation = req.DeviceLocation
-	}
-	if req.IPAddress != nil {
-		target.IPAddress = req.IPAddress
-	}
-	if req.Subnet != nil {
-		target.Subnet = req.Subnet
-	}
-	if req.Gateway != nil {
-		target.Gateway = req.Gateway
-	}
-	if req.Vlan != nil {
-		target.Vlan = req.Vlan
+	return appspscontroller.UpdateCommand{
+		SPSControllerID:   id,
+		ControlCabinetID:  nonNilUUIDPointer(req.ControlCabinetID),
+		GADevice:          req.GADevice,
+		DeviceName:        deviceName,
+		DeviceDescription: req.DeviceDescription,
+		DeviceLocation:    req.DeviceLocation,
+		IPAddress:         req.IPAddress,
+		Subnet:            req.Subnet,
+		Gateway:           req.Gateway,
+		VLAN:              req.Vlan,
+		SystemTypes:       systemTypes,
 	}
 }
 
@@ -194,28 +194,35 @@ func toFieldDeviceModel(req dto.CreateFieldDeviceRequest) *domainFacility.FieldD
 	}
 }
 
-func applyFieldDeviceUpdate(target *domainFacility.FieldDevice, req dto.UpdateFieldDeviceRequest) {
-	if req.BMK != nil {
-		target.BMK = req.BMK
+func toFieldDeviceUpdateCommand(
+	id uuid.UUID,
+	req dto.UpdateFieldDeviceRequest,
+) appfielddevice.UpdateCommand {
+	var bacnetObjects *[]domainFacility.BacnetObject
+	if req.BacnetObjects != nil {
+		mapped := toFieldDeviceBacnetObjects(*req.BacnetObjects)
+		bacnetObjects = &mapped
 	}
-	if req.Description != nil {
-		target.Description = req.Description
+
+	return appfielddevice.UpdateCommand{
+		FieldDeviceID:             id,
+		BMK:                       req.BMK,
+		Description:               req.Description,
+		TextIndividuell:           req.TextIndividuell,
+		ApparatNr:                 req.ApparatNr,
+		SPSControllerSystemTypeID: nonNilUUIDPointer(req.SPSControllerSystemTypeID),
+		SystemPartID:              nonNilUUIDPointer(req.SystemPartID),
+		ApparatID:                 nonNilUUIDPointer(req.ApparatID),
+		ObjectDataID:              req.ObjectDataID,
+		BacnetObjects:             bacnetObjects,
 	}
-	if req.TextIndividuell != nil {
-		target.TextIndividuell = req.TextIndividuell
+}
+
+func nonNilUUIDPointer(id uuid.UUID) *uuid.UUID {
+	if id == uuid.Nil {
+		return nil
 	}
-	if req.ApparatNr != nil {
-		target.ApparatNr = *req.ApparatNr
-	}
-	if req.SPSControllerSystemTypeID != uuid.Nil {
-		target.SPSControllerSystemTypeID = req.SPSControllerSystemTypeID
-	}
-	if req.SystemPartID != uuid.Nil {
-		target.SystemPartID = req.SystemPartID
-	}
-	if req.ApparatID != uuid.Nil {
-		target.ApparatID = req.ApparatID
-	}
+	return &id
 }
 
 func toFieldDeviceBacnetObjects(inputs []dto.BacnetObjectInput) []domainFacility.BacnetObject {
@@ -550,19 +557,23 @@ func applyAlarmDefinitionUpdate(target *domainFacility.AlarmDefinition, req dto.
 	}
 }
 
-func toControlCabinetModel(req dto.CreateControlCabinetRequest) *domainFacility.ControlCabinet {
-	return &domainFacility.ControlCabinet{
+func toControlCabinetCreateCommand(
+	req dto.CreateControlCabinetRequest,
+) appcontrolcabinet.CreateCommand {
+	return appcontrolcabinet.CreateCommand{
 		BuildingID:       req.BuildingID,
 		ControlCabinetNr: req.ControlCabinetNr,
 	}
 }
 
-func applyControlCabinetUpdate(target *domainFacility.ControlCabinet, req dto.UpdateControlCabinetRequest) {
-	if req.BuildingID != uuid.Nil {
-		target.BuildingID = req.BuildingID
-	}
-	if req.ControlCabinetNr != nil {
-		target.ControlCabinetNr = req.ControlCabinetNr
+func toControlCabinetUpdateCommand(
+	id uuid.UUID,
+	req dto.UpdateControlCabinetRequest,
+) appcontrolcabinet.UpdateCommand {
+	return appcontrolcabinet.UpdateCommand{
+		ControlCabinetID: id,
+		BuildingID:       nonNilUUIDPointer(req.BuildingID),
+		ControlCabinetNr: req.ControlCabinetNr,
 	}
 }
 

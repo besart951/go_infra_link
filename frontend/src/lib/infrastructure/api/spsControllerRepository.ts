@@ -104,7 +104,7 @@ export const spsControllerRepository: SPSControllerRepository = {
     const searchParams = new URLSearchParams();
     searchParams.set('control_cabinet_id', controlCabinetId);
     if (spsControllerId) {
-      searchParams.set('sps_controller_id', spsControllerId);
+      searchParams.set('exclude_id', spsControllerId);
     }
     return api<NextGADeviceResponse>(
       `/facility/sps-controllers/next-ga-device?${searchParams.toString()}`,

@@ -11,7 +11,6 @@ import (
 	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
 	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
-	"github.com/besart951/go_infra_link/backend/internal/service/changecapture"
 	"github.com/google/uuid"
 )
 
@@ -32,7 +31,6 @@ type FieldDeviceService struct {
 	alarmTypeRepo               domainFacility.AlarmTypeRepository
 	bacnetAlarmValueRepo        domainFacility.BacnetObjectAlarmValueRepository
 	fieldDeviceOptionsCache     *fieldDeviceOptionsCache
-	changeRecorder              changecapture.Recorder
 	tx                          txCoordinator
 }
 
@@ -68,16 +66,11 @@ func NewFieldDeviceService(
 		alarmTypeRepo:               alarmTypeRepo,
 		bacnetAlarmValueRepo:        bacnetAlarmValueRepo,
 		fieldDeviceOptionsCache:     newFieldDeviceOptionsCache(),
-		changeRecorder:              changecapture.NoopRecorder{},
 	}
 }
 
 func (s *FieldDeviceService) bindTransactions(tx txCoordinator) {
 	s.tx = tx
-}
-
-func (s *FieldDeviceService) bindChangeRecorder(recorder changecapture.Recorder) {
-	s.changeRecorder = changecapture.DefaultRecorder(recorder)
 }
 
 func (s *FieldDeviceService) transaction() facilityTx[*FieldDeviceService] {
@@ -88,17 +81,6 @@ func (s *FieldDeviceService) transaction() facilityTx[*FieldDeviceService] {
 
 func (s *FieldDeviceService) writer() fieldDeviceWriter {
 	return fieldDeviceWriter{service: s}
-}
-
-func (s *FieldDeviceService) recordFieldDeviceChange(ctx context.Context, action changecapture.Action, id uuid.UUID) error {
-	return changecapture.DefaultRecorder(s.changeRecorder).Record(ctx, changecapture.Change{
-		Action: action,
-		Entity: changecapture.EntityRef{
-			Domain: "facility",
-			Type:   "field_device",
-			ID:     id,
-		},
-	})
 }
 
 func (s *FieldDeviceService) Create(ctx context.Context, fieldDevice *domainFacility.FieldDevice) error {
@@ -156,25 +138,14 @@ func (s *FieldDeviceService) Validate(ctx context.Context, fieldDevice *domainFa
 }
 
 func (s *FieldDeviceService) DeleteByID(ctx context.Context, id uuid.UUID) error {
-	if err := s.repo.DeleteByIds(ctx, []uuid.UUID{id}); err != nil {
-		return err
-	}
-	return s.recordFieldDeviceChange(ctx, changecapture.ActionDeleted, id)
+	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
 }
 
 func (s *FieldDeviceService) DeleteByIDs(ctx context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	if err := s.repo.DeleteByIds(ctx, ids); err != nil {
-		return err
-	}
-	for _, id := range ids {
-		if err := s.recordFieldDeviceChange(ctx, changecapture.ActionDeleted, id); err != nil {
-			return err
-		}
-	}
-	return nil
+	return s.repo.DeleteByIds(ctx, ids)
 }
 func (s *FieldDeviceService) CreateSpecification(ctx context.Context, fieldDeviceID uuid.UUID, specification *domainFacility.Specification) error {
 	return s.writer().createSpecification(ctx, fieldDeviceID, specification)
@@ -646,11 +617,24 @@ func (s *FieldDeviceService) MultiCreate(ctx context.Context, items []domainFaci
 // It processes updates ensuring that swaps/permutations within the batch are handled correctly.
 // Uniqueness constraints are checked against the database (excluding batch items) AND internally within the batch.
 func (s *FieldDeviceService) BulkUpdate(ctx context.Context, updates []domainFacility.BulkFieldDeviceUpdate) *domainFacility.BulkOperationResult {
-	return s.writer().bulkUpdate(ctx, updates)
+	return s.ExecuteBulkUpdate(ctx, updates).Result
+}
+
+// ExecuteBulkUpdate exposes phase outcomes to the application layer while
+// BulkUpdate preserves the legacy service and HTTP contract.
+func (s *FieldDeviceService) ExecuteBulkUpdate(
+	ctx context.Context,
+	updates []domainFacility.BulkFieldDeviceUpdate,
+) domainFieldDevice.BulkUpdateExecution {
+	return s.writer().executeBulkUpdate(ctx, updates)
 }
 
 // BulkDelete deletes multiple field devices in a single operation.
 // It processes each deletion independently and returns detailed results.
+//
+// Deprecated: HTTP mutations use application/facility/fielddevice.BulkDeleteHandler
+// so each delete and its history commit atomically. Retained for compatibility
+// callers while the service layer is migrated vertically.
 func (s *FieldDeviceService) BulkDelete(ctx context.Context, ids []uuid.UUID) *domainFacility.BulkOperationResult {
 	result := &domainFacility.BulkOperationResult{
 		Results:      make([]domainFacility.BulkOperationResultItem, len(ids)),

@@ -20,20 +20,32 @@ type Handlers struct {
 	Phase              *phasehandler.Handler
 	PhasePermission    *phasepermissionhandler.Handler
 	FieldDeviceOptions *fielddevicehandler.OptionsHandler
-	RefreshBroadcaster *FacilityRefreshBroadcaster
 }
 
 type ServiceDeps struct {
-	Lifecycle          ProjectLifecycleService
-	AccessPolicy       ProjectAccessPolicyService
-	Membership         ProjectMembershipService
-	Workflow           ProjectWorkflowService
-	FacilityLink       ProjectFacilityLinkService
-	Phase              PhaseService
-	PhasePermission    PhasePermissionService
-	FieldDeviceOptions FieldDeviceOptionsService
-	Notifications      NotificationEventDispatcher
-	Collaboration      *ProjectCollaborationHub
+	Lifecycle                     ProjectLifecycleService
+	AccessPolicy                  ProjectAccessPolicyService
+	Membership                    ProjectMembershipService
+	Workflow                      ProjectWorkflowService
+	FacilityLink                  ProjectFacilityLinkService
+	ControlCabinetCloner          controlcabinethandler.ProjectControlCabinetCloner
+	ControlCabinetAssigner        controlcabinethandler.ProjectControlCabinetAssigner
+	ControlCabinetReassigner      controlcabinethandler.ProjectControlCabinetReassigner
+	SPSControllerCloner           spscontrollerhandler.ProjectSPSControllerCloner
+	SPSControllerSystemTypeCloner spscontrollerhandler.ProjectSPSControllerSystemTypeCloner
+	SPSControllerAssigner         spscontrollerhandler.ProjectSPSControllerAssigner
+	SPSControllerReassigner       spscontrollerhandler.ProjectSPSControllerReassigner
+	FieldDeviceMultiCreator       fielddevicehandler.ProjectFieldDeviceMultiCreator
+	FieldDeviceAssigner           fielddevicehandler.ProjectFieldDeviceAssigner
+	FieldDeviceBulkAssigner       fielddevicehandler.ProjectFieldDeviceBulkAssigner
+	FieldDeviceReassigner         fielddevicehandler.ProjectFieldDeviceReassigner
+	ObjectDataAttacher            objectdatahandler.ProjectObjectDataAttacher
+	ObjectDataDeactivator         objectdatahandler.ProjectObjectDataDeactivator
+	Phase                         PhaseService
+	PhasePermission               PhasePermissionService
+	FieldDeviceOptions            FieldDeviceOptionsService
+	Notifications                 NotificationEventDispatcher
+	Collaboration                 *ProjectCollaborationHub
 }
 
 func NewHandlers(deps ServiceDeps) *Handlers {
@@ -47,15 +59,20 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 	}
 	projectHandler := newProjectHandler(deps.Lifecycle, deps.AccessPolicy, deps.Membership, workflow, deps.FacilityLink, collaboration, deps.Notifications)
 	return &Handlers{
-		Project:            projectHandler,
-		Membership:         membershiphandler.NewHandler(deps.AccessPolicy, workflow, projectHandler.notifyProjectChange),
-		ControlCabinet:     controlcabinethandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectControlCabinetDelta),
-		SPSController:      spscontrollerhandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectSPSControllerDelta),
-		FieldDevice:        fielddevicehandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectFieldDeviceDelta),
-		ObjectData:         objectdatahandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange),
+		Project:        projectHandler,
+		Membership:     membershiphandler.NewHandler(deps.AccessPolicy, workflow, projectHandler.notifyProjectChange),
+		ControlCabinet: controlcabinethandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, deps.ControlCabinetCloner, deps.ControlCabinetAssigner, deps.ControlCabinetReassigner, projectHandler.notifyProjectChange, projectHandler.notifyProjectEvent),
+		SPSController:  spscontrollerhandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, deps.SPSControllerCloner, deps.SPSControllerSystemTypeCloner, deps.SPSControllerAssigner, deps.SPSControllerReassigner, projectHandler.notifyProjectChange, projectHandler.notifyProjectEvent),
+		FieldDevice:    fielddevicehandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, deps.FieldDeviceMultiCreator, deps.FieldDeviceAssigner, deps.FieldDeviceBulkAssigner, deps.FieldDeviceReassigner, projectHandler.notifyProjectChange, projectHandler.notifyProjectEvent),
+		ObjectData: objectdatahandler.NewHandler(
+			deps.AccessPolicy,
+			deps.FacilityLink,
+			deps.ObjectDataAttacher,
+			deps.ObjectDataDeactivator,
+			projectHandler.notifyProjectEvent,
+		),
 		Phase:              phasehandler.NewHandler(deps.Phase),
 		PhasePermission:    phasepermissionhandler.NewHandler(deps.PhasePermission),
 		FieldDeviceOptions: fielddevicehandler.NewOptionsHandler(deps.AccessPolicy, deps.FieldDeviceOptions),
-		RefreshBroadcaster: NewFacilityRefreshBroadcaster(deps.FacilityLink, collaboration),
 	}
 }

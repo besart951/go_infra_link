@@ -2,6 +2,14 @@
 
 Status: draft
 
+> Architekturhinweis (2026-07-20): Der aktuelle Umsetzungsstand und die
+> verbindlichen Abgrenzungen stehen in
+> `docs/FACILITY_MUTATION_ARCHITECTURE.md`. Der unten beschriebene
+> `ChangeRecorder` entspricht heute dem transaktionalen
+> `historycapture.ChangeStore`/`historysql.Store`-Pfad. Das entfernte
+> `service/changecapture`-Sparse-Modell darf nicht als zweites Audit-System
+> wieder eingefuehrt werden.
+
 Dieser Plan beschreibt die inkrementelle Umsetzung fuer:
 
 1. Change History Module - wer hat was wann erstellt, geaendert oder geloescht.
@@ -384,6 +392,47 @@ Akzeptanz:
 ## Implementation Log
 
 - 2026-04-30: Initial plan created.
+- 2026-07-20: Das konkurrierende `service/changecapture`-Modell entfernt und
+  `historycapture.ChangeStore` als Consumer-Interface eingefuehrt. Plurale
+  Create/Delete-Aufzeichnung, Snapshot-Reads, Scope-Aufloesung und
+  Event/Scope/Version-Inserts sind in 500er Batches umgesetzt. Query-Budget-
+  Tests decken FieldDevice, Specification, BACnet/Alarm, SystemType sowie die
+  501-Item-Grenze ab. PostgreSQL-Integrationstests fuer `to_jsonb`, Restore und
+  echtes Transaktions-Rollback bleiben offen.
+- 2026-07-20: Bei einem FieldDevice-Parent-Move ermittelt die gebatchte
+  Scope-Aufloesung die Vereinigungsmenge der alten und neuen
+  SPSControllerSystemType-Hierarchie aus Before/After-Snapshots. Damit bleiben
+  Building-, Cabinet-, SPS-, SystemType- und Project-Scopes beider Pfade ohne
+  N+1 Queries auffindbar. Direkte `ProjectFieldDevice` Links werden weiterhin
+  unveraendert beibehalten; ihre Herkunft ist im aktuellen Schema nicht
+  gespeichert.
+- 2026-07-20: `PUT SPSController` laeuft jetzt ueber eine application-eigene
+  Transaktion. Controller-Update, optionaler Cabinet-Move,
+  SystemType-Replacement und `historycapture` teilen eine Operation-/Batch-ID;
+  erst nach erfolgreichem Commit werden direkte `ProjectSPSController` Links
+  gebatcht aufgeloest und ein typisiertes Update-/Move-Kommando dispatcht. Die
+  Scope-Aufloesung nimmt bei Moves beide Cabinets, Buildings und direkten
+  Cabinet-Projekte auf, ohne Projekte fremder SPS-Nachfahren im alten Cabinet
+  zu leaken. Query-Budget-Tests belegen konstante Statement-Zahlen fuer einen
+  und zwanzig SPS-Moves; Write- und Commit-Fehler erzeugen keinen Dispatch.
+- 2026-07-20: `PUT ControlCabinet` laeuft ebenfalls ueber eine
+  application-eigene Transaktion. Cabinet-Update bzw. Building-Move und die
+  paginierte Regenerierung aller SPS-DeviceNames werden gemeinsam mit History
+  committed oder zurueckgerollt. Die Root-History enthaelt alte und neue
+  Building-Scopes; die SPS-Kindevents teilen dieselbe Batch-ID. Erst nach Commit
+  werden direkte `ProjectControlCabinet` Empfaenger aufgeloest und das bestehende
+  v1-`control_cabinet`-Delta ueber ein typisiertes Update-/Move-Kommando erzeugt.
+  Ein-versus-zwanzig Move-Batches bleiben im Scope-Resolver query-konstant.
+- 2026-07-20: `PUT BacnetObject` laeuft jetzt ueber eine application-eigene
+  Transaktion mit autoritativem Load, typisiertem Patch und optionaler
+  FieldDevice-Reassignment. Row-Write und `historycapture` teilen die
+  Operation-/Batch-ID; erst nach Commit wird die Vereinigungsmenge alter und
+  neuer direkter `ProjectFieldDevice` Links aufgeloest und pro Projekt als
+  bestehender v1-FieldDevice-Refresh dispatcht. Before/After-Snapshots liefern
+  beide FieldDevice-Hierarchie-/Project-Scopes ohne N+1 Queries. Eine neue
+  ObjectData-Verknuepfung wird innerhalb der Transaktion vor dem dekorierten
+  Row-Update angelegt, damit deren ObjectData-/Project-Scope im Event enthalten
+  ist. Join-Restore und ein v1-Template-Realtime-Scope bleiben offen.
 
 ## Resume Notes For Future Codex Sessions
 

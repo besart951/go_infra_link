@@ -221,6 +221,159 @@ func TestProjectService_CreateControlCabinet_CharacterizesDescendantLinking(t *t
 	}
 }
 
+func TestProjectService_UpdateSPSController_CharacterizesAdditiveDescendantLinking(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	linkID := uuid.New()
+	previousSPSControllerID := uuid.New()
+	newSPSControllerID := uuid.New()
+	oldFieldDeviceID := uuid.New()
+	newSystemTypeID := uuid.New()
+	newFieldDeviceID := uuid.New()
+
+	spsLinks := newProjectSPSControllerRepo()
+	fieldDeviceLinks := newProjectFieldDeviceRepo()
+	spsSystemRepo := newProjectSPSSystemTypeRepo()
+	fieldDeviceRepo := newProjectFieldDeviceStore()
+	spsLinks.items[linkID] = &domainProject.ProjectSPSController{
+		Base:            domain.Base{ID: linkID},
+		ProjectID:       projectID,
+		SPSControllerID: previousSPSControllerID,
+	}
+	fieldDeviceLinks.createWithID(projectID, oldFieldDeviceID)
+	spsSystemRepo.items[newSystemTypeID] = &domainFacility.SPSControllerSystemType{
+		Base:            domain.Base{ID: newSystemTypeID},
+		SPSControllerID: newSPSControllerID,
+	}
+	fieldDeviceRepo.items[newFieldDeviceID] = &domainFacility.FieldDevice{
+		Base:                      domain.Base{ID: newFieldDeviceID},
+		SPSControllerSystemTypeID: newSystemTypeID,
+	}
+
+	svc := newProjectCharacterizationServices(
+		newProjectRepo(),
+		newProjectControlCabinetRepo(),
+		spsLinks,
+		fieldDeviceLinks,
+		newProjectObjectDataRepo(),
+		newProjectBacnetObjectRepo(),
+		nil,
+		newProjectControlCabinetStore(),
+		newProjectSPSRepo(),
+		spsSystemRepo,
+		fieldDeviceRepo,
+		nil,
+	).FacilityLink
+
+	updated, err := svc.UpdateSPSController(
+		ctx,
+		linkID,
+		projectID,
+		newSPSControllerID,
+	)
+	if err != nil {
+		t.Fatalf("expected link update to succeed, got %v", err)
+	}
+
+	if updated.ID != linkID || updated.ProjectID != projectID ||
+		updated.SPSControllerID != newSPSControllerID {
+		t.Fatalf("unexpected updated link: %+v", updated)
+	}
+	if got := spsLinks.spsControllerIDs(projectID); !sameUUIDSet(got, []uuid.UUID{newSPSControllerID}) {
+		t.Fatalf("expected root link to target only the new SPSController, got %v", got)
+	}
+	if got := fieldDeviceLinks.fieldDeviceIDs(projectID); !sameUUIDSet(got, []uuid.UUID{
+		oldFieldDeviceID,
+		newFieldDeviceID,
+	}) {
+		t.Fatalf("expected old descendant link to remain and new descendant link to be added, got %v", got)
+	}
+}
+
+func TestProjectService_UpdateControlCabinet_CharacterizesAdditiveDescendantLinking(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	linkID := uuid.New()
+	previousCabinetID := uuid.New()
+	newCabinetID := uuid.New()
+	oldSPSControllerID := uuid.New()
+	oldFieldDeviceID := uuid.New()
+	newSPSControllerID := uuid.New()
+	newSystemTypeID := uuid.New()
+	newFieldDeviceID := uuid.New()
+
+	controlCabinetLinks := newProjectControlCabinetRepo()
+	spsLinks := newProjectSPSControllerRepo()
+	fieldDeviceLinks := newProjectFieldDeviceRepo()
+	spsRepo := newProjectSPSRepo()
+	spsSystemRepo := newProjectSPSSystemTypeRepo()
+	fieldDeviceRepo := newProjectFieldDeviceStore()
+	controlCabinetLinks.items[linkID] = &domainProject.ProjectControlCabinet{
+		Base:             domain.Base{ID: linkID},
+		ProjectID:        projectID,
+		ControlCabinetID: previousCabinetID,
+	}
+	spsLinks.createWithID(projectID, oldSPSControllerID)
+	fieldDeviceLinks.createWithID(projectID, oldFieldDeviceID)
+	spsRepo.items[newSPSControllerID] = &domainFacility.SPSController{
+		Base:             domain.Base{ID: newSPSControllerID},
+		ControlCabinetID: newCabinetID,
+	}
+	spsSystemRepo.items[newSystemTypeID] = &domainFacility.SPSControllerSystemType{
+		Base:            domain.Base{ID: newSystemTypeID},
+		SPSControllerID: newSPSControllerID,
+	}
+	fieldDeviceRepo.items[newFieldDeviceID] = &domainFacility.FieldDevice{
+		Base:                      domain.Base{ID: newFieldDeviceID},
+		SPSControllerSystemTypeID: newSystemTypeID,
+	}
+
+	svc := newProjectCharacterizationServices(
+		newProjectRepo(),
+		controlCabinetLinks,
+		spsLinks,
+		fieldDeviceLinks,
+		newProjectObjectDataRepo(),
+		newProjectBacnetObjectRepo(),
+		nil,
+		newProjectControlCabinetStore(),
+		spsRepo,
+		spsSystemRepo,
+		fieldDeviceRepo,
+		nil,
+	).FacilityLink
+
+	updated, err := svc.UpdateControlCabinet(
+		ctx,
+		linkID,
+		projectID,
+		newCabinetID,
+	)
+	if err != nil {
+		t.Fatalf("expected link update to succeed, got %v", err)
+	}
+
+	if updated.ID != linkID || updated.ProjectID != projectID ||
+		updated.ControlCabinetID != newCabinetID {
+		t.Fatalf("unexpected updated link: %+v", updated)
+	}
+	if got := controlCabinetLinks.controlCabinetIDs(projectID); !sameUUIDSet(got, []uuid.UUID{newCabinetID}) {
+		t.Fatalf("expected root link to target only the new ControlCabinet, got %v", got)
+	}
+	if got := spsLinks.spsControllerIDs(projectID); !sameUUIDSet(got, []uuid.UUID{
+		oldSPSControllerID,
+		newSPSControllerID,
+	}) {
+		t.Fatalf("expected old SPS link to remain and new SPS link to be added, got %v", got)
+	}
+	if got := fieldDeviceLinks.fieldDeviceIDs(projectID); !sameUUIDSet(got, []uuid.UUID{
+		oldFieldDeviceID,
+		newFieldDeviceID,
+	}) {
+		t.Fatalf("expected old FieldDevice link to remain and new FieldDevice link to be added, got %v", got)
+	}
+}
+
 func TestProjectService_DeleteControlCabinet_CharacterizesLinkAndHierarchyDeletion(t *testing.T) {
 	ctx := context.Background()
 	projectID := uuid.New()
@@ -1184,6 +1337,18 @@ func (r *projectBacnetObjectRepoFake) BulkCreate(_ context.Context, entities []*
 	return nil
 }
 
+func (r *projectBacnetObjectRepoFake) AssignSoftwareReferenceIDs(_ context.Context, assignments map[uuid.UUID]uuid.UUID) error {
+	for objectID, referenceID := range assignments {
+		item := r.items[objectID]
+		if item == nil {
+			continue
+		}
+		assignedID := referenceID
+		item.SoftwareReferenceID = &assignedID
+	}
+	return nil
+}
+
 func (r *projectBacnetObjectRepoFake) Update(_ context.Context, entity *domainFacility.BacnetObject) error {
 	clone := *entity
 	r.items[entity.ID] = &clone
@@ -1594,6 +1759,18 @@ func (r *projectFieldDeviceStoreFake) Update(_ context.Context, entity *domainFa
 	return nil
 }
 
+func (r *projectFieldDeviceStoreFake) AssignSpecificationIDs(_ context.Context, assignments map[uuid.UUID]uuid.UUID) error {
+	for fieldDeviceID, specificationID := range assignments {
+		item := r.items[fieldDeviceID]
+		if item == nil {
+			continue
+		}
+		assignedID := specificationID
+		item.SpecificationID = &assignedID
+	}
+	return nil
+}
+
 func (r *projectFieldDeviceStoreFake) DeleteByIds(_ context.Context, ids []uuid.UUID) error {
 	deleteIDs(ids, r.items)
 	return nil
@@ -1613,6 +1790,32 @@ func (r *projectFieldDeviceStoreFake) GetIDsBySPSControllerSystemTypeIDs(_ conte
 	for id, item := range r.items {
 		if _, ok := set[item.SPSControllerSystemTypeID]; ok {
 			out = append(out, id)
+		}
+	}
+	return out, nil
+}
+
+func (r *projectFieldDeviceStoreFake) ListIDsBySPSControllerSystemTypeIDsAfter(
+	ctx context.Context,
+	ids []uuid.UUID,
+	afterID *uuid.UUID,
+	limit int,
+) ([]uuid.UUID, error) {
+	all, err := r.GetIDsBySPSControllerSystemTypeIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(all, func(i, j int) bool {
+		return all[i].String() < all[j].String()
+	})
+	out := make([]uuid.UUID, 0, limit)
+	for _, id := range all {
+		if afterID != nil && id.String() <= afterID.String() {
+			continue
+		}
+		out = append(out, id)
+		if len(out) == limit {
+			break
 		}
 	}
 	return out, nil

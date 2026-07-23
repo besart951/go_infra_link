@@ -2,6 +2,7 @@ package historycapture
 
 import (
 	"context"
+	"fmt"
 	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
 	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
@@ -9,7 +10,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
-	"github.com/besart951/go_infra_link/backend/internal/repository/historysql"
 	"github.com/google/uuid"
 )
 
@@ -18,7 +18,7 @@ type repository[T any] struct {
 	audit audit[T]
 }
 
-func WrapRepository[T any](table string, next domain.Repository[T], store *historysql.Store) domain.Repository[T] {
+func WrapRepository[T any](table string, next domain.Repository[T], store ChangeStore) domain.Repository[T] {
 	if store == nil {
 		return next
 	}
@@ -42,7 +42,7 @@ type BuildingRepository struct {
 	audit audit[domainFacility.Building]
 }
 
-func WrapBuilding(next domainFacility.BuildingRepository, store *historysql.Store) domainFacility.BuildingRepository {
+func WrapBuilding(next domainFacility.BuildingRepository, store ChangeStore) domainFacility.BuildingRepository {
 	return &BuildingRepository{BuildingRepository: next, audit: newAudit[domainFacility.Building]("buildings", store)}
 }
 
@@ -61,7 +61,7 @@ type SystemTypeRepository struct {
 	audit audit[domainFacility.SystemType]
 }
 
-func WrapSystemType(next domainFacility.SystemTypeRepository, store *historysql.Store) domainFacility.SystemTypeRepository {
+func WrapSystemType(next domainFacility.SystemTypeRepository, store ChangeStore) domainFacility.SystemTypeRepository {
 	return &SystemTypeRepository{SystemTypeRepository: next, audit: newAudit[domainFacility.SystemType]("system_types", store)}
 }
 
@@ -80,7 +80,7 @@ type SystemPartRepository struct {
 	audit audit[domainFacility.SystemPart]
 }
 
-func WrapSystemPart(next domainFacility.SystemPartRepository, store *historysql.Store) domainFacility.SystemPartRepository {
+func WrapSystemPart(next domainFacility.SystemPartRepository, store ChangeStore) domainFacility.SystemPartRepository {
 	return &SystemPartRepository{SystemPartRepository: next, audit: newAudit[domainFacility.SystemPart]("system_parts", store)}
 }
 
@@ -99,7 +99,7 @@ type ApparatRepository struct {
 	audit audit[domainFacility.Apparat]
 }
 
-func WrapApparat(next domainFacility.ApparatRepository, store *historysql.Store) domainFacility.ApparatRepository {
+func WrapApparat(next domainFacility.ApparatRepository, store ChangeStore) domainFacility.ApparatRepository {
 	return &ApparatRepository{ApparatRepository: next, audit: newAudit[domainFacility.Apparat]("apparats", store)}
 }
 
@@ -118,7 +118,7 @@ type ControlCabinetRepository struct {
 	audit audit[domainFacility.ControlCabinet]
 }
 
-func WrapControlCabinet(next domainFacility.ControlCabinetRepository, store *historysql.Store) domainFacility.ControlCabinetRepository {
+func WrapControlCabinet(next domainFacility.ControlCabinetRepository, store ChangeStore) domainFacility.ControlCabinetRepository {
 	return &ControlCabinetRepository{ControlCabinetRepository: next, audit: newAudit[domainFacility.ControlCabinet]("control_cabinets", store)}
 }
 
@@ -137,7 +137,7 @@ type SPSControllerRepository struct {
 	audit audit[domainFacility.SPSController]
 }
 
-func WrapSPSController(next domainFacility.SPSControllerRepository, store *historysql.Store) domainFacility.SPSControllerRepository {
+func WrapSPSController(next domainFacility.SPSControllerRepository, store ChangeStore) domainFacility.SPSControllerRepository {
 	return &SPSControllerRepository{SPSControllerRepository: next, audit: newAudit[domainFacility.SPSController]("sps_controllers", store)}
 }
 
@@ -154,10 +154,10 @@ func (r *SPSControllerRepository) DeleteByIds(ctx context.Context, ids []uuid.UU
 type SPSControllerSystemTypeStore struct {
 	domainHierarchy.SPSControllerSystemTypeStore
 	audit audit[domainFacility.SPSControllerSystemType]
-	store *historysql.Store
+	store ChangeStore
 }
 
-func WrapSPSControllerSystemType(next domainHierarchy.SPSControllerSystemTypeStore, store *historysql.Store) domainHierarchy.SPSControllerSystemTypeStore {
+func WrapSPSControllerSystemType(next domainHierarchy.SPSControllerSystemTypeStore, store ChangeStore) domainHierarchy.SPSControllerSystemTypeStore {
 	return &SPSControllerSystemTypeStore{SPSControllerSystemTypeStore: next, audit: newAudit[domainFacility.SPSControllerSystemType]("sps_controller_system_types", store), store: store}
 }
 
@@ -187,10 +187,10 @@ func (r *SPSControllerSystemTypeStore) DeleteBySPSControllerIDs(ctx context.Cont
 type FieldDeviceStore struct {
 	domainFieldDevice.FieldDeviceStore
 	audit audit[domainFacility.FieldDevice]
-	store *historysql.Store
+	store ChangeStore
 }
 
-func WrapFieldDevice(next domainFieldDevice.FieldDeviceStore, store *historysql.Store) domainFieldDevice.FieldDeviceStore {
+func WrapFieldDevice(next domainFieldDevice.FieldDeviceStore, store ChangeStore) domainFieldDevice.FieldDeviceStore {
 	return &FieldDeviceStore{FieldDeviceStore: next, audit: newAudit[domainFacility.FieldDevice]("field_devices", store), store: store}
 }
 
@@ -208,6 +208,23 @@ func (r *FieldDeviceStore) BulkCreate(ctx context.Context, entities []*domainFac
 		func(ctx context.Context) error { return r.FieldDeviceStore.BulkCreate(ctx, entities, batchSize) },
 		func() []uuid.UUID { return idsOf(entities) },
 	)
+}
+func (r *FieldDeviceStore) AssignSpecificationIDs(ctx context.Context, assignments map[uuid.UUID]uuid.UUID) error {
+	if len(assignments) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(assignments))
+	for id := range assignments {
+		ids = append(ids, id)
+	}
+	before, err := r.store.LoadRows(ctx, "field_devices", ids)
+	if err != nil {
+		return err
+	}
+	if err := r.FieldDeviceStore.AssignSpecificationIDs(ctx, assignments); err != nil {
+		return err
+	}
+	return r.store.RecordUpdates(ctx, "field_devices", before)
 }
 func (r *FieldDeviceStore) DeleteBySPSControllerSystemTypeIDs(ctx context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {
@@ -236,10 +253,10 @@ func (r *FieldDeviceStore) DeleteBySPSControllerSystemTypeIDs(ctx context.Contex
 type SpecificationStore struct {
 	domainFieldDevice.SpecificationStore
 	audit audit[domainFacility.Specification]
-	store *historysql.Store
+	store ChangeStore
 }
 
-func WrapSpecification(next domainFieldDevice.SpecificationStore, store *historysql.Store) domainFieldDevice.SpecificationStore {
+func WrapSpecification(next domainFieldDevice.SpecificationStore, store ChangeStore) domainFieldDevice.SpecificationStore {
 	return &SpecificationStore{SpecificationStore: next, audit: newAudit[domainFacility.Specification]("specifications", store), store: store}
 }
 
@@ -295,15 +312,31 @@ func (r *SpecificationStore) DeleteBySPSControllerSystemTypeIDs(ctx context.Cont
 type BacnetObjectStore struct {
 	domainObjectData.BacnetObjectStore
 	audit audit[domainFacility.BacnetObject]
-	store *historysql.Store
+	store ChangeStore
 }
 
-func WrapBacnetObject(next domainObjectData.BacnetObjectStore, store *historysql.Store) domainObjectData.BacnetObjectStore {
+var _ domainObjectData.ObjectDataBacnetObjectCreator = (*BacnetObjectStore)(nil)
+
+func WrapBacnetObject(next domainObjectData.BacnetObjectStore, store ChangeStore) domainObjectData.BacnetObjectStore {
 	return &BacnetObjectStore{BacnetObjectStore: next, audit: newAudit[domainFacility.BacnetObject]("bacnet_objects", store), store: store}
 }
 
 func (r *BacnetObjectStore) Create(ctx context.Context, entity *domainFacility.BacnetObject) error {
 	return r.audit.create(ctx, r.BacnetObjectStore, entity)
+}
+func (r *BacnetObjectStore) CreateForObjectData(
+	ctx context.Context,
+	objectDataID uuid.UUID,
+	entity *domainFacility.BacnetObject,
+) error {
+	creator, ok := r.BacnetObjectStore.(domainObjectData.ObjectDataBacnetObjectCreator)
+	if !ok {
+		return fmt.Errorf("BACnet object store does not support ObjectData-owned create")
+	}
+	if err := creator.CreateForObjectData(ctx, objectDataID, entity); err != nil {
+		return err
+	}
+	return r.audit.recordCreated(ctx, entity.ID)
 }
 func (r *BacnetObjectStore) Update(ctx context.Context, entity *domainFacility.BacnetObject) error {
 	return r.audit.update(ctx, r.BacnetObjectStore, entity)
@@ -316,6 +349,23 @@ func (r *BacnetObjectStore) BulkCreate(ctx context.Context, entities []*domainFa
 		func(ctx context.Context) error { return r.BacnetObjectStore.BulkCreate(ctx, entities, batchSize) },
 		func() []uuid.UUID { return idsOf(entities) },
 	)
+}
+func (r *BacnetObjectStore) AssignSoftwareReferenceIDs(ctx context.Context, assignments map[uuid.UUID]uuid.UUID) error {
+	if len(assignments) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(assignments))
+	for id := range assignments {
+		ids = append(ids, id)
+	}
+	before, err := r.store.LoadRows(ctx, "bacnet_objects", ids)
+	if err != nil {
+		return err
+	}
+	if err := r.BacnetObjectStore.AssignSoftwareReferenceIDs(ctx, assignments); err != nil {
+		return err
+	}
+	return r.store.RecordUpdates(ctx, "bacnet_objects", before)
 }
 func (r *BacnetObjectStore) DeleteByFieldDeviceIDs(ctx context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {
@@ -356,7 +406,7 @@ type ObjectDataStore struct {
 	audit audit[domainFacility.ObjectData]
 }
 
-func WrapObjectData(next domainObjectData.ObjectDataStore, store *historysql.Store) domainObjectData.ObjectDataStore {
+func WrapObjectData(next domainObjectData.ObjectDataStore, store ChangeStore) domainObjectData.ObjectDataStore {
 	return &ObjectDataStore{ObjectDataStore: next, audit: newAudit[domainFacility.ObjectData]("object_data", store)}
 }
 
@@ -375,7 +425,7 @@ type AlarmDefinitionRepository struct {
 	audit audit[domainFacility.AlarmDefinition]
 }
 
-func WrapAlarmDefinition(next domainFacility.AlarmDefinitionRepository, store *historysql.Store) domainFacility.AlarmDefinitionRepository {
+func WrapAlarmDefinition(next domainFacility.AlarmDefinitionRepository, store ChangeStore) domainFacility.AlarmDefinitionRepository {
 	return &AlarmDefinitionRepository{AlarmDefinitionRepository: next, audit: newAudit[domainFacility.AlarmDefinition]("alarm_definitions", store)}
 }
 
@@ -394,7 +444,7 @@ type AlarmTypeRepository struct {
 	audit audit[domainFacility.AlarmType]
 }
 
-func WrapAlarmType(next domainFacility.AlarmTypeRepository, store *historysql.Store) domainFacility.AlarmTypeRepository {
+func WrapAlarmType(next domainFacility.AlarmTypeRepository, store ChangeStore) domainFacility.AlarmTypeRepository {
 	return &AlarmTypeRepository{AlarmTypeRepository: next, audit: newAudit[domainFacility.AlarmType]("alarm_types", store)}
 }
 
@@ -413,7 +463,7 @@ type BacnetObjectAlarmValueRepository struct {
 	audit audit[domainFacility.BacnetObjectAlarmValue]
 }
 
-func WrapBacnetObjectAlarmValue(next domainFacility.BacnetObjectAlarmValueRepository, store *historysql.Store) domainFacility.BacnetObjectAlarmValueRepository {
+func WrapBacnetObjectAlarmValue(next domainFacility.BacnetObjectAlarmValueRepository, store ChangeStore) domainFacility.BacnetObjectAlarmValueRepository {
 	return &BacnetObjectAlarmValueRepository{BacnetObjectAlarmValueRepository: next, audit: newAudit[domainFacility.BacnetObjectAlarmValue]("bacnet_object_alarm_values", store)}
 }
 
@@ -443,12 +493,11 @@ func (r *BacnetObjectAlarmValueRepository) ReplaceForBacnetObject(ctx context.Co
 			if err := r.BacnetObjectAlarmValueRepository.ReplaceForBacnetObject(ctx, bacnetObjectID, values); err != nil {
 				return err
 			}
+			ids := make([]uuid.UUID, 0, len(values))
 			for i := range values {
-				if err := r.audit.recordCreated(ctx, values[i].ID); err != nil {
-					return err
-				}
+				ids = append(ids, values[i].ID)
 			}
-			return nil
+			return r.audit.recordCreatedIDs(ctx, ids)
 		},
 	)
 }

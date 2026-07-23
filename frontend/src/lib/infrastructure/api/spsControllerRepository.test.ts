@@ -12,6 +12,17 @@ afterEach(() => {
 });
 
 describe('spsControllerRepository', () => {
+  it('uses the canonical exclude_id query parameter for GA suggestions', async () => {
+    vi.mocked(api).mockResolvedValue({ ga_device: 'AAA' });
+
+    await spsControllerRepository.getNextGADevice('cabinet-1', 'controller-1');
+
+    expect(api).toHaveBeenCalledWith(
+      '/facility/sps-controllers/next-ga-device?control_cabinet_id=cabinet-1&exclude_id=controller-1',
+      { signal: undefined }
+    );
+  });
+
   it('deduplicates listSystemTypes calls for canonicalized filters', async () => {
     vi.mocked(api).mockResolvedValue({
       items: [],

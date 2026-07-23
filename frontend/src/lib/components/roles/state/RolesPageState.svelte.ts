@@ -74,9 +74,7 @@ export class RolesPageState {
   uniqueResources = $derived(
     new Set(this.permissions.map((permission) => permission.resource)).size
   );
-  canEditSelectedRole = $derived(
-    this.selectedRole ? this.canEditRole(this.selectedRole) : false
-  );
+  canEditSelectedRole = $derived(this.selectedRole ? this.canEditRole(this.selectedRole) : false);
 
   get currentUser(): User | null | undefined {
     return this.resolveUser();

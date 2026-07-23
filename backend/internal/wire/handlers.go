@@ -19,7 +19,7 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 
 	projectHandlers := newProjectHandlers(services, runtime)
 
-	facilityHandlers := newFacilityHandlers(services, projectHandlers.RefreshBroadcaster)
+	facilityHandlers := newFacilityHandlers(services)
 	userHandlers := newUserHandlers(services)
 
 	authHandler := authhandler.NewAuthHandler(
@@ -32,6 +32,16 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 		cookieSettings,
 	)
 
+	var projectControlCabinetRestorer historyhandler.ProjectControlCabinetRestorer
+	var projectTimelineReader historyhandler.ProjectTimelineReader
+	if services.FacilityApplication != nil &&
+		services.FacilityApplication.ControlCabinet != nil {
+		projectControlCabinetRestorer = services.FacilityApplication.ControlCabinet.RestoreForProject
+	}
+	if services.HistoryApplication != nil {
+		projectTimelineReader = services.HistoryApplication.ProjectTimeline
+	}
+
 	return &handler.Handlers{
 		Auth:             authHandler,
 		AuthRegistration: authhandler.NewRegistrationHandler(services.UserRegistration),
@@ -42,6 +52,10 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 		Team:             teamhandler.NewTeamHandler(services.Team),
 		User:             userHandlers,
 		Facility:         facilityHandlers,
-		History:          historyhandler.NewHandler(services.History),
+		History: historyhandler.NewHandler(
+			services.History,
+			projectControlCabinetRestorer,
+			projectTimelineReader,
+		),
 	}
 }

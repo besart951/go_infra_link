@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import BuildingsPage from './+page.svelte';
 import type { Building } from '$lib/domain/facility/index.js';
 
@@ -125,6 +125,13 @@ describe('buildings facility page', () => {
     mockRuntime.confirm.mockResolvedValue(true);
     mockRuntime.deleteBuilding.mockResolvedValue(undefined);
     grant('building.create', 'building.update', 'building.delete');
+  });
+
+  afterEach(async () => {
+    cleanup();
+    // Bits UI deliberately restores body scroll on a 24 ms timer. Let that
+    // teardown complete while this test's jsdom document still exists.
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 30));
   });
 
   it('opens create form and reloads after form success', async () => {

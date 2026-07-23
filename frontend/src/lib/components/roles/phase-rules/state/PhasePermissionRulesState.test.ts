@@ -46,10 +46,12 @@ import type { Phase, PhasePermission } from '$lib/domain/phase/index.js';
 import type { Permission, Role } from '$lib/domain/role/index.js';
 import { PhasePermissionRulesState } from './PhasePermissionRulesState.svelte.js';
 
-function buildState(options: {
-  rules?: () => PhasePermission[];
-  onRulesChange?: () => Promise<void> | void;
-} = {}): PhasePermissionRulesState {
+function buildState(
+  options: {
+    rules?: () => PhasePermission[];
+    onRulesChange?: () => Promise<void> | void;
+  } = {}
+): PhasePermissionRulesState {
   const roles: Role[] = [];
   const phases: Phase[] = [{ id: 'phase-1', name: 'Planung', created_at: '', updated_at: '' }];
   const permissions: Permission[] = [];

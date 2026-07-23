@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	appcontrolcabinet "github.com/besart951/go_infra_link/backend/internal/application/facility/controlcabinet"
+	apphistory "github.com/besart951/go_infra_link/backend/internal/application/history"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
@@ -21,12 +23,36 @@ type Service interface {
 	RestoreControlCabinet(ctx context.Context, controlCabinetID uuid.UUID, req domainHistory.RestoreControlCabinetRequest) (*domainHistory.RestoreResult, error)
 }
 
-type Handler struct {
-	service Service
+type ProjectControlCabinetRestorer interface {
+	RestoreForProject(
+		context.Context,
+		appcontrolcabinet.RestoreForProjectCommand,
+	) (*domainHistory.RestoreResult, error)
 }
 
-func NewHandler(service Service) *Handler {
-	return &Handler{service: service}
+type ProjectTimelineReader interface {
+	ListProjectTimeline(
+		context.Context,
+		apphistory.ListProjectTimelineQuery,
+	) (*domain.PaginatedList[domainHistory.ChangeEvent], error)
+}
+
+type Handler struct {
+	service                       Service
+	projectControlCabinetRestorer ProjectControlCabinetRestorer
+	projectTimelineReader         ProjectTimelineReader
+}
+
+func NewHandler(
+	service Service,
+	projectControlCabinetRestorer ProjectControlCabinetRestorer,
+	projectTimelineReader ProjectTimelineReader,
+) *Handler {
+	return &Handler{
+		service:                       service,
+		projectControlCabinetRestorer: projectControlCabinetRestorer,
+		projectTimelineReader:         projectTimelineReader,
+	}
 }
 
 func (h *Handler) ListTimeline(c *gin.Context) {
@@ -113,15 +139,24 @@ func (h *Handler) ListProjectTimeline(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if filter.ScopeType != "" && filter.ScopeID != uuid.Nil {
-		filter.SecondaryScopeType = filter.ScopeType
-		filter.SecondaryScopeID = filter.ScopeID
-	}
-	filter.ScopeType = "project"
-	filter.ScopeID = projectID
-	result, err := h.service.ListTimeline(c.Request.Context(), filter)
-	if err != nil {
+	if h.projectTimelineReader == nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "history_fetch_failed", "facility.fetch_failed")
+		return
+	}
+	result, err := h.projectTimelineReader.ListProjectTimeline(
+		c.Request.Context(),
+		apphistory.ListProjectTimelineQuery{
+			ProjectID: projectID,
+			Filter:    filter,
+		},
+	)
+	if err != nil {
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "history_fetch_failed", "facility.fetch_failed"),
+			handlerutil.MapError(apphistory.ErrProjectTimelineAccessDenied, handlerutil.LocalizedError(http.StatusForbidden, "forbidden", "errors.forbidden")),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "errors.not_found")),
+			handlerutil.MapError(domain.ErrInvalidArgument, handlerutil.LocalizedError(http.StatusBadRequest, "invalid_request", "validation.invalid_request")),
+		)
 		return
 	}
 	c.JSON(http.StatusOK, result)
@@ -140,10 +175,26 @@ func (h *Handler) RestoreProjectControlCabinet(c *gin.Context) {
 	if !ok {
 		return
 	}
-	req.ProjectID = &projectID
-	result, err := h.service.RestoreControlCabinet(c.Request.Context(), controlCabinetID, req)
-	if err != nil {
+	if h.projectControlCabinetRestorer == nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "restore_failed", "facility.update_failed")
+		return
+	}
+	result, err := h.projectControlCabinetRestorer.RestoreForProject(
+		c.Request.Context(),
+		appcontrolcabinet.RestoreForProjectCommand{
+			ProjectID:        projectID,
+			ControlCabinetID: controlCabinetID,
+			AsOf:             req.AsOf,
+			EventID:          req.EventID,
+		},
+	)
+	if err != nil {
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "restore_failed", "facility.update_failed"),
+			handlerutil.MapError(appcontrolcabinet.ErrProjectRestoreAccessDenied, handlerutil.LocalizedError(http.StatusForbidden, "forbidden", "errors.forbidden")),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "errors.not_found")),
+			handlerutil.MapError(domain.ErrInvalidArgument, handlerutil.LocalizedError(http.StatusBadRequest, "invalid_request", "validation.invalid_request")),
+		)
 		return
 	}
 	c.JSON(http.StatusOK, result)

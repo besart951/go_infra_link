@@ -73,6 +73,7 @@ type AlarmDefinitionFieldOverrideRepository = domain.Repository[AlarmDefinitionF
 type BacnetObjectAlarmValueRepository interface {
 	domain.Repository[BacnetObjectAlarmValue]
 	GetByBacnetObjectID(ctx context.Context, bacnetObjectID uuid.UUID) ([]BacnetObjectAlarmValue, error)
+	GetByBacnetObjectIDs(ctx context.Context, bacnetObjectIDs []uuid.UUID) ([]BacnetObjectAlarmValue, error)
 	BulkCreate(ctx context.Context, values []*BacnetObjectAlarmValue, batchSize int) error
 	ReplaceForBacnetObject(ctx context.Context, bacnetObjectID uuid.UUID, values []BacnetObjectAlarmValue) error
 }

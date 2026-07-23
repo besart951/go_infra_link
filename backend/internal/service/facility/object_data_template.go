@@ -112,6 +112,9 @@ func (m objectDataTemplate) createBacnetObject(ctx context.Context, objectDataID
 	}
 
 	bacnetObject.FieldDeviceID = nil
+	if creator, ok := m.bacnetObjectRepo.(domainObjectData.ObjectDataBacnetObjectCreator); ok {
+		return creator.CreateForObjectData(ctx, objectDataID, bacnetObject)
+	}
 	if err := m.bacnetObjectRepo.Create(ctx, bacnetObject); err != nil {
 		return err
 	}
@@ -141,10 +144,14 @@ func (m objectDataTemplate) updateBacnetObject(ctx context.Context, objectDataID
 	}
 
 	bacnetObject.FieldDeviceID = nil
-	if err := m.bacnetObjectRepo.Update(ctx, bacnetObject); err != nil {
+	// Attach first inside the surrounding BacnetObjectService transaction so
+	// the decorated BACnet update can resolve the new ObjectData/project scope
+	// while writing history. Any later update/history failure rolls this link
+	// back with the row mutation.
+	if err := m.objectDataBacnetStore.Add(ctx, objectDataID, bacnetObject.ID); err != nil {
 		return err
 	}
-	return m.objectDataBacnetStore.Add(ctx, objectDataID, bacnetObject.ID)
+	return m.bacnetObjectRepo.Update(ctx, bacnetObject)
 }
 
 func (m objectDataTemplate) replaceBacnetObjects(ctx context.Context, objectDataID uuid.UUID, inputs []domainFacility.BacnetObject) error {

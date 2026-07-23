@@ -629,7 +629,6 @@
                 sharedFieldDeviceEditors={fieldDeviceEditorsByDevice}
                 onSharedFieldDeviceStateChange={(state) =>
                   collaboration.publishFieldDeviceDraftState(state)}
-                onFieldDevicesSaved={(devices) => collaboration.publishFieldDeviceDelta(devices)}
               />
             {:else}
               <Skeleton class="h-6 w-full" />

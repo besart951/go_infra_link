@@ -191,7 +191,9 @@
           permissions={state.permissions}
           onEdit={state.canManagePermissionDefinitions ? state.openEditPermission : undefined}
           onDelete={state.canManagePermissionDefinitions ? state.deletePermission : undefined}
-          onCreate={state.canManagePermissionDefinitions ? state.openCreatePermissionDialog : undefined}
+          onCreate={state.canManagePermissionDefinitions
+            ? state.openCreatePermissionDialog
+            : undefined}
           canManage={state.canManagePermissionDefinitions}
         />
       {/if}

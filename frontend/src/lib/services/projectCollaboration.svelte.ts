@@ -432,21 +432,6 @@ export class ProjectCollaborationState {
     );
   }
 
-  publishFieldDeviceDelta(fieldDevices: FieldDevice[]): void {
-    if (fieldDevices.length === 0) {
-      return;
-    }
-
-    this.send(
-      {
-        type: 'entity_delta',
-        scope: 'field_device',
-        field_devices: fieldDevices
-      },
-      { queueWhenClosed: true }
-    );
-  }
-
   buildFieldDeviceEditorsByDevice(
     usersById: Map<string, User>,
     currentUserId?: string

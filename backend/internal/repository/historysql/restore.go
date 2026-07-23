@@ -323,6 +323,38 @@ func (s *Store) historicalScopedTargets(ctx context.Context, controlCabinetID uu
 	return rows, err
 }
 
+// HasHistoricalProjectControlCabinet recognizes deleted root-link history
+// without loading event payloads. Requiring a project_control_cabinets event
+// prevents a descendant-only project scope from authorizing whole-cabinet
+// restore.
+func (s *Store) HasHistoricalProjectControlCabinet(
+	ctx context.Context,
+	projectID uuid.UUID,
+	controlCabinetID uuid.UUID,
+) (bool, error) {
+	if controlCabinetID == uuid.Nil || projectID == uuid.Nil {
+		return false, nil
+	}
+
+	controlCabinetEvents := s.db.WithContext(ctx).
+		Model(&domainHistory.ChangeEventScope{}).
+		Select("change_event_id").
+		Where("scope_type = ? AND scope_id = ?", scopeControlCabinet, controlCabinetID)
+	projectControlCabinetEvents := s.db.WithContext(ctx).
+		Model(&domainHistory.ChangeEvent{}).
+		Select("id").
+		Where("entity_table = ?", "project_control_cabinets")
+	var count int64
+	err := s.db.WithContext(ctx).
+		Model(&domainHistory.ChangeEventScope{}).
+		Where("scope_type = ? AND scope_id = ?", scopeProject, projectID).
+		Where("change_event_id IN (?)", controlCabinetEvents).
+		Where("change_event_id IN (?)", projectControlCabinetEvents).
+		Limit(1).
+		Count(&count).Error
+	return count > 0, err
+}
+
 func (s *Store) latestVersionsForTargets(ctx context.Context, targets map[string]map[uuid.UUID]struct{}, asOf time.Time) (map[string]domainHistory.EntityVersion, error) {
 	out := map[string]domainHistory.EntityVersion{}
 	for table, ids := range targets {

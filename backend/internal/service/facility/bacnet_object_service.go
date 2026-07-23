@@ -103,6 +103,13 @@ func (s *BacnetObjectService) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]
 	return s.repo.GetByIds(ctx, ids)
 }
 
+// GetObjectDataByID exposes the transaction-scoped owner lookup required by
+// the BACnet create application Module. The application uses the persisted
+// owner to derive project scope instead of trusting transport input.
+func (s *BacnetObjectService) GetObjectDataByID(ctx context.Context, id uuid.UUID) (*domainFacility.ObjectData, error) {
+	return domain.GetByID(ctx, s.objectDataRepo, id)
+}
+
 // CreateWithParent creates a bacnet object either for a field device (fieldDeviceID)
 // or for an object data template (objectDataID). Exactly one must be provided.
 func (s *BacnetObjectService) CreateWithParent(ctx context.Context, bacnetObject *domainFacility.BacnetObject, fieldDeviceID *uuid.UUID, objectDataID *uuid.UUID) error {

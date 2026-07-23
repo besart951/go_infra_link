@@ -1,20 +1,27 @@
 package facility
 
 import (
+	"errors"
 	"net/http"
 
+	appbacnetobject "github.com/besart951/go_infra_link/backend/internal/application/facility/bacnetobject"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 )
 
 type BacnetObjectHandler struct {
-	service BacnetObjectService
+	creator BacnetObjectCreator
+	updater BacnetObjectUpdater
 }
 
-func NewBacnetObjectHandler(service BacnetObjectService) *BacnetObjectHandler {
-	return &BacnetObjectHandler{service: service}
+func NewBacnetObjectHandler(
+	creator BacnetObjectCreator,
+	updater BacnetObjectUpdater,
+) *BacnetObjectHandler {
+	return &BacnetObjectHandler{creator: creator, updater: updater}
 }
 
 // CreateBacnetObject godoc
@@ -34,9 +41,31 @@ func (h *BacnetObjectHandler) CreateBacnetObject(c *gin.Context) {
 		return
 	}
 
-	obj := toBacnetObjectModel(req)
+	if h.creator == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "creation_failed", "facility.creation_failed")
+		return
+	}
 
-	if err := h.service.CreateWithParent(c.Request.Context(), obj, req.FieldDeviceID, req.ObjectDataID); err != nil {
+	var (
+		obj *domainFacility.BacnetObject
+		err error
+	)
+	switch {
+	case req.FieldDeviceID != nil && req.ObjectDataID == nil:
+		obj, err = h.creator.CreateForFieldDevice(
+			c.Request.Context(),
+			toBacnetObjectCreateForFieldDeviceCommand(*req.FieldDeviceID, req),
+		)
+	case req.FieldDeviceID == nil && req.ObjectDataID != nil:
+		obj, err = h.creator.CreateForObjectData(
+			c.Request.Context(),
+			toBacnetObjectCreateForObjectDataCommand(*req.ObjectDataID, req),
+		)
+	default:
+		err = domain.ErrInvalidArgument
+	}
+
+	if err != nil {
 		respondLocalizedDomainError(c, err, "creation_failed", "facility.creation_failed",
 			localizedInvalidArgument("facility.exactly_one_required"),
 			localizedInvalidReference(),
@@ -71,28 +100,24 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
-	if req.FieldDeviceID != nil && req.ObjectDataID != nil {
-		respondLocalizedError(c, http.StatusBadRequest, "validation_error", "facility.validation_error")
+	if h.updater == nil {
+		respondLocalizedError(c, http.StatusInternalServerError, "update_failed", "facility.update_failed")
 		return
 	}
 
-	ctx := c.Request.Context()
-
-	existing, err := h.service.GetByID(ctx, id)
+	updated, err := h.updater.Update(
+		c.Request.Context(),
+		toBacnetObjectUpdateCommand(id, req),
+	)
 	if err != nil {
-		if respondLocalizedNotFoundIf(c, err, "facility.bacnet_object_not_found") {
+		var loadErr *appbacnetobject.LoadError
+		if errors.As(err, &loadErr) {
+			if respondLocalizedNotFoundIf(c, loadErr.Err, "facility.bacnet_object_not_found") {
+				return
+			}
+			respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 			return
 		}
-		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
-		return
-	}
-
-	applyBacnetObjectPatch(existing, req.BacnetObjectPatchInput)
-	if req.FieldDeviceID != nil {
-		existing.FieldDeviceID = req.FieldDeviceID
-	}
-
-	if err := h.service.Update(ctx, existing, req.ObjectDataID); err != nil {
 		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
 			handlerutil.MapError(domain.ErrInvalidArgument, handlerutil.PlainError(http.StatusBadRequest, "validation_error", err.Error())),
 			localizedInvalidReference(),
@@ -101,5 +126,5 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, toBacnetObjectResponse(*existing))
+	c.JSON(http.StatusOK, toBacnetObjectResponse(*updated))
 }

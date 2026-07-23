@@ -73,8 +73,6 @@ describe('/facility overview', () => {
 
     expect(screen.getByText('hub.no_access')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /facility.specifications/ })).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('link', { name: /facility.field_devices/ })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /facility.field_devices/ })).not.toBeInTheDocument();
   });
 });

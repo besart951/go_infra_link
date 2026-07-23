@@ -399,7 +399,7 @@ func (s *SPSControllerService) NextAvailableGADevice(ctx context.Context, contro
 		if err != nil {
 			return "", err
 		}
-		if controller.GADevice != nil {
+		if controller.ControlCabinetID == controlCabinetID && controller.GADevice != nil {
 			current := strings.ToUpper(strings.TrimSpace(*controller.GADevice))
 			if current != "" {
 				delete(used, current)

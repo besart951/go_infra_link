@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	appobjectdata "github.com/besart951/go_infra_link/backend/internal/application/facility/objectdata"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
@@ -16,18 +17,44 @@ import (
 
 type FacilityLinkService interface {
 	ListObjectData(ctx context.Context, projectID uuid.UUID, page, limit int, search string, apparatID, systemPartID *uuid.UUID) (*domain.PaginatedList[domainFacility.ObjectData], error)
-	AddObjectData(ctx context.Context, projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
-	RemoveObjectData(ctx context.Context, projectID, objectDataID uuid.UUID) (*domainFacility.ObjectData, error)
+}
+
+type ProjectObjectDataAttacher interface {
+	AttachToProject(
+		context.Context,
+		appobjectdata.AttachToProjectCommand,
+	) (*domainFacility.ObjectData, error)
+}
+
+type ProjectObjectDataDeactivator interface {
+	DeactivateForProject(
+		context.Context,
+		appobjectdata.DeactivateForProjectCommand,
+	) (*domainFacility.ObjectData, error)
 }
 
 type Handler struct {
-	access       projectshared.AccessPolicyService
-	facilityLink FacilityLinkService
-	notify       projectshared.ProjectChangeNotifier
+	access      projectshared.AccessPolicyService
+	list        FacilityLinkService
+	attacher    ProjectObjectDataAttacher
+	deactivator ProjectObjectDataDeactivator
+	notifyEvent projectshared.ProjectChangeNotifier
 }
 
-func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier) *Handler {
-	return &Handler{access: access, facilityLink: facilityLink, notify: notify}
+func NewHandler(
+	access projectshared.AccessPolicyService,
+	list FacilityLinkService,
+	attacher ProjectObjectDataAttacher,
+	deactivator ProjectObjectDataDeactivator,
+	notifyEvent projectshared.ProjectChangeNotifier,
+) *Handler {
+	return &Handler{
+		access:      access,
+		list:        list,
+		attacher:    attacher,
+		deactivator: deactivator,
+		notifyEvent: notifyEvent,
+	}
 }
 
 // ListProjectObjectData godoc
@@ -84,7 +111,7 @@ func (h *Handler) ListProjectObjectData(c *gin.Context) {
 		systemPartID = &id
 	}
 
-	result, err := h.facilityLink.ListObjectData(c.Request.Context(), projectID, query.Page, query.Limit, query.Search, apparatID, systemPartID)
+	result, err := h.list.ListObjectData(c.Request.Context(), projectID, query.Page, query.Limit, query.Search, apparatID, systemPartID)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),
@@ -131,7 +158,17 @@ func (h *Handler) AddProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	obj, err := h.facilityLink.AddObjectData(c.Request.Context(), projectID, req.ObjectDataID)
+	if h.attacher == nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "project.update_failed")
+		return
+	}
+	obj, err := h.attacher.AttachToProject(
+		c.Request.Context(),
+		appobjectdata.AttachToProjectCommand{
+			ProjectID:    projectID,
+			ObjectDataID: req.ObjectDataID,
+		},
+	)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
@@ -141,8 +178,8 @@ func (h *Handler) AddProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.object_data.created")
+	if h.notifyEvent != nil {
+		h.notifyEvent(c, projectID, "project.object_data.created")
 	}
 
 	c.JSON(http.StatusCreated, toObjectDataResponse(*obj))
@@ -174,7 +211,17 @@ func (h *Handler) RemoveProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	obj, err := h.facilityLink.RemoveObjectData(c.Request.Context(), projectID, objectDataID)
+	if h.deactivator == nil {
+		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "update_failed", "project.update_failed")
+		return
+	}
+	obj, err := h.deactivator.DeactivateForProject(
+		c.Request.Context(),
+		appobjectdata.DeactivateForProjectCommand{
+			ProjectID:    projectID,
+			ObjectDataID: objectDataID,
+		},
+	)
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
@@ -183,8 +230,8 @@ func (h *Handler) RemoveProjectObjectData(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.object_data.deleted")
+	if h.notifyEvent != nil {
+		h.notifyEvent(c, projectID, "project.object_data.deleted")
 	}
 
 	c.JSON(http.StatusOK, toObjectDataResponse(*obj))
