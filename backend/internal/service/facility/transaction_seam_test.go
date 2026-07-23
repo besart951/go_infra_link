@@ -746,7 +746,7 @@ func (r *itemAtomicFieldDeviceStore) restore(
 	r.history = history
 }
 
-func TestFieldDeviceMultiCreateItemSavepointRollsBackFailedRootAndHistory(t *testing.T) {
+func TestFieldDeviceMultiCreateItemSavepointRollsBackFailedRootAndReleasesApparatNr(t *testing.T) {
 	spsSystemTypeID := uuid.New()
 	systemTypeID := uuid.New()
 	apparatID := uuid.New()
@@ -825,7 +825,7 @@ func TestFieldDeviceMultiCreateItemSavepointRollsBackFailedRootAndHistory(t *tes
 					spsSystemTypeID,
 					apparatID,
 					systemPartID,
-					2,
+					1,
 				),
 			},
 		},
@@ -843,6 +843,9 @@ func TestFieldDeviceMultiCreateItemSavepointRollsBackFailedRootAndHistory(t *tes
 	}
 	if fieldDevices.items[successID] == nil {
 		t.Fatal("successful FieldDevice did not remain staged")
+	}
+	if got := fieldDevices.items[successID].ApparatNr; got != 1 {
+		t.Fatalf("released ApparatNr was not reused: got %d, want 1", got)
 	}
 	if len(fieldDevices.history) != 1 || fieldDevices.history[0] != successID {
 		t.Fatalf("persisted history: got %v, want only %s", fieldDevices.history, successID)

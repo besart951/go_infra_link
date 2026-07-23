@@ -259,12 +259,6 @@ func (w fieldDeviceWriter) multiCreate(ctx context.Context, items []domainFacili
 		return nil
 	}
 
-	type createWorkItem struct {
-		index int
-		item  domainFacility.FieldDeviceCreateItem
-	}
-	createWork := make([]createWorkItem, 0, len(items))
-
 	for i, item := range items {
 		createResult := &result.Results[i]
 		createResult.Index = i
@@ -346,28 +340,20 @@ func (w fieldDeviceWriter) multiCreate(ctx context.Context, items []domainFacili
 			continue
 		}
 		usedSet[item.FieldDevice.ApparatNr] = struct{}{}
-		createWork = append(createWork, createWorkItem{index: i, item: item})
-	}
-
-	if len(createWork) == 0 {
-		return result
-	}
-
-	for _, work := range createWork {
-		createResult := &result.Results[work.index]
 		selection := fieldDeviceBacnetSelection{
-			objectDataID: work.item.ObjectDataID,
-			objects:      work.item.BacnetObjects,
-			objectsSet:   len(work.item.BacnetObjects) > 0,
+			objectDataID: item.ObjectDataID,
+			objects:      item.BacnetObjects,
+			objectsSet:   len(item.BacnetObjects) > 0,
 		}
-		if err := w.create(ctx, work.item.FieldDevice, selection); err != nil {
+		if err := w.create(ctx, item.FieldDevice, selection); err != nil {
+			delete(usedSet, item.FieldDevice.ApparatNr)
 			setFieldDeviceCreateError(createResult, err, "fielddevice")
 			result.FailureCount++
 			continue
 		}
 
 		createResult.Success = true
-		createResult.FieldDevice = work.item.FieldDevice
+		createResult.FieldDevice = item.FieldDevice
 		result.SuccessCount++
 	}
 

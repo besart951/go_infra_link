@@ -3456,22 +3456,28 @@ alarm/reference validation remain.**
 
 ### Step 8 — version-2 realtime and durable dispatch decision
 
+- **Status:** approved; implementation is the next migration step.
 - **Objective:** add schema/event/operation/revision fields, deduplication, and
-  explicit stale/gap recovery.
+  explicit stale/gap recovery backed by a transactional outbox with retries and
+  idempotent processing.
 - **Affected files:** collaboration application Module, realtime Adapter,
   frontend parser/state, bus persistence.
-- **New files:** v1/v2 codec tests and, if chosen, transactional outbox.
-- **Deprecated code:** client committed-state messages and unversioned v1 after
-  rollout.
-- **Database migration:** outbox/sequence tables only if durable ordered delivery
-  is approved.
-- **Compatibility:** dual read/write rollout.
+- **New files:** v1/v2 codec tests, transactional outbox model/Store, retry
+  worker, and idempotency tests.
+- **Deprecated code:** client committed-state `entity_delta` messages and
+  unversioned v1 after a short, explicit, monitored compatibility period.
+- **Database migration:** additive outbox, delivery-attempt, and idempotency
+  structures deployed blue-green.
+- **Compatibility:** dual read/write only for the bounded compatibility period;
+  remove `entity_delta` as early as observed active-client usage permits.
 - **Tests:** duplicates, ordering, reconnect, stale fallback, source loops,
   backpressure, oversized fallback.
 - **Performance risk:** outbox retention and fanout throughput.
 - **Rollback:** continue v1 emission while v2 is optional.
 - **Acceptance:** idempotent client application, authoritative PostgreSQL
-  recovery, and no reliance on WebSocket as source of truth.
+  recovery, retryable committed delivery, and no reliance on WebSocket as
+  source of truth. Presence remains process-local because deployment is a
+  single-server monolith.
 
 ## 21. Implemented vertical slices
 
@@ -4600,3 +4606,103 @@ are now the only production seam for migrated global facility notifications.
     after the cursor, but exact point-in-time clone semantics require a captured
     high-water mark, source locking, or repeatable-read policy and dedicated
     concurrency tests before this behavior should be tightened.
+
+## 23. Decisions and responses
+
+Accepted on 2026-07-23. These decisions supersede the open policy questions in
+Section 22. They are implementation constraints, not claims that the
+corresponding migration is already complete.
+
+1. **Project deletion and hierarchy unlinking:** a project may be deleted only
+   after completion and unlinking of all hierarchy entities, or while not
+   completed when it has no linked hierarchy entities. Only `SUPERADMIN` and
+   `ADMIN_FZAG` may delete projects.
+2. **Shared facility ownership:** deleting a project removes only project
+   associations. It must never delete globally existing hierarchy entities.
+3. **History consolidation:** complete PostgreSQL restore coverage,
+   project-link inserted-ID verification, memory-bound tests, and direct
+   `EntityChange` mapping.
+4. **Bulk partial-success reporting:** every item returns a structured success
+   or failure result. The frontend displays the exact item and field validation
+   errors.
+5. **Project-scoped MultiCreate reservations:** release a reserved `ApparatNr`
+   when its item fails. `ApparatNr` remains unique within its defined placement
+   scope.
+6. **Copy scalability:** process hierarchy copies sequentially in batches of at
+   most 100 items and, where practical, schedule work according to current
+   server resource availability.
+7. **Collaboration reliability:** introduce a transactional outbox with retries
+   and idempotent event processing.
+8. **Cross-node presence:** no distributed presence solution is required
+   because the deployment is a single-server monolith.
+9. **Revision migration:** plan and execute revision rollout using a blue-green
+   strategy.
+10. **Unique constraints and number swaps:** introduce the placement unique
+    constraint together with an atomic `ApparatNr` swap mechanism.
+11. **History and restore authorization:** global history and restore operations
+    are allowed only for `SUPERADMIN`, `ADMIN_FZAG`, and `FZAG`.
+12. **Legacy clients:** define a short, explicit compatibility period, monitor
+    active `entity_delta` usage, and remove support as early as possible.
+13. **BACnet alarm-value validation:** every supplied `AlarmTypeField` must
+    belong to the BACnet object's selected `AlarmType`.
+14. **Project-link provenance for FieldDevice moves:** a FieldDevice may remain
+    global and unlinked. Project association rows must distinguish explicit user
+    assignment from inheritance through a linked parent so inherited links can
+    be removed without deleting explicit links.
+15. **Placement uniqueness race:** add a database unique constraint without
+    automatically modifying existing data. The migration must detect and report
+    duplicates and stop while unresolved conflicts exist.
+16. **SPS normalized uniqueness:** normalize names and GA values and enforce
+    uniqueness through indexes over the normalized values.
+17. **SPS project-link provenance:** add the same explicit-versus-inherited
+    provenance model to SPSController project associations.
+18. **Cabinet descendant result fidelity:** add compact child changes to the
+    canonical application result without loading the complete hierarchy.
+19. **Large cabinet rename duration:** measure the current path and introduce
+    bounded updates and set-based history writes where the measurements require
+    them.
+20. **BACnet dual ownership:** record a dedicated ownership ADR covering direct
+    FieldDevice ownership, ObjectData associations, detach behavior, deletion,
+    multiple associations, and restore.
+21. **ObjectData collaboration:** add a typed ObjectData collaboration scope in
+    protocol version 2 so targeted reconciliation can replace full-project
+    refreshes.
+22. **BACnet uniqueness:** duplicate BACnet `TextFix` values are allowed and
+    receive no unique constraint. Template uniqueness remains enforced with
+    appropriate database constraints where required.
+23. **Delete-recipient race:** resolve recipients in the mutation transaction or
+    persist the pre-delete scope through the transactional outbox.
+24. **Root descendant delete history:** use bounded pre-delete snapshots and
+    set-based history writes so cascades do not bypass the audit trail.
+25. **Project clone source visibility:** require read access to the original
+    source hierarchy entity and create permission in the target project. The
+    clone and all events remain target-project scoped.
+26. **Global cabinet clone recipients:** a project-associated cabinet is copied
+    within that project and receives corresponding links. An unassociated
+    cabinet is copied globally without project links.
+27. **Global cabinet delete cleanup:** delete all related
+    `ProjectControlCabinet`, `ProjectSPSController`, and `ProjectFieldDevice`
+    associations and include their removal in history and restore.
+28. **Global system-type copy recipients:** the operation is manually triggered
+    when an `SPSController.ip_address` is created. Recipient projects derive
+    from the owning SPSController.
+29. **Global system-type delete cleanup:** apply the explicit project hierarchy
+    cleanup policy to specifications, BACnet data, project links, and other
+    descendants according to their ownership rules.
+30. **Multi-create batch atomicity:** retain partial success. A shared `BatchID`
+    is correlation only and never a shared rollback boundary; document this in
+    the API contract.
+31. **Project FieldDevice reassignment refresh scope:** notify clients about
+    both old and new `FieldDeviceID` values, or use a project refresh when a
+    targeted reconciliation cannot remove stale state.
+32. **Large parent-assignment volume:** measure memory, transaction and query
+    duration, lock duration, and WAL volume. Use bounded batches and move
+    extreme workloads to an asynchronous job.
+33. **Project SPSController reassignment:** introduce provenance before pruning
+    inherited links and reconcile both old and new hierarchy scopes.
+34. **Project ControlCabinet reassignment:** use provenance-aware cleanup,
+    bounded batching, resource limits, and old/new frontend reconciliation.
+35. **Hierarchy-copy external BACnet references:** BACnet software references
+    are facility-global; preserve targets outside the copied hierarchy.
+36. **Paged-copy source concurrency:** execute the copy transaction at
+    `REPEATABLE READ` isolation to provide one consistent source snapshot.
