@@ -37,7 +37,7 @@ func (c projectFacilityCopy) replaceFieldDeviceBacnetObjects(ctx context.Context
 		objects = append(objects, &bacnetObjects[i])
 	}
 
-	if err := c.bacnetObjectRepo.BulkCreate(ctx, objects, 200); err != nil {
+	if err := c.bacnetObjectRepo.BulkCreate(ctx, objects, copyBatchSize); err != nil {
 		return err
 	}
 
@@ -89,7 +89,7 @@ func (c projectFacilityCopy) replaceFieldDeviceBacnetObjectsFromObjectData(ctx c
 		return err
 	}
 
-	if err := c.bacnetObjectRepo.BulkCreate(ctx, clones, 200); err != nil {
+	if err := c.bacnetObjectRepo.BulkCreate(ctx, clones, copyBatchSize); err != nil {
 		return err
 	}
 	if err := c.createAlarmValuesForBacnetObjects(ctx, clones); err != nil {
@@ -213,5 +213,5 @@ func (c projectFacilityCopy) createAlarmValuesForBacnetObjects(ctx context.Conte
 		return nil
 	}
 
-	return c.bacnetAlarmValueRepo.BulkCreate(ctx, values, 500)
+	return c.bacnetAlarmValueRepo.BulkCreate(ctx, values, copyBatchSize)
 }

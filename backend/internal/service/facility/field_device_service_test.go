@@ -52,6 +52,9 @@ func (r *fakeFieldDeviceStore) BulkCreate(_ context.Context, entities []*domainF
 }
 
 func (r *fakeFieldDeviceStore) Update(_ context.Context, entity *domainFacility.FieldDevice) error {
+	if entity.Revision > 0 {
+		entity.Revision++
+	}
 	clone := *entity
 	r.items[entity.ID] = &clone
 	return nil
@@ -1454,6 +1457,56 @@ func TestFieldDeviceService_BulkUpdate_ReportsBaseFailureAndSpecificationSuccess
 	}
 	if got := specStore.items[specID].SpecificationSupplier; got == nil || *got != replacementSupplier {
 		t.Fatalf("expected successful specification phase to persist %q, got %v", replacementSupplier, got)
+	}
+}
+
+func TestFieldDeviceService_BulkUpdate_ChildOnlyChangeAdvancesAggregateRevision(t *testing.T) {
+	fdID := uuid.New()
+	specID := uuid.New()
+	replacementSupplier := "Replacement"
+	device := newFieldDevice(fdID, uuid.New(), uuid.New(), uuid.New(), 1)
+	device.Revision = 4
+	device.SpecificationID = &specID
+
+	fieldDeviceRepo := &fakeFieldDeviceStore{items: map[uuid.UUID]*domainFacility.FieldDevice{
+		fdID: device,
+	}}
+	specStore := &fakeSpecificationStore{items: map[uuid.UUID]*domainFacility.Specification{
+		specID: {
+			Base:          domain.Base{ID: specID},
+			FieldDeviceID: &fdID,
+		},
+	}}
+	svc := facility.NewFieldDeviceService(
+		fieldDeviceRepo,
+		nil,
+		nil,
+		nil,
+		nil,
+		specStore,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	execution := svc.ExecuteBulkUpdate(context.Background(), []domainFacility.BulkFieldDeviceUpdate{{
+		ID:              fdID,
+		ExpectedVersion: 4,
+		Specification: &domainFacility.SpecificationPatch{
+			SpecificationSupplier:    &replacementSupplier,
+			HasSpecificationSupplier: true,
+		},
+	}})
+
+	if execution.Result.FailureCount != 0 || execution.Result.SuccessCount != 1 {
+		t.Fatalf("expected child-only update success, got %+v", execution.Result)
+	}
+	if got := fieldDeviceRepo.items[fdID].Revision; got != 5 {
+		t.Fatalf("expected aggregate revision 5, got %d", got)
+	}
+	if got := specStore.items[specID].SpecificationSupplier; got == nil || *got != replacementSupplier {
+		t.Fatalf("expected specification update %q, got %v", replacementSupplier, got)
 	}
 }
 

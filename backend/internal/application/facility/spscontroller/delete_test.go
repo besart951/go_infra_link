@@ -222,7 +222,7 @@ func TestDeleteCapturesDirectRecipientsAndCommitsRootHistoryBeforeDispatch(t *te
 		if command.ProjectID != wantProjectID || command.SPSControllerID != controllerID ||
 			command.ControlCabinetID != cabinetID || command.OperationID != operationID ||
 			command.CorrelationID != operationID ||
-			command.SchemaVersion != appcollaboration.SchemaVersionV1 {
+			command.SchemaVersion != appcollaboration.SchemaVersionV2 {
 			t.Fatalf("command: %+v", command)
 		}
 	}

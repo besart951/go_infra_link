@@ -14,28 +14,255 @@
   import type { FieldDeviceGroupKey } from './state/FieldDeviceTableView.svelte.js';
 
   const t = createTranslator();
-  const state = useFieldDeviceState();
+  const tableState = useFieldDeviceState();
+
+  const ROW_HEIGHT = 52;
+  const BACNET_ROW_HEIGHT = 280;
+  const OVERSCAN = 4;
 
   const baseColumnCount = 11;
   const specColumnCount = 11;
   const columnCount = $derived.by(() =>
-    state.showSpecifications ? baseColumnCount + specColumnCount : baseColumnCount
+    tableState.showSpecifications ? baseColumnCount + specColumnCount : baseColumnCount
   );
-  const tableClass = $derived([state.view.tableClass, 'w-max min-w-full table-auto'].join(' '));
+  const tableClass = $derived([tableState.view.tableClass, 'w-max min-w-full table-auto'].join(' '));
   const sortableButtonClass =
     'h-auto w-full min-w-0 cursor-pointer justify-start overflow-hidden p-0 text-left underline-offset-4 hover:underline';
   const sortableLabelClass = 'min-w-0 truncate';
+  let tableBodyRef: HTMLElement | null = $state(null);
+  let tableBodyScrollTop = $state(0);
+  let tableBodyHeight = $state(640);
+  let lastSelectedDeviceId = $state<string | null>(null);
+
+  type FieldDeviceRenderRow =
+    | {
+        kind: 'group';
+        key: string;
+        index: number;
+        group: TableGroupNode<FieldDevice, FieldDeviceGroupKey>;
+      }
+    | {
+        kind: 'device';
+        key: string;
+        index: number;
+        device: FieldDevice;
+      }
+    | {
+        kind: 'bacnet';
+        key: string;
+        index: number;
+        device: FieldDevice;
+      };
+
+  function isInteractiveRowTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof Element)) return false;
+
+    return target.closest(
+      'a, button, input, select, textarea, option, label, [data-keyboard-table-cell], .editable-cell-display, .editable-cell-editor'
+    ) !== null;
+  }
+
+  function handleDeviceRowClick(row: Extract<FieldDeviceRenderRow, { kind: 'device' }>, event: MouseEvent): void {
+    const clickedId = row.device.id;
+    const isAdditive = event.ctrlKey || event.metaKey;
+    const isRange = event.shiftKey && lastSelectedDeviceId !== null;
+
+    if (isRange) {
+      const startIndex = allRenderRows.findIndex(
+        (entry) => entry.kind === 'device' && entry.device.id === lastSelectedDeviceId
+      );
+      if (startIndex >= 0) {
+        const from = Math.min(startIndex, row.index);
+        const to = Math.max(startIndex, row.index);
+        const next = new Set<string>();
+
+        for (let i = from; i <= to; i++) {
+          const candidate = allRenderRows[i];
+          if (candidate && candidate.kind === 'device') {
+            next.add(candidate.device.id);
+          }
+        }
+
+        tableState.setSelectedIds(next);
+        lastSelectedDeviceId = clickedId;
+        return;
+      }
+    }
+
+    if (isAdditive) {
+      const next = new Set(tableState.selectedIds);
+      if (next.has(clickedId)) {
+        next.delete(clickedId);
+      } else {
+        next.add(clickedId);
+      }
+      tableState.setSelectedIds(next);
+      lastSelectedDeviceId = clickedId;
+      return;
+    }
+
+    if (tableState.selectedIds.has(clickedId)) {
+      tableState.setSelectedIds(new Set());
+      lastSelectedDeviceId = null;
+      return;
+    }
+
+    tableState.setSelectedIds(new Set([clickedId]));
+    lastSelectedDeviceId = clickedId;
+  }
+
+  $effect(() => {
+    const root = tableBodyRef;
+    if (!root) return;
+
+    const handleResize = () => {
+      tableBodyHeight = root.clientHeight;
+    };
+    const handleScroll = () => {
+      tableBodyScrollTop = root.scrollTop;
+    };
+
+    handleResize();
+    handleScroll();
+
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    resizeObserver.observe(root);
+    root.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      resizeObserver.disconnect();
+      root.removeEventListener('scroll', handleScroll);
+    };
+  });
+
+  function rowHeightFor(row: FieldDeviceRenderRow): number {
+    return row.kind === 'bacnet' ? BACNET_ROW_HEIGHT : ROW_HEIGHT;
+  }
+
+  function addDeviceRow(accumulator: FieldDeviceRenderRow[], device: FieldDevice): void {
+    accumulator.push({
+      kind: 'device',
+      index: accumulator.length,
+      key: `d:${device.id}`,
+      device
+    });
+    if (tableState.isBacnetExpanded(device.id)) {
+      accumulator.push({
+        kind: 'bacnet',
+        index: accumulator.length,
+        key: `b:${device.id}`,
+        device
+      });
+    }
+  }
+
+  function addGroupRows(
+    accumulator: FieldDeviceRenderRow[],
+    group: TableGroupNode<FieldDevice, FieldDeviceGroupKey>
+  ): void {
+    accumulator.push({ kind: 'group', index: accumulator.length, key: `g:${group.id}`, group });
+    if (!tableState.view.grouping.isGroupExpanded(group.id)) {
+      return;
+    }
+
+    if (group.children.length > 0) {
+      for (const child of group.children) {
+        addGroupRows(accumulator, child);
+      }
+      return;
+    }
+
+    for (const device of group.items) {
+      addDeviceRow(accumulator, device);
+    }
+  }
+
+  const allRenderRows = $derived.by(() => {
+    const rows: FieldDeviceRenderRow[] = [];
+
+    if (tableState.view.grouping.isGrouped) {
+      for (const group of tableState.tableGroups) {
+        addGroupRows(rows, group);
+      }
+    } else {
+      for (const device of tableState.items) {
+        addDeviceRow(rows, device);
+      }
+    }
+
+    return rows;
+  });
+
+  const renderWindow = $derived.by(() => {
+    const rows = allRenderRows;
+    const itemCount = rows.length;
+
+    if (itemCount === 0 || tableBodyHeight <= 0) {
+      return {
+        rows: [] as FieldDeviceRenderRow[],
+        topSpacerHeight: 0,
+        bottomSpacerHeight: 0
+      };
+    }
+
+    let start = 0;
+    let consumedHeight = 0;
+    while (start < itemCount && consumedHeight + rowHeightFor(rows[start]) <= tableBodyScrollTop) {
+      consumedHeight += rowHeightFor(rows[start]);
+      start++;
+    }
+
+    let end = start;
+    let viewportHeight = consumedHeight + tableBodyHeight;
+    while (end < itemCount && consumedHeight < viewportHeight) {
+      consumedHeight += rowHeightFor(rows[end]);
+      end++;
+    }
+
+    const windowStart = Math.max(0, start - OVERSCAN);
+    const windowEnd = Math.min(itemCount, end + OVERSCAN);
+
+    let topSpacerHeight = 0;
+    let bottomSpacerHeight = 0;
+    for (let i = 0; i < windowStart; i++) {
+      topSpacerHeight += rowHeightFor(rows[i]);
+    }
+    for (let i = windowEnd; i < itemCount; i++) {
+      bottomSpacerHeight += rowHeightFor(rows[i]);
+    }
+
+    return {
+      rows: rows.slice(windowStart, windowEnd),
+      topSpacerHeight,
+      bottomSpacerHeight
+    };
+  });
+
+  const apparatNrSuggestionByDeviceId = $derived.by(() => {
+    const map = new Map<string, number | undefined>();
+    for (const row of renderWindow.rows) {
+      if (row.kind !== 'device') continue;
+      map.set(
+        row.device.id,
+        tableState.editing.getFieldSuggestion(row.device.id, 'apparat_nr', tableState.items)
+      );
+    }
+    return map;
+  });
 
   function getGroupLabelKey(key: FieldDeviceGroupKey): string {
     return (
-      state.view.grouping.definitions.find((definition) => definition.key === key)?.labelKey ?? ''
+      tableState.view.grouping.definitions.find((definition) => definition.key === key)?.labelKey ?? ''
     );
   }
 </script>
 
 <div
   use:keyboardTableNavigation
-  class="max-w-full min-w-0 overflow-hidden rounded-xl border bg-card shadow-sm"
+  bind:this={tableBodyRef}
+  class="max-w-full min-w-0 overflow-auto rounded-xl border bg-card shadow-sm max-h-[75vh]"
 >
   <Table.Root class={tableClass}>
     <Table.Header>
@@ -43,9 +270,9 @@
         <Table.Head resizable={false} class="w-8 max-w-8 min-w-8 px-0! py-1!">
           <div class="flex justify-center">
             <Checkbox
-              checked={state.allSelected}
-              indeterminate={state.someSelected}
-              onCheckedChange={() => state.toggleSelectAll()}
+              checked={tableState.allSelected}
+              indeterminate={tableState.someSelected}
+              onCheckedChange={() => tableState.toggleSelectAll()}
               aria-label={$t('field_device.table.select_all')}
             />
           </div>
@@ -56,12 +283,12 @@
             type="button"
             variant="ghost"
             class={`${sortableButtonClass} text-xs`}
-            onclick={() => void state.toggleSort('sps_system_type')}
+            onclick={() => void tableState.toggleSort('sps_system_type')}
           >
             <span class={sortableLabelClass}>{$t('field_device.table.sps_system_type')}</span>
-            {#if state.sortState('sps_system_type') === 'asc'}
+            {#if tableState.sortState('sps_system_type') === 'asc'}
               <ArrowUp class="h-3 w-3" />
-            {:else if state.sortState('sps_system_type') === 'desc'}
+            {:else if tableState.sortState('sps_system_type') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
           </Button>
@@ -71,12 +298,12 @@
             type="button"
             variant="ghost"
             class={sortableButtonClass}
-            onclick={() => void state.toggleSort('bmk')}
+            onclick={() => void tableState.toggleSort('bmk')}
           >
             <span class={sortableLabelClass}>{$t('field_device.table.bmk')}</span>
-            {#if state.sortState('bmk') === 'asc'}
+            {#if tableState.sortState('bmk') === 'asc'}
               <ArrowUp class="h-3 w-3" />
-            {:else if state.sortState('bmk') === 'desc'}
+            {:else if tableState.sortState('bmk') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
           </Button>
@@ -86,12 +313,12 @@
             type="button"
             variant="ghost"
             class={sortableButtonClass}
-            onclick={() => void state.toggleSort('description')}
+            onclick={() => void tableState.toggleSort('description')}
           >
             <span class={sortableLabelClass}>{$t('field_device.table.description')}</span>
-            {#if state.sortState('description') === 'asc'}
+            {#if tableState.sortState('description') === 'asc'}
               <ArrowUp class="h-3 w-3" />
-            {:else if state.sortState('description') === 'desc'}
+            {:else if tableState.sortState('description') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
           </Button>
@@ -101,12 +328,12 @@
             type="button"
             variant="ghost"
             class={sortableButtonClass}
-            onclick={() => void state.toggleSort('text_fix')}
+            onclick={() => void tableState.toggleSort('text_fix')}
           >
             <span class={sortableLabelClass}>{$t('field_device.table.text_fix')}</span>
-            {#if state.sortState('text_fix') === 'asc'}
+            {#if tableState.sortState('text_fix') === 'asc'}
               <ArrowUp class="h-3 w-3" />
-            {:else if state.sortState('text_fix') === 'desc'}
+            {:else if tableState.sortState('text_fix') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
           </Button>
@@ -116,12 +343,12 @@
             type="button"
             variant="ghost"
             class={sortableButtonClass}
-            onclick={() => void state.toggleSort('apparat_nr')}
+            onclick={() => void tableState.toggleSort('apparat_nr')}
           >
             <span class={sortableLabelClass}>Nr</span>
-            {#if state.sortState('apparat_nr') === 'asc'}
+            {#if tableState.sortState('apparat_nr') === 'asc'}
               <ArrowUp class="h-3 w-3" />
-            {:else if state.sortState('apparat_nr') === 'desc'}
+            {:else if tableState.sortState('apparat_nr') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
           </Button>
@@ -131,12 +358,12 @@
             type="button"
             variant="ghost"
             class={sortableButtonClass}
-            onclick={() => void state.toggleSort('apparat')}
+            onclick={() => void tableState.toggleSort('apparat')}
           >
             <span class={sortableLabelClass}>{$t('field_device.table.apparat')}</span>
-            {#if state.sortState('apparat') === 'asc'}
+            {#if tableState.sortState('apparat') === 'asc'}
               <ArrowUp class="h-3 w-3" />
-            {:else if state.sortState('apparat') === 'desc'}
+            {:else if tableState.sortState('apparat') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
           </Button>
@@ -146,41 +373,41 @@
             type="button"
             variant="ghost"
             class={sortableButtonClass}
-            onclick={() => void state.toggleSort('system_part')}
+            onclick={() => void tableState.toggleSort('system_part')}
           >
             <span class={sortableLabelClass}>{$t('field_device.table.system_part')}</span>
-            {#if state.sortState('system_part') === 'asc'}
+            {#if tableState.sortState('system_part') === 'asc'}
               <ArrowUp class="h-3 w-3" />
-            {:else if state.sortState('system_part') === 'desc'}
+            {:else if tableState.sortState('system_part') === 'desc'}
               <ArrowDown class="h-3 w-3" />
             {/if}
           </Button>
         </Table.Head>
         <Table.Head resizable={false} class="w-10 max-w-10 min-w-10">
           <Button
-            variant={state.showSpecifications ? 'secondary' : 'ghost'}
+            variant={tableState.showSpecifications ? 'secondary' : 'ghost'}
             size="sm"
             class="h-7 w-7 p-0"
-            onclick={() => void state.toggleSpecifications()}
-            title={state.showSpecifications
+            onclick={() => void tableState.toggleSpecifications()}
+            title={tableState.showSpecifications
               ? $t('field_device.table.hide_specifications')
               : $t('field_device.table.show_specifications')}
           >
             <Settings2 class="h-4 w-4" />
           </Button>
         </Table.Head>
-        {#if state.showSpecifications}
+        {#if tableState.showSpecifications}
           <Table.Head minResizeWidth={96} class="w-fit max-w-64 min-w-max text-xs">
             <Button
               type="button"
               variant="ghost"
               class={sortableButtonClass}
-              onclick={() => void state.toggleSort('spec_supplier')}
+              onclick={() => void tableState.toggleSort('spec_supplier')}
             >
               <span class={sortableLabelClass}>{$t('field_device.table.supplier')}</span>
-              {#if state.sortState('spec_supplier') === 'asc'}
+              {#if tableState.sortState('spec_supplier') === 'asc'}
                 <ArrowUp class="h-3 w-3" />
-              {:else if state.sortState('spec_supplier') === 'desc'}
+              {:else if tableState.sortState('spec_supplier') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
             </Button>
@@ -190,12 +417,12 @@
               type="button"
               variant="ghost"
               class={sortableButtonClass}
-              onclick={() => void state.toggleSort('spec_brand')}
+              onclick={() => void tableState.toggleSort('spec_brand')}
             >
               <span class={sortableLabelClass}>{$t('field_device.table.brand')}</span>
-              {#if state.sortState('spec_brand') === 'asc'}
+              {#if tableState.sortState('spec_brand') === 'asc'}
                 <ArrowUp class="h-3 w-3" />
-              {:else if state.sortState('spec_brand') === 'desc'}
+              {:else if tableState.sortState('spec_brand') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
             </Button>
@@ -205,12 +432,12 @@
               type="button"
               variant="ghost"
               class={sortableButtonClass}
-              onclick={() => void state.toggleSort('spec_type')}
+              onclick={() => void tableState.toggleSort('spec_type')}
             >
               <span class={sortableLabelClass}>{$t('field_device.table.type')}</span>
-              {#if state.sortState('spec_type') === 'asc'}
+              {#if tableState.sortState('spec_type') === 'asc'}
                 <ArrowUp class="h-3 w-3" />
-              {:else if state.sortState('spec_type') === 'desc'}
+              {:else if tableState.sortState('spec_type') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
             </Button>
@@ -220,12 +447,12 @@
               type="button"
               variant="ghost"
               class={sortableButtonClass}
-              onclick={() => void state.toggleSort('spec_motor_valve')}
+              onclick={() => void tableState.toggleSort('spec_motor_valve')}
             >
               <span class={sortableLabelClass}>{$t('field_device.table.motor_valve')}</span>
-              {#if state.sortState('spec_motor_valve') === 'asc'}
+              {#if tableState.sortState('spec_motor_valve') === 'asc'}
                 <ArrowUp class="h-3 w-3" />
-              {:else if state.sortState('spec_motor_valve') === 'desc'}
+              {:else if tableState.sortState('spec_motor_valve') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
             </Button>
@@ -235,12 +462,12 @@
               type="button"
               variant="ghost"
               class={sortableButtonClass}
-              onclick={() => void state.toggleSort('spec_size')}
+              onclick={() => void tableState.toggleSort('spec_size')}
             >
               <span class={sortableLabelClass}>{$t('field_device.table.size')}</span>
-              {#if state.sortState('spec_size') === 'asc'}
+              {#if tableState.sortState('spec_size') === 'asc'}
                 <ArrowUp class="h-3 w-3" />
-              {:else if state.sortState('spec_size') === 'desc'}
+              {:else if tableState.sortState('spec_size') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
             </Button>
@@ -250,12 +477,12 @@
               type="button"
               variant="ghost"
               class={sortableButtonClass}
-              onclick={() => void state.toggleSort('spec_install_loc')}
+              onclick={() => void tableState.toggleSort('spec_install_loc')}
             >
               <span class={sortableLabelClass}>{$t('field_device.table.install_location')}</span>
-              {#if state.sortState('spec_install_loc') === 'asc'}
+              {#if tableState.sortState('spec_install_loc') === 'asc'}
                 <ArrowUp class="h-3 w-3" />
-              {:else if state.sortState('spec_install_loc') === 'desc'}
+              {:else if tableState.sortState('spec_install_loc') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
             </Button>
@@ -265,12 +492,12 @@
               type="button"
               variant="ghost"
               class={sortableButtonClass}
-              onclick={() => void state.toggleSort('spec_ph')}
+              onclick={() => void tableState.toggleSort('spec_ph')}
             >
               <span class={sortableLabelClass}>{$t('field_device.table.ph')}</span>
-              {#if state.sortState('spec_ph') === 'asc'}
+              {#if tableState.sortState('spec_ph') === 'asc'}
                 <ArrowUp class="h-3 w-3" />
-              {:else if state.sortState('spec_ph') === 'desc'}
+              {:else if tableState.sortState('spec_ph') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
             </Button>
@@ -280,12 +507,12 @@
               type="button"
               variant="ghost"
               class={sortableButtonClass}
-              onclick={() => void state.toggleSort('spec_acdc')}
+              onclick={() => void tableState.toggleSort('spec_acdc')}
             >
               <span class={sortableLabelClass}>{$t('field_device.table.acdc')}</span>
-              {#if state.sortState('spec_acdc') === 'asc'}
+              {#if tableState.sortState('spec_acdc') === 'asc'}
                 <ArrowUp class="h-3 w-3" />
-              {:else if state.sortState('spec_acdc') === 'desc'}
+              {:else if tableState.sortState('spec_acdc') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
             </Button>
@@ -295,12 +522,12 @@
               type="button"
               variant="ghost"
               class={sortableButtonClass}
-              onclick={() => void state.toggleSort('spec_amperage')}
+              onclick={() => void tableState.toggleSort('spec_amperage')}
             >
               <span class={sortableLabelClass}>{$t('field_device.table.amperage')}</span>
-              {#if state.sortState('spec_amperage') === 'asc'}
+              {#if tableState.sortState('spec_amperage') === 'asc'}
                 <ArrowUp class="h-3 w-3" />
-              {:else if state.sortState('spec_amperage') === 'desc'}
+              {:else if tableState.sortState('spec_amperage') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
             </Button>
@@ -310,12 +537,12 @@
               type="button"
               variant="ghost"
               class={sortableButtonClass}
-              onclick={() => void state.toggleSort('spec_power')}
+              onclick={() => void tableState.toggleSort('spec_power')}
             >
               <span class={sortableLabelClass}>{$t('field_device.table.power')}</span>
-              {#if state.sortState('spec_power') === 'asc'}
+              {#if tableState.sortState('spec_power') === 'asc'}
                 <ArrowUp class="h-3 w-3" />
-              {:else if state.sortState('spec_power') === 'desc'}
+              {:else if tableState.sortState('spec_power') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
             </Button>
@@ -325,12 +552,12 @@
               type="button"
               variant="ghost"
               class={sortableButtonClass}
-              onclick={() => void state.toggleSort('spec_rotation')}
+              onclick={() => void tableState.toggleSort('spec_rotation')}
             >
               <span class={sortableLabelClass}>{$t('field_device.table.rotation')}</span>
-              {#if state.sortState('spec_rotation') === 'asc'}
+              {#if tableState.sortState('spec_rotation') === 'asc'}
                 <ArrowUp class="h-3 w-3" />
-              {:else if state.sortState('spec_rotation') === 'desc'}
+              {:else if tableState.sortState('spec_rotation') === 'desc'}
                 <ArrowDown class="h-3 w-3" />
               {/if}
             </Button>
@@ -340,38 +567,45 @@
       </Table.Row>
     </Table.Header>
     <Table.Body>
-      {#snippet renderDevice(device: FieldDevice)}
-        <FieldDeviceTableRow {device} />
+      {#snippet renderDevice(row: Extract<FieldDeviceRenderRow, { kind: 'device' }>) }
+        <FieldDeviceTableRow
+          device={row.device}
+          apparatNrSuggestion={apparatNrSuggestionByDeviceId.get(row.device.id)}
+          onRowClick={(event) => {
+            if (isInteractiveRowTarget(event.target)) return;
+            handleDeviceRowClick(row, event);
+          }}
+        />
+      {/snippet}
 
-        {#if state.isBacnetExpanded(device.id)}
-          <Table.Row class="bg-muted/30 hover:bg-muted/40">
-            <Table.Cell colspan={columnCount} class="p-0">
-              {#if state.isBacnetLoading(device.id)}
-                <div class="p-4">
-                  <Skeleton class="h-10 w-full" />
-                </div>
-              {:else}
-                <BacnetObjectsEditor
-                  bacnetObjects={device.bacnet_objects ?? []}
-                  pendingEdits={state.editing.getBacnetPendingEdits(device.id) ?? new Map()}
-                  fieldErrors={state.editing.getBacnetFieldErrors(device.id) ?? new Map()}
-                  clientErrors={state.editing.getBacnetClientErrors(device.id) ?? new Map()}
-                  sharedEditors={state.getEditorsForDevice(device.id)}
-                  disabled={!state.canUpdateFieldDeviceBacnetObjects()}
-                  onEdit={(objectId, field, value) => {
-                    state.editing.queueBacnetEdit(device.id, objectId, field, value);
-                  }}
-                  onUndoField={(objectId, field) => {
-                    state.editing.discardBacnetObjectFieldEdit(device.id, objectId, field);
-                  }}
-                  onUndoRow={(objectId) => {
-                    state.editing.discardBacnetObjectEdits(device.id, objectId);
-                  }}
-                />
-              {/if}
-            </Table.Cell>
-          </Table.Row>
-        {/if}
+      {#snippet renderBacnet(device: FieldDevice)}
+        <Table.Row class="bg-muted/30 hover:bg-muted/40">
+          <Table.Cell colspan={columnCount} class="p-0">
+            {#if tableState.isBacnetLoading(device.id)}
+              <div class="p-4">
+                <Skeleton class="h-10 w-full" />
+              </div>
+            {:else}
+              <BacnetObjectsEditor
+                bacnetObjects={device.bacnet_objects ?? []}
+                pendingEdits={tableState.editing.getBacnetPendingEdits(device.id) ?? new Map()}
+                fieldErrors={tableState.editing.getBacnetFieldErrors(device.id) ?? new Map()}
+                clientErrors={tableState.editing.getBacnetClientErrors(device.id) ?? new Map()}
+                sharedEditors={tableState.getEditorsForDevice(device.id)}
+                disabled={!tableState.canUpdateFieldDeviceBacnetObjects()}
+                onEdit={(objectId, field, value) => {
+                  tableState.editing.queueBacnetEdit(device.id, objectId, field, value);
+                }}
+                onUndoField={(objectId, field) => {
+                  tableState.editing.discardBacnetObjectFieldEdit(device.id, objectId, field);
+                }}
+                onUndoRow={(objectId) => {
+                  tableState.editing.discardBacnetObjectEdits(device.id, objectId);
+                }}
+              />
+            {/if}
+          </Table.Cell>
+        </Table.Row>
       {/snippet}
 
       {#snippet renderGroup(group: TableGroupNode<FieldDevice, FieldDeviceGroupKey>)}
@@ -382,10 +616,10 @@
               variant="ghost"
               class="flex h-auto w-full justify-start gap-2 px-3 py-2 text-left font-medium"
               style={`padding-left: ${0.75 + group.level * 1.25}rem`}
-              aria-expanded={state.view.grouping.isGroupExpanded(group.id)}
-              onclick={() => state.view.grouping.toggleGroupExpansion(group.id)}
+              aria-expanded={tableState.view.grouping.isGroupExpanded(group.id)}
+              onclick={() => tableState.view.grouping.toggleGroupExpansion(group.id)}
             >
-              {#if state.view.grouping.isGroupExpanded(group.id)}
+              {#if tableState.view.grouping.isGroupExpanded(group.id)}
                 <ChevronDown class="h-4 w-4 text-muted-foreground" />
               {:else}
                 <ChevronRight class="h-4 w-4 text-muted-foreground" />
@@ -402,41 +636,71 @@
             </Button>
           </Table.Cell>
         </Table.Row>
-
-        {#if state.view.grouping.isGroupExpanded(group.id)}
-          {#if group.children.length > 0}
-            {#each group.children as child (child.id)}
-              {@render renderGroup(child)}
-            {/each}
-          {:else}
-            {#each group.items as device (device.id)}
-              {@render renderDevice(device)}
-            {/each}
-          {/if}
-        {/if}
       {/snippet}
 
-      {#if state.loading}
+      {#if tableState.loading}
         <Table.LoadingRows loading {columnCount} rowCount={8} delayMs={0} />
-      {:else if state.items.length === 0}
+      {:else if tableState.items.length === 0}
         <Table.Row>
           <Table.Cell colspan={columnCount} class="h-24 text-center">
             <div class="flex flex-col items-center justify-center gap-2 text-muted-foreground">
               <p class="font-medium">{$t('field_device.empty.title')}</p>
-              {#if state.searchText}
+              {#if tableState.searchText}
                 <p class="text-sm">{$t('field_device.empty.search_hint')}</p>
               {/if}
             </div>
           </Table.Cell>
         </Table.Row>
-      {:else if state.view.grouping.isGrouped}
-        {#each state.tableGroups as group (group.id)}
-          {@render renderGroup(group)}
+      {:else if tableState.view.grouping.isGrouped}
+        {#if renderWindow.topSpacerHeight > 0}
+          <Table.Row>
+            <Table.Cell colspan={columnCount} class="h-0 border-0 p-0">
+              <div style={`height:${renderWindow.topSpacerHeight}px`} class="w-full"></div>
+            </Table.Cell>
+          </Table.Row>
+        {/if}
+
+        {#each renderWindow.rows as row (row.key)}
+          {#if row.kind === 'group'}
+            {@render renderGroup(row.group)}
+          {:else if row.kind === 'device'}
+            {@render renderDevice(row)}
+          {:else if row.kind === 'bacnet'}
+            {@render renderBacnet(row.device)}
+          {/if}
         {/each}
+
+        {#if renderWindow.bottomSpacerHeight > 0}
+          <Table.Row>
+            <Table.Cell colspan={columnCount} class="h-0 border-0 p-0">
+              <div style={`height:${renderWindow.bottomSpacerHeight}px`} class="w-full"></div>
+            </Table.Cell>
+          </Table.Row>
+        {/if}
       {:else}
-        {#each state.items as device (device.id)}
-          {@render renderDevice(device)}
+        {#if renderWindow.topSpacerHeight > 0}
+          <Table.Row>
+            <Table.Cell colspan={columnCount} class="h-0 border-0 p-0">
+              <div style={`height:${renderWindow.topSpacerHeight}px`} class="w-full"></div>
+            </Table.Cell>
+          </Table.Row>
+        {/if}
+
+        {#each renderWindow.rows as row (row.key)}
+          {#if row.kind === 'device'}
+            {@render renderDevice(row)}
+          {:else if row.kind === 'bacnet'}
+            {@render renderBacnet(row.device)}
+          {/if}
         {/each}
+
+        {#if renderWindow.bottomSpacerHeight > 0}
+          <Table.Row>
+            <Table.Cell colspan={columnCount} class="h-0 border-0 p-0">
+              <div style={`height:${renderWindow.bottomSpacerHeight}px`} class="w-full"></div>
+            </Table.Cell>
+          </Table.Row>
+        {/if}
       {/if}
     </Table.Body>
   </Table.Root>

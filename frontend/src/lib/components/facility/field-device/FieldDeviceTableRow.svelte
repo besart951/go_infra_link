@@ -27,9 +27,11 @@
 
   interface Props {
     device: FieldDevice;
+    apparatNrSuggestion?: number;
+    onRowClick?: (event: MouseEvent) => void;
   }
 
-  let { device }: Props = $props();
+  let { device, apparatNrSuggestion, onRowClick }: Props = $props();
 
   const t = createTranslator();
   const rowState = useFieldDeviceState();
@@ -180,8 +182,10 @@
   const systemPartSelectDirty = $derived(
     rowState.editing.isFieldDirty(device.id, 'system_part_id')
   );
-  const apparatNrSuggestion = $derived(
-    rowState.editing.getFieldSuggestion(device.id, 'apparat_nr', rowState.items)
+  const effectiveApparatNrSuggestion = $derived.by(
+    () =>
+      apparatNrSuggestion ??
+      rowState.editing.getFieldSuggestion(device.id, 'apparat_nr', rowState.items)
   );
   const hasFieldDevicePendingEdits = $derived(
     rowState.editing.hasPendingFieldDeviceEditsForDevice(device.id)
@@ -191,13 +195,46 @@
   const undoFieldTitle = $derived($t('field_device.editing.undo_field'));
   const undoFieldDeviceTitle = $derived($t('field_device.editing.undo_field_device'));
   const undoDeviceTitle = $derived($t('field_device.editing.undo_device'));
+  const isSelectedRow = $derived(rowState.isSelected(device.id));
+  const selectedRowStyle = $derived.by(
+    () =>
+      isSelectedRow
+        ? 'background-color: color-mix(in oklab, var(--color-background) 86%, var(--color-primary) 14%); --tw-ring-color: var(--color-primary);'
+        : ''
+  );
+
+  function isInteractiveRowTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof Element)) return false;
+
+    return (
+      target.closest(
+        'a, button, input, select, textarea, option, label, [role="checkbox"], [data-keyboard-table-cell], .editable-cell-display, .editable-cell-editor'
+      ) !== null
+    );
+  }
+
+  function handleRowClick(event: MouseEvent): void {
+    if (isInteractiveRowTarget(event.target)) return;
+    if (!onRowClick) return;
+    onRowClick(event);
+  }
+
+  function handleRowPointerDown(event: PointerEvent): void {
+    if (event.button !== 0) return;
+    if (isInteractiveRowTarget(event.target)) return;
+    event.preventDefault();
+  }
 </script>
 
 <Table.Row
+  onclick={handleRowClick}
+  onpointerdown={handleRowPointerDown}
+  style={selectedRowStyle}
   class={[
     'group/fd-row',
+    'cursor-pointer',
+    isSelectedRow ? 'ring-1 ring-primary/60' : '',
     rowState.loading ? 'opacity-60' : '',
-    rowState.isSelected(device.id) ? 'bg-muted/50' : ''
   ]
     .filter(Boolean)
     .join(' ')}
@@ -334,15 +371,15 @@
         disabled={!rowState.canUpdateFieldDevice()}
         isDirty={rowState.editing.isFieldDirty(device.id, 'apparat_nr')}
         error={rowState.editing.getFieldError(device.id, 'apparat_nr')}
-        suggestion={apparatNrSuggestion !== undefined ? String(apparatNrSuggestion) : undefined}
-        suggestionLabel={apparatNrSuggestion !== undefined
+        suggestion={effectiveApparatNrSuggestion !== undefined ? String(effectiveApparatNrSuggestion) : undefined}
+        suggestionLabel={effectiveApparatNrSuggestion !== undefined
           ? $t('field_device.editing.apparat_nr_lowest_available', {
-              value: apparatNrSuggestion
+              value: effectiveApparatNrSuggestion
             })
           : undefined}
-        suggestionActionLabel={apparatNrSuggestion !== undefined
+        suggestionActionLabel={effectiveApparatNrSuggestion !== undefined
           ? $t('field_device.editing.apparat_nr_use_available_short', {
-              value: apparatNrSuggestion
+              value: effectiveApparatNrSuggestion
             })
           : undefined}
         undoTitle={undoFieldTitle}

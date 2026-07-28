@@ -270,6 +270,7 @@
     "creation_failed": "Projekt konnte nicht erstellt werden.",
     "update_failed": "Projekt konnte nicht aktualisiert werden.",
     "deletion_failed": "Projekt konnte nicht gelöscht werden.",
+    "deletion_hierarchy_linked": "Das Projekt kann erst gelöscht werden, nachdem alle Anlagenzuordnungen entfernt wurden.",
     "fetch_failed": "Projekte konnten nicht abgerufen werden.",
     "project_not_found": "Projekt nicht gefunden.",
     "no_projects": "Keine Projekte gefunden.",

@@ -145,6 +145,48 @@ var migrations = []migration{
 		blueGreenCompatible: true,
 		apply:               ensureDeletedUserReadPermission,
 	},
+	{
+		version:             "202607230001",
+		description:         "collaboration_transactional_outbox",
+		blueGreenCompatible: true,
+		apply:               migrateCollaborationOutbox,
+	},
+	{
+		version:             "202607230002",
+		description:         "project_association_foreign_keys",
+		blueGreenCompatible: true,
+		apply:               migrateProjectAssociationForeignKeys,
+	},
+	{
+		version:             "202607230003",
+		description:         "field_device_placement_uniqueness",
+		blueGreenCompatible: true,
+		apply:               migrateFieldDevicePlacementUniqueness,
+	},
+	{
+		version:             "202607230004",
+		description:         "sps_controller_normalized_uniqueness",
+		blueGreenCompatible: true,
+		apply:               migrateSPSControllerNormalizedUniqueness,
+	},
+	{
+		version:             "202607230005",
+		description:         "object_data_bacnet_template_uniqueness",
+		blueGreenCompatible: true,
+		apply:               migrateBacnetTemplateUniqueness,
+	},
+	{
+		version:             "202607230006",
+		description:         "live_entity_revision_expand",
+		blueGreenCompatible: true,
+		apply:               migrateLiveEntityRevisions,
+	},
+	{
+		version:             "202607230007",
+		description:         "project_assignment_provenance_expand",
+		blueGreenCompatible: true,
+		apply:               migrateProjectAssignmentProvenance,
+	},
 }
 
 type MigrationOptions struct {

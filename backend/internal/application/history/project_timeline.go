@@ -100,4 +100,5 @@ func actorFromContext(provider ActorProvider, ctx context.Context) *uuid.UUID {
 
 type Services struct {
 	ProjectTimeline *ProjectTimelineHandler
+	Global          *GlobalHistoryService
 }

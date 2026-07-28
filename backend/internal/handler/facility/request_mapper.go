@@ -63,10 +63,12 @@ func toBacnetObjectUpdateCommand(
 	req dto.UpdateBacnetObjectRequest,
 ) appbacnetobject.UpdateCommand {
 	return appbacnetobject.UpdateCommand{
-		BacnetObjectID: id,
-		FieldDeviceID:  req.FieldDeviceID,
-		ObjectDataID:   req.ObjectDataID,
-		Patch:          toBacnetObjectPatch(id, req.BacnetObjectPatchInput),
+		BacnetObjectID:  id,
+		ExpectedVersion: req.ExpectedVersion,
+		FieldDeviceID:   req.FieldDeviceID.Value,
+		FieldDeviceSet:  req.FieldDeviceID.Set,
+		ObjectDataID:    req.ObjectDataID,
+		Patch:           toBacnetObjectPatch(id, req.BacnetObjectPatchInput),
 	}
 }
 
@@ -147,6 +149,7 @@ func toSPSControllerUpdateCommand(
 	}
 	return appspscontroller.UpdateCommand{
 		SPSControllerID:   id,
+		ExpectedVersion:   req.ExpectedVersion,
 		ControlCabinetID:  nonNilUUIDPointer(req.ControlCabinetID),
 		GADevice:          req.GADevice,
 		DeviceName:        deviceName,
@@ -206,6 +209,7 @@ func toFieldDeviceUpdateCommand(
 
 	return appfielddevice.UpdateCommand{
 		FieldDeviceID:             id,
+		ExpectedVersion:           req.ExpectedVersion,
 		BMK:                       req.BMK,
 		Description:               req.Description,
 		TextIndividuell:           req.TextIndividuell,
@@ -572,6 +576,7 @@ func toControlCabinetUpdateCommand(
 ) appcontrolcabinet.UpdateCommand {
 	return appcontrolcabinet.UpdateCommand{
 		ControlCabinetID: id,
+		ExpectedVersion:  req.ExpectedVersion,
 		BuildingID:       nonNilUUIDPointer(req.BuildingID),
 		ControlCabinetNr: req.ControlCabinetNr,
 	}

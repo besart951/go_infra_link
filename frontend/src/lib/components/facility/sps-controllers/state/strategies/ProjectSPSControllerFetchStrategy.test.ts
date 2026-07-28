@@ -28,6 +28,7 @@ vi.mock('$lib/infrastructure/api/controlCabinetRepository.js', () => ({
 const controllers: SPSController[] = [
   {
     id: 'controller-1',
+    revision: 1,
     control_cabinet_id: 'cabinet-1',
     device_name: 'SPS 1',
     ga_device: 'GA-1',
@@ -36,6 +37,7 @@ const controllers: SPSController[] = [
   },
   {
     id: 'controller-2',
+    revision: 1,
     control_cabinet_id: 'cabinet-1',
     device_name: 'SPS 2',
     ga_device: 'GA-2',
@@ -44,6 +46,7 @@ const controllers: SPSController[] = [
   },
   {
     id: 'controller-3',
+    revision: 1,
     control_cabinet_id: 'cabinet-2',
     device_name: 'SPS 3',
     ga_device: 'GA-3',

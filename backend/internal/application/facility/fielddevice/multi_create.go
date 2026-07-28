@@ -98,6 +98,7 @@ func (h *MultiCreateHandler) Execute(
 			"field device multi-create returned no result",
 		)
 	}
+	normalizeMultiCreateResult(result, command.Items)
 
 	mutationResult := mutation.Result{
 		OperationID: operationID,

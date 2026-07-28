@@ -7,6 +7,7 @@ import type { Pagination } from '../utils/index.ts';
 
 export interface ControlCabinet {
   id: string;
+  revision: number;
   control_cabinet_nr: string;
   building_id: string;
   created_at: string;
@@ -21,6 +22,7 @@ export interface CreateControlCabinetRequest {
 
 export interface UpdateControlCabinetRequest {
   id: string;
+  expected_version: number;
   control_cabinet_nr?: string;
   building_id?: string;
   project_id?: string;

@@ -439,6 +439,7 @@ export class FieldDeviceImportService {
         const mergedInputs = mergeSystemTypeInputs(current, missing);
         await this.backend.updateSpsController(spsController.id, {
           id: spsController.id,
+          expected_version: spsController.revision,
           control_cabinet_id: spsController.control_cabinet_id,
           ga_device: plan.controller.spsControllerRequest?.ga_device ?? spsController.ga_device,
           device_name:
@@ -621,7 +622,9 @@ export class FieldDeviceImportService {
 
       this.addFieldDeviceDiagnostic(
         fieldDevice,
-        result.error || translate('field_device.importer.errors.field_device_create_failed'),
+        result.reason ||
+          result.error ||
+          translate('field_device.importer.errors.field_device_create_failed'),
         result.error_field
       );
       failureCount += 1;
@@ -1040,6 +1043,7 @@ function toUpdateFieldDeviceRequest(
 ): UpdateFieldDeviceRequest {
   const createRequest = toCreateFieldDeviceRequest(fieldDevice, systemTypeMap);
   return {
+    expected_version: fieldDevice.existingFieldDeviceRevision ?? 0,
     bmk: createRequest.bmk,
     description: createRequest.description,
     text_fix: createRequest.text_fix,

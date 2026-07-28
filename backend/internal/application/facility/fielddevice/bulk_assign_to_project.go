@@ -8,6 +8,7 @@ import (
 	appcollaboration "github.com/besart951/go_infra_link/backend/internal/application/collaboration"
 	"github.com/besart951/go_infra_link/backend/internal/application/facility/mutation"
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
@@ -28,6 +29,7 @@ type BulkAssignToProjectCommand struct {
 type BulkAssignToProjectResult struct {
 	SuccessFieldDeviceIDs []uuid.UUID
 	AssociationErrors     []string
+	Results               []domainFacility.BulkOperationResultItem
 }
 
 type BulkAssignToProjectDependencies struct {
@@ -122,9 +124,20 @@ func (h *BulkAssignToProjectHandler) Execute(
 	command BulkAssignToProjectCommand,
 ) BulkAssignToProjectOutcome {
 	if h == nil || !h.transactionConfigured || h.projects == nil {
-		return BulkAssignToProjectOutcome{Result: BulkAssignToProjectResult{
+		result := BulkAssignToProjectResult{
 			AssociationErrors: []string{"project FieldDevice bulk assignment is not configured"},
-		}}
+			Results:           make([]domainFacility.BulkOperationResultItem, len(command.FieldDeviceIDs)),
+		}
+		for index, fieldDeviceID := range command.FieldDeviceIDs {
+			result.Results[index] = domainFacility.BulkOperationResultItem{
+				ID:         fieldDeviceID,
+				Error:      "project FieldDevice bulk assignment is not configured",
+				ErrorCode:  itemErrorCodeNotConfigured,
+				ErrorField: "fielddevice",
+				Reason:     "project FieldDevice bulk assignment is not configured",
+			}
+		}
+		return BulkAssignToProjectOutcome{Result: result}
 	}
 
 	operationID := h.newID()
@@ -140,16 +153,35 @@ func (h *BulkAssignToProjectHandler) Execute(
 		batchID := operationID
 		mutationResult.BatchID = &batchID
 	}
-	outcome := BulkAssignToProjectOutcome{Mutation: mutationResult}
+	outcome := BulkAssignToProjectOutcome{
+		Mutation: mutationResult,
+		Result: BulkAssignToProjectResult{
+			Results: make(
+				[]domainFacility.BulkOperationResultItem,
+				len(command.FieldDeviceIDs),
+			),
+		},
+	}
 
 	projects, err := h.projects.GetByIds(ctx, []uuid.UUID{command.ProjectID})
 	if err != nil || !containsProject(projects, command.ProjectID) {
 		outcome.Result.AssociationErrors = []string{projectNotFoundAssociationError}
+		for index, fieldDeviceID := range command.FieldDeviceIDs {
+			outcome.Result.Results[index] = domainFacility.BulkOperationResultItem{
+				ID:         fieldDeviceID,
+				Error:      projectNotFoundAssociationError,
+				ErrorCode:  itemErrorCodeNotFound,
+				ErrorField: "project_id",
+				Reason:     projectNotFoundAssociationError,
+			}
+		}
 		return outcome
 	}
 
 	changes := make([]mutation.EntityChange, 0, len(command.FieldDeviceIDs))
-	for _, fieldDeviceID := range command.FieldDeviceIDs {
+	for index, fieldDeviceID := range command.FieldDeviceIDs {
+		item := &outcome.Result.Results[index]
+		item.ID = fieldDeviceID
 		committed, assignErr := apptransaction.RunResult(
 			ctx,
 			h.operation,
@@ -157,7 +189,7 @@ func (h *BulkAssignToProjectHandler) Execute(
 				txCtx context.Context,
 				workflow AssignToProjectWorkflow,
 			) (committedProjectAssignment, error) {
-				return executeAssignToProjectTransaction(
+				result, err := executeAssignToProjectTransaction(
 					txCtx,
 					workflow,
 					AssignToProjectCommand{
@@ -167,15 +199,38 @@ func (h *BulkAssignToProjectHandler) Execute(
 					operationID,
 					h.historyBatch,
 				)
+				if err != nil {
+					return committedProjectAssignment{}, err
+				}
+				if appcollaboration.OutboxConfigured(txCtx) {
+					durableCommand := appcollaboration.FacilityHierarchyRefreshRequired{
+						Envelope: appcollaboration.Envelope{
+							SchemaVersion: appcollaboration.SchemaVersionV2,
+							EventID:       h.newID(), OperationID: operationID, CorrelationID: operationID,
+							ProjectID: command.ProjectID, ActorID: actorID, OccurredAt: occurredAt,
+						},
+						Scope:     appcollaboration.FacilityScopeFieldDevice,
+						EntityIDs: []uuid.UUID{result.link.FieldDeviceID},
+					}
+					if _, err := appcollaboration.EnqueueCommand(txCtx, durableCommand); err != nil {
+						return committedProjectAssignment{}, fmt.Errorf("enqueue bulk ProjectFieldDevice assignment: %w", err)
+					}
+				}
+				return result, nil
 			},
 		)
 		if assignErr != nil {
+			item.Error = assignErr.Error()
+			item.ErrorField = "fielddevice_id"
+			item.ErrorCode = classifyItemError(item.Error, item.ErrorField)
+			item.Reason = item.Error
 			outcome.Result.AssociationErrors = append(
 				outcome.Result.AssociationErrors,
 				assignErr.Error(),
 			)
 			continue
 		}
+		item.Success = true
 		outcome.Result.SuccessFieldDeviceIDs = append(
 			outcome.Result.SuccessFieldDeviceIDs,
 			committed.link.FieldDeviceID,

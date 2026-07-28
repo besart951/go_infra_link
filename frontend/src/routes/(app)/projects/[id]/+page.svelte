@@ -160,6 +160,10 @@
         case 'project_users':
           void loadProjectUsers();
           break;
+        case 'object_data':
+          refreshProjectFacilityViews();
+          void loadProject();
+          break;
       }
     },
     onReconnect: () => {

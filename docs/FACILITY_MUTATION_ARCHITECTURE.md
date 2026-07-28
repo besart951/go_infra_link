@@ -1,13 +1,18 @@
 # Facility mutation architecture
 
-Status: current-state analysis, incremental migration plan, Steps 1–4, FieldDevice multi-create/update/delete/bulk-delete and existing-device project assignment (including project item-savepoint isolation), project ObjectData activation/deactivation, project timeline and ControlCabinet restore isolation, project restore dispatch, Step 5/6 hierarchy lifecycle slices including copy fidelity, and Step 7 BACnet create/update/alarm-value replacement slices implemented
+Status: accepted correctness migration implemented; production sizing,
+outbox-retention operations, and temporary schema-v1 server emission remain
 Scope: `ControlCabinet` through `BacnetObject`
-Reviewed: 2026-07-22
+Reviewed: 2026-07-23
 
 This document records the repository state captured before the facility
 mutation refactoring started, then describes the implemented vertical slices. It is
 intentionally based on existing symbols, call sites, constraints, and tests
 rather than on a greenfield package design.
+
+Sections that describe the original package inventory and migration gaps are
+retained as design history. Sections 21 through 23, together with the status
+annotations in Section 20, are authoritative for the completed implementation.
 
 ## 1. Executive summary
 
@@ -48,14 +53,20 @@ The initial direction is therefore evolutionary:
    then shrink it as application handlers assume orchestration.
 6. Do not add a `Tenant` model.
 
-Two findings remain relevant before broad delete or link refactoring:
+The former project-link/global-delete conflation is closed on the three project
+hierarchy DELETE routes: each removes only its exact association. Global
+facility deletion is a distinct command family and now performs bounded
+descendant snapshots, set-wise history, project-link cleanup, and ownership-
+aware BACnet detach/delete handling. Browser-authored committed
+`entity_delta` messages are rejected and logged; server-originated v1 deltas
+remain only as a rollout compatibility projection.
 
-- Removing a project link currently deletes the physical facility hierarchy and
-  all matching links in every project.
-- The hub still accepts legacy browser-constructed committed `entity_delta`
-  messages. The bundled project page no longer publishes one after a bulk save,
-  but backend compatibility cannot be removed until the client migration window
-  is known.
+Project deletion now also follows the accepted facility boundary: only an
+active `SUPERADMIN` or `ADMIN_FZAG` may execute the application command, every
+hierarchy-link table must be empty for that project, and no global facility row
+is deleted. Project-owned ObjectData is removed in 100-row history batches,
+memberships and the project row are removed in the same transaction, and the
+v2 project refresh is persisted before commit.
 
 ## 2. Current package structure and dependency direction
 
@@ -108,7 +119,11 @@ Building
 through `object_data_bacnet_objects`, but it is not an ancestor of a
 FieldDevice.
 
-### 3.1 Responsibility inventory
+### 3.1 Baseline responsibility inventory
+
+This table records the starting behavior that motivated the migration. It is
+not the final implementation status; resolved delete, revision, constraint,
+history, and collaboration behavior is summarized in Sections 21 and 22.
 
 | Type                      | Identity and parent                                                                      | Local and cross-entity rules                                                                                                                                                                                       | Creation/update/move                                                                                                                                                                | Copy/delete/project/history/realtime                                                                                                                                                                                                                                                          |
 | ------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -203,20 +218,20 @@ Current transaction behavior is inconsistent:
 | Operation                                                                               | Current boundary                                                                                                                                                                    |
 | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | FieldDevice create / create with BACnet                                                 | One transaction per call                                                                                                                                                            |
-| `PUT /facility/field-devices/:id` base update plus optional BACnet/template replacement | Application-owned transaction includes authoritative before/after reads, data, decorated history, and mutation-result construction; project resolution and dispatch follow commit   |
+| `PUT /facility/field-devices/:id` base update plus optional BACnet/template replacement | Application-owned transaction includes authoritative before/after reads, data, decorated history, direct project resolution, and schema-v2 outbox; v1 compatibility dispatch follows commit |
 | Direct FieldDevice `MultiCreate`                                                        | Typed application wrapper supplies one OperationID/BatchID; existing service still opens one transaction per accepted item and request remains partial-success                      |
 | Project `MultiCreateAndAssignFieldDevices`                                              | One outer project transaction plus one nested GORM savepoint per accepted FieldDevice item; failed roots/children/history roll back locally while successful items remain staged    |
 | Legacy direct `FieldDeviceService.Update`                                               | No explicit transaction                                                                                                                                                             |
-| `DELETE /facility/field-devices/:id`                                                    | Application orchestration captures direct links before an application-owned row/history transaction; typed refresh dispatch follows commit                                          |
+| `DELETE /facility/field-devices/:id`                                                    | Application-owned row/history transaction captures direct links and persists schema-v2 delete scope before commit; v1 compatibility dispatch follows                                |
 | FieldDevice bulk update                                                                 | No request or per-item transaction; phase-level partial writes remain observable                                                                                                    |
-| `DELETE /facility/field-devices/bulk-delete`                                            | Application-owned independent transaction per input ID; one prefetched root set and pre-delete project-link set feed canonical results and bounded after-commit refreshes           |
-| `PUT /facility/bacnet-objects/:id`                                                      | Application-owned authoritative load/patch/write/history transaction; direct old/new FieldDevice recipient resolution and dispatch follow commit                                    |
-| ControlCabinet update                                                                   | Transaction includes descendant SPS name regeneration                                                                                                                               |
+| `DELETE /facility/field-devices/bulk-delete`                                            | Application-owned independent transaction per input ID; each changed item captures project links and persists v2 scope before delete, while one prefetched root/link set feeds the bounded v1 compatibility refresh |
+| `PUT /facility/bacnet-objects/:id`                                                      | Application-owned authoritative load/patch/write/history transaction captures FieldDevice/ObjectData owners and persists targeted or project-fallback v2 scope before commit         |
+| ControlCabinet update                                                                   | Transaction includes descendant SPS name regeneration, direct project resolution, history, and schema-v2 outbox                                                                    |
 | ControlCabinet create                                                                   | Application-owned validation/write/history/reload transaction                                                                                                                       |
-| `DELETE /facility/control-cabinets/:id`                                                 | Application orchestration captures direct links before an application-owned root/history transaction; typed refresh dispatch follows commit                                         |
+| `DELETE /facility/control-cabinets/:id`                                                 | Application-owned root/history transaction captures direct links and schema-v2 scope before delete; v1 compatibility dispatch follows commit                                         |
 | SPS create with system types / replace system types                                     | One transaction                                                                                                                                                                     |
-| SPS update                                                                              | Application-owned content/move/system-type/history transaction                                                                                                                      |
-| `DELETE /facility/sps-controllers/:id`                                                  | Application orchestration captures direct links before an application-owned root/history transaction; typed refresh dispatch follows commit                                         |
+| SPS update                                                                              | Application-owned content/move/system-type/history transaction with direct project resolution and schema-v2 outbox                                                                 |
+| `DELETE /facility/sps-controllers/:id`                                                  | Application-owned root/history transaction captures direct links and schema-v2 scope before delete; v1 compatibility dispatch follows commit                                         |
 | Global SPSController clone                                                              | Application-owned transaction around the existing deep `HierarchyCopier`; all decorated copy writes share one OperationID/BatchID and dispatch follows commit                       |
 | Project-scoped SPSController clone                                                      | Application-owned transaction around deep copy plus root/descendant project-link creation; all decorated writes share one OperationID/BatchID and dispatch follows commit           |
 | Global ControlCabinet clone                                                             | Application-owned transaction around the existing deep `HierarchyCopier`; all decorated copy writes share one OperationID/BatchID and dispatch follows commit                       |
@@ -231,10 +246,10 @@ Current transaction behavior is inconsistent:
 | `PUT /projects/:id/control-cabinets/:linkId`                                            | Application-owned authoritative root-link plus additive two-level descendant history transaction; typed new-cabinet refresh follows commit                                          |
 | `POST /projects/:id/sps-controllers`                                                    | Application-owned root-plus-descendant project-link/history transaction; exact inserted FieldDevice link IDs are audited and one SPS refresh follows commit                         |
 | `PUT /projects/:id/sps-controllers/:linkId`                                             | Application-owned authoritative root-link plus additive-descendant history transaction; notification and typed new-SPS refresh follow commit                                        |
-| Remaining project hierarchy delete                                                      | One legacy project-service transaction, followed by a direct handler notification/realtime callback; the route globally deletes facility data rather than merely unlinking it       |
-| Project ObjectData add/remove                                                           | Application-owned project existence/ownership/update/history transaction; canonical ObjectData result and full-project refresh are produced only after commit                       |
+| Project cabinet/SPS/FieldDevice link DELETE                                             | Application-owned exact-link/history transaction validates stored ProjectID and persists schema-v2 reconciliation; no global facility or descendant project rows are deleted; v1 compatibility follows commit |
+| Project ObjectData add/remove                                                           | Application-owned project existence/ownership/update/history transaction persists a targeted `object_data` v2 scope; canonical result and v1 full-project compatibility refresh follow commit |
 | Global history restore                                                                  | Explicit history-store transaction; transport calls it directly and no committed collaboration command is emitted                                                                   |
-| Project-scoped ControlCabinet restore                                                   | Project access plus current link or historical root-link validation, then the existing history-store transaction; full-project reconciliation follows its successful return         |
+| Project-scoped ControlCabinet restore                                                   | Project access plus current/historical root-link validation, then one outer transaction for restore rows/history, current recipient resolution, and schema-v2 project reconciliation |
 
 The former nested-boundary defect in project-scoped FieldDevice multi-create is
 closed: the transaction-scoped FieldDevice service receives a GORM runner rooted
@@ -693,12 +708,11 @@ The hub in
 - ping/pong and connection cleanup;
 - bounded send queues and slow-client eviction.
 
-Ephemeral edit state and committed facility state are currently mixed at the
-wire ingress. An authenticated room member may send `entity_delta` or
-`refresh_request`; the hub validates size/shape and rebroadcasts it without
-checking PostgreSQL, mutation permission, or current facility links
-(`project_collaboration.go:767-793` and
-`project_collaboration_validation.go:234-290`).
+Committed facility state no longer enters through the browser. The hub accepts
+client `edit_state` and bounded `refresh_request` hints, rejects and logs
+client-authored `entity_delta`, and emits committed state only from server
+commands. Schema-v2 `committed_event` messages originate from the durable
+outbox consumer.
 
 The active FieldDevice save flow is:
 
@@ -723,9 +737,8 @@ References:
 - `backend/internal/infrastructure/realtime/project_collaboration.go:767-793`
 
 The initiating browser retains its HTTP save reconciliation and ignores its own
-actor-scoped refresh. The hub continues accepting legacy client-authored
-committed messages for compatibility, but the bundled project page no longer
-publishes them.
+actor-scoped refresh. Server v1 messages remain readable during rollout, but
+the hub no longer accepts client-authored committed messages.
 
 ControlCabinet and SPSController global POST/PUT/copy/DELETE, both
 project-scoped root-copy routes, project-scoped SPSControllerSystemType copy,
@@ -745,7 +758,8 @@ canonical Result, but intentionally has no Dispatcher edge because no previous
 global realtime callback or unambiguous project-recipient rule exists.
 Global SPSControllerSystemType DELETE now uses the same typed transaction and
 canonical root Result, but also retains its previous realtime silence. It does
-not infer recipients or silently adopt the project hierarchy deletion policy.
+not infer recipients or silently invent a complete global descendant-delete
+policy.
 Global FieldDevice multi-create likewise has no collaboration edge: it creates
 unlinked facility rows, and guessing a ProjectID from their hierarchy would
 change the explicit project-link isolation model. Its application result is
@@ -859,38 +873,29 @@ reads it. Facility and project repositories are decorated in
   OperationID/correlation ID.
 - Timeline pages are bounded.
 
-### 10.2 Gaps
+### 10.2 Remaining maintenance constraints
 
-- Outside an explicit service transaction, the data write, change event, scope
-  rows, and entity version are separate statements and can partially commit.
-- Bulk decorators record one entity at a time, reload each created row, and
-  resolve scopes per entity. They use a shared BatchID only when a migrated
-  application command supplies batch context.
-- Cascading deletes bypass child decorators.
-- Global system-type DELETE now makes its root history atomic, but intentionally
-  retains the direct repository delete policy: database-cascaded FieldDevices
-  receive no child history, and the project-delete service's explicit
-  Specification/project-link cleanup is not run.
-- Remaining project delete scope resolution can still query already-deleted
-  live hierarchy/link rows, so project scope can be lost. The migrated global
-  FieldDevice, SPSController, and ControlCabinet single-delete paths pre-capture
-  direct collaboration recipients, but do not yet make descendant cascade
-  history complete.
-- `ON CONFLICT DO NOTHING` project-link bulk inserts can be followed by false
-  “create” history for already-existing links.
-- Global system-type copy now has application operation/batch correlation but no
-  recipient policy. Both system-type routes and the SPSController and
-  ControlCabinet clone routes supply one BatchID across their decorated
-  hierarchy and, where applicable, project-link writes.
-- Global entity and global ControlCabinet restore still do not publish a
-  committed collaboration command. Project-scoped ControlCabinet restore now
-  publishes a full-project reconciliation after commit to the validated target
-  project and other currently linked projects.
-- `historysql/store_test.go` covers actor/batch context and explicit batch
-  precedence. SQLite query budgets cover FieldDevice, Specification, BACnet,
-  alarm value, BACnet move, system-type, SPSController move, and ControlCabinet move batches;
-  PostgreSQL snapshot, restore, and concrete rollback integration coverage
-  remains missing.
+- Every new business mutation must enter through an explicit application
+  transaction. Direct use of a decorated repository outside that boundary is
+  unsupported because the data and history statements would otherwise
+  autocommit independently.
+- Partial-success bulk commands intentionally retain one transaction per item.
+  Their shared BatchID is correlation only, and the persistent history work
+  remains proportional to the number of successful items.
+- Global hierarchy delete no longer relies on database cascades for required
+  audit behavior: the bounded cleaner snapshots descendants, writes history
+  set-wise, removes project links, and applies the BACnet ownership policy.
+- Exact descendant project-link inserts report the IDs actually inserted, so
+  conflict no-ops do not create false history. Future generic
+  `ON CONFLICT DO NOTHING` paths must preserve that rule.
+- Global system-type copy derives recipients from the owning SPSController.
+  Global restore has no generally valid project-recipient rule and therefore
+  remains an administrative history operation rather than a project realtime
+  command. Project-scoped ControlCabinet restore publishes only after commit.
+- PostgreSQL integration covers `to_jsonb` snapshots, successful restore,
+  unique-conflict rollback, bounded hierarchy deletion, assignment
+  provenance, and live revisions. Production retention, resource sizing, and
+  extreme-volume execution remain operational concerns.
 
 ### 10.3 Duplicate change model
 
@@ -1138,24 +1143,26 @@ Design rules:
 
 ## 13. After-commit publication
 
-The required order is:
+The required durable order is:
 
 1. authorize at the HTTP/application entry point;
-2. capture pre-mutation recipients required for delete/unlink;
-3. enter the transaction;
+2. enter the transaction;
+3. capture recipients required for update/delete/unlink from transaction-scoped
+   project-link repositories;
 4. load minimal aggregate state;
 5. validate and mutate;
-6. persist data and history with operation/batch context;
-7. return a mutation Result and captured scope from the transaction callback;
+6. persist data, history, revision where available, and one schema-v2 outbox
+   event per affected project with operation/batch context;
+7. return a mutation Result and the captured project scope;
 8. let the transaction runner commit;
-9. resolve post-create/current recipients where appropriate;
-10. dispatch typed collaboration commands;
-11. translate to WebSocket/bus messages.
+9. optionally emit the temporary schema-v1 compatibility command;
+10. let the bounded outbox worker claim in per-project sequence order;
+11. translate the stored typed command to `committed_event` and fan it out.
 
-The first Adapter remains best effort, matching current behavior. A durable
-outbox is the later reliability option; dispatch failure after commit must not
-turn a successful HTTP mutation into an apparent rollback. PostgreSQL and HTTP
-refresh remain authoritative.
+The schema-v1 compatibility Adapter remains best effort and cannot change a
+committed HTTP result. Schema-v2 delivery is retried from PostgreSQL, consumers
+are idempotent by EventID, and clients recover sequence/revision gaps with an
+authoritative HTTP refresh. PostgreSQL remains the source of truth.
 
 Global FieldDevice multi-create deliberately has multiple commit gates because
 partial success is its public contract:
@@ -1387,19 +1394,19 @@ legacy missing-row behavior:
 ```text
 Gin path mapper
   -> typed DeleteCommand
-  -> GORM transaction and minimal authoritative FieldDevice load
-  -> one ProjectFieldDevice lookup before the mutation transaction
+  -> GORM transaction, minimal authoritative FieldDevice load, and direct ProjectFieldDevice lookup
   -> decorated root delete history with OperationID as BatchID
+  -> schema-v2 FieldDeviceDeleted outbox records
   -> canonical delete EntityChange from the captured before snapshot
   -> commit
   -> FieldDeviceDeleted per captured ProjectID
   -> existing v1 targeted field_device refresh_request
 ```
 
-Recipient lookup failure remains best effort: the delete commits and the error
-is reported, but no unscoped message is emitted. Missing rows still return 204,
-produce no mutation change, and dispatch nothing. This slice intentionally does
-not add explicit Specification/BACnet deletion or change database cascades;
+Recipient/outbox failure rolls the delete and history back; a committed delete
+therefore always has durable scope. Missing rows still return 204, produce no
+mutation change, and dispatch nothing. This slice intentionally does not add
+explicit Specification/BACnet deletion or change database cascades;
 child-history completeness is a separate bounded hierarchy-delete design.
 
 FieldDevice bulk DELETE preserves independent outcomes while applying that
@@ -1409,9 +1416,10 @@ commit gate once per input item:
 Gin JSON mapper
   -> typed BulkDeleteCommand
   -> one set-based candidate snapshot read
-  -> one set-based pre-delete ProjectFieldDevice read
+  -> one set-based ProjectFieldDevice read for the v1 aggregate projection
   -> one OperationID/history BatchID for the request
   -> independent GORM transaction per input ID
+  -> transaction-scoped direct-link read and schema-v2 outbox per changed item
   -> decorated root delete and history commit or rollback together per item
   -> unchanged index-aligned BulkOperationResult
   -> canonical unique successful delete changes
@@ -1420,10 +1428,10 @@ Gin JSON mapper
 
 Missing and repeated IDs remain successful compatibility results. A failed
 item does not roll back earlier successes, and no command includes its ID. The
-application deliberately captures direct links before any delete because link
-rows may disappear with the root; it never trusts a project supplied by the
-client. Dispatch begins only after every item transaction has returned, so no
-project observes an intermediate request state through this command path.
+application captures durable direct-link scope in each delete transaction; it
+never trusts a project supplied by the client. V1 compatibility dispatch begins
+only after every item transaction has returned, so no project observes an
+intermediate request state through that compatibility path.
 
 The initial SPSController slice uses the same ordering for
 `PUT /facility/sps-controllers/:id`:
@@ -1558,20 +1566,18 @@ Gin path mapper
 An absent assignment still executes the idempotent repository delete, returns
 204, records no canonical change, and emits nothing. Delete, history, and outer
 commit failures roll back together. The command does not load descendants or
-invent project recipients. It also does not adopt the explicit descendant and
-link cleanup performed by project hierarchy deletion; that behavioral mismatch
-remains a separate bounded-delete decision.
+invent project recipients. Complete descendant snapshots/history and global
+project-link cleanup remain a separate bounded-delete decision.
 
-SPSController single DELETE captures its direct project recipients before the
-destructive transaction, preserving the former broadcaster's scope without
-depending on links that may disappear through cascades:
+SPSController single DELETE captures direct project recipients and persists its
+schema-v2 scope in the destructive transaction:
 
 ```text
 Gin path mapper
   -> typed SPSController DeleteCommand
-  -> one ProjectSPSController lookup before the mutation transaction
-  -> GORM transaction and minimal authoritative SPSController load
+  -> GORM transaction with minimal authoritative SPSController and ProjectSPSController loads
   -> decorated root delete history with OperationID as BatchID
+  -> schema-v2 SPSControllerDeleted outbox records
   -> canonical delete EntityChange from the captured before snapshot
   -> commit
   -> SPSControllerDeleted per captured ProjectID
@@ -1579,8 +1585,8 @@ Gin path mapper
 ```
 
 The endpoint remains idempotent: an absent controller still returns 204,
-records no canonical change, and emits nothing. A recipient lookup failure is
-reported after the mutation commits and never widens publication. This slice
+records no canonical change, and emits nothing. A recipient/outbox failure
+rolls the root and history back. This slice
 does not load the controller's hierarchy. Database cascades and their existing
 child-history gaps are unchanged and remain part of the bounded hierarchy
 delete design.
@@ -1726,7 +1732,7 @@ entity revision. The initiating user ignores same-actor deltas/refreshes in
 `frontend/src/routes/(app)/projects/[id]/+page.svelte:91-164`. Reconnect causes a
 full HTTP refresh.
 
-Safe rollout:
+Implemented rollout:
 
 1. Introduce typed internal commands but emit the exact v1 `entity_delta` and
    `refresh_request` JSON.
@@ -1738,11 +1744,13 @@ Safe rollout:
    committed `entity_delta`.
    Global SPSControllerSystemType copy and DELETE use the typed application
    boundary but remain silent because v1 had no corresponding global callback.
-3. Continue accepting legacy client deltas temporarily; later treat them as a
-   refresh hint rather than trusted data.
-4. Make backend and frontend accept both v1 and v2.
-5. Add the versioned envelope to v2.
-6. Retire v1 after deployed clients have expired.
+3. Reject and log client-authored committed deltas; continue accepting only
+   edit state and bounded refresh hints.
+4. Backend and frontend accept server-originated v1 plus schema-v2
+   `committed_event`.
+5. V2 carries EventID, OperationID, correlation, per-project sequence, scope,
+   entity IDs, and optional revision mappings.
+6. Retire server v1 emission after deployed clients have expired.
 
 For v1 bulk messages:
 
@@ -1826,31 +1834,25 @@ no command.
 
 ## 15. Concurrency and versioning strategy
 
-`domain.Base` currently has only ID, CreatedAt, and UpdatedAt. No optimistic
-locking exists. Historical `EntityVersion` must not be reused as a live
-revision.
+`domain.Base` has an independent live `Revision`; historical `EntityVersion`
+is never reused as a concurrency token.
 
-Versioning is a separate additive migration after the command/result seam is
-proven. It must be a coordinated vertical slice rather than just adding a field
-to `domain.Base`: current generic repositories use `Save`, the specialized
-FieldDevice update has no compare-and-swap predicate, old binaries would not
-increment a new column, restore replays historical snapshots, and the strict v1
-frontend rejects unknown response/message fields.
+The additive blue-green migration installs
+`revision BIGINT NOT NULL DEFAULT 1` on existing mutable Base-backed tables and
+a PostgreSQL update trigger. The trigger makes mixed-version writers advance
+the revision even before every old binary has been retired. Specialized
+FieldDevice writes, generic repositories, and project hierarchy-link updates
+use compare-and-swap predicates and return a typed conflict with the expected
+and current revision. Restore writes historical business fields but lets the
+live trigger advance from the current revision instead of replaying the
+historical token.
 
-The required rollout is:
-
-1. add `revision BIGINT NOT NULL DEFAULT 1` to ControlCabinet, SPSController,
-   FieldDevice, and BacnetObject;
-2. expose `expected_version` compatibly in mutation DTOs;
-3. issue `UPDATE ... WHERE id = ? AND revision = ?`, atomically incrementing the
-   revision;
-4. return a typed conflict with expected/current revision;
-5. include the new revision in HTTP and v2 collaboration deltas;
-6. let clients ignore duplicate/lower revisions and refresh on gaps.
-
-The migration requires data/backfill, mixed-version deployment sequencing,
-restore rules that increment rather than replay a live revision, and a
-blue-green review. It is not part of the initial FieldDevice move slice.
+Facility and project-link mutation DTOs require `expected_version`; responses
+return the resulting revision. Version-2 collaboration envelopes carry entity
+revisions. The Svelte state rejects duplicate/lower revisions and performs an
+authoritative refresh on sequence or revision gaps. Compatibility-only
+internal callers may temporarily pass zero, but public mutation requests may
+not.
 
 Event IDs support duplicate detection; per-project sequence requires a durable
 allocator/outbox and should not be faked with process-local counters. Reconnect
@@ -1887,19 +1889,18 @@ flowchart TD
     Link --> Tx
     Facility --> Tx
     App -->|create/update/clone/delete| Tx
-    App -->|FieldDevice single/bulk, SPSController, or ControlCabinet DELETE pre-read| PreDeleteScope
-    PreDeleteScope --> Tx
+    App -->|transaction-scoped recipient read| Scope
     Tx --> Decorator
     Facility --> Decorator
     Decorator --> Repo
     Decorator --> History
+    Tx --> Outbox
     Tx -->|commit succeeds| Result
-    Result -->|create/current recipients| Scope
-    Scope --> Dispatcher
-    Result -->|captured delete recipients| Dispatcher
+    Result -->|temporary v1 compatibility| Dispatcher
     Dispatcher --> Hub
+    Outbox -->|bounded worker, retry, idempotency| Hub
     ProjectHandler -->|remaining project-link callbacks after return| Hub
-    Browser -.->|legacy clients may send entity_delta| Hub
+    Browser -.->|edit_state and bounded refresh hints only| Hub
     Hub --> Bus
     Bus --> Hub
     Hub --> Socket
@@ -1908,8 +1909,7 @@ flowchart TD
 
 This diagram distinguishes the migrated
 FieldDevice/SPSController/SPSControllerSystemType/ControlCabinet and BACnet
-paths from remaining direct project-link handler callbacks and the legacy client
-ingress retained for compatibility. The system-type copy's notification-only
+paths from remaining direct project-link handler callbacks. The system-type copy's notification-only
 callback is intentionally outside the realtime edge.
 
 ## 17. Target mutation flow
@@ -2220,8 +2220,9 @@ No realtime edge leaves the domain, repository, or uncommitted transaction.
 - BACnet alarm-value replacement delete/create snapshots, actor/batch
   correlation, write/reload/commit rollback, concrete SQL/history rollback,
   post-commit timing, direct-project filtering, ObjectData fallback,
-  cross-owner deduplication, empty no-op suppression, and unchanged transport
-  mapping: `application/facility/bacnetobject/replace_alarm_values_test.go`,
+  cross-owner deduplication, empty no-op suppression, unchanged transport
+  mapping, exact indexed field validation, and selected-AlarmType ownership:
+  `application/facility/bacnetobject/replace_alarm_values_test.go`,
   `handler/facility/bacnet_alarm_handler_test.go`, and
   `infrastructure/transaction/gorm_runner_test.go`.
 - Collaboration command routing and v1 Adapter mapping:
@@ -2248,81 +2249,46 @@ No realtime edge leaves the domain, repository, or uncommitted transaction.
 - Frontend bulk reconciliation, phase inference, BACnet validation/payload:
   `frontend/src/lib/hooks/fieldDeviceEditing/*.test.ts`.
 
-### 18.2 Highest-priority missing coverage
+### 18.2 Remaining verification and operational coverage
 
-- the same after-commit command guarantees for mutations other than migrated
-  FieldDevice PUT/DELETE/bulk PATCH/bulk DELETE/project assignments and
-  reassignment, SPSController
-  POST/PUT/global-and-project-copy/DELETE, project-scoped
-  SPSControllerSystemType copy, ControlCabinet POST/PUT, standalone BACnet PUT,
-  BACnet alarm-value PUT, and both BACnet POST ownership paths; global
-  SPSControllerSystemType copy and global DELETE are migrated but deliberately
-  silent pending a recipient-policy decision;
-- recipient resolution across link levels for cabinet/SPS/copy/move/delete;
-- project A unlink/delete cannot affect project B without explicit global
-  authority;
-- delete recipients captured before link/hierarchy removal on remaining
-  hierarchy/project delete paths;
-- mutation/history commit and rollback together on every remaining entry path;
-- no duplicate sparse-recorder/decorator history;
-- no false create history for remaining generic `BulkCreate` paths using
-  `ON CONFLICT DO NOTHING`; the production descendant set-insert paths are now
-  exact;
-- shared operation/batch IDs for bulk/copy plus bounded history query counts;
-- copy behavior for external-set BACnet software references and bounded
-  multi-million-row hierarchy execution;
-- full BACnet replace/patch final-state invariant parity;
-- an explicit product/API decision before any standalone BacnetObject delete
-  endpoint (none exists today);
-- optimistic concurrency conflicts;
-- client committed-delta spoof rejection;
-- room cleanup/multiple connections/backpressure behavior at hub level;
-- oversized fallback for remaining future delta shapes (project FieldDevice
-  create-and-assign is covered);
-- global restore collaboration dispatch and recipient resolution; the
-  project-scoped ControlCabinet route now has project access, current-link or
-  historical root-link validation, and after-commit dispatch.
+The correctness migration is covered by unit, characterization, frontend, and
+opt-in PostgreSQL integration tests. Remaining work is operational or belongs
+to future API surfaces:
 
-## 19. Current architecture violations and performance risks
+- production load tests for multi-million-row copy, large parent assignment,
+  cabinet rename, outbox throughput, retention, WAL volume, and lock duration;
+- failover and dead-letter runbooks for outbox delivery;
+- compatibility-removal tests when server schema-v1 emission is retired;
+- an explicit product/API decision and a new application command before adding
+  any standalone BacnetObject delete endpoint;
+- recipient semantics before adding global restore collaboration dispatch;
+- regression coverage for each future generic set-insert path so conflict
+  no-ops never produce create history.
 
-### 19.1 Exact violations
+## 19. Remaining architecture constraints and performance risks
 
-- Project handlers still directly trigger realtime for remaining project-link
-  mutations through `notifyProjectChange`; project ObjectData activation and
-  deactivation, project FieldDevice create-and-assign
-  no longer uses the former direct `BroadcastFieldDeviceDelta` callback, and
-  single/bulk existing-FieldDevice assignments plus single-link reassignment
-  now use the application Dispatcher plus a notification-only callback.
-  Project ControlCabinet and SPSController assignments also use typed
-  application commit gates. Both parent-link update routes now use the same
-  commit gate; their destructive delete routes remain direct. Global
-  facility mutations no longer receive the legacy refresh broadcaster through
-  handler construction.
-- Remaining hierarchy/project-link delete paths still bypass the application
-  command/after-commit Dispatcher. Single and bulk FieldDevice,
-  SPSController, and ControlCabinet DELETE, both SPSController and ControlCabinet
-  copy paths, both SPSControllerSystemType copy paths, global
-  SPSControllerSystemType DELETE, and BACnet POST/PUT/alarm-value replacement
-  paths are migrated; the global system-type routes intentionally have no
-  command until recipient semantics are approved.
-- Hub still accepts client-authored committed-state messages from legacy
-  clients:
-  `project_collaboration.go:767-793`.
-- The former second `FieldDeviceService` audit recorder is removed; remaining
-  history duplication risk is limited to repository-decoration paths that must
-  not be combined with future direct application history writes.
-- Domain entities expose persistence tags and unrestricted public mutation.
-- Move semantics are hidden in generic updates.
-- Project unlink and global hierarchy delete are conflated.
-- Global facility mutation routes, including FieldDevice PUT, carry no
-  ProjectID and therefore cannot apply project-membership isolation without a
-  separate authorization/API decision.
-- History atomicity depends on callers remembering to enter a transaction.
-- Typed FieldDevice delta data becomes `[]map[string]any` only at the v1 realtime
-  Adapter/hub serialization boundary; application and handler packages retain
-  typed state.
-- Realtime scope/event behavior uses free-form strings.
-- There is no maximum bulk request size.
+### 19.1 Structural constraints
+
+- Domain entities still expose persistence tags and public mutable fields.
+  Application commands and repository constraints, rather than rich aggregate
+  methods, enforce the mutation boundary.
+- Compatibility PUT shapes combine content and placement fields. The
+  application layer nevertheless executes placement as an explicit move and
+  reconciles old/new history, project provenance, and collaboration scopes.
+- Global facility commands intentionally carry no ProjectID. Authorization
+  uses the central global facility policy; project membership is enforced only
+  by project-scoped commands.
+- History atomicity is guaranteed by migrated application commands. New code
+  must not call decorated write repositories outside an explicit transaction.
+- The hub rejects and logs browser-authored committed state. Only the server
+  adapter emits schema-v1 `entity_delta` during the bounded compatibility
+  period; v2 committed events are durable outbox records.
+- Realtime scope and event names remain string-valued at the transport
+  boundary. Application commands and handlers use typed values before
+  serialization.
+- Facility bulk DTOs reject more than 100 items. Copy and provenance traversal
+  use sequential batches of at most 100; extreme hierarchy copies still need
+  measured resource limits or asynchronous execution.
 
 ### 19.2 Performance-sensitive queries
 
@@ -2331,7 +2297,7 @@ No realtime edge leaves the domain, repository, or uncommitted transaction.
 - BACnet sibling uniqueness loads full collections.
 - Cabinet number allocation can perform 9,999 queries.
 - Hierarchy copy scans ten source system-type IDs at a time using ascending UUID
-  keyset pages of 500 FieldDevices. This bounds the FieldDevice ID/entity maps
+  keyset pages of 100 FieldDevices. This bounds the FieldDevice ID/entity maps
   per copy phase, but BACnet/alarm child fan-out within a page and total
   transaction duration remain unbounded.
 - Hierarchy-copy Specification backlinks and BACnet reference remapping now use
@@ -2366,8 +2332,8 @@ Each step is intended to compile and preserve API behavior.
 - **New files:** application mutation types; collaboration command,
   Dispatcher, handler and port; FieldDevice bulk application handler;
   realtime command Adapter; tests.
-- **Deprecated code:** `publishFieldDeviceDelta` frontend method and new-client
-  use of client `entity_delta`; backend acceptance remains temporarily.
+- **Deprecated code:** `publishFieldDeviceDelta` frontend method and all client
+  use/acceptance of committed `entity_delta`.
 - **Dependencies:** explicit construction in `wire`; narrow
   `GetByFieldDeviceIDs` link reader.
 - **Database migration:** none.
@@ -2990,26 +2956,120 @@ Each step is intended to compile and preserve API behavior.
   together; collaboration occurs only after commit in the validated room; API,
   notification, additive-link, and v1 refresh contracts remain unchanged.
 
+### Step 2l — exact project hierarchy unlink
+
+**Status: implemented.**
+
+- **Objective:** make
+  `DELETE /projects/:id/{control-cabinets|sps-controllers|field-devices}/:linkId`
+  remove only the selected project association, never the global hierarchy.
+- **Affected files:** the new project-link application Module, project handler
+  composition, project assignment compatibility service, transaction wiring,
+  characterization tests, and this architecture record.
+- **Deleted/deprecated code:** the destructive project-assignment helpers that
+  deleted global cabinets, SPSControllers, system types, FieldDevices,
+  Specifications, and BACnet objects are removed. The legacy service method
+  names remain for API compatibility but now delete only the exact link.
+- **Dependencies:** one application transaction runner/factory, a normalized
+  consumer-owned repository Adapter over the three decorated project-link
+  repositories, actor/history BatchID context, and the transactional outbox.
+- **Database migration:** the additive provenance migration creates normalized
+  SPSController/FieldDevice source tables. Existing links are conservatively
+  backfilled as explicit rather than inferring ancestry from current placement.
+- **Authorization/API compatibility:** the existing project access and
+  type-specific delete permission checks still run before the command. Link ID
+  and stored ProjectID are validated transactionally. Routes, 204 response,
+  not-found mapping, and notification events are unchanged.
+- **History/realtime:** the decorated link delete and history share the
+  application OperationID/transaction. The same transaction persists a v2
+  refresh with the affected global entity ID. The handler retains the existing
+  post-commit v1 full-scope compatibility refresh.
+- **Source-aware descendant policy:** removing a parent link prunes its
+  inherited descendant claims in ordered batches of at most 100. A descendant
+  link is deleted only when no explicit, copy, or other parent claim remains.
+  Legacy-backfilled explicit claims are deliberately conservative.
+- **Tests:** all three link kinds, cross-project rejection, history BatchID,
+  durable scope, outbox-failure rollback, command routing, and service
+  characterization prove that global roots, descendants, Specification, BACnet
+  data, other-project links, and unproven descendant links survive.
+- **Acceptance:** project A cannot delete a global facility entity or project
+  B's association through an unlink route; history/outbox failure rolls back
+  the link deletion; global deletion remains a separate authorized operation.
+
+### Step 2m — policy-safe project deletion
+
+**Status: implemented.**
+
+- **Objective:** enforce the accepted deletion rule at the backend application
+  boundary and ensure project deletion never cascades into global facility
+  entities.
+- **Affected files:** the new project application Module, project handler and
+  composition wiring, project lifecycle compatibility service, migration
+  registry, project/ObjectData history path, translations, and focused policy
+  tests.
+- **Deleted/deprecated code:** the public project lifecycle service no longer
+  exposes its former unrestricted `DeleteByID`; the production route has no
+  direct repository-delete fallback.
+- **Authorization:** the existing route access/permission gate remains for
+  consistent denial details. Inside the deletion transaction the command
+  re-resolves the actor as an active database user and permits only
+  `SUPERADMIN` or `ADMIN_FZAG`, so stale token-role claims or a broadly assigned
+  `project.delete` permission cannot authorize deletion.
+- **Eligibility and concurrency:** completed, ongoing, and planned projects are
+  rejected while any ControlCabinet, SPSController, or FieldDevice project link
+  remains. The project row is locked before the check. PostgreSQL foreign keys
+  from all three hierarchy-link tables use `ON DELETE RESTRICT`, closing the
+  concurrent-insert race; the membership foreign key uses `ON DELETE CASCADE`
+  as a final integrity guard.
+- **Migration safety:** the migration reports the exact table and count for
+  existing orphan project associations and stops. It never repairs, relinks, or
+  deletes conflicting data.
+- **History/realtime:** project-owned ObjectData rows are deleted through the
+  decorated repository in sequential batches of at most 100, then memberships
+  and the project are deleted. ObjectData and project history share the command
+  OperationID/BatchID. The v2 `project` full-refresh outbox event is written in
+  the same transaction; the existing v1 notification remains post-commit.
+- **Global-entity safety:** project deletion has no repository capability for
+  ControlCabinet, SPSController, SPSControllerSystemType, FieldDevice,
+  Specification, or BACnet deletion. The required empty hierarchy links are
+  unlinked through Step 2l before project deletion.
+- **Tests:** both authorized roles and completed/non-completed statuses, all
+  unauthorized roles, missing/inactive actor behavior, every linked-status
+  conflict, 205 ObjectData rows split into `100/100/5`, other-project
+  isolation, shared history BatchID, durable v2 scope, outbox rollback, typed
+  HTTP conflict mapping, migration coverage, and full backend test/vet.
+- **Acceptance:** only the two allowed roles can delete an unlinked project;
+  any hierarchy association blocks the command; another project's state and
+  every global facility entity remain untouched; mutation, history, and outbox
+  either all commit or all roll back.
+
 ### Step 3 — Specification and bulk phase results
 
-**Status: internal execution seam implemented; HTTP exposure deferred.**
+**Status: implemented. Structured item-level HTTP/frontend results, bounded
+requests, aggregate revision checks, transaction-scoped history, and durable
+collaboration are active. Internal phase detail remains application-only.**
 
 - **Objective:** make Specification lifecycle part of FieldDevice mutation
-  orchestration and expose explicit internal per-phase outcomes without changing
-  existing HTTP fields.
+  orchestration, expose explicit internal per-phase outcomes, and give every
+  public bulk mutation item a stable machine-readable failure contract.
 - **Affected files:** FieldDevice bulk writer, Specification operations,
   mutation/result mapping, frontend reconciliation tests.
 - **New files:** `domain/facility/fielddevice/bulk_update.go` plus writer,
   application, and transport characterization tests.
-- **Deprecated code:** frontend/backend inference from arbitrary error paths once
-  compatible response fields are available.
+- **Deprecated code:** callers may still read the legacy `error`, `fields`, and
+  association summary lists, but new reconciliation uses `error_code`,
+  `error_field`, and `reason`.
 - **Dependencies:** batch history writer and operation context.
 - **Database migration:** none.
-- **Compatibility:** legacy result and JSON fields are unchanged. Optional
-  operation/batch/phase fields remain a later v2-compatible extension.
+- **Compatibility:** legacy result and JSON fields are retained. The additive
+  item fields are `id`, `error_code`, `error_field`, and `reason`; internal
+  operation/batch/phase fields are not leaked. All mutation arrays are bounded
+  to 100 items at transport validation.
 - **Tests:** base/Specification and base/BACnet partial behavior, ApparatNr
   conflict, exact successful-phase mutation mapping, operation/history
-  correlation, and absence of internal fields from the HTTP response.
+  correlation, deterministic primary-field selection, stable conflict/not-found
+  codes, project assignment mapping, and absence of internal fields from the
+  HTTP response.
 - **Performance risk:** reuse current maps; no new per-item reads.
 - **Rollback:** the service compatibility Adapter can return only
   `BulkUpdateExecution.Result`; the explicit transport mapper already ignores
@@ -3018,15 +3078,17 @@ Each step is intended to compile and preserve API behavior.
   and included in the canonical mutation result; reconciliation remains
   conservative for failed phases.
 
-Remaining Step 3 work is to characterize database failures within
-Specification/BACnet phases and design a backward-compatible HTTP/frontend
-projection. Exact intra-BACnet partial persistence cannot be claimed until the
-phase gains a transaction or returns child-level execution outcomes.
+Specification and BACnet phase failures are mapped to stable item codes and
+fields. The complete bulk command runs in one explicit outer transaction while
+retaining the documented item/phase partial-success contract. Child-only
+mutations compare-and-swap the authoritative FieldDevice aggregate revision
+before writing and publish the resulting revision. A BatchID correlates these
+results; it does not promise request-wide atomicity.
 
 ### Step 4 — history consolidation and batching
 
-**Status: initial consolidation and batch persistence implemented; PostgreSQL
-restore/integration coverage remains.**
+**Status: implemented, including PostgreSQL snapshot/restore and rollback
+coverage.**
 
 - **Objective:** remove `service/changecapture`, pass operation/batch context to
   one history Adapter, and batch snapshots/events/scopes.
@@ -3045,8 +3107,8 @@ restore/integration coverage remains.**
 - **Tests:** atomic commit/rollback, actor, shared batch ID, exactly one
   decorator event, delete snapshot/version parity, preparation-failure
   atomicity, 1-versus-20 query budgets, and the 501-row chunk boundary are
-  covered. PostgreSQL `to_jsonb` snapshot reads and restore remain an integration
-  test gap.
+  covered. The opt-in PostgreSQL tier exercises `to_jsonb`, successful restore,
+  unique-conflict rollback, and absence of a rolled-back restore event.
 - **Performance risk:** snapshots, mutations, and derived scopes are still held
   for the full repository call; maximum operation size and JSON memory need
   measurement.
@@ -3054,13 +3116,13 @@ restore/integration coverage remains.**
 - **Acceptance:** there is one facility audit model, mutation and history share
   the caller's transaction, no successful event survives rollback, UUID input
   lists and writes are chunked at 500, and scope-query count grows by chunks
-  rather than rows. Restore compatibility still needs a PostgreSQL regression
-  tier before the migration can retire legacy paths.
+  rather than rows. PostgreSQL restore compatibility is part of the regression
+  tier.
 
 ### Step 5 — explicit move commands and optimistic revisions
 
-**Status: initial FieldDevice, SPSController, and ControlCabinet move Modules
-implemented; link reconciliation and optimistic revisions deferred.**
+**Status: implemented for FieldDevice, SPSController, ControlCabinet, and
+project hierarchy-link mutations.**
 
 - **Objective:** separate FieldDevice placement, SPSController cabinet, and
   ControlCabinet building transitions from ordinary content updates;
@@ -3075,8 +3137,9 @@ implemented; link reconciliation and optimistic revisions deferred.**
   `application/facility/spscontroller/{move,update,result}.go`,
   `domain/facility/control_cabinet_move.go`,
   `application/facility/controlcabinet/{move,update,result}.go`, and their
-  tests. A later revision sub-slice still needs an additive migration and
-  conflict tests.
+  tests, plus the additive live-revision migration, project-assignment
+  provenance migration, conflict tests, and
+  `docs/adr/0002-project-assignment-provenance.md`.
 - **Deprecated code:** the combined PUT endpoints remain compatibility Adapters,
   but parent changes are no longer semantically hidden inside handler content
   mapping. The SPSController and ControlCabinet PUT handlers no longer
@@ -3085,11 +3148,12 @@ implemented; link reconciliation and optimistic revisions deferred.**
 - **Dependencies:** current-state load, destination validation through the
   transaction-scoped facility services, current direct ProjectFieldDevice,
   ProjectSPSController, and ProjectControlCabinet resolvers, collaboration
-  Dispatcher, and snapshot-based old/new history scope resolvers. Full recipient
-  reconciliation depends on a project-link provenance decision.
-- **Database migration:** none for the initial move slice. Revision columns are a
-  separate coordinated migration after mixed-binary, restore, and strict-client
-  compatibility are designed.
+  Dispatcher, snapshot-based old/new history scope resolvers, and normalized
+  project-assignment sources.
+- **Database migration:** the live-revision expand migration adds defaulted
+  columns and mixed-binary bump triggers. The provenance expand migration adds
+  normalized SPS/FieldDevice assignment-source tables and conservatively
+  backfills legacy links as explicit.
 - **API compatibility:** exact existing PUT request/response shapes. The
   FieldDevice importer may still submit parent, content, and BACnet replacement
   together atomically. SPSController content and system-type replacement remain
@@ -3118,24 +3182,26 @@ implemented; link reconciliation and optimistic revisions deferred.**
   direct-project query after commit, and set-based history hierarchy queries.
   ControlCabinet descendant rename retains the existing paged per-controller
   writes, while FieldDevice ApparatNr and SPS/cabinet normalized uniqueness
-  checks remain race-prone where constraints/collation differ.
+  checks are backed by the deferred FieldDevice placement constraint and
+  normalized SPS unique indexes. Migrations report legacy conflicts rather
+  than changing data.
 - **Rollback:** route any migrated PUT back to the corresponding compatibility
   service and old direct broadcaster; the schema and v1 wire need no rollback.
 - **Acceptance:** a valid move and its child replacement commit together; write
   and commit failures produce neither committed history nor collaboration
   commands; generated SPS names use the destination hierarchy and cabinet
   moves roll them back together; history is visible from both old and new
-  hierarchy scopes; existing project links and HTTP/WebSocket contracts are
-  unchanged.
+  hierarchy scopes; live inherited project claims transfer to the new parent
+  in the same transaction, explicit/legacy claims remain, stale revisions are
+  rejected, and HTTP/WebSocket contracts remain compatible.
 
 ### Step 6 — hierarchy aggregates and copy/delete
 
 **Status: ControlCabinet/SPSController create, global/project-scoped
 ControlCabinet, SPSController, and SPSControllerSystemType copy, copy fidelity,
-both root single-delete transaction/dispatch slices, and global
-SPSControllerSystemType delete implemented; descendant delete-history
-completeness, bounded child fan-out, and remaining assignment lifecycle work
-deferred.**
+bounded global hierarchy deletion, provenance-aware assignment lifecycle, and
+global SPSControllerSystemType delete implemented. Extreme transaction sizing
+remains operational work.**
 
 - **Objective:** migrate remaining ControlCabinet/SPSController create,
   copy/delete, and system-type use cases; repair copy fidelity and bound
@@ -3151,9 +3217,10 @@ deferred.**
   `application/facility/controlcabinet/{clone,clone_for_project,delete}.go`, and
   their tests. Copy fidelity adds typed set-assignment capabilities to the
   existing FieldDevice/BACnet store Interfaces, the existing history store
-  Interface, a deterministic FieldDevice ID-page capability, and focused
-  service/SQL/decorator tests; later work still needs bounded child fan-out and
-  an ADR for unlink versus global delete.
+  Interface, a deterministic FieldDevice ID-page capability, bounded delete
+  cleaner, normalized assignment-source capabilities, and focused
+  service/SQL/decorator/PostgreSQL tests. BACnet ownership and project
+  provenance decisions are recorded in `docs/adr/`.
 - **Deprecated code:** global SPSController copy and DELETE no longer call the
   facility service/collaboration broadcaster from Gin; the SPS facility handler
   has no realtime dependency. Project-scoped SPS copy no longer invokes a
@@ -3164,19 +3231,21 @@ deferred.**
   realtime silence. Global system-type DELETE likewise delegates to its typed
   transaction and remains silent. ControlCabinet global/project copy and DELETE no longer
   invoke the legacy service or collaboration callback from Gin. Neither global
-  root facility handler has a realtime dependency. Unbounded child fan-out and
-  whole-copy transaction duration remain migration targets.
+  root facility handler has a realtime dependency. Whole-copy transaction
+  duration remains an extreme-volume operational target.
 - **Dependencies:** application transaction Runner, transaction-scoped
   ControlCabinet/SPSController service and `HierarchyCopier` Adapters,
   transaction-scoped project copy/link service, current or pre-delete direct
   project-link readers, access-checked ProjectID where applicable,
   actor/history batch context, clock/ID generator, error reporter, injected
   collaboration Dispatcher, and the explicitly wired BACnet alarm-value
-  repository. The FieldDevice store Interface now supplies ordered exclusive-
-  cursor ID pages; later hierarchy work needs bounded BACnet/alarm fan-out and
-  project-link processing rather than aggregate-wide loads.
-- **Database migration:** none for the clone/delete slices; later constraints
-  only when proven safe by data audit.
+  repository. The FieldDevice store Interface supplies ordered exclusive-
+  cursor ID pages; delete and project-source cleanup use bounded set-wise
+  processing rather than aggregate-wide loads.
+- **Database migration:** copy/delete needs no destructive schema change.
+  Additive project-source, live-revision, normalized SPS, deferred placement,
+  project-link integrity, and BACnet-template uniqueness migrations report
+  conflicting legacy data rather than modifying it.
 - **API compatibility:** unchanged copy/DELETE paths, permissions, status codes,
   DTOs, error mappings, clone field/number policy, system-type project
   notification event, and idempotent delete success for a missing controller,
@@ -3198,10 +3267,11 @@ deferred.**
   returning only a compact root change. Both project root-clone handlers additionally give
   copied project links that same BatchID. The project-scoped system-type handler
   applies the same rule to its assignment, copied children, and descendant
-  FieldDevice links. Database cascade behavior and the existing absence of
-  descendant delete events are preserved, not silently redefined. Global
-  system-type DELETE now commits its decorated assignment row/history under one
-  BatchID without adopting the project hierarchy deletion cleanup policy.
+  FieldDevice links. Global root and system-type deletes collect descendant
+  snapshots in bounded pages, write delete history set-wise, remove all related
+  project links, and explicitly detach or delete BACnet objects according to
+  ownership before deleting the root. Required audit records no longer depend
+  on database cascades.
   Copy's cyclic Specification backlink and BACnet software-reference phases are
   plural before/after updates rather than per-row history calls; alarm-value
   clones are plural creates. All remain inside the caller's copy transaction
@@ -3228,15 +3298,18 @@ deferred.**
   leaves the base hierarchy unchanged. Paging coverage proves a 1,201-row copy
   is processed as 500/500/201 without duplicates and that the SQL Adapter
   returns strictly ordered, parent-scoped keyset pages with one query per page.
-  Remaining coverage is full hierarchy delete, child-fan-out bounds, and compact
-  large-copy refresh.
+  PostgreSQL coverage additionally proves bounded complete hierarchy cleanup,
+  descendant history, project-link removal, external software-reference
+  detach, and preservation of an ObjectData-shared BACnet object. Compact
+  cabinet child-result and 100-row copy/provenance boundaries have focused
+  coverage.
 - **Performance risk:** root delete adds one constant-size root read and, where
   recipients exist, one batched direct-link query; system-type delete adds only
   the root read and never loads descendants. Clone retains chunks of ten source
-  system types but scans their FieldDevices through 500-ID keyset pages. This
-  bounds FieldDevice working memory, not child fan-out or total transaction
-  size. Define a maximum hierarchy size or asynchronous strategy before
-  claiming bounded end-to-end copy scale.
+  system types and scans their FieldDevices through 100-ID keyset pages. Child
+  reads/writes and source cleanup are bounded, but total transaction duration
+  still grows with hierarchy size. Production measurements determine the
+  threshold for an asynchronous job.
 - **Rollback:** inject the legacy service/callback into the affected cabinet or
   SPS copy/DELETE route again; no schema or protocol rollback is needed.
   `HierarchyCopier` remains the compatibility implementation throughout.
@@ -3246,16 +3319,16 @@ deferred.**
   HTTP/v1 behavior, plus all three migrated root-delete/history atomicity paths
   and no hierarchy load. Copied Specifications now retain both foreign-key
   directions, persisted BACnet alarm values retain their concrete values/source,
-  reference/backlink history is set-based, and FieldDevice discovery is bounded
-  to 500-row keyset pages. Full Step 6 still requires remaining assignment
-  lifecycle migration, bounded child fan-out, traceable descendant deletes, and
-  one compact collaboration strategy for large operations.
+  reference/backlink history is set-based, FieldDevice discovery is bounded to
+  100-row keyset pages, descendant deletes are traceable, assignment
+  provenance is exact for new writes, and large cabinet results use compact
+  aggregate changes.
 
 ### Step 7 — independent BacnetObject aggregate
 
 **Status: standalone update, FieldDevice- and ObjectData-owned create, and
-alarm-value replacement slices implemented; collection-rule parity and broader
-alarm/reference validation remain.**
+alarm-value replacement slices implemented; alarm-value field ownership is
+enforced, while collection-rule parity and broader reference validation remain.**
 
 - **Objective:** unify standalone and collection validation; represent supported
   child deletion through replacement commands; decide separately whether a new
@@ -3456,28 +3529,76 @@ alarm/reference validation remain.**
 
 ### Step 8 — version-2 realtime and durable dispatch decision
 
-- **Status:** approved; implementation is the next migration step.
+- **Status:** implemented for current project-recipient transaction paths.
+  Global create/clone paths that intentionally create no project association
+  remain silent. FieldDevice bulk update now participates through its explicit
+  transaction boundary and emits revisions for successful aggregate changes.
 - **Objective:** add schema/event/operation/revision fields, deduplication, and
   explicit stale/gap recovery backed by a transactional outbox with retries and
   idempotent processing.
 - **Affected files:** collaboration application Module, realtime Adapter,
-  frontend parser/state, bus persistence.
+  frontend parser/state, transaction runner, runtime bootstrap, and facility
+  transaction workflows.
 - **New files:** v1/v2 codec tests, transactional outbox model/Store, retry
   worker, and idempotency tests.
-- **Deprecated code:** client committed-state `entity_delta` messages and
-  unversioned v1 after a short, explicit, monitored compatibility period.
+- **Deprecated code:** browser-authored committed `entity_delta` is rejected
+  and logged. Server-originated unversioned v1 remains temporarily.
 - **Database migration:** additive outbox, delivery-attempt, and idempotency
   structures deployed blue-green.
-- **Compatibility:** dual read/write only for the bounded compatibility period;
-  remove `entity_delta` as early as observed active-client usage permits.
+- **Compatibility:** the frontend reads v1 and v2. Transactional producers
+  write v2 durably and still emit their existing v1 projection after commit.
 - **Tests:** duplicates, ordering, reconnect, stale fallback, source loops,
-  backpressure, oversized fallback.
-- **Performance risk:** outbox retention and fanout throughput.
+  lease reclaim, retry, rollback, mixed BACnet ownership, recipient capture,
+  backpressure, and oversized fallback.
+- **Performance risk:** outbox retention and fanout throughput still require
+  production sizing and a retention policy.
 - **Rollback:** continue v1 emission while v2 is optional.
 - **Acceptance:** idempotent client application, authoritative PostgreSQL
   recovery, retryable committed delivery, and no reliance on WebSocket as
   source of truth. Presence remains process-local because deployment is a
   single-server monolith.
+
+#### Step 8a — transactional-outbox persistence foundation
+
+- **Implemented:** `domain/collaboration` now defines a durable outbox event,
+  per-project stream allocator, delivery lease, per-attempt audit records, and
+  per-consumer idempotency record. The additive
+  `202607230001_collaboration_transactional_outbox` migration creates these
+  records without changing existing websocket traffic.
+- **Delivery:** `application/collaboration.OutboxProcessor` claims at most 100
+  due events, preserves per-project sequence order, reclaims expired leases,
+  records each attempt, retries failures with bounded exponential backoff, and
+  lets a named consumer safely skip an already processed EventID. Delivery and
+  failure completion compare status plus attempt number, so a worker finishing
+  after lease expiry cannot overwrite a newer claim.
+  `EncodeCommand`/`DecodeCommand` preserve the existing sealed typed command
+  set behind an explicit event-type discriminator. The runtime starts one
+  bounded worker that converts stored commands to schema-v2 `committed_event`
+  messages.
+- **Producers:** the transaction runner installs a transaction-scoped outbox
+  Store. Project FieldDevice/ControlCabinet/SPSController assign, reassign and
+  copy paths; project multi-create/bulk assignment; single hierarchy updates
+  and deletes; FieldDevice bulk delete; project ControlCabinet restore;
+  exact cabinet/SPS/FieldDevice project unlink; ObjectData
+  activation/deactivation; and BACnet create/update/alarm-value replacement
+  write events before commit. BACnet ObjectData ownership uses the typed
+  `object_data` v2 scope; mixed direct/template ownership falls back to a
+  project reconciliation.
+- **Delete scope:** FieldDevice, SPSController, ControlCabinet, and per-item
+  FieldDevice bulk delete resolve direct project links inside the mutation
+  transaction. Link/outbox failure rolls the mutation and history back, closing
+  the former delete-recipient race for these routes.
+- **Bulk boundary:** FieldDevice bulk update uses the application transaction,
+  records successful phase outcomes, compare-and-swap touches child-only
+  aggregate mutations, and writes v2 outbox events before commit. Its BatchID
+  remains correlation rather than a promise that every requested item
+  succeeds.
+- **Tests:** SQLite repository coverage verifies claim, retry, delivery-attempt,
+  lease reclaim, stale-worker rejection, ordering, outer rollback, terminal
+  delivery, and idempotency persistence. Application/realtime/frontend tests
+  cover strict envelope validation, codec round-tripping, consumer envelope
+  validation, duplicate suppression, sequence/revision gap fallback,
+  transaction-scoped producers, and retained v1 compatibility.
 
 ## 21. Implemented vertical slices
 
@@ -3814,10 +3935,10 @@ hierarchy commands must eventually pre-resolve recipients/scopes.
 SQLite cannot execute the production `to_jsonb` snapshot queries or PostgreSQL
 restore SQL (`DISTINCT ON`, UUID casts). A PostgreSQL integration tier is still
 required for `RecordCreates`, mutation-plus-history rollback using the concrete
-Store, and restore regression coverage. Project-link `ON CONFLICT DO NOTHING`
-also still causes pre-existing links to look newly created to the history
-Adapter; fixing that needs SQL `RETURNING` inserted IDs and is intentionally
-separate from this compatibility slice.
+Store, and restore regression coverage. Project-link set inserts now use SQL
+`RETURNING` so the history Adapter records only rows created by that command;
+pre-existing materialized links and redundant provenance claims no longer
+produce false create events.
 
 Initial Step 5 FieldDevice move slice:
 
@@ -3841,12 +3962,11 @@ legacy service remains a narrow cross-aggregate Adapter. The collaboration
 Interface gains Leverage because ordinary updates and moves share one explicit
 after-commit Seam while retaining typed command intent.
 
-The slice intentionally preserves project links. Because link rows do not say
-whether they were explicit or inherited from a cabinet/SPS assignment, automatic
-reconciliation could delete an intended explicit link or leak a moved device to
-the destination hierarchy's projects. The revision migration is likewise
-separate: a safe compare-and-swap contract must cover SQL, HTTP, restore, bulk,
-mixed binaries, and v2 realtime together.
+The completed slice reconciles project links through ADR 0002 assignment
+sources. New destination SPS/cabinet claims are added before old claims are
+removed, explicit/copy/legacy claims survive, and old plus new projects receive
+the durable event. Compare-and-swap revisions cover SQL, HTTP, restore, bulk,
+mixed binaries, and v2 realtime.
 
 Initial Step 5 SPSController move slice:
 
@@ -3873,13 +3993,13 @@ composition is in `wire/application_modules.go`; the Dispatcher remains the
 single collaboration type-switch Seam and gains Leverage across both migrated
 aggregates.
 
-The move keeps direct project links unchanged because their provenance is not
-represented. History visibility is not used as an authorization source: its
-set-based resolver adds both cabinets/buildings and direct cabinet projects,
-then normal SPS resolution adds only the moved controller's own direct and
-FieldDevice-derived projects. A project linked solely to another controller in
-the old cabinet is explicitly excluded. Query-budget tests show the same number
-of history statements for one and twenty moves.
+The move transfers cabinet-inherited root and descendant claims while retaining
+direct SPS/FieldDevice and conservative legacy claims. History visibility is
+not used as an authorization source: its set-based resolver adds both
+cabinets/buildings and exact old/new assignment projects. A project linked
+solely to another controller in the old cabinet is explicitly excluded.
+Query-budget tests show the same number of history statements for one and
+twenty moves.
 
 The GA suggestion bug found while characterizing the move path is fixed. An
 excluded controller can free its GA only inside its own cabinet; moving from
@@ -4018,7 +4138,7 @@ copied FieldDevices created in one batch
 
 The outer copy loop orders source system-type IDs, groups ten parents, and reads
 FieldDevice IDs through `ListIDsBySPSControllerSystemTypeIDsAfter` in exclusive
-ascending-UUID pages of 500. Each page completes the full child pipeline before
+ascending-UUID pages of 100. Each page completes the full child pipeline before
 advancing the cursor, so temporary FieldDevice, Specification, BACnet, and alarm
 ID maps are released between pages.
 
@@ -4247,6 +4367,8 @@ BACnet alarm-value replacement slice:
 ```text
 PUT BACnet alarm values
   -> Gin maps the compatibility DTO to ReplaceAlarmValuesCommand
+  -> transaction locks the BACnet selection and validates every unique field
+     against its selected AlarmType in one batched read
   -> application-owned transaction reads the old child collection
   -> transaction-scoped legacy service calls the decorated replacement Adapter
   -> SQL delete/create savepoint and history events share OperationID/BatchID
@@ -4411,160 +4533,164 @@ the deletion test: no caller gained project lookup, command routing, or
 WebSocket publication logic. The application Dispatcher and realtime Adapter
 are now the only production seam for migrated global facility notifications.
 
+Completion slice (2026-07-23):
+
+- live revisions use a blue-green column/trigger migration, compare-and-swap
+  writes, typed conflicts, required public `expected_version`, response
+  revisions, and v2 entity revisions for facility entities and project links;
+- FieldDevice placement uniqueness is deferred for atomic number permutations,
+  SPS names/GA values use normalized unique indexes, and BACnet template
+  uniqueness is database-enforced; all migrations stop and report legacy
+  conflicts without changing data;
+- bulk mutation routes are capped at 100, return one structured result per
+  input, release failed-item number reservations, and put child-only
+  FieldDevice changes behind the aggregate revision;
+- global hierarchy delete uses bounded snapshots, set-wise history,
+  dependency-ordered cleanup, project-link removal, and BACnet ownership rules;
+- project assignment provenance is normalized and source-aware. Exact unlink,
+  reassignment, FieldDevice moves, and SPS moves prune only the removed source,
+  preserve explicit/legacy claims, and reconcile all old/new project scopes;
+- PostgreSQL integration covers complete hierarchy deletion, assignment
+  sources and live revisions, plus `to_jsonb` restore success and
+  unique-conflict rollback.
+
 ## 22. Risks and unresolved decisions
 
-1. **Project unlink versus global hierarchy delete:** requires an ADR before
-   project-link delete migration. The global single FieldDevice, SPSController,
-   and ControlCabinet delete slices do not reinterpret link ownership.
-2. **Shared facility ownership:** current link model permits multiple projects;
-   authorization for global deletion is not represented.
+1. **Project unlink versus global hierarchy delete:** resolved for project
+   unlink and project deletion. Exact unlink removes only one association;
+   project deletion requires all hierarchy associations to be absent. Separate
+   global FieldDevice, SPSController, SPSControllerSystemType, and
+   ControlCabinet deletes use the bounded hierarchy cleaner.
+2. **Shared facility ownership:** project deletion and unlink no longer treat
+   association as ownership. Global delete performs explicit descendant,
+   project-link, and BACnet attachment cleanup without crossing ObjectData
+   ownership.
 3. **History consolidation:** the sparse duplicate recorder is gone,
    `historycapture` owns a testable store Interface, and plural capture is
-   chunked/set-based. PostgreSQL restore coverage, project-link inserted-ID
-   accuracy, memory bounds, and direct `EntityChange` mapping remain open.
-4. **Bulk partial success:** typed outcomes exist internally and preserve current
-   semantics; v1 frontend projection still infers phases from error paths.
-5. **Project-scoped MultiCreate reservation semantics:** failed-item root,
-   child, and history writes now roll back through nested savepoints, but the
-   validation cache still reserves that item's proposed ApparatNr for the rest
-   of the request. Releasing it would change which later duplicate input wins
-   and therefore requires an explicit partial-result compatibility decision.
-6. **Copy scale:** a single transaction over millions of descendants may be
-   operationally unsafe even with paging; an asynchronous job may be a separate
-   future decision.
-7. **Collaboration reliability:** current bus is best effort and the PostgreSQL
-   realtime table is not a replay cursor; decide on an outbox separately.
+   chunked/set-based. Exact project-link inserted IDs, bounded hierarchy delete
+   history, compact aggregate changes, and PostgreSQL snapshot/restore rollback
+   are covered. Production memory/retention sizing remains operational work.
+4. **Bulk partial success:** resolved for the mutation endpoints. Global and
+   project-scoped FieldDevice multi-create, bulk update, bulk delete, and
+   existing-ID project assignment return one index-aligned item result with the
+   affected/requested ID, success, stable error code, exact invalid field, and
+   reason. Existing compatibility fields remain available, the Svelte state
+   renders the exact reason/field, and request DTOs reject more than 100 items.
+5. **Project-scoped MultiCreate reservation semantics:** resolved. Failed-item
+   root, child, and history writes roll back through nested savepoints, and the
+   request-local validation cache releases that item's proposed `ApparatNr` so
+   a later valid item can reuse it. Partial success and input-order winner
+   semantics remain explicit.
+6. **Copy scale:** hierarchy source reads and bulk writes now use sequential
+   batches of at most 100. A single `REPEATABLE READ` transaction over millions
+   of descendants can still be operationally unsafe; measured resource limits
+   and an asynchronous job remain the extreme-volume follow-up.
+7. **Collaboration reliability:** the transactional outbox, retry worker,
+   per-project sequence, and consumer idempotency are implemented. Production
+   retention, throughput sizing, and dead-letter operations remain open.
 8. **Cross-node presence:** presence is process-local while edit state is
    distributed; preserve current behavior unless product requirements change.
-9. **Revision migration:** needs duplicate/data audit and blue-green sequencing.
-10. **Constraint additions:** FieldDevice ApparatNr swaps currently depend on
-    sequential unconstrained updates; a unique constraint requires a compatible
-    write strategy.
-11. **History route isolation:** project timeline and project-scoped
-    ControlCabinet restore now require ProjectAccessPolicy; restore additionally
-    requires a current or historical root link before mutation. Global
-    entity/cabinet restore still needs a recipient/authority decision; confirm
-    whether those global paths are intentionally administrative.
-12. **Legacy clients:** backend client `entity_delta` acceptance cannot be
-    removed until the compatibility window is defined.
-13. **BACnet alarm-value validation parity:** replacement now has atomic history,
-    canonical child changes, and after-commit reconciliation, but it still
-    relies on database constraints rather than proving that every supplied
-    AlarmTypeField belongs to the BACnet object's selected AlarmType. Tightening
-    this requires characterization of existing import/UI behavior.
-14. **Project-link provenance on move:** `ProjectFieldDevice` does not distinguish
-    explicit from inherited links. Until an ADR and data migration define that
-    ownership, FieldDevice moves preserve links and notify only their current
-    direct project recipients.
+9. **Revision migration:** resolved with an additive blue-green column/trigger
+   rollout, compare-and-swap repositories, typed conflicts, HTTP revisions, and
+   v2 entity revisions.
+10. **Constraint additions:** resolved for FieldDevice placement by a
+    `DEFERRABLE INITIALLY DEFERRED` unique constraint. Whole-transaction number
+    permutations are atomic, and the migration reports legacy conflicts.
+11. **History route isolation:** resolved for the accepted policy. Project
+    timeline and project-scoped ControlCabinet restore require
+    ProjectAccessPolicy; restore additionally requires a current or historical
+    root link. Every global timeline, event, entity restore, and cabinet restore
+    reloads the active actor through one central application policy and permits
+    only `SUPERADMIN`, `ADMIN_FZAG`, and `FZAG`.
+12. **Legacy clients:** browser-authored committed `entity_delta` is rejected
+    and logged. Server v1 emission remains during the bounded reader rollout.
+13. **BACnet alarm-value validation parity:** resolved for the replacement
+    command. Before mutation it locks and loads the BACnet object's selected
+    AlarmType, rejects duplicate/zero/missing fields with exact indexed paths,
+    and verifies all supplied `AlarmTypeField` rows in one batched read.
+14. **Project-link provenance on move:** resolved by normalized assignment
+    sources and ADR 0002. FieldDevice moves transfer live SPS/cabinet claims,
+    retain explicit/copy/legacy claims, and reconcile old plus new projects in
+    the mutation transaction.
 15. **Placement uniqueness race:** the tuple of
     `SPSControllerSystemTypeID`, `SystemPartID`, `ApparatID`, and `ApparatNr` is
-    checked by query but has no database unique constraint, so concurrent moves
-    can still collide. Constraint rollout must account for ApparatNr swaps and
-    existing duplicate data.
+    is enforced by PostgreSQL with a deferred unique constraint. Existing
+    duplicates stop migration with their exact scope and IDs.
 16. **SPS normalized uniqueness:** generated names and GA values are checked in
-    service code and have database indexes, but case/whitespace normalization
-    and PostgreSQL collation behavior need a data/constraint audit before the
-    application can claim conflict-free concurrent moves.
-17. **SPS project-link provenance:** `ProjectSPSController` rows do not identify
-    whether a user linked the controller explicitly or a parent assignment
-    materialized it. SPS moves therefore preserve the rows and notify their
-    current projects; automatic old/new hierarchy reconciliation needs the same
-    ADR as FieldDevice moves.
+    service code and matching normalized PostgreSQL unique indexes. The
+    migration reports conflicting IDs and never renames or deletes data.
+17. **SPS project-link provenance:** resolved by the same source model.
+    Controller moves add new cabinet claims before removing old claims for the
+    root and descendant FieldDevices; explicit and legacy links survive.
 18. **Cabinet descendant result fidelity:** a cabinet rename/move records each
     regenerated SPSController through the transactional history decorator and
-    correlates it by BatchID, but the canonical application Result currently
-    lists only the cabinet root change. A future direct history mapping must add
-    compact child changes without loading all descendants in memory.
+    correlates it by BatchID. The canonical result adds one compact
+    `AggregateChange` with the child type, parent, changed field, action, and
+    count instead of loading descendant IDs.
 19. **Large cabinet rename duration:** SPSControllers are read in pages of 500,
     but each changed name is still updated and audited individually inside one
     transaction. Query count and lock duration grow with cabinet size; a batched
     update/history strategy needs measurement before very large cabinets are
     accepted.
 20. **BACnet dual ownership:** storage permits a nullable direct FieldDevice and
-    multiple ObjectData join rows. The compatibility PUT can add/reassign but
-    cannot express a reliable detach because pointer DTOs do not distinguish
-    omitted from JSON null. ObjectData-owned create now records after its owner
-    link exists. Project ObjectData DELETE is now explicit deactivation and
-    deliberately retains `ProjectID`; BACnet delete, multiple-link ownership,
-    and restorable join history still need an explicit ownership ADR before
-    semantics are tightened.
-21. **ObjectData collaboration:** strict v1 has no ObjectData scope. Create,
-    standalone update, and alarm-value replacement use the existing full-project
-    refresh fallback for server-loaded or persisted project templates, while
-    global templates remain silent. Updates collapse multiple owners per project
-    and let the broad refresh supersede an overlapping direct FieldDevice
-    refresh. This is deliberately broad; a typed v2 ObjectData scope is still
-    needed before high-frequency template mutations should use targeted push.
-22. **BACnet uniqueness race:** sibling TextFix and template
-    `(software_type, software_number)` uniqueness are service queries without
-    matching database constraints. Concurrent updates can still collide; a
-    constraint requires a duplicate/null-scope data audit.
-23. **Delete recipient race:** single FieldDevice, SPSController, and
-    ControlCabinet DELETE capture current direct links before opening the
-    mutation transaction so a failed best-effort lookup cannot abort PostgreSQL
-    and change the HTTP result. A concurrent link/unlink can therefore make the
-    captured recipient set stale. Closing that window requires either a lockable
-    project-association resolver in the same transaction or a transactional
-    outbox populated from pre-delete scope; it should not be hidden by making
-    realtime failure fatal.
-24. **Root descendant delete history:** migrated SPSController and
-    ControlCabinet DELETE make each root row and its history atomic, but database
-    cascades still bypass decorated SPSController, SPSControllerSystemType,
-    FieldDevice, Specification, BACnet, and alarm-value deletes. Completing that
-    audit trail requires bounded pre-delete snapshots and set-based history
-    writes; loading either hierarchy as one aggregate is not acceptable at
-    facility scale.
-25. **Project clone source visibility:** project-scoped SPSController,
-    SPSControllerSystemType, and ControlCabinet copy check membership and the
-    respective create permission for the target project, matching the existing
-    routes, but do not require the source entity to already be linked to that
-    project. The committed copy and all emitted data are scoped only to the
-    validated target project. Requiring source-link visibility would be an
-    authorization behavior change and needs an explicit policy decision plus
-    compatibility tests.
-26. **Global cabinet clone recipients:** the global `HierarchyCopier` creates no
-    `ProjectControlCabinet` links. Post-commit scope resolution therefore emits
-    no event in the normal case, matching the former broadcaster. Whether a
-    global clone should inherit source links is a project-association policy
-    change and must be decided with project link ownership/provenance rather
-    than inferred by the collaboration adapter.
-27. **Global cabinet delete links:** the facility delete service removes the
-    cabinet root but does not explicitly reconcile `ProjectControlCabinet`,
-    `ProjectSPSController`, or `ProjectFieldDevice` rows. The migrated command
-    preserves that behavior and only captures direct cabinet recipients for the
-    v1 refresh. Link cleanup, cross-project ownership, and restorable link
-    history require the same explicit unlink-versus-global-delete ADR.
-28. **Global system-type copy recipients:** the global facility copy route now
-    has an application-owned transaction, canonical Result, and shared operation
-    BatchID, but deliberately emits no collaboration command. An assignment has
-    no direct project link; visibility can derive from the owning SPS link and
-    descendant FieldDevice links, which are not always equivalent. Adding push
-    requires an explicit recipient policy rather than an Adapter inference.
-29. **Global system-type delete cleanup:** the global facility DELETE now makes
-    the assignment row and its root history atomic, but retains the old direct
-    repository delete. `FieldDeviceRecord` supplies a database cascade, while
-    the explicit Specification, BACnet, and `ProjectFieldDevice` cleanup used by
-    project hierarchy deletion is not invoked as one policy. Before unifying
-    these paths, define global authority, multi-project link ownership,
-    bounded descendant snapshots/history, and whether legacy orphan rows are
-    repaired or intentionally retained.
+    multiple ObjectData join rows. ADR 0001 defines global identity, attachment
+    claims, detach/delete, collaboration, and restore ordering. Presence-aware
+    nullable patches distinguish omitted from explicit detach; hierarchy
+    cleanup preserves shared ObjectData objects and deletes only unclaimed
+    objects.
+21. **ObjectData collaboration:** schema v2 now has a typed `object_data`
+    scope. ObjectData lifecycle and BACnet template mutations persist targeted
+    IDs; a project that owns the same BACnet object both directly and through a
+    template receives a project fallback so neither view remains stale. Strict
+    v1 continues using its existing full-project compatibility refresh.
+22. **BACnet uniqueness race:** duplicate `TextFix` is deliberately allowed.
+    Template `(object_data_id, normalized software_type, software_number)`
+    uniqueness is enforced in PostgreSQL after a reporting-only conflict audit.
+23. **Delete recipient race:** closed for single FieldDevice, SPSController,
+    ControlCabinet, per-item FieldDevice bulk DELETE, and exact project
+    hierarchy unlink. Scope is read and persisted in the mutation transaction;
+    a lookup or outbox failure rolls data and history back.
+24. **Root descendant delete history:** resolved with bounded descendant
+    snapshots, set-wise history, explicit project-link and BACnet attachment
+    cleanup, and deletion in dependency order. Required audit records do not
+    rely on database cascades or an in-memory hierarchy aggregate.
+25. **Project clone source visibility:** resolved. Project-scoped
+    SPSController, SPSControllerSystemType, and ControlCabinet copy retain the
+    existing target membership/create-permission gate and additionally lock an
+    exact source association in the target project before mutation. A source
+    outside that project is returned as not found; clone data and events remain
+    target-project scoped.
+26. **Global cabinet clone recipients:** resolved. The clone transaction locks
+    the source cabinet's direct project associations. For every deduplicated
+    project it uses the existing facility-link policy to assign the copied
+    cabinet and materialize descendant links; those links, history, and one
+    durable project event commit with the hierarchy copy. An unassociated source
+    remains a global unlinked copy.
+27. **Global cabinet delete links:** resolved. All related cabinet, SPS, and
+    FieldDevice project links are captured, audited, and removed by the global
+    delete transaction; project unlink remains association-only.
+28. **Global system-type copy recipients:** resolved. The transaction locks the
+    direct project associations of the copied assignment's owning
+    SPSController, deduplicates those project IDs, and persists one typed
+    system-type-cloned event per recipient before commit. An owning SPS without
+    project links remains a silent global mutation.
+29. **Global system-type delete cleanup:** resolved through the bounded
+    hierarchy cleaner. FieldDevices, Specifications, exclusive BACnet/alarm
+    rows, and project links are audited and removed; shared BACnet attachments
+    are detached and preserved.
 30. **Multi-create batch is correlation, not atomicity:** global FieldDevice
     multi-create now gives successful per-item transactions one BatchID. That
     identifier must not be interpreted as one rollback boundary: earlier items
-    remain committed after later validation/persistence failures. The request
-    is still unbounded. Project create-and-assign now has the same typed
+    remain committed after later validation/persistence failures. Requests are
+    bounded to 100 items. Project create-and-assign now has the same typed
     operation correlation and after-commit dispatch. Its outer transaction now
     contains one savepoint per accepted item, so failed-item prefixes roll back,
     while a later hard project-link or outer commit failure still rolls back all
     otherwise successful items together.
-31. **Project FieldDevice reassignment refresh scope:** the migrated project
-    link update preserves the former v1 notification payload and refreshes only
-    the new `FieldDeviceID`. The canonical mutation result contains both old and
-    new link snapshots, but remote consumers may retain stale cached state for
-    the old ID until a list refetch, reconnect snapshot, or broader refresh.
-    Sending both IDs or a project-level refresh is safer reconciliation but is
-    an observable protocol change that should be paired with frontend cache
-    tests and a versioned compatibility decision.
+31. **Project FieldDevice reassignment refresh scope:** resolved. The
+    transaction-scoped command and retained v1 compatibility refresh include
+    both old and new `FieldDeviceID` values, allowing remote caches to remove
+    stale state without waiting for reconnect.
 32. **Large parent-assignment history volume:** project ControlCabinet and
     SPSController assignments now obtain exact inserted descendant-link IDs
     directly from PostgreSQL and history writes them in existing 500-ID chunks,
@@ -4574,44 +4700,29 @@ are now the only production seam for migrated global facility notifications.
     before treating either synchronous endpoint as a multi-million-row import;
     a cursor/callback insert seam or asynchronous job may be needed without
     changing aggregate boundaries.
-33. **Project SPSController reassignment provenance and refresh scope:** the
-    migrated link update preserves additive descendant assignment and the v1
-    new-SPSController-only refresh. `ProjectFieldDevice` rows cannot identify
-    whether they were explicitly assigned or inherited from the old controller,
-    so pruning them could revoke intended access. Keeping them can broaden the
-    project's retained facility set, while refreshing only the new root can
-    leave old cached hierarchy state until refetch/reconnect. A provenance ADR,
-    migration, unlink policy, and frontend reconciliation tests are required
-    before changing either behavior.
-34. **Project ControlCabinet reassignment fan-out and provenance:** the migrated
-    link update preserves additive SPSController/FieldDevice assignment and a
-    v1 new-cabinet-only refresh. Without provenance, pruning old descendants can
-    revoke explicit access, while retaining them can steadily broaden the
-    project facility set. Large new cabinets also make this a long synchronous
-    transaction with returned-ID memory/WAL costs. Any cleanup or protocol
-    change needs the same provenance ADR/data migration as Risk 33, measured
-    fan-out limits, and frontend old/new hierarchy reconciliation coverage.
-35. **Hierarchy-copy external BACnet references:** in-copy software targets are
-    remapped set-wise, but a target outside the copied set remains the original
-    facility object, preserving legacy behavior. Clearing it would lose an
-    intentional reference; retaining it can expose an identity outside a newly
-    linked project's copied hierarchy. Define whether software references are
-    aggregate-local, facility-global, or project-visible before changing this
-    rule, and cover that decision with project-isolation and restore tests.
-36. **Paged-copy source concurrency:** PostgreSQL's default transaction
-    isolation gives each keyset page a fresh statement snapshot. A concurrent
-    FieldDevice insert under a source system type can therefore be included or
-    omitted according to its UUID and timing, whereas the former single ID query
-    observed one statement snapshot. UUIDv7 generation normally places new rows
-    after the cursor, but exact point-in-time clone semantics require a captured
-    high-water mark, source locking, or repeatable-read policy and dedicated
-    concurrency tests before this behavior should be tightened.
+33. **Project SPSController reassignment provenance and refresh scope:**
+    resolved. Reassignment requires an exclusive explicit claim, prunes only
+    old SPS-derived FieldDevice claims, adds the new descendants, and sends both
+    old and new entity IDs.
+34. **Project ControlCabinet reassignment fan-out and provenance:** source-aware
+    cleanup and old/new hierarchy reconciliation are implemented in ordered
+    100-row prune batches. Extreme fan-out still shares the operational sizing
+    concern in Risk 32.
+35. **Hierarchy-copy external BACnet references:** resolved as facility-global.
+    In-copy software targets are remapped set-wise; a target outside the copied
+    set remains the original facility object. Copy-fidelity tests pin both
+    behaviors.
+36. **Paged-copy source concurrency:** resolved. All global and project-scoped
+    cabinet, SPSController, and SPSControllerSystemType copy commands run their
+    outer PostgreSQL transaction at `REPEATABLE READ`, so every 100-item keyset
+    page observes one source snapshot.
 
 ## 23. Decisions and responses
 
 Accepted on 2026-07-23. These decisions supersede the open policy questions in
-Section 22. They are implementation constraints, not claims that the
-corresponding migration is already complete.
+Section 22. Their original normative wording is retained below; Section 22
+records the authoritative implementation status and the few remaining
+operational concerns.
 
 1. **Project deletion and hierarchy unlinking:** a project may be deleted only
    after completion and unlinking of all hierarchy entities, or while not
@@ -4631,8 +4742,8 @@ corresponding migration is already complete.
 6. **Copy scalability:** process hierarchy copies sequentially in batches of at
    most 100 items and, where practical, schedule work according to current
    server resource availability.
-7. **Collaboration reliability:** introduce a transactional outbox with retries
-   and idempotent event processing.
+7. **Collaboration reliability:** implemented with a transactional outbox,
+   retries, project sequences, delivery leases, and idempotent event processing.
 8. **Cross-node presence:** no distributed presence solution is required
    because the deployment is a single-server monolith.
 9. **Revision migration:** plan and execute revision rollout using a blue-green
@@ -4641,8 +4752,9 @@ corresponding migration is already complete.
     constraint together with an atomic `ApparatNr` swap mechanism.
 11. **History and restore authorization:** global history and restore operations
     are allowed only for `SUPERADMIN`, `ADMIN_FZAG`, and `FZAG`.
-12. **Legacy clients:** define a short, explicit compatibility period, monitor
-    active `entity_delta` usage, and remove support as early as possible.
+12. **Legacy clients:** browser-authored `entity_delta` support is removed;
+    rejected attempts are logged. Server v1 output remains the bounded
+    compatibility surface.
 13. **BACnet alarm-value validation:** every supplied `AlarmTypeField` must
     belong to the BACnet object's selected `AlarmType`.
 14. **Project-link provenance for FieldDevice moves:** a FieldDevice may remain
@@ -4664,14 +4776,14 @@ corresponding migration is already complete.
 20. **BACnet dual ownership:** record a dedicated ownership ADR covering direct
     FieldDevice ownership, ObjectData associations, detach behavior, deletion,
     multiple associations, and restore.
-21. **ObjectData collaboration:** add a typed ObjectData collaboration scope in
-    protocol version 2 so targeted reconciliation can replace full-project
-    refreshes.
+21. **ObjectData collaboration:** implemented as the typed `object_data` scope
+    in protocol version 2; mixed BACnet ownership uses project reconciliation.
 22. **BACnet uniqueness:** duplicate BACnet `TextFix` values are allowed and
     receive no unique constraint. Template uniqueness remains enforced with
     appropriate database constraints where required.
-23. **Delete-recipient race:** resolve recipients in the mutation transaction or
-    persist the pre-delete scope through the transactional outbox.
+23. **Delete-recipient race:** implemented for single hierarchy deletes and
+    per-item FieldDevice bulk delete by resolving links and writing the outbox
+    in the mutation transaction.
 24. **Root descendant delete history:** use bounded pre-delete snapshots and
     set-based history writes so cascades do not bypass the audit trail.
 25. **Project clone source visibility:** require read access to the original

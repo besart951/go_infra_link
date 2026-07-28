@@ -442,6 +442,41 @@ func TestObjectDataGlobalOwnerDoesNotCreateProjectRecipient(t *testing.T) {
 	}
 }
 
+func TestUpdateCanExplicitlyDetachDirectFieldDeviceWithJSONNullSemantics(t *testing.T) {
+	objectID := bacnetTestUUID(101)
+	fieldDeviceID := bacnetTestUUID(102)
+	harness := &updateTransactionHarness{
+		committed: updateTransactionState{object: &domainFacility.BacnetObject{
+			Base:           domain.Base{ID: objectID},
+			TextFix:        "AI",
+			SoftwareType:   domainFacility.BacnetSoftwareTypeAI,
+			SoftwareNumber: 1,
+			FieldDeviceID:  &fieldDeviceID,
+		}},
+	}
+	handler := NewUpdateHandler(UpdateDependencies{
+		TransactionRunner:   harness.runner,
+		TransactionWorkflow: harness.factory,
+	})
+
+	outcome, err := handler.Execute(context.Background(), UpdateCommand{
+		BacnetObjectID: objectID,
+		FieldDeviceSet: true,
+		FieldDeviceID:  nil,
+	})
+	if err != nil {
+		t.Fatalf("detach FieldDevice: %v", err)
+	}
+	if harness.committed.object.FieldDeviceID != nil {
+		t.Fatalf("FieldDevice attachment survived detach: %+v", harness.committed.object)
+	}
+	if !reflect.DeepEqual(outcome.Mutation.Changes[0].ChangedFields, []mutation.FieldName{
+		mutation.FieldNameFieldDevice,
+	}) {
+		t.Fatalf("detach change fields: %+v", outcome.Mutation.Changes[0])
+	}
+}
+
 func TestUpdatePrefersOneProjectRefreshWhenFieldDeviceAndObjectDataShareProject(t *testing.T) {
 	objectID := bacnetTestUUID(21)
 	fieldDeviceID := bacnetTestUUID(22)

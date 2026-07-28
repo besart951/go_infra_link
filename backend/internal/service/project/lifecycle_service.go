@@ -103,10 +103,6 @@ func (s *ProjectLifecycleService) Update(ctx context.Context, project *domainPro
 	return s.repo.Update(ctx, project)
 }
 
-func (s *ProjectLifecycleService) DeleteByID(ctx context.Context, id uuid.UUID) error {
-	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
-}
-
 func (s *ProjectLifecycleService) List(ctx context.Context, requesterID uuid.UUID, page, limit int, search string, status *domainProject.ProjectStatus, phaseID *uuid.UUID) (*domain.PaginatedList[domainProject.Project], error) {
 	page, limit = domain.NormalizePagination(page, limit, 10)
 

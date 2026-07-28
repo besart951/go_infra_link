@@ -11,6 +11,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/common"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func TestRespondDomainErrorUsesValidationError(t *testing.T) {
@@ -136,6 +137,36 @@ func TestRespondMappedDomainErrorLetsCustomMappingOverrideDefault(t *testing.T) 
 	}
 	if response.Code != "invalid_reference" {
 		t.Fatalf("expected custom code, got %+v", response)
+	}
+}
+
+func TestRespondMappedDomainErrorReturnsTypedRevisionConflictDetails(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	entityID := uuid.New()
+
+	handled := RespondMappedDomainError(context, &domain.RevisionConflict{
+		EntityID: entityID,
+		Expected: 4,
+		Current:  6,
+	})
+
+	if !handled || recorder.Code != http.StatusConflict {
+		t.Fatalf("revision conflict response: handled=%v status=%d", handled, recorder.Code)
+	}
+	var response dto.ErrorResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode revision conflict: %v", err)
+	}
+	details, ok := response.Details.(map[string]any)
+	if response.Code != "revision_conflict" ||
+		response.LocalizedKey != "errors.revision_conflict" ||
+		!ok ||
+		details["entity_id"] != entityID.String() ||
+		details["expected_version"] != float64(4) ||
+		details["current_version"] != float64(6) {
+		t.Fatalf("unexpected revision conflict response: %+v", response)
 	}
 }
 

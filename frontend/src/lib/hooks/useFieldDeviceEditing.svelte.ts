@@ -361,7 +361,7 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
   ): FieldDevice {
     const changes = pendingEdits.get(device.id);
     const bacnetEdits = pendingBacnetEdits.get(device.id);
-    let updated: FieldDevice = { ...device };
+    let updated: FieldDevice = { ...device, revision: device.revision + 1 };
 
     if (changes) {
       if ('bmk' in changes) {
@@ -629,7 +629,14 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
   ): number | undefined {
     const errorInfo = editErrors.get(deviceId);
     const staticSuggestion = resolveFieldMapValue(errorInfo?.suggestions, field);
-    const options = resolveFieldMapValue(errorInfo?.suggestionOptions, field);
+    let options = resolveFieldMapValue(errorInfo?.suggestionOptions, field);
+
+    // If the backend didn't return an option list for this field (for example after
+    // mixed validation path variants), fall back to the full free-number range in the
+    // current scope.
+    if (!options || options.length === 0) {
+      options = getFallbackApparatNrOptions(deviceId, storeItems);
+    }
 
     if (field !== 'apparat_nr' || !options || options.length === 0) {
       return staticSuggestion;
@@ -647,26 +654,104 @@ export function useFieldDeviceEditing(options: UseFieldDeviceEditingOptions = {}
     if (!targetDevice) return undefined;
 
     const targetScope = getEffectiveApparatNrScope(targetDevice);
+    const affectedDeviceIds = getDeviceIdsWithApparatNrSuggestionInScope(
+      targetScope,
+      storeItems
+    );
+    const affectedSet = new Set(affectedDeviceIds);
+
+    const occupied = getOccupiedApparatNumbersInScope(
+      targetDevice,
+      targetScope,
+      storeItems,
+      affectedSet
+    );
+
+    const reserved = new Set<number>();
+    for (const affectedId of affectedDeviceIds) {
+      const affectedOptions =
+        resolveFieldMapValue(editErrors.get(affectedId)?.suggestionOptions, 'apparat_nr') ?? options;
+      const suggestion = pickLowestAvailableApparatNr(affectedOptions, occupied, reserved);
+      if (suggestion === undefined) continue;
+      if (affectedId === deviceId) return suggestion;
+      reserved.add(suggestion);
+    }
+
+    return undefined;
+  }
+
+  function getDeviceIdsWithApparatNrSuggestionInScope(
+    scope: ReturnType<typeof getEffectiveApparatNrScope>,
+    storeItems: FieldDevice[]
+  ): string[] {
+    return storeItems
+      .filter((device) => isSameApparatNrScope(scope, getEffectiveApparatNrScope(device)))
+      .filter((device) => hasApparatNrErrorSuggestion(device.id))
+      .map((device) => device.id);
+  }
+
+  function hasApparatNrErrorSuggestion(deviceId: string): boolean {
+    const info = editErrors.get(deviceId);
+    if (!info) return false;
+
+    return (
+      resolveFieldMapValue(info.fields, 'apparat_nr') !== undefined ||
+      resolveFieldMapValue(info.suggestions, 'apparat_nr') !== undefined ||
+      resolveFieldMapValue(info.suggestionOptions, 'apparat_nr') !== undefined
+    );
+  }
+
+  function pickLowestAvailableApparatNr(
+    options: number[],
+    occupied: Set<number>,
+    reserved: Set<number>
+  ): number | undefined {
+    const normalized = [...new Set(options)]
+      .filter((value) => Number.isInteger(value) && value >= 1 && value <= 99)
+      .filter((value) => !occupied.has(value) && !reserved.has(value))
+      .sort((a, b) => a - b);
+
+    return normalized[0];
+  }
+
+  function getFallbackApparatNrOptions(deviceId: string, storeItems: FieldDevice[]): number[] {
+    const targetDevice = storeItems.find((item) => item.id === deviceId);
+    if (!targetDevice) return [];
+
+    const targetScope = getEffectiveApparatNrScope(targetDevice);
+    const occupied = getOccupiedApparatNumbersInScope(targetDevice, targetScope, storeItems);
+
+    const options: number[] = [];
+    for (let nr = 1; nr <= 99; nr += 1) {
+      if (!occupied.has(nr)) {
+        options.push(nr);
+      }
+    }
+    return options;
+  }
+
+  function getOccupiedApparatNumbersInScope(
+    targetDevice: FieldDevice,
+    targetScope: ReturnType<typeof getEffectiveApparatNrScope>,
+    storeItems: FieldDevice[],
+    ignoreDeviceIds: Set<string> = new Set<string>()
+  ): Set<number> {
     const occupied = new Set<number>();
 
     for (const device of storeItems) {
-      if (device.id === deviceId) continue;
+      if (ignoreDeviceIds.has(device.id)) continue;
+      if (device.id === targetDevice.id) continue;
       if (!isSameApparatNrScope(targetScope, getEffectiveApparatNrScope(device))) continue;
 
       const changes = pendingEdits.get(device.id);
-      if (!changes || !hasApparatNrConstraintDraft(changes)) continue;
-
-      const nr = Number('apparat_nr' in changes ? changes.apparat_nr : device.apparat_nr);
+      const nr = Number(
+        changes && 'apparat_nr' in changes ? changes.apparat_nr : device.apparat_nr
+      );
       if (Number.isInteger(nr) && nr >= 1 && nr <= 99) {
         occupied.add(nr);
       }
     }
-
-    return [...options].sort((a, b) => a - b).find((candidate) => !occupied.has(candidate));
-  }
-
-  function hasApparatNrConstraintDraft(changes: Partial<BulkUpdateFieldDeviceItem>): boolean {
-    return 'apparat_nr' in changes || 'apparat_id' in changes || 'system_part_id' in changes;
+    return occupied;
   }
 
   function getEffectiveApparatNrScope(device: FieldDevice) {

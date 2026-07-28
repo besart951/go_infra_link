@@ -140,12 +140,6 @@ func parseProjectCollaborationClientMessage(data []byte) (projectCollaborationCl
 			return projectCollaborationClientMessage{}, err
 		}
 		return validateProjectCollaborationEditStateDTO(dto)
-	case projectCollaborationMessageEntityDelta:
-		var dto projectCollaborationEntityDeltaDTO
-		if err := decodeProjectCollaborationJSON(data, &dto); err != nil {
-			return projectCollaborationClientMessage{}, err
-		}
-		return validateProjectCollaborationEntityDeltaDTO(dto)
 	case projectCollaborationMessageRefreshRequest:
 		var dto projectCollaborationRefreshRequestDTO
 		if err := decodeProjectCollaborationJSON(data, &dto); err != nil {

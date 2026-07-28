@@ -64,6 +64,7 @@ func (h *Handler) ListTimeline(c *gin.Context) {
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "history_fetch_failed", "facility.fetch_failed"),
+			handlerutil.MapError(apphistory.ErrGlobalHistoryAccessDenied, handlerutil.LocalizedError(http.StatusForbidden, "forbidden", "errors.forbidden")),
 		)
 		return
 	}
@@ -79,6 +80,7 @@ func (h *Handler) GetEvent(c *gin.Context) {
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "history_fetch_failed", "facility.fetch_failed"),
+			handlerutil.MapError(apphistory.ErrGlobalHistoryAccessDenied, handlerutil.LocalizedError(http.StatusForbidden, "forbidden", "errors.forbidden")),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "errors.not_found")),
 		)
 		return
@@ -103,6 +105,7 @@ func (h *Handler) RestoreEntity(c *gin.Context) {
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "restore_failed", "facility.update_failed"),
+			handlerutil.MapError(apphistory.ErrGlobalHistoryAccessDenied, handlerutil.LocalizedError(http.StatusForbidden, "forbidden", "errors.forbidden")),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "errors.not_found")),
 		)
 		return
@@ -123,6 +126,7 @@ func (h *Handler) RestoreControlCabinet(c *gin.Context) {
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "restore_failed", "facility.update_failed"),
+			handlerutil.MapError(apphistory.ErrGlobalHistoryAccessDenied, handlerutil.LocalizedError(http.StatusForbidden, "forbidden", "errors.forbidden")),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "errors.not_found")),
 		)
 		return

@@ -28,6 +28,7 @@ vi.mock('$lib/infrastructure/api/buildingRepository.js', () => ({
 const cabinets: ControlCabinet[] = [
   {
     id: 'cabinet-1',
+    revision: 1,
     control_cabinet_nr: 'CC-1',
     building_id: 'building-1',
     created_at: '2026-01-01T00:00:00Z',
@@ -35,6 +36,7 @@ const cabinets: ControlCabinet[] = [
   },
   {
     id: 'cabinet-2',
+    revision: 1,
     control_cabinet_nr: 'CC-2',
     building_id: 'building-1',
     created_at: '2026-01-01T00:00:00Z',
@@ -42,6 +44,7 @@ const cabinets: ControlCabinet[] = [
   },
   {
     id: 'cabinet-3',
+    revision: 1,
     control_cabinet_nr: 'CC-3',
     building_id: 'building-2',
     created_at: '2026-01-01T00:00:00Z',

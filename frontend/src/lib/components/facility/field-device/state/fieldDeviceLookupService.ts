@@ -15,6 +15,7 @@ export interface FieldDeviceStaticLookupResult {
 }
 
 export class FieldDeviceLookupService {
+  private static readonly LOOKUP_PAGE_SIZE = 200;
   private static readonly instances = new Set<FieldDeviceLookupService>();
 
   private readonly listApparatsUseCase: ListEntityUseCase<Apparat>;
@@ -52,17 +53,23 @@ export class FieldDeviceLookupService {
         projectId
           ? this.fieldDevices.getOptionsForProject(projectId)
           : this.fieldDevices.getOptions(),
-        fetchAllPages((page, pageSize) =>
-          this.listApparatsUseCase.execute({
-            pagination: { page, pageSize },
-            search: { text: '' }
-          })
+        fetchAllPages(
+          (page, pageSize) =>
+            this.listApparatsUseCase.execute({
+              pagination: { page, pageSize },
+              search: { text: '' }
+            }),
+          undefined,
+          FieldDeviceLookupService.LOOKUP_PAGE_SIZE
         ),
-        fetchAllPages((page, pageSize) =>
-          this.listSystemPartsUseCase.execute({
-            pagination: { page, pageSize },
-            search: { text: '' }
-          })
+        fetchAllPages(
+          (page, pageSize) =>
+            this.listSystemPartsUseCase.execute({
+              pagination: { page, pageSize },
+              search: { text: '' }
+            }),
+          undefined,
+          FieldDeviceLookupService.LOOKUP_PAGE_SIZE
         )
       ]);
       const options = optionsResult.status === 'fulfilled' ? optionsResult.value : undefined;

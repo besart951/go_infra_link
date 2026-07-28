@@ -70,6 +70,7 @@ func buildUpdateChanges(
 		Before:        beforeJSON,
 		After:         afterJSON,
 		ChangedFields: changedFieldDeviceFields(before, after, bacnetReplaced),
+		Revision:      revisionPointer(after.Revision),
 	}}
 
 	if !bacnetReplaced {
@@ -113,6 +114,14 @@ func buildUpdateChanges(
 	}
 
 	return changes, nil
+}
+
+func revisionPointer(revision uint64) *uint64 {
+	if revision == 0 {
+		return nil
+	}
+	value := revision
+	return &value
 }
 
 func buildDeleteChange(

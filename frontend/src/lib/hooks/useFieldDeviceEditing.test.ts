@@ -247,6 +247,7 @@ describe('useFieldDeviceEditing', () => {
       updates: [
         {
           id: 'fd-1',
+          expected_version: 1,
           bmk: 'FD-UPDATED',
           description: 'Updated description',
           specification: {
@@ -306,6 +307,7 @@ describe('useFieldDeviceEditing', () => {
       updates: [
         {
           id: 'fd-1',
+          expected_version: 1,
           specification: {
             specification_supplier: 'Supplier B'
           }
@@ -330,6 +332,7 @@ describe('useFieldDeviceEditing', () => {
       updates: [
         {
           id: 'fd-1',
+          expected_version: 1,
           bacnet_objects: [
             {
               id: 'bo-1',
@@ -354,6 +357,7 @@ describe('useFieldDeviceEditing', () => {
       updates: [
         {
           id: 'fd-1',
+          expected_version: 1,
           bacnet_objects: [
             {
               id: 'bo-1',
@@ -481,6 +485,7 @@ describe('useFieldDeviceEditing', () => {
       updates: [
         {
           id: device.id,
+          expected_version: 1,
           apparat_nr: 1,
           apparat_id: 'app-abk'
         }
@@ -558,7 +563,7 @@ describe('useFieldDeviceEditing', () => {
     await editing.saveAllPendingEdits(devices);
 
     expect(editing.getFieldSuggestion('fd-1', 'apparat_nr', devices)).toBe(1);
-    expect(editing.getFieldSuggestion('fd-2', 'apparat_nr', devices)).toBe(1);
+    expect(editing.getFieldSuggestion('fd-2', 'apparat_nr', devices)).toBe(2);
 
     editing.queueEdit('fd-1', 'apparat_nr', 1);
 
@@ -568,5 +573,92 @@ describe('useFieldDeviceEditing', () => {
     editing.queueEdit('fd-1', 'apparat_nr', 2);
 
     expect(editing.getFieldSuggestion('fd-2', 'apparat_nr', devices)).toBe(1);
+  });
+
+  it('assigns distinct next available apparat_nr suggestions for multi-row conflicts', async () => {
+    const devices = [
+      buildFieldDevice({
+        id: 'fd-1',
+        apparat_id: 'app-1',
+        apparat_nr: '1',
+        system_part_id: 'sp-1',
+        sps_controller_system_type_id: 'sps-1'
+      }),
+      buildFieldDevice({
+        id: 'fd-2',
+        apparat_id: 'app-1',
+        apparat_nr: '2',
+        system_part_id: 'sp-1',
+        sps_controller_system_type_id: 'sps-1'
+      }),
+      buildFieldDevice({
+        id: 'fd-3',
+        apparat_id: 'app-1',
+        apparat_nr: '3',
+        system_part_id: 'sp-1',
+        sps_controller_system_type_id: 'sps-1'
+      })
+    ];
+    const editing = await createEditing();
+
+    mockBulkUpdate.mockResolvedValueOnce({
+      results: [
+        {
+          id: 'fd-1',
+          success: false,
+          error: 'apparatnummer ist bereits vergeben',
+          fields: {
+            'fielddevice.apparat_nr': 'apparatnummer ist bereits vergeben'
+          },
+          suggestions: {
+            'fielddevice.apparat_nr': 1
+          },
+          suggestion_options: {
+            'fielddevice.apparat_nr': [1, 2, 4]
+          }
+        },
+        {
+          id: 'fd-2',
+          success: false,
+          error: 'apparatnummer ist bereits vergeben',
+          fields: {
+            'fielddevice.apparat_nr': 'apparatnummer ist bereits vergeben'
+          },
+          suggestions: {
+            'fielddevice.apparat_nr': 1
+          },
+          suggestion_options: {
+            'fielddevice.apparat_nr': [1, 2, 4]
+          }
+        },
+        {
+          id: 'fd-3',
+          success: false,
+          error: 'apparatnummer ist bereits vergeben',
+          fields: {
+            'fielddevice.apparat_nr': 'apparatnummer ist bereits vergeben'
+          },
+          suggestions: {
+            'fielddevice.apparat_nr': 1
+          },
+          suggestion_options: {
+            'fielddevice.apparat_nr': [1, 2, 4]
+          }
+        }
+      ],
+      total_count: 3,
+      success_count: 0,
+      failure_count: 3
+    });
+
+    editing.queueEdit('fd-1', 'apparat_nr', 2);
+    editing.queueEdit('fd-2', 'apparat_nr', 2);
+    editing.queueEdit('fd-3', 'apparat_nr', 2);
+
+    await editing.saveAllPendingEdits(devices);
+
+    expect(editing.getFieldSuggestion('fd-1', 'apparat_nr', devices)).toBe(1);
+    expect(editing.getFieldSuggestion('fd-2', 'apparat_nr', devices)).toBe(2);
+    expect(editing.getFieldSuggestion('fd-3', 'apparat_nr', devices)).toBe(4);
   });
 });

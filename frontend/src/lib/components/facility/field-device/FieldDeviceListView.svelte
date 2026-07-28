@@ -37,7 +37,7 @@
     projectId,
     refreshKey,
     refreshRequest,
-    pageSize = 300,
+    pageSize = 200,
     initialFilters,
     systemTypeRefreshKey,
     sharedFieldDeviceEditors,

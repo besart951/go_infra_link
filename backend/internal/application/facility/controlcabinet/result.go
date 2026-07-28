@@ -74,7 +74,16 @@ func buildUpdateChange(
 		Before:        json.RawMessage(beforeJSON),
 		After:         json.RawMessage(afterJSON),
 		ChangedFields: changedFields(before, after),
+		Revision:      revisionPointer(after.Revision),
 	}, nil
+}
+
+func revisionPointer(revision uint64) *uint64 {
+	if revision == 0 {
+		return nil
+	}
+	value := revision
+	return &value
 }
 
 func changedFields(
@@ -112,6 +121,7 @@ func toCollaborationState(
 	}
 	return appcollaboration.ControlCabinetState{
 		ID:               cabinet.ID,
+		Revision:         cabinet.Revision,
 		BuildingID:       cabinet.BuildingID,
 		ControlCabinetNr: clonePointer(cabinet.ControlCabinetNr),
 		CreatedAt:        cabinet.CreatedAt,

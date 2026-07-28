@@ -48,9 +48,11 @@ type projectSystemTypeCloneHarness struct {
 	committed       projectSystemTypeCloneState
 	copyEntity      *domainFacility.SPSControllerSystemType
 	copiedFieldIDs  []uuid.UUID
+	sourceAccessErr error
 	copyErr         error
 	commitErr       error
 	runnerCalls     int
+	accessCalls     int
 	copyCalls       int
 	projectID       uuid.UUID
 	sourceID        uuid.UUID
@@ -86,6 +88,16 @@ func (h *projectSystemTypeCloneHarness) factory(
 type projectSystemTypeCloneWorkflowStub struct {
 	harness *projectSystemTypeCloneHarness
 	state   *projectSystemTypeCloneState
+}
+
+func (s *projectSystemTypeCloneWorkflowStub) RequireSourceAccess(
+	_ context.Context,
+	projectID, sourceID uuid.UUID,
+) error {
+	s.harness.accessCalls++
+	s.harness.projectID = projectID
+	s.harness.sourceID = sourceID
+	return s.harness.sourceAccessErr
 }
 
 func (s *projectSystemTypeCloneWorkflowStub) CopySPSControllerSystemType(
@@ -448,5 +460,43 @@ func TestCloneSystemTypeForProjectValidatesConfigurationAndIdentifiers(t *testin
 	}
 	if harness.runnerCalls != 0 {
 		t.Fatalf("invalid identifiers started %d transactions", harness.runnerCalls)
+	}
+}
+
+func TestCloneSystemTypeForProjectRejectsSourceOutsideProjectBeforeMutation(t *testing.T) {
+	projectID := spsTestUUID(351)
+	sourceID := spsTestUUID(352)
+	controllerID := spsTestUUID(353)
+	harness := &projectSystemTypeCloneHarness{
+		committed: projectSystemTypeCloneState{
+			systemTypes: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+				sourceID: {
+					Base:            domain.Base{ID: sourceID},
+					SPSControllerID: controllerID,
+					SystemTypeID:    spsTestUUID(354),
+				},
+			},
+			projectFieldLinks: map[uuid.UUID][]uuid.UUID{},
+		},
+		sourceAccessErr: domain.ErrNotFound,
+	}
+	handler := NewCloneSystemTypeForProjectHandler(CloneSystemTypeForProjectDependencies{
+		TransactionRunner:   harness.runner,
+		TransactionWorkflow: harness.factory,
+	})
+
+	_, err := handler.Execute(context.Background(), CloneSystemTypeForProjectCommand{
+		ProjectID:                       projectID,
+		SourceSPSControllerSystemTypeID: sourceID,
+	})
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("source access error: got %v, want %v", err, domain.ErrNotFound)
+	}
+	if harness.accessCalls != 1 || harness.copyCalls != 0 {
+		t.Fatalf("workflow calls: access=%d copy=%d", harness.accessCalls, harness.copyCalls)
+	}
+	if len(harness.committed.systemTypes) != 1 ||
+		len(harness.committed.projectFieldLinks) != 0 || len(harness.committed.history) != 0 {
+		t.Fatalf("source denial changed committed state: %+v", harness.committed)
 	}
 }

@@ -8,6 +8,8 @@ import (
 
 	appcollaboration "github.com/besart951/go_infra_link/backend/internal/application/collaboration"
 	"github.com/besart951/go_infra_link/backend/internal/application/facility/mutation"
+	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
@@ -28,13 +30,21 @@ type ProjectLinkReader interface {
 	GetByFieldDeviceIDs(context.Context, []uuid.UUID) ([]*domainProject.ProjectFieldDevice, error)
 }
 
+type BulkUpdateWorkflow interface {
+	BulkUpdateExecutor
+	ProjectLinkReader
+}
+
 type ActorProvider func(context.Context) *uuid.UUID
 type IDGenerator func() uuid.UUID
 type Clock func() time.Time
 type ErrorReporter func(error)
+type TransactionErrorMapper func(error) error
 
 type BulkUpdateDependencies struct {
 	Executor              BulkUpdateExecutor
+	TransactionRunner     apptransaction.Runner
+	TransactionWorkflow   apptransaction.Factory[BulkUpdateWorkflow]
 	HistoryBatch          HistoryBatchContext
 	ProjectLinks          ProjectLinkReader
 	Dispatcher            appcollaboration.CommandDispatcher
@@ -42,11 +52,14 @@ type BulkUpdateDependencies struct {
 	NewID                 IDGenerator
 	Now                   Clock
 	ReportError           ErrorReporter
+	MapTransactionError   TransactionErrorMapper
 	MaxTargetedRefreshIDs int
 }
 
 type BulkUpdateHandler struct {
 	executor              BulkUpdateExecutor
+	operation             apptransaction.Operation[BulkUpdateWorkflow, BulkUpdateWorkflow]
+	transactionConfigured bool
 	historyBatch          HistoryBatchContext
 	projectLinks          ProjectLinkReader
 	dispatcher            appcollaboration.CommandDispatcher
@@ -54,6 +67,7 @@ type BulkUpdateHandler struct {
 	newID                 IDGenerator
 	now                   Clock
 	reportError           ErrorReporter
+	mapTransactionError   TransactionErrorMapper
 	maxTargetedRefreshIDs int
 }
 
@@ -78,8 +92,20 @@ func NewBulkUpdateHandler(deps BulkUpdateDependencies) *BulkUpdateHandler {
 		maxTargetedRefreshIDs = defaultMaxTargetedRefreshIDs
 	}
 
+	boundary := apptransaction.NewBoundary[BulkUpdateWorkflow](
+		deps.TransactionRunner,
+		deps.TransactionWorkflow,
+	)
+	var noNonTransactionalWorkflow BulkUpdateWorkflow
+	operation := apptransaction.Bind(
+		boundary,
+		noNonTransactionalWorkflow,
+		func(workflow BulkUpdateWorkflow) BulkUpdateWorkflow { return workflow },
+	)
 	return &BulkUpdateHandler{
 		executor:              deps.Executor,
+		operation:             operation,
+		transactionConfigured: deps.TransactionRunner != nil && deps.TransactionWorkflow != nil,
 		historyBatch:          deps.HistoryBatch,
 		projectLinks:          deps.ProjectLinks,
 		dispatcher:            deps.Dispatcher,
@@ -87,6 +113,7 @@ func NewBulkUpdateHandler(deps BulkUpdateDependencies) *BulkUpdateHandler {
 		newID:                 newID,
 		now:                   now,
 		reportError:           deps.ReportError,
+		mapTransactionError:   deps.MapTransactionError,
 		maxTargetedRefreshIDs: maxTargetedRefreshIDs,
 	}
 }
@@ -110,7 +137,7 @@ func (h *BulkUpdateHandler) Execute(
 	ctx context.Context,
 	updates []domainFacility.BulkFieldDeviceUpdate,
 ) BulkUpdateOutcome {
-	if h == nil || h.executor == nil {
+	if h == nil || (!h.transactionConfigured && h.executor == nil) {
 		return BulkUpdateOutcome{
 			Result: failedBulkResult(updates, "field device bulk updater is not configured"),
 		}
@@ -118,13 +145,69 @@ func (h *BulkUpdateHandler) Execute(
 
 	operationID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
-	mutationCtx := ctx
-	if h.historyBatch != nil {
-		mutationCtx = h.historyBatch(ctx, operationID)
-	}
-	execution := h.executor.ExecuteBulkUpdate(mutationCtx, updates)
-	result := execution.Result
 	occurredAt := h.now().UTC()
+	var (
+		execution  domainFieldDevice.BulkUpdateExecution
+		byProject  map[uuid.UUID][]uuid.UUID
+		projectIDs []uuid.UUID
+	)
+	if h.transactionConfigured {
+		committed, err := apptransaction.RunResult(
+			ctx,
+			h.operation,
+			func(
+				txCtx context.Context,
+				workflow BulkUpdateWorkflow,
+			) (committedBulkUpdate, error) {
+				return executeBulkUpdateTransaction(
+					txCtx,
+					workflow,
+					updates,
+					operationID,
+					actorID,
+					occurredAt,
+					h.newID,
+					h.historyBatch,
+					h.maxTargetedRefreshIDs,
+				)
+			},
+		)
+		if err != nil {
+			if h.mapTransactionError != nil {
+				err = h.mapTransactionError(err)
+			}
+			return BulkUpdateOutcome{
+				Result: failedBulkResultFromError(updates, err),
+				Mutation: mutation.Result{
+					OperationID: operationID,
+					BatchID:     &operationID,
+					ActorID:     actorID,
+					OccurredAt:  occurredAt,
+				},
+			}
+		}
+		execution = committed.execution
+		byProject = committed.byProject
+		projectIDs = committed.projectIDs
+	} else {
+		mutationCtx := ctx
+		if h.historyBatch != nil {
+			mutationCtx = h.historyBatch(ctx, operationID)
+		}
+		execution = h.executor.ExecuteBulkUpdate(mutationCtx, updates)
+	}
+	result := execution.Result
+	if result == nil {
+		result = failedBulkResult(
+			updates,
+			"field device bulk updater returned no result",
+		)
+	}
+	ids := make([]uuid.UUID, len(updates))
+	for index := range updates {
+		ids[index] = updates[index].ID
+	}
+	normalizeBulkResult(result, ids)
 	batchID := operationID
 	outcome := BulkUpdateOutcome{
 		Result: result,
@@ -138,21 +221,25 @@ func (h *BulkUpdateHandler) Execute(
 		ReconciliationIDs: reconciliationIDs(updates),
 	}
 
-	if len(outcome.ReconciliationIDs) == 0 || h.projectLinks == nil || h.dispatcher == nil {
+	if h.transactionConfigured {
+		outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
+	} else if len(outcome.ReconciliationIDs) > 0 && h.projectLinks != nil {
+		dispatchCtx := context.WithoutCancel(ctx)
+		links, err := h.projectLinks.GetByFieldDeviceIDs(dispatchCtx, outcome.ReconciliationIDs)
+		if err != nil {
+			outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf("resolve FieldDevice collaboration projects: %w", err))
+			return outcome
+		}
+		byProject = groupLinkedFieldDevices(links, outcome.ReconciliationIDs)
+		projectIDs = sortedProjectIDs(byProject)
+		outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
+	}
+
+	if len(outcome.ReconciliationIDs) == 0 || h.dispatcher == nil {
 		return outcome
 	}
 
 	dispatchCtx := context.WithoutCancel(ctx)
-	links, err := h.projectLinks.GetByFieldDeviceIDs(dispatchCtx, outcome.ReconciliationIDs)
-	if err != nil {
-		outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf("resolve FieldDevice collaboration projects: %w", err))
-		return outcome
-	}
-
-	byProject := groupLinkedFieldDevices(links, outcome.ReconciliationIDs)
-	projectIDs := sortedProjectIDs(byProject)
-	outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
-
 	for _, projectID := range projectIDs {
 		entityIDs := byProject[projectID]
 		fullRefresh := len(entityIDs) > h.maxTargetedRefreshIDs
@@ -186,6 +273,80 @@ func (h *BulkUpdateHandler) Execute(
 	return outcome
 }
 
+type committedBulkUpdate struct {
+	execution  domainFieldDevice.BulkUpdateExecution
+	byProject  map[uuid.UUID][]uuid.UUID
+	projectIDs []uuid.UUID
+}
+
+func executeBulkUpdateTransaction(
+	ctx context.Context,
+	workflow BulkUpdateWorkflow,
+	updates []domainFacility.BulkFieldDeviceUpdate,
+	operationID uuid.UUID,
+	actorID *uuid.UUID,
+	occurredAt time.Time,
+	newID IDGenerator,
+	historyBatch HistoryBatchContext,
+	maxTargetedRefreshIDs int,
+) (committedBulkUpdate, error) {
+	if workflow == nil {
+		return committedBulkUpdate{}, fmt.Errorf("field device bulk update transaction is not configured")
+	}
+	writeCtx := ctx
+	if historyBatch != nil {
+		writeCtx = historyBatch(ctx, operationID)
+	}
+	execution := workflow.ExecuteBulkUpdate(writeCtx, updates)
+	ids := reconciliationIDs(updates)
+	if len(ids) == 0 {
+		return committedBulkUpdate{execution: execution}, nil
+	}
+	links, err := workflow.GetByFieldDeviceIDs(ctx, ids)
+	if err != nil {
+		return committedBulkUpdate{}, fmt.Errorf("resolve FieldDevice collaboration projects: %w", err)
+	}
+	byProject := groupLinkedFieldDevices(links, ids)
+	projectIDs := sortedProjectIDs(byProject)
+	for _, projectID := range projectIDs {
+		entityIDs := byProject[projectID]
+		fullRefresh := len(entityIDs) > maxTargetedRefreshIDs
+		if fullRefresh {
+			entityIDs = nil
+		}
+		command := appcollaboration.FacilityHierarchyRefreshRequired{
+			Envelope: appcollaboration.Envelope{
+				SchemaVersion: appcollaboration.SchemaVersionV2,
+				EventID:       newID(),
+				OperationID:   operationID,
+				CorrelationID: operationID,
+				ProjectID:     projectID,
+				ActorID:       actorID,
+				OccurredAt:    occurredAt,
+				EntityRevisions: successfulRevisions(
+					execution.Items,
+					entityIDs,
+				),
+			},
+			Scope:       appcollaboration.FacilityScopeFieldDevice,
+			EntityIDs:   append([]uuid.UUID(nil), entityIDs...),
+			FullRefresh: fullRefresh,
+		}
+		if _, err := appcollaboration.EnqueueCommand(ctx, command); err != nil {
+			return committedBulkUpdate{}, fmt.Errorf(
+				"enqueue FieldDevice bulk update for project %s: %w",
+				projectID,
+				err,
+			)
+		}
+	}
+	return committedBulkUpdate{
+		execution:  execution,
+		byProject:  byProject,
+		projectIDs: projectIDs,
+	}, nil
+}
+
 func failedBulkResult(
 	updates []domainFacility.BulkFieldDeviceUpdate,
 	message string,
@@ -197,10 +358,38 @@ func failedBulkResult(
 	}
 	for i, update := range updates {
 		result.Results[i] = domainFacility.BulkOperationResultItem{
-			ID:    update.ID,
-			Error: message,
+			ID:         update.ID,
+			Error:      message,
+			ErrorField: "fielddevice",
 		}
 	}
+	return result
+}
+
+func failedBulkResultFromError(
+	updates []domainFacility.BulkFieldDeviceUpdate,
+	err error,
+) *domainFacility.BulkOperationResult {
+	message := "field device bulk update failed"
+	if err != nil {
+		message = err.Error()
+	}
+	result := failedBulkResult(updates, message)
+	if validation, ok := domain.AsValidationError(err); ok {
+		for index := range result.Results {
+			result.Results[index].Error = ""
+			result.Results[index].ErrorField = ""
+			result.Results[index].Fields = make(map[string]string, len(validation.Fields))
+			for field, reason := range validation.Fields {
+				result.Results[index].Fields[field] = reason
+			}
+		}
+	}
+	ids := make([]uuid.UUID, len(updates))
+	for index := range updates {
+		ids[index] = updates[index].ID
+	}
+	normalizeBulkResult(result, ids)
 	return result
 }
 
@@ -273,9 +462,50 @@ func successfulChanges(
 			EntityID:      id,
 			Action:        domainHistory.ActionUpdate,
 			ChangedFields: fields,
+			Revision:      revisionForExecutionID(executions, id),
 		})
 	}
 	return changes
+}
+
+func successfulRevisions(
+	executions []domainFieldDevice.BulkUpdateItemExecution,
+	entityIDs []uuid.UUID,
+) map[string]uint64 {
+	requested := make(map[uuid.UUID]struct{}, len(entityIDs))
+	for _, id := range entityIDs {
+		requested[id] = struct{}{}
+	}
+	revisions := make(map[string]uint64)
+	for _, execution := range executions {
+		if execution.ID == uuid.Nil || execution.Revision == 0 {
+			continue
+		}
+		if _, ok := requested[execution.ID]; !ok {
+			continue
+		}
+		revisions[execution.ID.String()] = execution.Revision
+	}
+	if len(revisions) == 0 {
+		return nil
+	}
+	return revisions
+}
+
+func revisionForExecutionID(
+	executions []domainFieldDevice.BulkUpdateItemExecution,
+	id uuid.UUID,
+) *uint64 {
+	var revision uint64
+	for _, execution := range executions {
+		if execution.ID == id && execution.Revision > revision {
+			revision = execution.Revision
+		}
+	}
+	if revision == 0 {
+		return nil
+	}
+	return &revision
 }
 
 func successfulRequestedFields(

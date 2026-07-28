@@ -330,6 +330,7 @@ func TestUpdateProjectControlCabinetAuthorizesThenUsesTypedReassignmentAndNotifi
 	)
 	body, err := json.Marshal(projectdto.UpdateProjectControlCabinetRequest{
 		ControlCabinetID: controlCabinetID,
+		ExpectedVersion:  1,
 	})
 	if err != nil {
 		t.Fatalf("encode request: %v", err)
@@ -412,6 +413,7 @@ func TestUpdateProjectControlCabinetRejectsUnauthorizedProjectBeforeReassignment
 	)
 	body, err := json.Marshal(projectdto.UpdateProjectControlCabinetRequest{
 		ControlCabinetID: controlCabinetID,
+		ExpectedVersion:  1,
 	})
 	if err != nil {
 		t.Fatalf("encode request: %v", err)

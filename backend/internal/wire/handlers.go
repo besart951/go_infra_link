@@ -34,12 +34,16 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 
 	var projectControlCabinetRestorer historyhandler.ProjectControlCabinetRestorer
 	var projectTimelineReader historyhandler.ProjectTimelineReader
+	globalHistory := historyhandler.Service(services.History)
 	if services.FacilityApplication != nil &&
 		services.FacilityApplication.ControlCabinet != nil {
 		projectControlCabinetRestorer = services.FacilityApplication.ControlCabinet.RestoreForProject
 	}
 	if services.HistoryApplication != nil {
 		projectTimelineReader = services.HistoryApplication.ProjectTimeline
+		if services.HistoryApplication.Global != nil {
+			globalHistory = services.HistoryApplication.Global
+		}
 	}
 
 	return &handler.Handlers{
@@ -53,7 +57,7 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 		User:             userHandlers,
 		Facility:         facilityHandlers,
 		History: historyhandler.NewHandler(
-			services.History,
+			globalHistory,
 			projectControlCabinetRestorer,
 			projectTimelineReader,
 		),

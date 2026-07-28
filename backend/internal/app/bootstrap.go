@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
+	appcollaboration "github.com/besart951/go_infra_link/backend/internal/application/collaboration"
 	"github.com/besart951/go_infra_link/backend/internal/config"
 	"github.com/besart951/go_infra_link/backend/internal/db"
 	"github.com/besart951/go_infra_link/backend/internal/handler"
 	authhandler "github.com/besart951/go_infra_link/backend/internal/handler/auth"
+	infraltime "github.com/besart951/go_infra_link/backend/internal/infrastructure/realtime"
 	"github.com/besart951/go_infra_link/backend/internal/wire"
 	"github.com/besart951/go_infra_link/backend/pkg/i18n"
 	applogger "github.com/besart951/go_infra_link/backend/pkg/logger"
@@ -16,11 +18,12 @@ import (
 )
 
 type runtime struct {
-	cfg        config.Config
-	log        applogger.Logger
-	services   *wire.Services
-	handlers   *handler.Handlers
-	translator *i18n.Translator
+	cfg                 config.Config
+	log                 applogger.Logger
+	services            *wire.Services
+	handlers            *handler.Handlers
+	translator          *i18n.Translator
+	collaborationOutbox *appcollaboration.OutboxProcessor
 }
 
 func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func(), error) {
@@ -54,6 +57,15 @@ func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func()
 	cleanupAll := func() {
 		runtimeCleanup()
 		cleanup()
+	}
+	collaborationOutbox, err := appcollaboration.NewOutboxProcessor(
+		repos.CollaborationOutbox,
+		infraltime.NewCollaborationOutboxConsumer(runtimeAdapters.ProjectCollaboration),
+		nil,
+	)
+	if err != nil {
+		cleanupAll()
+		return nil, func() {}, fmt.Errorf("collaboration outbox: %w", err)
 	}
 
 	services, err := wire.NewServices(gormDB, repos, wire.ServiceConfig{
@@ -92,11 +104,12 @@ func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func()
 	)
 
 	return &runtime{
-		cfg:        cfg,
-		log:        log,
-		services:   services,
-		handlers:   handlers,
-		translator: translator,
+		cfg:                 cfg,
+		log:                 log,
+		services:            services,
+		handlers:            handlers,
+		translator:          translator,
+		collaborationOutbox: collaborationOutbox,
 	}, cleanupAll, nil
 }
 

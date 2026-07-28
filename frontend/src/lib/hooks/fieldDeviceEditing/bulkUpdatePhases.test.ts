@@ -6,6 +6,7 @@ describe('field-device bulk update phase classification', () => {
     expect(
       getUpdatePhases({
         id: 'fd-1',
+        expected_version: 1,
         bmk: 'FD-1',
         specification: { specification_brand: 'Brand X' },
         bacnet_objects: [{ id: 'bo-1', software_number: 42 }]
@@ -28,6 +29,7 @@ describe('field-device bulk update phase classification', () => {
       hasPartialPhaseSuccess(
         {
           id: 'fd-1',
+          expected_version: 1,
           bmk: 'FD-1',
           specification: { specification_brand: 'Brand X' },
           bacnet_objects: [{ id: 'bo-1', software_number: 42 }]
@@ -44,6 +46,7 @@ describe('field-device bulk update phase classification', () => {
       hasPartialPhaseSuccess(
         {
           id: 'fd-1',
+          expected_version: 1,
           bmk: 'FD-1',
           specification: { specification_brand: 'Brand X' }
         },

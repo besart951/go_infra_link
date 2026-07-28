@@ -42,6 +42,21 @@ func RespondMappedDomainError(c *gin.Context, err error, mappings ...ErrorMappin
 		RespondValidationError(c, validationErr.Fields)
 		return true
 	}
+	if conflict, ok := domain.AsRevisionConflict(err); ok {
+		RespondErrorWithDetails(
+			c,
+			http.StatusConflict,
+			"revision_conflict",
+			conflict.Error(),
+			"errors.revision_conflict",
+			map[string]any{
+				"entity_id":        conflict.EntityID,
+				"expected_version": conflict.Expected,
+				"current_version":  conflict.Current,
+			},
+		)
+		return true
+	}
 
 	for _, mapping := range mappings {
 		if errors.Is(err, mapping.Target) {

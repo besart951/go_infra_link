@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	appcollaboration "github.com/besart951/go_infra_link/backend/internal/application/collaboration"
@@ -25,6 +26,8 @@ var ErrCloneTransactionNotConfigured = errors.New(
 type CloneWorkflow interface {
 	CopyByID(context.Context, uuid.UUID) (*domainFacility.ControlCabinet, error)
 	GetByID(context.Context, uuid.UUID) (*domainFacility.ControlCabinet, error)
+	GetSourceProjectIDs(context.Context, uuid.UUID) ([]uuid.UUID, error)
+	AssignCopyToProject(context.Context, uuid.UUID, uuid.UUID) error
 }
 
 type CloneCommand struct {
@@ -42,7 +45,6 @@ type CloneDependencies struct {
 	TransactionRunner   apptransaction.Runner
 	TransactionWorkflow apptransaction.Factory[CloneWorkflow]
 	HistoryBatch        HistoryBatchContext
-	ProjectLinks        ProjectLinkReader
 	Dispatcher          appcollaboration.CommandDispatcher
 	Actor               ActorProvider
 	NewID               IDGenerator
@@ -54,7 +56,6 @@ type CloneHandler struct {
 	operation             apptransaction.Operation[CloneWorkflow, CloneWorkflow]
 	transactionConfigured bool
 	historyBatch          HistoryBatchContext
-	projectLinks          ProjectLinkReader
 	dispatcher            appcollaboration.CommandDispatcher
 	actor                 ActorProvider
 	newID                 IDGenerator
@@ -69,9 +70,10 @@ type CloneOutcome struct {
 }
 
 type committedClone struct {
-	cabinet *domainFacility.ControlCabinet
-	change  mutation.EntityChange
-	batched bool
+	cabinet    *domainFacility.ControlCabinet
+	projectIDs []uuid.UUID
+	change     mutation.EntityChange
+	batched    bool
 }
 
 func NewCloneHandler(deps CloneDependencies) *CloneHandler {
@@ -97,7 +99,6 @@ func NewCloneHandler(deps CloneDependencies) *CloneHandler {
 		operation:             operation,
 		transactionConfigured: deps.TransactionRunner != nil && deps.TransactionWorkflow != nil,
 		historyBatch:          deps.HistoryBatch,
-		projectLinks:          deps.ProjectLinks,
 		dispatcher:            deps.Dispatcher,
 		actor:                 deps.Actor,
 		newID:                 newID,
@@ -135,28 +136,64 @@ func (h *CloneHandler) Execute(
 
 	operationID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
+	var collaborationCommands []appcollaboration.Command
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
 		func(txCtx context.Context, workflow CloneWorkflow) (committedClone, error) {
-			return executeCloneTransaction(
+			result, err := executeCloneTransaction(
 				txCtx,
 				workflow,
 				command,
 				operationID,
 				h.historyBatch,
 			)
+			if err != nil {
+				return committedClone{}, err
+			}
+			state := toCollaborationState(result.cabinet)
+			for _, projectID := range result.projectIDs {
+				collaborationCommand := appcollaboration.ControlCabinetCloned{
+					Envelope: appcollaboration.Envelope{
+						SchemaVersion: appcollaboration.SchemaVersionV2,
+						EventID:       h.newID(),
+						OperationID:   operationID,
+						CorrelationID: operationID,
+						ProjectID:     projectID,
+						ActorID:       actorID,
+						OccurredAt:    occurredAt,
+					},
+					SourceControlCabinetID: command.SourceControlCabinetID,
+					ControlCabinet:         state,
+				}
+				if _, err := appcollaboration.EnqueueCommand(
+					txCtx,
+					collaborationCommand,
+				); err != nil {
+					return committedClone{}, fmt.Errorf(
+						"enqueue inherited ControlCabinet clone for project %s: %w",
+						projectID,
+						err,
+					)
+				}
+				collaborationCommands = append(
+					collaborationCommands,
+					collaborationCommand,
+				)
+			}
+			return result, nil
 		},
 	)
 	if err != nil {
 		return CloneOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	result := mutation.Result{
 		OperationID: operationID,
 		ActorID:     actorID,
 		OccurredAt:  occurredAt,
+		ProjectIDs:  append([]uuid.UUID(nil), committed.projectIDs...),
 		Changes:     []mutation.EntityChange{committed.change},
 	}
 	if committed.batched {
@@ -167,44 +204,15 @@ func (h *CloneHandler) Execute(
 		ControlCabinet: committed.cabinet,
 		Mutation:       result,
 	}
-	if h.projectLinks == nil || h.dispatcher == nil {
+	if h.dispatcher == nil {
 		return outcome, nil
 	}
 
 	dispatchCtx := context.WithoutCancel(ctx)
-	links, err := h.projectLinks.GetByControlCabinetIDs(
-		dispatchCtx,
-		[]uuid.UUID{committed.cabinet.ID},
-	)
-	if err != nil {
-		outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
-			"resolve cloned ControlCabinet collaboration projects: %w",
-			err,
-		))
-		return outcome, nil
-	}
-
-	projectIDs := linkedProjectIDs(links, committed.cabinet.ID)
-	outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
-	state := toCollaborationState(committed.cabinet)
-	for _, projectID := range projectIDs {
-		collaborationCommand := appcollaboration.ControlCabinetCloned{
-			Envelope: appcollaboration.Envelope{
-				SchemaVersion: appcollaboration.SchemaVersionV1,
-				EventID:       h.newID(),
-				OperationID:   operationID,
-				CorrelationID: operationID,
-				ProjectID:     projectID,
-				ActorID:       actorID,
-				OccurredAt:    occurredAt,
-			},
-			SourceControlCabinetID: command.SourceControlCabinetID,
-			ControlCabinet:         state,
-		}
+	for _, collaborationCommand := range collaborationCommands {
 		if dispatchErr := h.dispatcher.Dispatch(dispatchCtx, collaborationCommand); dispatchErr != nil {
 			outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
-				"dispatch cloned ControlCabinet for project %s: %w",
-				projectID,
+				"dispatch inherited ControlCabinet clone: %w",
 				dispatchErr,
 			))
 		}
@@ -228,6 +236,14 @@ func executeCloneTransaction(
 	if batched {
 		writeCtx = historyBatch(ctx, operationID)
 	}
+	projectIDs, err := workflow.GetSourceProjectIDs(
+		writeCtx,
+		command.SourceControlCabinetID,
+	)
+	if err != nil {
+		return committedClone{}, err
+	}
+	projectIDs = normalizeProjectIDs(projectIDs)
 	copyEntity, err := workflow.CopyByID(writeCtx, command.SourceControlCabinetID)
 	if err != nil {
 		return committedClone{}, err
@@ -243,13 +259,40 @@ func executeCloneTransaction(
 	if after == nil || after.ID != copyEntity.ID {
 		return committedClone{}, domain.ErrNotFound
 	}
+	for _, projectID := range projectIDs {
+		if err := workflow.AssignCopyToProject(
+			writeCtx,
+			projectID,
+			after.ID,
+		); err != nil {
+			return committedClone{}, err
+		}
+	}
 	change, err := buildCreateChange(after)
 	if err != nil {
 		return committedClone{}, err
 	}
 	return committedClone{
-		cabinet: cloneControlCabinet(after),
-		change:  change,
-		batched: batched,
+		cabinet:    cloneControlCabinet(after),
+		projectIDs: projectIDs,
+		change:     change,
+		batched:    batched,
 	}, nil
+}
+
+func normalizeProjectIDs(projectIDs []uuid.UUID) []uuid.UUID {
+	set := make(map[uuid.UUID]struct{}, len(projectIDs))
+	for _, projectID := range projectIDs {
+		if projectID != uuid.Nil {
+			set[projectID] = struct{}{}
+		}
+	}
+	normalized := make([]uuid.UUID, 0, len(set))
+	for projectID := range set {
+		normalized = append(normalized, projectID)
+	}
+	sort.Slice(normalized, func(i, j int) bool {
+		return normalized[i].String() < normalized[j].String()
+	})
+	return normalized
 }

@@ -12,6 +12,7 @@ import (
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
@@ -30,6 +31,15 @@ type ProjectLinkReader interface {
 	GetByControlCabinetIDs(context.Context, []uuid.UUID) ([]*domainProject.ProjectControlCabinet, error)
 }
 
+type transactionalUpdateOutbox interface {
+	UpdateWorkflow
+	GetByControlCabinetIDs(context.Context, []uuid.UUID) ([]*domainProject.ProjectControlCabinet, error)
+}
+
+type descendantChangeCounter interface {
+	CountSPSControllers(context.Context, uuid.UUID) (int64, error)
+}
+
 type HistoryBatchContext func(context.Context, uuid.UUID) context.Context
 type ActorProvider func(context.Context) *uuid.UUID
 type IDGenerator func() uuid.UUID
@@ -38,6 +48,7 @@ type ErrorReporter func(error)
 
 type UpdateCommand struct {
 	ControlCabinetID uuid.UUID
+	ExpectedVersion  uint64
 	BuildingID       *uuid.UUID
 	ControlCabinetNr *string
 }
@@ -107,10 +118,12 @@ type UpdateOutcome struct {
 }
 
 type committedUpdate struct {
-	cabinet *domainFacility.ControlCabinet
-	change  mutation.EntityChange
-	move    *MoveCommand
-	batched bool
+	cabinet    *domainFacility.ControlCabinet
+	change     mutation.EntityChange
+	move       *MoveCommand
+	batched    bool
+	projectIDs []uuid.UUID
+	childCount int64
 }
 
 func NewUpdateHandler(deps UpdateDependencies) *UpdateHandler {
@@ -177,6 +190,7 @@ func (h *UpdateHandler) Execute(
 
 	operationID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -186,6 +200,9 @@ func (h *UpdateHandler) Execute(
 				workflow,
 				command,
 				operationID,
+				actorID,
+				occurredAt,
+				h.newID,
 				h.historyBatch,
 			)
 		},
@@ -194,12 +211,20 @@ func (h *UpdateHandler) Execute(
 		return UpdateOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	result := mutation.Result{
 		OperationID: operationID,
 		ActorID:     actorID,
 		OccurredAt:  occurredAt,
 		Changes:     []mutation.EntityChange{committed.change},
+	}
+	if committed.childCount > 0 {
+		result.Aggregates = []mutation.AggregateChange{{
+			EntityType:    mutation.EntityTypeSPSController,
+			ParentID:      command.ControlCabinetID,
+			Action:        domainHistory.ActionUpdate,
+			ChangedFields: []mutation.FieldName{mutation.FieldNameDeviceName},
+			Count:         committed.childCount,
+		}}
 	}
 	if committed.batched {
 		batchID := operationID
@@ -210,24 +235,27 @@ func (h *UpdateHandler) Execute(
 		Mutation:       result,
 	}
 
-	if h.projectLinks == nil || h.dispatcher == nil {
+	if h.dispatcher == nil {
 		return outcome, nil
 	}
 
 	dispatchCtx := context.WithoutCancel(ctx)
-	links, err := h.projectLinks.GetByControlCabinetIDs(
-		dispatchCtx,
-		[]uuid.UUID{command.ControlCabinetID},
-	)
-	if err != nil {
-		outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
-			"resolve ControlCabinet collaboration projects: %w",
-			err,
-		))
-		return outcome, nil
+	projectIDs := append([]uuid.UUID(nil), committed.projectIDs...)
+	if len(projectIDs) == 0 && h.projectLinks != nil {
+		links, err := h.projectLinks.GetByControlCabinetIDs(
+			dispatchCtx,
+			[]uuid.UUID{command.ControlCabinetID},
+		)
+		if err != nil {
+			outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
+				"resolve ControlCabinet collaboration projects: %w",
+				err,
+			))
+			return outcome, nil
+		}
+		projectIDs = linkedProjectIDs(links, command.ControlCabinetID)
 	}
 
-	projectIDs := linkedProjectIDs(links, command.ControlCabinetID)
 	outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
 	state := toCollaborationState(committed.cabinet)
 	for _, projectID := range projectIDs {
@@ -271,6 +299,9 @@ func executeUpdateTransaction(
 	workflow UpdateWorkflow,
 	command UpdateCommand,
 	operationID uuid.UUID,
+	actorID *uuid.UUID,
+	occurredAt time.Time,
+	newID IDGenerator,
 	historyBatch HistoryBatchContext,
 ) (committedUpdate, error) {
 	if workflow == nil {
@@ -283,6 +314,13 @@ func executeUpdateTransaction(
 	}
 	if before == nil {
 		return committedUpdate{}, &LoadError{Err: domain.ErrNotFound}
+	}
+	if command.ExpectedVersion != 0 && before.Revision != command.ExpectedVersion {
+		return committedUpdate{}, &domain.RevisionConflict{
+			EntityID: before.ID,
+			Expected: command.ExpectedVersion,
+			Current:  before.Revision,
+		}
 	}
 
 	updated := cloneControlCabinet(before)
@@ -305,6 +343,15 @@ func executeUpdateTransaction(
 	if err := workflow.Update(writeCtx, updated); err != nil {
 		return committedUpdate{}, err
 	}
+	var childCount int64
+	if command.BuildingID != nil || command.ControlCabinetNr != nil {
+		if counter, ok := workflow.(descendantChangeCounter); ok {
+			childCount, err = counter.CountSPSControllers(writeCtx, command.ControlCabinetID)
+			if err != nil {
+				return committedUpdate{}, fmt.Errorf("count regenerated SPSController names: %w", err)
+			}
+		}
+	}
 
 	after, err := workflow.GetByID(writeCtx, command.ControlCabinetID)
 	if err != nil {
@@ -318,12 +365,89 @@ func executeUpdateTransaction(
 	if err != nil {
 		return committedUpdate{}, err
 	}
+	projectIDs, err := enqueueTransactionalUpdateCommands(
+		writeCtx,
+		workflow,
+		command.ControlCabinetID,
+		after,
+		move,
+		operationID,
+		actorID,
+		occurredAt,
+		newID,
+	)
+	if err != nil {
+		return committedUpdate{}, err
+	}
 	return committedUpdate{
-		cabinet: cloneControlCabinet(after),
-		change:  change,
-		move:    move,
-		batched: batched,
+		cabinet:    cloneControlCabinet(after),
+		change:     change,
+		move:       move,
+		batched:    batched,
+		projectIDs: projectIDs,
+		childCount: childCount,
 	}, nil
+}
+
+func enqueueTransactionalUpdateCommands(
+	ctx context.Context,
+	workflow UpdateWorkflow,
+	controlCabinetID uuid.UUID,
+	after *domainFacility.ControlCabinet,
+	move *MoveCommand,
+	operationID uuid.UUID,
+	actorID *uuid.UUID,
+	occurredAt time.Time,
+	newID IDGenerator,
+) ([]uuid.UUID, error) {
+	outbox, ok := workflow.(transactionalUpdateOutbox)
+	if !ok {
+		return nil, nil
+	}
+	links, err := outbox.GetByControlCabinetIDs(ctx, []uuid.UUID{controlCabinetID})
+	if err != nil {
+		return nil, fmt.Errorf("resolve ControlCabinet collaboration projects for outbox: %w", err)
+	}
+	projectIDs := linkedProjectIDs(links, controlCabinetID)
+	state := toCollaborationState(after)
+	for _, projectID := range projectIDs {
+		envelope := appcollaboration.Envelope{
+			SchemaVersion: appcollaboration.SchemaVersionV2,
+			EventID:       newID(),
+			OperationID:   operationID,
+			CorrelationID: operationID,
+			ProjectID:     projectID,
+			ActorID:       actorID,
+			OccurredAt:    occurredAt,
+			EntityRevisions: map[string]uint64{
+				controlCabinetID.String(): after.Revision,
+			},
+		}
+		var event appcollaboration.Command = appcollaboration.ControlCabinetUpdated{
+			Envelope:       envelope,
+			ControlCabinet: state,
+		}
+		if move != nil {
+			event = appcollaboration.ControlCabinetMoved{
+				Envelope:       envelope,
+				ControlCabinet: state,
+				FromBuildingID: move.FromBuildingID,
+				ToBuildingID:   move.ToBuildingID,
+			}
+		}
+		configured, err := appcollaboration.EnqueueCommand(ctx, event)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"enqueue ControlCabinet collaboration event for project %s: %w",
+				projectID,
+				err,
+			)
+		}
+		if !configured {
+			return nil, nil
+		}
+	}
+	return projectIDs, nil
 }
 
 func linkedProjectIDs(

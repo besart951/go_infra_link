@@ -231,6 +231,7 @@ func TestUpdateBacnetObjectMapsCompatibilityRequestToApplicationCommand(t *testi
 		http.MethodPut,
 		"/facility/bacnet-objects/"+objectID.String(),
 		strings.NewReader(`{
+			"expected_version":3,
 			"field_device_id":"`+fieldDeviceID.String()+`",
 			"text_fix":"NEW",
 			"gms_visible":true,
@@ -285,7 +286,7 @@ func TestUpdateBacnetObjectPreservesExcelSoftwareReferenceOnlyPayload(t *testing
 	request := httptest.NewRequest(
 		http.MethodPut,
 		"/facility/bacnet-objects/"+objectID.String(),
-		strings.NewReader(`{"software_reference_id":"`+softwareReferenceID.String()+`"}`),
+		strings.NewReader(`{"expected_version":3,"software_reference_id":"`+softwareReferenceID.String()+`"}`),
 	)
 	request.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()
@@ -313,7 +314,7 @@ func TestUpdateBacnetObjectMapsApplicationLoadNotFound(t *testing.T) {
 	request := httptest.NewRequest(
 		http.MethodPut,
 		"/facility/bacnet-objects/"+objectID.String(),
-		strings.NewReader(`{}`),
+		strings.NewReader(`{"expected_version":3}`),
 	)
 	request.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()

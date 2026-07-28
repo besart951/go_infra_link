@@ -13,6 +13,8 @@
     state: ListState<T>;
     columns: Array<{ key: string; label: string; width?: string }>;
     rowSnippet: Snippet<[T]>;
+    rowHref?: (item: T) => string;
+    onRowClick?: (item: T) => void;
     emptyMessage?: string;
     searchPlaceholder?: string;
     onSearch: (text: string) => void;
@@ -24,6 +26,8 @@
     state,
     columns,
     rowSnippet,
+    rowHref,
+    onRowClick,
     emptyMessage = 'No items found',
     searchPlaceholder = 'Search...',
     onSearch,
@@ -47,6 +51,36 @@
   function handleNext() {
     if (state.page < state.totalPages) {
       onPageChange(state.page + 1);
+    }
+  }
+
+  function isInteractiveTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof Element)) return false;
+    return target.closest('a, button, input, select, textarea, option, label') !== null;
+  }
+
+  function handleRowClick(item: T, event: MouseEvent | KeyboardEvent): void {
+    if (event instanceof KeyboardEvent && event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+    if (event instanceof KeyboardEvent) {
+      event.preventDefault();
+    }
+
+    if (!isInteractiveTarget(event.target)) {
+      if (onRowClick) {
+        onRowClick(item);
+        return;
+      }
+
+      if (rowHref) {
+        const href = rowHref(item);
+        if (event instanceof MouseEvent && event.button !== 0) return;
+        if (event instanceof MouseEvent) {
+          event.preventDefault();
+        }
+        window.location.assign(href);
+      }
     }
   }
 </script>
@@ -109,7 +143,19 @@
           </Table.Row>
         {:else}
           {#each state.items as item}
-            <Table.Row class={state.loading ? 'opacity-60' : undefined}>
+            {@const rowLink = rowHref ? rowHref(item) : undefined}
+            {@const isClickable = !!rowLink || !!onRowClick}
+            <Table.Row
+              role={isClickable ? 'link' : undefined}
+              tabindex={isClickable ? 0 : undefined}
+              class={`${state.loading ? 'opacity-60' : ''} ${
+                isClickable
+                  ? 'cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                  : ''
+              }`}
+              onclick={(event: MouseEvent) => handleRowClick(item, event)}
+              onkeydown={(event: KeyboardEvent) => handleRowClick(item, event)}
+            >
               {@render rowSnippet(item)}
             </Table.Row>
           {/each}

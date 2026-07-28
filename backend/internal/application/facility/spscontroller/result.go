@@ -82,7 +82,16 @@ func buildUpdateChange(
 		Before:        json.RawMessage(beforeJSON),
 		After:         json.RawMessage(afterJSON),
 		ChangedFields: changedFields(before, after, systemTypesReplaced),
+		Revision:      revisionPointer(after.Revision),
 	}, nil
+}
+
+func revisionPointer(revision uint64) *uint64 {
+	if revision == 0 {
+		return nil
+	}
+	value := revision
+	return &value
 }
 
 func changedFields(
@@ -152,6 +161,7 @@ func toCollaborationState(
 	}
 	return appcollaboration.SPSControllerState{
 		ID:                controller.ID,
+		Revision:          controller.Revision,
 		ControlCabinetID:  controller.ControlCabinetID,
 		GADevice:          clonePointer(controller.GADevice),
 		DeviceName:        controller.DeviceName,

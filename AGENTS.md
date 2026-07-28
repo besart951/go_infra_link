@@ -195,3 +195,4 @@ Never:
 * silently overwrite stale revisions;
 * load an unbounded hierarchy into memory;
 * return only a generic bulk error.
+* add pure error message in english. add always translation text in backend and show it in the frontend.

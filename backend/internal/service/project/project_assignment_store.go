@@ -7,7 +7,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
-	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
@@ -20,6 +19,15 @@ type projectSPSControllerSetCreator interface {
 	BulkCreateBySPSControllerIDs(ctx context.Context, projectID uuid.UUID, spsControllerIDs []uuid.UUID) error
 }
 
+type projectSPSControllerSourceSetCreator interface {
+	BulkCreateBySPSControllerIDsWithSource(
+		ctx context.Context,
+		projectID uuid.UUID,
+		spsControllerIDs []uuid.UUID,
+		source domainProject.AssignmentSource,
+	) error
+}
+
 type projectFieldDeviceBulkCreator interface {
 	BulkCreate(ctx context.Context, entities []*domainProject.ProjectFieldDevice, batchSize int) error
 }
@@ -29,8 +37,19 @@ type projectFieldDeviceSetCreator interface {
 	BulkCreateBySPSControllerSystemTypeIDs(ctx context.Context, projectID uuid.UUID, systemTypeIDs []uuid.UUID) error
 }
 
-type spsControllerSystemTypeFieldDeviceDeleter interface {
-	DeleteBySPSControllerSystemTypeIDs(ctx context.Context, systemTypeIDs []uuid.UUID) error
+type projectFieldDeviceSourceSetCreator interface {
+	BulkCreateByFieldDeviceIDsWithSource(
+		ctx context.Context,
+		projectID uuid.UUID,
+		fieldDeviceIDs []uuid.UUID,
+		source domainProject.AssignmentSource,
+	) error
+	BulkCreateBySPSControllerSystemTypeIDsWithSource(
+		ctx context.Context,
+		projectID uuid.UUID,
+		systemTypeIDs []uuid.UUID,
+		source domainProject.AssignmentSource,
+	) error
 }
 
 type projectAssignmentStore struct {
@@ -39,8 +58,6 @@ type projectAssignmentStore struct {
 	projectFieldDeviceRepo    domainProject.ProjectFieldDeviceRepository
 	spsControllerSystemRepo   domainHierarchy.SPSControllerSystemTypeStore
 	fieldDeviceRepo           domainFieldDevice.FieldDeviceStore
-	specificationRepo         domainFieldDevice.SpecificationStore
-	bacnetObjectRepo          domainObjectData.BacnetObjectStore
 }
 
 func newProjectAssignmentStore(deps projectAssignmentDependencies) projectAssignmentStore {
@@ -50,16 +67,27 @@ func newProjectAssignmentStore(deps projectAssignmentDependencies) projectAssign
 		projectFieldDeviceRepo:    deps.projectFieldDeviceRepo,
 		spsControllerSystemRepo:   deps.spsControllerSystemRepo,
 		fieldDeviceRepo:           deps.fieldDeviceRepo,
-		specificationRepo:         deps.specificationRepo,
-		bacnetObjectRepo:          deps.bacnetObjectRepo,
 	}
 }
 
-func (s projectAssignmentStore) assignFieldDeviceIDs(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) error {
+func (s projectAssignmentStore) assignFieldDeviceIDs(
+	ctx context.Context,
+	projectID uuid.UUID,
+	fieldDeviceIDs []uuid.UUID,
+	source domainProject.AssignmentSource,
+) error {
 	if len(fieldDeviceIDs) == 0 {
 		return nil
 	}
 
+	if repo, ok := s.projectFieldDeviceRepo.(projectFieldDeviceSourceSetCreator); ok {
+		return repo.BulkCreateByFieldDeviceIDsWithSource(
+			ctx,
+			projectID,
+			fieldDeviceIDs,
+			source,
+		)
+	}
 	if repo, ok := s.projectFieldDeviceRepo.(projectFieldDeviceSetCreator); ok {
 		return repo.BulkCreateByFieldDeviceIDs(ctx, projectID, fieldDeviceIDs)
 	}
@@ -81,12 +109,27 @@ func (s projectAssignmentStore) assignFieldDeviceIDs(ctx context.Context, projec
 	return s.createProjectFieldDeviceAssignments(ctx, projectID, toCreate)
 }
 
-func (s projectAssignmentStore) assignSPSControllerDescendants(ctx context.Context, projectID uuid.UUID, spsControllerIDs []uuid.UUID) error {
+func (s projectAssignmentStore) assignSPSControllerDescendants(
+	ctx context.Context,
+	projectID uuid.UUID,
+	spsControllerIDs []uuid.UUID,
+	spsSource domainProject.AssignmentSource,
+	fieldDeviceSource domainProject.AssignmentSource,
+) error {
 	if len(spsControllerIDs) == 0 {
 		return nil
 	}
 
-	if repo, ok := s.projectSPSControllerRepo.(projectSPSControllerSetCreator); ok {
+	if repo, ok := s.projectSPSControllerRepo.(projectSPSControllerSourceSetCreator); ok {
+		if err := repo.BulkCreateBySPSControllerIDsWithSource(
+			ctx,
+			projectID,
+			spsControllerIDs,
+			spsSource,
+		); err != nil {
+			return err
+		}
+	} else if repo, ok := s.projectSPSControllerRepo.(projectSPSControllerSetCreator); ok {
 		if err := repo.BulkCreateBySPSControllerIDs(ctx, projectID, spsControllerIDs); err != nil {
 			return err
 		}
@@ -112,14 +155,32 @@ func (s projectAssignmentStore) assignSPSControllerDescendants(ctx context.Conte
 	if err != nil {
 		return err
 	}
-	return s.assignFieldDevicesForSystemTypes(ctx, projectID, systemTypeIDs)
+	return s.assignFieldDevicesForSystemTypes(
+		ctx,
+		projectID,
+		systemTypeIDs,
+		fieldDeviceSource,
+	)
 }
 
-func (s projectAssignmentStore) assignFieldDevicesForSystemTypes(ctx context.Context, projectID uuid.UUID, systemTypeIDs []uuid.UUID) error {
+func (s projectAssignmentStore) assignFieldDevicesForSystemTypes(
+	ctx context.Context,
+	projectID uuid.UUID,
+	systemTypeIDs []uuid.UUID,
+	source domainProject.AssignmentSource,
+) error {
 	if len(systemTypeIDs) == 0 {
 		return nil
 	}
 
+	if repo, ok := s.projectFieldDeviceRepo.(projectFieldDeviceSourceSetCreator); ok {
+		return repo.BulkCreateBySPSControllerSystemTypeIDsWithSource(
+			ctx,
+			projectID,
+			systemTypeIDs,
+			source,
+		)
+	}
 	if repo, ok := s.projectFieldDeviceRepo.(projectFieldDeviceSetCreator); ok {
 		return repo.BulkCreateBySPSControllerSystemTypeIDs(ctx, projectID, systemTypeIDs)
 	}
@@ -146,73 +207,6 @@ func (s projectAssignmentStore) assignFieldDevicesForSystemTypes(ctx context.Con
 	}
 
 	return s.createProjectFieldDeviceAssignments(ctx, projectID, missingFieldDeviceIDs)
-}
-
-func (s projectAssignmentStore) deleteFieldDeviceHierarchyForSystemTypes(ctx context.Context, systemTypeIDs []uuid.UUID) error {
-	if len(systemTypeIDs) == 0 {
-		return nil
-	}
-
-	projectLinks, okProjectLinks := s.projectFieldDeviceRepo.(spsControllerSystemTypeFieldDeviceDeleter)
-	bacnetObjects, okBacnetObjects := s.bacnetObjectRepo.(spsControllerSystemTypeFieldDeviceDeleter)
-	specifications, okSpecifications := s.specificationRepo.(spsControllerSystemTypeFieldDeviceDeleter)
-	fieldDevices, okFieldDevices := s.fieldDeviceRepo.(spsControllerSystemTypeFieldDeviceDeleter)
-	if okProjectLinks && okBacnetObjects && okSpecifications && okFieldDevices {
-		if err := projectLinks.DeleteBySPSControllerSystemTypeIDs(ctx, systemTypeIDs); err != nil {
-			return err
-		}
-		if err := bacnetObjects.DeleteBySPSControllerSystemTypeIDs(ctx, systemTypeIDs); err != nil {
-			return err
-		}
-		if err := specifications.DeleteBySPSControllerSystemTypeIDs(ctx, systemTypeIDs); err != nil {
-			return err
-		}
-		return fieldDevices.DeleteBySPSControllerSystemTypeIDs(ctx, systemTypeIDs)
-	}
-
-	fieldDeviceIDs, err := s.fieldDeviceRepo.GetIDsBySPSControllerSystemTypeIDs(ctx, systemTypeIDs)
-	if err != nil {
-		return err
-	}
-	if err := s.deleteFieldDeviceAssignments(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	return s.deleteFieldDevicesWithChildren(ctx, fieldDeviceIDs)
-}
-
-func (s projectAssignmentStore) deleteFieldDevicesWithChildren(ctx context.Context, fieldDeviceIDs []uuid.UUID) error {
-	if len(fieldDeviceIDs) == 0 {
-		return nil
-	}
-
-	if err := s.bacnetObjectRepo.DeleteByFieldDeviceIDs(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	if err := s.specificationRepo.DeleteByFieldDeviceIDs(ctx, fieldDeviceIDs); err != nil {
-		return err
-	}
-	return s.fieldDeviceRepo.DeleteByIds(ctx, fieldDeviceIDs)
-}
-
-func (s projectAssignmentStore) deleteControlCabinetAssignments(ctx context.Context, controlCabinetIDs []uuid.UUID) error {
-	if len(controlCabinetIDs) == 0 {
-		return nil
-	}
-	return s.projectControlCabinetRepo.DeleteByControlCabinetIDs(ctx, controlCabinetIDs)
-}
-
-func (s projectAssignmentStore) deleteSPSControllerAssignments(ctx context.Context, spsControllerIDs []uuid.UUID) error {
-	if len(spsControllerIDs) == 0 {
-		return nil
-	}
-	return s.projectSPSControllerRepo.DeleteBySPSControllerIDs(ctx, spsControllerIDs)
-}
-
-func (s projectAssignmentStore) deleteFieldDeviceAssignments(ctx context.Context, fieldDeviceIDs []uuid.UUID) error {
-	if len(fieldDeviceIDs) == 0 {
-		return nil
-	}
-	return s.projectFieldDeviceRepo.DeleteByFieldDeviceIDs(ctx, fieldDeviceIDs)
 }
 
 func (s projectAssignmentStore) listProjectSPSControllerIDSet(ctx context.Context, projectID uuid.UUID) (map[uuid.UUID]struct{}, error) {

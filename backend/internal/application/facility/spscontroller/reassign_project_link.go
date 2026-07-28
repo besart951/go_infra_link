@@ -37,6 +37,7 @@ type ReassignProjectLinkWorkflow interface {
 type ReassignProjectLinkCommand struct {
 	ProjectID       uuid.UUID
 	LinkID          uuid.UUID
+	ExpectedVersion uint64
 	SPSControllerID uuid.UUID
 }
 
@@ -69,9 +70,10 @@ type ReassignProjectLinkOutcome struct {
 }
 
 type committedProjectLinkReassignment struct {
-	link    *domainProject.ProjectSPSController
-	change  mutation.EntityChange
-	batched bool
+	link                    *domainProject.ProjectSPSController
+	previousSPSControllerID uuid.UUID
+	change                  mutation.EntityChange
+	batched                 bool
 }
 
 func NewReassignProjectLinkHandler(
@@ -132,7 +134,10 @@ func (h *ReassignProjectLinkHandler) Execute(
 	}
 
 	operationID := h.newID()
+	eventID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
+	var collaborationCommand appcollaboration.Command
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -140,20 +145,38 @@ func (h *ReassignProjectLinkHandler) Execute(
 			txCtx context.Context,
 			workflow ReassignProjectLinkWorkflow,
 		) (committedProjectLinkReassignment, error) {
-			return executeReassignProjectLinkTransaction(
+			result, err := executeReassignProjectLinkTransaction(
 				txCtx,
 				workflow,
 				command,
 				operationID,
 				h.historyBatch,
 			)
+			if err != nil {
+				return committedProjectLinkReassignment{}, err
+			}
+			collaborationCommand = appcollaboration.FacilityHierarchyRefreshRequired{
+				Envelope: appcollaboration.Envelope{
+					SchemaVersion: appcollaboration.SchemaVersionV2,
+					EventID:       eventID, OperationID: operationID, CorrelationID: operationID,
+					ProjectID: command.ProjectID, ActorID: actorID, OccurredAt: occurredAt,
+				},
+				Scope: appcollaboration.FacilityScopeSPSController,
+				EntityIDs: reassignedSPSControllerIDs(
+					result.previousSPSControllerID,
+					result.link.SPSControllerID,
+				),
+			}
+			if _, err := appcollaboration.EnqueueCommand(txCtx, collaborationCommand); err != nil {
+				return committedProjectLinkReassignment{}, fmt.Errorf("enqueue ProjectSPSController reassignment: %w", err)
+			}
+			return result, nil
 		},
 	)
 	if err != nil {
 		return ReassignProjectLinkOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	result := mutation.Result{
 		OperationID: operationID,
 		ActorID:     actorID,
@@ -174,20 +197,7 @@ func (h *ReassignProjectLinkHandler) Execute(
 	}
 
 	dispatchCtx := context.WithoutCancel(ctx)
-	commandToDispatch := appcollaboration.FacilityHierarchyRefreshRequired{
-		Envelope: appcollaboration.Envelope{
-			SchemaVersion: appcollaboration.SchemaVersionV1,
-			EventID:       h.newID(),
-			OperationID:   operationID,
-			CorrelationID: operationID,
-			ProjectID:     command.ProjectID,
-			ActorID:       actorID,
-			OccurredAt:    occurredAt,
-		},
-		Scope:     appcollaboration.FacilityScopeSPSController,
-		EntityIDs: []uuid.UUID{committed.link.SPSControllerID},
-	}
-	if dispatchErr := h.dispatcher.Dispatch(dispatchCtx, commandToDispatch); dispatchErr != nil {
+	if dispatchErr := h.dispatcher.Dispatch(dispatchCtx, collaborationCommand); dispatchErr != nil {
 		outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
 			"dispatch ProjectSPSController reassignment for project %s: %w",
 			command.ProjectID,
@@ -214,6 +224,13 @@ func executeReassignProjectLinkTransaction(
 	}
 	if link.ProjectID != command.ProjectID {
 		return committedProjectLinkReassignment{}, domain.ErrNotFound
+	}
+	if command.ExpectedVersion != 0 && link.Revision != command.ExpectedVersion {
+		return committedProjectLinkReassignment{}, &domain.RevisionConflict{
+			EntityID: link.ID,
+			Expected: command.ExpectedVersion,
+			Current:  link.Revision,
+		}
 	}
 	before := cloneProjectSPSControllerLink(link)
 
@@ -243,10 +260,18 @@ func executeReassignProjectLinkTransaction(
 		return committedProjectLinkReassignment{}, err
 	}
 	return committedProjectLinkReassignment{
-		link:    cloneProjectSPSControllerLink(updated),
-		change:  change,
-		batched: batched,
+		link:                    cloneProjectSPSControllerLink(updated),
+		previousSPSControllerID: before.SPSControllerID,
+		change:                  change,
+		batched:                 batched,
 	}, nil
+}
+
+func reassignedSPSControllerIDs(previousID, currentID uuid.UUID) []uuid.UUID {
+	if previousID == currentID {
+		return []uuid.UUID{currentID}
+	}
+	return []uuid.UUID{previousID, currentID}
 }
 
 func buildProjectSPSControllerUpdateChange(
@@ -268,6 +293,11 @@ func buildProjectSPSControllerUpdateChange(
 		)
 	}
 	projectID := after.ProjectID
+	var revision *uint64
+	if after.Revision != 0 {
+		value := after.Revision
+		revision = &value
+	}
 	return mutation.EntityChange{
 		EntityType:    mutation.EntityTypeProjectSPSController,
 		EntityID:      after.ID,
@@ -276,5 +306,6 @@ func buildProjectSPSControllerUpdateChange(
 		Before:        beforeJSON,
 		After:         afterJSON,
 		ChangedFields: []mutation.FieldName{mutation.FieldNameSPSController},
+		Revision:      revision,
 	}, nil
 }

@@ -17,12 +17,22 @@ type ProjectHandler struct {
 	access        ProjectAccessPolicyService
 	workflow      ProjectWorkflowService
 	facilityLink  ProjectFacilityLinkService
+	projectDelete ProjectDeleter
 	collaboration *ProjectCollaborationHub
 	notifications NotificationEventDispatcher
 }
 
 func NewProjectHandler(lifecycle ProjectLifecycleService, access ProjectAccessPolicyService, membership ProjectMembershipService, facilityLink ProjectFacilityLinkService) *ProjectHandler {
-	return newProjectHandler(lifecycle, access, membership, newWorkflowFromServices(lifecycle, membership), facilityLink, NewProjectCollaborationHub(), nil)
+	return newProjectHandler(
+		lifecycle,
+		access,
+		membership,
+		newWorkflowFromServices(lifecycle, membership),
+		facilityLink,
+		nil,
+		NewProjectCollaborationHub(),
+		nil,
+	)
 }
 
 func newProjectHandler(
@@ -31,6 +41,7 @@ func newProjectHandler(
 	membership ProjectMembershipService,
 	workflow ProjectWorkflowService,
 	facilityLink ProjectFacilityLinkService,
+	projectDelete ProjectDeleter,
 	collaboration *ProjectCollaborationHub,
 	notifications NotificationEventDispatcher,
 ) *ProjectHandler {
@@ -42,6 +53,7 @@ func newProjectHandler(
 		access:        access,
 		workflow:      workflow,
 		facilityLink:  facilityLink,
+		projectDelete: projectDelete,
 		collaboration: collaboration,
 		notifications: notifications,
 	}

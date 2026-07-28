@@ -47,9 +47,11 @@ type projectCabinetCloneTransactionUnit struct {
 type projectCabinetCloneTransactionHarness struct {
 	committed       projectCabinetCloneTransactionState
 	copyEntity      *domainFacility.ControlCabinet
+	sourceAccessErr error
 	copyErr         error
 	commitErr       error
 	runnerCalls     int
+	accessCalls     int
 	copyCalls       int
 	projectID       uuid.UUID
 	sourceID        uuid.UUID
@@ -85,6 +87,16 @@ func (h *projectCabinetCloneTransactionHarness) factory(
 type projectCabinetCloneWorkflowStub struct {
 	harness *projectCabinetCloneTransactionHarness
 	state   *projectCabinetCloneTransactionState
+}
+
+func (s *projectCabinetCloneWorkflowStub) RequireSourceAccess(
+	_ context.Context,
+	projectID, sourceID uuid.UUID,
+) error {
+	s.harness.accessCalls++
+	s.harness.projectID = projectID
+	s.harness.sourceID = sourceID
+	return s.harness.sourceAccessErr
 }
 
 func (s *projectCabinetCloneWorkflowStub) CopyControlCabinet(
@@ -265,7 +277,7 @@ func TestCloneForProjectCommitsHierarchyAndLinksBeforeTypedDispatch(t *testing.T
 		command.SourceControlCabinetID != sourceID || command.ControlCabinet.ID != copyID ||
 		command.OperationID != operationID || command.EventID != eventID ||
 		command.CorrelationID != operationID ||
-		command.SchemaVersion != appcollaboration.SchemaVersionV1 {
+		command.SchemaVersion != appcollaboration.SchemaVersionV2 {
 		t.Fatalf("project clone command: %+v", dispatcher.commands[0])
 	}
 }
@@ -393,5 +405,38 @@ func TestCloneForProjectRejectsMissingScopeOrSourceBeforeTransaction(t *testing.
 	}
 	if harness.runnerCalls != 0 {
 		t.Fatalf("invalid commands opened %d transactions", harness.runnerCalls)
+	}
+}
+
+func TestCloneForProjectRejectsSourceOutsideProjectBeforeMutation(t *testing.T) {
+	projectID := cabinetTestUUID(541)
+	sourceID := cabinetTestUUID(542)
+	harness := &projectCabinetCloneTransactionHarness{
+		committed: projectCabinetCloneTransactionState{
+			cabinets: map[uuid.UUID]*domainFacility.ControlCabinet{
+				sourceID: {Base: domain.Base{ID: sourceID}},
+			},
+			projectRows: map[uuid.UUID][]string{},
+		},
+		sourceAccessErr: domain.ErrNotFound,
+	}
+	handler := NewCloneForProjectHandler(CloneForProjectDependencies{
+		TransactionRunner:   harness.runner,
+		TransactionWorkflow: harness.factory,
+	})
+
+	_, err := handler.Execute(context.Background(), CloneForProjectCommand{
+		ProjectID:              projectID,
+		SourceControlCabinetID: sourceID,
+	})
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("source access error: got %v, want %v", err, domain.ErrNotFound)
+	}
+	if harness.accessCalls != 1 || harness.copyCalls != 0 {
+		t.Fatalf("workflow calls: access=%d copy=%d", harness.accessCalls, harness.copyCalls)
+	}
+	if len(harness.committed.cabinets) != 1 ||
+		len(harness.committed.projectRows) != 0 || len(harness.committed.history) != 0 {
+		t.Fatalf("source denial changed committed state: %+v", harness.committed)
 	}
 }

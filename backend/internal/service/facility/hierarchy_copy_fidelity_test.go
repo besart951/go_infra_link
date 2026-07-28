@@ -410,7 +410,8 @@ func TestHierarchyCopyPreservesSpecificationBacklinkAndBacnetAlarmValues(t *test
 }
 
 func TestHierarchyCopyProcessesFieldDevicesInBoundedKeysetPages(t *testing.T) {
-	const fieldDeviceCount = copyFieldDevicePageSize*2 + 201
+	const finalPageSize = 21
+	const fieldDeviceCount = copyFieldDevicePageSize*2 + finalPageSize
 	originalSystemTypeID := uuid.New()
 	newSystemTypeID := uuid.New()
 	source := make(map[uuid.UUID]*domainFacility.FieldDevice, fieldDeviceCount)
@@ -436,7 +437,11 @@ func TestHierarchyCopyProcessesFieldDevicesInBoundedKeysetPages(t *testing.T) {
 		t.Fatalf("copy paged field devices: %v", err)
 	}
 
-	wantPageLengths := []int{copyFieldDevicePageSize, copyFieldDevicePageSize, 201}
+	wantPageLengths := []int{
+		copyFieldDevicePageSize,
+		copyFieldDevicePageSize,
+		finalPageSize,
+	}
 	if fieldDevices.pageCalls != len(wantPageLengths) ||
 		!reflect.DeepEqual(fieldDevices.pageLengths, wantPageLengths) ||
 		!reflect.DeepEqual(fieldDevices.loadedLengths, wantPageLengths) {
@@ -469,6 +474,44 @@ func TestHierarchyCopyProcessesFieldDevicesInBoundedKeysetPages(t *testing.T) {
 			t.Fatalf("duplicate copied ID %s", item.ID)
 		}
 		copiedIDs[item.ID] = struct{}{}
+	}
+}
+
+func TestHierarchyCopyPreservesSoftwareReferenceOutsideCopiedSet(t *testing.T) {
+	sourceFieldDeviceID := uuid.New()
+	copyFieldDeviceID := uuid.New()
+	sourceObjectID := uuid.New()
+	externalObjectID := uuid.New()
+	sourceObject := &domainFacility.BacnetObject{
+		Base:                domain.Base{ID: sourceObjectID},
+		FieldDeviceID:       &sourceFieldDeviceID,
+		SoftwareReferenceID: &externalObjectID,
+		TextFix:             "outside-ref",
+	}
+	bacnetObjects := &hierarchyCopyBacnetObjectStore{}
+	copier := projectFacilityCopy{
+		bacnetObjectRepo:     bacnetObjects,
+		bacnetAlarmValueRepo: &hierarchyCopyAlarmValueStore{},
+	}
+
+	if err := copier.copyBacnetObjectsWithFieldDeviceMap(
+		context.Background(),
+		[]*domainFacility.BacnetObject{sourceObject},
+		map[uuid.UUID]uuid.UUID{sourceFieldDeviceID: copyFieldDeviceID},
+	); err != nil {
+		t.Fatalf("copy BACnet object with external reference: %v", err)
+	}
+	if len(bacnetObjects.created) != 1 ||
+		bacnetObjects.created[0].SoftwareReferenceID == nil ||
+		*bacnetObjects.created[0].SoftwareReferenceID != externalObjectID {
+		t.Fatalf("external software reference was not preserved: %+v", bacnetObjects.created)
+	}
+	if bacnetObjects.assignmentCalls != 1 || len(bacnetObjects.assignments) != 0 {
+		t.Fatalf(
+			"external reference must not be remapped: calls=%d assignments=%v",
+			bacnetObjects.assignmentCalls,
+			bacnetObjects.assignments,
+		)
 	}
 }
 

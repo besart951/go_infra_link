@@ -68,11 +68,12 @@ export function reconcileFieldDeviceSaveResult({
       continue;
     }
 
-    if (item.error) {
+    const reason = item.reason || item.error;
+    if (reason) {
       editErrors.set(
         item.id,
         localizeEditErrorInfo({
-          message: item.error,
+          message: reason,
           fields: item.fields,
           suggestions: item.suggestions,
           suggestionOptions: item.suggestion_options

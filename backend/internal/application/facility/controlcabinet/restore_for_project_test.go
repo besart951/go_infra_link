@@ -8,6 +8,7 @@ import (
 
 	appcollaboration "github.com/besart951/go_infra_link/backend/internal/application/collaboration"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainCollaboration "github.com/besart951/go_infra_link/backend/internal/domain/collaboration"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
@@ -79,6 +80,68 @@ type projectRestoreDispatcherStub struct {
 	commands []appcollaboration.Command
 	err      error
 	order    *[]string
+}
+
+type transactionalProjectRestoreWorkflowStub struct {
+	*projectHistoryRestorerStub
+	*projectRestoreLinkReaderStub
+}
+
+func TestTransactionalProjectRestoreWritesVersionTwoOutboxBeforeReturn(t *testing.T) {
+	projectID := cabinetTestUUID(951)
+	otherProjectID := cabinetTestUUID(952)
+	controlCabinetID := cabinetTestUUID(953)
+	batchID := cabinetTestUUID(954)
+	eventIDs := []uuid.UUID{cabinetTestUUID(955), cabinetTestUUID(956)}
+	workflow := &transactionalProjectRestoreWorkflowStub{
+		projectHistoryRestorerStub: &projectHistoryRestorerStub{
+			result: &domainHistory.RestoreResult{RestoredCount: 4, BatchID: batchID},
+		},
+		projectRestoreLinkReaderStub: &projectRestoreLinkReaderStub{links: []*domainProject.ProjectControlCabinet{
+			{ProjectID: projectID, ControlCabinetID: controlCabinetID},
+			{ProjectID: otherProjectID, ControlCabinetID: controlCabinetID},
+		}},
+	}
+	store := &updateOutboxStoreStub{}
+	ctx := domainCollaboration.WithOutboxStore(context.Background(), store)
+
+	committed, err := executeTransactionalProjectRestore(
+		ctx,
+		workflow,
+		RestoreForProjectCommand{
+			ProjectID: projectID, ControlCabinetID: controlCabinetID,
+		},
+		nil,
+		time.Date(2026, time.July, 23, 17, 0, 0, 0, time.UTC),
+		func() uuid.UUID {
+			id := eventIDs[0]
+			eventIDs = eventIDs[1:]
+			return id
+		},
+	)
+	if err != nil {
+		t.Fatalf("transactional restore: %v", err)
+	}
+	if committed.restore != workflow.result || committed.operationID != batchID {
+		t.Fatalf("committed restore: %+v", committed)
+	}
+	assertProjectIDSet(t, committed.projectIDs, projectID, otherProjectID)
+	if len(store.events) != 2 {
+		t.Fatalf("outbox events: got %d, want 2", len(store.events))
+	}
+	for _, event := range store.events {
+		decoded, err := appcollaboration.DecodeCommand(appcollaboration.EncodedCommand{
+			Type: event.EventType, Payload: event.Payload,
+		})
+		if err != nil {
+			t.Fatalf("decode outbox event: %v", err)
+		}
+		refresh, ok := decoded.(appcollaboration.FacilityHierarchyRefreshRequired)
+		if !ok || refresh.SchemaVersion != appcollaboration.SchemaVersionV2 ||
+			refresh.Scope != appcollaboration.FacilityScopeProject || !refresh.FullRefresh {
+			t.Fatalf("unexpected durable refresh: %#v", decoded)
+		}
+	}
 }
 
 func (s *projectRestoreDispatcherStub) Dispatch(

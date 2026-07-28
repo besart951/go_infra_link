@@ -349,6 +349,7 @@ func TestUpdateProjectSPSControllerAuthorizesThenUsesTypedReassignmentAndNotific
 	)
 	body, err := json.Marshal(projectdto.UpdateProjectSPSControllerRequest{
 		SPSControllerID: spsControllerID,
+		ExpectedVersion: 1,
 	})
 	if err != nil {
 		t.Fatalf("encode request: %v", err)
@@ -432,6 +433,7 @@ func TestUpdateProjectSPSControllerRejectsUnauthorizedProjectBeforeReassignment(
 	)
 	body, err := json.Marshal(projectdto.UpdateProjectSPSControllerRequest{
 		SPSControllerID: spsControllerID,
+		ExpectedVersion: 1,
 	})
 	if err != nil {
 		t.Fatalf("encode request: %v", err)

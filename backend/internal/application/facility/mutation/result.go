@@ -73,6 +73,18 @@ type Result struct {
 	OccurredAt  time.Time
 	ProjectIDs  []uuid.UUID
 	Changes     []EntityChange
+	Aggregates  []AggregateChange
+}
+
+// AggregateChange is a bounded projection for a large homogeneous child set.
+// Persistent history still contains one exact event per entity; application
+// results can report the committed fan-out without retaining every child ID.
+type AggregateChange struct {
+	EntityType    EntityType
+	ParentID      uuid.UUID
+	Action        domainHistory.Action
+	ChangedFields []FieldName
+	Count         int64
 }
 
 type EntityChange struct {

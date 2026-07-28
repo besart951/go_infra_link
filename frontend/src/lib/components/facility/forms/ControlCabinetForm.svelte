@@ -76,6 +76,7 @@
       if (initialData) {
         const res = await manageControlCabinet.update(initialData.id, {
           id: initialData.id,
+          expected_version: initialData.revision,
           control_cabinet_nr,
           building_id,
           project_id: projectId || undefined

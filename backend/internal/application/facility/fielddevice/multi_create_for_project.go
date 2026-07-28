@@ -133,7 +133,10 @@ func (h *MultiCreateForProjectHandler) Execute(
 	}
 
 	operationID := h.newID()
+	eventID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
+	var collaborationCommand appcollaboration.Command
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -141,20 +144,36 @@ func (h *MultiCreateForProjectHandler) Execute(
 			txCtx context.Context,
 			workflow MultiCreateForProjectWorkflow,
 		) (committedProjectMultiCreate, error) {
-			return executeMultiCreateForProjectTransaction(
+			result, err := executeMultiCreateForProjectTransaction(
 				txCtx,
 				workflow,
 				command,
 				operationID,
 				h.historyBatch,
 			)
+			if err != nil {
+				return committedProjectMultiCreate{}, err
+			}
+			if len(result.fieldDevices) > 0 {
+				collaborationCommand = appcollaboration.FieldDevicesCreated{
+					Envelope: appcollaboration.Envelope{
+						SchemaVersion: appcollaboration.SchemaVersionV2,
+						EventID:       eventID, OperationID: operationID, CorrelationID: operationID,
+						ProjectID: command.ProjectID, ActorID: actorID, OccurredAt: occurredAt,
+					},
+					FieldDevices: result.fieldDevices,
+				}
+				if _, err := appcollaboration.EnqueueCommand(txCtx, collaborationCommand); err != nil {
+					return committedProjectMultiCreate{}, fmt.Errorf("enqueue project FieldDevice multi-create: %w", err)
+				}
+			}
+			return result, nil
 		},
 	)
 	if err != nil {
 		return MultiCreateForProjectOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	batchID := operationID
 	result := mutation.Result{
 		OperationID: operationID,
@@ -175,18 +194,6 @@ func (h *MultiCreateForProjectHandler) Execute(
 	}
 
 	dispatchCtx := context.WithoutCancel(ctx)
-	collaborationCommand := appcollaboration.FieldDevicesCreated{
-		Envelope: appcollaboration.Envelope{
-			SchemaVersion: appcollaboration.SchemaVersionV1,
-			EventID:       h.newID(),
-			OperationID:   operationID,
-			CorrelationID: operationID,
-			ProjectID:     command.ProjectID,
-			ActorID:       actorID,
-			OccurredAt:    occurredAt,
-		},
-		FieldDevices: committed.fieldDevices,
-	}
 	if dispatchErr := h.dispatcher.Dispatch(dispatchCtx, collaborationCommand); dispatchErr != nil {
 		outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
 			"dispatch project FieldDevice multi-create for project %s: %w",
@@ -221,6 +228,7 @@ func executeMultiCreateForProjectTransaction(
 	if err != nil {
 		return committedProjectMultiCreate{}, err
 	}
+	normalizeMultiCreateResult(result, command.Items)
 	return committedProjectMultiCreate{
 		result:       result,
 		changes:      successfulCreateChanges(result),
@@ -244,6 +252,7 @@ func successfulFieldDeviceStates(
 		fieldDevice := item.FieldDevice
 		states = append(states, appcollaboration.FieldDeviceState{
 			ID:                        fieldDevice.ID,
+			Revision:                  fieldDevice.Revision,
 			BMK:                       clonePointer(fieldDevice.BMK),
 			Description:               clonePointer(fieldDevice.Description),
 			TextFix:                   clonePointer(fieldDevice.TextIndividuell),

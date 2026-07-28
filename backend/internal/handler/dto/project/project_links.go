@@ -29,12 +29,14 @@ type CreateProjectControlCabinetRequest struct {
 
 type UpdateProjectControlCabinetRequest struct {
 	ControlCabinetID uuid.UUID `json:"control_cabinet_id" binding:"required"`
+	ExpectedVersion  uint64    `json:"expected_version" binding:"required,min=1"`
 }
 
 type ProjectControlCabinetResponse struct {
 	ID               uuid.UUID `json:"id"`
 	ProjectID        uuid.UUID `json:"project_id"`
 	ControlCabinetID uuid.UUID `json:"control_cabinet_id"`
+	Revision         uint64    `json:"revision"`
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
 }
@@ -52,12 +54,14 @@ type CreateProjectSPSControllerRequest struct {
 
 type UpdateProjectSPSControllerRequest struct {
 	SPSControllerID uuid.UUID `json:"sps_controller_id" binding:"required"`
+	ExpectedVersion uint64    `json:"expected_version" binding:"required,min=1"`
 }
 
 type ProjectSPSControllerResponse struct {
 	ID              uuid.UUID `json:"id"`
 	ProjectID       uuid.UUID `json:"project_id"`
 	SPSControllerID uuid.UUID `json:"sps_controller_id"`
+	Revision        uint64    `json:"revision"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
@@ -74,13 +78,14 @@ type CreateProjectFieldDeviceRequest struct {
 }
 
 type MultiCreateProjectFieldDeviceRequest struct {
-	FieldDeviceIDs []uuid.UUID                            `json:"field_device_ids"`
-	FieldDevices   []facilitydto.CreateFieldDeviceRequest `json:"field_devices" binding:"omitempty,dive"`
+	FieldDeviceIDs []uuid.UUID                            `json:"field_device_ids" binding:"omitempty,max=100,dive,required"`
+	FieldDevices   []facilitydto.CreateFieldDeviceRequest `json:"field_devices" binding:"omitempty,max=100,dive"`
 }
 
 type MultiCreateProjectFieldDeviceResponse struct {
-	SuccessFieldDeviceIDs []uuid.UUID `json:"success_field_device_ids"`
-	AssociationErrors     []string    `json:"association_errors"`
+	SuccessFieldDeviceIDs []uuid.UUID                           `json:"success_field_device_ids"`
+	AssociationErrors     []string                              `json:"association_errors"`
+	Results               []facilitydto.BulkOperationResultItem `json:"results"`
 }
 
 type CreateProjectObjectDataRequest struct {
@@ -88,13 +93,15 @@ type CreateProjectObjectDataRequest struct {
 }
 
 type UpdateProjectFieldDeviceRequest struct {
-	FieldDeviceID uuid.UUID `json:"field_device_id" binding:"required"`
+	FieldDeviceID   uuid.UUID `json:"field_device_id" binding:"required"`
+	ExpectedVersion uint64    `json:"expected_version" binding:"required,min=1"`
 }
 
 type ProjectFieldDeviceResponse struct {
 	ID            uuid.UUID `json:"id"`
 	ProjectID     uuid.UUID `json:"project_id"`
 	FieldDeviceID uuid.UUID `json:"field_device_id"`
+	Revision      uint64    `json:"revision"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }

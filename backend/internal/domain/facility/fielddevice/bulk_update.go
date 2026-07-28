@@ -35,9 +35,10 @@ type BulkUpdatePhaseResult struct {
 // because duplicate FieldDevice IDs are currently accepted and processed
 // independently.
 type BulkUpdateItemExecution struct {
-	Index  int
-	ID     uuid.UUID
-	Phases []BulkUpdatePhaseResult
+	Index    int
+	ID       uuid.UUID
+	Revision uint64
+	Phases   []BulkUpdatePhaseResult
 }
 
 // BulkUpdateExecution deepens the bulk Interface without changing the legacy

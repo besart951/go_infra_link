@@ -219,7 +219,8 @@ func TestReassignProjectLinkCommitsHistoryBeforeTypedRefresh(t *testing.T) {
 		command.OperationID != operationID || command.CorrelationID != operationID ||
 		command.ActorID == nil || *command.ActorID != actorID ||
 		command.Scope != appcollaboration.FacilityScopeFieldDevice || command.FullRefresh ||
-		!reflect.DeepEqual(command.EntityIDs, []uuid.UUID{newFieldDeviceID}) {
+		command.SchemaVersion != appcollaboration.SchemaVersionV2 ||
+		!reflect.DeepEqual(command.EntityIDs, []uuid.UUID{oldFieldDeviceID, newFieldDeviceID}) {
 		t.Fatalf("typed collaboration command: %#v", dispatcher.commands[0])
 	}
 }

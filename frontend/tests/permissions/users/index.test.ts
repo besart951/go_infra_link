@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => {
   return {
@@ -157,6 +157,13 @@ describe('/users/directory permission surface', () => {
     state.enableUserMock.mockReset();
     state.restoreUserMock.mockReset();
     state.deleteUserMock.mockReset();
+  });
+
+  afterEach(async () => {
+    cleanup();
+    // Bits UI restores body scroll on a 24 ms timer after an open action menu
+    // unmounts. Drain it before Vitest removes this file's jsdom document.
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 30));
   });
 
   it('redirects to / when auth says user cannot access directory', async () => {

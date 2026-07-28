@@ -5,6 +5,7 @@ import (
 	appcontrolcabinet "github.com/besart951/go_infra_link/backend/internal/application/facility/controlcabinet"
 	appfielddevice "github.com/besart951/go_infra_link/backend/internal/application/facility/fielddevice"
 	appobjectdata "github.com/besart951/go_infra_link/backend/internal/application/facility/objectdata"
+	appprojectlink "github.com/besart951/go_infra_link/backend/internal/application/facility/projectlink"
 	appspscontroller "github.com/besart951/go_infra_link/backend/internal/application/facility/spscontroller"
 )
 
@@ -59,5 +60,6 @@ type Services struct {
 	ControlCabinet *ControlCabinetModule
 	FieldDevice    *FieldDeviceModule
 	ObjectData     *ObjectDataModule
+	ProjectLink    *appprojectlink.Handler
 	SPSController  *SPSControllerModule
 }

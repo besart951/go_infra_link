@@ -34,6 +34,20 @@ type ProjectLinkReader interface {
 	GetBySPSControllerIDs(context.Context, []uuid.UUID) ([]*domainProject.ProjectSPSController, error)
 }
 
+type transactionalUpdateOutbox interface {
+	UpdateWorkflow
+	GetBySPSControllerIDs(context.Context, []uuid.UUID) ([]*domainProject.ProjectSPSController, error)
+}
+
+type projectAssignmentMoveReconciler interface {
+	ReconcileSPSControllerMove(
+		context.Context,
+		uuid.UUID,
+		uuid.UUID,
+		uuid.UUID,
+	) ([]uuid.UUID, error)
+}
+
 type HistoryBatchContext func(context.Context, uuid.UUID) context.Context
 type ActorProvider func(context.Context) *uuid.UUID
 type IDGenerator func() uuid.UUID
@@ -42,6 +56,7 @@ type ErrorReporter func(error)
 
 type UpdateCommand struct {
 	SPSControllerID   uuid.UUID
+	ExpectedVersion   uint64
 	ControlCabinetID  *uuid.UUID
 	GADevice          *string
 	DeviceName        *string
@@ -144,6 +159,7 @@ type committedUpdate struct {
 	change     mutation.EntityChange
 	move       *MoveCommand
 	batched    bool
+	projectIDs []uuid.UUID
 }
 
 func NewUpdateHandler(deps UpdateDependencies) *UpdateHandler {
@@ -211,6 +227,7 @@ func (h *UpdateHandler) Execute(
 
 	operationID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -220,6 +237,9 @@ func (h *UpdateHandler) Execute(
 				workflow,
 				command,
 				operationID,
+				actorID,
+				occurredAt,
+				h.newID,
 				h.historyBatch,
 			)
 		},
@@ -228,7 +248,6 @@ func (h *UpdateHandler) Execute(
 		return UpdateOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	result := mutation.Result{
 		OperationID: operationID,
 		ActorID:     actorID,
@@ -244,24 +263,27 @@ func (h *UpdateHandler) Execute(
 		Mutation:      result,
 	}
 
-	if h.projectLinks == nil || h.dispatcher == nil {
+	if h.dispatcher == nil {
 		return outcome, nil
 	}
 
 	dispatchCtx := context.WithoutCancel(ctx)
-	links, err := h.projectLinks.GetBySPSControllerIDs(
-		dispatchCtx,
-		[]uuid.UUID{command.SPSControllerID},
-	)
-	if err != nil {
-		outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
-			"resolve SPSController collaboration projects: %w",
-			err,
-		))
-		return outcome, nil
+	projectIDs := append([]uuid.UUID(nil), committed.projectIDs...)
+	if len(projectIDs) == 0 && h.projectLinks != nil {
+		links, err := h.projectLinks.GetBySPSControllerIDs(
+			dispatchCtx,
+			[]uuid.UUID{command.SPSControllerID},
+		)
+		if err != nil {
+			outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
+				"resolve SPSController collaboration projects: %w",
+				err,
+			))
+			return outcome, nil
+		}
+		projectIDs = linkedProjectIDs(links, command.SPSControllerID)
 	}
 
-	projectIDs := linkedProjectIDs(links, command.SPSControllerID)
 	outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
 	for _, projectID := range projectIDs {
 		envelope := appcollaboration.Envelope{
@@ -304,6 +326,9 @@ func executeUpdateTransaction(
 	workflow UpdateWorkflow,
 	command UpdateCommand,
 	operationID uuid.UUID,
+	actorID *uuid.UUID,
+	occurredAt time.Time,
+	newID IDGenerator,
 	historyBatch HistoryBatchContext,
 ) (committedUpdate, error) {
 	if workflow == nil {
@@ -316,6 +341,13 @@ func executeUpdateTransaction(
 	}
 	if before == nil {
 		return committedUpdate{}, &LoadError{Err: domain.ErrNotFound}
+	}
+	if command.ExpectedVersion != 0 && before.Revision != command.ExpectedVersion {
+		return committedUpdate{}, &domain.RevisionConflict{
+			EntityID: before.ID,
+			Expected: command.ExpectedVersion,
+			Current:  before.Revision,
+		}
 	}
 
 	updated := cloneSPSController(before)
@@ -347,6 +379,24 @@ func executeUpdateTransaction(
 		return committedUpdate{}, err
 	}
 
+	var reconciliationProjectIDs []uuid.UUID
+	if move != nil {
+		if reconciler, ok := workflow.(projectAssignmentMoveReconciler); ok {
+			reconciliationProjectIDs, err = reconciler.ReconcileSPSControllerMove(
+				writeCtx,
+				command.SPSControllerID,
+				move.FromControlCabinetID,
+				move.ToControlCabinetID,
+			)
+			if err != nil {
+				return committedUpdate{}, fmt.Errorf(
+					"reconcile SPSController project assignments: %w",
+					err,
+				)
+			}
+		}
+	}
+
 	after, err := workflow.GetByID(writeCtx, command.SPSControllerID)
 	if err != nil {
 		return committedUpdate{}, err
@@ -359,12 +409,109 @@ func executeUpdateTransaction(
 	if err != nil {
 		return committedUpdate{}, err
 	}
+	projectIDs, err := enqueueTransactionalUpdateCommands(
+		writeCtx,
+		workflow,
+		command.SPSControllerID,
+		after.Revision,
+		move,
+		reconciliationProjectIDs,
+		operationID,
+		actorID,
+		occurredAt,
+		newID,
+	)
+	if err != nil {
+		return committedUpdate{}, err
+	}
 	return committedUpdate{
 		controller: cloneSPSController(after),
 		change:     change,
 		move:       move,
 		batched:    batched,
+		projectIDs: projectIDs,
 	}, nil
+}
+
+func enqueueTransactionalUpdateCommands(
+	ctx context.Context,
+	workflow UpdateWorkflow,
+	spsControllerID uuid.UUID,
+	revision uint64,
+	move *MoveCommand,
+	reconciliationProjectIDs []uuid.UUID,
+	operationID uuid.UUID,
+	actorID *uuid.UUID,
+	occurredAt time.Time,
+	newID IDGenerator,
+) ([]uuid.UUID, error) {
+	outbox, ok := workflow.(transactionalUpdateOutbox)
+	if !ok {
+		return nil, nil
+	}
+	links, err := outbox.GetBySPSControllerIDs(ctx, []uuid.UUID{spsControllerID})
+	if err != nil {
+		return nil, fmt.Errorf("resolve SPSController collaboration projects for outbox: %w", err)
+	}
+	projectIDs := mergeProjectIDs(
+		linkedProjectIDs(links, spsControllerID),
+		reconciliationProjectIDs,
+	)
+	for _, projectID := range projectIDs {
+		envelope := appcollaboration.Envelope{
+			SchemaVersion:   appcollaboration.SchemaVersionV2,
+			EventID:         newID(),
+			OperationID:     operationID,
+			CorrelationID:   operationID,
+			ProjectID:       projectID,
+			ActorID:         actorID,
+			OccurredAt:      occurredAt,
+			EntityRevisions: map[string]uint64{spsControllerID.String(): revision},
+		}
+		var event appcollaboration.Command = appcollaboration.SPSControllerUpdated{
+			Envelope:        envelope,
+			SPSControllerID: spsControllerID,
+		}
+		if move != nil {
+			event = appcollaboration.SPSControllerMoved{
+				Envelope:             envelope,
+				SPSControllerID:      spsControllerID,
+				FromControlCabinetID: move.FromControlCabinetID,
+				ToControlCabinetID:   move.ToControlCabinetID,
+			}
+		}
+		configured, err := appcollaboration.EnqueueCommand(ctx, event)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"enqueue SPSController collaboration event for project %s: %w",
+				projectID,
+				err,
+			)
+		}
+		if !configured {
+			return nil, nil
+		}
+	}
+	return projectIDs, nil
+}
+
+func mergeProjectIDs(groups ...[]uuid.UUID) []uuid.UUID {
+	set := make(map[uuid.UUID]struct{})
+	for _, group := range groups {
+		for _, projectID := range group {
+			if projectID != uuid.Nil {
+				set[projectID] = struct{}{}
+			}
+		}
+	}
+	out := make([]uuid.UUID, 0, len(set))
+	for projectID := range set {
+		out = append(out, projectID)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].String() < out[j].String()
+	})
+	return out
 }
 
 func linkedProjectIDs(

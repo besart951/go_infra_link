@@ -58,8 +58,7 @@ func (r *BaseRepository[T]) Create(ctx context.Context, entity T) error {
 
 // Update updates an existing entity
 func (r *BaseRepository[T]) Update(ctx context.Context, entity T) error {
-	entity.GetBase().TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Save(entity).Error
+	return updateEntityWithRevision(ctx, r.db, entity)
 }
 
 // DeleteByIds hard deletes entities by their IDs
@@ -121,12 +120,56 @@ func (r *BaseRepository[T]) BulkUpdate(ctx context.Context, entities []T) error 
 	// Use transaction for bulk updates
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, entity := range entities {
-			if err := tx.Save(entity).Error; err != nil {
+			if err := updateEntityWithRevision(ctx, tx, entity); err != nil {
 				return err
 			}
 		}
 		return nil
 	})
+}
+
+func updateEntityWithRevision[T Entity](
+	ctx context.Context,
+	db *gorm.DB,
+	entity T,
+) error {
+	base := entity.GetBase()
+	if base.ID == uuid.Nil || base.Revision == 0 {
+		return domain.ErrInvalidArgument
+	}
+	expected := base.Revision
+	base.TouchForUpdate(time.Now().UTC())
+	base.Revision = expected + 1
+	result := db.WithContext(ctx).
+		Model(entity).
+		Where("id = ? AND revision = ?", base.ID, expected).
+		Omit(clause.Associations).
+		Select("*").
+		Updates(entity)
+	if result.Error != nil {
+		base.Revision = expected
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		base.Revision = expected
+		var current uint64
+		lookup := db.WithContext(ctx).
+			Model(entity).
+			Where("id = ?", base.ID).
+			Pluck("revision", &current)
+		if lookup.Error != nil {
+			return lookup.Error
+		}
+		if lookup.RowsAffected == 0 {
+			return domain.ErrNotFound
+		}
+		return &domain.RevisionConflict{
+			EntityID: base.ID,
+			Expected: expected,
+			Current:  current,
+		}
+	}
+	return nil
 }
 
 // DB returns the underlying GORM database instance for custom queries

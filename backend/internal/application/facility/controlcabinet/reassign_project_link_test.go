@@ -260,7 +260,10 @@ func TestReassignProjectControlCabinetLinkCommitsDescendantsAndHistoryBeforeRefr
 		dispatched.ActorID == nil || *dispatched.ActorID != actorID ||
 		dispatched.Scope != appcollaboration.FacilityScopeControlCabinet ||
 		dispatched.FullRefresh ||
-		!reflect.DeepEqual(dispatched.EntityIDs, []uuid.UUID{newCabinetID}) {
+		!reflect.DeepEqual(
+			dispatched.EntityIDs,
+			[]uuid.UUID{previousCabinetID, newCabinetID},
+		) {
 		t.Fatalf("typed collaboration command: %#v", dispatcher.commands[0])
 	}
 }

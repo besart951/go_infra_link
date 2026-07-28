@@ -127,7 +127,7 @@ func TestProjectService_CopySPSController_CharacterizesDeepCopyAndProjectLinks(t
 	}
 }
 
-func TestProjectService_DeleteSPSController_CharacterizesLinkAndHierarchyDeletion(t *testing.T) {
+func TestProjectService_DeleteSPSController_RemovesOnlySelectedProjectLink(t *testing.T) {
 	ctx := context.Background()
 	projectID := uuid.New()
 	linkID := uuid.New()
@@ -178,22 +178,22 @@ func TestProjectService_DeleteSPSController_CharacterizesLinkAndHierarchyDeletio
 		t.Fatalf("expected delete to succeed, got %v", err)
 	}
 
-	if len(spsLinks.items) != 0 || len(fieldDeviceLinks.items) != 0 {
-		t.Fatalf("expected project links to be removed, got sps=%d fd=%d", len(spsLinks.items), len(fieldDeviceLinks.items))
+	if len(spsLinks.items) != 0 {
+		t.Fatalf("expected selected sps link to be removed, got %d", len(spsLinks.items))
 	}
-	if _, ok := spsRepo.items[spsID]; ok {
-		t.Fatal("expected copied/original sps controller to be deleted by current behavior")
+	if len(fieldDeviceLinks.items) != 1 {
+		t.Fatalf("descendant project links must remain without provenance, got %d", len(fieldDeviceLinks.items))
 	}
-	if _, ok := spsSystemRepo.items[systemTypeID]; ok {
-		t.Fatal("expected descendant sps controller system type to be deleted by current behavior")
+	if _, ok := spsRepo.items[spsID]; !ok {
+		t.Fatal("global sps controller was deleted during project unlink")
 	}
-	if _, ok := fieldDeviceRepo.items[fieldDeviceID]; ok {
-		t.Fatal("expected descendant field device to be deleted by current behavior")
+	if _, ok := spsSystemRepo.items[systemTypeID]; !ok {
+		t.Fatal("global descendant system type was deleted during project unlink")
 	}
-	if !sameUUIDSet(bacnetRepo.deletedFieldDeviceIDs, []uuid.UUID{fieldDeviceID}) {
-		t.Fatalf("expected bacnet objects to be deleted for field device %s, got %v", fieldDeviceID, bacnetRepo.deletedFieldDeviceIDs)
+	if _, ok := fieldDeviceRepo.items[fieldDeviceID]; !ok {
+		t.Fatal("global descendant field device was deleted during project unlink")
 	}
-	if !sameUUIDSet(specRepo.deletedFieldDeviceIDs, []uuid.UUID{fieldDeviceID}) {
-		t.Fatalf("expected specifications to be deleted for field device %s, got %v", fieldDeviceID, specRepo.deletedFieldDeviceIDs)
+	if len(bacnetRepo.deletedFieldDeviceIDs) != 0 || len(specRepo.deletedFieldDeviceIDs) != 0 {
+		t.Fatalf("global children were deleted: bacnet=%v specifications=%v", bacnetRepo.deletedFieldDeviceIDs, specRepo.deletedFieldDeviceIDs)
 	}
 }

@@ -6,6 +6,7 @@ import (
 
 	appfacility "github.com/besart951/go_infra_link/backend/internal/application/facility"
 	apphistory "github.com/besart951/go_infra_link/backend/internal/application/history"
+	appproject "github.com/besart951/go_infra_link/backend/internal/application/project"
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	adminservice "github.com/besart951/go_infra_link/backend/internal/service/admin"
@@ -49,6 +50,7 @@ type Services struct {
 
 	Facility            *facilityservice.Services
 	FacilityApplication *appfacility.Services
+	ProjectApplication  *appproject.Services
 }
 
 // ServiceConfig contains configuration for services.
@@ -103,6 +105,7 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 		projectServices.AccessPolicy,
 		cfg.Runtime,
 	)
+	projectApplication := newProjectApplicationServices(gormDB)
 
 	return &Services{
 		Project:          projectServices,
@@ -133,6 +136,7 @@ func NewServices(gormDB *gorm.DB, repos *Repositories, cfg ServiceConfig) (*Serv
 		HistoryApplication:  historyApplication,
 		Facility:            facilityServices,
 		FacilityApplication: facilityApplication,
+		ProjectApplication:  projectApplication,
 	}, nil
 }
 

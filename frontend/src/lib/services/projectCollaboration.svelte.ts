@@ -44,6 +44,28 @@ export interface ProjectCollaborationEntityDeltaMessage {
   at: string;
 }
 
+export interface ProjectCollaborationCommittedEvent {
+  type: 'committed_event';
+  schema_version: 2;
+  event_id: string;
+  operation_id: string;
+  correlation_id: string;
+  project_id: string;
+  actor_id?: string;
+  sequence: number;
+  event_type: string;
+  scope:
+    | 'project'
+    | 'project_users'
+    | 'control_cabinet'
+    | 'sps_controller'
+    | 'field_device'
+    | 'object_data';
+  entity_ids?: string[];
+  entity_revisions?: Record<string, number>;
+  occurred_at: string;
+}
+
 interface ProjectCollaborationSnapshotMessage {
   type: 'snapshot';
   presence: ProjectCollaboratorPresence[];
@@ -65,7 +87,8 @@ type ProjectCollaborationInboundMessage =
   | ProjectCollaborationPresenceMessage
   | ProjectCollaborationEditStatesMessage
   | ProjectCollaborationEntityDeltaMessage
-  | ProjectCollaborationRefreshRequest;
+  | ProjectCollaborationRefreshRequest
+  | ProjectCollaborationCommittedEvent;
 
 const PROJECT_COLLABORATION_FIELD_VALUE_MAX = 64;
 const PROJECT_COLLABORATION_CHANGED_FIELDS_MAX = 64;
@@ -319,6 +342,36 @@ const projectCollaborationInboundMessageSchema = z.discriminatedUnion('type', [
       device_ids: z.array(uuidSchema).max(PROJECT_COLLABORATION_ENTITIES_MAX).optional(),
       at: dateTimeSchema
     })
+    .strict(),
+  z
+    .object({
+      type: z.literal('committed_event'),
+      schema_version: z.literal(2),
+      event_id: uuidSchema,
+      operation_id: uuidSchema,
+      correlation_id: uuidSchema,
+      project_id: uuidSchema,
+      actor_id: uuidSchema.optional(),
+      sequence: z.number().int().positive(),
+      event_type: z.string().trim().min(1).max(128),
+      scope: z.enum([
+        'project',
+        'project_users',
+        'control_cabinet',
+        'sps_controller',
+        'field_device',
+        'object_data'
+      ]),
+      entity_ids: z.array(uuidSchema).max(PROJECT_COLLABORATION_ENTITIES_MAX).optional(),
+      entity_revisions: z
+        .record(uuidSchema, z.number().int().positive())
+        .refine(
+          (revisions) => Object.keys(revisions).length <= PROJECT_COLLABORATION_ENTITIES_MAX,
+          'too many entity revisions'
+        )
+        .optional(),
+      occurred_at: dateTimeSchema
+    })
     .strict()
 ]);
 
@@ -344,6 +397,7 @@ export type SharedFieldDeviceEditorsByDevice = Record<string, SharedFieldDeviceE
 interface ProjectCollaborationStateOptions {
   onRefreshRequest?: (message: ProjectCollaborationRefreshRequest) => void;
   onEntityDelta?: (message: ProjectCollaborationEntityDeltaMessage) => void;
+  onCommittedEvent?: (message: ProjectCollaborationCommittedEvent) => void;
   onReconnect?: () => void;
 }
 
@@ -354,6 +408,7 @@ export class ProjectCollaborationState {
 
   private readonly onRefreshRequest?: (message: ProjectCollaborationRefreshRequest) => void;
   private readonly onEntityDelta?: (message: ProjectCollaborationEntityDeltaMessage) => void;
+  private readonly onCommittedEvent?: (message: ProjectCollaborationCommittedEvent) => void;
   private readonly onReconnect?: () => void;
   private readonly connection: RealtimeJsonStream<ProjectCollaborationInboundMessage>;
 
@@ -362,10 +417,15 @@ export class ProjectCollaborationState {
   private desiredEditState: SharedFieldDeviceDraftState = {
     devices: []
   };
+  private readonly seenCommittedEventIds = new Set<string>();
+  private readonly committedEventOrder: string[] = [];
+  private readonly lastSequenceByProject = new Map<string, number>();
+  private readonly lastRevisionByEntity = new Map<string, number>();
 
   constructor(options: ProjectCollaborationStateOptions = {}) {
     this.onRefreshRequest = options.onRefreshRequest;
     this.onEntityDelta = options.onEntityDelta;
+    this.onCommittedEvent = options.onCommittedEvent;
     this.onReconnect = options.onReconnect;
     this.connection = new RealtimeJsonStream<ProjectCollaborationInboundMessage>({
       url: () => buildProjectCollaborationUrl(this.projectId),
@@ -393,6 +453,7 @@ export class ProjectCollaborationState {
     }
 
     this.projectId = projectId;
+    this.resetCommittedEventTracking();
     this.destroyed = false;
     this.connection.disconnect({ clearQueue: true });
     this.connection.connect();
@@ -403,6 +464,7 @@ export class ProjectCollaborationState {
     this.projectId = null;
     this.onlineUsers = [];
     this.fieldDeviceEditStates = [];
+    this.resetCommittedEventTracking();
     this.connection.disconnect();
   }
 
@@ -480,7 +542,80 @@ export class ProjectCollaborationState {
       case 'refresh_request':
         this.onRefreshRequest?.(message);
         break;
+      case 'committed_event':
+        this.handleCommittedEvent(message);
+        break;
     }
+  }
+
+  private handleCommittedEvent(message: ProjectCollaborationCommittedEvent): void {
+    if (this.seenCommittedEventIds.has(message.event_id)) return;
+    this.rememberCommittedEvent(message.event_id);
+
+    const previousSequence = this.lastSequenceByProject.get(message.project_id);
+    if (previousSequence !== undefined && message.sequence <= previousSequence) {
+      return;
+    }
+
+    const sequenceGap = previousSequence !== undefined && message.sequence > previousSequence + 1;
+    const revisionGap = this.hasRevisionGap(message.entity_revisions);
+    this.lastSequenceByProject.set(message.project_id, message.sequence);
+    this.rememberEntityRevisions(message.entity_revisions);
+    this.onCommittedEvent?.(message);
+
+    if (sequenceGap || revisionGap) {
+      this.onRefreshRequest?.({
+        type: 'refresh_request',
+        project_id: message.project_id,
+        scope: 'project',
+        actor_id: message.actor_id,
+        at: message.occurred_at
+      });
+      return;
+    }
+
+    this.onRefreshRequest?.({
+      type: 'refresh_request',
+      project_id: message.project_id,
+      scope: message.scope,
+      actor_id: message.actor_id,
+      entity_ids: message.entity_ids,
+      device_ids: message.scope === 'field_device' ? message.entity_ids : undefined,
+      at: message.occurred_at
+    });
+  }
+
+  private rememberCommittedEvent(eventId: string): void {
+    this.seenCommittedEventIds.add(eventId);
+    this.committedEventOrder.push(eventId);
+    if (this.committedEventOrder.length <= 1024) return;
+    const oldest = this.committedEventOrder.shift();
+    if (oldest) this.seenCommittedEventIds.delete(oldest);
+  }
+
+  private hasRevisionGap(revisions?: Record<string, number>): boolean {
+    if (!revisions) return false;
+    return Object.entries(revisions).some(([entityId, revision]) => {
+      const previous = this.lastRevisionByEntity.get(entityId);
+      return previous !== undefined && revision > previous + 1;
+    });
+  }
+
+  private rememberEntityRevisions(revisions?: Record<string, number>): void {
+    if (!revisions) return;
+    for (const [entityId, revision] of Object.entries(revisions)) {
+      const previous = this.lastRevisionByEntity.get(entityId);
+      if (previous === undefined || revision > previous) {
+        this.lastRevisionByEntity.set(entityId, revision);
+      }
+    }
+  }
+
+  private resetCommittedEventTracking(): void {
+    this.seenCommittedEventIds.clear();
+    this.committedEventOrder.length = 0;
+    this.lastSequenceByProject.clear();
+    this.lastRevisionByEntity.clear();
   }
 
   private send(

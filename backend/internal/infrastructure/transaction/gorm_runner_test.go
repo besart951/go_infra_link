@@ -2,6 +2,7 @@ package transaction_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -130,6 +131,27 @@ func TestGormRunnerCommitsOnSuccess(t *testing.T) {
 
 	if err != nil {
 		t.Fatalf("expected commit to succeed, got %v", err)
+	}
+	assertGormRunnerRecordCount(t, db, 1)
+}
+
+func TestGormRunnerWithIsolationCommitsOnSuccess(t *testing.T) {
+	db := newGormRunnerTestDB(t)
+	runner := infratransaction.NewGormRunnerWithIsolation(db, sql.LevelRepeatableRead)
+
+	err := runner(context.Background(), func(runCtx context.Context, unit apptransaction.UnitOfWork) error {
+		tx, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return err
+		}
+		return tx.WithContext(runCtx).Create(&gormRunnerTestRecord{
+			ID:   "repeatable-read",
+			Name: "created",
+		}).Error
+	})
+
+	if err != nil {
+		t.Fatalf("expected repeatable-read commit to succeed, got %v", err)
 	}
 	assertGormRunnerRecordCount(t, db, 1)
 }

@@ -21,12 +21,26 @@ var ErrReplaceAlarmValuesTransactionNotConfigured = errors.New(
 	"BACnet alarm-value replacement transaction is not configured",
 )
 
-// ReplaceAlarmValuesWorkflow is the transaction-scoped Interface consumed by
-// the application Module. The legacy BacnetAlarmValueService remains the first
-// Implementation while validation and SQL persistence are migrated gradually.
-type ReplaceAlarmValuesWorkflow interface {
+type AlarmValueStore interface {
 	GetValues(context.Context, uuid.UUID) ([]domainFacility.BacnetObjectAlarmValue, error)
 	PutValues(context.Context, uuid.UUID, []domainFacility.BacnetObjectAlarmValue) error
+}
+
+// ReplaceAlarmValuesWorkflow is the transaction-scoped Interface consumed by
+// the application Module. The compatibility alarm-value service provides
+// persistence while the wire Adapter provides authoritative schema reads.
+type ReplaceAlarmValuesWorkflow interface {
+	AlarmValueStore
+	GetAlarmSelection(context.Context, uuid.UUID) (*AlarmSelection, error)
+	GetAlarmTypeFields(
+		context.Context,
+		[]uuid.UUID,
+	) ([]*domainFacility.AlarmTypeField, error)
+}
+
+type AlarmSelection struct {
+	BacnetObjectID uuid.UUID
+	AlarmTypeID    *uuid.UUID
 }
 
 // BacnetObjectStateReader resolves the current direct owner after commit. It is
@@ -34,6 +48,12 @@ type ReplaceAlarmValuesWorkflow interface {
 // best effort and must not alter the committed HTTP result.
 type BacnetObjectStateReader interface {
 	GetByIds(context.Context, []uuid.UUID) ([]*domainFacility.BacnetObject, error)
+}
+
+type transactionalAlarmValuesOutbox interface {
+	ReplaceAlarmValuesWorkflow
+	BacnetObjectStateReader
+	transactionalCollaborationResolver
 }
 
 // AlarmValueInput contains only client-controlled state. IDs, timestamps, and
@@ -136,9 +156,10 @@ type ReplaceAlarmValuesOutcome struct {
 }
 
 type committedAlarmValueReplacement struct {
-	values  []domainFacility.BacnetObjectAlarmValue
-	changes []mutation.EntityChange
-	batched bool
+	values     []domainFacility.BacnetObjectAlarmValue
+	changes    []mutation.EntityChange
+	projectIDs []uuid.UUID
+	batched    bool
 }
 
 func NewReplaceAlarmValuesHandler(
@@ -208,6 +229,7 @@ func (h *ReplaceAlarmValuesHandler) Execute(
 
 	operationID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -220,6 +242,9 @@ func (h *ReplaceAlarmValuesHandler) Execute(
 				workflow,
 				command,
 				operationID,
+				actorID,
+				occurredAt,
+				h.newID,
 				h.historyBatch,
 			)
 		},
@@ -228,7 +253,6 @@ func (h *ReplaceAlarmValuesHandler) Execute(
 		return ReplaceAlarmValuesOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	result := mutation.Result{
 		OperationID: operationID,
 		ActorID:     actorID,
@@ -278,7 +302,11 @@ func (h *ReplaceAlarmValuesHandler) Execute(
 		actorID,
 		occurredAt,
 	)
-	outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
+	if len(committed.projectIDs) > 0 {
+		outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), committed.projectIDs...)
+	} else {
+		outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
+	}
 	outcome.DispatchErrors = append(outcome.DispatchErrors, dispatchErrors...)
 	return outcome, nil
 }
@@ -288,12 +316,18 @@ func executeReplaceAlarmValuesTransaction(
 	workflow ReplaceAlarmValuesWorkflow,
 	command ReplaceAlarmValuesCommand,
 	operationID uuid.UUID,
+	actorID *uuid.UUID,
+	occurredAt time.Time,
+	newID IDGenerator,
 	historyBatch HistoryBatchContext,
 ) (committedAlarmValueReplacement, error) {
 	if workflow == nil {
 		return committedAlarmValueReplacement{}, ErrReplaceAlarmValuesTransactionNotConfigured
 	}
 
+	if err := validateAlarmValueFields(ctx, workflow, command); err != nil {
+		return committedAlarmValueReplacement{}, err
+	}
 	before, err := workflow.GetValues(ctx, command.BacnetObjectID)
 	if err != nil {
 		return committedAlarmValueReplacement{}, err
@@ -322,11 +356,118 @@ func executeReplaceAlarmValuesTransaction(
 	if err != nil {
 		return committedAlarmValueReplacement{}, err
 	}
+	var projectIDs []uuid.UUID
+	if len(changes) > 0 {
+		if outbox, ok := workflow.(transactionalAlarmValuesOutbox); ok {
+			objects, err := outbox.GetByIds(writeCtx, []uuid.UUID{command.BacnetObjectID})
+			if err != nil {
+				return committedAlarmValueReplacement{}, fmt.Errorf(
+					"resolve BACnet object owner for outbox: %w",
+					err,
+				)
+			}
+			projectIDs, err = enqueueTransactionalMutation(
+				writeCtx,
+				outbox,
+				command.BacnetObjectID,
+				0,
+				currentFieldDeviceIDs(command.BacnetObjectID, objects),
+				operationID,
+				actorID,
+				occurredAt,
+				newID,
+			)
+			if err != nil {
+				return committedAlarmValueReplacement{}, err
+			}
+		}
+	}
 	return committedAlarmValueReplacement{
-		values:  cloneAlarmValues(after),
-		changes: changes,
-		batched: batched,
+		values:     cloneAlarmValues(after),
+		changes:    changes,
+		projectIDs: projectIDs,
+		batched:    batched,
 	}, nil
+}
+
+func validateAlarmValueFields(
+	ctx context.Context,
+	workflow ReplaceAlarmValuesWorkflow,
+	command ReplaceAlarmValuesCommand,
+) error {
+	selection, err := workflow.GetAlarmSelection(ctx, command.BacnetObjectID)
+	if err != nil {
+		return err
+	}
+	if selection == nil || selection.BacnetObjectID != command.BacnetObjectID {
+		return domain.ErrNotFound
+	}
+	if len(command.Values) == 0 {
+		return nil
+	}
+
+	validation := domain.NewValidationError()
+	uniqueIDs := make([]uuid.UUID, 0, len(command.Values))
+	seen := make(map[uuid.UUID]int, len(command.Values))
+	for index, value := range command.Values {
+		field := fmt.Sprintf("values.%d.alarm_type_field_id", index)
+		if value.AlarmTypeFieldID == uuid.Nil {
+			validation.Add(field, "alarm_type_field_id is required")
+			continue
+		}
+		if firstIndex, exists := seen[value.AlarmTypeFieldID]; exists {
+			validation.Add(
+				field,
+				fmt.Sprintf(
+					"alarm type field is duplicated from values.%d.alarm_type_field_id",
+					firstIndex,
+				),
+			)
+			continue
+		}
+		seen[value.AlarmTypeFieldID] = index
+		uniqueIDs = append(uniqueIDs, value.AlarmTypeFieldID)
+	}
+	if selection.AlarmTypeID == nil || *selection.AlarmTypeID == uuid.Nil {
+		for index := range command.Values {
+			validation.Add(
+				fmt.Sprintf("values.%d.alarm_type_field_id", index),
+				"BACnet object has no selected alarm type",
+			)
+		}
+	}
+	if len(validation.Fields) > 0 {
+		return validation
+	}
+
+	fields, err := workflow.GetAlarmTypeFields(ctx, uniqueIDs)
+	if err != nil {
+		return err
+	}
+	byID := make(map[uuid.UUID]*domainFacility.AlarmTypeField, len(fields))
+	for _, field := range fields {
+		if field != nil && field.ID != uuid.Nil {
+			byID[field.ID] = field
+		}
+	}
+	for index, value := range command.Values {
+		fieldPath := fmt.Sprintf("values.%d.alarm_type_field_id", index)
+		field := byID[value.AlarmTypeFieldID]
+		if field == nil {
+			validation.Add(fieldPath, "alarm type field does not exist")
+			continue
+		}
+		if field.AlarmTypeID != *selection.AlarmTypeID {
+			validation.Add(
+				fieldPath,
+				"alarm type field does not belong to the BACnet object's selected alarm type",
+			)
+		}
+	}
+	if len(validation.Fields) > 0 {
+		return validation
+	}
+	return nil
 }
 
 type alarmValueSnapshot struct {

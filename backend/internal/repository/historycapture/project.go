@@ -17,6 +17,15 @@ type projectSPSControllerSetCreatorWithIDs interface {
 	) ([]uuid.UUID, error)
 }
 
+type projectSPSControllerSourceSetCreatorWithIDs interface {
+	BulkCreateBySPSControllerIDsWithSourceReturningIDs(
+		context.Context,
+		uuid.UUID,
+		[]uuid.UUID,
+		domainProject.AssignmentSource,
+	) ([]uuid.UUID, error)
+}
+
 type projectFieldDeviceIDSetCreatorWithIDs interface {
 	BulkCreateByFieldDeviceIDsReturningIDs(
 		context.Context,
@@ -25,11 +34,29 @@ type projectFieldDeviceIDSetCreatorWithIDs interface {
 	) ([]uuid.UUID, error)
 }
 
+type projectFieldDeviceSourceIDSetCreatorWithIDs interface {
+	BulkCreateByFieldDeviceIDsWithSourceReturningIDs(
+		context.Context,
+		uuid.UUID,
+		[]uuid.UUID,
+		domainProject.AssignmentSource,
+	) ([]uuid.UUID, error)
+}
+
 type projectFieldDeviceSystemTypeSetCreatorWithIDs interface {
 	BulkCreateBySPSControllerSystemTypeIDsReturningIDs(
 		context.Context,
 		uuid.UUID,
 		[]uuid.UUID,
+	) ([]uuid.UUID, error)
+}
+
+type projectFieldDeviceSourceSystemTypeSetCreatorWithIDs interface {
+	BulkCreateBySPSControllerSystemTypeIDsWithSourceReturningIDs(
+		context.Context,
+		uuid.UUID,
+		[]uuid.UUID,
+		domainProject.AssignmentSource,
 	) ([]uuid.UUID, error)
 }
 
@@ -179,6 +206,151 @@ func (r *ProjectSPSControllerRepository) BulkCreateBySPSControllerIDs(ctx contex
 	return r.audit.recordCreatedIDs(ctx, mapKeys(rows))
 }
 
+func (r *ProjectSPSControllerRepository) BulkCreateBySPSControllerIDsWithSource(
+	ctx context.Context,
+	projectID uuid.UUID,
+	spsControllerIDs []uuid.UUID,
+	source domainProject.AssignmentSource,
+) error {
+	if len(spsControllerIDs) == 0 {
+		return nil
+	}
+	creator, ok := r.ProjectSPSControllerRepository.(projectSPSControllerSourceSetCreatorWithIDs)
+	if !ok {
+		return r.BulkCreateBySPSControllerIDs(ctx, projectID, spsControllerIDs)
+	}
+	insertedIDs, err := creator.BulkCreateBySPSControllerIDsWithSourceReturningIDs(
+		ctx,
+		projectID,
+		spsControllerIDs,
+		source,
+	)
+	if err != nil {
+		return err
+	}
+	return r.audit.recordCreatedIDs(ctx, insertedIDs)
+}
+
+func (r *ProjectSPSControllerRepository) AddAssignmentSource(
+	ctx context.Context,
+	projectID uuid.UUID,
+	spsControllerIDs []uuid.UUID,
+	source domainProject.AssignmentSource,
+) error {
+	writer, ok := r.ProjectSPSControllerRepository.(interface {
+		AddAssignmentSource(
+			context.Context,
+			uuid.UUID,
+			[]uuid.UUID,
+			domainProject.AssignmentSource,
+		) error
+	})
+	if !ok {
+		return nil
+	}
+	return writer.AddAssignmentSource(ctx, projectID, spsControllerIDs, source)
+}
+
+func (r *ProjectSPSControllerRepository) ListProjectIDsByAssignmentSource(
+	ctx context.Context,
+	source domainProject.AssignmentSource,
+) ([]uuid.UUID, error) {
+	reader, ok := r.ProjectSPSControllerRepository.(interface {
+		ListProjectIDsByAssignmentSource(
+			context.Context,
+			domainProject.AssignmentSource,
+		) ([]uuid.UUID, error)
+	})
+	if !ok {
+		return nil, nil
+	}
+	return reader.ListProjectIDsByAssignmentSource(ctx, source)
+}
+
+func (r *ProjectSPSControllerRepository) RemoveAssignmentSourceAndPrune(
+	ctx context.Context,
+	projectID uuid.UUID,
+	source domainProject.AssignmentSource,
+) (bool, error) {
+	store, ok := r.ProjectSPSControllerRepository.(interface {
+		AssignmentProvenanceEnabled() bool
+		RemoveAssignmentSourceBatch(
+			context.Context,
+			uuid.UUID,
+			domainProject.AssignmentSource,
+			uuid.UUID,
+			int,
+		) ([]uuid.UUID, []uuid.UUID, error)
+	})
+	if !ok || !store.AssignmentProvenanceEnabled() {
+		return false, nil
+	}
+
+	afterID := uuid.Nil
+	for {
+		processed, unclaimed, err := store.RemoveAssignmentSourceBatch(
+			ctx,
+			projectID,
+			source,
+			afterID,
+			100,
+		)
+		if err != nil {
+			return true, err
+		}
+		if len(processed) == 0 {
+			return true, nil
+		}
+		if err := r.DeleteByIds(ctx, unclaimed); err != nil {
+			return true, err
+		}
+		afterID = processed[len(processed)-1]
+	}
+}
+
+func (r *ProjectSPSControllerRepository) HasAssignmentSourceOtherThan(
+	ctx context.Context,
+	linkID uuid.UUID,
+	allowed domainProject.AssignmentSource,
+) (bool, error) {
+	reader, ok := r.ProjectSPSControllerRepository.(interface {
+		HasAssignmentSourceOtherThan(
+			context.Context,
+			uuid.UUID,
+			domainProject.AssignmentSource,
+		) (bool, error)
+	})
+	if !ok {
+		return false, nil
+	}
+	return reader.HasAssignmentSourceOtherThan(ctx, linkID, allowed)
+}
+
+func (r *ProjectSPSControllerRepository) ReplaceExplicitAssignmentSource(
+	ctx context.Context,
+	linkID uuid.UUID,
+	fromEntityID uuid.UUID,
+	toEntityID uuid.UUID,
+) error {
+	writer, ok := r.ProjectSPSControllerRepository.(interface {
+		ReplaceExplicitAssignmentSource(
+			context.Context,
+			uuid.UUID,
+			uuid.UUID,
+			uuid.UUID,
+		) error
+	})
+	if !ok {
+		return nil
+	}
+	return writer.ReplaceExplicitAssignmentSource(
+		ctx,
+		linkID,
+		fromEntityID,
+		toEntityID,
+	)
+}
+
 type ProjectFieldDeviceRepository struct {
 	domainProject.ProjectFieldDeviceRepository
 	audit audit[domainProject.ProjectFieldDevice]
@@ -254,6 +426,31 @@ func (r *ProjectFieldDeviceRepository) BulkCreateByFieldDeviceIDs(ctx context.Co
 	}
 	return r.recordRowsByFieldDeviceIDs(ctx, projectID, fieldDeviceIDs)
 }
+
+func (r *ProjectFieldDeviceRepository) BulkCreateByFieldDeviceIDsWithSource(
+	ctx context.Context,
+	projectID uuid.UUID,
+	fieldDeviceIDs []uuid.UUID,
+	source domainProject.AssignmentSource,
+) error {
+	if len(fieldDeviceIDs) == 0 {
+		return nil
+	}
+	creator, ok := r.ProjectFieldDeviceRepository.(projectFieldDeviceSourceIDSetCreatorWithIDs)
+	if !ok {
+		return r.BulkCreateByFieldDeviceIDs(ctx, projectID, fieldDeviceIDs)
+	}
+	insertedIDs, err := creator.BulkCreateByFieldDeviceIDsWithSourceReturningIDs(
+		ctx,
+		projectID,
+		fieldDeviceIDs,
+		source,
+	)
+	if err != nil {
+		return err
+	}
+	return r.audit.recordCreatedIDs(ctx, insertedIDs)
+}
 func (r *ProjectFieldDeviceRepository) BulkCreateBySPSControllerSystemTypeIDs(ctx context.Context, projectID uuid.UUID, systemTypeIDs []uuid.UUID) error {
 	if len(systemTypeIDs) == 0 {
 		return nil
@@ -287,6 +484,140 @@ func (r *ProjectFieldDeviceRepository) BulkCreateBySPSControllerSystemTypeIDs(ct
 		return err
 	}
 	return r.audit.recordCreatedIDs(ctx, mapKeys(rows))
+}
+
+func (r *ProjectFieldDeviceRepository) BulkCreateBySPSControllerSystemTypeIDsWithSource(
+	ctx context.Context,
+	projectID uuid.UUID,
+	systemTypeIDs []uuid.UUID,
+	source domainProject.AssignmentSource,
+) error {
+	if len(systemTypeIDs) == 0 {
+		return nil
+	}
+	creator, ok := r.ProjectFieldDeviceRepository.(projectFieldDeviceSourceSystemTypeSetCreatorWithIDs)
+	if !ok {
+		return r.BulkCreateBySPSControllerSystemTypeIDs(
+			ctx,
+			projectID,
+			systemTypeIDs,
+		)
+	}
+	insertedIDs, err := creator.
+		BulkCreateBySPSControllerSystemTypeIDsWithSourceReturningIDs(
+			ctx,
+			projectID,
+			systemTypeIDs,
+			source,
+		)
+	if err != nil {
+		return err
+	}
+	return r.audit.recordCreatedIDs(ctx, insertedIDs)
+}
+
+func (r *ProjectFieldDeviceRepository) AddAssignmentSource(
+	ctx context.Context,
+	projectID uuid.UUID,
+	fieldDeviceIDs []uuid.UUID,
+	source domainProject.AssignmentSource,
+) error {
+	writer, ok := r.ProjectFieldDeviceRepository.(interface {
+		AddAssignmentSource(
+			context.Context,
+			uuid.UUID,
+			[]uuid.UUID,
+			domainProject.AssignmentSource,
+		) error
+	})
+	if !ok {
+		return nil
+	}
+	return writer.AddAssignmentSource(ctx, projectID, fieldDeviceIDs, source)
+}
+
+func (r *ProjectFieldDeviceRepository) RemoveAssignmentSourceAndPrune(
+	ctx context.Context,
+	projectID uuid.UUID,
+	source domainProject.AssignmentSource,
+) (bool, error) {
+	store, ok := r.ProjectFieldDeviceRepository.(interface {
+		AssignmentProvenanceEnabled() bool
+		RemoveAssignmentSourceBatch(
+			context.Context,
+			uuid.UUID,
+			domainProject.AssignmentSource,
+			uuid.UUID,
+			int,
+		) ([]uuid.UUID, []uuid.UUID, error)
+	})
+	if !ok || !store.AssignmentProvenanceEnabled() {
+		return false, nil
+	}
+
+	afterID := uuid.Nil
+	for {
+		processed, unclaimed, err := store.RemoveAssignmentSourceBatch(
+			ctx,
+			projectID,
+			source,
+			afterID,
+			100,
+		)
+		if err != nil {
+			return true, err
+		}
+		if len(processed) == 0 {
+			return true, nil
+		}
+		if err := r.DeleteByIds(ctx, unclaimed); err != nil {
+			return true, err
+		}
+		afterID = processed[len(processed)-1]
+	}
+}
+
+func (r *ProjectFieldDeviceRepository) HasAssignmentSourceOtherThan(
+	ctx context.Context,
+	linkID uuid.UUID,
+	allowed domainProject.AssignmentSource,
+) (bool, error) {
+	reader, ok := r.ProjectFieldDeviceRepository.(interface {
+		HasAssignmentSourceOtherThan(
+			context.Context,
+			uuid.UUID,
+			domainProject.AssignmentSource,
+		) (bool, error)
+	})
+	if !ok {
+		return false, nil
+	}
+	return reader.HasAssignmentSourceOtherThan(ctx, linkID, allowed)
+}
+
+func (r *ProjectFieldDeviceRepository) ReplaceExplicitAssignmentSource(
+	ctx context.Context,
+	linkID uuid.UUID,
+	fromEntityID uuid.UUID,
+	toEntityID uuid.UUID,
+) error {
+	writer, ok := r.ProjectFieldDeviceRepository.(interface {
+		ReplaceExplicitAssignmentSource(
+			context.Context,
+			uuid.UUID,
+			uuid.UUID,
+			uuid.UUID,
+		) error
+	})
+	if !ok {
+		return nil
+	}
+	return writer.ReplaceExplicitAssignmentSource(
+		ctx,
+		linkID,
+		fromEntityID,
+		toEntityID,
+	)
 }
 func (r *ProjectFieldDeviceRepository) DeleteBySPSControllerSystemTypeIDs(ctx context.Context, systemTypeIDs []uuid.UUID) error {
 	if len(systemTypeIDs) == 0 {

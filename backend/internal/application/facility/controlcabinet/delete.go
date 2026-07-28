@@ -11,6 +11,7 @@ import (
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
@@ -24,6 +25,11 @@ var ErrDeleteTransactionNotConfigured = errors.New(
 type DeleteWorkflow interface {
 	GetByID(context.Context, uuid.UUID) (*domainFacility.ControlCabinet, error)
 	DeleteByID(context.Context, uuid.UUID) error
+}
+
+type transactionalDeleteProjectLinks interface {
+	DeleteWorkflow
+	GetByControlCabinetIDs(context.Context, []uuid.UUID) ([]*domainProject.ProjectControlCabinet, error)
 }
 
 type DeleteCommand struct {
@@ -71,6 +77,8 @@ type committedDelete struct {
 	change         *mutation.EntityChange
 	buildingID     uuid.UUID
 	historyBatched bool
+	projectIDs     []uuid.UUID
+	commands       []appcollaboration.Command
 }
 
 func NewDeleteHandler(deps DeleteDependencies) *DeleteHandler {
@@ -133,6 +141,7 @@ func (h *DeleteHandler) Execute(
 
 	operationID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
 	var (
 		projectIDs []uuid.UUID
 		scopeErr   error
@@ -153,20 +162,46 @@ func (h *DeleteHandler) Execute(
 		ctx,
 		h.operation,
 		func(txCtx context.Context, workflow DeleteWorkflow) (committedDelete, error) {
-			return executeDeleteTransaction(
+			if links, ok := workflow.(transactionalDeleteProjectLinks); ok {
+				resolved, err := links.GetByControlCabinetIDs(txCtx, []uuid.UUID{command.ControlCabinetID})
+				if err != nil {
+					return committedDelete{}, fmt.Errorf("resolve deleted ControlCabinet collaboration projects: %w", err)
+				}
+				projectIDs = linkedProjectIDs(resolved, command.ControlCabinetID)
+				scopeErr = nil
+			}
+			result, err := executeDeleteTransaction(
 				txCtx,
 				workflow,
 				command,
 				operationID,
 				h.historyBatch,
 			)
+			if err != nil || result.change == nil {
+				return result, err
+			}
+			result.projectIDs = append([]uuid.UUID(nil), projectIDs...)
+			for _, projectID := range projectIDs {
+				event := appcollaboration.ControlCabinetDeleted{
+					Envelope: appcollaboration.Envelope{
+						SchemaVersion: appcollaboration.SchemaVersionV2,
+						EventID:       h.newID(), OperationID: operationID, CorrelationID: operationID,
+						ProjectID: projectID, ActorID: actorID, OccurredAt: occurredAt,
+					},
+					ControlCabinetID: command.ControlCabinetID, BuildingID: result.buildingID,
+				}
+				if _, err := appcollaboration.EnqueueCommand(txCtx, event); err != nil {
+					return committedDelete{}, fmt.Errorf("enqueue deleted ControlCabinet for project %s: %w", projectID, err)
+				}
+				result.commands = append(result.commands, event)
+			}
+			return result, nil
 		},
 	)
 	if err != nil {
 		return DeleteOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	result := mutation.Result{
 		OperationID: operationID,
 		ActorID:     actorID,
@@ -178,7 +213,7 @@ func (h *DeleteHandler) Execute(
 	}
 	if committed.change != nil {
 		result.Changes = []mutation.EntityChange{*committed.change}
-		result.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
+		result.ProjectIDs = append([]uuid.UUID(nil), committed.projectIDs...)
 	}
 	outcome := DeleteOutcome{
 		Mutation: result,
@@ -196,24 +231,12 @@ func (h *DeleteHandler) Execute(
 	}
 
 	dispatchCtx := context.WithoutCancel(ctx)
-	for _, projectID := range projectIDs {
-		collaborationCommand := appcollaboration.ControlCabinetDeleted{
-			Envelope: appcollaboration.Envelope{
-				SchemaVersion: appcollaboration.SchemaVersionV1,
-				EventID:       h.newID(),
-				OperationID:   operationID,
-				CorrelationID: operationID,
-				ProjectID:     projectID,
-				ActorID:       actorID,
-				OccurredAt:    occurredAt,
-			},
-			ControlCabinetID: command.ControlCabinetID,
-			BuildingID:       committed.buildingID,
-		}
+	for _, collaborationCommand := range committed.commands {
+		envelope, _ := appcollaboration.CommandEnvelope(collaborationCommand)
 		if dispatchErr := h.dispatcher.Dispatch(dispatchCtx, collaborationCommand); dispatchErr != nil {
 			outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
 				"dispatch deleted ControlCabinet for project %s: %w",
-				projectID,
+				envelope.ProjectID,
 				dispatchErr,
 			))
 		}

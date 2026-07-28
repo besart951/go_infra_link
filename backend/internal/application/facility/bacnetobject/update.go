@@ -38,6 +38,11 @@ type ObjectDataOwnerReader interface {
 	) ([]domainObjectData.BacnetObjectOwner, error)
 }
 
+type transactionalUpdateOutbox interface {
+	UpdateWorkflow
+	transactionalCollaborationResolver
+}
+
 type HistoryBatchContext func(context.Context, uuid.UUID) context.Context
 type ActorProvider func(context.Context) *uuid.UUID
 type IDGenerator func() uuid.UUID
@@ -45,10 +50,12 @@ type Clock func() time.Time
 type ErrorReporter func(error)
 
 type UpdateCommand struct {
-	BacnetObjectID uuid.UUID
-	FieldDeviceID  *uuid.UUID
-	ObjectDataID   *uuid.UUID
-	Patch          domainFacility.BacnetObjectPatch
+	BacnetObjectID  uuid.UUID
+	ExpectedVersion uint64
+	FieldDeviceID   *uuid.UUID
+	FieldDeviceSet  bool
+	ObjectDataID    *uuid.UUID
+	Patch           domainFacility.BacnetObjectPatch
 }
 
 func (c UpdateCommand) validate() error {
@@ -58,10 +65,11 @@ func (c UpdateCommand) validate() error {
 	if c.Patch.ID != uuid.Nil && c.Patch.ID != c.BacnetObjectID {
 		return domain.ErrInvalidArgument
 	}
-	if c.FieldDeviceID != nil && c.ObjectDataID != nil {
+	fieldDeviceSet := c.FieldDeviceSet || c.FieldDeviceID != nil
+	if fieldDeviceSet && c.FieldDeviceID != nil && c.ObjectDataID != nil {
 		return domain.ErrInvalidArgument
 	}
-	if c.FieldDeviceID != nil && *c.FieldDeviceID == uuid.Nil {
+	if fieldDeviceSet && c.FieldDeviceID != nil && *c.FieldDeviceID == uuid.Nil {
 		return domain.ErrInvalidArgument
 	}
 	if c.ObjectDataID != nil && *c.ObjectDataID == uuid.Nil {
@@ -124,6 +132,7 @@ type committedUpdate struct {
 	object                 *domainFacility.BacnetObject
 	change                 mutation.EntityChange
 	affectedFieldDeviceIDs []uuid.UUID
+	projectIDs             []uuid.UUID
 	batched                bool
 }
 
@@ -192,6 +201,7 @@ func (h *UpdateHandler) Execute(
 
 	operationID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -201,6 +211,9 @@ func (h *UpdateHandler) Execute(
 				workflow,
 				command,
 				operationID,
+				actorID,
+				occurredAt,
+				h.newID,
 				h.historyBatch,
 			)
 		},
@@ -209,7 +222,6 @@ func (h *UpdateHandler) Execute(
 		return UpdateOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	result := mutation.Result{
 		OperationID: operationID,
 		ActorID:     actorID,
@@ -239,7 +251,11 @@ func (h *UpdateHandler) Execute(
 		actorID,
 		occurredAt,
 	)
-	outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
+	if len(committed.projectIDs) > 0 {
+		outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), committed.projectIDs...)
+	} else {
+		outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
+	}
 	outcome.DispatchErrors = append(outcome.DispatchErrors, dispatchErrors...)
 
 	return outcome, nil
@@ -284,6 +300,9 @@ func executeUpdateTransaction(
 	workflow UpdateWorkflow,
 	command UpdateCommand,
 	operationID uuid.UUID,
+	actorID *uuid.UUID,
+	occurredAt time.Time,
+	newID IDGenerator,
 	historyBatch HistoryBatchContext,
 ) (committedUpdate, error) {
 	if workflow == nil {
@@ -296,6 +315,13 @@ func executeUpdateTransaction(
 	}
 	if before == nil {
 		return committedUpdate{}, &LoadError{Err: domain.ErrNotFound}
+	}
+	if command.ExpectedVersion != 0 && before.Revision != command.ExpectedVersion {
+		return committedUpdate{}, &domain.RevisionConflict{
+			EntityID: before.ID,
+			Expected: command.ExpectedVersion,
+			Current:  before.Revision,
+		}
 	}
 
 	updated := cloneBacnetObject(before)
@@ -334,11 +360,30 @@ func executeUpdateTransaction(
 	if err != nil {
 		return committedUpdate{}, err
 	}
+	fieldDeviceIDs := affectedFieldDeviceIDs(before, after)
+	var projectIDs []uuid.UUID
+	if outbox, ok := workflow.(transactionalUpdateOutbox); ok {
+		projectIDs, err = enqueueTransactionalMutation(
+			writeCtx,
+			outbox,
+			command.BacnetObjectID,
+			after.Revision,
+			fieldDeviceIDs,
+			operationID,
+			actorID,
+			occurredAt,
+			newID,
+		)
+		if err != nil {
+			return committedUpdate{}, err
+		}
+	}
 
 	return committedUpdate{
 		object:                 cloneBacnetObject(after),
 		change:                 change,
-		affectedFieldDeviceIDs: affectedFieldDeviceIDs(before, after),
+		affectedFieldDeviceIDs: fieldDeviceIDs,
+		projectIDs:             projectIDs,
 		batched:                batched,
 	}, nil
 }

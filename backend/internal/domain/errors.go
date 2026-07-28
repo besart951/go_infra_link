@@ -1,6 +1,11 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/google/uuid"
+)
 
 // ErrNotFound is returned when a requested entity does not exist.
 var ErrNotFound = errors.New("entity not found")
@@ -10,6 +15,35 @@ var ErrConflict = errors.New("entity conflict")
 
 // ErrInvalidArgument is returned when the caller provided an invalid request/payload.
 var ErrInvalidArgument = errors.New("invalid argument")
+
+// RevisionConflict is returned when a client attempts to update a stale
+// entity snapshot. Expected is the revision last seen by the client; Current
+// is the authoritative revision observed after the compare-and-swap failed.
+type RevisionConflict struct {
+	EntityID uuid.UUID
+	Expected uint64
+	Current  uint64
+}
+
+func (e *RevisionConflict) Error() string {
+	if e == nil {
+		return ErrConflict.Error()
+	}
+	return fmt.Sprintf(
+		"revision conflict for %s: expected %d, current %d",
+		e.EntityID,
+		e.Expected,
+		e.Current,
+	)
+}
+
+func (*RevisionConflict) Unwrap() error {
+	return ErrConflict
+}
+
+func AsRevisionConflict(err error) (*RevisionConflict, bool) {
+	return errors.AsType[*RevisionConflict](err)
+}
 
 // ValidationError carries field-level validation details.
 // Use dot-separated paths for fields, e.g. "fielddevice.apparat_nr".

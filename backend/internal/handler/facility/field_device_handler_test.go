@@ -313,7 +313,7 @@ func TestBulkUpdateFieldDevicesUsesApplicationBulkUpdater(t *testing.T) {
 		},
 	}
 	handler := NewFieldDeviceHandler(service, nil, nil, bulkUpdater, nil, nil)
-	body := `{"updates":[{"id":"00000000-0000-0000-0000-000000000001","bmk":"B-1"}]}`
+	body := `{"updates":[{"id":"00000000-0000-0000-0000-000000000001","expected_version":3,"bmk":"B-1"}]}`
 
 	recorder := httptest.NewRecorder()
 	ginContext, _ := gin.CreateTestContext(recorder)
@@ -352,7 +352,14 @@ func TestBulkDeleteFieldDevicesUsesTypedApplicationCommand(t *testing.T) {
 		result: &domainFacility.BulkOperationResult{
 			Results: []domainFacility.BulkOperationResultItem{
 				{ID: firstID, Success: true},
-				{ID: secondID, Success: false, Error: "delete failed"},
+				{
+					ID:         secondID,
+					Success:    false,
+					Error:      "delete failed",
+					ErrorCode:  "operation_failed",
+					ErrorField: "fielddevice.id",
+					Reason:     "delete failed",
+				},
 			},
 			TotalCount:   2,
 			SuccessCount: 1,
@@ -395,7 +402,10 @@ func TestBulkDeleteFieldDevicesUsesTypedApplicationCommand(t *testing.T) {
 	if response.TotalCount != 2 || response.SuccessCount != 1 || response.FailureCount != 1 ||
 		len(response.Results) != 2 || response.Results[0].ID != firstID ||
 		!response.Results[0].Success || response.Results[1].ID != secondID ||
-		response.Results[1].Success || response.Results[1].Error != "delete failed" {
+		response.Results[1].Success || response.Results[1].Error != "delete failed" ||
+		response.Results[1].ErrorCode != "operation_failed" ||
+		response.Results[1].ErrorField != "fielddevice.id" ||
+		response.Results[1].Reason != "delete failed" {
 		t.Fatalf("legacy response changed: %+v", response)
 	}
 	for _, internalKey := range []string{"operation_id", "batch_id", "changes"} {
@@ -419,6 +429,7 @@ func TestUpdateFieldDeviceUsesApplicationUpdaterAndPreservesEmptyReplacement(t *
 	}
 	handler := NewFieldDeviceHandler(service, updater, nil, service, nil, nil)
 	body := `{
+		"expected_version": 3,
 		"bmk": "B-1",
 		"system_part_id": "` + systemPartID.String() + `",
 		"bacnet_objects": []
@@ -482,7 +493,7 @@ func TestUpdateFieldDeviceMapsInitialApplicationLoadNotFound(t *testing.T) {
 		nil,
 		nil,
 	)
-	body := `{"system_part_id":"` + systemPartID.String() + `"}`
+	body := `{"expected_version":3,"system_part_id":"` + systemPartID.String() + `"}`
 
 	recorder := httptest.NewRecorder()
 	ginContext, _ := gin.CreateTestContext(recorder)

@@ -21,6 +21,7 @@ type CreateFieldDeviceRequest struct {
 }
 
 type UpdateFieldDeviceRequest struct {
+	ExpectedVersion           uint64               `json:"expected_version" binding:"required,min=1"`
 	BMK                       *string              `json:"bmk" binding:"omitempty,max=10"`
 	Description               *string              `json:"description" binding:"omitempty,max=250"`
 	TextIndividuell           *string              `json:"text_fix" binding:"omitempty,max=250"`
@@ -34,6 +35,7 @@ type UpdateFieldDeviceRequest struct {
 
 type FieldDeviceResponse struct {
 	ID                        uuid.UUID  `json:"id"`
+	Revision                  uint64     `json:"revision"`
 	BMK                       *string    `json:"bmk"`
 	Description               *string    `json:"description"`
 	TextIndividuell           *string    `json:"text_fix"`
@@ -76,16 +78,19 @@ type FieldDeviceOptionsResponse struct {
 
 // MultiCreateFieldDeviceRequest represents a request to create multiple field devices
 type MultiCreateFieldDeviceRequest struct {
-	FieldDevices []CreateFieldDeviceRequest `json:"field_devices" binding:"required,min=1,dive"`
+	FieldDevices []CreateFieldDeviceRequest `json:"field_devices" binding:"required,min=1,max=100,dive"`
 }
 
 // FieldDeviceCreateResultResponse represents the result of creating a single field device
 type FieldDeviceCreateResultResponse struct {
 	Index       int                  `json:"index"`        // Index in the original request array
+	ID          uuid.UUID            `json:"id"`           // Requested or created FieldDevice ID
 	Success     bool                 `json:"success"`      // Whether the creation succeeded
 	FieldDevice *FieldDeviceResponse `json:"field_device"` // The created field device (null if failed)
 	Error       string               `json:"error"`        // Error message if failed (empty if succeeded)
+	ErrorCode   string               `json:"error_code"`   // Stable machine-readable failure code
 	ErrorField  string               `json:"error_field"`  // Specific field that caused the error (if applicable)
+	Reason      string               `json:"reason"`       // Exact failure reason
 }
 
 // MultiCreateFieldDeviceResponse represents the response from a multi-create operation
@@ -114,6 +119,7 @@ type SpecificationInput struct {
 // BulkUpdateFieldDeviceItem represents a single field device update in a bulk operation
 type BulkUpdateFieldDeviceItem struct {
 	ID              uuid.UUID                     `json:"id" binding:"required"`
+	ExpectedVersion uint64                        `json:"expected_version" binding:"required,min=1"`
 	BMK             OptionalString                `json:"bmk"`
 	Description     OptionalString                `json:"description"`
 	TextIndividuell OptionalString                `json:"text_fix"`
@@ -126,7 +132,7 @@ type BulkUpdateFieldDeviceItem struct {
 
 // BulkUpdateFieldDeviceRequest represents a request to update multiple field devices
 type BulkUpdateFieldDeviceRequest struct {
-	Updates []BulkUpdateFieldDeviceItem `json:"updates" binding:"required,min=1,dive"`
+	Updates []BulkUpdateFieldDeviceItem `json:"updates" binding:"required,min=1,max=100,dive"`
 }
 
 // BulkOperationResultItem represents the result of a single item in a bulk operation
@@ -134,6 +140,9 @@ type BulkOperationResultItem struct {
 	ID                uuid.UUID         `json:"id"`
 	Success           bool              `json:"success"`
 	Error             string            `json:"error,omitempty"`
+	ErrorCode         string            `json:"error_code,omitempty"`
+	ErrorField        string            `json:"error_field,omitempty"`
+	Reason            string            `json:"reason,omitempty"`
 	Fields            map[string]string `json:"fields,omitempty"`
 	Suggestions       map[string]int    `json:"suggestions,omitempty"`
 	SuggestionOptions map[string][]int  `json:"suggestion_options,omitempty"`
@@ -149,7 +158,7 @@ type BulkUpdateFieldDeviceResponse struct {
 
 // BulkDeleteFieldDeviceRequest represents a request to delete multiple field devices
 type BulkDeleteFieldDeviceRequest struct {
-	IDs []uuid.UUID `json:"ids" binding:"required,min=1"`
+	IDs []uuid.UUID `json:"ids" binding:"required,min=1,max=100"`
 }
 
 // BulkDeleteFieldDeviceResponse represents the response from a bulk delete operation

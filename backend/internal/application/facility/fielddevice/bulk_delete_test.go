@@ -11,6 +11,7 @@ import (
 	appcollaboration "github.com/besart951/go_infra_link/backend/internal/application/collaboration"
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainCollaboration "github.com/besart951/go_infra_link/backend/internal/domain/collaboration"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
@@ -48,6 +49,7 @@ type bulkDeleteTransactionHarness struct {
 	runnerCalls     int
 	deleteCalls     []uuid.UUID
 	historyBatchIDs []uuid.UUID
+	outbox          domainCollaboration.OutboxStore
 }
 
 func (h *bulkDeleteTransactionHarness) runner(
@@ -56,7 +58,11 @@ func (h *bulkDeleteTransactionHarness) runner(
 ) error {
 	h.runnerCalls++
 	staged := h.committed.clone()
-	if err := run(ctx, bulkDeleteTransactionUnit{state: &staged}); err != nil {
+	txCtx := ctx
+	if h.outbox != nil {
+		txCtx = domainCollaboration.WithOutboxStore(ctx, h.outbox)
+	}
+	if err := run(txCtx, bulkDeleteTransactionUnit{state: &staged}); err != nil {
 		return err
 	}
 	if commitErr := h.commitErrs[staged.lastAttempt]; commitErr != nil {
@@ -79,6 +85,18 @@ func (h *bulkDeleteTransactionHarness) factory(
 type bulkDeleteWorkflowStub struct {
 	harness *bulkDeleteTransactionHarness
 	state   *bulkDeleteTransactionState
+}
+
+type bulkDeleteOutboxWorkflowStub struct {
+	*bulkDeleteWorkflowStub
+	links []*domainProject.ProjectFieldDevice
+}
+
+func (s *bulkDeleteOutboxWorkflowStub) GetByFieldDeviceIDs(
+	context.Context,
+	[]uuid.UUID,
+) ([]*domainProject.ProjectFieldDevice, error) {
+	return s.links, nil
 }
 
 func (s *bulkDeleteWorkflowStub) DeleteByID(ctx context.Context, id uuid.UUID) error {
@@ -248,8 +266,13 @@ func TestBulkDeletePreservesPartialResultsAndDispatchesOneRefreshPerProjectAfter
 	outcome := handler.Execute(context.Background(), BulkDeleteCommand{FieldDeviceIDs: requestIDs})
 
 	if snapshots.calls != 1 || links.calls != 1 || !snapshots.calledBeforeTransaction ||
-		!links.calledBeforeTransaction || harness.runnerCalls != len(requestIDs) ||
-		!reflect.DeepEqual(harness.deleteCalls, requestIDs) {
+		!links.calledBeforeTransaction || harness.runnerCalls != 4 ||
+		!reflect.DeepEqual(harness.deleteCalls, []uuid.UUID{
+			fieldDeviceA,
+			fieldDeviceB,
+			fieldDeviceA,
+			fieldDeviceD,
+		}) {
 		t.Fatalf("set-based reads/transactions: snapshots=%+v links=%+v runner=%d deletes=%v",
 			snapshots,
 			links,
@@ -266,11 +289,11 @@ func TestBulkDeletePreservesPartialResultsAndDispatchesOneRefreshPerProjectAfter
 			wantCandidates,
 		)
 	}
-	if outcome.Result.TotalCount != len(requestIDs) || outcome.Result.SuccessCount != 4 ||
-		outcome.Result.FailureCount != 2 || len(outcome.Result.Results) != len(requestIDs) {
+	if outcome.Result.TotalCount != len(requestIDs) || outcome.Result.SuccessCount != 2 ||
+		outcome.Result.FailureCount != 4 || len(outcome.Result.Results) != len(requestIDs) {
 		t.Fatalf("partial result counts: %+v", outcome.Result)
 	}
-	wantSuccess := []bool{true, false, true, true, false, true}
+	wantSuccess := []bool{true, false, false, true, false, false}
 	for index, item := range outcome.Result.Results {
 		if item.ID != requestIDs[index] || item.Success != wantSuccess[index] {
 			t.Fatalf("result %d: %+v", index, item)
@@ -280,13 +303,21 @@ func TestBulkDeletePreservesPartialResultsAndDispatchesOneRefreshPerProjectAfter
 		outcome.Result.Results[4].Error != commitErr.Error() {
 		t.Fatalf("failure errors changed: %+v", outcome.Result.Results)
 	}
+	for _, index := range []int{2, 5} {
+		item := outcome.Result.Results[index]
+		if item.ErrorCode != itemErrorCodeNotFound ||
+			item.ErrorField != "fielddevice.id" ||
+			item.Reason != "field device not found" {
+			t.Fatalf("missing result %d: %+v", index, item)
+		}
+	}
 	if harness.committed.fieldDevices[fieldDeviceA] != nil ||
 		harness.committed.fieldDevices[fieldDeviceB] == nil ||
 		harness.committed.fieldDevices[fieldDeviceD] == nil ||
 		!reflect.DeepEqual(harness.committed.history, []uuid.UUID{fieldDeviceA}) {
 		t.Fatalf("partial transaction state: %+v", harness.committed)
 	}
-	if len(harness.historyBatchIDs) != len(requestIDs) {
+	if len(harness.historyBatchIDs) != harness.runnerCalls {
 		t.Fatalf("history batch calls: %v", harness.historyBatchIDs)
 	}
 	for _, batchID := range harness.historyBatchIDs {
@@ -332,6 +363,65 @@ func TestBulkDeletePreservesPartialResultsAndDispatchesOneRefreshPerProjectAfter
 			!reflect.DeepEqual(command.EntityIDs, []uuid.UUID{fieldDeviceA}) {
 			t.Fatalf("command %d: %+v", index, command)
 		}
+	}
+}
+
+func TestBulkDeleteWritesPerItemVersionTwoOutboxInsideTransaction(t *testing.T) {
+	fieldDeviceID := testUUID(801)
+	projectID := testUUID(802)
+	operationID := testUUID(803)
+	outboxEventID := testUUID(804)
+	compatibilityEventID := testUUID(805)
+	occurredAt := time.Date(2026, time.July, 23, 17, 30, 0, 0, time.UTC)
+	harness := &bulkDeleteTransactionHarness{
+		committed: bulkDeleteTransactionState{fieldDevices: map[uuid.UUID]*domainFacility.FieldDevice{
+			fieldDeviceID: {Base: domain.Base{ID: fieldDeviceID}},
+		}},
+	}
+	store := &updateOutboxStoreStub{}
+	harness.outbox = store
+	factory := func(unit apptransaction.UnitOfWork) (BulkDeleteWorkflow, error) {
+		typed := unit.(bulkDeleteTransactionUnit)
+		return &bulkDeleteOutboxWorkflowStub{
+			bulkDeleteWorkflowStub: &bulkDeleteWorkflowStub{harness: harness, state: typed.state},
+			links: []*domainProject.ProjectFieldDevice{{
+				ProjectID: projectID, FieldDeviceID: fieldDeviceID,
+			}},
+		}, nil
+	}
+	links := &bulkDeleteProjectLinkReaderStub{
+		harness: harness,
+		links: []*domainProject.ProjectFieldDevice{{
+			ProjectID: projectID, FieldDeviceID: fieldDeviceID,
+		}},
+	}
+	dispatcher := &bulkDeleteDispatcherStub{harness: harness, wantDeleted: []uuid.UUID{fieldDeviceID}}
+	ids := []uuid.UUID{operationID, outboxEventID, compatibilityEventID}
+	handler := NewBulkDeleteHandler(BulkDeleteDependencies{
+		TransactionRunner: harness.runner, TransactionWorkflow: factory,
+		Snapshots:    &bulkDeleteSnapshotReaderStub{harness: harness},
+		ProjectLinks: links, Dispatcher: dispatcher,
+		NewID: func() uuid.UUID { id := ids[0]; ids = ids[1:]; return id },
+		Now:   func() time.Time { return occurredAt },
+	})
+
+	outcome := handler.Execute(context.Background(), BulkDeleteCommand{
+		FieldDeviceIDs: []uuid.UUID{fieldDeviceID},
+	})
+	if outcome.Result.SuccessCount != 1 || len(store.events) != 1 {
+		t.Fatalf("bulk delete outcome=%+v events=%d", outcome.Result, len(store.events))
+	}
+	decoded, err := appcollaboration.DecodeCommand(appcollaboration.EncodedCommand{
+		Type: store.events[0].EventType, Payload: store.events[0].Payload,
+	})
+	if err != nil {
+		t.Fatalf("decode queued command: %v", err)
+	}
+	refresh, ok := decoded.(appcollaboration.FacilityHierarchyRefreshRequired)
+	if !ok || refresh.SchemaVersion != appcollaboration.SchemaVersionV2 ||
+		refresh.EventID != outboxEventID || refresh.ProjectID != projectID ||
+		!reflect.DeepEqual(refresh.EntityIDs, []uuid.UUID{fieldDeviceID}) {
+		t.Fatalf("unexpected queued command: %#v", decoded)
 	}
 }
 

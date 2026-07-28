@@ -35,7 +35,15 @@ func (r *projectFieldDeviceRepo) Create(ctx context.Context, entity *project.Pro
 	if err := entity.Base.InitForCreate(time.Now().UTC()); err != nil {
 		return err
 	}
-	return mapWriteError(r.db.WithContext(ctx).Create(toProjectFieldDeviceRecord(entity)).Error)
+	if err := mapWriteError(r.db.WithContext(ctx).Create(toProjectFieldDeviceRecord(entity)).Error); err != nil {
+		return err
+	}
+	return r.AddAssignmentSource(
+		ctx,
+		entity.ProjectID,
+		[]uuid.UUID{entity.FieldDeviceID},
+		project.ExplicitAssignmentSource(),
+	)
 }
 
 func (r *projectFieldDeviceRepo) BulkCreate(ctx context.Context, entities []*project.ProjectFieldDevice, batchSize int) error {
@@ -78,8 +86,25 @@ func (r *projectFieldDeviceRepo) BulkCreateByFieldDeviceIDsReturningIDs(
 	projectID uuid.UUID,
 	fieldDeviceIDs []uuid.UUID,
 ) ([]uuid.UUID, error) {
+	return r.BulkCreateByFieldDeviceIDsWithSourceReturningIDs(
+		ctx,
+		projectID,
+		fieldDeviceIDs,
+		project.ExplicitAssignmentSource(),
+	)
+}
+
+func (r *projectFieldDeviceRepo) BulkCreateByFieldDeviceIDsWithSourceReturningIDs(
+	ctx context.Context,
+	projectID uuid.UUID,
+	fieldDeviceIDs []uuid.UUID,
+	source project.AssignmentSource,
+) ([]uuid.UUID, error) {
 	if len(fieldDeviceIDs) == 0 {
 		return nil, nil
+	}
+	if err := source.Validate(); err != nil {
+		return nil, err
 	}
 
 	now := time.Now().UTC()
@@ -108,6 +133,9 @@ func (r *projectFieldDeviceRepo) BulkCreateByFieldDeviceIDsReturningIDs(
 			insertedIDs = append(insertedIDs, row.ID)
 		}
 	}
+	if err := r.AddAssignmentSource(ctx, projectID, fieldDeviceIDs, source); err != nil {
+		return nil, err
+	}
 	return insertedIDs, nil
 }
 
@@ -123,8 +151,25 @@ func (r *projectFieldDeviceRepo) BulkCreateBySPSControllerSystemTypeIDsReturning
 	projectID uuid.UUID,
 	systemTypeIDs []uuid.UUID,
 ) ([]uuid.UUID, error) {
+	return r.BulkCreateBySPSControllerSystemTypeIDsWithSourceReturningIDs(
+		ctx,
+		projectID,
+		systemTypeIDs,
+		project.ExplicitAssignmentSource(),
+	)
+}
+
+func (r *projectFieldDeviceRepo) BulkCreateBySPSControllerSystemTypeIDsWithSourceReturningIDs(
+	ctx context.Context,
+	projectID uuid.UUID,
+	systemTypeIDs []uuid.UUID,
+	source project.AssignmentSource,
+) ([]uuid.UUID, error) {
 	if len(systemTypeIDs) == 0 {
 		return nil, nil
+	}
+	if err := source.Validate(); err != nil {
+		return nil, err
 	}
 
 	now := time.Now().UTC()
@@ -153,18 +198,51 @@ func (r *projectFieldDeviceRepo) BulkCreateBySPSControllerSystemTypeIDsReturning
 			insertedIDs = append(insertedIDs, row.ID)
 		}
 	}
+	fieldDeviceIDs := make([]uuid.UUID, 0)
+	for _, chunk := range uuidChunks(systemTypeIDs, projectFieldDeviceSystemTypeFilterChunkSize) {
+		var chunkIDs []uuid.UUID
+		if err := r.db.WithContext(ctx).
+			Table("field_devices").
+			Where("sps_controller_system_type_id IN ?", chunk).
+			Pluck("id", &chunkIDs).Error; err != nil {
+			return nil, err
+		}
+		fieldDeviceIDs = append(fieldDeviceIDs, chunkIDs...)
+	}
+	if err := r.AddAssignmentSource(ctx, projectID, fieldDeviceIDs, source); err != nil {
+		return nil, err
+	}
 	return insertedIDs, nil
 }
 
 func (r *projectFieldDeviceRepo) Update(ctx context.Context, entity *project.ProjectFieldDevice) error {
+	if entity == nil || entity.ID == uuid.Nil || entity.Revision == 0 {
+		return domain.ErrInvalidArgument
+	}
+	expectedRevision := entity.Revision
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Model(&ProjectFieldDeviceRecord{}).
-		Where("id = ?", entity.ID).
+	result := r.db.WithContext(ctx).Model(&ProjectFieldDeviceRecord{}).
+		Where("id = ? AND revision = ?", entity.ID, expectedRevision).
 		Updates(map[string]any{
 			"updated_at":      entity.UpdatedAt,
+			"revision":        expectedRevision + 1,
 			"project_id":      entity.ProjectID,
 			"field_device_id": entity.FieldDeviceID,
-		}).Error
+		})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return projectLinkRevisionConflict(
+			ctx,
+			r.db,
+			&ProjectFieldDeviceRecord{},
+			entity.ID,
+			expectedRevision,
+		)
+	}
+	entity.Revision = expectedRevision + 1
+	return nil
 }
 
 func (r *projectFieldDeviceRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {

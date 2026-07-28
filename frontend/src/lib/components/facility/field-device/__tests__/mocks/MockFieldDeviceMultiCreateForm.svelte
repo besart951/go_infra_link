@@ -15,6 +15,7 @@
     onSuccess([
       {
         id: 'created-1',
+        revision: 1,
         bmk: 'NEW-1',
         description: 'created',
         text_fix: 'txt',

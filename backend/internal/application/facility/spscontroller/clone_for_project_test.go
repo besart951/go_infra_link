@@ -47,9 +47,11 @@ type projectCloneTransactionUnit struct {
 type projectCloneTransactionHarness struct {
 	committed       projectCloneTransactionState
 	copyEntity      *domainFacility.SPSController
+	sourceAccessErr error
 	copyErr         error
 	commitErr       error
 	runnerCalls     int
+	accessCalls     int
 	copyCalls       int
 	projectID       uuid.UUID
 	sourceID        uuid.UUID
@@ -85,6 +87,16 @@ func (h *projectCloneTransactionHarness) factory(
 type projectCloneWorkflowStub struct {
 	harness *projectCloneTransactionHarness
 	state   *projectCloneTransactionState
+}
+
+func (s *projectCloneWorkflowStub) RequireSourceAccess(
+	_ context.Context,
+	projectID, sourceID uuid.UUID,
+) error {
+	s.harness.accessCalls++
+	s.harness.projectID = projectID
+	s.harness.sourceID = sourceID
+	return s.harness.sourceAccessErr
 }
 
 func (s *projectCloneWorkflowStub) CopySPSController(
@@ -385,5 +397,38 @@ func TestCloneForProjectRejectsMissingScopeOrSourceBeforeTransaction(t *testing.
 	}
 	if harness.runnerCalls != 0 {
 		t.Fatalf("invalid commands opened %d transactions", harness.runnerCalls)
+	}
+}
+
+func TestCloneForProjectRejectsSourceOutsideProjectBeforeMutation(t *testing.T) {
+	projectID := spsTestUUID(241)
+	sourceID := spsTestUUID(242)
+	harness := &projectCloneTransactionHarness{
+		committed: projectCloneTransactionState{
+			controllers: map[uuid.UUID]*domainFacility.SPSController{
+				sourceID: {Base: domain.Base{ID: sourceID}},
+			},
+			projectLinks: map[uuid.UUID][]uuid.UUID{},
+		},
+		sourceAccessErr: domain.ErrNotFound,
+	}
+	handler := NewCloneForProjectHandler(CloneForProjectDependencies{
+		TransactionRunner:   harness.runner,
+		TransactionWorkflow: harness.factory,
+	})
+
+	_, err := handler.Execute(context.Background(), CloneForProjectCommand{
+		ProjectID:             projectID,
+		SourceSPSControllerID: sourceID,
+	})
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("source access error: got %v, want %v", err, domain.ErrNotFound)
+	}
+	if harness.accessCalls != 1 || harness.copyCalls != 0 {
+		t.Fatalf("workflow calls: access=%d copy=%d", harness.accessCalls, harness.copyCalls)
+	}
+	if len(harness.committed.controllers) != 1 ||
+		len(harness.committed.projectLinks) != 0 || len(harness.committed.history) != 0 {
+		t.Fatalf("source denial changed committed state: %+v", harness.committed)
 	}
 }

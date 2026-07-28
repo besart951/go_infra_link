@@ -18,12 +18,13 @@ func newMoveCommand(
 	current *domainFacility.BacnetObject,
 	command UpdateCommand,
 ) *MoveCommand {
-	if current == nil || (command.FieldDeviceID == nil && command.ObjectDataID == nil) {
+	fieldDeviceSet := command.FieldDeviceSet || command.FieldDeviceID != nil
+	if current == nil || (!fieldDeviceSet && command.ObjectDataID == nil) {
 		return nil
 	}
 
 	to := clonePointer(current.FieldDeviceID)
-	if command.FieldDeviceID != nil {
+	if fieldDeviceSet {
 		to = clonePointer(command.FieldDeviceID)
 	} else if command.ObjectDataID != nil {
 		to = nil
@@ -47,7 +48,11 @@ func (c MoveCommand) applyTo(object *domainFacility.BacnetObject) error {
 }
 
 func (c UpdateCommand) applyAssignmentTo(object *domainFacility.BacnetObject) error {
-	if c.FieldDeviceID != nil {
+	fieldDeviceSet := c.FieldDeviceSet || c.FieldDeviceID != nil
+	if fieldDeviceSet && c.FieldDeviceID == nil {
+		return object.DetachFromFieldDevice()
+	}
+	if fieldDeviceSet && c.FieldDeviceID != nil {
 		return object.AssignToFieldDevice(*c.FieldDeviceID)
 	}
 	if c.ObjectDataID != nil {

@@ -11,6 +11,7 @@ type Base struct {
 	ID        uuid.UUID `json:"id" gorm:"type:uuid;primaryKey"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+	Revision  uint64    `json:"revision" gorm:"not null;default:1"`
 }
 
 func (b *Base) InitForCreate(now time.Time) error {
@@ -25,6 +26,9 @@ func (b *Base) InitForCreate(now time.Time) error {
 		b.CreatedAt = now
 	}
 	b.UpdatedAt = now
+	if b.Revision == 0 {
+		b.Revision = 1
+	}
 	return nil
 }
 

@@ -374,7 +374,7 @@ func TestProjectService_UpdateControlCabinet_CharacterizesAdditiveDescendantLink
 	}
 }
 
-func TestProjectService_DeleteControlCabinet_CharacterizesLinkAndHierarchyDeletion(t *testing.T) {
+func TestProjectService_DeleteControlCabinet_RemovesOnlySelectedProjectLink(t *testing.T) {
 	ctx := context.Background()
 	projectID := uuid.New()
 	controlCabinetID := uuid.New()
@@ -424,26 +424,90 @@ func TestProjectService_DeleteControlCabinet_CharacterizesLinkAndHierarchyDeleti
 		t.Fatalf("expected delete to succeed, got %v", err)
 	}
 
-	if len(controlCabinetLinks.items) != 0 || len(spsLinks.items) != 0 || len(fieldDeviceLinks.items) != 0 {
-		t.Fatalf("expected project links to be removed, got cc=%d sps=%d fd=%d", len(controlCabinetLinks.items), len(spsLinks.items), len(fieldDeviceLinks.items))
+	if len(controlCabinetLinks.items) != 0 {
+		t.Fatalf("expected selected cabinet link to be removed, got %d", len(controlCabinetLinks.items))
 	}
-	if _, ok := controlCabinetRepo.items[controlCabinetID]; ok {
-		t.Fatal("expected copied/original control cabinet to be deleted by current behavior")
+	if len(spsLinks.items) != 1 || len(fieldDeviceLinks.items) != 1 {
+		t.Fatalf("descendant project links must remain without provenance, got sps=%d fd=%d", len(spsLinks.items), len(fieldDeviceLinks.items))
 	}
-	if _, ok := spsRepo.items[spsID]; ok {
-		t.Fatal("expected descendant sps controller to be deleted by current behavior")
+	if _, ok := controlCabinetRepo.items[controlCabinetID]; !ok {
+		t.Fatal("global control cabinet was deleted during project unlink")
 	}
-	if _, ok := spsSystemRepo.items[systemTypeID]; ok {
-		t.Fatal("expected descendant sps controller system type to be deleted by current behavior")
+	if _, ok := spsRepo.items[spsID]; !ok {
+		t.Fatal("global descendant sps controller was deleted during project unlink")
 	}
-	if _, ok := fieldDeviceRepo.items[fieldDeviceID]; ok {
-		t.Fatal("expected descendant field device to be deleted by current behavior")
+	if _, ok := spsSystemRepo.items[systemTypeID]; !ok {
+		t.Fatal("global descendant system type was deleted during project unlink")
 	}
-	if !sameUUIDSet(bacnetRepo.deletedFieldDeviceIDs, []uuid.UUID{fieldDeviceID}) {
-		t.Fatalf("expected bacnet objects to be deleted for field device %s, got %v", fieldDeviceID, bacnetRepo.deletedFieldDeviceIDs)
+	if _, ok := fieldDeviceRepo.items[fieldDeviceID]; !ok {
+		t.Fatal("global descendant field device was deleted during project unlink")
 	}
-	if !sameUUIDSet(specRepo.deletedFieldDeviceIDs, []uuid.UUID{fieldDeviceID}) {
-		t.Fatalf("expected specifications to be deleted for field device %s, got %v", fieldDeviceID, specRepo.deletedFieldDeviceIDs)
+	if len(bacnetRepo.deletedFieldDeviceIDs) != 0 || len(specRepo.deletedFieldDeviceIDs) != 0 {
+		t.Fatalf("global children were deleted: bacnet=%v specifications=%v", bacnetRepo.deletedFieldDeviceIDs, specRepo.deletedFieldDeviceIDs)
+	}
+}
+
+func TestProjectService_DeleteFieldDevice_RemovesOnlySelectedProjectLink(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	linkID := uuid.New()
+	fieldDeviceID := uuid.New()
+	specificationID := uuid.New()
+	bacnetObjectID := uuid.New()
+
+	fieldDeviceLinks := newProjectFieldDeviceRepo()
+	fieldDeviceRepo := newProjectFieldDeviceStore()
+	specRepo := newProjectSpecificationRepo()
+	bacnetRepo := newProjectBacnetObjectRepo()
+	fieldDeviceLinks.items[linkID] = &domainProject.ProjectFieldDevice{
+		Base:          domain.Base{ID: linkID},
+		ProjectID:     projectID,
+		FieldDeviceID: fieldDeviceID,
+	}
+	fieldDeviceRepo.items[fieldDeviceID] = &domainFacility.FieldDevice{
+		Base: domain.Base{ID: fieldDeviceID},
+	}
+	specRepo.items[specificationID] = &domainFacility.Specification{
+		Base:          domain.Base{ID: specificationID},
+		FieldDeviceID: &fieldDeviceID,
+	}
+	bacnetRepo.items[bacnetObjectID] = &domainFacility.BacnetObject{
+		Base:          domain.Base{ID: bacnetObjectID},
+		FieldDeviceID: &fieldDeviceID,
+	}
+
+	svc := newProjectCharacterizationServices(
+		newProjectRepo(),
+		newProjectControlCabinetRepo(),
+		newProjectSPSControllerRepo(),
+		fieldDeviceLinks,
+		newProjectObjectDataRepo(),
+		bacnetRepo,
+		specRepo,
+		newProjectControlCabinetStore(),
+		newProjectSPSRepo(),
+		newProjectSPSSystemTypeRepo(),
+		fieldDeviceRepo,
+		nil,
+	).FacilityLink
+
+	if err := svc.DeleteFieldDevice(ctx, linkID, projectID); err != nil {
+		t.Fatalf("expected unlink to succeed, got %v", err)
+	}
+	if len(fieldDeviceLinks.items) != 0 {
+		t.Fatalf("expected selected FieldDevice link to be removed, got %d", len(fieldDeviceLinks.items))
+	}
+	if _, ok := fieldDeviceRepo.items[fieldDeviceID]; !ok {
+		t.Fatal("global FieldDevice was deleted during project unlink")
+	}
+	if _, ok := specRepo.items[specificationID]; !ok {
+		t.Fatal("global Specification was deleted during project unlink")
+	}
+	if _, ok := bacnetRepo.items[bacnetObjectID]; !ok {
+		t.Fatal("global BACnet object was deleted during project unlink")
+	}
+	if len(bacnetRepo.deletedFieldDeviceIDs) != 0 || len(specRepo.deletedFieldDeviceIDs) != 0 {
+		t.Fatalf("global children were deleted: bacnet=%v specifications=%v", bacnetRepo.deletedFieldDeviceIDs, specRepo.deletedFieldDeviceIDs)
 	}
 }
 

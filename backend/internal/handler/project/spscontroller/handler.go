@@ -321,6 +321,7 @@ func (h *Handler) UpdateProjectSPSController(c *gin.Context) {
 		appspscontroller.ReassignProjectLinkCommand{
 			ProjectID:       projectID,
 			LinkID:          linkID,
+			ExpectedVersion: req.ExpectedVersion,
 			SPSControllerID: req.SPSControllerID,
 		},
 	)
@@ -390,6 +391,7 @@ func toProjectSPSControllerResponse(item domainProject.ProjectSPSController) dto
 		ID:              item.ID,
 		ProjectID:       item.ProjectID,
 		SPSControllerID: item.SPSControllerID,
+		Revision:        item.Revision,
 		CreatedAt:       item.CreatedAt,
 		UpdatedAt:       item.UpdatedAt,
 	}

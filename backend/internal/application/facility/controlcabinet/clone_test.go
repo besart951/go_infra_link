@@ -11,18 +11,19 @@ import (
 	appcollaboration "github.com/besart951/go_infra_link/backend/internal/application/collaboration"
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainCollaboration "github.com/besart951/go_infra_link/backend/internal/domain/collaboration"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
-	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
 type cloneHistoryBatchKey struct{}
 
 type cloneTransactionState struct {
-	cabinets    map[uuid.UUID]*domainFacility.ControlCabinet
-	descendants []string
-	history     []string
+	cabinets     map[uuid.UUID]*domainFacility.ControlCabinet
+	projectLinks map[uuid.UUID][]uuid.UUID
+	descendants  []string
+	history      []string
 }
 
 func (s cloneTransactionState) clone() cloneTransactionState {
@@ -31,9 +32,10 @@ func (s cloneTransactionState) clone() cloneTransactionState {
 		cabinets[id] = cloneControlCabinet(cabinet)
 	}
 	return cloneTransactionState{
-		cabinets:    cabinets,
-		descendants: append([]string(nil), s.descendants...),
-		history:     append([]string(nil), s.history...),
+		cabinets:     cabinets,
+		projectLinks: cloneCabinetProjectLinks(s.projectLinks),
+		descendants:  append([]string(nil), s.descendants...),
+		history:      append([]string(nil), s.history...),
 	}
 }
 
@@ -44,12 +46,18 @@ type cloneTransactionUnit struct {
 type cloneTransactionHarness struct {
 	committed       cloneTransactionState
 	copyEntity      *domainFacility.ControlCabinet
+	projectIDs      []uuid.UUID
+	projectIDsErr   error
+	assignErr       error
+	outbox          domainCollaboration.OutboxStore
 	cloneErr        error
 	reloadErr       error
 	commitErr       error
 	runnerCalls     int
 	cloneCalls      int
 	reloadCalls     int
+	projectIDCalls  int
+	assignCalls     int
 	historyBatchIDs []uuid.UUID
 }
 
@@ -59,7 +67,11 @@ func (h *cloneTransactionHarness) runner(
 ) error {
 	h.runnerCalls++
 	staged := h.committed.clone()
-	if err := run(ctx, cloneTransactionUnit{state: &staged}); err != nil {
+	runCtx := ctx
+	if h.outbox != nil {
+		runCtx = domainCollaboration.WithOutboxStore(ctx, h.outbox)
+	}
+	if err := run(runCtx, cloneTransactionUnit{state: &staged}); err != nil {
 		return err
 	}
 	if h.commitErr != nil {
@@ -134,24 +146,44 @@ func (s *cloneWorkflowStub) GetByID(
 	return cloneControlCabinet(cabinet), nil
 }
 
-type cloneProjectLinkReaderStub struct {
-	harness           *cloneTransactionHarness
-	copyID            uuid.UUID
-	links             []*domainProject.ProjectControlCabinet
-	err               error
-	calls             int
-	received          []uuid.UUID
-	calledAfterCommit bool
+func (s *cloneWorkflowStub) GetSourceProjectIDs(
+	_ context.Context,
+	_ uuid.UUID,
+) ([]uuid.UUID, error) {
+	s.harness.projectIDCalls++
+	return append([]uuid.UUID(nil), s.harness.projectIDs...), s.harness.projectIDsErr
 }
 
-func (s *cloneProjectLinkReaderStub) GetByControlCabinetIDs(
-	_ context.Context,
-	ids []uuid.UUID,
-) ([]*domainProject.ProjectControlCabinet, error) {
-	s.calls++
-	s.received = append([]uuid.UUID(nil), ids...)
-	_, s.calledAfterCommit = s.harness.committed.cabinets[s.copyID]
-	return s.links, s.err
+func (s *cloneWorkflowStub) AssignCopyToProject(
+	ctx context.Context,
+	projectID, controlCabinetID uuid.UUID,
+) error {
+	s.harness.assignCalls++
+	if s.harness.assignErr != nil {
+		return s.harness.assignErr
+	}
+	if s.state.projectLinks == nil {
+		s.state.projectLinks = make(map[uuid.UUID][]uuid.UUID)
+	}
+	s.state.projectLinks[projectID] = append(
+		s.state.projectLinks[projectID],
+		controlCabinetID,
+	)
+	s.state.history = append(s.state.history, "project_control_cabinet:create")
+	if batchID, ok := ctx.Value(cloneHistoryBatchKey{}).(uuid.UUID); ok {
+		s.harness.historyBatchIDs = append(s.harness.historyBatchIDs, batchID)
+	}
+	return nil
+}
+
+func cloneCabinetProjectLinks(
+	source map[uuid.UUID][]uuid.UUID,
+) map[uuid.UUID][]uuid.UUID {
+	cloned := make(map[uuid.UUID][]uuid.UUID, len(source))
+	for projectID, cabinetIDs := range source {
+		cloned[projectID] = append([]uuid.UUID(nil), cabinetIDs...)
+	}
+	return cloned
 }
 
 func TestCloneCommitsDeepCopyHistoryBeforeResolvingProjectsAndDispatching(t *testing.T) {
@@ -168,24 +200,19 @@ func TestCloneCommitsDeepCopyHistoryBeforeResolvingProjectsAndDispatching(t *tes
 	occurredAt := createdAt.Add(time.Second)
 	number := "AK02"
 	harness := &cloneTransactionHarness{
-		committed: cloneTransactionState{cabinets: map[uuid.UUID]*domainFacility.ControlCabinet{
-			sourceID: {Base: domain.Base{ID: sourceID}, BuildingID: buildingID},
-		}},
+		committed: cloneTransactionState{
+			cabinets: map[uuid.UUID]*domainFacility.ControlCabinet{
+				sourceID: {Base: domain.Base{ID: sourceID}, BuildingID: buildingID},
+			},
+			projectLinks: map[uuid.UUID][]uuid.UUID{},
+		},
 		copyEntity: &domainFacility.ControlCabinet{
 			Base:             domain.Base{ID: copyID, CreatedAt: createdAt, UpdatedAt: createdAt},
 			BuildingID:       buildingID,
 			ControlCabinetNr: &number,
 		},
-	}
-	links := &cloneProjectLinkReaderStub{
-		harness: harness,
-		copyID:  copyID,
-		links: []*domainProject.ProjectControlCabinet{
-			{ProjectID: projectTwo, ControlCabinetID: copyID},
-			{ProjectID: projectOne, ControlCabinetID: copyID},
-			{ProjectID: projectOne, ControlCabinetID: copyID},
-			{ProjectID: cabinetTestUUID(410), ControlCabinetID: sourceID},
-		},
+		projectIDs: []uuid.UUID{projectTwo, projectOne, projectOne, uuid.Nil},
+		outbox:     &updateOutboxStoreStub{},
 	}
 	dispatcher := &updateCommandDispatcherStub{}
 	generatedIDs := []uuid.UUID{operationID, eventOne, eventTwo}
@@ -195,9 +222,8 @@ func TestCloneCommitsDeepCopyHistoryBeforeResolvingProjectsAndDispatching(t *tes
 		HistoryBatch: func(ctx context.Context, batchID uuid.UUID) context.Context {
 			return context.WithValue(ctx, cloneHistoryBatchKey{}, batchID)
 		},
-		ProjectLinks: links,
-		Dispatcher:   dispatcher,
-		Actor:        func(context.Context) *uuid.UUID { return &actorID },
+		Dispatcher: dispatcher,
+		Actor:      func(context.Context) *uuid.UUID { return &actorID },
 		NewID: func() uuid.UUID {
 			id := generatedIDs[0]
 			generatedIDs = generatedIDs[1:]
@@ -212,11 +238,14 @@ func TestCloneCommitsDeepCopyHistoryBeforeResolvingProjectsAndDispatching(t *tes
 	if err != nil {
 		t.Fatalf("execute cabinet clone: %v", err)
 	}
-	if harness.runnerCalls != 1 || harness.cloneCalls != 1 || harness.reloadCalls != 1 {
-		t.Fatalf("transaction calls: runner=%d clone=%d reload=%d",
+	if harness.runnerCalls != 1 || harness.cloneCalls != 1 || harness.reloadCalls != 1 ||
+		harness.projectIDCalls != 1 || harness.assignCalls != 2 {
+		t.Fatalf("transaction calls: runner=%d clone=%d reload=%d project_ids=%d assignments=%d",
 			harness.runnerCalls,
 			harness.cloneCalls,
 			harness.reloadCalls,
+			harness.projectIDCalls,
+			harness.assignCalls,
 		)
 	}
 	if !reflect.DeepEqual(harness.committed.descendants, []string{
@@ -225,20 +254,17 @@ func TestCloneCommitsDeepCopyHistoryBeforeResolvingProjectsAndDispatching(t *tes
 		"field_device",
 		"specification",
 		"bacnet_object",
-	}) || len(harness.committed.history) != 6 {
+	}) || len(harness.committed.history) != 8 ||
+		!reflect.DeepEqual(harness.committed.projectLinks, map[uuid.UUID][]uuid.UUID{
+			projectOne: {copyID},
+			projectTwo: {copyID},
+		}) {
 		t.Fatalf("deep copy did not commit atomically: %+v", harness.committed)
-	}
-	if !links.calledAfterCommit || links.calls != 1 ||
-		!reflect.DeepEqual(links.received, []uuid.UUID{copyID}) {
-		t.Fatalf("post-commit scope: after=%t calls=%d ids=%v",
-			links.calledAfterCommit,
-			links.calls,
-			links.received,
-		)
 	}
 	wantBatches := []uuid.UUID{
 		operationID, operationID, operationID,
 		operationID, operationID, operationID,
+		operationID, operationID,
 	}
 	if !reflect.DeepEqual(harness.historyBatchIDs, wantBatches) ||
 		outcome.Mutation.BatchID == nil || *outcome.Mutation.BatchID != operationID {
@@ -277,9 +303,12 @@ func TestCloneCommitsDeepCopyHistoryBeforeResolvingProjectsAndDispatching(t *tes
 			command.SourceControlCabinetID != sourceID ||
 			command.ControlCabinet.ID != copyID ||
 			command.OperationID != operationID || command.CorrelationID != operationID ||
-			command.SchemaVersion != appcollaboration.SchemaVersionV1 {
+			command.SchemaVersion != appcollaboration.SchemaVersionV2 {
 			t.Fatalf("clone command: %+v", command)
 		}
+	}
+	if len(harness.outbox.(*updateOutboxStoreStub).events) != 2 {
+		t.Fatalf("durable clone events: %+v", harness.outbox)
 	}
 }
 
@@ -313,12 +342,10 @@ func TestCloneFailureOrCommitFailureRollsBackAndDoesNotResolveOrDispatch(t *test
 				reloadErr: test.reloadErr,
 				commitErr: test.commitErr,
 			}
-			links := &cloneProjectLinkReaderStub{harness: harness, copyID: copyID}
 			dispatcher := &updateCommandDispatcherStub{}
 			handler := NewCloneHandler(CloneDependencies{
 				TransactionRunner:   harness.runner,
 				TransactionWorkflow: harness.factory,
-				ProjectLinks:        links,
 				Dispatcher:          dispatcher,
 			})
 
@@ -333,17 +360,14 @@ func TestCloneFailureOrCommitFailureRollsBackAndDoesNotResolveOrDispatch(t *test
 				len(harness.committed.descendants) != 0 || len(harness.committed.history) != 0 {
 				t.Fatalf("failed clone escaped transaction: %+v", harness.committed)
 			}
-			if links.calls != 0 || len(dispatcher.commands) != 0 {
-				t.Fatalf("post-commit work ran after rollback: links=%d commands=%v",
-					links.calls,
-					dispatcher.commands,
-				)
+			if len(dispatcher.commands) != 0 {
+				t.Fatalf("post-commit work ran after rollback: commands=%v", dispatcher.commands)
 			}
 		})
 	}
 }
 
-func TestCloneScopeFailureIsBestEffortAfterCommit(t *testing.T) {
+func TestCloneSourceProjectFailureRollsBackBeforeCopy(t *testing.T) {
 	sourceID := cabinetTestUUID(431)
 	copyID := cabinetTestUUID(432)
 	scopeErr := errors.New("scope lookup failed")
@@ -356,30 +380,23 @@ func TestCloneScopeFailureIsBestEffortAfterCommit(t *testing.T) {
 			BuildingID: cabinetTestUUID(433),
 		},
 	}
-	links := &cloneProjectLinkReaderStub{
-		harness: harness,
-		copyID:  copyID,
-		err:     scopeErr,
-	}
+	harness.projectIDsErr = scopeErr
 	dispatcher := &updateCommandDispatcherStub{}
 	handler := NewCloneHandler(CloneDependencies{
 		TransactionRunner:   harness.runner,
 		TransactionWorkflow: harness.factory,
-		ProjectLinks:        links,
 		Dispatcher:          dispatcher,
 	})
 
 	outcome, err := handler.Execute(context.Background(), CloneCommand{
 		SourceControlCabinetID: sourceID,
 	})
-	if err != nil {
-		t.Fatalf("clone with scope failure: %v", err)
+	if !errors.Is(err, scopeErr) {
+		t.Fatalf("clone source-project failure: got %v, want %v", err, scopeErr)
 	}
-	if harness.committed.cabinets[copyID] == nil || outcome.ControlCabinet == nil {
-		t.Fatalf("clone did not commit: outcome=%+v state=%+v", outcome, harness.committed)
-	}
-	if len(outcome.DispatchErrors) != 1 || !errors.Is(outcome.DispatchErrors[0], scopeErr) {
-		t.Fatalf("dispatch errors: got %v, want wrapped %v", outcome.DispatchErrors, scopeErr)
+	if harness.committed.cabinets[copyID] != nil || outcome.ControlCabinet != nil ||
+		harness.cloneCalls != 0 {
+		t.Fatalf("scope failure changed state: outcome=%+v state=%+v", outcome, harness.committed)
 	}
 	if len(dispatcher.commands) != 0 {
 		t.Fatalf("unexpected command after scope failure: %+v", dispatcher.commands)
@@ -399,20 +416,13 @@ func TestCloneReportsDispatchFailureWithoutChangingCommittedResult(t *testing.T)
 			Base:       domain.Base{ID: copyID},
 			BuildingID: cabinetTestUUID(444),
 		},
-	}
-	links := &cloneProjectLinkReaderStub{
-		harness: harness,
-		copyID:  copyID,
-		links: []*domainProject.ProjectControlCabinet{
-			{ProjectID: projectID, ControlCabinetID: copyID},
-		},
+		projectIDs: []uuid.UUID{projectID},
 	}
 	dispatcher := &updateCommandDispatcherStub{err: dispatchErr}
 	var reported []error
 	handler := NewCloneHandler(CloneDependencies{
 		TransactionRunner:   harness.runner,
 		TransactionWorkflow: harness.factory,
-		ProjectLinks:        links,
 		Dispatcher:          dispatcher,
 		ReportError: func(err error) {
 			reported = append(reported, err)

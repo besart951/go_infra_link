@@ -215,6 +215,11 @@ export abstract class BaseDataTableState<
     return this.selectedIds.has(id);
   }
 
+  setSelectedIds(selectedIds: Set<string>): void {
+    this.selectedIds = selectedIds;
+    this.onSelectionChanged();
+  }
+
   toggleSelection(id: string): void {
     const nextSelectedIds = new Set(this.selectedIds);
     if (nextSelectedIds.has(id)) {
@@ -223,8 +228,7 @@ export abstract class BaseDataTableState<
       nextSelectedIds.add(id);
     }
 
-    this.selectedIds = nextSelectedIds;
-    this.onSelectionChanged();
+    this.setSelectedIds(nextSelectedIds);
   }
 
   toggleSelectAll(): void {

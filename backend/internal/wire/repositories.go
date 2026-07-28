@@ -11,6 +11,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainAuth "github.com/besart951/go_infra_link/backend/internal/domain/auth"
+	domainCollaboration "github.com/besart951/go_infra_link/backend/internal/domain/collaboration"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
 	domainNotification "github.com/besart951/go_infra_link/backend/internal/domain/notification"
@@ -18,6 +19,7 @@ import (
 	domainTeam "github.com/besart951/go_infra_link/backend/internal/domain/team"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	authrepo "github.com/besart951/go_infra_link/backend/internal/repository/auth"
+	collaborationoutbox "github.com/besart951/go_infra_link/backend/internal/repository/collaborationoutbox"
 	facilitycache "github.com/besart951/go_infra_link/backend/internal/repository/facilitycache"
 	facilityrepo "github.com/besart951/go_infra_link/backend/internal/repository/facilitysql"
 	historycapture "github.com/besart951/go_infra_link/backend/internal/repository/historycapture"
@@ -41,6 +43,7 @@ type Repositories struct {
 	ProjectSPSControllers    domainProject.ProjectSPSControllerRepository
 	ProjectFieldDevices      domainProject.ProjectFieldDeviceRepository
 	History                  HistoryRepository
+	CollaborationOutbox      domainCollaboration.OutboxStore
 	User                     domainUser.UserRepository
 	UserLifecycle            domainUser.UserLifecycleRepository
 	UserEmail                domainUser.UserEmailRepository
@@ -162,14 +165,16 @@ func NewRepositories(gormDB *gorm.DB) (*Repositories, error) {
 	notificationRepos := newNotificationRepositories(gormDB)
 	teamRepos := newTeamRepositories(gormDB)
 
-	return composeRepositories(
+	repositories := composeRepositories(
 		historyStore,
 		userRepos,
 		projectRepos,
 		facilityRepos,
 		notificationRepos,
 		teamRepos,
-	), nil
+	)
+	repositories.CollaborationOutbox = collaborationoutbox.NewStore(gormDB)
+	return repositories, nil
 }
 
 func newUserRepositories(gormDB *gorm.DB) (userRepositoryGroup, error) {

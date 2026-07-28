@@ -28,9 +28,10 @@ type ReassignProjectLinkWorkflow interface {
 }
 
 type ReassignProjectLinkCommand struct {
-	ProjectID     uuid.UUID
-	LinkID        uuid.UUID
-	FieldDeviceID uuid.UUID
+	ProjectID       uuid.UUID
+	LinkID          uuid.UUID
+	ExpectedVersion uint64
+	FieldDeviceID   uuid.UUID
 }
 
 type ReassignProjectLinkDependencies struct {
@@ -62,9 +63,10 @@ type ReassignProjectLinkOutcome struct {
 }
 
 type committedProjectLinkReassignment struct {
-	link    *domainProject.ProjectFieldDevice
-	change  mutation.EntityChange
-	batched bool
+	link                  *domainProject.ProjectFieldDevice
+	previousFieldDeviceID uuid.UUID
+	change                mutation.EntityChange
+	batched               bool
 }
 
 func NewReassignProjectLinkHandler(
@@ -124,7 +126,10 @@ func (h *ReassignProjectLinkHandler) Execute(
 		return ReassignProjectLinkOutcome{}, ErrReassignProjectLinkTransactionNotConfigured
 	}
 	operationID := h.newID()
+	eventID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
+	var collaborationCommand appcollaboration.Command
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -132,20 +137,35 @@ func (h *ReassignProjectLinkHandler) Execute(
 			txCtx context.Context,
 			workflow ReassignProjectLinkWorkflow,
 		) (committedProjectLinkReassignment, error) {
-			return executeReassignProjectLinkTransaction(
+			result, err := executeReassignProjectLinkTransaction(
 				txCtx,
 				workflow,
 				command,
 				operationID,
 				h.historyBatch,
 			)
+			if err != nil {
+				return committedProjectLinkReassignment{}, err
+			}
+			collaborationCommand = appcollaboration.FacilityHierarchyRefreshRequired{
+				Envelope: appcollaboration.Envelope{
+					SchemaVersion: appcollaboration.SchemaVersionV2,
+					EventID:       eventID, OperationID: operationID, CorrelationID: operationID,
+					ProjectID: command.ProjectID, ActorID: actorID, OccurredAt: occurredAt,
+				},
+				Scope:     appcollaboration.FacilityScopeFieldDevice,
+				EntityIDs: []uuid.UUID{result.previousFieldDeviceID, result.link.FieldDeviceID},
+			}
+			if _, err := appcollaboration.EnqueueCommand(txCtx, collaborationCommand); err != nil {
+				return committedProjectLinkReassignment{}, fmt.Errorf("enqueue ProjectFieldDevice reassignment: %w", err)
+			}
+			return result, nil
 		},
 	)
 	if err != nil {
 		return ReassignProjectLinkOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	result := mutation.Result{
 		OperationID: operationID,
 		ActorID:     actorID,
@@ -166,20 +186,7 @@ func (h *ReassignProjectLinkHandler) Execute(
 	}
 
 	dispatchCtx := context.WithoutCancel(ctx)
-	commandToDispatch := appcollaboration.FacilityHierarchyRefreshRequired{
-		Envelope: appcollaboration.Envelope{
-			SchemaVersion: appcollaboration.SchemaVersionV1,
-			EventID:       h.newID(),
-			OperationID:   operationID,
-			CorrelationID: operationID,
-			ProjectID:     command.ProjectID,
-			ActorID:       actorID,
-			OccurredAt:    occurredAt,
-		},
-		Scope:     appcollaboration.FacilityScopeFieldDevice,
-		EntityIDs: []uuid.UUID{committed.link.FieldDeviceID},
-	}
-	if dispatchErr := h.dispatcher.Dispatch(dispatchCtx, commandToDispatch); dispatchErr != nil {
+	if dispatchErr := h.dispatcher.Dispatch(dispatchCtx, collaborationCommand); dispatchErr != nil {
 		outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
 			"dispatch ProjectFieldDevice reassignment for project %s: %w",
 			command.ProjectID,
@@ -206,6 +213,13 @@ func executeReassignProjectLinkTransaction(
 	if link.ProjectID != command.ProjectID {
 		return committedProjectLinkReassignment{}, domain.ErrNotFound
 	}
+	if command.ExpectedVersion != 0 && link.Revision != command.ExpectedVersion {
+		return committedProjectLinkReassignment{}, &domain.RevisionConflict{
+			EntityID: link.ID,
+			Expected: command.ExpectedVersion,
+			Current:  link.Revision,
+		}
+	}
 	before := cloneProjectFieldDeviceLink(link)
 	link.FieldDeviceID = command.FieldDeviceID
 	writeCtx := ctx
@@ -221,9 +235,10 @@ func executeReassignProjectLinkTransaction(
 		return committedProjectLinkReassignment{}, err
 	}
 	return committedProjectLinkReassignment{
-		link:    cloneProjectFieldDeviceLink(link),
-		change:  change,
-		batched: batched,
+		link:                  cloneProjectFieldDeviceLink(link),
+		previousFieldDeviceID: before.FieldDeviceID,
+		change:                change,
+		batched:               batched,
 	}, nil
 }
 
@@ -240,6 +255,11 @@ func buildProjectFieldDeviceUpdateChange(
 		return mutation.EntityChange{}, fmt.Errorf("marshal ProjectFieldDevice after snapshot: %w", err)
 	}
 	projectID := after.ProjectID
+	var revision *uint64
+	if after.Revision != 0 {
+		value := after.Revision
+		revision = &value
+	}
 	return mutation.EntityChange{
 		EntityType:    mutation.EntityTypeProjectFieldDevice,
 		EntityID:      after.ID,
@@ -248,6 +268,7 @@ func buildProjectFieldDeviceUpdateChange(
 		Before:        beforeJSON,
 		After:         afterJSON,
 		ChangedFields: []mutation.FieldName{mutation.FieldNameFieldDevice},
+		Revision:      revision,
 	}, nil
 }
 

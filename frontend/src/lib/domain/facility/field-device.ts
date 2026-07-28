@@ -12,6 +12,7 @@ import type { SystemPart } from './system.js';
 
 export interface FieldDevice {
   id: string;
+  revision: number;
   bmk?: string;
   description?: string;
   text_fix?: string;
@@ -77,6 +78,7 @@ export interface CreateFieldDeviceRequest {
 }
 
 export interface UpdateFieldDeviceRequest {
+  expected_version: number;
   bmk?: string | null;
   description?: string | null;
   text_fix?: string | null;
@@ -131,10 +133,13 @@ export interface MultiCreateFieldDeviceRequest {
  */
 export interface FieldDeviceCreateResult {
   index: number; // Index in the original request array
+  id?: string;
   success: boolean; // Whether the creation succeeded
   field_device?: FieldDevice; // The created field device (null if failed)
   error: string; // Error message if failed (empty if succeeded)
+  error_code?: string;
   error_field: string; // Specific field that caused the error (if applicable)
+  reason?: string;
 }
 
 /**
@@ -169,6 +174,7 @@ export interface SpecificationInput {
  */
 export interface BulkUpdateFieldDeviceItem {
   id: string;
+  expected_version: number;
   bmk?: string | null;
   description?: string | null;
   text_fix?: string | null;
@@ -193,6 +199,9 @@ export interface BulkOperationResultItem {
   id: string;
   success: boolean;
   error?: string;
+  error_code?: string;
+  error_field?: string;
+  reason?: string;
   fields?: Record<string, string>;
   suggestions?: Record<string, number>;
   suggestion_options?: Record<string, number[]>;

@@ -12,6 +12,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/application/facility/mutation"
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainCollaboration "github.com/besart951/go_infra_link/backend/internal/domain/collaboration"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
@@ -38,14 +39,17 @@ type updateTransactionUnit struct {
 type updateHistoryBatchKey struct{}
 
 type updateTransactionHarness struct {
-	committed      updateTransactionState
-	updateErr      error
-	commitErr      error
-	updatedAt      time.Time
-	generatedName  string
-	runnerCalls    int
-	updateCalls    int
-	historyBatchID *uuid.UUID
+	committed          updateTransactionState
+	updateErr          error
+	commitErr          error
+	updatedAt          time.Time
+	generatedName      string
+	descendantCount    int64
+	descendantCountErr error
+	runnerCalls        int
+	updateCalls        int
+	historyBatchID     *uuid.UUID
+	outbox             domainCollaboration.OutboxStore
 }
 
 func (h *updateTransactionHarness) runner(
@@ -54,7 +58,11 @@ func (h *updateTransactionHarness) runner(
 ) error {
 	h.runnerCalls++
 	staged := h.committed.clone()
-	if err := run(ctx, updateTransactionUnit{state: &staged}); err != nil {
+	txCtx := ctx
+	if h.outbox != nil {
+		txCtx = domainCollaboration.WithOutboxStore(ctx, h.outbox)
+	}
+	if err := run(txCtx, updateTransactionUnit{state: &staged}); err != nil {
 		return err
 	}
 	if h.commitErr != nil {
@@ -105,6 +113,13 @@ func (s *updateWorkflowStub) Update(
 	return s.harness.updateErr
 }
 
+func (s *updateWorkflowStub) CountSPSControllers(
+	_ context.Context,
+	_ uuid.UUID,
+) (int64, error) {
+	return s.harness.descendantCount, s.harness.descendantCountErr
+}
+
 type updateProjectLinkReaderStub struct {
 	harness          *updateTransactionHarness
 	links            []*domainProject.ProjectControlCabinet
@@ -130,6 +145,97 @@ func (s *updateProjectLinkReaderStub) GetByControlCabinetIDs(
 type updateCommandDispatcherStub struct {
 	commands []appcollaboration.Command
 	err      error
+}
+
+type transactionalUpdateOutboxStub struct {
+	*updateWorkflowStub
+	links []*domainProject.ProjectControlCabinet
+}
+
+func (s *transactionalUpdateOutboxStub) GetByControlCabinetIDs(
+	_ context.Context,
+	_ []uuid.UUID,
+) ([]*domainProject.ProjectControlCabinet, error) {
+	return s.links, nil
+}
+
+type updateOutboxStoreStub struct {
+	events []*domainCollaboration.OutboxEvent
+}
+
+func (s *updateOutboxStoreStub) Enqueue(_ context.Context, event *domainCollaboration.OutboxEvent) error {
+	s.events = append(s.events, event)
+	return nil
+}
+func (*updateOutboxStoreStub) ClaimDue(context.Context, time.Time, int) ([]domainCollaboration.OutboxEvent, error) {
+	return nil, nil
+}
+func (*updateOutboxStoreStub) WasProcessed(context.Context, string, uuid.UUID) (bool, error) {
+	return false, nil
+}
+func (*updateOutboxStoreStub) MarkDelivered(context.Context, string, domainCollaboration.OutboxEvent, time.Time) error {
+	return nil
+}
+func (*updateOutboxStoreStub) MarkFailed(context.Context, domainCollaboration.OutboxEvent, string, time.Time, time.Time) error {
+	return nil
+}
+
+func TestUpdateWritesVersionTwoOutboxCommandInsideTransaction(t *testing.T) {
+	cabinetID := cabinetTestUUID(901)
+	buildingID := cabinetTestUUID(902)
+	projectID := cabinetTestUUID(903)
+	operationID := cabinetTestUUID(904)
+	outboxEventID := cabinetTestUUID(905)
+	compatibilityEventID := cabinetTestUUID(906)
+	number := "AK01"
+	updatedNumber := "AK02"
+	occurredAt := time.Date(2026, time.July, 23, 16, 0, 0, 0, time.UTC)
+	harness := &updateTransactionHarness{committed: updateTransactionState{
+		cabinet: &domainFacility.ControlCabinet{
+			Base: domain.Base{ID: cabinetID}, BuildingID: buildingID, ControlCabinetNr: &number,
+		},
+	}}
+	outboxStore := &updateOutboxStoreStub{}
+	harness.outbox = outboxStore
+	factory := func(unit apptransaction.UnitOfWork) (UpdateWorkflow, error) {
+		typed := unit.(updateTransactionUnit)
+		return &transactionalUpdateOutboxStub{
+			updateWorkflowStub: &updateWorkflowStub{harness: harness, state: typed.state},
+			links: []*domainProject.ProjectControlCabinet{{
+				ProjectID: projectID, ControlCabinetID: cabinetID,
+			}},
+		}, nil
+	}
+	dispatcher := &updateCommandDispatcherStub{}
+	ids := []uuid.UUID{operationID, outboxEventID, compatibilityEventID}
+	handler := NewUpdateHandler(UpdateDependencies{
+		TransactionRunner: harness.runner, TransactionWorkflow: factory, Dispatcher: dispatcher,
+		NewID: func() uuid.UUID { id := ids[0]; ids = ids[1:]; return id },
+		Now:   func() time.Time { return occurredAt },
+	})
+
+	if _, err := handler.Execute(context.Background(), UpdateCommand{
+		ControlCabinetID: cabinetID, ControlCabinetNr: &updatedNumber,
+	}); err != nil {
+		t.Fatalf("update cabinet: %v", err)
+	}
+	if len(outboxStore.events) != 1 {
+		t.Fatalf("outbox events: got %d, want 1", len(outboxStore.events))
+	}
+	decoded, err := appcollaboration.DecodeCommand(appcollaboration.EncodedCommand{
+		Type: outboxStore.events[0].EventType, Payload: outboxStore.events[0].Payload,
+	})
+	if err != nil {
+		t.Fatalf("decode queued command: %v", err)
+	}
+	queued, ok := decoded.(appcollaboration.ControlCabinetUpdated)
+	if !ok || queued.SchemaVersion != appcollaboration.SchemaVersionV2 ||
+		queued.EventID != outboxEventID || queued.ProjectID != projectID {
+		t.Fatalf("unexpected queued command: %#v", decoded)
+	}
+	if len(dispatcher.commands) != 1 {
+		t.Fatalf("compatibility commands: got %d, want 1", len(dispatcher.commands))
+	}
 }
 
 func (s *updateCommandDispatcherStub) Dispatch(
@@ -161,8 +267,9 @@ func TestUpdateMoveCommitsDescendantRenameBeforeProjectScopedDispatch(t *testing
 			BuildingID:       oldBuildingID,
 			ControlCabinetNr: &oldNumber,
 		}},
-		updatedAt:     updatedAt,
-		generatedName: "NEW_AK02_AAA",
+		updatedAt:       updatedAt,
+		generatedName:   "NEW_AK02_AAA",
+		descendantCount: 7,
 	}
 	links := &updateProjectLinkReaderStub{
 		harness:          harness,
@@ -224,6 +331,16 @@ func TestUpdateMoveCommitsDescendantRenameBeforeProjectScopedDispatch(t *testing
 	}
 	if got := outcome.Mutation.Changes[0].ChangedFields; !reflect.DeepEqual(got, wantFields) {
 		t.Fatalf("changed fields: got %v, want %v", got, wantFields)
+	}
+	if len(outcome.Mutation.Aggregates) != 1 {
+		t.Fatalf("aggregate changes: got %d, want 1", len(outcome.Mutation.Aggregates))
+	}
+	aggregate := outcome.Mutation.Aggregates[0]
+	if aggregate.EntityType != mutation.EntityTypeSPSController ||
+		aggregate.ParentID != cabinetID ||
+		aggregate.Count != 7 ||
+		!reflect.DeepEqual(aggregate.ChangedFields, []mutation.FieldName{mutation.FieldNameDeviceName}) {
+		t.Fatalf("unexpected aggregate change: %+v", aggregate)
 	}
 	if links.calls != 1 || !reflect.DeepEqual(links.received, []uuid.UUID{cabinetID}) {
 		t.Fatalf("project link lookup: calls=%d ids=%v", links.calls, links.received)

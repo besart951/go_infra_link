@@ -121,40 +121,15 @@ func TestParseProjectCollaborationRefreshRequestRejectsProjectScopeFromClient(t 
 	})
 }
 
-func TestParseProjectCollaborationEntityDeltaSanitizesFieldDeviceDeltas(t *testing.T) {
-	fieldDeviceID := uuid.New().String()
-	apparatID := uuid.New().String()
-	parsed := mustParseProjectCollaborationMessage(t, map[string]any{
-		"type":  "entity_delta",
-		"scope": "field_device",
-		"field_devices": []map[string]any{
-			{
-				"id":         fieldDeviceID,
-				"apparat_id": apparatID,
-				"text_fix":   "TF-2",
-			},
-		},
-	})
-
-	if parsed.Scope != projectCollaborationRefreshScopeFieldDevice {
-		t.Fatalf("expected field_device scope, got %q", parsed.Scope)
-	}
-	if len(parsed.FieldDevices) != 1 {
-		t.Fatalf("expected one field device delta, got %+v", parsed.FieldDevices)
-	}
-	if parsed.FieldDevices[0]["id"] != fieldDeviceID {
-		t.Fatalf("expected sanitized id, got %+v", parsed.FieldDevices[0])
-	}
-}
-
-func TestParseProjectCollaborationEntityDeltaRejectsUnknownFieldDeviceField(t *testing.T) {
+func TestParseProjectCollaborationEntityDeltaIsNoLongerAcceptedFromClients(t *testing.T) {
 	assertInvalidProjectCollaborationMessage(t, map[string]any{
 		"type":  "entity_delta",
 		"scope": "field_device",
 		"field_devices": []map[string]any{
 			{
 				"id":         uuid.New().String(),
-				"admin_note": "should not pass",
+				"apparat_id": uuid.New().String(),
+				"text_fix":   "TF-2",
 			},
 		},
 	})

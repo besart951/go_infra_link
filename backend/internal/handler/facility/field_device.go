@@ -496,6 +496,7 @@ func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
 
 		updates[i] = domainFacility.BulkFieldDeviceUpdate{
 			ID:                 item.ID,
+			ExpectedVersion:    item.ExpectedVersion,
 			BMK:                item.BMK.Value,
 			HasBMK:             item.BMK.Set,
 			Description:        item.Description.Value,
@@ -550,6 +551,9 @@ func toBulkOperationResponse(result *domainFacility.BulkOperationResult) dto.Bul
 			ID:                r.ID,
 			Success:           r.Success,
 			Error:             r.Error,
+			ErrorCode:         r.ErrorCode,
+			ErrorField:        r.ErrorField,
+			Reason:            r.Reason,
 			Fields:            r.Fields,
 			Suggestions:       r.Suggestions,
 			SuggestionOptions: r.SuggestionOptions,

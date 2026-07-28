@@ -265,6 +265,7 @@ func (h *Handler) UpdateProjectControlCabinet(c *gin.Context) {
 		appcontrolcabinet.ReassignProjectLinkCommand{
 			ProjectID:        projectID,
 			LinkID:           linkID,
+			ExpectedVersion:  req.ExpectedVersion,
 			ControlCabinetID: req.ControlCabinetID,
 		},
 	)
@@ -334,6 +335,7 @@ func toProjectControlCabinetResponse(item domainProject.ProjectControlCabinet) d
 		ID:               item.ID,
 		ProjectID:        item.ProjectID,
 		ControlCabinetID: item.ControlCabinetID,
+		Revision:         item.Revision,
 		CreatedAt:        item.CreatedAt,
 		UpdatedAt:        item.UpdatedAt,
 	}

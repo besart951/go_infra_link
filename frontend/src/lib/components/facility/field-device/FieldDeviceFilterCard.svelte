@@ -34,7 +34,7 @@
 
   const t = createTranslator();
   const fieldDeviceState = useFieldDeviceState();
-  const OPTION_PAGE_SIZE = 1000;
+  const OPTION_PAGE_SIZE = 200;
 
   let buildingIds = $state(
     selectedIdsFromFilters(
@@ -337,12 +337,15 @@
     controlCabinetIds: string[],
     spsControllerIds: string[]
   ): Promise<MultiFilterOption[]> {
-    const fetchedSystemTypes = await fetchAllPages((page, pageSize) =>
-      spsControllerSystemTypeRepository.list({
-        pagination: { page, pageSize },
-        search: { text: '' },
-        filters: projectId ? { project_id: projectId } : undefined
-      })
+    const fetchedSystemTypes = await fetchAllPages(
+      (page, pageSize) =>
+        spsControllerSystemTypeRepository.list({
+          pagination: { page, pageSize },
+          search: { text: '' },
+          filters: projectId ? { project_id: projectId } : undefined
+        }),
+      undefined,
+      OPTION_PAGE_SIZE
     );
     let systemTypes = fetchedSystemTypes;
     if (spsControllerIds.length > 0) {
@@ -386,11 +389,15 @@
 
     const load = (async () => {
       const [cabinetLinks, spsLinks] = await Promise.all([
-        fetchAllPages((page, pageSize) =>
-          projectRepository.listControlCabinets(projectId, { page, limit: pageSize })
+        fetchAllPages(
+          (page, pageSize) => projectRepository.listControlCabinets(projectId, { page, limit: pageSize }),
+          undefined,
+          OPTION_PAGE_SIZE
         ),
-        fetchAllPages((page, pageSize) =>
-          projectRepository.listSPSControllers(projectId, { page, limit: pageSize })
+        fetchAllPages(
+          (page, pageSize) => projectRepository.listSPSControllers(projectId, { page, limit: pageSize }),
+          undefined,
+          OPTION_PAGE_SIZE
         )
       ]);
 

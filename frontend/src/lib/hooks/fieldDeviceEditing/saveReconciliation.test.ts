@@ -18,7 +18,12 @@ describe('field-device save-result reconciliation', () => {
     const result = reconcileFieldDeviceSaveResult({
       storeItems: [buildFieldDevice()],
       updates: [
-        { id: 'fd-1', bmk: 'FD-SAVED', bacnet_objects: [{ id: 'bo-1', software_number: 42 }] }
+        {
+          id: 'fd-1',
+          expected_version: 1,
+          bmk: 'FD-SAVED',
+          bacnet_objects: [{ id: 'bo-1', software_number: 42 }]
+        }
       ],
       result: {
         results: [{ id: 'fd-1', success: true }],
@@ -63,6 +68,7 @@ describe('field-device save-result reconciliation', () => {
       updates: [
         {
           id: 'fd-1',
+          expected_version: 1,
           bmk: 'FD-PARTIAL',
           specification: { specification_brand: 'Rejected Brand' },
           bacnet_objects: [{ id: 'bo-1', text_fix: 'TF-PARTIAL' }]
@@ -130,6 +136,7 @@ describe('field-device save-result reconciliation', () => {
       updates: [
         {
           id: 'fd-1',
+          expected_version: 1,
           bmk: 'FD-PARTIAL',
           specification: { specification_brand: 'Rejected Brand' },
           bacnet_objects: [{ id: 'bo-1', alarm_type_id: 'alarm-9' }]

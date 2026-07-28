@@ -194,7 +194,7 @@ func TestUpdateControlCabinetMapsCompatibilityRequestToApplicationCommand(t *tes
 	request := httptest.NewRequest(
 		http.MethodPut,
 		"/facility/control-cabinets/"+cabinetID.String(),
-		strings.NewReader(`{"building_id":"`+buildingID.String()+`","control_cabinet_nr":"AK02"}`),
+		strings.NewReader(`{"expected_version":3,"building_id":"`+buildingID.String()+`","control_cabinet_nr":"AK02"}`),
 	)
 	request.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()
@@ -231,7 +231,7 @@ func TestUpdateControlCabinetMapsApplicationLoadNotFound(t *testing.T) {
 	request := httptest.NewRequest(
 		http.MethodPut,
 		"/facility/control-cabinets/"+cabinetID.String(),
-		strings.NewReader(`{}`),
+		strings.NewReader(`{"expected_version":3}`),
 	)
 	request.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()

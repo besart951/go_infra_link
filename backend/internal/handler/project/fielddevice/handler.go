@@ -220,6 +220,7 @@ func (h *Handler) MultiCreateProjectFieldDevices(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.MultiCreateProjectFieldDeviceResponse{
 		SuccessFieldDeviceIDs: result.SuccessFieldDeviceIDs,
 		AssociationErrors:     result.AssociationErrors,
+		Results:               toBulkAssignmentResults(result.Results),
 	})
 }
 
@@ -338,9 +339,10 @@ func (h *Handler) UpdateProjectFieldDevice(c *gin.Context) {
 	updated, err := h.reassigner.ReassignProjectLink(
 		c.Request.Context(),
 		appfielddevice.ReassignProjectLinkCommand{
-			ProjectID:     projectID,
-			LinkID:        linkID,
-			FieldDeviceID: req.FieldDeviceID,
+			ProjectID:       projectID,
+			LinkID:          linkID,
+			ExpectedVersion: req.ExpectedVersion,
+			FieldDeviceID:   req.FieldDeviceID,
 		},
 	)
 	if err != nil {
@@ -439,6 +441,7 @@ func toProjectFieldDeviceResponse(item domainProject.ProjectFieldDevice) dto.Pro
 		ID:            item.ID,
 		ProjectID:     item.ProjectID,
 		FieldDeviceID: item.FieldDeviceID,
+		Revision:      item.Revision,
 		CreatedAt:     item.CreatedAt,
 		UpdatedAt:     item.UpdatedAt,
 	}
@@ -515,10 +518,13 @@ func toMultiCreateFieldDeviceResponse(result *domainFacility.FieldDeviceMultiCre
 	for i, item := range result.Results {
 		results[i] = facilitydto.FieldDeviceCreateResultResponse{
 			Index:       item.Index,
+			ID:          item.ID,
 			Success:     item.Success,
 			FieldDevice: toFieldDeviceResponse(item.FieldDevice),
 			Error:       item.Error,
+			ErrorCode:   item.ErrorCode,
 			ErrorField:  item.ErrorField,
+			Reason:      item.Reason,
 		}
 	}
 
@@ -528,6 +534,26 @@ func toMultiCreateFieldDeviceResponse(result *domainFacility.FieldDeviceMultiCre
 		SuccessCount:  result.SuccessCount,
 		FailureCount:  result.FailureCount,
 	}
+}
+
+func toBulkAssignmentResults(
+	results []domainFacility.BulkOperationResultItem,
+) []facilitydto.BulkOperationResultItem {
+	mapped := make([]facilitydto.BulkOperationResultItem, len(results))
+	for index, item := range results {
+		mapped[index] = facilitydto.BulkOperationResultItem{
+			ID:                item.ID,
+			Success:           item.Success,
+			Error:             item.Error,
+			ErrorCode:         item.ErrorCode,
+			ErrorField:        item.ErrorField,
+			Reason:            item.Reason,
+			Fields:            item.Fields,
+			Suggestions:       item.Suggestions,
+			SuggestionOptions: item.SuggestionOptions,
+		}
+	}
+	return mapped
 }
 
 func toFieldDeviceResponse(fieldDevice *domainFacility.FieldDevice) *facilitydto.FieldDeviceResponse {

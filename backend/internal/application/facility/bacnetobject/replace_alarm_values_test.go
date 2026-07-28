@@ -41,12 +41,20 @@ type alarmValueTransactionHarness struct {
 	committed      alarmValueTransactionState
 	createdIDs     []uuid.UUID
 	createdAt      time.Time
+	alarmTypeID    *uuid.UUID
+	selectionSet   bool
+	fieldTypes     map[uuid.UUID]uuid.UUID
+	missingFields  map[uuid.UUID]bool
+	selectionErr   error
+	fieldsErr      error
 	writeErr       error
 	reloadErr      error
 	commitErr      error
 	runnerCalls    int
 	putCalls       int
 	getCalls       int
+	selectionCalls int
+	fieldCalls     int
 	historyBatchID *uuid.UUID
 }
 
@@ -80,6 +88,55 @@ type alarmValueWorkflowStub struct {
 	harness  *alarmValueTransactionHarness
 	state    *alarmValueTransactionState
 	getCalls int
+}
+
+var defaultAlarmTypeID = uuid.MustParse("00000000-0000-0000-0000-000000000901")
+
+func (s *alarmValueWorkflowStub) GetAlarmSelection(
+	_ context.Context,
+	bacnetObjectID uuid.UUID,
+) (*AlarmSelection, error) {
+	s.harness.selectionCalls++
+	if s.harness.selectionErr != nil {
+		return nil, s.harness.selectionErr
+	}
+	alarmTypeID := s.harness.alarmTypeID
+	if !s.harness.selectionSet {
+		defaultID := defaultAlarmTypeID
+		alarmTypeID = &defaultID
+	}
+	return &AlarmSelection{
+		BacnetObjectID: bacnetObjectID,
+		AlarmTypeID:    clonePointer(alarmTypeID),
+	}, nil
+}
+
+func (s *alarmValueWorkflowStub) GetAlarmTypeFields(
+	_ context.Context,
+	ids []uuid.UUID,
+) ([]*domainFacility.AlarmTypeField, error) {
+	s.harness.fieldCalls++
+	if s.harness.fieldsErr != nil {
+		return nil, s.harness.fieldsErr
+	}
+	fields := make([]*domainFacility.AlarmTypeField, 0, len(ids))
+	for _, id := range ids {
+		if s.harness.missingFields[id] {
+			continue
+		}
+		alarmTypeID := defaultAlarmTypeID
+		if configured, exists := s.harness.fieldTypes[id]; exists {
+			alarmTypeID = configured
+		} else if s.harness.selectionSet &&
+			s.harness.alarmTypeID != nil {
+			alarmTypeID = *s.harness.alarmTypeID
+		}
+		fields = append(fields, &domainFacility.AlarmTypeField{
+			Base:        domain.Base{ID: id},
+			AlarmTypeID: alarmTypeID,
+		})
+	}
+	return fields, nil
 }
 
 func (s *alarmValueWorkflowStub) GetValues(
@@ -260,6 +317,134 @@ func TestReplaceAlarmValuesCommitsHistoryAndReloadBeforeDirectProjectDispatch(t 
 		command.ProjectID != projectID || command.OperationID != operationID ||
 		command.EventID != eventID || command.ActorID == nil || *command.ActorID != actorID {
 		t.Fatalf("collaboration command: %+v", dispatcher.commands[0])
+	}
+}
+
+func TestReplaceAlarmValuesRejectsFieldFromAnotherAlarmTypeBeforeMutation(t *testing.T) {
+	bacnetObjectID := bacnetTestUUID(201)
+	selectedAlarmTypeID := bacnetTestUUID(202)
+	foreignAlarmTypeID := bacnetTestUUID(203)
+	foreignFieldID := bacnetTestUUID(204)
+	oldValueID := bacnetTestUUID(205)
+	harness := &alarmValueTransactionHarness{
+		committed: alarmValueTransactionState{values: []domainFacility.BacnetObjectAlarmValue{{
+			Base:             domain.Base{ID: oldValueID},
+			BacnetObjectID:   bacnetObjectID,
+			AlarmTypeFieldID: bacnetTestUUID(206),
+		}}},
+		alarmTypeID:  &selectedAlarmTypeID,
+		selectionSet: true,
+		fieldTypes: map[uuid.UUID]uuid.UUID{
+			foreignFieldID: foreignAlarmTypeID,
+		},
+	}
+	handler := NewReplaceAlarmValuesHandler(ReplaceAlarmValuesDependencies{
+		TransactionRunner:   harness.runner,
+		TransactionWorkflow: harness.factory,
+	})
+
+	_, err := handler.Execute(context.Background(), ReplaceAlarmValuesCommand{
+		BacnetObjectID: bacnetObjectID,
+		Values: []AlarmValueInput{{
+			AlarmTypeFieldID: foreignFieldID,
+		}},
+	})
+	validation, ok := domain.AsValidationError(err)
+	if !ok {
+		t.Fatalf("expected validation error, got %v", err)
+	}
+	const field = "values.0.alarm_type_field_id"
+	if validation.Fields[field] !=
+		"alarm type field does not belong to the BACnet object's selected alarm type" {
+		t.Fatalf("validation fields: %+v", validation.Fields)
+	}
+	if harness.selectionCalls != 1 || harness.fieldCalls != 1 ||
+		harness.getCalls != 0 || harness.putCalls != 0 {
+		t.Fatalf(
+			"validation ordering: selection=%d fields=%d get=%d put=%d",
+			harness.selectionCalls,
+			harness.fieldCalls,
+			harness.getCalls,
+			harness.putCalls,
+		)
+	}
+	if len(harness.committed.values) != 1 ||
+		harness.committed.values[0].ID != oldValueID ||
+		len(harness.committed.history) != 0 {
+		t.Fatalf("rejected replacement mutated state: %+v", harness.committed)
+	}
+}
+
+func TestReplaceAlarmValuesRequiresSelectedAlarmTypeAndUniqueExistingFields(t *testing.T) {
+	bacnetObjectID := bacnetTestUUID(211)
+	fieldID := bacnetTestUUID(212)
+	harness := &alarmValueTransactionHarness{
+		selectionSet: true,
+	}
+	handler := NewReplaceAlarmValuesHandler(ReplaceAlarmValuesDependencies{
+		TransactionRunner:   harness.runner,
+		TransactionWorkflow: harness.factory,
+	})
+
+	_, err := handler.Execute(context.Background(), ReplaceAlarmValuesCommand{
+		BacnetObjectID: bacnetObjectID,
+		Values: []AlarmValueInput{
+			{AlarmTypeFieldID: fieldID},
+			{AlarmTypeFieldID: fieldID},
+			{},
+		},
+	})
+	validation, ok := domain.AsValidationError(err)
+	if !ok {
+		t.Fatalf("expected validation error, got %v", err)
+	}
+	for _, field := range []string{
+		"values.0.alarm_type_field_id",
+		"values.1.alarm_type_field_id",
+		"values.2.alarm_type_field_id",
+	} {
+		if validation.Fields[field] == "" {
+			t.Fatalf("missing field error %q in %+v", field, validation.Fields)
+		}
+	}
+	if harness.fieldCalls != 0 || harness.getCalls != 0 || harness.putCalls != 0 {
+		t.Fatalf(
+			"invalid inputs reached persistence: fields=%d get=%d put=%d",
+			harness.fieldCalls,
+			harness.getCalls,
+			harness.putCalls,
+		)
+	}
+}
+
+func TestReplaceAlarmValuesReportsMissingAlarmTypeFieldAtExactIndex(t *testing.T) {
+	bacnetObjectID := bacnetTestUUID(221)
+	alarmTypeID := bacnetTestUUID(222)
+	missingFieldID := bacnetTestUUID(223)
+	harness := &alarmValueTransactionHarness{
+		alarmTypeID:   &alarmTypeID,
+		selectionSet:  true,
+		missingFields: map[uuid.UUID]bool{missingFieldID: true},
+	}
+	handler := NewReplaceAlarmValuesHandler(ReplaceAlarmValuesDependencies{
+		TransactionRunner:   harness.runner,
+		TransactionWorkflow: harness.factory,
+	})
+
+	_, err := handler.Execute(context.Background(), ReplaceAlarmValuesCommand{
+		BacnetObjectID: bacnetObjectID,
+		Values: []AlarmValueInput{{
+			AlarmTypeFieldID: missingFieldID,
+		}},
+	})
+	validation, ok := domain.AsValidationError(err)
+	if !ok ||
+		validation.Fields["values.0.alarm_type_field_id"] !=
+			"alarm type field does not exist" {
+		t.Fatalf("expected exact missing-field validation, got %v", err)
+	}
+	if harness.getCalls != 0 || harness.putCalls != 0 {
+		t.Fatalf("missing field reached persistence: get=%d put=%d", harness.getCalls, harness.putCalls)
 	}
 }
 

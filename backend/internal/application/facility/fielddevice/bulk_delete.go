@@ -26,6 +26,11 @@ type BulkDeleteWorkflow interface {
 	DeleteByID(context.Context, uuid.UUID) error
 }
 
+type transactionalBulkDeleteOutbox interface {
+	BulkDeleteWorkflow
+	GetByFieldDeviceIDs(context.Context, []uuid.UUID) ([]*domainProject.ProjectFieldDevice, error)
+}
+
 type BulkDeleteCommand struct {
 	FieldDeviceIDs []uuid.UUID
 }
@@ -133,6 +138,7 @@ func (h *BulkDeleteHandler) Execute(
 
 	operationID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
 	candidateIDs := uniqueBulkDeleteIDs(command.FieldDeviceIDs)
 	var snapshots []*domainFacility.FieldDevice
 	if len(candidateIDs) > 0 {
@@ -172,24 +178,39 @@ func (h *BulkDeleteHandler) Execute(
 	}
 	changes := make([]mutation.EntityChange, 0, len(snapshotByID))
 	changedIDs := make(map[uuid.UUID]struct{}, len(snapshotByID))
+	durableProjectIDs := make(map[uuid.UUID]struct{})
 	for index, fieldDeviceID := range command.FieldDeviceIDs {
 		item := &result.Results[index]
 		item.ID = fieldDeviceID
+		_, alreadyChanged := changedIDs[fieldDeviceID]
+		shouldPublish := snapshotByID[fieldDeviceID] != nil && !alreadyChanged
+		if snapshotByID[fieldDeviceID] == nil {
+			item.Error = "field device not found"
+			item.ErrorCode = itemErrorCodeNotFound
+			item.ErrorField = "fielddevice.id"
+			item.Reason = item.Error
+			result.FailureCount++
+			continue
+		}
 
 		committed, deleteErr := apptransaction.RunResult(
 			ctx,
 			h.operation,
-			func(txCtx context.Context, workflow BulkDeleteWorkflow) (bool, error) {
+			func(txCtx context.Context, workflow BulkDeleteWorkflow) (bulkDeleteItemCommit, error) {
 				return executeBulkDeleteItem(
 					txCtx,
 					workflow,
 					fieldDeviceID,
 					operationID,
+					actorID,
+					occurredAt,
+					h.newID,
+					shouldPublish,
 					h.historyBatch,
 				)
 			},
 		)
-		if deleteErr != nil || !committed {
+		if deleteErr != nil || !committed.committed {
 			if deleteErr != nil {
 				item.Error = deleteErr.Error()
 			} else {
@@ -197,6 +218,9 @@ func (h *BulkDeleteHandler) Execute(
 			}
 			result.FailureCount++
 			continue
+		}
+		for _, projectID := range committed.projectIDs {
+			durableProjectIDs[projectID] = struct{}{}
 		}
 
 		item.Success = true
@@ -219,7 +243,6 @@ func (h *BulkDeleteHandler) Execute(
 		changes = append(changes, change)
 	}
 
-	occurredAt := h.now().UTC()
 	reconciliationIDs := sortedUUIDSet(changedIDs)
 	mutationResult := mutation.Result{
 		OperationID: operationID,
@@ -236,6 +259,10 @@ func (h *BulkDeleteHandler) Execute(
 		Mutation:          mutationResult,
 		ReconciliationIDs: reconciliationIDs,
 	}
+	normalizeBulkResult(result, command.FieldDeviceIDs)
+	if len(durableProjectIDs) > 0 {
+		outcome.Mutation.ProjectIDs = sortedUUIDSet(durableProjectIDs)
+	}
 	if len(reconciliationIDs) == 0 || h.dispatcher == nil {
 		return outcome
 	}
@@ -249,7 +276,9 @@ func (h *BulkDeleteHandler) Execute(
 
 	grouped := groupLinkedFieldDevices(links, reconciliationIDs)
 	projectIDs := sortedProjectIDs(grouped)
-	outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
+	if len(outcome.Mutation.ProjectIDs) == 0 {
+		outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
+	}
 	dispatchCtx := context.WithoutCancel(ctx)
 	for _, projectID := range projectIDs {
 		entityIDs := grouped[projectID]
@@ -282,24 +311,70 @@ func (h *BulkDeleteHandler) Execute(
 	return outcome
 }
 
+type bulkDeleteItemCommit struct {
+	committed  bool
+	projectIDs []uuid.UUID
+}
+
 func executeBulkDeleteItem(
 	ctx context.Context,
 	workflow BulkDeleteWorkflow,
 	fieldDeviceID uuid.UUID,
 	operationID uuid.UUID,
+	actorID *uuid.UUID,
+	occurredAt time.Time,
+	newID IDGenerator,
+	publish bool,
 	historyBatch HistoryBatchContext,
-) (bool, error) {
+) (bulkDeleteItemCommit, error) {
 	if workflow == nil {
-		return false, ErrDeleteTransactionNotConfigured
+		return bulkDeleteItemCommit{}, ErrDeleteTransactionNotConfigured
 	}
 	writeCtx := ctx
 	if historyBatch != nil {
 		writeCtx = historyBatch(ctx, operationID)
 	}
-	if err := workflow.DeleteByID(writeCtx, fieldDeviceID); err != nil {
-		return false, err
+	var projectIDs []uuid.UUID
+	if publish && appcollaboration.OutboxConfigured(writeCtx) {
+		outbox, ok := workflow.(transactionalBulkDeleteOutbox)
+		if !ok {
+			return bulkDeleteItemCommit{}, fmt.Errorf("FieldDevice bulk delete outbox workflow is not configured")
+		}
+		links, err := outbox.GetByFieldDeviceIDs(writeCtx, []uuid.UUID{fieldDeviceID})
+		if err != nil {
+			return bulkDeleteItemCommit{}, fmt.Errorf(
+				"resolve bulk-deleted FieldDevice projects for outbox: %w",
+				err,
+			)
+		}
+		projectIDs = sortedProjectIDs(groupLinkedFieldDevices(links, []uuid.UUID{fieldDeviceID}))
+		for _, projectID := range projectIDs {
+			event := appcollaboration.FacilityHierarchyRefreshRequired{
+				Envelope: appcollaboration.Envelope{
+					SchemaVersion: appcollaboration.SchemaVersionV2,
+					EventID:       newID(),
+					OperationID:   operationID,
+					CorrelationID: operationID,
+					ProjectID:     projectID,
+					ActorID:       actorID,
+					OccurredAt:    occurredAt,
+				},
+				Scope:     appcollaboration.FacilityScopeFieldDevice,
+				EntityIDs: []uuid.UUID{fieldDeviceID},
+			}
+			if _, err := appcollaboration.EnqueueCommand(writeCtx, event); err != nil {
+				return bulkDeleteItemCommit{}, fmt.Errorf(
+					"enqueue bulk-deleted FieldDevice for project %s: %w",
+					projectID,
+					err,
+				)
+			}
+		}
 	}
-	return true, nil
+	if err := workflow.DeleteByID(writeCtx, fieldDeviceID); err != nil {
+		return bulkDeleteItemCommit{}, err
+	}
+	return bulkDeleteItemCommit{committed: true, projectIDs: projectIDs}, nil
 }
 
 func failedBulkDeleteResult(
@@ -313,10 +388,12 @@ func failedBulkDeleteResult(
 	}
 	for index, id := range ids {
 		result.Results[index] = domainFacility.BulkOperationResultItem{
-			ID:    id,
-			Error: message,
+			ID:         id,
+			Error:      message,
+			ErrorField: "fielddevice",
 		}
 	}
+	normalizeBulkResult(result, ids)
 	return result
 }
 

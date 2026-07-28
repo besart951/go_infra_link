@@ -70,8 +70,9 @@ export function reconcileMultiCreateRows(
       continue;
     }
 
+    const reason = result.reason || result.error;
     backendErrors.set(result.index, {
-      message: localizeError(result.error, result.error_field),
+      message: localizeError(reason, result.error_field),
       field: (result.error_field as FieldDeviceRowError['field']) || ''
     });
   }

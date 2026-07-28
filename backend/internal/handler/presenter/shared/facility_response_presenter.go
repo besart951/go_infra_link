@@ -8,6 +8,7 @@ import (
 func ToControlCabinetResponse(controlCabinet domainFacility.ControlCabinet) dto.ControlCabinetResponse {
 	return dto.ControlCabinetResponse{
 		ID:               controlCabinet.ID,
+		Revision:         controlCabinet.Revision,
 		BuildingID:       controlCabinet.BuildingID,
 		ControlCabinetNr: controlCabinet.ControlCabinetNr,
 		CreatedAt:        controlCabinet.CreatedAt,
@@ -18,6 +19,7 @@ func ToControlCabinetResponse(controlCabinet domainFacility.ControlCabinet) dto.
 func ToSPSControllerResponse(controller domainFacility.SPSController) dto.SPSControllerResponse {
 	return dto.SPSControllerResponse{
 		ID:                controller.ID,
+		Revision:          controller.Revision,
 		ControlCabinetID:  controller.ControlCabinetID,
 		GADevice:          controller.GADevice,
 		DeviceName:        controller.DeviceName,

@@ -384,6 +384,7 @@ describe('FieldDeviceListView', () => {
         spsControllers: [
           {
             id: 'controller-1',
+            revision: 1,
             control_cabinet_id: 'cabinet-1',
             device_name: 'SPS 1 updated',
             created_at: '2026-01-01T00:00:00Z',

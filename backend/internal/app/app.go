@@ -25,6 +25,14 @@ func Run() error {
 	defer stopRegistrationCleanup()
 	stopDeletedUserPurge := runtimeDeps.services.User.StartDeletedUserPurgeWorker(time.Hour, 100)
 	defer stopDeletedUserPurge()
+	stopCollaborationOutbox := runtimeDeps.collaborationOutbox.StartWorker(
+		time.Second,
+		100,
+		func(err error) {
+			log.Error("Collaboration outbox delivery failed", "err", err)
+		},
+	)
+	defer stopCollaborationOutbox()
 
 	router := newRouter(runtimeDeps)
 	return serveHTTP(runtimeDeps.cfg, runtimeDeps.log, router)

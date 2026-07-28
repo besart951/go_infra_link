@@ -24,6 +24,7 @@ export function buildSpecification(overrides: Partial<Specification> = {}): Spec
 export function buildBacnetObject(overrides: Partial<BacnetObject> = {}): BacnetObject {
   return {
     id: 'bo-1',
+    revision: 1,
     text_fix: 'TF-001',
     description: 'Bacnet object',
     gms_visible: true,
@@ -44,6 +45,7 @@ export function buildBacnetObject(overrides: Partial<BacnetObject> = {}): Bacnet
 export function buildFieldDevice(overrides: Partial<FieldDevice> = {}): FieldDevice {
   return {
     id: 'fd-1',
+    revision: 1,
     bmk: 'FD-001',
     description: 'Field Device',
     text_fix: 'TXT-1',

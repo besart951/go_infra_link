@@ -3,9 +3,11 @@ package bacnetobject
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	appcollaboration "github.com/besart951/go_infra_link/backend/internal/application/collaboration"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"github.com/google/uuid"
 )
 
@@ -14,6 +16,118 @@ type collaborationDependencies struct {
 	objectDataOwners ObjectDataOwnerReader
 	dispatcher       appcollaboration.CommandDispatcher
 	newID            IDGenerator
+}
+
+type transactionalCollaborationResolver interface {
+	ProjectLinkReader
+	ObjectDataOwnerReader
+}
+
+// enqueueTransactionalMutation captures the exact project recipient set and
+// persists one version-2 event per project before the surrounding mutation
+// commits. ObjectData-only ownership uses the typed object_data scope; mixed
+// direct/template ownership falls back to a project reconciliation because one
+// narrower scope cannot authoritatively cover both views.
+func enqueueTransactionalMutation(
+	ctx context.Context,
+	resolver transactionalCollaborationResolver,
+	bacnetObjectID uuid.UUID,
+	revision uint64,
+	fieldDeviceIDs []uuid.UUID,
+	operationID uuid.UUID,
+	actorID *uuid.UUID,
+	occurredAt time.Time,
+	newID IDGenerator,
+) ([]uuid.UUID, error) {
+	if resolver == nil || !appcollaboration.OutboxConfigured(ctx) {
+		return nil, nil
+	}
+	groupedFieldDevices := make(map[uuid.UUID][]uuid.UUID)
+	if len(fieldDeviceIDs) > 0 {
+		links, err := resolver.GetByFieldDeviceIDs(ctx, fieldDeviceIDs)
+		if err != nil {
+			return nil, fmt.Errorf("resolve BACnet FieldDevice projects for outbox: %w", err)
+		}
+		groupedFieldDevices = groupLinkedFieldDevices(links, fieldDeviceIDs)
+	}
+	owners, err := resolver.GetByBacnetObjectIDs(ctx, []uuid.UUID{bacnetObjectID})
+	if err != nil {
+		return nil, fmt.Errorf("resolve BACnet ObjectData projects for outbox: %w", err)
+	}
+	objectDataIDs := objectDataIDsByProject(bacnetObjectID, owners)
+	objectDataProjects := make(map[uuid.UUID]struct{}, len(objectDataIDs))
+	for projectID := range objectDataIDs {
+		objectDataProjects[projectID] = struct{}{}
+	}
+	projectIDs := sortedUpdateProjectIDs(groupedFieldDevices, objectDataProjects)
+	for _, projectID := range projectIDs {
+		envelope := appcollaboration.Envelope{
+			SchemaVersion: appcollaboration.SchemaVersionV2,
+			EventID:       newID(),
+			OperationID:   operationID,
+			CorrelationID: operationID,
+			ProjectID:     projectID,
+			ActorID:       actorID,
+			OccurredAt:    occurredAt,
+			EntityRevisions: map[string]uint64{
+				bacnetObjectID.String(): revision,
+			},
+		}
+		var event appcollaboration.Command
+		_, hasDirectOwner := groupedFieldDevices[projectID]
+		ids, hasObjectDataOwner := objectDataIDs[projectID]
+		switch {
+		case hasDirectOwner && hasObjectDataOwner:
+			event = appcollaboration.FacilityHierarchyRefreshRequired{
+				Envelope: envelope, Scope: appcollaboration.FacilityScopeProject, FullRefresh: true,
+			}
+		case hasObjectDataOwner:
+			event = appcollaboration.FacilityHierarchyRefreshRequired{
+				Envelope: envelope, Scope: appcollaboration.FacilityScopeObjectData,
+				EntityIDs: append([]uuid.UUID(nil), ids...),
+			}
+		default:
+			event = appcollaboration.BacnetObjectUpdated{
+				Envelope: envelope, BacnetObjectID: bacnetObjectID,
+				FieldDeviceIDs: append([]uuid.UUID(nil), groupedFieldDevices[projectID]...),
+			}
+		}
+		if _, err := appcollaboration.EnqueueCommand(ctx, event); err != nil {
+			return nil, fmt.Errorf(
+				"enqueue BACnet collaboration event for project %s: %w",
+				projectID,
+				err,
+			)
+		}
+	}
+	return projectIDs, nil
+}
+
+func objectDataIDsByProject(
+	bacnetObjectID uuid.UUID,
+	owners []domainObjectData.BacnetObjectOwner,
+) map[uuid.UUID][]uuid.UUID {
+	sets := make(map[uuid.UUID]map[uuid.UUID]struct{})
+	for _, owner := range owners {
+		if owner.BacnetObjectID != bacnetObjectID || owner.ObjectDataID == uuid.Nil ||
+			owner.ProjectID == nil || *owner.ProjectID == uuid.Nil {
+			continue
+		}
+		if sets[*owner.ProjectID] == nil {
+			sets[*owner.ProjectID] = make(map[uuid.UUID]struct{})
+		}
+		sets[*owner.ProjectID][owner.ObjectDataID] = struct{}{}
+	}
+	result := make(map[uuid.UUID][]uuid.UUID, len(sets))
+	for projectID, ids := range sets {
+		values := make([]uuid.UUID, 0, len(ids))
+		for id := range ids {
+			values = append(values, id)
+		}
+		sort.Slice(values, func(i, j int) bool { return values[i].String() < values[j].String() })
+		result[projectID] = values
+	}
+	return result
 }
 
 // dispatchCommittedMutation is the single post-commit policy shared by

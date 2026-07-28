@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
+	appcollaboration "github.com/besart951/go_infra_link/backend/internal/application/collaboration"
 	"github.com/besart951/go_infra_link/backend/internal/application/facility/mutation"
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -27,6 +29,14 @@ type DeleteSystemTypeWorkflow interface {
 	DeleteByID(context.Context, uuid.UUID) error
 }
 
+type transactionalDeleteSystemTypeScope interface {
+	DeleteSystemTypeWorkflow
+	GetDeleteProjectScope(
+		context.Context,
+		uuid.UUID,
+	) (uuid.UUID, []uuid.UUID, error)
+}
+
 type DeleteSystemTypeCommand struct {
 	SPSControllerSystemTypeID uuid.UUID
 }
@@ -42,9 +52,11 @@ type DeleteSystemTypeDependencies struct {
 	TransactionRunner   apptransaction.Runner
 	TransactionWorkflow apptransaction.Factory[DeleteSystemTypeWorkflow]
 	HistoryBatch        HistoryBatchContext
+	Dispatcher          appcollaboration.CommandDispatcher
 	Actor               ActorProvider
 	NewID               IDGenerator
 	Now                 Clock
+	ReportError         ErrorReporter
 }
 
 type DeleteSystemTypeHandler struct {
@@ -54,19 +66,24 @@ type DeleteSystemTypeHandler struct {
 	]
 	transactionConfigured bool
 	historyBatch          HistoryBatchContext
+	dispatcher            appcollaboration.CommandDispatcher
 	actor                 ActorProvider
 	newID                 IDGenerator
 	now                   Clock
+	reportError           ErrorReporter
 }
 
 type DeleteSystemTypeOutcome struct {
-	Mutation mutation.Result
-	Existed  bool
+	Mutation       mutation.Result
+	Existed        bool
+	DispatchErrors []error
 }
 
 type committedSystemTypeDelete struct {
-	change  *mutation.EntityChange
-	batched bool
+	change     *mutation.EntityChange
+	batched    bool
+	projectIDs []uuid.UUID
+	commands   []appcollaboration.Command
 }
 
 func NewDeleteSystemTypeHandler(
@@ -96,20 +113,29 @@ func NewDeleteSystemTypeHandler(
 		operation:             operation,
 		transactionConfigured: deps.TransactionRunner != nil && deps.TransactionWorkflow != nil,
 		historyBatch:          deps.HistoryBatch,
+		dispatcher:            deps.Dispatcher,
 		actor:                 deps.Actor,
 		newID:                 newID,
 		now:                   now,
+		reportError:           deps.ReportError,
 	}
 }
 
 // DeleteSystemType preserves the existing idempotent 204 transport contract.
-// The global endpoint remains silent on the collaboration stream.
 func (h *DeleteSystemTypeHandler) DeleteSystemType(
 	ctx context.Context,
 	command DeleteSystemTypeCommand,
 ) error {
-	_, err := h.Execute(ctx, command)
-	return err
+	outcome, err := h.Execute(ctx, command)
+	if err != nil {
+		return err
+	}
+	for _, dispatchErr := range outcome.DispatchErrors {
+		if h.reportError != nil {
+			h.reportError(dispatchErr)
+		}
+	}
+	return nil
 }
 
 func (h *DeleteSystemTypeHandler) Execute(
@@ -125,6 +151,7 @@ func (h *DeleteSystemTypeHandler) Execute(
 
 	operationID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -132,13 +159,64 @@ func (h *DeleteSystemTypeHandler) Execute(
 			txCtx context.Context,
 			workflow DeleteSystemTypeWorkflow,
 		) (committedSystemTypeDelete, error) {
-			return executeDeleteSystemTypeTransaction(
+			var (
+				ownerID    uuid.UUID
+				projectIDs []uuid.UUID
+			)
+			if scope, ok := workflow.(transactionalDeleteSystemTypeScope); ok {
+				var scopeErr error
+				ownerID, projectIDs, scopeErr = scope.GetDeleteProjectScope(
+					txCtx,
+					command.SPSControllerSystemTypeID,
+				)
+				if scopeErr != nil {
+					return committedSystemTypeDelete{}, fmt.Errorf(
+						"resolve SPSControllerSystemType delete scope: %w",
+						scopeErr,
+					)
+				}
+			}
+			result, err := executeDeleteSystemTypeTransaction(
 				txCtx,
 				workflow,
 				command,
 				operationID,
 				h.historyBatch,
 			)
+			if err != nil || result.change == nil {
+				return result, err
+			}
+			if ownerID == uuid.Nil {
+				return result, nil
+			}
+			result.projectIDs = append([]uuid.UUID(nil), projectIDs...)
+			for _, projectID := range projectIDs {
+				event := appcollaboration.FacilityHierarchyRefreshRequired{
+					Envelope: appcollaboration.Envelope{
+						SchemaVersion: appcollaboration.SchemaVersionV2,
+						EventID:       h.newID(),
+						OperationID:   operationID,
+						CorrelationID: operationID,
+						ProjectID:     projectID,
+						ActorID:       actorID,
+						OccurredAt:    occurredAt,
+					},
+					Scope:     appcollaboration.FacilityScopeSPSController,
+					EntityIDs: []uuid.UUID{ownerID},
+				}
+				configured, err := appcollaboration.EnqueueCommand(txCtx, event)
+				if err != nil {
+					return committedSystemTypeDelete{}, fmt.Errorf(
+						"enqueue SPSControllerSystemType delete for project %s: %w",
+						projectID,
+						err,
+					)
+				}
+				if configured {
+					result.commands = append(result.commands, event)
+				}
+			}
+			return result, nil
 		},
 	)
 	if err != nil {
@@ -148,7 +226,8 @@ func (h *DeleteSystemTypeHandler) Execute(
 	result := mutation.Result{
 		OperationID: operationID,
 		ActorID:     actorID,
-		OccurredAt:  h.now().UTC(),
+		OccurredAt:  occurredAt,
+		ProjectIDs:  append([]uuid.UUID(nil), committed.projectIDs...),
 	}
 	if committed.batched {
 		batchID := operationID
@@ -157,10 +236,25 @@ func (h *DeleteSystemTypeHandler) Execute(
 	if committed.change != nil {
 		result.Changes = []mutation.EntityChange{*committed.change}
 	}
-	return DeleteSystemTypeOutcome{
+	outcome := DeleteSystemTypeOutcome{
 		Mutation: result,
 		Existed:  committed.change != nil,
-	}, nil
+	}
+	if committed.change == nil || h.dispatcher == nil {
+		return outcome, nil
+	}
+	dispatchCtx := context.WithoutCancel(ctx)
+	for _, event := range committed.commands {
+		envelope, _ := appcollaboration.CommandEnvelope(event)
+		if err := h.dispatcher.Dispatch(dispatchCtx, event); err != nil {
+			outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
+				"dispatch SPSControllerSystemType delete for project %s: %w",
+				envelope.ProjectID,
+				err,
+			))
+		}
+	}
+	return outcome, nil
 }
 
 func executeDeleteSystemTypeTransaction(

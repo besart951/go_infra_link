@@ -2,6 +2,7 @@
   import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
   import { getPhase, listPhases } from '$lib/infrastructure/api/phase.adapter.js';
   import type { Phase } from '$lib/domain/phase/index.js';
+  import { createTranslator } from '$lib/i18n/translator.js';
 
   interface ProjectPhaseSelectProps {
     value?: string;
@@ -22,12 +23,20 @@
     id,
     disabled = false,
     clearable = false,
-    clearText = 'Auswahl aufheben',
-    placeholder = 'Select phase...',
-    searchPlaceholder = 'Search phases...',
-    emptyText = 'No phases found.',
+    clearText,
+    placeholder,
+    searchPlaceholder,
+    emptyText,
     onValueChange
   }: ProjectPhaseSelectProps = $props();
+  const t = createTranslator();
+
+  const effectiveClearText = $derived(clearText ?? $t('facility.selects.clear'));
+  const effectivePlaceholder = $derived(placeholder ?? $t('facility.selects.phase'));
+  const effectiveSearchPlaceholder = $derived(
+    searchPlaceholder ?? $t('phases.page.search_placeholder')
+  );
+  const effectiveEmptyText = $derived(emptyText ?? $t('messages.no_phases_found'));
 
   const MAX_PHASE_SAMPLES = 100;
 
@@ -50,11 +59,11 @@
   {fetcher}
   {fetchById}
   labelKey="name"
-  {placeholder}
-  {searchPlaceholder}
-  {emptyText}
+  placeholder={effectivePlaceholder}
+  searchPlaceholder={effectiveSearchPlaceholder}
+  emptyText={effectiveEmptyText}
   {clearable}
-  {clearText}
+  clearText={effectiveClearText}
   {onValueChange}
   {width}
   {id}

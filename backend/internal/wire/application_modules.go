@@ -2,6 +2,8 @@ package wire
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -11,21 +13,26 @@ import (
 	appcontrolcabinet "github.com/besart951/go_infra_link/backend/internal/application/facility/controlcabinet"
 	appfielddevice "github.com/besart951/go_infra_link/backend/internal/application/facility/fielddevice"
 	appobjectdata "github.com/besart951/go_infra_link/backend/internal/application/facility/objectdata"
+	appprojectlink "github.com/besart951/go_infra_link/backend/internal/application/facility/projectlink"
 	appspscontroller "github.com/besart951/go_infra_link/backend/internal/application/facility/spscontroller"
 	apphistory "github.com/besart951/go_infra_link/backend/internal/application/history"
+	appproject "github.com/besart951/go_infra_link/backend/internal/application/project"
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
+	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	infraltime "github.com/besart951/go_infra_link/backend/internal/infrastructure/realtime"
 	infratransaction "github.com/besart951/go_infra_link/backend/internal/infrastructure/transaction"
+	facilityrepo "github.com/besart951/go_infra_link/backend/internal/repository/facilitysql"
 	"github.com/besart951/go_infra_link/backend/internal/service/auditctx"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	projectservice "github.com/besart951/go_infra_link/backend/internal/service/project"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type projectSPSControllerReassignmentWorkflow struct {
@@ -41,6 +48,908 @@ type projectControlCabinetReassignmentWorkflow struct {
 type projectObjectDataAssociationWorkflow struct {
 	projects   domainProject.ProjectRepository
 	objectData domainObjectData.ObjectDataStore
+}
+
+type projectControlCabinetRestoreWorkflow struct {
+	restorer appcontrolcabinet.ControlCabinetHistoryRestorer
+	links    appcontrolcabinet.ProjectLinkReader
+}
+
+type projectFacilityUnlinkWorkflow struct {
+	controlCabinets domainProject.ProjectControlCabinetRepository
+	spsControllers  domainProject.ProjectSPSControllerRepository
+	fieldDevices    domainProject.ProjectFieldDeviceRepository
+}
+
+type projectDeletionWorkflow struct {
+	db         *gorm.DB
+	projects   domainProject.ProjectRepository
+	objectData domainObjectData.ObjectDataStore
+}
+
+type projectCloneSourceKind uint8
+
+const (
+	projectCloneControlCabinet projectCloneSourceKind = iota + 1
+	projectCloneSPSController
+	projectCloneSPSControllerSystemType
+)
+
+type projectFacilityCloneWorkflow struct {
+	*projectservice.ProjectFacilityLinkService
+	db         *gorm.DB
+	sourceKind projectCloneSourceKind
+}
+
+type spsControllerSystemTypeCloneStore interface {
+	CopyByID(
+		context.Context,
+		uuid.UUID,
+	) (*domainFacility.SPSControllerSystemType, error)
+	GetByID(
+		context.Context,
+		uuid.UUID,
+	) (*domainFacility.SPSControllerSystemType, error)
+}
+
+type globalSPSControllerSystemTypeCloneWorkflow struct {
+	clones spsControllerSystemTypeCloneStore
+	db     *gorm.DB
+}
+
+type controlCabinetCloneStore interface {
+	CopyByID(context.Context, uuid.UUID) (*domainFacility.ControlCabinet, error)
+	GetByID(context.Context, uuid.UUID) (*domainFacility.ControlCabinet, error)
+}
+
+type globalControlCabinetCloneWorkflow struct {
+	clones        controlCabinetCloneStore
+	facilityLinks *projectservice.ProjectFacilityLinkService
+	db            *gorm.DB
+}
+
+func (workflow *globalControlCabinetCloneWorkflow) CopyByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*domainFacility.ControlCabinet, error) {
+	return workflow.clones.CopyByID(ctx, id)
+}
+
+func (workflow *globalControlCabinetCloneWorkflow) GetByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*domainFacility.ControlCabinet, error) {
+	return workflow.clones.GetByID(ctx, id)
+}
+
+func (workflow *globalControlCabinetCloneWorkflow) GetSourceProjectIDs(
+	ctx context.Context,
+	controlCabinetID uuid.UUID,
+) ([]uuid.UUID, error) {
+	var projectIDs []uuid.UUID
+	result := workflow.db.WithContext(ctx).Raw(`
+		SELECT project_link.project_id
+		FROM project_control_cabinets AS project_link
+		WHERE project_link.control_cabinet_id = ?
+		ORDER BY project_link.project_id
+		FOR UPDATE OF project_link
+	`, controlCabinetID).Scan(&projectIDs)
+	return projectIDs, result.Error
+}
+
+func (workflow *globalControlCabinetCloneWorkflow) AssignCopyToProject(
+	ctx context.Context,
+	projectID, controlCabinetID uuid.UUID,
+) error {
+	_, err := workflow.facilityLinks.CreateControlCabinet(
+		ctx,
+		projectID,
+		controlCabinetID,
+	)
+	return err
+}
+
+func (workflow *globalSPSControllerSystemTypeCloneWorkflow) CopyByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*domainFacility.SPSControllerSystemType, error) {
+	return workflow.clones.CopyByID(ctx, id)
+}
+
+func (workflow *globalSPSControllerSystemTypeCloneWorkflow) GetByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*domainFacility.SPSControllerSystemType, error) {
+	return workflow.clones.GetByID(ctx, id)
+}
+
+func (workflow *globalSPSControllerSystemTypeCloneWorkflow) GetOwningProjectIDs(
+	ctx context.Context,
+	spsControllerID uuid.UUID,
+) ([]uuid.UUID, error) {
+	var projectIDs []uuid.UUID
+	result := workflow.db.WithContext(ctx).Raw(`
+		SELECT project_link.project_id
+		FROM project_sps_controllers AS project_link
+		WHERE project_link.sps_controller_id = ?
+		ORDER BY project_link.project_id
+		FOR UPDATE OF project_link
+	`, spsControllerID).Scan(&projectIDs)
+	return projectIDs, result.Error
+}
+
+func (workflow *projectFacilityCloneWorkflow) RequireSourceAccess(
+	ctx context.Context,
+	projectID, sourceID uuid.UUID,
+) error {
+	var query string
+	switch workflow.sourceKind {
+	case projectCloneControlCabinet:
+		query = `
+			SELECT project_link.id
+			FROM project_control_cabinets AS project_link
+			WHERE project_link.project_id = ?
+			  AND project_link.control_cabinet_id = ?
+			LIMIT 1
+			FOR UPDATE OF project_link
+		`
+	case projectCloneSPSController:
+		query = `
+			SELECT project_link.id
+			FROM project_sps_controllers AS project_link
+			WHERE project_link.project_id = ?
+			  AND project_link.sps_controller_id = ?
+			LIMIT 1
+			FOR UPDATE OF project_link
+		`
+	case projectCloneSPSControllerSystemType:
+		query = `
+			SELECT project_link.id
+			FROM sps_controller_system_types AS source
+			INNER JOIN project_sps_controllers AS project_link
+				ON project_link.sps_controller_id = source.sps_controller_id
+			WHERE project_link.project_id = ?
+			  AND source.id = ?
+			LIMIT 1
+			FOR UPDATE OF project_link
+		`
+	default:
+		return domain.ErrInvalidArgument
+	}
+
+	var linkID uuid.UUID
+	result := workflow.db.WithContext(ctx).Raw(query, projectID, sourceID).Scan(&linkID)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 || linkID == uuid.Nil {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
+func (workflow *projectDeletionWorkflow) GetProjectForDeletion(
+	ctx context.Context,
+	projectID uuid.UUID,
+) (*appproject.Snapshot, error) {
+	var snapshot appproject.Snapshot
+	err := workflow.db.WithContext(ctx).
+		Table("projects").
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Select("id, status").
+		Where("id = ?", projectID).
+		Take(&snapshot).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, domain.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &snapshot, nil
+}
+
+func (workflow *projectDeletionWorkflow) GetActiveUserRole(
+	ctx context.Context,
+	userID uuid.UUID,
+) (domainUser.Role, error) {
+	var row struct {
+		Role domainUser.Role
+	}
+	err := workflow.db.WithContext(ctx).
+		Table("users").
+		Select("role").
+		Where("id = ?", userID).
+		Where("is_active = ?", true).
+		Where("disabled_at IS NULL").
+		Where("deleted_at IS NULL").
+		Where("anonymized_at IS NULL").
+		Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", domain.ErrNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	return row.Role, nil
+}
+
+func (workflow *projectDeletionWorkflow) HasHierarchyLinks(
+	ctx context.Context,
+	projectID uuid.UUID,
+) (bool, error) {
+	var linked bool
+	err := workflow.db.WithContext(ctx).Raw(`
+		SELECT EXISTS (
+			SELECT 1 FROM project_control_cabinets WHERE project_id = ?
+			UNION ALL
+			SELECT 1 FROM project_sps_controllers WHERE project_id = ?
+			UNION ALL
+			SELECT 1 FROM project_field_devices WHERE project_id = ?
+		)
+	`, projectID, projectID, projectID).Scan(&linked).Error
+	return linked, err
+}
+
+func (workflow *projectDeletionWorkflow) ListProjectObjectDataIDs(
+	ctx context.Context,
+	projectID, after uuid.UUID,
+	limit int,
+) ([]uuid.UUID, error) {
+	query := workflow.db.WithContext(ctx).
+		Table("object_data").
+		Select("id").
+		Where("project_id = ?", projectID)
+	if after != uuid.Nil {
+		query = query.Where("id > ?", after)
+	}
+	var ids []uuid.UUID
+	err := query.Order("id ASC").Limit(limit).Scan(&ids).Error
+	return ids, err
+}
+
+func (workflow *projectDeletionWorkflow) DeleteObjectData(
+	ctx context.Context,
+	ids []uuid.UUID,
+) error {
+	return workflow.objectData.DeleteByIds(ctx, ids)
+}
+
+func (workflow *projectDeletionWorkflow) DeleteProjectMemberships(
+	ctx context.Context,
+	projectID uuid.UUID,
+) error {
+	return workflow.db.WithContext(ctx).
+		Table("project_users").
+		Where("project_id = ?", projectID).
+		Delete(nil).Error
+}
+
+func (workflow *projectDeletionWorkflow) DeleteProject(
+	ctx context.Context,
+	projectID uuid.UUID,
+) error {
+	return workflow.projects.DeleteByIds(ctx, []uuid.UUID{projectID})
+}
+
+func (workflow *projectFacilityUnlinkWorkflow) GetProjectFacilityLink(
+	ctx context.Context,
+	kind appprojectlink.Kind,
+	linkID uuid.UUID,
+) (*appprojectlink.Link, error) {
+	switch kind {
+	case appprojectlink.KindControlCabinet:
+		item, err := domain.GetByID(ctx, workflow.controlCabinets, linkID)
+		if err != nil {
+			return nil, err
+		}
+		return &appprojectlink.Link{
+			ID: item.ID, ProjectID: item.ProjectID, EntityID: item.ControlCabinetID,
+		}, nil
+	case appprojectlink.KindSPSController:
+		item, err := domain.GetByID(ctx, workflow.spsControllers, linkID)
+		if err != nil {
+			return nil, err
+		}
+		return &appprojectlink.Link{
+			ID: item.ID, ProjectID: item.ProjectID, EntityID: item.SPSControllerID,
+		}, nil
+	case appprojectlink.KindFieldDevice:
+		item, err := domain.GetByID(ctx, workflow.fieldDevices, linkID)
+		if err != nil {
+			return nil, err
+		}
+		return &appprojectlink.Link{
+			ID: item.ID, ProjectID: item.ProjectID, EntityID: item.FieldDeviceID,
+		}, nil
+	default:
+		return nil, domain.ErrInvalidArgument
+	}
+}
+
+func (workflow *projectFacilityUnlinkWorkflow) DeleteProjectFacilityLink(
+	ctx context.Context,
+	kind appprojectlink.Kind,
+	linkID uuid.UUID,
+) error {
+	switch kind {
+	case appprojectlink.KindControlCabinet:
+		link, err := domain.GetByID(ctx, workflow.controlCabinets, linkID)
+		if err != nil {
+			return err
+		}
+		source := domainProject.AssignmentSource{
+			Kind:           domainProject.AssignmentSourceControlCabinet,
+			SourceEntityID: link.ControlCabinetID,
+		}
+		if pruner, ok := workflow.fieldDevices.(interface {
+			RemoveAssignmentSourceAndPrune(
+				context.Context,
+				uuid.UUID,
+				domainProject.AssignmentSource,
+			) (bool, error)
+		}); ok {
+			if _, err := pruner.RemoveAssignmentSourceAndPrune(
+				ctx,
+				link.ProjectID,
+				source,
+			); err != nil {
+				return err
+			}
+		}
+		if pruner, ok := workflow.spsControllers.(interface {
+			RemoveAssignmentSourceAndPrune(
+				context.Context,
+				uuid.UUID,
+				domainProject.AssignmentSource,
+			) (bool, error)
+		}); ok {
+			if _, err := pruner.RemoveAssignmentSourceAndPrune(
+				ctx,
+				link.ProjectID,
+				source,
+			); err != nil {
+				return err
+			}
+		}
+		return workflow.controlCabinets.DeleteByIds(ctx, []uuid.UUID{linkID})
+	case appprojectlink.KindSPSController:
+		link, err := domain.GetByID(ctx, workflow.spsControllers, linkID)
+		if err != nil {
+			return err
+		}
+		if pruner, ok := workflow.fieldDevices.(interface {
+			RemoveAssignmentSourceAndPrune(
+				context.Context,
+				uuid.UUID,
+				domainProject.AssignmentSource,
+			) (bool, error)
+		}); ok {
+			if _, err := pruner.RemoveAssignmentSourceAndPrune(
+				ctx,
+				link.ProjectID,
+				domainProject.AssignmentSource{
+					Kind:           domainProject.AssignmentSourceSPSController,
+					SourceEntityID: link.SPSControllerID,
+				},
+			); err != nil {
+				return err
+			}
+		}
+		if pruner, ok := workflow.spsControllers.(interface {
+			RemoveAssignmentSourceAndPrune(
+				context.Context,
+				uuid.UUID,
+				domainProject.AssignmentSource,
+			) (bool, error)
+		}); ok {
+			handled, err := pruner.RemoveAssignmentSourceAndPrune(
+				ctx,
+				link.ProjectID,
+				domainProject.AssignmentSource{
+					Kind:           domainProject.AssignmentSourceExplicit,
+					SourceEntityID: link.SPSControllerID,
+				},
+			)
+			if err != nil {
+				return err
+			}
+			if handled {
+				return nil
+			}
+		}
+		return workflow.spsControllers.DeleteByIds(ctx, []uuid.UUID{linkID})
+	case appprojectlink.KindFieldDevice:
+		link, err := domain.GetByID(ctx, workflow.fieldDevices, linkID)
+		if err != nil {
+			return err
+		}
+		if pruner, ok := workflow.fieldDevices.(interface {
+			RemoveAssignmentSourceAndPrune(
+				context.Context,
+				uuid.UUID,
+				domainProject.AssignmentSource,
+			) (bool, error)
+		}); ok {
+			handled, err := pruner.RemoveAssignmentSourceAndPrune(
+				ctx,
+				link.ProjectID,
+				domainProject.AssignmentSource{
+					Kind:           domainProject.AssignmentSourceExplicit,
+					SourceEntityID: link.FieldDeviceID,
+				},
+			)
+			if err != nil {
+				return err
+			}
+			if handled {
+				return nil
+			}
+		}
+		return workflow.fieldDevices.DeleteByIds(ctx, []uuid.UUID{linkID})
+	default:
+		return domain.ErrInvalidArgument
+	}
+}
+
+func (w *projectControlCabinetRestoreWorkflow) RestoreControlCabinet(
+	ctx context.Context,
+	controlCabinetID uuid.UUID,
+	request domainHistory.RestoreControlCabinetRequest,
+) (*domainHistory.RestoreResult, error) {
+	return w.restorer.RestoreControlCabinet(ctx, controlCabinetID, request)
+}
+
+func (w *projectControlCabinetRestoreWorkflow) GetByControlCabinetIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainProject.ProjectControlCabinet, error) {
+	return w.links.GetByControlCabinetIDs(ctx, ids)
+}
+
+type bacnetObjectCreateOutboxWorkflow struct {
+	appbacnetobject.CreateWorkflow
+	links appbacnetobject.ProjectLinkReader
+}
+
+type bacnetObjectUpdateOutboxWorkflow struct {
+	appbacnetobject.UpdateWorkflow
+	links  appbacnetobject.ProjectLinkReader
+	owners appbacnetobject.ObjectDataOwnerReader
+}
+
+func (w *bacnetObjectUpdateOutboxWorkflow) GetByFieldDeviceIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainProject.ProjectFieldDevice, error) {
+	return w.links.GetByFieldDeviceIDs(ctx, ids)
+}
+
+func (w *bacnetObjectUpdateOutboxWorkflow) GetByBacnetObjectIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]domainObjectData.BacnetObjectOwner, error) {
+	return w.owners.GetByBacnetObjectIDs(ctx, ids)
+}
+
+type bacnetAlarmValuesOutboxWorkflow struct {
+	appbacnetobject.AlarmValueStore
+	db      *gorm.DB
+	objects appbacnetobject.BacnetObjectStateReader
+	links   appbacnetobject.ProjectLinkReader
+	owners  appbacnetobject.ObjectDataOwnerReader
+}
+
+func (w *bacnetAlarmValuesOutboxWorkflow) GetAlarmSelection(
+	ctx context.Context,
+	bacnetObjectID uuid.UUID,
+) (*appbacnetobject.AlarmSelection, error) {
+	var selection appbacnetobject.AlarmSelection
+	err := w.db.WithContext(ctx).
+		Table("bacnet_objects").
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Select("id AS bacnet_object_id, alarm_type_id").
+		Where("id = ?", bacnetObjectID).
+		Take(&selection).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, domain.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &selection, nil
+}
+
+func (w *bacnetAlarmValuesOutboxWorkflow) GetAlarmTypeFields(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainFacility.AlarmTypeField, error) {
+	if len(ids) == 0 {
+		return []*domainFacility.AlarmTypeField{}, nil
+	}
+	var fields []*domainFacility.AlarmTypeField
+	err := w.db.WithContext(ctx).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id IN ?", ids).
+		Find(&fields).Error
+	return fields, err
+}
+
+func (w *bacnetAlarmValuesOutboxWorkflow) GetByIds(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainFacility.BacnetObject, error) {
+	return w.objects.GetByIds(ctx, ids)
+}
+
+func (w *bacnetAlarmValuesOutboxWorkflow) GetByFieldDeviceIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainProject.ProjectFieldDevice, error) {
+	return w.links.GetByFieldDeviceIDs(ctx, ids)
+}
+
+func (w *bacnetAlarmValuesOutboxWorkflow) GetByBacnetObjectIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]domainObjectData.BacnetObjectOwner, error) {
+	return w.owners.GetByBacnetObjectIDs(ctx, ids)
+}
+
+func (w *bacnetObjectCreateOutboxWorkflow) GetByFieldDeviceIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainProject.ProjectFieldDevice, error) {
+	return w.links.GetByFieldDeviceIDs(ctx, ids)
+}
+
+type fieldDeviceUpdateOutboxWorkflow struct {
+	appfielddevice.UpdateWorkflow
+	links       appfielddevice.ProjectLinkReader
+	assignments *projectservice.ProjectFacilityLinkService
+}
+
+type fieldDeviceBulkUpdateOutboxWorkflow struct {
+	appfielddevice.BulkUpdateExecutor
+	links appfielddevice.ProjectLinkReader
+}
+
+type fieldDeviceDeleteOutboxWorkflow struct {
+	appfielddevice.DeleteWorkflow
+	links appfielddevice.ProjectLinkReader
+}
+
+type fieldDeviceBulkDeleteOutboxWorkflow struct {
+	appfielddevice.BulkDeleteWorkflow
+	links appfielddevice.ProjectLinkReader
+}
+
+func (w *fieldDeviceUpdateOutboxWorkflow) ReconcileFieldDeviceMove(
+	ctx context.Context,
+	fieldDeviceID uuid.UUID,
+	fromSystemTypeID uuid.UUID,
+	toSystemTypeID uuid.UUID,
+) ([]uuid.UUID, error) {
+	if w.assignments == nil {
+		return nil, nil
+	}
+	return w.assignments.ReconcileFieldDeviceMove(
+		ctx,
+		fieldDeviceID,
+		fromSystemTypeID,
+		toSystemTypeID,
+	)
+}
+
+func (w *fieldDeviceBulkUpdateOutboxWorkflow) GetByFieldDeviceIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainProject.ProjectFieldDevice, error) {
+	return w.links.GetByFieldDeviceIDs(ctx, ids)
+}
+
+type controlCabinetUpdateOutboxWorkflow struct {
+	appcontrolcabinet.UpdateWorkflow
+	links appcontrolcabinet.ProjectLinkReader
+	db    *gorm.DB
+}
+
+func (w *controlCabinetUpdateOutboxWorkflow) CountSPSControllers(
+	ctx context.Context,
+	controlCabinetID uuid.UUID,
+) (int64, error) {
+	var count int64
+	err := w.db.WithContext(ctx).
+		Model(&domainFacility.SPSController{}).
+		Where("control_cabinet_id = ?", controlCabinetID).
+		Count(&count).Error
+	return count, err
+}
+
+type controlCabinetDeleteOutboxWorkflow struct {
+	appcontrolcabinet.DeleteWorkflow
+	cleaner *hierarchyDeleteCleaner
+	db      *gorm.DB
+}
+
+func (w *controlCabinetDeleteOutboxWorkflow) GetByControlCabinetIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainProject.ProjectControlCabinet, error) {
+	if len(ids) == 0 {
+		return []*domainProject.ProjectControlCabinet{}, nil
+	}
+	var projectIDs []uuid.UUID
+	if err := w.db.WithContext(ctx).Raw(`
+		WITH descendant_fields AS (
+			SELECT field.id
+			FROM field_devices AS field
+			JOIN sps_controller_system_types AS assignment
+				ON assignment.id = field.sps_controller_system_type_id
+			JOIN sps_controllers AS controller
+				ON controller.id = assignment.sps_controller_id
+			WHERE controller.control_cabinet_id IN ?
+		),
+		descendant_bacnet AS (
+			SELECT object.id
+			FROM bacnet_objects AS object
+			WHERE object.field_device_id IN (SELECT id FROM descendant_fields)
+		),
+		affected_bacnet AS (
+			SELECT id FROM descendant_bacnet
+			UNION
+			SELECT object.id
+			FROM bacnet_objects AS object
+			WHERE object.software_reference_id IN (SELECT id FROM descendant_bacnet)
+		)
+		SELECT project_id
+		FROM project_control_cabinets
+		WHERE control_cabinet_id IN ?
+		UNION
+		SELECT link.project_id
+		FROM project_sps_controllers AS link
+		JOIN sps_controllers AS controller
+			ON controller.id = link.sps_controller_id
+		WHERE controller.control_cabinet_id IN ?
+		UNION
+		SELECT project_id
+		FROM project_field_devices
+		WHERE field_device_id IN (SELECT id FROM descendant_fields)
+		UNION
+		SELECT link.project_id
+		FROM project_field_devices AS link
+		JOIN bacnet_objects AS object ON object.field_device_id = link.field_device_id
+		WHERE object.id IN (SELECT id FROM affected_bacnet)
+		UNION
+		SELECT object_data.project_id
+		FROM object_data
+		JOIN object_data_bacnet_objects AS link
+			ON link.object_data_id = object_data.id
+		WHERE object_data.project_id IS NOT NULL
+		  AND link.bacnet_object_id IN (SELECT id FROM affected_bacnet)
+		ORDER BY project_id
+	`, ids, ids, ids).Scan(&projectIDs).Error; err != nil {
+		return nil, err
+	}
+	links := make([]*domainProject.ProjectControlCabinet, len(projectIDs))
+	for index, projectID := range projectIDs {
+		links[index] = &domainProject.ProjectControlCabinet{
+			ProjectID:        projectID,
+			ControlCabinetID: ids[0],
+		}
+	}
+	return links, nil
+}
+
+func (w *controlCabinetDeleteOutboxWorkflow) DeleteByID(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
+	return w.cleaner.deleteControlCabinet(ctx, id)
+}
+
+func (w *controlCabinetUpdateOutboxWorkflow) GetByControlCabinetIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainProject.ProjectControlCabinet, error) {
+	return w.links.GetByControlCabinetIDs(ctx, ids)
+}
+
+type spsControllerUpdateOutboxWorkflow struct {
+	appspscontroller.UpdateWorkflow
+	links       appspscontroller.ProjectLinkReader
+	assignments *projectservice.ProjectFacilityLinkService
+}
+
+type spsControllerDeleteOutboxWorkflow struct {
+	appspscontroller.DeleteWorkflow
+	cleaner *hierarchyDeleteCleaner
+	db      *gorm.DB
+}
+
+type spsControllerSystemTypeDeleteWorkflow struct {
+	appspscontroller.DeleteSystemTypeWorkflow
+	cleaner *hierarchyDeleteCleaner
+	db      *gorm.DB
+}
+
+func (w *spsControllerUpdateOutboxWorkflow) ReconcileSPSControllerMove(
+	ctx context.Context,
+	spsControllerID uuid.UUID,
+	fromControlCabinetID uuid.UUID,
+	toControlCabinetID uuid.UUID,
+) ([]uuid.UUID, error) {
+	if w.assignments == nil {
+		return nil, nil
+	}
+	return w.assignments.ReconcileSPSControllerMove(
+		ctx,
+		spsControllerID,
+		fromControlCabinetID,
+		toControlCabinetID,
+	)
+}
+
+func (w *spsControllerSystemTypeDeleteWorkflow) DeleteByID(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
+	return w.cleaner.deleteSPSControllerSystemTypes(ctx, []uuid.UUID{id})
+}
+
+func (w *spsControllerSystemTypeDeleteWorkflow) GetDeleteProjectScope(
+	ctx context.Context,
+	systemTypeID uuid.UUID,
+) (uuid.UUID, []uuid.UUID, error) {
+	var ownerID uuid.UUID
+	if err := w.db.WithContext(ctx).
+		Model(&domainFacility.SPSControllerSystemType{}).
+		Where("id = ?", systemTypeID).
+		Pluck("sps_controller_id", &ownerID).Error; err != nil {
+		return uuid.Nil, nil, err
+	}
+	if ownerID == uuid.Nil {
+		return uuid.Nil, nil, nil
+	}
+
+	var projectIDs []uuid.UUID
+	if err := w.db.WithContext(ctx).Raw(`
+		WITH descendant_fields AS (
+			SELECT id
+			FROM field_devices
+			WHERE sps_controller_system_type_id = ?
+		),
+		descendant_bacnet AS (
+			SELECT object.id
+			FROM bacnet_objects AS object
+			WHERE object.field_device_id IN (SELECT id FROM descendant_fields)
+		),
+		affected_bacnet AS (
+			SELECT id FROM descendant_bacnet
+			UNION
+			SELECT object.id
+			FROM bacnet_objects AS object
+			WHERE object.software_reference_id IN (SELECT id FROM descendant_bacnet)
+		)
+		SELECT project_id
+		FROM project_sps_controllers
+		WHERE sps_controller_id = ?
+		UNION
+		SELECT project_id
+		FROM project_field_devices
+		WHERE field_device_id IN (SELECT id FROM descendant_fields)
+		UNION
+		SELECT link.project_id
+		FROM project_field_devices AS link
+		JOIN bacnet_objects AS object ON object.field_device_id = link.field_device_id
+		WHERE object.id IN (SELECT id FROM affected_bacnet)
+		UNION
+		SELECT object_data.project_id
+		FROM object_data
+		JOIN object_data_bacnet_objects AS link
+			ON link.object_data_id = object_data.id
+		WHERE object_data.project_id IS NOT NULL
+		  AND link.bacnet_object_id IN (SELECT id FROM affected_bacnet)
+		ORDER BY project_id
+	`, systemTypeID, ownerID).Scan(&projectIDs).Error; err != nil {
+		return uuid.Nil, nil, err
+	}
+	return ownerID, projectIDs, nil
+}
+
+func (w *spsControllerUpdateOutboxWorkflow) GetBySPSControllerIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainProject.ProjectSPSController, error) {
+	return w.links.GetBySPSControllerIDs(ctx, ids)
+}
+
+func (w *spsControllerDeleteOutboxWorkflow) GetBySPSControllerIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainProject.ProjectSPSController, error) {
+	if len(ids) == 0 {
+		return []*domainProject.ProjectSPSController{}, nil
+	}
+	var projectIDs []uuid.UUID
+	if err := w.db.WithContext(ctx).Raw(`
+		WITH descendant_fields AS (
+			SELECT field.id
+			FROM field_devices AS field
+			JOIN sps_controller_system_types AS assignment
+				ON assignment.id = field.sps_controller_system_type_id
+			WHERE assignment.sps_controller_id IN ?
+		),
+		descendant_bacnet AS (
+			SELECT object.id
+			FROM bacnet_objects AS object
+			WHERE object.field_device_id IN (SELECT id FROM descendant_fields)
+		),
+		affected_bacnet AS (
+			SELECT id FROM descendant_bacnet
+			UNION
+			SELECT object.id
+			FROM bacnet_objects AS object
+			WHERE object.software_reference_id IN (SELECT id FROM descendant_bacnet)
+		)
+		SELECT project_id
+		FROM project_sps_controllers
+		WHERE sps_controller_id IN ?
+		UNION
+		SELECT project_id
+		FROM project_field_devices
+		WHERE field_device_id IN (SELECT id FROM descendant_fields)
+		UNION
+		SELECT link.project_id
+		FROM project_field_devices AS link
+		JOIN bacnet_objects AS object ON object.field_device_id = link.field_device_id
+		WHERE object.id IN (SELECT id FROM affected_bacnet)
+		UNION
+		SELECT object_data.project_id
+		FROM object_data
+		JOIN object_data_bacnet_objects AS link
+			ON link.object_data_id = object_data.id
+		WHERE object_data.project_id IS NOT NULL
+		  AND link.bacnet_object_id IN (SELECT id FROM affected_bacnet)
+		ORDER BY project_id
+	`, ids, ids).Scan(&projectIDs).Error; err != nil {
+		return nil, err
+	}
+	links := make([]*domainProject.ProjectSPSController, len(projectIDs))
+	for index, projectID := range projectIDs {
+		links[index] = &domainProject.ProjectSPSController{
+			ProjectID:       projectID,
+			SPSControllerID: ids[0],
+		}
+	}
+	return links, nil
+}
+
+func (w *spsControllerDeleteOutboxWorkflow) DeleteByID(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
+	return w.cleaner.deleteSPSControllers(ctx, []uuid.UUID{id})
+}
+
+func (w *fieldDeviceDeleteOutboxWorkflow) GetByFieldDeviceIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainProject.ProjectFieldDevice, error) {
+	return w.links.GetByFieldDeviceIDs(ctx, ids)
+}
+
+func (w *fieldDeviceBulkDeleteOutboxWorkflow) GetByFieldDeviceIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainProject.ProjectFieldDevice, error) {
+	return w.links.GetByFieldDeviceIDs(ctx, ids)
+}
+
+func (w *fieldDeviceUpdateOutboxWorkflow) GetByFieldDeviceIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]*domainProject.ProjectFieldDevice, error) {
+	return w.links.GetByFieldDeviceIDs(ctx, ids)
 }
 
 type projectRestoreAccessPolicy interface {
@@ -134,6 +1043,41 @@ func (s *projectControlCabinetRestoreScope) RequireControlCabinetRestoreScope(
 		return domain.ErrNotFound
 	}
 	return nil
+}
+
+func newProjectApplicationServices(
+	gormDB *gorm.DB,
+) *appproject.Services {
+	actor := func(ctx context.Context) *uuid.UUID {
+		actorID, _ := auditctx.ActorID(ctx)
+		return actorID
+	}
+	transactionWorkflow := func(
+		unit apptransaction.UnitOfWork,
+	) (appproject.DeletionWorkflow, error) {
+		txDB, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return nil, err
+		}
+		txRepos, err := repositoriesFromUnit(unit)
+		if err != nil {
+			return nil, err
+		}
+		return &projectDeletionWorkflow{
+			db:         txDB,
+			projects:   txRepos.Project,
+			objectData: txRepos.FacilityObjectData,
+		}, nil
+	}
+
+	return &appproject.Services{
+		Delete: appproject.NewDeleteHandler(appproject.DeleteDependencies{
+			TransactionRunner:   infratransaction.NewGormRunner(gormDB),
+			TransactionWorkflow: transactionWorkflow,
+			HistoryBatch:        auditctx.WithBatchID,
+			Actor:               actor,
+		}),
+	}
 }
 
 func (w *projectObjectDataAssociationWorkflow) RequireProject(
@@ -237,6 +1181,24 @@ func newFacilityApplicationServices(
 		actorID, _ := auditctx.ActorID(ctx)
 		return actorID
 	}
+	projectFacilityUnlink := appprojectlink.NewHandler(appprojectlink.Dependencies{
+		TransactionRunner: infratransaction.NewGormRunner(gormDB),
+		TransactionWorkflow: func(
+			unit apptransaction.UnitOfWork,
+		) (appprojectlink.Workflow, error) {
+			txRepos, err := repositoriesFromUnit(unit)
+			if err != nil {
+				return nil, fmt.Errorf("project facility unlink transaction unit: %w", err)
+			}
+			return &projectFacilityUnlinkWorkflow{
+				controlCabinets: txRepos.ProjectControlCabinets,
+				spsControllers:  txRepos.ProjectSPSControllers,
+				fieldDevices:    txRepos.ProjectFieldDevices,
+			}, nil
+		},
+		HistoryBatch: auditctx.WithBatchID,
+		Actor:        actor,
+	})
 	fieldDeviceReportError := func(err error) {
 		slog.Warn("FieldDevice collaboration dispatch failed", "err", err)
 	}
@@ -261,7 +1223,11 @@ func newFacilityApplicationServices(
 			return nil, fmt.Errorf("BACnetObject application transaction unit: %w", err)
 		}
 		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return txServices.BacnetObject, nil
+		return &bacnetObjectUpdateOutboxWorkflow{
+			UpdateWorkflow: txServices.BacnetObject,
+			links:          txRepos.ProjectFieldDevices,
+			owners:         txRepos.FacilityBacnetObjectOwners,
+		}, nil
 	}
 	bacnetObjectCreateTransactionWorkflow := func(
 		unit apptransaction.UnitOfWork,
@@ -271,7 +1237,10 @@ func newFacilityApplicationServices(
 			return nil, fmt.Errorf("BACnetObject application transaction unit: %w", err)
 		}
 		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return txServices.BacnetObject, nil
+		return &bacnetObjectCreateOutboxWorkflow{
+			CreateWorkflow: txServices.BacnetObject,
+			links:          txRepos.ProjectFieldDevices,
+		}, nil
 	}
 	bacnetAlarmValuesTransactionWorkflow := func(
 		unit apptransaction.UnitOfWork,
@@ -281,7 +1250,17 @@ func newFacilityApplicationServices(
 			return nil, fmt.Errorf("BACnet alarm-value application transaction unit: %w", err)
 		}
 		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return txServices.BacnetAlarmValue, nil
+		txDB, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return nil, fmt.Errorf("BACnet alarm-value transaction database: %w", err)
+		}
+		return &bacnetAlarmValuesOutboxWorkflow{
+			AlarmValueStore: txServices.BacnetAlarmValue,
+			db:              txDB,
+			objects:         txRepos.FacilityBacnetObjects,
+			links:           txRepos.ProjectFieldDevices,
+			owners:          txRepos.FacilityBacnetObjectOwners,
+		}, nil
 	}
 	bacnetObjectCreate := appbacnetobject.NewCreateHandler(appbacnetobject.CreateDependencies{
 		TransactionRunner:   infratransaction.NewGormRunner(gormDB),
@@ -346,7 +1325,15 @@ func newFacilityApplicationServices(
 			return nil, fmt.Errorf("ControlCabinet application transaction unit: %w", err)
 		}
 		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return txServices.ControlCabinet, nil
+		txDB, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return nil, fmt.Errorf("resolve ControlCabinet update transaction DB: %w", err)
+		}
+		return &controlCabinetUpdateOutboxWorkflow{
+			UpdateWorkflow: txServices.ControlCabinet,
+			links:          txRepos.ProjectControlCabinets,
+			db:             txDB,
+		}, nil
 	}
 	controlCabinetCreateTransactionWorkflow := func(
 		unit apptransaction.UnitOfWork,
@@ -365,8 +1352,19 @@ func newFacilityApplicationServices(
 		if err != nil {
 			return nil, fmt.Errorf("ControlCabinet clone application transaction unit: %w", err)
 		}
-		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return txServices.ControlCabinet, nil
+		txFacilityServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
+		txProjectServices := projectservice.NewServices(
+			buildProjectDependencies(txRepos, txFacilityServices),
+		)
+		txDB, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return nil, fmt.Errorf("resolve ControlCabinet clone transaction DB: %w", err)
+		}
+		return &globalControlCabinetCloneWorkflow{
+			clones:        txFacilityServices.ControlCabinet,
+			facilityLinks: txProjectServices.FacilityLink,
+			db:            txDB,
+		}, nil
 	}
 	controlCabinetProjectCloneTransactionWorkflow := func(
 		unit apptransaction.UnitOfWork,
@@ -379,7 +1377,15 @@ func newFacilityApplicationServices(
 		txProjectServices := projectservice.NewServices(
 			buildProjectDependencies(txRepos, txFacilityServices),
 		)
-		return txProjectServices.FacilityLink, nil
+		txDB, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return nil, fmt.Errorf("resolve project ControlCabinet clone transaction DB: %w", err)
+		}
+		return &projectFacilityCloneWorkflow{
+			ProjectFacilityLinkService: txProjectServices.FacilityLink,
+			db:                         txDB,
+			sourceKind:                 projectCloneControlCabinet,
+		}, nil
 	}
 	controlCabinetProjectAssignmentTransactionWorkflow := func(
 		unit apptransaction.UnitOfWork,
@@ -418,7 +1424,16 @@ func newFacilityApplicationServices(
 			return nil, fmt.Errorf("ControlCabinet delete application transaction unit: %w", err)
 		}
 		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return txServices.ControlCabinet, nil
+		txDB, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return nil, fmt.Errorf("resolve ControlCabinet delete transaction DB: %w", err)
+		}
+		cleaner := &hierarchyDeleteCleaner{db: txDB, repos: txRepos}
+		return &controlCabinetDeleteOutboxWorkflow{
+			DeleteWorkflow: txServices.ControlCabinet,
+			cleaner:        cleaner,
+			db:             txDB,
+		}, nil
 	}
 	controlCabinetCreate := appcontrolcabinet.NewCreateHandler(appcontrolcabinet.CreateDependencies{
 		TransactionRunner:   infratransaction.NewGormRunner(gormDB),
@@ -430,17 +1445,22 @@ func newFacilityApplicationServices(
 		ReportError:         controlCabinetReportError,
 	})
 	controlCabinetClone := appcontrolcabinet.NewCloneHandler(appcontrolcabinet.CloneDependencies{
-		TransactionRunner:   infratransaction.NewGormRunner(gormDB),
+		TransactionRunner: infratransaction.NewGormRunnerWithIsolation(
+			gormDB,
+			sql.LevelRepeatableRead,
+		),
 		TransactionWorkflow: controlCabinetCloneTransactionWorkflow,
 		HistoryBatch:        auditctx.WithBatchID,
-		ProjectLinks:        repos.ProjectControlCabinets,
 		Dispatcher:          dispatcher,
 		Actor:               actor,
 		ReportError:         controlCabinetReportError,
 	})
 	controlCabinetProjectClone := appcontrolcabinet.NewCloneForProjectHandler(
 		appcontrolcabinet.CloneForProjectDependencies{
-			TransactionRunner:   infratransaction.NewGormRunner(gormDB),
+			TransactionRunner: infratransaction.NewGormRunnerWithIsolation(
+				gormDB,
+				sql.LevelRepeatableRead,
+			),
 			TransactionWorkflow: controlCabinetProjectCloneTransactionWorkflow,
 			HistoryBatch:        auditctx.WithBatchID,
 			Dispatcher:          dispatcher,
@@ -486,8 +1506,22 @@ func newFacilityApplicationServices(
 		Actor:               actor,
 		ReportError:         controlCabinetReportError,
 	})
+	controlCabinetProjectRestoreTransactionWorkflow := func(
+		unit apptransaction.UnitOfWork,
+	) (appcontrolcabinet.RestoreForProjectWorkflow, error) {
+		txRepos, err := repositoriesFromUnit(unit)
+		if err != nil {
+			return nil, fmt.Errorf("project ControlCabinet restore transaction unit: %w", err)
+		}
+		return &projectControlCabinetRestoreWorkflow{
+			restorer: txRepos.History,
+			links:    txRepos.ProjectControlCabinets,
+		}, nil
+	}
 	controlCabinetProjectRestore := appcontrolcabinet.NewRestoreForProjectHandler(
 		appcontrolcabinet.RestoreForProjectDependencies{
+			TransactionRunner:   infratransaction.NewGormRunner(gormDB),
+			TransactionWorkflow: controlCabinetProjectRestoreTransactionWorkflow,
 			Scope: &projectControlCabinetRestoreScope{
 				access:  projectAccess,
 				links:   repos.ProjectControlCabinets,
@@ -559,7 +1593,15 @@ func newFacilityApplicationServices(
 		txProjectServices := projectservice.NewServices(
 			buildProjectDependencies(txRepos, txFacilityServices),
 		)
-		return txProjectServices.FacilityLink, nil
+		txDB, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return nil, fmt.Errorf("resolve project SPSController clone transaction DB: %w", err)
+		}
+		return &projectFacilityCloneWorkflow{
+			ProjectFacilityLinkService: txProjectServices.FacilityLink,
+			db:                         txDB,
+			sourceKind:                 projectCloneSPSController,
+		}, nil
 	}
 	projectAssignment := appfielddevice.NewAssignToProjectHandler(
 		appfielddevice.AssignToProjectDependencies{
@@ -601,13 +1643,29 @@ func newFacilityApplicationServices(
 			ReportError:         fieldDeviceReportError,
 		},
 	)
+	bulkUpdateTransactionWorkflow := func(
+		unit apptransaction.UnitOfWork,
+	) (appfielddevice.BulkUpdateWorkflow, error) {
+		txRepos, err := repositoriesFromUnit(unit)
+		if err != nil {
+			return nil, fmt.Errorf("FieldDevice bulk-update transaction unit: %w", err)
+		}
+		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
+		return &fieldDeviceBulkUpdateOutboxWorkflow{
+			BulkUpdateExecutor: txServices.FieldDevice,
+			links:              txRepos.ProjectFieldDevices,
+		}, nil
+	}
 	bulkUpdate := appfielddevice.NewBulkUpdateHandler(appfielddevice.BulkUpdateDependencies{
-		Executor:     legacy.FieldDevice,
-		HistoryBatch: auditctx.WithBatchID,
-		ProjectLinks: repos.ProjectFieldDevices,
-		Dispatcher:   dispatcher,
-		Actor:        actor,
-		ReportError:  fieldDeviceReportError,
+		Executor:            legacy.FieldDevice,
+		TransactionRunner:   infratransaction.NewGormRunner(gormDB),
+		TransactionWorkflow: bulkUpdateTransactionWorkflow,
+		HistoryBatch:        auditctx.WithBatchID,
+		ProjectLinks:        repos.ProjectFieldDevices,
+		Dispatcher:          dispatcher,
+		Actor:               actor,
+		ReportError:         fieldDeviceReportError,
+		MapTransactionError: facilityrepo.MapFieldDeviceWriteError,
 	})
 
 	transactionWorkflow := func(
@@ -618,7 +1676,14 @@ func newFacilityApplicationServices(
 			return nil, fmt.Errorf("FieldDevice application transaction unit: %w", err)
 		}
 		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return txServices.FieldDevice, nil
+		txProjectServices := projectservice.NewServices(
+			buildProjectDependencies(txRepos, txServices),
+		)
+		return &fieldDeviceUpdateOutboxWorkflow{
+			UpdateWorkflow: txServices.FieldDevice,
+			links:          txRepos.ProjectFieldDevices,
+			assignments:    txProjectServices.FacilityLink,
+		}, nil
 	}
 	deleteTransactionWorkflow := func(
 		unit apptransaction.UnitOfWork,
@@ -628,7 +1693,10 @@ func newFacilityApplicationServices(
 			return nil, fmt.Errorf("FieldDevice delete application transaction unit: %w", err)
 		}
 		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return txServices.FieldDevice, nil
+		return &fieldDeviceDeleteOutboxWorkflow{
+			DeleteWorkflow: txServices.FieldDevice,
+			links:          txRepos.ProjectFieldDevices,
+		}, nil
 	}
 	bulkDeleteTransactionWorkflow := func(
 		unit apptransaction.UnitOfWork,
@@ -638,7 +1706,10 @@ func newFacilityApplicationServices(
 			return nil, fmt.Errorf("FieldDevice bulk-delete application transaction unit: %w", err)
 		}
 		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return txServices.FieldDevice, nil
+		return &fieldDeviceBulkDeleteOutboxWorkflow{
+			BulkDeleteWorkflow: txServices.FieldDevice,
+			links:              txRepos.ProjectFieldDevices,
+		}, nil
 	}
 	update := appfielddevice.NewUpdateHandler(appfielddevice.UpdateDependencies{
 		TransactionRunner:   infratransaction.NewGormRunner(gormDB),
@@ -677,7 +1748,14 @@ func newFacilityApplicationServices(
 			return nil, fmt.Errorf("SPSController application transaction unit: %w", err)
 		}
 		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return txServices.SPSController, nil
+		txProjectServices := projectservice.NewServices(
+			buildProjectDependencies(txRepos, txServices),
+		)
+		return &spsControllerUpdateOutboxWorkflow{
+			UpdateWorkflow: txServices.SPSController,
+			links:          txRepos.ProjectSPSControllers,
+			assignments:    txProjectServices.FacilityLink,
+		}, nil
 	}
 	spsCreateTransactionWorkflow := func(
 		unit apptransaction.UnitOfWork,
@@ -707,7 +1785,14 @@ func newFacilityApplicationServices(
 			return nil, fmt.Errorf("SPSControllerSystemType clone application transaction unit: %w", err)
 		}
 		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return txServices.SPSControllerSystemType, nil
+		txDB, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return nil, fmt.Errorf("resolve SPSControllerSystemType clone transaction DB: %w", err)
+		}
+		return &globalSPSControllerSystemTypeCloneWorkflow{
+			clones: txServices.SPSControllerSystemType,
+			db:     txDB,
+		}, nil
 	}
 	spsSystemTypeDeleteTransactionWorkflow := func(
 		unit apptransaction.UnitOfWork,
@@ -717,7 +1802,15 @@ func newFacilityApplicationServices(
 			return nil, fmt.Errorf("SPSControllerSystemType delete application transaction unit: %w", err)
 		}
 		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return txServices.SPSControllerSystemType, nil
+		txDB, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return nil, fmt.Errorf("resolve SPSControllerSystemType delete transaction DB: %w", err)
+		}
+		return &spsControllerSystemTypeDeleteWorkflow{
+			DeleteSystemTypeWorkflow: txServices.SPSControllerSystemType,
+			cleaner:                  &hierarchyDeleteCleaner{db: txDB, repos: txRepos},
+			db:                       txDB,
+		}, nil
 	}
 	spsProjectCloneTransactionWorkflow := func(
 		unit apptransaction.UnitOfWork,
@@ -730,7 +1823,15 @@ func newFacilityApplicationServices(
 		txProjectServices := projectservice.NewServices(
 			buildProjectDependencies(txRepos, txFacilityServices),
 		)
-		return txProjectServices.FacilityLink, nil
+		txDB, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return nil, fmt.Errorf("resolve project SPSController clone transaction DB: %w", err)
+		}
+		return &projectFacilityCloneWorkflow{
+			ProjectFacilityLinkService: txProjectServices.FacilityLink,
+			db:                         txDB,
+			sourceKind:                 projectCloneSPSController,
+		}, nil
 	}
 	spsProjectAssignmentTransactionWorkflow := func(
 		unit apptransaction.UnitOfWork,
@@ -772,7 +1873,15 @@ func newFacilityApplicationServices(
 		txProjectServices := projectservice.NewServices(
 			buildProjectDependencies(txRepos, txFacilityServices),
 		)
-		return txProjectServices.FacilityLink, nil
+		txDB, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return nil, fmt.Errorf("resolve project SPSControllerSystemType clone transaction DB: %w", err)
+		}
+		return &projectFacilityCloneWorkflow{
+			ProjectFacilityLinkService: txProjectServices.FacilityLink,
+			db:                         txDB,
+			sourceKind:                 projectCloneSPSControllerSystemType,
+		}, nil
 	}
 	spsDeleteTransactionWorkflow := func(
 		unit apptransaction.UnitOfWork,
@@ -782,7 +1891,16 @@ func newFacilityApplicationServices(
 			return nil, fmt.Errorf("SPSController delete application transaction unit: %w", err)
 		}
 		txServices := facilityservice.NewServices(buildFacilityRepositories(txRepos))
-		return txServices.SPSController, nil
+		txDB, err := infratransaction.GormDB(unit)
+		if err != nil {
+			return nil, fmt.Errorf("resolve SPSController delete transaction DB: %w", err)
+		}
+		cleaner := &hierarchyDeleteCleaner{db: txDB, repos: txRepos}
+		return &spsControllerDeleteOutboxWorkflow{
+			DeleteWorkflow: txServices.SPSController,
+			cleaner:        cleaner,
+			db:             txDB,
+		}, nil
 	}
 	spsCreate := appspscontroller.NewCreateHandler(appspscontroller.CreateDependencies{
 		TransactionRunner:   infratransaction.NewGormRunner(gormDB),
@@ -794,7 +1912,10 @@ func newFacilityApplicationServices(
 		ReportError:         spsControllerReportError,
 	})
 	spsClone := appspscontroller.NewCloneHandler(appspscontroller.CloneDependencies{
-		TransactionRunner:   infratransaction.NewGormRunner(gormDB),
+		TransactionRunner: infratransaction.NewGormRunnerWithIsolation(
+			gormDB,
+			sql.LevelRepeatableRead,
+		),
 		TransactionWorkflow: spsCloneTransactionWorkflow,
 		HistoryBatch:        auditctx.WithBatchID,
 		ProjectLinks:        repos.ProjectSPSControllers,
@@ -804,10 +1925,15 @@ func newFacilityApplicationServices(
 	})
 	spsSystemTypeClone := appspscontroller.NewCloneSystemTypeHandler(
 		appspscontroller.CloneSystemTypeDependencies{
-			TransactionRunner:   infratransaction.NewGormRunner(gormDB),
+			TransactionRunner: infratransaction.NewGormRunnerWithIsolation(
+				gormDB,
+				sql.LevelRepeatableRead,
+			),
 			TransactionWorkflow: spsSystemTypeCloneTransactionWorkflow,
 			HistoryBatch:        auditctx.WithBatchID,
+			Dispatcher:          dispatcher,
 			Actor:               actor,
+			ReportError:         spsControllerReportError,
 		},
 	)
 	spsSystemTypeDelete := appspscontroller.NewDeleteSystemTypeHandler(
@@ -815,12 +1941,17 @@ func newFacilityApplicationServices(
 			TransactionRunner:   infratransaction.NewGormRunner(gormDB),
 			TransactionWorkflow: spsSystemTypeDeleteTransactionWorkflow,
 			HistoryBatch:        auditctx.WithBatchID,
+			Dispatcher:          dispatcher,
 			Actor:               actor,
+			ReportError:         spsControllerReportError,
 		},
 	)
 	spsProjectClone := appspscontroller.NewCloneForProjectHandler(
 		appspscontroller.CloneForProjectDependencies{
-			TransactionRunner:   infratransaction.NewGormRunner(gormDB),
+			TransactionRunner: infratransaction.NewGormRunnerWithIsolation(
+				gormDB,
+				sql.LevelRepeatableRead,
+			),
 			TransactionWorkflow: spsProjectCloneTransactionWorkflow,
 			HistoryBatch:        auditctx.WithBatchID,
 			Dispatcher:          dispatcher,
@@ -850,7 +1981,10 @@ func newFacilityApplicationServices(
 	)
 	spsProjectSystemTypeClone := appspscontroller.NewCloneSystemTypeForProjectHandler(
 		appspscontroller.CloneSystemTypeForProjectDependencies{
-			TransactionRunner:   infratransaction.NewGormRunner(gormDB),
+			TransactionRunner: infratransaction.NewGormRunnerWithIsolation(
+				gormDB,
+				sql.LevelRepeatableRead,
+			),
 			TransactionWorkflow: spsProjectSystemTypeCloneTransactionWorkflow,
 			HistoryBatch:        auditctx.WithBatchID,
 			Dispatcher:          dispatcher,
@@ -907,6 +2041,7 @@ func newFacilityApplicationServices(
 		ObjectData: &appfacility.ObjectDataModule{
 			ProjectAssociation: objectDataProjectAssociation,
 		},
+		ProjectLink: projectFacilityUnlink,
 		SPSController: &appfacility.SPSControllerModule{
 			Create:                    spsCreate,
 			AssignToProject:           spsProjectAssignment,
@@ -931,6 +2066,13 @@ func newHistoryApplicationServices(
 		return actorID
 	}
 	return &apphistory.Services{
+		Global: apphistory.NewGlobalHistoryService(
+			apphistory.GlobalHistoryDependencies{
+				History: repos.History,
+				Users:   repos.User,
+				Actor:   actor,
+			},
+		),
 		ProjectTimeline: apphistory.NewProjectTimelineHandler(
 			apphistory.ProjectTimelineDependencies{
 				Access:   &projectHistoryAccessScope{access: projectAccess},

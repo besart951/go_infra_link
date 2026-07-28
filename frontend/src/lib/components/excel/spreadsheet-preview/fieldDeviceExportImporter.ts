@@ -145,6 +145,7 @@ export interface FieldDeviceImportDevicePlan {
   spsControllerSystemTypeKey: string;
   spsSystemTypeNumber?: number;
   existingFieldDeviceId?: string;
+  existingFieldDeviceRevision?: number;
   existingComparison?: ImportExistingComparison;
   systemPartLabel: string;
   apparatLabel: string;
@@ -1254,6 +1255,7 @@ function validateExistingFieldDevices(
     if (!existing) continue;
 
     fieldDevice.existingFieldDeviceId = existing.id;
+    fieldDevice.existingFieldDeviceRevision = existing.revision;
     fieldDevice.existingComparison = compareExistingFieldDevice(existing, fieldDevice);
     const systemTypeNumber = fieldDevice.spsSystemTypeNumber
       ? translate('field_device.importer.validation.sps_system_type_with_number', {

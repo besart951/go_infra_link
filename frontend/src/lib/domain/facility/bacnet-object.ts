@@ -5,6 +5,7 @@
 
 export interface BacnetObject {
   id: string;
+  revision: number;
   text_fix: string;
   description?: string;
   gms_visible: boolean;
@@ -41,6 +42,7 @@ export interface CreateBacnetObjectRequest {
 }
 
 export interface UpdateBacnetObjectRequest {
+  expected_version: number;
   text_fix?: string;
   description?: string;
   gms_visible?: boolean;
@@ -50,7 +52,7 @@ export interface UpdateBacnetObjectRequest {
   software_number?: number;
   hardware_type?: string;
   hardware_quantity?: number;
-  field_device_id?: string;
+  field_device_id?: string | null;
   software_reference_id?: string;
   state_text_id?: string;
   notification_class_id?: string;

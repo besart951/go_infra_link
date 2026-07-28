@@ -526,6 +526,16 @@ func TestMultiCreateProjectFieldDevicesUsesTypedBulkAssignmentAndNotificationOnl
 		result: appfielddevice.BulkAssignToProjectResult{
 			SuccessFieldDeviceIDs: []uuid.UUID{firstID},
 			AssociationErrors:     []string{"second association failed"},
+			Results: []domainFacility.BulkOperationResultItem{
+				{ID: firstID, Success: true},
+				{
+					ID:         secondID,
+					Error:      "second association failed",
+					ErrorCode:  "operation_failed",
+					ErrorField: "fielddevice_id",
+					Reason:     "second association failed",
+				},
+			},
 		},
 	}
 	combinedNotifyCalls := 0
@@ -589,7 +599,12 @@ func TestMultiCreateProjectFieldDevicesUsesTypedBulkAssignmentAndNotificationOnl
 		t.Fatalf("decode response: %v", err)
 	}
 	if !reflect.DeepEqual(response.SuccessFieldDeviceIDs, []uuid.UUID{firstID}) ||
-		!reflect.DeepEqual(response.AssociationErrors, []string{"second association failed"}) {
+		!reflect.DeepEqual(response.AssociationErrors, []string{"second association failed"}) ||
+		len(response.Results) != 2 || !response.Results[0].Success ||
+		response.Results[1].ID != secondID ||
+		response.Results[1].ErrorCode != "operation_failed" ||
+		response.Results[1].ErrorField != "fielddevice_id" ||
+		response.Results[1].Reason != "second association failed" {
 		t.Fatalf("existing-ID response changed: %+v", response)
 	}
 }
@@ -631,7 +646,8 @@ func TestUpdateProjectFieldDeviceAuthorizesThenUsesTypedReassignmentAndNotificat
 		},
 	)
 	body, err := json.Marshal(projectdto.UpdateProjectFieldDeviceRequest{
-		FieldDeviceID: fieldDeviceID,
+		FieldDeviceID:   fieldDeviceID,
+		ExpectedVersion: 1,
 	})
 	if err != nil {
 		t.Fatalf("encode request: %v", err)
@@ -706,7 +722,8 @@ func TestUpdateProjectFieldDeviceRejectsUnauthorizedProjectBeforeReassignment(t 
 		func(*gin.Context, uuid.UUID, string, ...string) { notifyCalls++ },
 	)
 	body, err := json.Marshal(projectdto.UpdateProjectFieldDeviceRequest{
-		FieldDeviceID: fieldDeviceID,
+		FieldDeviceID:   fieldDeviceID,
+		ExpectedVersion: 1,
 	})
 	if err != nil {
 		t.Fatalf("encode request: %v", err)

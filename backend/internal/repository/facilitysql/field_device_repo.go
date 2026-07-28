@@ -38,9 +38,10 @@ func (r *fieldDeviceRepo) Create(ctx context.Context, entity *domainFacility.Fie
 		return err
 	}
 
-	return r.db.WithContext(ctx).
+	return MapFieldDeviceWriteError(r.db.WithContext(ctx).
 		Omit(clause.Associations).
-		Create(toFieldDeviceRecord(entity)).Error
+		Create(toFieldDeviceRecord(entity)).
+		Error)
 }
 
 func (r *fieldDeviceRepo) BulkCreate(ctx context.Context, entities []*domainFacility.FieldDevice, batchSize int) error {
@@ -61,9 +62,9 @@ func (r *fieldDeviceRepo) BulkCreate(ctx context.Context, entities []*domainFaci
 		batchSize = gormbase.DefaultBatchSize
 	}
 
-	return r.db.WithContext(ctx).
+	return MapFieldDeviceWriteError(r.db.WithContext(ctx).
 		Omit(clause.Associations).
-		CreateInBatches(records, batchSize).Error
+		CreateInBatches(records, batchSize).Error)
 }
 
 func (r *fieldDeviceRepo) AssignSpecificationIDs(ctx context.Context, assignments map[uuid.UUID]uuid.UUID) error {
@@ -71,11 +72,16 @@ func (r *fieldDeviceRepo) AssignSpecificationIDs(ctx context.Context, assignment
 }
 
 func (r *fieldDeviceRepo) Update(ctx context.Context, entity *domainFacility.FieldDevice) error {
+	if entity == nil || entity.ID == uuid.Nil || entity.Revision == 0 {
+		return domain.ErrInvalidArgument
+	}
+	expectedRevision := entity.Revision
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Model(&FieldDeviceRecord{}).
-		Where("id = ?", entity.ID).
+	result := r.db.WithContext(ctx).Model(&FieldDeviceRecord{}).
+		Where("id = ? AND revision = ?", entity.ID, expectedRevision).
 		Updates(map[string]any{
 			"updated_at":                    entity.UpdatedAt,
+			"revision":                      expectedRevision + 1,
 			"bmk":                           entity.BMK,
 			"description":                   entity.Description,
 			"apparat_nr":                    entity.ApparatNr,
@@ -84,7 +90,30 @@ func (r *fieldDeviceRepo) Update(ctx context.Context, entity *domainFacility.Fie
 			"system_part_id":                entity.SystemPartID,
 			"specification_id":              entity.SpecificationID,
 			"apparat_id":                    entity.ApparatID,
-		}).Error
+		})
+	if result.Error != nil {
+		return MapFieldDeviceWriteError(result.Error)
+	}
+	if result.RowsAffected == 0 {
+		var current uint64
+		lookup := r.db.WithContext(ctx).
+			Model(&FieldDeviceRecord{}).
+			Where("id = ?", entity.ID).
+			Pluck("revision", &current)
+		if lookup.Error != nil {
+			return lookup.Error
+		}
+		if lookup.RowsAffected == 0 {
+			return domain.ErrNotFound
+		}
+		return &domain.RevisionConflict{
+			EntityID: entity.ID,
+			Expected: expectedRevision,
+			Current:  current,
+		}
+	}
+	entity.Revision = expectedRevision + 1
+	return nil
 }
 
 func (r *fieldDeviceRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Button } from '$lib/components/ui/button/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
   import PaginatedList from '$lib/components/list/PaginatedList.svelte';
@@ -70,20 +69,18 @@
       { key: 'name', label: $t('common.name') },
       { key: 'status', label: $t('common.status') },
       { key: 'start_date', label: $t('messages.start_date') },
-      { key: 'phase', label: $t('messages.phase') },
-      { key: 'actions', label: $t('messages.actions'), width: 'w-[100px]' }
+      { key: 'phase', label: $t('messages.phase') }
     ]}
     searchPlaceholder={$t('messages.search_projects')}
     emptyMessage={$t('messages.no_projects_found')}
     onSearch={(text) => projectListStore.search(text)}
     onPageChange={(page) => projectListStore.goToPage(page)}
     onReload={() => projectListStore.reload()}
+    rowHref={(project) => `/projects/${project.id}`}
   >
     {#snippet rowSnippet(project: Project)}
       <Table.Cell class="font-medium">
-        <a href="/projects/{project.id}" class="hover:underline">
-          {project.name}
-        </a>
+        {project.name}
       </Table.Cell>
       <Table.Cell>
         <ProjectStatusBadge status={project.status} label={$t(`messages.${project.status}`)} />
@@ -93,11 +90,6 @@
       </Table.Cell>
       <Table.Cell>
         {project.phase?.name?.trim() || $t('common.not_available')}
-      </Table.Cell>
-      <Table.Cell>
-        <Button variant="ghost" size="sm" href="/projects/{project.id}"
-          >{$t('messages.view')}</Button
-        >
       </Table.Cell>
     {/snippet}
   </PaginatedList>

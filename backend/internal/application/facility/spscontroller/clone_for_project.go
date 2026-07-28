@@ -22,6 +22,11 @@ var ErrCloneForProjectTransactionNotConfigured = errors.New(
 // ProjectFacilityLinkService. That service retains deep-copy and link policy;
 // the application command owns the outer transaction and commit gate.
 type CloneForProjectWorkflow interface {
+	RequireSourceAccess(
+		context.Context,
+		uuid.UUID,
+		uuid.UUID,
+	) error
 	CopySPSController(
 		context.Context,
 		uuid.UUID,
@@ -136,7 +141,10 @@ func (h *CloneForProjectHandler) Execute(
 	}
 
 	operationID := h.newID()
+	eventID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
+	var collaborationCommand appcollaboration.Command
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -144,20 +152,35 @@ func (h *CloneForProjectHandler) Execute(
 			txCtx context.Context,
 			workflow CloneForProjectWorkflow,
 		) (committedProjectClone, error) {
-			return executeCloneForProjectTransaction(
+			result, err := executeCloneForProjectTransaction(
 				txCtx,
 				workflow,
 				command,
 				operationID,
 				h.historyBatch,
 			)
+			if err != nil {
+				return committedProjectClone{}, err
+			}
+			collaborationCommand = appcollaboration.SPSControllerCloned{
+				Envelope: appcollaboration.Envelope{
+					SchemaVersion: appcollaboration.SchemaVersionV2,
+					EventID:       eventID, OperationID: operationID, CorrelationID: operationID,
+					ProjectID: command.ProjectID, ActorID: actorID, OccurredAt: occurredAt,
+				},
+				SourceSPSControllerID: command.SourceSPSControllerID,
+				SPSController:         toCollaborationState(result.controller),
+			}
+			if _, err := appcollaboration.EnqueueCommand(txCtx, collaborationCommand); err != nil {
+				return committedProjectClone{}, fmt.Errorf("enqueue project-scoped SPSController clone: %w", err)
+			}
+			return result, nil
 		},
 	)
 	if err != nil {
 		return CloneForProjectOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	batchID := operationID
 	result := mutation.Result{
 		OperationID: operationID,
@@ -178,19 +201,6 @@ func (h *CloneForProjectHandler) Execute(
 	}
 
 	dispatchCtx := context.WithoutCancel(ctx)
-	collaborationCommand := appcollaboration.SPSControllerCloned{
-		Envelope: appcollaboration.Envelope{
-			SchemaVersion: appcollaboration.SchemaVersionV1,
-			EventID:       h.newID(),
-			OperationID:   operationID,
-			CorrelationID: operationID,
-			ProjectID:     command.ProjectID,
-			ActorID:       actorID,
-			OccurredAt:    occurredAt,
-		},
-		SourceSPSControllerID: command.SourceSPSControllerID,
-		SPSController:         toCollaborationState(committed.controller),
-	}
 	if dispatchErr := h.dispatcher.Dispatch(dispatchCtx, collaborationCommand); dispatchErr != nil {
 		outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
 			"dispatch project-scoped cloned SPSController for project %s: %w",
@@ -210,6 +220,13 @@ func executeCloneForProjectTransaction(
 ) (committedProjectClone, error) {
 	if workflow == nil {
 		return committedProjectClone{}, ErrCloneForProjectTransactionNotConfigured
+	}
+	if err := workflow.RequireSourceAccess(
+		ctx,
+		command.ProjectID,
+		command.SourceSPSControllerID,
+	); err != nil {
+		return committedProjectClone{}, err
 	}
 
 	writeCtx := ctx

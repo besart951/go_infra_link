@@ -333,7 +333,7 @@ func TestMultiCreateForProjectCommitsPartialResultAndLinksBeforeTypedDispatch(t 
 	if !ok {
 		t.Fatalf("command type: %T", dispatcher.commands[0])
 	}
-	if command.SchemaVersion != appcollaboration.SchemaVersionV1 ||
+	if command.SchemaVersion != appcollaboration.SchemaVersionV2 ||
 		command.EventID != eventID || command.OperationID != operationID ||
 		command.CorrelationID != operationID || command.ProjectID != projectID ||
 		command.ActorID == nil || *command.ActorID != actorID ||

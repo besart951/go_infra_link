@@ -146,6 +146,7 @@ func TestUpdateSPSControllerMapsCompatibilityRequestToApplicationCommand(t *test
 	router := gin.New()
 	router.PUT("/facility/sps-controllers/:id", handler.UpdateSPSController)
 	body := `{
+		"expected_version":3,
 		"control_cabinet_id":"` + cabinetID.String() + `",
 		"ga_device":"AAA",
 		"device_name":"ignored-by-generated-name-rule",
@@ -198,7 +199,7 @@ func TestUpdateSPSControllerMapsApplicationLoadNotFound(t *testing.T) {
 	request := httptest.NewRequest(
 		http.MethodPut,
 		"/facility/sps-controllers/"+controllerID.String(),
-		strings.NewReader(`{}`),
+		strings.NewReader(`{"expected_version":3}`),
 	)
 	request.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()

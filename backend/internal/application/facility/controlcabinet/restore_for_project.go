@@ -9,6 +9,7 @@ import (
 
 	appcollaboration "github.com/besart951/go_infra_link/backend/internal/application/collaboration"
 	"github.com/besart951/go_infra_link/backend/internal/application/facility/mutation"
+	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
 	"github.com/google/uuid"
@@ -45,6 +46,11 @@ type ControlCabinetHistoryRestorer interface {
 	) (*domainHistory.RestoreResult, error)
 }
 
+type RestoreForProjectWorkflow interface {
+	ControlCabinetHistoryRestorer
+	ProjectLinkReader
+}
+
 type RestoreForProjectCommand struct {
 	ProjectID        uuid.UUID
 	ControlCabinetID uuid.UUID
@@ -60,25 +66,29 @@ func (c RestoreForProjectCommand) validate() error {
 }
 
 type RestoreForProjectDependencies struct {
-	Scope        ProjectRestoreScope
-	Restorer     ControlCabinetHistoryRestorer
-	ProjectLinks ProjectLinkReader
-	Dispatcher   appcollaboration.CommandDispatcher
-	Actor        ActorProvider
-	NewID        IDGenerator
-	Now          Clock
-	ReportError  ErrorReporter
+	TransactionRunner   apptransaction.Runner
+	TransactionWorkflow apptransaction.Factory[RestoreForProjectWorkflow]
+	Scope               ProjectRestoreScope
+	Restorer            ControlCabinetHistoryRestorer
+	ProjectLinks        ProjectLinkReader
+	Dispatcher          appcollaboration.CommandDispatcher
+	Actor               ActorProvider
+	NewID               IDGenerator
+	Now                 Clock
+	ReportError         ErrorReporter
 }
 
 type RestoreForProjectHandler struct {
-	scope        ProjectRestoreScope
-	restorer     ControlCabinetHistoryRestorer
-	projectLinks ProjectLinkReader
-	dispatcher   appcollaboration.CommandDispatcher
-	actor        ActorProvider
-	newID        IDGenerator
-	now          Clock
-	reportError  ErrorReporter
+	operation             apptransaction.Operation[RestoreForProjectWorkflow, RestoreForProjectWorkflow]
+	transactionConfigured bool
+	scope                 ProjectRestoreScope
+	restorer              ControlCabinetHistoryRestorer
+	projectLinks          ProjectLinkReader
+	dispatcher            appcollaboration.CommandDispatcher
+	actor                 ActorProvider
+	newID                 IDGenerator
+	now                   Clock
+	reportError           ErrorReporter
 }
 
 type RestoreForProjectOutcome struct {
@@ -98,15 +108,27 @@ func NewRestoreForProjectHandler(
 	if now == nil {
 		now = func() time.Time { return time.Now().UTC() }
 	}
+	boundary := apptransaction.NewBoundary[RestoreForProjectWorkflow](
+		deps.TransactionRunner,
+		deps.TransactionWorkflow,
+	)
+	var noNonTransactionalWorkflow RestoreForProjectWorkflow
+	operation := apptransaction.Bind(
+		boundary,
+		noNonTransactionalWorkflow,
+		func(workflow RestoreForProjectWorkflow) RestoreForProjectWorkflow { return workflow },
+	)
 	return &RestoreForProjectHandler{
-		scope:        deps.Scope,
-		restorer:     deps.Restorer,
-		projectLinks: deps.ProjectLinks,
-		dispatcher:   deps.Dispatcher,
-		actor:        deps.Actor,
-		newID:        newID,
-		now:          now,
-		reportError:  deps.ReportError,
+		operation:             operation,
+		transactionConfigured: deps.TransactionRunner != nil && deps.TransactionWorkflow != nil,
+		scope:                 deps.Scope,
+		restorer:              deps.Restorer,
+		projectLinks:          deps.ProjectLinks,
+		dispatcher:            deps.Dispatcher,
+		actor:                 deps.Actor,
+		newID:                 newID,
+		now:                   now,
+		reportError:           deps.ReportError,
 	}
 }
 
@@ -132,7 +154,7 @@ func (h *RestoreForProjectHandler) Execute(
 	ctx context.Context,
 	command RestoreForProjectCommand,
 ) (RestoreForProjectOutcome, error) {
-	if h == nil || h.scope == nil || h.restorer == nil {
+	if h == nil || h.scope == nil || (!h.transactionConfigured && h.restorer == nil) {
 		return RestoreForProjectOutcome{}, ErrProjectRestoreNotConfigured
 	}
 	if err := command.validate(); err != nil {
@@ -152,46 +174,79 @@ func (h *RestoreForProjectHandler) Execute(
 		return RestoreForProjectOutcome{}, err
 	}
 
-	projectID := command.ProjectID
-	restore, err := h.restorer.RestoreControlCabinet(
-		ctx,
-		command.ControlCabinetID,
-		domainHistory.RestoreControlCabinetRequest{
-			AsOf:      command.AsOf,
-			EventID:   command.EventID,
-			ProjectID: &projectID,
-		},
-	)
-	if err != nil {
-		return RestoreForProjectOutcome{}, err
-	}
-	if restore == nil {
-		return RestoreForProjectOutcome{}, domain.ErrInvalidArgument
-	}
-
-	operationID := restore.BatchID
-	if operationID == uuid.Nil {
-		operationID = h.newID()
-	}
 	occurredAt := h.now().UTC()
-	projectIDs := []uuid.UUID{command.ProjectID}
-	outcome := RestoreForProjectOutcome{Restore: restore}
-	if h.projectLinks != nil {
-		links, scopeErr := h.projectLinks.GetByControlCabinetIDs(
+	var (
+		restore             *domainHistory.RestoreResult
+		operationID         uuid.UUID
+		projectIDs          []uuid.UUID
+		fallbackScopeErrors []error
+	)
+	if h.transactionConfigured {
+		committed, err := apptransaction.RunResult(
 			ctx,
-			[]uuid.UUID{command.ControlCabinetID},
+			h.operation,
+			func(
+				txCtx context.Context,
+				workflow RestoreForProjectWorkflow,
+			) (committedProjectRestore, error) {
+				return executeTransactionalProjectRestore(
+					txCtx,
+					workflow,
+					command,
+					actorID,
+					occurredAt,
+					h.newID,
+				)
+			},
 		)
-		if scopeErr != nil {
-			outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
-				"resolve restored ControlCabinet collaboration projects: %w",
-				scopeErr,
-			))
-		} else {
-			projectIDs = restoreProjectIDs(
-				command.ProjectID,
-				linkedProjectIDs(links, command.ControlCabinetID),
-			)
+		if err != nil {
+			return RestoreForProjectOutcome{}, err
 		}
+		restore = committed.restore
+		operationID = committed.operationID
+		projectIDs = committed.projectIDs
+	} else {
+		projectID := command.ProjectID
+		var err error
+		restore, err = h.restorer.RestoreControlCabinet(
+			ctx,
+			command.ControlCabinetID,
+			domainHistory.RestoreControlCabinetRequest{
+				AsOf: command.AsOf, EventID: command.EventID, ProjectID: &projectID,
+			},
+		)
+		if err != nil {
+			return RestoreForProjectOutcome{}, err
+		}
+		if restore == nil {
+			return RestoreForProjectOutcome{}, domain.ErrInvalidArgument
+		}
+		operationID = restore.BatchID
+		if operationID == uuid.Nil {
+			operationID = h.newID()
+		}
+		projectIDs = []uuid.UUID{command.ProjectID}
+		if h.projectLinks != nil {
+			links, scopeErr := h.projectLinks.GetByControlCabinetIDs(
+				ctx,
+				[]uuid.UUID{command.ControlCabinetID},
+			)
+			if scopeErr != nil {
+				fallbackScopeErrors = append(fallbackScopeErrors, fmt.Errorf(
+					"resolve restored ControlCabinet collaboration projects: %w",
+					scopeErr,
+				))
+			} else {
+				projectIDs = restoreProjectIDs(
+					command.ProjectID,
+					linkedProjectIDs(links, command.ControlCabinetID),
+				)
+			}
+		}
+	}
+	outcome := RestoreForProjectOutcome{
+		Restore:        restore,
+		DispatchErrors: fallbackScopeErrors,
 	}
 
 	result := mutation.Result{
@@ -240,6 +295,84 @@ func (h *RestoreForProjectHandler) Execute(
 		}
 	}
 	return outcome, nil
+}
+
+type committedProjectRestore struct {
+	restore     *domainHistory.RestoreResult
+	operationID uuid.UUID
+	projectIDs  []uuid.UUID
+}
+
+func executeTransactionalProjectRestore(
+	ctx context.Context,
+	workflow RestoreForProjectWorkflow,
+	command RestoreForProjectCommand,
+	actorID *uuid.UUID,
+	occurredAt time.Time,
+	newID IDGenerator,
+) (committedProjectRestore, error) {
+	if workflow == nil {
+		return committedProjectRestore{}, ErrProjectRestoreNotConfigured
+	}
+	projectID := command.ProjectID
+	restore, err := workflow.RestoreControlCabinet(
+		ctx,
+		command.ControlCabinetID,
+		domainHistory.RestoreControlCabinetRequest{
+			AsOf: command.AsOf, EventID: command.EventID, ProjectID: &projectID,
+		},
+	)
+	if err != nil {
+		return committedProjectRestore{}, err
+	}
+	if restore == nil {
+		return committedProjectRestore{}, domain.ErrInvalidArgument
+	}
+	operationID := restore.BatchID
+	if operationID == uuid.Nil {
+		operationID = newID()
+	}
+	links, err := workflow.GetByControlCabinetIDs(
+		ctx,
+		[]uuid.UUID{command.ControlCabinetID},
+	)
+	if err != nil {
+		return committedProjectRestore{}, fmt.Errorf(
+			"resolve restored ControlCabinet collaboration projects for outbox: %w",
+			err,
+		)
+	}
+	projectIDs := restoreProjectIDs(
+		command.ProjectID,
+		linkedProjectIDs(links, command.ControlCabinetID),
+	)
+	if restore.RestoredCount+restore.DeletedCount > 0 {
+		for _, affectedProjectID := range projectIDs {
+			event := appcollaboration.FacilityHierarchyRefreshRequired{
+				Envelope: appcollaboration.Envelope{
+					SchemaVersion: appcollaboration.SchemaVersionV2,
+					EventID:       newID(),
+					OperationID:   operationID,
+					CorrelationID: operationID,
+					ProjectID:     affectedProjectID,
+					ActorID:       actorID,
+					OccurredAt:    occurredAt,
+				},
+				Scope:       appcollaboration.FacilityScopeProject,
+				FullRefresh: true,
+			}
+			if _, err := appcollaboration.EnqueueCommand(ctx, event); err != nil {
+				return committedProjectRestore{}, fmt.Errorf(
+					"enqueue restored ControlCabinet for project %s: %w",
+					affectedProjectID,
+					err,
+				)
+			}
+		}
+	}
+	return committedProjectRestore{
+		restore: restore, operationID: operationID, projectIDs: projectIDs,
+	}, nil
 }
 
 func restoreProjectIDs(requested uuid.UUID, linked []uuid.UUID) []uuid.UUID {

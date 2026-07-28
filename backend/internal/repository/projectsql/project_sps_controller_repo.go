@@ -35,7 +35,15 @@ func (r *projectSPSControllerRepo) Create(ctx context.Context, entity *project.P
 	if err := entity.Base.InitForCreate(time.Now().UTC()); err != nil {
 		return err
 	}
-	return mapWriteError(r.db.WithContext(ctx).Create(toProjectSPSControllerRecord(entity)).Error)
+	if err := mapWriteError(r.db.WithContext(ctx).Create(toProjectSPSControllerRecord(entity)).Error); err != nil {
+		return err
+	}
+	return r.AddAssignmentSource(
+		ctx,
+		entity.ProjectID,
+		[]uuid.UUID{entity.SPSControllerID},
+		project.ExplicitAssignmentSource(),
+	)
 }
 
 func (r *projectSPSControllerRepo) BulkCreate(ctx context.Context, entities []*project.ProjectSPSController, batchSize int) error {
@@ -79,8 +87,25 @@ func (r *projectSPSControllerRepo) BulkCreateBySPSControllerIDsReturningIDs(
 	projectID uuid.UUID,
 	spsControllerIDs []uuid.UUID,
 ) ([]uuid.UUID, error) {
+	return r.BulkCreateBySPSControllerIDsWithSourceReturningIDs(
+		ctx,
+		projectID,
+		spsControllerIDs,
+		project.ExplicitAssignmentSource(),
+	)
+}
+
+func (r *projectSPSControllerRepo) BulkCreateBySPSControllerIDsWithSourceReturningIDs(
+	ctx context.Context,
+	projectID uuid.UUID,
+	spsControllerIDs []uuid.UUID,
+	source project.AssignmentSource,
+) ([]uuid.UUID, error) {
 	if len(spsControllerIDs) == 0 {
 		return nil, nil
+	}
+	if err := source.Validate(); err != nil {
+		return nil, err
 	}
 
 	now := time.Now().UTC()
@@ -109,18 +134,40 @@ func (r *projectSPSControllerRepo) BulkCreateBySPSControllerIDsReturningIDs(
 			insertedIDs = append(insertedIDs, row.ID)
 		}
 	}
+	if err := r.AddAssignmentSource(ctx, projectID, spsControllerIDs, source); err != nil {
+		return nil, err
+	}
 	return insertedIDs, nil
 }
 
 func (r *projectSPSControllerRepo) Update(ctx context.Context, entity *project.ProjectSPSController) error {
+	if entity == nil || entity.ID == uuid.Nil || entity.Revision == 0 {
+		return domain.ErrInvalidArgument
+	}
+	expectedRevision := entity.Revision
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Model(&ProjectSPSControllerRecord{}).
-		Where("id = ?", entity.ID).
+	result := r.db.WithContext(ctx).Model(&ProjectSPSControllerRecord{}).
+		Where("id = ? AND revision = ?", entity.ID, expectedRevision).
 		Updates(map[string]any{
 			"updated_at":        entity.UpdatedAt,
+			"revision":          expectedRevision + 1,
 			"project_id":        entity.ProjectID,
 			"sps_controller_id": entity.SPSControllerID,
-		}).Error
+		})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return projectLinkRevisionConflict(
+			ctx,
+			r.db,
+			&ProjectSPSControllerRecord{},
+			entity.ID,
+			expectedRevision,
+		)
+	}
+	entity.Revision = expectedRevision + 1
+	return nil
 }
 
 func (r *projectSPSControllerRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {

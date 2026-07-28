@@ -37,6 +37,7 @@ describe('field-device update payload construction', () => {
       )
     ).toEqual({
       id: 'fd-1',
+      expected_version: 1,
       bmk: 'FD-UPDATED',
       description: 'Updated description',
       apparat_nr: 12
@@ -60,6 +61,7 @@ describe('field-device update payload construction', () => {
       )
     ).toEqual({
       id: 'fd-1',
+      expected_version: 1,
       specification: {
         specification_brand: 'Brand X'
       }
@@ -84,6 +86,7 @@ describe('field-device update payload construction', () => {
       )
     ).toEqual({
       id: 'fd-1',
+      expected_version: 1,
       text_fix: 'TXT-UPDATED',
       specification: {
         specification_supplier: 'Supplier X'
@@ -115,6 +118,7 @@ describe('field-device update payload construction', () => {
       })
     ).toEqual({
       id: 'fd-1',
+      expected_version: 1,
       bacnet_objects: [{ id: 'bo-1', software_number: 42 }]
     });
   });

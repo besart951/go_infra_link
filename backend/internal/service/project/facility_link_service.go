@@ -2,6 +2,8 @@ package project
 
 import (
 	"context"
+	"sort"
+
 	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
 	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
@@ -70,6 +72,9 @@ func (s *ProjectFacilityLinkService) ListProjectIDsByControlCabinetID(ctx contex
 	for projectID := range projectIDSet {
 		projectIDs = append(projectIDs, projectID)
 	}
+	sort.Slice(projectIDs, func(i, j int) bool {
+		return projectIDs[i].String() < projectIDs[j].String()
+	})
 	return projectIDs, nil
 }
 
@@ -91,6 +96,9 @@ func (s *ProjectFacilityLinkService) ListProjectIDsBySPSControllerID(ctx context
 	for projectID := range projectIDSet {
 		projectIDs = append(projectIDs, projectID)
 	}
+	sort.Slice(projectIDs, func(i, j int) bool {
+		return projectIDs[i].String() < projectIDs[j].String()
+	})
 	return projectIDs, nil
 }
 
@@ -127,15 +135,19 @@ func (s *ProjectFacilityLinkService) copyControlCabinet(ctx context.Context, pro
 
 // UpdateControlCabinet is the transaction-scoped workflow behind
 // application/facility/controlcabinet.ReassignProjectLinkHandler. It
-// materializes links for the new ControlCabinet descendants without pruning
-// links inherited from the old one and remains available to compatibility
-// callers.
+// materializes links for the new ControlCabinet descendants and prunes only
+// claims inherited from the old one. Explicit and other inherited claims
+// remain available to compatibility callers.
 func (s *ProjectFacilityLinkService) UpdateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
 	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
 		return txService.assignments().updateControlCabinet(txCtx, linkID, projectID, controlCabinetID)
 	})
 }
 
+// DeleteControlCabinet removes the selected ProjectControlCabinet association
+// and its descendant inheritance claims. Global entities and descendant links
+// with another claim are untouched. Production HTTP uses the application
+// unlink command for durable collaboration.
 func (s *ProjectFacilityLinkService) DeleteControlCabinet(ctx context.Context, linkID, projectID uuid.UUID) error {
 	return s.withTx(ctx, func(txCtx context.Context, txService *ProjectFacilityLinkService) error {
 		return txService.assignments().removeControlCabinet(txCtx, linkID, projectID)
@@ -194,15 +206,19 @@ func (s *ProjectFacilityLinkService) copySPSControllerSystemType(ctx context.Con
 
 // UpdateSPSController is the transaction-scoped workflow behind
 // application/facility/spscontroller.ReassignProjectLinkHandler. It
-// materializes links for the new SPSController descendants without pruning
-// links inherited from the old one and remains available to compatibility
-// callers.
+// materializes links for the new SPSController descendants and prunes only
+// FieldDevice claims inherited from the old controller. Explicit and other
+// inherited claims remain available to compatibility callers.
 func (s *ProjectFacilityLinkService) UpdateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
 	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectSPSController, error) {
 		return txService.assignments().updateSPSController(txCtx, linkID, projectID, spsControllerID)
 	})
 }
 
+// DeleteSPSController removes the explicit source for the selected project
+// association plus FieldDevice claims inherited from that controller. It never
+// deletes the global controller or descendants, and another source retains the
+// materialized project link.
 func (s *ProjectFacilityLinkService) DeleteSPSController(ctx context.Context, linkID, projectID uuid.UUID) error {
 	return s.withTx(ctx, func(txCtx context.Context, txService *ProjectFacilityLinkService) error {
 		return txService.assignments().removeSPSController(txCtx, linkID, projectID)
@@ -226,6 +242,9 @@ func (s *ProjectFacilityLinkService) UpdateFieldDevice(ctx context.Context, link
 	})
 }
 
+// DeleteFieldDevice removes the explicit source for the selected project
+// association. Another inherited/copy source retains the materialized link.
+// The global FieldDevice, Specification, and BACnet rows remain intact.
 func (s *ProjectFacilityLinkService) DeleteFieldDevice(ctx context.Context, linkID, projectID uuid.UUID) error {
 	return s.withTx(ctx, func(txCtx context.Context, txService *ProjectFacilityLinkService) error {
 		return txService.assignments().removeFieldDevice(txCtx, linkID, projectID)

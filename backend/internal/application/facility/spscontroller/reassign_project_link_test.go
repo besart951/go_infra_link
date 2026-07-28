@@ -254,7 +254,10 @@ func TestReassignProjectSPSControllerLinkCommitsDescendantsAndHistoryBeforeRefre
 		dispatched.ActorID == nil || *dispatched.ActorID != actorID ||
 		dispatched.Scope != appcollaboration.FacilityScopeSPSController ||
 		dispatched.FullRefresh ||
-		!reflect.DeepEqual(dispatched.EntityIDs, []uuid.UUID{newSPSControllerID}) {
+		!reflect.DeepEqual(
+			dispatched.EntityIDs,
+			[]uuid.UUID{previousSPSControllerID, newSPSControllerID},
+		) {
 		t.Fatalf("typed collaboration command: %#v", dispatcher.commands[0])
 	}
 }

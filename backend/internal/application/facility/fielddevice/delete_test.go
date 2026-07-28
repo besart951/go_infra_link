@@ -230,7 +230,7 @@ func TestDeleteCapturesRecipientsAndHistoryBeforeCommittedDispatch(t *testing.T)
 		wantProjectID := []uuid.UUID{projectOne, projectTwo}[index]
 		if command.ProjectID != wantProjectID || command.FieldDeviceID != fieldDeviceID ||
 			command.SPSControllerSystemTypeID != parentID || command.OperationID != operationID ||
-			command.CorrelationID != operationID || command.SchemaVersion != appcollaboration.SchemaVersionV1 {
+			command.CorrelationID != operationID || command.SchemaVersion != appcollaboration.SchemaVersionV2 {
 			t.Fatalf("unexpected collaboration command: %+v", command)
 		}
 	}

@@ -36,8 +36,9 @@ type spsControllerSystemTypeBulkCreator interface {
 
 const (
 	copyFieldDeviceSystemTypeChunkSize = 10
-	copyFieldDevicePageSize            = 500
-	copySPSControllerPageLimit         = 500
+	copyBatchSize                      = 100
+	copyFieldDevicePageSize            = copyBatchSize
+	copySPSControllerPageLimit         = copyBatchSize
 )
 
 func (s *FieldDeviceService) projectFacilityCopy() projectFacilityCopy {
@@ -207,62 +208,81 @@ func (c projectFacilityCopy) copySPSControllersForControlCabinet(ctx context.Con
 		return err
 	}
 
-	originalSPSControllers, err := c.listSPSControllersByControlCabinetID(ctx, originalControlCabinetID)
-	if err != nil {
-		return err
-	}
-
-	spsCopies := make([]*domainFacility.SPSController, 0, len(originalSPSControllers))
-	originalToCopy := make(map[uuid.UUID]*domainFacility.SPSController, len(originalSPSControllers))
-
-	for _, originalSPS := range originalSPSControllers {
-		gaDevice := ""
-		if originalSPS.GADevice != nil {
-			gaDevice = strings.ToUpper(strings.TrimSpace(*originalSPS.GADevice))
+	for page := 1; ; page++ {
+		result, err := c.spsControllerRepo.GetPaginatedListByControlCabinetID(
+			ctx,
+			originalControlCabinetID,
+			domain.PaginationParams{Page: page, Limit: copySPSControllerPageLimit},
+		)
+		if err != nil {
+			return err
 		}
-		if gaDevice == "" {
-			nextGADevice, err := c.nextAvailableGADevice(ctx, newControlCabinetID)
-			if err != nil {
-				return err
+		if len(result.Items) == 0 {
+			return nil
+		}
+
+		spsCopies := make([]*domainFacility.SPSController, 0, len(result.Items))
+		originalToCopy := make(
+			map[uuid.UUID]*domainFacility.SPSController,
+			len(result.Items),
+		)
+		for _, originalSPS := range result.Items {
+			gaDevice := ""
+			if originalSPS.GADevice != nil {
+				gaDevice = strings.ToUpper(strings.TrimSpace(*originalSPS.GADevice))
 			}
-			gaDevice = nextGADevice
+			if gaDevice == "" {
+				nextGADevice, err := c.nextAvailableGADevice(ctx, newControlCabinetID)
+				if err != nil {
+					return err
+				}
+				gaDevice = nextGADevice
+			}
+
+			var gaDevicePtr *string
+			if gaDevice != "" {
+				gaDevicePtr = &gaDevice
+			}
+
+			deviceName := strings.TrimSpace(originalSPS.DeviceName)
+			if generatedName, ok := generatedSPSControllerDeviceName(
+				newControlCabinet,
+				building,
+				gaDevicePtr,
+			); ok {
+				deviceName = generatedName
+			}
+
+			spsCopy := &domainFacility.SPSController{
+				ControlCabinetID:  newControlCabinetID,
+				GADevice:          gaDevicePtr,
+				DeviceName:        deviceName,
+				DeviceDescription: originalSPS.DeviceDescription,
+				DeviceLocation:    originalSPS.DeviceLocation,
+				IPAddress:         nil,
+				Subnet:            originalSPS.Subnet,
+				Gateway:           originalSPS.Gateway,
+				Vlan:              originalSPS.Vlan,
+			}
+			spsCopies = append(spsCopies, spsCopy)
+			originalToCopy[originalSPS.ID] = spsCopy
 		}
 
-		var gaDevicePtr *string
-		if gaDevice != "" {
-			gaDevicePtr = &gaDevice
+		if err := c.createSPSControllerCopies(ctx, spsCopies); err != nil {
+			return err
+		}
+		spsIDMap := make(map[uuid.UUID]uuid.UUID, len(originalToCopy))
+		for originalID, copyEntity := range originalToCopy {
+			spsIDMap[originalID] = copyEntity.ID
+		}
+		if err := c.copySystemTypesAndFieldDevicesForSPSControllers(ctx, spsIDMap); err != nil {
+			return err
 		}
 
-		deviceName := strings.TrimSpace(originalSPS.DeviceName)
-		if generatedName, ok := generatedSPSControllerDeviceName(newControlCabinet, building, gaDevicePtr); ok {
-			deviceName = generatedName
+		if page >= result.TotalPages || len(result.Items) < copySPSControllerPageLimit {
+			return nil
 		}
-
-		spsCopy := &domainFacility.SPSController{
-			ControlCabinetID:  newControlCabinetID,
-			GADevice:          gaDevicePtr,
-			DeviceName:        deviceName,
-			DeviceDescription: originalSPS.DeviceDescription,
-			DeviceLocation:    originalSPS.DeviceLocation,
-			IPAddress:         nil,
-			Subnet:            originalSPS.Subnet,
-			Gateway:           originalSPS.Gateway,
-			Vlan:              originalSPS.Vlan,
-		}
-		spsCopies = append(spsCopies, spsCopy)
-		originalToCopy[originalSPS.ID] = spsCopy
 	}
-
-	if err := c.createSPSControllerCopies(ctx, spsCopies); err != nil {
-		return err
-	}
-
-	spsIDMap := make(map[uuid.UUID]uuid.UUID, len(originalToCopy))
-	for originalID, copyEntity := range originalToCopy {
-		spsIDMap[originalID] = copyEntity.ID
-	}
-
-	return c.copySystemTypesAndFieldDevicesForSPSControllers(ctx, spsIDMap)
 }
 
 func (c projectFacilityCopy) copySystemTypesAndFieldDevicesForSPSController(ctx context.Context, originalSPSControllerID, newSPSControllerID uuid.UUID) error {
@@ -330,7 +350,7 @@ func (c projectFacilityCopy) createSPSControllerCopies(ctx context.Context, copi
 		return nil
 	}
 	if repo, ok := c.spsControllerRepo.(spsControllerBulkCreator); ok {
-		return repo.BulkCreate(ctx, copies, 100)
+		return repo.BulkCreate(ctx, copies, copyBatchSize)
 	}
 	for _, copyEntity := range copies {
 		if err := c.spsControllerRepo.Create(ctx, copyEntity); err != nil {
@@ -345,7 +365,7 @@ func (c projectFacilityCopy) createSPSControllerSystemTypeCopies(ctx context.Con
 		return nil
 	}
 	if repo, ok := c.spsControllerSystemRepo.(spsControllerSystemTypeBulkCreator); ok {
-		return repo.BulkCreate(ctx, copies, 100)
+		return repo.BulkCreate(ctx, copies, copyBatchSize)
 	}
 	for _, copyEntity := range copies {
 		if err := c.spsControllerSystemRepo.Create(ctx, copyEntity); err != nil {
@@ -361,25 +381,6 @@ func cloneIntPointer(value *int) *int {
 	}
 	clone := *value
 	return &clone
-}
-
-func (c projectFacilityCopy) listSPSControllersByControlCabinetID(ctx context.Context, controlCabinetID uuid.UUID) ([]domainFacility.SPSController, error) {
-	items := make([]domainFacility.SPSController, 0)
-	for page := 1; ; page++ {
-		result, err := c.spsControllerRepo.GetPaginatedListByControlCabinetID(ctx, controlCabinetID, domain.PaginationParams{
-			Page:  page,
-			Limit: copySPSControllerPageLimit,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		items = append(items, result.Items...)
-		if page >= result.TotalPages || len(result.Items) == 0 {
-			break
-		}
-	}
-	return items, nil
 }
 
 func (c projectFacilityCopy) nextAvailableControlCabinetNr(ctx context.Context, buildingID uuid.UUID, base string) (string, error) {

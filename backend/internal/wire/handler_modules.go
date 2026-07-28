@@ -24,6 +24,8 @@ func newProjectHandlers(services *Services, runtime *RuntimeAdapters) *projectha
 	var fieldDeviceReassigner projectfielddevicehandler.ProjectFieldDeviceReassigner
 	var objectDataAttacher projectobjectdatahandler.ProjectObjectDataAttacher
 	var objectDataDeactivator projectobjectdatahandler.ProjectObjectDataDeactivator
+	var facilityUnlinker projecthandler.ProjectFacilityUnlinker
+	var projectDeleter projecthandler.ProjectDeleter
 	if services.FacilityApplication != nil && services.FacilityApplication.ControlCabinet != nil {
 		controlCabinetCloner = services.FacilityApplication.ControlCabinet.CloneForProject
 		controlCabinetAssigner = services.FacilityApplication.ControlCabinet.AssignToProject
@@ -45,12 +47,20 @@ func newProjectHandlers(services *Services, runtime *RuntimeAdapters) *projectha
 		objectDataAttacher = services.FacilityApplication.ObjectData.ProjectAssociation
 		objectDataDeactivator = services.FacilityApplication.ObjectData.ProjectAssociation
 	}
+	if services.FacilityApplication != nil {
+		facilityUnlinker = services.FacilityApplication.ProjectLink
+	}
+	if services.ProjectApplication != nil {
+		projectDeleter = services.ProjectApplication.Delete
+	}
 	return projecthandler.NewHandlers(projecthandler.ServiceDeps{
 		Lifecycle:                     services.Project.Lifecycle,
 		AccessPolicy:                  services.Project.AccessPolicy,
 		Membership:                    services.Project.Membership,
 		Workflow:                      services.Project.Workflow,
 		FacilityLink:                  services.Project.FacilityLink,
+		FacilityUnlinker:              facilityUnlinker,
+		ProjectDeleter:                projectDeleter,
 		ControlCabinetCloner:          controlCabinetCloner,
 		ControlCabinetAssigner:        controlCabinetAssigner,
 		ControlCabinetReassigner:      controlCabinetReassigner,

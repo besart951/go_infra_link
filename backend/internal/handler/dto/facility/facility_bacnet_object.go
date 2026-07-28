@@ -18,8 +18,9 @@ type CreateBacnetObjectRequest struct {
 // UpdateBacnetObjectRequest is a partial update payload.
 // If object_data_id is provided, the object will also be attached to that object data template.
 type UpdateBacnetObjectRequest struct {
-	FieldDeviceID *uuid.UUID `json:"field_device_id"`
-	ObjectDataID  *uuid.UUID `json:"object_data_id"`
+	ExpectedVersion uint64       `json:"expected_version" binding:"required,min=1"`
+	FieldDeviceID   OptionalUUID `json:"field_device_id"`
+	ObjectDataID    *uuid.UUID   `json:"object_data_id"`
 
 	BacnetObjectPatchInput
 }
@@ -75,7 +76,8 @@ type BacnetObjectBulkPatchInput struct {
 }
 
 type BacnetObjectResponse struct {
-	ID string `json:"id"`
+	ID       string `json:"id"`
+	Revision uint64 `json:"revision"`
 
 	TextFix        string  `json:"text_fix"`
 	Description    *string `json:"description"`

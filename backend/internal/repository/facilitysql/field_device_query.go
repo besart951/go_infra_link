@@ -16,6 +16,7 @@ const (
 	fieldDeviceListMaxLimit     = 300
 	fieldDeviceListSelect       = `
 		field_devices.id,
+		field_devices.revision,
 		field_devices.created_at,
 		field_devices.updated_at,
 		field_devices.bmk,

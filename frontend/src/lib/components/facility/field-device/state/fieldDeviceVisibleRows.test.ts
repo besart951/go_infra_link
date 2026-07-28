@@ -59,6 +59,7 @@ describe('field-device visible row helpers', () => {
       applySPSControllerNameDelta(context.items, [
         {
           id: 'sps-1',
+          revision: 1,
           device_name: 'SPS new',
           control_cabinet_id: 'cc-1',
           created_at: '2026-01-01T00:00:00Z',

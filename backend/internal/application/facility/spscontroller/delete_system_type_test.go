@@ -8,8 +8,10 @@ import (
 	"testing"
 	"time"
 
+	appcollaboration "github.com/besart951/go_infra_link/backend/internal/application/collaboration"
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainCollaboration "github.com/besart951/go_infra_link/backend/internal/domain/collaboration"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
 	"github.com/google/uuid"
@@ -46,6 +48,7 @@ type globalSystemTypeDeleteHarness struct {
 	deleteCalls         int
 	deletedID           uuid.UUID
 	historyBatchID      *uuid.UUID
+	outbox              domainCollaboration.OutboxStore
 }
 
 func (h *globalSystemTypeDeleteHarness) runner(
@@ -54,7 +57,11 @@ func (h *globalSystemTypeDeleteHarness) runner(
 ) error {
 	h.runnerCalls++
 	staged := h.committed.clone()
-	if err := run(ctx, globalSystemTypeDeleteUnit{state: &staged}); err != nil {
+	txCtx := ctx
+	if h.outbox != nil {
+		txCtx = domainCollaboration.WithOutboxStore(txCtx, h.outbox)
+	}
+	if err := run(txCtx, globalSystemTypeDeleteUnit{state: &staged}); err != nil {
 		return err
 	}
 	if h.commitErr != nil {
@@ -62,6 +69,20 @@ func (h *globalSystemTypeDeleteHarness) runner(
 	}
 	h.committed = staged
 	return nil
+}
+
+type scopedGlobalSystemTypeDeleteWorkflowStub struct {
+	*globalSystemTypeDeleteWorkflowStub
+	ownerID    uuid.UUID
+	projectIDs []uuid.UUID
+	scopeErr   error
+}
+
+func (s *scopedGlobalSystemTypeDeleteWorkflowStub) GetDeleteProjectScope(
+	_ context.Context,
+	_ uuid.UUID,
+) (uuid.UUID, []uuid.UUID, error) {
+	return s.ownerID, append([]uuid.UUID(nil), s.projectIDs...), s.scopeErr
 }
 
 func (h *globalSystemTypeDeleteHarness) factory(
@@ -203,6 +224,83 @@ func TestDeleteSystemTypeCommitsRootHistoryAndCanonicalResultTogether(t *testing
 		snapshot.DocumentName == nil || *snapshot.DocumentName != documentName ||
 		!snapshot.CreatedAt.Equal(createdAt) || !snapshot.UpdatedAt.Equal(updatedAt) {
 		t.Fatalf("delete snapshot: %+v", snapshot)
+	}
+}
+
+func TestDeleteSystemTypePersistsProjectRefreshBeforeCommitAndDispatchesAfter(
+	t *testing.T,
+) {
+	systemTypeID := spsTestUUID(481)
+	controllerID := spsTestUUID(482)
+	projectID := spsTestUUID(483)
+	operationID := spsTestUUID(484)
+	eventID := spsTestUUID(485)
+	occurredAt := time.Date(2026, time.July, 23, 23, 0, 0, 0, time.UTC)
+	harness := &globalSystemTypeDeleteHarness{
+		committed: globalSystemTypeDeleteState{
+			systemType: &domainFacility.SPSControllerSystemType{
+				Base:            domain.Base{ID: systemTypeID},
+				SPSControllerID: controllerID,
+				SystemTypeID:    spsTestUUID(486),
+			},
+		},
+	}
+	outbox := &updateOutboxStoreStub{}
+	harness.outbox = outbox
+	factory := func(unit apptransaction.UnitOfWork) (DeleteSystemTypeWorkflow, error) {
+		typed := unit.(globalSystemTypeDeleteUnit)
+		return &scopedGlobalSystemTypeDeleteWorkflowStub{
+			globalSystemTypeDeleteWorkflowStub: &globalSystemTypeDeleteWorkflowStub{
+				harness: harness,
+				state:   typed.state,
+			},
+			ownerID:    controllerID,
+			projectIDs: []uuid.UUID{projectID},
+		}, nil
+	}
+	dispatcher := &updateCommandDispatcherStub{}
+	ids := []uuid.UUID{operationID, eventID}
+	handler := NewDeleteSystemTypeHandler(DeleteSystemTypeDependencies{
+		TransactionRunner:   harness.runner,
+		TransactionWorkflow: factory,
+		Dispatcher:          dispatcher,
+		NewID: func() uuid.UUID {
+			id := ids[0]
+			ids = ids[1:]
+			return id
+		},
+		Now: func() time.Time { return occurredAt },
+	})
+
+	outcome, err := handler.Execute(context.Background(), DeleteSystemTypeCommand{
+		SPSControllerSystemTypeID: systemTypeID,
+	})
+	if err != nil {
+		t.Fatalf("delete system type: %v", err)
+	}
+	if !reflect.DeepEqual(outcome.Mutation.ProjectIDs, []uuid.UUID{projectID}) {
+		t.Fatalf("project IDs: %v", outcome.Mutation.ProjectIDs)
+	}
+	if len(outbox.events) != 1 {
+		t.Fatalf("outbox events: got %d, want 1", len(outbox.events))
+	}
+	decoded, err := appcollaboration.DecodeCommand(appcollaboration.EncodedCommand{
+		Type:    outbox.events[0].EventType,
+		Payload: outbox.events[0].Payload,
+	})
+	if err != nil {
+		t.Fatalf("decode outbox event: %v", err)
+	}
+	event, ok := decoded.(appcollaboration.FacilityHierarchyRefreshRequired)
+	if !ok ||
+		event.SchemaVersion != appcollaboration.SchemaVersionV2 ||
+		event.ProjectID != projectID ||
+		event.Scope != appcollaboration.FacilityScopeSPSController ||
+		!reflect.DeepEqual(event.EntityIDs, []uuid.UUID{controllerID}) {
+		t.Fatalf("unexpected outbox event: %#v", decoded)
+	}
+	if len(dispatcher.commands) != 1 {
+		t.Fatalf("compatibility commands: got %d, want 1", len(dispatcher.commands))
 	}
 }
 

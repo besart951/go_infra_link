@@ -262,6 +262,7 @@ describe('field device export importer', () => {
   it('marks existing cabinets as reusable on the header source cell', () => {
     const cabinet: ControlCabinet = {
       id: 'cabinet-1',
+      revision: 1,
       building_id: 'building-1',
       control_cabinet_nr: '1_0100_00',
       created_at: '',
@@ -286,6 +287,7 @@ describe('field device export importer', () => {
   it('marks already existing field devices as reusable on the source object name cell', () => {
     const existingFieldDevice: FieldDevice = {
       id: 'field-device-1',
+      revision: 1,
       apparat_nr: '1',
       sps_controller_system_type_id: 'sps-controller-system-type-1',
       system_part_id: 'system-part-1',

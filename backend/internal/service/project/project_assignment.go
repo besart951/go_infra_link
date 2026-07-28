@@ -2,9 +2,10 @@ package project
 
 import (
 	"context"
+	"fmt"
+
 	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
 	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
-	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -21,12 +22,9 @@ type projectAssignmentDependencies struct {
 	projectControlCabinetRepo domainProject.ProjectControlCabinetRepository
 	projectSPSControllerRepo  domainProject.ProjectSPSControllerRepository
 	projectFieldDeviceRepo    domainProject.ProjectFieldDeviceRepository
-	controlCabinetRepo        domainFacility.ControlCabinetRepository
 	spsControllerRepo         domainFacility.SPSControllerRepository
 	spsControllerSystemRepo   domainHierarchy.SPSControllerSystemTypeStore
 	fieldDeviceRepo           domainFieldDevice.FieldDeviceStore
-	specificationRepo         domainFieldDevice.SpecificationStore
-	bacnetObjectRepo          domainObjectData.BacnetObjectStore
 }
 
 type projectAssignmentKind int
@@ -120,12 +118,9 @@ func (s *ProjectFacilityLinkService) assignments() projectAssignment {
 		projectControlCabinetRepo: s.projectControlCabinetRepo,
 		projectSPSControllerRepo:  s.projectSPSControllerRepo,
 		projectFieldDeviceRepo:    s.projectFieldDeviceRepo,
-		controlCabinetRepo:        s.controlCabinetRepo,
 		spsControllerRepo:         s.spsControllerRepo,
 		spsControllerSystemRepo:   s.spsControllerSystemRepo,
 		fieldDeviceRepo:           s.fieldDeviceRepo,
-		specificationRepo:         s.specificationRepo,
-		bacnetObjectRepo:          s.bacnetObjectRepo,
 	}}
 }
 
@@ -145,20 +140,101 @@ func (a projectAssignment) assign(ctx context.Context, projectID uuid.UUID, targ
 		}
 		return &projectAssignmentResult{controlCabinet: entity}, nil
 	case projectAssignmentSPSController:
+		existing, err := a.findProjectSPSControllerLink(ctx, projectID, target.id)
+		if err != nil {
+			return nil, err
+		}
+		if existing != nil {
+			if writer, ok := a.deps.projectSPSControllerRepo.(interface {
+				AddAssignmentSource(
+					context.Context,
+					uuid.UUID,
+					[]uuid.UUID,
+					domainProject.AssignmentSource,
+				) error
+			}); ok {
+				if err := writer.AddAssignmentSource(
+					ctx,
+					projectID,
+					[]uuid.UUID{target.id},
+					domainProject.ExplicitAssignmentSource(),
+				); err != nil {
+					return nil, err
+				}
+			}
+			systemTypeIDs, err := a.deps.spsControllerSystemRepo.
+				GetIDsBySPSControllerIDs(ctx, []uuid.UUID{target.id})
+			if err != nil {
+				return nil, err
+			}
+			if err := a.assignFieldDevicesForSystemTypes(
+				ctx,
+				projectID,
+				systemTypeIDs,
+				domainProject.AssignmentSource{
+					Kind:           domainProject.AssignmentSourceSPSController,
+					SourceEntityID: target.id,
+				},
+			); err != nil {
+				return nil, err
+			}
+			return &projectAssignmentResult{spsController: existing}, nil
+		}
 		entity := &domainProject.ProjectSPSController{ProjectID: projectID, SPSControllerID: target.id}
 		if err := a.deps.projectSPSControllerRepo.Create(ctx, entity); err != nil {
 			return nil, err
 		}
-		if err := a.assignSPSControllerDescendants(ctx, projectID, []uuid.UUID{target.id}); err != nil {
+		if err := a.assignSPSControllerDescendants(
+			ctx,
+			projectID,
+			[]uuid.UUID{target.id},
+			domainProject.ExplicitAssignmentSource(),
+			domainProject.AssignmentSource{
+				Kind:           domainProject.AssignmentSourceSPSController,
+				SourceEntityID: target.id,
+			},
+		); err != nil {
 			return nil, err
 		}
 		return &projectAssignmentResult{spsController: entity}, nil
 	case projectAssignmentSPSControllerSystemType:
-		if err := a.assignFieldDevicesForSystemTypes(ctx, projectID, []uuid.UUID{target.id}); err != nil {
+		if err := a.assignFieldDevicesForSystemTypes(
+			ctx,
+			projectID,
+			[]uuid.UUID{target.id},
+			domainProject.AssignmentSource{
+				Kind:           domainProject.AssignmentSourceSPSSystemType,
+				SourceEntityID: target.id,
+			},
+		); err != nil {
 			return nil, err
 		}
 		return &projectAssignmentResult{}, nil
 	case projectAssignmentFieldDevice:
+		existing, err := a.findProjectFieldDeviceLink(ctx, projectID, target.id)
+		if err != nil {
+			return nil, err
+		}
+		if existing != nil {
+			if writer, ok := a.deps.projectFieldDeviceRepo.(interface {
+				AddAssignmentSource(
+					context.Context,
+					uuid.UUID,
+					[]uuid.UUID,
+					domainProject.AssignmentSource,
+				) error
+			}); ok {
+				if err := writer.AddAssignmentSource(
+					ctx,
+					projectID,
+					[]uuid.UUID{target.id},
+					domainProject.ExplicitAssignmentSource(),
+				); err != nil {
+					return nil, err
+				}
+			}
+			return &projectAssignmentResult{fieldDevice: existing}, nil
+		}
 		entity := &domainProject.ProjectFieldDevice{ProjectID: projectID, FieldDeviceID: target.id}
 		if err := a.deps.projectFieldDeviceRepo.Create(ctx, entity); err != nil {
 			return nil, err
@@ -167,6 +243,46 @@ func (a projectAssignment) assign(ctx context.Context, projectID uuid.UUID, targ
 	default:
 		return nil, domain.ErrInvalidArgument
 	}
+}
+
+func (a projectAssignment) findProjectSPSControllerLink(
+	ctx context.Context,
+	projectID uuid.UUID,
+	spsControllerID uuid.UUID,
+) (*domainProject.ProjectSPSController, error) {
+	links, err := a.deps.projectSPSControllerRepo.GetBySPSControllerID(
+		ctx,
+		spsControllerID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	for _, link := range links {
+		if link != nil && link.ProjectID == projectID {
+			return link, nil
+		}
+	}
+	return nil, nil
+}
+
+func (a projectAssignment) findProjectFieldDeviceLink(
+	ctx context.Context,
+	projectID uuid.UUID,
+	fieldDeviceID uuid.UUID,
+) (*domainProject.ProjectFieldDevice, error) {
+	links, err := a.deps.projectFieldDeviceRepo.GetByFieldDeviceIDs(
+		ctx,
+		[]uuid.UUID{fieldDeviceID},
+	)
+	if err != nil {
+		return nil, err
+	}
+	for _, link := range links {
+		if link != nil && link.ProjectID == projectID {
+			return link, nil
+		}
+	}
+	return nil, nil
 }
 
 func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UUID, target projectAssignmentTarget) (*projectAssignmentResult, error) {
@@ -178,6 +294,29 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 		}
 		if entity.ProjectID != projectID {
 			return nil, domain.ErrNotFound
+		}
+		previousControlCabinetID := entity.ControlCabinetID
+		if previousControlCabinetID != target.id {
+			source := domainProject.AssignmentSource{
+				Kind:           domainProject.AssignmentSourceControlCabinet,
+				SourceEntityID: previousControlCabinetID,
+			}
+			if err := pruneProjectAssignmentSource(
+				ctx,
+				a.deps.projectFieldDeviceRepo,
+				projectID,
+				source,
+			); err != nil {
+				return nil, err
+			}
+			if err := pruneProjectAssignmentSource(
+				ctx,
+				a.deps.projectSPSControllerRepo,
+				projectID,
+				source,
+			); err != nil {
+				return nil, err
+			}
 		}
 		entity.ControlCabinetID = target.id
 		if err := a.deps.projectControlCabinetRepo.Update(ctx, entity); err != nil {
@@ -195,11 +334,57 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 		if entity.ProjectID != projectID {
 			return nil, domain.ErrNotFound
 		}
+		previousSPSControllerID := entity.SPSControllerID
+		if previousSPSControllerID != target.id {
+			explicitSource := domainProject.AssignmentSource{
+				Kind:           domainProject.AssignmentSourceExplicit,
+				SourceEntityID: previousSPSControllerID,
+			}
+			if err := requireExclusiveProjectAssignmentSource(
+				ctx,
+				a.deps.projectSPSControllerRepo,
+				linkID,
+				explicitSource,
+			); err != nil {
+				return nil, err
+			}
+			if err := pruneProjectAssignmentSource(
+				ctx,
+				a.deps.projectFieldDeviceRepo,
+				projectID,
+				domainProject.AssignmentSource{
+					Kind:           domainProject.AssignmentSourceSPSController,
+					SourceEntityID: previousSPSControllerID,
+				},
+			); err != nil {
+				return nil, err
+			}
+		}
 		entity.SPSControllerID = target.id
 		if err := a.deps.projectSPSControllerRepo.Update(ctx, entity); err != nil {
 			return nil, err
 		}
-		if err := a.assignSPSControllerDescendants(ctx, projectID, []uuid.UUID{target.id}); err != nil {
+		if previousSPSControllerID != target.id {
+			if err := replaceExplicitProjectAssignmentSource(
+				ctx,
+				a.deps.projectSPSControllerRepo,
+				linkID,
+				previousSPSControllerID,
+				target.id,
+			); err != nil {
+				return nil, err
+			}
+		}
+		if err := a.assignSPSControllerDescendants(
+			ctx,
+			projectID,
+			[]uuid.UUID{target.id},
+			domainProject.ExplicitAssignmentSource(),
+			domainProject.AssignmentSource{
+				Kind:           domainProject.AssignmentSourceSPSController,
+				SourceEntityID: target.id,
+			},
+		); err != nil {
 			return nil, err
 		}
 		return &projectAssignmentResult{spsController: entity}, nil
@@ -211,14 +396,129 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 		if entity.ProjectID != projectID {
 			return nil, domain.ErrNotFound
 		}
+		previousFieldDeviceID := entity.FieldDeviceID
+		if previousFieldDeviceID != target.id {
+			explicitSource := domainProject.AssignmentSource{
+				Kind:           domainProject.AssignmentSourceExplicit,
+				SourceEntityID: previousFieldDeviceID,
+			}
+			if err := requireExclusiveProjectAssignmentSource(
+				ctx,
+				a.deps.projectFieldDeviceRepo,
+				linkID,
+				explicitSource,
+			); err != nil {
+				return nil, err
+			}
+		}
 		entity.FieldDeviceID = target.id
 		if err := a.deps.projectFieldDeviceRepo.Update(ctx, entity); err != nil {
 			return nil, err
+		}
+		if previousFieldDeviceID != target.id {
+			if err := replaceExplicitProjectAssignmentSource(
+				ctx,
+				a.deps.projectFieldDeviceRepo,
+				linkID,
+				previousFieldDeviceID,
+				target.id,
+			); err != nil {
+				return nil, err
+			}
 		}
 		return &projectAssignmentResult{fieldDevice: entity}, nil
 	default:
 		return nil, domain.ErrInvalidArgument
 	}
+}
+
+func pruneProjectAssignmentSource(
+	ctx context.Context,
+	repository any,
+	projectID uuid.UUID,
+	source domainProject.AssignmentSource,
+) error {
+	_, err := pruneProjectAssignmentSourceHandled(ctx, repository, projectID, source)
+	return err
+}
+
+func pruneProjectAssignmentSourceHandled(
+	ctx context.Context,
+	repository any,
+	projectID uuid.UUID,
+	source domainProject.AssignmentSource,
+) (bool, error) {
+	pruner, ok := repository.(interface {
+		RemoveAssignmentSourceAndPrune(
+			context.Context,
+			uuid.UUID,
+			domainProject.AssignmentSource,
+		) (bool, error)
+	})
+	if !ok {
+		return false, nil
+	}
+	_, err := pruner.RemoveAssignmentSourceAndPrune(ctx, projectID, source)
+	return true, err
+}
+
+func requireExclusiveProjectAssignmentSource(
+	ctx context.Context,
+	repository any,
+	linkID uuid.UUID,
+	explicitSource domainProject.AssignmentSource,
+) error {
+	reader, ok := repository.(interface {
+		HasAssignmentSourceOtherThan(
+			context.Context,
+			uuid.UUID,
+			domainProject.AssignmentSource,
+		) (bool, error)
+	})
+	if !ok {
+		return nil
+	}
+	hasOtherSource, err := reader.HasAssignmentSourceOtherThan(
+		ctx,
+		linkID,
+		explicitSource,
+	)
+	if err != nil {
+		return err
+	}
+	if hasOtherSource {
+		return fmt.Errorf(
+			"project association is also inherited and cannot be reassigned: %w",
+			domain.ErrConflict,
+		)
+	}
+	return nil
+}
+
+func replaceExplicitProjectAssignmentSource(
+	ctx context.Context,
+	repository any,
+	linkID uuid.UUID,
+	fromEntityID uuid.UUID,
+	toEntityID uuid.UUID,
+) error {
+	writer, ok := repository.(interface {
+		ReplaceExplicitAssignmentSource(
+			context.Context,
+			uuid.UUID,
+			uuid.UUID,
+			uuid.UUID,
+		) error
+	})
+	if !ok {
+		return nil
+	}
+	return writer.ReplaceExplicitAssignmentSource(
+		ctx,
+		linkID,
+		fromEntityID,
+		toEntityID,
+	)
 }
 
 func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UUID, kind projectAssignmentKind) error {
@@ -231,36 +531,27 @@ func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UU
 		if entity.ProjectID != projectID {
 			return domain.ErrNotFound
 		}
-
-		controlCabinetID := entity.ControlCabinetID
-		spsControllerIDs, err := a.deps.spsControllerRepo.GetIDsByControlCabinetID(ctx, controlCabinetID)
-		if err != nil {
+		source := domainProject.AssignmentSource{
+			Kind:           domainProject.AssignmentSourceControlCabinet,
+			SourceEntityID: entity.ControlCabinetID,
+		}
+		if err := pruneProjectAssignmentSource(
+			ctx,
+			a.deps.projectFieldDeviceRepo,
+			projectID,
+			source,
+		); err != nil {
 			return err
 		}
-		systemTypeIDs, err := a.collectSystemTypeIDsForSPSControllers(ctx, spsControllerIDs)
-		if err != nil {
+		if err := pruneProjectAssignmentSource(
+			ctx,
+			a.deps.projectSPSControllerRepo,
+			projectID,
+			source,
+		); err != nil {
 			return err
 		}
-
-		if err := a.deleteControlCabinetAssignments(ctx, []uuid.UUID{controlCabinetID}); err != nil {
-			return err
-		}
-		if err := a.deleteSPSControllerAssignments(ctx, spsControllerIDs); err != nil {
-			return err
-		}
-		if err := a.deleteFieldDeviceHierarchyForSystemTypes(ctx, systemTypeIDs); err != nil {
-			return err
-		}
-		if len(spsControllerIDs) > 0 {
-			if err := a.deps.spsControllerSystemRepo.DeleteBySPSControllerIDs(ctx, spsControllerIDs); err != nil {
-				return err
-			}
-			if err := a.deps.spsControllerRepo.DeleteByIds(ctx, spsControllerIDs); err != nil {
-				return err
-			}
-		}
-
-		return a.deps.controlCabinetRepo.DeleteByIds(ctx, []uuid.UUID{controlCabinetID})
+		return a.deps.projectControlCabinetRepo.DeleteByIds(ctx, []uuid.UUID{linkID})
 	case projectAssignmentSPSController:
 		entity, err := domain.GetByID(ctx, a.deps.projectSPSControllerRepo, linkID)
 		if err != nil {
@@ -269,23 +560,30 @@ func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UU
 		if entity.ProjectID != projectID {
 			return domain.ErrNotFound
 		}
-
-		spsControllerID := entity.SPSControllerID
-		systemTypeIDs, err := a.collectSystemTypeIDsForSPSControllers(ctx, []uuid.UUID{spsControllerID})
-		if err != nil {
+		if err := pruneProjectAssignmentSource(
+			ctx,
+			a.deps.projectFieldDeviceRepo,
+			projectID,
+			domainProject.AssignmentSource{
+				Kind:           domainProject.AssignmentSourceSPSController,
+				SourceEntityID: entity.SPSControllerID,
+			},
+		); err != nil {
 			return err
 		}
-
-		if err := a.deleteSPSControllerAssignments(ctx, []uuid.UUID{spsControllerID}); err != nil {
+		handled, err := pruneProjectAssignmentSourceHandled(
+			ctx,
+			a.deps.projectSPSControllerRepo,
+			projectID,
+			domainProject.AssignmentSource{
+				Kind:           domainProject.AssignmentSourceExplicit,
+				SourceEntityID: entity.SPSControllerID,
+			},
+		)
+		if err != nil || handled {
 			return err
 		}
-		if err := a.deleteFieldDeviceHierarchyForSystemTypes(ctx, systemTypeIDs); err != nil {
-			return err
-		}
-		if err := a.deps.spsControllerSystemRepo.DeleteBySPSControllerIDs(ctx, []uuid.UUID{spsControllerID}); err != nil {
-			return err
-		}
-		return a.deps.spsControllerRepo.DeleteByIds(ctx, []uuid.UUID{spsControllerID})
+		return a.deps.projectSPSControllerRepo.DeleteByIds(ctx, []uuid.UUID{linkID})
 	case projectAssignmentFieldDevice:
 		entity, err := domain.GetByID(ctx, a.deps.projectFieldDeviceRepo, linkID)
 		if err != nil {
@@ -294,12 +592,19 @@ func (a projectAssignment) remove(ctx context.Context, linkID, projectID uuid.UU
 		if entity.ProjectID != projectID {
 			return domain.ErrNotFound
 		}
-
-		fieldDeviceID := entity.FieldDeviceID
-		if err := a.deleteFieldDeviceAssignments(ctx, []uuid.UUID{fieldDeviceID}); err != nil {
+		handled, err := pruneProjectAssignmentSourceHandled(
+			ctx,
+			a.deps.projectFieldDeviceRepo,
+			projectID,
+			domainProject.AssignmentSource{
+				Kind:           domainProject.AssignmentSourceExplicit,
+				SourceEntityID: entity.FieldDeviceID,
+			},
+		)
+		if err != nil || handled {
 			return err
 		}
-		return a.deleteFieldDevicesWithChildren(ctx, []uuid.UUID{fieldDeviceID})
+		return a.deps.projectFieldDeviceRepo.DeleteByIds(ctx, []uuid.UUID{linkID})
 	default:
 		return domain.ErrInvalidArgument
 	}
@@ -325,7 +630,12 @@ func (a projectAssignment) multiAssignFieldDevices(ctx context.Context, projectI
 }
 
 func (a projectAssignment) assignFieldDeviceIDs(ctx context.Context, projectID uuid.UUID, fieldDeviceIDs []uuid.UUID) error {
-	return a.store().assignFieldDeviceIDs(ctx, projectID, fieldDeviceIDs)
+	return a.store().assignFieldDeviceIDs(
+		ctx,
+		projectID,
+		fieldDeviceIDs,
+		domainProject.ExplicitAssignmentSource(),
+	)
 }
 
 func (a projectAssignment) assignControlCabinetDescendants(ctx context.Context, projectID, controlCabinetID uuid.UUID) error {
@@ -333,40 +643,45 @@ func (a projectAssignment) assignControlCabinetDescendants(ctx context.Context, 
 	if err != nil {
 		return err
 	}
-	return a.assignSPSControllerDescendants(ctx, projectID, spsControllerIDs)
-}
-
-func (a projectAssignment) assignSPSControllerDescendants(ctx context.Context, projectID uuid.UUID, spsControllerIDs []uuid.UUID) error {
-	return a.store().assignSPSControllerDescendants(ctx, projectID, spsControllerIDs)
-}
-
-func (a projectAssignment) assignFieldDevicesForSystemTypes(ctx context.Context, projectID uuid.UUID, systemTypeIDs []uuid.UUID) error {
-	return a.store().assignFieldDevicesForSystemTypes(ctx, projectID, systemTypeIDs)
-}
-
-func (a projectAssignment) collectSystemTypeIDsForSPSControllers(ctx context.Context, spsControllerIDs []uuid.UUID) ([]uuid.UUID, error) {
-	if len(spsControllerIDs) == 0 {
-		return nil, nil
+	source := domainProject.AssignmentSource{
+		Kind:           domainProject.AssignmentSourceControlCabinet,
+		SourceEntityID: controlCabinetID,
 	}
-	return a.deps.spsControllerSystemRepo.GetIDsBySPSControllerIDs(ctx, spsControllerIDs)
+	return a.assignSPSControllerDescendants(
+		ctx,
+		projectID,
+		spsControllerIDs,
+		source,
+		source,
+	)
 }
 
-func (a projectAssignment) deleteFieldDeviceHierarchyForSystemTypes(ctx context.Context, systemTypeIDs []uuid.UUID) error {
-	return a.store().deleteFieldDeviceHierarchyForSystemTypes(ctx, systemTypeIDs)
+func (a projectAssignment) assignSPSControllerDescendants(
+	ctx context.Context,
+	projectID uuid.UUID,
+	spsControllerIDs []uuid.UUID,
+	spsSource domainProject.AssignmentSource,
+	fieldDeviceSource domainProject.AssignmentSource,
+) error {
+	return a.store().assignSPSControllerDescendants(
+		ctx,
+		projectID,
+		spsControllerIDs,
+		spsSource,
+		fieldDeviceSource,
+	)
 }
 
-func (a projectAssignment) deleteFieldDevicesWithChildren(ctx context.Context, fieldDeviceIDs []uuid.UUID) error {
-	return a.store().deleteFieldDevicesWithChildren(ctx, fieldDeviceIDs)
-}
-
-func (a projectAssignment) deleteControlCabinetAssignments(ctx context.Context, controlCabinetIDs []uuid.UUID) error {
-	return a.store().deleteControlCabinetAssignments(ctx, controlCabinetIDs)
-}
-
-func (a projectAssignment) deleteSPSControllerAssignments(ctx context.Context, spsControllerIDs []uuid.UUID) error {
-	return a.store().deleteSPSControllerAssignments(ctx, spsControllerIDs)
-}
-
-func (a projectAssignment) deleteFieldDeviceAssignments(ctx context.Context, fieldDeviceIDs []uuid.UUID) error {
-	return a.store().deleteFieldDeviceAssignments(ctx, fieldDeviceIDs)
+func (a projectAssignment) assignFieldDevicesForSystemTypes(
+	ctx context.Context,
+	projectID uuid.UUID,
+	systemTypeIDs []uuid.UUID,
+	source domainProject.AssignmentSource,
+) error {
+	return a.store().assignFieldDevicesForSystemTypes(
+		ctx,
+		projectID,
+		systemTypeIDs,
+		source,
+	)
 }

@@ -24,8 +24,12 @@ export function buildFieldDeviceUpdatePayload({
   const changes = pendingEdits.get(deviceId);
   const bacnetEdits = pendingBacnetEdits.get(deviceId);
   const shouldIncludeBacnet = includeBacnet && bacnetEdits && bacnetEdits.size > 0;
-  const update: BulkUpdateFieldDeviceItem = { id: deviceId };
   const device = storeItems.find((item) => item.id === deviceId);
+  if (!device) return null;
+  const update: BulkUpdateFieldDeviceItem = {
+    id: deviceId,
+    expected_version: device.revision
+  };
   let hasChanges = false;
 
   if (changes) {

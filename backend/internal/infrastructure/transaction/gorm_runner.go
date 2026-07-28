@@ -2,14 +2,27 @@ package transaction
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
+	domainCollaboration "github.com/besart951/go_infra_link/backend/internal/domain/collaboration"
+	"github.com/besart951/go_infra_link/backend/internal/repository/collaborationoutbox"
 	"gorm.io/gorm"
 )
 
 func NewGormRunner(db *gorm.DB) apptransaction.Runner {
 	return gormRunner{db: db}.Run
+}
+
+// NewGormRunnerWithIsolation creates a transaction runner with an explicit
+// database isolation level. It is used by paged read/write workflows that need
+// one source snapshot across every statement.
+func NewGormRunnerWithIsolation(
+	db *gorm.DB,
+	isolation sql.IsolationLevel,
+) apptransaction.Runner {
+	return gormRunner{db: db, isolation: isolation}.Run
 }
 
 func GormDB(unit apptransaction.UnitOfWork) (*gorm.DB, error) {
@@ -21,7 +34,8 @@ func GormDB(unit apptransaction.UnitOfWork) (*gorm.DB, error) {
 }
 
 type gormRunner struct {
-	db *gorm.DB
+	db        *gorm.DB
+	isolation sql.IsolationLevel
 }
 
 func (r gormRunner) Run(ctx context.Context, run func(context.Context, apptransaction.UnitOfWork) error) error {
@@ -31,7 +45,18 @@ func (r gormRunner) Run(ctx context.Context, run func(context.Context, apptransa
 	if run == nil {
 		return fmt.Errorf("transaction callback is nil")
 	}
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return run(ctx, tx)
-	})
+	runTransaction := func(tx *gorm.DB) error {
+		runCtx := domainCollaboration.WithOutboxStore(
+			ctx,
+			collaborationoutbox.NewStore(tx),
+		)
+		return run(runCtx, tx)
+	}
+	if r.isolation == sql.LevelDefault {
+		return r.db.WithContext(ctx).Transaction(runTransaction)
+	}
+	return r.db.WithContext(ctx).Transaction(
+		runTransaction,
+		&sql.TxOptions{Isolation: r.isolation},
+	)
 }

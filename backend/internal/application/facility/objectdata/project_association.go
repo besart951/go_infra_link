@@ -213,7 +213,11 @@ func (h *ProjectAssociationHandler) execute(
 	apply func(*domainFacility.ObjectData) error,
 ) (ProjectAssociationOutcome, error) {
 	operationID := h.newID()
+	durableEventID := h.newID()
+	compatibilityEventID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
+	var compatibilityCommand appcollaboration.Command
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -221,7 +225,7 @@ func (h *ProjectAssociationHandler) execute(
 			txCtx context.Context,
 			workflow ProjectAssociationWorkflow,
 		) (committedProjectAssociation, error) {
-			return executeProjectAssociationTransaction(
+			result, err := executeProjectAssociationTransaction(
 				txCtx,
 				workflow,
 				projectID,
@@ -230,13 +234,41 @@ func (h *ProjectAssociationHandler) execute(
 				h.historyBatch,
 				apply,
 			)
+			if err != nil {
+				return committedProjectAssociation{}, err
+			}
+			durableCommand := appcollaboration.FacilityHierarchyRefreshRequired{
+				Envelope: appcollaboration.Envelope{
+					SchemaVersion: appcollaboration.SchemaVersionV2,
+					EventID:       durableEventID, OperationID: operationID, CorrelationID: operationID,
+					ProjectID: projectID, ActorID: actorID, OccurredAt: occurredAt,
+				},
+				Scope:     appcollaboration.FacilityScopeObjectData,
+				EntityIDs: []uuid.UUID{objectDataID},
+			}
+			if _, err := appcollaboration.EnqueueCommand(txCtx, durableCommand); err != nil {
+				return committedProjectAssociation{}, fmt.Errorf("enqueue project ObjectData refresh: %w", err)
+			}
+			compatibilityCommand = appcollaboration.FacilityHierarchyRefreshRequired{
+				Envelope: appcollaboration.Envelope{
+					SchemaVersion: appcollaboration.SchemaVersionV1,
+					EventID:       compatibilityEventID,
+					OperationID:   operationID,
+					CorrelationID: operationID,
+					ProjectID:     projectID,
+					ActorID:       actorID,
+					OccurredAt:    occurredAt,
+				},
+				Scope:       appcollaboration.FacilityScopeProject,
+				FullRefresh: true,
+			}
+			return result, nil
 		},
 	)
 	if err != nil {
 		return ProjectAssociationOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	result := mutation.Result{
 		OperationID: operationID,
 		ActorID:     actorID,
@@ -257,20 +289,7 @@ func (h *ProjectAssociationHandler) execute(
 	}
 
 	dispatchCtx := context.WithoutCancel(ctx)
-	refresh := appcollaboration.FacilityHierarchyRefreshRequired{
-		Envelope: appcollaboration.Envelope{
-			SchemaVersion: appcollaboration.SchemaVersionV1,
-			EventID:       h.newID(),
-			OperationID:   operationID,
-			CorrelationID: operationID,
-			ProjectID:     projectID,
-			ActorID:       actorID,
-			OccurredAt:    occurredAt,
-		},
-		Scope:       appcollaboration.FacilityScopeProject,
-		FullRefresh: true,
-	}
-	if dispatchErr := h.dispatcher.Dispatch(dispatchCtx, refresh); dispatchErr != nil {
+	if dispatchErr := h.dispatcher.Dispatch(dispatchCtx, compatibilityCommand); dispatchErr != nil {
 		outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
 			"dispatch project ObjectData refresh for project %s: %w",
 			projectID,

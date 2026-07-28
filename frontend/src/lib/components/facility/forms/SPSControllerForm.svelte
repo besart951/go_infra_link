@@ -476,6 +476,7 @@
       if (initialData) {
         const res = await spsControllerFormService.update(initialData.id, {
           id: initialData.id,
+          expected_version: initialData.revision,
           ga_device,
           device_name,
           ip_address: ip_address || undefined,

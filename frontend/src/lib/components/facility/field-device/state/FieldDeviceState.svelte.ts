@@ -81,7 +81,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     const initialFilters = sanitizeFilters(resolveFieldDeviceFilters(props.initialFilters) ?? {});
 
     super(strategyFactory.create(), {
-      pageSize: resolvePageSize(props.pageSize) ?? 300,
+      pageSize: resolvePageSize(props.pageSize) ?? 200,
       initialFilters
     });
 

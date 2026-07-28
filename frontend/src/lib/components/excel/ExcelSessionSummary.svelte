@@ -1,7 +1,10 @@
 <script lang="ts">
   import type { ExcelReadSession } from '$lib/domain/excel/index.js';
   import type { CreateObjectDataRequest } from '$lib/domain/facility/object-data.js';
-  import type { CreateBacnetObjectRequest } from '$lib/domain/facility/bacnet-object.js';
+  import type {
+    BacnetObject,
+    CreateBacnetObjectRequest
+  } from '$lib/domain/facility/bacnet-object.js';
   import ExcelSessionActionSection from './ExcelSessionActionSection.svelte';
   import ExcelSessionWarningSection from './ExcelSessionWarningSection.svelte';
   import ExcelSessionPreparedSummary from './ExcelSessionPreparedSummary.svelte';
@@ -746,18 +749,18 @@
         const createdBacnetObjects = await objectDataRepository.getBacnetObjects(
           createdObjectData.id
         );
-        const createdSoftwareIdMap = new Map<string, string>();
+        const createdSoftwareMap = new Map<string, BacnetObject>();
         createdBacnetObjects.forEach((bacnet) => {
-          createdSoftwareIdMap.set(
+          createdSoftwareMap.set(
             toSoftwareId(bacnet.software_type, bacnet.software_number),
-            bacnet.id
+            bacnet
           );
         });
 
         for (const link of item.plannedSoftwareReferenceLinks) {
-          const fromId = createdSoftwareIdMap.get(link.fromSoftwareId);
-          const toId = createdSoftwareIdMap.get(link.toSoftwareId);
-          if (!fromId || !toId) {
+          const fromObject = createdSoftwareMap.get(link.fromSoftwareId);
+          const toObject = createdSoftwareMap.get(link.toSoftwareId);
+          if (!fromObject || !toObject) {
             unresolvedSoftwareLinks.push({
               objectDataId: item.objectDataId,
               from: link.fromSoftwareId,
@@ -766,7 +769,10 @@
             continue;
           }
 
-          await updateBacnetObject(fromId, { software_reference_id: toId });
+          await updateBacnetObject(fromObject.id, {
+            expected_version: fromObject.revision,
+            software_reference_id: toObject.id
+          });
         }
 
         success += 1;

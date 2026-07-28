@@ -3,6 +3,8 @@ package facility
 import (
 	"bytes"
 	"encoding/json"
+
+	"github.com/google/uuid"
 )
 
 type OptionalString struct {
@@ -48,6 +50,26 @@ func (o *OptionalInt) UnmarshalJSON(data []byte) error {
 type OptionalFloat64 struct {
 	Set   bool
 	Value *float64
+}
+
+type OptionalUUID struct {
+	Set   bool
+	Value *uuid.UUID
+}
+
+func (o *OptionalUUID) UnmarshalJSON(data []byte) error {
+	o.Set = true
+	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+		o.Value = nil
+		return nil
+	}
+
+	var value uuid.UUID
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	o.Value = &value
+	return nil
 }
 
 func (o *OptionalFloat64) UnmarshalJSON(data []byte) error {

@@ -8,8 +8,10 @@ import (
 	"testing"
 	"time"
 
+	appcollaboration "github.com/besart951/go_infra_link/backend/internal/application/collaboration"
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainCollaboration "github.com/besart951/go_infra_link/backend/internal/domain/collaboration"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
 	"github.com/google/uuid"
@@ -44,9 +46,13 @@ type globalSystemTypeCloneHarness struct {
 	copyErr         error
 	reloadErr       error
 	commitErr       error
+	projectIDs      []uuid.UUID
+	projectIDsErr   error
+	outbox          domainCollaboration.OutboxStore
 	runnerCalls     int
 	copyCalls       int
 	reloadCalls     int
+	projectIDCalls  int
 	sourceID        uuid.UUID
 	historyBatchIDs []uuid.UUID
 }
@@ -57,7 +63,11 @@ func (h *globalSystemTypeCloneHarness) runner(
 ) error {
 	h.runnerCalls++
 	staged := h.committed.clone()
-	if err := run(ctx, globalSystemTypeCloneUnit{state: &staged}); err != nil {
+	runCtx := ctx
+	if h.outbox != nil {
+		runCtx = domainCollaboration.WithOutboxStore(ctx, h.outbox)
+	}
+	if err := run(runCtx, globalSystemTypeCloneUnit{state: &staged}); err != nil {
 		return err
 	}
 	if h.commitErr != nil {
@@ -127,6 +137,14 @@ func (s *globalSystemTypeCloneWorkflowStub) GetByID(
 		return nil, domain.ErrNotFound
 	}
 	return cloneSPSControllerSystemType(entity), nil
+}
+
+func (s *globalSystemTypeCloneWorkflowStub) GetOwningProjectIDs(
+	_ context.Context,
+	_ uuid.UUID,
+) ([]uuid.UUID, error) {
+	s.harness.projectIDCalls++
+	return append([]uuid.UUID(nil), s.harness.projectIDs...), s.harness.projectIDsErr
 }
 
 func TestCloneSystemTypeCorrelatesDeepHistoryAndReturnsAuthoritativeRoot(t *testing.T) {
@@ -322,5 +340,80 @@ func TestCloneSystemTypeValidatesConfigurationAndSourceID(t *testing.T) {
 	}
 	if harness.runnerCalls != 0 {
 		t.Fatalf("invalid source started %d transactions", harness.runnerCalls)
+	}
+}
+
+func TestCloneSystemTypeUsesOwningSPSProjectsForDurableRecipients(t *testing.T) {
+	sourceID := spsTestUUID(421)
+	copyID := spsTestUUID(422)
+	spsControllerID := spsTestUUID(423)
+	systemTypeDefinitionID := spsTestUUID(424)
+	projectOne := spsTestUUID(425)
+	projectTwo := spsTestUUID(426)
+	operationID := spsTestUUID(427)
+	eventOne := spsTestUUID(428)
+	eventTwo := spsTestUUID(429)
+	occurredAt := time.Date(2026, time.July, 23, 20, 0, 0, 0, time.UTC)
+	outbox := &updateOutboxStoreStub{}
+	harness := &globalSystemTypeCloneHarness{
+		committed: globalSystemTypeCloneState{
+			systemTypes: map[uuid.UUID]*domainFacility.SPSControllerSystemType{
+				sourceID: {
+					Base:            domain.Base{ID: sourceID},
+					SPSControllerID: spsControllerID,
+					SystemTypeID:    systemTypeDefinitionID,
+				},
+			},
+		},
+		copyEntity: &domainFacility.SPSControllerSystemType{
+			Base:            domain.Base{ID: copyID},
+			SPSControllerID: spsControllerID,
+			SystemTypeID:    systemTypeDefinitionID,
+		},
+		projectIDs: []uuid.UUID{projectTwo, projectOne, projectOne, uuid.Nil},
+		outbox:     outbox,
+	}
+	dispatcher := &updateCommandDispatcherStub{}
+	generatedIDs := []uuid.UUID{operationID, eventOne, eventTwo}
+	handler := NewCloneSystemTypeHandler(CloneSystemTypeDependencies{
+		TransactionRunner:   harness.runner,
+		TransactionWorkflow: harness.factory,
+		Dispatcher:          dispatcher,
+		NewID: func() uuid.UUID {
+			id := generatedIDs[0]
+			generatedIDs = generatedIDs[1:]
+			return id
+		},
+		Now: func() time.Time { return occurredAt },
+	})
+
+	outcome, err := handler.Execute(context.Background(), CloneSystemTypeCommand{
+		SourceSPSControllerSystemTypeID: sourceID,
+	})
+	if err != nil {
+		t.Fatalf("execute recipient-aware system-type clone: %v", err)
+	}
+	if harness.projectIDCalls != 1 {
+		t.Fatalf("owning project reads: got %d, want 1", harness.projectIDCalls)
+	}
+	wantProjects := []uuid.UUID{projectOne, projectTwo}
+	if !reflect.DeepEqual(outcome.Mutation.ProjectIDs, wantProjects) {
+		t.Fatalf("recipient projects: got %v, want %v", outcome.Mutation.ProjectIDs, wantProjects)
+	}
+	if len(outbox.events) != 2 || len(dispatcher.commands) != 2 {
+		t.Fatalf("durable/live commands: outbox=%d dispatch=%d", len(outbox.events), len(dispatcher.commands))
+	}
+	for index, raw := range dispatcher.commands {
+		command, ok := raw.(appcollaboration.SPSControllerSystemTypeCloned)
+		if !ok {
+			t.Fatalf("command %d type: %T", index, raw)
+		}
+		if command.ProjectID != wantProjects[index] ||
+			command.SPSControllerID != spsControllerID ||
+			command.SPSControllerSystemTypeID != copyID ||
+			command.SourceSPSControllerSystemTypeID != sourceID ||
+			command.SchemaVersion != appcollaboration.SchemaVersionV2 {
+			t.Fatalf("command %d: %+v", index, command)
+		}
 	}
 }

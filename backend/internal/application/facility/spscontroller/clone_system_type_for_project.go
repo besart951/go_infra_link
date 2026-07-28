@@ -25,6 +25,11 @@ var ErrCloneSystemTypeForProjectTransactionNotConfigured = errors.New(
 // and descendant project-link policy while the application handler owns the
 // outer transaction and after-commit publication gate.
 type CloneSystemTypeForProjectWorkflow interface {
+	RequireSourceAccess(
+		context.Context,
+		uuid.UUID,
+		uuid.UUID,
+	) error
 	CopySPSControllerSystemType(
 		context.Context,
 		uuid.UUID,
@@ -154,7 +159,10 @@ func (h *CloneSystemTypeForProjectHandler) Execute(
 	}
 
 	operationID := h.newID()
+	eventID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
+	var collaborationCommand appcollaboration.Command
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -162,20 +170,36 @@ func (h *CloneSystemTypeForProjectHandler) Execute(
 			txCtx context.Context,
 			workflow CloneSystemTypeForProjectWorkflow,
 		) (committedProjectSystemTypeClone, error) {
-			return executeCloneSystemTypeForProjectTransaction(
+			result, err := executeCloneSystemTypeForProjectTransaction(
 				txCtx,
 				workflow,
 				command,
 				operationID,
 				h.historyBatch,
 			)
+			if err != nil {
+				return committedProjectSystemTypeClone{}, err
+			}
+			collaborationCommand = appcollaboration.SPSControllerSystemTypeCloned{
+				Envelope: appcollaboration.Envelope{
+					SchemaVersion: appcollaboration.SchemaVersionV2,
+					EventID:       eventID, OperationID: operationID, CorrelationID: operationID,
+					ProjectID: command.ProjectID, ActorID: actorID, OccurredAt: occurredAt,
+				},
+				SourceSPSControllerSystemTypeID: command.SourceSPSControllerSystemTypeID,
+				SPSControllerSystemTypeID:       result.systemType.ID,
+				SPSControllerID:                 result.systemType.SPSControllerID,
+			}
+			if _, err := appcollaboration.EnqueueCommand(txCtx, collaborationCommand); err != nil {
+				return committedProjectSystemTypeClone{}, fmt.Errorf("enqueue project-scoped SPSControllerSystemType clone: %w", err)
+			}
+			return result, nil
 		},
 	)
 	if err != nil {
 		return CloneSystemTypeForProjectOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	result := mutation.Result{
 		OperationID: operationID,
 		ProjectIDs:  []uuid.UUID{command.ProjectID},
@@ -196,20 +220,6 @@ func (h *CloneSystemTypeForProjectHandler) Execute(
 	}
 
 	dispatchCtx := context.WithoutCancel(ctx)
-	collaborationCommand := appcollaboration.SPSControllerSystemTypeCloned{
-		Envelope: appcollaboration.Envelope{
-			SchemaVersion: appcollaboration.SchemaVersionV1,
-			EventID:       h.newID(),
-			OperationID:   operationID,
-			CorrelationID: operationID,
-			ProjectID:     command.ProjectID,
-			ActorID:       actorID,
-			OccurredAt:    occurredAt,
-		},
-		SourceSPSControllerSystemTypeID: command.SourceSPSControllerSystemTypeID,
-		SPSControllerSystemTypeID:       committed.systemType.ID,
-		SPSControllerID:                 committed.systemType.SPSControllerID,
-	}
 	if dispatchErr := h.dispatcher.Dispatch(dispatchCtx, collaborationCommand); dispatchErr != nil {
 		outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
 			"dispatch project-scoped cloned SPSControllerSystemType for project %s: %w",
@@ -229,6 +239,13 @@ func executeCloneSystemTypeForProjectTransaction(
 ) (committedProjectSystemTypeClone, error) {
 	if workflow == nil {
 		return committedProjectSystemTypeClone{}, ErrCloneSystemTypeForProjectTransactionNotConfigured
+	}
+	if err := workflow.RequireSourceAccess(
+		ctx,
+		command.ProjectID,
+		command.SourceSPSControllerSystemTypeID,
+	); err != nil {
+		return committedProjectSystemTypeClone{}, err
 	}
 
 	writeCtx := ctx

@@ -11,6 +11,7 @@ import (
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
@@ -25,6 +26,11 @@ type CreateWorkflow interface {
 	) error
 	GetByID(context.Context, uuid.UUID) (*domainFacility.BacnetObject, error)
 	GetObjectDataByID(context.Context, uuid.UUID) (*domainFacility.ObjectData, error)
+}
+
+type transactionalCreateOutbox interface {
+	CreateWorkflow
+	GetByFieldDeviceIDs(context.Context, []uuid.UUID) ([]*domainProject.ProjectFieldDevice, error)
 }
 
 // CreateInput contains only client-controlled BACnet state. Identity,
@@ -121,10 +127,11 @@ type CreateOutcome struct {
 }
 
 type committedCreate struct {
-	object    *domainFacility.BacnetObject
-	change    mutation.EntityChange
-	projectID *uuid.UUID
-	batched   bool
+	object     *domainFacility.BacnetObject
+	change     mutation.EntityChange
+	projectID  *uuid.UUID
+	projectIDs []uuid.UUID
+	batched    bool
 }
 
 func NewCreateHandler(deps CreateDependencies) *CreateHandler {
@@ -204,6 +211,7 @@ func (h *CreateHandler) ExecuteForFieldDevice(
 
 	operationID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -213,6 +221,9 @@ func (h *CreateHandler) ExecuteForFieldDevice(
 				workflow,
 				command,
 				operationID,
+				actorID,
+				occurredAt,
+				h.newID,
 				h.historyBatch,
 			)
 		},
@@ -221,7 +232,6 @@ func (h *CreateHandler) ExecuteForFieldDevice(
 		return CreateOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	result := mutation.Result{
 		OperationID: operationID,
 		ActorID:     actorID,
@@ -237,24 +247,27 @@ func (h *CreateHandler) ExecuteForFieldDevice(
 		Mutation:     result,
 	}
 	fieldDeviceID := *committed.object.FieldDeviceID
-	if h.projectLinks == nil || h.dispatcher == nil {
+	if h.dispatcher == nil {
 		return outcome, nil
 	}
 
 	dispatchCtx := context.WithoutCancel(ctx)
-	links, err := h.projectLinks.GetByFieldDeviceIDs(
-		dispatchCtx,
-		[]uuid.UUID{fieldDeviceID},
-	)
-	if err != nil {
-		outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
-			"resolve created BACnet object collaboration projects: %w",
-			err,
-		))
-		return outcome, nil
+	projectIDs := append([]uuid.UUID(nil), committed.projectIDs...)
+	if len(projectIDs) == 0 && h.projectLinks != nil {
+		links, err := h.projectLinks.GetByFieldDeviceIDs(
+			dispatchCtx,
+			[]uuid.UUID{fieldDeviceID},
+		)
+		if err != nil {
+			outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
+				"resolve created BACnet object collaboration projects: %w",
+				err,
+			))
+			return outcome, nil
+		}
+		grouped := groupLinkedFieldDevices(links, []uuid.UUID{fieldDeviceID})
+		projectIDs = sortedProjectIDs(grouped)
 	}
-	grouped := groupLinkedFieldDevices(links, []uuid.UUID{fieldDeviceID})
-	projectIDs := sortedProjectIDs(grouped)
 	outcome.Mutation.ProjectIDs = append([]uuid.UUID(nil), projectIDs...)
 	for _, projectID := range projectIDs {
 		collaborationCommand := appcollaboration.BacnetObjectCreated{
@@ -294,6 +307,7 @@ func (h *CreateHandler) ExecuteForObjectData(
 
 	operationID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -303,6 +317,9 @@ func (h *CreateHandler) ExecuteForObjectData(
 				workflow,
 				command,
 				operationID,
+				actorID,
+				occurredAt,
+				h.newID,
 				h.historyBatch,
 			)
 		},
@@ -311,7 +328,6 @@ func (h *CreateHandler) ExecuteForObjectData(
 		return CreateOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	result := mutation.Result{
 		OperationID: operationID,
 		ActorID:     actorID,
@@ -364,6 +380,9 @@ func executeCreateForFieldDeviceTransaction(
 	workflow CreateWorkflow,
 	command CreateForFieldDeviceCommand,
 	operationID uuid.UUID,
+	actorID *uuid.UUID,
+	occurredAt time.Time,
+	newID IDGenerator,
 	historyBatch HistoryBatchContext,
 ) (committedCreate, error) {
 	if workflow == nil {
@@ -397,10 +416,24 @@ func executeCreateForFieldDeviceTransaction(
 	if err != nil {
 		return committedCreate{}, err
 	}
+	projectIDs, err := enqueueCreatedForFieldDevice(
+		writeCtx,
+		workflow,
+		after.ID,
+		command.FieldDeviceID,
+		operationID,
+		actorID,
+		occurredAt,
+		newID,
+	)
+	if err != nil {
+		return committedCreate{}, err
+	}
 	return committedCreate{
-		object:  cloneBacnetObject(after),
-		change:  change,
-		batched: batched,
+		object:     cloneBacnetObject(after),
+		change:     change,
+		projectIDs: projectIDs,
+		batched:    batched,
 	}, nil
 }
 
@@ -409,6 +442,9 @@ func executeCreateForObjectDataTransaction(
 	workflow CreateWorkflow,
 	command CreateForObjectDataCommand,
 	operationID uuid.UUID,
+	actorID *uuid.UUID,
+	occurredAt time.Time,
+	newID IDGenerator,
 	historyBatch HistoryBatchContext,
 ) (committedCreate, error) {
 	if workflow == nil {
@@ -453,10 +489,80 @@ func executeCreateForObjectDataTransaction(
 	if projectID != nil && *projectID == uuid.Nil {
 		projectID = nil
 	}
+	if projectID != nil && appcollaboration.OutboxConfigured(writeCtx) {
+		event := appcollaboration.FacilityHierarchyRefreshRequired{
+			Envelope: appcollaboration.Envelope{
+				SchemaVersion: appcollaboration.SchemaVersionV2,
+				EventID:       newID(),
+				OperationID:   operationID,
+				CorrelationID: operationID,
+				ProjectID:     *projectID,
+				ActorID:       actorID,
+				OccurredAt:    occurredAt,
+			},
+			Scope:     appcollaboration.FacilityScopeObjectData,
+			EntityIDs: []uuid.UUID{command.ObjectDataID},
+		}
+		if _, err := appcollaboration.EnqueueCommand(writeCtx, event); err != nil {
+			return committedCreate{}, fmt.Errorf(
+				"enqueue ObjectData-owned BACnet object create for project %s: %w",
+				*projectID,
+				err,
+			)
+		}
+	}
 	return committedCreate{
 		object:    cloneBacnetObject(after),
 		change:    change,
 		projectID: projectID,
 		batched:   batched,
 	}, nil
+}
+
+func enqueueCreatedForFieldDevice(
+	ctx context.Context,
+	workflow CreateWorkflow,
+	bacnetObjectID uuid.UUID,
+	fieldDeviceID uuid.UUID,
+	operationID uuid.UUID,
+	actorID *uuid.UUID,
+	occurredAt time.Time,
+	newID IDGenerator,
+) ([]uuid.UUID, error) {
+	outbox, ok := workflow.(transactionalCreateOutbox)
+	if !ok {
+		return nil, nil
+	}
+	links, err := outbox.GetByFieldDeviceIDs(ctx, []uuid.UUID{fieldDeviceID})
+	if err != nil {
+		return nil, fmt.Errorf("resolve BACnet create collaboration projects for outbox: %w", err)
+	}
+	projectIDs := sortedProjectIDs(groupLinkedFieldDevices(links, []uuid.UUID{fieldDeviceID}))
+	for _, projectID := range projectIDs {
+		event := appcollaboration.BacnetObjectCreated{
+			Envelope: appcollaboration.Envelope{
+				SchemaVersion: appcollaboration.SchemaVersionV2,
+				EventID:       newID(),
+				OperationID:   operationID,
+				CorrelationID: operationID,
+				ProjectID:     projectID,
+				ActorID:       actorID,
+				OccurredAt:    occurredAt,
+			},
+			BacnetObjectID: bacnetObjectID,
+			FieldDeviceID:  fieldDeviceID,
+		}
+		configured, err := appcollaboration.EnqueueCommand(ctx, event)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"enqueue BACnet object create for project %s: %w",
+				projectID,
+				err,
+			)
+		}
+		if !configured {
+			return nil, nil
+		}
+	}
+	return projectIDs, nil
 }

@@ -3,6 +3,7 @@ package project
 import (
 	"net/http"
 
+	appproject "github.com/besart951/go_infra_link/backend/internal/application/project"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
@@ -220,10 +221,21 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 		return
 	}
 
-	if err := h.lifecycle.DeleteByID(c.Request.Context(), id); err != nil {
+	var err error
+	if h.projectDelete != nil {
+		err = h.projectDelete.Delete(
+			c.Request.Context(),
+			appproject.DeleteCommand{ProjectID: id},
+		)
+	} else {
+		err = appproject.ErrDeletionTransactionNotConfigured
+	}
+	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "deletion_failed", "project.deletion_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_not_found")),
+			handlerutil.MapError(appproject.ErrDeletionForbidden, handlerutil.LocalizedError(http.StatusForbidden, "forbidden", "errors.forbidden")),
+			handlerutil.MapError(appproject.ErrHierarchyLinksRemain, handlerutil.LocalizedError(http.StatusConflict, "project_hierarchy_linked", "project.deletion_hierarchy_linked")),
 		)
 		return
 	}

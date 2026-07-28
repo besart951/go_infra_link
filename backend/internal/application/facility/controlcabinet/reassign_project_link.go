@@ -36,6 +36,7 @@ type ReassignProjectLinkWorkflow interface {
 type ReassignProjectLinkCommand struct {
 	ProjectID        uuid.UUID
 	LinkID           uuid.UUID
+	ExpectedVersion  uint64
 	ControlCabinetID uuid.UUID
 }
 
@@ -68,9 +69,10 @@ type ReassignProjectLinkOutcome struct {
 }
 
 type committedProjectLinkReassignment struct {
-	link    *domainProject.ProjectControlCabinet
-	change  mutation.EntityChange
-	batched bool
+	link                     *domainProject.ProjectControlCabinet
+	previousControlCabinetID uuid.UUID
+	change                   mutation.EntityChange
+	batched                  bool
 }
 
 func NewReassignProjectLinkHandler(
@@ -131,7 +133,10 @@ func (h *ReassignProjectLinkHandler) Execute(
 	}
 
 	operationID := h.newID()
+	eventID := h.newID()
 	actorID := actorFromContext(h.actor, ctx)
+	occurredAt := h.now().UTC()
+	var collaborationCommand appcollaboration.Command
 	committed, err := apptransaction.RunResult(
 		ctx,
 		h.operation,
@@ -139,20 +144,38 @@ func (h *ReassignProjectLinkHandler) Execute(
 			txCtx context.Context,
 			workflow ReassignProjectLinkWorkflow,
 		) (committedProjectLinkReassignment, error) {
-			return executeReassignProjectLinkTransaction(
+			result, err := executeReassignProjectLinkTransaction(
 				txCtx,
 				workflow,
 				command,
 				operationID,
 				h.historyBatch,
 			)
+			if err != nil {
+				return committedProjectLinkReassignment{}, err
+			}
+			collaborationCommand = appcollaboration.FacilityHierarchyRefreshRequired{
+				Envelope: appcollaboration.Envelope{
+					SchemaVersion: appcollaboration.SchemaVersionV2,
+					EventID:       eventID, OperationID: operationID, CorrelationID: operationID,
+					ProjectID: command.ProjectID, ActorID: actorID, OccurredAt: occurredAt,
+				},
+				Scope: appcollaboration.FacilityScopeControlCabinet,
+				EntityIDs: reassignedControlCabinetIDs(
+					result.previousControlCabinetID,
+					result.link.ControlCabinetID,
+				),
+			}
+			if _, err := appcollaboration.EnqueueCommand(txCtx, collaborationCommand); err != nil {
+				return committedProjectLinkReassignment{}, fmt.Errorf("enqueue ProjectControlCabinet reassignment: %w", err)
+			}
+			return result, nil
 		},
 	)
 	if err != nil {
 		return ReassignProjectLinkOutcome{}, err
 	}
 
-	occurredAt := h.now().UTC()
 	result := mutation.Result{
 		OperationID: operationID,
 		ActorID:     actorID,
@@ -173,20 +196,7 @@ func (h *ReassignProjectLinkHandler) Execute(
 	}
 
 	dispatchCtx := context.WithoutCancel(ctx)
-	commandToDispatch := appcollaboration.FacilityHierarchyRefreshRequired{
-		Envelope: appcollaboration.Envelope{
-			SchemaVersion: appcollaboration.SchemaVersionV1,
-			EventID:       h.newID(),
-			OperationID:   operationID,
-			CorrelationID: operationID,
-			ProjectID:     command.ProjectID,
-			ActorID:       actorID,
-			OccurredAt:    occurredAt,
-		},
-		Scope:     appcollaboration.FacilityScopeControlCabinet,
-		EntityIDs: []uuid.UUID{committed.link.ControlCabinetID},
-	}
-	if dispatchErr := h.dispatcher.Dispatch(dispatchCtx, commandToDispatch); dispatchErr != nil {
+	if dispatchErr := h.dispatcher.Dispatch(dispatchCtx, collaborationCommand); dispatchErr != nil {
 		outcome.DispatchErrors = append(outcome.DispatchErrors, fmt.Errorf(
 			"dispatch ProjectControlCabinet reassignment for project %s: %w",
 			command.ProjectID,
@@ -213,6 +223,13 @@ func executeReassignProjectLinkTransaction(
 	}
 	if link.ProjectID != command.ProjectID {
 		return committedProjectLinkReassignment{}, domain.ErrNotFound
+	}
+	if command.ExpectedVersion != 0 && link.Revision != command.ExpectedVersion {
+		return committedProjectLinkReassignment{}, &domain.RevisionConflict{
+			EntityID: link.ID,
+			Expected: command.ExpectedVersion,
+			Current:  link.Revision,
+		}
 	}
 	before := cloneProjectControlCabinetLink(link)
 
@@ -242,10 +259,18 @@ func executeReassignProjectLinkTransaction(
 		return committedProjectLinkReassignment{}, err
 	}
 	return committedProjectLinkReassignment{
-		link:    cloneProjectControlCabinetLink(updated),
-		change:  change,
-		batched: batched,
+		link:                     cloneProjectControlCabinetLink(updated),
+		previousControlCabinetID: before.ControlCabinetID,
+		change:                   change,
+		batched:                  batched,
 	}, nil
+}
+
+func reassignedControlCabinetIDs(previousID, currentID uuid.UUID) []uuid.UUID {
+	if previousID == currentID {
+		return []uuid.UUID{currentID}
+	}
+	return []uuid.UUID{previousID, currentID}
 }
 
 func buildProjectControlCabinetUpdateChange(
@@ -267,6 +292,11 @@ func buildProjectControlCabinetUpdateChange(
 		)
 	}
 	projectID := after.ProjectID
+	var revision *uint64
+	if after.Revision != 0 {
+		value := after.Revision
+		revision = &value
+	}
 	return mutation.EntityChange{
 		EntityType:    mutation.EntityTypeProjectControlCabinet,
 		EntityID:      after.ID,
@@ -275,5 +305,6 @@ func buildProjectControlCabinetUpdateChange(
 		Before:        beforeJSON,
 		After:         afterJSON,
 		ChangedFields: []mutation.FieldName{mutation.FieldNameControlCabinet},
+		Revision:      revision,
 	}, nil
 }

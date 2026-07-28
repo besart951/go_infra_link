@@ -12,6 +12,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/application/facility/mutation"
 	apptransaction "github.com/besart951/go_infra_link/backend/internal/application/transaction"
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainCollaboration "github.com/besart951/go_infra_link/backend/internal/domain/collaboration"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
@@ -52,6 +53,7 @@ type updateTransactionHarness struct {
 	historyBatchID        *uuid.UUID
 	objectDataReplacement []domainFacility.BacnetObject
 	receivedObjectDataID  *uuid.UUID
+	outbox                domainCollaboration.OutboxStore
 }
 
 func (h *updateTransactionHarness) runner(
@@ -63,6 +65,7 @@ func (h *updateTransactionHarness) runner(
 		h.historyBatchID = &batchID
 	}
 	staged := h.committed.clone()
+	ctx = domainCollaboration.WithOutboxStore(ctx, h.outbox)
 	if err := run(ctx, updateTransactionUnit{state: &staged}); err != nil {
 		return err
 	}
@@ -186,6 +189,91 @@ func (s *updateProjectLinkReaderStub) GetByFieldDeviceIDs(
 type updateCommandDispatcherStub struct {
 	commands []appcollaboration.Command
 	err      error
+}
+
+type transactionalUpdateOutboxStub struct {
+	*updateWorkflowStub
+	links []*domainProject.ProjectFieldDevice
+}
+
+func (s *transactionalUpdateOutboxStub) GetByFieldDeviceIDs(
+	_ context.Context,
+	_ []uuid.UUID,
+) ([]*domainProject.ProjectFieldDevice, error) {
+	return s.links, nil
+}
+
+type updateOutboxStoreStub struct {
+	events []*domainCollaboration.OutboxEvent
+}
+
+func (s *updateOutboxStoreStub) Enqueue(_ context.Context, event *domainCollaboration.OutboxEvent) error {
+	s.events = append(s.events, event)
+	return nil
+}
+func (*updateOutboxStoreStub) ClaimDue(context.Context, time.Time, int) ([]domainCollaboration.OutboxEvent, error) {
+	return nil, nil
+}
+func (*updateOutboxStoreStub) WasProcessed(context.Context, string, uuid.UUID) (bool, error) {
+	return false, nil
+}
+func (*updateOutboxStoreStub) MarkDelivered(context.Context, string, domainCollaboration.OutboxEvent, time.Time) error {
+	return nil
+}
+func (*updateOutboxStoreStub) MarkFailed(context.Context, domainCollaboration.OutboxEvent, string, time.Time, time.Time) error {
+	return nil
+}
+
+func TestUpdateWritesVersionTwoOutboxCommandsInsideTheTransaction(t *testing.T) {
+	fieldDeviceID := testUUID(901)
+	projectID := testUUID(902)
+	operationID := testUUID(903)
+	outboxEventID := testUUID(904)
+	v1EventID := testUUID(905)
+	updatedAt := time.Date(2026, time.July, 23, 14, 0, 0, 0, time.UTC)
+	harness := &updateTransactionHarness{committed: updateTransactionState{fieldDevice: &domainFacility.FieldDevice{
+		Base: domain.Base{ID: fieldDeviceID}, SPSControllerSystemTypeID: testUUID(906), SystemPartID: testUUID(907), ApparatID: testUUID(908),
+	}}, updatedAt: updatedAt}
+	outboxStore := &updateOutboxStoreStub{}
+	harness.outbox = outboxStore
+	var outbox *transactionalUpdateOutboxStub
+	factory := func(unit apptransaction.UnitOfWork) (UpdateWorkflow, error) {
+		typed := unit.(updateTransactionUnit)
+		outbox = &transactionalUpdateOutboxStub{
+			updateWorkflowStub: &updateWorkflowStub{harness: harness, state: typed.state},
+			links:              []*domainProject.ProjectFieldDevice{{ProjectID: projectID, FieldDeviceID: fieldDeviceID}},
+		}
+		return outbox, nil
+	}
+	dispatcher := &updateCommandDispatcherStub{}
+	ids := []uuid.UUID{operationID, outboxEventID, v1EventID}
+	handler := NewUpdateHandler(UpdateDependencies{
+		TransactionRunner: harness.runner, TransactionWorkflow: factory, Dispatcher: dispatcher,
+		NewID: func() uuid.UUID { id := ids[0]; ids = ids[1:]; return id }, Now: func() time.Time { return updatedAt },
+	})
+	if _, err := handler.Update(context.Background(), UpdateCommand{FieldDeviceID: fieldDeviceID}); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if outbox == nil || len(outboxStore.events) != 1 {
+		t.Fatalf("expected one transaction-scoped outbox command, got %#v", outboxStore.events)
+	}
+	decoded, err := appcollaboration.DecodeCommand(appcollaboration.EncodedCommand{
+		Type: outboxStore.events[0].EventType, Payload: outboxStore.events[0].Payload,
+	})
+	if err != nil {
+		t.Fatalf("decode queued command: %v", err)
+	}
+	queued, ok := decoded.(appcollaboration.FieldDeviceUpdated)
+	if !ok || queued.SchemaVersion != appcollaboration.SchemaVersionV2 || queued.EventID != outboxEventID || queued.ProjectID != projectID {
+		t.Fatalf("unexpected outbox command: %#v", decoded)
+	}
+	if len(dispatcher.commands) != 1 {
+		t.Fatalf("expected one v1 compatibility dispatch, got %#v", dispatcher.commands)
+	}
+	compatibility, ok := dispatcher.commands[0].(appcollaboration.FieldDeviceUpdated)
+	if !ok || compatibility.SchemaVersion != appcollaboration.SchemaVersionV1 || compatibility.EventID != v1EventID || compatibility.ProjectID != projectID {
+		t.Fatalf("unexpected v1 command: %#v", dispatcher.commands[0])
+	}
 }
 
 func (s *updateCommandDispatcherStub) Dispatch(

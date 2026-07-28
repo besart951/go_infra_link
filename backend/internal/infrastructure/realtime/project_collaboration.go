@@ -3,6 +3,7 @@ package realtime
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"maps"
 	"net/http"
@@ -28,6 +29,7 @@ const (
 	projectCollaborationMessageEditStates     = "edit_states"
 	projectCollaborationMessageEntityDelta    = "entity_delta"
 	projectCollaborationMessageRefreshRequest = "refresh_request"
+	projectCollaborationMessageCommittedEvent = "committed_event"
 	projectCollaborationMessageEditState      = "edit_state"
 
 	projectCollaborationRefreshScopeControlCabinet = "control_cabinet"
@@ -93,6 +95,22 @@ type ProjectCollaborationRefreshMessage struct {
 	EntityIDs []string  `json:"entity_ids,omitempty"`
 	DeviceIDs []string  `json:"device_ids,omitempty"`
 	At        time.Time `json:"at"`
+}
+
+type ProjectCollaborationCommittedEventMessage struct {
+	Type            string            `json:"type"`
+	SchemaVersion   uint16            `json:"schema_version"`
+	EventID         uuid.UUID         `json:"event_id"`
+	OperationID     uuid.UUID         `json:"operation_id"`
+	CorrelationID   uuid.UUID         `json:"correlation_id"`
+	ProjectID       uuid.UUID         `json:"project_id"`
+	ActorID         string            `json:"actor_id,omitempty"`
+	Sequence        uint64            `json:"sequence"`
+	EventType       string            `json:"event_type"`
+	Scope           string            `json:"scope"`
+	EntityIDs       []string          `json:"entity_ids,omitempty"`
+	EntityRevisions map[string]uint64 `json:"entity_revisions,omitempty"`
+	OccurredAt      time.Time         `json:"occurred_at"`
 }
 
 type projectCollaborationControlCabinet struct {
@@ -422,6 +440,27 @@ func (h *ProjectCollaborationHub) BroadcastRefreshRequest(projectID uuid.UUID, a
 	})
 }
 
+func (h *ProjectCollaborationHub) BroadcastCommittedEvent(
+	message ProjectCollaborationCommittedEventMessage,
+) error {
+	if h == nil {
+		return fmt.Errorf("project collaboration hub is not configured")
+	}
+	if message.ProjectID == uuid.Nil || message.EventID == uuid.Nil ||
+		message.OperationID == uuid.Nil || message.Sequence == 0 ||
+		message.SchemaVersion != 2 || strings.TrimSpace(message.EventType) == "" ||
+		strings.TrimSpace(message.Scope) == "" {
+		return fmt.Errorf("invalid version-2 collaboration event")
+	}
+	message.Type = projectCollaborationMessageCommittedEvent
+	message.EntityIDs = normalizeIDs(message.EntityIDs)
+	message.OccurredAt = message.OccurredAt.UTC()
+	if message.OccurredAt.IsZero() {
+		return fmt.Errorf("version-2 collaboration event occurred_at is required")
+	}
+	return h.broadcastDistributed(message.ProjectID, message)
+}
+
 func (h *ProjectCollaborationHub) BroadcastControlCabinetDelta(projectID uuid.UUID, actorID *uuid.UUID, controlCabinet domainFacility.ControlCabinet) {
 	h.broadcastEntityDelta(projectID, actorID, projectCollaborationRefreshScopeControlCabinet, projectCollaborationEntityDeltaMessage{
 		ControlCabinets: []projectCollaborationControlCabinet{toProjectCollaborationControlCabinet(controlCabinet)},
@@ -481,13 +520,14 @@ func (h *ProjectCollaborationHub) broadcast(projectID uuid.UUID, payload any) {
 	h.broadcastBytes(projectID, b)
 }
 
-func (h *ProjectCollaborationHub) broadcastDistributed(projectID uuid.UUID, payload any) {
+func (h *ProjectCollaborationHub) broadcastDistributed(projectID uuid.UUID, payload any) error {
 	b, err := json.Marshal(payload)
 	if err != nil {
-		return
+		return err
 	}
 	h.broadcastBytes(projectID, b)
 	h.publishPayload(projectID, b)
+	return nil
 }
 
 func (h *ProjectCollaborationHub) broadcastBytes(projectID uuid.UUID, b []byte) {
@@ -774,11 +814,6 @@ func (c *projectCollaborationClient) handleMessage(data []byte) {
 	switch message.Type {
 	case projectCollaborationMessageEditState:
 		c.hub.UpdateEditState(c.projectID, c.userID, message.Devices)
-	case projectCollaborationMessageEntityDelta:
-		if strings.TrimSpace(message.Scope) != projectCollaborationRefreshScopeFieldDevice || len(message.FieldDevices) == 0 {
-			return
-		}
-		c.hub.BroadcastFieldDeviceDelta(c.projectID, &c.userID, message.FieldDevices)
 	case projectCollaborationMessageRefreshRequest:
 		scope := strings.TrimSpace(message.Scope)
 		if scope == "" {

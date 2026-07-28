@@ -56,10 +56,13 @@ type FieldDeviceCreateItem struct {
 // FieldDeviceCreateResult represents the result of creating a single field device
 type FieldDeviceCreateResult struct {
 	Index       int          // Index in the original request array
+	ID          uuid.UUID    // Requested or created FieldDevice identity
 	Success     bool         // Whether the creation succeeded
 	FieldDevice *FieldDevice // The created field device (nil if failed)
 	Error       string       // Error message if failed (empty if succeeded)
+	ErrorCode   string       // Stable machine-readable failure code
 	ErrorField  string       // Specific field that caused the error (if applicable)
+	Reason      string       // Exact failure reason
 }
 
 // FieldDeviceMultiCreateResult represents the result of a multi-create operation
@@ -73,6 +76,7 @@ type FieldDeviceMultiCreateResult struct {
 // BulkFieldDeviceUpdate represents a single field device update in a bulk operation
 type BulkFieldDeviceUpdate struct {
 	ID                 uuid.UUID
+	ExpectedVersion    uint64
 	BMK                *string
 	HasBMK             bool
 	Description        *string
@@ -162,6 +166,9 @@ type BulkOperationResultItem struct {
 	ID                uuid.UUID
 	Success           bool
 	Error             string
+	ErrorCode         string
+	ErrorField        string
+	Reason            string
 	Fields            map[string]string // Per-field validation errors (e.g., "bacnet_objects.0.text_fix" -> "message")
 	Suggestions       map[string]int    // Per-field numeric suggestions, e.g. "fielddevice.apparat_nr" -> 4
 	SuggestionOptions map[string][]int  // Per-field numeric options behind the suggestion, sorted ascending.

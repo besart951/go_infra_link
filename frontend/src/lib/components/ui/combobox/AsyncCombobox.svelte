@@ -2,6 +2,7 @@
   import * as Command from '$lib/components/ui/command/index.js';
   import * as Popover from '$lib/components/ui/popover/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
+  import { createTranslator } from '$lib/i18n/translator.js';
   import { cn } from '$lib/utils.js';
   import { Check, ChevronsUpDown } from '@lucide/svelte';
 
@@ -20,6 +21,7 @@
     placeholder?: string;
     searchPlaceholder?: string;
     emptyText?: string;
+    loadingText?: string;
     width?: string;
     popupWidth?: string;
     triggerTitle?: string;
@@ -43,6 +45,7 @@
     placeholder = 'Eintrag auswählen...',
     searchPlaceholder = 'Suchen...',
     emptyText = 'Keine Ergebnisse gefunden.',
+    loadingText,
     width = 'w-[200px]',
     popupWidth = 'w-[240px]',
     triggerTitle,
@@ -50,6 +53,8 @@
     selectedTitleFormatter,
     onValueChange
   }: AsyncComboboxProps<T> = $props();
+  const t = createTranslator();
+  const effectiveLoadingText = $derived(loadingText ?? $t('common.loading'));
 
   let open = $state(false);
   let items = $state<T[]>([]);
@@ -248,7 +253,7 @@
     <Command.Root shouldFilter={false}>
       <Command.Input placeholder={searchPlaceholder} bind:value={search} />
       <Command.List>
-        <Command.Empty>{loading ? 'Loading...' : emptyText}</Command.Empty>
+        <Command.Empty>{loading ? effectiveLoadingText : emptyText}</Command.Empty>
         <Command.Group>
           {#if clearable && value}
             <Command.Item

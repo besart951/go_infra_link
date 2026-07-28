@@ -140,7 +140,10 @@ func newAssociationHandler(
 	eventID uuid.UUID,
 	occurredAt time.Time,
 ) *ProjectAssociationHandler {
-	ids := []uuid.UUID{operationID, eventID}
+	// The production handler allocates distinct durable-v2 and v1 compatibility
+	// event IDs. This helper does not install an outbox, so reusing the expected
+	// compatibility ID keeps the existing dispatch assertions focused.
+	ids := []uuid.UUID{operationID, eventID, eventID}
 	nextID := 0
 	return NewProjectAssociationHandler(ProjectAssociationDependencies{
 		TransactionRunner: harness.runner,

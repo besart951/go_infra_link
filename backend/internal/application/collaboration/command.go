@@ -6,17 +6,21 @@ import (
 	"github.com/google/uuid"
 )
 
-const SchemaVersionV1 uint16 = 1
+const (
+	SchemaVersionV1 uint16 = 1
+	SchemaVersionV2 uint16 = 2
+)
 
 type Envelope struct {
-	SchemaVersion uint16
-	EventID       uuid.UUID
-	OperationID   uuid.UUID
-	CorrelationID uuid.UUID
-	ProjectID     uuid.UUID
-	ActorID       *uuid.UUID
-	OccurredAt    time.Time
-	Sequence      *uint64
+	SchemaVersion   uint16
+	EventID         uuid.UUID
+	OperationID     uuid.UUID
+	CorrelationID   uuid.UUID
+	ProjectID       uuid.UUID
+	ActorID         *uuid.UUID
+	OccurredAt      time.Time
+	Sequence        *uint64
+	EntityRevisions map[string]uint64
 }
 
 type FacilityScope string
@@ -25,6 +29,7 @@ const (
 	FacilityScopeControlCabinet FacilityScope = "control_cabinet"
 	FacilityScopeSPSController  FacilityScope = "sps_controller"
 	FacilityScopeFieldDevice    FacilityScope = "field_device"
+	FacilityScopeObjectData     FacilityScope = "object_data"
 	FacilityScopeProject        FacilityScope = "project"
 )
 
@@ -82,6 +87,7 @@ func (FieldDeviceDeleted) isCollaborationCommand() {}
 // associations and persistence-only state.
 type FieldDeviceState struct {
 	ID                        uuid.UUID
+	Revision                  uint64
 	BMK                       *string
 	Description               *string
 	TextFix                   *string
@@ -138,6 +144,7 @@ func (SPSControllerUpdated) isCollaborationCommand() {}
 
 type SPSControllerState struct {
 	ID                uuid.UUID
+	Revision          uint64
 	ControlCabinetID  uuid.UUID
 	GADevice          *string
 	DeviceName        string
@@ -208,6 +215,7 @@ func (SPSControllerDeleted) isCollaborationCommand() {}
 // by the version-one collaboration delta.
 type ControlCabinetState struct {
 	ID               uuid.UUID
+	Revision         uint64
 	BuildingID       uuid.UUID
 	ControlCabinetNr *string
 	CreatedAt        time.Time

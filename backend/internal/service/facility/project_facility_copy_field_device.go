@@ -117,7 +117,7 @@ func (c projectFacilityCopy) copyFieldDevicesWithChildrenDetailed(
 		return nil, nil
 	}
 
-	if err := c.fieldDeviceRepo.BulkCreate(ctx, fieldDeviceCopies, 0); err != nil {
+	if err := c.fieldDeviceRepo.BulkCreate(ctx, fieldDeviceCopies, copyBatchSize); err != nil {
 		return nil, err
 	}
 	for originalID, copyDevice := range originalToCopy {
@@ -140,7 +140,7 @@ func (c projectFacilityCopy) copyFieldDevicesWithChildrenDetailed(
 			}
 			specCopies = append(specCopies, cloneSpecificationForCopy(*originalSpec, copyDevice.ID))
 		}
-		if err := c.specificationRepo.BulkCreate(ctx, specCopies, 0); err != nil {
+		if err := c.specificationRepo.BulkCreate(ctx, specCopies, copyBatchSize); err != nil {
 			return nil, err
 		}
 
@@ -250,7 +250,7 @@ func (c projectFacilityCopy) copyBacnetObjectsWithFieldDeviceMap(
 	if err != nil {
 		return err
 	}
-	if err := c.bacnetObjectRepo.BulkCreate(ctx, boCopies, 0); err != nil {
+	if err := c.bacnetObjectRepo.BulkCreate(ctx, boCopies, copyBatchSize); err != nil {
 		return err
 	}
 
@@ -283,7 +283,7 @@ func (c projectFacilityCopy) copyBacnetObjectsWithFieldDeviceMap(
 		alarmValueCopies = append(alarmValueCopies, cloneBacnetAlarmValueForCopy(originalValue, newObject.ID))
 	}
 	if len(alarmValueCopies) > 0 {
-		if err := c.bacnetAlarmValueRepo.BulkCreate(ctx, alarmValueCopies, 0); err != nil {
+		if err := c.bacnetAlarmValueRepo.BulkCreate(ctx, alarmValueCopies, copyBatchSize); err != nil {
 			return err
 		}
 	}

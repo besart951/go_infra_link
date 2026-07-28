@@ -2,6 +2,7 @@ package facility
 
 import (
 	"context"
+	"errors"
 	"maps"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -422,6 +423,17 @@ func (w fieldDeviceWriter) executeBulkUpdate(
 			result.FailureCount++
 			continue
 		}
+		existing := existingMap[update.ID]
+		if update.ExpectedVersion != 0 && existing.Revision != update.ExpectedVersion {
+			resultItem.Error = (&domain.RevisionConflict{
+				EntityID: update.ID,
+				Expected: update.ExpectedVersion,
+				Current:  existing.Revision,
+			}).Error()
+			resultItem.Fields["fielddevice.revision"] = resultItem.Error
+			result.FailureCount++
+			continue
+		}
 
 		proposed, ok := proposedMap[update.ID]
 		if !ok {
@@ -433,6 +445,7 @@ func (w fieldDeviceWriter) executeBulkUpdate(
 		phaseErrors := make(map[string]string)
 		phaseSuggestions := make(map[string]int)
 		phaseSuggestionOptions := make(map[string][]int)
+		revisionAdvanced := false
 
 		if hasBaseFieldDeviceUpdates(update) {
 			succeeded := w.applyBulkBaseUpdate(
@@ -451,6 +464,30 @@ func (w fieldDeviceWriter) executeBulkUpdate(
 				domainFieldDevice.BulkUpdatePhaseFieldDevice,
 				bulkMutationPhaseStatus(succeeded),
 			)
+			revisionAdvanced = succeeded
+			if !succeeded && hasRevisionConflict(phaseErrors) {
+				resultItem.Fields = phaseErrors
+				resultItem.Error = phaseErrors["fielddevice.revision"]
+				result.FailureCount++
+				continue
+			}
+		}
+		if !revisionAdvanced && hasChildFieldDeviceUpdates(update) {
+			// A rejected root-field phase may still be followed by a successful
+			// compatibility child phase. Touch the authoritative before-state,
+			// never the invalid proposed root values.
+			if err := w.touchFieldDeviceRevision(ctx, existing); err != nil {
+				addBulkRevisionWriteError(phaseErrors, err)
+				resultItem.Fields = phaseErrors
+				for _, message := range phaseErrors {
+					resultItem.Error = message
+					break
+				}
+				result.FailureCount++
+				continue
+			}
+			proposed.Revision = existing.Revision
+			revisionAdvanced = true
 		}
 
 		if update.Specification != nil && update.Specification.HasChanges() {
@@ -503,6 +540,9 @@ func (w fieldDeviceWriter) executeBulkUpdate(
 				break
 			}
 			result.FailureCount++
+		}
+		if revisionAdvanced {
+			executionItem.Revision = proposed.Revision
 		}
 	}
 
@@ -617,10 +657,33 @@ func (w fieldDeviceWriter) applyBulkBaseUpdate(
 	}
 
 	if err := w.service.repo.Update(ctx, proposed); err != nil {
-		phaseErrors["fielddevice"] = err.Error()
+		addBulkRevisionWriteError(phaseErrors, err)
 		return false
 	}
 	return true
+}
+
+// Child collection changes participate in the FieldDevice aggregate revision
+// even when no root columns change. The repository performs the compare-and-
+// swap and advances the revision in the database.
+func (w fieldDeviceWriter) touchFieldDeviceRevision(
+	ctx context.Context,
+	fieldDevice *domainFacility.FieldDevice,
+) error {
+	return w.service.repo.Update(ctx, fieldDevice)
+}
+
+func addBulkRevisionWriteError(fields map[string]string, err error) {
+	var conflict *domain.RevisionConflict
+	if errors.As(err, &conflict) {
+		fields["fielddevice.revision"] = conflict.Error()
+		return
+	}
+	fields["fielddevice"] = err.Error()
+}
+
+func hasRevisionConflict(fields map[string]string) bool {
+	return fields["fielddevice.revision"] != ""
 }
 
 func buildProposedFieldDevice(existing *domainFacility.FieldDevice, update domainFacility.BulkFieldDeviceUpdate) *domainFacility.FieldDevice {
@@ -653,6 +716,11 @@ func hasBaseFieldDeviceUpdates(update domainFacility.BulkFieldDeviceUpdate) bool
 		update.ApparatNr != nil ||
 		update.ApparatID != nil ||
 		update.SystemPartID != nil
+}
+
+func hasChildFieldDeviceUpdates(update domainFacility.BulkFieldDeviceUpdate) bool {
+	return (update.Specification != nil && update.Specification.HasChanges()) ||
+		update.BacnetObjects != nil
 }
 
 func hasApparatNrConstraintUpdates(update domainFacility.BulkFieldDeviceUpdate) bool {
