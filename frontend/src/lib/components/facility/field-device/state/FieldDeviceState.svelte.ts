@@ -10,6 +10,7 @@ import { ProjectFacilityListFilterStore } from '$lib/components/facility/shared/
 import { createFieldDevicePermissionPolicy } from './fieldDevicePermissionPolicy.js';
 import { FieldDeviceGroupingLookupService } from './fieldDeviceGroupingLookupService.js';
 import { FieldDeviceLookupService } from './fieldDeviceLookupService.js';
+import { facilityReferenceDataCache } from '$lib/services/facilityReferenceDataCache.js';
 import { ProjectFieldDeviceAssociationService } from './projectFieldDeviceAssociationService.js';
 import {
   applySPSControllerNameDelta,
@@ -72,6 +73,7 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   private readonly filterStore = new ProjectFacilityListFilterStore<FieldDeviceFilters>(
     'field-devices'
   );
+  private unsubscribeReferenceData: (() => void) | undefined;
   private restoredFilterScope: string | undefined;
 
   constructor(props: FieldDeviceStateProps = {}) {
@@ -107,6 +109,10 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
       onSaveSuccess: () => undefined
     });
     this.restorePersistedFilters();
+    this.unsubscribeReferenceData = facilityReferenceDataCache.subscribe(() => {
+      this.lookupService.resetCachedLookups();
+      void this.loadLookups();
+    });
   }
 
   get projectId() {
@@ -243,6 +249,12 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     if (result.systemPartsError) {
       console.error('Failed to load system parts', result.systemPartsError);
     }
+  }
+
+  override dispose(): void {
+    this.unsubscribeReferenceData?.();
+    this.unsubscribeReferenceData = undefined;
+    super.dispose();
   }
 
   async applyFilters(filters: FieldDeviceFilters): Promise<void> {

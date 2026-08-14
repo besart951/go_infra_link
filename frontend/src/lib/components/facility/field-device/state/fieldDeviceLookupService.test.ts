@@ -1,4 +1,5 @@
 import { FieldDeviceLookupService } from './fieldDeviceLookupService.js';
+import { FacilityReferenceDataCache } from '$lib/services/facilityReferenceDataCache.js';
 import type { Apparat, FieldDeviceOptions, SystemPart } from '$lib/domain/facility/index.js';
 
 const systemPartAir: SystemPart = {
@@ -67,10 +68,18 @@ function options(overrides: Partial<FieldDeviceOptions> = {}): FieldDeviceOption
 
 describe('FieldDeviceLookupService', () => {
   it('falls back to field device options when paginated lookup lists are empty', async () => {
-    const service = new FieldDeviceLookupService(repository([]), repository([]), {
+    const apparats = repository<Apparat>([]);
+    const systemParts = repository<SystemPart>([]);
+    const fieldDevices = {
       getOptions: vi.fn().mockResolvedValue(options()),
       getOptionsForProject: vi.fn()
-    });
+    };
+    const service = new FieldDeviceLookupService(
+      apparats,
+      systemParts,
+      fieldDevices,
+      new FacilityReferenceDataCache({ apparats, systemParts, fieldDevices })
+    );
 
     const result = await service.loadStaticLookups();
 
@@ -84,22 +93,26 @@ describe('FieldDeviceLookupService', () => {
   });
 
   it('keeps all paginated apparats and enriches relations from field device options', async () => {
+    const apparats = repository([apparatDamper, apparatPump]);
+    const systemParts = repository([systemPartAir, systemPartHeat]);
+    const fieldDevices = {
+      getOptions: vi.fn().mockResolvedValue(
+        options({
+          apparats: [apparatDamper, apparatPump],
+          system_parts: [systemPartAir, systemPartHeat],
+          apparat_to_system_part: {
+            [apparatDamper.id]: [systemPartAir.id],
+            [apparatPump.id]: [systemPartHeat.id]
+          }
+        })
+      ),
+      getOptionsForProject: vi.fn()
+    };
     const service = new FieldDeviceLookupService(
-      repository([apparatDamper, apparatPump]),
-      repository([systemPartAir, systemPartHeat]),
-      {
-        getOptions: vi.fn().mockResolvedValue(
-          options({
-            apparats: [apparatDamper, apparatPump],
-            system_parts: [systemPartAir, systemPartHeat],
-            apparat_to_system_part: {
-              [apparatDamper.id]: [systemPartAir.id],
-              [apparatPump.id]: [systemPartHeat.id]
-            }
-          })
-        ),
-        getOptionsForProject: vi.fn()
-      }
+      apparats,
+      systemParts,
+      fieldDevices,
+      new FacilityReferenceDataCache({ apparats, systemParts, fieldDevices })
     );
 
     const result = await service.loadStaticLookups();

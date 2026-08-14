@@ -15,6 +15,7 @@ import (
 type RuntimeAdapters struct {
 	ProjectCollaboration     *realtime.ProjectCollaborationHub
 	SystemNotificationStream *realtime.SystemNotificationHub
+	FacilityReferenceData    *realtime.FacilityReferenceDataHub
 	bus                      apprealtime.Bus
 	ownsBus                  bool
 }
@@ -70,6 +71,9 @@ func NewRuntimeAdaptersWithBusAndStore(bus apprealtime.Bus, nodeID string, ownsB
 		SystemNotificationStream: realtime.NewSystemNotificationHub(
 			realtime.WithSystemNotificationBus(bus, nodeID),
 		),
+		FacilityReferenceData: realtime.NewFacilityReferenceDataHub(
+			realtime.WithFacilityReferenceDataBus(bus, nodeID),
+		),
 		bus:     bus,
 		ownsBus: ownsBus,
 	}
@@ -95,6 +99,9 @@ func (r *RuntimeAdapters) Close() {
 	}
 	if r.SystemNotificationStream != nil {
 		r.SystemNotificationStream.Close()
+	}
+	if r.FacilityReferenceData != nil {
+		r.FacilityReferenceData.Close()
 	}
 	if r.ownsBus && r.bus != nil {
 		_ = r.bus.Close()

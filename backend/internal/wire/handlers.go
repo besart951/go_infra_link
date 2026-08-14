@@ -19,7 +19,7 @@ func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings au
 
 	projectHandlers := newProjectHandlers(services, runtime)
 
-	facilityHandlers := newFacilityHandlers(services, projectHandlers.RefreshBroadcaster)
+	facilityHandlers := newFacilityHandlers(services, projectHandlers.RefreshBroadcaster, runtime.FacilityReferenceData)
 	userHandlers := newUserHandlers(services)
 
 	authHandler := authhandler.NewAuthHandler(

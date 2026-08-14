@@ -22,7 +22,7 @@ func newProjectHandlers(services *Services, runtime *RuntimeAdapters) *projectha
 	})
 }
 
-func newFacilityHandlers(services *Services, collaboration facilityhandler.ProjectRefreshBroadcaster) *facilityhandler.Handlers {
+func newFacilityHandlers(services *Services, collaboration facilityhandler.ProjectRefreshBroadcaster, referenceData facilityhandler.FacilityReferenceDataRealtime) *facilityhandler.Handlers {
 	return facilityhandler.NewHandlers(facilityhandler.ServiceDeps{
 		Building:                services.Facility.Building,
 		SystemType:              services.Facility.SystemType,
@@ -45,6 +45,7 @@ func newFacilityHandlers(services *Services, collaboration facilityhandler.Proje
 		BacnetAlarm:             services.Facility.BacnetAlarmValue,
 		BacnetReferenceUsage:    services.Facility.BacnetReferenceUsage,
 		Collaboration:           collaboration,
+		ReferenceData:           referenceData,
 	})
 }
 

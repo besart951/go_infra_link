@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import AppSidebar from '$lib/components/app-sidebar.svelte';
   import { NotificationBell } from '$lib/components/notifications/index.js';
   import Toasts from '$lib/components/toast.svelte';
@@ -14,6 +14,8 @@
   import { initNetworkStatus, networkStatus } from '$lib/stores/network.js';
   import { initAppearance, setCurrentAppearanceUserId } from '$lib/stores/appearance.js';
   import { getBreadcrumbForPath } from '$lib/navigation/appNavigation.js';
+  import { hasUserPermission } from '$lib/utils/permissions.js';
+  import { facilityReferenceDataCache } from '$lib/services/facilityReferenceDataCache.js';
 
   const translator = createTranslator();
 
@@ -24,6 +26,16 @@
     await loadAuth();
     setCurrentAppearanceUserId(data.user?.id ?? null);
     initAppearance(data.user?.id ?? null);
+    if (
+      hasUserPermission(data.user, 'apparat.read') &&
+      hasUserPermission(data.user, 'system_part.read')
+    ) {
+      facilityReferenceDataCache.start();
+    }
+  });
+
+  onDestroy(() => {
+    facilityReferenceDataCache.stop();
   });
 
   $effect(() => {

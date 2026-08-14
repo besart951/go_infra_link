@@ -4460,6 +4460,50 @@
         }
       }
     },
+    "/api/v1/facility/reference-data/stream": {
+      "get": {
+        "description": "Upgrades the authenticated request to a WebSocket. Each event follows the `facility_reference_data.changed` contract and causes clients to refresh cached apparats and system parts through their authorized HTTP endpoints.",
+        "tags": [
+          "facility-reference-data"
+        ],
+        "summary": "Stream facility reference-data changes",
+        "responses": {
+          "101": {
+            "description": "Switching Protocols"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/facility/sps-controller-system-types": {
       "get": {
         "tags": [

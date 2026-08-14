@@ -2,6 +2,7 @@ package facility
 
 import (
 	"context"
+	"net/http"
 
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	"github.com/google/uuid"
@@ -16,6 +17,19 @@ type ProjectRefreshBroadcaster interface {
 
 type ProjectFieldDeviceChangeBroadcaster interface {
 	BroadcastFieldDeviceChange(ctx context.Context, actorID *uuid.UUID, fieldDeviceID uuid.UUID, action string)
+}
+
+type FacilityReferenceDataBroadcaster interface {
+	BroadcastFacilityReferenceDataChange(ctx context.Context, resources ...string)
+}
+
+type FacilityReferenceDataStreamer interface {
+	Stream(w http.ResponseWriter, r *http.Request)
+}
+
+type FacilityReferenceDataRealtime interface {
+	FacilityReferenceDataBroadcaster
+	FacilityReferenceDataStreamer
 }
 
 // ServiceDeps groups service dependencies for facility handler construction.
@@ -41,6 +55,7 @@ type ServiceDeps struct {
 	BacnetAlarm             BacnetAlarmValueService
 	BacnetReferenceUsage    BacnetReferenceUsageService
 	Collaboration           ProjectRefreshBroadcaster
+	ReferenceData           FacilityReferenceDataRealtime
 }
 
 // Handlers groups all facility HTTP handlers.
@@ -66,6 +81,7 @@ type Handlers struct {
 	AlarmTypeField          *AlarmTypeFieldHandler
 	BacnetAlarm             *BacnetAlarmHandler
 	BacnetReferenceUsage    *BacnetReferenceUsageHandler
+	ReferenceData           *FacilityReferenceDataStreamHandler
 }
 
 // NewHandlers creates facility handlers using service dependencies.
@@ -91,8 +107,9 @@ func registerFacilityHierarchyHandlers(handlers *Handlers, deps ServiceDeps) {
 
 func registerFacilityLookupHandlers(handlers *Handlers, deps ServiceDeps) {
 	handlers.SystemType = NewSystemTypeHandler(deps.SystemType)
-	handlers.SystemPart = NewSystemPartHandler(deps.SystemPart, deps.Apparat, deps.ObjectData)
-	handlers.Apparat = NewApparatHandler(deps.Apparat)
+	handlers.SystemPart = NewSystemPartHandler(deps.SystemPart, deps.Apparat, deps.ObjectData, deps.ReferenceData)
+	handlers.Apparat = NewApparatHandler(deps.Apparat, deps.ReferenceData)
+	handlers.ReferenceData = NewFacilityReferenceDataStreamHandler(deps.ReferenceData)
 	handlers.StateText = NewStateTextHandler(deps.StateText)
 	handlers.NotificationClass = NewNotificationClassHandler(deps.NotificationClass)
 	handlers.BacnetReferenceUsage = NewBacnetReferenceUsageHandler(deps.BacnetReferenceUsage)

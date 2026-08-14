@@ -12,8 +12,9 @@ import (
 type Topic string
 
 const (
-	TopicProjectCollaboration Topic = "project_collaboration"
-	TopicSystemNotifications  Topic = "system_notifications"
+	TopicProjectCollaboration  Topic = "project_collaboration"
+	TopicSystemNotifications   Topic = "system_notifications"
+	TopicFacilityReferenceData Topic = "facility_reference_data"
 )
 
 var (
