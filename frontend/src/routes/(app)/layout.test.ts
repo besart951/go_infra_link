@@ -12,7 +12,8 @@ vi.mock('$lib/api/client', () => ({
       super(message);
     }
   },
-  api: mockApi
+  api: mockApi,
+  apiFetch: vi.fn()
 }));
 
 import { load } from './+layout.js';

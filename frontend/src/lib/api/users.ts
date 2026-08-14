@@ -1,4 +1,5 @@
 import { api } from './client.js';
+import { apiClient } from './generated/client.js';
 
 export type UserRole =
   | 'superadmin'
@@ -240,9 +241,9 @@ export async function resendUserRegistration(userId: string): Promise<Registrati
  * CSRF token is automatically included
  */
 export async function setUserRole(userId: string, role: UserRole): Promise<void> {
-  return api<void>(`/admin/users/${userId}/role`, {
-    method: 'POST',
-    body: JSON.stringify({ role })
+  await apiClient.POST('/api/v1/admin/users/{id}/role', {
+    params: { path: { id: userId } },
+    body: { role }
   });
 }
 
@@ -251,8 +252,8 @@ export async function setUserRole(userId: string, role: UserRole): Promise<void>
  * CSRF token is automatically included
  */
 export async function disableUser(userId: string): Promise<void> {
-  return api<void>(`/admin/users/${userId}/disable`, {
-    method: 'POST'
+  await apiClient.POST('/api/v1/admin/users/{id}/disable', {
+    params: { path: { id: userId } }
   });
 }
 
@@ -261,8 +262,8 @@ export async function disableUser(userId: string): Promise<void> {
  * CSRF token is automatically included
  */
 export async function enableUser(userId: string): Promise<void> {
-  return api<void>(`/admin/users/${userId}/enable`, {
-    method: 'POST'
+  await apiClient.POST('/api/v1/admin/users/{id}/enable', {
+    params: { path: { id: userId } }
   });
 }
 
@@ -271,8 +272,8 @@ export async function enableUser(userId: string): Promise<void> {
  * CSRF token is automatically included
  */
 export async function restoreUser(userId: string): Promise<void> {
-  return api<void>(`/admin/users/${userId}/restore`, {
-    method: 'POST'
+  await apiClient.POST('/api/v1/admin/users/{id}/restore', {
+    params: { path: { id: userId } }
   });
 }
 
@@ -281,8 +282,8 @@ export async function restoreUser(userId: string): Promise<void> {
  * CSRF token is automatically included
  */
 export async function deleteUser(userId: string): Promise<void> {
-  return api<void>(`/users/${userId}`, {
-    method: 'DELETE'
+  await apiClient.DELETE('/api/v1/users/{id}', {
+    params: { path: { id: userId } }
   });
 }
 

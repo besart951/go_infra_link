@@ -15,6 +15,460 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/account/notifications": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "List current user's system notifications",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Only unread notifications",
+                        "name": "unread_only",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/account/notifications/preferences": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Get current user's notification preference",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UserNotificationPreferenceResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Create or update current user's notification preference",
+                "parameters": [
+                    {
+                        "description": "Notification preference",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UpsertUserNotificationPreferenceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UserNotificationPreferenceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/account/notifications/preferences/email-verification": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Send an email verification code for current user's notification email",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UserNotificationPreferenceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/account/notifications/preferences/email-verification/verify": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Verify current user's notification email with a code",
+                "parameters": [
+                    {
+                        "description": "Verification code",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.VerifyUserNotificationEmailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UserNotificationPreferenceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/account/notifications/read-all": {
+            "post": {
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Mark all current user's system notifications as read",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/account/notifications/{id}": {
+            "delete": {
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Delete one system notification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Notification ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/account/notifications/{id}/important": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Toggle important state for one system notification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Notification ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/account/notifications/{id}/read": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Mark one system notification as read",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Notification ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/account/notifications/{id}/read-toggle": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Toggle read state for one system notification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Notification ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/notifications/smtp": {
             "get": {
                 "produces": [
@@ -174,6 +628,40 @@ const docTemplate = `{
                     "admin"
                 ],
                 "summary": "Enable a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/{id}/restore": {
+            "post": {
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Restore a deleted user",
                 "parameters": [
                     {
                         "type": "string",
@@ -369,6 +857,25 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/session": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get current auth session status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.SessionResponse"
                         }
                     }
                 }
@@ -1156,6 +1663,57 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmValuesResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/facility/bacnet-reference-usages": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "facility-bacnet-reference-usages"
+                ],
+                "summary": "Count BACnet object usage for reference data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Reference resource",
+                        "name": "resource",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Reference IDs",
+                        "name": "ids",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetReferenceUsageListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                         }
                     }
                 }
@@ -1949,25 +2507,25 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Filter by building ID",
+                        "description": "Filter by building ID(s), accepts a single UUID or a | separated list",
                         "name": "building_id",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Filter by control cabinet ID",
+                        "description": "Filter by control cabinet ID(s), accepts a single UUID or a | separated list",
                         "name": "control_cabinet_id",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Filter by SPS controller ID",
+                        "description": "Filter by SPS controller ID(s), accepts a single UUID or a | separated list",
                         "name": "sps_controller_id",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Filter by SPS controller system type ID",
+                        "description": "Filter by SPS controller system type ID(s), accepts a single UUID or a | separated list",
                         "name": "sps_controller_system_type_id",
                         "in": "query"
                     },
@@ -2028,7 +2586,8 @@ const docTemplate = `{
                         "type": "string",
                         "description": "System Part ID",
                         "name": "system_part_id",
-                        "in": "query"
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -4933,6 +5492,18 @@ const docTemplate = `{
                         "description": "Search query",
                         "name": "search",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status filter",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Phase ID filter",
+                        "name": "phase_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -5195,6 +5766,113 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/projects/{id}/changes": {
+            "get": {
+                "description": "Returns durable project changes for HTTP recovery after a missed collaboration event.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "List project changes after a revision",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Last processed revision",
+                        "name": "after_revision",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 500,
+                        "description": "Maximum number of changes",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectChangesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{id}/collaboration": {
+            "get": {
+                "description": "Upgrades the authenticated request to a WebSocket. Messages use the frontend's ProjectSyncInboundMessage contract.",
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Stream project collaboration events",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_project.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_project.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler_project.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/projects/{id}/control-cabinets": {
             "get": {
                 "produces": [
@@ -5447,25 +6125,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler_project.FieldDeviceOptionsResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceOptionsResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler_project.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler_project.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler_project.ErrorResponse"
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
                         }
                     }
                 }
@@ -5564,6 +6242,64 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectFieldDeviceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{id}/field-devices/multi-create": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Create multiple project field device links",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Link data",
+                        "name": "link",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.MultiCreateProjectFieldDeviceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.MultiCreateProjectFieldDeviceResponse"
                         }
                     },
                     "400": {
@@ -6858,6 +7594,28 @@ const docTemplate = `{
                         "description": "Search query",
                         "name": "search",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field",
+                        "name": "order_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "description": "Sort direction",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Include soft-deleted users",
+                        "name": "include_deleted",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -6939,6 +7697,150 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.AllowedRolesResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/directory": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "List visible users for the user directory",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Visible team filter",
+                        "name": "team_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role filter",
+                        "name": "role",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field",
+                        "name": "order_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "description": "Sort direction",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Include soft-deleted users",
+                        "name": "include_deleted",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/me/password": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update own password",
+                "parameters": [
+                    {
+                        "description": "Password",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UpdateOwnPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse"
                         }
                     },
                     "401": {
@@ -7149,6 +8051,9 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.AuthUserResponse": {
             "type": "object",
             "properties": {
+                "can_access_user_directory": {
+                    "type": "boolean"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -7196,8 +8101,22 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.ErrorResponse": {
             "type": "object",
             "properties": {
-                "error": {
+                "code": {
                     "type": "string"
+                },
+                "conflict": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse"
+                },
+                "details": {},
+                "error": {
+                    "description": "Error and Fields are kept as compatibility aliases for existing clients.",
+                    "type": "string"
+                },
+                "field_errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse"
+                    }
                 },
                 "fields": {
                     "type": "object",
@@ -7205,7 +8124,13 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "localized_key": {
+                    "type": "string"
+                },
                 "message": {
+                    "type": "string"
+                },
+                "request_id": {
                     "type": "string"
                 }
             }
@@ -7223,6 +8148,59 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "minLength": 8
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.SessionResponse": {
+            "type": "object",
+            "properties": {
+                "authenticated": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "localized_key": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "params": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse": {
+            "type": "object",
+            "properties": {
+                "aggregate_id": {
+                    "type": "string"
+                },
+                "aggregate_type": {
+                    "type": "string"
+                },
+                "base_version": {
+                    "type": "integer"
+                },
+                "conflicting_fields": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "current": {},
+                "current_version": {
+                    "type": "integer"
                 }
             }
         },
@@ -7655,6 +8633,10 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse": {
             "type": "object",
             "properties": {
+                "aggregate_version": {
+                    "description": "AggregateVersion is the owning FieldDevice concurrency token.",
+                    "type": "integer"
+                },
                 "alarm_definition_id": {
                     "type": "string"
                 },
@@ -7707,6 +8689,31 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetReferenceUsageListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetReferenceUsageResponse"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetReferenceUsageResponse": {
+            "type": "object",
+            "properties": {
+                "bacnet_object_count": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "resource": {
                     "type": "string"
                 }
             }
@@ -7818,6 +8825,9 @@ const docTemplate = `{
                 "error": {
                     "type": "string"
                 },
+                "field_device": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"
+                },
                 "fields": {
                     "type": "object",
                     "additionalProperties": {
@@ -7827,8 +8837,29 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "merged": {
+                    "type": "boolean"
+                },
                 "success": {
                     "type": "boolean"
+                },
+                "suggestion_options": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "suggestions": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -7851,6 +8882,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectBulkPatchInput"
                     }
+                },
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
                 },
                 "bmk": {
                     "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
@@ -7993,6 +9028,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -8459,8 +9497,22 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse": {
             "type": "object",
             "properties": {
-                "error": {
+                "code": {
                     "type": "string"
+                },
+                "conflict": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse"
+                },
+                "details": {},
+                "error": {
+                    "description": "Error and Fields are kept as compatibility aliases for existing clients.",
+                    "type": "string"
+                },
+                "field_errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse"
+                    }
                 },
                 "fields": {
                     "type": "object",
@@ -8468,7 +9520,13 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "localized_key": {
+                    "type": "string"
+                },
                 "message": {
+                    "type": "string"
+                },
+                "request_id": {
                     "type": "string"
                 }
             }
@@ -8623,6 +9681,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -8781,7 +9842,8 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "value": {
-                    "type": "number"
+                    "type": "number",
+                    "format": "float64"
                 }
             }
         },
@@ -8903,6 +9965,9 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string"
                 },
+                "version": {
+                    "type": "integer"
+                },
                 "vlan": {
                     "type": "string"
                 }
@@ -8932,6 +9997,9 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeResponse": {
             "type": "object",
             "properties": {
+                "aggregate_version": {
+                    "type": "integer"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -9289,6 +10357,10 @@ const docTemplate = `{
                 "alarm_type_id": {
                     "type": "string"
                 },
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "description": {
                     "type": "string"
                 },
@@ -9353,6 +10425,10 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest": {
             "type": "object",
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "building_id": {
                     "type": "string"
                 },
@@ -9382,6 +10458,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectInput"
                     }
                 },
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "bmk": {
                     "type": "string",
                     "maxLength": 10
@@ -9409,42 +10489,37 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "additional_info_motor_valve": {
-                    "type": "string",
-                    "maxLength": 250
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 },
                 "additional_info_size": {
-                    "type": "integer"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalInt"
                 },
                 "additional_information_installation_location": {
-                    "type": "string",
-                    "maxLength": 250
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 },
                 "electrical_connection_acdc": {
-                    "type": "string"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 },
                 "electrical_connection_amperage": {
-                    "type": "number"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalFloat64"
                 },
                 "electrical_connection_ph": {
-                    "type": "integer"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalInt"
                 },
                 "electrical_connection_power": {
-                    "type": "number"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalFloat64"
                 },
                 "electrical_connection_rotation": {
-                    "type": "integer"
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalInt"
                 },
                 "specification_brand": {
-                    "type": "string",
-                    "maxLength": 250
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 },
                 "specification_supplier": {
-                    "type": "string",
-                    "maxLength": 250
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 },
                 "specification_type": {
-                    "type": "string",
-                    "maxLength": 250
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString"
                 }
             }
         },
@@ -9518,6 +10593,10 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest": {
             "type": "object",
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "control_cabinet_id": {
                     "type": "string"
                 },
@@ -9709,8 +10788,22 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse": {
             "type": "object",
             "properties": {
-                "error": {
+                "code": {
                     "type": "string"
+                },
+                "conflict": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse"
+                },
+                "details": {},
+                "error": {
+                    "description": "Error and Fields are kept as compatibility aliases for existing clients.",
+                    "type": "string"
+                },
+                "field_errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse"
+                    }
                 },
                 "fields": {
                     "type": "object",
@@ -9718,7 +10811,13 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "localized_key": {
+                    "type": "string"
+                },
                 "message": {
+                    "type": "string"
+                },
+                "request_id": {
                     "type": "string"
                 }
             }
@@ -9790,6 +10889,76 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "unread_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationResponse": {
+            "type": "object",
+            "properties": {
+                "actor_id": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "event_key": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_important": {
+                    "type": "boolean"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "read_at": {
+                    "type": "string"
+                },
+                "recipient_id": {
+                    "type": "string"
+                },
+                "resource_id": {
+                    "type": "string"
+                },
+                "resource_type": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UpsertSMTPSettingsRequest": {
             "type": "object",
             "required": [
@@ -9844,6 +11013,81 @@ const docTemplate = `{
                     ]
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UpsertUserNotificationPreferenceRequest": {
+            "type": "object",
+            "required": [
+                "channel",
+                "frequency"
+            ],
+            "properties": {
+                "channel": {
+                    "type": "string",
+                    "enum": [
+                        "email",
+                        "system",
+                        "both"
+                    ]
+                },
+                "frequency": {
+                    "type": "string",
+                    "enum": [
+                        "immediate",
+                        "hourly",
+                        "daily",
+                        "weekly"
+                    ]
+                },
+                "notification_email": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UserNotificationPreferenceResponse": {
+            "type": "object",
+            "properties": {
+                "channel": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email_verification_expires_at": {
+                    "type": "string"
+                },
+                "email_verification_sent_at": {
+                    "type": "string"
+                },
+                "frequency": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notification_email": {
+                    "type": "string"
+                },
+                "notification_email_verified_at": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.VerifyUserNotificationEmailRequest": {
+            "type": "object",
+            "required": [
+                "code"
+            ],
+            "properties": {
+                "code": {
                     "type": "string"
                 }
             }
@@ -9950,8 +11194,22 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse": {
             "type": "object",
             "properties": {
-                "error": {
+                "code": {
                     "type": "string"
+                },
+                "conflict": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse"
+                },
+                "details": {},
+                "error": {
+                    "description": "Error and Fields are kept as compatibility aliases for existing clients.",
+                    "type": "string"
+                },
+                "field_errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse"
+                    }
                 },
                 "fields": {
                     "type": "object",
@@ -9959,8 +11217,48 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "localized_key": {
+                    "type": "string"
+                },
                 "message": {
                     "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.MultiCreateProjectFieldDeviceRequest": {
+            "type": "object",
+            "properties": {
+                "field_device_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "field_devices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateFieldDeviceRequest"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.MultiCreateProjectFieldDeviceResponse": {
+            "type": "object",
+            "properties": {
+                "association_errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "success_field_device_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -10059,6 +11357,67 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectChangeResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "actor_id": {
+                    "type": "string"
+                },
+                "aggregate_id": {
+                    "type": "string"
+                },
+                "aggregate_type": {
+                    "type": "string"
+                },
+                "changed_fields": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "event_id": {
+                    "type": "string"
+                },
+                "occurred_at": {
+                    "type": "string"
+                },
+                "parent_refs": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "revision": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectChangesResponse": {
+            "type": "object",
+            "properties": {
+                "current_revision": {
+                    "type": "integer"
+                },
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectChangeResponse"
+                    }
+                },
+                "has_more": {
+                    "type": "boolean"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "reset_required": {
+                    "type": "boolean"
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectControlCabinetListResponse": {
             "type": "object",
             "properties": {
@@ -10096,6 +11455,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -10136,6 +11498,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -10177,6 +11542,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "phase": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.PhaseResponse"
+                },
                 "phase_id": {
                     "type": "string"
                 },
@@ -10188,6 +11556,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -10228,6 +11599,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -10276,6 +11650,10 @@ const docTemplate = `{
                 "control_cabinet_id"
             ],
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "control_cabinet_id": {
                     "type": "string"
                 }
@@ -10287,6 +11665,10 @@ const docTemplate = `{
                 "field_device_id"
             ],
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "field_device_id": {
                     "type": "string"
                 }
@@ -10295,6 +11677,10 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectRequest": {
             "type": "object",
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "description": {
                     "type": "string"
                 },
@@ -10330,6 +11716,10 @@ const docTemplate = `{
                 "sps_controller_id"
             ],
             "properties": {
+                "base_version": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "sps_controller_id": {
                     "type": "string"
                 }
@@ -10374,8 +11764,22 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse": {
             "type": "object",
             "properties": {
-                "error": {
+                "code": {
                     "type": "string"
+                },
+                "conflict": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse"
+                },
+                "details": {},
+                "error": {
+                    "description": "Error and Fields are kept as compatibility aliases for existing clients.",
+                    "type": "string"
+                },
+                "field_errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse"
+                    }
                 },
                 "fields": {
                     "type": "object",
@@ -10383,7 +11787,13 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "localized_key": {
+                    "type": "string"
+                },
                 "message": {
+                    "type": "string"
+                },
+                "request_id": {
                     "type": "string"
                 }
             }
@@ -10602,8 +12012,22 @@ const docTemplate = `{
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse": {
             "type": "object",
             "properties": {
-                "error": {
+                "code": {
                     "type": "string"
+                },
+                "conflict": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse"
+                },
+                "details": {},
+                "error": {
+                    "description": "Error and Fields are kept as compatibility aliases for existing clients.",
+                    "type": "string"
+                },
+                "field_errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse"
+                    }
                 },
                 "fields": {
                     "type": "object",
@@ -10611,7 +12035,13 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "localized_key": {
+                    "type": "string"
+                },
                 "message": {
+                    "type": "string"
+                },
+                "request_id": {
                     "type": "string"
                 }
             }
@@ -10638,6 +12068,61 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RegistrationProcessResponse": {
+            "type": "object",
+            "properties": {
+                "accepted_at": {
+                    "type": "string"
+                },
+                "can_resend": {
+                    "type": "boolean"
+                },
+                "email_status": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "last_error": {
+                    "type": "string"
+                },
+                "last_sent_at": {
+                    "type": "string"
+                },
+                "resend_available_at": {
+                    "type": "string"
+                },
+                "send_count": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "steps": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RegistrationProcessStepResponse"
+                    }
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RegistrationProcessStepResponse": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "timestamp": {
                     "type": "string"
                 }
             }
@@ -10700,6 +12185,22 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UpdateOwnPasswordRequest": {
+            "type": "object",
+            "required": [
+                "current_password",
+                "new_password"
+            ],
+            "properties": {
+                "current_password": {
+                    "type": "string"
+                },
+                "new_password": {
+                    "type": "string",
+                    "minLength": 8
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UpdatePermissionRequest": {
             "type": "object",
             "properties": {
@@ -10756,6 +12257,182 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryCapabilitiesResponse": {
+            "type": "object",
+            "properties": {
+                "can_change_role": {
+                    "type": "boolean"
+                },
+                "can_delete": {
+                    "type": "boolean"
+                },
+                "can_disable": {
+                    "type": "boolean"
+                },
+                "can_enable": {
+                    "type": "boolean"
+                },
+                "can_restore": {
+                    "type": "boolean"
+                },
+                "can_update": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryListResponse": {
+            "type": "object",
+            "properties": {
+                "capabilities": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryPageCapabilitiesResponse"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryUserResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryRoleFilterResponse"
+                    }
+                },
+                "teams": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryTeamFilterResponse"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryPageCapabilitiesResponse": {
+            "type": "object",
+            "properties": {
+                "can_create_user": {
+                    "type": "boolean"
+                },
+                "can_read_deleted": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryRoleFilterResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryTeamFilterResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryTeamResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryUserResponse": {
+            "type": "object",
+            "properties": {
+                "capabilities": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryCapabilitiesResponse"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "disabled_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "failed_login_attempts": {
+                    "type": "integer"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_anonymized": {
+                    "type": "boolean"
+                },
+                "is_deleted": {
+                    "type": "boolean"
+                },
+                "last_login_at": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "locked_until": {
+                    "type": "string"
+                },
+                "registration_process": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RegistrationProcessResponse"
+                },
+                "restore_until": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "role_display_name": {
+                    "type": "string"
+                },
+                "teams": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryTeamResponse"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserListResponse": {
             "type": "object",
             "properties": {
@@ -10782,6 +12459,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "deleted_at": {
+                    "type": "string"
+                },
                 "disabled_at": {
                     "type": "string"
                 },
@@ -10800,6 +12480,12 @@ const docTemplate = `{
                 "is_active": {
                     "type": "boolean"
                 },
+                "is_anonymized": {
+                    "type": "boolean"
+                },
+                "is_deleted": {
+                    "type": "boolean"
+                },
                 "last_login_at": {
                     "type": "string"
                 },
@@ -10807,6 +12493,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "locked_until": {
+                    "type": "string"
+                },
+                "restore_until": {
                     "type": "string"
                 },
                 "role": {
@@ -10823,8 +12512,22 @@ const docTemplate = `{
         "internal_handler_facility.ErrorResponse": {
             "type": "object",
             "properties": {
-                "error": {
+                "code": {
                     "type": "string"
+                },
+                "conflict": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse"
+                },
+                "details": {},
+                "error": {
+                    "description": "Error and Fields are kept as compatibility aliases for existing clients.",
+                    "type": "string"
+                },
+                "field_errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse"
+                    }
                 },
                 "fields": {
                     "type": "object",
@@ -10832,7 +12535,13 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "localized_key": {
+                    "type": "string"
+                },
                 "message": {
+                    "type": "string"
+                },
+                "request_id": {
                     "type": "string"
                 }
             }
@@ -10918,6 +12627,9 @@ const docTemplate = `{
         "internal_handler_facility.SPSControllerSystemTypeResponse": {
             "type": "object",
             "properties": {
+                "aggregate_version": {
+                    "type": "integer"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -10954,8 +12666,22 @@ const docTemplate = `{
         "internal_handler_i18n.ErrorResponse": {
             "type": "object",
             "properties": {
-                "error": {
+                "code": {
                     "type": "string"
+                },
+                "conflict": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse"
+                },
+                "details": {},
+                "error": {
+                    "description": "Error and Fields are kept as compatibility aliases for existing clients.",
+                    "type": "string"
+                },
+                "field_errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse"
+                    }
                 },
                 "fields": {
                     "type": "object",
@@ -10963,7 +12689,13 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "localized_key": {
+                    "type": "string"
+                },
                 "message": {
+                    "type": "string"
+                },
+                "request_id": {
                     "type": "string"
                 }
             }
@@ -10971,8 +12703,22 @@ const docTemplate = `{
         "internal_handler_project.ErrorResponse": {
             "type": "object",
             "properties": {
-                "error": {
+                "code": {
                     "type": "string"
+                },
+                "conflict": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse"
+                },
+                "details": {},
+                "error": {
+                    "description": "Error and Fields are kept as compatibility aliases for existing clients.",
+                    "type": "string"
+                },
+                "field_errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse"
+                    }
                 },
                 "fields": {
                     "type": "object",
@@ -10980,51 +12726,14 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "localized_key": {
+                    "type": "string"
+                },
                 "message": {
                     "type": "string"
-                }
-            }
-        },
-        "internal_handler_project.FieldDeviceOptionsResponse": {
-            "type": "object",
-            "properties": {
-                "apparat_to_system_part": {
-                    "description": "apparat_id -\u003e [system_part_ids]",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    }
                 },
-                "apparats": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse"
-                    }
-                },
-                "object_data_to_apparat": {
-                    "description": "object_data_id -\u003e [apparat_ids]",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "object_datas": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ObjectDataResponse"
-                    }
-                },
-                "system_parts": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartResponse"
-                    }
+                "request_id": {
+                    "type": "string"
                 }
             }
         }

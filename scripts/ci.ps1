@@ -100,6 +100,22 @@ function Invoke-FrontendCI {
         $env:CI = 'true'
         pnpm install --frozen-lockfile
 
+        Write-Step 'api contract: regenerate and verify'
+        Push-Location $RepoRoot
+        try {
+            & (Join-Path $RepoRoot 'scripts/swagger.ps1')
+            if ($LASTEXITCODE -ne 0) {
+                throw "API contract generation failed with exit code $LASTEXITCODE"
+            }
+            git diff --exit-code -- backend/docs frontend/src/lib/api/generated
+            if ($LASTEXITCODE -ne 0) {
+                throw 'Generated API contract files are stale. Run scripts/swagger.ps1 and commit the result.'
+            }
+        }
+        finally {
+            Pop-Location
+        }
+
         Write-Step 'frontend: check'
         pnpm check
 
@@ -109,8 +125,8 @@ function Invoke-FrontendCI {
         Write-Step 'frontend: build'
         pnpm build
 
-        Write-Step 'frontend: lint'
-        pnpm lint
+        Write-Step 'frontend: API contract lint'
+        pnpm api:lint
     }
     finally {
         Pop-Location

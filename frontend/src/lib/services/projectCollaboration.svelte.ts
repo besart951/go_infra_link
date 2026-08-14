@@ -1,5 +1,5 @@
 import type { User } from '$lib/domain/user/index.js';
-import { api } from '$lib/api/client.js';
+import { apiClient } from '$lib/api/generated/client.js';
 import type {
   ReconnectingWebSocketOptions,
   RealtimeSocketConnection,
@@ -109,16 +109,6 @@ export interface ProjectChangesResponse {
   events: ProjectChange[];
   has_more: boolean;
   reset_required: boolean;
-}
-
-interface ProjectChangesWireResponse {
-  project_id?: string;
-  current_revision?: number;
-  events?: ProjectChange[];
-  has_more?: boolean;
-  reset_required?: boolean;
-  items?: ProjectChange[];
-  next_revision?: number;
 }
 
 export interface SharedFieldDeviceDraftState {
@@ -677,10 +667,13 @@ async function fetchProjectChanges(
   projectId: string,
   afterRevision: number
 ): Promise<ProjectChangesResponse> {
-  const raw = await api<ProjectChangesWireResponse>(
-    `/projects/${projectId}/changes?after_revision=${afterRevision}&limit=500`
-  );
-  const parsed = projectChangesResponseSchema.parse(raw);
+  const { data } = await apiClient.GET('/api/v1/projects/{id}/changes', {
+    params: {
+      path: { id: projectId },
+      query: { after_revision: afterRevision, limit: 500 }
+    }
+  });
+  const parsed = projectChangesResponseSchema.parse(data);
   const events = parsed.events ?? parsed.items ?? [];
   return {
     project_id: parsed.project_id,

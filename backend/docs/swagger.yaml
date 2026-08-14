@@ -40,6 +40,8 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.AuthUserResponse:
     properties:
+      can_access_user_directory:
+        type: boolean
       created_at:
         type: string
       disabled_at:
@@ -71,13 +73,28 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.ErrorResponse:
     properties:
-      error:
+      code:
         type: string
+      conflict:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse'
+      details: {}
+      error:
+        description: Error and Fields are kept as compatibility aliases for existing
+          clients.
+        type: string
+      field_errors:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse'
+        type: array
       fields:
         additionalProperties:
           type: string
         type: object
+      localized_key:
+        type: string
       message:
+        type: string
+      request_id:
         type: string
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.LoginRequest:
@@ -90,6 +107,41 @@ definitions:
     required:
     - email
     - password
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.SessionResponse:
+    properties:
+      authenticated:
+        type: boolean
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse:
+    properties:
+      code:
+        type: string
+      localized_key:
+        type: string
+      message:
+        type: string
+      params:
+        additionalProperties: {}
+        type: object
+      path:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse:
+    properties:
+      aggregate_id:
+        type: string
+      aggregate_type:
+        type: string
+      base_version:
+        type: integer
+      conflicting_fields:
+        items:
+          type: string
+        type: array
+      current: {}
+      current_version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.AlarmDefinitionListResponse:
     properties:
@@ -377,6 +429,9 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectResponse:
     properties:
+      aggregate_version:
+        description: AggregateVersion is the owning FieldDevice concurrency token.
+        type: integer
       alarm_definition_id:
         type: string
       alarm_type_id:
@@ -412,6 +467,22 @@ definitions:
       text_individual:
         type: string
       updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetReferenceUsageListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetReferenceUsageResponse'
+        type: array
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetReferenceUsageResponse:
+    properties:
+      bacnet_object_count:
+        type: integer
+      id:
+        type: string
+      resource:
         type: string
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingBulkRequest:
@@ -484,14 +555,30 @@ definitions:
     properties:
       error:
         type: string
+      field_device:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse'
       fields:
         additionalProperties:
           type: string
         type: object
       id:
         type: string
+      merged:
+        type: boolean
       success:
         type: boolean
+      suggestion_options:
+        additionalProperties:
+          items:
+            type: integer
+          type: array
+        type: object
+      suggestions:
+        additionalProperties:
+          type: integer
+        type: object
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkUpdateFieldDeviceItem:
     properties:
@@ -505,6 +592,9 @@ definitions:
         items:
           $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectBulkPatchInput'
         type: array
+      base_version:
+        minimum: 1
+        type: integer
       bmk:
         $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString'
       description:
@@ -600,6 +690,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmDefinitionRequest:
     properties:
@@ -923,13 +1015,28 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse:
     properties:
-      error:
+      code:
         type: string
+      conflict:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse'
+      details: {}
+      error:
+        description: Error and Fields are kept as compatibility aliases for existing
+          clients.
+        type: string
+      field_errors:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse'
+        type: array
       fields:
         additionalProperties:
           type: string
         type: object
+      localized_key:
+        type: string
       message:
+        type: string
+      request_id:
         type: string
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceCreateResultResponse:
@@ -1031,6 +1138,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.MultiCreateFieldDeviceRequest:
     properties:
@@ -1134,6 +1243,7 @@ definitions:
       set:
         type: boolean
       value:
+        format: float64
         type: number
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalInt:
@@ -1213,6 +1323,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      version:
+        type: integer
       vlan:
         type: string
     type: object
@@ -1232,6 +1344,8 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeResponse:
     properties:
+      aggregate_version:
+        type: integer
       created_at:
         type: string
       document_name:
@@ -1470,6 +1584,9 @@ definitions:
         type: string
       alarm_type_id:
         type: string
+      base_version:
+        minimum: 1
+        type: integer
       description:
         type: string
       field_device_id:
@@ -1514,6 +1631,9 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       building_id:
         type: string
       control_cabinet_nr:
@@ -1532,6 +1652,9 @@ definitions:
         items:
           $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetObjectInput'
         type: array
+      base_version:
+        minimum: 1
+        type: integer
       bmk:
         maxLength: 10
         type: string
@@ -1553,32 +1676,27 @@ definitions:
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceSpecificationRequest:
     properties:
       additional_info_motor_valve:
-        maxLength: 250
-        type: string
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString'
       additional_info_size:
-        type: integer
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalInt'
       additional_information_installation_location:
-        maxLength: 250
-        type: string
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString'
       electrical_connection_acdc:
-        type: string
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString'
       electrical_connection_amperage:
-        type: number
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalFloat64'
       electrical_connection_ph:
-        type: integer
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalInt'
       electrical_connection_power:
-        type: number
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalFloat64'
       electrical_connection_rotation:
-        type: integer
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalInt'
       specification_brand:
-        maxLength: 250
-        type: string
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString'
       specification_supplier:
-        maxLength: 250
-        type: string
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString'
       specification_type:
-        maxLength: 250
-        type: string
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.OptionalString'
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateNotificationClassRequest:
     properties:
@@ -1626,6 +1744,9 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       control_cabinet_id:
         type: string
       device_description:
@@ -1755,13 +1876,28 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse:
     properties:
-      error:
+      code:
         type: string
+      conflict:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse'
+      details: {}
+      error:
+        description: Error and Fields are kept as compatibility aliases for existing
+          clients.
+        type: string
+      field_errors:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse'
+        type: array
       fields:
         additionalProperties:
           type: string
         type: object
+      localized_key:
+        type: string
       message:
+        type: string
+      request_id:
         type: string
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SMTPSettingsResponse:
@@ -1808,6 +1944,52 @@ definitions:
     required:
     - to
     type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+      unread_count:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationResponse:
+    properties:
+      actor_id:
+        type: string
+      body:
+        type: string
+      created_at:
+        type: string
+      event_key:
+        type: string
+      id:
+        type: string
+      is_important:
+        type: boolean
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
+      read_at:
+        type: string
+      recipient_id:
+        type: string
+      resource_id:
+        type: string
+      resource_type:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UpsertSMTPSettingsRequest:
     properties:
       allow_insecure_tls:
@@ -1849,6 +2031,57 @@ definitions:
     - host
     - port
     - security
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UpsertUserNotificationPreferenceRequest:
+    properties:
+      channel:
+        enum:
+        - email
+        - system
+        - both
+        type: string
+      frequency:
+        enum:
+        - immediate
+        - hourly
+        - daily
+        - weekly
+        type: string
+      notification_email:
+        type: string
+    required:
+    - channel
+    - frequency
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UserNotificationPreferenceResponse:
+    properties:
+      channel:
+        type: string
+      created_at:
+        type: string
+      email_verification_expires_at:
+        type: string
+      email_verification_sent_at:
+        type: string
+      frequency:
+        type: string
+      id:
+        type: string
+      notification_email:
+        type: string
+      notification_email_verified_at:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.VerifyUserNotificationEmailRequest:
+    properties:
+      code:
+        type: string
+    required:
+    - code
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.CreatePhaseRequest:
     properties:
@@ -1918,14 +2151,51 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse:
     properties:
-      error:
+      code:
         type: string
+      conflict:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse'
+      details: {}
+      error:
+        description: Error and Fields are kept as compatibility aliases for existing
+          clients.
+        type: string
+      field_errors:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse'
+        type: array
       fields:
         additionalProperties:
           type: string
         type: object
+      localized_key:
+        type: string
       message:
         type: string
+      request_id:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_project.MultiCreateProjectFieldDeviceRequest:
+    properties:
+      field_device_ids:
+        items:
+          type: string
+        type: array
+      field_devices:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateFieldDeviceRequest'
+        type: array
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_project.MultiCreateProjectFieldDeviceResponse:
+    properties:
+      association_errors:
+        items:
+          type: string
+        type: array
+      success_field_device_ids:
+        items:
+          type: string
+        type: array
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ObjectDataListResponse:
     properties:
@@ -1989,6 +2259,46 @@ definitions:
       updated_at:
         type: string
     type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectChangeResponse:
+    properties:
+      action:
+        type: string
+      actor_id:
+        type: string
+      aggregate_id:
+        type: string
+      aggregate_type:
+        type: string
+      changed_fields:
+        items:
+          type: string
+        type: array
+      event_id:
+        type: string
+      occurred_at:
+        type: string
+      parent_refs:
+        additionalProperties:
+          type: string
+        type: object
+      revision:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectChangesResponse:
+    properties:
+      current_revision:
+        type: integer
+      events:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectChangeResponse'
+        type: array
+      has_more:
+        type: boolean
+      project_id:
+        type: string
+      reset_required:
+        type: boolean
+    type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectControlCabinetListResponse:
     properties:
       items:
@@ -2014,6 +2324,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectFieldDeviceListResponse:
     properties:
@@ -2040,6 +2352,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectListResponse:
     properties:
@@ -2066,6 +2380,8 @@ definitions:
         type: string
       name:
         type: string
+      phase:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.PhaseResponse'
       phase_id:
         type: string
       start_date:
@@ -2074,6 +2390,8 @@ definitions:
         $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_domain_project.ProjectStatus'
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectSPSControllerListResponse:
     properties:
@@ -2100,6 +2418,8 @@ definitions:
         type: string
       updated_at:
         type: string
+      version:
+        type: integer
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectUserListResponse:
     properties:
@@ -2128,6 +2448,9 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectControlCabinetRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       control_cabinet_id:
         type: string
     required:
@@ -2135,6 +2458,9 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectFieldDeviceRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       field_device_id:
         type: string
     required:
@@ -2142,6 +2468,9 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       description:
         type: string
       name:
@@ -2163,6 +2492,9 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectSPSControllerRequest:
     properties:
+      base_version:
+        minimum: 1
+        type: integer
       sps_controller_id:
         type: string
     required:
@@ -2195,13 +2527,28 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_team.ErrorResponse:
     properties:
-      error:
+      code:
         type: string
+      conflict:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse'
+      details: {}
+      error:
+        description: Error and Fields are kept as compatibility aliases for existing
+          clients.
+        type: string
+      field_errors:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse'
+        type: array
       fields:
         additionalProperties:
           type: string
         type: object
+      localized_key:
+        type: string
       message:
+        type: string
+      request_id:
         type: string
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_team.TeamListResponse:
@@ -2351,13 +2698,28 @@ definitions:
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse:
     properties:
-      error:
+      code:
         type: string
+      conflict:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse'
+      details: {}
+      error:
+        description: Error and Fields are kept as compatibility aliases for existing
+          clients.
+        type: string
+      field_errors:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse'
+        type: array
       fields:
         additionalProperties:
           type: string
         type: object
+      localized_key:
+        type: string
       message:
+        type: string
+      request_id:
         type: string
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_user.PermissionResponse:
@@ -2375,6 +2737,42 @@ definitions:
       resource:
         type: string
       updated_at:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RegistrationProcessResponse:
+    properties:
+      accepted_at:
+        type: string
+      can_resend:
+        type: boolean
+      email_status:
+        type: string
+      expires_at:
+        type: string
+      last_error:
+        type: string
+      last_sent_at:
+        type: string
+      resend_available_at:
+        type: string
+      send_count:
+        type: integer
+      status:
+        type: string
+      steps:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RegistrationProcessStepResponse'
+        type: array
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RegistrationProcessStepResponse:
+    properties:
+      key:
+        type: string
+      label:
+        type: string
+      status:
+        type: string
+      timestamp:
         type: string
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RolePermissionResponse:
@@ -2414,6 +2812,17 @@ definitions:
         type: array
       updated_at:
         type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UpdateOwnPasswordRequest:
+    properties:
+      current_password:
+        type: string
+      new_password:
+        minLength: 8
+        type: string
+    required:
+    - current_password
+    - new_password
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UpdatePermissionRequest:
     properties:
@@ -2455,6 +2864,121 @@ definitions:
         - entrepreneur
         type: string
     type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryCapabilitiesResponse:
+    properties:
+      can_change_role:
+        type: boolean
+      can_delete:
+        type: boolean
+      can_disable:
+        type: boolean
+      can_enable:
+        type: boolean
+      can_restore:
+        type: boolean
+      can_update:
+        type: boolean
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryListResponse:
+    properties:
+      capabilities:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryPageCapabilitiesResponse'
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryUserResponse'
+        type: array
+      page:
+        type: integer
+      roles:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryRoleFilterResponse'
+        type: array
+      teams:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryTeamFilterResponse'
+        type: array
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryPageCapabilitiesResponse:
+    properties:
+      can_create_user:
+        type: boolean
+      can_read_deleted:
+        type: boolean
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryRoleFilterResponse:
+    properties:
+      count:
+        type: integer
+      display_name:
+        type: string
+      role:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryTeamFilterResponse:
+    properties:
+      count:
+        type: integer
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryTeamResponse:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryUserResponse:
+    properties:
+      capabilities:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryCapabilitiesResponse'
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      disabled_at:
+        type: string
+      email:
+        type: string
+      failed_login_attempts:
+        type: integer
+      first_name:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      is_anonymized:
+        type: boolean
+      is_deleted:
+        type: boolean
+      last_login_at:
+        type: string
+      last_name:
+        type: string
+      locked_until:
+        type: string
+      registration_process:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.RegistrationProcessResponse'
+      restore_until:
+        type: string
+      role:
+        type: string
+      role_display_name:
+        type: string
+      teams:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryTeamResponse'
+        type: array
+      updated_at:
+        type: string
+    type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserListResponse:
     properties:
       items:
@@ -2472,6 +2996,8 @@ definitions:
     properties:
       created_at:
         type: string
+      deleted_at:
+        type: string
       disabled_at:
         type: string
       email:
@@ -2484,11 +3010,17 @@ definitions:
         type: string
       is_active:
         type: boolean
+      is_anonymized:
+        type: boolean
+      is_deleted:
+        type: boolean
       last_login_at:
         type: string
       last_name:
         type: string
       locked_until:
+        type: string
+      restore_until:
         type: string
       role:
         type: string
@@ -2499,13 +3031,28 @@ definitions:
     type: object
   internal_handler_facility.ErrorResponse:
     properties:
-      error:
+      code:
         type: string
+      conflict:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse'
+      details: {}
+      error:
+        description: Error and Fields are kept as compatibility aliases for existing
+          clients.
+        type: string
+      field_errors:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse'
+        type: array
       fields:
         additionalProperties:
           type: string
         type: object
+      localized_key:
+        type: string
       message:
+        type: string
+      request_id:
         type: string
     type: object
   internal_handler_facility.ObjectDataListResponse:
@@ -2561,6 +3108,8 @@ definitions:
     type: object
   internal_handler_facility.SPSControllerSystemTypeResponse:
     properties:
+      aggregate_version:
+        type: integer
       created_at:
         type: string
       document_name:
@@ -2585,58 +3134,355 @@ definitions:
     type: object
   internal_handler_i18n.ErrorResponse:
     properties:
-      error:
+      code:
         type: string
+      conflict:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse'
+      details: {}
+      error:
+        description: Error and Fields are kept as compatibility aliases for existing
+          clients.
+        type: string
+      field_errors:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse'
+        type: array
       fields:
         additionalProperties:
           type: string
         type: object
+      localized_key:
+        type: string
       message:
+        type: string
+      request_id:
         type: string
     type: object
   internal_handler_project.ErrorResponse:
     properties:
-      error:
+      code:
         type: string
+      conflict:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse'
+      details: {}
+      error:
+        description: Error and Fields are kept as compatibility aliases for existing
+          clients.
+        type: string
+      field_errors:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse'
+        type: array
       fields:
         additionalProperties:
           type: string
         type: object
+      localized_key:
+        type: string
       message:
         type: string
-    type: object
-  internal_handler_project.FieldDeviceOptionsResponse:
-    properties:
-      apparat_to_system_part:
-        additionalProperties:
-          items:
-            type: string
-          type: array
-        description: apparat_id -> [system_part_ids]
-        type: object
-      apparats:
-        items:
-          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ApparatResponse'
-        type: array
-      object_data_to_apparat:
-        additionalProperties:
-          items:
-            type: string
-          type: array
-        description: object_data_id -> [apparat_ids]
-        type: object
-      object_datas:
-        items:
-          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ObjectDataResponse'
-        type: array
-      system_parts:
-        items:
-          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SystemPartResponse'
-        type: array
+      request_id:
+        type: string
     type: object
 info:
   contact: {}
 paths:
+  /api/v1/account/notifications:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Only unread notifications
+        in: query
+        name: unread_only
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+      summary: List current user's system notifications
+      tags:
+      - notifications
+  /api/v1/account/notifications/{id}:
+    delete:
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+      summary: Delete one system notification
+      tags:
+      - notifications
+  /api/v1/account/notifications/{id}/important:
+    post:
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+      summary: Toggle important state for one system notification
+      tags:
+      - notifications
+  /api/v1/account/notifications/{id}/read:
+    post:
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+      summary: Mark one system notification as read
+      tags:
+      - notifications
+  /api/v1/account/notifications/{id}/read-toggle:
+    post:
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.SystemNotificationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+      summary: Toggle read state for one system notification
+      tags:
+      - notifications
+  /api/v1/account/notifications/preferences:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UserNotificationPreferenceResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+      summary: Get current user's notification preference
+      tags:
+      - notifications
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Notification preference
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UpsertUserNotificationPreferenceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UserNotificationPreferenceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+      summary: Create or update current user's notification preference
+      tags:
+      - notifications
+  /api/v1/account/notifications/preferences/email-verification:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UserNotificationPreferenceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+      summary: Send an email verification code for current user's notification email
+      tags:
+      - notifications
+  /api/v1/account/notifications/preferences/email-verification/verify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Verification code
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.VerifyUserNotificationEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.UserNotificationPreferenceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+      summary: Verify current user's notification email with a code
+      tags:
+      - notifications
+  /api/v1/account/notifications/read-all:
+    post:
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse'
+      summary: Mark all current user's system notifications as read
+      tags:
+      - notifications
   /api/v1/admin/notifications/smtp:
     get:
       produces:
@@ -2758,6 +3604,28 @@ paths:
       summary: Enable a user
       tags:
       - admin
+  /api/v1/admin/users/{id}/restore:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse'
+      summary: Restore a deleted user
+      tags:
+      - admin
   /api/v1/admin/users/{id}/role:
     post:
       consumes:
@@ -2867,6 +3735,18 @@ paths:
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.ErrorResponse'
       summary: Refresh access token
+      tags:
+      - auth
+  /api/v1/auth/session:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_auth.SessionResponse'
+      summary: Get current auth session status
       tags:
       - auth
   /api/v1/facility/alarm-definitions:
@@ -3385,6 +4265,40 @@ paths:
       summary: Replace alarm values for a BacnetObject
       tags:
       - facility-bacnet-alarm
+  /api/v1/facility/bacnet-reference-usages:
+    get:
+      parameters:
+      - description: Reference resource
+        in: query
+        name: resource
+        required: true
+        type: string
+      - collectionFormat: csv
+        description: Reference IDs
+        in: query
+        items:
+          type: string
+        name: ids
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BacnetReferenceUsageListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: Count BACnet object usage for reference data
+      tags:
+      - facility-bacnet-reference-usages
   /api/v1/facility/buildings:
     get:
       parameters:
@@ -3896,19 +4810,23 @@ paths:
         in: query
         name: order
         type: string
-      - description: Filter by building ID
+      - description: Filter by building ID(s), accepts a single UUID or a | separated
+          list
         in: query
         name: building_id
         type: string
-      - description: Filter by control cabinet ID
+      - description: Filter by control cabinet ID(s), accepts a single UUID or a |
+          separated list
         in: query
         name: control_cabinet_id
         type: string
-      - description: Filter by SPS controller ID
+      - description: Filter by SPS controller ID(s), accepts a single UUID or a |
+          separated list
         in: query
         name: sps_controller_id
         type: string
-      - description: Filter by SPS controller system type ID
+      - description: Filter by SPS controller system type ID(s), accepts a single
+          UUID or a | separated list
         in: query
         name: sps_controller_system_type_id
         type: string
@@ -4151,6 +5069,7 @@ paths:
       - description: System Part ID
         in: query
         name: system_part_id
+        required: true
         type: string
       produces:
       - application/json
@@ -4644,7 +5563,8 @@ paths:
         in: query
         name: search
         type: string
-      - description: SPS Controller ID(s), accepts a single UUID or a | separated list
+      - description: SPS Controller ID(s), accepts a single UUID or a | separated
+          list
         in: query
         name: sps_controller_id
         type: string
@@ -5868,6 +6788,14 @@ paths:
         in: query
         name: search
         type: string
+      - description: Status filter
+        in: query
+        name: status
+        type: string
+      - description: Phase ID filter
+        in: query
+        name: phase_id
+        type: string
       produces:
       - application/json
       responses:
@@ -6047,6 +6975,79 @@ paths:
       summary: Update a project
       tags:
       - projects
+  /api/v1/projects/{id}/changes:
+    get:
+      description: Returns durable project changes for HTTP recovery after a missed
+        collaboration event.
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Last processed revision
+        in: query
+        name: after_revision
+        type: integer
+      - default: 500
+        description: Maximum number of changes
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectChangesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+      summary: List project changes after a revision
+      tags:
+      - projects
+  /api/v1/projects/{id}/collaboration:
+    get:
+      description: Upgrades the authenticated request to a WebSocket. Messages use
+        the frontend's ProjectSyncInboundMessage contract.
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "101":
+          description: Switching Protocols
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler_project.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler_project.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handler_project.ErrorResponse'
+      summary: Stream project collaboration events
+      tags:
+      - projects
   /api/v1/projects/{id}/control-cabinets:
     get:
       parameters:
@@ -6216,19 +7217,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_handler_project.FieldDeviceOptionsResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceOptionsResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/internal_handler_project.ErrorResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/internal_handler_project.ErrorResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/internal_handler_project.ErrorResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
       summary: Get all metadata needed for creating/editing field devices within a
         project
       tags:
@@ -6383,6 +7384,44 @@ paths:
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
       summary: Update project field device link
+      tags:
+      - projects
+  /api/v1/projects/{id}/field-devices/multi-create:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Link data
+        in: body
+        name: link
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.MultiCreateProjectFieldDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.MultiCreateProjectFieldDeviceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+      summary: Create multiple project field device links
       tags:
       - projects
   /api/v1/projects/{id}/object-data:
@@ -7147,6 +8186,21 @@ paths:
         in: query
         name: search
         type: string
+      - description: Sort field
+        in: query
+        name: order_by
+        type: string
+      - description: Sort direction
+        enum:
+        - asc
+        - desc
+        in: query
+        name: order
+        type: string
+      - description: Include soft-deleted users
+        in: query
+        name: include_deleted
+        type: boolean
       produces:
       - application/json
       responses:
@@ -7301,6 +8355,101 @@ paths:
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse'
       summary: Get roles that the current user can assign
+      tags:
+      - users
+  /api/v1/users/directory:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      - description: Visible team filter
+        in: query
+        name: team_id
+        type: string
+      - description: Role filter
+        in: query
+        name: role
+        type: string
+      - description: Sort field
+        in: query
+        name: order_by
+        type: string
+      - description: Sort direction
+        enum:
+        - asc
+        - desc
+        in: query
+        name: order
+        type: string
+      - description: Include soft-deleted users
+        in: query
+        name: include_deleted
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserDirectoryListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse'
+      summary: List visible users for the user directory
+      tags:
+      - users
+  /api/v1/users/me/password:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Password
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UpdateOwnPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_user.ErrorResponse'
+      summary: Update own password
       tags:
       - users
 swagger: "2.0"

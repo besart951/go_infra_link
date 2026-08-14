@@ -78,6 +78,13 @@ run_frontend() {
   ensure_pnpm
   CI=true pnpm install --frozen-lockfile
 
+  echo "[ci] api contract: regenerate and verify"
+  cd "$REPO_ROOT"
+  bash scripts/swagger.sh
+  git diff --exit-code -- backend/docs frontend/src/lib/api/generated
+
+  cd "$REPO_ROOT/frontend"
+
   echo "[ci] frontend: check"
   pnpm check
 
@@ -87,8 +94,8 @@ run_frontend() {
   echo "[ci] frontend: build"
   pnpm build
 
-  echo "[ci] frontend: lint"
-  pnpm lint
+  echo "[ci] frontend: API contract lint"
+  pnpm api:lint
 }
 
 if [[ "$TARGET" == "all" || "$TARGET" == "backend" ]]; then

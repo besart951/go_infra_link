@@ -12,6 +12,7 @@ vi.mock('$lib/i18n/index.js', () => ({
 
 import {
   api,
+  apiFetch,
   ApiException,
   buildHttpErrorRoute,
   getFieldError,
@@ -19,10 +20,12 @@ import {
   getHttpErrorPath,
   HandledApiException
 } from './client.js';
+import { apiClient } from './generated/client.js';
 
 describe('api client HTTP error navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
     window.history.replaceState({}, '', '/projects/project-1');
   });
 
@@ -88,6 +91,20 @@ describe('api client HTTP error navigation', () => {
     );
   });
 
+  it('redirects unauthenticated responses to the login page', async () => {
+    const customFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'unauthorized', message: 'Unauthorized' }), {
+        status: 401,
+        statusText: 'Unauthorized',
+        headers: { 'Content-Type': 'application/json' }
+      })
+    );
+
+    await expect(api('/auth/me', { customFetch })).rejects.toBeInstanceOf(HandledApiException);
+
+    expect(mockGoto).toHaveBeenCalledWith('/login');
+  });
+
   it('lets callers handle recoverable 404 responses without page navigation', async () => {
     const customFetch = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ error: 'not_found', message: 'Not Found' }), {
@@ -133,14 +150,14 @@ describe('api client HTTP error navigation', () => {
     expect(customFetch).toHaveBeenCalledTimes(2);
   });
 
-  it('does not retry unsafe POST requests after a network failure', async () => {
+  it.each(['POST', 'PUT', 'DELETE'])('does not retry unsafe %s requests', async (method) => {
     const customFetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
 
     await expect(
-      api('/teams', {
+      api('/teams/team-1', {
         customFetch,
-        method: 'POST',
-        body: JSON.stringify({ name: 'Team' }),
+        method,
+        body: method === 'DELETE' ? undefined : JSON.stringify({ name: 'Team' }),
         retryDelayMs: 0
       })
     ).rejects.toMatchObject({ status: 0, error: 'network_error' });
@@ -172,6 +189,53 @@ describe('api client HTTP error navigation', () => {
     });
 
     expect(customFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('applies the shared CSRF and cookie policy to generated OpenAPI calls', async () => {
+    document.cookie = 'csrf_token=contract-token';
+    const customFetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', customFetch);
+
+    await expect(
+      apiFetch(
+        new Request('http://localhost/api/v1/projects/project-1/users', {
+          method: 'POST',
+          body: JSON.stringify({ user_id: 'user-1' }),
+          headers: { 'Content-Type': 'application/json' }
+        })
+      )
+    ).resolves.toMatchObject({ status: 204 });
+
+    const request = customFetch.mock.calls[0]?.[0] as Request;
+    expect(request.credentials).toBe('include');
+    expect(request.headers.get('X-CSRF-Token')).toBe('contract-token');
+    expect(request.headers.get('Content-Type')).toBe('application/json');
+  });
+
+  it('applies centralized error navigation to generated OpenAPI calls', async () => {
+    const customFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'not_found', message: 'Not Found' }), {
+        status: 404,
+        statusText: 'Not Found',
+        headers: { 'Content-Type': 'application/json' }
+      })
+    );
+    vi.stubGlobal('fetch', customFetch);
+
+    await expect(
+      apiClient.GET('/api/v1/projects/{id}', { params: { path: { id: 'missing' } } })
+    ).rejects.toBeInstanceOf(HandledApiException);
+
+    expect(mockGoto).toHaveBeenCalledWith(
+      '/errors/404?from=%2Fprojects%2Fproject-1&message=errors.not_found',
+      { replaceState: true }
+    );
+  });
+
+  it('returns undefined for a successful empty response', async () => {
+    const customFetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(api('/teams/team-1', { customFetch, method: 'DELETE' })).resolves.toBeUndefined();
   });
 
   it('maps unified field_errors responses onto form field paths', async () => {

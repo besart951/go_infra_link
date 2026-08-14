@@ -25,6 +25,20 @@ func NewHandler(access projectshared.AccessPolicyService, service Service) *Hand
 	return &Handler{access: access, service: service}
 }
 
+// List godoc
+// @Summary List project changes after a revision
+// @Description Returns durable project changes for HTTP recovery after a missed collaboration event.
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param after_revision query int false "Last processed revision"
+// @Param limit query int false "Maximum number of changes" default(500)
+// @Success 200 {object} dto.ProjectChangesResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/changes [get]
 func (h *Handler) List(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {

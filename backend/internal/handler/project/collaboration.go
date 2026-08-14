@@ -16,6 +16,16 @@ func NewProjectCollaborationHub() *ProjectCollaborationHub {
 	return realtime.NewProjectCollaborationHub()
 }
 
+// StreamProjectCollaboration godoc
+// @Summary Stream project collaboration events
+// @Description Upgrades the authenticated request to a WebSocket. Messages use the frontend's ProjectSyncInboundMessage contract.
+// @Tags projects
+// @Param id path string true "Project ID"
+// @Success 101
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Router /api/v1/projects/{id}/collaboration [get]
 func (h *ProjectHandler) StreamProjectCollaboration(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {

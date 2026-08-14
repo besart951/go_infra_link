@@ -23,6 +23,21 @@ steps:
       - go test ./...
       - go build ./cmd/app
 
+  api_contract:
+    image: golang:1.26-alpine
+    environment:
+      GOMODCACHE: /woodpecker/src/.cache/go-mod
+      GOCACHE: /woodpecker/src/.cache/go-build
+      PNPM_STORE_DIR: /woodpecker/src/.cache/pnpm
+    commands:
+      - apk add --no-cache bash git nodejs npm
+      - npm install -g pnpm@10.29.1
+      - cd frontend
+      - CI=true pnpm install --frozen-lockfile
+      - cd ..
+      - bash scripts/swagger.sh
+      - git diff --exit-code -- backend/docs frontend/src/lib/api/generated
+
   frontend_ci:
     image: node:24-alpine
     environment:
@@ -32,12 +47,15 @@ steps:
       - npm install -g pnpm@10.29.1
       - CI=true pnpm install --frozen-lockfile
       - pnpm check
+      - pnpm test
       - pnpm build
+      - pnpm api:lint
 
   build_backend_image:
     image: docker:28-cli-alpine3.22
     depends_on:
       - backend_test_build
+      - api_contract
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     commands:
@@ -47,6 +65,7 @@ steps:
     image: docker:28-cli-alpine3.22
     depends_on:
       - frontend_ci
+      - api_contract
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     commands:

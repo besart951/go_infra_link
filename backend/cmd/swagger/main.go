@@ -9,7 +9,7 @@ func main() {
 	cmd := exec.Command(
 		"go",
 		"run",
-		"github.com/swaggo/swag/cmd/swag@v1.16.4",
+		"github.com/swaggo/swag/cmd/swag@v1.16.6",
 		"init",
 		"-g",
 		"cmd/app/main.go",

@@ -352,10 +352,10 @@ func (h *Handler) DeleteProjectFieldDevice(c *gin.Context) {
 // @Tags projects
 // @Produce json
 // @Param id path string true "Project ID"
-// @Success 200 {object} FieldDeviceOptionsResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Success 200 {object} facilitydto.FieldDeviceOptionsResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/field-device-options [get]
 func (h *OptionsHandler) GetFieldDeviceOptionsForProject(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")

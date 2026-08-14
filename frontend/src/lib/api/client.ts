@@ -114,10 +114,6 @@ const DEFAULT_SAFE_RETRIES = 2;
 const DEFAULT_RETRY_DELAY_MS = 400;
 const MAX_RETRY_AFTER_DELAY_MS = 5000;
 
-function getRequestMethod(options: RequestInit): string {
-  return (options.method ?? 'GET').toUpperCase();
-}
-
 function getMaxRetries(method: string, retry: ApiOptions['retry']): number {
   if (!SAFE_RETRY_METHODS.has(method) || retry === false) {
     return 0;
@@ -183,6 +179,137 @@ function isNetworkError(err: unknown): err is TypeError {
   return err instanceof TypeError;
 }
 
+function prepareHeaders(headersInit?: HeadersInit, includeContentType = false): Headers {
+  const headers = new Headers(headersInit);
+  if (includeContentType && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const csrf = getCsrfToken();
+  if (csrf) {
+    headers.set('X-CSRF-Token', csrf);
+  }
+
+  return headers;
+}
+
+function getInputMethod(input: RequestInfo | URL, options: RequestInit): string {
+  if (options.method) return options.method.toUpperCase();
+  if (input instanceof Request) return input.method.toUpperCase();
+  return 'GET';
+}
+
+interface ApiTransportOptions {
+  customFetch?: typeof fetch;
+  retry?: ApiOptions['retry'];
+  retryDelayMs?: number;
+}
+
+async function requestWithRetry(
+  input: RequestInfo | URL,
+  options: RequestInit,
+  transport: ApiTransportOptions = {}
+): Promise<Response> {
+  const fetchImpl = transport.customFetch ?? fetch;
+  const method = getInputMethod(input, options);
+  const maxRetries = getMaxRetries(method, transport.retry);
+  const retryDelayMs = transport.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    try {
+      const response = await fetchImpl(input, options);
+      if (attempt < maxRetries && isRetryableResponse(response)) {
+        reportApiRetry(attempt + 1, maxRetries);
+        await wait(retryDelay(attempt + 1, response, retryDelayMs), options.signal ?? undefined);
+        continue;
+      }
+      return response;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw err;
+      }
+
+      if (isNetworkError(err)) {
+        if (attempt < maxRetries) {
+          reportApiRetry(attempt + 1, maxRetries);
+          await wait(retryDelay(attempt + 1, undefined, retryDelayMs), options.signal ?? undefined);
+          continue;
+        }
+
+        reportApiFailure();
+        throw new ApiException(0, 'network_error', t('errors.network_request_failed'), err.message);
+      }
+
+      throw new ApiException(
+        500,
+        'unknown_error',
+        t('errors.unexpected_error'),
+        err instanceof Error ? err.message : String(err)
+      );
+    }
+  }
+
+  throw new ApiException(500, 'unknown_error', t('errors.unexpected_error'));
+}
+
+export async function throwApiResponse(
+  response: Response,
+  skipHttpErrorNavigation = false
+): Promise<never> {
+  if (isRetryableResponse(response)) {
+    reportApiFailure();
+  }
+
+  const error = await parseApiErrorResponse(response);
+
+  if (response.status === 401 && typeof window !== 'undefined') {
+    const { goto } = await import('$app/navigation');
+    goto('/login');
+    throw new HandledApiException(
+      401,
+      error.error,
+      localizeErrorText(error.message || 'Unauthorized'),
+      error.details
+    );
+  }
+
+  const message = localizeErrorText(
+    error.message || response.statusText || `HTTP ${response.status}`
+  );
+
+  if (!skipHttpErrorNavigation && (await navigateToHttpErrorPage(response.status, message))) {
+    throw new HandledApiException(response.status, error.error, message, error.details);
+  }
+
+  throw new ApiException(response.status, error.error, message, error.details);
+}
+
+export async function assertApiSuccess(
+  response: Response,
+  skipHttpErrorNavigation = false
+): Promise<Response> {
+  if (!response.ok) {
+    return throwApiResponse(response, skipHttpErrorNavigation);
+  }
+
+  reportApiSuccess();
+  return response;
+}
+
+/**
+ * Fetch adapter for generated OpenAPI clients. It preserves the same-origin
+ * cookie, CSRF and safe-retry policy used by the hand-written API wrapper.
+ */
+export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const request = new Request(input, init);
+  const preparedRequest = new Request(request, {
+    credentials: 'include',
+    headers: prepareHeaders(request.headers, request.body !== null)
+  });
+
+  return requestWithRetry(preparedRequest, {}, {});
+}
+
 export async function api<T = unknown>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const {
     baseUrl,
@@ -196,123 +323,22 @@ export async function api<T = unknown>(endpoint: string, options: ApiOptions = {
   const basePath = baseUrl ?? '';
   const url = `${basePath}/api/v1${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
 
-  const csrf = getCsrfToken();
-  const customHeaders = fetchOptions.headers;
+  const response = await requestWithRetry(
+    url,
+    {
+      ...fetchOptions,
+      credentials: 'include',
+      headers: prepareHeaders(fetchOptions.headers, true)
+    },
+    { customFetch, retry, retryDelayMs }
+  );
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json'
-  };
-
-  if (customHeaders) {
-    if (customHeaders instanceof Headers) {
-      for (const [key, value] of customHeaders.entries()) {
-        headers[key] = value;
-      }
-    } else if (Array.isArray(customHeaders)) {
-      for (const header of customHeaders) {
-        headers[header[0]] = header[1];
-      }
-    } else {
-      for (const key in customHeaders) {
-        headers[key] = customHeaders[key] as string;
-      }
-    }
+  await assertApiSuccess(response, skipHttpErrorNavigation);
+  if (response.status === 204) {
+    return undefined as T;
   }
 
-  // Add CSRF token if available
-  if (csrf) {
-    headers['X-CSRF-Token'] = csrf;
-  }
-
-  const fetchImpl = customFetch ?? fetch;
-  const method = getRequestMethod(fetchOptions);
-  const maxRetries = getMaxRetries(method, retry);
-  const signal = fetchOptions.signal ?? undefined;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
-    try {
-      const response = await fetchImpl(url, {
-        ...fetchOptions,
-        credentials: 'include',
-        headers
-      });
-
-      if (!response.ok) {
-        if (attempt < maxRetries && isRetryableResponse(response)) {
-          reportApiRetry(attempt + 1, maxRetries);
-          await wait(retryDelay(attempt + 1, response, retryDelayMs), signal);
-          continue;
-        }
-
-        if (isRetryableResponse(response)) {
-          reportApiFailure();
-        }
-
-        const error = await parseApiErrorResponse(response);
-
-        // 401 Unauthorized: session expired or not logged in → redirect to login
-        if (response.status === 401 && typeof window !== 'undefined') {
-          const { goto } = await import('$app/navigation');
-          goto('/login');
-          throw new HandledApiException(
-            401,
-            error.error,
-            localizeErrorText(error.message || 'Unauthorized'),
-            error.details
-          );
-        }
-
-        const message = localizeErrorText(
-          error.message || response.statusText || `HTTP ${response.status}`
-        );
-
-        if (!skipHttpErrorNavigation && (await navigateToHttpErrorPage(response.status, message))) {
-          throw new HandledApiException(response.status, error.error, message, error.details);
-        }
-
-        throw new ApiException(response.status, error.error, message, error.details);
-      }
-
-      reportApiSuccess();
-
-      // Handle 204 No Content
-      if (response.status === 204) {
-        return undefined as T;
-      }
-
-      return response.json() as Promise<T>;
-    } catch (err) {
-      // Preserve abort semantics so callers can silently ignore cancellations
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        throw err;
-      }
-
-      // Re-throw ApiException as-is
-      if (err instanceof ApiException) throw err;
-
-      // Network errors
-      if (isNetworkError(err)) {
-        if (attempt < maxRetries) {
-          reportApiRetry(attempt + 1, maxRetries);
-          await wait(retryDelay(attempt + 1, undefined, retryDelayMs), signal);
-          continue;
-        }
-
-        reportApiFailure();
-        throw new ApiException(0, 'network_error', t('errors.network_request_failed'), err.message);
-      }
-
-      // Unknown errors
-      throw new ApiException(
-        500,
-        'unknown_error',
-        t('errors.unexpected_error'),
-        err instanceof Error ? err.message : String(err)
-      );
-    }
-  }
-
-  throw new ApiException(500, 'unknown_error', t('errors.unexpected_error'));
+  return response.json() as Promise<T>;
 }
 
 /**

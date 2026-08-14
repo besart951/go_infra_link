@@ -27,6 +27,7 @@ import type {
   SPSController
 } from '$lib/domain/facility/index.js';
 import { api } from '$lib/api/client.js';
+import { apiClient } from '$lib/api/generated/client.js';
 
 function buildQuery(params: Record<string, string | number | boolean | undefined>): string {
   const searchParams = new URLSearchParams();
@@ -93,7 +94,10 @@ export const projectRepository: ProjectRepository = {
   },
 
   async delete(id: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/projects/${id}`, { method: 'DELETE', signal });
+    await apiClient.DELETE('/api/v1/projects/{id}', {
+      params: { path: { id } },
+      signal
+    });
   },
 
   // ──────────────────────────────────────────────────────────────────────
@@ -105,16 +109,16 @@ export const projectRepository: ProjectRepository = {
   },
 
   async addUser(projectId: string, userId: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/projects/${projectId}/users`, {
-      method: 'POST',
-      body: JSON.stringify({ user_id: userId }),
+    await apiClient.POST('/api/v1/projects/{id}/users', {
+      params: { path: { id: projectId } },
+      body: { user_id: userId },
       signal
     });
   },
 
   async removeUser(projectId: string, userId: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/projects/${projectId}/users/${userId}`, {
-      method: 'DELETE',
+    await apiClient.DELETE('/api/v1/projects/{id}/users/{userId}', {
+      params: { path: { id: projectId, userId } },
       signal
     });
   },
@@ -145,9 +149,9 @@ export const projectRepository: ProjectRepository = {
     objectDataId: string,
     signal?: AbortSignal
   ): Promise<void> {
-    return api<void>(`/projects/${projectId}/object-data`, {
-      method: 'POST',
-      body: JSON.stringify({ object_data_id: objectDataId }),
+    await apiClient.POST('/api/v1/projects/{id}/object-data', {
+      params: { path: { id: projectId } },
+      body: { object_data_id: objectDataId },
       signal
     });
   },
@@ -157,8 +161,8 @@ export const projectRepository: ProjectRepository = {
     objectDataId: string,
     signal?: AbortSignal
   ): Promise<void> {
-    return api<void>(`/projects/${projectId}/object-data/${objectDataId}`, {
-      method: 'DELETE',
+    await apiClient.DELETE('/api/v1/projects/{id}/object-data/{objectDataId}', {
+      params: { path: { id: projectId, objectDataId } },
       signal
     });
   },
@@ -184,9 +188,9 @@ export const projectRepository: ProjectRepository = {
     controlCabinetId: string,
     signal?: AbortSignal
   ): Promise<void> {
-    return api<void>(`/projects/${projectId}/control-cabinets`, {
-      method: 'POST',
-      body: JSON.stringify({ control_cabinet_id: controlCabinetId }),
+    await apiClient.POST('/api/v1/projects/{id}/control-cabinets', {
+      params: { path: { id: projectId } },
+      body: { control_cabinet_id: controlCabinetId },
       signal
     });
   },
@@ -196,8 +200,8 @@ export const projectRepository: ProjectRepository = {
     linkId: string,
     signal?: AbortSignal
   ): Promise<void> {
-    return api<void>(`/projects/${projectId}/control-cabinets/${linkId}`, {
-      method: 'DELETE',
+    await apiClient.DELETE('/api/v1/projects/{id}/control-cabinets/{linkId}', {
+      params: { path: { id: projectId, linkId } },
       signal
     });
   },
@@ -233,9 +237,9 @@ export const projectRepository: ProjectRepository = {
     spsControllerId: string,
     signal?: AbortSignal
   ): Promise<void> {
-    return api<void>(`/projects/${projectId}/sps-controllers`, {
-      method: 'POST',
-      body: JSON.stringify({ sps_controller_id: spsControllerId }),
+    await apiClient.POST('/api/v1/projects/{id}/sps-controllers', {
+      params: { path: { id: projectId } },
+      body: { sps_controller_id: spsControllerId },
       signal
     });
   },
@@ -245,8 +249,8 @@ export const projectRepository: ProjectRepository = {
     linkId: string,
     signal?: AbortSignal
   ): Promise<void> {
-    return api<void>(`/projects/${projectId}/sps-controllers/${linkId}`, {
-      method: 'DELETE',
+    await apiClient.DELETE('/api/v1/projects/{id}/sps-controllers/{linkId}', {
+      params: { path: { id: projectId, linkId } },
       signal
     });
   },
@@ -282,9 +286,9 @@ export const projectRepository: ProjectRepository = {
     fieldDeviceId: string,
     signal?: AbortSignal
   ): Promise<void> {
-    return api<void>(`/projects/${projectId}/field-devices`, {
-      method: 'POST',
-      body: JSON.stringify({ field_device_id: fieldDeviceId }),
+    await apiClient.POST('/api/v1/projects/{id}/field-devices', {
+      params: { path: { id: projectId } },
+      body: { field_device_id: fieldDeviceId },
       signal
     });
   },
@@ -320,8 +324,8 @@ export const projectRepository: ProjectRepository = {
   },
 
   async removeFieldDevice(projectId: string, linkId: string, signal?: AbortSignal): Promise<void> {
-    return api<void>(`/projects/${projectId}/field-devices/${linkId}`, {
-      method: 'DELETE',
+    await apiClient.DELETE('/api/v1/projects/{id}/field-devices/{linkId}', {
+      params: { path: { id: projectId, linkId } },
       signal
     });
   }

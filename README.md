@@ -67,14 +67,22 @@ CI is defined for GitHub Actions and Forgejo Actions with separate backend and f
 
 ## Swagger
 
-### Generate Swagger docs
+### Generate the API contract
 
-From the backend folder:
+From the repository root, regenerate Swagger 2.0, the OpenAPI 3.0 conversion and the typed
+frontend client artifacts together:
+
+```powershell
+.\scripts\swagger.ps1
+```
 
 ```bash
-cd backend
-swag init -g ./cmd/app/main.go -o ./docs
+bash scripts/swagger.sh
 ```
+
+The generated frontend contract lives in `frontend/src/lib/api/generated/` and must not be
+edited manually. CI regenerates both backend and frontend artifacts and fails when the committed
+files are stale.
 
 ### View Swagger UI
 

@@ -105,6 +105,9 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(10)
 // @Param search query string false "Search query"
+// @Param order_by query string false "Sort field"
+// @Param order query string false "Sort direction" Enums(asc, desc)
+// @Param include_deleted query bool false "Include soft-deleted users"
 // @Success 200 {object} dto.UserListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
@@ -140,6 +143,9 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 // @Param search query string false "Search query"
 // @Param team_id query string false "Visible team filter"
 // @Param role query string false "Role filter"
+// @Param order_by query string false "Sort field"
+// @Param order query string false "Sort direction" Enums(asc, desc)
+// @Param include_deleted query bool false "Include soft-deleted users"
 // @Success 200 {object} dto.UserDirectoryListResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse

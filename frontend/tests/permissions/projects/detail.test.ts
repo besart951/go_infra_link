@@ -89,7 +89,16 @@ vi.mock('$lib/services/projectCollaboration.svelte.js', () => ({
     buildFieldDeviceEditorsByDevice = vi.fn(() => new Map());
     publishFieldDeviceDraftState = vi.fn();
     publishFieldDeviceDelta = vi.fn();
-  }
+  },
+  provideProjectSyncCoordinator: () => ({
+    socketStatus: 'connected',
+    onlineUsers: [],
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    buildFieldDeviceEditorsByDevice: vi.fn(() => new Map()),
+    publishFieldDeviceDraftState: vi.fn(),
+    publishFieldDeviceDelta: vi.fn()
+  })
 }));
 
 vi.mock('$lib/components/history/HistoryTimelineDialog.svelte', async () => {
