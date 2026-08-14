@@ -12,6 +12,7 @@
     fetchByIds?: (ids: string[]) => Promise<T[]>;
     labelKey: keyof T;
     idKey?: keyof T;
+    refreshKey?: string | number;
     id?: string;
     placeholder?: string;
     searchPlaceholder?: string;
@@ -26,6 +27,7 @@
     fetchByIds,
     labelKey,
     idKey = 'id' as keyof T,
+    refreshKey,
     id,
     placeholder = 'Select items...',
     searchPlaceholder = 'Search...',
@@ -42,40 +44,62 @@
   let initialized = $state(false);
   let selectedItems = $state<T[]>([]);
   let selectedLoading = $state(false);
+  let previousRefreshKey: string | number | undefined;
+  let loadedSelectionKey: string | undefined;
+  let itemsRequestId = 0;
+  let selectedRequestId = 0;
 
   // Derived state
   const availableItems = $derived(items.filter((item) => !value.includes(String(item[idKey]))));
 
   // Load selected items by IDs
   async function loadSelected() {
-    if (!fetchByIds || value.length === 0) {
+    const requestId = ++selectedRequestId;
+    const selectedIDs = [...value];
+
+    if (!fetchByIds || selectedIDs.length === 0) {
       selectedItems = [];
+      selectedLoading = false;
       return;
     }
     selectedLoading = true;
     try {
-      selectedItems = await fetchByIds(value);
+      const result = await fetchByIds(selectedIDs);
+      if (requestId !== selectedRequestId) return;
+
+      selectedItems = result;
     } catch (error) {
+      if (requestId !== selectedRequestId) return;
+
       console.error('Failed to fetch selected items:', error);
       selectedItems = [];
     } finally {
-      selectedLoading = false;
+      if (requestId === selectedRequestId) {
+        selectedLoading = false;
+      }
     }
   }
 
   // Load items from fetcher
   function loadItems(query: string) {
     clearTimeout(debounceTimer);
+    const requestId = ++itemsRequestId;
     debounceTimer = setTimeout(async () => {
       loading = true;
       try {
         const res = await fetcher(query);
-        items = res;
+        if (requestId === itemsRequestId) {
+          items = res;
+        }
       } catch (error) {
-        console.error('Failed to fetch items:', error);
-        items = [];
+        if (requestId === itemsRequestId) {
+          console.error('Failed to fetch items:', error);
+          items = [];
+        }
       } finally {
-        loading = false;
+        if (requestId === itemsRequestId) {
+          loading = false;
+        }
       }
     }, 500);
   }
@@ -95,11 +119,35 @@
   });
 
   $effect(() => {
-    if (value && value.length > 0) {
+    if (initialized && refreshKey !== undefined) {
+      loadItems(search);
+    }
+  });
+
+  $effect(() => {
+    const selectionKey = value.join('\u0000');
+    if (selectionKey === loadedSelectionKey) return;
+
+    loadedSelectionKey = selectionKey;
+    if (value.length > 0) {
       loadSelected();
     } else {
+      selectedRequestId += 1;
+      selectedLoading = false;
       selectedItems = [];
     }
+  });
+
+  $effect(() => {
+    if (
+      refreshKey !== undefined &&
+      previousRefreshKey !== undefined &&
+      refreshKey !== previousRefreshKey &&
+      value.length > 0
+    ) {
+      loadSelected();
+    }
+    previousRefreshKey = refreshKey;
   });
 
   function handleSelect(itemId: string) {
