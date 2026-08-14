@@ -18,6 +18,7 @@ type CreateBacnetObjectRequest struct {
 // UpdateBacnetObjectRequest is a partial update payload.
 // If object_data_id is provided, the object will also be attached to that object data template.
 type UpdateBacnetObjectRequest struct {
+	BaseVersion   *uint64    `json:"base_version" binding:"omitempty,min=1"`
 	FieldDeviceID *uuid.UUID `json:"field_device_id"`
 	ObjectDataID  *uuid.UUID `json:"object_data_id"`
 
@@ -76,6 +77,8 @@ type BacnetObjectBulkPatchInput struct {
 
 type BacnetObjectResponse struct {
 	ID string `json:"id"`
+	// AggregateVersion is the owning FieldDevice concurrency token.
+	AggregateVersion uint64 `json:"aggregate_version,omitempty"`
 
 	TextFix        string  `json:"text_fix"`
 	Description    *string `json:"description"`

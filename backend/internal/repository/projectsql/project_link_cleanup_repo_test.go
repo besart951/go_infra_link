@@ -75,6 +75,58 @@ func TestProjectControlCabinetRepo_CreateDuplicateReturnsDomainConflict(t *testi
 	}
 }
 
+func TestProjectLinkRepositoriesRejectStaleUpdates(t *testing.T) {
+	ctx := context.Background()
+	t.Run("control cabinet", func(t *testing.T) {
+		repo := NewProjectControlCabinetRepository(newProjectLinkRepoTestDB(t))
+		item := &domainProject.ProjectControlCabinet{ProjectID: uuid.New(), ControlCabinetID: uuid.New()}
+		if err := repo.Create(ctx, item); err != nil {
+			t.Fatal(err)
+		}
+		stale := *item
+		item.ControlCabinetID = uuid.New()
+		if err := repo.Update(ctx, item); err != nil {
+			t.Fatalf("first update: %v", err)
+		}
+		stale.ControlCabinetID = uuid.New()
+		if err := repo.Update(ctx, &stale); !errors.Is(err, domain.ErrConflict) {
+			t.Fatalf("stale update error = %v, want conflict", err)
+		}
+	})
+	t.Run("sps controller", func(t *testing.T) {
+		repo := NewProjectSPSControllerRepository(newProjectLinkRepoTestDB(t))
+		item := &domainProject.ProjectSPSController{ProjectID: uuid.New(), SPSControllerID: uuid.New()}
+		if err := repo.Create(ctx, item); err != nil {
+			t.Fatal(err)
+		}
+		stale := *item
+		item.SPSControllerID = uuid.New()
+		if err := repo.Update(ctx, item); err != nil {
+			t.Fatalf("first update: %v", err)
+		}
+		stale.SPSControllerID = uuid.New()
+		if err := repo.Update(ctx, &stale); !errors.Is(err, domain.ErrConflict) {
+			t.Fatalf("stale update error = %v, want conflict", err)
+		}
+	})
+	t.Run("field device", func(t *testing.T) {
+		repo := NewProjectFieldDeviceRepository(newProjectLinkRepoTestDB(t))
+		item := &domainProject.ProjectFieldDevice{ProjectID: uuid.New(), FieldDeviceID: uuid.New()}
+		if err := repo.Create(ctx, item); err != nil {
+			t.Fatal(err)
+		}
+		stale := *item
+		item.FieldDeviceID = uuid.New()
+		if err := repo.Update(ctx, item); err != nil {
+			t.Fatalf("first update: %v", err)
+		}
+		stale.FieldDeviceID = uuid.New()
+		if err := repo.Update(ctx, &stale); !errors.Is(err, domain.ErrConflict) {
+			t.Fatalf("stale update error = %v, want conflict", err)
+		}
+	})
+}
+
 func TestProjectSPSControllerRepo_ListAndDeleteBySPSControllerIDs(t *testing.T) {
 	ctx := context.Background()
 	projectOneID := uuid.New()

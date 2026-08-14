@@ -14,6 +14,10 @@ type ProjectRefreshBroadcaster interface {
 	BroadcastSPSControllerDelta(ctx context.Context, actorID *uuid.UUID, spsController domainFacility.SPSController)
 }
 
+type ProjectFieldDeviceChangeBroadcaster interface {
+	BroadcastFieldDeviceChange(ctx context.Context, actorID *uuid.UUID, fieldDeviceID uuid.UUID, action string)
+}
+
 // ServiceDeps groups service dependencies for facility handler construction.
 type ServiceDeps struct {
 	Building                BuildingService
@@ -78,9 +82,9 @@ func registerFacilityHierarchyHandlers(handlers *Handlers, deps ServiceDeps) {
 	handlers.Building = NewBuildingHandler(deps.Building)
 	handlers.ControlCabinet = NewControlCabinetHandler(deps.ControlCabinet, deps.Collaboration)
 	handlers.SPSController = NewSPSControllerHandler(deps.SPSController, deps.Collaboration)
-	handlers.SPSControllerSystemType = NewSPSControllerSystemTypeHandler(deps.SPSControllerSystemType)
-	handlers.FieldDevice = NewFieldDeviceHandler(deps.FieldDevice)
-	handlers.BacnetObject = NewBacnetObjectHandler(deps.BacnetObject)
+	handlers.SPSControllerSystemType = NewSPSControllerSystemTypeHandler(deps.SPSControllerSystemType, deps.Collaboration)
+	handlers.FieldDevice = NewFieldDeviceHandler(deps.FieldDevice, deps.Collaboration)
+	handlers.BacnetObject = NewBacnetObjectHandler(deps.BacnetObject, deps.Collaboration)
 	handlers.ObjectData = NewObjectDataHandler(deps.ObjectData, deps.BacnetObject, deps.Apparat)
 	handlers.Validation = NewValidationHandler(deps.Building, deps.ControlCabinet, deps.SPSController)
 }

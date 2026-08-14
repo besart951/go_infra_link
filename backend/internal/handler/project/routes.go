@@ -12,6 +12,7 @@ func RegisterProjectRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers) {
 		projects.POST("", handlers.Project.CreateProject)
 		projects.GET("", handlers.Project.ListProjects)
 		projects.GET("/:id", handlers.Project.GetProject)
+		projects.GET("/:id/changes", handlers.Changes.List)
 		projects.GET("/:id/collaboration", handlers.Project.StreamProjectCollaboration)
 		projects.GET("/:id/field-device-options", handlers.FieldDeviceOptions.GetFieldDeviceOptionsForProject)
 		projects.POST("/:id/users", handlers.Membership.InviteProjectUser)

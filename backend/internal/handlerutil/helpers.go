@@ -1,7 +1,9 @@
 package handlerutil
 
 import (
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"reflect"
 	"sort"
@@ -9,6 +11,7 @@ import (
 
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/common"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
@@ -18,15 +21,41 @@ func RespondNotFound(c *gin.Context, message string) {
 }
 
 func BindJSON(c *gin.Context, dst any) bool {
-	if err := c.ShouldBindJSON(dst); err != nil {
+	decoder := json.NewDecoder(c.Request.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(dst); err != nil {
 		if verr := asValidationErrors(err); verr != nil {
 			RespondValidationErrorWithFieldErrors(c, http.StatusBadRequest, validationErrorFields(dst, verr), validationFieldErrors(dst, verr))
 			return false
 		}
-		RespondError(c, http.StatusBadRequest, "validation_error", err.Error())
+		RespondError(c, http.StatusBadRequest, "invalid_json", "request body must be valid JSON with known fields")
+		return false
+	}
+	if err := ensureJSONEOF(decoder); err != nil {
+		RespondError(c, http.StatusBadRequest, "invalid_json", "request body must contain exactly one JSON value")
+		return false
+	}
+	if err := binding.Validator.ValidateStruct(dst); err != nil {
+		if verr := asValidationErrors(err); verr != nil {
+			RespondValidationErrorWithFieldErrors(c, http.StatusBadRequest, validationErrorFields(dst, verr), validationFieldErrors(dst, verr))
+			return false
+		}
+		RespondError(c, http.StatusBadRequest, "validation_error", "request validation failed")
 		return false
 	}
 	return true
+}
+
+func ensureJSONEOF(decoder *json.Decoder) error {
+	var trailing any
+	err := decoder.Decode(&trailing)
+	if errors.Is(err, io.EOF) {
+		return nil
+	}
+	if err == nil {
+		return errors.New("trailing JSON value")
+	}
+	return err
 }
 
 func BindQuery(c *gin.Context, dst any) bool {

@@ -2,6 +2,7 @@ package facility
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -251,6 +252,9 @@ func (s *FieldDeviceService) ensureParentsExist(ctx context.Context, fieldDevice
 	// 1. sps_controller_system_type must exist and not be deleted
 	sts, err := domain.GetByID(ctx, s.spsControllerSystemTypeRepo, fieldDevice.SPSControllerSystemTypeID)
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return domain.NewValidationError().AddCode(fieldDeviceSystemTypeIDField.Key, "invalid_reference", "sps_controller_system_type_id does not reference an existing entity")
+		}
 		return err
 	}
 
@@ -260,12 +264,12 @@ func (s *FieldDeviceService) ensureParentsExist(ctx context.Context, fieldDevice
 	}
 
 	// 3. apparat must exist and not be deleted
-	if err := validateChecks(referenceExists(ctx, s.apparatRepo, fieldDevice.ApparatID)); err != nil {
+	if err := validateChecks(referenceFieldExists(ctx, s.apparatRepo, fieldDevice.ApparatID, fieldDeviceApparatIDField)); err != nil {
 		return err
 	}
 
 	// 4. system_part must exist and not be deleted
-	if err := validateChecks(referenceExists(ctx, s.systemPartRepo, fieldDevice.SystemPartID)); err != nil {
+	if err := validateChecks(referenceFieldExists(ctx, s.systemPartRepo, fieldDevice.SystemPartID, fieldDeviceSystemPartIDField)); err != nil {
 		return err
 	}
 
@@ -497,14 +501,7 @@ func (s *FieldDeviceService) loadAllFieldDeviceOptionSystemParts(ctx context.Con
 }
 
 func (s *FieldDeviceService) validateRequiredFields(fieldDevice *domainFacility.FieldDevice) error {
-	return validateRules(
-		requiredUUID(fieldDeviceSystemTypeIDField, fieldDevice.SPSControllerSystemTypeID),
-		requiredUUID(fieldDeviceApparatIDField, fieldDevice.ApparatID),
-		requiredUUID(fieldDeviceSystemPartIDField, fieldDevice.SystemPartID),
-		optionalMaxLength(fieldDeviceBMKField, fieldDevice.BMK, 10),
-		optionalMaxLength(fieldDeviceDescriptionField, fieldDevice.Description, 250),
-		optionalMaxLength(fieldDeviceTextFixField, fieldDevice.TextIndividuell, 250),
-	)
+	return fieldDevice.Validate()
 }
 
 func normalizeOptionalString(value *string) *string {

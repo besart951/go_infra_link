@@ -7,8 +7,10 @@ import (
 
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainNotification "github.com/besart951/go_infra_link/backend/internal/domain/notification"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
+	infrarealtime "github.com/besart951/go_infra_link/backend/internal/infrastructure/realtime"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -20,10 +22,11 @@ type ProjectHandler struct {
 	facilityLink  ProjectFacilityLinkService
 	collaboration *ProjectCollaborationHub
 	notifications NotificationEventDispatcher
+	changes       ProjectChangeService
 }
 
 func NewProjectHandler(lifecycle ProjectLifecycleService, access ProjectAccessPolicyService, membership ProjectMembershipService, facilityLink ProjectFacilityLinkService) *ProjectHandler {
-	return newProjectHandler(lifecycle, access, membership, newWorkflowFromServices(lifecycle, membership), facilityLink, NewProjectCollaborationHub(), nil)
+	return newProjectHandler(lifecycle, access, membership, newWorkflowFromServices(lifecycle, membership), facilityLink, NewProjectCollaborationHub(), nil, nil)
 }
 
 func newProjectHandler(
@@ -34,6 +37,7 @@ func newProjectHandler(
 	facilityLink ProjectFacilityLinkService,
 	collaboration *ProjectCollaborationHub,
 	notifications NotificationEventDispatcher,
+	changes ProjectChangeService,
 ) *ProjectHandler {
 	if workflow == nil {
 		workflow = newWorkflowFromServices(lifecycle, membership)
@@ -45,6 +49,7 @@ func newProjectHandler(
 		facilityLink:  facilityLink,
 		collaboration: collaboration,
 		notifications: notifications,
+		changes:       changes,
 	}
 }
 
@@ -53,12 +58,7 @@ func (h *ProjectHandler) notifyProjectChange(c *gin.Context, projectID uuid.UUID
 	if userID, ok := middleware.GetUserID(c); ok {
 		actorID = &userID
 	}
-
-	if h.collaboration != nil {
-		if scope, ok := refreshScopeForProjectEvent(eventType); ok {
-			h.collaboration.BroadcastRefreshRequest(projectID, actorID, scope, entityIDs)
-		}
-	}
+	h.recordDurableProjectChange(c, projectID, eventType, actorID, entityIDs...)
 
 	if h.notifications != nil {
 		metadata := map[string]string{
@@ -84,6 +84,46 @@ func (h *ProjectHandler) notifyProjectChange(c *gin.Context, projectID uuid.UUID
 				Metadata:     metadata,
 			})
 		}()
+	}
+}
+
+func (h *ProjectHandler) recordDurableProjectChange(c *gin.Context, projectID uuid.UUID, eventType string, actorID *uuid.UUID, entityIDs ...string) {
+	if h.changes == nil {
+		return
+	}
+	recorder, ok := h.changes.(interface {
+		RecordEvents(context.Context, uuid.UUID, string, *uuid.UUID, ...string) ([]domainProject.Change, error)
+	})
+	if !ok {
+		if err := h.changes.RecordEvent(c.Request.Context(), projectID, eventType, actorID, entityIDs...); err != nil {
+			_ = c.Error(err)
+		}
+		return
+	}
+	changes, err := recorder.RecordEvents(c.Request.Context(), projectID, eventType, actorID, entityIDs...)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	if h.collaboration == nil {
+		return
+	}
+	for _, change := range changes {
+		if change.AggregateID == nil {
+			continue
+		}
+		parentRefs := make(map[string]string, len(change.ParentRefs))
+		for key, value := range change.ParentRefs {
+			parentRefs[key] = value.String()
+		}
+		if err := h.collaboration.BroadcastProjectChange(c.Request.Context(), infrarealtime.ProjectChange{
+			ProjectID: change.ProjectID, Revision: int64(change.Revision), EventID: change.EventID,
+			AggregateType: change.AggregateType, AggregateID: *change.AggregateID,
+			Action: string(change.Action), ActorID: change.ActorID, ChangedFields: change.ChangedFields,
+			ParentRefs: parentRefs, OccurredAt: change.OccurredAt,
+		}); err != nil {
+			_ = c.Error(err)
+		}
 	}
 }
 
@@ -121,7 +161,7 @@ func resourceIDForProjectNotificationEvent(resourceType string, projectID uuid.U
 }
 
 func (h *ProjectHandler) notifyProjectFieldDeviceDelta(c *gin.Context, projectID uuid.UUID, fieldDevices []domainFacility.FieldDevice) {
-	if h.collaboration == nil || len(fieldDevices) == 0 {
+	if len(fieldDevices) == 0 {
 		return
 	}
 
@@ -129,34 +169,30 @@ func (h *ProjectHandler) notifyProjectFieldDeviceDelta(c *gin.Context, projectID
 	if userID, ok := middleware.GetUserID(c); ok {
 		actorID = &userID
 	}
+	entityIDs := make([]string, len(fieldDevices))
+	for i := range fieldDevices {
+		entityIDs[i] = fieldDevices[i].ID.String()
+	}
+	h.recordDurableProjectChange(c, projectID, "project.field_device.multi_created", actorID, entityIDs...)
 
-	h.collaboration.BroadcastFieldDeviceDelta(projectID, actorID, projectFieldDeviceDeltaPayload(fieldDevices))
 }
 
 func (h *ProjectHandler) notifyProjectControlCabinetDelta(c *gin.Context, projectID uuid.UUID, controlCabinet domainFacility.ControlCabinet) {
-	if h.collaboration == nil {
-		return
-	}
-
 	var actorID *uuid.UUID
 	if userID, ok := middleware.GetUserID(c); ok {
 		actorID = &userID
 	}
+	h.recordDurableProjectChange(c, projectID, "project.control_cabinet.copied", actorID, controlCabinet.ID.String())
 
-	h.collaboration.BroadcastControlCabinetDelta(projectID, actorID, controlCabinet)
 }
 
 func (h *ProjectHandler) notifyProjectSPSControllerDelta(c *gin.Context, projectID uuid.UUID, spsController domainFacility.SPSController) {
-	if h.collaboration == nil {
-		return
-	}
-
 	var actorID *uuid.UUID
 	if userID, ok := middleware.GetUserID(c); ok {
 		actorID = &userID
 	}
+	h.recordDurableProjectChange(c, projectID, "project.sps_controller.copied", actorID, spsController.ID.String())
 
-	h.collaboration.BroadcastSPSControllerDelta(projectID, actorID, spsController)
 }
 
 func (h *ProjectHandler) ensureProjectAccess(c *gin.Context, projectID uuid.UUID) bool {

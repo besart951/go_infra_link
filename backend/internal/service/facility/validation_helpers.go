@@ -2,6 +2,7 @@ package facility
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -137,5 +138,16 @@ func uniqueWithinIfPresent(field domain.ValidationField, scope, value string, ex
 func referenceExists[T any](ctx context.Context, repo domain.Reader[T], id uuid.UUID) validationCheck {
 	return func(_ *domain.ValidationBuilder) error {
 		return domain.EnsureReferenceExists(ctx, repo, id)
+	}
+}
+
+func referenceFieldExists[T any](ctx context.Context, repo domain.Reader[T], id uuid.UUID, field domain.ValidationField) validationCheck {
+	return func(builder *domain.ValidationBuilder) error {
+		err := domain.EnsureReferenceExists(ctx, repo, id)
+		if errors.Is(err, domain.ErrNotFound) {
+			builder.AddCode(field.Key, "invalid_reference", field.Name+" does not reference an existing entity")
+			return nil
+		}
+		return err
 	}
 }

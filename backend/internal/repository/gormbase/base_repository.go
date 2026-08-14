@@ -58,8 +58,32 @@ func (r *BaseRepository[T]) Create(ctx context.Context, entity T) error {
 
 // Update updates an existing entity
 func (r *BaseRepository[T]) Update(ctx context.Context, entity T) error {
-	entity.GetBase().TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Save(entity).Error
+	base := entity.GetBase()
+	expectedVersion := base.Version
+	base.TouchForUpdate(time.Now().UTC())
+
+	// A zero incoming version is the temporary compatibility path for callers
+	// that have not adopted optimistic concurrency yet. Versioned aggregate
+	// commands always take the conditional branch below.
+	if expectedVersion == 0 {
+		return r.db.WithContext(ctx).Save(entity).Error
+	}
+
+	result := r.db.WithContext(ctx).
+		Model(entity).
+		Where("id = ? AND version = ?", base.ID, expectedVersion).
+		Select("*").
+		Omit("created_at", clause.Associations).
+		Updates(entity)
+	if result.Error != nil {
+		base.Version = expectedVersion
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		base.Version = expectedVersion
+		return domain.ErrConflict
+	}
+	return nil
 }
 
 // DeleteByIds hard deletes entities by their IDs

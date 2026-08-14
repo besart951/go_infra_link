@@ -15,19 +15,30 @@ type PaginationQuery struct {
 
 type ErrorResponse struct {
 	// Error and Fields are kept as compatibility aliases for existing clients.
-	Error        string               `json:"error"`
-	Code         string               `json:"code,omitempty"`
-	Message      string               `json:"message,omitempty"`
-	LocalizedKey string               `json:"localized_key,omitempty"`
-	Details      any                  `json:"details,omitempty"`
-	Fields       map[string]string    `json:"fields,omitempty"`
-	FieldErrors  []FieldErrorResponse `json:"field_errors,omitempty"`
-	RequestID    string               `json:"request_id,omitempty"`
+	Error        string                 `json:"error"`
+	Code         string                 `json:"code,omitempty"`
+	Message      string                 `json:"message,omitempty"`
+	LocalizedKey string                 `json:"localized_key,omitempty"`
+	Details      any                    `json:"details,omitempty"`
+	Fields       map[string]string      `json:"fields,omitempty"`
+	FieldErrors  []FieldErrorResponse   `json:"field_errors,omitempty"`
+	Conflict     *WriteConflictResponse `json:"conflict,omitempty"`
+	RequestID    string                 `json:"request_id,omitempty"`
 }
 
 type FieldErrorResponse struct {
-	Path         string `json:"path"`
-	Code         string `json:"code,omitempty"`
-	Message      string `json:"message"`
-	LocalizedKey string `json:"localized_key,omitempty"`
+	Path         string         `json:"path"`
+	Code         string         `json:"code,omitempty"`
+	Message      string         `json:"message"`
+	LocalizedKey string         `json:"localized_key,omitempty"`
+	Params       map[string]any `json:"params,omitempty"`
+}
+
+type WriteConflictResponse struct {
+	AggregateType     string   `json:"aggregate_type"`
+	AggregateID       string   `json:"aggregate_id"`
+	BaseVersion       uint64   `json:"base_version"`
+	CurrentVersion    uint64   `json:"current_version"`
+	ConflictingFields []string `json:"conflicting_fields"`
+	Current           any      `json:"current,omitempty"`
 }

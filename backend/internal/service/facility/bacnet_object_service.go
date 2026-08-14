@@ -2,12 +2,11 @@ package facility
 
 import (
 	"context"
-	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
-	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
-	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"github.com/google/uuid"
 )
 
@@ -35,26 +34,14 @@ func (s *BacnetObjectService) ensureTextFixUniqueForFieldDevice(ctx context.Cont
 			continue
 		}
 		if it.TextFix == textFix {
-			return domain.NewValidationError().Add("fielddevice.bacnetobject.textfix", "textfix must be unique within the field device")
+			return domain.NewValidationError().AddCode("fielddevice.bacnetobject.text_fix", "unique", "text_fix must be unique within the field device")
 		}
 	}
 	return nil
 }
 
 func (s *BacnetObjectService) validateRequiredFields(bacnetObject *domainFacility.BacnetObject, prefix string) error {
-	ve := domain.NewValidationError()
-
-	if strings.TrimSpace(bacnetObject.TextFix) == "" {
-		ve = ve.Add(prefix+".textfix", "textfix is required")
-	}
-	if strings.TrimSpace(string(bacnetObject.SoftwareType)) == "" {
-		ve = ve.Add(prefix+".software_type", "software_type is required")
-	}
-
-	if len(ve.Fields) > 0 {
-		return ve
-	}
-	return nil
+	return bacnetObject.Validate(prefix)
 }
 
 func NewBacnetObjectService(
@@ -101,6 +88,16 @@ func (s *BacnetObjectService) GetByID(ctx context.Context, id uuid.UUID) (*domai
 
 func (s *BacnetObjectService) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.BacnetObject, error) {
 	return s.repo.GetByIds(ctx, ids)
+}
+
+func (s *BacnetObjectService) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	if id == uuid.Nil {
+		return domain.ErrInvalidArgument
+	}
+	if _, err := s.GetByID(ctx, id); err != nil {
+		return err
+	}
+	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
 }
 
 // CreateWithParent creates a bacnet object either for a field device (fieldDeviceID)

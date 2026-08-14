@@ -29,6 +29,7 @@ type CreateProjectControlCabinetRequest struct {
 
 type UpdateProjectControlCabinetRequest struct {
 	ControlCabinetID uuid.UUID `json:"control_cabinet_id" binding:"required"`
+	BaseVersion      *uint64   `json:"base_version" binding:"omitempty,min=1"`
 }
 
 type ProjectControlCabinetResponse struct {
@@ -37,6 +38,7 @@ type ProjectControlCabinetResponse struct {
 	ControlCabinetID uuid.UUID `json:"control_cabinet_id"`
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
+	Version          uint64    `json:"version"`
 }
 
 type ProjectControlCabinetListResponse struct {
@@ -52,6 +54,7 @@ type CreateProjectSPSControllerRequest struct {
 
 type UpdateProjectSPSControllerRequest struct {
 	SPSControllerID uuid.UUID `json:"sps_controller_id" binding:"required"`
+	BaseVersion     *uint64   `json:"base_version" binding:"omitempty,min=1"`
 }
 
 type ProjectSPSControllerResponse struct {
@@ -60,6 +63,7 @@ type ProjectSPSControllerResponse struct {
 	SPSControllerID uuid.UUID `json:"sps_controller_id"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
+	Version         uint64    `json:"version"`
 }
 
 type ProjectSPSControllerListResponse struct {
@@ -89,6 +93,7 @@ type CreateProjectObjectDataRequest struct {
 
 type UpdateProjectFieldDeviceRequest struct {
 	FieldDeviceID uuid.UUID `json:"field_device_id" binding:"required"`
+	BaseVersion   *uint64   `json:"base_version" binding:"omitempty,min=1"`
 }
 
 type ProjectFieldDeviceResponse struct {
@@ -97,6 +102,7 @@ type ProjectFieldDeviceResponse struct {
 	FieldDeviceID uuid.UUID `json:"field_device_id"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	Version       uint64    `json:"version"`
 }
 
 type ProjectFieldDeviceListResponse struct {

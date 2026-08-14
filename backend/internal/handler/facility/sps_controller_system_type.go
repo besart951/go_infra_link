@@ -5,15 +5,59 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/gin-gonic/gin"
 )
 
-type SPSControllerSystemTypeHandler struct {
-	service SPSControllerSystemTypeService
+func (h *SPSControllerSystemTypeHandler) UpdateSPSControllerSystemType(c *gin.Context) {
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	var req dto.UpdateSPSControllerSystemTypeRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	item, err := h.service.GetByID(c.Request.Context(), id)
+	if err != nil {
+		respondLocalizedDomainError(c, err, "fetch_failed", "facility.fetch_failed", localizedNotFound("facility.sps_controller_system_type_not_found"))
+		return
+	}
+	baseVersion := item.Version
+	if req.BaseVersion != nil {
+		baseVersion = *req.BaseVersion
+		item.Version = *req.BaseVersion
+	}
+	if req.Number != nil {
+		item.Number = req.Number
+	}
+	if req.DocumentName != nil {
+		item.DocumentName = req.DocumentName
+	}
+	if err := h.service.Update(c.Request.Context(), item); err != nil {
+		if current, getErr := h.service.GetByID(c.Request.Context(), id); getErr == nil && respondWriteConflict(c, err, "sps_controller", current.SPSControllerID, baseVersion, []string{"system_types." + id.String()}, current.Version, toSPSControllerSystemTypeResponse(*current)) {
+			return
+		}
+		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed")
+		return
+	}
+	c.JSON(http.StatusOK, toSPSControllerSystemTypeResponse(*item))
+	if h.collaboration != nil {
+		h.collaboration.BroadcastRefreshForSPSController(c.Request.Context(), currentActorID(c), item.SPSControllerID, "sps_controller")
+	}
 }
 
-func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService) *SPSControllerSystemTypeHandler {
-	return &SPSControllerSystemTypeHandler{service: service}
+type SPSControllerSystemTypeHandler struct {
+	service       SPSControllerSystemTypeService
+	collaboration ProjectRefreshBroadcaster
+}
+
+func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService, collaboration ...ProjectRefreshBroadcaster) *SPSControllerSystemTypeHandler {
+	h := &SPSControllerSystemTypeHandler{service: service}
+	if len(collaboration) > 0 {
+		h.collaboration = collaboration[0]
+	}
+	return h
 }
 
 // ListSPSControllerSystemTypes godoc
@@ -118,6 +162,9 @@ func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Cont
 		return
 	}
 
+	if h.collaboration != nil {
+		h.collaboration.BroadcastRefreshForSPSController(c.Request.Context(), currentActorID(c), copyEntity.SPSControllerID, "sps_controller")
+	}
 	c.JSON(http.StatusCreated, toSPSControllerSystemTypeResponse(*copyEntity))
 }
 
@@ -137,11 +184,19 @@ func (h *SPSControllerSystemTypeHandler) DeleteSPSControllerSystemType(c *gin.Co
 		return
 	}
 
+	item, err := h.service.GetByID(c.Request.Context(), id)
+	if err != nil {
+		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed", localizedNotFound("facility.sps_controller_system_type_not_found"))
+		return
+	}
 	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.sps_controller_system_type_not_found"),
 		)
 		return
+	}
+	if h.collaboration != nil {
+		h.collaboration.BroadcastRefreshForSPSController(c.Request.Context(), currentActorID(c), item.SPSControllerID, "sps_controller")
 	}
 
 	c.Status(http.StatusNoContent)

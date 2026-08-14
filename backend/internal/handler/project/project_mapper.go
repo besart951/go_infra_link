@@ -22,6 +22,9 @@ func ToProjectModel(req dto.CreateProjectRequest) *project.Project {
 
 // ApplyProjectUpdate applies UpdateProjectRequest fields to an existing Project
 func ApplyProjectUpdate(target *project.Project, req dto.UpdateProjectRequest) {
+	if req.BaseVersion != nil {
+		target.Version = *req.BaseVersion
+	}
 	if req.Name != nil {
 		target.Name = *req.Name
 	}
@@ -39,6 +42,26 @@ func ApplyProjectUpdate(target *project.Project, req dto.UpdateProjectRequest) {
 	}
 }
 
+func projectUpdatePaths(req dto.UpdateProjectRequest) []string {
+	paths := make([]string, 0, 5)
+	if req.Name != nil {
+		paths = append(paths, "name")
+	}
+	if req.Description != nil {
+		paths = append(paths, "description")
+	}
+	if req.Status != nil {
+		paths = append(paths, "status")
+	}
+	if req.StartDate.Set {
+		paths = append(paths, "start_date")
+	}
+	if req.PhaseID != nil {
+		paths = append(paths, "phase_id")
+	}
+	return paths
+}
+
 func toTimePtr(value *dto.SwissDateTime) *time.Time {
 	if value == nil {
 		return nil
@@ -51,6 +74,7 @@ func toTimePtr(value *dto.SwissDateTime) *time.Time {
 func ToProjectResponse(p *project.Project) dto.ProjectResponse {
 	return dto.ProjectResponse{
 		ID:          p.ID,
+		Version:     p.Version,
 		Name:        p.Name,
 		Description: p.Description,
 		Status:      p.Status,

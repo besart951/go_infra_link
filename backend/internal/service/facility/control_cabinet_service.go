@@ -2,12 +2,12 @@ package facility
 
 import (
 	"context"
-	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
-	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
-	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"github.com/google/uuid"
 )
 
@@ -204,14 +204,11 @@ func (s *ControlCabinetService) regenerateSPSControllerDeviceNames(ctx context.C
 }
 
 func (s *ControlCabinetService) ensureBuildingExists(ctx context.Context, buildingID uuid.UUID) error {
-	return validateChecks(referenceExists(ctx, s.buildingRepo, buildingID))
+	return validateChecks(referenceFieldExists(ctx, s.buildingRepo, buildingID, controlCabinetBuildingIDField))
 }
 
 func (s *ControlCabinetService) validateRequiredFields(controlCabinet *domainFacility.ControlCabinet) error {
-	return validateRules(
-		requiredUUID(controlCabinetBuildingIDField, controlCabinet.BuildingID),
-		requiredTrimmedPtrMax(controlCabinetNumberField, controlCabinet.ControlCabinetNr, 11),
-	)
+	return controlCabinet.Validate()
 }
 
 func (s *ControlCabinetService) ensureUnique(ctx context.Context, controlCabinet *domainFacility.ControlCabinet, excludeID *uuid.UUID) error {

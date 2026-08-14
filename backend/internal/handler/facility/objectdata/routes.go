@@ -9,6 +9,7 @@ import (
 type Handlers struct {
 	CreateBacnetObject         gin.HandlerFunc
 	UpdateBacnetObject         gin.HandlerFunc
+	DeleteBacnetObject         gin.HandlerFunc
 	ListObjectData             gin.HandlerFunc
 	GetObjectData              gin.HandlerFunc
 	GetObjectDataBacnetObjects gin.HandlerFunc
@@ -21,6 +22,7 @@ func Routes(handlers Handlers) []routing.Definition {
 	return []routing.Definition{
 		routing.Post("/bacnet-objects", domainUser.PermissionBacnetObjectCreate, handlers.CreateBacnetObject),
 		routing.Put("/bacnet-objects/:id", domainUser.PermissionBacnetObjectUpdate, handlers.UpdateBacnetObject),
+		routing.Delete("/bacnet-objects/:id", domainUser.PermissionBacnetObjectDelete, handlers.DeleteBacnetObject),
 		routing.Get("/object-data", domainUser.PermissionObjectDataRead, handlers.ListObjectData),
 		routing.Get("/object-data/:id", domainUser.PermissionObjectDataRead, handlers.GetObjectData),
 		routing.Get("/object-data/:id/bacnet-objects", domainUser.PermissionObjectDataRead, handlers.GetObjectDataBacnetObjects),

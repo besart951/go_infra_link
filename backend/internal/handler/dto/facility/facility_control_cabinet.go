@@ -14,12 +14,14 @@ type CreateControlCabinetRequest struct {
 }
 
 type UpdateControlCabinetRequest struct {
+	BaseVersion      *uint64   `json:"base_version" binding:"omitempty,min=1"`
 	BuildingID       uuid.UUID `json:"building_id"`
 	ControlCabinetNr *string   `json:"control_cabinet_nr" binding:"omitempty,max=11"`
 }
 
 type ControlCabinetResponse struct {
 	ID               uuid.UUID `json:"id"`
+	Version          uint64    `json:"version"`
 	BuildingID       uuid.UUID `json:"building_id"`
 	ControlCabinetNr *string   `json:"control_cabinet_nr"`
 	CreatedAt        time.Time `json:"created_at"`

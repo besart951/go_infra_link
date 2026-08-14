@@ -67,11 +67,17 @@ func (r *fieldDeviceRepo) BulkCreate(ctx context.Context, entities []*domainFaci
 }
 
 func (r *fieldDeviceRepo) Update(ctx context.Context, entity *domainFacility.FieldDevice) error {
+	expectedVersion := entity.Version
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Model(&FieldDeviceRecord{}).
-		Where("id = ?", entity.ID).
+	query := r.db.WithContext(ctx).Model(&FieldDeviceRecord{}).
+		Where("id = ?", entity.ID)
+	if expectedVersion > 0 {
+		query = query.Where("version = ?", expectedVersion)
+	}
+	result := query.
 		Updates(map[string]any{
 			"updated_at":                    entity.UpdatedAt,
+			"version":                       entity.Version,
 			"bmk":                           entity.BMK,
 			"description":                   entity.Description,
 			"apparat_nr":                    entity.ApparatNr,
@@ -80,7 +86,16 @@ func (r *fieldDeviceRepo) Update(ctx context.Context, entity *domainFacility.Fie
 			"system_part_id":                entity.SystemPartID,
 			"specification_id":              entity.SpecificationID,
 			"apparat_id":                    entity.ApparatID,
-		}).Error
+		})
+	if result.Error != nil {
+		entity.Version = expectedVersion
+		return result.Error
+	}
+	if expectedVersion > 0 && result.RowsAffected == 0 {
+		entity.Version = expectedVersion
+		return domain.ErrConflict
+	}
+	return nil
 }
 
 func (r *fieldDeviceRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {

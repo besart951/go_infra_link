@@ -145,6 +145,12 @@ var migrations = []migration{
 		blueGreenCompatible: true,
 		apply:               ensureDeletedUserReadPermission,
 	},
+	{
+		version:             "202608130001",
+		description:         "durable_project_change_stream",
+		blueGreenCompatible: true,
+		apply:               migrateProjectChanges,
+	},
 }
 
 type MigrationOptions struct {

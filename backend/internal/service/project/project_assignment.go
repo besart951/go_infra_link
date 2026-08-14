@@ -78,24 +78,24 @@ func (a projectAssignment) assignFieldDevice(ctx context.Context, projectID, fie
 	return result.fieldDevice, nil
 }
 
-func (a projectAssignment) updateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
-	result, err := a.update(ctx, linkID, projectID, projectAssignmentTarget{kind: projectAssignmentControlCabinet, id: controlCabinetID})
+func (a projectAssignment) updateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID, baseVersion ...uint64) (*domainProject.ProjectControlCabinet, error) {
+	result, err := a.update(ctx, linkID, projectID, projectAssignmentTarget{kind: projectAssignmentControlCabinet, id: controlCabinetID}, baseVersion...)
 	if err != nil {
 		return nil, err
 	}
 	return result.controlCabinet, nil
 }
 
-func (a projectAssignment) updateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID) (*domainProject.ProjectSPSController, error) {
-	result, err := a.update(ctx, linkID, projectID, projectAssignmentTarget{kind: projectAssignmentSPSController, id: spsControllerID})
+func (a projectAssignment) updateSPSController(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID, baseVersion ...uint64) (*domainProject.ProjectSPSController, error) {
+	result, err := a.update(ctx, linkID, projectID, projectAssignmentTarget{kind: projectAssignmentSPSController, id: spsControllerID}, baseVersion...)
 	if err != nil {
 		return nil, err
 	}
 	return result.spsController, nil
 }
 
-func (a projectAssignment) updateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
-	result, err := a.update(ctx, linkID, projectID, projectAssignmentTarget{kind: projectAssignmentFieldDevice, id: fieldDeviceID})
+func (a projectAssignment) updateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID, baseVersion ...uint64) (*domainProject.ProjectFieldDevice, error) {
+	result, err := a.update(ctx, linkID, projectID, projectAssignmentTarget{kind: projectAssignmentFieldDevice, id: fieldDeviceID}, baseVersion...)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func (a projectAssignment) assign(ctx context.Context, projectID uuid.UUID, targ
 	}
 }
 
-func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UUID, target projectAssignmentTarget) (*projectAssignmentResult, error) {
+func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UUID, target projectAssignmentTarget, baseVersion ...uint64) (*projectAssignmentResult, error) {
 	switch target.kind {
 	case projectAssignmentControlCabinet:
 		entity, err := domain.GetByID(ctx, a.deps.projectControlCabinetRepo, linkID)
@@ -178,6 +178,9 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 		}
 		if entity.ProjectID != projectID {
 			return nil, domain.ErrNotFound
+		}
+		if len(baseVersion) > 0 && entity.Version != baseVersion[0] {
+			return nil, domain.ErrConflict
 		}
 		entity.ControlCabinetID = target.id
 		if err := a.deps.projectControlCabinetRepo.Update(ctx, entity); err != nil {
@@ -195,6 +198,9 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 		if entity.ProjectID != projectID {
 			return nil, domain.ErrNotFound
 		}
+		if len(baseVersion) > 0 && entity.Version != baseVersion[0] {
+			return nil, domain.ErrConflict
+		}
 		entity.SPSControllerID = target.id
 		if err := a.deps.projectSPSControllerRepo.Update(ctx, entity); err != nil {
 			return nil, err
@@ -210,6 +216,9 @@ func (a projectAssignment) update(ctx context.Context, linkID, projectID uuid.UU
 		}
 		if entity.ProjectID != projectID {
 			return nil, domain.ErrNotFound
+		}
+		if len(baseVersion) > 0 && entity.Version != baseVersion[0] {
+			return nil, domain.ErrConflict
 		}
 		entity.FieldDeviceID = target.id
 		if err := a.deps.projectFieldDeviceRepo.Update(ctx, entity); err != nil {

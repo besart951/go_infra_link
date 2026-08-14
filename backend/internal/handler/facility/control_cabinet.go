@@ -259,10 +259,17 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
+	baseVersion := controlCabinet.Version
+	if req.BaseVersion != nil {
+		baseVersion = *req.BaseVersion
+	}
 
 	applyControlCabinetUpdate(controlCabinet, req)
 
 	if err := h.service.Update(ctx, controlCabinet); err != nil {
+		if current, getErr := h.service.GetByID(ctx, id); getErr == nil && respondWriteConflict(c, err, "control_cabinet", id, baseVersion, controlCabinetUpdatePaths(req), current.Version, toControlCabinetResponse(*current)) {
+			return
+		}
 		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
 			localizedInvalidReference(),
 		)
@@ -288,13 +295,17 @@ func (h *ControlCabinetHandler) DeleteControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+	ctx := c.Request.Context()
+	projectIDs := captureDeleteAudience(ctx, h.collaboration, "control_cabinet", id)
+	if err := h.service.DeleteByID(ctx, id); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.control_cabinet_not_found"),
 		)
 		return
 	}
 
-	h.broadcastProjectRefresh(c.Request.Context(), currentActorID(c), id)
+	if !broadcastCapturedDelete(ctx, h.collaboration, currentActorID(c), projectIDs, "control_cabinet", id) {
+		h.broadcastProjectRefresh(ctx, currentActorID(c), id)
+	}
 	c.Status(http.StatusNoContent)
 }

@@ -1,6 +1,8 @@
 package facility
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -13,6 +15,45 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+type destructiveChangeBroadcaster interface {
+	ProjectIDsForControlCabinet(context.Context, uuid.UUID) ([]uuid.UUID, error)
+	ProjectIDsForSPSController(context.Context, uuid.UUID) ([]uuid.UUID, error)
+	ProjectIDsForFieldDevice(context.Context, uuid.UUID) ([]uuid.UUID, error)
+	BroadcastChangeForProjects(context.Context, *uuid.UUID, []uuid.UUID, string, uuid.UUID)
+}
+
+func captureDeleteAudience(ctx context.Context, broadcaster any, aggregateType string, id uuid.UUID) []uuid.UUID {
+	resolver, ok := any(broadcaster).(destructiveChangeBroadcaster)
+	if !ok {
+		return nil
+	}
+	var (
+		ids []uuid.UUID
+		err error
+	)
+	switch aggregateType {
+	case "control_cabinet":
+		ids, err = resolver.ProjectIDsForControlCabinet(ctx, id)
+	case "sps_controller":
+		ids, err = resolver.ProjectIDsForSPSController(ctx, id)
+	case "field_device":
+		ids, err = resolver.ProjectIDsForFieldDevice(ctx, id)
+	}
+	if err != nil {
+		return nil
+	}
+	return ids
+}
+
+func broadcastCapturedDelete(ctx context.Context, broadcaster any, actorID *uuid.UUID, projectIDs []uuid.UUID, aggregateType string, id uuid.UUID) bool {
+	resolver, ok := any(broadcaster).(destructiveChangeBroadcaster)
+	if !ok || len(projectIDs) == 0 {
+		return false
+	}
+	resolver.BroadcastChangeForProjects(ctx, actorID, projectIDs, "project."+aggregateType+".deleted", id)
+	return true
+}
 
 func respondError(c *gin.Context, status int, code, message string) {
 	handlerutil.RespondError(c, status, code, message)
@@ -39,12 +80,27 @@ func bindJSON(c *gin.Context, dst any) bool {
 	return handlerutil.BindJSON(c, dst)
 }
 
+func respondWriteConflict(c *gin.Context, err error, aggregateType string, aggregateID uuid.UUID, baseVersion uint64, fields []string, currentVersion uint64, current any) bool {
+	if !errors.Is(err, domain.ErrConflict) {
+		return false
+	}
+	handlerutil.RespondWriteConflict(c, aggregateType, aggregateID.String(), baseVersion, currentVersion, fields, current)
+	return true
+}
+
 func bindQuery(c *gin.Context, dst any) bool {
 	return handlerutil.BindQuery(c, dst)
 }
 
 func parseUUIDParam(c *gin.Context, name string) (uuid.UUID, bool) {
 	return handlerutil.ParseUUIDParam(c, name)
+}
+
+func uuidValue(value *uuid.UUID) uuid.UUID {
+	if value == nil {
+		return uuid.Nil
+	}
+	return *value
 }
 
 func parsePaginationQuery(c *gin.Context) (dto.PaginationQuery, bool) {

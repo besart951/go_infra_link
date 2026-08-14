@@ -7,14 +7,26 @@ import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type FieldDeviceHandler struct {
-	service FieldDeviceService
+	service       FieldDeviceService
+	collaboration ProjectFieldDeviceChangeBroadcaster
 }
 
-func NewFieldDeviceHandler(service FieldDeviceService) *FieldDeviceHandler {
-	return &FieldDeviceHandler{service: service}
+func NewFieldDeviceHandler(service FieldDeviceService, broadcasters ...ProjectRefreshBroadcaster) *FieldDeviceHandler {
+	h := &FieldDeviceHandler{service: service}
+	if len(broadcasters) > 0 {
+		h.collaboration, _ = broadcasters[0].(ProjectFieldDeviceChangeBroadcaster)
+	}
+	return h
+}
+
+func (h *FieldDeviceHandler) broadcastChange(c *gin.Context, id uuid.UUID, action string) {
+	if h.collaboration != nil {
+		h.collaboration.BroadcastFieldDeviceChange(c.Request.Context(), currentActorID(c), id, action)
+	}
 }
 
 // MultiCreateFieldDevices godoc
@@ -283,6 +295,10 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
+	baseVersion := fieldDevice.Version
+	if req.BaseVersion != nil {
+		baseVersion = *req.BaseVersion
+	}
 
 	applyFieldDeviceUpdate(fieldDevice, req)
 
@@ -293,6 +309,9 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateWithBacnetObjects(ctx, fieldDevice, req.ObjectDataID, bacnetObjects); err != nil {
+		if current, getErr := h.service.GetByID(ctx, id); getErr == nil && respondWriteConflict(c, err, "field_device", id, baseVersion, fieldDeviceUpdatePaths(req), current.Version, toFieldDeviceResponse(*current)) {
+			return
+		}
 		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
 			localizedInvalidArgument("facility.mutually_exclusive_error"),
 			localizedInvalidReference(),
@@ -302,6 +321,7 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toFieldDeviceResponse(*fieldDevice))
+	h.broadcastChange(c, fieldDevice.ID, "updated")
 }
 
 // DeleteFieldDevice godoc
@@ -319,11 +339,16 @@ func (h *FieldDeviceHandler) DeleteFieldDevice(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+	ctx := c.Request.Context()
+	projectIDs := captureDeleteAudience(ctx, h.collaboration, "field_device", id)
+	if err := h.service.DeleteByID(ctx, id); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.field_device_not_found"),
 		)
 		return
+	}
+	if !broadcastCapturedDelete(ctx, h.collaboration, currentActorID(c), projectIDs, "field_device", id) {
+		h.broadcastChange(c, id, "deleted")
 	}
 
 	c.Status(http.StatusNoContent)
@@ -391,6 +416,7 @@ func (h *FieldDeviceHandler) CreateFieldDeviceSpecification(c *gin.Context) {
 		return
 	}
 
+	h.broadcastChange(c, fieldDeviceID, "updated")
 	c.JSON(http.StatusCreated, toSpecificationResponse(*spec))
 }
 
@@ -428,6 +454,7 @@ func (h *FieldDeviceHandler) UpdateFieldDeviceSpecification(c *gin.Context) {
 		return
 	}
 
+	h.broadcastChange(c, fieldDeviceID, "updated")
 	c.JSON(http.StatusOK, toSpecificationResponse(*spec))
 }
 
@@ -464,6 +491,7 @@ func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
 
 		updates[i] = domainFacility.BulkFieldDeviceUpdate{
 			ID:                 item.ID,
+			BaseVersion:        item.BaseVersion,
 			BMK:                item.BMK.Value,
 			HasBMK:             item.BMK.Set,
 			Description:        item.Description.Value,
@@ -479,6 +507,11 @@ func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
 	}
 
 	result := h.service.BulkUpdate(c.Request.Context(), updates)
+	for _, item := range result.Results {
+		if item.Success {
+			h.broadcastChange(c, item.ID, "updated")
+		}
+	}
 
 	c.JSON(http.StatusOK, toBulkOperationResponse(result))
 }
@@ -500,6 +533,11 @@ func (h *FieldDeviceHandler) BulkDeleteFieldDevices(c *gin.Context) {
 	}
 
 	result := h.service.BulkDelete(c.Request.Context(), req.IDs)
+	for _, item := range result.Results {
+		if item.Success {
+			h.broadcastChange(c, item.ID, "deleted")
+		}
+	}
 
 	c.JSON(http.StatusOK, toBulkOperationResponse(result))
 }
@@ -510,6 +548,9 @@ func toBulkOperationResponse(result *domainFacility.BulkOperationResult) dto.Bul
 		results[i] = dto.BulkOperationResultItem{
 			ID:                r.ID,
 			Success:           r.Success,
+			Version:           r.Version,
+			Merged:            r.Merged,
+			FieldDevice:       fieldDeviceResponsePtr(r.FieldDevice),
 			Error:             r.Error,
 			Fields:            r.Fields,
 			Suggestions:       r.Suggestions,
@@ -522,4 +563,12 @@ func toBulkOperationResponse(result *domainFacility.BulkOperationResult) dto.Bul
 		SuccessCount: result.SuccessCount,
 		FailureCount: result.FailureCount,
 	}
+}
+
+func fieldDeviceResponsePtr(item *domainFacility.FieldDevice) *dto.FieldDeviceResponse {
+	if item == nil {
+		return nil
+	}
+	response := toFieldDeviceResponse(*item)
+	return &response
 }

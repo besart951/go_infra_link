@@ -96,7 +96,14 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
     });
     this.editing = useFieldDeviceEditing({
       projectId: () => this.projectId,
-      onSharedStateChange: props.onSharedFieldDeviceStateChange,
+      onSharedStateChange: (state) =>
+        props.onSharedFieldDeviceStateChange?.({
+          devices: state.devices.map((device) => ({
+            ...device,
+            specification_id: this.items.find((item) => item.id === device.device_id)
+              ?.specification_id
+          }))
+        }),
       onSaveSuccess: () => undefined
     });
     this.restorePersistedFilters();

@@ -39,7 +39,7 @@ func RespondMappedDomainError(c *gin.Context, err error, mappings ...ErrorMappin
 	}
 
 	if validationErr, ok := domain.AsValidationError(err); ok {
-		RespondValidationError(c, validationErr.Fields)
+		RespondDomainValidationError(c, validationErr)
 		return true
 	}
 

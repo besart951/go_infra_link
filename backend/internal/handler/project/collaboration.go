@@ -10,6 +10,7 @@ import (
 )
 
 type ProjectCollaborationHub = realtime.ProjectCollaborationHub
+type ProjectChange = realtime.ProjectChange
 
 func NewProjectCollaborationHub() *ProjectCollaborationHub {
 	return realtime.NewProjectCollaborationHub()

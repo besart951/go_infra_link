@@ -12,6 +12,7 @@ import (
 
 type Dependencies struct {
 	Projects                 domainProject.ProjectRepository
+	ProjectChanges           domainProject.ChangeStore
 	Phases                   domainProject.PhaseRepository
 	PhasePermissions         domainProject.PhasePermissionRepository
 	ProjectControlCabinets   domainProject.ProjectControlCabinetRepository
@@ -32,6 +33,7 @@ type Dependencies struct {
 
 type Services struct {
 	Lifecycle    *ProjectLifecycleService
+	Changes      *ChangeService
 	AccessPolicy *ProjectAccessPolicyService
 	Membership   *ProjectMembershipService
 	Workflow     *ProjectWorkflowService
@@ -46,6 +48,7 @@ func NewServices(deps Dependencies, cfgs ...Config) *Services {
 	tx := newTxCoordinator(cfg)
 
 	services := &Services{}
+	services.Changes = NewChangeService(deps.ProjectChanges)
 	services.AccessPolicy = &ProjectAccessPolicyService{
 		repo:                deps.Projects,
 		phaseRepo:           deps.Phases,
@@ -55,6 +58,7 @@ func NewServices(deps Dependencies, cfgs ...Config) *Services {
 	}
 	services.Lifecycle = &ProjectLifecycleService{
 		repo:               deps.Projects,
+		phaseRepo:          deps.Phases,
 		userRepo:           deps.Users,
 		rolePermissionRepo: deps.RolePermissions,
 		objectDataRepo:     deps.ObjectData,

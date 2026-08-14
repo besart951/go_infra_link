@@ -264,6 +264,10 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
+	baseVersion := spsController.Version
+	if req.BaseVersion != nil {
+		baseVersion = *req.BaseVersion
+	}
 
 	applySPSControllerUpdate(spsController, req)
 
@@ -275,6 +279,9 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		updateErr = h.service.Update(ctx, spsController)
 	}
 	if updateErr != nil {
+		if current, getErr := h.service.GetByID(ctx, id); getErr == nil && respondWriteConflict(c, updateErr, "sps_controller", id, baseVersion, spsControllerUpdatePaths(req), current.Version, toSPSControllerResponse(*current)) {
+			return
+		}
 		respondLocalizedDomainError(c, updateErr, "update_failed", "facility.update_failed",
 			localizedInvalidReference(),
 		)
@@ -300,13 +307,17 @@ func (h *SPSControllerHandler) DeleteSPSController(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+	ctx := c.Request.Context()
+	projectIDs := captureDeleteAudience(ctx, h.collaboration, "sps_controller", id)
+	if err := h.service.DeleteByID(ctx, id); err != nil {
 		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
 			localizedNotFound("facility.sps_controller_not_found"),
 		)
 		return
 	}
 
-	h.broadcastProjectRefresh(c.Request.Context(), currentActorID(c), id)
+	if !broadcastCapturedDelete(ctx, h.collaboration, currentActorID(c), projectIDs, "sps_controller", id) {
+		h.broadcastProjectRefresh(ctx, currentActorID(c), id)
+	}
 	c.Status(http.StatusNoContent)
 }

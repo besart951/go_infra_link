@@ -73,6 +73,7 @@ type FieldDeviceMultiCreateResult struct {
 // BulkFieldDeviceUpdate represents a single field device update in a bulk operation
 type BulkFieldDeviceUpdate struct {
 	ID                 uuid.UUID
+	BaseVersion        *uint64
 	BMK                *string
 	HasBMK             bool
 	Description        *string
@@ -161,6 +162,9 @@ func (p *SpecificationPatch) HasNonNilValues() bool {
 type BulkOperationResultItem struct {
 	ID                uuid.UUID
 	Success           bool
+	Version           uint64
+	Merged            bool
+	FieldDevice       *FieldDevice
 	Error             string
 	Fields            map[string]string // Per-field validation errors (e.g., "bacnet_objects.0.text_fix" -> "message")
 	Suggestions       map[string]int    // Per-field numeric suggestions, e.g. "fielddevice.apparat_nr" -> 4

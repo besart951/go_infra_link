@@ -45,6 +45,7 @@ func bootstrapRuntime(cfg config.Config, log applogger.Logger) (*runtime, func()
 		PostgresChannel:  cfg.Realtime.PostgresChannel,
 		SubscriberBuffer: cfg.Realtime.SubscriberBuffer,
 		EventTTL:         cfg.Realtime.EventTTL,
+		DB:               gormDB,
 	})
 	if err != nil {
 		log.Error("Failed to initialize runtime adapters", "err", err)

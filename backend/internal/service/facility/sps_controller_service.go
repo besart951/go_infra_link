@@ -2,14 +2,13 @@ package facility
 
 import (
 	"context"
-	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
-	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
-	"net"
-	"strconv"
+	"fmt"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
 	"github.com/google/uuid"
 )
 
@@ -77,12 +76,15 @@ func (s *SPSControllerService) CreateWithSystemTypes(ctx context.Context, spsCon
 		if err := txService.repo.Create(txCtx, spsController); err != nil {
 			return err
 		}
-		for _, st := range systemTypes {
+		for i, st := range systemTypes {
 			entity := &domainFacility.SPSControllerSystemType{
 				Number:          st.Number,
 				DocumentName:    st.DocumentName,
 				SPSControllerID: spsController.ID,
 				SystemTypeID:    st.SystemTypeID,
+			}
+			if err := entity.Validate(fmt.Sprintf("spscontroller.system_types[%d]", i)); err != nil {
+				return err
 			}
 			if err := txService.spsControllerSystemTyper.Create(txCtx, entity); err != nil {
 				return err
@@ -174,7 +176,7 @@ func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsCon
 			}
 		}
 
-		for _, st := range systemTypes {
+		for i, st := range systemTypes {
 			if st.ID != uuid.Nil {
 				incomingIDs[st.ID] = struct{}{}
 			}
@@ -185,6 +187,9 @@ func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsCon
 					existingItem.SystemTypeID = st.SystemTypeID
 					existingItem.Number = st.Number
 					existingItem.DocumentName = st.DocumentName
+					if err := existingItem.Validate(fmt.Sprintf("spscontroller.system_types[%d]", i)); err != nil {
+						return err
+					}
 					if err := txService.spsControllerSystemTyper.Update(txCtx, existingItem); err != nil {
 						return err
 					}
@@ -196,6 +201,9 @@ func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsCon
 				if existingItem, ok := existingBySystemType[st.SystemTypeID]; ok {
 					existingItem.Number = st.Number
 					existingItem.DocumentName = st.DocumentName
+					if err := existingItem.Validate(fmt.Sprintf("spscontroller.system_types[%d]", i)); err != nil {
+						return err
+					}
 					if err := txService.spsControllerSystemTyper.Update(txCtx, existingItem); err != nil {
 						return err
 					}
@@ -208,6 +216,9 @@ func (s *SPSControllerService) UpdateWithSystemTypes(ctx context.Context, spsCon
 				DocumentName:    st.DocumentName,
 				SPSControllerID: spsController.ID,
 				SystemTypeID:    st.SystemTypeID,
+			}
+			if err := entity.Validate(fmt.Sprintf("spscontroller.system_types[%d]", i)); err != nil {
+				return err
 			}
 			if err := txService.spsControllerSystemTyper.Create(txCtx, entity); err != nil {
 				return err
@@ -248,7 +259,7 @@ func (s *SPSControllerService) DeleteByID(ctx context.Context, id uuid.UUID) err
 	return s.repo.DeleteByIds(ctx, []uuid.UUID{id})
 }
 func (s *SPSControllerService) ensureControlCabinetExists(ctx context.Context, controlCabinetID uuid.UUID) error {
-	return validateChecks(referenceExists(ctx, s.controlCabinetRepo, controlCabinetID))
+	return validateChecks(referenceFieldExists(ctx, s.controlCabinetRepo, controlCabinetID, spsControllerControlCabinetField))
 }
 
 func (s *SPSControllerService) loadSystemTypes(ctx context.Context, systemTypes []domainFacility.SPSControllerSystemType) (map[uuid.UUID]domainFacility.SystemType, error) {
@@ -347,17 +358,7 @@ func (s *SPSControllerService) nextAvailableGADevice(ctx context.Context, contro
 }
 
 func (s *SPSControllerService) validateRequiredFields(spsController *domainFacility.SPSController) error {
-	gaDeviceMissing := spsController.GADevice == nil || strings.TrimSpace(*spsController.GADevice) == ""
-	gaDeviceInvalid := !gaDeviceMissing && !isValidGADevice(*spsController.GADevice)
-	return validateChecks(
-		mergeValidation(validateRules(
-			requiredUUID(spsControllerControlCabinetField, spsController.ControlCabinetID),
-			requiredTrimmed(spsControllerDeviceNameField, spsController.DeviceName),
-			addIf(spsControllerGADeviceField, gaDeviceMissing, "ga_device is required"),
-			addIf(spsControllerGADeviceField, gaDeviceInvalid, "ga_device must be exactly 3 uppercase letters (A-Z)"),
-		)),
-		mergeValidation(validateNetworkFields(spsController)),
-	)
+	return spsController.Validate()
 }
 
 func (s *SPSControllerService) Validate(ctx context.Context, spsController *domainFacility.SPSController, excludeID *uuid.UUID) error {
@@ -483,48 +484,4 @@ func gaDeviceFromIndex(index int) string {
 	second := (index / 26) % 26
 	third := (index / (26 * 26)) % 26
 	return string([]byte{alphabet[first], alphabet[second], alphabet[third]})
-}
-
-func validateNetworkFields(spsController *domainFacility.SPSController) error {
-	return validateRules(
-		addIf(spsControllerIPAddressField,
-			spsController.IPAddress != nil && strings.TrimSpace(*spsController.IPAddress) != "" && !isValidIPv4(*spsController.IPAddress),
-			"ip_address must be a valid IPv4 address",
-		),
-		addIf(spsControllerGatewayField,
-			spsController.Gateway != nil && strings.TrimSpace(*spsController.Gateway) != "" && !isValidIPv4(*spsController.Gateway),
-			"gateway must be a valid IPv4 address",
-		),
-		addIf(spsControllerSubnetField,
-			spsController.Subnet != nil && strings.TrimSpace(*spsController.Subnet) != "" && !isValidSubnetMask(*spsController.Subnet),
-			"subnet must be a valid IPv4 subnet mask",
-		),
-		func(builder *domain.ValidationBuilder) {
-			if spsController.Vlan == nil || strings.TrimSpace(*spsController.Vlan) == "" {
-				return
-			}
-			vlan, err := strconv.Atoi(strings.TrimSpace(*spsController.Vlan))
-			if err != nil || vlan < 1 || vlan > 4094 {
-				spsControllerVlanField.Add(builder, "vlan must be a number between 1 and 4094")
-			}
-		},
-	)
-}
-
-func isValidIPv4(value string) bool {
-	ip := net.ParseIP(strings.TrimSpace(value))
-	return ip != nil && ip.To4() != nil
-}
-
-func isValidSubnetMask(value string) bool {
-	ip := net.ParseIP(strings.TrimSpace(value))
-	if ip == nil {
-		return false
-	}
-	mask := net.IPMask(ip.To4())
-	if mask == nil {
-		return false
-	}
-	ones, bits := mask.Size()
-	return bits == 32 && ones > 0
 }

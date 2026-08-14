@@ -1,6 +1,7 @@
 package project
 
 import (
+	changeshandler "github.com/besart951/go_infra_link/backend/internal/handler/project/changes"
 	controlcabinethandler "github.com/besart951/go_infra_link/backend/internal/handler/project/controlcabinet"
 	fielddevicehandler "github.com/besart951/go_infra_link/backend/internal/handler/project/fielddevice"
 	membershiphandler "github.com/besart951/go_infra_link/backend/internal/handler/project/membership"
@@ -12,6 +13,7 @@ import (
 
 type Handlers struct {
 	Project            *ProjectHandler
+	Changes            *changeshandler.Handler
 	Membership         *membershiphandler.Handler
 	ControlCabinet     *controlcabinethandler.Handler
 	SPSController      *spscontrollerhandler.Handler
@@ -25,6 +27,7 @@ type Handlers struct {
 
 type ServiceDeps struct {
 	Lifecycle          ProjectLifecycleService
+	Changes            ProjectChangeService
 	AccessPolicy       ProjectAccessPolicyService
 	Membership         ProjectMembershipService
 	Workflow           ProjectWorkflowService
@@ -45,9 +48,10 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 	if workflow == nil {
 		workflow = newWorkflowFromServices(deps.Lifecycle, deps.Membership)
 	}
-	projectHandler := newProjectHandler(deps.Lifecycle, deps.AccessPolicy, deps.Membership, workflow, deps.FacilityLink, collaboration, deps.Notifications)
+	projectHandler := newProjectHandler(deps.Lifecycle, deps.AccessPolicy, deps.Membership, workflow, deps.FacilityLink, collaboration, deps.Notifications, deps.Changes)
 	return &Handlers{
 		Project:            projectHandler,
+		Changes:            changeshandler.NewHandler(deps.AccessPolicy, deps.Changes),
 		Membership:         membershiphandler.NewHandler(deps.AccessPolicy, workflow, projectHandler.notifyProjectChange),
 		ControlCabinet:     controlcabinethandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectControlCabinetDelta),
 		SPSController:      spscontrollerhandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectSPSControllerDelta),
@@ -56,6 +60,6 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 		Phase:              phasehandler.NewHandler(deps.Phase),
 		PhasePermission:    phasepermissionhandler.NewHandler(deps.PhasePermission),
 		FieldDeviceOptions: fielddevicehandler.NewOptionsHandler(deps.AccessPolicy, deps.FieldDeviceOptions),
-		RefreshBroadcaster: NewFacilityRefreshBroadcaster(deps.FacilityLink, collaboration),
+		RefreshBroadcaster: NewFacilityRefreshBroadcaster(deps.FacilityLink, collaboration, deps.Changes),
 	}
 }

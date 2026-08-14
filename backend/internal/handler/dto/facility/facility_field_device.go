@@ -21,6 +21,7 @@ type CreateFieldDeviceRequest struct {
 }
 
 type UpdateFieldDeviceRequest struct {
+	BaseVersion               *uint64              `json:"base_version" binding:"omitempty,min=1"`
 	BMK                       *string              `json:"bmk" binding:"omitempty,max=10"`
 	Description               *string              `json:"description" binding:"omitempty,max=250"`
 	TextIndividuell           *string              `json:"text_fix" binding:"omitempty,max=250"`
@@ -34,6 +35,7 @@ type UpdateFieldDeviceRequest struct {
 
 type FieldDeviceResponse struct {
 	ID                        uuid.UUID  `json:"id"`
+	Version                   uint64     `json:"version"`
 	BMK                       *string    `json:"bmk"`
 	Description               *string    `json:"description"`
 	TextIndividuell           *string    `json:"text_fix"`
@@ -114,6 +116,7 @@ type SpecificationInput struct {
 // BulkUpdateFieldDeviceItem represents a single field device update in a bulk operation
 type BulkUpdateFieldDeviceItem struct {
 	ID              uuid.UUID                     `json:"id" binding:"required"`
+	BaseVersion     *uint64                       `json:"base_version" binding:"omitempty,min=1"`
 	BMK             OptionalString                `json:"bmk"`
 	Description     OptionalString                `json:"description"`
 	TextIndividuell OptionalString                `json:"text_fix"`
@@ -131,12 +134,15 @@ type BulkUpdateFieldDeviceRequest struct {
 
 // BulkOperationResultItem represents the result of a single item in a bulk operation
 type BulkOperationResultItem struct {
-	ID                uuid.UUID         `json:"id"`
-	Success           bool              `json:"success"`
-	Error             string            `json:"error,omitempty"`
-	Fields            map[string]string `json:"fields,omitempty"`
-	Suggestions       map[string]int    `json:"suggestions,omitempty"`
-	SuggestionOptions map[string][]int  `json:"suggestion_options,omitempty"`
+	ID                uuid.UUID            `json:"id"`
+	Success           bool                 `json:"success"`
+	Version           uint64               `json:"version,omitempty"`
+	Merged            bool                 `json:"merged,omitempty"`
+	FieldDevice       *FieldDeviceResponse `json:"field_device,omitempty"`
+	Error             string               `json:"error,omitempty"`
+	Fields            map[string]string    `json:"fields,omitempty"`
+	Suggestions       map[string]int       `json:"suggestions,omitempty"`
+	SuggestionOptions map[string][]int     `json:"suggestion_options,omitempty"`
 }
 
 // BulkUpdateFieldDeviceResponse represents the response from a bulk update operation

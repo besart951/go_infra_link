@@ -57,6 +57,23 @@ func TestValidateChecks_ReferenceExistsPropagatesLookupErrors(t *testing.T) {
 	}
 }
 
+func TestReferenceFieldExistsMapsMissingReferenceToInput(t *testing.T) {
+	err := validateChecks(referenceFieldExists(
+		context.Background(),
+		validationReaderFake{},
+		uuid.New(),
+		domain.ValidationField{Key: "entity.parent_id", Name: "parent_id"},
+	))
+
+	validationErr, ok := domain.AsValidationError(err)
+	if !ok {
+		t.Fatalf("error = %T, want *domain.ValidationError", err)
+	}
+	if got := validationErr.Codes["entity.parent_id"]; got != "invalid_reference" {
+		t.Fatalf("code = %q, want invalid_reference", got)
+	}
+}
+
 func TestBuildingServiceValidate_UsesSharedPolicies(t *testing.T) {
 	svc := NewBuildingService(&validationBuildingRepoFake{existsIWSCodeGroup: true})
 

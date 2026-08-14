@@ -1,6 +1,7 @@
 package project
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -52,6 +53,8 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 		)
 		return
 	}
+
+	h.notifyProjectChange(c, proj.ID, "project.created", proj.ID.String())
 
 	c.JSON(http.StatusCreated, ToProjectResponse(proj))
 }
@@ -183,10 +186,20 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 		)
 		return
 	}
+	baseVersion := proj.Version
+	if req.BaseVersion != nil {
+		baseVersion = *req.BaseVersion
+	}
 
 	ApplyProjectUpdate(proj, req)
 
 	if err := h.lifecycle.Update(ctx, proj); err != nil {
+		if errors.Is(err, domain.ErrConflict) {
+			if current, getErr := h.lifecycle.GetByID(ctx, id); getErr == nil {
+				handlerutil.RespondWriteConflict(c, "project", id.String(), baseVersion, current.Version, projectUpdatePaths(req), ToProjectResponse(current))
+				return
+			}
+		}
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_not_found")),

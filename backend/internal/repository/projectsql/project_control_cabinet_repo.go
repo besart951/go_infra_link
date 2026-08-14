@@ -38,14 +38,28 @@ func (r *projectControlCabinetRepo) Create(ctx context.Context, entity *project.
 }
 
 func (r *projectControlCabinetRepo) Update(ctx context.Context, entity *project.ProjectControlCabinet) error {
+	expectedVersion := entity.Version
+	if expectedVersion == 0 {
+		return domain.ErrConflict
+	}
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Model(&ProjectControlCabinetRecord{}).
-		Where("id = ?", entity.ID).
+	result := r.db.WithContext(ctx).Model(&ProjectControlCabinetRecord{}).
+		Where("id = ? AND project_id = ? AND version = ?", entity.ID, entity.ProjectID, expectedVersion).
 		Updates(map[string]any{
 			"updated_at":         entity.UpdatedAt,
+			"version":            entity.Version,
 			"project_id":         entity.ProjectID,
 			"control_cabinet_id": entity.ControlCabinetID,
-		}).Error
+		})
+	if result.Error != nil {
+		entity.Version = expectedVersion
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		entity.Version = expectedVersion
+		return domain.ErrConflict
+	}
+	return nil
 }
 
 func (r *projectControlCabinetRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {

@@ -9,6 +9,7 @@ import (
 	apprealtime "github.com/besart951/go_infra_link/backend/internal/application/realtime"
 	"github.com/besart951/go_infra_link/backend/internal/infrastructure/realtime"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type RuntimeAdapters struct {
@@ -30,6 +31,7 @@ type RuntimeConfig struct {
 	PostgresChannel  string
 	SubscriberBuffer int
 	EventTTL         time.Duration
+	DB               *gorm.DB
 }
 
 const (
@@ -46,18 +48,25 @@ func NewRuntimeAdaptersFromConfig(ctx context.Context, cfg RuntimeConfig) (*Runt
 	if nodeID == "" {
 		nodeID = uuid.NewString()
 	}
-	adapters := NewRuntimeAdaptersWithBus(bus, nodeID, true)
+	adapters := NewRuntimeAdaptersWithBusAndStore(bus, nodeID, true, cfg.DB)
 	return adapters, adapters.Close, nil
 }
 
 func NewRuntimeAdaptersWithBus(bus apprealtime.Bus, nodeID string, ownsBus bool) *RuntimeAdapters {
+	return NewRuntimeAdaptersWithBusAndStore(bus, nodeID, ownsBus, nil)
+}
+
+func NewRuntimeAdaptersWithBusAndStore(bus apprealtime.Bus, nodeID string, ownsBus bool, db *gorm.DB) *RuntimeAdapters {
 	if strings.TrimSpace(nodeID) == "" {
 		nodeID = uuid.NewString()
 	}
+	options := []realtime.ProjectCollaborationHubOption{realtime.WithProjectCollaborationBus(bus, nodeID)}
+	if db != nil {
+		store := realtime.NewSQLProjectCollaborationStore(db)
+		options = append(options, realtime.WithProjectRevisionSource(store), realtime.WithProjectDraftStore(store), realtime.WithProjectPresenceStore(store))
+	}
 	return &RuntimeAdapters{
-		ProjectCollaboration: realtime.NewProjectCollaborationHub(
-			realtime.WithProjectCollaborationBus(bus, nodeID),
-		),
+		ProjectCollaboration: realtime.NewProjectCollaborationHub(options...),
 		SystemNotificationStream: realtime.NewSystemNotificationHub(
 			realtime.WithSystemNotificationBus(bus, nodeID),
 		),

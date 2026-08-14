@@ -23,6 +23,7 @@ export type FieldDeviceFiltersInput =
 export interface SharedFieldDeviceDraftState {
   devices: Array<{
     device_id: string;
+    specification_id?: string;
     changed_fields: string[];
     field_values?: Record<string, unknown>;
   }>;

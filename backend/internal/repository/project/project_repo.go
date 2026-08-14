@@ -49,18 +49,33 @@ func (r *projectRepo) Create(ctx context.Context, entity *domainProject.Project)
 }
 
 func (r *projectRepo) Update(ctx context.Context, entity *domainProject.Project) error {
+	expectedVersion := entity.Version
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Model(&ProjectRecord{}).
-		Where("id = ?", entity.ID).
+	query := r.db.WithContext(ctx).Model(&ProjectRecord{}).
+		Where("id = ?", entity.ID)
+	if expectedVersion > 0 {
+		query = query.Where("version = ?", expectedVersion)
+	}
+	result := query.
 		Updates(map[string]any{
 			"updated_at":  entity.UpdatedAt,
+			"version":     entity.Version,
 			"name":        entity.Name,
 			"description": entity.Description,
 			"status":      entity.Status,
 			"start_date":  entity.StartDate,
 			"phase_id":    entity.PhaseID,
 			"creator_id":  entity.CreatorID,
-		}).Error
+		})
+	if result.Error != nil {
+		entity.Version = expectedVersion
+		return result.Error
+	}
+	if expectedVersion > 0 && result.RowsAffected == 0 {
+		entity.Version = expectedVersion
+		return domain.ErrConflict
+	}
+	return nil
 }
 
 func (r *projectRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {

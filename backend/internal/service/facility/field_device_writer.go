@@ -428,6 +428,14 @@ func (w fieldDeviceWriter) bulkUpdate(ctx context.Context, updates []domainFacil
 			result.FailureCount++
 			continue
 		}
+		if update.BaseVersion != nil && existingMap[update.ID].Version != *update.BaseVersion {
+			resultItem.Error = domain.ErrConflict.Error()
+			resultItem.Fields["fielddevice"] = "write_conflict"
+			resultItem.Version = existingMap[update.ID].Version
+			resultItem.FieldDevice = existingMap[update.ID]
+			result.FailureCount++
+			continue
+		}
 
 		phaseErrors := make(map[string]string)
 		phaseSuggestions := make(map[string]int)
@@ -463,8 +471,16 @@ func (w fieldDeviceWriter) bulkUpdate(ctx context.Context, updates []domainFacil
 			}
 		}
 
+		if len(phaseErrors) == 0 && totalPhases > 0 && !hasBaseFieldDeviceUpdates(update) {
+			if err := w.service.repo.Update(ctx, proposed); err != nil {
+				phaseErrors["fielddevice"] = err.Error()
+			}
+		}
+
 		if len(phaseErrors) == 0 && totalPhases > 0 {
 			resultItem.Success = true
+			resultItem.Version = proposed.Version
+			resultItem.FieldDevice = proposed
 			result.SuccessCount++
 		} else {
 			resultItem.Fields = phaseErrors
@@ -558,6 +574,9 @@ func (w fieldDeviceWriter) applyBulkBaseUpdate(
 
 func buildProposedFieldDevice(existing *domainFacility.FieldDevice, update domainFacility.BulkFieldDeviceUpdate) *domainFacility.FieldDevice {
 	clone := *existing
+	if update.BaseVersion != nil {
+		clone.Version = *update.BaseVersion
+	}
 	if update.HasBMKUpdate() {
 		clone.BMK = normalizeOptionalString(update.BMK)
 	}

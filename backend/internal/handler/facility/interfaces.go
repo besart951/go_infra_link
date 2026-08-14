@@ -55,6 +55,7 @@ type BacnetObjectService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.BacnetObject, error)
 	GetByIDs(ctx context.Context, ids []uuid.UUID) ([]*domainFacility.BacnetObject, error)
 	Update(ctx context.Context, bacnetObject *domainFacility.BacnetObject, objectDataID *uuid.UUID) error
+	DeleteByID(ctx context.Context, id uuid.UUID) error
 	ReplaceForObjectData(ctx context.Context, objectDataID uuid.UUID, inputs []domainFacility.BacnetObject) error
 }
 
@@ -152,6 +153,7 @@ type SPSControllerSystemTypeService interface {
 	ListByProjectID(ctx context.Context, projectID uuid.UUID, page, limit int, search string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
 	GetByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
 	CopyByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
+	Update(ctx context.Context, item *domainFacility.SPSControllerSystemType) error
 	DeleteByID(ctx context.Context, id uuid.UUID) error
 }
 

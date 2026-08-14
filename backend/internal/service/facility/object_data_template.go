@@ -2,12 +2,12 @@ package facility
 
 import (
 	"context"
-	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"strconv"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"github.com/google/uuid"
 )
 
@@ -195,19 +195,7 @@ func (m objectDataTemplate) prepareBacnetObjects(ctx context.Context, inputs []d
 }
 
 func (m objectDataTemplate) validateBacnetObject(bacnetObject *domainFacility.BacnetObject) error {
-	ve := domain.NewValidationError()
-
-	if strings.TrimSpace(bacnetObject.TextFix) == "" {
-		ve = ve.Add("objectdata.bacnetobject.textfix", "textfix is required")
-	}
-	if strings.TrimSpace(string(bacnetObject.SoftwareType)) == "" {
-		ve = ve.Add("objectdata.bacnetobject.software_type", "software_type is required")
-	}
-
-	if len(ve.Fields) > 0 {
-		return ve
-	}
-	return nil
+	return bacnetObject.Validate("objectdata.bacnetobject")
 }
 
 func (m objectDataTemplate) resolveAlarmBinding(ctx context.Context, bacnetObject *domainFacility.BacnetObject) error {

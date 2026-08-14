@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"errors"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
@@ -13,6 +14,7 @@ import (
 
 type ProjectLifecycleService struct {
 	repo               domainProject.ProjectRepository
+	phaseRepo          domainProject.PhaseRepository
 	userRepo           domainUser.UserRepository
 	rolePermissionRepo domainUser.RolePermissionRepository
 	objectDataRepo     domainObjectData.ObjectDataStore
@@ -44,6 +46,12 @@ func (s *ProjectLifecycleService) Create(ctx context.Context, project *domainPro
 func (s *ProjectLifecycleService) createProject(ctx context.Context, project *domainProject.Project) error {
 	if project.Status == "" {
 		project.Status = domainProject.StatusPlanned
+	}
+	if err := project.Validate(); err != nil {
+		return err
+	}
+	if err := s.ensurePhaseExists(ctx, project.PhaseID); err != nil {
+		return err
 	}
 
 	if err := s.repo.Create(ctx, project); err != nil {
@@ -100,7 +108,26 @@ func (s *ProjectLifecycleService) GetByID(ctx context.Context, id uuid.UUID) (*d
 }
 
 func (s *ProjectLifecycleService) Update(ctx context.Context, project *domainProject.Project) error {
+	if err := project.Validate(); err != nil {
+		return err
+	}
+	if err := s.ensurePhaseExists(ctx, project.PhaseID); err != nil {
+		return err
+	}
 	return s.repo.Update(ctx, project)
+}
+
+func (s *ProjectLifecycleService) ensurePhaseExists(ctx context.Context, phaseID uuid.UUID) error {
+	if s.phaseRepo == nil {
+		return nil
+	}
+	if _, err := domain.GetByID(ctx, s.phaseRepo, phaseID); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return domain.NewValidationError().AddCode("project.phase_id", "invalid_reference", "phase_id does not reference an existing phase")
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *ProjectLifecycleService) DeleteByID(ctx context.Context, id uuid.UUID) error {

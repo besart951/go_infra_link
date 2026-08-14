@@ -210,11 +210,24 @@ func (h *Handler) UpdateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	updated, err := h.facilityLink.UpdateControlCabinet(c.Request.Context(), linkID, projectID, req.ControlCabinetID)
+	var updated *domainProject.ProjectControlCabinet
+	var err error
+	if req.BaseVersion != nil {
+		if versioned, ok := h.facilityLink.(interface {
+			UpdateControlCabinetAtVersion(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, uint64) (*domainProject.ProjectControlCabinet, error)
+		}); ok {
+			updated, err = versioned.UpdateControlCabinetAtVersion(c.Request.Context(), linkID, projectID, req.ControlCabinetID, *req.BaseVersion)
+		} else {
+			updated, err = h.facilityLink.UpdateControlCabinet(c.Request.Context(), linkID, projectID, req.ControlCabinetID)
+		}
+	} else {
+		updated, err = h.facilityLink.UpdateControlCabinet(c.Request.Context(), linkID, projectID, req.ControlCabinetID)
+	}
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.link_not_found")),
+			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "write_conflict", "errors.write_conflict")),
 		)
 		return
 	}
@@ -279,6 +292,7 @@ func toProjectControlCabinetResponse(item domainProject.ProjectControlCabinet) d
 		ControlCabinetID: item.ControlCabinetID,
 		CreatedAt:        item.CreatedAt,
 		UpdatedAt:        item.UpdatedAt,
+		Version:          item.Version,
 	}
 }
 

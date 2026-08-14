@@ -3,11 +3,106 @@ package handlerutil
 import (
 	"net/http"
 	"sort"
+	"strings"
 
+	"github.com/besart951/go_infra_link/backend/internal/domain"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/common"
 	"github.com/besart951/go_infra_link/backend/internal/requestutil"
 	"github.com/gin-gonic/gin"
 )
+
+func RespondWriteConflict(c *gin.Context, aggregateType, aggregateID string, baseVersion, currentVersion uint64, fields []string, current any) {
+	fields = append([]string(nil), fields...)
+	sort.Strings(fields)
+	fieldErrors := make([]dto.FieldErrorResponse, 0, len(fields))
+	for _, path := range fields {
+		fieldErrors = append(fieldErrors, dto.FieldErrorResponse{
+			Path:         path,
+			Code:         "conflict",
+			Message:      "The value changed on the server.",
+			LocalizedKey: "errors.field_conflict",
+			Params: map[string]any{
+				"base_version":    baseVersion,
+				"current_version": currentVersion,
+			},
+		})
+	}
+	respondErrorResponse(c, http.StatusConflict, dto.ErrorResponse{
+		Error:        "write_conflict",
+		Code:         "write_conflict",
+		Message:      "The value changed on the server.",
+		LocalizedKey: "errors.write_conflict",
+		FieldErrors:  fieldErrors,
+		Conflict: &dto.WriteConflictResponse{
+			AggregateType:     aggregateType,
+			AggregateID:       aggregateID,
+			BaseVersion:       baseVersion,
+			CurrentVersion:    currentVersion,
+			ConflictingFields: fields,
+			Current:           current,
+		},
+	})
+}
+
+func RespondDomainValidationError(c *gin.Context, validationErr *domain.ValidationError) {
+	if validationErr == nil {
+		RespondValidationError(c, nil)
+		return
+	}
+
+	canonicalFields := make(map[string]string, len(validationErr.Fields))
+	paths := make([]string, 0, len(validationErr.Fields))
+	for path, message := range validationErr.Fields {
+		path = canonicalValidationPath(path)
+		canonicalFields[path] = message
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	fieldErrors := make([]dto.FieldErrorResponse, 0, len(paths))
+	for _, path := range paths {
+		originalPath := matchingValidationPath(validationErr.Fields, path)
+		code := validationErr.Codes[originalPath]
+		if code == "" {
+			code = "invalid"
+		}
+		fieldErrors = append(fieldErrors, dto.FieldErrorResponse{
+			Path:         path,
+			Code:         code,
+			Message:      canonicalFields[path],
+			LocalizedKey: domainValidationLocalizedKey(validationErr.LocalizedKeys[originalPath], code),
+		})
+	}
+	RespondValidationErrorWithFieldErrors(c, http.StatusBadRequest, canonicalFields, fieldErrors)
+}
+
+func canonicalValidationPath(path string) string {
+	for _, prefix := range []string{"project.", "controlcabinet.", "spscontroller.", "fielddevice.", "bacnetobject."} {
+		if strings.HasPrefix(path, prefix) {
+			return strings.TrimPrefix(path, prefix)
+		}
+	}
+	return path
+}
+
+func matchingValidationPath(fields map[string]string, canonical string) string {
+	for path := range fields {
+		if canonicalValidationPath(path) == canonical {
+			return path
+		}
+	}
+	return canonical
+}
+
+func domainValidationLocalizedKey(existing, code string) string {
+	if existing != "" {
+		return existing
+	}
+	if code == "" {
+		return ""
+	}
+	return "validation." + code
+}
 
 func RespondError(c *gin.Context, status int, code, message string) {
 	respondErrorResponse(c, status, dto.ErrorResponse{

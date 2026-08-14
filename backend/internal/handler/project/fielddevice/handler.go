@@ -271,11 +271,24 @@ func (h *Handler) UpdateProjectFieldDevice(c *gin.Context) {
 		return
 	}
 
-	updated, err := h.facilityLink.UpdateFieldDevice(c.Request.Context(), linkID, projectID, req.FieldDeviceID)
+	var updated *domainProject.ProjectFieldDevice
+	var err error
+	if req.BaseVersion != nil {
+		if versioned, ok := h.facilityLink.(interface {
+			UpdateFieldDeviceAtVersion(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, uint64) (*domainProject.ProjectFieldDevice, error)
+		}); ok {
+			updated, err = versioned.UpdateFieldDeviceAtVersion(c.Request.Context(), linkID, projectID, req.FieldDeviceID, *req.BaseVersion)
+		} else {
+			updated, err = h.facilityLink.UpdateFieldDevice(c.Request.Context(), linkID, projectID, req.FieldDeviceID)
+		}
+	} else {
+		updated, err = h.facilityLink.UpdateFieldDevice(c.Request.Context(), linkID, projectID, req.FieldDeviceID)
+	}
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.link_not_found")),
+			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "write_conflict", "errors.write_conflict")),
 		)
 		return
 	}
@@ -370,6 +383,7 @@ func toProjectFieldDeviceResponse(item domainProject.ProjectFieldDevice) dto.Pro
 		FieldDeviceID: item.FieldDeviceID,
 		CreatedAt:     item.CreatedAt,
 		UpdatedAt:     item.UpdatedAt,
+		Version:       item.Version,
 	}
 }
 

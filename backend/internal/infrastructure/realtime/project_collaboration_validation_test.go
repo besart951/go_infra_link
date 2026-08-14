@@ -2,161 +2,99 @@ package realtime
 
 import (
 	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 )
 
-func TestParseProjectCollaborationEditStateMessageValidatesAndNormalizes(t *testing.T) {
-	deviceID := uuid.New().String()
-	bacnetObjectID := uuid.New().String()
-	message := map[string]any{
-		"type": "edit_state",
-		"devices": []map[string]any{
-			{
-				"device_id": deviceID,
-				"changed_fields": []string{
-					" text_fix ",
-					"specification.specification_brand",
-					"bacnet_objects." + bacnetObjectID + ".software_type",
-				},
-				"field_values": map[string]any{
-					"text_fix":                          "TF-1",
-					"specification.specification_brand": "Brand",
-					"bacnet_objects." + bacnetObjectID + ".software_type": "ai",
-				},
-			},
-		},
+func TestParseProjectCollaborationDraftStateValidatesAllAggregatePaths(t *testing.T) {
+	tests := []struct {
+		aggregate string
+		path      string
+	}{
+		{"project", "name"},
+		{"control_cabinet", "control_cabinet_nr"},
+		{"sps_controller", "device_name"},
+		{"sps_controller_system_type", "number"},
+		{"field_device", "apparat_nr"},
+		{"specification", "specification_brand"},
+		{"bacnet_object", "software_type"},
+		{"alarm", "values.high_limit"},
 	}
 
-	parsed := mustParseProjectCollaborationMessage(t, message)
+	for _, tt := range tests {
+		t.Run(tt.aggregate+"/"+tt.path, func(t *testing.T) {
+			aggregateID := uuid.New().String()
+			parsed := mustParseProjectCollaborationMessage(t, map[string]any{
+				"type": "draft_state",
+				"entries": []map[string]any{{
+					"aggregate_type": tt.aggregate,
+					"aggregate_id":   aggregateID,
+					"action":         "update",
+					"base_version":   7,
+					"fields":         []map[string]any{{"path": tt.path, "value": "draft"}},
+				}},
+			})
 
-	if parsed.Type != projectCollaborationMessageEditState {
-		t.Fatalf("expected edit_state type, got %q", parsed.Type)
-	}
-	if len(parsed.Devices) != 1 {
-		t.Fatalf("expected one device, got %+v", parsed.Devices)
-	}
-	if parsed.Devices[0].DeviceID != deviceID {
-		t.Fatalf("expected normalized device id, got %q", parsed.Devices[0].DeviceID)
-	}
-	if !containsString(parsed.Devices[0].ChangedFields, "text_fix") {
-		t.Fatalf("expected trimmed text_fix field, got %+v", parsed.Devices[0].ChangedFields)
-	}
-	if parsed.Devices[0].FieldValues["text_fix"] != "TF-1" {
-		t.Fatalf("expected field value to survive validation, got %+v", parsed.Devices[0].FieldValues)
+			if parsed.Type != projectCollaborationMessageDraftState || len(parsed.Entries) != 1 {
+				t.Fatalf("parsed = %+v", parsed)
+			}
+			entry := parsed.Entries[0]
+			if entry.AggregateType != tt.aggregate || entry.AggregateID != aggregateID || entry.Fields[0].Path != tt.path {
+				t.Fatalf("entry = %+v", entry)
+			}
+		})
 	}
 }
 
-func TestParseProjectCollaborationMessageRejectsInvalidType(t *testing.T) {
-	assertInvalidProjectCollaborationMessage(t, map[string]any{"type": "delete_everything"})
-}
-
-func TestParseProjectCollaborationEditStateRejectsInvalidUUID(t *testing.T) {
+func TestParseProjectCollaborationCreateDraftRequiresDraftID(t *testing.T) {
 	assertInvalidProjectCollaborationMessage(t, map[string]any{
-		"type": "edit_state",
-		"devices": []map[string]any{
-			{
-				"device_id":      "not-a-uuid",
-				"changed_fields": []string{"text_fix"},
-			},
-		},
+		"type": "draft_state",
+		"entries": []map[string]any{{
+			"aggregate_type": "field_device",
+			"action":         "create",
+			"base_version":   0,
+			"fields":         []map[string]any{{"path": "bmk", "value": "draft"}},
+		}},
 	})
 }
 
-func TestParseProjectCollaborationEditStateRejectsUnknownFieldName(t *testing.T) {
+func TestParseProjectCollaborationDraftRejectsCrossAggregatePath(t *testing.T) {
 	assertInvalidProjectCollaborationMessage(t, map[string]any{
-		"type": "edit_state",
-		"devices": []map[string]any{
-			{
-				"device_id":      uuid.New().String(),
-				"changed_fields": []string{"admin_role"},
-			},
-		},
+		"type": "draft_state",
+		"entries": []map[string]any{{
+			"aggregate_type": "project",
+			"aggregate_id":   uuid.NewString(),
+			"action":         "update",
+			"base_version":   1,
+			"fields":         []map[string]any{{"path": "software_type", "value": "ai"}},
+		}},
 	})
 }
 
-func TestParseProjectCollaborationEditStateRejectsExcessiveFieldValues(t *testing.T) {
-	fieldValues := make(map[string]any, projectCollaborationMaxFieldValuesPerDevice+1)
-	changedFields := make([]string, 0, projectCollaborationMaxFieldValuesPerDevice+1)
-	for range projectCollaborationMaxFieldValuesPerDevice + 1 {
-		field := "bacnet_objects." + uuid.New().String() + ".text_fix"
-		changedFields = append(changedFields, field)
-		fieldValues[field] = strings.Repeat("x", 4)
-	}
-
-	assertInvalidProjectCollaborationMessage(t, map[string]any{
-		"type": "edit_state",
-		"devices": []map[string]any{
-			{
-				"device_id":      uuid.New().String(),
-				"changed_fields": changedFields,
-				"field_values":   fieldValues,
-			},
-		},
-	})
-}
-
-func TestParseProjectCollaborationRefreshRequestValidatesScopeAndIDs(t *testing.T) {
-	id := uuid.New().String()
+func TestParseProjectCollaborationDraftClearValidatesSelector(t *testing.T) {
+	id := uuid.NewString()
 	parsed := mustParseProjectCollaborationMessage(t, map[string]any{
-		"type":       "refresh_request",
-		"scope":      "field_device",
-		"device_ids": []string{id},
+		"type":           "draft_clear",
+		"aggregate_type": "bacnet_object",
+		"aggregate_id":   id,
 	})
-
-	if parsed.Scope != projectCollaborationRefreshScopeFieldDevice {
-		t.Fatalf("expected field_device scope, got %q", parsed.Scope)
-	}
-	if len(parsed.DeviceIDs) != 1 || parsed.DeviceIDs[0] != id {
-		t.Fatalf("expected validated device id, got %+v", parsed.DeviceIDs)
+	if parsed.Clear == nil || parsed.Clear.AggregateType != "bacnet_object" || parsed.Clear.AggregateID != id {
+		t.Fatalf("clear = %+v", parsed.Clear)
 	}
 }
 
-func TestParseProjectCollaborationRefreshRequestRejectsProjectScopeFromClient(t *testing.T) {
+func TestParseProjectCollaborationRejectsBrowserAuthoredCommittedMessages(t *testing.T) {
+	for _, messageType := range []string{"entity_delta", "refresh_request", "project_change", "revision"} {
+		t.Run(messageType, func(t *testing.T) {
+			assertInvalidProjectCollaborationMessage(t, map[string]any{"type": messageType})
+		})
+	}
+}
+
+func TestParseProjectCollaborationRejectsUnknownJSONFields(t *testing.T) {
 	assertInvalidProjectCollaborationMessage(t, map[string]any{
-		"type":  "refresh_request",
-		"scope": "project_users",
-	})
-}
-
-func TestParseProjectCollaborationEntityDeltaSanitizesFieldDeviceDeltas(t *testing.T) {
-	fieldDeviceID := uuid.New().String()
-	apparatID := uuid.New().String()
-	parsed := mustParseProjectCollaborationMessage(t, map[string]any{
-		"type":  "entity_delta",
-		"scope": "field_device",
-		"field_devices": []map[string]any{
-			{
-				"id":         fieldDeviceID,
-				"apparat_id": apparatID,
-				"text_fix":   "TF-2",
-			},
-		},
-	})
-
-	if parsed.Scope != projectCollaborationRefreshScopeFieldDevice {
-		t.Fatalf("expected field_device scope, got %q", parsed.Scope)
-	}
-	if len(parsed.FieldDevices) != 1 {
-		t.Fatalf("expected one field device delta, got %+v", parsed.FieldDevices)
-	}
-	if parsed.FieldDevices[0]["id"] != fieldDeviceID {
-		t.Fatalf("expected sanitized id, got %+v", parsed.FieldDevices[0])
-	}
-}
-
-func TestParseProjectCollaborationEntityDeltaRejectsUnknownFieldDeviceField(t *testing.T) {
-	assertInvalidProjectCollaborationMessage(t, map[string]any{
-		"type":  "entity_delta",
-		"scope": "field_device",
-		"field_devices": []map[string]any{
-			{
-				"id":         uuid.New().String(),
-				"admin_note": "should not pass",
-			},
-		},
+		"type": "draft_clear", "aggregate_type": "project", "aggregate_id": uuid.NewString(), "admin": true,
 	})
 }
 
@@ -182,13 +120,4 @@ func assertInvalidProjectCollaborationMessage(t *testing.T, message map[string]a
 	if _, err := parseProjectCollaborationClientMessage(data); err == nil {
 		t.Fatalf("expected message to be rejected")
 	}
-}
-
-func containsString(values []string, expected string) bool {
-	for _, value := range values {
-		if value == expected {
-			return true
-		}
-	}
-	return false
 }

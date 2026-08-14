@@ -24,6 +24,7 @@ import (
 	historyrepo "github.com/besart951/go_infra_link/backend/internal/repository/historysql"
 	notificationrepo "github.com/besart951/go_infra_link/backend/internal/repository/notification"
 	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
+	projectchangerepo "github.com/besart951/go_infra_link/backend/internal/repository/projectchange"
 	projectsqlrepo "github.com/besart951/go_infra_link/backend/internal/repository/projectsql"
 	teamrepo "github.com/besart951/go_infra_link/backend/internal/repository/team"
 	userrepo "github.com/besart951/go_infra_link/backend/internal/repository/user"
@@ -35,6 +36,7 @@ import (
 // Repositories holds all repository instances.
 type Repositories struct {
 	Project                  domainProject.ProjectRepository
+	ProjectChanges           domainProject.ChangeStore
 	Phase                    domainProject.PhaseRepository
 	PhasePermissions         domainProject.PhasePermissionRepository
 	ProjectControlCabinets   domainProject.ProjectControlCabinetRepository
@@ -101,6 +103,7 @@ type (
 
 	projectRepositoryGroup struct {
 		Project                domainProject.ProjectRepository
+		ProjectChanges         domainProject.ChangeStore
 		Phase                  domainProject.PhaseRepository
 		PhasePermissions       domainProject.PhasePermissionRepository
 		ProjectControlCabinets domainProject.ProjectControlCabinetRepository
@@ -194,6 +197,7 @@ func newUserRepositories(gormDB *gorm.DB) (userRepositoryGroup, error) {
 func newProjectRepositories(gormDB *gorm.DB, history *historyrepo.Store) projectRepositoryGroup {
 	return projectRepositoryGroup{
 		Project:                historycapture.WrapProject(projectrepo.NewProjectRepository(gormDB), history),
+		ProjectChanges:         projectchangerepo.NewStore(gormDB),
 		Phase:                  projectrepo.NewPhaseRepository(gormDB),
 		PhasePermissions:       projectrepo.NewPhasePermissionRepository(gormDB),
 		ProjectControlCabinets: historycapture.WrapProjectControlCabinet(projectsqlrepo.NewProjectControlCabinetRepository(gormDB), history),
@@ -260,6 +264,7 @@ func composeRepositories(
 	return &Repositories{
 		History:                          history,
 		Project:                          projects.Project,
+		ProjectChanges:                   projects.ProjectChanges,
 		Phase:                            projects.Phase,
 		PhasePermissions:                 projects.PhasePermissions,
 		ProjectControlCabinets:           projects.ProjectControlCabinets,

@@ -247,11 +247,24 @@ func (h *Handler) UpdateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	updated, err := h.facilityLink.UpdateSPSController(c.Request.Context(), linkID, projectID, req.SPSControllerID)
+	var updated *domainProject.ProjectSPSController
+	var err error
+	if req.BaseVersion != nil {
+		if versioned, ok := h.facilityLink.(interface {
+			UpdateSPSControllerAtVersion(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, uint64) (*domainProject.ProjectSPSController, error)
+		}); ok {
+			updated, err = versioned.UpdateSPSControllerAtVersion(c.Request.Context(), linkID, projectID, req.SPSControllerID, *req.BaseVersion)
+		} else {
+			updated, err = h.facilityLink.UpdateSPSController(c.Request.Context(), linkID, projectID, req.SPSControllerID)
+		}
+	} else {
+		updated, err = h.facilityLink.UpdateSPSController(c.Request.Context(), linkID, projectID, req.SPSControllerID)
+	}
 	if err != nil {
 		handlerutil.RespondDomainError(c, err,
 			handlerutil.LocalizedError(http.StatusInternalServerError, "update_failed", "project.update_failed"),
 			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.link_not_found")),
+			handlerutil.MapError(domain.ErrConflict, handlerutil.LocalizedError(http.StatusConflict, "write_conflict", "errors.write_conflict")),
 		)
 		return
 	}
@@ -316,6 +329,7 @@ func toProjectSPSControllerResponse(item domainProject.ProjectSPSController) dto
 		SPSControllerID: item.SPSControllerID,
 		CreatedAt:       item.CreatedAt,
 		UpdatedAt:       item.UpdatedAt,
+		Version:         item.Version,
 	}
 }
 

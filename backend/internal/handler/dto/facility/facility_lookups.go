@@ -169,9 +169,10 @@ type AlarmDefinitionListResponse struct {
 
 // This represents the join of SPS Controller and System Type
 type SPSControllerSystemTypeResponse struct {
-	ID              uuid.UUID `json:"id"`
-	SPSControllerID uuid.UUID `json:"sps_controller_id"`
-	SystemTypeID    uuid.UUID `json:"system_type_id"`
+	ID               uuid.UUID `json:"id"`
+	AggregateVersion uint64    `json:"aggregate_version,omitempty"`
+	SPSControllerID  uuid.UUID `json:"sps_controller_id"`
+	SystemTypeID     uuid.UUID `json:"system_type_id"`
 
 	// Pre-filled names for display in combobox
 	SPSControllerName string `json:"sps_controller_name"`
@@ -182,6 +183,12 @@ type SPSControllerSystemTypeResponse struct {
 	FieldDevicesCount int       `json:"field_devices_count"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+type UpdateSPSControllerSystemTypeRequest struct {
+	BaseVersion  *uint64 `json:"base_version" binding:"omitempty,min=1"`
+	Number       *int    `json:"number" binding:"omitempty,min=1"`
+	DocumentName *string `json:"document_name" binding:"omitempty,max=250"`
 }
 
 type SPSControllerSystemTypeListResponse struct {

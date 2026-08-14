@@ -24,6 +24,14 @@ func (b *ValidationBuilder) Add(field, message string) *ValidationBuilder {
 	return b
 }
 
+func (b *ValidationBuilder) AddCode(field, code, message string) *ValidationBuilder {
+	if b == nil {
+		return b
+	}
+	b.err = b.err.AddCode(field, code, message)
+	return b
+}
+
 func (b *ValidationBuilder) Merge(err error) error {
 	if err == nil {
 		return nil
@@ -33,7 +41,10 @@ func (b *ValidationBuilder) Merge(err error) error {
 		return err
 	}
 	for field, message := range ve.Fields {
-		b.Add(field, message)
+		b.AddCode(field, ve.Codes[field], message)
+		if key := ve.LocalizedKeys[field]; key != "" {
+			b.err.LocalizedKeys[field] = key
+		}
 	}
 	return nil
 }
@@ -61,10 +72,14 @@ func (f ValidationField) Add(builder *ValidationBuilder, message string) {
 	builder.Add(f.Key, message)
 }
 
+func (f ValidationField) addCode(builder *ValidationBuilder, code, message string) {
+	builder.AddCode(f.Key, code, message)
+}
+
 func (f ValidationField) RequireTrimmed(builder *ValidationBuilder, value string) string {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
-		f.Add(builder, f.requiredMessage())
+		f.addCode(builder, "required", f.requiredMessage())
 	}
 	return trimmed
 }
@@ -83,7 +98,7 @@ func (f ValidationField) RequireTrimmedMax(builder *ValidationBuilder, value str
 
 func (f ValidationField) RequireTrimmedPtr(builder *ValidationBuilder, value *string) string {
 	if value == nil {
-		f.Add(builder, f.requiredMessage())
+		f.addCode(builder, "required", f.requiredMessage())
 		return ""
 	}
 	return f.RequireTrimmed(builder, *value)
@@ -91,19 +106,19 @@ func (f ValidationField) RequireTrimmedPtr(builder *ValidationBuilder, value *st
 
 func (f ValidationField) RequireUUID(builder *ValidationBuilder, value uuid.UUID) {
 	if value == uuid.Nil {
-		f.Add(builder, f.requiredMessage())
+		f.addCode(builder, "required", f.requiredMessage())
 	}
 }
 
 func (f ValidationField) RequireNonZero(builder *ValidationBuilder, value int) {
 	if value == 0 {
-		f.Add(builder, f.requiredMessage())
+		f.addCode(builder, "required", f.requiredMessage())
 	}
 }
 
 func (f ValidationField) ExactLength(builder *ValidationBuilder, value string, length int) {
 	if value != "" && len(value) != length {
-		f.Add(builder, fmt.Sprintf("%s must be exactly %d characters", f.Name, length))
+		f.addCode(builder, "len", fmt.Sprintf("%s must be exactly %d characters", f.Name, length))
 	}
 }
 
@@ -116,7 +131,7 @@ func (f ValidationField) ExactLengthPtr(builder *ValidationBuilder, value *strin
 
 func (f ValidationField) MaxLength(builder *ValidationBuilder, value string, max int) {
 	if value != "" && len(value) > max {
-		f.Add(builder, fmt.Sprintf("%s must be at most %d characters", f.Name, max))
+		f.addCode(builder, "max", fmt.Sprintf("%s must be at most %d characters", f.Name, max))
 	}
 }
 
@@ -129,24 +144,24 @@ func (f ValidationField) MaxLengthPtr(builder *ValidationBuilder, value *string,
 
 func (f ValidationField) Between(builder *ValidationBuilder, value, min, max int) {
 	if value != 0 && (value < min || value > max) {
-		f.Add(builder, fmt.Sprintf("%s must be between %d and %d", f.Name, min, max))
+		f.addCode(builder, "range", fmt.Sprintf("%s must be between %d and %d", f.Name, min, max))
 	}
 }
 
 func (f ValidationField) Unique(builder *ValidationBuilder) {
-	f.Add(builder, f.uniqueMessage())
+	f.addCode(builder, "unique", f.uniqueMessage())
 }
 
 func (f ValidationField) UniqueWithin(builder *ValidationBuilder, scope string) {
-	f.Add(builder, fmt.Sprintf("%s must be unique within %s", f.Name, scope))
+	f.addCode(builder, "unique", fmt.Sprintf("%s must be unique within %s", f.Name, scope))
 }
 
 func (f ValidationField) UniqueError() error {
-	return NewValidationError().Add(f.Key, f.uniqueMessage())
+	return NewValidationError().AddCode(f.Key, "unique", f.uniqueMessage())
 }
 
 func (f ValidationField) UniqueWithinError(scope string) error {
-	return NewValidationError().Add(f.Key, fmt.Sprintf("%s must be unique within %s", f.Name, scope))
+	return NewValidationError().AddCode(f.Key, "unique", fmt.Sprintf("%s must be unique within %s", f.Name, scope))
 }
 
 func (f ValidationField) requiredMessage() string {

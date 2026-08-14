@@ -82,6 +82,7 @@ type fieldDeviceListRow struct {
 	ID                        uuid.UUID  `gorm:"column:id"`
 	CreatedAt                 time.Time  `gorm:"column:created_at"`
 	UpdatedAt                 time.Time  `gorm:"column:updated_at"`
+	Version                   uint64     `gorm:"column:version"`
 	BMK                       *string    `gorm:"column:bmk"`
 	Description               *string    `gorm:"column:description"`
 	ApparatNr                 int        `gorm:"column:apparat_nr"`
@@ -120,6 +121,7 @@ func (row fieldDeviceListRow) toDomain() domainFacility.FieldDevice {
 			ID:        row.ID,
 			CreatedAt: row.CreatedAt,
 			UpdatedAt: row.UpdatedAt,
+			Version:   row.Version,
 		},
 		BMK:                       row.BMK,
 		Description:               row.Description,

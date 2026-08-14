@@ -10,11 +10,16 @@ import (
 )
 
 type BacnetObjectHandler struct {
-	service BacnetObjectService
+	service       BacnetObjectService
+	collaboration ProjectFieldDeviceChangeBroadcaster
 }
 
-func NewBacnetObjectHandler(service BacnetObjectService) *BacnetObjectHandler {
-	return &BacnetObjectHandler{service: service}
+func NewBacnetObjectHandler(service BacnetObjectService, broadcasters ...ProjectRefreshBroadcaster) *BacnetObjectHandler {
+	h := &BacnetObjectHandler{service: service}
+	if len(broadcasters) > 0 {
+		h.collaboration, _ = broadcasters[0].(ProjectFieldDeviceChangeBroadcaster)
+	}
+	return h
 }
 
 // CreateBacnetObject godoc
@@ -46,6 +51,9 @@ func (h *BacnetObjectHandler) CreateBacnetObject(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, toBacnetObjectResponse(*obj))
+	if obj.FieldDeviceID != nil && h.collaboration != nil {
+		h.collaboration.BroadcastFieldDeviceChange(c.Request.Context(), currentActorID(c), *obj.FieldDeviceID, "updated")
+	}
 }
 
 // UpdateBacnetObject godoc
@@ -86,6 +94,12 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
+	baseVersion := existing.Version
+	previousFieldDeviceID := existing.FieldDeviceID
+	if req.BaseVersion != nil {
+		baseVersion = *req.BaseVersion
+		existing.Version = *req.BaseVersion
+	}
 
 	applyBacnetObjectPatch(existing, req.BacnetObjectPatchInput)
 	if req.FieldDeviceID != nil {
@@ -93,6 +107,9 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 	}
 
 	if err := h.service.Update(ctx, existing, req.ObjectDataID); err != nil {
+		if current, getErr := h.service.GetByID(ctx, id); getErr == nil && respondWriteConflict(c, err, "field_device", uuidValue(current.FieldDeviceID), baseVersion, []string{"bacnet_objects." + id.String()}, current.Version, toBacnetObjectResponse(*current)) {
+			return
+		}
 		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
 			handlerutil.MapError(domain.ErrInvalidArgument, handlerutil.PlainError(http.StatusBadRequest, "validation_error", err.Error())),
 			localizedInvalidReference(),
@@ -102,4 +119,33 @@ func (h *BacnetObjectHandler) UpdateBacnetObject(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toBacnetObjectResponse(*existing))
+	if existing.FieldDeviceID != nil && h.collaboration != nil {
+		h.collaboration.BroadcastFieldDeviceChange(ctx, currentActorID(c), *existing.FieldDeviceID, "updated")
+		if previousFieldDeviceID != nil && *previousFieldDeviceID != *existing.FieldDeviceID {
+			h.collaboration.BroadcastFieldDeviceChange(ctx, currentActorID(c), *previousFieldDeviceID, "updated")
+		}
+	}
+}
+
+// DeleteBacnetObject deletes one BACnet object.
+func (h *BacnetObjectHandler) DeleteBacnetObject(c *gin.Context) {
+	id, ok := parseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	existing, err := h.service.GetByID(c.Request.Context(), id)
+	if err != nil {
+		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed", localizedNotFound("facility.bacnet_object_not_found"))
+		return
+	}
+	if err := h.service.DeleteByID(c.Request.Context(), id); err != nil {
+		respondLocalizedDomainError(c, err, "deletion_failed", "facility.deletion_failed",
+			localizedNotFound("facility.bacnet_object_not_found"),
+		)
+		return
+	}
+	if existing.FieldDeviceID != nil && h.collaboration != nil {
+		h.collaboration.BroadcastFieldDeviceChange(c.Request.Context(), currentActorID(c), *existing.FieldDeviceID, "updated")
+	}
+	c.Status(http.StatusNoContent)
 }

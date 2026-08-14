@@ -2,13 +2,14 @@ package facility
 
 import (
 	"context"
-	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
-	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
-	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
+	"fmt"
 	"strings"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainFieldDevice "github.com/besart951/go_infra_link/backend/internal/domain/facility/fielddevice"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"github.com/google/uuid"
 )
 
@@ -428,7 +429,7 @@ func (c projectFacilityCopy) loadSystemTypeDefinitions(
 	ids := make([]uuid.UUID, 0, len(systemTypes))
 	for _, st := range systemTypes {
 		if st.SystemTypeID == uuid.Nil {
-			return nil, domain.ErrNotFound
+			continue
 		}
 		if _, ok := unique[st.SystemTypeID]; ok {
 			continue
@@ -441,13 +442,25 @@ func (c projectFacilityCopy) loadSystemTypeDefinitions(
 	if err != nil {
 		return nil, err
 	}
-	if len(found) != len(ids) {
-		return nil, domain.ErrNotFound
-	}
-
 	mapOut := make(map[uuid.UUID]domainFacility.SystemType, len(found))
 	for _, item := range found {
 		mapOut[item.ID] = *item
+	}
+	validation := domain.NewValidationError()
+	for i, st := range systemTypes {
+		if _, ok := mapOut[st.SystemTypeID]; !ok {
+			path := fmt.Sprintf("spscontroller.system_types[%d].system_type_id", i)
+			code := "invalid_reference"
+			message := "system_type_id does not reference an existing entity"
+			if st.SystemTypeID == uuid.Nil {
+				code = "required"
+				message = "system_type_id is required"
+			}
+			validation.AddCode(path, code, message)
+		}
+	}
+	if len(validation.Fields) > 0 {
+		return nil, validation
 	}
 	return mapOut, nil
 }
@@ -471,24 +484,24 @@ func assignSystemTypeNumbers(
 	ve := domain.NewValidationError()
 	usedNumbers := make(map[uuid.UUID]map[int]struct{}, len(systemTypes))
 
-	for _, st := range systemTypes {
+	for i, st := range systemTypes {
 		systemType, ok := systemTypeMap[st.SystemTypeID]
 		if !ok {
-			return domain.ErrNotFound
+			continue
 		}
 		if st.Number == nil {
 			continue
 		}
 		number := *st.Number
 		if number < systemType.NumberMin || number > systemType.NumberMax {
-			ve = ve.Add("spscontroller.system_types", "number must be within the system type range")
+			ve.AddCode(fmt.Sprintf("spscontroller.system_types[%d].number", i), "range", "number must be within the system type range")
 			continue
 		}
 		if usedNumbers[st.SystemTypeID] == nil {
 			usedNumbers[st.SystemTypeID] = map[int]struct{}{}
 		}
 		if _, exists := usedNumbers[st.SystemTypeID][number]; exists {
-			ve = ve.Add("spscontroller.system_types", "number must be unique per system type")
+			ve.AddCode(fmt.Sprintf("spscontroller.system_types[%d].number", i), "unique", "number must be unique per system type")
 			continue
 		}
 		usedNumbers[st.SystemTypeID][number] = struct{}{}
@@ -504,14 +517,14 @@ func assignSystemTypeNumbers(
 		}
 		systemType, ok := systemTypeMap[systemTypes[i].SystemTypeID]
 		if !ok {
-			return domain.ErrNotFound
+			continue
 		}
 		if usedNumbers[systemTypes[i].SystemTypeID] == nil {
 			usedNumbers[systemTypes[i].SystemTypeID] = map[int]struct{}{}
 		}
 		next, ok := findLowestAvailableNumber(systemType.NumberMin, systemType.NumberMax, usedNumbers[systemTypes[i].SystemTypeID])
 		if !ok {
-			return domain.NewValidationError().Add("spscontroller.system_types", "no available number in the system type range")
+			return domain.NewValidationError().AddCode(fmt.Sprintf("spscontroller.system_types[%d].number", i), "unavailable", "no available number in the system type range")
 		}
 		systemTypes[i].Number = &next
 		usedNumbers[systemTypes[i].SystemTypeID][next] = struct{}{}

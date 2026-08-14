@@ -9,6 +9,7 @@ import (
 func newProjectHandlers(services *Services, runtime *RuntimeAdapters) *projecthandler.Handlers {
 	return projecthandler.NewHandlers(projecthandler.ServiceDeps{
 		Lifecycle:          services.Project.Lifecycle,
+		Changes:            services.Project.Changes,
 		AccessPolicy:       services.Project.AccessPolicy,
 		Membership:         services.Project.Membership,
 		Workflow:           services.Project.Workflow,

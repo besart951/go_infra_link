@@ -147,6 +147,7 @@ func toFieldDeviceResponse(fieldDevice domainFacility.FieldDevice) dto.FieldDevi
 
 	resp := dto.FieldDeviceResponse{
 		ID:                        fieldDevice.ID,
+		Version:                   fieldDevice.Version,
 		BMK:                       fieldDevice.BMK,
 		Description:               fieldDevice.Description,
 		TextIndividuell:           fieldDevice.TextIndividuell,
@@ -223,6 +224,7 @@ func toMultiCreateFieldDeviceResponse(result *domainFacility.FieldDeviceMultiCre
 func toBacnetObjectResponse(obj domainFacility.BacnetObject) dto.BacnetObjectResponse {
 	return dto.BacnetObjectResponse{
 		ID:                  obj.ID.String(),
+		AggregateVersion:    obj.Version,
 		TextFix:             obj.TextFix,
 		Description:         obj.Description,
 		GMSVisible:          obj.GMSVisible,

@@ -2,10 +2,10 @@ package facility
 
 import (
 	"context"
-	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainHierarchy "github.com/besart951/go_infra_link/backend/internal/domain/facility/hierarchy"
 	"github.com/google/uuid"
 )
 
@@ -62,6 +62,16 @@ func (s *SPSControllerSystemTypeService) GetByID(ctx context.Context, id uuid.UU
 
 func (s *SPSControllerSystemTypeService) CopyByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSControllerSystemType, error) {
 	return s.hierarchyCopier.CopySPSControllerSystemTypeByID(ctx, id)
+}
+
+func (s *SPSControllerSystemTypeService) Update(ctx context.Context, item *domainFacility.SPSControllerSystemType) error {
+	if item == nil {
+		return domain.ErrInvalidArgument
+	}
+	if err := item.Validate("system_types." + item.ID.String()); err != nil {
+		return err
+	}
+	return s.repo.Update(ctx, item)
 }
 
 func (s *SPSControllerSystemTypeService) DeleteByID(ctx context.Context, id uuid.UUID) error {

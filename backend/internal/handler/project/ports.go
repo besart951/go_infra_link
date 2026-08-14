@@ -19,6 +19,11 @@ type ProjectLifecycleService interface {
 	DeleteByID(ctx context.Context, id uuid.UUID) error
 }
 
+type ProjectChangeService interface {
+	ListAfter(ctx context.Context, projectID uuid.UUID, afterRevision uint64, limit int) (*domainProject.ChangePage, error)
+	RecordEvent(ctx context.Context, projectID uuid.UUID, eventType string, actorID *uuid.UUID, entityIDs ...string) error
+}
+
 type ProjectAccessPolicyService interface {
 	CanAccessProject(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role) (bool, error)
 	CanUseProjectPermission(ctx context.Context, requesterID uuid.UUID, requesterRole *domainUser.Role, permission string) (bool, error)

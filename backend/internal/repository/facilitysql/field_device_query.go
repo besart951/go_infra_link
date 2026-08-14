@@ -18,6 +18,7 @@ const (
 		field_devices.id,
 		field_devices.created_at,
 		field_devices.updated_at,
+		field_devices.version,
 		field_devices.bmk,
 		field_devices.description,
 		field_devices.apparat_nr,

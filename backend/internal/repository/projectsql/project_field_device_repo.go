@@ -115,14 +115,28 @@ func (r *projectFieldDeviceRepo) BulkCreateBySPSControllerSystemTypeIDs(ctx cont
 }
 
 func (r *projectFieldDeviceRepo) Update(ctx context.Context, entity *project.ProjectFieldDevice) error {
+	expectedVersion := entity.Version
+	if expectedVersion == 0 {
+		return domain.ErrConflict
+	}
 	entity.Base.TouchForUpdate(time.Now().UTC())
-	return r.db.WithContext(ctx).Model(&ProjectFieldDeviceRecord{}).
-		Where("id = ?", entity.ID).
+	result := r.db.WithContext(ctx).Model(&ProjectFieldDeviceRecord{}).
+		Where("id = ? AND project_id = ? AND version = ?", entity.ID, entity.ProjectID, expectedVersion).
 		Updates(map[string]any{
 			"updated_at":      entity.UpdatedAt,
+			"version":         entity.Version,
 			"project_id":      entity.ProjectID,
 			"field_device_id": entity.FieldDeviceID,
-		}).Error
+		})
+	if result.Error != nil {
+		entity.Version = expectedVersion
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		entity.Version = expectedVersion
+		return domain.ErrConflict
+	}
+	return nil
 }
 
 func (r *projectFieldDeviceRepo) DeleteByIds(ctx context.Context, ids []uuid.UUID) error {

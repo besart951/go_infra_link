@@ -94,6 +94,26 @@ func (s *ProjectFacilityLinkService) ListProjectIDsBySPSControllerID(ctx context
 	return projectIDs, nil
 }
 
+func (s *ProjectFacilityLinkService) ListProjectIDsByFieldDeviceID(ctx context.Context, fieldDeviceID uuid.UUID) ([]uuid.UUID, error) {
+	items, err := s.projectFieldDeviceRepo.GetByFieldDeviceIDs(ctx, []uuid.UUID{fieldDeviceID})
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[uuid.UUID]struct{}, len(items))
+	projectIDs := make([]uuid.UUID, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		if _, ok := seen[item.ProjectID]; ok {
+			continue
+		}
+		seen[item.ProjectID] = struct{}{}
+		projectIDs = append(projectIDs, item.ProjectID)
+	}
+	return projectIDs, nil
+}
+
 func (s *ProjectFacilityLinkService) CreateControlCabinet(ctx context.Context, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
 	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
 		return txService.assignments().assignControlCabinet(txCtx, projectID, controlCabinetID)
@@ -122,6 +142,12 @@ func (s *ProjectFacilityLinkService) copyControlCabinet(ctx context.Context, pro
 func (s *ProjectFacilityLinkService) UpdateControlCabinet(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID) (*domainProject.ProjectControlCabinet, error) {
 	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
 		return txService.assignments().updateControlCabinet(txCtx, linkID, projectID, controlCabinetID)
+	})
+}
+
+func (s *ProjectFacilityLinkService) UpdateControlCabinetAtVersion(ctx context.Context, linkID, projectID, controlCabinetID uuid.UUID, baseVersion uint64) (*domainProject.ProjectControlCabinet, error) {
+	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectControlCabinet, error) {
+		return txService.assignments().updateControlCabinet(txCtx, linkID, projectID, controlCabinetID, baseVersion)
 	})
 }
 
@@ -181,6 +207,12 @@ func (s *ProjectFacilityLinkService) UpdateSPSController(ctx context.Context, li
 	})
 }
 
+func (s *ProjectFacilityLinkService) UpdateSPSControllerAtVersion(ctx context.Context, linkID, projectID, spsControllerID uuid.UUID, baseVersion uint64) (*domainProject.ProjectSPSController, error) {
+	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectSPSController, error) {
+		return txService.assignments().updateSPSController(txCtx, linkID, projectID, spsControllerID, baseVersion)
+	})
+}
+
 func (s *ProjectFacilityLinkService) DeleteSPSController(ctx context.Context, linkID, projectID uuid.UUID) error {
 	return s.withTx(ctx, func(txCtx context.Context, txService *ProjectFacilityLinkService) error {
 		return txService.assignments().removeSPSController(txCtx, linkID, projectID)
@@ -196,6 +228,12 @@ func (s *ProjectFacilityLinkService) CreateFieldDevice(ctx context.Context, proj
 func (s *ProjectFacilityLinkService) UpdateFieldDevice(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID) (*domainProject.ProjectFieldDevice, error) {
 	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectFieldDevice, error) {
 		return txService.assignments().updateFieldDevice(txCtx, linkID, projectID, fieldDeviceID)
+	})
+}
+
+func (s *ProjectFacilityLinkService) UpdateFieldDeviceAtVersion(ctx context.Context, linkID, projectID, fieldDeviceID uuid.UUID, baseVersion uint64) (*domainProject.ProjectFieldDevice, error) {
+	return withProjectFacilityLinkTxResult(ctx, s, func(txCtx context.Context, txService *ProjectFacilityLinkService) (*domainProject.ProjectFieldDevice, error) {
+		return txService.assignments().updateFieldDevice(txCtx, linkID, projectID, fieldDeviceID, baseVersion)
 	})
 }
 

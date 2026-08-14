@@ -18,6 +18,7 @@ type CreateProjectRequest struct {
 }
 
 type UpdateProjectRequest struct {
+	BaseVersion *uint64                      `json:"base_version" binding:"omitempty,min=1"`
 	Name        *string                      `json:"name" binding:"omitempty,max=255"`
 	Description *string                      `json:"description"`
 	Status      *domainproject.ProjectStatus `json:"status" binding:"omitempty,oneof=planned ongoing completed"`
@@ -27,6 +28,7 @@ type UpdateProjectRequest struct {
 
 type ProjectResponse struct {
 	ID          uuid.UUID                   `json:"id"`
+	Version     uint64                      `json:"version"`
 	Name        string                      `json:"name"`
 	Description string                      `json:"description"`
 	Status      domainproject.ProjectStatus `json:"status"`

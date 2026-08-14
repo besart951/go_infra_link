@@ -37,6 +37,7 @@ func hierarchyHandlers(handlers *Handlers) hierarchy.Handlers {
 		DeleteSPSController:           handlers.SPSController.DeleteSPSController,
 		ListSPSControllerSystemTypes:  handlers.SPSControllerSystemType.ListSPSControllerSystemTypes,
 		GetSPSControllerSystemType:    handlers.SPSControllerSystemType.GetSPSControllerSystemType,
+		UpdateSPSControllerSystemType: handlers.SPSControllerSystemType.UpdateSPSControllerSystemType,
 		CopySPSControllerSystemType:   handlers.SPSControllerSystemType.CopySPSControllerSystemType,
 		DeleteSPSControllerSystemType: handlers.SPSControllerSystemType.DeleteSPSControllerSystemType,
 	}
@@ -98,6 +99,7 @@ func objectDataHandlers(handlers *Handlers) objectdata.Handlers {
 	return objectdata.Handlers{
 		CreateBacnetObject:         handlers.BacnetObject.CreateBacnetObject,
 		UpdateBacnetObject:         handlers.BacnetObject.UpdateBacnetObject,
+		DeleteBacnetObject:         handlers.BacnetObject.DeleteBacnetObject,
 		ListObjectData:             handlers.ObjectData.ListObjectData,
 		GetObjectData:              handlers.ObjectData.GetObjectData,
 		GetObjectDataBacnetObjects: handlers.ObjectData.GetObjectDataBacnetObjects,

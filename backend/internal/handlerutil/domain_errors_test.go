@@ -1,5 +1,8 @@
 package handlerutil
 
+// Domain validation response coverage lives with the response helpers because
+// all HTTP adapters share this presenter.
+
 import (
 	"context"
 	"encoding/json"
@@ -20,7 +23,7 @@ func TestRespondDomainErrorUsesValidationError(t *testing.T) {
 
 	handled := RespondDomainError(
 		context,
-		domain.NewValidationError().Add("email", "is required"),
+		domain.NewValidationError().AddLocalized("email", "required", "is required", "validation.required"),
 		PlainError(http.StatusInternalServerError, "internal", "internal error"),
 	)
 
@@ -29,6 +32,17 @@ func TestRespondDomainErrorUsesValidationError(t *testing.T) {
 	}
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("expected status 400, got %d", recorder.Code)
+	}
+	var response dto.ErrorResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(response.FieldErrors) != 1 {
+		t.Fatalf("field errors = %+v, want one", response.FieldErrors)
+	}
+	got := response.FieldErrors[0]
+	if got.Path != "email" || got.Code != "required" || got.LocalizedKey != "validation.required" {
+		t.Fatalf("field error = %+v, want stable path, code, and localized key", got)
 	}
 }
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy } from 'svelte';
   import { page } from '$app/stores';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
@@ -24,7 +24,10 @@
     EntityRefreshRequest
   } from '$lib/components/facility/shared/entityRefresh.js';
   import { canPerform } from '$lib/utils/permissions.js';
-  import { ProjectCollaborationState } from '$lib/services/projectCollaboration.svelte.js';
+  import {
+    provideProjectSyncCoordinator,
+    type ProjectChange
+  } from '$lib/services/projectCollaboration.svelte.js';
   import { Cpu, History, PanelsTopLeft, Settings, Server, Wifi, WifiOff } from '@lucide/svelte';
 
   type FacilityTabId = 'control-cabinets' | 'sps-controllers' | 'field-devices';
@@ -72,6 +75,8 @@
   let entityRefreshRequestVersion = 0;
   let entityDeltaRequestVersion = 0;
   let fieldDeviceRefreshRequestVersion = 0;
+  let projectLoadVersion = 0;
+  let projectUsersLoadVersion = 0;
 
   type ControlCabinetListViewModule =
     typeof import('$lib/components/facility/control-cabinets/ControlCabinetListView.svelte');
@@ -88,81 +93,9 @@
   let spsControllerListViewLoad: Promise<SPSControllerListViewModule> | null = null;
   let fieldDeviceListViewLoad: Promise<FieldDeviceListViewModule> | null = null;
 
-  const collaboration = new ProjectCollaborationState({
-    onEntityDelta: (message) => {
-      if (message.actor_id && message.actor_id === currentUser?.id) return;
-
-      switch (message.scope) {
-        case 'control_cabinet':
-          if (message.control_cabinets && message.control_cabinets.length > 0) {
-            requestControlCabinetDelta(message.control_cabinets);
-            requestSPSControllerCabinetLabelDelta(message.control_cabinets);
-            bumpControlCabinetOptionsRefresh();
-            bumpSPSControllerRefresh();
-            bumpFieldDeviceRefresh();
-            bumpSystemTypeRefresh();
-          }
-          break;
-        case 'sps_controller':
-          if (message.sps_controllers && message.sps_controllers.length > 0) {
-            requestSPSControllerDelta(message.sps_controllers);
-            requestFieldDeviceSPSControllerDelta(message.sps_controllers);
-            bumpSystemTypeRefresh();
-          }
-          break;
-        case 'field_device':
-          if (message.field_devices && message.field_devices.length > 0) {
-            requestFieldDeviceDelta(message.field_devices);
-          }
-          break;
-      }
-    },
-    onRefreshRequest: (message) => {
-      if (message.actor_id && message.actor_id === currentUser?.id) return;
-
-      switch (message.scope) {
-        case 'field_device':
-          if (message.device_ids && message.device_ids.length > 0) {
-            requestFieldDeviceRefresh(message.device_ids);
-            break;
-          }
-
-          bumpFieldDeviceRefresh();
-          break;
-        case 'control_cabinet':
-          if (message.entity_ids && message.entity_ids.length > 0) {
-            requestControlCabinetRefresh(message.entity_ids);
-            requestSPSControllerCabinetLabelRefresh(message.entity_ids);
-            bumpControlCabinetOptionsRefresh();
-            break;
-          }
-
-          bumpControlCabinetViewRefresh();
-          bumpControlCabinetOptionsRefresh();
-          bumpSPSControllerRefresh();
-          break;
-        case 'sps_controller':
-          if (message.entity_ids && message.entity_ids.length > 0) {
-            requestSPSControllerRefresh(message.entity_ids);
-            requestFieldDeviceSPSControllerRefresh(message.entity_ids);
-            bumpSystemTypeRefresh();
-            break;
-          }
-
-          bumpSPSControllerRefresh();
-          bumpFieldDeviceRefresh();
-          bumpSystemTypeRefresh();
-          break;
-        case 'project':
-          refreshProjectFacilityViews();
-          void loadProject();
-          break;
-        case 'project_users':
-          void loadProjectUsers();
-          break;
-      }
-    },
-    onReconnect: () => {
+  const collaboration = provideProjectSyncCoordinator({
+    onProjectChange: handleProjectChange,
+    onResetRequired: () => {
       refreshProjectFacilityViews();
       void loadProject();
       void loadProjectUsers();
@@ -369,6 +302,45 @@
     bumpSystemTypeRefresh();
   }
 
+  function handleProjectChange(change: ProjectChange): void {
+    switch (change.aggregate_type) {
+      case 'control_cabinet':
+        requestControlCabinetRefresh([change.aggregate_id]);
+        requestSPSControllerCabinetLabelRefresh([change.aggregate_id]);
+        bumpControlCabinetOptionsRefresh();
+        bumpSPSControllerRefresh();
+        bumpFieldDeviceRefresh();
+        bumpSystemTypeRefresh();
+        break;
+      case 'sps_controller':
+        requestSPSControllerRefresh([change.aggregate_id]);
+        requestFieldDeviceSPSControllerRefresh([change.aggregate_id]);
+        bumpSystemTypeRefresh();
+        break;
+      case 'sps_controller_system_type':
+        bumpSystemTypeRefresh();
+        bumpFieldDeviceRefresh();
+        break;
+      case 'field_device':
+        requestFieldDeviceRefresh([change.aggregate_id]);
+        break;
+      case 'bacnet_object': {
+        const fieldDeviceId = change.parent_refs?.field_device_id;
+        if (typeof fieldDeviceId === 'string') requestFieldDeviceRefresh([fieldDeviceId]);
+        else bumpFieldDeviceRefresh();
+        break;
+      }
+      case 'project':
+        void loadProject();
+        break;
+      case 'project_users':
+        void loadProjectUsers();
+        break;
+      default:
+        refreshProjectFacilityViews();
+    }
+  }
+
   function handleControlCabinetsChanged(event?: EntityChangeEvent<ControlCabinet>): void {
     bumpControlCabinetOptionsRefresh();
     bumpSPSControllerRefresh();
@@ -397,42 +369,58 @@
     bumpSystemTypeRefresh();
   }
 
-  async function loadProject(): Promise<void> {
-    if (!projectId) return;
+  async function loadProject(targetProjectId = projectId): Promise<void> {
+    const loadVersion = ++projectLoadVersion;
+    if (!targetProjectId) return;
 
     loading = true;
     error = null;
 
     try {
-      project = await projectDetailService.getProject(projectId);
+      const loadedProject = await projectDetailService.getProject(targetProjectId);
+      if (projectId !== targetProjectId || projectLoadVersion !== loadVersion) return;
+      project = loadedProject;
     } catch (loadError) {
+      if (projectId !== targetProjectId || projectLoadVersion !== loadVersion) return;
       const message =
         loadError instanceof Error ? loadError.message : translate('projects.errors.load_failed');
       error = message;
       addToast(message, 'error');
     } finally {
-      loading = false;
+      if (projectId === targetProjectId && projectLoadVersion === loadVersion) {
+        loading = false;
+      }
     }
   }
 
-  async function loadProjectUsers(): Promise<void> {
-    if (!projectId || !canOpenProjectSettings) {
+  async function loadProjectUsers(targetProjectId = projectId): Promise<void> {
+    const loadVersion = ++projectUsersLoadVersion;
+    if (!targetProjectId || !canOpenProjectSettings) {
       projectUsers = [];
       return;
     }
 
     try {
-      const response = await projectDetailService.listUsers(projectId);
+      const response = await projectDetailService.listUsers(targetProjectId);
+      if (projectId !== targetProjectId || projectUsersLoadVersion !== loadVersion) return;
       projectUsers = response.items;
     } catch (loadError) {
+      if (projectId !== targetProjectId || projectUsersLoadVersion !== loadVersion) return;
       console.error('Failed to load project users', loadError);
     }
   }
 
-  onMount(() => {
-    void loadProject();
-    void loadProjectUsers();
-    collaboration.connect(projectId);
+  $effect(() => {
+    const targetProjectId = projectId;
+    project = null;
+    projectUsers = [];
+    error = null;
+    loading = true;
+    if (!targetProjectId) return;
+
+    collaboration.connect(targetProjectId);
+    void loadProject(targetProjectId);
+    void loadProjectUsers(targetProjectId);
   });
 
   onDestroy(() => {
@@ -549,94 +537,95 @@
       {$t('errors.forbidden')}
     </div>
   {:else}
-    <Tabs.Root bind:value={activeFacilityTab} class="min-w-0">
-      <Tabs.List class="w-full justify-start overflow-x-auto sm:w-fit">
+    {#key projectId}
+      <Tabs.Root bind:value={activeFacilityTab} class="min-w-0">
+        <Tabs.List class="w-full justify-start overflow-x-auto sm:w-fit">
+          {#if canReadProjectControlCabinets}
+            <Tabs.Trigger value="control-cabinets" class="gap-2">
+              <PanelsTopLeft class="size-4" />
+              {$t('projects.control_cabinets.title')}
+            </Tabs.Trigger>
+          {/if}
+          {#if canReadProjectSPSControllers}
+            <Tabs.Trigger value="sps-controllers" class="gap-2">
+              <Cpu class="size-4" />
+              {$t('projects.sps_controllers.title')}
+            </Tabs.Trigger>
+          {/if}
+          {#if canReadProjectFieldDevices}
+            <Tabs.Trigger value="field-devices" class="gap-2">
+              <Server class="size-4" />
+              {$t('projects.field_devices.title')}
+            </Tabs.Trigger>
+          {/if}
+        </Tabs.List>
+
         {#if canReadProjectControlCabinets}
-          <Tabs.Trigger value="control-cabinets" class="gap-2">
-            <PanelsTopLeft class="size-4" />
-            {$t('projects.control_cabinets.title')}
-          </Tabs.Trigger>
+          <Tabs.Content value="control-cabinets" class="mt-4 min-w-0">
+            <div class="min-w-0 rounded-lg border bg-card p-6">
+              {#if controlCabinetListViewModule}
+                {@const ControlCabinetListView = controlCabinetListViewModule.default}
+                <ControlCabinetListView
+                  {projectId}
+                  refreshKey={controlCabinetViewRefreshKey}
+                  refreshRequest={controlCabinetRefreshRequest}
+                  deltaRequest={controlCabinetDeltaRequest}
+                  onChanged={handleControlCabinetsChanged}
+                />
+              {:else}
+                <Skeleton class="h-6 w-full" />
+              {/if}
+            </div>
+          </Tabs.Content>
         {/if}
+
         {#if canReadProjectSPSControllers}
-          <Tabs.Trigger value="sps-controllers" class="gap-2">
-            <Cpu class="size-4" />
-            {$t('projects.sps_controllers.title')}
-          </Tabs.Trigger>
+          <Tabs.Content value="sps-controllers" class="mt-4 min-w-0">
+            <div class="min-w-0 rounded-lg border bg-card p-6">
+              {#if spsControllerListViewModule}
+                {@const SPSControllerListView = spsControllerListViewModule.default}
+                <SPSControllerListView
+                  {projectId}
+                  refreshKey={spsControllerRefreshKey}
+                  refreshRequest={spsControllerRefreshRequest}
+                  deltaRequest={spsControllerDeltaRequest}
+                  controlCabinetLabelRefreshRequest={spsControllerCabinetLabelRefreshRequest}
+                  controlCabinetLabelDeltaRequest={spsControllerCabinetLabelDeltaRequest}
+                  controlCabinetRefreshKey={controlCabinetOptionsRefreshKey}
+                  onChanged={handleSPSControllersChanged}
+                />
+              {:else}
+                <Skeleton class="h-6 w-full" />
+              {/if}
+            </div>
+          </Tabs.Content>
         {/if}
+
         {#if canReadProjectFieldDevices}
-          <Tabs.Trigger value="field-devices" class="gap-2">
-            <Server class="size-4" />
-            {$t('projects.field_devices.title')}
-          </Tabs.Trigger>
+          <Tabs.Content value="field-devices" class="mt-4 min-w-0">
+            <div class="min-w-0 rounded-lg border bg-card p-6">
+              {#if fieldDeviceListViewModule}
+                {@const FieldDeviceListView = fieldDeviceListViewModule.default}
+                <FieldDeviceListView
+                  {projectId}
+                  pageSize={100}
+                  refreshKey={fieldDeviceRefreshKey}
+                  refreshRequest={fieldDeviceRefreshRequest}
+                  {systemTypeRefreshKey}
+                  onMultiCreateFormVisibilityChange={(open) => {
+                    fieldDeviceMultiCreateFormOpen = open;
+                  }}
+                  sharedFieldDeviceEditors={fieldDeviceEditorsByDevice}
+                  onSharedFieldDeviceStateChange={(state) =>
+                    collaboration.publishFieldDeviceDraftState(state)}
+                />
+              {:else}
+                <Skeleton class="h-6 w-full" />
+              {/if}
+            </div>
+          </Tabs.Content>
         {/if}
-      </Tabs.List>
-
-      {#if canReadProjectControlCabinets}
-        <Tabs.Content value="control-cabinets" class="mt-4 min-w-0">
-          <div class="min-w-0 rounded-lg border bg-card p-6">
-            {#if controlCabinetListViewModule}
-              {@const ControlCabinetListView = controlCabinetListViewModule.default}
-              <ControlCabinetListView
-                {projectId}
-                refreshKey={controlCabinetViewRefreshKey}
-                refreshRequest={controlCabinetRefreshRequest}
-                deltaRequest={controlCabinetDeltaRequest}
-                onChanged={handleControlCabinetsChanged}
-              />
-            {:else}
-              <Skeleton class="h-6 w-full" />
-            {/if}
-          </div>
-        </Tabs.Content>
-      {/if}
-
-      {#if canReadProjectSPSControllers}
-        <Tabs.Content value="sps-controllers" class="mt-4 min-w-0">
-          <div class="min-w-0 rounded-lg border bg-card p-6">
-            {#if spsControllerListViewModule}
-              {@const SPSControllerListView = spsControllerListViewModule.default}
-              <SPSControllerListView
-                {projectId}
-                refreshKey={spsControllerRefreshKey}
-                refreshRequest={spsControllerRefreshRequest}
-                deltaRequest={spsControllerDeltaRequest}
-                controlCabinetLabelRefreshRequest={spsControllerCabinetLabelRefreshRequest}
-                controlCabinetLabelDeltaRequest={spsControllerCabinetLabelDeltaRequest}
-                controlCabinetRefreshKey={controlCabinetOptionsRefreshKey}
-                onChanged={handleSPSControllersChanged}
-              />
-            {:else}
-              <Skeleton class="h-6 w-full" />
-            {/if}
-          </div>
-        </Tabs.Content>
-      {/if}
-
-      {#if canReadProjectFieldDevices}
-        <Tabs.Content value="field-devices" class="mt-4 min-w-0">
-          <div class="min-w-0 rounded-lg border bg-card p-6">
-            {#if fieldDeviceListViewModule}
-              {@const FieldDeviceListView = fieldDeviceListViewModule.default}
-              <FieldDeviceListView
-                {projectId}
-                pageSize={100}
-                refreshKey={fieldDeviceRefreshKey}
-                refreshRequest={fieldDeviceRefreshRequest}
-                {systemTypeRefreshKey}
-                onMultiCreateFormVisibilityChange={(open) => {
-                  fieldDeviceMultiCreateFormOpen = open;
-                }}
-                sharedFieldDeviceEditors={fieldDeviceEditorsByDevice}
-                onSharedFieldDeviceStateChange={(state) =>
-                  collaboration.publishFieldDeviceDraftState(state)}
-                onFieldDevicesSaved={(devices) => collaboration.publishFieldDeviceDelta(devices)}
-              />
-            {:else}
-              <Skeleton class="h-6 w-full" />
-            {/if}
-          </div>
-        </Tabs.Content>
-      {/if}
-    </Tabs.Root>
+      </Tabs.Root>
+    {/key}
   {/if}
 </div>

@@ -34,6 +34,7 @@ type Handlers struct {
 	DeleteSPSController           gin.HandlerFunc
 	ListSPSControllerSystemTypes  gin.HandlerFunc
 	GetSPSControllerSystemType    gin.HandlerFunc
+	UpdateSPSControllerSystemType gin.HandlerFunc
 	CopySPSControllerSystemType   gin.HandlerFunc
 	DeleteSPSControllerSystemType gin.HandlerFunc
 }
@@ -67,6 +68,7 @@ func Routes(handlers Handlers) []routing.Definition {
 		routing.Delete("/sps-controllers/:id", domainUser.PermissionSPSControllerDelete, handlers.DeleteSPSController),
 		routing.Get("/sps-controller-system-types", domainUser.PermissionSPSControllerSystemTypeRead, handlers.ListSPSControllerSystemTypes),
 		routing.Get("/sps-controller-system-types/:id", domainUser.PermissionSPSControllerSystemTypeRead, handlers.GetSPSControllerSystemType),
+		routing.Put("/sps-controller-system-types/:id", domainUser.PermissionSPSControllerSystemTypeUpdate, handlers.UpdateSPSControllerSystemType),
 		routing.Post("/sps-controller-system-types/:id/copy", domainUser.PermissionSPSControllerSystemTypeCreate, handlers.CopySPSControllerSystemType),
 		routing.Delete("/sps-controller-system-types/:id", domainUser.PermissionSPSControllerSystemTypeDelete, handlers.DeleteSPSControllerSystemType),
 	}

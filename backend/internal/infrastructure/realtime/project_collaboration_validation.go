@@ -15,80 +15,46 @@ import (
 )
 
 const (
-	projectCollaborationMaxClientDevices          = 100
-	projectCollaborationMaxChangedFieldsPerDevice = 64
-	projectCollaborationMaxFieldValuesPerDevice   = 64
-	projectCollaborationMaxRefreshIDs             = 100
-	projectCollaborationMaxFieldDeviceDeltas      = 100
-	projectCollaborationMaxDeltaRootFields        = 20
-	projectCollaborationMaxDeltaNestedFields      = 80
-	projectCollaborationMaxDeltaNestedItems       = 250
-	projectCollaborationMaxFieldNameBytes         = 180
-	projectCollaborationMaxStringValueBytes       = 2048
-	projectCollaborationMaxMessageTypeBytes       = 64
+	projectCollaborationMaxDraftEntries     = 100
+	projectCollaborationMaxDraftFields      = 100
+	projectCollaborationMaxFieldNameBytes   = 180
+	projectCollaborationMaxStringValueBytes = 2048
+	projectCollaborationMaxMessageTypeBytes = 64
 )
 
 var (
 	errProjectCollaborationInvalidMessage = errors.New("invalid project collaboration message")
 
-	projectCollaborationAllowedBaseEditFields = map[string]struct{}{
-		"bmk":                           {},
-		"description":                   {},
-		"text_fix":                      {},
-		"apparat_nr":                    {},
-		"apparat_id":                    {},
-		"system_part_id":                {},
-		"sps_controller_system_type_id": {},
-		"specification_id":              {},
-	}
-
-	projectCollaborationAllowedSpecificationEditFields = map[string]struct{}{
-		"specification_supplier":                       {},
-		"specification_brand":                          {},
-		"specification_type":                           {},
-		"additional_info_motor_valve":                  {},
-		"additional_info_size":                         {},
-		"additional_information_installation_location": {},
-		"electrical_connection_ph":                     {},
-		"electrical_connection_acdc":                   {},
-		"electrical_connection_amperage":               {},
-		"electrical_connection_power":                  {},
-		"electrical_connection_rotation":               {},
-	}
-
-	projectCollaborationAllowedBacnetEditFields = map[string]struct{}{
-		"text_fix":              {},
-		"description":           {},
-		"gms_visible":           {},
-		"optional":              {},
-		"text_individual":       {},
-		"software_type":         {},
-		"software_number":       {},
-		"hardware_type":         {},
-		"hardware_quantity":     {},
-		"software_reference_id": {},
-		"state_text_id":         {},
-		"notification_class_id": {},
-		"alarm_type_id":         {},
-	}
-
-	projectCollaborationAllowedFieldDeviceDeltaFields = map[string]struct{}{
-		"id":                            {},
-		"bmk":                           {},
-		"description":                   {},
-		"text_fix":                      {},
-		"apparat_nr":                    {},
-		"sps_controller_system_type_id": {},
-		"system_part_id":                {},
-		"specification_id":              {},
-		"apparat_id":                    {},
-		"created_at":                    {},
-		"updated_at":                    {},
-		"sps_controller_system_type":    {},
-		"apparat":                       {},
-		"system_part":                   {},
-		"specification":                 {},
-		"bacnet_objects":                {},
+	projectCollaborationDraftFields = map[string]map[string]struct{}{
+		"project":         fieldSet("name", "description", "status", "phase_id", "start_date"),
+		"control_cabinet": fieldSet("building_id", "control_cabinet_nr"),
+		"sps_controller": fieldSet(
+			"control_cabinet_id", "ga_device", "device_name", "device_description", "device_location",
+			"ip_address", "subnet", "gateway", "vlan",
+		),
+		"sps_controller_system_type": fieldSet("sps_controller_id", "system_type_id", "number", "document_name"),
+		"field_device": fieldSet(
+			"bmk", "description", "apparat_nr", "text_individuell", "sps_controller_system_type_id",
+			"system_part_id", "specification_id", "apparat_id",
+		),
+		"specification": fieldSet(
+			"specification_supplier", "specification_brand", "specification_type", "additional_info_motor_valve",
+			"additional_info_size", "additional_information_installation_location", "electrical_connection_ph",
+			"electrical_connection_acdc", "electrical_connection_amperage", "electrical_connection_power",
+			"electrical_connection_rotation",
+		),
+		"bacnet_object": fieldSet(
+			"text_fix", "description", "gms_visible", "optional", "text_individual", "software_type",
+			"software_number", "hardware_type", "hardware_quantity", "field_device_id", "software_reference_id",
+			"state_text_id", "notification_class_id", "alarm_type_id", "alarm_definition_id",
+		),
+		"alarm": fieldSet(
+			"alarm_type_id", "alarm_definition_id", "notification_class_id", "state_text_id", "enabled",
+			"priority", "limit", "deadband", "delay", "message", "value", "unit_id",
+		),
+		"alarm_definition": fieldSet("alarm_type_id", "name", "description", "enabled", "delay", "deadband"),
+		"alarm_value":      fieldSet("alarm_definition_id", "alarm_type_field_id", "value", "unit_id"),
+		"alarm_type":       fieldSet("name", "description", "validation_json"),
 	}
 )
 
@@ -96,28 +62,30 @@ type projectCollaborationMessageEnvelopeDTO struct {
 	Type string `json:"type"`
 }
 
-type projectCollaborationEditStateMessageDTO struct {
-	Type    string                              `json:"type"`
-	Devices []projectCollaborationDeviceEditDTO `json:"devices,omitempty"`
+type projectCollaborationDraftStateDTO struct {
+	Type    string                         `json:"type"`
+	Entries []projectCollaborationDraftDTO `json:"entries"`
 }
 
-type projectCollaborationDeviceEditDTO struct {
-	DeviceID      string         `json:"device_id"`
-	ChangedFields []string       `json:"changed_fields"`
-	FieldValues   map[string]any `json:"field_values,omitempty"`
+type projectCollaborationDraftClearDTO struct {
+	Type          string  `json:"type"`
+	AggregateType string  `json:"aggregate_type"`
+	AggregateID   *string `json:"aggregate_id,omitempty"`
+	DraftID       *string `json:"draft_id,omitempty"`
 }
 
-type projectCollaborationRefreshRequestDTO struct {
-	Type      string   `json:"type"`
-	Scope     string   `json:"scope,omitempty"`
-	EntityIDs []string `json:"entity_ids,omitempty"`
-	DeviceIDs []string `json:"device_ids,omitempty"`
+type projectCollaborationDraftDTO struct {
+	AggregateType string                           `json:"aggregate_type"`
+	AggregateID   *string                          `json:"aggregate_id,omitempty"`
+	DraftID       *string                          `json:"draft_id,omitempty"`
+	Action        string                           `json:"action"`
+	BaseVersion   int64                            `json:"base_version"`
+	Fields        []projectCollaborationDraftField `json:"fields"`
 }
 
-type projectCollaborationEntityDeltaDTO struct {
-	Type         string           `json:"type"`
-	Scope        string           `json:"scope"`
-	FieldDevices []map[string]any `json:"field_devices,omitempty"`
+type projectCollaborationDraftField struct {
+	Path  string `json:"path"`
+	Value any    `json:"value"`
 }
 
 func parseProjectCollaborationClientMessage(data []byte) (projectCollaborationClientMessage, error) {
@@ -134,24 +102,22 @@ func parseProjectCollaborationClientMessage(data []byte) (projectCollaborationCl
 	}
 
 	switch strings.TrimSpace(envelope.Type) {
-	case projectCollaborationMessageEditState:
-		var dto projectCollaborationEditStateMessageDTO
+	case projectCollaborationMessageDraftState:
+		var dto projectCollaborationDraftStateDTO
 		if err := decodeProjectCollaborationJSON(data, &dto); err != nil {
 			return projectCollaborationClientMessage{}, err
 		}
-		return validateProjectCollaborationEditStateDTO(dto)
-	case projectCollaborationMessageEntityDelta:
-		var dto projectCollaborationEntityDeltaDTO
+		return validateProjectCollaborationDraftState(dto)
+	case projectCollaborationMessageDraftClear:
+		var dto projectCollaborationDraftClearDTO
 		if err := decodeProjectCollaborationJSON(data, &dto); err != nil {
 			return projectCollaborationClientMessage{}, err
 		}
-		return validateProjectCollaborationEntityDeltaDTO(dto)
-	case projectCollaborationMessageRefreshRequest:
-		var dto projectCollaborationRefreshRequestDTO
-		if err := decodeProjectCollaborationJSON(data, &dto); err != nil {
+		selector, err := validateProjectCollaborationDraftSelector(dto.AggregateType, dto.AggregateID, dto.DraftID)
+		if err != nil {
 			return projectCollaborationClientMessage{}, err
 		}
-		return validateProjectCollaborationRefreshRequestDTO(dto)
+		return projectCollaborationClientMessage{Type: projectCollaborationMessageDraftClear, Clear: &selector}, nil
 	default:
 		return projectCollaborationClientMessage{}, fmt.Errorf("%w: unsupported message type", errProjectCollaborationInvalidMessage)
 	}
@@ -169,362 +135,182 @@ func decodeProjectCollaborationJSON(data []byte, dst any) error {
 	return nil
 }
 
-func validateProjectCollaborationEditStateDTO(dto projectCollaborationEditStateMessageDTO) (projectCollaborationClientMessage, error) {
-	if strings.TrimSpace(dto.Type) != projectCollaborationMessageEditState {
-		return projectCollaborationClientMessage{}, fmt.Errorf("%w: unsupported edit_state type", errProjectCollaborationInvalidMessage)
+func validateProjectCollaborationDraftState(dto projectCollaborationDraftStateDTO) (projectCollaborationClientMessage, error) {
+	if strings.TrimSpace(dto.Type) != projectCollaborationMessageDraftState {
+		return projectCollaborationClientMessage{}, fmt.Errorf("%w: unsupported draft_state type", errProjectCollaborationInvalidMessage)
 	}
-	if len(dto.Devices) > projectCollaborationMaxClientDevices {
-		return projectCollaborationClientMessage{}, fmt.Errorf("%w: too many edited devices", errProjectCollaborationInvalidMessage)
+	if len(dto.Entries) == 0 {
+		return projectCollaborationClientMessage{}, fmt.Errorf("%w: entries is required", errProjectCollaborationInvalidMessage)
+	}
+	if len(dto.Entries) > projectCollaborationMaxDraftEntries {
+		return projectCollaborationClientMessage{}, fmt.Errorf("%w: too many draft entries", errProjectCollaborationInvalidMessage)
 	}
 
-	devices := make([]ProjectFieldDeviceByFields, 0, len(dto.Devices))
-	for _, device := range dto.Devices {
-		normalized, err := validateProjectCollaborationDeviceEditDTO(device)
+	entries := make([]ProjectDraftEntry, 0, len(dto.Entries))
+	seen := make(map[string]struct{}, len(dto.Entries))
+	for _, entry := range dto.Entries {
+		normalized, err := validateProjectCollaborationDraftEntry(entry)
 		if err != nil {
 			return projectCollaborationClientMessage{}, err
 		}
-		devices = append(devices, normalized)
+		key := normalized.selectorKey()
+		if _, exists := seen[key]; exists {
+			return projectCollaborationClientMessage{}, fmt.Errorf("%w: duplicate draft entry", errProjectCollaborationInvalidMessage)
+		}
+		seen[key] = struct{}{}
+		entries = append(entries, normalized)
 	}
 
-	return projectCollaborationClientMessage{
-		Type:    projectCollaborationMessageEditState,
-		Devices: devices,
-	}, nil
+	sort.Slice(entries, func(i, j int) bool { return entries[i].selectorKey() < entries[j].selectorKey() })
+	return projectCollaborationClientMessage{Type: projectCollaborationMessageDraftState, Entries: entries}, nil
 }
 
-func validateProjectCollaborationDeviceEditDTO(dto projectCollaborationDeviceEditDTO) (ProjectFieldDeviceByFields, error) {
-	deviceID, err := validateProjectCollaborationUUIDString(dto.DeviceID, "device_id")
+func validateProjectCollaborationDraftEntry(dto projectCollaborationDraftDTO) (ProjectDraftEntry, error) {
+	selector, err := validateProjectCollaborationDraftSelector(dto.AggregateType, dto.AggregateID, dto.DraftID)
 	if err != nil {
-		return ProjectFieldDeviceByFields{}, err
+		return ProjectDraftEntry{}, err
 	}
-	if len(dto.ChangedFields) == 0 {
-		return ProjectFieldDeviceByFields{}, fmt.Errorf("%w: changed_fields is required", errProjectCollaborationInvalidMessage)
+	action := strings.TrimSpace(dto.Action)
+	if action != "create" && action != "update" {
+		return ProjectDraftEntry{}, fmt.Errorf("%w: action must be create or update", errProjectCollaborationInvalidMessage)
 	}
-	if len(dto.ChangedFields) > projectCollaborationMaxChangedFieldsPerDevice {
-		return ProjectFieldDeviceByFields{}, fmt.Errorf("%w: too many changed_fields", errProjectCollaborationInvalidMessage)
+	if action == "create" && selector.DraftID == "" {
+		return ProjectDraftEntry{}, fmt.Errorf("%w: create drafts require draft_id", errProjectCollaborationInvalidMessage)
+	}
+	if action == "update" && selector.AggregateID == "" {
+		return ProjectDraftEntry{}, fmt.Errorf("%w: update drafts require aggregate_id", errProjectCollaborationInvalidMessage)
+	}
+	if dto.BaseVersion < 0 {
+		return ProjectDraftEntry{}, fmt.Errorf("%w: base_version cannot be negative", errProjectCollaborationInvalidMessage)
+	}
+	if len(dto.Fields) == 0 || len(dto.Fields) > projectCollaborationMaxDraftFields {
+		return ProjectDraftEntry{}, fmt.Errorf("%w: invalid draft fields count", errProjectCollaborationInvalidMessage)
 	}
 
-	fieldSet := make(map[string]struct{}, len(dto.ChangedFields))
-	changedFields := make([]string, 0, len(dto.ChangedFields))
-	for _, field := range dto.ChangedFields {
-		normalized, err := normalizeProjectCollaborationFieldName(field)
+	fields := make([]ProjectDraftField, 0, len(dto.Fields))
+	seen := make(map[string]struct{}, len(dto.Fields))
+	for _, field := range dto.Fields {
+		path, err := validateProjectCollaborationDraftPath(selector.AggregateType, field.Path)
 		if err != nil {
-			return ProjectFieldDeviceByFields{}, err
+			return ProjectDraftEntry{}, err
 		}
-		if _, exists := fieldSet[normalized]; exists {
-			continue
+		if _, exists := seen[path]; exists {
+			return ProjectDraftEntry{}, fmt.Errorf("%w: duplicate draft field", errProjectCollaborationInvalidMessage)
 		}
-		fieldSet[normalized] = struct{}{}
-		changedFields = append(changedFields, normalized)
+		if err := validateProjectCollaborationDraftValue(field.Value, 0); err != nil {
+			return ProjectDraftEntry{}, err
+		}
+		seen[path] = struct{}{}
+		fields = append(fields, ProjectDraftField{Path: path, Value: field.Value})
 	}
-	sort.Strings(changedFields)
+	sort.Slice(fields, func(i, j int) bool { return fields[i].Path < fields[j].Path })
 
-	fieldValues, err := validateProjectCollaborationFieldValues(dto.FieldValues, fieldSet)
-	if err != nil {
-		return ProjectFieldDeviceByFields{}, err
-	}
-
-	return ProjectFieldDeviceByFields{
-		DeviceID:      deviceID,
-		ChangedFields: changedFields,
-		FieldValues:   fieldValues,
+	return ProjectDraftEntry{
+		ProjectDraftSelector: selector,
+		Action:               action,
+		BaseVersion:          dto.BaseVersion,
+		Fields:               fields,
 	}, nil
 }
 
-func validateProjectCollaborationRefreshRequestDTO(dto projectCollaborationRefreshRequestDTO) (projectCollaborationClientMessage, error) {
-	if strings.TrimSpace(dto.Type) != projectCollaborationMessageRefreshRequest {
-		return projectCollaborationClientMessage{}, fmt.Errorf("%w: unsupported refresh_request type", errProjectCollaborationInvalidMessage)
+func validateProjectCollaborationDraftSelector(aggregateType string, aggregateID, draftID *string) (ProjectDraftSelector, error) {
+	normalizedType := strings.TrimSpace(aggregateType)
+	if _, ok := projectCollaborationDraftFields[normalizedType]; !ok {
+		return ProjectDraftSelector{}, fmt.Errorf("%w: unsupported aggregate_type", errProjectCollaborationInvalidMessage)
 	}
 
-	scope, err := normalizeProjectCollaborationIncomingRefreshScope(dto.Scope)
-	if err != nil {
-		return projectCollaborationClientMessage{}, err
+	selector := ProjectDraftSelector{AggregateType: normalizedType}
+	if aggregateID != nil {
+		parsed, err := uuid.Parse(strings.TrimSpace(*aggregateID))
+		if err != nil || parsed == uuid.Nil {
+			return ProjectDraftSelector{}, fmt.Errorf("%w: invalid aggregate_id", errProjectCollaborationInvalidMessage)
+		}
+		selector.AggregateID = parsed.String()
 	}
-	entityIDs, err := validateProjectCollaborationUUIDStrings(dto.EntityIDs, "entity_ids")
-	if err != nil {
-		return projectCollaborationClientMessage{}, err
+	if draftID != nil {
+		parsed, err := uuid.Parse(strings.TrimSpace(*draftID))
+		if err != nil || parsed == uuid.Nil {
+			return ProjectDraftSelector{}, fmt.Errorf("%w: invalid draft_id", errProjectCollaborationInvalidMessage)
+		}
+		selector.DraftID = parsed.String()
 	}
-	deviceIDs, err := validateProjectCollaborationUUIDStrings(dto.DeviceIDs, "device_ids")
-	if err != nil {
-		return projectCollaborationClientMessage{}, err
+	if (selector.AggregateID == "") == (selector.DraftID == "") {
+		return ProjectDraftSelector{}, fmt.Errorf("%w: exactly one of aggregate_id or draft_id is required", errProjectCollaborationInvalidMessage)
 	}
-
-	return projectCollaborationClientMessage{
-		Type:      projectCollaborationMessageRefreshRequest,
-		Scope:     scope,
-		EntityIDs: entityIDs,
-		DeviceIDs: deviceIDs,
-	}, nil
+	return selector, nil
 }
 
-func validateProjectCollaborationEntityDeltaDTO(dto projectCollaborationEntityDeltaDTO) (projectCollaborationClientMessage, error) {
-	if strings.TrimSpace(dto.Type) != projectCollaborationMessageEntityDelta {
-		return projectCollaborationClientMessage{}, fmt.Errorf("%w: unsupported entity_delta type", errProjectCollaborationInvalidMessage)
+func validateProjectCollaborationDraftPath(aggregateType, path string) (string, error) {
+	normalized := strings.TrimSpace(path)
+	if normalized == "" || len(normalized) > projectCollaborationMaxFieldNameBytes || !utf8.ValidString(normalized) {
+		return "", fmt.Errorf("%w: invalid draft field path", errProjectCollaborationInvalidMessage)
 	}
-
-	scope := strings.TrimSpace(dto.Scope)
-	if scope != projectCollaborationRefreshScopeFieldDevice {
-		return projectCollaborationClientMessage{}, fmt.Errorf("%w: unsupported entity_delta scope", errProjectCollaborationInvalidMessage)
-	}
-	if len(dto.FieldDevices) == 0 {
-		return projectCollaborationClientMessage{}, fmt.Errorf("%w: field_devices is required", errProjectCollaborationInvalidMessage)
-	}
-	if len(dto.FieldDevices) > projectCollaborationMaxFieldDeviceDeltas {
-		return projectCollaborationClientMessage{}, fmt.Errorf("%w: too many field_devices", errProjectCollaborationInvalidMessage)
-	}
-
-	fieldDevices := make([]map[string]any, 0, len(dto.FieldDevices))
-	for _, item := range dto.FieldDevices {
-		sanitized, err := sanitizeProjectCollaborationFieldDeviceDelta(item)
-		if err != nil {
-			return projectCollaborationClientMessage{}, err
-		}
-		fieldDevices = append(fieldDevices, sanitized)
-	}
-
-	return projectCollaborationClientMessage{
-		Type:         projectCollaborationMessageEntityDelta,
-		Scope:        scope,
-		FieldDevices: fieldDevices,
-	}, nil
-}
-
-func validateProjectCollaborationFieldValues(values map[string]any, changedFields map[string]struct{}) (map[string]any, error) {
-	if len(values) == 0 {
-		return nil, nil
-	}
-	if len(values) > projectCollaborationMaxFieldValuesPerDevice {
-		return nil, fmt.Errorf("%w: too many field_values", errProjectCollaborationInvalidMessage)
-	}
-
-	normalized := make(map[string]any, len(values))
-	for key, value := range values {
-		field, err := normalizeProjectCollaborationFieldName(key)
-		if err != nil {
-			return nil, err
-		}
-		if _, ok := changedFields[field]; !ok {
-			return nil, fmt.Errorf("%w: field_values contains a key outside changed_fields", errProjectCollaborationInvalidMessage)
-		}
-		if err := validateProjectCollaborationScalarValue(value); err != nil {
-			return nil, err
-		}
-		normalized[field] = value
-	}
-	return normalized, nil
-}
-
-func normalizeProjectCollaborationFieldName(field string) (string, error) {
-	normalized := strings.TrimSpace(field)
-	if normalized == "" {
-		return "", fmt.Errorf("%w: empty field name", errProjectCollaborationInvalidMessage)
-	}
-	if len(normalized) > projectCollaborationMaxFieldNameBytes || !utf8.ValidString(normalized) {
-		return "", fmt.Errorf("%w: invalid field name", errProjectCollaborationInvalidMessage)
-	}
-	if _, ok := projectCollaborationAllowedBaseEditFields[normalized]; ok {
-		return normalized, nil
-	}
-
-	if specField, ok := strings.CutPrefix(normalized, "specification."); ok {
-		if _, allowed := projectCollaborationAllowedSpecificationEditFields[specField]; allowed {
+	if fields := projectCollaborationDraftFields[aggregateType]; fields != nil {
+		if _, ok := fields[normalized]; ok {
 			return normalized, nil
 		}
-		return "", fmt.Errorf("%w: unsupported specification field", errProjectCollaborationInvalidMessage)
 	}
-
-	parts := strings.Split(normalized, ".")
-	if len(parts) == 3 && parts[0] == "bacnet_objects" {
-		if _, err := validateProjectCollaborationUUIDString(parts[1], "bacnet_object_id"); err != nil {
-			return "", err
-		}
-		if _, allowed := projectCollaborationAllowedBacnetEditFields[parts[2]]; allowed {
+	if aggregateType == "alarm" && strings.HasPrefix(normalized, "values.") {
+		segment := strings.TrimPrefix(normalized, "values.")
+		if segment != "" && !strings.ContainsAny(segment, " .[]") {
 			return normalized, nil
 		}
-		return "", fmt.Errorf("%w: unsupported BACnet field", errProjectCollaborationInvalidMessage)
 	}
-
-	return "", fmt.Errorf("%w: unsupported field name", errProjectCollaborationInvalidMessage)
+	if aggregateType == "bacnet_object" && strings.HasPrefix(normalized, "alarm.") {
+		segment := strings.TrimPrefix(normalized, "alarm.")
+		if segment != "" && !strings.ContainsAny(segment, " []") {
+			return normalized, nil
+		}
+	}
+	return "", fmt.Errorf("%w: unsupported %s draft field", errProjectCollaborationInvalidMessage, aggregateType)
 }
 
-func normalizeProjectCollaborationIncomingRefreshScope(scope string) (string, error) {
-	normalized := strings.TrimSpace(scope)
-	if normalized == "" {
-		return projectCollaborationRefreshScopeFieldDevice, nil
-	}
-
-	switch normalized {
-	case projectCollaborationRefreshScopeFieldDevice,
-		projectCollaborationRefreshScopeControlCabinet,
-		projectCollaborationRefreshScopeSPSController:
-		return normalized, nil
-	default:
-		return "", fmt.Errorf("%w: unsupported refresh scope", errProjectCollaborationInvalidMessage)
-	}
-}
-
-func validateProjectCollaborationUUIDStrings(values []string, field string) ([]string, error) {
-	if len(values) == 0 {
-		return nil, nil
-	}
-	if len(values) > projectCollaborationMaxRefreshIDs {
-		return nil, fmt.Errorf("%w: too many %s", errProjectCollaborationInvalidMessage, field)
-	}
-
-	normalized := make([]string, 0, len(values))
-	seen := make(map[string]struct{}, len(values))
-	for _, value := range values {
-		parsed, err := validateProjectCollaborationUUIDString(value, field)
-		if err != nil {
-			return nil, err
-		}
-		if _, exists := seen[parsed]; exists {
-			continue
-		}
-		seen[parsed] = struct{}{}
-		normalized = append(normalized, parsed)
-	}
-	sort.Strings(normalized)
-	return normalized, nil
-}
-
-func validateProjectCollaborationUUIDString(value, field string) (string, error) {
-	trimmed := strings.TrimSpace(value)
-	if trimmed == "" {
-		return "", fmt.Errorf("%w: %s is required", errProjectCollaborationInvalidMessage, field)
-	}
-	parsed, err := uuid.Parse(trimmed)
-	if err != nil || parsed == uuid.Nil {
-		return "", fmt.Errorf("%w: invalid %s", errProjectCollaborationInvalidMessage, field)
-	}
-	return parsed.String(), nil
-}
-
-func validateProjectCollaborationScalarValue(value any) error {
-	switch typed := value.(type) {
-	case nil, bool, float64:
-		return nil
-	case string:
-		if len(typed) > projectCollaborationMaxStringValueBytes || !utf8.ValidString(typed) {
-			return fmt.Errorf("%w: invalid field value", errProjectCollaborationInvalidMessage)
-		}
-		return nil
-	default:
-		return fmt.Errorf("%w: unsupported field value type", errProjectCollaborationInvalidMessage)
-	}
-}
-
-func sanitizeProjectCollaborationFieldDeviceDelta(item map[string]any) (map[string]any, error) {
-	if len(item) == 0 {
-		return nil, fmt.Errorf("%w: empty field_device delta", errProjectCollaborationInvalidMessage)
-	}
-	if len(item) > projectCollaborationMaxDeltaRootFields {
-		return nil, fmt.Errorf("%w: too many field_device fields", errProjectCollaborationInvalidMessage)
-	}
-
-	sanitized := make(map[string]any, len(item))
-	for key, value := range item {
-		field := strings.TrimSpace(key)
-		if _, ok := projectCollaborationAllowedFieldDeviceDeltaFields[field]; !ok {
-			return nil, fmt.Errorf("%w: unsupported field_device field", errProjectCollaborationInvalidMessage)
-		}
-		if field == "id" {
-			id, ok := value.(string)
-			if !ok {
-				return nil, fmt.Errorf("%w: invalid field_device id", errProjectCollaborationInvalidMessage)
-			}
-			normalized, err := validateProjectCollaborationUUIDString(id, "field_device.id")
-			if err != nil {
-				return nil, err
-			}
-			sanitized[field] = normalized
-			continue
-		}
-		if isProjectCollaborationFieldDeviceUUIDField(field) {
-			if value == nil {
-				sanitized[field] = nil
-				continue
-			}
-			id, ok := value.(string)
-			if !ok {
-				return nil, fmt.Errorf("%w: invalid field_device UUID field", errProjectCollaborationInvalidMessage)
-			}
-			normalized, err := validateProjectCollaborationUUIDString(id, field)
-			if err != nil {
-				return nil, err
-			}
-			sanitized[field] = normalized
-			continue
-		}
-
-		safeValue, err := sanitizeProjectCollaborationDeltaValue(value, 0)
-		if err != nil {
-			return nil, err
-		}
-		sanitized[field] = safeValue
-	}
-
-	if _, ok := sanitized["id"]; !ok {
-		return nil, fmt.Errorf("%w: field_device id is required", errProjectCollaborationInvalidMessage)
-	}
-	return sanitized, nil
-}
-
-func isProjectCollaborationFieldDeviceUUIDField(field string) bool {
-	switch field {
-	case "sps_controller_system_type_id", "system_part_id", "specification_id", "apparat_id":
-		return true
-	default:
-		return false
-	}
-}
-
-func sanitizeProjectCollaborationDeltaValue(value any, depth int) (any, error) {
+func validateProjectCollaborationDraftValue(value any, depth int) error {
 	if depth > 2 {
-		return nil, fmt.Errorf("%w: nested delta value too deep", errProjectCollaborationInvalidMessage)
+		return fmt.Errorf("%w: draft value nested too deeply", errProjectCollaborationInvalidMessage)
 	}
-
 	switch typed := value.(type) {
 	case nil, bool, float64:
-		return typed, nil
+		return nil
 	case string:
 		if len(typed) > projectCollaborationMaxStringValueBytes || !utf8.ValidString(typed) {
-			return nil, fmt.Errorf("%w: invalid delta string value", errProjectCollaborationInvalidMessage)
+			return fmt.Errorf("%w: invalid draft string value", errProjectCollaborationInvalidMessage)
 		}
-		return typed, nil
+		return nil
 	case []any:
-		if len(typed) > projectCollaborationMaxDeltaNestedItems {
-			return nil, fmt.Errorf("%w: too many nested delta items", errProjectCollaborationInvalidMessage)
+		if len(typed) > projectCollaborationMaxDraftFields {
+			return fmt.Errorf("%w: too many draft array values", errProjectCollaborationInvalidMessage)
 		}
-		values := make([]any, 0, len(typed))
 		for _, item := range typed {
-			sanitized, err := sanitizeProjectCollaborationDeltaValue(item, depth+1)
-			if err != nil {
-				return nil, err
+			if err := validateProjectCollaborationDraftValue(item, depth+1); err != nil {
+				return err
 			}
-			values = append(values, sanitized)
 		}
-		return values, nil
+		return nil
 	case map[string]any:
-		if len(typed) > projectCollaborationMaxDeltaNestedFields {
-			return nil, fmt.Errorf("%w: too many nested delta fields", errProjectCollaborationInvalidMessage)
+		if len(typed) > projectCollaborationMaxDraftFields {
+			return fmt.Errorf("%w: too many draft object values", errProjectCollaborationInvalidMessage)
 		}
-		values := make(map[string]any, len(typed))
 		for key, item := range typed {
-			field := strings.TrimSpace(key)
-			if field == "" || len(field) > projectCollaborationMaxFieldNameBytes || !utf8.ValidString(field) {
-				return nil, fmt.Errorf("%w: invalid nested delta field", errProjectCollaborationInvalidMessage)
+			if strings.TrimSpace(key) == "" || len(key) > projectCollaborationMaxFieldNameBytes || !utf8.ValidString(key) {
+				return fmt.Errorf("%w: invalid draft object key", errProjectCollaborationInvalidMessage)
 			}
-			sanitized, err := sanitizeProjectCollaborationDeltaValue(item, depth+1)
-			if err != nil {
-				return nil, err
+			if err := validateProjectCollaborationDraftValue(item, depth+1); err != nil {
+				return err
 			}
-			values[field] = sanitized
 		}
-		return values, nil
+		return nil
 	default:
-		return nil, fmt.Errorf("%w: unsupported delta value type", errProjectCollaborationInvalidMessage)
+		return fmt.Errorf("%w: unsupported draft value type", errProjectCollaborationInvalidMessage)
 	}
+}
+
+func fieldSet(fields ...string) map[string]struct{} {
+	set := make(map[string]struct{}, len(fields))
+	for _, field := range fields {
+		set[field] = struct{}{}
+	}
+	return set
 }
 
 func logInvalidProjectCollaborationMessage(data []byte, err error) {

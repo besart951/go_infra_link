@@ -11,6 +11,9 @@ type Base struct {
 	ID        uuid.UUID `json:"id" gorm:"type:uuid;primaryKey"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+	// Version is the optimistic-concurrency token for an aggregate. New rows
+	// start at one and every persisted mutation advances it exactly once.
+	Version uint64 `json:"version" gorm:"not null;default:1"`
 }
 
 func (b *Base) InitForCreate(now time.Time) error {
@@ -24,12 +27,20 @@ func (b *Base) InitForCreate(now time.Time) error {
 	if b.CreatedAt.IsZero() {
 		b.CreatedAt = now
 	}
+	if b.Version == 0 {
+		b.Version = 1
+	}
 	b.UpdatedAt = now
 	return nil
 }
 
 func (b *Base) TouchForUpdate(now time.Time) {
 	b.UpdatedAt = now
+	if b.Version == 0 {
+		b.Version = 1
+		return
+	}
+	b.Version++
 }
 
 // GetBase returns a pointer to the Base struct (for use with generic repositories)

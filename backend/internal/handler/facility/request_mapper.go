@@ -131,6 +131,9 @@ func toSPSControllerModel(req dto.CreateSPSControllerRequest) *domainFacility.SP
 }
 
 func applySPSControllerUpdate(target *domainFacility.SPSController, req dto.UpdateSPSControllerRequest) {
+	if req.BaseVersion != nil {
+		target.Version = *req.BaseVersion
+	}
 	if req.ControlCabinetID != uuid.Nil {
 		target.ControlCabinetID = req.ControlCabinetID
 	}
@@ -195,6 +198,9 @@ func toFieldDeviceModel(req dto.CreateFieldDeviceRequest) *domainFacility.FieldD
 }
 
 func applyFieldDeviceUpdate(target *domainFacility.FieldDevice, req dto.UpdateFieldDeviceRequest) {
+	if req.BaseVersion != nil {
+		target.Version = *req.BaseVersion
+	}
 	if req.BMK != nil {
 		target.BMK = req.BMK
 	}
@@ -558,12 +564,93 @@ func toControlCabinetModel(req dto.CreateControlCabinetRequest) *domainFacility.
 }
 
 func applyControlCabinetUpdate(target *domainFacility.ControlCabinet, req dto.UpdateControlCabinetRequest) {
+	if req.BaseVersion != nil {
+		target.Version = *req.BaseVersion
+	}
 	if req.BuildingID != uuid.Nil {
 		target.BuildingID = req.BuildingID
 	}
 	if req.ControlCabinetNr != nil {
 		target.ControlCabinetNr = req.ControlCabinetNr
 	}
+}
+
+func controlCabinetUpdatePaths(req dto.UpdateControlCabinetRequest) []string {
+	paths := make([]string, 0, 2)
+	if req.BuildingID != uuid.Nil {
+		paths = append(paths, "building_id")
+	}
+	if req.ControlCabinetNr != nil {
+		paths = append(paths, "control_cabinet_nr")
+	}
+	return paths
+}
+
+func spsControllerUpdatePaths(req dto.UpdateSPSControllerRequest) []string {
+	paths := make([]string, 0, 10)
+	if req.ControlCabinetID != uuid.Nil {
+		paths = append(paths, "control_cabinet_id")
+	}
+	if req.GADevice != nil {
+		paths = append(paths, "ga_device")
+	}
+	if req.DeviceName != "" {
+		paths = append(paths, "device_name")
+	}
+	if req.DeviceDescription != nil {
+		paths = append(paths, "device_description")
+	}
+	if req.DeviceLocation != nil {
+		paths = append(paths, "device_location")
+	}
+	if req.IPAddress != nil {
+		paths = append(paths, "ip_address")
+	}
+	if req.Subnet != nil {
+		paths = append(paths, "subnet")
+	}
+	if req.Gateway != nil {
+		paths = append(paths, "gateway")
+	}
+	if req.Vlan != nil {
+		paths = append(paths, "vlan")
+	}
+	if req.SystemTypes != nil {
+		paths = append(paths, "system_types")
+	}
+	return paths
+}
+
+func fieldDeviceUpdatePaths(req dto.UpdateFieldDeviceRequest) []string {
+	paths := make([]string, 0, 10)
+	if req.BMK != nil {
+		paths = append(paths, "bmk")
+	}
+	if req.Description != nil {
+		paths = append(paths, "description")
+	}
+	if req.TextIndividuell != nil {
+		paths = append(paths, "text_fix")
+	}
+	if req.ApparatNr != nil {
+		paths = append(paths, "apparat_nr")
+	}
+	if req.SPSControllerSystemTypeID != uuid.Nil {
+		paths = append(paths, "sps_controller_system_type_id")
+	}
+	if req.SystemPartID != uuid.Nil {
+		paths = append(paths, "system_part_id")
+	}
+	if req.ApparatID != uuid.Nil {
+		paths = append(paths, "apparat_id")
+	}
+	if req.ObjectDataID != nil {
+		paths = append(paths, "object_data_id")
+	}
+	if req.BacnetObjects != nil {
+		paths = append(paths, "bacnet_objects")
+	}
+	return paths
 }
 
 func toUnitModel(req dto.CreateUnitRequest) *domainFacility.Unit {

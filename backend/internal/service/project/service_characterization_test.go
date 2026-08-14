@@ -2,13 +2,13 @@ package project
 
 import (
 	"context"
-	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainObjectData "github.com/besart951/go_infra_link/backend/internal/domain/facility/objectdata"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
@@ -69,6 +69,7 @@ func TestProjectService_Create_CharacterizesTemplateCopyAndCreatorMembership(t *
 	project := &domainProject.Project{
 		Base:      domain.Base{ID: projectID},
 		Name:      "Current project",
+		PhaseID:   uuid.New(),
 		CreatorID: creatorID,
 	}
 
@@ -145,6 +146,7 @@ func TestProjectService_Create_AssignsCreatorAndProjectAdmins(t *testing.T) {
 	project := &domainProject.Project{
 		Base:      domain.Base{ID: projectID},
 		Name:      "Assigned project",
+		PhaseID:   uuid.New(),
 		CreatorID: creatorID,
 	}
 
