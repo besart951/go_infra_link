@@ -7,6 +7,8 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -14,10 +16,15 @@ import (
 type SPSControllerHandler struct {
 	service       SPSControllerService
 	collaboration ProjectRefreshBroadcaster
+	copyJobs      *facilityservice.CopyJobManager
 }
 
-func NewSPSControllerHandler(service SPSControllerService, collaboration ProjectRefreshBroadcaster) *SPSControllerHandler {
-	return &SPSControllerHandler{service: service, collaboration: collaboration}
+func NewSPSControllerHandler(service SPSControllerService, collaboration ProjectRefreshBroadcaster, copyJobs ...*facilityservice.CopyJobManager) *SPSControllerHandler {
+	handler := &SPSControllerHandler{service: service, collaboration: collaboration}
+	if len(copyJobs) > 0 {
+		handler.copyJobs = copyJobs[0]
+	}
+	return handler
 }
 
 func (h *SPSControllerHandler) broadcastProjectRefresh(ctx context.Context, actorID *uuid.UUID, spsControllerID uuid.UUID) {
@@ -127,7 +134,8 @@ func (h *SPSControllerHandler) GetSPSControllersByIDs(c *gin.Context) {
 // @Tags facility-sps-controllers
 // @Produce json
 // @Param id path string true "SPS Controller ID"
-// @Success 201 {object} dto.SPSControllerResponse
+// @Param X-Copy-Operation-ID header string false "Client-generated copy operation UUID"
+// @Success 202 {object} dto.CopyJobResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 409 {object} dto.ErrorResponse
@@ -136,6 +144,26 @@ func (h *SPSControllerHandler) GetSPSControllersByIDs(c *gin.Context) {
 func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
 	if !ok {
+		return
+	}
+	if h.copyJobs != nil {
+		operationID, ok := copyOperationID(c)
+		if !ok {
+			return
+		}
+		actorID, ok := middleware.GetUserID(c)
+		if !ok {
+			respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+			return
+		}
+		job := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSController, func(ctx context.Context) error {
+			copyEntity, err := h.service.CopyByID(ctx, id)
+			if err == nil {
+				h.broadcastProjectDelta(ctx, &actorID, copyEntity)
+			}
+			return err
+		})
+		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
 		return
 	}
 

@@ -135,6 +135,7 @@
                     <Tooltip.Root>
                       <Tooltip.Trigger
                         class={buttonVariants({ variant: 'outline', size: 'icon-sm' })}
+                        disabled={state.copyInProgress}
                         onclick={createCopyHandler(controller)}
                         aria-label={$t('common.copy')}
                       >

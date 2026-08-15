@@ -27,6 +27,7 @@ import { toProjectIdResolver, toRefreshKeyResolver } from './types.js';
 import { ContextualSPSControllerFetchStrategy } from './strategies/ContextualSPSControllerFetchStrategy.js';
 import { SPSControllerFetchStrategyFactory } from './SPSControllerFetchStrategyFactory.js';
 import { groupSystemTypesByController } from './groupSystemTypesByController.js';
+import { copyOperation } from '$lib/state/copyOperation.svelte.js';
 
 export class SPSControllerState extends BaseDataTableState<SPSController, SPSControllerFilters> {
   showForm = $state(false);
@@ -72,6 +73,10 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
 
   get isProjectContext(): boolean {
     return Boolean(this.projectId);
+  }
+
+  get copyInProgress(): boolean {
+    return copyOperation.isPending;
   }
 
   get selectedControlCabinetFilterIds(): string[] {
@@ -312,16 +317,26 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
     if (!this.canCreateSPSController()) return;
 
     try {
-      if (this.projectId) {
-        await projectRepository.copySPSController(this.projectId, controller.id);
-        addToast(translate('projects.sps_controllers.duplicated'), 'success');
-      } else {
-        await this.manageSPSControllerUseCase.copy(controller.id);
-        addToast(translate('facility.sps_controller_copied'), 'success');
-      }
-
-      await this.reload();
-      this.notifyChanged({ entityIds: [controller.id] });
+      const result = await copyOperation.run({
+        start: (operationId) =>
+          this.projectId
+            ? projectRepository.copySPSController(this.projectId, controller.id, operationId)
+            : this.manageSPSControllerUseCase.copy(controller.id, operationId),
+        onCompleted: async () => {
+          await this.reload();
+          this.notifyChanged({ entityIds: [controller.id] });
+          addToast(
+            this.projectId
+              ? translate('projects.sps_controllers.duplicated')
+              : translate('facility.sps_controller_copied'),
+            'success'
+          );
+        },
+        onFailed: () => {
+          addToast(translate('facility.copy_failed'), 'error');
+        }
+      });
+      if (!result.started) return;
     } catch (error) {
       const message =
         error instanceof Error

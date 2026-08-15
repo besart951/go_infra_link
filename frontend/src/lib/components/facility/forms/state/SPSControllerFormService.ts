@@ -7,6 +7,7 @@ import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsCo
 import { systemTypeRepository } from '$lib/infrastructure/api/systemTypeRepository.js';
 import type {
   CreateSPSControllerRequest,
+  CopyJob,
   SPSController,
   SPSControllerSystemType,
   UpdateSPSControllerRequest
@@ -40,12 +41,12 @@ export const spsControllerFormService = {
     return spsControllerSystemTypeRepository.delete(id);
   },
 
-  copySystemType(id: string): Promise<SPSControllerSystemType> {
-    return spsControllerSystemTypeRepository.copy(id);
+  copySystemType(id: string, operationId: string): Promise<CopyJob> {
+    return spsControllerSystemTypeRepository.copy(id, operationId);
   },
 
-  copyProjectSystemType(projectId: string, id: string): Promise<SPSControllerSystemType> {
-    return copyProjectSPSControllerSystemType(projectId, id);
+  copyProjectSystemType(projectId: string, id: string, operationId: string): Promise<CopyJob> {
+    return copyProjectSPSControllerSystemType(projectId, id, operationId);
   },
 
   getSystemType(id: string) {

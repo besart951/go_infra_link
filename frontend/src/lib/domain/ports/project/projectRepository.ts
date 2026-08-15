@@ -19,7 +19,8 @@ import type {
   MultiCreateFieldDeviceRequest,
   MultiCreateFieldDeviceResponse,
   ObjectDataListParams,
-  SPSController
+  SPSController,
+  CopyJob
 } from '$lib/domain/facility/index.js';
 
 export interface PaginationParams {
@@ -63,8 +64,9 @@ export interface ProjectRepository extends ListRepository<Project> {
   copyControlCabinet(
     projectId: string,
     controlCabinetId: string,
+    operationId: string,
     signal?: AbortSignal
-  ): Promise<ControlCabinet>;
+  ): Promise<CopyJob>;
 
   // Project SPS controller links
   listSPSControllers(
@@ -77,8 +79,9 @@ export interface ProjectRepository extends ListRepository<Project> {
   copySPSController(
     projectId: string,
     spsControllerId: string,
+    operationId: string,
     signal?: AbortSignal
-  ): Promise<SPSController>;
+  ): Promise<CopyJob>;
 
   // Project field device links
   listFieldDevices(

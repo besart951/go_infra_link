@@ -1,11 +1,14 @@
 package facility
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 )
 
@@ -50,6 +53,7 @@ func (h *SPSControllerSystemTypeHandler) UpdateSPSControllerSystemType(c *gin.Co
 type SPSControllerSystemTypeHandler struct {
 	service       SPSControllerSystemTypeService
 	collaboration ProjectRefreshBroadcaster
+	copyJobs      *facilityservice.CopyJobManager
 }
 
 func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService, collaboration ...ProjectRefreshBroadcaster) *SPSControllerSystemTypeHandler {
@@ -58,6 +62,12 @@ func NewSPSControllerSystemTypeHandler(service SPSControllerSystemTypeService, c
 		h.collaboration = collaboration[0]
 	}
 	return h
+}
+
+func NewSPSControllerSystemTypeHandlerWithCopyJobs(service SPSControllerSystemTypeService, collaboration ProjectRefreshBroadcaster, copyJobs *facilityservice.CopyJobManager) *SPSControllerSystemTypeHandler {
+	handler := NewSPSControllerSystemTypeHandler(service, collaboration)
+	handler.copyJobs = copyJobs
+	return handler
 }
 
 // ListSPSControllerSystemTypes godoc
@@ -143,7 +153,8 @@ func (h *SPSControllerSystemTypeHandler) GetSPSControllerSystemType(c *gin.Conte
 // @Tags facility-sps-controller-system-types
 // @Produce json
 // @Param id path string true "SPS Controller System Type ID"
-// @Success 201 {object} SPSControllerSystemTypeResponse
+// @Param X-Copy-Operation-ID header string false "Client-generated copy operation UUID"
+// @Success 202 {object} dto.CopyJobResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -151,6 +162,26 @@ func (h *SPSControllerSystemTypeHandler) GetSPSControllerSystemType(c *gin.Conte
 func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
 	if !ok {
+		return
+	}
+	if h.copyJobs != nil {
+		operationID, ok := copyOperationID(c)
+		if !ok {
+			return
+		}
+		actorID, ok := middleware.GetUserID(c)
+		if !ok {
+			respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+			return
+		}
+		job := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSControllerSystemType, func(ctx context.Context) error {
+			copyEntity, err := h.service.CopyByID(ctx, id)
+			if err == nil && h.collaboration != nil {
+				h.collaboration.BroadcastRefreshForSPSController(ctx, &actorID, copyEntity.SPSControllerID, "sps_controller")
+			}
+			return err
+		})
+		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
 		return
 	}
 

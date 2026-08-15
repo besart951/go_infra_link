@@ -24,8 +24,10 @@ import type {
   MultiCreateFieldDeviceRequest,
   MultiCreateFieldDeviceResponse,
   ObjectDataListParams,
-  SPSController
+  SPSController,
+  CopyJob
 } from '$lib/domain/facility/index.js';
+import { toCopyJob } from '$lib/domain/facility/copy-job.js';
 import { api } from '$lib/api/client.js';
 import { apiClient } from '$lib/api/generated/client.js';
 
@@ -209,12 +211,23 @@ export const projectRepository: ProjectRepository = {
   async copyControlCabinet(
     projectId: string,
     controlCabinetId: string,
+    operationId: string,
     signal?: AbortSignal
-  ): Promise<ControlCabinet> {
-    return api<ControlCabinet>(`/projects/${projectId}/control-cabinets/${controlCabinetId}/copy`, {
-      method: 'POST',
-      signal
-    });
+  ): Promise<CopyJob> {
+    const { data } = await apiClient.POST(
+      '/api/v1/projects/{id}/control-cabinets/{controlCabinetId}/copy',
+      {
+        params: {
+          path: { id: projectId, controlCabinetId },
+          header: { 'X-Copy-Operation-ID': operationId }
+        },
+        signal
+      }
+    );
+    if (!data) {
+      throw new Error('Copy job response is empty');
+    }
+    return toCopyJob(data);
   },
 
   // ──────────────────────────────────────────────────────────────────────
@@ -258,12 +271,23 @@ export const projectRepository: ProjectRepository = {
   async copySPSController(
     projectId: string,
     spsControllerId: string,
+    operationId: string,
     signal?: AbortSignal
-  ): Promise<SPSController> {
-    return api<SPSController>(`/projects/${projectId}/sps-controllers/${spsControllerId}/copy`, {
-      method: 'POST',
-      signal
-    });
+  ): Promise<CopyJob> {
+    const { data } = await apiClient.POST(
+      '/api/v1/projects/{id}/sps-controllers/{spsControllerId}/copy',
+      {
+        params: {
+          path: { id: projectId, spsControllerId },
+          header: { 'X-Copy-Operation-ID': operationId }
+        },
+        signal
+      }
+    );
+    if (!data) {
+      throw new Error('Copy job response is empty');
+    }
+    return toCopyJob(data);
   },
 
   // ──────────────────────────────────────────────────────────────────────

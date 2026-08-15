@@ -58,7 +58,11 @@ func (h *ProjectHandler) notifyProjectChange(c *gin.Context, projectID uuid.UUID
 	if userID, ok := middleware.GetUserID(c); ok {
 		actorID = &userID
 	}
-	h.recordDurableProjectChange(c, projectID, eventType, actorID, entityIDs...)
+	h.notifyProjectChangeForActor(c.Request.Context(), actorID, projectID, eventType, entityIDs...)
+}
+
+func (h *ProjectHandler) notifyProjectChangeForActor(ctx context.Context, actorID *uuid.UUID, projectID uuid.UUID, eventType string, entityIDs ...string) {
+	h.recordDurableProjectChangeForActor(ctx, projectID, eventType, actorID, entityIDs...)
 
 	if h.notifications != nil {
 		metadata := map[string]string{
@@ -73,7 +77,7 @@ func (h *ProjectHandler) notifyProjectChange(c *gin.Context, projectID uuid.UUID
 			metadata["resource_type"] = resourceType
 		}
 		resourceID := resourceIDForProjectNotificationEvent(resourceType, projectID, entityIDs)
-		dispatchCtx := context.WithoutCancel(c.Request.Context())
+		dispatchCtx := context.WithoutCancel(ctx)
 		go func() {
 			_ = h.notifications.DispatchEvent(dispatchCtx, domainNotification.DispatchEventInput{
 				ActorID:      actorID,
@@ -88,6 +92,10 @@ func (h *ProjectHandler) notifyProjectChange(c *gin.Context, projectID uuid.UUID
 }
 
 func (h *ProjectHandler) recordDurableProjectChange(c *gin.Context, projectID uuid.UUID, eventType string, actorID *uuid.UUID, entityIDs ...string) {
+	h.recordDurableProjectChangeForActor(c.Request.Context(), projectID, eventType, actorID, entityIDs...)
+}
+
+func (h *ProjectHandler) recordDurableProjectChangeForActor(ctx context.Context, projectID uuid.UUID, eventType string, actorID *uuid.UUID, entityIDs ...string) {
 	if h.changes == nil {
 		return
 	}
@@ -95,14 +103,11 @@ func (h *ProjectHandler) recordDurableProjectChange(c *gin.Context, projectID uu
 		RecordEvents(context.Context, uuid.UUID, string, *uuid.UUID, ...string) ([]domainProject.Change, error)
 	})
 	if !ok {
-		if err := h.changes.RecordEvent(c.Request.Context(), projectID, eventType, actorID, entityIDs...); err != nil {
-			_ = c.Error(err)
-		}
+		_ = h.changes.RecordEvent(ctx, projectID, eventType, actorID, entityIDs...)
 		return
 	}
-	changes, err := recorder.RecordEvents(c.Request.Context(), projectID, eventType, actorID, entityIDs...)
+	changes, err := recorder.RecordEvents(ctx, projectID, eventType, actorID, entityIDs...)
 	if err != nil {
-		_ = c.Error(err)
 		return
 	}
 	if h.collaboration == nil {
@@ -116,13 +121,13 @@ func (h *ProjectHandler) recordDurableProjectChange(c *gin.Context, projectID uu
 		for key, value := range change.ParentRefs {
 			parentRefs[key] = value.String()
 		}
-		if err := h.collaboration.BroadcastProjectChange(c.Request.Context(), infrarealtime.ProjectChange{
+		if err := h.collaboration.BroadcastProjectChange(ctx, infrarealtime.ProjectChange{
 			ProjectID: change.ProjectID, Revision: int64(change.Revision), EventID: change.EventID,
 			AggregateType: change.AggregateType, AggregateID: *change.AggregateID,
 			Action: string(change.Action), ActorID: change.ActorID, ChangedFields: change.ChangedFields,
 			ParentRefs: parentRefs, OccurredAt: change.OccurredAt,
 		}); err != nil {
-			_ = c.Error(err)
+			continue
 		}
 	}
 }

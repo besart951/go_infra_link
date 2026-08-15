@@ -5,7 +5,9 @@ import { spsControllerSystemTypeRepository } from './spsControllerSystemTypeRepo
 import { api } from '$lib/api/client.js';
 
 vi.mock('$lib/api/client.js', () => ({
-  api: vi.fn()
+  api: vi.fn(),
+  apiFetch: vi.fn(),
+  assertApiSuccess: vi.fn()
 }));
 
 afterEach(() => {

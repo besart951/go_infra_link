@@ -1,6 +1,8 @@
 package project
 
 import (
+	"context"
+
 	changeshandler "github.com/besart951/go_infra_link/backend/internal/handler/project/changes"
 	controlcabinethandler "github.com/besart951/go_infra_link/backend/internal/handler/project/controlcabinet"
 	fielddevicehandler "github.com/besart951/go_infra_link/backend/internal/handler/project/fielddevice"
@@ -9,6 +11,8 @@ import (
 	phasehandler "github.com/besart951/go_infra_link/backend/internal/handler/project/phase"
 	phasepermissionhandler "github.com/besart951/go_infra_link/backend/internal/handler/project/phasepermission"
 	spscontrollerhandler "github.com/besart951/go_infra_link/backend/internal/handler/project/spscontroller"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
+	"github.com/google/uuid"
 )
 
 type Handlers struct {
@@ -37,6 +41,7 @@ type ServiceDeps struct {
 	FieldDeviceOptions FieldDeviceOptionsService
 	Notifications      NotificationEventDispatcher
 	Collaboration      *ProjectCollaborationHub
+	CopyJobs           *facilityservice.CopyJobManager
 }
 
 func NewHandlers(deps ServiceDeps) *Handlers {
@@ -49,12 +54,21 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 		workflow = newWorkflowFromServices(deps.Lifecycle, deps.Membership)
 	}
 	projectHandler := newProjectHandler(deps.Lifecycle, deps.AccessPolicy, deps.Membership, workflow, deps.FacilityLink, collaboration, deps.Notifications, deps.Changes)
+	controlCabinetHandler := controlcabinethandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectControlCabinetDelta)
+	controlCabinetHandler.ConfigureCopyJobs(deps.CopyJobs, func(ctx context.Context, actorID *uuid.UUID, projectID uuid.UUID, eventType, entityID string) {
+		projectHandler.notifyProjectChangeForActor(ctx, actorID, projectID, eventType, entityID)
+	})
+	spsControllerHandler := spscontrollerhandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectSPSControllerDelta)
+	spsControllerHandler.ConfigureCopyJobs(deps.CopyJobs, func(ctx context.Context, actorID *uuid.UUID, projectID uuid.UUID, eventType, entityID string) {
+		projectHandler.notifyProjectChangeForActor(ctx, actorID, projectID, eventType, entityID)
+	})
+
 	return &Handlers{
 		Project:            projectHandler,
 		Changes:            changeshandler.NewHandler(deps.AccessPolicy, deps.Changes),
 		Membership:         membershiphandler.NewHandler(deps.AccessPolicy, workflow, projectHandler.notifyProjectChange),
-		ControlCabinet:     controlcabinethandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectControlCabinetDelta),
-		SPSController:      spscontrollerhandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectSPSControllerDelta),
+		ControlCabinet:     controlCabinetHandler,
+		SPSController:      spsControllerHandler,
 		FieldDevice:        fielddevicehandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange, projectHandler.notifyProjectFieldDeviceDelta),
 		ObjectData:         objectdatahandler.NewHandler(deps.AccessPolicy, deps.FacilityLink, projectHandler.notifyProjectChange),
 		Phase:              phasehandler.NewHandler(deps.Phase),

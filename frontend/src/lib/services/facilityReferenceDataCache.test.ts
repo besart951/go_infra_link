@@ -74,6 +74,24 @@ describe('FacilityReferenceDataCache', () => {
     expect(stream.disconnect).toHaveBeenCalledOnce();
   });
 
+  it('keeps the realtime stream open for copy progress without fetching unauthorized reference data', () => {
+    const apparats = repository(() => [apparat]);
+    const systemParts = repository(() => [systemPart]);
+    const fieldDevices = { getOptions: vi.fn().mockResolvedValue(options()) };
+    const stream = { connect: vi.fn(), disconnect: vi.fn() };
+    const cache = new FacilityReferenceDataCache(
+      { apparats, systemParts, fieldDevices },
+      { createStream: () => stream }
+    );
+
+    cache.start({ refreshReferenceData: false });
+
+    expect(stream.connect).toHaveBeenCalledOnce();
+    expect(apparats.list).not.toHaveBeenCalled();
+    expect(systemParts.list).not.toHaveBeenCalled();
+    expect(fieldDevices.getOptions).not.toHaveBeenCalled();
+  });
+
   it('refreshes the cache and notifies subscribers when the realtime stream signals a change', async () => {
     let apparatItems = [apparat];
     let systemPartItems = [systemPart];
@@ -93,6 +111,7 @@ describe('FacilityReferenceDataCache', () => {
     const updates: Apparat[][] = [];
     cache.subscribe((data) => updates.push(data.apparats));
 
+    cache.start();
     await cache.load();
     const updatedApparat = { ...apparat, name: 'Updated apparatus' };
     const updatedSystemPart = { ...systemPart, name: 'Updated system part' };

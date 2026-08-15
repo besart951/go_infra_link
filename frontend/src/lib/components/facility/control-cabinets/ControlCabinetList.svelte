@@ -153,8 +153,11 @@
               {$t('common.copy')}
             </DropdownMenu.Item>
             {#if listState.canCreateControlCabinet()}
-              <DropdownMenu.Item onclick={() => void listState.duplicateControlCabinet(cabinet)}>
-                {$t('facility.duplicate')}
+              <DropdownMenu.Item
+                disabled={listState.copyInProgress}
+                onclick={() => void listState.duplicateControlCabinet(cabinet)}
+              >
+                {listState.copyInProgress ? $t('common.copying') : $t('facility.duplicate')}
               </DropdownMenu.Item>
             {/if}
             <DropdownMenu.Item onclick={() => void handleView(cabinet)}>

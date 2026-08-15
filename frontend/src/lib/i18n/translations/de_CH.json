@@ -20,6 +20,7 @@
     "save": "Speichern",
     "save_changes": "Änderungen speichern",
     "saving": "Speichern...",
+    "copying": "Wird kopiert...",
     "delete": "Löschen",
     "copy": "Kopieren",
     "view": "Anzeigen",
@@ -722,6 +723,19 @@
     }
   },
   "facility": {
+    "copy_progress": {
+      "aria": "Fortschritt des Kopiervorgangs",
+      "queued": "Kopiervorgang wartet",
+      "preparing": "Kopiervorgang wird vorbereitet",
+      "copying_root": "Stammdaten werden kopiert",
+      "copying_controllers": "SPS-Controller werden kopiert",
+      "copying_system_types": "SPS-Systemtypen werden kopiert",
+      "copying_field_devices": "Feldgeräte werden kopiert",
+      "finalizing": "Kopiervorgang wird abgeschlossen",
+      "completed": "Kopiervorgang abgeschlossen",
+      "failed": "Kopiervorgang fehlgeschlagen",
+      "connection_interrupted": "Verbindung unterbrochen. Der Kopiervorgang läuft auf dem Server weiter."
+    },
     "management": "Anlagenverwaltung",
     "building": "Gebäude",
     "buildings": "Gebäude",

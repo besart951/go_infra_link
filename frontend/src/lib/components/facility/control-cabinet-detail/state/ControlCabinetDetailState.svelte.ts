@@ -4,6 +4,7 @@ import { ManageControlCabinetUseCase } from '$lib/application/useCases/facility/
 import { ManageSPSControllerUseCase } from '$lib/application/useCases/facility/manageSPSControllerUseCase.js';
 import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
 import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
+import { copyOperation } from '$lib/state/copyOperation.svelte.js';
 import type { ToastType } from '$lib/components/toast.svelte';
 
 import type {
@@ -100,6 +101,10 @@ export class ControlCabinetDetailState {
 
   get canDeleteCabinet(): boolean {
     return canPerform('delete', 'controlcabinet');
+  }
+
+  get copyInProgress(): boolean {
+    return copyOperation.isPending;
   }
 
   getSystemTypesForController(controllerId: string): SPSControllerSystemType[] {
@@ -220,9 +225,16 @@ export class ControlCabinetDetailState {
 
   async copySps(controller: SPSController): Promise<void> {
     try {
-      await this.manageSpsController.copy(controller.id);
-      this.toastAction(translate('facility.sps_controller_copied'), 'success');
-      await this.refreshAfterChange();
+      await copyOperation.run({
+        start: (operationId) => this.manageSpsController.copy(controller.id, operationId),
+        onCompleted: async () => {
+          await this.refreshAfterChange();
+          this.toastAction(translate('facility.sps_controller_copied'), 'success');
+        },
+        onFailed: () => {
+          this.toastAction(translate('facility.copy_failed'), 'error');
+        }
+      });
     } catch (error) {
       this.toastAction(
         error instanceof Error ? error.message : translate('facility.copy_failed'),

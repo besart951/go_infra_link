@@ -221,9 +221,10 @@
               {/if}
               {#if listState.canCreateSPSController()}
                 <DropdownMenu.Item
+                  disabled={listState.copyInProgress}
                   onclick={() => void listState.duplicateSPSController(controller)}
                 >
-                  {$t('facility.duplicate')}
+                  {listState.copyInProgress ? $t('common.copying') : $t('facility.duplicate')}
                 </DropdownMenu.Item>
               {/if}
               {#if listState.canReadSPSController()}

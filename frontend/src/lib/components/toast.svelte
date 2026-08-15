@@ -67,7 +67,7 @@
 </script>
 
 {#if $toasts.length > 0}
-  <div class="fixed right-4 bottom-4 z-50 flex max-w-md flex-col gap-2">
+  <div class="fixed right-4 bottom-4 z-50 flex max-w-md flex-col gap-2" aria-live="polite">
     {#each $toasts as toast (toast.id)}
       {@const Icon = getIcon(toast.type)}
       <div

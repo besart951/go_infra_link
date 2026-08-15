@@ -68,6 +68,7 @@ func CopyObjectDataTemplatesForProject(
 }
 
 func (c projectFacilityCopy) copyControlCabinetByID(ctx context.Context, id uuid.UUID) (*domainFacility.ControlCabinet, error) {
+	reportCopyProgress(ctx, 5, copyJobStagePreparing)
 	original, err := domain.GetByID(ctx, c.controlCabinetRepo, id)
 	if err != nil {
 		return nil, err
@@ -87,18 +88,22 @@ func (c projectFacilityCopy) copyControlCabinetByID(ctx context.Context, id uuid
 		BuildingID:       original.BuildingID,
 		ControlCabinetNr: &nextNr,
 	}
+	reportCopyProgress(ctx, 15, copyJobStageCopyingRoot)
 	if err := c.controlCabinetRepo.Create(ctx, copyEntity); err != nil {
 		return nil, err
 	}
 
+	reportCopyProgress(ctx, 25, copyJobStageCopyingControllers)
 	if err := c.copySPSControllersForControlCabinet(ctx, original.ID, copyEntity.ID); err != nil {
 		return nil, err
 	}
 
+	reportCopyProgress(ctx, 95, copyJobStageFinalizing)
 	return copyEntity, nil
 }
 
 func (c projectFacilityCopy) copySPSControllerByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSController, error) {
+	reportCopyProgress(ctx, 5, copyJobStagePreparing)
 	original, err := domain.GetByID(ctx, c.spsControllerRepo, id)
 	if err != nil {
 		return nil, err
@@ -138,18 +143,22 @@ func (c projectFacilityCopy) copySPSControllerByID(ctx context.Context, id uuid.
 		Gateway:           original.Gateway,
 		Vlan:              original.Vlan,
 	}
+	reportCopyProgress(ctx, 25, copyJobStageCopyingRoot)
 	if err := c.spsControllerRepo.Create(ctx, copyEntity); err != nil {
 		return nil, err
 	}
 
+	reportCopyProgress(ctx, 35, copyJobStageCopyingSystemTypes)
 	if err := c.copySystemTypesAndFieldDevicesForSPSController(ctx, original.ID, copyEntity.ID); err != nil {
 		return nil, err
 	}
 
+	reportCopyProgress(ctx, 95, copyJobStageFinalizing)
 	return copyEntity, nil
 }
 
 func (c projectFacilityCopy) copySPSControllerSystemTypeByID(ctx context.Context, id uuid.UUID) (*domainFacility.SPSControllerSystemType, error) {
+	reportCopyProgress(ctx, 5, copyJobStagePreparing)
 	original, err := domain.GetByID(ctx, c.spsControllerSystemRepo, id)
 	if err != nil {
 		return nil, err
@@ -185,18 +194,22 @@ func (c projectFacilityCopy) copySPSControllerSystemTypeByID(ctx context.Context
 		SPSControllerID: original.SPSControllerID,
 		SystemTypeID:    original.SystemTypeID,
 	}
+	reportCopyProgress(ctx, 25, copyJobStageCopyingRoot)
 	if err := c.spsControllerSystemRepo.Create(ctx, copyEntity); err != nil {
 		return nil, err
 	}
 
+	reportCopyProgress(ctx, 40, copyJobStageCopyingFieldDevices)
 	if err := c.copyFieldDevicesForSystemTypes(ctx, map[uuid.UUID]uuid.UUID{original.ID: copyEntity.ID}); err != nil {
 		return nil, err
 	}
 
+	reportCopyProgress(ctx, 95, copyJobStageFinalizing)
 	return domain.GetByID(ctx, c.spsControllerSystemRepo, copyEntity.ID)
 }
 
 func (c projectFacilityCopy) copySPSControllersForControlCabinet(ctx context.Context, originalControlCabinetID, newControlCabinetID uuid.UUID) error {
+	reportCopyProgress(ctx, 30, copyJobStageCopyingControllers)
 	newControlCabinet, err := domain.GetByID(ctx, c.controlCabinetRepo, newControlCabinetID)
 	if err != nil {
 		return err
@@ -256,6 +269,7 @@ func (c projectFacilityCopy) copySPSControllersForControlCabinet(ctx context.Con
 	if err := c.createSPSControllerCopies(ctx, spsCopies); err != nil {
 		return err
 	}
+	reportCopyProgress(ctx, 50, copyJobStageCopyingSystemTypes)
 
 	spsIDMap := make(map[uuid.UUID]uuid.UUID, len(originalToCopy))
 	for originalID, copyEntity := range originalToCopy {
@@ -318,6 +332,7 @@ func (c projectFacilityCopy) copySystemTypesAndFieldDevicesForSPSControllers(ctx
 	if err := c.createSPSControllerSystemTypeCopies(ctx, newSystemTypes); err != nil {
 		return err
 	}
+	reportCopyProgress(ctx, 65, copyJobStageCopyingFieldDevices)
 	for originalID, copyEntity := range originalToCopy {
 		newSystemTypeMap[originalID] = copyEntity.ID
 	}

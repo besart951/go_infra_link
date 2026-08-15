@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/google/uuid"
 )
 
@@ -24,7 +25,7 @@ type FacilityReferenceDataBroadcaster interface {
 }
 
 type FacilityReferenceDataStreamer interface {
-	Stream(w http.ResponseWriter, r *http.Request)
+	Stream(w http.ResponseWriter, r *http.Request, userID uuid.UUID)
 }
 
 type FacilityReferenceDataRealtime interface {
@@ -54,6 +55,7 @@ type ServiceDeps struct {
 	AlarmTypeField          AlarmTypeFieldService
 	BacnetAlarm             BacnetAlarmValueService
 	BacnetReferenceUsage    BacnetReferenceUsageService
+	CopyJobs                *facilityservice.CopyJobManager
 	Collaboration           ProjectRefreshBroadcaster
 	ReferenceData           FacilityReferenceDataRealtime
 }
@@ -81,6 +83,7 @@ type Handlers struct {
 	AlarmTypeField          *AlarmTypeFieldHandler
 	BacnetAlarm             *BacnetAlarmHandler
 	BacnetReferenceUsage    *BacnetReferenceUsageHandler
+	CopyJob                 *CopyJobHandler
 	ReferenceData           *FacilityReferenceDataStreamHandler
 }
 
@@ -96,9 +99,9 @@ func NewHandlers(deps ServiceDeps) *Handlers {
 
 func registerFacilityHierarchyHandlers(handlers *Handlers, deps ServiceDeps) {
 	handlers.Building = NewBuildingHandler(deps.Building)
-	handlers.ControlCabinet = NewControlCabinetHandler(deps.ControlCabinet, deps.Collaboration)
-	handlers.SPSController = NewSPSControllerHandler(deps.SPSController, deps.Collaboration)
-	handlers.SPSControllerSystemType = NewSPSControllerSystemTypeHandler(deps.SPSControllerSystemType, deps.Collaboration)
+	handlers.ControlCabinet = NewControlCabinetHandler(deps.ControlCabinet, deps.Collaboration, deps.CopyJobs)
+	handlers.SPSController = NewSPSControllerHandler(deps.SPSController, deps.Collaboration, deps.CopyJobs)
+	handlers.SPSControllerSystemType = NewSPSControllerSystemTypeHandlerWithCopyJobs(deps.SPSControllerSystemType, deps.Collaboration, deps.CopyJobs)
 	handlers.FieldDevice = NewFieldDeviceHandler(deps.FieldDevice, deps.Collaboration)
 	handlers.BacnetObject = NewBacnetObjectHandler(deps.BacnetObject, deps.Collaboration)
 	handlers.ObjectData = NewObjectDataHandler(deps.ObjectData, deps.BacnetObject, deps.Apparat)
@@ -113,6 +116,7 @@ func registerFacilityLookupHandlers(handlers *Handlers, deps ServiceDeps) {
 	handlers.StateText = NewStateTextHandler(deps.StateText)
 	handlers.NotificationClass = NewNotificationClassHandler(deps.NotificationClass)
 	handlers.BacnetReferenceUsage = NewBacnetReferenceUsageHandler(deps.BacnetReferenceUsage)
+	handlers.CopyJob = NewCopyJobHandler(deps.CopyJobs)
 }
 
 func registerFacilityAlarmHandlers(handlers *Handlers, deps ServiceDeps) {

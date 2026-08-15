@@ -1,7 +1,6 @@
 package facility
 
 import (
-	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/facility/alarm"
 	"github.com/besart951/go_infra_link/backend/internal/handler/facility/fielddevice"
 	"github.com/besart951/go_infra_link/backend/internal/handler/facility/hierarchy"
@@ -17,12 +16,8 @@ type routeDefinition = routing.Definition
 func RegisterRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authChecker middleware.AuthorizationChecker) {
 	facility := protectedV1.Group("/facility")
 	registerRoutes(facility, authChecker, routeDefinitions(handlers))
-	facility.GET(
-		"/reference-data/stream",
-		middleware.RequirePermission(authChecker, domainUser.PermissionApparatRead),
-		middleware.RequirePermission(authChecker, domainUser.PermissionSystemPartRead),
-		handlers.ReferenceData.StreamFacilityReferenceData,
-	)
+	facility.GET("/reference-data/stream", handlers.ReferenceData.StreamFacilityReferenceData)
+	facility.GET("/copy-jobs/:id", handlers.CopyJob.GetCopyJob)
 }
 
 func registerRoutes(group *gin.RouterGroup, authChecker middleware.AuthorizationChecker, routes []routeDefinition) {

@@ -9,11 +9,14 @@ import type {
   NextGADeviceResponse,
   SPSControllerSystemType,
   SPSControllerSystemTypeListParams,
-  SPSControllerSystemTypeListResponse
+  SPSControllerSystemTypeListResponse,
+  CopyJob
 } from '$lib/domain/facility/index.js';
+import { toCopyJob } from '$lib/domain/facility/copy-job.js';
 import { createCachedBulkFetchByIds } from '$lib/infrastructure/api/createCachedBulkFetch.js';
 import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsControllerSystemTypeRepository.js';
 import { api } from '$lib/api/client.js';
+import { apiClient } from '$lib/api/generated/client.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
 
 const getBulkCached = createCachedBulkFetchByIds('facility-sps-controllers', (ids, signal) =>
@@ -42,11 +45,18 @@ export const spsControllerRepository: SPSControllerRepository = {
     return getBulkCached(ids, signal);
   },
 
-  async copy(id: string, signal?: AbortSignal): Promise<SPSController> {
-    return api<SPSController>(`/facility/sps-controllers/${id}/copy`, {
-      method: 'POST',
+  async copy(id: string, operationId: string, signal?: AbortSignal): Promise<CopyJob> {
+    const { data } = await apiClient.POST('/api/v1/facility/sps-controllers/{id}/copy', {
+      params: {
+        path: { id },
+        header: { 'X-Copy-Operation-ID': operationId }
+      },
       signal
     });
+    if (!data) {
+      throw new Error('Copy job response is empty');
+    }
+    return toCopyJob(data);
   },
 
   async create(data: CreateSPSControllerRequest, signal?: AbortSignal): Promise<SPSController> {

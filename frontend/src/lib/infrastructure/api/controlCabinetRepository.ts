@@ -6,9 +6,12 @@ import type {
   ControlCabinetBulkResponse,
   CreateControlCabinetRequest,
   UpdateControlCabinetRequest,
-  ControlCabinetDeleteImpact
+  ControlCabinetDeleteImpact,
+  CopyJob
 } from '$lib/domain/facility/index.js';
+import { toCopyJob } from '$lib/domain/facility/copy-job.js';
 import { api } from '$lib/api/client.js';
+import { apiClient } from '$lib/api/generated/client.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
 
 export const controlCabinetRepository: ControlCabinetRepository = {
@@ -34,11 +37,18 @@ export const controlCabinetRepository: ControlCabinetRepository = {
     return response.items;
   },
 
-  async copy(id: string, signal?: AbortSignal): Promise<ControlCabinet> {
-    return api<ControlCabinet>(`/facility/control-cabinets/${id}/copy`, {
-      method: 'POST',
+  async copy(id: string, operationId: string, signal?: AbortSignal): Promise<CopyJob> {
+    const { data } = await apiClient.POST('/api/v1/facility/control-cabinets/{id}/copy', {
+      params: {
+        path: { id },
+        header: { 'X-Copy-Operation-ID': operationId }
+      },
       signal
     });
+    if (!data) {
+      throw new Error('Copy job response is empty');
+    }
+    return toCopyJob(data);
   },
 
   async create(data: CreateControlCabinetRequest, signal?: AbortSignal): Promise<ControlCabinet> {

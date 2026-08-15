@@ -2,7 +2,8 @@ import type {
   ControlCabinet,
   CreateControlCabinetRequest,
   UpdateControlCabinetRequest,
-  ControlCabinetDeleteImpact
+  ControlCabinetDeleteImpact,
+  CopyJob
 } from '$lib/domain/facility/index.js';
 import type { ControlCabinetRepository } from '$lib/domain/ports/facility/controlCabinetRepository.js';
 import { ManageEntityUseCase } from '$lib/application/useCases/manageEntityUseCase.js';
@@ -16,8 +17,8 @@ export class ManageControlCabinetUseCase extends ManageEntityUseCase<
     super(repo);
   }
 
-  async copy(id: string, signal?: AbortSignal): Promise<ControlCabinet> {
-    return this.repo.copy(id, signal);
+  async copy(id: string, operationId: string, signal?: AbortSignal): Promise<CopyJob> {
+    return this.repo.copy(id, operationId, signal);
   }
 
   async validate(

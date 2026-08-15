@@ -4,9 +4,10 @@ import (
 	facilityhandler "github.com/besart951/go_infra_link/backend/internal/handler/facility"
 	projecthandler "github.com/besart951/go_infra_link/backend/internal/handler/project"
 	userhandler "github.com/besart951/go_infra_link/backend/internal/handler/user"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 )
 
-func newProjectHandlers(services *Services, runtime *RuntimeAdapters) *projecthandler.Handlers {
+func newProjectHandlers(services *Services, runtime *RuntimeAdapters, copyJobs *facilityservice.CopyJobManager) *projecthandler.Handlers {
 	return projecthandler.NewHandlers(projecthandler.ServiceDeps{
 		Lifecycle:          services.Project.Lifecycle,
 		Changes:            services.Project.Changes,
@@ -19,10 +20,11 @@ func newProjectHandlers(services *Services, runtime *RuntimeAdapters) *projectha
 		FieldDeviceOptions: services.Facility.FieldDevice,
 		Notifications:      services.Notification,
 		Collaboration:      runtime.ProjectCollaboration,
+		CopyJobs:           copyJobs,
 	})
 }
 
-func newFacilityHandlers(services *Services, collaboration facilityhandler.ProjectRefreshBroadcaster, referenceData facilityhandler.FacilityReferenceDataRealtime) *facilityhandler.Handlers {
+func newFacilityHandlers(services *Services, collaboration facilityhandler.ProjectRefreshBroadcaster, referenceData facilityhandler.FacilityReferenceDataRealtime, copyJobs *facilityservice.CopyJobManager) *facilityhandler.Handlers {
 	return facilityhandler.NewHandlers(facilityhandler.ServiceDeps{
 		Building:                services.Facility.Building,
 		SystemType:              services.Facility.SystemType,
@@ -44,6 +46,7 @@ func newFacilityHandlers(services *Services, collaboration facilityhandler.Proje
 		AlarmTypeField:          services.Facility.AlarmTypeField,
 		BacnetAlarm:             services.Facility.BacnetAlarmValue,
 		BacnetReferenceUsage:    services.Facility.BacnetReferenceUsage,
+		CopyJobs:                copyJobs,
 		Collaboration:           collaboration,
 		ReferenceData:           referenceData,
 	})

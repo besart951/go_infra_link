@@ -20,6 +20,7 @@ import type { ControlCabinetFilters, ControlCabinetStateProps } from './types.js
 import { toProjectIdResolver } from './types.js';
 import { ControlCabinetFetchStrategyFactory } from './ControlCabinetFetchStrategyFactory.js';
 import { ContextualControlCabinetFetchStrategy } from './strategies/ContextualControlCabinetFetchStrategy.js';
+import { copyOperation } from '$lib/state/copyOperation.svelte.js';
 
 export class ControlCabinetState extends BaseDataTableState<ControlCabinet, ControlCabinetFilters> {
   showForm = $state(false);
@@ -59,6 +60,10 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
 
   get isProjectContext(): boolean {
     return Boolean(this.projectId);
+  }
+
+  get copyInProgress(): boolean {
+    return copyOperation.isPending;
   }
 
   get selectedBuildingFilterIds(): string[] {
@@ -235,16 +240,26 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
     if (!this.canCreateControlCabinet()) return;
 
     try {
-      if (this.projectId) {
-        await projectRepository.copyControlCabinet(this.projectId, controlCabinet.id);
-        addToast(translate('projects.control_cabinets.duplicated'), 'success');
-      } else {
-        await this.manageControlCabinetUseCase.copy(controlCabinet.id);
-        addToast(translate('facility.control_cabinet_copied'), 'success');
-      }
-
-      await this.reload();
-      this.notifyChanged();
+      const result = await copyOperation.run({
+        start: (operationId) =>
+          this.projectId
+            ? projectRepository.copyControlCabinet(this.projectId, controlCabinet.id, operationId)
+            : this.manageControlCabinetUseCase.copy(controlCabinet.id, operationId),
+        onCompleted: async () => {
+          await this.reload();
+          this.notifyChanged();
+          addToast(
+            this.projectId
+              ? translate('projects.control_cabinets.duplicated')
+              : translate('facility.control_cabinet_copied'),
+            'success'
+          );
+        },
+        onFailed: () => {
+          addToast(translate('facility.copy_failed'), 'error');
+        }
+      });
+      if (!result.started) return;
     } catch (error) {
       const message = error instanceof Error ? error.message : translate('facility.copy_failed');
       addToast(message, 'error');

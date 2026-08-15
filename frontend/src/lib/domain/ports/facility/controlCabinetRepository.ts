@@ -12,7 +12,11 @@ export interface ControlCabinetRepository extends CrudRepository<
   UpdateControlCabinetRequest
 > {
   getBulk(ids: string[], signal?: AbortSignal): Promise<ControlCabinet[]>;
-  copy(id: string, signal?: AbortSignal): Promise<ControlCabinet>;
+  copy(
+    id: string,
+    operationId: string,
+    signal?: AbortSignal
+  ): Promise<import('$lib/domain/facility/index.js').CopyJob>;
   validate(
     data: { id?: string; building_id: string; control_cabinet_nr?: string },
     signal?: AbortSignal

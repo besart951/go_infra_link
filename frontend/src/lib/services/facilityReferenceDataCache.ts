@@ -1,6 +1,7 @@
 import { ListEntityUseCase } from '$lib/application/useCases/listEntityUseCase.js';
 import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
 import type { Apparat, FieldDeviceOptions, SystemPart } from '$lib/domain/facility/index.js';
+import type { CopyJobKind, CopyJobStatus } from '$lib/domain/facility/copy-job.js';
 import type { CrudRepository } from '$lib/domain/ports/crudRepository.js';
 import type { FieldDeviceRepository } from '$lib/domain/ports/facility/fieldDeviceRepository.js';
 import { apparatRepository } from '$lib/infrastructure/api/apparatRepository.js';
@@ -11,6 +12,17 @@ import {
   RealtimeJsonStream
 } from '$lib/infrastructure/realtime/realtimeJsonStream.js';
 import { z } from 'zod';
+
+export interface FacilityCopyJobProgressEvent {
+  type: 'facility.copy_job.progress';
+  job_id: string;
+  kind: CopyJobKind;
+  status: CopyJobStatus;
+  progress: number;
+  stage: string;
+  error?: string;
+  updated_at: string;
+}
 
 export interface FacilityReferenceData {
   apparats: Apparat[];
@@ -29,14 +41,34 @@ export interface FacilityReferenceDataStream {
 }
 
 interface FacilityReferenceDataCacheOptions {
-  createStream?: (onChange: () => void) => FacilityReferenceDataStream;
+  createStream?: (
+    onChange: () => void,
+    onCopyJobProgress: (event: FacilityCopyJobProgressEvent) => void,
+    onOpen: () => void
+  ) => FacilityReferenceDataStream;
 }
 
-const facilityReferenceDataEventSchema = z.object({
+const facilityReferenceDataChangedEventSchema = z.object({
   type: z.literal('facility_reference_data.changed'),
   resources: z.array(z.enum(['apparats', 'system_parts'])).min(1),
   at: z.string()
 });
+
+const facilityCopyJobProgressEventSchema = z.object({
+  type: z.literal('facility.copy_job.progress'),
+  job_id: z.string().uuid(),
+  kind: z.enum(['control_cabinet', 'sps_controller', 'sps_controller_system_type']),
+  status: z.enum(['queued', 'running', 'completed', 'failed']),
+  progress: z.number().int().min(0).max(100),
+  stage: z.string(),
+  error: z.string().optional(),
+  updated_at: z.string()
+});
+
+const facilityRealtimeEventSchema = z.discriminatedUnion('type', [
+  facilityReferenceDataChangedEventSchema,
+  facilityCopyJobProgressEventSchema
+]);
 
 export class FacilityReferenceDataCache {
   private readonly listApparatsUseCase: ListEntityUseCase<Apparat>;
@@ -44,8 +76,11 @@ export class FacilityReferenceDataCache {
   private readonly fieldDevices: Pick<FieldDeviceRepository, 'getOptions'>;
   private readonly stream: FacilityReferenceDataStream;
   private readonly listeners = new Set<(data: FacilityReferenceData) => void>();
+  private readonly copyJobListeners = new Set<(event: FacilityCopyJobProgressEvent) => void>();
+  private readonly realtimeOpenListeners = new Set<() => void>();
   private data: FacilityReferenceData | null = null;
   private request: Promise<FacilityReferenceData> | null = null;
+  private refreshReferenceData = false;
 
   constructor(
     dependencies: FacilityReferenceDataDependencies = {
@@ -59,16 +94,31 @@ export class FacilityReferenceDataCache {
     this.listSystemPartsUseCase = new ListEntityUseCase(dependencies.systemParts);
     this.fieldDevices = dependencies.fieldDevices;
     this.stream =
-      options.createStream?.(() => this.refreshInBackground()) ??
-      createFacilityReferenceDataStream(() => this.refreshInBackground());
+      options.createStream?.(
+        () => this.handleReferenceDataChange(),
+        (event) => this.notifyCopyJobProgress(event),
+        () => this.notifyRealtimeOpen()
+      ) ??
+      createFacilityReferenceDataStream(
+        () => this.handleReferenceDataChange(),
+        (event) => this.notifyCopyJobProgress(event),
+        () => this.notifyRealtimeOpen()
+      );
   }
 
-  start(): void {
+  /**
+   * Opens the single facility realtime stream for every signed-in user. Users
+   * without both reference-data permissions still receive their own copy-job
+   * progress, while reference data is fetched only when it is authorized.
+   */
+  start(options: { refreshReferenceData?: boolean } = {}): void {
+    this.refreshReferenceData = options.refreshReferenceData ?? true;
     this.stream.connect();
-    this.refreshInBackground();
+    this.handleReferenceDataChange();
   }
 
   stop(): void {
+    this.refreshReferenceData = false;
     this.stream.disconnect();
   }
 
@@ -90,8 +140,26 @@ export class FacilityReferenceDataCache {
     };
   }
 
+  subscribeCopyJobProgress(listener: (event: FacilityCopyJobProgressEvent) => void): () => void {
+    this.copyJobListeners.add(listener);
+    return () => {
+      this.copyJobListeners.delete(listener);
+    };
+  }
+
+  subscribeRealtimeOpen(listener: () => void): () => void {
+    this.realtimeOpenListeners.add(listener);
+    return () => {
+      this.realtimeOpenListeners.delete(listener);
+    };
+  }
+
   private refreshInBackground(): void {
     void this.refresh().catch(() => undefined);
+  }
+
+  private handleReferenceDataChange(): void {
+    if (this.refreshReferenceData) this.refreshInBackground();
   }
 
   private fetch(force: boolean): Promise<FacilityReferenceData> {
@@ -150,6 +218,18 @@ export class FacilityReferenceDataCache {
       listener(data);
     }
   }
+
+  private notifyCopyJobProgress(event: FacilityCopyJobProgressEvent): void {
+    for (const listener of this.copyJobListeners) {
+      listener(event);
+    }
+  }
+
+  private notifyRealtimeOpen(): void {
+    for (const listener of this.realtimeOpenListeners) {
+      listener();
+    }
+  }
 }
 
 function resolveReferenceItems<T>(
@@ -187,12 +267,25 @@ export function withOptionRelations(
   });
 }
 
-function createFacilityReferenceDataStream(onChange: () => void): FacilityReferenceDataStream {
+function createFacilityReferenceDataStream(
+  onChange: () => void,
+  onCopyJobProgress: (event: FacilityCopyJobProgressEvent) => void,
+  onOpen: () => void
+): FacilityReferenceDataStream {
   return new RealtimeJsonStream({
     url: () => buildSameOriginWebSocketUrl('/api/v1/facility/reference-data/stream'),
-    parseMessage: (message) => facilityReferenceDataEventSchema.parse(message),
-    onMessage: onChange,
-    onOpen: onChange,
+    parseMessage: (message) => facilityRealtimeEventSchema.parse(message),
+    onMessage: (event) => {
+      if (event.type === 'facility_reference_data.changed') {
+        onChange();
+        return;
+      }
+      onCopyJobProgress(event);
+    },
+    onOpen: () => {
+      onChange();
+      onOpen();
+    },
     onInvalidMessage: (raw, error) => {
       console.warn('Ignored invalid facility reference data event', { raw, error });
     }

@@ -10,16 +10,18 @@ import (
 	i18nhandler "github.com/besart951/go_infra_link/backend/internal/handler/i18n"
 	notificationhandler "github.com/besart951/go_infra_link/backend/internal/handler/notification"
 	teamhandler "github.com/besart951/go_infra_link/backend/internal/handler/team"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/besart951/go_infra_link/backend/pkg/i18n"
 )
 
 // NewHandlers creates all HTTP handler instances from services.
 func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings authhandler.CookieSettings, i18nLoader *i18n.Loader, accessTokenTTL, refreshTokenTTL time.Duration) *handler.Handlers {
 	runtime = runtimeOrDefault(runtime)
+	copyJobs := facilityservice.NewCopyJobManager(runtime.FacilityReferenceData)
 
-	projectHandlers := newProjectHandlers(services, runtime)
+	projectHandlers := newProjectHandlers(services, runtime, copyJobs)
 
-	facilityHandlers := newFacilityHandlers(services, projectHandlers.RefreshBroadcaster, runtime.FacilityReferenceData)
+	facilityHandlers := newFacilityHandlers(services, projectHandlers.RefreshBroadcaster, runtime.FacilityReferenceData, copyJobs)
 	userHandlers := newUserHandlers(services)
 
 	authHandler := authhandler.NewAuthHandler(

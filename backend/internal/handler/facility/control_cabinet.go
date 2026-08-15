@@ -7,6 +7,8 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -14,10 +16,15 @@ import (
 type ControlCabinetHandler struct {
 	service       ControlCabinetService
 	collaboration ProjectRefreshBroadcaster
+	copyJobs      *facilityservice.CopyJobManager
 }
 
-func NewControlCabinetHandler(service ControlCabinetService, collaboration ProjectRefreshBroadcaster) *ControlCabinetHandler {
-	return &ControlCabinetHandler{service: service, collaboration: collaboration}
+func NewControlCabinetHandler(service ControlCabinetService, collaboration ProjectRefreshBroadcaster, copyJobs ...*facilityservice.CopyJobManager) *ControlCabinetHandler {
+	handler := &ControlCabinetHandler{service: service, collaboration: collaboration}
+	if len(copyJobs) > 0 {
+		handler.copyJobs = copyJobs[0]
+	}
+	return handler
 }
 
 func (h *ControlCabinetHandler) broadcastProjectRefresh(ctx context.Context, actorID *uuid.UUID, controlCabinetID uuid.UUID) {
@@ -126,7 +133,8 @@ func (h *ControlCabinetHandler) GetControlCabinetsByIDs(c *gin.Context) {
 // @Tags facility-control-cabinets
 // @Produce json
 // @Param id path string true "Control Cabinet ID"
-// @Success 201 {object} dto.ControlCabinetResponse
+// @Param X-Copy-Operation-ID header string false "Client-generated copy operation UUID"
+// @Success 202 {object} dto.CopyJobResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 409 {object} dto.ErrorResponse
@@ -135,6 +143,26 @@ func (h *ControlCabinetHandler) GetControlCabinetsByIDs(c *gin.Context) {
 func (h *ControlCabinetHandler) CopyControlCabinet(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
 	if !ok {
+		return
+	}
+	if h.copyJobs != nil {
+		operationID, ok := copyOperationID(c)
+		if !ok {
+			return
+		}
+		actorID, ok := middleware.GetUserID(c)
+		if !ok {
+			respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+			return
+		}
+		job := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindControlCabinet, func(ctx context.Context) error {
+			copyEntity, err := h.service.CopyByID(ctx, id)
+			if err == nil {
+				h.broadcastProjectDelta(ctx, &actorID, copyEntity)
+			}
+			return err
+		})
+		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
 		return
 	}
 

@@ -8,10 +8,13 @@ import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
+	facilitydto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
+	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -29,9 +32,12 @@ type Handler struct {
 	facilityLink FacilityLinkService
 	notify       projectshared.ProjectChangeNotifier
 	notifyDelta  ProjectControlCabinetDeltaNotifier
+	copyJobs     *facilityservice.CopyJobManager
+	notifyCopy   ProjectCopyJobNotifier
 }
 
 type ProjectControlCabinetDeltaNotifier func(*gin.Context, uuid.UUID, domainFacility.ControlCabinet)
+type ProjectCopyJobNotifier func(context.Context, *uuid.UUID, uuid.UUID, string, string)
 
 func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier, notifyDelta ...ProjectControlCabinetDeltaNotifier) *Handler {
 	var delta ProjectControlCabinetDeltaNotifier
@@ -39,6 +45,11 @@ func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityL
 		delta = notifyDelta[0]
 	}
 	return &Handler{access: access, facilityLink: facilityLink, notify: notify, notifyDelta: delta}
+}
+
+func (h *Handler) ConfigureCopyJobs(copyJobs *facilityservice.CopyJobManager, notify ProjectCopyJobNotifier) {
+	h.copyJobs = copyJobs
+	h.notifyCopy = notify
 }
 
 // CreateProjectControlCabinet godoc
@@ -133,6 +144,19 @@ func (h *Handler) ListProjectControlCabinets(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// CopyProjectControlCabinet godoc
+// @Summary Copy a project control cabinet asynchronously
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param controlCabinetId path string true "Control Cabinet ID"
+// @Param X-Copy-Operation-ID header string false "Client-generated copy operation UUID"
+// @Success 202 {object} facilitydto.CopyJobResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/control-cabinets/{controlCabinetId}/copy [post]
 func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
@@ -150,6 +174,27 @@ func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 
 	controlCabinetID, ok := handlerutil.ParseUUIDParam(c, "controlCabinetId")
 	if !ok {
+		return
+	}
+	if h.copyJobs != nil {
+		operationID, err := handlerutil.ParseCopyOperationID(c)
+		if err != nil {
+			handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_operation_id", "project.creation_failed")
+			return
+		}
+		actorID, ok := middleware.GetUserID(c)
+		if !ok {
+			handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+			return
+		}
+		job := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindControlCabinet, func(ctx context.Context) error {
+			copyEntity, err := h.facilityLink.CopyControlCabinet(ctx, projectID, controlCabinetID)
+			if err == nil && h.notifyCopy != nil {
+				h.notifyCopy(ctx, &actorID, projectID, "project.control_cabinet.copied", copyEntity.ID.String())
+			}
+			return err
+		})
+		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
 		return
 	}
 
@@ -170,6 +215,13 @@ func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, sharedpresenter.ToControlCabinetResponse(*copyEntity))
+}
+
+func toCopyJobResponse(job facilityservice.CopyJob) facilitydto.CopyJobResponse {
+	return facilitydto.CopyJobResponse{
+		JobID: job.ID, Kind: string(job.Kind), Status: string(job.Status), Progress: job.Progress,
+		Stage: job.Stage, Error: job.Error, CreatedAt: job.CreatedAt, UpdatedAt: job.UpdatedAt,
+	}
 }
 
 // UpdateProjectControlCabinet godoc

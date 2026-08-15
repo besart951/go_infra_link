@@ -29,7 +29,9 @@
   import { useLiveValidation } from '$lib/hooks/useLiveValidation.svelte.js';
   import { createTranslator } from '$lib/i18n/translator.js';
   import { t as translate } from '$lib/i18n/index.js';
+  import { copyOperation } from '$lib/state/copyOperation.svelte.js';
   import CopyIcon from '@lucide/svelte/icons/copy';
+  import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
   import Trash2Icon from '@lucide/svelte/icons/trash-2';
 
   interface Props {
@@ -416,34 +418,24 @@
 
   async function copySystemType(index: number) {
     const entry = systemTypes[index];
-    if (!entry?.id) return;
+    const systemTypeEntryId = entry?.id;
+    if (!systemTypeEntryId) return;
     try {
-      const copied = projectId
-        ? await spsControllerFormService.copyProjectSystemType(projectId, entry.id)
-        : await spsControllerFormService.copySystemType(entry.id);
-      const systemTypeId = copied.system_type_id;
-      if (!systemTypeDetails[systemTypeId]) {
-        const details = await ensureSystemTypeDetails(systemTypeId);
-        if (details) {
-          systemTypeLabels = {
-            ...systemTypeLabels,
-            [systemTypeId]: buildSPSControllerSystemTypeLabel(
-              details.name,
-              details.number_min,
-              details.number_max
-            )
-          };
+      const result = await copyOperation.run({
+        start: (operationId) =>
+          projectId
+            ? spsControllerFormService.copyProjectSystemType(
+                projectId,
+                systemTypeEntryId,
+                operationId
+              )
+            : spsControllerFormService.copySystemType(systemTypeEntryId, operationId),
+        onCompleted: () => loadSystemTypes(),
+        onFailed: () => {
+          error = translate('facility.copy_failed');
         }
-      }
-      systemTypes = [
-        ...systemTypes,
-        {
-          id: copied.id,
-          system_type_id: systemTypeId,
-          number: copied.number ?? undefined,
-          document_name: copied.document_name ?? undefined
-        }
-      ];
+      });
+      if (!result.started) return;
     } catch (e) {
       console.error(e);
       error = getErrorMessage(e);
@@ -748,8 +740,13 @@
                         aria-label={$t('common.copy')}
                         title={$t('common.copy')}
                         class="pointer-events-auto h-7 w-7"
+                        disabled={loading || copyOperation.isPending}
                       >
-                        <CopyIcon class="h-4 w-4" />
+                        {#if copyOperation.isPending}
+                          <LoaderCircleIcon class="h-4 w-4 animate-spin" />
+                        {:else}
+                          <CopyIcon class="h-4 w-4" />
+                        {/if}
                         <span class="sr-only">{$t('common.copy')}</span>
                       </Button>
                     {/if}

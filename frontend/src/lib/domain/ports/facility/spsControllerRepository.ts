@@ -15,7 +15,11 @@ export interface SPSControllerRepository extends CrudRepository<
   UpdateSPSControllerRequest
 > {
   getBulk(ids: string[], signal?: AbortSignal): Promise<SPSController[]>;
-  copy(id: string, signal?: AbortSignal): Promise<SPSController>;
+  copy(
+    id: string,
+    operationId: string,
+    signal?: AbortSignal
+  ): Promise<import('$lib/domain/facility/index.js').CopyJob>;
   validate(
     data: {
       id?: string;

@@ -2915,15 +2915,23 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "Client-generated copy operation UUID",
+            "name": "X-Copy-Operation-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
-          "201": {
-            "description": "Created",
+          "202": {
+            "description": "Accepted",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
                 }
               }
             }
@@ -3021,6 +3029,67 @@
           },
           "500": {
             "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/facility/copy-jobs/{id}": {
+      "get": {
+        "tags": [
+          "facility-copy-jobs"
+        ],
+        "summary": "Get a facility copy job",
+        "parameters": [
+          {
+            "description": "Copy Job ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4462,7 +4531,7 @@
     },
     "/api/v1/facility/reference-data/stream": {
       "get": {
-        "description": "Upgrades the authenticated request to a WebSocket. Each event follows the `facility_reference_data.changed` contract and causes clients to refresh cached apparats and system parts through their authorized HTTP endpoints.",
+        "description": "Upgrades the authenticated request to the shared facility WebSocket. `facility_reference_data.changed` tells authorized clients to refresh cached apparats and system parts. User-scoped `facility.copy_job.progress` events contain a copy job ID, status, stage and 0-100 progress; they are only delivered to the user that started the job.",
         "tags": [
           "facility-reference-data"
         ],
@@ -4473,16 +4542,6 @@
           },
           "401": {
             "description": "Unauthorized",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
             "content": {
               "*/*": {
                 "schema": {
@@ -4716,15 +4775,23 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "Client-generated copy operation UUID",
+            "name": "X-Copy-Operation-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
-          "201": {
-            "description": "Created",
+          "202": {
+            "description": "Accepted",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/internal_handler_facility.SPSControllerSystemTypeResponse"
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
                 }
               }
             }
@@ -5249,15 +5316,23 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "Client-generated copy operation UUID",
+            "name": "X-Copy-Operation-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
-          "201": {
-            "description": "Created",
+          "202": {
+            "description": "Accepted",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
                 }
               }
             }
@@ -7462,6 +7537,94 @@
         }
       }
     },
+    "/api/v1/projects/{id}/control-cabinets/{controlCabinetId}/copy": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Copy a project control cabinet asynchronously",
+        "parameters": [
+          {
+            "description": "Project ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Control Cabinet ID",
+            "name": "controlCabinetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Client-generated copy operation UUID",
+            "name": "X-Copy-Operation-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/{id}/control-cabinets/{linkId}": {
       "put": {
         "tags": [
@@ -8282,6 +8445,94 @@
         }
       }
     },
+    "/api/v1/projects/{id}/sps-controller-system-types/{systemTypeId}/copy": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Copy a project SPS controller system type asynchronously",
+        "parameters": [
+          {
+            "description": "Project ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "SPS Controller System Type ID",
+            "name": "systemTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Client-generated copy operation UUID",
+            "name": "X-Copy-Operation-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/{id}/sps-controllers": {
       "get": {
         "tags": [
@@ -8562,6 +8813,94 @@
           },
           "500": {
             "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/sps-controllers/{spsControllerId}/copy": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Copy a project SPS controller asynchronously",
+        "parameters": [
+          {
+            "description": "Project ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "SPS Controller ID",
+            "name": "spsControllerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Client-generated copy operation UUID",
+            "name": "X-Copy-Operation-ID",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -11062,6 +11401,48 @@
           },
           "version": {
             "type": "integer"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "job_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "control_cabinet",
+              "sps_controller",
+              "sps_controller_system_type"
+            ]
+          },
+          "progress": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 0
+          },
+          "stage": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "failed"
+            ]
+          },
+          "updated_at": {
+            "type": "string"
           }
         }
       },

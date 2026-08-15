@@ -693,6 +693,36 @@ definitions:
       version:
         type: integer
     type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse:
+    properties:
+      created_at:
+        type: string
+      error:
+        type: string
+      job_id:
+        type: string
+      kind:
+        enum:
+        - control_cabinet
+        - sps_controller
+        - sps_controller_system_type
+        type: string
+      progress:
+        maximum: 100
+        minimum: 0
+        type: integer
+      stage:
+        type: string
+      status:
+        enum:
+        - queued
+        - running
+        - completed
+        - failed
+        type: string
+      updated_at:
+        type: string
+    type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CreateAlarmDefinitionRequest:
     properties:
       alarm_note:
@@ -4673,13 +4703,17 @@ paths:
         name: id
         required: true
         type: string
+      - description: Client-generated copy operation UUID
+        in: header
+        name: X-Copy-Operation-ID
+        type: string
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "202":
+          description: Accepted
           schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
         "400":
           description: Bad Request
           schema:
@@ -4785,6 +4819,36 @@ paths:
       summary: Validate control cabinet fields
       tags:
       - facility-validation
+  /api/v1/facility/copy-jobs/{id}:
+    get:
+      parameters:
+      - description: Copy Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+      summary: Get a facility copy job
+      tags:
+      - facility-copy-jobs
   /api/v1/facility/field-devices:
     get:
       parameters:
@@ -5548,18 +5612,16 @@ paths:
       - facility-object-data
   /api/v1/facility/reference-data/stream:
     get:
-      description: Upgrades the authenticated request to a WebSocket. Each event follows
-        the `facility_reference_data.changed` contract and causes clients to refresh
-        cached apparats and system parts through their authorized HTTP endpoints.
+      description: Upgrades the authenticated request to the shared facility WebSocket.
+        `facility_reference_data.changed` tells authorized clients to refresh cached
+        apparats and system parts. User-scoped `facility.copy_job.progress` events
+        contain a copy job ID, status, stage and 0-100 progress; they are only delivered
+        to the user that started the job.
       responses:
         "101":
           description: Switching Protocols
         "401":
           description: Unauthorized
-          schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
-        "403":
-          description: Forbidden
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
         "404":
@@ -5678,13 +5740,17 @@ paths:
         name: id
         required: true
         type: string
+      - description: Client-generated copy operation UUID
+        in: header
+        name: X-Copy-Operation-ID
+        type: string
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "202":
+          description: Accepted
           schema:
-            $ref: '#/definitions/internal_handler_facility.SPSControllerSystemTypeResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
         "400":
           description: Bad Request
           schema:
@@ -5865,13 +5931,17 @@ paths:
         name: id
         required: true
         type: string
+      - description: Client-generated copy operation UUID
+        in: header
+        name: X-Copy-Operation-ID
+        type: string
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "202":
+          description: Accepted
           schema:
-            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse'
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
         "400":
           description: Bad Request
           schema:
@@ -7148,6 +7218,49 @@ paths:
       summary: Create project control cabinet link
       tags:
       - projects
+  /api/v1/projects/{id}/control-cabinets/{controlCabinetId}/copy:
+    post:
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Control Cabinet ID
+        in: path
+        name: controlCabinetId
+        required: true
+        type: string
+      - description: Client-generated copy operation UUID
+        in: header
+        name: X-Copy-Operation-ID
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+      summary: Copy a project control cabinet asynchronously
+      tags:
+      - projects
   /api/v1/projects/{id}/control-cabinets/{linkId}:
     delete:
       parameters:
@@ -7575,6 +7688,49 @@ paths:
       summary: Detach object data from project
       tags:
       - projects
+  /api/v1/projects/{id}/sps-controller-system-types/{systemTypeId}/copy:
+    post:
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: SPS Controller System Type ID
+        in: path
+        name: systemTypeId
+        required: true
+        type: string
+      - description: Client-generated copy operation UUID
+        in: header
+        name: X-Copy-Operation-ID
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+      summary: Copy a project SPS controller system type asynchronously
+      tags:
+      - projects
   /api/v1/projects/{id}/sps-controllers:
     get:
       parameters:
@@ -7725,6 +7881,49 @@ paths:
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
       summary: Update project SPS controller link
+      tags:
+      - projects
+  /api/v1/projects/{id}/sps-controllers/{spsControllerId}/copy:
+    post:
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: SPS Controller ID
+        in: path
+        name: spsControllerId
+        required: true
+        type: string
+      - description: Client-generated copy operation UUID
+        in: header
+        name: X-Copy-Operation-ID
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.CopyJobResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+      summary: Copy a project SPS controller asynchronously
       tags:
       - projects
   /api/v1/projects/{id}/users:

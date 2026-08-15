@@ -51,6 +51,7 @@ func (c projectFacilityCopy) copyFieldDevicesForSystemTypes(ctx context.Context,
 		if err := c.copyFieldDevicesWithChildren(ctx, derefSlice(originalFieldDevices), chunkMap); err != nil {
 			return err
 		}
+		reportCopyProgress(ctx, 70+((start/copyFieldDeviceSystemTypeChunkSize+1)*20)/((len(pairs)+copyFieldDeviceSystemTypeChunkSize-1)/copyFieldDeviceSystemTypeChunkSize), copyJobStageCopyingFieldDevices)
 	}
 
 	return nil

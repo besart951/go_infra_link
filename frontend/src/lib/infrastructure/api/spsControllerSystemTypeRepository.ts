@@ -2,9 +2,12 @@ import type { SPSControllerSystemTypeRepository } from '$lib/domain/ports/facili
 import type { ListParams, PaginatedResponse } from '$lib/domain/ports/listRepository.js';
 import type {
   SPSControllerSystemType,
-  SPSControllerSystemTypeListResponse
+  SPSControllerSystemTypeListResponse,
+  CopyJob
 } from '$lib/domain/facility/index.js';
+import { toCopyJob } from '$lib/domain/facility/copy-job.js';
 import { ApiException, api } from '$lib/api/client.js';
+import { apiClient } from '$lib/api/generated/client.js';
 import { clearCachedFetchById, createCachedFetchById } from './createCachedFetchById.js';
 import { buildListUrl, mapPaginatedResponse } from './listHelpers.js';
 
@@ -154,17 +157,21 @@ export const spsControllerSystemTypeRepository: SPSControllerSystemTypeRepositor
     return response;
   },
 
-  async copy(id: string, signal?: AbortSignal): Promise<SPSControllerSystemType> {
-    const result = await api<SPSControllerSystemType>(
-      `/facility/sps-controller-system-types/${id}/copy`,
+  async copy(id: string, operationId: string, signal?: AbortSignal): Promise<CopyJob> {
+    const { data } = await apiClient.POST(
+      '/api/v1/facility/sps-controller-system-types/{id}/copy',
       {
-        method: 'POST',
+        params: {
+          path: { id },
+          header: { 'X-Copy-Operation-ID': operationId }
+        },
         signal
       }
     );
-    clearSystemTypeListCache();
-    clearCachedFetchById('facility-sps-controller-system-types');
-    return result;
+    if (!data) {
+      throw new Error('Copy job response is empty');
+    }
+    return toCopyJob(data);
   },
   async delete(id: string, signal?: AbortSignal): Promise<void> {
     await api<void>(`/facility/sps-controller-system-types/${id}`, {

@@ -16,6 +16,8 @@
   import { getBreadcrumbForPath } from '$lib/navigation/appNavigation.js';
   import { hasUserPermission } from '$lib/utils/permissions.js';
   import { facilityReferenceDataCache } from '$lib/services/facilityReferenceDataCache.js';
+  import { copyOperation } from '$lib/state/copyOperation.svelte.js';
+  import CopyProgressIndicator from '$lib/components/facility/CopyProgressIndicator.svelte';
 
   const translator = createTranslator();
 
@@ -26,15 +28,16 @@
     await loadAuth();
     setCurrentAppearanceUserId(data.user?.id ?? null);
     initAppearance(data.user?.id ?? null);
-    if (
-      hasUserPermission(data.user, 'apparat.read') &&
-      hasUserPermission(data.user, 'system_part.read')
-    ) {
-      facilityReferenceDataCache.start();
-    }
+    copyOperation.initialize(data.user?.id);
+    facilityReferenceDataCache.start({
+      refreshReferenceData:
+        hasUserPermission(data.user, 'apparat.read') &&
+        hasUserPermission(data.user, 'system_part.read')
+    });
   });
 
   onDestroy(() => {
+    copyOperation.dispose();
     facilityReferenceDataCache.stop();
   });
 
@@ -113,6 +116,7 @@
       </div>
     </Sidebar.Inset>
     <Toasts />
+    <CopyProgressIndicator />
   </Sidebar.Provider>
 {:else if data.backendAvailable === false}
   <div class="flex h-screen w-full items-center justify-center p-4">

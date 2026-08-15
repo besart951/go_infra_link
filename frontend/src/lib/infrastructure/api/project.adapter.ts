@@ -15,12 +15,9 @@ import type {
   ProjectSPSControllerListResponse,
   ProjectFieldDeviceListResponse
 } from '$lib/domain/project/index.js';
-import type {
-  ControlCabinet,
-  ObjectDataListParams,
-  SPSController,
-  SPSControllerSystemType
-} from '$lib/domain/facility/index.js';
+import type { ObjectDataListParams, CopyJob } from '$lib/domain/facility/index.js';
+import { toCopyJob } from '$lib/domain/facility/copy-job.js';
+import { apiClient } from '$lib/api/generated/client.js';
 
 /**
  * List projects with optional filters
@@ -223,12 +220,23 @@ export async function removeProjectControlCabinet(
 export async function copyProjectControlCabinet(
   projectId: string,
   controlCabinetId: string,
-  options?: RequestInit
-): Promise<ControlCabinet> {
-  return api<ControlCabinet>(`/projects/${projectId}/control-cabinets/${controlCabinetId}/copy`, {
-    ...options,
-    method: 'POST'
-  });
+  operationId: string,
+  signal?: AbortSignal
+): Promise<CopyJob> {
+  const { data } = await apiClient.POST(
+    '/api/v1/projects/{id}/control-cabinets/{controlCabinetId}/copy',
+    {
+      params: {
+        path: { id: projectId, controlCabinetId },
+        header: { 'X-Copy-Operation-ID': operationId }
+      },
+      signal
+    }
+  );
+  if (!data) {
+    throw new Error('Copy job response is empty');
+  }
+  return toCopyJob(data);
 }
 
 // ============================================================================
@@ -276,26 +284,45 @@ export async function removeProjectSPSController(
 export async function copyProjectSPSController(
   projectId: string,
   spsControllerId: string,
-  options?: RequestInit
-): Promise<SPSController> {
-  return api<SPSController>(`/projects/${projectId}/sps-controllers/${spsControllerId}/copy`, {
-    ...options,
-    method: 'POST'
-  });
+  operationId: string,
+  signal?: AbortSignal
+): Promise<CopyJob> {
+  const { data } = await apiClient.POST(
+    '/api/v1/projects/{id}/sps-controllers/{spsControllerId}/copy',
+    {
+      params: {
+        path: { id: projectId, spsControllerId },
+        header: { 'X-Copy-Operation-ID': operationId }
+      },
+      signal
+    }
+  );
+  if (!data) {
+    throw new Error('Copy job response is empty');
+  }
+  return toCopyJob(data);
 }
 
 export async function copyProjectSPSControllerSystemType(
   projectId: string,
   systemTypeId: string,
-  options?: RequestInit
-): Promise<SPSControllerSystemType> {
-  return api<SPSControllerSystemType>(
-    `/projects/${projectId}/sps-controller-system-types/${systemTypeId}/copy`,
+  operationId: string,
+  signal?: AbortSignal
+): Promise<CopyJob> {
+  const { data } = await apiClient.POST(
+    '/api/v1/projects/{id}/sps-controller-system-types/{systemTypeId}/copy',
     {
-      ...options,
-      method: 'POST'
+      params: {
+        path: { id: projectId, systemTypeId },
+        header: { 'X-Copy-Operation-ID': operationId }
+      },
+      signal
     }
   );
+  if (!data) {
+    throw new Error('Copy job response is empty');
+  }
+  return toCopyJob(data);
 }
 
 // ============================================================================
