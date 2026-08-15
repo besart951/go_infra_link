@@ -1,14 +1,17 @@
+import type { PermissionName } from '$lib/api/generated/permissions.js';
 type CanPerform = (action: string, resource: string) => boolean;
 
 export interface RouteAccessRule {
   path: string;
-  permission: string;
+  permission: PermissionName;
+  requiredPermissions?: readonly PermissionName[];
 }
 
 export interface FacilityNavAccess {
   titleKey: string;
   url: string;
-  permission: string;
+  permission: PermissionName;
+  requiredPermissions?: readonly PermissionName[];
   dividerAfter?: boolean;
 }
 
@@ -24,7 +27,6 @@ export const APP_ROUTE_ACCESS_RULES: RouteAccessRule[] = [
   { path: '/projects/new', permission: 'project.create' },
   { path: '/projects/phases/new', permission: 'phase.create' },
   { path: '/projects/phases', permission: 'phase.read' },
-  { path: '/projects/*/settings', permission: 'project.update' },
 
   { path: '/facility/buildings', permission: 'building.read' },
   { path: '/facility/control-cabinets', permission: 'controlcabinet.read' },
@@ -37,7 +39,11 @@ export const APP_ROUTE_ACCESS_RULES: RouteAccessRule[] = [
   { path: '/facility/object-data', permission: 'objectdata.read' },
   { path: '/facility/state-texts', permission: 'statetext.read' },
   { path: '/facility/alarm-definitions', permission: 'alarmdefinition.read' },
-  { path: '/facility/alarm-catalog', permission: 'alarmtype.read' },
+  {
+    path: '/facility/alarm-catalog',
+    permission: 'alarmtype.read',
+    requiredPermissions: ['alarmfield.read', 'unit.read']
+  },
   { path: '/facility/notification-classes', permission: 'notificationclass.read' },
   { path: '/facility/specifications', permission: 'specification.read' }
 ];
@@ -89,7 +95,8 @@ export const FACILITY_NAV_ACCESS: FacilityNavAccess[] = [
   {
     titleKey: 'navigation.alarm_catalog',
     url: '/facility/alarm-catalog',
-    permission: 'alarmtype.read'
+    permission: 'alarmtype.read',
+    requiredPermissions: ['alarmfield.read', 'unit.read']
   },
   {
     titleKey: 'navigation.notification_classes',
@@ -105,11 +112,15 @@ export const NAV_PERMISSION = {
   notificationSMTP: 'notification.smtp.manage'
 } as const;
 
-export function canPerformPermission(canPerform: CanPerform, permission: string): boolean {
+export function canPerformPermission(canPerform: CanPerform, permission: PermissionName): boolean {
   const lastDot = permission.lastIndexOf('.');
   if (lastDot <= 0) return false;
+  return canPerform(permission.slice(lastDot + 1), permission.slice(0, lastDot));
+}
 
-  const resource = permission.slice(0, lastDot);
-  const action = permission.slice(lastDot + 1);
-  return canPerform(action, resource);
+export function canPerformAllPermissions(
+  canPerform: CanPerform,
+  permissions: readonly PermissionName[]
+): boolean {
+  return permissions.every((permission) => canPerformPermission(canPerform, permission));
 }

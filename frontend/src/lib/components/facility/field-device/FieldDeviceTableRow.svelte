@@ -22,6 +22,7 @@
   import type { FieldDevice } from '$lib/domain/facility/index.js';
   import type { SharedFieldDeviceEditor } from '$lib/services/projectCollaboration.svelte.js';
   import { createTranslator } from '$lib/i18n/translator.js';
+  import { can } from '$lib/utils/permissions.js';
   import { useFieldDeviceState } from './state/context.svelte.js';
   import { formatFieldDeviceSPSControllerSystemType } from './state/FieldDeviceTableView.svelte.js';
 
@@ -34,6 +35,8 @@
   const t = createTranslator();
   const rowState = useFieldDeviceState();
   let historyOpen = $state(false);
+  let historyFields = $state<string[]>([]);
+  const canReadTimeline = $derived(can('timeline.read'));
   let relationFilterSource = $state<RelationFilterSource>(null);
 
   function toDisplayString(value: unknown, isNumeric = false): string {
@@ -191,6 +194,11 @@
   const undoFieldTitle = $derived($t('field_device.editing.undo_field'));
   const undoFieldDeviceTitle = $derived($t('field_device.editing.undo_field_device'));
   const undoDeviceTitle = $derived($t('field_device.editing.undo_device'));
+
+  function openHistory(fields: string[] = []): void {
+    historyFields = fields;
+    historyOpen = true;
+  }
 </script>
 
 <Table.Row
@@ -788,9 +796,17 @@
           >
             {$t('facility.copy')}
           </DropdownMenu.Item>
-          <DropdownMenu.Item onclick={() => (historyOpen = true)}>
-            {$t('history.open')}
-          </DropdownMenu.Item>
+          {#if canReadTimeline}
+            <DropdownMenu.Item onclick={() => openHistory()}>
+              {$t('history.open')}
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onclick={() => openHistory(['apparat_id'])}>
+              {$t('history.activity.field_history_apparat')}
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onclick={() => openHistory(['system_part_id'])}>
+              {$t('history.activity.field_history_system_part')}
+            </DropdownMenu.Item>
+          {/if}
           {#if rowState.canDeleteFieldDevice()}
             <DropdownMenu.Separator />
             <DropdownMenu.Item
@@ -811,6 +827,7 @@
   title={`${$t('history.title')}: ${device.bmk ?? device.id}`}
   scopeType="field_device"
   scopeId={device.id}
+  fields={historyFields}
   projectId={rowState.effectiveProjectId}
   onRestored={() => rowState.reload()}
 />

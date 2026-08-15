@@ -105,117 +105,117 @@
   }
 </script>
 
-<Popover.Root bind:open>
-  <Popover.Trigger>
-    {#snippet child({ props })}
-      {#if hasError}
-        <Tooltip.Provider>
-          <Tooltip.Root>
-            <Tooltip.Trigger>
-              {#snippet child({ props: tooltipProps })}
-                <Button
-                  {...mergeTriggerProps(props, tooltipProps)}
-                  {id}
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={open}
-                  {disabled}
-                  aria-disabled={disabled}
+{#if disabled}
+  <span class={cn('block min-w-0 truncate px-2 py-1 text-sm', width)} title={triggerTitle}>
+    {triggerLabel}
+  </span>
+{:else}
+  <Popover.Root bind:open>
+    <Popover.Trigger>
+      {#snippet child({ props })}
+        {#if hasError}
+          <Tooltip.Provider>
+            <Tooltip.Root>
+              <Tooltip.Trigger>
+                {#snippet child({ props: tooltipProps })}
+                  <Button
+                    {...mergeTriggerProps(props, tooltipProps)}
+                    {id}
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    class={cn(
+                      'min-w-0 justify-between overflow-hidden border-destructive text-destructive',
+                      width
+                    )}
+                  >
+                    <span class="min-w-0 truncate text-left">{triggerLabel}</span>
+                    <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                {/snippet}
+              </Tooltip.Trigger>
+              <Tooltip.Content side="top">
+                <p>{error}</p>
+              </Tooltip.Content>
+            </Tooltip.Root>
+          </Tooltip.Provider>
+        {:else if triggerTitle}
+          <Tooltip.Provider>
+            <Tooltip.Root>
+              <Tooltip.Trigger>
+                {#snippet child({ props: tooltipProps })}
+                  <Button
+                    {...mergeTriggerProps(props, tooltipProps)}
+                    {id}
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    class={cn('min-w-0 justify-between overflow-hidden', width)}
+                  >
+                    <span class="min-w-0 truncate text-left">{triggerLabel}</span>
+                    <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                {/snippet}
+              </Tooltip.Trigger>
+              <Tooltip.Content side="top" class="max-w-xs">
+                <p class="wrap-break-word">{triggerTitle}</p>
+              </Tooltip.Content>
+            </Tooltip.Root>
+          </Tooltip.Provider>
+        {:else}
+          <Button
+            {...props}
+            {id}
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            class={cn('min-w-0 justify-between overflow-hidden', width)}
+          >
+            <span class="min-w-0 truncate text-left">{triggerLabel}</span>
+            <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        {/if}
+      {/snippet}
+    </Popover.Trigger>
+    <Popover.Content class={cn('p-0', popupWidth)}>
+      <Command.Root shouldFilter={false}>
+        <Command.Input placeholder={searchPlaceholder} bind:value={search} />
+        <Command.List>
+          <Command.Empty>{emptyText}</Command.Empty>
+          <Command.Group>
+            {#if clearable && value}
+              <Command.Item
+                value=""
+                onSelect={() => {
+                  clearSelection();
+                }}
+              >
+                {clearText}
+              </Command.Item>
+            {/if}
+            {#each filteredItems as item (String(item[idKey]))}
+              <Command.Item
+                value={String(item[idKey])}
+                onSelect={() => {
+                  const next = String(item[idKey] ?? '');
+                  if (!next || next === 'undefined' || next === 'null') return;
+                  value = next;
+                  onValueChange?.(value);
+                  open = false;
+                }}
+              >
+                <Check
                   class={cn(
-                    'min-w-0 justify-between overflow-hidden border-destructive text-destructive',
-                    width
+                    'mr-2 h-4 w-4',
+                    value === String(item[idKey]) ? 'opacity-100' : 'opacity-0'
                   )}
-                >
-                  <span class="min-w-0 truncate text-left">{triggerLabel}</span>
-                  <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              {/snippet}
-            </Tooltip.Trigger>
-            <Tooltip.Content side="top">
-              <p>{error}</p>
-            </Tooltip.Content>
-          </Tooltip.Root>
-        </Tooltip.Provider>
-      {:else if triggerTitle}
-        <Tooltip.Provider>
-          <Tooltip.Root>
-            <Tooltip.Trigger>
-              {#snippet child({ props: tooltipProps })}
-                <Button
-                  {...mergeTriggerProps(props, tooltipProps)}
-                  {id}
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={open}
-                  {disabled}
-                  aria-disabled={disabled}
-                  class={cn('min-w-0 justify-between overflow-hidden', width)}
-                >
-                  <span class="min-w-0 truncate text-left">{triggerLabel}</span>
-                  <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              {/snippet}
-            </Tooltip.Trigger>
-            <Tooltip.Content side="top" class="max-w-xs">
-              <p class="wrap-break-word">{triggerTitle}</p>
-            </Tooltip.Content>
-          </Tooltip.Root>
-        </Tooltip.Provider>
-      {:else}
-        <Button
-          {...props}
-          {id}
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          {disabled}
-          aria-disabled={disabled}
-          class={cn('min-w-0 justify-between overflow-hidden', width)}
-        >
-          <span class="min-w-0 truncate text-left">{triggerLabel}</span>
-          <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      {/if}
-    {/snippet}
-  </Popover.Trigger>
-  <Popover.Content class={cn('p-0', popupWidth)}>
-    <Command.Root shouldFilter={false}>
-      <Command.Input placeholder={searchPlaceholder} bind:value={search} />
-      <Command.List>
-        <Command.Empty>{emptyText}</Command.Empty>
-        <Command.Group>
-          {#if clearable && value}
-            <Command.Item
-              value=""
-              onSelect={() => {
-                clearSelection();
-              }}
-            >
-              {clearText}
-            </Command.Item>
-          {/if}
-          {#each filteredItems as item (String(item[idKey]))}
-            <Command.Item
-              value={String(item[idKey])}
-              onSelect={() => {
-                const next = String(item[idKey] ?? '');
-                if (!next || next === 'undefined' || next === 'null') return;
-                value = next;
-                onValueChange?.(value);
-                open = false;
-              }}
-            >
-              <Check
-                class={cn(
-                  'mr-2 h-4 w-4',
-                  value === String(item[idKey]) ? 'opacity-100' : 'opacity-0'
-                )}
-              />
-              {String(item[optionLabelKey] ?? '')}
-            </Command.Item>
-          {/each}
-        </Command.Group>
-      </Command.List>
-    </Command.Root>
-  </Popover.Content>
-</Popover.Root>
+                />
+                {String(item[optionLabelKey] ?? '')}
+              </Command.Item>
+            {/each}
+          </Command.Group>
+        </Command.List>
+      </Command.Root>
+    </Popover.Content>
+  </Popover.Root>
+{/if}

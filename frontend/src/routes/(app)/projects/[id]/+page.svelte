@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { page } from '$app/stores';
+  import type { PageData } from './$types.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import * as Tabs from '$lib/components/ui/tabs/index.js';
@@ -14,7 +15,7 @@
   import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { projectDetailService } from '$lib/components/project/ProjectDetailService.js';
   import type { ControlCabinet, FieldDevice, SPSController } from '$lib/domain/facility/index.js';
-  import type { Project } from '$lib/domain/project/index.js';
+  import type { Project, ProjectCapabilities } from '$lib/domain/project/index.js';
   import type { User } from '$lib/domain/user/index.js';
   import type { FieldDeviceRefreshRequest } from '$lib/components/facility/field-device/state/types.js';
   import type {
@@ -22,7 +23,8 @@
     EntityDeltaRequest,
     EntityRefreshRequest
   } from '$lib/components/facility/shared/entityRefresh.js';
-  import { canPerform } from '$lib/utils/permissions.js';
+  import { can, canProject } from '$lib/utils/permissions.js';
+  import { notifyProjectActivityChanged } from '$lib/activity/activityLiveUpdates.js';
   import {
     provideProjectSyncCoordinator,
     type ProjectChange
@@ -32,12 +34,21 @@
   type FacilityTabId = 'control-cabinets' | 'sps-controllers' | 'field-devices';
 
   const t = createTranslator();
+  const { data } = $props<{ data: PageData }>();
   const projectId = $derived($page.params.id ?? '');
-  const canOpenProjectSettings = $derived(canPerform('update', 'project'));
-  const canReadProjectControlCabinets = $derived(canPerform('read', 'project.controlcabinet'));
-  const canReadProjectSPSControllers = $derived(canPerform('read', 'project.spscontroller'));
-  const canReadProjectFieldDevices = $derived(canPerform('read', 'project.fielddevice'));
-  const canReadTimeline = $derived(canPerform('read', 'timeline'));
+  let cachedProjectCapabilities = $state.raw<ProjectCapabilities | undefined>(undefined);
+  const projectCapabilities = $derived(cachedProjectCapabilities ?? data.projectCapabilities);
+  const canOpenProjectSettings = $derived(canProject(projectCapabilities, 'project.update'));
+  const canReadProjectControlCabinets = $derived(
+    canProject(projectCapabilities, 'project.controlcabinet.read')
+  );
+  const canReadProjectSPSControllers = $derived(
+    canProject(projectCapabilities, 'project.spscontroller.read')
+  );
+  const canReadProjectFieldDevices = $derived(
+    canProject(projectCapabilities, 'project.fielddevice.read')
+  );
+  const canReadTimeline = $derived(can('timeline.read'));
   const availableFacilityTabs = $derived.by((): FacilityTabId[] => {
     const tabs: FacilityTabId[] = [];
     if (canReadProjectControlCabinets) tabs.push('control-cabinets');
@@ -47,7 +58,7 @@
   });
 
   let project = $state<Project | null>(null);
-  let loading = $state(true);
+  let loading = $state(false);
   let error = $state<string | null>(null);
   let projectUsers = $state<User[]>([]);
 
@@ -302,6 +313,7 @@
   }
 
   function handleProjectChange(change: ProjectChange): void {
+    notifyProjectActivityChanged(projectId);
     switch (change.aggregate_type) {
       case 'control_cabinet':
         requestControlCabinetRefresh([change.aggregate_id]);
@@ -333,6 +345,7 @@
         void loadProject();
         break;
       case 'project_users':
+        void loadProject();
         void loadProjectUsers();
         break;
       default:
@@ -376,9 +389,10 @@
     error = null;
 
     try {
-      const loadedProject = await projectDetailService.getProject(targetProjectId);
+      const context = await projectDetailService.refreshProjectContext(targetProjectId);
       if (projectId !== targetProjectId || projectLoadVersion !== loadVersion) return;
-      project = loadedProject;
+      project = context.project;
+      cachedProjectCapabilities = context.capabilities;
     } catch (loadError) {
       if (projectId !== targetProjectId || projectLoadVersion !== loadVersion) return;
       const message =
@@ -411,14 +425,14 @@
 
   $effect(() => {
     const targetProjectId = projectId;
-    project = null;
+    project = data.project;
+    cachedProjectCapabilities = data.projectCapabilities;
     projectUsers = [];
     error = null;
-    loading = true;
+    loading = false;
     if (!targetProjectId) return;
 
     collaboration.connect(targetProjectId);
-    void loadProject(targetProjectId);
     void loadProjectUsers(targetProjectId);
   });
 
@@ -565,6 +579,7 @@
                 {@const ControlCabinetListView = controlCabinetListViewModule.default}
                 <ControlCabinetListView
                   {projectId}
+                  {projectCapabilities}
                   refreshKey={controlCabinetViewRefreshKey}
                   refreshRequest={controlCabinetRefreshRequest}
                   deltaRequest={controlCabinetDeltaRequest}
@@ -584,6 +599,7 @@
                 {@const SPSControllerListView = spsControllerListViewModule.default}
                 <SPSControllerListView
                   {projectId}
+                  {projectCapabilities}
                   refreshKey={spsControllerRefreshKey}
                   refreshRequest={spsControllerRefreshRequest}
                   deltaRequest={spsControllerDeltaRequest}
@@ -606,6 +622,7 @@
                 {@const FieldDeviceListView = fieldDeviceListViewModule.default}
                 <FieldDeviceListView
                   {projectId}
+                  {projectCapabilities}
                   pageSize={100}
                   refreshKey={fieldDeviceRefreshKey}
                   refreshRequest={fieldDeviceRefreshRequest}

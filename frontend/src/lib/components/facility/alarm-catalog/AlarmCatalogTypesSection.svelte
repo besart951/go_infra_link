@@ -19,6 +19,7 @@
   const t = createTranslator();
   let historyItem = $state<AlarmType | null>(null);
   let historyOpen = $state(false);
+  const canReadTimeline = $derived(canPerform('read', 'timeline'));
 </script>
 
 {#if historyItem}
@@ -84,18 +85,20 @@
                   <Table.Cell>{type.name}</Table.Cell>
                   <Table.Cell class="text-right">
                     <div class="flex justify-end gap-1">
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        onclick={() => {
-                          historyItem = type;
-                          historyOpen = true;
-                        }}
-                        aria-label={$t('history.open')}
-                        title={$t('history.open')}
-                      >
-                        <History class="size-4" />
-                      </Button>
+                      {#if canReadTimeline}
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          onclick={() => {
+                            historyItem = type;
+                            historyOpen = true;
+                          }}
+                          aria-label={$t('history.open')}
+                          title={$t('history.open')}
+                        >
+                          <History class="size-4" />
+                        </Button>
+                      {/if}
                       {#if canPerform('delete', 'alarmtype')}
                         <Button
                           size="icon-sm"

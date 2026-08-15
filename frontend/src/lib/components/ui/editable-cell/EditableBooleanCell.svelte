@@ -48,13 +48,17 @@
     .filter(Boolean)
     .join(' ')}
 >
-  {#if hasError}
+  {#if disabled}
+    <span class="text-sm" title={error} aria-label={displayValue ? 'True' : 'False'}>
+      {displayValue ? '✓' : '—'}
+    </span>
+  {:else if hasError}
     <Tooltip.Provider>
       <Tooltip.Root>
         <Tooltip.Trigger>
           {#snippet child({ props })}
             <div {...props}>
-              <Checkbox checked={displayValue} onCheckedChange={handleChange} {disabled} />
+              <Checkbox checked={displayValue} onCheckedChange={handleChange} />
             </div>
           {/snippet}
         </Tooltip.Trigger>
@@ -64,9 +68,9 @@
       </Tooltip.Root>
     </Tooltip.Provider>
   {:else}
-    <Checkbox checked={displayValue} onCheckedChange={handleChange} {disabled} />
+    <Checkbox checked={displayValue} onCheckedChange={handleChange} />
   {/if}
-  {#if canUndo}
+  {#if canUndo && !disabled}
     <InlineUndoButton title={undoTitle} onclick={() => onUndo?.()} />
   {/if}
 </div>

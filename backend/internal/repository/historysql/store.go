@@ -317,6 +317,9 @@ func (s *Store) ListTimeline(ctx context.Context, filter domainHistory.TimelineF
 	if filter.OccurredTo != nil {
 		query = query.Where("occurred_at <= ?", filter.OccurredTo.UTC())
 	}
+	if len(filter.Actions) > 0 {
+		query = query.Where("action IN ?", filter.Actions)
+	}
 	query = s.applyFieldFilter(query, filter.Fields)
 	if filter.ScopeType != "" && filter.ScopeID != uuid.Nil {
 		sub := s.db.WithContext(ctx).Model(&domainHistory.ChangeEventScope{}).

@@ -192,6 +192,7 @@
       !selectedLabel &&
       !selectedItem &&
       fetchById &&
+      !disabled &&
       !selectedLoading &&
       value !== selectedLoadFailedId
     ) {
@@ -222,59 +223,63 @@
   }
 </script>
 
-<Popover.Root bind:open>
-  <Popover.Trigger>
-    {#snippet child({ props })}
-      {@const selectedTitle = getSelectedTitle()}
-      <Button
-        {...props}
-        {id}
-        variant="outline"
-        role="combobox"
-        aria-expanded={open}
-        {disabled}
-        aria-disabled={disabled}
-        title={selectedTitle}
-        class={cn('min-w-0 justify-between gap-2', width)}
-      >
-        <span class="min-w-0 flex-1 truncate text-left">
-          {getTriggerLabel()}
-        </span>
-        <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-      </Button>
-    {/snippet}
-  </Popover.Trigger>
-  <Popover.Content class={cn('p-0', popupWidth)}>
-    <Command.Root shouldFilter={false}>
-      <Command.Input placeholder={searchPlaceholder} bind:value={search} />
-      <Command.List>
-        <Command.Empty>{loading ? 'Loading...' : emptyText}</Command.Empty>
-        <Command.Group>
-          {#if clearable && value}
-            <Command.Item
-              value=""
-              onSelect={() => {
-                clearSelection();
-              }}
-            >
-              {clearText}
-            </Command.Item>
-          {/if}
-          {#each items as item (String(item[idKey]))}
-            {@const itemTitle = getItemTitle(item)}
-            <Command.Item
-              value={String(item[idKey])}
-              title={itemTitle}
-              onSelect={() => selectItem(item)}
-            >
-              <Check
-                class={cn('size-4', value === String(item[idKey]) ? 'opacity-100' : 'opacity-0')}
-              />
-              {getItemLabel(item)}
-            </Command.Item>
-          {/each}
-        </Command.Group>
-      </Command.List>
-    </Command.Root>
-  </Popover.Content>
-</Popover.Root>
+{#if disabled}
+  <span class={cn('block min-w-0 truncate px-2 py-1 text-sm', width)} title={getSelectedTitle()}>
+    {getTriggerLabel()}
+  </span>
+{:else}
+  <Popover.Root bind:open>
+    <Popover.Trigger>
+      {#snippet child({ props })}
+        {@const selectedTitle = getSelectedTitle()}
+        <Button
+          {...props}
+          {id}
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          title={selectedTitle}
+          class={cn('min-w-0 justify-between gap-2', width)}
+        >
+          <span class="min-w-0 flex-1 truncate text-left">
+            {getTriggerLabel()}
+          </span>
+          <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      {/snippet}
+    </Popover.Trigger>
+    <Popover.Content class={cn('p-0', popupWidth)}>
+      <Command.Root shouldFilter={false}>
+        <Command.Input placeholder={searchPlaceholder} bind:value={search} />
+        <Command.List>
+          <Command.Empty>{loading ? 'Loading...' : emptyText}</Command.Empty>
+          <Command.Group>
+            {#if clearable && value}
+              <Command.Item
+                value=""
+                onSelect={() => {
+                  clearSelection();
+                }}
+              >
+                {clearText}
+              </Command.Item>
+            {/if}
+            {#each items as item (String(item[idKey]))}
+              {@const itemTitle = getItemTitle(item)}
+              <Command.Item
+                value={String(item[idKey])}
+                title={itemTitle}
+                onSelect={() => selectItem(item)}
+              >
+                <Check
+                  class={cn('size-4', value === String(item[idKey]) ? 'opacity-100' : 'opacity-0')}
+                />
+                {getItemLabel(item)}
+              </Command.Item>
+            {/each}
+          </Command.Group>
+        </Command.List>
+      </Command.Root>
+    </Popover.Content>
+  </Popover.Root>
+{/if}

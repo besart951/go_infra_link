@@ -11,6 +11,7 @@
   import SPSControllerForm from '$lib/components/facility/forms/SPSControllerForm.svelte';
   import FieldDeviceListView from '$lib/components/facility/field-device/FieldDeviceListView.svelte';
   import { SPSControllerSystemTypeDetailState } from '$lib/components/facility/sps-controller-system-type-detail/state/SPSControllerSystemTypeDetailState.svelte.js';
+  import { can } from '$lib/utils/permissions.js';
 
   let { data }: { data: PageData } = $props();
 
@@ -20,6 +21,7 @@
     invalidateAllAction: invalidateAll
   });
   let historyOpen = $state(false);
+  const canReadTimeline = $derived(can('timeline.read'));
 
   async function handleRefreshAfterChange(): Promise<void> {
     await detailState.refreshAfterChange();
@@ -46,14 +48,16 @@
     backHref={detailState.backHref}
     backLabel={$t('common.back')}
   >
-    <Button
-      variant="outline"
-      size="icon"
-      onclick={() => (historyOpen = true)}
-      aria-label={$t('history.open')}
-    >
-      <HistoryIcon class="size-4" />
-    </Button>
+    {#if canReadTimeline}
+      <Button
+        variant="outline"
+        size="icon"
+        onclick={() => (historyOpen = true)}
+        aria-label={$t('history.open')}
+      >
+        <HistoryIcon class="size-4" />
+      </Button>
+    {/if}
     {#if detailState.canEdit}
       <Button
         variant="outline"

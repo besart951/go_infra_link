@@ -17,6 +17,7 @@
   const actions = createSystemPartActions();
   let historyItem = $state<SystemPart | null>(null);
   let historyOpen = $state(false);
+  const canReadTimeline = $derived(canPerform('read', 'timeline'));
 </script>
 
 {#if historyItem}
@@ -67,14 +68,16 @@
           <DropdownMenu.Item onclick={() => goto(`/facility/system-parts/${item.id}`)}>
             {$t('facility.view')}
           </DropdownMenu.Item>
-          <DropdownMenu.Item
-            onclick={() => {
-              historyItem = item;
-              historyOpen = true;
-            }}
-          >
-            {$t('history.open')}
-          </DropdownMenu.Item>
+          {#if canReadTimeline}
+            <DropdownMenu.Item
+              onclick={() => {
+                historyItem = item;
+                historyOpen = true;
+              }}
+            >
+              {$t('history.open')}
+            </DropdownMenu.Item>
+          {/if}
           {#if canPerform('update', 'systempart')}
             <DropdownMenu.Item onclick={() => actions.edit(item)}
               >{$t('common.edit')}</DropdownMenu.Item

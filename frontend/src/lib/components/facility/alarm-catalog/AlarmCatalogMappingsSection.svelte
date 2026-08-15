@@ -20,6 +20,7 @@
   const t = createTranslator();
   let historyItem = $state<AlarmTypeField | null>(null);
   let historyOpen = $state(false);
+  const canReadTimeline = $derived(canPerform('read', 'timeline'));
 </script>
 
 {#if historyItem}
@@ -102,7 +103,7 @@
     </div>
 
     <div class="flex justify-end">
-      {#if canPerform('update', 'alarmtype')}
+      {#if canPerform('create', 'alarmfield')}
         <Button
           onclick={() => catalogState.createMapping()}
           disabled={!catalogState.selectedTypeId || !catalogState.mapForm.alarm_field_id}
@@ -154,19 +155,21 @@
                   <Table.Cell>{typeField.display_order}</Table.Cell>
                   <Table.Cell class="text-right">
                     <div class="flex justify-end gap-1">
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        onclick={() => {
-                          historyItem = typeField;
-                          historyOpen = true;
-                        }}
-                        aria-label={$t('history.open')}
-                        title={$t('history.open')}
-                      >
-                        <History class="size-4" />
-                      </Button>
-                      {#if canPerform('update', 'alarmtype')}
+                      {#if canReadTimeline}
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          onclick={() => {
+                            historyItem = typeField;
+                            historyOpen = true;
+                          }}
+                          aria-label={$t('history.open')}
+                          title={$t('history.open')}
+                        >
+                          <History class="size-4" />
+                        </Button>
+                      {/if}
+                      {#if canPerform('delete', 'alarmfield')}
                         <Button
                           size="icon-sm"
                           variant="ghost"

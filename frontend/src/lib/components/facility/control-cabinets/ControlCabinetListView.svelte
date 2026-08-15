@@ -2,9 +2,11 @@
   import { onDestroy, onMount } from 'svelte';
   import ControlCabinetList from './ControlCabinetList.svelte';
   import { provideControlCabinetState } from './state/context.svelte.js';
+  import type { ProjectCapabilities } from '$lib/domain/project/capabilities.js';
 
   interface Props {
     projectId?: string;
+    projectCapabilities?: ProjectCapabilities;
     refreshKey?: string | number;
     refreshRequest?: import('../shared/entityRefresh.js').EntityRefreshRequest;
     deltaRequest?: import('../shared/entityRefresh.js').EntityDeltaRequest<
@@ -17,10 +19,12 @@
     ) => void;
   }
 
-  const { projectId, refreshKey, refreshRequest, deltaRequest, onChanged }: Props = $props();
+  const { projectId, projectCapabilities, refreshKey, refreshRequest, deltaRequest, onChanged }: Props =
+    $props();
 
   const controlCabinetState = provideControlCabinetState({
     projectId: () => projectId,
+    projectCapabilities: () => projectCapabilities,
     onChanged: (event) => onChanged?.(event)
   });
 

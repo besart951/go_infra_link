@@ -5,7 +5,7 @@ import { ManageControlCabinetUseCase } from '$lib/application/useCases/facility/
 import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinetRepository.js';
 import { buildingRepository } from '$lib/infrastructure/api/buildingRepository.js';
 import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
-import { canPerform } from '$lib/utils/permissions.js';
+import { can, canProject } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
 import { sanitizeFilters } from '$lib/state/table/sanitizeFilters.js';
 import {
@@ -17,7 +17,7 @@ import {
 } from '$lib/components/facility/shared/projectFacilityListFilters.js';
 import type { Building, ControlCabinet } from '$lib/domain/facility/index.js';
 import type { ControlCabinetFilters, ControlCabinetStateProps } from './types.js';
-import { toProjectIdResolver } from './types.js';
+import { toProjectCapabilitiesResolver, toProjectIdResolver } from './types.js';
 import { ControlCabinetFetchStrategyFactory } from './ControlCabinetFetchStrategyFactory.js';
 import { ContextualControlCabinetFetchStrategy } from './strategies/ContextualControlCabinetFetchStrategy.js';
 import { copyOperation } from '$lib/state/copyOperation.svelte.js';
@@ -30,6 +30,9 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
 
   private readonly buildingRequests = new Set<string>();
   private readonly resolveProjectId: () => string | undefined;
+  private readonly resolveProjectCapabilities: () =>
+    | import('$lib/domain/project/capabilities.js').ProjectCapabilities
+    | undefined;
   private readonly onChanged?: (
     event?: import('../../shared/entityRefresh.js').EntityChangeEvent<ControlCabinet>
   ) => void;
@@ -50,6 +53,7 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
     super(fetchStrategy, { pageSize: props.pageSize ?? 10 });
 
     this.resolveProjectId = resolveProjectId;
+    this.resolveProjectCapabilities = toProjectCapabilitiesResolver(props.projectCapabilities);
     this.onChanged = props.onChanged;
     this.fetchStrategy = fetchStrategy;
   }
@@ -62,6 +66,10 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
     return Boolean(this.projectId);
   }
 
+  get projectCapabilities() {
+    return this.resolveProjectCapabilities();
+  }
+
   get copyInProgress(): boolean {
     return copyOperation.isPending;
   }
@@ -72,20 +80,28 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
 
   canCreateControlCabinet(): boolean {
     return this.isProjectContext
-      ? canPerform('create', 'project.controlcabinet')
-      : canPerform('create', 'controlcabinet');
+      ? canProject(this.projectCapabilities, 'project.controlcabinet.create') &&
+          can('controlcabinet.create')
+      : can('controlcabinet.create');
+  }
+
+  canDuplicateControlCabinet(): boolean {
+    return this.isProjectContext
+      ? canProject(this.projectCapabilities, 'project.controlcabinet.create')
+      : can('controlcabinet.create');
   }
 
   canUpdateControlCabinet(): boolean {
     return this.isProjectContext
-      ? canPerform('update', 'project.controlcabinet')
-      : canPerform('update', 'controlcabinet');
+      ? canProject(this.projectCapabilities, 'project.controlcabinet.update') &&
+          can('controlcabinet.update')
+      : can('controlcabinet.update');
   }
 
   canDeleteControlCabinet(): boolean {
     return this.isProjectContext
-      ? canPerform('delete', 'project.controlcabinet')
-      : canPerform('delete', 'controlcabinet');
+      ? canProject(this.projectCapabilities, 'project.controlcabinet.delete')
+      : can('controlcabinet.delete');
   }
 
   async initialize(): Promise<void> {
@@ -237,7 +253,7 @@ export class ControlCabinetState extends BaseDataTableState<ControlCabinet, Cont
   }
 
   async duplicateControlCabinet(controlCabinet: ControlCabinet): Promise<void> {
-    if (!this.canCreateControlCabinet()) return;
+    if (!this.canDuplicateControlCabinet()) return;
 
     try {
       const result = await copyOperation.run({

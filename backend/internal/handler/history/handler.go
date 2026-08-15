@@ -9,6 +9,7 @@ import (
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainHistory "github.com/besart951/go_infra_link/backend/internal/domain/history"
+	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/history"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -29,6 +30,28 @@ func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
 }
 
+// ListTimeline godoc
+// @Summary List global audit activities
+// @Description Returns authoritative audit events with their actual before/after diff. Multiple action and field parameters are combined as OR filters within their category.
+// @Tags history
+// @Produce json
+// @Param scope_type query string false "Scope type"
+// @Param scope_id query string false "Scope UUID"
+// @Param entity_table query string false "Entity table"
+// @Param entity_id query string false "Entity UUID"
+// @Param actor_id query string false "Actor UUID"
+// @Param occurred_from query string false "Earliest ISO-8601 timestamp"
+// @Param occurred_to query string false "Latest ISO-8601 timestamp"
+// @Param action query []string false "Actions: create, update, delete, restore" collectionFormat(multi)
+// @Param field query []string false "Changed field names" collectionFormat(multi)
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(50)
+// @Success 200 {object} dto.TimelineResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/history/timeline [get]
 func (h *Handler) ListTimeline(c *gin.Context) {
 	filter, ok := parseTimelineFilter(c)
 	if !ok {
@@ -41,7 +64,7 @@ func (h *Handler) ListTimeline(c *gin.Context) {
 		)
 		return
 	}
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, dto.TimelineResponseFrom(result))
 }
 
 func (h *Handler) GetEvent(c *gin.Context) {
@@ -104,6 +127,29 @@ func (h *Handler) RestoreControlCabinet(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+// ListProjectTimeline godoc
+// @Summary List project audit activities
+// @Description Returns authoritative audit events for one project. The optional entity, field, action, actor and date filters work like the global timeline.
+// @Tags history, projects
+// @Produce json
+// @Param id path string true "Project UUID"
+// @Param scope_type query string false "Secondary scope type"
+// @Param scope_id query string false "Secondary scope UUID"
+// @Param entity_table query string false "Entity table"
+// @Param entity_id query string false "Entity UUID"
+// @Param actor_id query string false "Actor UUID"
+// @Param occurred_from query string false "Earliest ISO-8601 timestamp"
+// @Param occurred_to query string false "Latest ISO-8601 timestamp"
+// @Param action query []string false "Actions: create, update, delete, restore" collectionFormat(multi)
+// @Param field query []string false "Changed field names" collectionFormat(multi)
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(50)
+// @Success 200 {object} dto.TimelineResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/history/timeline [get]
 func (h *Handler) ListProjectTimeline(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
 	if !ok {
@@ -124,7 +170,7 @@ func (h *Handler) ListProjectTimeline(c *gin.Context) {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "history_fetch_failed", "facility.fetch_failed")
 		return
 	}
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, dto.TimelineResponseFrom(result))
 }
 
 func (h *Handler) RestoreProjectControlCabinet(c *gin.Context) {
@@ -194,6 +240,11 @@ func parseTimelineFilter(c *gin.Context) (domainHistory.TimelineFilter, bool) {
 		}
 		filter.OccurredTo = &parsed
 	}
+	actions, ok := parseTimelineActions(c)
+	if !ok {
+		return filter, false
+	}
+	filter.Actions = actions
 	filter.Fields = parseStringListQuery(c, "field", 40)
 	page, ok := parseOptionalIntQuery(c, "page")
 	if !ok {
@@ -210,6 +261,20 @@ func parseTimelineFilter(c *gin.Context) (domainHistory.TimelineFilter, bool) {
 		filter.Limit = *limit
 	}
 	return filter, true
+}
+
+func parseTimelineActions(c *gin.Context) ([]domainHistory.Action, bool) {
+	values := parseStringListQuery(c, "action", 8)
+	actions := make([]domainHistory.Action, 0, len(values))
+	for _, value := range values {
+		action := domainHistory.Action(value)
+		if !domainHistory.IsAction(action) {
+			handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_action", "validation.invalid_request")
+			return nil, false
+		}
+		actions = append(actions, action)
+	}
+	return actions, true
 }
 
 func parseControlCabinetRestoreRequest(c *gin.Context) (domainHistory.RestoreControlCabinetRequest, bool) {

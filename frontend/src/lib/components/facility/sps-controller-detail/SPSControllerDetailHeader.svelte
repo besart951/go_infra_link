@@ -1,16 +1,14 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button/index.js';
+  import ActivityEntryPoint from '$lib/components/activity/ActivityEntryPoint.svelte';
   import EntityListHeader from '$lib/components/layout/EntityListHeader.svelte';
-  import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import { createTranslator } from '$lib/i18n/translator.js';
-  import HistoryIcon from '@lucide/svelte/icons/history';
   import PencilIcon from '@lucide/svelte/icons/pencil';
   import Trash2Icon from '@lucide/svelte/icons/trash-2';
   import { useSPSControllerDetailState } from './state/context.svelte.js';
 
   const detailState = useSPSControllerDetailState();
   const t = createTranslator();
-  let historyOpen = $state(false);
 
   function handleEditClick(): void {
     detailState.startEdit();
@@ -21,28 +19,17 @@
   }
 </script>
 
-<HistoryTimelineDialog
-  bind:open={historyOpen}
-  title={`${$t('history.title')}: ${detailState.controller.device_name}`}
-  scopeType="sps_controller"
-  scopeId={detailState.controller.id}
-  onRestored={() => detailState.refreshAfterChange()}
-/>
-
 <EntityListHeader
   title={detailState.title}
   description={detailState.subtitle}
   backHref={detailState.backHref}
   backLabel={$t('common.back')}
 >
-  <Button
-    variant="outline"
-    size="icon"
-    onclick={() => (historyOpen = true)}
-    aria-label={$t('history.open')}
-  >
-    <HistoryIcon class="size-4" />
-  </Button>
+  <ActivityEntryPoint
+    title={`${$t('history.title')}: ${detailState.controller.device_name}`}
+    scope={{ scopeType: 'sps_controller', scopeId: detailState.controller.id }}
+    onRestored={() => detailState.refreshAfterChange()}
+  />
 
   {#if detailState.canUpdateSps}
     <Button

@@ -37,13 +37,14 @@
 <div class="rounded-md border bg-card">
   <!-- Resource Header -->
   <div class="flex items-center gap-2 px-3 py-2">
-    <Checkbox
-      checked={isFullySelected}
-      indeterminate={isPartiallySelected}
-      onCheckedChange={handleToggleAll}
-      disabled={!state.canEdit}
-      aria-label={`Select all ${resource} permissions`}
-    />
+    {#if state.canEdit}
+      <Checkbox
+        checked={isFullySelected}
+        indeterminate={isPartiallySelected}
+        onCheckedChange={handleToggleAll}
+        aria-label={`Select all ${resource} permissions`}
+      />
+    {/if}
 
     <Button
       type="button"

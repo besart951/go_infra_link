@@ -10,6 +10,7 @@
   import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import type { ControlCabinet } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
+  import { can } from '$lib/utils/permissions.js';
   import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
   import PlusIcon from '@lucide/svelte/icons/plus';
   import { useControlCabinetState } from './state/context.svelte.js';
@@ -18,6 +19,7 @@
   const listState = useControlCabinetState();
   let historyCabinet = $state<ControlCabinet | null>(null);
   let historyOpen = $state(false);
+  const canReadTimeline = $derived(can('timeline.read'));
 
   const columns = $derived.by(() => [
     {
@@ -152,7 +154,7 @@
             >
               {$t('common.copy')}
             </DropdownMenu.Item>
-            {#if listState.canCreateControlCabinet()}
+            {#if listState.canDuplicateControlCabinet()}
               <DropdownMenu.Item
                 disabled={listState.copyInProgress}
                 onclick={() => void listState.duplicateControlCabinet(cabinet)}
@@ -163,14 +165,16 @@
             <DropdownMenu.Item onclick={() => void handleView(cabinet)}>
               {$t('common.view')}
             </DropdownMenu.Item>
-            <DropdownMenu.Item
-              onclick={() => {
-                historyCabinet = cabinet;
-                historyOpen = true;
-              }}
-            >
-              {$t('history.open')}
-            </DropdownMenu.Item>
+            {#if canReadTimeline}
+              <DropdownMenu.Item
+                onclick={() => {
+                  historyCabinet = cabinet;
+                  historyOpen = true;
+                }}
+              >
+                {$t('history.open')}
+              </DropdownMenu.Item>
+            {/if}
             {#if listState.canUpdateControlCabinet()}
               <DropdownMenu.Item onclick={() => listState.editControlCabinet(cabinet)}>
                 {$t('common.edit')}

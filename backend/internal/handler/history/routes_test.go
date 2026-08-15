@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -54,6 +55,39 @@ func TestRegisterRoutes_RequiresTimelineRestorePermission(t *testing.T) {
 	}
 }
 
+func TestListTimelineParsesActionFilter(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &timelineFilterService{}
+	handler := NewHandler(service)
+	router := gin.New()
+	router.GET("/timeline", handler.ListTimeline)
+
+	req := httptest.NewRequest(http.MethodGet, "/timeline?action=create&action=update", nil)
+	res := httptest.NewRecorder()
+	router.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected OK, got %d", res.Code)
+	}
+	if got, want := service.filter.Actions, []domainHistory.Action{domainHistory.ActionCreate, domainHistory.ActionUpdate}; !slices.Equal(got, want) {
+		t.Fatalf("actions = %v, want %v", got, want)
+	}
+}
+
+func TestListTimelineRejectsUnknownActionFilter(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.GET("/timeline", NewHandler(historyServiceStub{}).ListTimeline)
+
+	req := httptest.NewRequest(http.MethodGet, "/timeline?action=copy", nil)
+	res := httptest.NewRecorder()
+	router.ServeHTTP(res, req)
+
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected bad request, got %d", res.Code)
+	}
+}
+
 func setupHistoryRouter(t *testing.T) (*gin.Engine, *historyAuthzStub) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -88,6 +122,27 @@ func (a *historyAuthzStub) HasPermission(_ context.Context, _ domainUser.Role, p
 }
 
 type historyServiceStub struct{}
+
+type timelineFilterService struct {
+	filter domainHistory.TimelineFilter
+}
+
+func (s *timelineFilterService) ListTimeline(_ context.Context, filter domainHistory.TimelineFilter) (*domain.PaginatedList[domainHistory.ChangeEvent], error) {
+	s.filter = filter
+	return &domain.PaginatedList[domainHistory.ChangeEvent]{Items: []domainHistory.ChangeEvent{}}, nil
+}
+
+func (s *timelineFilterService) GetEvent(context.Context, uuid.UUID) (*domainHistory.ChangeEvent, error) {
+	return &domainHistory.ChangeEvent{}, nil
+}
+
+func (s *timelineFilterService) RestoreEntityToEvent(context.Context, uuid.UUID, domainHistory.RestoreMode) (*domainHistory.RestoreResult, error) {
+	return &domainHistory.RestoreResult{}, nil
+}
+
+func (s *timelineFilterService) RestoreControlCabinet(context.Context, uuid.UUID, domainHistory.RestoreControlCabinetRequest) (*domainHistory.RestoreResult, error) {
+	return &domainHistory.RestoreResult{}, nil
+}
 
 func (historyServiceStub) ListTimeline(context.Context, domainHistory.TimelineFilter) (*domain.PaginatedList[domainHistory.ChangeEvent], error) {
 	return &domain.PaginatedList[domainHistory.ChangeEvent]{Items: []domainHistory.ChangeEvent{}}, nil

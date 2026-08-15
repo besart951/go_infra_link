@@ -47,6 +47,12 @@ type ProjectListResponse struct {
 	TotalPages int               `json:"total_pages"`
 }
 
+// ProjectCapabilitiesResponse contains the project-scoped permissions that are
+// effective for the authenticated user in one concrete project.
+type ProjectCapabilitiesResponse struct {
+	Permissions []string `json:"permissions"`
+}
+
 type ListProjectsQuery struct {
 	PaginationQuery
 	Status  domainproject.ProjectStatus `form:"status" binding:"omitempty,oneof=planned ongoing completed"`

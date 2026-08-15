@@ -1,5 +1,8 @@
+import type { ProjectPermissionName } from '$lib/api/generated/permissions.js';
+
 export interface FieldDevicePermissionChecks {
   canPerform: (action: string, resource: string) => boolean;
+  canProject: (permission: ProjectPermissionName) => boolean;
 }
 
 export interface FieldDevicePendingEditState {
@@ -15,13 +18,15 @@ interface FieldDevicePermissionPolicyOptions extends FieldDevicePermissionChecks
 
 export function createFieldDevicePermissionPolicy({
   isProjectContext,
-  canPerform
+  canPerform,
+  canProject
 }: FieldDevicePermissionPolicyOptions) {
-  const canPerformProjectFieldDevice = (action: string) => canPerform(action, 'project.fielddevice');
-  const canPerformProjectFieldDeviceSpecification = (action: string) =>
-    canPerform(action, 'project.fielddevice_specification');
-  const canPerformProjectFieldDeviceBacnetObjects = (action: string) =>
-    canPerform(action, 'project.fielddevice.bacnetobjects');
+  const canPerformProjectFieldDevice = (action: 'create' | 'update' | 'delete') =>
+    canProject(`project.fielddevice.${action}`);
+  const canPerformProjectFieldDeviceSpecification = (action: 'update') =>
+    canProject(`project.fielddevice_specification.${action}`);
+  const canPerformProjectFieldDeviceBacnetObjects = (action: 'update') =>
+    canProject(`project.fielddevice.bacnetobjects.${action}`);
 
   function canCreateFieldDevice(): boolean {
     return isProjectContext()
@@ -31,7 +36,7 @@ export function createFieldDevicePermissionPolicy({
 
   function canUpdateFieldDevice(): boolean {
     return isProjectContext()
-      ? canPerformProjectFieldDevice('update')
+      ? canPerformProjectFieldDevice('update') && canPerform('update', 'fielddevice')
       : canPerform('update', 'fielddevice');
   }
 

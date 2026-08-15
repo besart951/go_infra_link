@@ -17,6 +17,7 @@
   const actions = createSystemTypeActions();
   let historyItem = $state<SystemType | null>(null);
   let historyOpen = $state(false);
+  const canReadTimeline = $derived(canPerform('read', 'timeline'));
 
   function formatNumber(value: number) {
     return String(value).padStart(4, '0');
@@ -71,14 +72,16 @@
           <DropdownMenu.Item onclick={() => goto(`/facility/system-types/${item.id}`)}>
             {$t('facility.view')}
           </DropdownMenu.Item>
-          <DropdownMenu.Item
-            onclick={() => {
-              historyItem = item;
-              historyOpen = true;
-            }}
-          >
-            {$t('history.open')}
-          </DropdownMenu.Item>
+          {#if canReadTimeline}
+            <DropdownMenu.Item
+              onclick={() => {
+                historyItem = item;
+                historyOpen = true;
+              }}
+            >
+              {$t('history.open')}
+            </DropdownMenu.Item>
+          {/if}
           {#if canPerform('update', 'systemtype')}
             <DropdownMenu.Item onclick={() => actions.edit(item)}
               >{$t('common.edit')}</DropdownMenu.Item

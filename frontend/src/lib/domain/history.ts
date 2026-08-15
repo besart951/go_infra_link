@@ -45,6 +45,7 @@ export interface HistoryTimelineParams {
   actorId?: string;
   occurredFrom?: string;
   occurredTo?: string;
+  actions?: HistoryAction[];
   fields?: string[];
   page?: number;
   limit?: number;

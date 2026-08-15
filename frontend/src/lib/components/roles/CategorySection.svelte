@@ -39,13 +39,14 @@
   <div class="rounded-lg border bg-background">
     <!-- Category Header -->
     <div class="flex items-center gap-2 border-b bg-muted/50 px-4 py-3">
-      <Checkbox
-        checked={isFullySelected}
-        indeterminate={isPartiallySelected}
-        onCheckedChange={handleToggleAll}
-        disabled={!state.canEdit}
-        aria-label={`Select all ${label} permissions`}
-      />
+      {#if state.canEdit}
+        <Checkbox
+          checked={isFullySelected}
+          indeterminate={isPartiallySelected}
+          onCheckedChange={handleToggleAll}
+          aria-label={`Select all ${label} permissions`}
+        />
+      {/if}
 
       <Button
         type="button"

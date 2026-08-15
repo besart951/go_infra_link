@@ -11,7 +11,7 @@
     "test:watch": "vitest --config vitest.config.ts",
     "api:generate": "node ./scripts/generate-api-contract.mjs",
     "api:check": "pnpm run api:generate && git diff --exit-code -- src/lib/api/generated",
-    "api:lint": "prettier --check scripts/generate-api-contract.mjs src/lib/api/client.ts src/lib/api/client.test.ts src/lib/api/contract.test.ts src/lib/api/users.ts src/lib/infrastructure/api/projectRepository.ts src/lib/services/projectCollaboration.svelte.ts",
+    "api:lint": "prettier --check scripts/generate-api-contract.mjs src/lib/api/generated/permissions.ts src/lib/api/client.ts src/lib/api/client.test.ts src/lib/api/contract.test.ts src/lib/api/users.ts src/lib/components/auth/PermissionGate.svelte src/lib/infrastructure/api/projectRepository.ts src/lib/services/projectCollaboration.svelte.ts src/lib/utils/permissions.ts",
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",

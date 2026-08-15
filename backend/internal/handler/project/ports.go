@@ -28,6 +28,7 @@ type ProjectAccessPolicyService interface {
 	CanAccessProject(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role) (bool, error)
 	CanUseProjectPermission(ctx context.Context, requesterID uuid.UUID, requesterRole *domainUser.Role, permission string) (bool, error)
 	CanUseProjectPermissionForProject(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role, permission string) (bool, error)
+	EffectiveProjectPermissions(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role) ([]string, error)
 }
 
 type ProjectMembershipService interface {

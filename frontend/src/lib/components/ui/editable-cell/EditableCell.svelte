@@ -110,7 +110,28 @@
   });
 </script>
 
-{#if isEditing}
+{#if disabled}
+  <div
+    class={[
+      'editable-cell-display flex h-7 min-h-7 w-full min-w-0 items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm font-normal whitespace-normal',
+      isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
+      hasError ? 'border border-destructive bg-destructive/10' : ''
+    ]
+      .filter(Boolean)
+      .join(' ')}
+    title={error ?? displayTitle}
+  >
+    {#if type === 'number'}
+      <code class="block max-w-full truncate rounded-md bg-muted px-1.5 py-0.5 text-sm">
+        {displaySizerValue}
+      </code>
+    {:else}
+      <span class:text-muted-foreground={!displayValue} class="min-w-0 truncate">
+        {displayValue || emptyText}
+      </span>
+    {/if}
+  </div>
+{:else if isEditing}
   <div class="editable-cell-editor relative block w-full max-w-full min-w-0 align-middle">
     <Button
       type="button"

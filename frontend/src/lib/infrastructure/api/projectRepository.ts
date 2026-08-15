@@ -2,6 +2,7 @@
  * Project API repository
  * Infrastructure layer - implements ProjectRepository port via HTTP
  */
+import { toProjectCapabilities } from '$lib/domain/project/capabilities.js';
 import type {
   ProjectRepository,
   PaginationParams
@@ -17,7 +18,8 @@ import type {
   ProjectControlCabinetListResponse,
   ProjectSPSControllerListResponse,
   ProjectFieldDeviceListResponse,
-  ProjectFieldDeviceMultiCreateResponse
+  ProjectFieldDeviceMultiCreateResponse,
+  ProjectCapabilities
 } from '$lib/domain/project/index.js';
 import type {
   ControlCabinet,
@@ -77,6 +79,17 @@ export const projectRepository: ProjectRepository = {
 
   async get(id: string, signal?: AbortSignal): Promise<Project> {
     return api<Project>(`/projects/${id}`, { signal });
+  },
+
+  async getCapabilities(id: string, signal?: AbortSignal): Promise<ProjectCapabilities> {
+    const { data } = await apiClient.GET('/api/v1/projects/{id}/capabilities', {
+      params: { path: { id } },
+      signal
+    });
+    if (!data) {
+      throw new Error('Project capabilities response is empty');
+    }
+    return toProjectCapabilities(data.permissions);
   },
 
   async create(data: CreateProjectRequest, signal?: AbortSignal): Promise<Project> {

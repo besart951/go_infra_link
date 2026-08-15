@@ -16,7 +16,8 @@ import type { Project, ProjectStatus, UpdateProjectRequest } from '$lib/domain/p
 import type { User } from '$lib/domain/user/index.js';
 import { t as translate } from '$lib/i18n/index.js';
 import { confirm } from '$lib/stores/confirm-dialog.js';
-import { canPerform } from '$lib/utils/permissions.js';
+import type { ProjectCapabilities } from '$lib/domain/project/capabilities.js';
+import { can, canProject } from '$lib/utils/permissions.js';
 
 export type ProjectSettingsTab = 'settings' | 'users' | 'object-data';
 export type ObjectDataStatusFilter = 'all' | 'active' | 'inactive';
@@ -60,18 +61,22 @@ export class ProjectSettingsPageState {
   private userSearchTimeout: ReturnType<typeof setTimeout> | null = null;
   private objectDataSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private readonly resolveProjectId: () => string) {}
+  constructor(
+    private readonly resolveProjectId: () => string,
+    private readonly resolveProjectCapabilities: () => ProjectCapabilities | undefined,
+    private readonly resolveInitialProject: () => Project | undefined = () => undefined
+  ) {}
 
   get projectId(): string {
     return this.resolveProjectId();
   }
 
   get canUpdateProject(): boolean {
-    return canPerform('update', 'project');
+    return canProject(this.resolveProjectCapabilities(), 'project.update');
   }
 
   get canUpdateObjectData(): boolean {
-    return canPerform('update', 'objectdata');
+    return can('objectdata.update');
   }
 
   getFilteredObjectData(): ObjectData[] {
@@ -151,7 +156,14 @@ export class ProjectSettingsPageState {
     this.objectDataLoaded = false;
 
     try {
-      this.project = await getProject(this.projectId);
+      const initialProject = this.resolveInitialProject();
+      this.project =
+        initialProject?.id === this.projectId
+          ? {
+              ...initialProject,
+              phase: initialProject.phase ? { ...initialProject.phase } : undefined
+            }
+          : await getProject(this.projectId);
       this.hydrateForm(this.project);
     } catch (error) {
       const message =

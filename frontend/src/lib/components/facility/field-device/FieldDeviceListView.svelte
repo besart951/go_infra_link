@@ -15,11 +15,13 @@
   import FieldDeviceExportPanel from './FieldDeviceExportPanel.svelte';
   import { provideFieldDeviceState } from './state/context.svelte.js';
   import type { FieldDeviceFilters } from './state/types.js';
+  import type { ProjectCapabilities } from '$lib/domain/project/capabilities.js';
 
   const t = createTranslator();
 
   interface Props {
     projectId?: string;
+    projectCapabilities?: ProjectCapabilities;
     refreshKey?: string | number;
     refreshRequest?: import('./state/types.js').FieldDeviceRefreshRequest;
     pageSize?: number;
@@ -35,6 +37,7 @@
 
   const {
     projectId,
+    projectCapabilities,
     refreshKey,
     refreshRequest,
     pageSize = 300,
@@ -48,6 +51,7 @@
 
   const fieldDeviceState = provideFieldDeviceState({
     projectId: () => projectId,
+    projectCapabilities: () => projectCapabilities,
     pageSize: () => pageSize,
     initialFilters: () => initialFilters,
     sharedFieldDeviceEditors: () => sharedFieldDeviceEditors ?? {},

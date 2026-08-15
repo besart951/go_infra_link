@@ -19,6 +19,7 @@
   const t = createTranslator();
   let historyItem = $state<Unit | null>(null);
   let historyOpen = $state(false);
+  const canReadTimeline = $derived(canPerform('read', 'timeline'));
 </script>
 
 {#if historyItem}
@@ -52,7 +53,7 @@
       </div>
     </div>
     <div class="flex justify-end">
-      {#if canPerform('create', 'alarmtype')}
+      {#if canPerform('create', 'unit')}
         <Button
           onclick={() => catalogState.createUnit()}
           disabled={!catalogState.unitForm.code ||
@@ -91,19 +92,21 @@
                   <Table.Cell>{unit.name}</Table.Cell>
                   <Table.Cell class="text-right">
                     <div class="flex justify-end gap-1">
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        onclick={() => {
-                          historyItem = unit;
-                          historyOpen = true;
-                        }}
-                        aria-label={$t('history.open')}
-                        title={$t('history.open')}
-                      >
-                        <History class="size-4" />
-                      </Button>
-                      {#if canPerform('delete', 'alarmtype')}
+                      {#if canReadTimeline}
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          onclick={() => {
+                            historyItem = unit;
+                            historyOpen = true;
+                          }}
+                          aria-label={$t('history.open')}
+                          title={$t('history.open')}
+                        >
+                          <History class="size-4" />
+                        </Button>
+                      {/if}
+                      {#if canPerform('delete', 'unit')}
                         <Button
                           size="icon-sm"
                           variant="ghost"

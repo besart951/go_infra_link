@@ -17,6 +17,7 @@
   const actions = createNotificationClassActions();
   let historyItem = $state<NotificationClass | null>(null);
   let historyOpen = $state(false);
+  const canReadTimeline = $derived(canPerform('read', 'timeline'));
 </script>
 
 {#if historyItem}
@@ -70,14 +71,16 @@
           <DropdownMenu.Item onclick={() => goto(`/facility/notification-classes/${item.id}`)}>
             {$t('facility.view')}
           </DropdownMenu.Item>
-          <DropdownMenu.Item
-            onclick={() => {
-              historyItem = item;
-              historyOpen = true;
-            }}
-          >
-            {$t('history.open')}
-          </DropdownMenu.Item>
+          {#if canReadTimeline}
+            <DropdownMenu.Item
+              onclick={() => {
+                historyItem = item;
+                historyOpen = true;
+              }}
+            >
+              {$t('history.open')}
+            </DropdownMenu.Item>
+          {/if}
           {#if canPerform('update', 'notificationclass')}
             <DropdownMenu.Item onclick={() => actions.edit(item)}
               >{$t('common.edit')}</DropdownMenu.Item

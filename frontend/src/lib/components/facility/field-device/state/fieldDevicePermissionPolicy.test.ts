@@ -7,7 +7,8 @@ function buildPolicy(projectContext: boolean, permissions: string[]) {
   const canPerform = (action: string, resource: string) => granted.has(`${resource}.${action}`);
   return createFieldDevicePermissionPolicy({
     isProjectContext: () => projectContext,
-    canPerform
+    canPerform,
+    canProject: (permission) => granted.has(permission)
   });
 }
 
@@ -35,12 +36,12 @@ describe('field-device permission policy', () => {
 
   it('uses project field-device permissions for base edits in project context', () => {
     expect(
-      buildPolicy(true, ['project.fielddevice.update']).canSavePendingEdits(
+      buildPolicy(true, ['project.fielddevice.update', 'fielddevice.update']).canSavePendingEdits(
         pending({ hasPendingBaseEdits: true })
       )
     ).toBe(true);
     expect(
-      buildPolicy(true, ['project.fielddevice_specification.update']).canSavePendingEdits(
+      buildPolicy(true, ['project.fielddevice_specification.update', 'fielddevice.update']).canSavePendingEdits(
         pending({ hasPendingBaseEdits: true })
       )
     ).toBe(false);
@@ -53,7 +54,7 @@ describe('field-device permission policy', () => {
       )
     ).toBe(true);
     expect(
-      buildPolicy(true, ['project.fielddevice.update']).canSavePendingEdits(
+      buildPolicy(true, ['project.fielddevice.update', 'fielddevice.update']).canSavePendingEdits(
         pending({ hasPendingSpecificationEdits: true })
       )
     ).toBe(true);
@@ -61,12 +62,12 @@ describe('field-device permission policy', () => {
 
   it('allows BACnet edits through BACnet or broad project update permission', () => {
     expect(
-      buildPolicy(true, ['project.fielddevice.bacnetobjects.update']).canSavePendingEdits(
+      buildPolicy(true, ['project.fielddevice.bacnetobjects.update', 'fielddevice.update']).canSavePendingEdits(
         pending({ hasPendingBacnetEdits: true })
       )
     ).toBe(true);
     expect(
-      buildPolicy(true, ['project.fielddevice.update']).canSavePendingEdits(
+      buildPolicy(true, ['project.fielddevice.update', 'fielddevice.update']).canSavePendingEdits(
         pending({ hasPendingBacnetEdits: true })
       )
     ).toBe(true);

@@ -74,7 +74,20 @@
   }
 </script>
 
-{#if isEditing}
+{#if disabled}
+  <div
+    class={[
+      'editable-cell-display flex h-7 min-h-7 w-full min-w-0 items-center overflow-hidden rounded-sm px-2 py-1 text-left text-sm font-normal whitespace-normal',
+      isDirty ? 'bg-warning-muted dark:bg-warning-muted/60' : '',
+      hasError ? 'border border-destructive bg-destructive/10' : ''
+    ]
+      .filter(Boolean)
+      .join(' ')}
+    title={error}
+  >
+    <span class="truncate">{displayLabel}</span>
+  </div>
+{:else if isEditing}
   <div class="editable-cell-editor relative block w-full max-w-full min-w-0 align-middle">
     <Button
       type="button"

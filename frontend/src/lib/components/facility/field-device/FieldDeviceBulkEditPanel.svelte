@@ -144,8 +144,8 @@
     </Card.Description>
   </Card.Header>
   <Card.Content>
-    <div class="mb-4">
-      <fieldset disabled={!canEditBaseFields}>
+    {#if canEditBaseFields}
+      <div class="mb-4">
         <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
           <div class="flex flex-col gap-1">
             <Label class="text-xs">{$t('field_device.bulk_edit.bmk')}</Label>
@@ -224,8 +224,8 @@
             />
           </div>
         </div>
-      </fieldset>
-    </div>
+      </div>
+    {/if}
 
     <div class="mb-4">
       {#if canEditSpecificationFields}

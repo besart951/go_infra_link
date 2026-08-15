@@ -49,20 +49,22 @@
           {$t('field_device.importer.actions.transform')}
         </Button>
 
-        <Button
-          type="button"
-          disabled={!service.canImport || service.isTransforming}
-          onclick={() => service.importPlan()}
-        >
-          {#if service.isImporting}
-            <LoaderCircle class="mr-2 size-4 animate-spin" />
-          {:else}
-            <Play class="mr-2 size-4" />
-          {/if}
-          {service.importReport?.status === 'partial' || service.importReport?.status === 'failed'
-            ? $t('field_device.importer.actions.retry')
-            : $t('field_device.importer.actions.import')}
-        </Button>
+        {#if service.canImport}
+          <Button
+            type="button"
+            disabled={service.isTransforming}
+            onclick={() => service.importPlan()}
+          >
+            {#if service.isImporting}
+              <LoaderCircle class="mr-2 size-4 animate-spin" />
+            {:else}
+              <Play class="mr-2 size-4" />
+            {/if}
+            {service.importReport?.status === 'partial' || service.importReport?.status === 'failed'
+              ? $t('field_device.importer.actions.retry')
+              : $t('field_device.importer.actions.import')}
+          </Button>
+        {/if}
       </div>
     </div>
 

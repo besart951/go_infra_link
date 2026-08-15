@@ -91,6 +91,50 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 	c.JSON(http.StatusOK, ToProjectResponse(proj))
 }
 
+// GetProjectCapabilities godoc
+// @Summary Get effective permissions for a project
+// @Description Returns project-scoped permissions after project membership and phase restrictions have been applied.
+// @Tags projects
+// @Produce json
+// @Param id path string true "Project ID"
+// @Success 200 {object} dto.ProjectCapabilitiesResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /api/v1/projects/{id}/capabilities [get]
+func (h *ProjectHandler) GetProjectCapabilities(c *gin.Context) {
+	id, ok := handlerutil.ParseUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	if !h.ensureProjectAccess(c, id) {
+		return
+	}
+
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return
+	}
+	var role *domainUser.Role
+	if requesterRole, ok := middleware.GetUserRole(c); ok {
+		role = &requesterRole
+	}
+
+	permissions, err := h.access.EffectiveProjectPermissions(c.Request.Context(), userID, id, role)
+	if err != nil {
+		handlerutil.RespondDomainError(c, err,
+			handlerutil.LocalizedError(http.StatusInternalServerError, "fetch_failed", "project.fetch_failed"),
+			handlerutil.MapError(domain.ErrNotFound, handlerutil.LocalizedError(http.StatusNotFound, "not_found", "project.project_not_found")),
+		)
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.ProjectCapabilitiesResponse{Permissions: permissions})
+}
+
 // ListProjects godoc
 // @Summary List projects with pagination
 // @Tags projects

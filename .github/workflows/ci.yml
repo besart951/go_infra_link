@@ -83,8 +83,21 @@ jobs:
           corepack enable
           corepack prepare pnpm@${PNPM_VERSION} --activate
 
+      - name: Set up Go for API contract generation
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      - name: Verify generated API and permission contracts
+        working-directory: .
+        run: |
+          bash ./scripts/swagger.sh
+          git diff --exit-code -- backend/docs frontend/src/lib/api/generated
 
       - name: Type check
         run: pnpm check

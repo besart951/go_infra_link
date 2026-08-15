@@ -74,6 +74,83 @@ func (s *ProjectAccessPolicyService) CanUseProjectPermissionForProject(ctx conte
 	return s.phaseAllowsProjectPermission(ctx, role, projectID, permission)
 }
 
+// EffectiveProjectPermissions returns the project permissions granted to a user
+// after applying the role and the project's current phase rule. Callers must
+// verify project access separately; this keeps membership authorization and
+// permission evaluation as distinct concerns.
+func (s *ProjectAccessPolicyService) EffectiveProjectPermissions(ctx context.Context, requesterID, projectID uuid.UUID, requesterRole *domainUser.Role) ([]string, error) {
+	project, err := domain.GetByID(ctx, s.repo, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	role, ok, err := s.resolveRequesterRole(ctx, requesterID, requesterRole)
+	if err != nil || !ok {
+		return []string{}, err
+	}
+
+	projectPermissions := canonicalProjectPermissions()
+	if roleCanAccessAllProjects(role) {
+		return projectPermissions, nil
+	}
+	if s.rolePermissionRepo == nil {
+		return []string{}, nil
+	}
+
+	rolePermissions, err := s.rolePermissionRepo.ListByRole(ctx, role)
+	if err != nil {
+		return nil, err
+	}
+	granted := make(map[string]struct{}, len(rolePermissions))
+	for _, rolePermission := range rolePermissions {
+		granted[rolePermission.Permission] = struct{}{}
+	}
+
+	phasePermissions := map[string]struct{}{}
+	if project.PhaseID != uuid.Nil {
+		if s.phasePermissionRepo == nil {
+			return []string{}, nil
+		}
+		rule, err := s.phasePermissionRepo.GetByPhaseAndRole(ctx, project.PhaseID, role)
+		if err != nil && !errors.Is(err, domain.ErrNotFound) {
+			return nil, err
+		}
+		if err == nil && rule != nil {
+			for _, permission := range rule.Permissions {
+				phasePermissions[permission] = struct{}{}
+			}
+		}
+	}
+
+	effective := make([]string, 0, len(projectPermissions))
+	for _, permission := range projectPermissions {
+		if _, ok := granted[permission]; !ok {
+			continue
+		}
+		if isPhaseScopedProjectPermission(permission) && project.PhaseID != uuid.Nil {
+			if _, ok := phasePermissions[permission]; !ok {
+				continue
+			}
+		}
+		effective = append(effective, permission)
+	}
+	return effective, nil
+}
+
+func canonicalProjectPermissions() []string {
+	permissions := make([]string, 0)
+	for _, definition := range domainUser.CanonicalPermissionDefinitions() {
+		if !strings.HasPrefix(definition.Name, "project.") {
+			continue
+		}
+		if definition.Name == domainUser.PermissionProjectCreate || definition.Name == domainUser.PermissionProjectListAll {
+			continue
+		}
+		permissions = append(permissions, definition.Name)
+	}
+	return permissions
+}
+
 func (s *ProjectAccessPolicyService) ExplainProjectPermissionDenial(ctx context.Context, requesterID uuid.UUID, requesterRole *domainUser.Role, permissions []string) (*domainProject.PermissionDenialDetails, error) {
 	role, ok, err := s.resolveRequesterRole(ctx, requesterID, requesterRole)
 	if err != nil {

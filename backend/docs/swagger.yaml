@@ -1904,6 +1904,92 @@ definitions:
       vlan:
         type: string
     type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ChangeEventResponse:
+    properties:
+      action:
+        enum:
+        - create
+        - update
+        - delete
+        - restore
+        type: string
+      actor_id:
+        type: string
+      actor_name:
+        type: string
+      after_json:
+        type: object
+      batch_id:
+        type: string
+      before_json:
+        type: object
+      diff_json:
+        type: object
+      entity_id:
+        type: string
+      entity_table:
+        type: string
+      id:
+        type: string
+      metadata_json:
+        type: object
+      occurred_at:
+        type: string
+      scopes:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ScopeResponse'
+        type: array
+      summary:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse:
+    properties:
+      code:
+        type: string
+      conflict:
+        $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse'
+      details: {}
+      error:
+        description: Error and Fields are kept as compatibility aliases for existing
+          clients.
+        type: string
+      field_errors:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse'
+        type: array
+      fields:
+        additionalProperties:
+          type: string
+        type: object
+      localized_key:
+        type: string
+      message:
+        type: string
+      request_id:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ScopeResponse:
+    properties:
+      label:
+        type: string
+      scope_id:
+        type: string
+      scope_type:
+        type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ChangeEventResponse'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse:
     properties:
       code:
@@ -2288,6 +2374,13 @@ definitions:
         type: string
       updated_at:
         type: string
+    type: object
+  github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectCapabilitiesResponse:
+    properties:
+      permissions:
+        items:
+          type: string
+        type: array
     type: object
   github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectChangeResponse:
     properties:
@@ -6538,6 +6631,90 @@ paths:
       summary: Update a system type
       tags:
       - facility-system-types
+  /api/v1/history/timeline:
+    get:
+      description: Returns authoritative audit events with their actual before/after
+        diff. Multiple action and field parameters are combined as OR filters within
+        their category.
+      parameters:
+      - description: Scope type
+        in: query
+        name: scope_type
+        type: string
+      - description: Scope UUID
+        in: query
+        name: scope_id
+        type: string
+      - description: Entity table
+        in: query
+        name: entity_table
+        type: string
+      - description: Entity UUID
+        in: query
+        name: entity_id
+        type: string
+      - description: Actor UUID
+        in: query
+        name: actor_id
+        type: string
+      - description: Earliest ISO-8601 timestamp
+        in: query
+        name: occurred_from
+        type: string
+      - description: Latest ISO-8601 timestamp
+        in: query
+        name: occurred_to
+        type: string
+      - collectionFormat: multi
+        description: 'Actions: create, update, delete, restore'
+        in: query
+        items:
+          type: string
+        name: action
+        type: array
+      - collectionFormat: multi
+        description: Changed field names
+        in: query
+        items:
+          type: string
+        name: field
+        type: array
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 50
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse'
+      summary: List global audit activities
+      tags:
+      - history
   /api/v1/i18n/{locale}:
     get:
       parameters:
@@ -7080,6 +7257,46 @@ paths:
       summary: Update a project
       tags:
       - projects
+  /api/v1/projects/{id}/capabilities:
+    get:
+      description: Returns project-scoped permissions after project membership and
+        phase restrictions have been applied.
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectCapabilitiesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+      summary: Get effective permissions for a project
+      tags:
+      - projects
   /api/v1/projects/{id}/changes:
     get:
       description: Returns durable project changes for HTTP recovery after a missed
@@ -7575,6 +7792,95 @@ paths:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
       summary: Create multiple project field device links
       tags:
+      - projects
+  /api/v1/projects/{id}/history/timeline:
+    get:
+      description: Returns authoritative audit events for one project. The optional
+        entity, field, action, actor and date filters work like the global timeline.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Secondary scope type
+        in: query
+        name: scope_type
+        type: string
+      - description: Secondary scope UUID
+        in: query
+        name: scope_id
+        type: string
+      - description: Entity table
+        in: query
+        name: entity_table
+        type: string
+      - description: Entity UUID
+        in: query
+        name: entity_id
+        type: string
+      - description: Actor UUID
+        in: query
+        name: actor_id
+        type: string
+      - description: Earliest ISO-8601 timestamp
+        in: query
+        name: occurred_from
+        type: string
+      - description: Latest ISO-8601 timestamp
+        in: query
+        name: occurred_to
+        type: string
+      - collectionFormat: multi
+        description: 'Actions: create, update, delete, restore'
+        in: query
+        items:
+          type: string
+        name: action
+        type: array
+      - collectionFormat: multi
+        description: Changed field names
+        in: query
+        items:
+          type: string
+        name: field
+        type: array
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 50
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse'
+      summary: List project audit activities
+      tags:
+      - history
       - projects
   /api/v1/projects/{id}/object-data:
     get:

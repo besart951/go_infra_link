@@ -16,7 +16,10 @@
   import { getBreadcrumbForPath } from '$lib/navigation/appNavigation.js';
   import { hasUserPermission } from '$lib/utils/permissions.js';
   import { facilityReferenceDataCache } from '$lib/services/facilityReferenceDataCache.js';
+  import { projectDetailService } from '$lib/components/project/ProjectDetailService.js';
+  import { appNavigationDataCache } from '$lib/services/appNavigationDataCache.js';
   import { copyOperation } from '$lib/state/copyOperation.svelte.js';
+  import { clearActivityCache } from '$lib/activity/activityCache.js';
   import CopyProgressIndicator from '$lib/components/facility/CopyProgressIndicator.svelte';
 
   const translator = createTranslator();
@@ -32,13 +35,16 @@
     facilityReferenceDataCache.start({
       refreshReferenceData:
         hasUserPermission(data.user, 'apparat.read') &&
-        hasUserPermission(data.user, 'system_part.read')
+        hasUserPermission(data.user, 'systempart.read')
     });
   });
 
   onDestroy(() => {
     copyOperation.dispose();
     facilityReferenceDataCache.stop();
+    projectDetailService.clearProjectContextCache();
+    appNavigationDataCache.clear();
+    clearActivityCache();
   });
 
   $effect(() => {

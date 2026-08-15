@@ -6226,6 +6226,104 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/history/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List global audit activities
+         * @description Returns authoritative audit events with their actual before/after diff. Multiple action and field parameters are combined as OR filters within their category.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Actions: create, update, delete, restore */
+                    action?: string[];
+                    /** @description Actor UUID */
+                    actor_id?: string;
+                    /** @description Entity UUID */
+                    entity_id?: string;
+                    /** @description Entity table */
+                    entity_table?: string;
+                    /** @description Changed field names */
+                    field?: string[];
+                    /** @description Items per page */
+                    limit?: number;
+                    /** @description Earliest ISO-8601 timestamp */
+                    occurred_from?: string;
+                    /** @description Latest ISO-8601 timestamp */
+                    occurred_to?: string;
+                    /** @description Page number */
+                    page?: number;
+                    /** @description Scope UUID */
+                    scope_id?: string;
+                    /** @description Scope type */
+                    scope_type?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/i18n/{locale}": {
         parameters: {
             query?: never;
@@ -7135,6 +7233,93 @@ export type paths = {
         };
         trace?: never;
     };
+    "/api/v1/projects/{id}/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get effective permissions for a project
+         * @description Returns project-scoped permissions after project membership and phase restrictions have been applied.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Project ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectCapabilitiesResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{id}/changes": {
         parameters: {
             query?: never;
@@ -8006,6 +8191,107 @@ export type paths = {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{id}/history/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List project audit activities
+         * @description Returns authoritative audit events for one project. The optional entity, field, action, actor and date filters work like the global timeline.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Actions: create, update, delete, restore */
+                    action?: string[];
+                    /** @description Actor UUID */
+                    actor_id?: string;
+                    /** @description Entity UUID */
+                    entity_id?: string;
+                    /** @description Entity table */
+                    entity_table?: string;
+                    /** @description Changed field names */
+                    field?: string[];
+                    /** @description Items per page */
+                    limit?: number;
+                    /** @description Earliest ISO-8601 timestamp */
+                    occurred_from?: string;
+                    /** @description Latest ISO-8601 timestamp */
+                    occurred_to?: string;
+                    /** @description Page number */
+                    page?: number;
+                    /** @description Secondary scope UUID */
+                    scope_id?: string;
+                    /** @description Secondary scope type */
+                    scope_type?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description Project UUID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -10835,6 +11121,48 @@ export type components = {
             subnet?: string;
             vlan?: string;
         };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ChangeEventResponse": {
+            /** @enum {string} */
+            action?: "create" | "update" | "delete" | "restore";
+            actor_id?: string;
+            actor_name?: string;
+            after_json?: Record<string, never>;
+            batch_id?: string;
+            before_json?: Record<string, never>;
+            diff_json?: Record<string, never>;
+            entity_id?: string;
+            entity_table?: string;
+            id?: string;
+            metadata_json?: Record<string, never>;
+            occurred_at?: string;
+            scopes?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ScopeResponse"][];
+            summary?: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse": {
+            code?: string;
+            conflict?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse"];
+            details?: unknown;
+            /** @description Error and Fields are kept as compatibility aliases for existing clients. */
+            error?: string;
+            field_errors?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse"][];
+            fields?: {
+                [key: string]: string;
+            };
+            localized_key?: string;
+            message?: string;
+            request_id?: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ScopeResponse": {
+            label?: string;
+            scope_id?: string;
+            scope_type?: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse": {
+            items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ChangeEventResponse"][];
+            page?: number;
+            total?: number;
+            total_pages?: number;
+        };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse": {
             code?: string;
             conflict?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse"];
@@ -11008,6 +11336,9 @@ export type components = {
             id?: string;
             name?: string;
             updated_at?: string;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectCapabilitiesResponse": {
+            permissions?: string[];
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectChangeResponse": {
             action?: string;

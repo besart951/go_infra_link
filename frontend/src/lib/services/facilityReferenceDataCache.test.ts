@@ -49,6 +49,42 @@ function options(): FieldDeviceOptions {
 }
 
 describe('FacilityReferenceDataCache', () => {
+  it('uses its reference data cache for 30 minutes before refreshing it', async () => {
+    let now = 0;
+    const apparats = repository(() => [apparat]);
+    const systemParts = repository(() => [systemPart]);
+    const fieldDevices = { getOptions: vi.fn().mockResolvedValue(options()) };
+    const cache = new FacilityReferenceDataCache(
+      { apparats, systemParts, fieldDevices },
+      { createStream: () => ({ connect: vi.fn(), disconnect: vi.fn() }), now: () => now }
+    );
+
+    await cache.load();
+    now = 30 * 60 * 1000 - 1;
+    await cache.load();
+    expect(apparats.list).toHaveBeenCalledOnce();
+
+    now += 1;
+    await cache.load();
+    expect(apparats.list).toHaveBeenCalledTimes(2);
+  });
+
+  it('clears reference data when the authenticated application session ends', async () => {
+    const apparats = repository(() => [apparat]);
+    const systemParts = repository(() => [systemPart]);
+    const fieldDevices = { getOptions: vi.fn().mockResolvedValue(options()) };
+    const cache = new FacilityReferenceDataCache(
+      { apparats, systemParts, fieldDevices },
+      { createStream: () => ({ connect: vi.fn(), disconnect: vi.fn() }) }
+    );
+
+    await cache.load();
+    cache.stop();
+    await cache.load();
+
+    expect(apparats.list).toHaveBeenCalledTimes(2);
+  });
+
   it('loads the reference data once and starts its realtime stream without blocking callers', async () => {
     const apparats = repository(() => [apparat]);
     const systemParts = repository(() => [systemPart]);

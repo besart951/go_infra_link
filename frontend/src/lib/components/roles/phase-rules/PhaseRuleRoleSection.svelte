@@ -40,7 +40,7 @@
       <Table.Body>
         {#each state.phases as phase (phase.id)}
           {@const rule = state.getRule(phase.id, role.name)}
-          {@const disabled = !state.canManage || state.isSaving(phase.id, role.name)}
+          {@const disabled = state.isSaving(phase.id, role.name)}
           <Table.Row>
             <Table.Cell class="align-top">
               <div class="font-medium">{phase.name}</div>
@@ -53,11 +53,17 @@
               </div>
             </Table.Cell>
             <Table.Cell class="align-top">
-              <PhaseRulePresetButtons phaseID={phase.id} role={role.name} {rule} {disabled} />
+              {#if state.canManage}
+                <PhaseRulePresetButtons phaseID={phase.id} role={role.name} {rule} {disabled} />
+              {/if}
             </Table.Cell>
             <Table.Cell class="align-top">
-              {#if rule}
+              {#if rule && state.canManage}
                 <PhaseRulePermissionGrid phaseID={phase.id} role={role.name} {rule} {disabled} />
+              {:else if rule}
+                <div class="text-sm text-muted-foreground">
+                  {state.getRuleBadgeLabel(rule)}
+                </div>
               {:else}
                 <div class="text-sm text-muted-foreground">
                   {translate('roles.phase_rules.default_hint')}

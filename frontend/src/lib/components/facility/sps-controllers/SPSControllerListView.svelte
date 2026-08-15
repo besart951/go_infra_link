@@ -2,9 +2,11 @@
   import { onDestroy, onMount } from 'svelte';
   import SPSControllerList from './SPSControllerList.svelte';
   import { provideSPSControllerState } from './state/context.svelte.js';
+  import type { ProjectCapabilities } from '$lib/domain/project/capabilities.js';
 
   interface Props {
     projectId?: string;
+    projectCapabilities?: ProjectCapabilities;
     refreshKey?: string | number;
     refreshRequest?: import('../shared/entityRefresh.js').EntityRefreshRequest;
     deltaRequest?: import('../shared/entityRefresh.js').EntityDeltaRequest<
@@ -24,6 +26,7 @@
 
   const {
     projectId,
+    projectCapabilities,
     refreshKey,
     refreshRequest,
     deltaRequest,
@@ -35,6 +38,7 @@
 
   const spsControllerState = provideSPSControllerState({
     projectId: () => projectId,
+    projectCapabilities: () => projectCapabilities,
     controlCabinetRefreshKey: () => controlCabinetRefreshKey,
     onChanged: (event) => onChanged?.(event)
   });

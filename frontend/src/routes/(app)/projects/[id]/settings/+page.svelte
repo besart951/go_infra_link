@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
+  import type { PageData } from '../$types.js';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Textarea } from '$lib/components/ui/textarea/index.js';
@@ -15,9 +16,14 @@
   import ObjectDataForm from '$lib/components/facility/forms/ObjectDataForm.svelte';
 
   const t = createTranslator();
+  const { data } = $props<{ data: PageData }>();
 
   const projectId = $derived($page.params.id ?? '');
-  const state = new ProjectSettingsPageState(() => projectId);
+  const state = new ProjectSettingsPageState(
+    () => projectId,
+    () => data.projectCapabilities,
+    () => data.project
+  );
 
   $effect(() => {
     state.ensureActiveTabLoaded();

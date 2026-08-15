@@ -3,7 +3,7 @@ import { useFieldDeviceEditing } from '$lib/hooks/useFieldDeviceEditing.svelte.j
 import { t as translate } from '$lib/i18n/index.js';
 import { ManageFieldDeviceUseCase } from '$lib/application/useCases/facility/manageFieldDeviceUseCase.js';
 import { fieldDeviceRepository } from '$lib/infrastructure/api/fieldDeviceRepository.js';
-import { canPerform } from '$lib/utils/permissions.js';
+import { canPerform, canProject } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
 import { sanitizeFilters } from '$lib/state/table/sanitizeFilters.js';
 import { ProjectFacilityListFilterStore } from '$lib/components/facility/shared/projectFacilityListFilters.js';
@@ -31,7 +31,12 @@ import type {
   FieldDeviceStateProps,
   SharedFieldDeviceEditorsByDevice
 } from './types.js';
-import { resolveFieldDeviceFilters, resolvePageSize, toProjectIdResolver } from './types.js';
+import {
+  resolveFieldDeviceFilters,
+  resolvePageSize,
+  toProjectCapabilitiesResolver,
+  toProjectIdResolver
+} from './types.js';
 import { FieldDeviceFetchStrategyFactory } from './strategies/FieldDeviceFetchStrategyFactory.js';
 import { FieldDevicePanelState } from './FieldDevicePanelState.svelte.js';
 import {
@@ -62,6 +67,9 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
   readonly tableGroups = $derived.by(() => this.view.groupItems(this.items));
 
   private readonly resolveProjectId: () => string | undefined;
+  private readonly resolveProjectCapabilities: () =>
+    | import('$lib/domain/project/capabilities.js').ProjectCapabilities
+    | undefined;
   private readonly fixedFilters: FieldDeviceFilters;
   private readonly resolveSharedFieldDeviceEditors: () => SharedFieldDeviceEditorsByDevice;
   private readonly onFieldDevicesSaved?: (devices: FieldDevice[]) => void;
@@ -89,12 +97,14 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
     this.loading = true;
     this.resolveProjectId = resolveProjectId;
+    this.resolveProjectCapabilities = toProjectCapabilitiesResolver(props.projectCapabilities);
     this.fixedFilters = initialFilters;
     this.resolveSharedFieldDeviceEditors = props.sharedFieldDeviceEditors ?? (() => ({}));
     this.onFieldDevicesSaved = props.onFieldDevicesSaved;
     this.permissionPolicy = createFieldDevicePermissionPolicy({
       isProjectContext: () => this.isProjectContext,
-      canPerform
+      canPerform,
+      canProject: (permission) => canProject(this.projectCapabilities, permission)
     });
     this.editing = useFieldDeviceEditing({
       projectId: () => this.projectId,
@@ -117,6 +127,10 @@ export class FieldDeviceState extends BaseDataTableState<FieldDevice, FieldDevic
 
   get projectId() {
     return this.resolveProjectId();
+  }
+
+  get projectCapabilities() {
+    return this.resolveProjectCapabilities();
   }
 
   get effectiveProjectId(): string | undefined {

@@ -55,6 +55,19 @@ const state = vi.hoisted(() => {
         updated_at: '2026-01-01T00:00:00.000Z'
       }),
       listUsers: vi.fn().mockResolvedValue({ items: [] })
+    },
+    projectPageData: {
+      project: {
+        id: 'project-1',
+        name: 'Alpha',
+        description: '',
+        status: 'planned',
+        phase_id: 'phase-1',
+        creator_id: 'user-1',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z'
+      },
+      projectCapabilities: { permissions: [] }
     }
   };
 });
@@ -73,6 +86,9 @@ vi.mock('$lib/i18n/translator.js', () => ({
 }));
 
 vi.mock('$lib/utils/permissions.js', () => ({
+  can: (permission: string) => state.canPerform(permission.slice(permission.lastIndexOf('.') + 1), permission.slice(0, permission.lastIndexOf('.'))),
+  canProject: (_capabilities: unknown, permission: string) =>
+    state.canPerform(permission.slice(permission.lastIndexOf('.') + 1), permission.slice(0, permission.lastIndexOf('.'))),
   canPerform: (action: string, resource: string) => state.canPerform(action, resource)
 }));
 
@@ -133,6 +149,10 @@ vi.mock('$lib/components/facility/field-device/FieldDeviceListView.svelte', asyn
 
 import ProjectDetailPage from '../../../src/routes/(app)/projects/[id]/+page.svelte';
 
+function renderPage() {
+  return render(ProjectDetailPage, { data: state.projectPageData as never });
+}
+
 describe('/projects/:id permission surface', () => {
   beforeEach(() => {
     state.resetPermissions();
@@ -143,7 +163,7 @@ describe('/projects/:id permission surface', () => {
   it('hides the settings link when project.update would be forbidden', () => {
     state.setPermissions([permission('project', 'listAll')]);
 
-    const { container } = render(ProjectDetailPage);
+    const { container } = renderPage();
 
     expect(container.querySelector('a[href="/projects/project-1/settings"]')).toBeNull();
   });
@@ -151,7 +171,7 @@ describe('/projects/:id permission surface', () => {
   it('does not open project subareas that would be forbidden for a project.listAll-only user', () => {
     state.setPermissions([permission('project', 'listAll')]);
 
-    render(ProjectDetailPage);
+    renderPage();
 
     expect(state.projectDetailService.listUsers).not.toHaveBeenCalled();
     expect(screen.queryByLabelText('history.open')).not.toBeInTheDocument();
@@ -163,7 +183,7 @@ describe('/projects/:id permission surface', () => {
   it('shows the settings link when project.update is granted', () => {
     state.setPermissions([permission('project', 'listAll'), permission('project', 'update')]);
 
-    const { container } = render(ProjectDetailPage);
+    const { container } = renderPage();
 
     expect(container.querySelector('a[href="/projects/project-1/settings"]')).not.toBeNull();
     expect(state.projectDetailService.listUsers).toHaveBeenCalledWith('project-1');
@@ -176,7 +196,7 @@ describe('/projects/:id permission surface', () => {
       permission('project.fielddevice')
     ]);
 
-    render(ProjectDetailPage);
+    renderPage();
 
     await waitFor(() =>
       expect(screen.getByText('projects.control_cabinets.title')).toBeInTheDocument()
@@ -188,7 +208,7 @@ describe('/projects/:id permission surface', () => {
   it('shows the project history action only when timeline.read is granted', () => {
     state.setPermissions([permission('project', 'listAll'), permission('timeline')]);
 
-    render(ProjectDetailPage);
+    renderPage();
 
     expect(screen.getByLabelText('history.open')).toBeInTheDocument();
   });

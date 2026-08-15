@@ -46,7 +46,17 @@ interface FacilityReferenceDataCacheOptions {
     onCopyJobProgress: (event: FacilityCopyJobProgressEvent) => void,
     onOpen: () => void
   ) => FacilityReferenceDataStream;
+  ttlMs?: number;
+  now?: () => number;
 }
+
+interface FacilityReferenceDataRequest {
+  id: number;
+  force: boolean;
+  promise: Promise<FacilityReferenceData>;
+}
+
+export const FACILITY_REFERENCE_DATA_CACHE_TTL_MS = 30 * 60 * 1000;
 
 const facilityReferenceDataChangedEventSchema = z.object({
   type: z.literal('facility_reference_data.changed'),
@@ -78,8 +88,13 @@ export class FacilityReferenceDataCache {
   private readonly listeners = new Set<(data: FacilityReferenceData) => void>();
   private readonly copyJobListeners = new Set<(event: FacilityCopyJobProgressEvent) => void>();
   private readonly realtimeOpenListeners = new Set<() => void>();
+  private readonly ttlMs: number;
+  private readonly now: () => number;
   private data: FacilityReferenceData | null = null;
-  private request: Promise<FacilityReferenceData> | null = null;
+  private expiresAt = 0;
+  private request: FacilityReferenceDataRequest | null = null;
+  private cacheGeneration = 0;
+  private requestID = 0;
   private refreshReferenceData = false;
 
   constructor(
@@ -93,6 +108,8 @@ export class FacilityReferenceDataCache {
     this.listApparatsUseCase = new ListEntityUseCase(dependencies.apparats);
     this.listSystemPartsUseCase = new ListEntityUseCase(dependencies.systemParts);
     this.fieldDevices = dependencies.fieldDevices;
+    this.ttlMs = options.ttlMs ?? FACILITY_REFERENCE_DATA_CACHE_TTL_MS;
+    this.now = options.now ?? Date.now;
     this.stream =
       options.createStream?.(
         () => this.handleReferenceDataChange(),
@@ -114,16 +131,20 @@ export class FacilityReferenceDataCache {
   start(options: { refreshReferenceData?: boolean } = {}): void {
     this.refreshReferenceData = options.refreshReferenceData ?? true;
     this.stream.connect();
-    this.handleReferenceDataChange();
+    if (this.refreshReferenceData) this.loadInBackground();
   }
 
   stop(): void {
     this.refreshReferenceData = false;
+    this.cacheGeneration += 1;
+    this.data = null;
+    this.expiresAt = 0;
+    this.request = null;
     this.stream.disconnect();
   }
 
   async load(): Promise<FacilityReferenceData> {
-    if (this.data) return this.data;
+    if (this.data && this.expiresAt > this.now()) return this.data;
     return this.fetch(false);
   }
 
@@ -154,6 +175,10 @@ export class FacilityReferenceDataCache {
     };
   }
 
+  private loadInBackground(): void {
+    void this.load().catch(() => undefined);
+  }
+
   private refreshInBackground(): void {
     void this.refresh().catch(() => undefined);
   }
@@ -163,23 +188,34 @@ export class FacilityReferenceDataCache {
   }
 
   private fetch(force: boolean): Promise<FacilityReferenceData> {
-    if (!force && this.data) return Promise.resolve(this.data);
-    if (this.request) return this.request;
+    if (!force && this.data && this.expiresAt > this.now()) return Promise.resolve(this.data);
+    if (this.request && (!force || this.request.force)) return this.request.promise;
 
-    const request = this.fetchReferenceData()
+    const request = this.createRequest(force);
+    this.request = request;
+    return request.promise;
+  }
+
+  private createRequest(force: boolean): FacilityReferenceDataRequest {
+    const requestID = ++this.requestID;
+    const generation = this.cacheGeneration;
+    const promise = this.fetchReferenceData()
       .then((data) => {
+        if (generation !== this.cacheGeneration || this.request?.id !== requestID) {
+          return data;
+        }
         this.data = data;
+        this.expiresAt = this.now() + this.ttlMs;
         this.notify(data);
         return data;
       })
       .finally(() => {
-        if (this.request === request) {
+        if (this.request?.id === requestID) {
           this.request = null;
         }
       });
 
-    this.request = request;
-    return request;
+    return { id: requestID, force, promise };
   }
 
   private async fetchReferenceData(): Promise<FacilityReferenceData> {
@@ -282,8 +318,8 @@ function createFacilityReferenceDataStream(
       }
       onCopyJobProgress(event);
     },
-    onOpen: () => {
-      onChange();
+    onOpen: ({ wasReconnect }) => {
+      if (wasReconnect) onChange();
       onOpen();
     },
     onInvalidMessage: (raw, error) => {

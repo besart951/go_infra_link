@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 
@@ -10,6 +11,59 @@ import (
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/google/uuid"
 )
+
+func TestProjectAccessPolicyService_EffectiveProjectPermissions(t *testing.T) {
+	ctx := context.Background()
+	projectID := uuid.New()
+	phaseID := uuid.New()
+	role := domainUser.RoleAdminPlaner
+
+	projectRepo := newProjectRepo()
+	projectRepo.items[projectID] = &domainProject.Project{Base: domain.Base{ID: projectID}, PhaseID: phaseID}
+
+	rolePermissionRepo := newProjectRolePermissionRepo()
+	rolePermissionRepo.grant(role, domainUser.PermissionProjectFieldDeviceCreate)
+	rolePermissionRepo.grant(role, domainUser.PermissionProjectFieldDeviceUpdate)
+	rolePermissionRepo.grant(role, domainUser.PermissionProjectUpdate)
+
+	phasePermissionRepo := newProjectPhasePermissionRepo()
+	if err := phasePermissionRepo.Create(ctx, &domainProject.PhasePermission{
+		PhaseID: phaseID,
+		Role:    role,
+		Permissions: []string{
+			domainUser.PermissionProjectFieldDeviceUpdate,
+			domainUser.PermissionProjectUpdate,
+		},
+	}); err != nil {
+		t.Fatalf("create phase permission: %v", err)
+	}
+
+	svc := NewServices(Dependencies{
+		Projects:         projectRepo,
+		RolePermissions:  rolePermissionRepo,
+		PhasePermissions: phasePermissionRepo,
+	}).AccessPolicy
+
+	permissions, err := svc.EffectiveProjectPermissions(ctx, uuid.New(), projectID, &role)
+	if err != nil {
+		t.Fatalf("effective permissions: %v", err)
+	}
+	if !slices.Contains(permissions, domainUser.PermissionProjectFieldDeviceUpdate) || !slices.Contains(permissions, domainUser.PermissionProjectUpdate) {
+		t.Fatalf("expected phase-allowed permissions, got %v", permissions)
+	}
+	if slices.Contains(permissions, domainUser.PermissionProjectFieldDeviceCreate) {
+		t.Fatalf("expected phase-blocked create permission to be omitted, got %v", permissions)
+	}
+
+	superadminRole := domainUser.RoleSuperAdmin
+	superadminPermissions, err := svc.EffectiveProjectPermissions(ctx, uuid.New(), projectID, &superadminRole)
+	if err != nil {
+		t.Fatalf("superadmin effective permissions: %v", err)
+	}
+	if !slices.Contains(superadminPermissions, domainUser.PermissionProjectFieldDeviceCreate) || !slices.Contains(superadminPermissions, domainUser.PermissionProjectDelete) {
+		t.Fatalf("expected all project-scoped permissions for superadmin, got %v", superadminPermissions)
+	}
+}
 
 func TestProjectAccessPolicyService_CanAccessProject_CharacterizesAccessSources(t *testing.T) {
 	ctx := context.Background()

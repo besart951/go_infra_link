@@ -27,7 +27,9 @@
     'cursor-pointer hover:bg-accent/50'
   )}
 >
-  <Checkbox checked={isSelected} onCheckedChange={handleToggle} disabled={!state.canEdit} />
+  {#if state.canEdit}
+    <Checkbox checked={isSelected} onCheckedChange={handleToggle} />
+  {/if}
   <div class="flex flex-1 items-center gap-2">
     <Badge variant="outline" class="text-xs">
       {permission.action}

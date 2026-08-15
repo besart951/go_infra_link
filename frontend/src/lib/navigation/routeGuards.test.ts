@@ -37,6 +37,16 @@ describe('route guards', () => {
     );
   });
 
+  it('requires every endpoint permission used by the alarm catalog', () => {
+    expect(canAccessProtectedRoute(user(['alarmtype.read']), '/facility/alarm-catalog')).toBe(false);
+    expect(
+      canAccessProtectedRoute(
+        user(['alarmtype.read', 'alarmfield.read', 'unit.read']),
+        '/facility/alarm-catalog'
+      )
+    ).toBe(true);
+  });
+
   it('treats superadmin as allowed without stored route permissions', () => {
     expect(canAccessProtectedRoute({ ...user(), role: 'superadmin' }, '/facility/buildings')).toBe(
       true

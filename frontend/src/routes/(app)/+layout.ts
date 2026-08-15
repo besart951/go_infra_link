@@ -3,9 +3,11 @@ import type { LayoutLoad } from './$types';
 import type { User } from '$lib/domain/user';
 import type { Team } from '$lib/domain/team';
 import type { Project, ProjectListResponse } from '$lib/domain/project';
+import type { PermissionName } from '$lib/api/generated/permissions.js';
 import { hasUserPermission } from '$lib/utils/permissions.js';
 import { redirect } from '@sveltejs/kit';
 import { canAccessProtectedRoute, forbiddenRouteRedirect } from '$lib/navigation/routeGuards.js';
+import { appNavigationDataCache } from '$lib/services/appNavigationDataCache.js';
 
 // Disable SSR for this layout and children
 export const ssr = false;
@@ -22,8 +24,6 @@ export const load: LayoutLoad = async ({ fetch, url }) => {
 
   const customFetch = fetch;
 
-  const hasPermission = (permission: string) => hasUserPermission(user, permission);
-
   try {
     try {
       const userRes = await api<User>('/auth/me', { customFetch });
@@ -36,20 +36,27 @@ export const load: LayoutLoad = async ({ fetch, url }) => {
     }
 
     if (user) {
+      const authenticatedUser = user;
+      const hasPermission = (permission: PermissionName) =>
+        hasUserPermission(authenticatedUser, permission);
+
       try {
-        const teamPromise =
-          user.can_access_user_directory || !hasPermission('team.read')
-            ? Promise.resolve([] as Team[])
-            : api<Team[]>('/teams', { customFetch, skipHttpErrorNavigation: true });
-        const projectPromise = hasPermission('project.listAll')
-          ? api<ProjectListResponse>('/projects?page=1&limit=10', {
-              customFetch,
-              skipHttpErrorNavigation: true
-            }).then((response) => response.items ?? [])
-          : Promise.resolve([] as Project[]);
-        const [t, p] = await Promise.all([teamPromise, projectPromise]);
-        teams = t;
-        projects = p;
+        const navigationData = await appNavigationDataCache.load(authenticatedUser, async () => {
+          const teamPromise =
+            authenticatedUser.can_access_user_directory || !hasPermission('team.read')
+              ? Promise.resolve([] as Team[])
+              : api<Team[]>('/teams', { customFetch, skipHttpErrorNavigation: true });
+          const projectPromise = hasPermission('project.listAll')
+            ? api<ProjectListResponse>('/projects?page=1&limit=10', {
+                customFetch,
+                skipHttpErrorNavigation: true
+              }).then((response) => response.items ?? [])
+            : Promise.resolve([] as Project[]);
+          const [teams, projects] = await Promise.all([teamPromise, projectPromise]);
+          return { teams, projects };
+        });
+        teams = navigationData.teams;
+        projects = navigationData.projects;
       } catch (e) {
         if (isNetworkUnavailable(e)) {
           backendAvailable = false;

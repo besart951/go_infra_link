@@ -15,6 +15,15 @@ const (
 	ActionRestore Action = "restore"
 )
 
+func IsAction(action Action) bool {
+	switch action {
+	case ActionCreate, ActionUpdate, ActionDelete, ActionRestore:
+		return true
+	default:
+		return false
+	}
+}
+
 type ChangeEvent struct {
 	ID           uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
 	OccurredAt   time.Time  `gorm:"not null;index" json:"occurred_at"`
@@ -78,6 +87,7 @@ type TimelineFilter struct {
 	ActorID            uuid.UUID
 	OccurredFrom       *time.Time
 	OccurredTo         *time.Time
+	Actions            []Action
 	Fields             []string
 	Page               int
 	Limit              int

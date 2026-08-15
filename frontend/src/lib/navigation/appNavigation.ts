@@ -14,6 +14,7 @@ import {
   canAccessUserDirectory
 } from '$lib/navigation/userAccess.js';
 import {
+  canPerformAllPermissions,
   canPerformPermission,
   FACILITY_NAV_ACCESS,
   NAV_PERMISSION
@@ -196,7 +197,10 @@ const navDefinitions: NavDefinition[] = [
         url: item.url,
         dividerAfter: item.dividerAfter,
         hasAccess: (context: NavContext) =>
-          canPerformPermission(context.canPerform, item.permission)
+          canPerformAllPermissions(context.canPerform, [
+            item.permission,
+            ...(item.requiredPermissions ?? [])
+          ])
       }))
     ]
   },

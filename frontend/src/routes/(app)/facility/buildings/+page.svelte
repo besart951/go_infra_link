@@ -18,6 +18,7 @@
   const actions = createBuildingActions();
   let historyItem = $state<Building | null>(null);
   let historyOpen = $state(false);
+  const canReadTimeline = $derived(canPerform('read', 'timeline'));
 </script>
 
 {#if historyItem}
@@ -69,14 +70,16 @@
           <DropdownMenu.Item onclick={() => goto(`/facility/buildings/${building.id}`)}>
             {$t('facility.view')}
           </DropdownMenu.Item>
-          <DropdownMenu.Item
-            onclick={() => {
-              historyItem = building;
-              historyOpen = true;
-            }}
-          >
-            {$t('history.open')}
-          </DropdownMenu.Item>
+          {#if canReadTimeline}
+            <DropdownMenu.Item
+              onclick={() => {
+                historyItem = building;
+                historyOpen = true;
+              }}
+            >
+              {$t('history.open')}
+            </DropdownMenu.Item>
+          {/if}
           {#if canPerform('update', 'building')}
             <DropdownMenu.Item onclick={() => actions.edit(building)}
               >{$t('common.edit')}</DropdownMenu.Item

@@ -6,6 +6,7 @@
 
   const t = createTranslator();
   const state = useFieldDeviceState();
+  const canSavePendingEdits = $derived(state.canSavePendingEdits());
 </script>
 
 {#if state.editing.hasUnsavedChanges}
@@ -26,31 +27,29 @@
       </Tooltip.Content>
     </Tooltip.Root>
 
-    <Tooltip.Root>
-      <Tooltip.Trigger class="inline-flex">
-        {@const canSavePendingEdits = state.canSavePendingEdits()}
-        <div
-          class={`inline-flex h-8 w-8 items-center justify-center rounded-md border ${
-            canSavePendingEdits ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
-          }`}
-          role="button"
-          tabindex="0"
-          aria-disabled={!canSavePendingEdits}
-          onclick={() => canSavePendingEdits && state.savePendingEdits()}
-          onkeydown={(event) => {
-            if ((event.key === 'Enter' || event.key === ' ') && canSavePendingEdits) {
-              state.savePendingEdits();
-            }
-          }}
-          aria-label={$t('field_device.save_bar.save_all')}
-        >
-          <Save class="h-4 w-4" />
-        </div>
-      </Tooltip.Trigger>
-      <Tooltip.Content>
-        <div class="text-sm">{$t('field_device.save_bar.save_all')}</div>
-      </Tooltip.Content>
-    </Tooltip.Root>
+    {#if canSavePendingEdits}
+      <Tooltip.Root>
+        <Tooltip.Trigger class="inline-flex">
+          <div
+            class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border"
+            role="button"
+            tabindex="0"
+            onclick={() => state.savePendingEdits()}
+            onkeydown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                state.savePendingEdits();
+              }
+            }}
+            aria-label={$t('field_device.save_bar.save_all')}
+          >
+            <Save class="h-4 w-4" />
+          </div>
+        </Tooltip.Trigger>
+        <Tooltip.Content>
+          <div class="text-sm">{$t('field_device.save_bar.save_all')}</div>
+        </Tooltip.Content>
+      </Tooltip.Root>
+    {/if}
 
     <Tooltip.Root>
       <Tooltip.Trigger class="inline-flex">

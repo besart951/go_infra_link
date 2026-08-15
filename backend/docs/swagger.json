@@ -5052,6 +5052,128 @@
                 }
             }
         },
+        "/api/v1/history/timeline": {
+            "get": {
+                "description": "Returns authoritative audit events with their actual before/after diff. Multiple action and field parameters are combined as OR filters within their category.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "history"
+                ],
+                "summary": "List global audit activities",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Scope type",
+                        "name": "scope_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Scope UUID",
+                        "name": "scope_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Entity table",
+                        "name": "entity_table",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Entity UUID",
+                        "name": "entity_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Actor UUID",
+                        "name": "actor_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Earliest ISO-8601 timestamp",
+                        "name": "occurred_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Latest ISO-8601 timestamp",
+                        "name": "occurred_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "Actions: create, update, delete, restore",
+                        "name": "action",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "Changed field names",
+                        "name": "field",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/i18n/{locale}": {
             "get": {
                 "produces": [
@@ -5863,6 +5985,65 @@
                 }
             }
         },
+        "/api/v1/projects/{id}/capabilities": {
+            "get": {
+                "description": "Returns project-scoped permissions after project membership and phase restrictions have been applied.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Get effective permissions for a project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectCapabilitiesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/projects/{id}/changes": {
             "get": {
                 "description": "Returns durable project changes for HTTP recovery after a missed collaboration event.",
@@ -6599,6 +6780,136 @@
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{id}/history/timeline": {
+            "get": {
+                "description": "Returns authoritative audit events for one project. The optional entity, field, action, actor and date filters work like the global timeline.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "history",
+                    "projects"
+                ],
+                "summary": "List project audit activities",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Secondary scope type",
+                        "name": "scope_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Secondary scope UUID",
+                        "name": "scope_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Entity table",
+                        "name": "entity_table",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Entity UUID",
+                        "name": "entity_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Actor UUID",
+                        "name": "actor_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Earliest ISO-8601 timestamp",
+                        "name": "occurred_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Latest ISO-8601 timestamp",
+                        "name": "occurred_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "Actions: create, update, delete, restore",
+                        "name": "action",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "Changed field names",
+                        "name": "field",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse"
                         }
                     }
                 }
@@ -11137,6 +11448,133 @@
                 }
             }
         },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ChangeEventResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "create",
+                        "update",
+                        "delete",
+                        "restore"
+                    ]
+                },
+                "actor_id": {
+                    "type": "string"
+                },
+                "actor_name": {
+                    "type": "string"
+                },
+                "after_json": {
+                    "type": "object"
+                },
+                "batch_id": {
+                    "type": "string"
+                },
+                "before_json": {
+                    "type": "object"
+                },
+                "diff_json": {
+                    "type": "object"
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "entity_table": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "metadata_json": {
+                    "type": "object"
+                },
+                "occurred_at": {
+                    "type": "string"
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ScopeResponse"
+                    }
+                },
+                "summary": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "conflict": {
+                    "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse"
+                },
+                "details": {},
+                "error": {
+                    "description": "Error and Fields are kept as compatibility aliases for existing clients.",
+                    "type": "string"
+                },
+                "field_errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_common.FieldErrorResponse"
+                    }
+                },
+                "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "localized_key": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ScopeResponse": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string"
+                },
+                "scope_id": {
+                    "type": "string"
+                },
+                "scope_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_history.TimelineResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_history.ChangeEventResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_notification.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -11706,6 +12144,17 @@
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ProjectCapabilitiesResponse": {
+            "type": "object",
+            "properties": {
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

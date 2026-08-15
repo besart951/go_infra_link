@@ -11,6 +11,7 @@
   import HistoryTimelineDialog from '$lib/components/history/HistoryTimelineDialog.svelte';
   import type { SPSController } from '$lib/domain/facility/index.js';
   import { createTranslator } from '$lib/i18n/translator.js';
+  import { can } from '$lib/utils/permissions.js';
   import { Plus } from '@lucide/svelte';
   import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
   import { useSPSControllerState } from './state/context.svelte.js';
@@ -19,6 +20,7 @@
   const listState = useSPSControllerState();
   let historyController = $state<SPSController | null>(null);
   let historyOpen = $state(false);
+  const canReadTimeline = $derived(can('timeline.read'));
 
   const columns = $derived.by(() => [
     { key: 'device_name', label: $t('facility.device_name') },
@@ -219,7 +221,7 @@
                   {$t('facility.copy')}
                 </DropdownMenu.Item>
               {/if}
-              {#if listState.canCreateSPSController()}
+              {#if listState.canDuplicateSPSController()}
                 <DropdownMenu.Item
                   disabled={listState.copyInProgress}
                   onclick={() => void listState.duplicateSPSController(controller)}
@@ -234,14 +236,16 @@
                   {$t('common.view')}
                 </DropdownMenu.Item>
               {/if}
-              <DropdownMenu.Item
-                onclick={() => {
-                  historyController = controller;
-                  historyOpen = true;
-                }}
-              >
-                {$t('history.open')}
-              </DropdownMenu.Item>
+              {#if canReadTimeline}
+                <DropdownMenu.Item
+                  onclick={() => {
+                    historyController = controller;
+                    historyOpen = true;
+                  }}
+                >
+                  {$t('history.open')}
+                </DropdownMenu.Item>
+              {/if}
               {#if listState.canUpdateSPSController()}
                 <DropdownMenu.Item onclick={() => listState.editSPSController(controller)}>
                   {$t('common.edit')}

@@ -12,7 +12,8 @@ import type {
   ProjectControlCabinetListResponse,
   ProjectSPSControllerListResponse,
   ProjectFieldDeviceListResponse,
-  ProjectFieldDeviceMultiCreateResponse
+  ProjectFieldDeviceMultiCreateResponse,
+  ProjectCapabilities
 } from '$lib/domain/project/index.js';
 import type {
   ControlCabinet,
@@ -31,6 +32,7 @@ export interface PaginationParams {
 export interface ProjectRepository extends ListRepository<Project> {
   list(params: ListParams, signal?: AbortSignal): Promise<PaginatedResponse<Project>>;
   get(id: string, signal?: AbortSignal): Promise<Project>;
+  getCapabilities(id: string, signal?: AbortSignal): Promise<ProjectCapabilities>;
   create(data: CreateProjectRequest, signal?: AbortSignal): Promise<Project>;
   update(id: string, data: UpdateProjectRequest, signal?: AbortSignal): Promise<Project>;
   delete(id: string, signal?: AbortSignal): Promise<void>;

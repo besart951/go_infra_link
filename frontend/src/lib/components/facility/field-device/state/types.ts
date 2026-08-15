@@ -1,5 +1,6 @@
 import type { TableFilterRecord } from '$lib/state/table/contracts.js';
 import type { FieldDevice, SPSController } from '$lib/domain/facility/index.js';
+import type { ProjectCapabilities } from '$lib/domain/project/capabilities.js';
 
 export interface FieldDeviceFilters extends TableFilterRecord {
   buildingId?: string;
@@ -14,6 +15,10 @@ export interface FieldDeviceFilters extends TableFilterRecord {
 }
 
 export type ProjectIdInput = string | undefined | (() => string | undefined);
+export type ProjectCapabilitiesInput =
+  | ProjectCapabilities
+  | undefined
+  | (() => ProjectCapabilities | undefined);
 export type PageSizeInput = number | undefined | (() => number | undefined);
 export type FieldDeviceFiltersInput =
   | FieldDeviceFilters
@@ -50,11 +55,22 @@ export type SharedFieldDeviceEditorsByDevice = Record<string, SharedFieldDeviceE
 
 export interface FieldDeviceStateProps {
   projectId?: ProjectIdInput;
+  projectCapabilities?: ProjectCapabilitiesInput;
   pageSize?: PageSizeInput;
   initialFilters?: FieldDeviceFiltersInput;
   sharedFieldDeviceEditors?: () => SharedFieldDeviceEditorsByDevice;
   onSharedFieldDeviceStateChange?: (state: SharedFieldDeviceDraftState) => void;
   onFieldDevicesSaved?: (devices: FieldDevice[]) => void;
+}
+
+export function toProjectCapabilitiesResolver(
+  capabilities?: ProjectCapabilitiesInput
+): () => ProjectCapabilities | undefined {
+  if (typeof capabilities === 'function') {
+    return capabilities;
+  }
+
+  return () => capabilities;
 }
 
 export function toProjectIdResolver(projectId?: ProjectIdInput): () => string | undefined {

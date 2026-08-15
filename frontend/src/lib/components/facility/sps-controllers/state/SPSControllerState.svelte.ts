@@ -6,7 +6,7 @@ import { controlCabinetRepository } from '$lib/infrastructure/api/controlCabinet
 import { projectRepository } from '$lib/infrastructure/api/projectRepository.js';
 import { spsControllerRepository } from '$lib/infrastructure/api/spsControllerRepository.js';
 import { spsControllerSystemTypeRepository } from '$lib/infrastructure/api/spsControllerSystemTypeRepository.js';
-import { canPerform } from '$lib/utils/permissions.js';
+import { can, canProject } from '$lib/utils/permissions.js';
 import { BaseDataTableState } from '$lib/state/table/BaseDataTableState.svelte.js';
 import { sanitizeFilters } from '$lib/state/table/sanitizeFilters.js';
 import { fetchAllPages } from '$lib/components/facility/shared/paginatedListFetcher.js';
@@ -23,7 +23,11 @@ import type {
   SPSControllerSystemType
 } from '$lib/domain/facility/index.js';
 import type { SPSControllerFilters, SPSControllerStateProps } from './types.js';
-import { toProjectIdResolver, toRefreshKeyResolver } from './types.js';
+import {
+  toProjectCapabilitiesResolver,
+  toProjectIdResolver,
+  toRefreshKeyResolver
+} from './types.js';
 import { ContextualSPSControllerFetchStrategy } from './strategies/ContextualSPSControllerFetchStrategy.js';
 import { SPSControllerFetchStrategyFactory } from './SPSControllerFetchStrategyFactory.js';
 import { groupSystemTypesByController } from './groupSystemTypesByController.js';
@@ -37,6 +41,9 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
   systemTypesByController = $state<Record<string, SPSControllerSystemType[]>>({});
 
   private readonly resolveProjectId: () => string | undefined;
+  private readonly resolveProjectCapabilities: () =>
+    | import('$lib/domain/project/capabilities.js').ProjectCapabilities
+    | undefined;
   private readonly resolveControlCabinetRefreshKey: () => string | number | undefined;
   private readonly onChanged?: (
     event?: import('../../shared/entityRefresh.js').EntityChangeEvent<SPSController>
@@ -58,6 +65,7 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
     super(fetchStrategy, { pageSize: props.pageSize ?? 10 });
 
     this.resolveProjectId = resolveProjectId;
+    this.resolveProjectCapabilities = toProjectCapabilitiesResolver(props.projectCapabilities);
     this.resolveControlCabinetRefreshKey = toRefreshKeyResolver(props.controlCabinetRefreshKey);
     this.onChanged = props.onChanged;
     this.fetchStrategy = fetchStrategy;
@@ -75,6 +83,10 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
     return Boolean(this.projectId);
   }
 
+  get projectCapabilities() {
+    return this.resolveProjectCapabilities();
+  }
+
   get copyInProgress(): boolean {
     return copyOperation.isPending;
   }
@@ -85,24 +97,32 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
 
   canCreateSPSController(): boolean {
     return this.isProjectContext
-      ? canPerform('create', 'project.spscontroller')
-      : canPerform('create', 'spscontroller');
+      ? canProject(this.projectCapabilities, 'project.spscontroller.create') && can('spscontroller.create')
+      : can('spscontroller.create');
+  }
+
+  canDuplicateSPSController(): boolean {
+    return this.isProjectContext
+      ? canProject(this.projectCapabilities, 'project.spscontroller.create')
+      : can('spscontroller.create');
   }
 
   canReadSPSController(): boolean {
-    return this.isProjectContext || canPerform('read', 'spscontroller');
+    return this.isProjectContext
+      ? canProject(this.projectCapabilities, 'project.spscontroller.read')
+      : can('spscontroller.read');
   }
 
   canUpdateSPSController(): boolean {
     return this.isProjectContext
-      ? canPerform('update', 'project.spscontroller')
-      : canPerform('update', 'spscontroller');
+      ? canProject(this.projectCapabilities, 'project.spscontroller.update') && can('spscontroller.update')
+      : can('spscontroller.update');
   }
 
   canDeleteSPSController(): boolean {
     return this.isProjectContext
-      ? canPerform('delete', 'project.spscontroller')
-      : canPerform('delete', 'spscontroller');
+      ? canProject(this.projectCapabilities, 'project.spscontroller.delete')
+      : can('spscontroller.delete');
   }
 
   async initialize(): Promise<void> {
@@ -314,7 +334,7 @@ export class SPSControllerState extends BaseDataTableState<SPSController, SPSCon
   }
 
   async duplicateSPSController(controller: SPSController): Promise<void> {
-    if (!this.canCreateSPSController()) return;
+    if (!this.canDuplicateSPSController()) return;
 
     try {
       const result = await copyOperation.run({
