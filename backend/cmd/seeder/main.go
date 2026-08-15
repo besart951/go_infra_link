@@ -79,6 +79,54 @@ func loadExistingTables(database *gorm.DB, schema string) (map[string]struct{}, 
 	return tables, nil
 }
 
+func loadTableColumns(database *gorm.DB, schema, table string) (map[string]struct{}, error) {
+	rows, err := database.Raw(`
+		SELECT column_name
+		FROM information_schema.columns
+		WHERE table_schema = ?
+		  AND table_name = ?
+	`, schema, table).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	columns := make(map[string]struct{})
+	for rows.Next() {
+		var columnName string
+		if err := rows.Scan(&columnName); err != nil {
+			return nil, err
+		}
+		columns[columnName] = struct{}{}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return columns, nil
+}
+
+// snapshotColumns returns the columns represented by the snapshot and still
+// present in the current database. In particular, it omits columns introduced
+// after the snapshot was exported so PostgreSQL can apply their defaults.
+func snapshotColumns(rows []map[string]any, databaseColumns map[string]struct{}) []string {
+	columns := make(map[string]struct{})
+	for _, row := range rows {
+		for columnName := range row {
+			if _, exists := databaseColumns[columnName]; exists {
+				columns[columnName] = struct{}{}
+			}
+		}
+	}
+
+	names := make([]string, 0, len(columns))
+	for columnName := range columns {
+		names = append(names, columnName)
+	}
+	sort.Strings(names)
+	return names
+}
+
 func loadForeignKeyDependencies(database *gorm.DB, schema string) ([]fkDependency, error) {
 	rows, err := database.Raw(`
 		SELECT
@@ -218,14 +266,27 @@ func seedFromSnapshot(database *gorm.DB, snapshotPath string) error {
 			if len(rows) == 0 {
 				continue
 			}
+			databaseColumns, err := loadTableColumns(database, snapshot.Schema, tableName)
+			if err != nil {
+				return fmt.Errorf("load columns for %s: %w", tableName, err)
+			}
+			columns := snapshotColumns(rows, databaseColumns)
+			if len(columns) == 0 {
+				return fmt.Errorf("table %s has no compatible snapshot columns", tableName)
+			}
 
 			rowsJSON, err := json.Marshal(rows)
 			if err != nil {
 				return err
 			}
 
-			query := "INSERT INTO " + quoteIdentifier(snapshot.Schema) + "." + quoteIdentifier(tableName) +
-				" SELECT * FROM json_populate_recordset(NULL::" + quoteIdentifier(snapshot.Schema) + "." + quoteIdentifier(tableName) + ", ?::json)"
+			quotedColumns := make([]string, len(columns))
+			for index, columnName := range columns {
+				quotedColumns[index] = quoteIdentifier(columnName)
+			}
+			qualifiedTable := quoteIdentifier(snapshot.Schema) + "." + quoteIdentifier(tableName)
+			query := "INSERT INTO " + qualifiedTable + " (" + strings.Join(quotedColumns, ", ") + ")" +
+				" SELECT " + strings.Join(quotedColumns, ", ") + " FROM json_populate_recordset(NULL::" + qualifiedTable + ", ?::json)"
 			if err := tx.Exec(query, string(rowsJSON)).Error; err != nil {
 				return fmt.Errorf("table %s: %w", tableName, err)
 			}

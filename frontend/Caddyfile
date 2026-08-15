@@ -1,10 +1,14 @@
 :80 {
 	@api path /api/*
-	reverse_proxy @api {$BACKEND_UPSTREAM:backend:8080}
+	handle @api {
+		reverse_proxy {$BACKEND_UPSTREAM:backend:8080}
+	}
 
-	root * /usr/share/caddy
-	file_server
-	try_files {path} /index.html
+	handle {
+		root * /usr/share/caddy
+		try_files {path} /index.html
+		file_server
+	}
 
 	@immutable path /_app/immutable/*
 	header @immutable Cache-Control "public, max-age=31536000, immutable"
@@ -21,7 +25,7 @@
 		# Disable FLoC / interest-cohort tracking
 		Permissions-Policy "interest-cohort=()"
 		# Restrict executable content and browser integration surfaces for the static SPA
-		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; worker-src 'self' blob:; form-action 'self'; manifest-src 'self'"
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; script-src 'self' __CSP_SCRIPT_HASHES__; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; worker-src 'self' blob:; form-action 'self'; manifest-src 'self'"
 		# Remove Server header to avoid version disclosure
 		-Server
 	}

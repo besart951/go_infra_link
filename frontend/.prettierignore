@@ -10,3 +10,7 @@ bun.lockb
 
 # Generated API contract
 src/lib/api/generated/
+
+# Generated Playwright evidence
+test-results/
+playwright-report/

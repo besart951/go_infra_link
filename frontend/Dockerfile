@@ -15,11 +15,12 @@ COPY . .
 
 # Build
 RUN pnpm build -- --logLevel warn
+RUN node ./scripts/generate-csp.mjs ./build ./Caddyfile ./Caddyfile.generated
 
 # Serve Stage
 FROM caddy:2.11.2-alpine AS runtime
 
-COPY Caddyfile /etc/caddy/Caddyfile
+COPY --from=builder /app/Caddyfile.generated /etc/caddy/Caddyfile
 COPY --from=builder /app/build /usr/share/caddy
 
 EXPOSE 80

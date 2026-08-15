@@ -123,7 +123,6 @@ export class ProjectSettingsPageState {
     this.saving = true;
     try {
       const payload: UpdateProjectRequest = {
-        id: this.projectId,
         name: this.form.name.trim(),
         description: this.form.description.trim(),
         status: this.form.status,

@@ -45,6 +45,31 @@ cd backend
 go test ./...
 ```
 
+### Browser end-to-end tests
+
+Playwright runs only against an isolated, disposable Docker stack. It never starts,
+modifies, or reuses the local development stack. The stack contains PostgreSQL, the
+Go backend, the Caddy-served production frontend, and a restricted test user.
+
+```powershell
+cd frontend
+pnpm install
+pnpm run test:e2e:install
+pnpm test:e2e
+```
+
+```bash
+cd frontend
+pnpm install
+pnpm run test:e2e:install
+pnpm test:e2e
+```
+
+The command publishes only a dynamically assigned frontend port and always removes
+the compose project, database volume, and containers after a run. It cannot fall
+back to the local development stack. Failure evidence (Playwright trace, video,
+screenshot, and compose logs) is written to `frontend/test-results/`.
+
 ### Quality Gates
 
 Run the same checks locally before pushing:

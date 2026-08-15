@@ -7,6 +7,7 @@ import type { Pagination } from '../utils/index.ts';
 import type { User } from '../user/index.ts';
 import type { ObjectData } from '../facility/index.ts';
 import type { Phase } from '../phase/index.ts';
+import type { components } from '$lib/api/generated/schema.js';
 export type ProjectStatus = 'planned' | 'ongoing' | 'completed';
 
 export interface Project {
@@ -30,14 +31,9 @@ export interface CreateProjectRequest {
   phase_id: string;
 }
 
-export interface UpdateProjectRequest {
-  id: string;
-  name?: string;
-  description?: string;
-  status?: ProjectStatus;
-  start_date?: string | null;
-  phase_id?: string;
-}
+/** API DTO for PATCH /projects/{id}; the ID belongs exclusively in the path. */
+export type UpdateProjectRequest =
+  components['schemas']['github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdateProjectRequest'];
 
 export interface ProjectListParams {
   page?: number;

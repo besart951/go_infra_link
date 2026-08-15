@@ -58,6 +58,10 @@ node_modules/
 .cache/
 
 # Frontend app artifacts
+frontend/.svelte-kit/
+frontend/build/
+frontend/test-results/
+frontend/playwright-report/
 apps/**/node_modules/
 apps/**/.svelte-kit/
 apps/**/.vite-inspect/

@@ -127,3 +127,48 @@ jobs:
 
       - name: Build frontend runtime image
         run: docker build --target runtime -t local/go-infra-frontend:ci ./frontend
+
+  e2e:
+    name: Browser E2E
+    runs-on: ubuntu-latest
+    needs:
+      - backend
+      - frontend
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Set up pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@${PNPM_VERSION} --activate
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run browser tests against isolated stack
+        working-directory: frontend
+        run: pnpm test:e2e
+
+      - name: Upload Playwright evidence
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-evidence
+          path: |
+            frontend/test-results
+            frontend/playwright-report
+          if-no-files-found: ignore
