@@ -589,6 +589,7 @@
     "create_team_failed": "Team-Erstellung fehlgeschlagen",
     "delete_team_failed": "Team löschen fehlgeschlagen",
     "internal_server_error": "Ein interner Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
+    "service_unavailable": "Der Dienst ist derzeit nicht verfügbar. Bitte versuchen Sie es in einem Moment erneut.",
     "bad_request": "Die Anfrage ist ungültig.",
     "token_expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
     "forbidden": "Sie haben keine Berechtigung für diese Aktion.",

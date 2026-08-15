@@ -158,6 +158,7 @@ func (h *SPSControllerSystemTypeHandler) GetSPSControllerSystemType(c *gin.Conte
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
+// @Failure 503 {object} ErrorResponse
 // @Router /api/v1/facility/sps-controller-system-types/{id}/copy [post]
 func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
@@ -174,13 +175,17 @@ func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Cont
 			respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 			return
 		}
-		job := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSControllerSystemType, func(ctx context.Context) error {
+		job, err := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSControllerSystemType, func(ctx context.Context) error {
 			copyEntity, err := h.service.CopyByID(ctx, id)
 			if err == nil && h.collaboration != nil {
 				h.collaboration.BroadcastRefreshForSPSController(ctx, &actorID, copyEntity.SPSControllerID, "sps_controller")
 			}
 			return err
 		})
+		if err != nil {
+			respondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
+			return
+		}
 		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
 		return
 	}

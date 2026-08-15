@@ -17,7 +17,10 @@ import (
 // NewHandlers creates all HTTP handler instances from services.
 func NewHandlers(services *Services, runtime *RuntimeAdapters, cookieSettings authhandler.CookieSettings, i18nLoader *i18n.Loader, accessTokenTTL, refreshTokenTTL time.Duration) *handler.Handlers {
 	runtime = runtimeOrDefault(runtime)
-	copyJobs := facilityservice.NewCopyJobManager(runtime.FacilityReferenceData)
+	if runtime.CopyJobs == nil {
+		runtime.CopyJobs = facilityservice.NewCopyJobManager(runtime.FacilityReferenceData)
+	}
+	copyJobs := runtime.CopyJobs
 
 	projectHandlers := newProjectHandlers(services, runtime, copyJobs)
 

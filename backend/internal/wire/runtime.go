@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	apprealtime "github.com/besart951/go_infra_link/backend/internal/application/realtime"
 	"github.com/besart951/go_infra_link/backend/internal/infrastructure/realtime"
+	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -16,8 +18,10 @@ type RuntimeAdapters struct {
 	ProjectCollaboration     *realtime.ProjectCollaborationHub
 	SystemNotificationStream *realtime.SystemNotificationHub
 	FacilityReferenceData    *realtime.FacilityReferenceDataHub
+	CopyJobs                 *facilityservice.CopyJobManager
 	bus                      apprealtime.Bus
 	ownsBus                  bool
+	closeOnce                sync.Once
 }
 
 func NewRuntimeAdapters() *RuntimeAdapters {
@@ -66,16 +70,18 @@ func NewRuntimeAdaptersWithBusAndStore(bus apprealtime.Bus, nodeID string, ownsB
 		store := realtime.NewSQLProjectCollaborationStore(db)
 		options = append(options, realtime.WithProjectRevisionSource(store), realtime.WithProjectDraftStore(store), realtime.WithProjectPresenceStore(store))
 	}
+	facilityReferenceData := realtime.NewFacilityReferenceDataHub(
+		realtime.WithFacilityReferenceDataBus(bus, nodeID),
+	)
 	return &RuntimeAdapters{
 		ProjectCollaboration: realtime.NewProjectCollaborationHub(options...),
 		SystemNotificationStream: realtime.NewSystemNotificationHub(
 			realtime.WithSystemNotificationBus(bus, nodeID),
 		),
-		FacilityReferenceData: realtime.NewFacilityReferenceDataHub(
-			realtime.WithFacilityReferenceDataBus(bus, nodeID),
-		),
-		bus:     bus,
-		ownsBus: ownsBus,
+		FacilityReferenceData: facilityReferenceData,
+		CopyJobs:              facilityservice.NewCopyJobManager(facilityReferenceData),
+		bus:                   bus,
+		ownsBus:               ownsBus,
 	}
 }
 
@@ -94,18 +100,23 @@ func (r *RuntimeAdapters) Close() {
 	if r == nil {
 		return
 	}
-	if r.ProjectCollaboration != nil {
-		r.ProjectCollaboration.Close()
-	}
-	if r.SystemNotificationStream != nil {
-		r.SystemNotificationStream.Close()
-	}
-	if r.FacilityReferenceData != nil {
-		r.FacilityReferenceData.Close()
-	}
-	if r.ownsBus && r.bus != nil {
-		_ = r.bus.Close()
-	}
+	r.closeOnce.Do(func() {
+		if r.CopyJobs != nil {
+			r.CopyJobs.Close()
+		}
+		if r.ProjectCollaboration != nil {
+			r.ProjectCollaboration.Close()
+		}
+		if r.SystemNotificationStream != nil {
+			r.SystemNotificationStream.Close()
+		}
+		if r.FacilityReferenceData != nil {
+			r.FacilityReferenceData.Close()
+		}
+		if r.ownsBus && r.bus != nil {
+			_ = r.bus.Close()
+		}
+	})
 }
 
 func newRuntimeBus(ctx context.Context, cfg RuntimeConfig) (apprealtime.Bus, error) {

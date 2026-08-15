@@ -2975,6 +2975,15 @@ export type paths = {
                         "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
                     };
                 };
+                /** @description Service Unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -4852,6 +4861,15 @@ export type paths = {
                         "application/json": components["schemas"]["internal_handler_facility.ErrorResponse"];
                     };
                 };
+                /** @description Service Unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.ErrorResponse"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -5189,6 +5207,15 @@ export type paths = {
                 };
                 /** @description Internal Server Error */
                 500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Service Unavailable */
+                503: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -7456,6 +7483,15 @@ export type paths = {
                         "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"];
                     };
                 };
+                /** @description Service Unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -8257,6 +8293,15 @@ export type paths = {
                         "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"];
                     };
                 };
+                /** @description Service Unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -8579,6 +8624,15 @@ export type paths = {
                 };
                 /** @description Not Found */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"];
+                    };
+                };
+                /** @description Service Unavailable */
+                503: {
                     headers: {
                         [name: string]: unknown;
                     };

@@ -140,6 +140,7 @@ func (h *SPSControllerHandler) GetSPSControllersByIDs(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 409 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
+// @Failure 503 {object} dto.ErrorResponse
 // @Router /api/v1/facility/sps-controllers/{id}/copy [post]
 func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
@@ -156,13 +157,17 @@ func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 			respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 			return
 		}
-		job := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSController, func(ctx context.Context) error {
+		job, err := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSController, func(ctx context.Context) error {
 			copyEntity, err := h.service.CopyByID(ctx, id)
 			if err == nil {
 				h.broadcastProjectDelta(ctx, &actorID, copyEntity)
 			}
 			return err
 		})
+		if err != nil {
+			respondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
+			return
+		}
 		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
 		return
 	}

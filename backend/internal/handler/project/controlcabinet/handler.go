@@ -156,6 +156,7 @@ func (h *Handler) ListProjectControlCabinets(c *gin.Context) {
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 503 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/control-cabinets/{controlCabinetId}/copy [post]
 func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
@@ -187,13 +188,17 @@ func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 			handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 			return
 		}
-		job := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindControlCabinet, func(ctx context.Context) error {
+		job, err := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindControlCabinet, func(ctx context.Context) error {
 			copyEntity, err := h.facilityLink.CopyControlCabinet(ctx, projectID, controlCabinetID)
 			if err == nil && h.notifyCopy != nil {
 				h.notifyCopy(ctx, &actorID, projectID, "project.control_cabinet.copied", copyEntity.ID.String())
 			}
 			return err
 		})
+		if err != nil {
+			handlerutil.RespondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
+			return
+		}
 		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
 		return
 	}

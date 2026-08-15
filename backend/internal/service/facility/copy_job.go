@@ -40,7 +40,10 @@ const (
 	copyJobRetention                = 24 * time.Hour
 )
 
-var ErrCopyJobNotFound = errors.New("copy job not found")
+var (
+	ErrCopyJobNotFound      = errors.New("copy job not found")
+	errCopyJobManagerClosed = errors.New("copy job manager is closed")
+)
 
 // CopyJob is an in-memory, user-scoped asynchronous facility copy. The
 // operation ID is supplied by the browser, making retries after a connection
@@ -67,17 +70,25 @@ func (j CopyJob) IsTerminal() bool {
 }
 
 type CopyJobManager struct {
-	mu           sync.RWMutex
+	mu           sync.Mutex
 	jobs         map[copyJobKey]CopyJob
 	activeByUser map[uuid.UUID]uuid.UUID
 	publisher    apprealtime.CopyJobProgressPublisher
+	ctx          context.Context
+	cancel       context.CancelFunc
+	wg           sync.WaitGroup
+	closeOnce    sync.Once
+	closed       bool
 }
 
 func NewCopyJobManager(publisher apprealtime.CopyJobProgressPublisher) *CopyJobManager {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &CopyJobManager{
 		jobs:         make(map[copyJobKey]CopyJob),
 		activeByUser: make(map[uuid.UUID]uuid.UUID),
 		publisher:    publisher,
+		ctx:          ctx,
+		cancel:       cancel,
 	}
 }
 
@@ -89,18 +100,22 @@ func (m *CopyJobManager) Start(
 	operationID uuid.UUID,
 	kind CopyJobKind,
 	work func(context.Context) error,
-) CopyJob {
+) (CopyJob, error) {
 	key := copyJobKey{ownerID: ownerID, jobID: operationID}
 	m.mu.Lock()
+	if m.closed {
+		m.mu.Unlock()
+		return CopyJob{}, errCopyJobManagerClosed
+	}
 	m.pruneCompletedLocked(time.Now().UTC())
 	if existing, ok := m.jobs[key]; ok {
 		m.mu.Unlock()
-		return existing
+		return existing, nil
 	}
 	if activeID, ok := m.activeByUser[ownerID]; ok {
 		if active, exists := m.jobs[copyJobKey{ownerID: ownerID, jobID: activeID}]; exists {
 			m.mu.Unlock()
-			return active
+			return active, nil
 		}
 		delete(m.activeByUser, ownerID)
 	}
@@ -118,11 +133,30 @@ func (m *CopyJobManager) Start(
 	}
 	m.jobs[key] = job
 	m.activeByUser[ownerID] = job.ID
+	m.wg.Add(1)
 	m.mu.Unlock()
 
 	m.publish(job)
-	go m.run(key, work)
-	return job
+	go func() {
+		defer m.wg.Done()
+		m.run(key, work)
+	}()
+	return job, nil
+}
+
+// Close cancels active copies and waits until their worker goroutines exit.
+// It is safe to call more than once.
+func (m *CopyJobManager) Close() {
+	if m == nil {
+		return
+	}
+	m.closeOnce.Do(func() {
+		m.mu.Lock()
+		m.closed = true
+		m.mu.Unlock()
+		m.cancel()
+		m.wg.Wait()
+	})
 }
 
 func (m *CopyJobManager) Get(ownerID, jobID uuid.UUID) (CopyJob, error) {
@@ -146,7 +180,7 @@ func (m *CopyJobManager) pruneCompletedLocked(now time.Time) {
 
 func (m *CopyJobManager) run(key copyJobKey, work func(context.Context) error) {
 	m.update(key, CopyJobStatusRunning, 1, copyJobStagePreparing, "")
-	ctx := withCopyProgressReporter(context.Background(), func(progress int, stage string) {
+	ctx := withCopyProgressReporter(m.ctx, func(progress int, stage string) {
 		m.report(key, progress, stage)
 	})
 

@@ -4730,6 +4730,10 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
       summary: Copy a control cabinet
       tags:
       - facility-control-cabinets
@@ -5763,6 +5767,10 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/internal_handler_facility.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/internal_handler_facility.ErrorResponse'
       summary: Copy an SPS controller system type
       tags:
       - facility-sps-controller-system-types
@@ -5956,6 +5964,10 @@ paths:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
         "500":
           description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
+        "503":
+          description: Service Unavailable
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse'
       summary: Copy an SPS controller
@@ -7258,6 +7270,10 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
       summary: Copy a project control cabinet asynchronously
       tags:
       - projects
@@ -7728,6 +7744,10 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
       summary: Copy a project SPS controller system type asynchronously
       tags:
       - projects
@@ -7921,6 +7941,10 @@ paths:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
         "404":
           description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
+        "503":
+          description: Service Unavailable
           schema:
             $ref: '#/definitions/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse'
       summary: Copy a project SPS controller asynchronously

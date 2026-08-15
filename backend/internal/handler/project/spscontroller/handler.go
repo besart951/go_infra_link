@@ -157,6 +157,7 @@ func (h *Handler) ListProjectSPSControllers(c *gin.Context) {
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 503 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/sps-controllers/{spsControllerId}/copy [post]
 func (h *Handler) CopyProjectSPSController(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
@@ -188,13 +189,17 @@ func (h *Handler) CopyProjectSPSController(c *gin.Context) {
 			handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 			return
 		}
-		job := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSController, func(ctx context.Context) error {
+		job, err := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSController, func(ctx context.Context) error {
 			copyEntity, err := h.facilityLink.CopySPSController(ctx, projectID, spsControllerID)
 			if err == nil && h.notifyCopy != nil {
 				h.notifyCopy(ctx, &actorID, projectID, "project.sps_controller.copied", copyEntity.ID.String())
 			}
 			return err
 		})
+		if err != nil {
+			handlerutil.RespondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
+			return
+		}
 		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
 		return
 	}
@@ -230,6 +235,7 @@ func (h *Handler) CopyProjectSPSController(c *gin.Context) {
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
+// @Failure 503 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/sps-controller-system-types/{systemTypeId}/copy [post]
 func (h *Handler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
@@ -261,13 +267,17 @@ func (h *Handler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 			handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
 			return
 		}
-		job := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSControllerSystemType, func(ctx context.Context) error {
+		job, err := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSControllerSystemType, func(ctx context.Context) error {
 			copyEntity, err := h.facilityLink.CopySPSControllerSystemType(ctx, projectID, systemTypeID)
 			if err == nil && h.notifyCopy != nil {
 				h.notifyCopy(ctx, &actorID, projectID, "project.sps_controller_system_type.copied", copyEntity.SPSControllerID.String())
 			}
 			return err
 		})
+		if err != nil {
+			handlerutil.RespondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
+			return
+		}
 		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
 		return
 	}
