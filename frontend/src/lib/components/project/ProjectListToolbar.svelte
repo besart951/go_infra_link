@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Label } from '$lib/components/ui/label/index.js';
+  import StaticCombobox from '$lib/components/ui/combobox/StaticCombobox.svelte';
   import ProjectPhaseSelect from '$lib/components/project/ProjectPhaseSelect.svelte';
   import type { ProjectStatusFilter } from '$lib/stores/projects/projectListStore.js';
 
@@ -11,10 +12,12 @@
   type Props = {
     statusLabel: string;
     statusValue: ProjectStatusFilter;
-    options: readonly StatusOption[];
+    options: StatusOption[];
     phaseLabel: string;
     phaseValue: string;
     allPhasesLabel: string;
+    statusSearchPlaceholder: string;
+    statusEmptyText: string;
     phaseSearchPlaceholder: string;
     phaseEmptyText: string;
     disabled?: boolean;
@@ -29,6 +32,8 @@
     phaseLabel,
     phaseValue,
     allPhasesLabel,
+    statusSearchPlaceholder,
+    statusEmptyText,
     phaseSearchPlaceholder,
     phaseEmptyText,
     disabled = false,
@@ -40,12 +45,10 @@
     return value === 'all' || value === 'planned' || value === 'ongoing' || value === 'completed';
   }
 
-  function handleStatusChange(event: Event): void {
-    const target = event.currentTarget;
-    if (!(target instanceof HTMLSelectElement)) return;
-    if (!isProjectStatusFilter(target.value)) return;
-
-    onStatusChange(target.value);
+  function handleStatusChange(value: string): void {
+    if (isProjectStatusFilter(value)) {
+      onStatusChange(value);
+    }
   }
 </script>
 
@@ -54,17 +57,19 @@
     <div class="flex flex-col gap-2">
       <Label for="project_status_filter">{statusLabel}</Label>
 
-      <select
+      <StaticCombobox
         id="project_status_filter"
-        class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-        {disabled}
+        items={options}
         value={statusValue}
-        onchange={handleStatusChange}
-      >
-        {#each options as option (option.value)}
-          <option value={option.value}>{option.label}</option>
-        {/each}
-      </select>
+        labelKey="label"
+        idKey="value"
+        width="w-full"
+        popupWidth="w-full"
+        searchPlaceholder={statusSearchPlaceholder}
+        emptyText={statusEmptyText}
+        {disabled}
+        onValueChange={handleStatusChange}
+      />
     </div>
 
     <div class="flex flex-col gap-2">

@@ -203,6 +203,11 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 		hierarchyRepos.BacnetObjects,
 	)
 	hierarchyCopier.bindTransactions(tx)
+	controllerNames := NewSPSControllerNameSynchronizer(
+		hierarchyRepos.Buildings,
+		hierarchyRepos.ControlCabinets,
+		hierarchyRepos.SPSControllers,
+	)
 
 	fieldDeviceService := NewFieldDeviceService(
 		fieldDeviceRepos.FieldDevices,
@@ -256,12 +261,15 @@ func NewServices(repos Repositories, cfgs ...Config) *Services {
 		hierarchyRepos.BacnetObjects,
 		hierarchyRepos.Specifications,
 		hierarchyCopier,
+		controllerNames,
 	)
 	controlCabinetService.bindTransactions(tx)
+	buildingService := NewBuildingService(hierarchyRepos.Buildings, controllerNames)
+	buildingService.bindTransactions(tx)
 
 	return &Services{
 		HierarchyCopier:   hierarchyCopier,
-		Building:          NewBuildingService(hierarchyRepos.Buildings),
+		Building:          buildingService,
 		SystemType:        NewSystemTypeService(referenceRepos.SystemTypes, repos.BacnetReferenceUsages),
 		SystemPart:        NewSystemPartService(referenceRepos.SystemParts, repos.BacnetReferenceUsages, repos.DeleteImpacts),
 		Apparat:           NewApparatService(referenceRepos.Apparats, referenceRepos.SystemParts, referenceRepos.ObjectData, repos.BacnetReferenceUsages, repos.DeleteImpacts),

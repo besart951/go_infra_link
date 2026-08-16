@@ -108,6 +108,62 @@ func TestFieldDeviceRepo_ProjectFilteredListMapsAggregateRelations(t *testing.T)
 	}
 }
 
+func TestFieldDeviceRepoUpdatePersistsEveryScalarRecordField(t *testing.T) {
+	ctx := context.Background()
+	db := newFieldDeviceRepoTestDB(t)
+	repo := NewFieldDeviceRepository(db)
+
+	bmk, description, text := "FD-01", "original description", "original text"
+	fieldDevice := &domainFacility.FieldDevice{
+		BMK:                       &bmk,
+		Description:               &description,
+		TextIndividuell:           &text,
+		ApparatNr:                 1,
+		SPSControllerSystemTypeID: uuid.New(),
+		SystemPartID:              uuid.New(),
+		ApparatID:                 uuid.New(),
+	}
+	if err := repo.Create(ctx, fieldDevice); err != nil {
+		t.Fatalf("create field device: %v", err)
+	}
+	initialVersion := fieldDevice.Version
+
+	updatedBMK := "FD-02"
+	specificationID := uuid.New()
+	fieldDevice.BMK = &updatedBMK
+	fieldDevice.Description = nil
+	fieldDevice.TextIndividuell = nil
+	fieldDevice.ApparatNr = 2
+	fieldDevice.SPSControllerSystemTypeID = uuid.New()
+	fieldDevice.SystemPartID = uuid.New()
+	fieldDevice.ApparatID = uuid.New()
+	fieldDevice.SpecificationID = &specificationID
+	if err := repo.Update(ctx, fieldDevice); err != nil {
+		t.Fatalf("update field device: %v", err)
+	}
+	if fieldDevice.Version != initialVersion+1 {
+		t.Fatalf("version = %d, want %d", fieldDevice.Version, initialVersion+1)
+	}
+
+	items, err := repo.GetByIds(ctx, []uuid.UUID{fieldDevice.ID})
+	if err != nil {
+		t.Fatalf("reload field device: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("reloaded %d field devices, want 1", len(items))
+	}
+	stored := items[0]
+	if stored.BMK == nil || *stored.BMK != updatedBMK || stored.Description != nil || stored.TextIndividuell != nil || stored.ApparatNr != 2 {
+		t.Fatalf("scalar fields were not persisted: %+v", stored)
+	}
+	if stored.SPSControllerSystemTypeID != fieldDevice.SPSControllerSystemTypeID || stored.SystemPartID != fieldDevice.SystemPartID || stored.ApparatID != fieldDevice.ApparatID {
+		t.Fatalf("reference ids were not persisted: %+v", stored)
+	}
+	if stored.SpecificationID == nil || *stored.SpecificationID != specificationID {
+		t.Fatalf("specification id = %v, want %s", stored.SpecificationID, specificationID)
+	}
+}
+
 func TestFieldDeviceRepo_ShortSearchFindsBMKSubstring(t *testing.T) {
 	ctx := context.Background()
 	db := newFieldDeviceRepoTestDB(t)

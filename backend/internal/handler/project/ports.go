@@ -11,6 +11,60 @@ import (
 	"github.com/google/uuid"
 )
 
+// FacilityDetailServices groups the concrete facility aggregates used by
+// project-scoped hierarchy details. These calls deliberately bypass global
+// route middleware after the project handler has verified membership,
+// capability, and the actual project relationship.
+type FacilityDetailServices struct {
+	Building                FacilityBuildingDetailService
+	ControlCabinet          FacilityControlCabinetDetailService
+	SPSController           FacilitySPSControllerDetailService
+	SPSControllerSystemType FacilitySPSControllerSystemTypeDetailService
+	FieldDevice             FacilityFieldDeviceDetailService
+	Apparat                 FacilityApparatDetailService
+	SystemPart              FacilitySystemPartDetailService
+}
+
+type FacilityBuildingDetailService interface {
+	GetByID(context.Context, uuid.UUID) (*domainFacility.Building, error)
+	Update(context.Context, *domainFacility.Building) error
+}
+
+type FacilityControlCabinetDetailService interface {
+	GetByID(context.Context, uuid.UUID) (*domainFacility.ControlCabinet, error)
+	GetByIDs(context.Context, []uuid.UUID) ([]domainFacility.ControlCabinet, error)
+	Update(context.Context, *domainFacility.ControlCabinet) error
+}
+
+type FacilitySPSControllerDetailService interface {
+	GetByID(context.Context, uuid.UUID) (*domainFacility.SPSController, error)
+	GetByIDs(context.Context, []uuid.UUID) ([]domainFacility.SPSController, error)
+	ListByControlCabinetID(context.Context, uuid.UUID, int, int, string) (*domain.PaginatedList[domainFacility.SPSController], error)
+	Update(context.Context, *domainFacility.SPSController) error
+}
+
+type FacilitySPSControllerSystemTypeDetailService interface {
+	GetByID(context.Context, uuid.UUID) (*domainFacility.SPSControllerSystemType, error)
+	ListBySPSControllerID(context.Context, uuid.UUID, int, int, string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
+	ListByProjectID(context.Context, uuid.UUID, int, int, string) (*domain.PaginatedList[domainFacility.SPSControllerSystemType], error)
+	Update(context.Context, *domainFacility.SPSControllerSystemType) error
+}
+
+type FacilityFieldDeviceDetailService interface {
+	GetByID(context.Context, uuid.UUID) (*domainFacility.FieldDevice, error)
+	ListWithFilters(context.Context, domain.PaginationParams, domainFacility.FieldDeviceFilterParams) (*domain.PaginatedList[domainFacility.FieldDevice], error)
+	ListBacnetObjects(context.Context, uuid.UUID) ([]domainFacility.BacnetObject, error)
+	Update(context.Context, *domainFacility.FieldDevice) error
+}
+
+type FacilityApparatDetailService interface {
+	GetByID(context.Context, uuid.UUID) (*domainFacility.Apparat, error)
+}
+
+type FacilitySystemPartDetailService interface {
+	GetByID(context.Context, uuid.UUID) (*domainFacility.SystemPart, error)
+}
+
 type ProjectLifecycleService interface {
 	Create(ctx context.Context, project *domainProject.Project) error
 	GetByID(ctx context.Context, id uuid.UUID) (*domainProject.Project, error)

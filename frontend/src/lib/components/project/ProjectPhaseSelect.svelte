@@ -2,6 +2,7 @@
   import AsyncCombobox from '$lib/components/ui/combobox/AsyncCombobox.svelte';
   import { getPhase, listPhases } from '$lib/infrastructure/api/phase.adapter.js';
   import type { Phase } from '$lib/domain/phase/index.js';
+  import { createTranslator } from '$lib/i18n/translator.js';
 
   interface ProjectPhaseSelectProps {
     value?: string;
@@ -22,14 +23,21 @@
     id,
     disabled = false,
     clearable = false,
-    clearText = 'Auswahl aufheben',
-    placeholder = 'Select phase...',
-    searchPlaceholder = 'Search phases...',
-    emptyText = 'No phases found.',
+    clearText,
+    placeholder,
+    searchPlaceholder,
+    emptyText,
     onValueChange
   }: ProjectPhaseSelectProps = $props();
 
+  const t = createTranslator();
   const MAX_PHASE_SAMPLES = 100;
+  const resolvedClearText = $derived(clearText ?? $t('project_phase_select.clear'));
+  const resolvedPlaceholder = $derived(placeholder ?? $t('project_phase_select.placeholder'));
+  const resolvedSearchPlaceholder = $derived(
+    searchPlaceholder ?? $t('phases.page.search_placeholder')
+  );
+  const resolvedEmptyText = $derived(emptyText ?? $t('messages.no_phases_found'));
 
   async function fetcher(search: string): Promise<Phase[]> {
     const res = await listPhases({ page: 1, limit: MAX_PHASE_SAMPLES, search });
@@ -50,11 +58,11 @@
   {fetcher}
   {fetchById}
   labelKey="name"
-  {placeholder}
-  {searchPlaceholder}
-  {emptyText}
+  placeholder={resolvedPlaceholder}
+  searchPlaceholder={resolvedSearchPlaceholder}
+  emptyText={resolvedEmptyText}
   {clearable}
-  {clearText}
+  clearText={resolvedClearText}
   {onValueChange}
   {width}
   {id}

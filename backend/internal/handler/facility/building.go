@@ -135,6 +135,7 @@ func (h *BuildingHandler) ListBuildings(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/buildings/{id} [put]
+// @Router /api/v1/facility/buildings/{id} [patch]
 func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
 	if !ok {
@@ -156,10 +157,18 @@ func (h *BuildingHandler) UpdateBuilding(c *gin.Context) {
 		respondLocalizedError(c, http.StatusInternalServerError, "fetch_failed", "facility.fetch_failed")
 		return
 	}
+	baseVersion := building.Version
+	if req.BaseVersion != nil {
+		baseVersion = *req.BaseVersion
+	}
 
 	applyBuildingUpdate(building, req)
 
-	if err := h.service.Update(ctx, building); respondLocalizedValidationOrError(c, err, "facility.update_failed") {
+	if err := h.service.Update(ctx, building); err != nil {
+		if current, getErr := h.service.GetByID(ctx, id); getErr == nil && respondWriteConflict(c, err, "building", id, baseVersion, req.ChangedFields(), current.Version, toBuildingResponse(*current)) {
+			return
+		}
+		respondLocalizedValidationOrError(c, err, "facility.update_failed")
 		return
 	}
 

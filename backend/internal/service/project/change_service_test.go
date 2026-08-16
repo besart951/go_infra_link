@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
@@ -40,5 +41,22 @@ func TestChangeServiceRecordsOneSemanticEventPerAggregate(t *testing.T) {
 		if change.ParentRefs["project_id"] != projectID {
 			t.Fatalf("missing project parent ref: %+v", change.ParentRefs)
 		}
+	}
+}
+
+func TestChangeServiceUsesExplicitChangedFieldsWhenProvided(t *testing.T) {
+	store := &changeStoreFake{}
+	service := NewChangeService(store)
+	projectID, fieldDeviceID := uuid.New(), uuid.New()
+
+	_, err := service.RecordEventsWithFields(context.Background(), projectID, "project.field_device.updated", nil, []string{"description"}, fieldDeviceID.String())
+	if err != nil {
+		t.Fatalf("record event: %v", err)
+	}
+	if len(store.changes) != 1 {
+		t.Fatalf("recorded %d changes, want 1", len(store.changes))
+	}
+	if got, want := store.changes[0].ChangedFields, []string{"description"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("changed fields = %#v, want %#v", got, want)
 	}
 }

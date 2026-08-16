@@ -75,7 +75,7 @@ func TestReferenceFieldExistsMapsMissingReferenceToInput(t *testing.T) {
 }
 
 func TestBuildingServiceValidate_UsesSharedPolicies(t *testing.T) {
-	svc := NewBuildingService(&validationBuildingRepoFake{existsIWSCodeGroup: true})
+	svc := NewBuildingService(&validationBuildingRepoFake{existsIWSCodeGroup: true}, nil)
 
 	err := svc.Validate(context.Background(), &domainFacility.Building{
 		IWSCode:       " ABCD ",
@@ -99,6 +99,7 @@ func TestControlCabinetServiceValidate_UsesSharedPolicies(t *testing.T) {
 		&validationBuildingRepoFake{items: map[uuid.UUID]*domainFacility.Building{
 			buildingID: {Base: domain.Base{ID: buildingID}},
 		}},
+		nil,
 		nil,
 		nil,
 		nil,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
@@ -12,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type apparatRepo struct {
@@ -65,20 +67,38 @@ func (r *apparatRepo) Create(ctx context.Context, entity *domainFacility.Apparat
 }
 
 func (r *apparatRepo) Update(ctx context.Context, entity *domainFacility.Apparat) error {
-	// Use GORM's Association API to replace SystemParts
+	base := entity.GetBase()
+	expectedVersion := base.Version
+	base.TouchForUpdate(time.Now().UTC())
+
+	// The aggregate has one owned relation, so it needs a transaction. Keep the
+	// scalar write on the same optimistic-concurrency path as BaseRepository;
+	// Select("*") is important because a nil Description is an intentional clear.
 	err := r.DB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Update the entity itself
-		if err := tx.Model(entity).Updates(entity).Error; err != nil {
-			return err
+		query := tx.Model(&domainFacility.Apparat{}).Where("id = ?", entity.ID)
+		if expectedVersion > 0 {
+			query = query.Where("version = ?", expectedVersion)
+		}
+		result := query.
+			Select("*").
+			Omit("id", "created_at", clause.Associations).
+			Updates(entity)
+		if result.Error != nil {
+			return result.Error
+		}
+		if expectedVersion > 0 && result.RowsAffected == 0 {
+			return domain.ErrConflict
 		}
 
-		// Replace SystemParts association
 		if err := tx.Model(entity).Association("SystemParts").Replace(entity.SystemParts); err != nil {
 			return err
 		}
 
 		return nil
 	})
+	if err != nil {
+		base.Version = expectedVersion
+	}
 	return mapApparatWriteError(err)
 }
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import type { PageData } from './$types.js';
   import { Button } from '$lib/components/ui/button/index.js';
@@ -26,7 +26,7 @@
   import { can, canProject } from '$lib/utils/permissions.js';
   import { notifyProjectActivityChanged } from '$lib/activity/activityLiveUpdates.js';
   import {
-    provideProjectSyncCoordinator,
+    useProjectSyncCoordinator,
     type ProjectChange
   } from '$lib/services/projectCollaboration.svelte.js';
   import { Cpu, History, PanelsTopLeft, Settings, Server, Wifi, WifiOff } from '@lucide/svelte';
@@ -103,14 +103,7 @@
   let spsControllerListViewLoad: Promise<SPSControllerListViewModule> | null = null;
   let fieldDeviceListViewLoad: Promise<FieldDeviceListViewModule> | null = null;
 
-  const collaboration = provideProjectSyncCoordinator({
-    onProjectChange: handleProjectChange,
-    onResetRequired: () => {
-      refreshProjectFacilityViews();
-      void loadProject();
-      void loadProjectUsers();
-    }
-  });
+  const collaboration = useProjectSyncCoordinator();
 
   const currentUser = $derived(($page.data.user as User | null) ?? null);
   const usersById = $derived.by(() => {
@@ -432,12 +425,21 @@
     loading = false;
     if (!targetProjectId) return;
 
-    collaboration.connect(targetProjectId);
     void loadProjectUsers(targetProjectId);
   });
 
-  onDestroy(() => {
-    collaboration.disconnect();
+  onMount(() => {
+    const unsubscribeChanges = collaboration.subscribeProjectChanges(handleProjectChange);
+    const unsubscribeReset = collaboration.subscribeResetRequired(() => {
+      refreshProjectFacilityViews();
+      void loadProject();
+      void loadProjectUsers();
+    });
+
+    return () => {
+      unsubscribeChanges();
+      unsubscribeReset();
+    };
   });
 </script>
 

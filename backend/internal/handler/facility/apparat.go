@@ -1,7 +1,6 @@
 package facility
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -11,16 +10,11 @@ import (
 )
 
 type ApparatHandler struct {
-	service       ApparatService
-	referenceData FacilityReferenceDataBroadcaster
+	service ApparatService
 }
 
-func NewApparatHandler(service ApparatService, referenceData ...FacilityReferenceDataBroadcaster) *ApparatHandler {
-	var broadcaster FacilityReferenceDataBroadcaster
-	if len(referenceData) > 0 {
-		broadcaster = referenceData[0]
-	}
-	return &ApparatHandler{service: service, referenceData: broadcaster}
+func NewApparatHandler(service ApparatService) *ApparatHandler {
+	return &ApparatHandler{service: service}
 }
 
 // CreateApparat godoc
@@ -45,7 +39,6 @@ func (h *ApparatHandler) CreateApparat(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, toApparatResponse(*apparat))
-	h.broadcastReferenceDataChange(c.Request.Context())
 }
 
 // GetApparat godoc
@@ -211,7 +204,6 @@ func (h *ApparatHandler) UpdateApparat(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toApparatResponse(*apparat))
-	h.broadcastReferenceDataChange(c.Request.Context())
 }
 
 // DeleteApparat godoc
@@ -241,11 +233,4 @@ func (h *ApparatHandler) DeleteApparat(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
-	h.broadcastReferenceDataChange(c.Request.Context())
-}
-
-func (h *ApparatHandler) broadcastReferenceDataChange(ctx context.Context) {
-	if h.referenceData != nil {
-		h.referenceData.BroadcastFacilityReferenceDataChange(ctx, "apparats")
-	}
 }

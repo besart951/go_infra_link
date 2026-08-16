@@ -50,7 +50,7 @@
 >
   {#snippet rowSnippet(building: Building)}
     <Table.Cell class="font-medium">
-      <a href="/facility/buildings/{building.id}" class="hover:underline">
+      <a href={`/facility/buildings/${building.id}`} class="hover:underline">
         {building.iws_code}
       </a>
     </Table.Cell>

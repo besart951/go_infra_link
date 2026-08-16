@@ -7,7 +7,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
-	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -34,12 +33,12 @@ func (h *ControlCabinetHandler) broadcastProjectRefresh(ctx context.Context, act
 	h.collaboration.BroadcastRefreshForControlCabinet(ctx, actorID, controlCabinetID, "control_cabinet")
 }
 
-func (h *ControlCabinetHandler) broadcastProjectDelta(ctx context.Context, actorID *uuid.UUID, controlCabinet *domainFacility.ControlCabinet) {
+func (h *ControlCabinetHandler) broadcastProjectDelta(ctx context.Context, actorID *uuid.UUID, controlCabinet *domainFacility.ControlCabinet, changedFields ...string) {
 	if h.collaboration == nil || controlCabinet == nil {
 		return
 	}
 
-	h.collaboration.BroadcastControlCabinetDelta(ctx, actorID, *controlCabinet)
+	h.collaboration.BroadcastControlCabinetDelta(ctx, actorID, *controlCabinet, changedFields...)
 }
 
 // CreateControlCabinet godoc
@@ -146,28 +145,13 @@ func (h *ControlCabinetHandler) CopyControlCabinet(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.copyJobs != nil {
-		operationID, ok := copyOperationID(c)
-		if !ok {
-			return
+	if startFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindControlCabinet, func(ctx context.Context, actorID uuid.UUID) error {
+		copyEntity, err := h.service.CopyByID(ctx, id)
+		if err == nil {
+			h.broadcastProjectDelta(ctx, &actorID, copyEntity)
 		}
-		actorID, ok := middleware.GetUserID(c)
-		if !ok {
-			respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
-			return
-		}
-		job, err := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindControlCabinet, func(ctx context.Context) error {
-			copyEntity, err := h.service.CopyByID(ctx, id)
-			if err == nil {
-				h.broadcastProjectDelta(ctx, &actorID, copyEntity)
-			}
-			return err
-		})
-		if err != nil {
-			respondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
-			return
-		}
-		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
+		return err
+	}) {
 		return
 	}
 
@@ -271,6 +255,7 @@ func (h *ControlCabinetHandler) ListControlCabinets(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/control-cabinets/{id} [put]
+// @Router /api/v1/facility/control-cabinets/{id} [patch]
 func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
 	if !ok {
@@ -300,7 +285,7 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 	applyControlCabinetUpdate(controlCabinet, req)
 
 	if err := h.service.Update(ctx, controlCabinet); err != nil {
-		if current, getErr := h.service.GetByID(ctx, id); getErr == nil && respondWriteConflict(c, err, "control_cabinet", id, baseVersion, controlCabinetUpdatePaths(req), current.Version, toControlCabinetResponse(*current)) {
+		if current, getErr := h.service.GetByID(ctx, id); getErr == nil && respondWriteConflict(c, err, "control_cabinet", id, baseVersion, req.ChangedFields(), current.Version, toControlCabinetResponse(*current)) {
 			return
 		}
 		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
@@ -309,7 +294,7 @@ func (h *ControlCabinetHandler) UpdateControlCabinet(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectDelta(ctx, currentActorID(c), controlCabinet)
+	h.broadcastProjectDelta(ctx, currentActorID(c), controlCabinet, req.ChangedFields()...)
 	c.JSON(http.StatusOK, toControlCabinetResponse(*controlCabinet))
 }
 

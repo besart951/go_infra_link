@@ -2978,12 +2978,7 @@ export type paths = {
                 };
                 cookie?: never;
             };
-            /** @description Building data */
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest"];
-                };
-            };
+            requestBody: components["requestBodies"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest"];
             responses: {
                 /** @description OK */
                 200: {
@@ -3064,6 +3059,118 @@ export type paths = {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        /** Update a building */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Building ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: components["requestBodies"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest"];
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/facility/buildings/{id}/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a building detail with permitted hierarchy relations */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Relationship page size */
+                    limit?: number;
+                    /** @description Relationship page */
+                    page?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description Building ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingDetailResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3360,12 +3467,7 @@ export type paths = {
                 };
                 cookie?: never;
             };
-            /** @description Control Cabinet data */
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest"];
-                };
-            };
+            requestBody: components["requestBodies"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest"];
             responses: {
                 /** @description OK */
                 200: {
@@ -3448,7 +3550,57 @@ export type paths = {
         };
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update a control cabinet */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Control Cabinet ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: components["requestBodies"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest"];
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/facility/control-cabinets/{id}/copy": {
@@ -3574,6 +3726,68 @@ export type paths = {
                     };
                     content: {
                         "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/facility/control-cabinets/{id}/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a control cabinet detail with permitted hierarchy relations */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Relationship page size */
+                    limit?: number;
+                    /** @description Relationship page */
+                    page?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description Control cabinet ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetDetailResponse"];
                     };
                 };
                 /** @description Not Found */
@@ -3998,12 +4212,7 @@ export type paths = {
                 };
                 cookie?: never;
             };
-            /** @description Field Device data */
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest"];
-                };
-            };
+            requestBody: components["requestBodies"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest"];
             responses: {
                 /** @description OK */
                 200: {
@@ -4086,7 +4295,57 @@ export type paths = {
         };
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update a field device */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Field Device ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: components["requestBodies"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest"];
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/facility/field-devices/{id}/bacnet-objects": {
@@ -4125,6 +4384,63 @@ export type paths = {
                     };
                     content: {
                         "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/facility/field-devices/{id}/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a field device detail with permitted hierarchy and references */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Field device ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceDetailResponse"];
                     };
                 };
                 /** @description Not Found */
@@ -5369,12 +5685,7 @@ export type paths = {
                 };
                 cookie?: never;
             };
-            /** @description SPS controller system type data */
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest"];
-                };
-            };
+            requestBody: components["requestBodies"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest"];
             responses: {
                 /** @description OK */
                 200: {
@@ -5475,7 +5786,66 @@ export type paths = {
         };
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update an SPS controller system type */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description SPS Controller System Type ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: components["requestBodies"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest"];
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.SPSControllerSystemTypeResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["internal_handler_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/facility/sps-controller-system-types/{id}/copy": {
@@ -5550,6 +5920,68 @@ export type paths = {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/facility/sps-controller-system-types/{id}/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an SPS controller system type detail with permitted hierarchy relations */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Relationship page size */
+                    limit?: number;
+                    /** @description Relationship page */
+                    page?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description SPS controller system type ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeDetailResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5731,12 +6163,7 @@ export type paths = {
                 };
                 cookie?: never;
             };
-            /** @description SPS Controller data */
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest"];
-                };
-            };
+            requestBody: components["requestBodies"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest"];
             responses: {
                 /** @description OK */
                 200: {
@@ -5828,7 +6255,57 @@ export type paths = {
         };
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update an SPS controller */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description SPS Controller ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: components["requestBodies"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest"];
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/facility/sps-controllers/{id}/copy": {
@@ -5912,6 +6389,68 @@ export type paths = {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/facility/sps-controllers/{id}/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an SPS controller detail with permitted hierarchy relations */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Relationship page size */
+                    limit?: number;
+                    /** @description Relationship page */
+                    page?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description SPS controller ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerDetailResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8511,6 +9050,477 @@ export type paths = {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{id}/facility/buildings/{buildingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a project-scoped, read-only building detail */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Relationship page size */
+                    limit?: number;
+                    /** @description Relationship page */
+                    page?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description Building ID */
+                    buildingId: string;
+                    /** @description Project ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingDetailResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{id}/facility/control-cabinets/{controlCabinetId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a project-scoped control cabinet detail */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Relationship page size */
+                    limit?: number;
+                    /** @description Relationship page */
+                    page?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description Control cabinet ID */
+                    controlCabinetId: string;
+                    /** @description Project ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetDetailResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch a project control cabinet when both permission layers allow it */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Control cabinet ID */
+                    controlCabinetId: string;
+                    /** @description Project ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description Control cabinet patch */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/projects/{id}/facility/field-devices/{fieldDeviceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a project-scoped field device detail */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Field device ID */
+                    fieldDeviceId: string;
+                    /** @description Project ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceDetailResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch a project field device when both permission layers allow it */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Field device ID */
+                    fieldDeviceId: string;
+                    /** @description Project ID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            /** @description Field device patch */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/projects/{id}/facility/sps-controller-system-types/{spsControllerSystemTypeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a project-scoped SPS controller system type detail */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Relationship page size */
+                    limit?: number;
+                    /** @description Relationship page */
+                    page?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description Project ID */
+                    id: string;
+                    /** @description SPS controller system type ID */
+                    spsControllerSystemTypeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeDetailResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch a project SPS controller system type when both permission layers allow it */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Project ID */
+                    id: string;
+                    /** @description SPS controller system type ID */
+                    spsControllerSystemTypeId: string;
+                };
+                cookie?: never;
+            };
+            /** @description System type patch */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/projects/{id}/facility/sps-controllers/{spsControllerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a project-scoped SPS controller detail */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Relationship page size */
+                    limit?: number;
+                    /** @description Relationship page */
+                    page?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description Project ID */
+                    id: string;
+                    /** @description SPS controller ID */
+                    spsControllerId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerDetailResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch a project SPS controller when both permission layers allow it */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Project ID */
+                    id: string;
+                    /** @description SPS controller ID */
+                    spsControllerId: string;
+                };
+                cookie?: never;
+            };
+            /** @description SPS controller patch */
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/projects/{id}/field-device-options": {
@@ -11193,6 +12203,11 @@ export type components = {
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingBulkResponse": {
             items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingResponse"][];
         };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingDetailResponse": {
+            building?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingResponse"];
+            capabilities?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailCapabilities"];
+            relations?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation"][];
+        };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingListResponse": {
             items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingResponse"][];
             page?: number;
@@ -11205,6 +12220,7 @@ export type components = {
             id?: string;
             iws_code?: string;
             updated_at?: string;
+            version?: number;
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BulkDeleteFieldDeviceRequest": {
             ids: string[];
@@ -11266,6 +12282,11 @@ export type components = {
             specifications_count?: number;
             sps_controller_system_types_count?: number;
             sps_controllers_count?: number;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetDetailResponse": {
+            capabilities?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailCapabilities"];
+            control_cabinet?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"];
+            relations?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation"][];
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetListResponse": {
             items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"][];
@@ -11453,6 +12474,23 @@ export type components = {
             id?: string;
             resource?: string;
         };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailCapabilities": {
+            can_update?: boolean;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation": {
+            count?: number;
+            items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelationItem"][];
+            key?: string;
+            label?: string;
+            page?: number;
+            resource?: string;
+            total_pages?: number;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelationItem": {
+            id?: string;
+            label?: string;
+            subtitle?: string;
+        };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse": {
             code?: string;
             conflict?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_common.WriteConflictResponse"];
@@ -11478,6 +12516,11 @@ export type components = {
             index?: number;
             /** @description Whether the creation succeeded */
             success?: boolean;
+        };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceDetailResponse": {
+            capabilities?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailCapabilities"];
+            field_device?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"];
+            relations?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation"][];
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceListResponse": {
             items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"][];
@@ -11615,6 +12658,11 @@ export type components = {
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerBulkResponse": {
             items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"][];
         };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerDetailResponse": {
+            capabilities?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailCapabilities"];
+            relations?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation"][];
+            sps_controller?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"];
+        };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerListResponse": {
             items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"][];
             page?: number;
@@ -11636,6 +12684,11 @@ export type components = {
             version?: number;
             vlan?: string;
         };
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeDetailResponse": {
+            capabilities?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailCapabilities"];
+            relations?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation"][];
+            sps_controller_system_type?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeResponse"];
+        };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeInput": {
             document_name?: string;
             id?: string;
@@ -11643,6 +12696,10 @@ export type components = {
             system_type_id: string;
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeResponse": {
+            /**
+             * @description AggregateVersion is retained for clients generated before the unified
+             *     version token was introduced. New clients should use Version.
+             */
             aggregate_version?: number;
             created_at?: string;
             document_name?: string;
@@ -11655,6 +12712,7 @@ export type components = {
             system_type_id?: string;
             system_type_name?: string;
             updated_at?: string;
+            version?: number;
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.StateTextListResponse": {
             items?: components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.StateTextResponse"][];
@@ -11777,6 +12835,7 @@ export type components = {
             text_individual?: string;
         };
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest": {
+            base_version?: number;
             building_group?: number;
             iws_code?: string;
         };
@@ -12518,6 +13577,10 @@ export type components = {
             total_pages?: number;
         };
         "internal_handler_facility.SPSControllerSystemTypeResponse": {
+            /**
+             * @description AggregateVersion is retained for clients generated before the unified
+             *     version token was introduced. New clients should use Version.
+             */
             aggregate_version?: number;
             created_at?: string;
             document_name?: string;
@@ -12530,6 +13593,7 @@ export type components = {
             system_type_id?: string;
             system_type_name?: string;
             updated_at?: string;
+            version?: number;
         };
         "internal_handler_i18n.ErrorResponse": {
             code?: string;
@@ -12563,6 +13627,36 @@ export type components = {
     responses: never;
     parameters: never;
     requestBodies: {
+        /** @description Building data */
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest": {
+            content: {
+                "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest"];
+            };
+        };
+        /** @description Control Cabinet data */
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest": {
+            content: {
+                "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest"];
+            };
+        };
+        /** @description Field Device data */
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest": {
+            content: {
+                "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest"];
+            };
+        };
+        /** @description SPS Controller data */
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest": {
+            content: {
+                "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest"];
+            };
+        };
+        /** @description SPS controller system type data */
+        "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest": {
+            content: {
+                "application/json": components["schemas"]["github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest"];
+            };
+        };
         /** @description Partial phase data */
         "github_com_besart951_go_infra_link_backend_internal_handler_dto_project.UpdatePhaseRequest": {
             content: {

@@ -9,13 +9,29 @@ import (
 )
 
 type BuildingService struct {
-	repo domainFacility.BuildingRepository
+	repo            domainFacility.BuildingRepository
+	controllerNames *SPSControllerNameSynchronizer
+	tx              txCoordinator
 }
 
-func NewBuildingService(repo domainFacility.BuildingRepository) *BuildingService {
+func NewBuildingService(
+	repo domainFacility.BuildingRepository,
+	controllerNames *SPSControllerNameSynchronizer,
+) *BuildingService {
 	return &BuildingService{
-		repo: repo,
+		repo:            repo,
+		controllerNames: controllerNames,
 	}
+}
+
+func (s *BuildingService) bindTransactions(tx txCoordinator) {
+	s.tx = tx
+}
+
+func (s *BuildingService) transaction() facilityTx[*BuildingService] {
+	return newFacilityTx(s.tx, s, func(services *Services) *BuildingService {
+		return services.Building
+	})
 }
 
 func (s *BuildingService) Create(ctx context.Context, building *domainFacility.Building) error {
@@ -47,10 +63,15 @@ func (s *BuildingService) List(ctx context.Context, page, limit int, search stri
 }
 
 func (s *BuildingService) Update(ctx context.Context, building *domainFacility.Building) error {
-	if err := s.Validate(ctx, building, &building.ID); err != nil {
-		return err
-	}
-	return s.repo.Update(ctx, building)
+	return s.transaction().run(ctx, func(txCtx context.Context, txService *BuildingService) error {
+		if err := txService.Validate(txCtx, building, &building.ID); err != nil {
+			return err
+		}
+		if err := txService.repo.Update(txCtx, building); err != nil {
+			return err
+		}
+		return txService.controllerNames.RefreshForBuilding(txCtx, building)
+	})
 }
 
 func (s *BuildingService) Validate(ctx context.Context, building *domainFacility.Building, excludeID *uuid.UUID) error {

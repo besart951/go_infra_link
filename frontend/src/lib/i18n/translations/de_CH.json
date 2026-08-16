@@ -589,6 +589,10 @@
     "page": {
       "creating": "Projekt wird erstellt..."
     },
+    "filters": {
+      "search_status": "Status suchen...",
+      "no_status_found": "Keine Status gefunden."
+    },
     "detail": {
       "description": "Projektressourcen und Zuweisungen verwalten.",
       "settings": "Einstellungen"
@@ -761,6 +765,10 @@
       "load_failed": "Phase konnte nicht geladen werden",
       "load_title": "Phase konnte nicht geladen werden"
     }
+  },
+  "project_phase_select": {
+    "placeholder": "Phase auswählen...",
+    "clear": "Auswahl aufheben"
   },
   "facility": {
     "copy_progress": {

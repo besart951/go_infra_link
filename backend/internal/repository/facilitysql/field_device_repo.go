@@ -69,24 +69,20 @@ func (r *fieldDeviceRepo) BulkCreate(ctx context.Context, entities []*domainFaci
 func (r *fieldDeviceRepo) Update(ctx context.Context, entity *domainFacility.FieldDevice) error {
 	expectedVersion := entity.Version
 	entity.Base.TouchForUpdate(time.Now().UTC())
+	record := toFieldDeviceRecord(entity)
 	query := r.db.WithContext(ctx).Model(&FieldDeviceRecord{}).
 		Where("id = ?", entity.ID)
 	if expectedVersion > 0 {
 		query = query.Where("version = ?", expectedVersion)
 	}
+	// Select("*") persists every scalar record field, including nil pointers.
+	// That keeps new FieldDevice columns from being silently omitted by a second
+	// hand-maintained update map. Primary and creation fields stay immutable and
+	// associations remain outside this aggregate write.
 	result := query.
-		Updates(map[string]any{
-			"updated_at":                    entity.UpdatedAt,
-			"version":                       entity.Version,
-			"bmk":                           entity.BMK,
-			"description":                   entity.Description,
-			"apparat_nr":                    entity.ApparatNr,
-			"text_individuell":              entity.TextIndividuell,
-			"sps_controller_system_type_id": entity.SPSControllerSystemTypeID,
-			"system_part_id":                entity.SystemPartID,
-			"specification_id":              entity.SpecificationID,
-			"apparat_id":                    entity.ApparatID,
-		})
+		Select("*").
+		Omit("id", "created_at", clause.Associations).
+		Updates(record)
 	if result.Error != nil {
 		entity.Version = expectedVersion
 		return result.Error

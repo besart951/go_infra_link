@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
@@ -14,62 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
-
-func TestApparatHandler_CreateApparatBroadcastsReferenceDataChange(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	broadcaster := &facilityReferenceDataBroadcasterSpy{}
-	handler := NewApparatHandler(&fakeApparatHandlerService{}, broadcaster)
-	recorder := httptest.NewRecorder()
-	requestContext, _ := gin.CreateTestContext(recorder)
-	requestContext.Request = httptest.NewRequest(
-		http.MethodPost,
-		"/apparats",
-		strings.NewReader(`{"short_name":"PMP","name":"Pump"}`),
-	)
-	requestContext.Request.Header.Set("Content-Type", "application/json")
-
-	handler.CreateApparat(requestContext)
-
-	if recorder.Code != http.StatusCreated {
-		t.Fatalf("expected status 201, got %d body=%s", recorder.Code, recorder.Body.String())
-	}
-	if len(broadcaster.changes) != 1 || len(broadcaster.changes[0]) != 1 || broadcaster.changes[0][0] != "apparats" {
-		t.Fatalf("reference data changes = %#v, want apparats invalidation", broadcaster.changes)
-	}
-}
-
-func TestApparatHandler_UpdateApparatBroadcastsReferenceDataChange(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	apparatID := uuid.New()
-	broadcaster := &facilityReferenceDataBroadcasterSpy{}
-	handler := NewApparatHandler(&fakeApparatHandlerService{
-		items: map[uuid.UUID]*domainFacility.Apparat{
-			apparatID: {
-				Base:      domain.Base{ID: apparatID},
-				ShortName: "PMP",
-				Name:      "Pump",
-			},
-		},
-	}, broadcaster)
-	recorder := httptest.NewRecorder()
-	requestContext, _ := gin.CreateTestContext(recorder)
-	requestContext.Params = gin.Params{{Key: "id", Value: apparatID.String()}}
-	requestContext.Request = httptest.NewRequest(
-		http.MethodPut,
-		"/apparats/"+apparatID.String(),
-		strings.NewReader(`{"name":"Updated pump"}`),
-	)
-	requestContext.Request.Header.Set("Content-Type", "application/json")
-
-	handler.UpdateApparat(requestContext)
-
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d body=%s", recorder.Code, recorder.Body.String())
-	}
-	if len(broadcaster.changes) != 1 || len(broadcaster.changes[0]) != 1 || broadcaster.changes[0][0] != "apparats" {
-		t.Fatalf("reference data changes = %#v, want apparats invalidation", broadcaster.changes)
-	}
-}
 
 func TestApparatHandler_ListApparats_CharacterizesCombinedFiltersAndSearch(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -173,14 +116,6 @@ type fakeApparatHandlerService struct {
 	listWithFiltersErr    error
 	lastListParams        domain.PaginationParams
 	lastListFilters       domainFacility.ApparatFilterParams
-}
-
-type facilityReferenceDataBroadcasterSpy struct {
-	changes [][]string
-}
-
-func (s *facilityReferenceDataBroadcasterSpy) BroadcastFacilityReferenceDataChange(_ context.Context, resources ...string) {
-	s.changes = append(s.changes, append([]string(nil), resources...))
 }
 
 func (s *fakeApparatHandlerService) Create(context.Context, *domainFacility.Apparat) error {

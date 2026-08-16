@@ -10,6 +10,7 @@ import (
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	facilitydto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
+	facilityfielddevice "github.com/besart951/go_infra_link/backend/internal/handler/facility/fielddevice"
 	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
@@ -163,7 +164,7 @@ func (h *Handler) MultiCreateProjectFieldDevices(c *gin.Context) {
 }
 
 func (h *Handler) multiCreateAndAssignProjectFieldDevices(c *gin.Context, projectID uuid.UUID, reqItems []facilitydto.CreateFieldDeviceRequest) {
-	items := toFieldDeviceCreateItems(reqItems)
+	items := facilityfielddevice.CreateItems(reqItems)
 
 	result, err := h.facilityLink.MultiCreateAndAssignFieldDevices(c.Request.Context(), projectID, items)
 	if err != nil {
@@ -395,60 +396,6 @@ func toProjectFieldDeviceList(items []domainProject.ProjectFieldDevice) []dto.Pr
 	return out
 }
 
-func toFieldDeviceCreateItems(reqItems []facilitydto.CreateFieldDeviceRequest) []domainFacility.FieldDeviceCreateItem {
-	items := make([]domainFacility.FieldDeviceCreateItem, len(reqItems))
-	for i, req := range reqItems {
-		apparatNr := 0
-		if req.ApparatNr != nil {
-			apparatNr = *req.ApparatNr
-		}
-		items[i] = domainFacility.FieldDeviceCreateItem{
-			FieldDevice: &domainFacility.FieldDevice{
-				BMK:                       req.BMK,
-				Description:               req.Description,
-				TextIndividuell:           req.TextIndividuell,
-				ApparatNr:                 apparatNr,
-				SPSControllerSystemTypeID: req.SPSControllerSystemTypeID,
-				SystemPartID:              req.SystemPartID,
-				ApparatID:                 req.ApparatID,
-			},
-			ObjectDataID:  req.ObjectDataID,
-			BacnetObjects: toFieldDeviceBacnetObjects(req.BacnetObjects),
-		}
-	}
-	return items
-}
-
-func toFieldDeviceBacnetObjects(inputs []facilitydto.BacnetObjectInput) []domainFacility.BacnetObject {
-	items := make([]domainFacility.BacnetObject, 0, len(inputs))
-	for _, bo := range inputs {
-		items = append(items, domainFacility.BacnetObject{
-			TextFix:             bo.TextFix,
-			Description:         bo.Description,
-			GMSVisible:          bo.GMSVisible,
-			Optional:            bo.Optional,
-			TextIndividual:      normalizeTextIndividual(bo.TextIndividual),
-			SoftwareType:        domainFacility.BacnetSoftwareType(bo.SoftwareType),
-			SoftwareNumber:      uint16(bo.SoftwareNumber),
-			HardwareType:        domainFacility.BacnetHardwareType(bo.HardwareType),
-			HardwareQuantity:    uint8(bo.HardwareQuantity),
-			SoftwareReferenceID: bo.SoftwareReferenceID,
-			StateTextID:         bo.StateTextID,
-			NotificationClassID: bo.NotificationClassID,
-			AlarmDefinitionID:   bo.AlarmDefinitionID,
-			AlarmTypeID:         bo.AlarmTypeID,
-		})
-	}
-	return items
-}
-
-func normalizeTextIndividual(value *string) *string {
-	if value != nil && *value == "" {
-		return nil
-	}
-	return value
-}
-
 func toMultiCreateFieldDeviceResponse(result *domainFacility.FieldDeviceMultiCreateResult) facilitydto.MultiCreateFieldDeviceResponse {
 	if result == nil {
 		return facilitydto.MultiCreateFieldDeviceResponse{}
@@ -478,21 +425,8 @@ func toFieldDeviceResponse(fieldDevice *domainFacility.FieldDevice) *facilitydto
 		return nil
 	}
 
-	apparatNr := fieldDevice.ApparatNr
-	systemPartID := fieldDevice.SystemPartID
-	return &facilitydto.FieldDeviceResponse{
-		ID:                        fieldDevice.ID,
-		BMK:                       fieldDevice.BMK,
-		Description:               fieldDevice.Description,
-		TextIndividuell:           fieldDevice.TextIndividuell,
-		ApparatNr:                 &apparatNr,
-		SPSControllerSystemTypeID: fieldDevice.SPSControllerSystemTypeID,
-		SystemPartID:              &systemPartID,
-		SpecificationID:           fieldDevice.SpecificationID,
-		ApparatID:                 fieldDevice.ApparatID,
-		CreatedAt:                 fieldDevice.CreatedAt,
-		UpdatedAt:                 fieldDevice.UpdatedAt,
-	}
+	response := sharedpresenter.ToFieldDeviceResponse(*fieldDevice)
+	return &response
 }
 
 func createdFieldDevices(result *domainFacility.FieldDeviceMultiCreateResult) []domainFacility.FieldDevice {

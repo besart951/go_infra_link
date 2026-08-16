@@ -10,7 +10,6 @@ import (
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	facilitydto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
-	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
@@ -28,28 +27,28 @@ type FacilityLinkService interface {
 }
 
 type Handler struct {
-	access       projectshared.AccessPolicyService
+	base         *projectshared.FacilityLinkHandler
 	facilityLink FacilityLinkService
-	notify       projectshared.ProjectChangeNotifier
 	notifyDelta  ProjectControlCabinetDeltaNotifier
-	copyJobs     *facilityservice.CopyJobManager
-	notifyCopy   ProjectCopyJobNotifier
 }
 
 type ProjectControlCabinetDeltaNotifier func(*gin.Context, uuid.UUID, domainFacility.ControlCabinet)
-type ProjectCopyJobNotifier func(context.Context, *uuid.UUID, uuid.UUID, string, string)
+type ProjectCopyJobNotifier = projectshared.ProjectCopyJobNotifier
+
+// copyJobResponseContract keeps Swag's imported DTO reference available while
+// the shared project-link module writes the asynchronous response.
+type copyJobResponseContract = facilitydto.CopyJobResponse
 
 func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier, notifyDelta ...ProjectControlCabinetDeltaNotifier) *Handler {
 	var delta ProjectControlCabinetDeltaNotifier
 	if len(notifyDelta) > 0 {
 		delta = notifyDelta[0]
 	}
-	return &Handler{access: access, facilityLink: facilityLink, notify: notify, notifyDelta: delta}
+	return &Handler{base: projectshared.NewFacilityLinkHandler(access, notify), facilityLink: facilityLink, notifyDelta: delta}
 }
 
 func (h *Handler) ConfigureCopyJobs(copyJobs *facilityservice.CopyJobManager, notify ProjectCopyJobNotifier) {
-	h.copyJobs = copyJobs
-	h.notifyCopy = notify
+	h.base.ConfigureCopyJobs(copyJobs, notify)
 }
 
 // CreateProjectControlCabinet godoc
@@ -65,17 +64,8 @@ func (h *Handler) ConfigureCopyJobs(copyJobs *facilityservice.CopyJobManager, no
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/control-cabinets [post]
 func (h *Handler) CreateProjectControlCabinet(c *gin.Context) {
-	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	projectID, ok := h.base.ProjectIDWithPermission(c, domainUser.PermissionProjectControlCabinetCreate)
 	if !ok {
-		return
-	}
-
-	if !projectshared.EnsureProjectAccessAndAnyPermission(
-		c,
-		h.access,
-		projectID,
-		domainUser.PermissionProjectControlCabinetCreate,
-	) {
 		return
 	}
 
@@ -94,9 +84,7 @@ func (h *Handler) CreateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.control_cabinet.created", created.ControlCabinetID.String())
-	}
+	h.base.Notify(c, projectID, "project.control_cabinet.created", created.ControlCabinetID.String())
 
 	c.JSON(http.StatusCreated, toProjectControlCabinetResponse(*created))
 }
@@ -114,12 +102,8 @@ func (h *Handler) CreateProjectControlCabinet(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/control-cabinets [get]
 func (h *Handler) ListProjectControlCabinets(c *gin.Context) {
-	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	projectID, ok := h.base.ProjectIDWithPermission(c, domainUser.PermissionProjectControlCabinetRead)
 	if !ok {
-		return
-	}
-
-	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectControlCabinetRead) {
 		return
 	}
 
@@ -159,17 +143,8 @@ func (h *Handler) ListProjectControlCabinets(c *gin.Context) {
 // @Failure 503 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/control-cabinets/{controlCabinetId}/copy [post]
 func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
-	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	projectID, ok := h.base.ProjectIDWithPermission(c, domainUser.PermissionProjectControlCabinetCreate)
 	if !ok {
-		return
-	}
-
-	if !projectshared.EnsureProjectAccessAndAnyPermission(
-		c,
-		h.access,
-		projectID,
-		domainUser.PermissionProjectControlCabinetCreate,
-	) {
 		return
 	}
 
@@ -177,29 +152,13 @@ func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.copyJobs != nil {
-		operationID, err := handlerutil.ParseCopyOperationID(c)
+	if h.base.StartCopy(c, projectID, facilityservice.CopyJobKindControlCabinet, "project.control_cabinet.copied", func(ctx context.Context) (string, error) {
+		copyEntity, err := h.facilityLink.CopyControlCabinet(ctx, projectID, controlCabinetID)
 		if err != nil {
-			handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_operation_id", "project.creation_failed")
-			return
+			return "", err
 		}
-		actorID, ok := middleware.GetUserID(c)
-		if !ok {
-			handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
-			return
-		}
-		job, err := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindControlCabinet, func(ctx context.Context) error {
-			copyEntity, err := h.facilityLink.CopyControlCabinet(ctx, projectID, controlCabinetID)
-			if err == nil && h.notifyCopy != nil {
-				h.notifyCopy(ctx, &actorID, projectID, "project.control_cabinet.copied", copyEntity.ID.String())
-			}
-			return err
-		})
-		if err != nil {
-			handlerutil.RespondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
-			return
-		}
-		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
+		return copyEntity.ID.String(), nil
+	}) {
 		return
 	}
 
@@ -215,18 +174,11 @@ func (h *Handler) CopyProjectControlCabinet(c *gin.Context) {
 
 	if h.notifyDelta != nil {
 		h.notifyDelta(c, projectID, *copyEntity)
-	} else if h.notify != nil {
-		h.notify(c, projectID, "project.control_cabinet.copied", copyEntity.ID.String())
+	} else {
+		h.base.Notify(c, projectID, "project.control_cabinet.copied", copyEntity.ID.String())
 	}
 
 	c.JSON(http.StatusCreated, sharedpresenter.ToControlCabinetResponse(*copyEntity))
-}
-
-func toCopyJobResponse(job facilityservice.CopyJob) facilitydto.CopyJobResponse {
-	return facilitydto.CopyJobResponse{
-		JobID: job.ID, Kind: string(job.Kind), Status: string(job.Status), Progress: job.Progress,
-		Stage: job.Stage, Error: job.Error, CreatedAt: job.CreatedAt, UpdatedAt: job.UpdatedAt,
-	}
 }
 
 // UpdateProjectControlCabinet godoc
@@ -243,17 +195,8 @@ func toCopyJobResponse(job facilityservice.CopyJob) facilitydto.CopyJobResponse 
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/control-cabinets/{linkId} [put]
 func (h *Handler) UpdateProjectControlCabinet(c *gin.Context) {
-	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	projectID, ok := h.base.ProjectIDWithPermission(c, domainUser.PermissionProjectControlCabinetUpdate)
 	if !ok {
-		return
-	}
-
-	if !projectshared.EnsureProjectAccessAndAnyPermission(
-		c,
-		h.access,
-		projectID,
-		domainUser.PermissionProjectControlCabinetUpdate,
-	) {
 		return
 	}
 
@@ -289,9 +232,7 @@ func (h *Handler) UpdateProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.control_cabinet.updated", updated.ControlCabinetID.String())
-	}
+	h.base.Notify(c, projectID, "project.control_cabinet.updated", updated.ControlCabinetID.String())
 
 	c.JSON(http.StatusOK, toProjectControlCabinetResponse(*updated))
 }
@@ -308,17 +249,8 @@ func (h *Handler) UpdateProjectControlCabinet(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/control-cabinets/{linkId} [delete]
 func (h *Handler) DeleteProjectControlCabinet(c *gin.Context) {
-	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	projectID, ok := h.base.ProjectIDWithPermission(c, domainUser.PermissionProjectControlCabinetDelete)
 	if !ok {
-		return
-	}
-
-	if !projectshared.EnsureProjectAccessAndAnyPermission(
-		c,
-		h.access,
-		projectID,
-		domainUser.PermissionProjectControlCabinetDelete,
-	) {
 		return
 	}
 
@@ -335,9 +267,7 @@ func (h *Handler) DeleteProjectControlCabinet(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.control_cabinet.deleted")
-	}
+	h.base.Notify(c, projectID, "project.control_cabinet.deleted")
 
 	c.Status(http.StatusNoContent)
 }

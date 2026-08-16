@@ -16,6 +16,7 @@
   import { getBreadcrumbForPath } from '$lib/navigation/appNavigation.js';
   import { hasUserPermission } from '$lib/utils/permissions.js';
   import { facilityReferenceDataCache } from '$lib/services/facilityReferenceDataCache.js';
+  import { facilityDetailCache } from '$lib/services/facilityDetailCache.js';
   import { projectDetailService } from '$lib/components/project/ProjectDetailService.js';
   import { appNavigationDataCache } from '$lib/services/appNavigationDataCache.js';
   import { copyOperation } from '$lib/state/copyOperation.svelte.js';
@@ -38,11 +39,13 @@
         hasUserPermission(data.user, 'apparat.read') &&
         hasUserPermission(data.user, 'systempart.read')
     });
+    facilityDetailCache.start(data.user?.id);
   });
 
   onDestroy(() => {
     copyOperation.dispose();
     facilityReferenceDataCache.stop();
+    facilityDetailCache.stop();
     projectDetailService.clearProjectContextCache();
     appNavigationDataCache.clear();
     clearActivityCache();

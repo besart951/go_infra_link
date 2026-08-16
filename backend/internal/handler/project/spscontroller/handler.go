@@ -10,7 +10,6 @@ import (
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	facilitydto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/project"
-	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	projectshared "github.com/besart951/go_infra_link/backend/internal/handler/project/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
@@ -29,28 +28,28 @@ type FacilityLinkService interface {
 }
 
 type Handler struct {
-	access       projectshared.AccessPolicyService
+	base         *projectshared.FacilityLinkHandler
 	facilityLink FacilityLinkService
-	notify       projectshared.ProjectChangeNotifier
 	notifyDelta  ProjectSPSControllerDeltaNotifier
-	copyJobs     *facilityservice.CopyJobManager
-	notifyCopy   ProjectCopyJobNotifier
 }
 
 type ProjectSPSControllerDeltaNotifier func(*gin.Context, uuid.UUID, domainFacility.SPSController)
-type ProjectCopyJobNotifier func(context.Context, *uuid.UUID, uuid.UUID, string, string)
+type ProjectCopyJobNotifier = projectshared.ProjectCopyJobNotifier
+
+// copyJobResponseContract keeps Swag's imported DTO reference available while
+// the shared project-link module writes the asynchronous response.
+type copyJobResponseContract = facilitydto.CopyJobResponse
 
 func NewHandler(access projectshared.AccessPolicyService, facilityLink FacilityLinkService, notify projectshared.ProjectChangeNotifier, notifyDelta ...ProjectSPSControllerDeltaNotifier) *Handler {
 	var delta ProjectSPSControllerDeltaNotifier
 	if len(notifyDelta) > 0 {
 		delta = notifyDelta[0]
 	}
-	return &Handler{access: access, facilityLink: facilityLink, notify: notify, notifyDelta: delta}
+	return &Handler{base: projectshared.NewFacilityLinkHandler(access, notify), facilityLink: facilityLink, notifyDelta: delta}
 }
 
 func (h *Handler) ConfigureCopyJobs(copyJobs *facilityservice.CopyJobManager, notify ProjectCopyJobNotifier) {
-	h.copyJobs = copyJobs
-	h.notifyCopy = notify
+	h.base.ConfigureCopyJobs(copyJobs, notify)
 }
 
 // CreateProjectSPSController godoc
@@ -66,17 +65,8 @@ func (h *Handler) ConfigureCopyJobs(copyJobs *facilityservice.CopyJobManager, no
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/sps-controllers [post]
 func (h *Handler) CreateProjectSPSController(c *gin.Context) {
-	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	projectID, ok := h.base.ProjectIDWithPermission(c, domainUser.PermissionProjectSPSControllerCreate)
 	if !ok {
-		return
-	}
-
-	if !projectshared.EnsureProjectAccessAndAnyPermission(
-		c,
-		h.access,
-		projectID,
-		domainUser.PermissionProjectSPSControllerCreate,
-	) {
 		return
 	}
 
@@ -95,9 +85,7 @@ func (h *Handler) CreateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.sps_controller.created", created.SPSControllerID.String())
-	}
+	h.base.Notify(c, projectID, "project.sps_controller.created", created.SPSControllerID.String())
 
 	c.JSON(http.StatusCreated, toProjectSPSControllerResponse(*created))
 }
@@ -115,12 +103,8 @@ func (h *Handler) CreateProjectSPSController(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/sps-controllers [get]
 func (h *Handler) ListProjectSPSControllers(c *gin.Context) {
-	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	projectID, ok := h.base.ProjectIDWithPermission(c, domainUser.PermissionProjectSPSControllerRead)
 	if !ok {
-		return
-	}
-
-	if !projectshared.EnsureProjectAccessAndPermission(c, h.access, projectID, domainUser.PermissionProjectSPSControllerRead) {
 		return
 	}
 
@@ -160,17 +144,8 @@ func (h *Handler) ListProjectSPSControllers(c *gin.Context) {
 // @Failure 503 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/sps-controllers/{spsControllerId}/copy [post]
 func (h *Handler) CopyProjectSPSController(c *gin.Context) {
-	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	projectID, ok := h.base.ProjectIDWithPermission(c, domainUser.PermissionProjectSPSControllerCreate)
 	if !ok {
-		return
-	}
-
-	if !projectshared.EnsureProjectAccessAndAnyPermission(
-		c,
-		h.access,
-		projectID,
-		domainUser.PermissionProjectSPSControllerCreate,
-	) {
 		return
 	}
 
@@ -178,29 +153,13 @@ func (h *Handler) CopyProjectSPSController(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.copyJobs != nil {
-		operationID, err := handlerutil.ParseCopyOperationID(c)
+	if h.base.StartCopy(c, projectID, facilityservice.CopyJobKindSPSController, "project.sps_controller.copied", func(ctx context.Context) (string, error) {
+		copyEntity, err := h.facilityLink.CopySPSController(ctx, projectID, spsControllerID)
 		if err != nil {
-			handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_operation_id", "project.creation_failed")
-			return
+			return "", err
 		}
-		actorID, ok := middleware.GetUserID(c)
-		if !ok {
-			handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
-			return
-		}
-		job, err := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSController, func(ctx context.Context) error {
-			copyEntity, err := h.facilityLink.CopySPSController(ctx, projectID, spsControllerID)
-			if err == nil && h.notifyCopy != nil {
-				h.notifyCopy(ctx, &actorID, projectID, "project.sps_controller.copied", copyEntity.ID.String())
-			}
-			return err
-		})
-		if err != nil {
-			handlerutil.RespondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
-			return
-		}
-		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
+		return copyEntity.ID.String(), nil
+	}) {
 		return
 	}
 
@@ -216,8 +175,8 @@ func (h *Handler) CopyProjectSPSController(c *gin.Context) {
 
 	if h.notifyDelta != nil {
 		h.notifyDelta(c, projectID, *copyEntity)
-	} else if h.notify != nil {
-		h.notify(c, projectID, "project.sps_controller.copied", copyEntity.ID.String())
+	} else {
+		h.base.Notify(c, projectID, "project.sps_controller.copied", copyEntity.ID.String())
 	}
 
 	c.JSON(http.StatusCreated, sharedpresenter.ToSPSControllerResponse(*copyEntity))
@@ -238,17 +197,8 @@ func (h *Handler) CopyProjectSPSController(c *gin.Context) {
 // @Failure 503 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/sps-controller-system-types/{systemTypeId}/copy [post]
 func (h *Handler) CopyProjectSPSControllerSystemType(c *gin.Context) {
-	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	projectID, ok := h.base.ProjectIDWithPermission(c, domainUser.PermissionProjectSPSControllerSystemTypeCreate)
 	if !ok {
-		return
-	}
-
-	if !projectshared.EnsureProjectAccessAndAnyPermission(
-		c,
-		h.access,
-		projectID,
-		domainUser.PermissionProjectSPSControllerSystemTypeCreate,
-	) {
 		return
 	}
 
@@ -256,29 +206,13 @@ func (h *Handler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.copyJobs != nil {
-		operationID, err := handlerutil.ParseCopyOperationID(c)
+	if h.base.StartCopy(c, projectID, facilityservice.CopyJobKindSPSControllerSystemType, "project.sps_controller_system_type.copied", func(ctx context.Context) (string, error) {
+		copyEntity, err := h.facilityLink.CopySPSControllerSystemType(ctx, projectID, systemTypeID)
 		if err != nil {
-			handlerutil.RespondLocalizedError(c, http.StatusBadRequest, "invalid_operation_id", "project.creation_failed")
-			return
+			return "", err
 		}
-		actorID, ok := middleware.GetUserID(c)
-		if !ok {
-			handlerutil.RespondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
-			return
-		}
-		job, err := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSControllerSystemType, func(ctx context.Context) error {
-			copyEntity, err := h.facilityLink.CopySPSControllerSystemType(ctx, projectID, systemTypeID)
-			if err == nil && h.notifyCopy != nil {
-				h.notifyCopy(ctx, &actorID, projectID, "project.sps_controller_system_type.copied", copyEntity.SPSControllerID.String())
-			}
-			return err
-		})
-		if err != nil {
-			handlerutil.RespondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
-			return
-		}
-		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
+		return copyEntity.SPSControllerID.String(), nil
+	}) {
 		return
 	}
 
@@ -291,18 +225,9 @@ func (h *Handler) CopyProjectSPSControllerSystemType(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.sps_controller_system_type.copied", copyEntity.SPSControllerID.String())
-	}
+	h.base.Notify(c, projectID, "project.sps_controller_system_type.copied", copyEntity.SPSControllerID.String())
 
 	c.JSON(http.StatusCreated, sharedpresenter.ToSPSControllerSystemTypeResponse(*copyEntity))
-}
-
-func toCopyJobResponse(job facilityservice.CopyJob) facilitydto.CopyJobResponse {
-	return facilitydto.CopyJobResponse{
-		JobID: job.ID, Kind: string(job.Kind), Status: string(job.Status), Progress: job.Progress,
-		Stage: job.Stage, Error: job.Error, CreatedAt: job.CreatedAt, UpdatedAt: job.UpdatedAt,
-	}
 }
 
 // UpdateProjectSPSController godoc
@@ -319,17 +244,8 @@ func toCopyJobResponse(job facilityservice.CopyJob) facilitydto.CopyJobResponse 
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/sps-controllers/{linkId} [put]
 func (h *Handler) UpdateProjectSPSController(c *gin.Context) {
-	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	projectID, ok := h.base.ProjectIDWithPermission(c, domainUser.PermissionProjectSPSControllerUpdate)
 	if !ok {
-		return
-	}
-
-	if !projectshared.EnsureProjectAccessAndAnyPermission(
-		c,
-		h.access,
-		projectID,
-		domainUser.PermissionProjectSPSControllerUpdate,
-	) {
 		return
 	}
 
@@ -365,9 +281,7 @@ func (h *Handler) UpdateProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.sps_controller.updated", updated.SPSControllerID.String())
-	}
+	h.base.Notify(c, projectID, "project.sps_controller.updated", updated.SPSControllerID.String())
 
 	c.JSON(http.StatusOK, toProjectSPSControllerResponse(*updated))
 }
@@ -384,17 +298,8 @@ func (h *Handler) UpdateProjectSPSController(c *gin.Context) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/projects/{id}/sps-controllers/{linkId} [delete]
 func (h *Handler) DeleteProjectSPSController(c *gin.Context) {
-	projectID, ok := handlerutil.ParseUUIDParam(c, "id")
+	projectID, ok := h.base.ProjectIDWithPermission(c, domainUser.PermissionProjectSPSControllerDelete)
 	if !ok {
-		return
-	}
-
-	if !projectshared.EnsureProjectAccessAndAnyPermission(
-		c,
-		h.access,
-		projectID,
-		domainUser.PermissionProjectSPSControllerDelete,
-	) {
 		return
 	}
 
@@ -411,9 +316,7 @@ func (h *Handler) DeleteProjectSPSController(c *gin.Context) {
 		return
 	}
 
-	if h.notify != nil {
-		h.notify(c, projectID, "project.sps_controller.deleted")
-	}
+	h.base.Notify(c, projectID, "project.sps_controller.deleted")
 
 	c.Status(http.StatusNoContent)
 }

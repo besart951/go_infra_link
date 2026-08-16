@@ -53,8 +53,14 @@
 
   const selectedBuildingFilterCount = $derived(listState.selectedBuildingFilterIds.length);
 
+  function detailHref(cabinet: ControlCabinet): string {
+    return listState.projectId
+      ? `/projects/${listState.projectId}/facility/control-cabinets/${cabinet.id}`
+      : `/facility/control-cabinets/${cabinet.id}`;
+  }
+
   async function handleView(cabinet: ControlCabinet): Promise<void> {
-    await goto(`/facility/control-cabinets/${cabinet.id}`);
+    await goto(detailHref(cabinet));
   }
 
   async function handleHistoryRestored(): Promise<void> {

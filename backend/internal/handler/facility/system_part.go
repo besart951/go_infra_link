@@ -1,7 +1,6 @@
 package facility
 
 import (
-	"context"
 	"net/http"
 	"strings"
 
@@ -15,19 +14,13 @@ type SystemPartHandler struct {
 	service           SystemPartService
 	apparatService    ApparatService
 	objectDataService ObjectDataService
-	referenceData     FacilityReferenceDataBroadcaster
 }
 
-func NewSystemPartHandler(service SystemPartService, apparatService ApparatService, objectDataService ObjectDataService, referenceData ...FacilityReferenceDataBroadcaster) *SystemPartHandler {
-	var broadcaster FacilityReferenceDataBroadcaster
-	if len(referenceData) > 0 {
-		broadcaster = referenceData[0]
-	}
+func NewSystemPartHandler(service SystemPartService, apparatService ApparatService, objectDataService ObjectDataService) *SystemPartHandler {
 	return &SystemPartHandler{
 		service:           service,
 		apparatService:    apparatService,
 		objectDataService: objectDataService,
-		referenceData:     broadcaster,
 	}
 }
 
@@ -54,7 +47,6 @@ func (h *SystemPartHandler) CreateSystemPart(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, toSystemPartResponse(*systemPart))
-	h.broadcastReferenceDataChange(c.Request.Context())
 }
 
 // GetSystemPart godoc
@@ -279,7 +271,6 @@ func (h *SystemPartHandler) UpdateSystemPart(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toSystemPartResponse(*systemPart))
-	h.broadcastReferenceDataChange(c.Request.Context())
 }
 
 // DeleteSystemPart godoc
@@ -309,11 +300,4 @@ func (h *SystemPartHandler) DeleteSystemPart(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
-	h.broadcastReferenceDataChange(c.Request.Context())
-}
-
-func (h *SystemPartHandler) broadcastReferenceDataChange(ctx context.Context) {
-	if h.referenceData != nil {
-		h.referenceData.BroadcastFacilityReferenceDataChange(ctx, "system_parts")
-	}
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
+	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	projectrepo "github.com/besart951/go_infra_link/backend/internal/repository/project"
@@ -178,6 +179,64 @@ func TestApplyMigrationsEnsuresUserReadDeletedPermission(t *testing.T) {
 	var grant domainUser.RolePermission
 	if err := db.Where("role = ? AND permission = ?", domainUser.RoleSuperAdmin, domainUser.PermissionUserReadDeleted).First(&grant).Error; err != nil {
 		t.Fatalf("expected superadmin grant for %s, got %v", domainUser.PermissionUserReadDeleted, err)
+	}
+}
+
+func TestObjectDataOptimisticLockingMigrationBackfillsAlreadyBaselinedDatabase(t *testing.T) {
+	db := openMigrationTestDB(t)
+	if err := db.AutoMigrate(&schemaMigration{}); err != nil {
+		t.Fatalf("expected migration table setup to succeed, got %v", err)
+	}
+
+	for _, migration := range migrations {
+		if migration.version == "202608160001" {
+			continue
+		}
+		if err := db.Create(&schemaMigration{
+			Version:     migration.version,
+			Description: migration.description,
+			AppliedAt:   time.Now().UTC(),
+		}).Error; err != nil {
+			t.Fatalf("expected migration %s to be marked applied, got %v", migration.version, err)
+		}
+	}
+
+	if err := db.Exec(`
+		CREATE TABLE object_data (
+			id text PRIMARY KEY,
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			description text NOT NULL,
+			obj_version text NOT NULL,
+			is_active boolean NOT NULL DEFAULT true,
+			project_id text
+		)
+	`).Error; err != nil {
+		t.Fatalf("expected legacy object_data table setup to succeed, got %v", err)
+	}
+
+	if err := ApplyMigrations(db); err != nil {
+		t.Fatalf("expected object data version migration to succeed, got %v", err)
+	}
+	var versionColumnCount int
+	if err := db.Raw(
+		"SELECT COUNT(*) FROM pragma_table_info('object_data') WHERE name = 'version'",
+	).Scan(&versionColumnCount).Error; err != nil {
+		t.Fatalf("expected object_data.version column lookup to succeed, got %v", err)
+	}
+	if versionColumnCount != 1 {
+		t.Fatal("expected object_data.version to be added for already-baselined databases")
+	}
+
+	now := time.Now().UTC()
+	objectData := domainFacility.ObjectData{
+		Base:        domain.Base{ID: uuid.New(), CreatedAt: now, UpdatedAt: now, Version: 1},
+		Description: "Migrated object data",
+		Version:     "1.0",
+		IsActive:    true,
+	}
+	if err := db.Create(&objectData).Error; err != nil {
+		t.Fatalf("expected object data create with optimistic-locking version to succeed, got %v", err)
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
+	fielddevice "github.com/besart951/go_infra_link/backend/internal/handler/facility/fielddevice"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -23,9 +24,9 @@ func NewFieldDeviceHandler(service FieldDeviceService, broadcasters ...ProjectRe
 	return h
 }
 
-func (h *FieldDeviceHandler) broadcastChange(c *gin.Context, id uuid.UUID, action string) {
+func (h *FieldDeviceHandler) broadcastChange(c *gin.Context, id uuid.UUID, action string, changedFields ...string) {
 	if h.collaboration != nil {
-		h.collaboration.BroadcastFieldDeviceChange(c.Request.Context(), currentActorID(c), id, action)
+		h.collaboration.BroadcastFieldDeviceChange(c.Request.Context(), currentActorID(c), id, action, changedFields...)
 	}
 }
 
@@ -46,17 +47,7 @@ func (h *FieldDeviceHandler) MultiCreateFieldDevices(c *gin.Context) {
 		return
 	}
 
-	// Convert DTOs to domain models
-	items := make([]domainFacility.FieldDeviceCreateItem, len(req.FieldDevices))
-	for i, fdReq := range req.FieldDevices {
-		fieldDevice := toFieldDeviceModel(fdReq)
-		bacnetObjects := toFieldDeviceBacnetObjects(fdReq.BacnetObjects)
-		items[i] = domainFacility.FieldDeviceCreateItem{
-			FieldDevice:   fieldDevice,
-			ObjectDataID:  fdReq.ObjectDataID,
-			BacnetObjects: bacnetObjects,
-		}
-	}
+	items := fielddevice.CreateItems(req.FieldDevices)
 
 	// Create field devices
 	result := h.service.MultiCreate(c.Request.Context(), items)
@@ -274,6 +265,7 @@ func (h *FieldDeviceHandler) GetFieldDeviceOptions(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/field-devices/{id} [put]
+// @Router /api/v1/facility/field-devices/{id} [patch]
 func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
 	if !ok {
@@ -304,12 +296,12 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 
 	var bacnetObjects *[]domainFacility.BacnetObject
 	if req.BacnetObjects != nil {
-		mapped := toFieldDeviceBacnetObjects(*req.BacnetObjects)
+		mapped := fielddevice.ToBacnetObjects(*req.BacnetObjects)
 		bacnetObjects = &mapped
 	}
 
 	if err := h.service.UpdateWithBacnetObjects(ctx, fieldDevice, req.ObjectDataID, bacnetObjects); err != nil {
-		if current, getErr := h.service.GetByID(ctx, id); getErr == nil && respondWriteConflict(c, err, "field_device", id, baseVersion, fieldDeviceUpdatePaths(req), current.Version, toFieldDeviceResponse(*current)) {
+		if current, getErr := h.service.GetByID(ctx, id); getErr == nil && respondWriteConflict(c, err, "field_device", id, baseVersion, req.ChangedFields(), current.Version, toFieldDeviceResponse(*current)) {
 			return
 		}
 		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed",
@@ -321,7 +313,7 @@ func (h *FieldDeviceHandler) UpdateFieldDevice(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toFieldDeviceResponse(*fieldDevice))
-	h.broadcastChange(c, fieldDevice.ID, "updated")
+	h.broadcastChange(c, fieldDevice.ID, "updated", req.ChangedFields()...)
 }
 
 // DeleteFieldDevice godoc
@@ -416,7 +408,7 @@ func (h *FieldDeviceHandler) CreateFieldDeviceSpecification(c *gin.Context) {
 		return
 	}
 
-	h.broadcastChange(c, fieldDeviceID, "updated")
+	h.broadcastChange(c, fieldDeviceID, "updated", dto.FieldDeviceSpecificationChangedFields()...)
 	c.JSON(http.StatusCreated, toSpecificationResponse(*spec))
 }
 
@@ -454,7 +446,7 @@ func (h *FieldDeviceHandler) UpdateFieldDeviceSpecification(c *gin.Context) {
 		return
 	}
 
-	h.broadcastChange(c, fieldDeviceID, "updated")
+	h.broadcastChange(c, fieldDeviceID, "updated", dto.FieldDeviceSpecificationChangedFields()...)
 	c.JSON(http.StatusOK, toSpecificationResponse(*spec))
 }
 
@@ -506,10 +498,11 @@ func (h *FieldDeviceHandler) BulkUpdateFieldDevices(c *gin.Context) {
 		}
 	}
 
+	changedFields := req.ChangedFields()
 	result := h.service.BulkUpdate(c.Request.Context(), updates)
 	for _, item := range result.Results {
 		if item.Success {
-			h.broadcastChange(c, item.ID, "updated")
+			h.broadcastChange(c, item.ID, "updated", changedFields...)
 		}
 	}
 

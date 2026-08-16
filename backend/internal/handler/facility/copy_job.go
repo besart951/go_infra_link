@@ -1,10 +1,12 @@
 package facility
 
 import (
+	"context"
 	"net/http"
 
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
+	sharedpresenter "github.com/besart951/go_infra_link/backend/internal/handler/presenter/shared"
 	"github.com/besart951/go_infra_link/backend/internal/handlerutil"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
@@ -61,8 +63,39 @@ func copyOperationID(c *gin.Context) (uuid.UUID, bool) {
 }
 
 func toCopyJobResponse(job facilityservice.CopyJob) dto.CopyJobResponse {
-	return dto.CopyJobResponse{
-		JobID: job.ID, Kind: string(job.Kind), Status: string(job.Status), Progress: job.Progress,
-		Stage: job.Stage, Error: job.Error, CreatedAt: job.CreatedAt, UpdatedAt: job.UpdatedAt,
+	return sharedpresenter.ToCopyJobResponse(job)
+}
+
+// startFacilityCopyJob owns the transport mechanics shared by the global
+// hierarchy-copy endpoints. The callback keeps each domain's copy and
+// realtime side effects local to its handler.
+func startFacilityCopyJob(
+	c *gin.Context,
+	jobs *facilityservice.CopyJobManager,
+	kind facilityservice.CopyJobKind,
+	work func(context.Context, uuid.UUID) error,
+) bool {
+	if jobs == nil {
+		return false
 	}
+
+	operationID, ok := copyOperationID(c)
+	if !ok {
+		return true
+	}
+	actorID, ok := middleware.GetUserID(c)
+	if !ok {
+		respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
+		return true
+	}
+	job, err := jobs.Start(actorID, operationID, kind, func(ctx context.Context) error {
+		return work(ctx, actorID)
+	})
+	if err != nil {
+		respondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
+		return true
+	}
+
+	c.JSON(http.StatusAccepted, sharedpresenter.ToCopyJobResponse(job))
+	return true
 }

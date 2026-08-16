@@ -27,6 +27,11 @@ type PermissionDenialExplainer interface {
 
 type ProjectChangeNotifier func(*gin.Context, uuid.UUID, string, ...string)
 
+// ProjectMutationNotifier carries the exact changed fields from an HTTP
+// mutation. It is deliberately separate from ProjectChangeNotifier so legacy
+// lifecycle events retain their compact call shape.
+type ProjectMutationNotifier func(*gin.Context, uuid.UUID, string, []string, ...string)
+
 func EnsureProjectAccess(c *gin.Context, access AccessPolicyService, projectID uuid.UUID) bool {
 	if access == nil {
 		handlerutil.RespondLocalizedError(c, http.StatusInternalServerError, "authorization_failed", "authorization_failed")

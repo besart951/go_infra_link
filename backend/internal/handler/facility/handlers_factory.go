@@ -12,12 +12,13 @@ import (
 type ProjectRefreshBroadcaster interface {
 	BroadcastRefreshForControlCabinet(ctx context.Context, actorID *uuid.UUID, controlCabinetID uuid.UUID, scope string)
 	BroadcastRefreshForSPSController(ctx context.Context, actorID *uuid.UUID, spsControllerID uuid.UUID, scope string)
-	BroadcastControlCabinetDelta(ctx context.Context, actorID *uuid.UUID, controlCabinet domainFacility.ControlCabinet)
-	BroadcastSPSControllerDelta(ctx context.Context, actorID *uuid.UUID, spsController domainFacility.SPSController)
+	BroadcastControlCabinetDelta(ctx context.Context, actorID *uuid.UUID, controlCabinet domainFacility.ControlCabinet, changedFields ...string)
+	BroadcastSPSControllerDelta(ctx context.Context, actorID *uuid.UUID, spsController domainFacility.SPSController, changedFields ...string)
+	BroadcastSPSControllerSystemTypeChange(ctx context.Context, actorID *uuid.UUID, spsControllerID, systemTypeID uuid.UUID, action string, changedFields ...string)
 }
 
 type ProjectFieldDeviceChangeBroadcaster interface {
-	BroadcastFieldDeviceChange(ctx context.Context, actorID *uuid.UUID, fieldDeviceID uuid.UUID, action string)
+	BroadcastFieldDeviceChange(ctx context.Context, actorID *uuid.UUID, fieldDeviceID uuid.UUID, action string, changedFields ...string)
 }
 
 type FacilityReferenceDataBroadcaster interface {
@@ -36,6 +37,13 @@ type FacilityReferenceDataRealtime interface {
 	FacilityReferenceDataBroadcaster
 	FacilityChangeBroadcaster
 	FacilityReferenceDataStreamer
+}
+
+// FacilityMutationBroadcaster is the narrow seam required by route wrappers.
+// Streaming remains independent of mutation delivery.
+type FacilityMutationBroadcaster interface {
+	FacilityReferenceDataBroadcaster
+	FacilityChangeBroadcaster
 }
 
 // ServiceDeps groups service dependencies for facility handler construction.
@@ -92,7 +100,8 @@ type Handlers struct {
 	DeleteImpact            *DeleteImpactHandler
 	CopyJob                 *CopyJobHandler
 	ReferenceData           *FacilityReferenceDataStreamHandler
-	Realtime                FacilityChangeBroadcaster
+	Details                 *FacilityDetailHandler
+	Realtime                FacilityMutationBroadcaster
 }
 
 // NewHandlers creates facility handlers using service dependencies.
@@ -115,12 +124,21 @@ func registerFacilityHierarchyHandlers(handlers *Handlers, deps ServiceDeps) {
 	handlers.BacnetObject = NewBacnetObjectHandler(deps.BacnetObject, deps.Collaboration)
 	handlers.ObjectData = NewObjectDataHandler(deps.ObjectData, deps.BacnetObject, deps.Apparat)
 	handlers.Validation = NewValidationHandler(deps.Building, deps.ControlCabinet, deps.SPSController)
+	handlers.Details = NewFacilityDetailHandler(
+		deps.Building,
+		deps.ControlCabinet,
+		deps.SPSController,
+		deps.SPSControllerSystemType,
+		deps.FieldDevice,
+		deps.Apparat,
+		deps.SystemPart,
+	)
 }
 
 func registerFacilityLookupHandlers(handlers *Handlers, deps ServiceDeps) {
 	handlers.SystemType = NewSystemTypeHandler(deps.SystemType)
-	handlers.SystemPart = NewSystemPartHandler(deps.SystemPart, deps.Apparat, deps.ObjectData, deps.ReferenceData)
-	handlers.Apparat = NewApparatHandler(deps.Apparat, deps.ReferenceData)
+	handlers.SystemPart = NewSystemPartHandler(deps.SystemPart, deps.Apparat, deps.ObjectData)
+	handlers.Apparat = NewApparatHandler(deps.Apparat)
 	handlers.ReferenceData = NewFacilityReferenceDataStreamHandler(deps.ReferenceData)
 	handlers.StateText = NewStateTextHandler(deps.StateText)
 	handlers.NotificationClass = NewNotificationClassHandler(deps.NotificationClass)

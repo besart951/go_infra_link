@@ -14,12 +14,14 @@ type CreateBuildingRequest struct {
 }
 
 type UpdateBuildingRequest struct {
-	IWSCode       string `json:"iws_code" binding:"omitempty,len=4"`
-	BuildingGroup int    `json:"building_group" binding:"omitempty"`
+	BaseVersion   *uint64 `json:"base_version" binding:"omitempty,min=1"`
+	IWSCode       string  `json:"iws_code" binding:"omitempty,len=4"`
+	BuildingGroup int     `json:"building_group" binding:"omitempty"`
 }
 
 type BuildingResponse struct {
 	ID            uuid.UUID `json:"id"`
+	Version       uint64    `json:"version"`
 	IWSCode       string    `json:"iws_code"`
 	BuildingGroup int       `json:"building_group"`
 	CreatedAt     time.Time `json:"created_at"`

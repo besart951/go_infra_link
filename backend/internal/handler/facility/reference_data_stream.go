@@ -3,7 +3,6 @@ package facility
 import (
 	"net/http"
 
-	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
 	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	"github.com/gin-gonic/gin"
@@ -53,30 +52,11 @@ func (h *FacilityReferenceDataStreamHandler) readableResources(c *gin.Context) m
 	if !ok {
 		return map[string]struct{}{}
 	}
-	permissions := map[string]string{
-		"buildings":                   domainUser.PermissionBuildingRead,
-		"system_types":                domainUser.PermissionSystemTypeRead,
-		"system_parts":                domainUser.PermissionSystemPartRead,
-		"apparats":                    domainUser.PermissionApparatRead,
-		"control_cabinets":            domainUser.PermissionControlCabinetRead,
-		"sps_controllers":             domainUser.PermissionSPSControllerRead,
-		"sps_controller_system_types": domainUser.PermissionSPSControllerSystemTypeRead,
-		"field_devices":               domainUser.PermissionFieldDeviceRead,
-		"bacnet_objects":              domainUser.PermissionBacnetObjectRead,
-		"object_data":                 domainUser.PermissionObjectDataRead,
-		"state_texts":                 domainUser.PermissionStateTextRead,
-		"notification_classes":        domainUser.PermissionNotificationClassRead,
-		"alarm_definitions":           domainUser.PermissionAlarmDefinitionRead,
-		"alarm_types":                 domainUser.PermissionAlarmTypeRead,
-		"alarm_type_fields":           domainUser.PermissionAlarmFieldRead,
-		"alarm_fields":                domainUser.PermissionAlarmFieldRead,
-		"units":                       domainUser.PermissionUnitRead,
-	}
-	readable := make(map[string]struct{}, len(permissions))
-	for resource, permission := range permissions {
-		allowed, err := h.authz.HasPermission(c.Request.Context(), role, permission)
+	readable := make(map[string]struct{}, len(facilityResourceCatalog))
+	for _, definition := range facilityResourceCatalog {
+		allowed, err := h.authz.HasPermission(c.Request.Context(), role, definition.readPermission)
 		if err == nil && allowed {
-			readable[resource] = struct{}{}
+			readable[definition.name] = struct{}{}
 		}
 	}
 	return readable

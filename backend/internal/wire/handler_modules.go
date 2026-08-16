@@ -18,9 +18,19 @@ func newProjectHandlers(services *Services, runtime *RuntimeAdapters, copyJobs *
 		Phase:              services.Phase,
 		PhasePermission:    services.PhasePermission,
 		FieldDeviceOptions: services.Facility.FieldDevice,
-		Notifications:      services.Notification,
-		Collaboration:      runtime.ProjectCollaboration,
-		CopyJobs:           copyJobs,
+		FacilityDetail: projecthandler.FacilityDetailServices{
+			Building:                services.Facility.Building,
+			ControlCabinet:          services.Facility.ControlCabinet,
+			SPSController:           services.Facility.SPSController,
+			SPSControllerSystemType: services.Facility.SPSControllerSystemType,
+			FieldDevice:             services.Facility.FieldDevice,
+			Apparat:                 services.Facility.Apparat,
+			SystemPart:              services.Facility.SystemPart,
+		},
+		Authorization: services.RBAC,
+		Notifications: services.Notification,
+		Collaboration: runtime.ProjectCollaboration,
+		CopyJobs:      copyJobs,
 	})
 }
 

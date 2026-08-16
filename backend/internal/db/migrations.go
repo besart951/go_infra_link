@@ -151,6 +151,12 @@ var migrations = []migration{
 		blueGreenCompatible: true,
 		apply:               migrateProjectChanges,
 	},
+	{
+		version:             "202608160001",
+		description:         "object_data_optimistic_locking",
+		blueGreenCompatible: true,
+		apply:               migrateObjectDataOptimisticLocking,
+	},
 }
 
 type MigrationOptions struct {

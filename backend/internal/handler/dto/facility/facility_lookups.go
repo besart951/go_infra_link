@@ -169,7 +169,10 @@ type AlarmDefinitionListResponse struct {
 
 // This represents the join of SPS Controller and System Type
 type SPSControllerSystemTypeResponse struct {
-	ID               uuid.UUID `json:"id"`
+	ID      uuid.UUID `json:"id"`
+	Version uint64    `json:"version"`
+	// AggregateVersion is retained for clients generated before the unified
+	// version token was introduced. New clients should use Version.
 	AggregateVersion uint64    `json:"aggregate_version,omitempty"`
 	SPSControllerID  uuid.UUID `json:"sps_controller_id"`
 	SystemTypeID     uuid.UUID `json:"system_type_id"`

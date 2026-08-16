@@ -214,7 +214,7 @@ export class SPSControllerDetailState {
   }
 
   getSystemTypeHref(id: string): string {
-    return `/facility/sps-controller-system-type/${id}`;
+    return `/facility/sps-controller-system-types/${id}`;
   }
 
   getSystemTypeActionHref(id: string): string {

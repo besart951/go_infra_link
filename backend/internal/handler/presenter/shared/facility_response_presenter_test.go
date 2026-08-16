@@ -109,6 +109,34 @@ func TestToSPSControllerSystemTypeResponseIncludesFieldDevicesCount(t *testing.T
 	}
 }
 
+func TestToFieldDeviceResponsePreservesVersionAndOmitsEmptySystemPart(t *testing.T) {
+	now := time.Now().UTC()
+	fieldDeviceID := uuid.New()
+	systemTypeID := uuid.New()
+	apparatID := uuid.New()
+	apparatNr := 4
+
+	response := ToFieldDeviceResponse(domainFacility.FieldDevice{
+		Base:                      domain.Base{ID: fieldDeviceID, Version: 7, CreatedAt: now, UpdatedAt: now},
+		ApparatNr:                 apparatNr,
+		SPSControllerSystemTypeID: systemTypeID,
+		ApparatID:                 apparatID,
+	})
+
+	if response.ID != fieldDeviceID || response.Version != 7 {
+		t.Fatalf("expected id/version %s/7, got %s/%d", fieldDeviceID, response.ID, response.Version)
+	}
+	if response.ApparatNr == nil || *response.ApparatNr != apparatNr {
+		t.Fatalf("expected apparat number %d, got %#v", apparatNr, response.ApparatNr)
+	}
+	if response.SystemPartID != nil {
+		t.Fatalf("expected an omitted system part for uuid.Nil, got %s", *response.SystemPartID)
+	}
+	if response.SPSControllerSystemTypeID != systemTypeID || response.ApparatID != apparatID {
+		t.Fatalf("expected relationships to be preserved")
+	}
+}
+
 func TestToFieldDeviceOptionsResponsePreservesNestedRelationships(t *testing.T) {
 	now := time.Now().UTC()
 	apparatID := uuid.New()

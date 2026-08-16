@@ -20,6 +20,7 @@ func mapItems[T, R any](items []T, fn func(T) R) []R {
 func toBuildingResponse(building domainFacility.Building) dto.BuildingResponse {
 	return dto.BuildingResponse{
 		ID:            building.ID,
+		Version:       building.Version,
 		IWSCode:       building.IWSCode,
 		BuildingGroup: building.BuildingGroup,
 		CreatedAt:     building.CreatedAt,
@@ -140,25 +141,7 @@ func toSPSControllerListResponse(list *domain.PaginatedList[domainFacility.SPSCo
 }
 
 func toFieldDeviceResponse(fieldDevice domainFacility.FieldDevice) dto.FieldDeviceResponse {
-	var systemPartID *uuid.UUID
-	if fieldDevice.SystemPartID != uuid.Nil {
-		systemPartID = &fieldDevice.SystemPartID
-	}
-
-	resp := dto.FieldDeviceResponse{
-		ID:                        fieldDevice.ID,
-		Version:                   fieldDevice.Version,
-		BMK:                       fieldDevice.BMK,
-		Description:               fieldDevice.Description,
-		TextIndividuell:           fieldDevice.TextIndividuell,
-		ApparatNr:                 &fieldDevice.ApparatNr,
-		SPSControllerSystemTypeID: fieldDevice.SPSControllerSystemTypeID,
-		SystemPartID:              systemPartID,
-		SpecificationID:           fieldDevice.SpecificationID,
-		ApparatID:                 fieldDevice.ApparatID,
-		CreatedAt:                 fieldDevice.CreatedAt,
-		UpdatedAt:                 fieldDevice.UpdatedAt,
-	}
+	resp := sharedpresenter.ToFieldDeviceResponse(fieldDevice)
 
 	// Include embedded related entities if preloaded
 	if fieldDevice.SPSControllerSystemType.ID != uuid.Nil {

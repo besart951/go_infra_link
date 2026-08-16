@@ -6,6 +6,7 @@
   import type { Snippet } from 'svelte';
   import type { ListState } from '$lib/application/useCases/listUseCase.js';
   import { createTranslator } from '$lib/i18n/translator';
+  import { cn } from '$lib/utils.js';
 
   const t = createTranslator();
 
@@ -18,6 +19,8 @@
     onSearch: (text: string) => void;
     onPageChange: (page: number) => void;
     onReload?: () => void;
+    onRowClick?: (item: T) => void;
+    getRowLabel?: (item: T) => string;
   }
 
   let {
@@ -28,7 +31,9 @@
     searchPlaceholder = 'Search...',
     onSearch,
     onPageChange,
-    onReload
+    onReload,
+    onRowClick,
+    getRowLabel
   }: Props = $props();
 
   let searchInput = $derived(state.searchText);
@@ -48,6 +53,13 @@
     if (state.page < state.totalPages) {
       onPageChange(state.page + 1);
     }
+  }
+
+  function handleRowKeydown(event: KeyboardEvent, item: T) {
+    if (!onRowClick || (event.key !== 'Enter' && event.key !== ' ')) return;
+
+    event.preventDefault();
+    onRowClick(item);
   }
 </script>
 
@@ -109,7 +121,19 @@
           </Table.Row>
         {:else}
           {#each state.items as item}
-            <Table.Row class={state.loading ? 'opacity-60' : undefined}>
+            <Table.Row
+              class={cn(
+                state.loading ? 'opacity-60' : undefined,
+                onRowClick
+                  ? 'cursor-pointer focus-visible:bg-muted focus-visible:outline-none'
+                  : undefined
+              )}
+              role={onRowClick ? 'link' : undefined}
+              tabindex={onRowClick ? 0 : undefined}
+              aria-label={onRowClick ? getRowLabel?.(item) : undefined}
+              onclick={() => onRowClick?.(item)}
+              onkeydown={(event: KeyboardEvent) => handleRowKeydown(event, item)}
+            >
               {@render rowSnippet(item)}
             </Table.Row>
           {/each}

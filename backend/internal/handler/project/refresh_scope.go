@@ -16,7 +16,7 @@ func refreshScopeForProjectEvent(eventType string) (string, bool) {
 		return projectRefreshScopeControlCabinet, true
 	case strings.HasPrefix(eventType, "project.sps_controller."):
 		return projectRefreshScopeSPSController, true
-	case eventType == "project.sps_controller_system_type.copied":
+	case strings.HasPrefix(eventType, "project.sps_controller_system_type."):
 		return projectRefreshScopeSPSController, true
 	case strings.HasPrefix(eventType, "project.field_device."):
 		return projectRefreshScopeFieldDevice, true

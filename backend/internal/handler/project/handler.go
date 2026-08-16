@@ -54,15 +54,23 @@ func newProjectHandler(
 }
 
 func (h *ProjectHandler) notifyProjectChange(c *gin.Context, projectID uuid.UUID, eventType string, entityIDs ...string) {
+	h.notifyProjectMutation(c, projectID, eventType, nil, entityIDs...)
+}
+
+func (h *ProjectHandler) notifyProjectMutation(c *gin.Context, projectID uuid.UUID, eventType string, changedFields []string, entityIDs ...string) {
 	var actorID *uuid.UUID
 	if userID, ok := middleware.GetUserID(c); ok {
 		actorID = &userID
 	}
-	h.notifyProjectChangeForActor(c.Request.Context(), actorID, projectID, eventType, entityIDs...)
+	h.notifyProjectMutationForActor(c.Request.Context(), actorID, projectID, eventType, changedFields, entityIDs...)
 }
 
 func (h *ProjectHandler) notifyProjectChangeForActor(ctx context.Context, actorID *uuid.UUID, projectID uuid.UUID, eventType string, entityIDs ...string) {
-	h.recordDurableProjectChangeForActor(ctx, projectID, eventType, actorID, entityIDs...)
+	h.notifyProjectMutationForActor(ctx, actorID, projectID, eventType, nil, entityIDs...)
+}
+
+func (h *ProjectHandler) notifyProjectMutationForActor(ctx context.Context, actorID *uuid.UUID, projectID uuid.UUID, eventType string, changedFields []string, entityIDs ...string) {
+	h.recordDurableProjectChangeForActor(ctx, projectID, eventType, actorID, changedFields, entityIDs...)
 
 	if h.notifications != nil {
 		metadata := map[string]string{
@@ -92,11 +100,20 @@ func (h *ProjectHandler) notifyProjectChangeForActor(ctx context.Context, actorI
 }
 
 func (h *ProjectHandler) recordDurableProjectChange(c *gin.Context, projectID uuid.UUID, eventType string, actorID *uuid.UUID, entityIDs ...string) {
-	h.recordDurableProjectChangeForActor(c.Request.Context(), projectID, eventType, actorID, entityIDs...)
+	h.recordDurableProjectChangeForActor(c.Request.Context(), projectID, eventType, actorID, nil, entityIDs...)
 }
 
-func (h *ProjectHandler) recordDurableProjectChangeForActor(ctx context.Context, projectID uuid.UUID, eventType string, actorID *uuid.UUID, entityIDs ...string) {
+func (h *ProjectHandler) recordDurableProjectChangeForActor(ctx context.Context, projectID uuid.UUID, eventType string, actorID *uuid.UUID, changedFields []string, entityIDs ...string) {
 	if h.changes == nil {
+		return
+	}
+	if recorder, ok := h.changes.(interface {
+		RecordEventsWithFields(context.Context, uuid.UUID, string, *uuid.UUID, []string, ...string) ([]domainProject.Change, error)
+	}); ok {
+		changes, err := recorder.RecordEventsWithFields(ctx, projectID, eventType, actorID, changedFields, entityIDs...)
+		if err == nil {
+			h.broadcastDurableProjectChanges(ctx, changes)
+		}
 		return
 	}
 	recorder, ok := h.changes.(interface {
@@ -110,6 +127,10 @@ func (h *ProjectHandler) recordDurableProjectChangeForActor(ctx context.Context,
 	if err != nil {
 		return
 	}
+	h.broadcastDurableProjectChanges(ctx, changes)
+}
+
+func (h *ProjectHandler) broadcastDurableProjectChanges(ctx context.Context, changes []domainProject.Change) {
 	if h.collaboration == nil {
 		return
 	}
@@ -142,6 +163,8 @@ func resourceTypeForProjectNotificationEvent(eventType string) string {
 		return "control_cabinet"
 	case strings.HasPrefix(eventType, "project.sps_controller."):
 		return "sps_controller"
+	case strings.HasPrefix(eventType, "project.sps_controller_system_type."):
+		return "sps_controller_system_type"
 	case strings.HasPrefix(eventType, "project.field_device."):
 		return "field_device"
 	case strings.HasPrefix(eventType, "project.object_data."):

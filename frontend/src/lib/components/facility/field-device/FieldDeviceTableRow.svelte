@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Table from '$lib/components/ui/table/index.js';
   import { Checkbox } from '$lib/components/ui/checkbox/index.js';
@@ -198,6 +199,12 @@
   function openHistory(fields: string[] = []): void {
     historyFields = fields;
     historyOpen = true;
+  }
+
+  function detailHref(): string {
+    return rowState.effectiveProjectId
+      ? `/projects/${rowState.effectiveProjectId}/facility/field-devices/${device.id}`
+      : `/facility/field-devices/${device.id}`;
   }
 </script>
 
@@ -795,6 +802,9 @@
               )}
           >
             {$t('facility.copy')}
+          </DropdownMenu.Item>
+          <DropdownMenu.Item onclick={() => void goto(detailHref())}>
+            {$t('common.view')}
           </DropdownMenu.Item>
           {#if canReadTimeline}
             <DropdownMenu.Item onclick={() => openHistory()}>

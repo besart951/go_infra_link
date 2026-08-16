@@ -126,7 +126,7 @@ func (b *FacilityRefreshBroadcaster) BroadcastRefreshForSPSController(ctx contex
 	}
 }
 
-func (b *FacilityRefreshBroadcaster) BroadcastControlCabinetDelta(ctx context.Context, actorID *uuid.UUID, controlCabinet domainFacility.ControlCabinet) {
+func (b *FacilityRefreshBroadcaster) BroadcastControlCabinetDelta(ctx context.Context, actorID *uuid.UUID, controlCabinet domainFacility.ControlCabinet, changedFields ...string) {
 	if b == nil || b.lookup == nil || b.publisher == nil {
 		return
 	}
@@ -143,12 +143,12 @@ func (b *FacilityRefreshBroadcaster) BroadcastControlCabinetDelta(ctx context.Co
 	}
 
 	for _, projectID := range projectIDs {
-		b.recordAndPublish(ctx, projectID, actorID, "project.control_cabinet.updated", controlCabinet.ID)
+		b.recordAndPublishWithFields(ctx, projectID, actorID, "project.control_cabinet.updated", controlCabinet.ID, changedFields)
 	}
 
 }
 
-func (b *FacilityRefreshBroadcaster) BroadcastSPSControllerDelta(ctx context.Context, actorID *uuid.UUID, spsController domainFacility.SPSController) {
+func (b *FacilityRefreshBroadcaster) BroadcastSPSControllerDelta(ctx context.Context, actorID *uuid.UUID, spsController domainFacility.SPSController, changedFields ...string) {
 	if b == nil || b.lookup == nil || b.publisher == nil {
 		return
 	}
@@ -165,11 +165,28 @@ func (b *FacilityRefreshBroadcaster) BroadcastSPSControllerDelta(ctx context.Con
 	}
 
 	for _, projectID := range projectIDs {
-		b.recordAndPublish(ctx, projectID, actorID, "project.sps_controller.updated", spsController.ID)
+		b.recordAndPublishWithFields(ctx, projectID, actorID, "project.sps_controller.updated", spsController.ID, changedFields)
 	}
 }
 
-func (b *FacilityRefreshBroadcaster) BroadcastFieldDeviceChange(ctx context.Context, actorID *uuid.UUID, fieldDeviceID uuid.UUID, action string) {
+// BroadcastSPSControllerSystemTypeChange records an exact project event while
+// resolving the audience through the owning controller. The system type itself
+// has no direct project link, so this keeps the relationship traversal in one
+// adapter instead of every global mutation handler.
+func (b *FacilityRefreshBroadcaster) BroadcastSPSControllerSystemTypeChange(ctx context.Context, actorID *uuid.UUID, spsControllerID, systemTypeID uuid.UUID, action string, changedFields ...string) {
+	if b == nil || b.lookup == nil || b.publisher == nil {
+		return
+	}
+	projectIDs, err := b.lookup.ListProjectIDsBySPSControllerID(ctx, spsControllerID)
+	if err != nil {
+		return
+	}
+	for _, projectID := range projectIDs {
+		b.recordAndPublishWithFields(ctx, projectID, actorID, "project.sps_controller_system_type."+action, systemTypeID, changedFields)
+	}
+}
+
+func (b *FacilityRefreshBroadcaster) BroadcastFieldDeviceChange(ctx context.Context, actorID *uuid.UUID, fieldDeviceID uuid.UUID, action string, changedFields ...string) {
 	if b == nil || b.lookup == nil {
 		return
 	}
@@ -182,13 +199,26 @@ func (b *FacilityRefreshBroadcaster) BroadcastFieldDeviceChange(ctx context.Cont
 		return
 	}
 	for _, projectID := range projectIDs {
-		b.recordAndPublish(ctx, projectID, actorID, "project.field_device."+action, fieldDeviceID)
+		b.recordAndPublishWithFields(ctx, projectID, actorID, "project.field_device."+action, fieldDeviceID, changedFields)
 	}
 }
 
 func (b *FacilityRefreshBroadcaster) recordAndPublish(ctx context.Context, projectID uuid.UUID, actorID *uuid.UUID, eventType string, entityID uuid.UUID) {
+	b.recordAndPublishWithFields(ctx, projectID, actorID, eventType, entityID, nil)
+}
+
+func (b *FacilityRefreshBroadcaster) recordAndPublishWithFields(ctx context.Context, projectID uuid.UUID, actorID *uuid.UUID, eventType string, entityID uuid.UUID, changedFields []string) {
 	if b.changes == nil {
 		b.publisher.BroadcastRefreshRequest(projectID, actorID, "", []string{entityID.String()})
+		return
+	}
+	if recorder, ok := b.changes.(interface {
+		RecordEventsWithFields(context.Context, uuid.UUID, string, *uuid.UUID, []string, ...string) ([]domainProject.Change, error)
+	}); ok {
+		events, err := recorder.RecordEventsWithFields(ctx, projectID, eventType, actorID, changedFields, entityID.String())
+		if err == nil {
+			b.publishDurableChanges(ctx, events)
+		}
 		return
 	}
 	recorder, ok := b.changes.(interface {
@@ -202,6 +232,10 @@ func (b *FacilityRefreshBroadcaster) recordAndPublish(ctx context.Context, proje
 	if err != nil {
 		return
 	}
+	b.publishDurableChanges(ctx, events)
+}
+
+func (b *FacilityRefreshBroadcaster) publishDurableChanges(ctx context.Context, events []domainProject.Change) {
 	publisher, ok := any(b.publisher).(durableProjectChangePublisher)
 	if !ok {
 		return

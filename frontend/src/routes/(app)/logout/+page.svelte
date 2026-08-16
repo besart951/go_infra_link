@@ -5,11 +5,13 @@
   import { systemNotificationState } from '$lib/components/notifications/SystemNotificationState.svelte.js';
   import { createTranslator } from '$lib/i18n/translator';
   import { facilityReferenceDataCache } from '$lib/services/facilityReferenceDataCache.js';
+  import { facilityDetailCache } from '$lib/services/facilityDetailCache.js';
 
   const t = createTranslator();
 
   onMount(async () => {
     facilityReferenceDataCache.stop({ immediate: true });
+    facilityDetailCache.stop();
     systemNotificationState.disconnect({ immediate: true });
 
     try {

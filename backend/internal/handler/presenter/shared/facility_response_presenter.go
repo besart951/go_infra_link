@@ -3,6 +3,7 @@ package shared
 import (
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
+	"github.com/google/uuid"
 )
 
 func ToControlCabinetResponse(controlCabinet domainFacility.ControlCabinet) dto.ControlCabinetResponse {
@@ -37,6 +38,7 @@ func ToSPSControllerResponse(controller domainFacility.SPSController) dto.SPSCon
 func ToSPSControllerSystemTypeResponse(item domainFacility.SPSControllerSystemType) dto.SPSControllerSystemTypeResponse {
 	return dto.SPSControllerSystemTypeResponse{
 		ID:                item.ID,
+		Version:           item.Version,
 		AggregateVersion:  item.Version,
 		SPSControllerID:   item.SPSControllerID,
 		SystemTypeID:      item.SystemTypeID,
@@ -47,6 +49,31 @@ func ToSPSControllerSystemTypeResponse(item domainFacility.SPSControllerSystemTy
 		FieldDevicesCount: item.FieldDevicesCount,
 		CreatedAt:         item.CreatedAt,
 		UpdatedAt:         item.UpdatedAt,
+	}
+}
+
+// ToFieldDeviceResponse maps the scalar field-device API contract shared by
+// global and project-scoped endpoints. Callers may deliberately enrich the
+// response with preloaded relations when their endpoint exposes them.
+func ToFieldDeviceResponse(fieldDevice domainFacility.FieldDevice) dto.FieldDeviceResponse {
+	var systemPartID *uuid.UUID
+	if fieldDevice.SystemPartID != uuid.Nil {
+		systemPartID = &fieldDevice.SystemPartID
+	}
+
+	return dto.FieldDeviceResponse{
+		ID:                        fieldDevice.ID,
+		Version:                   fieldDevice.Version,
+		BMK:                       fieldDevice.BMK,
+		Description:               fieldDevice.Description,
+		TextIndividuell:           fieldDevice.TextIndividuell,
+		ApparatNr:                 &fieldDevice.ApparatNr,
+		SPSControllerSystemTypeID: fieldDevice.SPSControllerSystemTypeID,
+		SystemPartID:              systemPartID,
+		SpecificationID:           fieldDevice.SpecificationID,
+		ApparatID:                 fieldDevice.ApparatID,
+		CreatedAt:                 fieldDevice.CreatedAt,
+		UpdatedAt:                 fieldDevice.UpdatedAt,
 	}
 }
 

@@ -1,6 +1,7 @@
 package facility
 
 import (
+	domainUser "github.com/besart951/go_infra_link/backend/internal/domain/user"
 	"github.com/besart951/go_infra_link/backend/internal/handler/facility/alarm"
 	"github.com/besart951/go_infra_link/backend/internal/handler/facility/fielddevice"
 	"github.com/besart951/go_infra_link/backend/internal/handler/facility/hierarchy"
@@ -18,12 +19,18 @@ func RegisterRoutes(protectedV1 *gin.RouterGroup, handlers *Handlers, authChecke
 	registerRoutes(facility, authChecker, routeDefinitions(handlers), handlers.Realtime)
 	handlers.DeleteImpact.SetAuthorizationChecker(authChecker)
 	handlers.ReferenceData.SetAuthorizationChecker(authChecker)
+	handlers.Details.SetAuthorizationChecker(authChecker)
+	facility.GET("/buildings/:id/detail", middleware.RequirePermission(authChecker, domainUser.PermissionBuildingRead), handlers.Details.GetBuildingDetail)
+	facility.GET("/control-cabinets/:id/detail", middleware.RequirePermission(authChecker, domainUser.PermissionControlCabinetRead), handlers.Details.GetControlCabinetDetail)
+	facility.GET("/sps-controllers/:id/detail", middleware.RequirePermission(authChecker, domainUser.PermissionSPSControllerRead), handlers.Details.GetSPSControllerDetail)
+	facility.GET("/sps-controller-system-types/:id/detail", middleware.RequirePermission(authChecker, domainUser.PermissionSPSControllerSystemTypeRead), handlers.Details.GetSPSControllerSystemTypeDetail)
+	facility.GET("/field-devices/:id/detail", middleware.RequirePermission(authChecker, domainUser.PermissionFieldDeviceRead), handlers.Details.GetFieldDeviceDetail)
 	facility.GET("/delete-impacts", handlers.DeleteImpact.GetDeleteImpacts)
 	facility.GET("/reference-data/stream", handlers.ReferenceData.StreamFacilityReferenceData)
 	facility.GET("/copy-jobs/:id", handlers.CopyJob.GetCopyJob)
 }
 
-func registerRoutes(group *gin.RouterGroup, authChecker middleware.AuthorizationChecker, routes []routeDefinition, broadcaster FacilityChangeBroadcaster) {
+func registerRoutes(group *gin.RouterGroup, authChecker middleware.AuthorizationChecker, routes []routeDefinition, broadcaster FacilityMutationBroadcaster) {
 	for _, route := range routes {
 		handler := route.Handler
 		if change, ok := facilityMutationForRoute(route); ok && broadcaster != nil {

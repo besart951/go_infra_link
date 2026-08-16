@@ -290,6 +290,8 @@ export class ProjectSyncCoordinator {
   private readonly draftDebounceMs: number;
   private readonly catchUpRetryMs: number;
   private readonly bufferedChanges = new Map<number, ProjectChange>();
+  private readonly projectChangeListeners = new Set<(change: ProjectChange) => void>();
+  private readonly resetListeners = new Set<() => void>();
 
   private projectId: string | null = null;
   private destroyed = true;
@@ -359,6 +361,16 @@ export class ProjectSyncCoordinator {
     this.bufferedChanges.clear();
     this.catchUpPromise = null;
     this.connection.disconnect();
+  }
+
+  subscribeProjectChanges(listener: (change: ProjectChange) => void): () => void {
+    this.projectChangeListeners.add(listener);
+    return () => this.projectChangeListeners.delete(listener);
+  }
+
+  subscribeResetRequired(listener: () => void): () => void {
+    this.resetListeners.add(listener);
+    return () => this.resetListeners.delete(listener);
   }
 
   publishDraftState(entries: ProjectDraftEntry[]): void {
@@ -479,6 +491,9 @@ export class ProjectSyncCoordinator {
     this.currentRevision = change.revision;
     this.highestObservedRevision = Math.max(this.highestObservedRevision, change.revision);
     this.onProjectChange?.(change);
+    for (const listener of this.projectChangeListeners) {
+      listener(change);
+    }
   }
 
   private catchUp(): Promise<void> {
@@ -523,6 +538,9 @@ export class ProjectSyncCoordinator {
           response.current_revision
         );
         this.onResetRequired?.();
+        for (const listener of this.resetListeners) {
+          listener();
+        }
         return;
       }
 

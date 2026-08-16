@@ -7,9 +7,9 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
-	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // UpdateSPSControllerSystemType godoc
@@ -25,6 +25,7 @@ import (
 // @Failure 409 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /api/v1/facility/sps-controller-system-types/{id} [put]
+// @Router /api/v1/facility/sps-controller-system-types/{id} [patch]
 func (h *SPSControllerSystemTypeHandler) UpdateSPSControllerSystemType(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
 	if !ok {
@@ -57,10 +58,10 @@ func (h *SPSControllerSystemTypeHandler) UpdateSPSControllerSystemType(c *gin.Co
 		respondLocalizedDomainError(c, err, "update_failed", "facility.update_failed")
 		return
 	}
-	c.JSON(http.StatusOK, toSPSControllerSystemTypeResponse(*item))
 	if h.collaboration != nil {
-		h.collaboration.BroadcastRefreshForSPSController(c.Request.Context(), currentActorID(c), item.SPSControllerID, "sps_controller")
+		h.collaboration.BroadcastSPSControllerSystemTypeChange(c.Request.Context(), currentActorID(c), item.SPSControllerID, item.ID, "updated", req.ChangedFields()...)
 	}
+	c.JSON(http.StatusOK, toSPSControllerSystemTypeResponse(*item))
 }
 
 type SPSControllerSystemTypeHandler struct {
@@ -178,28 +179,13 @@ func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Cont
 	if !ok {
 		return
 	}
-	if h.copyJobs != nil {
-		operationID, ok := copyOperationID(c)
-		if !ok {
-			return
+	if startFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSControllerSystemType, func(ctx context.Context, actorID uuid.UUID) error {
+		copyEntity, err := h.service.CopyByID(ctx, id)
+		if err == nil && h.collaboration != nil {
+			h.collaboration.BroadcastSPSControllerSystemTypeChange(ctx, &actorID, copyEntity.SPSControllerID, copyEntity.ID, "created")
 		}
-		actorID, ok := middleware.GetUserID(c)
-		if !ok {
-			respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
-			return
-		}
-		job, err := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSControllerSystemType, func(ctx context.Context) error {
-			copyEntity, err := h.service.CopyByID(ctx, id)
-			if err == nil && h.collaboration != nil {
-				h.collaboration.BroadcastRefreshForSPSController(ctx, &actorID, copyEntity.SPSControllerID, "sps_controller")
-			}
-			return err
-		})
-		if err != nil {
-			respondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
-			return
-		}
-		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
+		return err
+	}) {
 		return
 	}
 
@@ -212,7 +198,7 @@ func (h *SPSControllerSystemTypeHandler) CopySPSControllerSystemType(c *gin.Cont
 	}
 
 	if h.collaboration != nil {
-		h.collaboration.BroadcastRefreshForSPSController(c.Request.Context(), currentActorID(c), copyEntity.SPSControllerID, "sps_controller")
+		h.collaboration.BroadcastSPSControllerSystemTypeChange(c.Request.Context(), currentActorID(c), copyEntity.SPSControllerID, copyEntity.ID, "created")
 	}
 	c.JSON(http.StatusCreated, toSPSControllerSystemTypeResponse(*copyEntity))
 }
@@ -245,7 +231,7 @@ func (h *SPSControllerSystemTypeHandler) DeleteSPSControllerSystemType(c *gin.Co
 		return
 	}
 	if h.collaboration != nil {
-		h.collaboration.BroadcastRefreshForSPSController(c.Request.Context(), currentActorID(c), item.SPSControllerID, "sps_controller")
+		h.collaboration.BroadcastSPSControllerSystemTypeChange(c.Request.Context(), currentActorID(c), item.SPSControllerID, item.ID, "deleted")
 	}
 
 	c.Status(http.StatusNoContent)

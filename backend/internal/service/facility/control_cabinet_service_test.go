@@ -55,6 +55,7 @@ func TestControlCabinetServiceUpdateRegeneratesSPSControllerDeviceNames(t *testi
 		nil,
 		nil,
 		nil,
+		facility.NewSPSControllerNameSynchronizer(buildings, controlCabinets, spsControllers),
 	)
 
 	updated := *controlCabinets.items[controlCabinetID]

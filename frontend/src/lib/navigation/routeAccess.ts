@@ -31,6 +31,7 @@ export const APP_ROUTE_ACCESS_RULES: RouteAccessRule[] = [
   { path: '/facility/buildings', permission: 'building.read' },
   { path: '/facility/control-cabinets', permission: 'controlcabinet.read' },
   { path: '/facility/sps-controllers', permission: 'spscontroller.read' },
+  { path: '/facility/sps-controller-system-types', permission: 'spscontrollersystemtype.read' },
   { path: '/facility/sps-controller-system-type', permission: 'spscontrollersystemtype.read' },
   { path: '/facility/field-devices', permission: 'fielddevice.read' },
   { path: '/facility/system-types', permission: 'systemtype.read' },

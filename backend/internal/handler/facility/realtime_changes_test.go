@@ -12,10 +12,11 @@ import (
 )
 
 type facilityChangeBroadcasterSpy struct {
-	resource string
-	action   string
-	ids      []uuid.UUID
-	called   int
+	resource                  string
+	action                    string
+	ids                       []uuid.UUID
+	called                    int
+	referenceCacheInvalidated [][]string
 }
 
 func (s *facilityChangeBroadcasterSpy) BroadcastFacilityChange(_ context.Context, resource, action string, ids []uuid.UUID, _ *uuid.UUID) {
@@ -23,6 +24,10 @@ func (s *facilityChangeBroadcasterSpy) BroadcastFacilityChange(_ context.Context
 	s.action = action
 	s.ids = append([]uuid.UUID(nil), ids...)
 	s.called++
+}
+
+func (s *facilityChangeBroadcasterSpy) BroadcastFacilityReferenceDataChange(_ context.Context, resources ...string) {
+	s.referenceCacheInvalidated = append(s.referenceCacheInvalidated, append([]string(nil), resources...))
 }
 
 func TestFacilityMutationForRoute(t *testing.T) {
@@ -37,6 +42,7 @@ func TestFacilityMutationForRoute(t *testing.T) {
 		{name: "bulk delete", route: routing.Delete("/field-devices/bulk-delete", "", nil), want: facilityMutation{resource: "field_devices", action: "bulk_deleted", pathIDIsTarget: true}, ok: true},
 		{name: "multi create", route: routing.Post("/field-devices/multi-create", "", nil), want: facilityMutation{resource: "field_devices", action: "bulk_created", pathIDIsTarget: true}, ok: true},
 		{name: "mapping creation does not publish parent alarm type ID", route: routing.Post("/alarm-types/:id/fields", "", nil), want: facilityMutation{resource: "alarm_type_fields", action: "created"}, ok: true},
+		{name: "alarm unit route", route: routing.Put("/alarm-units/:id", "", nil), want: facilityMutation{resource: "units", action: "updated", pathIDIsTarget: true}, ok: true},
 		{name: "validation is excluded", route: routing.Post("/buildings/validate", "", nil)},
 		{name: "cabinet validation is excluded", route: routing.Post("/control-cabinets/validate", "", nil)},
 		{name: "controller validation is excluded", route: routing.Post("/sps-controllers/validate", "", nil)},
@@ -56,6 +62,17 @@ func TestFacilityMutationForRoute(t *testing.T) {
 	}
 }
 
+func TestEveryFacilityMutationRouteHasCatalogResource(t *testing.T) {
+	for _, route := range routeDefinitions(&Handlers{}) {
+		if !isFacilityMutationRoute(route) {
+			continue
+		}
+		if _, ok := facilityMutationForRoute(route); !ok {
+			t.Errorf("mutation route %s %s has no facility resource catalog entry", route.Method, route.Path)
+		}
+	}
+}
+
 func TestFacilityChangeBroadcastsOnlySuccessfulMutations(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	id := uuid.New()
@@ -72,6 +89,9 @@ func TestFacilityChangeBroadcastsOnlySuccessfulMutations(t *testing.T) {
 	if spy.called != 1 || spy.resource != "apparats" || spy.action != "deleted" || len(spy.ids) != 1 || spy.ids[0] != id {
 		t.Fatalf("broadcast = %#v, want deleted apparat %s", spy, id)
 	}
+	if len(spy.referenceCacheInvalidated) != 1 || len(spy.referenceCacheInvalidated[0]) != 1 || spy.referenceCacheInvalidated[0][0] != "apparats" {
+		t.Fatalf("reference cache invalidation = %#v, want apparats", spy.referenceCacheInvalidated)
+	}
 
 	failingSpy := &facilityChangeBroadcasterSpy{}
 	failing := withFacilityChangeBroadcast(
@@ -85,6 +105,9 @@ func TestFacilityChangeBroadcastsOnlySuccessfulMutations(t *testing.T) {
 	failing(failingCtx)
 	if failingSpy.called != 0 {
 		t.Fatalf("failed mutation broadcast %d times, want 0", failingSpy.called)
+	}
+	if len(failingSpy.referenceCacheInvalidated) != 0 {
+		t.Fatalf("failed mutation invalidated reference cache: %#v", failingSpy.referenceCacheInvalidated)
 	}
 }
 

@@ -34,6 +34,7 @@ func Routes(handlers Handlers) []routing.Definition {
 		routing.Get("/field-devices/:id/bacnet-objects", domainUser.PermissionFieldDeviceRead, handlers.ListFieldDeviceBacnetObjects),
 		routing.Post("/field-devices/:id/specification", domainUser.PermissionSpecificationCreate, handlers.CreateFieldDeviceSpecification),
 		routing.Put("/field-devices/:id/specification", domainUser.PermissionSpecificationUpdate, handlers.UpdateFieldDeviceSpecification),
+		routing.Patch("/field-devices/:id", domainUser.PermissionFieldDeviceUpdate, handlers.UpdateFieldDevice),
 		routing.Put("/field-devices/:id", domainUser.PermissionFieldDeviceUpdate, handlers.UpdateFieldDevice),
 		routing.Delete("/field-devices/:id", domainUser.PermissionFieldDeviceDelete, handlers.DeleteFieldDevice),
 		routing.Patch("/field-devices/bulk-update", domainUser.PermissionFieldDeviceUpdate, handlers.BulkUpdateFieldDevices),

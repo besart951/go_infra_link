@@ -7,7 +7,6 @@ import (
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
 	dto "github.com/besart951/go_infra_link/backend/internal/handler/dto/facility"
-	"github.com/besart951/go_infra_link/backend/internal/handler/middleware"
 	facilityservice "github.com/besart951/go_infra_link/backend/internal/service/facility"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -34,12 +33,12 @@ func (h *SPSControllerHandler) broadcastProjectRefresh(ctx context.Context, acto
 	h.collaboration.BroadcastRefreshForSPSController(ctx, actorID, spsControllerID, "sps_controller")
 }
 
-func (h *SPSControllerHandler) broadcastProjectDelta(ctx context.Context, actorID *uuid.UUID, spsController *domainFacility.SPSController) {
+func (h *SPSControllerHandler) broadcastProjectDelta(ctx context.Context, actorID *uuid.UUID, spsController *domainFacility.SPSController, changedFields ...string) {
 	if h.collaboration == nil || spsController == nil {
 		return
 	}
 
-	h.collaboration.BroadcastSPSControllerDelta(ctx, actorID, *spsController)
+	h.collaboration.BroadcastSPSControllerDelta(ctx, actorID, *spsController, changedFields...)
 }
 
 // CreateSPSController godoc
@@ -147,28 +146,13 @@ func (h *SPSControllerHandler) CopySPSController(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.copyJobs != nil {
-		operationID, ok := copyOperationID(c)
-		if !ok {
-			return
+	if startFacilityCopyJob(c, h.copyJobs, facilityservice.CopyJobKindSPSController, func(ctx context.Context, actorID uuid.UUID) error {
+		copyEntity, err := h.service.CopyByID(ctx, id)
+		if err == nil {
+			h.broadcastProjectDelta(ctx, &actorID, copyEntity)
 		}
-		actorID, ok := middleware.GetUserID(c)
-		if !ok {
-			respondLocalizedError(c, http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
-			return
-		}
-		job, err := h.copyJobs.Start(actorID, operationID, facilityservice.CopyJobKindSPSController, func(ctx context.Context) error {
-			copyEntity, err := h.service.CopyByID(ctx, id)
-			if err == nil {
-				h.broadcastProjectDelta(ctx, &actorID, copyEntity)
-			}
-			return err
-		})
-		if err != nil {
-			respondLocalizedError(c, http.StatusServiceUnavailable, "service_unavailable", "errors.service_unavailable")
-			return
-		}
-		c.JSON(http.StatusAccepted, toCopyJobResponse(job))
+		return err
+	}) {
 		return
 	}
 
@@ -276,6 +260,7 @@ func (h *SPSControllerHandler) GetNextAvailableGADevice(c *gin.Context) {
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /api/v1/facility/sps-controllers/{id} [put]
+// @Router /api/v1/facility/sps-controllers/{id} [patch]
 func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 	id, ok := parseUUIDParam(c, "id")
 	if !ok {
@@ -312,7 +297,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		updateErr = h.service.Update(ctx, spsController)
 	}
 	if updateErr != nil {
-		if current, getErr := h.service.GetByID(ctx, id); getErr == nil && respondWriteConflict(c, updateErr, "sps_controller", id, baseVersion, spsControllerUpdatePaths(req), current.Version, toSPSControllerResponse(*current)) {
+		if current, getErr := h.service.GetByID(ctx, id); getErr == nil && respondWriteConflict(c, updateErr, "sps_controller", id, baseVersion, req.ChangedFields(), current.Version, toSPSControllerResponse(*current)) {
 			return
 		}
 		respondLocalizedDomainError(c, updateErr, "update_failed", "facility.update_failed",
@@ -321,7 +306,7 @@ func (h *SPSControllerHandler) UpdateSPSController(c *gin.Context) {
 		return
 	}
 
-	h.broadcastProjectDelta(ctx, currentActorID(c), spsController)
+	h.broadcastProjectDelta(ctx, currentActorID(c), spsController, req.ChangedFields()...)
 	c.JSON(http.StatusOK, toSPSControllerResponse(*spsController))
 }
 

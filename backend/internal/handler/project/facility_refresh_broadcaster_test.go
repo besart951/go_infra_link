@@ -3,10 +3,12 @@ package project
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/besart951/go_infra_link/backend/internal/domain"
 	domainFacility "github.com/besart951/go_infra_link/backend/internal/domain/facility"
+	domainProject "github.com/besart951/go_infra_link/backend/internal/domain/project"
 	"github.com/google/uuid"
 )
 
@@ -107,6 +109,34 @@ func TestFacilityRefreshBroadcasterBroadcastsSPSControllerDelta(t *testing.T) {
 	}
 }
 
+func TestFacilityRefreshBroadcasterRecordsPreciseSystemTypeChange(t *testing.T) {
+	ctx := context.Background()
+	projectID, controllerID, systemTypeID := uuid.New(), uuid.New(), uuid.New()
+	publisher := &fakeProjectRefreshPublisher{}
+	changes := &preciseChangeRecorder{}
+	broadcaster := NewFacilityRefreshBroadcaster(
+		&fakeFacilityProjectLookup{spsControllerProjectIDs: []uuid.UUID{projectID}},
+		publisher,
+		changes,
+	)
+
+	broadcaster.BroadcastSPSControllerSystemTypeChange(ctx, nil, controllerID, systemTypeID, "updated", "document_name")
+
+	if len(changes.calls) != 1 {
+		t.Fatalf("recorded %d changes, want 1", len(changes.calls))
+	}
+	call := changes.calls[0]
+	if call.eventType != "project.sps_controller_system_type.updated" || call.entityID != systemTypeID.String() {
+		t.Fatalf("unexpected change call: %+v", call)
+	}
+	if got, want := call.changedFields, []string{"document_name"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("changed fields = %#v, want %#v", got, want)
+	}
+	if len(publisher.projectChanges) != 1 || publisher.projectChanges[0].AggregateID != systemTypeID {
+		t.Fatalf("expected durable project event for system type, got %+v", publisher.projectChanges)
+	}
+}
+
 type fakeFacilityProjectLookup struct {
 	controlCabinetProjectIDs []uuid.UUID
 	spsControllerProjectIDs  []uuid.UUID
@@ -133,6 +163,7 @@ type fakeProjectRefreshPublisher struct {
 	controlCabinetDeltaProjects []uuid.UUID
 	spsControllerDeltas         []domainFacility.SPSController
 	spsControllerDeltaProjects  []uuid.UUID
+	projectChanges              []ProjectChange
 }
 
 type projectRefreshCall struct {
@@ -153,4 +184,38 @@ func (f *fakeProjectRefreshPublisher) BroadcastControlCabinetDelta(projectID uui
 func (f *fakeProjectRefreshPublisher) BroadcastSPSControllerDelta(projectID uuid.UUID, _ *uuid.UUID, spsController domainFacility.SPSController) {
 	f.spsControllerDeltaProjects = append(f.spsControllerDeltaProjects, projectID)
 	f.spsControllerDeltas = append(f.spsControllerDeltas, spsController)
+}
+
+func (f *fakeProjectRefreshPublisher) BroadcastProjectChange(_ context.Context, change ProjectChange) error {
+	f.projectChanges = append(f.projectChanges, change)
+	return nil
+}
+
+type preciseChangeCall struct {
+	eventType     string
+	entityID      string
+	changedFields []string
+}
+
+type preciseChangeRecorder struct {
+	calls []preciseChangeCall
+}
+
+func (r *preciseChangeRecorder) ListAfter(context.Context, uuid.UUID, uint64, int) (*domainProject.ChangePage, error) {
+	return nil, nil
+}
+
+func (r *preciseChangeRecorder) RecordEvent(context.Context, uuid.UUID, string, *uuid.UUID, ...string) error {
+	return nil
+}
+
+func (r *preciseChangeRecorder) RecordEventsWithFields(_ context.Context, projectID uuid.UUID, eventType string, actorID *uuid.UUID, changedFields []string, entityIDs ...string) ([]domainProject.Change, error) {
+	entityID := uuid.Nil
+	if len(entityIDs) > 0 {
+		entityID, _ = uuid.Parse(entityIDs[0])
+	}
+	r.calls = append(r.calls, preciseChangeCall{eventType: eventType, entityID: entityID.String(), changedFields: append([]string(nil), changedFields...)})
+	return []domainProject.Change{{
+		ProjectID: projectID, AggregateType: "sps_controller_system_type", AggregateID: &entityID, Action: domainProject.ChangeUpdated, ActorID: actorID, ChangedFields: append([]string(nil), changedFields...),
+	}}, nil
 }

@@ -55,6 +55,12 @@
     listState.selectedControlCabinetFilterIds.length
   );
 
+  function detailHref(controller: SPSController): string {
+    return listState.projectId
+      ? `/projects/${listState.projectId}/facility/sps-controllers/${controller.id}`
+      : `/facility/sps-controllers/${controller.id}`;
+  }
+
   async function handleHistoryRestored(): Promise<void> {
     await listState.reload();
     listState.notifyHistoryRestored();
@@ -128,7 +134,7 @@
       {#snippet rowSnippet(controller: SPSController)}
         {@const systemTypes = listState.getSystemTypes(controller.id)}
         <Table.Cell class="font-medium">
-          <a href="/facility/sps-controllers/{controller.id}" class="hover:underline">
+          <a href={detailHref(controller)} class="hover:underline">
             {controller.device_name}
           </a>
         </Table.Cell>
@@ -230,9 +236,7 @@
                 </DropdownMenu.Item>
               {/if}
               {#if listState.canReadSPSController()}
-                <DropdownMenu.Item
-                  onclick={() => goto(`/facility/sps-controllers/${controller.id}`)}
-                >
+                <DropdownMenu.Item onclick={() => goto(detailHref(controller))}>
                   {$t('common.view')}
                 </DropdownMenu.Item>
               {/if}

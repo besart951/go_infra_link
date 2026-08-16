@@ -18,12 +18,11 @@ type facilityMutation struct {
 }
 
 func facilityMutationForRoute(route routing.Definition) (facilityMutation, bool) {
-	if route.Method != http.MethodPost && route.Method != http.MethodPut && route.Method != http.MethodPatch && route.Method != http.MethodDelete {
+	if !isFacilityMutationRoute(route) {
 		return facilityMutation{}, false
 	}
-
 	resource := facilityRealtimeResource(route.Path)
-	if resource == "" || strings.HasSuffix(route.Path, "/bulk") || strings.HasSuffix(route.Path, "/validate") || strings.Contains(route.Path, "/export") {
+	if resource == "" {
 		return facilityMutation{}, false
 	}
 	action := map[string]string{
@@ -46,36 +45,24 @@ func facilityMutationForRoute(route routing.Definition) (facilityMutation, bool)
 	return facilityMutation{resource: resource, action: action, pathIDIsTarget: pathIDIsTarget}, true
 }
 
-func facilityRealtimeResource(path string) string {
-	if strings.HasPrefix(path, "/alarm-types/:id/fields") || strings.HasPrefix(path, "/alarm-type-fields/") {
-		return "alarm_type_fields"
+func isFacilityMutationRoute(route routing.Definition) bool {
+	if route.Method != http.MethodPost && route.Method != http.MethodPut && route.Method != http.MethodPatch && route.Method != http.MethodDelete {
+		return false
 	}
-	segment := strings.TrimPrefix(path, "/")
-	if slash := strings.IndexByte(segment, '/'); slash >= 0 {
-		segment = segment[:slash]
-	}
-	return map[string]string{
-		"buildings":                   "buildings",
-		"system-types":                "system_types",
-		"system-parts":                "system_parts",
-		"apparats":                    "apparats",
-		"control-cabinets":            "control_cabinets",
-		"sps-controllers":             "sps_controllers",
-		"sps-controller-system-types": "sps_controller_system_types",
-		"field-devices":               "field_devices",
-		"bacnet-objects":              "bacnet_objects",
-		"object-data":                 "object_data",
-		"state-texts":                 "state_texts",
-		"notification-classes":        "notification_classes",
-		"alarm-definitions":           "alarm_definitions",
-		"alarm-types":                 "alarm_types",
-		"alarm-type-fields":           "alarm_type_fields",
-		"units":                       "units",
-		"alarm-fields":                "alarm_fields",
-	}[segment]
+	return !strings.HasSuffix(route.Path, "/bulk") &&
+		!strings.HasSuffix(route.Path, "/validate") &&
+		!strings.Contains(route.Path, "/export")
 }
 
-func withFacilityChangeBroadcast(next gin.HandlerFunc, broadcaster FacilityChangeBroadcaster, change facilityMutation) gin.HandlerFunc {
+func facilityRealtimeResource(path string) string {
+	definition, ok := facilityResourceForRoute(path)
+	if !ok {
+		return ""
+	}
+	return definition.name
+}
+
+func withFacilityChangeBroadcast(next gin.HandlerFunc, broadcaster FacilityMutationBroadcaster, change facilityMutation) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		originalWriter := c.Writer
 		capture := &facilityChangeResponseWriter{ResponseWriter: originalWriter}
@@ -93,6 +80,9 @@ func withFacilityChangeBroadcast(next gin.HandlerFunc, broadcaster FacilityChang
 			ids = facilityChangeIDsFromResponse(capture.body.Bytes())
 		}
 		broadcaster.BroadcastFacilityChange(c.Request.Context(), change.resource, change.action, ids, currentActorID(c))
+		if definition, ok := facilityResourceByName(change.resource); ok && definition.invalidatesReferenceCache {
+			broadcaster.BroadcastFacilityReferenceDataChange(c.Request.Context(), change.resource)
+		}
 	}
 }
 

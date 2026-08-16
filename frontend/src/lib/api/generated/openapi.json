@@ -3008,15 +3008,7 @@
           }
         ],
         "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest"
-              }
-            }
-          },
-          "description": "Building data",
-          "required": true
+          "$ref": "#/components/requestBodies/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest"
         },
         "responses": {
           "200": {
@@ -3083,6 +3075,137 @@
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "facility-buildings"
+        ],
+        "summary": "Update a building",
+        "parameters": [
+          {
+            "description": "Building ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest"
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/facility/buildings/{id}/detail": {
+      "get": {
+        "tags": [
+          "facility-details"
+        ],
+        "summary": "Get a building detail with permitted hierarchy relations",
+        "parameters": [
+          {
+            "description": "Building ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Relationship page",
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "description": "Relationship page size",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3401,15 +3524,7 @@
           }
         ],
         "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest"
-              }
-            }
-          },
-          "description": "Control Cabinet data",
-          "required": true
+          "$ref": "#/components/requestBodies/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest"
         },
         "responses": {
           "200": {
@@ -3476,6 +3591,68 @@
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "facility-control-cabinets"
+        ],
+        "summary": "Update a control cabinet",
+        "parameters": [
+          {
+            "description": "Control Cabinet ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest"
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3620,6 +3797,75 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/facility/control-cabinets/{id}/detail": {
+      "get": {
+        "tags": [
+          "facility-details"
+        ],
+        "summary": "Get a control cabinet detail with permitted hierarchy relations",
+        "parameters": [
+          {
+            "description": "Control cabinet ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Relationship page",
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "description": "Relationship page size",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetDetailResponse"
                 }
               }
             }
@@ -4239,15 +4485,7 @@
           }
         ],
         "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest"
-              }
-            }
-          },
-          "description": "Field Device data",
-          "required": true
+          "$ref": "#/components/requestBodies/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest"
         },
         "responses": {
           "200": {
@@ -4333,6 +4571,68 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "facility-field-devices"
+        ],
+        "summary": "Update a field device",
+        "parameters": [
+          {
+            "description": "Field Device ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest"
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/facility/field-devices/{id}/bacnet-objects": {
@@ -4372,6 +4672,57 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/facility/field-devices/{id}/detail": {
+      "get": {
+        "tags": [
+          "facility-details"
+        ],
+        "summary": "Get a field device detail with permitted hierarchy and references",
+        "parameters": [
+          {
+            "description": "Field device ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceDetailResponse"
                 }
               }
             }
@@ -5406,15 +5757,7 @@
           }
         ],
         "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest"
-              }
-            }
-          },
-          "description": "SPS controller system type data",
-          "required": true
+          "$ref": "#/components/requestBodies/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest"
         },
         "responses": {
           "200": {
@@ -5520,6 +5863,78 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "facility-sps-controller-system-types"
+        ],
+        "summary": "Update an SPS controller system type",
+        "parameters": [
+          {
+            "description": "SPS Controller System Type ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest"
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/internal_handler_facility.SPSControllerSystemTypeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/internal_handler_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/internal_handler_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/internal_handler_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/internal_handler_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/facility/sps-controller-system-types/{id}/copy": {
@@ -5594,6 +6009,75 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/internal_handler_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/facility/sps-controller-system-types/{id}/detail": {
+      "get": {
+        "tags": [
+          "facility-details"
+        ],
+        "summary": "Get an SPS controller system type detail with permitted hierarchy relations",
+        "parameters": [
+          {
+            "description": "SPS controller system type ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Relationship page",
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "description": "Relationship page size",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                 }
               }
             }
@@ -5977,15 +6461,7 @@
           }
         ],
         "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest"
-              }
-            }
-          },
-          "description": "SPS Controller data",
-          "required": true
+          "$ref": "#/components/requestBodies/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest"
         },
         "responses": {
           "200": {
@@ -6062,6 +6538,68 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "facility-sps-controllers"
+        ],
+        "summary": "Update an SPS controller",
+        "parameters": [
+          {
+            "description": "SPS Controller ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest"
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -6161,6 +6699,75 @@
           },
           "503": {
             "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/facility/sps-controllers/{id}/detail": {
+      "get": {
+        "tags": [
+          "facility-details"
+        ],
+        "summary": "Get an SPS controller detail with permitted hierarchy relations",
+        "parameters": [
+          {
+            "description": "SPS controller ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Relationship page",
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "description": "Relationship page size",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerDetailResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -8825,6 +9432,614 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_project.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/facility/buildings/{buildingId}": {
+      "get": {
+        "tags": [
+          "project-facility-details"
+        ],
+        "summary": "Get a project-scoped, read-only building detail",
+        "parameters": [
+          {
+            "description": "Project ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Building ID",
+            "name": "buildingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Relationship page",
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "description": "Relationship page size",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/facility/control-cabinets/{controlCabinetId}": {
+      "get": {
+        "tags": [
+          "project-facility-details"
+        ],
+        "summary": "Get a project-scoped control cabinet detail",
+        "parameters": [
+          {
+            "description": "Project ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Control cabinet ID",
+            "name": "controlCabinetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Relationship page",
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "description": "Relationship page size",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "project-facility-details"
+        ],
+        "summary": "Patch a project control cabinet when both permission layers allow it",
+        "parameters": [
+          {
+            "description": "Project ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Control cabinet ID",
+            "name": "controlCabinetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest"
+              }
+            }
+          },
+          "description": "Control cabinet patch",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/facility/field-devices/{fieldDeviceId}": {
+      "get": {
+        "tags": [
+          "project-facility-details"
+        ],
+        "summary": "Get a project-scoped field device detail",
+        "parameters": [
+          {
+            "description": "Project ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Field device ID",
+            "name": "fieldDeviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "project-facility-details"
+        ],
+        "summary": "Patch a project field device when both permission layers allow it",
+        "parameters": [
+          {
+            "description": "Project ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Field device ID",
+            "name": "fieldDeviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest"
+              }
+            }
+          },
+          "description": "Field device patch",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/facility/sps-controller-system-types/{spsControllerSystemTypeId}": {
+      "get": {
+        "tags": [
+          "project-facility-details"
+        ],
+        "summary": "Get a project-scoped SPS controller system type detail",
+        "parameters": [
+          {
+            "description": "Project ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "SPS controller system type ID",
+            "name": "spsControllerSystemTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Relationship page",
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "description": "Relationship page size",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "project-facility-details"
+        ],
+        "summary": "Patch a project SPS controller system type when both permission layers allow it",
+        "parameters": [
+          {
+            "description": "Project ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "SPS controller system type ID",
+            "name": "spsControllerSystemTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest"
+              }
+            }
+          },
+          "description": "System type patch",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{id}/facility/sps-controllers/{spsControllerId}": {
+      "get": {
+        "tags": [
+          "project-facility-details"
+        ],
+        "summary": "Get a project-scoped SPS controller detail",
+        "parameters": [
+          {
+            "description": "Project ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "SPS controller ID",
+            "name": "spsControllerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Relationship page",
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "description": "Relationship page size",
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "project-facility-details"
+        ],
+        "summary": "Patch a project SPS controller when both permission layers allow it",
+        "parameters": [
+          {
+            "description": "Project ID",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "SPS controller ID",
+            "name": "spsControllerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest"
+              }
+            }
+          },
+          "description": "SPS controller patch",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse"
                 }
               }
             }
@@ -11620,6 +12835,61 @@
         },
         "description": "Partial project data",
         "required": true
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerRequest"
+            }
+          }
+        },
+        "description": "SPS Controller data",
+        "required": true
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateSPSControllerSystemTypeRequest"
+            }
+          }
+        },
+        "description": "SPS controller system type data",
+        "required": true
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateFieldDeviceRequest"
+            }
+          }
+        },
+        "description": "Field Device data",
+        "required": true
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest"
+            }
+          }
+        },
+        "description": "Building data",
+        "required": true
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateControlCabinetRequest"
+            }
+          }
+        },
+        "description": "Control Cabinet data",
+        "required": true
       }
     },
     "schemas": {
@@ -12390,6 +13660,23 @@
           }
         }
       },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingDetailResponse": {
+        "type": "object",
+        "properties": {
+          "building": {
+            "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingResponse"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailCapabilities"
+          },
+          "relations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation"
+            }
+          }
+        }
+      },
       "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.BuildingListResponse": {
         "type": "object",
         "properties": {
@@ -12427,6 +13714,9 @@
           },
           "updated_at": {
             "type": "string"
+          },
+          "version": {
+            "type": "integer"
           }
         }
       },
@@ -12634,6 +13924,23 @@
           },
           "sps_controllers_count": {
             "type": "integer"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetDetailResponse": {
+        "type": "object",
+        "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailCapabilities"
+          },
+          "control_cabinet": {
+            "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ControlCabinetResponse"
+          },
+          "relations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation"
+            }
           }
         }
       },
@@ -13320,6 +14627,57 @@
           }
         }
       },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailCapabilities": {
+        "type": "object",
+        "properties": {
+          "can_update": {
+            "type": "boolean"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelationItem"
+            }
+          },
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "total_pages": {
+            "type": "integer"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelationItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "subtitle": {
+            "type": "string"
+          }
+        }
+      },
       "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.ErrorResponse": {
         "type": "object",
         "properties": {
@@ -13383,6 +14741,23 @@
           "success": {
             "description": "Whether the creation succeeded",
             "type": "boolean"
+          }
+        }
+      },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceDetailResponse": {
+        "type": "object",
+        "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailCapabilities"
+          },
+          "field_device": {
+            "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.FieldDeviceResponse"
+          },
+          "relations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation"
+            }
           }
         }
       },
@@ -13735,6 +15110,23 @@
           }
         }
       },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerDetailResponse": {
+        "type": "object",
+        "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailCapabilities"
+          },
+          "relations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation"
+            }
+          },
+          "sps_controller": {
+            "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerResponse"
+          }
+        }
+      },
       "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerListResponse": {
         "type": "object",
         "properties": {
@@ -13799,6 +15191,23 @@
           }
         }
       },
+      "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeDetailResponse": {
+        "type": "object",
+        "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailCapabilities"
+          },
+          "relations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.DetailRelation"
+            }
+          },
+          "sps_controller_system_type": {
+            "$ref": "#/components/schemas/github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeResponse"
+          }
+        }
+      },
       "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.SPSControllerSystemTypeInput": {
         "type": "object",
         "required": [
@@ -13824,6 +15233,7 @@
         "type": "object",
         "properties": {
           "aggregate_version": {
+            "description": "AggregateVersion is retained for clients generated before the unified\nversion token was introduced. New clients should use Version.",
             "type": "integer"
           },
           "created_at": {
@@ -13856,6 +15266,9 @@
           },
           "updated_at": {
             "type": "string"
+          },
+          "version": {
+            "type": "integer"
           }
         }
       },
@@ -14318,6 +15731,10 @@
       "github_com_besart951_go_infra_link_backend_internal_handler_dto_facility.UpdateBuildingRequest": {
         "type": "object",
         "properties": {
+          "base_version": {
+            "type": "integer",
+            "minimum": 1
+          },
           "building_group": {
             "type": "integer"
           },
@@ -16704,6 +18121,7 @@
         "type": "object",
         "properties": {
           "aggregate_version": {
+            "description": "AggregateVersion is retained for clients generated before the unified\nversion token was introduced. New clients should use Version.",
             "type": "integer"
           },
           "created_at": {
@@ -16736,6 +18154,9 @@
           },
           "updated_at": {
             "type": "string"
+          },
+          "version": {
+            "type": "integer"
           }
         }
       },
