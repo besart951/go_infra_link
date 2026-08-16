@@ -1,5 +1,18 @@
 import { expect, login, test } from './fixtures';
 
+const collapsibleNavigationGroups = ['Benutzer', 'Anlage', 'Projekte', 'Benachrichtigungen'];
+
+async function expandNavigationGroups(page: Parameters<typeof login>[0]): Promise<void> {
+  const sidebarContent = page.locator('[data-sidebar="content"]');
+
+  for (const name of collapsibleNavigationGroups) {
+    const trigger = sidebarContent.getByRole('button', { name, exact: true });
+    if ((await trigger.getAttribute('aria-expanded')) !== 'true') {
+      await trigger.click();
+    }
+  }
+}
+
 test.describe('collapsed sidebar navigation', () => {
   test('shows the hovered icon menu above the main content and switches panels', async ({
     page
@@ -22,6 +35,7 @@ test.describe('collapsed sidebar navigation', () => {
     await userTrigger.hover();
     await expect(userPanel).toBeVisible();
     await expect(userTrigger).toHaveAttribute('aria-expanded', 'true');
+    await expect(userPanel.locator(':scope > div').first().locator('svg')).toHaveCount(0);
 
     const panelReceivesPointerEvents = await userPanel.evaluate((panel) => {
       const firstLink = panel.querySelector('a');
@@ -64,5 +78,53 @@ test.describe('collapsed sidebar navigation', () => {
       trackBackgroundColor: 'rgba(0, 0, 0, 0)',
       thumbBorderRadius: '9999px'
     });
+  });
+
+  test('uses a pointer cursor for every enabled sidebar control', async ({ page }) => {
+    await login(page);
+    await expandNavigationGroups(page);
+
+    const cursors = await page
+      .locator('[data-sidebar="content"] :is(a[href], button, [role="button"], [role="link"])')
+      .evaluateAll((elements) =>
+        elements
+          .filter(
+            (element) =>
+              element.checkVisibility() && !element.matches(':disabled, [aria-disabled="true"]')
+          )
+          .map((element) => getComputedStyle(element).cursor)
+      );
+
+    expect(cursors.length).toBeGreaterThan(25);
+    expect(cursors.every((cursor) => cursor === 'pointer')).toBe(true);
+  });
+
+  test('opens every visible sidebar navigation target', async ({ page }) => {
+    test.setTimeout(90_000);
+
+    await login(page);
+    await expandNavigationGroups(page);
+
+    const sidebarContent = page.locator('[data-sidebar="content"]');
+    const targets = await sidebarContent.locator('a[href^="/"]').evaluateAll((links) => {
+      return [
+        ...new Set(
+          links
+            .map((link) => link.getAttribute('href'))
+            .filter((href): href is string => href !== null)
+        )
+      ];
+    });
+
+    expect(targets.length).toBeGreaterThanOrEqual(25);
+
+    for (const target of targets) {
+      await expandNavigationGroups(page);
+
+      const link = sidebarContent.locator(`a[href="${target}"]`);
+      await expect(link).toBeVisible();
+      await Promise.all([page.waitForURL((url) => url.pathname === target), link.click()]);
+      await expect(page).not.toHaveURL(/\/errors\/403$/);
+    }
   });
 });

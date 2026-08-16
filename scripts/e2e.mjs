@@ -8,7 +8,9 @@ const repositoryDir = resolve(scriptDir, "..");
 const frontendDir = resolve(repositoryDir, "frontend");
 const composeFile = resolve(repositoryDir, "docker-compose.e2e.yml");
 const resultsDir = resolve(frontendDir, "test-results");
-const [action = "run", ...playwrightArgs] = process.argv.slice(2);
+const [action = "run", ...rawPlaywrightArgs] = process.argv.slice(2);
+const playwrightArgs =
+  rawPlaywrightArgs[0] === "--" ? rawPlaywrightArgs.slice(1) : rawPlaywrightArgs;
 const supportedActions = new Set(["run", "up", "down", "logs"]);
 
 if (!supportedActions.has(action)) {

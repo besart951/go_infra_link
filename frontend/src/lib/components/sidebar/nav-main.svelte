@@ -58,15 +58,8 @@
               <NavigationMenu.Content
                 class="start-full! top-0! z-50 mt-0! w-[17.5rem] overflow-hidden rounded-xl border-sidebar-border/80 bg-sidebar p-1.5 text-sidebar-foreground shadow-xl shadow-black/25"
               >
-                <div class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-semibold">
-                  <span
-                    class="flex size-7 items-center justify-center rounded-md bg-sidebar-accent text-sidebar-accent-foreground"
-                  >
-                    {#if item.icon}
-                      <item.icon class="size-4" />
-                    {/if}
-                  </span>
-                  <span>{item.title}</span>
+                <div class="rounded-lg px-2.5 py-2 text-sm font-semibold">
+                  {item.title}
                 </div>
                 <div class="my-1.5 h-px bg-sidebar-border/70"></div>
                 <ul class="space-y-1">
