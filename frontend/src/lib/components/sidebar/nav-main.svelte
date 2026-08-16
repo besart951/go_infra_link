@@ -1,12 +1,10 @@
 <script lang="ts">
   import * as Collapsible from '$lib/components/ui/collapsible/index.js';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+  import * as NavigationMenu from '$lib/components/ui/navigation-menu/index.js';
   import * as Sidebar from '$lib/components/ui/sidebar/index.js';
   import { cn } from '$lib/utils.js';
   import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
-  import { tick, type Component } from 'svelte';
-
-  const COLLAPSED_MENU_CLOSE_DELAY_MS = 180;
+  import type { Component } from 'svelte';
 
   interface NavSubItem {
     title: string;
@@ -28,141 +26,39 @@
   const sidebar = Sidebar.useSidebar();
   const showCollapsedMenu = $derived(sidebar.state === 'collapsed' && !sidebar.isMobile);
 
-  let collapsedMenuOpen = $state<Record<string, boolean>>({});
-  let collapsedMenuAnchors = $state<Record<string, HTMLButtonElement | null>>({});
-  let collapsedMenuContent = $state<Record<string, HTMLDivElement | null>>({});
-  let pointerInsideCollapsedMenu: string | undefined;
-  let pointerFocusedMenu: string | undefined;
-  let closeCollapsedMenuTimeout: ReturnType<typeof setTimeout> | undefined;
-
   function closeMobileSidebar() {
     if (sidebar.isMobile) {
       sidebar.setOpenMobile(false);
     }
   }
-
-  function getCollapsedMenuId(item: NavItem) {
-    return `collapsed-nav-menu-${item.url.replace(/[^a-z0-9]+/gi, '-')}`;
-  }
-
-  function clearCollapsedMenuCloseTimeout() {
-    if (closeCollapsedMenuTimeout === undefined) return;
-    clearTimeout(closeCollapsedMenuTimeout);
-    closeCollapsedMenuTimeout = undefined;
-  }
-
-  function openCollapsedMenu(title: string) {
-    clearCollapsedMenuCloseTimeout();
-
-    for (const menuTitle of Object.keys(collapsedMenuOpen)) {
-      if (menuTitle !== title) {
-        collapsedMenuOpen[menuTitle] = false;
-      }
-    }
-
-    collapsedMenuOpen[title] = true;
-  }
-
-  function isFocusInsideCollapsedMenu(title: string) {
-    const activeElement = document.activeElement;
-    const anchor = collapsedMenuAnchors[title];
-    const content = collapsedMenuContent[title];
-
-    return activeElement === anchor || content?.contains(activeElement) === true;
-  }
-
-  function scheduleCollapsedMenuClose(title: string) {
-    clearCollapsedMenuCloseTimeout();
-    closeCollapsedMenuTimeout = setTimeout(() => {
-      if (pointerInsideCollapsedMenu === title || isFocusInsideCollapsedMenu(title)) {
-        return;
-      }
-
-      collapsedMenuOpen[title] = false;
-    }, COLLAPSED_MENU_CLOSE_DELAY_MS);
-  }
-
-  function handleCollapsedMenuPointerEnter(title: string) {
-    pointerInsideCollapsedMenu = title;
-    openCollapsedMenu(title);
-  }
-
-  function handleCollapsedMenuPointerLeave(title: string) {
-    if (pointerInsideCollapsedMenu === title) {
-      pointerInsideCollapsedMenu = undefined;
-    }
-    scheduleCollapsedMenuClose(title);
-  }
-
-  function handleCollapsedMenuFocus(title: string) {
-    if (pointerFocusedMenu === title) {
-      pointerFocusedMenu = undefined;
-      return;
-    }
-
-    openCollapsedMenu(title);
-  }
-
-  async function focusCollapsedMenuContent(title: string) {
-    openCollapsedMenu(title);
-    await tick();
-    collapsedMenuContent[title]?.focus();
-  }
-
-  function handleCollapsedMenuKeydown(event: KeyboardEvent, title: string) {
-    if (event.key !== 'ArrowDown') return;
-
-    event.preventDefault();
-    void focusCollapsedMenuContent(title);
-  }
 </script>
 
 <Sidebar.Group>
   <Sidebar.GroupLabel>Platform</Sidebar.GroupLabel>
-  <Sidebar.Menu>
-    {#each items as item (item.title)}
-      {#if item.items && item.items.length > 0}
-        <Sidebar.MenuItem>
-          {#if showCollapsedMenu}
-            <DropdownMenu.Root
-              open={collapsedMenuOpen[item.title] ?? false}
-              onOpenChange={(open) => (collapsedMenuOpen[item.title] = open)}
-            >
-              <Sidebar.MenuButton
-                bind:ref={collapsedMenuAnchors[item.title]}
-                isActive={item.isActive}
-                aria-controls={getCollapsedMenuId(item)}
-                aria-expanded={collapsedMenuOpen[item.title] ?? false}
-                aria-haspopup="menu"
-                class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                onpointerenter={() => handleCollapsedMenuPointerEnter(item.title)}
-                onpointerleave={() => handleCollapsedMenuPointerLeave(item.title)}
-                onpointerdown={() => (pointerFocusedMenu = item.title)}
-                onfocus={() => handleCollapsedMenuFocus(item.title)}
-                onblur={() => scheduleCollapsedMenuClose(item.title)}
-                onkeydown={(event) => handleCollapsedMenuKeydown(event, item.title)}
+
+  {#if showCollapsedMenu}
+    <NavigationMenu.Root
+      viewport={false}
+      orientation="vertical"
+      class="w-full max-w-none items-start justify-start"
+    >
+      <NavigationMenu.List class="w-full flex-col items-stretch justify-start gap-1">
+        {#each items as item (item.title)}
+          <NavigationMenu.Item class="w-full">
+            {#if item.items && item.items.length > 0}
+              <NavigationMenu.Trigger
+                data-active={item.isActive}
+                class="peer/menu-button flex size-8! w-full items-center justify-center overflow-hidden rounded-md bg-transparent! p-2! text-start text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding,transform,filter,box-shadow] duration-100 ease-in-out hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground [&>svg:first-child]:size-4 [&>svg:first-child]:shrink-0 [&>svg:last-child]:hidden"
               >
                 {#if item.icon}
                   <item.icon />
                 {/if}
                 <span class="sr-only">{item.title}</span>
-              </Sidebar.MenuButton>
-              <DropdownMenu.Content
-                bind:ref={collapsedMenuContent[item.title]}
-                id={getCollapsedMenuId(item)}
-                customAnchor={collapsedMenuAnchors[item.title]}
-                class="w-[17.5rem] overflow-hidden rounded-xl border-sidebar-border/80 bg-sidebar p-1.5 text-sidebar-foreground shadow-xl shadow-black/25"
-                side="right"
-                align="start"
-                sideOffset={10}
-                onpointerenter={() => handleCollapsedMenuPointerEnter(item.title)}
-                onpointerleave={() => handleCollapsedMenuPointerLeave(item.title)}
-                onfocusin={clearCollapsedMenuCloseTimeout}
-                onfocusout={() => scheduleCollapsedMenuClose(item.title)}
+              </NavigationMenu.Trigger>
+              <NavigationMenu.Content
+                class="start-full! top-0! z-50 mt-0! w-[17.5rem] overflow-hidden rounded-xl border-sidebar-border/80 bg-sidebar p-1.5 text-sidebar-foreground shadow-xl shadow-black/25"
               >
-                <DropdownMenu.Label
-                  class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-sidebar-foreground"
-                >
+                <div class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-semibold">
                   <span
                     class="flex size-7 items-center justify-center rounded-md bg-sidebar-accent text-sidebar-accent-foreground"
                   >
@@ -171,22 +67,19 @@
                     {/if}
                   </span>
                   <span>{item.title}</span>
-                </DropdownMenu.Label>
-                <DropdownMenu.Separator class="my-1.5 bg-sidebar-border/70" />
-                {#each item.items as subItem, index (subItem.title)}
-                  <DropdownMenu.Item
-                    class={cn(
-                      'min-h-11 cursor-pointer gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-sidebar-foreground transition-colors',
-                      subItem.isActive
-                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                        : 'data-highlighted:bg-sidebar-accent data-highlighted:text-sidebar-accent-foreground'
-                    )}
-                  >
-                    {#snippet child({ props })}
+                </div>
+                <div class="my-1.5 h-px bg-sidebar-border/70"></div>
+                <ul class="space-y-1">
+                  {#each item.items as subItem, index (subItem.title)}
+                    <li>
                       <a
                         href={subItem.url}
+                        onclick={closeMobileSidebar}
                         aria-current={subItem.isActive ? 'page' : undefined}
-                        {...props}
+                        class={cn(
+                          'flex min-h-11 items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground focus-visible:outline-none',
+                          subItem.isActive && 'bg-sidebar-accent text-sidebar-accent-foreground'
+                        )}
                       >
                         <span
                           class={cn(
@@ -198,15 +91,36 @@
                         </span>
                         <span>{subItem.title}</span>
                       </a>
-                    {/snippet}
-                  </DropdownMenu.Item>
-                  {#if subItem.dividerAfter && index < item.items.length - 1}
-                    <DropdownMenu.Separator class="my-1.5 bg-sidebar-border/70" />
-                  {/if}
-                {/each}
-              </DropdownMenu.Content>
-            </DropdownMenu.Root>
-          {:else}
+                    </li>
+                    {#if subItem.dividerAfter && index < item.items.length - 1}
+                      <li aria-hidden="true" class="my-1.5 h-px bg-sidebar-border/70"></li>
+                    {/if}
+                  {/each}
+                </ul>
+              </NavigationMenu.Content>
+            {:else}
+              <NavigationMenu.Link
+                href={item.url}
+                onclick={closeMobileSidebar}
+                data-active={item.isActive}
+                aria-current={item.isActive ? 'page' : undefined}
+                class="peer/menu-button flex size-8! w-full items-center justify-center overflow-hidden rounded-md bg-transparent! p-2! text-start text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding,transform,filter,box-shadow] duration-100 ease-in-out hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground [&>svg]:size-4 [&>svg]:shrink-0"
+              >
+                {#if item.icon}
+                  <item.icon />
+                {/if}
+                <span class="sr-only">{item.title}</span>
+              </NavigationMenu.Link>
+            {/if}
+          </NavigationMenu.Item>
+        {/each}
+      </NavigationMenu.List>
+    </NavigationMenu.Root>
+  {:else}
+    <Sidebar.Menu>
+      {#each items as item (item.title)}
+        {#if item.items && item.items.length > 0}
+          <Sidebar.MenuItem>
             <Collapsible.Root open={item.isActive} class="group/collapsible">
               <Collapsible.Trigger>
                 {#snippet child({ props })}
@@ -247,27 +161,27 @@
                 </Sidebar.MenuSub>
               </Collapsible.Content>
             </Collapsible.Root>
-          {/if}
-        </Sidebar.MenuItem>
-      {:else}
-        <Sidebar.MenuItem>
-          <Sidebar.MenuButton isActive={item.isActive} tooltipContent={item.title}>
-            {#snippet child({ props })}
-              <a
-                href={item.url}
-                onclick={closeMobileSidebar}
-                aria-current={item.isActive ? 'page' : undefined}
-                {...props}
-              >
-                {#if item.icon}
-                  <item.icon />
-                {/if}
-                <span>{item.title}</span>
-              </a>
-            {/snippet}
-          </Sidebar.MenuButton>
-        </Sidebar.MenuItem>
-      {/if}
-    {/each}
-  </Sidebar.Menu>
+          </Sidebar.MenuItem>
+        {:else}
+          <Sidebar.MenuItem>
+            <Sidebar.MenuButton isActive={item.isActive} tooltipContent={item.title}>
+              {#snippet child({ props })}
+                <a
+                  href={item.url}
+                  onclick={closeMobileSidebar}
+                  aria-current={item.isActive ? 'page' : undefined}
+                  {...props}
+                >
+                  {#if item.icon}
+                    <item.icon />
+                  {/if}
+                  <span>{item.title}</span>
+                </a>
+              {/snippet}
+            </Sidebar.MenuButton>
+          </Sidebar.MenuItem>
+        {/if}
+      {/each}
+    </Sidebar.Menu>
+  {/if}
 </Sidebar.Group>
